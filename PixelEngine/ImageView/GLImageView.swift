@@ -11,7 +11,7 @@ import Foundation
 import GLKit
 import AVFoundation
 
-public class GLImageView : GLKView {
+public class GLImageView : GLKView, HardwareImageViewType {
 
   // MARK: - Properties
 

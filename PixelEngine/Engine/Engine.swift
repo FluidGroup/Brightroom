@@ -9,11 +9,11 @@
 import Foundation
 import CoreImage
 
-public protocol EngineDelegate : class {
+public protocol ImageEngineDelegate : class {
 
 }
 
-public final class Engine {
+public final class ImageEngine {
 
   private enum Static {
 
@@ -38,9 +38,9 @@ public final class Engine {
     self.targetImage = targetImage
   }
 
-  public func makePreviewEngine() -> PreviewEngine {
+  public func makePreviewEngine() -> PreviewImageEngine {
 
-    let engine = PreviewEngine(
+    let engine = PreviewImageEngine(
       fullResolutionOriginalImage: targetImage,
       previewSize: .zero
     )
@@ -61,7 +61,7 @@ public final class Engine {
       }
 
       let result = modifiers.reduce(image, { image, modifier in
-        return modifier.modify(to: image)
+        return modifier.apply(to: image)
       })
 
       return result
@@ -93,7 +93,7 @@ public final class Engine {
   }
 }
 
-public final class PreviewEngine {
+public final class PreviewImageEngine {
 
   var image: CIImage
   var imageForCropping: UIImage

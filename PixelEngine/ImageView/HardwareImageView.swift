@@ -7,3 +7,7 @@
 //
 
 import Foundation
+
+public protocol HardwareImageViewType : class {
+  var image: CIImage? { get set }
+}
