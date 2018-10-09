@@ -151,7 +151,7 @@ public final class PreviewImageEngine : PreviewImageEngineDelegate {
     _cropRect.size.height *= scale
 
 
-    
+
   }
 }
 
