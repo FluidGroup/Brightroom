@@ -103,13 +103,13 @@ public protocol PreviewImageEngineDelegate : class {
 
 public final class PreviewImageEngine : PreviewImageEngineDelegate {
 
-  var previewImage: CIImage?
-  var imageForCropping: UIImage
-  let scaleFromOriginal: CGFloat
+  public var previewImage: CIImage?
+  public var imageForCropping: UIImage
+  public let scaleFromOriginal: CGFloat
 
-  let engine: ImageEngine
+  public let engine: ImageEngine
 
-  init(
+  public init(
     engine: ImageEngine,
     previewSize: CGSize
     ) {
@@ -149,8 +149,6 @@ public final class PreviewImageEngine : PreviewImageEngineDelegate {
     _cropRect.origin.y *= scale
     _cropRect.size.width *= scale
     _cropRect.size.height *= scale
-
-
 
   }
 }
