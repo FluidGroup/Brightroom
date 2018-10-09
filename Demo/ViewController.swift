@@ -22,9 +22,19 @@ class ViewController: UIViewController {
 
     let image = UIImage(named: "small")!
 
-    let engine = ImageEngine(fullResolutionOriginalImage: image)
+    let engine = ImageEngine(targetImage: image)
 
-    engine.croppingRect = CGRect(x: 0, y: 0, width: 300, height: 300)
+    var path = DrawPath(
+      brush: .init(color: .red, width: 30),
+      path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
+    )
+
+    path.drawScale = 0.5
+
+    engine.edit.croppingRect = CGRect(x: 0, y: 0, width: 400, height: 400)
+    engine.edit.drawer = [
+      path
+    ]
 
     let result = engine.render()
 

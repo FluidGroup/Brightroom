@@ -15,21 +15,30 @@ public protocol ImageEngineDelegate : class {
 
 public final class ImageEngine {
 
+  public struct Edit {
+    public var croppingRect: CGRect?
+    public var modifiers: [Filtering] = []
+    public var drawer: [GraphicsDrawing] = []
+  }
+
   private enum Static {
 
-    static let cicontext = CIContext(options: [CIContextOption.useSoftwareRenderer : true])
+    static let cicontext = CIContext(options: [
+      .useSoftwareRenderer : false,
+      .highQualityDownsample : true,
+      ])
   }
+
+  public weak var delegate: ImageEngineDelegate?
 
   public let targetImage: CIImage
 
-  public var croppingRect: CGRect?
-  public var modifiers: [Filtering] = []
-  public var drawer: [GraphicsDrawing] = []
+  public var edit: Edit = .init()
 
-  public convenience init(fullResolutionOriginalImage: UIImage) {
+  public convenience init(targetImage: UIImage) {
 
-    let image = CIImage(image: fullResolutionOriginalImage)!
-    let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(fullResolutionOriginalImage.imageOrientation))
+    let image = CIImage(image: targetImage)!
+    let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(targetImage.imageOrientation))
 
     self.init(targetImage: fixedOriantationImage)
   }
@@ -38,29 +47,20 @@ public final class ImageEngine {
     self.targetImage = targetImage
   }
 
-  public func makePreviewEngine() -> PreviewImageEngine {
-
-    let engine = PreviewImageEngine(
-      fullResolutionOriginalImage: targetImage,
-      previewSize: .zero
-    )
-    return engine
-  }
-
   public func render() -> UIImage {
 
     let resultImage: CIImage = {
 
       let image: CIImage
 
-      if var croppingRect = croppingRect {
+      if var croppingRect = edit.croppingRect {
         croppingRect.origin.y = targetImage.extent.height - croppingRect.minY - croppingRect.height
         image = targetImage.cropped(to: croppingRect.rounded())
       } else {
         image = targetImage
       }
 
-      let result = modifiers.reduce(image, { image, modifier in
+      let result = edit.modifiers.reduce(image, { image, modifier in
         return modifier.apply(to: image)
       })
 
@@ -86,6 +86,10 @@ public final class ImageEngine {
         cgContext.scaleBy(x: 1, y: -1)
         cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
         cgContext.restoreGState()
+
+        self.edit.drawer.forEach { drawer in
+          drawer.draw(in: context)
+        }
     }
 
     return image
@@ -93,24 +97,61 @@ public final class ImageEngine {
   }
 }
 
-public final class PreviewImageEngine {
+public protocol PreviewImageEngineDelegate : class {
 
-  var image: CIImage
+}
+
+public final class PreviewImageEngine : PreviewImageEngineDelegate {
+
+  var previewImage: CIImage?
   var imageForCropping: UIImage
+  let scaleFromOriginal: CGFloat
+
+  let engine: ImageEngine
 
   init(
-    fullResolutionOriginalImage: CIImage,
+    engine: ImageEngine,
     previewSize: CGSize
     ) {
 
+    self.engine = engine
+
     let ratio = _ratio(
-      to: fullResolutionOriginalImage.extent.size,
+      to: engine.targetImage.extent.size,
       from: previewSize
     )
 
-    image = fullResolutionOriginalImage
+    self.scaleFromOriginal = ratio
 
-    imageForCropping = .init()
+    self.imageForCropping = UIImage.init(
+      ciImage: engine.targetImage,
+      scale: UIScreen.main.scale,
+      orientation: .up
+    )
+  }
+
+  public func set(cropRect: CGRect, from displayingBounds: CGRect) {
+
+    assert(
+      engine.targetImage.extent.size == CGSize(
+        width: imageForCropping.size.width * imageForCropping.scale,
+        height: imageForCropping.size.height * imageForCropping.scale
+      )
+    )
+
+    let scale = _ratio(
+      to: engine.targetImage.extent.size,
+      from: displayingBounds.size
+    )
+
+    var _cropRect = cropRect
+    _cropRect.origin.x *= scale
+    _cropRect.origin.y *= scale
+    _cropRect.size.width *= scale
+    _cropRect.size.height *= scale
+
+
+    
   }
 }
 

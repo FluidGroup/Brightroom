@@ -28,6 +28,8 @@
 		4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */; };
 		4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E8216BBA8A001593B9 /* Filtering.swift */; };
 		4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02EB216BBDA8001593B9 /* Layer.swift */; };
+		4B9B030C216C55DA001593B9 /* OvalBrush.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030B216C55D9001593B9 /* OvalBrush.swift */; };
+		4B9B030E216C58C6001593B9 /* DrawnPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030D216C58C6001593B9 /* DrawnPath.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +80,8 @@
 		4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphicDrawing.swift; sourceTree = "<group>"; };
 		4B9B02E8216BBA8A001593B9 /* Filtering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Filtering.swift; sourceTree = "<group>"; };
 		4B9B02EB216BBDA8001593B9 /* Layer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layer.swift; sourceTree = "<group>"; };
+		4B9B030B216C55D9001593B9 /* OvalBrush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OvalBrush.swift; sourceTree = "<group>"; };
+		4B9B030D216C58C6001593B9 /* DrawnPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPath.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +129,8 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B9B0310216C58EB001593B9 /* Filters */,
+				4B9B030F216C58DE001593B9 /* Graphics */,
 				4B600B00216B7A94001E1456 /* PixelEngine.h */,
 				4B600B01216B7A94001E1456 /* Info.plist */,
 				4B9B02EA216BBB6B001593B9 /* Engine */,
@@ -173,11 +179,27 @@
 			children = (
 				4B600B18216B7BB9001E1456 /* Engine.swift */,
 				4B9B02EB216BBDA8001593B9 /* Layer.swift */,
-				4B600B1A216B7BE2001E1456 /* Filter.swift */,
-				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
-				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
 			);
 			path = Engine;
+			sourceTree = "<group>";
+		};
+		4B9B030F216C58DE001593B9 /* Graphics */ = {
+			isa = PBXGroup;
+			children = (
+				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
+				4B9B030B216C55D9001593B9 /* OvalBrush.swift */,
+				4B9B030D216C58C6001593B9 /* DrawnPath.swift */,
+			);
+			path = Graphics;
+			sourceTree = "<group>";
+		};
+		4B9B0310216C58EB001593B9 /* Filters */ = {
+			isa = PBXGroup;
+			children = (
+				4B600B1A216B7BE2001E1456 /* Filter.swift */,
+				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
+			);
+			path = Filters;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -299,9 +321,11 @@
 				4B600B16216B7B79001E1456 /* GLImageView.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
 				4B600B1B216B7BE2001E1456 /* Filter.swift in Sources */,
+				4B9B030C216C55DA001593B9 /* OvalBrush.swift in Sources */,
 				4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */,
 				4B600B19216B7BB9001E1456 /* Engine.swift in Sources */,
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
+				4B9B030E216C58C6001593B9 /* DrawnPath.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
