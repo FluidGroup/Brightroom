@@ -23,6 +23,8 @@ public final class PixelEditViewController : UIViewController {
     case preview
   }
 
+  private let cropView = CropAndStraightenView()
+
   private let editContainerView = UIView()
 
   private let controlContainerView = UIView()
@@ -32,12 +34,6 @@ public final class PixelEditViewController : UIViewController {
   public let engine: ImageEngine
 
   private var previewEngine: PreviewImageEngine!
-
-  private lazy var standaloneNavigationBar: UINavigationBar = .init()
-
-  private var targetNagitaionBar: UINavigationBar {
-    return navigationController?.navigationBar ?? standaloneNavigationBar
-  }
 
   public weak var delegate: PixelEditViewControllerDelegate?
 
@@ -94,6 +90,20 @@ public final class PixelEditViewController : UIViewController {
 
       }
 
+      edit: do {
+
+        editContainerView.addSubview(cropView)
+
+        cropView.translatesAutoresizingMaskIntoConstraints = false
+        cropView.topAnchor.constraint(equalTo: cropView.superview!.topAnchor).isActive = true
+        cropView.rightAnchor.constraint(equalTo: cropView.superview!.rightAnchor).isActive = true
+        cropView.bottomAnchor.constraint(equalTo: cropView.superview!.bottomAnchor).isActive = true
+        cropView.leftAnchor.constraint(equalTo: cropView.superview!.leftAnchor).isActive = true
+
+        cropView.widthAnchor.constraint(equalTo: cropView.heightAnchor, multiplier: 1).isActive = true
+
+      }
+
       control: do {
 
         let stackView = ControlStackView()
@@ -122,6 +132,13 @@ public final class PixelEditViewController : UIViewController {
 
     }
 
+    start: do {
+
+      view.layoutIfNeeded()
+
+      cropView.image = previewEngine.imageForCropping
+    }
+
   }
 
   @objc
@@ -142,8 +159,6 @@ public final class PixelEditViewController : UIViewController {
   }
 
 }
-
-
 
 private final class CropViewController : UIViewController {
 
@@ -209,19 +224,7 @@ private final class CropViewController : UIViewController {
 
       }
 
-      edit: do {
 
-        editContainerView.addSubview(cropView)
-
-        cropView.translatesAutoresizingMaskIntoConstraints = false
-        cropView.topAnchor.constraint(equalTo: cropView.superview!.topAnchor).isActive = true
-        cropView.rightAnchor.constraint(equalTo: cropView.superview!.rightAnchor).isActive = true
-        cropView.bottomAnchor.constraint(equalTo: cropView.superview!.bottomAnchor).isActive = true
-        cropView.leftAnchor.constraint(equalTo: cropView.superview!.leftAnchor).isActive = true
-
-        cropView.widthAnchor.constraint(equalTo: cropView.heightAnchor, multiplier: 1).isActive = true
-
-      }
 
       control: do {
 
