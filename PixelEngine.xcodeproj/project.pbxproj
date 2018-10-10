@@ -47,6 +47,8 @@
 		4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456C216DEBB1003A240A /* ParameterRange.swift */; };
 		4B9D4571216DF1A1003A240A /* Media.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B9D4570216DF1A1003A240A /* Media.xcassets */; };
 		4B9D4575216DF66F003A240A /* NavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4574216DF66F003A240A /* NavigationView.swift */; };
+		4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4576216E0694003A240A /* ImagePreviewView.swift */; };
+		4B9D457A216E8013003A240A /* ContentRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4579216E8013003A240A /* ContentRect.swift */; };
 		734FD1056420C24F002EE1FF /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */; };
 /* End PBXBuildFile section */
 
@@ -126,6 +128,8 @@
 		4B9D456E216DEE95003A240A /* StepSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSlider.swift; sourceTree = "<group>"; };
 		4B9D4570216DF1A1003A240A /* Media.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Media.xcassets; sourceTree = "<group>"; };
 		4B9D4574216DF66F003A240A /* NavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationView.swift; sourceTree = "<group>"; };
+		4B9D4576216E0694003A240A /* ImagePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePreviewView.swift; sourceTree = "<group>"; };
+		4B9D4579216E8013003A240A /* ContentRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentRect.swift; sourceTree = "<group>"; };
 		5746031AA05B70B21F9A640E /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		C0220044A87FC9A27E8277C4 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -166,18 +170,13 @@
 		4B47D053216CC5350007B594 /* PixelEditor */ = {
 			isa = PBXGroup;
 			children = (
-				4B47D05F216CC5480007B594 /* CropAndStraightenView.swift */,
+				4B9D4578216E07BC003A240A /* Components */,
 				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
-				4B9D4562216DD143003A240A /* ControlStackView.swift */,
-				4B9D4564216DD1E0003A240A /* TopControlView.swift */,
-				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
-				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
 				4B47D05E216CC5480007B594 /* ZoomImageView.swift */,
 				4B47D054216CC5350007B594 /* PixelEditor.h */,
 				4B47D055216CC5350007B594 /* Info.plist */,
 				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
-				4B9D4574216DF66F003A240A /* NavigationView.swift */,
 				4B9D4570216DF1A1003A240A /* Media.xcassets */,
 			);
 			path = PixelEditor;
@@ -214,6 +213,7 @@
 				4B600B01216B7A94001E1456 /* Info.plist */,
 				4B9B02EA216BBB6B001593B9 /* Engine */,
 				4B600B17216B7B93001E1456 /* ImageView */,
+				4B9D4579216E8013003A240A /* ContentRect.swift */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -283,6 +283,20 @@
 				4B9D456C216DEBB1003A240A /* ParameterRange.swift */,
 			);
 			path = Filters;
+			sourceTree = "<group>";
+		};
+		4B9D4578216E07BC003A240A /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				4B9D4574216DF66F003A240A /* NavigationView.swift */,
+				4B47D05F216CC5480007B594 /* CropAndStraightenView.swift */,
+				4B9D4576216E0694003A240A /* ImagePreviewView.swift */,
+				4B9D4562216DD143003A240A /* ControlStackView.swift */,
+				4B9D4564216DD1E0003A240A /* TopControlView.swift */,
+				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
+				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		868BF3B9AACA397101103395 /* Pods */ = {
@@ -498,6 +512,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B47D061216CC5480007B594 /* ZoomImageView.swift in Sources */,
+				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
 				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* BrightnessControlView.swift in Sources */,
@@ -524,6 +539,7 @@
 				4B600B19216B7BB9001E1456 /* Engine.swift in Sources */,
 				4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */,
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
+				4B9D457A216E8013003A240A /* ContentRect.swift in Sources */,
 				4B9B030E216C58C6001593B9 /* DrawnPath.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

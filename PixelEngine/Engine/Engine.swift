@@ -103,6 +103,14 @@ public protocol PreviewImageEngineDelegate : class {
 
 public final class PreviewImageEngine : PreviewImageEngineDelegate {
 
+  private enum Static {
+
+    static let cicontext = CIContext(options: [
+      .useSoftwareRenderer : false,
+      .highQualityDownsample : true,
+      ])
+  }
+
   public var previewImage: CIImage?
   public var imageForCropping: UIImage
   public let scaleFromOriginal: CGFloat
@@ -123,11 +131,19 @@ public final class PreviewImageEngine : PreviewImageEngineDelegate {
 
     self.scaleFromOriginal = ratio
 
-    self.imageForCropping = UIImage.init(
-      ciImage: engine.targetImage,
-      scale: UIScreen.main.scale,
-      orientation: .up
-    )
+    let cgImage = Static.cicontext.createCGImage(engine.targetImage, from: engine.targetImage.extent)!
+
+    let uiImage = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
+
+    self.imageForCropping = uiImage
+
+//      UIImage.init(
+//      ciImage: engine.targetImage,
+//      scale: UIScreen.main.scale,
+//      orientation: .up
+//    )
+
+    self.previewImage = engine.targetImage
   }
 
   public func set(cropRect: CGRect, from displayingBounds: CGRect) {

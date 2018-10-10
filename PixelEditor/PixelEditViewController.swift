@@ -23,6 +23,8 @@ public final class PixelEditViewController : UIViewController {
     case preview
   }
 
+  private let previewView = ImagePreviewView()
+
   private let cropView = CropAndStraightenView()
 
   private let editContainerView = UIView()
@@ -93,14 +95,22 @@ public final class PixelEditViewController : UIViewController {
       edit: do {
 
         editContainerView.addSubview(cropView)
+        editContainerView.addSubview(previewView)
 
+        previewView.translatesAutoresizingMaskIntoConstraints = false
         cropView.translatesAutoresizingMaskIntoConstraints = false
-        cropView.topAnchor.constraint(equalTo: cropView.superview!.topAnchor).isActive = true
-        cropView.rightAnchor.constraint(equalTo: cropView.superview!.rightAnchor).isActive = true
-        cropView.bottomAnchor.constraint(equalTo: cropView.superview!.bottomAnchor).isActive = true
-        cropView.leftAnchor.constraint(equalTo: cropView.superview!.leftAnchor).isActive = true
 
-        cropView.widthAnchor.constraint(equalTo: cropView.heightAnchor, multiplier: 1).isActive = true
+        NSLayoutConstraint.activate([
+          cropView.topAnchor.constraint(equalTo: cropView.superview!.topAnchor),
+          cropView.rightAnchor.constraint(equalTo: cropView.superview!.rightAnchor),
+          cropView.bottomAnchor.constraint(equalTo: cropView.superview!.bottomAnchor),
+          cropView.leftAnchor.constraint(equalTo: cropView.superview!.leftAnchor),
+
+          previewView.topAnchor.constraint(equalTo: previewView.superview!.topAnchor),
+          previewView.rightAnchor.constraint(equalTo: previewView.superview!.rightAnchor),
+          previewView.bottomAnchor.constraint(equalTo: previewView.superview!.bottomAnchor),
+          previewView.leftAnchor.constraint(equalTo: previewView.superview!.leftAnchor),
+          ])
 
       }
 
@@ -137,6 +147,8 @@ public final class PixelEditViewController : UIViewController {
       view.layoutIfNeeded()
 
       cropView.image = previewEngine.imageForCropping
+
+      previewView.image = previewEngine.previewImage
     }
 
   }

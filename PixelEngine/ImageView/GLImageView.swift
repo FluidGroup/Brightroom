@@ -23,19 +23,6 @@ public class GLImageView : GLKView, HardwareImageViewType {
     }
   }
 
-  private var destRect: CGRect {
-
-    let scale = contentScaleFactor
-    let destRect = bounds.applying(CGAffineTransform(scaleX: scale, y: scale))
-
-    return CGRect(
-      x: round(destRect.origin.x),
-      y: round(destRect.origin.y),
-      width: round(destRect.width),
-      height: round(destRect.height)
-    )
-  }
-
   // MARK: - Initializers
 
   public override convenience init(frame: CGRect) {
@@ -79,6 +66,15 @@ public class GLImageView : GLKView, HardwareImageViewType {
       return
     }
 
-    coreImageContext.draw(image, in: destRect, from: image.extent)
+    var _bounds = bounds
+    _bounds.size.width *= contentScaleFactor
+    _bounds.size.height *= contentScaleFactor
+
+    let targetRect = ContentRect.rectThatAspectFill(
+      aspectRatio: image.extent.size,
+      minimumRect: _bounds
+    )
+
+    coreImageContext.draw(image, in: targetRect, from: image.extent)
   }
 }
