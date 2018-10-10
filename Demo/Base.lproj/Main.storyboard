@@ -41,6 +41,26 @@
                                             <segue destination="BYZ-38-t0r" kind="show" id="BNE-x7-2M7"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" textLabel="xJY-lp-A6d" style="IBUITableViewCellStyleDefault" id="s1Y-xS-Qum">
+                                        <rect key="frame" x="0.0" y="44" width="375" height="44"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="s1Y-xS-Qum" id="p7b-pr-eDS">
+                                            <rect key="frame" x="0.0" y="0.0" width="375" height="43.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" insetsLayoutMarginsFromSafeArea="NO" text="Editor" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="xJY-lp-A6d">
+                                                    <rect key="frame" x="16" y="0.0" width="343" height="43.5"/>
+                                                    <autoresizingMask key="autoresizingMask"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <segue destination="ra8-Bb-A3k" kind="show" id="7XW-Ac-P67"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                         </sections>
@@ -54,6 +74,48 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="B8g-cr-YgR" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="336.80000000000001" y="132.68365817091455"/>
+        </scene>
+        <!--Editor View Controller-->
+        <scene sceneID="U6J-Jk-O5Y">
+            <objects>
+                <viewController id="ra8-Bb-A3k" customClass="EditorViewController" customModule="Demo" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="YjF-Ei-1KN">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="200"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="vwj-E5-JQy">
+                                <rect key="frame" x="161" y="66" width="53" height="68"/>
+                                <subviews>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5OI-XE-CkV">
+                                        <rect key="frame" x="0.0" y="0.0" width="53" height="30"/>
+                                        <state key="normal" title="Present"/>
+                                        <connections>
+                                            <action selector="didTapPresentButton" destination="ra8-Bb-A3k" eventType="touchUpInside" id="0JH-4b-s5l"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="yql-ja-UAV">
+                                        <rect key="frame" x="0.0" y="38" width="53" height="30"/>
+                                        <state key="normal" title="Push"/>
+                                        <connections>
+                                            <action selector="didTapPushButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="hKV-Zl-PgD"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                            </stackView>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstItem="vwj-E5-JQy" firstAttribute="centerY" secondItem="YjF-Ei-1KN" secondAttribute="centerY" id="EGT-3b-1Ct"/>
+                            <constraint firstItem="vwj-E5-JQy" firstAttribute="centerX" secondItem="YjF-Ei-1KN" secondAttribute="centerX" id="dZA-Np-ga0"/>
+                        </constraints>
+                        <viewLayoutGuide key="safeArea" id="4sA-BM-Q5K"/>
+                    </view>
+                    <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+                    <size key="freeformSize" width="375" height="200"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="QNl-KZ-Av6" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1076" y="-344"/>
         </scene>
         <!--View Controller-->
         <scene sceneID="tne-QT-ifu">
@@ -93,7 +155,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1076" y="132.68365817091455"/>
+            <point key="canvasLocation" x="1270" y="133"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="4hu-Qs-Qi7">
