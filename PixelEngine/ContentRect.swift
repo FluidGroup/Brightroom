@@ -17,10 +17,10 @@ public enum ContentRect {
     var size = boundingSize
 
     if widthRatio < heightRatio {
-      size.height = boundingSize.width / aspectRatio.width * aspectRatio.height;
+      size.height = boundingSize.width / aspectRatio.width * aspectRatio.height
     }
     else if (heightRatio < widthRatio) {
-      size.width = boundingSize.height / aspectRatio.height * aspectRatio.width;
+      size.width = boundingSize.height / aspectRatio.height * aspectRatio.width
     }
 
     return CGSize(

@@ -176,6 +176,7 @@ extension TopControlView {
       item: do {
 
         adjustment: do {
+
           let button = UIButton(type: .system)
           button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
           button.setTitle(TODOL10n("Adjust"), for: .normal)

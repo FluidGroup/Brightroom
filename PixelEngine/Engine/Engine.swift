@@ -99,8 +99,8 @@ public final class ImageEngine {
 
 public protocol PreviewImageEngineDelegate : class {
 
-  func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage: CIImage)
-  func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage: UIImage)
+  func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage image: UIImage?)
+  func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage image: UIImage?)
 }
 
 public final class PreviewImageEngine {
@@ -112,21 +112,33 @@ public final class PreviewImageEngine {
       ])
   }
 
-  public var previewImage: CIImage {
+  public var previewImage: UIImage? {
     didSet {
       delegate?.previewImageEngine(self, didChangePreviewImage: previewImage)
     }
   }
 
-  public var adjustmentImage: UIImage {
+  public var originalPreviewImage: CIImage? {
+    didSet {
+
+      previewImage = originalPreviewImage.map {
+        UIImage(ciImage: $0, scale: targetScreenScale, orientation: .up)
+      }
+
+    }
+  }
+
+  public var adjustmentImage: UIImage? {
     didSet {
       delegate?.previewImageEngine(self, didChangeAdjustmentImage: adjustmentImage)
     }
   }
 
-  public let scaleFromOriginal: CGFloat
-
   public let engine: ImageEngine
+
+  public let preferredPreviewSize: CGSize
+
+  public let targetScreenScale: CGFloat
 
   public weak var delegate: PreviewImageEngineDelegate?
 
@@ -136,32 +148,64 @@ public final class PreviewImageEngine {
     screenScale: CGFloat = UIScreen.main.scale
     ) {
 
+    self.targetScreenScale = screenScale
+    self.preferredPreviewSize = previewSize
+
     self.engine = engine
 
-    let ratio = _ratio(
-      to: engine.targetImage.extent.size,
-      from: previewSize
+    self.adjustmentImage = UIImage(
+      ciImage: engine.targetImage,
+      scale: screenScale,
+      orientation: .up
     )
 
-    self.scaleFromOriginal = ratio
+    originalPreviewImage = ImageTool.resize(
+      to: ContentRect.sizeThatAspectFill(
+        aspectRatio: engine.targetImage.extent.size,
+        minimumSize: CGSize(
+          width: preferredPreviewSize.width * targetScreenScale,
+          height: preferredPreviewSize.height * targetScreenScale
+        )
+      ),
+      from: engine.targetImage
+    )
 
-    self.adjustmentImage = UIImage.init(ciImage: engine.targetImage, scale: screenScale, orientation: .up)
+    setAdjustment(cropRect: engine.edit.croppingRect ?? engine.targetImage.extent)
 
-    let image = engine.targetImage
-    let scale = min(previewSize.width / image.extent.width * screenScale, previewSize.height / image.extent.height * screenScale)
-
-    self.previewImage = image//.transformed(by: .init(scaleX: scale, y: scale))
-
-//    DispatchQueue.global().async {
-//
-//      let cgImage = Static.cicontext.createCGImage(engine.targetImage, from: engine.targetImage.extent)!
-//      let uiImage = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
-//      self.adjustmentImage = uiImage
-//    }
+    self.adjustmentImage = engine.targetImage.cgImage
+      .flatMap { UIImage(cgImage: $0, scale: screenScale, orientation: .up) }
+      ?? UIImage(ciImage: engine.targetImage, scale: screenScale, orientation: .up)
   }
 
   public func requestApplyingFilterImage() -> CIImage {
     fatalError()
+  }
+
+  public func setAdjustment(cropRect: CGRect) {
+
+    let originalImage = engine.targetImage
+
+    var _cropRect = cropRect.rounded()
+
+    engine.edit.croppingRect = _cropRect
+
+    _cropRect.origin.y = originalImage.extent.height - _cropRect.minY - _cropRect.height
+
+    let croppedImage = originalImage
+      .cropped(to: _cropRect)
+
+    let result = ImageTool.resize(
+      to: ContentRect.sizeThatAspectFit(
+        aspectRatio: croppedImage.extent.size,
+        boundingSize: CGSize(
+          width: preferredPreviewSize.width * targetScreenScale,
+          height: preferredPreviewSize.height * targetScreenScale
+        )
+      ),
+      from: croppedImage
+    )
+
+    originalPreviewImage = result
   }
 }
 
@@ -194,7 +238,28 @@ fileprivate func imageOrientationToTiffOrientation(_ value: UIImage.Orientation)
   }
 }
 
+extension CGFloat {
+
+  fileprivate mutating func ceil() {
+    self = Darwin.ceil(self)
+  }
+}
+
 extension CGRect {
+
+  /// Round x, y, width, height
+  fileprivate func ceiled() -> CGRect {
+
+    var _rect = self
+
+    _rect.origin.x.ceil()
+    _rect.origin.y.ceil()
+    _rect.size.width.ceil()
+    _rect.size.height.ceil()
+
+    return _rect
+
+  }
 
   /// Round x, y, width, height
   fileprivate func rounded() -> CGRect {

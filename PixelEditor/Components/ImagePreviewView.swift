@@ -20,12 +20,12 @@ final class ImagePreviewView : UIView {
 
   let imageView: UIImageView = .init()
 
-  var image: CIImage? {
+  var image: UIImage? {
     get {
-      return imageView.image?.ciImage
+      return imageView.image
     }
     set {
-      imageView.image = newValue.map { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+      imageView.image = newValue
     }
   }
 

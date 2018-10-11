@@ -24,7 +24,7 @@ class ViewController: UIViewController {
 
     let engine = ImageEngine(targetImage: image)
 
-    var path = DrawPath(
+    var path = DrawnPath(
       brush: .init(color: .red, width: 30),
       path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
     )

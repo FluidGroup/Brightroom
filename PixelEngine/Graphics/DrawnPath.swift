@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct DrawPath : GraphicsDrawing, Equatable {
+public struct DrawnPath : GraphicsDrawing, Equatable {
 
   // MARK: - Properties
 
@@ -46,11 +46,24 @@ public struct DrawPath : GraphicsDrawing, Equatable {
       UIGraphicsPopContext()
     }
 
-    context.cgContext.scaleBy(x: drawScale, y: drawScale)
+    draw()
+  }
+
+  public func draw() {
+
+    guard let context = UIGraphicsGetCurrentContext() else {
+      return
+    }
+
+    context.saveGState()
+    defer {
+      context.restoreGState()
+    }
+
+    context.scaleBy(x: drawScale, y: drawScale)
     brush.color.setStroke()
     let bezierPath = brushedPath()
     bezierPath.stroke(with: brush.blendMode, alpha: brush.alpha)
-
   }
 
 }

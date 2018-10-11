@@ -34,10 +34,12 @@ final class CropAndStraightenView : UIView {
       var _visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
 
       let scale = _ratio(
-        to: image.size,
+        to: CGSize(
+          width: image.size.width * image.scale,
+          height: image.size.height * image.scale
+        ),
         from: imageView.internalImageView.bounds.size
       )
-      * image.scale
 
       _visibleRect.origin.x *= scale
       _visibleRect.origin.y *= scale
@@ -51,13 +53,20 @@ final class CropAndStraightenView : UIView {
       guard let image = image else { return }
 
       imageView.zoomScale = 0
-      let _scale = _ratio(to: imageView.contentSize, from: image.size)
+
+      let scale = _ratio(
+        to: imageView.internalImageView.bounds.size,
+        from: CGSize(
+          width: image.size.width * image.scale,
+          height: image.size.height * image.scale
+        )
+      )
 
       var _visibleRect = newValue
-      _visibleRect.origin.x *= _scale
-      _visibleRect.origin.y *= _scale
-      _visibleRect.size.width *= _scale
-      _visibleRect.size.height *= _scale
+      _visibleRect.origin.x *= scale
+      _visibleRect.origin.y *= scale
+      _visibleRect.size.width *= scale
+      _visibleRect.size.height *= scale
 
       imageView.zoom(to: _visibleRect, animated: false)
     }
@@ -143,5 +152,5 @@ final class CropAndStraightenView : UIView {
 private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
 
 //  assert(to.width / from.width == to.height / from.height)
-  return to.height / from.height
+  return min(to.height / from.height, to.width / from.width)
 }

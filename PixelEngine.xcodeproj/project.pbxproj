@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
+		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
 		4B47D056216CC5350007B594 /* PixelEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B47D054216CC5350007B594 /* PixelEditor.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B47D059216CC5350007B594 /* PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; };
@@ -91,6 +93,8 @@
 
 /* Begin PBXFileReference section */
 		29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
+		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
 		4B112F14216C9B5400EF8E25 /* ImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTool.swift; sourceTree = "<group>"; };
 		4B47D052216CC5350007B594 /* PixelEditor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEditor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
@@ -310,6 +314,8 @@
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
 				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
 				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
+				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
+				4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -528,6 +534,7 @@
 			files = (
 				4B47D061216CC5480007B594 /* ZoomImageView.swift in Sources */,
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
+				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
 				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* BrightnessControlView.swift in Sources */,
@@ -536,6 +543,7 @@
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* TopControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
+				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
 				4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */,
 			);

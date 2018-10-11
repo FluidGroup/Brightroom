@@ -26,7 +26,7 @@ final class EditorViewController : UIViewController {
 
   @IBAction func didTapPushButton(_ sender: Any) {
 
-    let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    let controller = PixelEditViewController.init(image: UIImage(named: "unsplash1")!)
 
     navigationController?.pushViewController(controller, animated: true)
   }

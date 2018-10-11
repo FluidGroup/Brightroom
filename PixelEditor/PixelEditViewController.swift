@@ -38,6 +38,7 @@ public final class PixelEditViewController : UIViewController {
   public enum Mode {
 
     case adjustment
+    case masking
     case preview
   }
 
@@ -47,6 +48,8 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     }
   }
+
+  private let maskingView = BlurredMosaicView()
 
   private let previewView = ImagePreviewView()
 
@@ -58,7 +61,7 @@ public final class PixelEditViewController : UIViewController {
 
   private let cropButton = UIButton(type: .system)
 
-  private let doneButton = UIBarButtonItem(
+  private lazy var doneButton = UIBarButtonItem(
     title: TODOL10n("Done"),
     style: .plain,
     target: self,
@@ -121,31 +124,34 @@ public final class PixelEditViewController : UIViewController {
           controlContainerView.topAnchor.constraint(equalTo: editContainerView.bottomAnchor),
           controlContainerView.rightAnchor.constraint(equalTo: editContainerView.rightAnchor),
           controlContainerView.leftAnchor.constraint(equalTo: editContainerView.leftAnchor),
-          controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+          {
+            if #available(iOS 11.0, *) {
+              return controlContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            } else {
+              return controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            }
+          }()
           ])
 
       }
 
       edit: do {
 
-        editContainerView.addSubview(adjustmentView)
-        editContainerView.addSubview(previewView)
-
-        previewView.translatesAutoresizingMaskIntoConstraints = false
-        adjustmentView.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-          adjustmentView.topAnchor.constraint(equalTo: adjustmentView.superview!.topAnchor),
-          adjustmentView.rightAnchor.constraint(equalTo: adjustmentView.superview!.rightAnchor),
-          adjustmentView.bottomAnchor.constraint(equalTo: adjustmentView.superview!.bottomAnchor),
-          adjustmentView.leftAnchor.constraint(equalTo: adjustmentView.superview!.leftAnchor),
-
-          previewView.topAnchor.constraint(equalTo: previewView.superview!.topAnchor),
-          previewView.rightAnchor.constraint(equalTo: previewView.superview!.rightAnchor),
-          previewView.bottomAnchor.constraint(equalTo: previewView.superview!.bottomAnchor),
-          previewView.leftAnchor.constraint(equalTo: previewView.superview!.leftAnchor),
-          ])
-
+        [
+          adjustmentView,
+          maskingView,
+          previewView
+          ].forEach { view in
+            view.translatesAutoresizingMaskIntoConstraints = false
+            editContainerView.addSubview(view)
+            NSLayoutConstraint.activate([
+              view.topAnchor.constraint(equalTo: view.superview!.topAnchor),
+              view.rightAnchor.constraint(equalTo: view.superview!.rightAnchor),
+              view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor),
+              view.leftAnchor.constraint(equalTo: view.superview!.leftAnchor),
+              ])
+        }
+        
       }
 
       control: do {
@@ -173,7 +179,9 @@ public final class PixelEditViewController : UIViewController {
         case .setMode(let mode):
           self.set(mode: mode)
         case .endAdjustment(let save):
-          break
+          if save {
+            self.previewEngine.setAdjustment(cropRect: self.adjustmentView.visibleExtent)
+          }
         }
       }
 
@@ -181,6 +189,7 @@ public final class PixelEditViewController : UIViewController {
 
     start: do {
 
+      previewEngine.delegate = self
       view.layoutIfNeeded()
 
       set(mode: mode)
@@ -191,20 +200,34 @@ public final class PixelEditViewController : UIViewController {
   @objc
   private func didTapDoneButton() {
 
-    print("done")
+    let renderedImage = engine.render()
+    print("done", renderedImage)
   }
 
   private func set(mode: Mode) {
 
+
+    adjustmentView.isHidden = true
+    previewView.isHidden = true
+    maskingView.isHidden = true
+
     switch mode {
     case .adjustment:
       navigationItem.rightBarButtonItem = nil
+
       adjustmentView.isHidden = false
-      previewView.isHidden = true
+
       adjustmentView.image = previewEngine.adjustmentImage
+      if let croppingRect = engine.edit.croppingRect {
+        adjustmentView.visibleExtent = croppingRect
+      }
+    case .masking:
+
+      navigationItem.rightBarButtonItem = nil
+      maskingView.isHidden = false
+
     case .preview:
       navigationItem.rightBarButtonItem = doneButton
-      adjustmentView.isHidden = true
       previewView.isHidden = false
       previewView.image = previewEngine.previewImage
     }
@@ -215,11 +238,11 @@ public final class PixelEditViewController : UIViewController {
 
 extension PixelEditViewController : PreviewImageEngineDelegate {
 
-  public func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage: CIImage) {
-
+  public func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage image: UIImage?) {
+    previewView.image = image
   }
 
-  public func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage: UIImage) {
+  public func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage image: UIImage?) {
 
   }
 
