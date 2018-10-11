@@ -8,21 +8,7 @@
 
 import Foundation
 
-open class AdjustmentControlViewBase : UIView, ControlChildViewType {
-
-  init() {
-    super.init(frame: .zero)
-    setup()
-  }
-
-  @available(*, unavailable)
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  open func setup() {
-
-  }
+open class AdjustmentControlViewBase : ControlViewBase, ControlChildViewType {
 
 }
 
@@ -49,13 +35,27 @@ public final class AdjustmentControlView : AdjustmentControlViewBase {
     navigationView.didTapCancelButton = { [weak self] in
 
       self?.pop()
+      self?.context.action(.endAdjustment(save: false))
     }
 
     navigationView.didTapSaveButton = { [weak self] in
 
       self?.pop()
+      self?.context.action(.endAdjustment(save: true))
+    }
+
+  }
+
+  public override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+
+    if superview != nil {
+      context.action(.setMode(.adjustment))
+    } else {
+      context.action(.setMode(.preview))
     }
 
   }
 
 }
+

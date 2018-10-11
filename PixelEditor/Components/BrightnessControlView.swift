@@ -10,24 +10,13 @@ import Foundation
 
 import struct PixelEngine.ParameterRange
 
-open class BrightnessControlViewBase : UIView {
+open class BrightnessControlViewBase : ControlViewBase {
 
-  public final var range: ParameterRange<Double> {
-    fatalError()
-  }
+  public final let range: ParameterRange<Double>
 
-  init(range: ParameterRange<Double>) {
-    super.init(frame: .zero)
-    setup()
-  }
-
-  @available(*, unavailable)
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  open func setup() {
-
+  init(range: ParameterRange<Double>, context: PixelEditContext) {
+    self.range = range
+    super.init(context: context)
   }
 
   open func set(brightness: Double) {

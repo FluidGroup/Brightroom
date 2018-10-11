@@ -63,14 +63,20 @@ open class MetalImageView : MTKView, HardwareImageViewType {
       origin: .zero,
       size: drawableSize
     )
-    let originX = image.extent.origin.x
-    let originY = image.extent.origin.y
-    let scaleX = drawableSize.width / image.extent.width
-    let scaleY = drawableSize.height / image.extent.height
+
+    let targetRect = ContentRect.rectThatAspectFill(
+      aspectRatio: image.extent.size,
+      minimumRect: bounds
+    )
+
+    let originX = targetRect.origin.x
+    let originY = targetRect.origin.y
+    let scaleX = targetRect.width / image.extent.width
+    let scaleY = targetRect.height / image.extent.height
     let scale = min(scaleX, scaleY)
     let scaledImage = image
-      .transformed(by: CGAffineTransform(translationX: -originX, y: -originY))
       .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+      .transformed(by: CGAffineTransform(translationX: originX, y: originY))
 
     ciContext.render(
       scaledImage,
@@ -83,6 +89,18 @@ open class MetalImageView : MTKView, HardwareImageViewType {
     commandBuffer?.present(currentDrawable!)
     commandBuffer?.commit()
   }
+}
+
+private func makeCGAffineTransform(from: CGRect, to: CGRect) -> CGAffineTransform {
+
+  return .init(
+    a: to.width / from.width,
+    b: 0,
+    c: 0,
+    d: to.height / from.height,
+    tx: to.midX - from.midX,
+    ty: to.midY - from.midY
+  )
 }
 
 #endif

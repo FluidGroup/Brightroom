@@ -31,7 +31,7 @@
 		4B600B3B216B7CDD001E1456 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3A216B7CDD001E1456 /* AVFoundation.framework */; };
 		4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3C216B7CE3001E1456 /* Foundation.framework */; };
 		4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */; };
-		4B9B02E1216BB6D4001593B9 /* RealtimeFilterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* RealtimeFilterViewController.swift */; };
+		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
 		4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */; };
@@ -49,6 +49,11 @@
 		4B9D4575216DF66F003A240A /* NavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4574216DF66F003A240A /* NavigationView.swift */; };
 		4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4576216E0694003A240A /* ImagePreviewView.swift */; };
 		4B9D457A216E8013003A240A /* ContentRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4579216E8013003A240A /* ContentRect.swift */; };
+		4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D457D216EE1AF003A240A /* DoodleControlView.swift */; };
+		4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D457F216EE1BC003A240A /* ControlViewBase.swift */; };
+		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
+		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
+		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
 		734FD1056420C24F002EE1FF /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */; };
 /* End PBXBuildFile section */
 
@@ -111,7 +116,7 @@
 		4B600B3A216B7CDD001E1456 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		4B600B3C216B7CE3001E1456 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		4B9B02E0216BB6D4001593B9 /* RealtimeFilterViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeFilterViewController.swift; sourceTree = "<group>"; };
+		4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageViewViewController.swift; sourceTree = "<group>"; };
 		4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalImageView.swift; sourceTree = "<group>"; };
 		4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageView.swift; sourceTree = "<group>"; };
 		4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphicDrawing.swift; sourceTree = "<group>"; };
@@ -130,6 +135,11 @@
 		4B9D4574216DF66F003A240A /* NavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationView.swift; sourceTree = "<group>"; };
 		4B9D4576216E0694003A240A /* ImagePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePreviewView.swift; sourceTree = "<group>"; };
 		4B9D4579216E8013003A240A /* ContentRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentRect.swift; sourceTree = "<group>"; };
+		4B9D457D216EE1AF003A240A /* DoodleControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleControlView.swift; sourceTree = "<group>"; };
+		4B9D457F216EE1BC003A240A /* ControlViewBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlViewBase.swift; sourceTree = "<group>"; };
+		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
+		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
+		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
 		5746031AA05B70B21F9A640E /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		C0220044A87FC9A27E8277C4 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -238,7 +248,10 @@
 				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
 				4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */,
 				4B600B2E216B7C9E001E1456 /* Info.plist */,
-				4B9B02E0216BB6D4001593B9 /* RealtimeFilterViewController.swift */,
+				4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */,
+				4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */,
+				4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */,
+				4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */,
 			);
 			path = Demo;
 			sourceTree = "<group>";
@@ -292,8 +305,10 @@
 				4B47D05F216CC5480007B594 /* CropAndStraightenView.swift */,
 				4B9D4576216E0694003A240A /* ImagePreviewView.swift */,
 				4B9D4562216DD143003A240A /* ControlStackView.swift */,
+				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
 				4B9D4564216DD1E0003A240A /* TopControlView.swift */,
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
+				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
 				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
 			);
 			path = Components;
@@ -521,6 +536,8 @@
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* TopControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
+				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
+				4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,8 +565,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */,
+				4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */,
 				4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */,
-				4B9B02E1216BB6D4001593B9 /* RealtimeFilterViewController.swift in Sources */,
+				4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */,
+				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
 				4B47D066216CC5DB0007B594 /* EditorViewController.swift in Sources */,
 			);

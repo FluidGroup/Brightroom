@@ -8,7 +8,7 @@
 
 import Foundation
 
-final class TopControlView : UIView, ControlChildViewType {
+final class TopControlView : ControlViewBase, ControlChildViewType {
 
   enum DisplayType {
     case filter
@@ -24,17 +24,17 @@ final class TopControlView : UIView, ControlChildViewType {
 
   private let containerView = UIView()
 
-  private lazy var filtesView = FilterControlView()
+  private lazy var filtesView = FilterControlView(context: context)
 
-  private lazy var editView = EditControlView()
+  private lazy var editView = EditControlView(context: context)
 
   private let filtersButton = UIButton(type: .system)
 
   private let editButton = UIButton(type: .system)
 
-  init() {
+  override init(context: PixelEditContext) {
 
-    super.init(frame: .zero)
+    super.init(context: context)
 
     layout: do {
 
@@ -76,10 +76,6 @@ final class TopControlView : UIView, ControlChildViewType {
 
   }
 
-  required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
   @objc
   private func didTapFilterButton() {
 
@@ -112,62 +108,109 @@ final class TopControlView : UIView, ControlChildViewType {
 
 extension TopControlView {
 
-  final class EditControlView : UIView, ControlChildViewType {
+  final class EditControlView : ControlViewBase, ControlChildViewType {
 
+    private let contentView = UIView()
     private let itemsView = UIStackView()
+    private let scrollView = UIScrollView()
 
-    init() {
-      super.init(frame: .zero)
+    override func setup() {
 
-      stack: do {
+      super.setup()
+
+      backgroundColor = .white
+
+      layout: do {
+
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.showsHorizontalScrollIndicator = false
+        if #available(iOS 11.0, *) {
+          scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        scrollView.contentInset.right = 36
+        scrollView.contentInset.left = 36
+        addSubview(scrollView)
+
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+          scrollView.topAnchor.constraint(equalTo: scrollView.superview!.topAnchor),
+          scrollView.rightAnchor.constraint(equalTo: scrollView.superview!.rightAnchor),
+          scrollView.leftAnchor.constraint(equalTo: scrollView.superview!.leftAnchor),
+          scrollView.bottomAnchor.constraint(equalTo: scrollView.superview!.bottomAnchor),
+          ])
+
+        scrollView.addSubview(contentView)
+
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+          contentView.widthAnchor.constraint(greaterThanOrEqualTo: contentView.superview!.widthAnchor, constant: -(scrollView.contentInset.right + scrollView.contentInset.left)),
+          contentView.heightAnchor.constraint(equalTo: contentView.superview!.heightAnchor),
+          contentView.topAnchor.constraint(equalTo: contentView.superview!.topAnchor),
+          contentView.rightAnchor.constraint(equalTo: contentView.superview!.rightAnchor),
+          contentView.leftAnchor.constraint(equalTo: contentView.superview!.leftAnchor),
+          contentView.bottomAnchor.constraint(equalTo: contentView.superview!.bottomAnchor),
+          ])
+
+        contentView.addSubview(itemsView)
 
         itemsView.axis = .horizontal
         itemsView.alignment = .center
-        itemsView.distribution = .equalSpacing
-        itemsView.spacing = 8
+        itemsView.distribution = .equalCentering
+        itemsView.spacing = 16
 
         itemsView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(itemsView)
 
         NSLayoutConstraint.activate([
-          itemsView.topAnchor.constraint(greaterThanOrEqualTo: itemsView.superview!.topAnchor),
-          itemsView.rightAnchor.constraint(equalTo: itemsView.superview!.rightAnchor),
-          itemsView.leftAnchor.constraint(equalTo: itemsView.superview!.leftAnchor),
-          itemsView.bottomAnchor.constraint(greaterThanOrEqualTo: itemsView.superview!.bottomAnchor),
-          itemsView.centerYAnchor.constraint(equalTo: itemsView.superview!.centerYAnchor),
+          itemsView.heightAnchor.constraint(equalTo: itemsView.superview!.heightAnchor),
+          itemsView.topAnchor.constraint(equalTo: itemsView.superview!.topAnchor),
+          itemsView.rightAnchor.constraint(lessThanOrEqualTo: itemsView.superview!.rightAnchor),
+          itemsView.leftAnchor.constraint(greaterThanOrEqualTo: itemsView.superview!.leftAnchor),
+          itemsView.bottomAnchor.constraint(equalTo: itemsView.superview!.bottomAnchor),
+          itemsView.centerXAnchor.constraint(equalTo: itemsView.superview!.centerXAnchor),
           ])
 
       }
 
       item: do {
 
-        let button = UIButton(type: .system)
+        adjustment: do {
+          let button = UIButton(type: .system)
+          button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
+          button.setTitle(TODOL10n("Adjust"), for: .normal)
+          itemsView.addArrangedSubview(button)
+        }
 
-        button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
-        button.setTitle(TODOL10n("Adjust"), for: .normal)
-        itemsView.addArrangedSubview(button)
+        doodle: do {
+          let button = UIButton(type: .system)
+          button.addTarget(self, action: #selector(doodle), for: .touchUpInside)
+          button.setTitle(TODOL10n("Doodle"), for: .normal)
+          itemsView.addArrangedSubview(button)
+        }
+
       }
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-      fatalError("init(coder:) has not been implemented")
     }
 
     @objc
     private func adjustment() {
 
-      push(AdjustmentControlView()) 
+      push(AdjustmentControlView(context: context))
     }
+
+    @objc
+    private func doodle() {
+
+      push(DoodleControlView(context: context))
+    }
+    
   }
 
-  final class FilterControlView : UIView, ControlChildViewType {
+  final class FilterControlView : ControlViewBase, ControlChildViewType {
 
-    init() {
-      super.init(frame: .zero)
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-      fatalError("init(coder:) has not been implemented")
+    override func setup() {
+      super.setup()
+      backgroundColor = .white
     }
   }
 

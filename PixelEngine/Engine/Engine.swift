@@ -99,27 +99,41 @@ public final class ImageEngine {
 
 public protocol PreviewImageEngineDelegate : class {
 
+  func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage: CIImage)
+  func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage: UIImage)
 }
 
-public final class PreviewImageEngine : PreviewImageEngineDelegate {
+public final class PreviewImageEngine {
 
   private enum Static {
 
     static let cicontext = CIContext(options: [
       .useSoftwareRenderer : false,
-      .highQualityDownsample : true,
       ])
   }
 
-  public var previewImage: CIImage?
-  public var imageForCropping: UIImage
+  public var previewImage: CIImage {
+    didSet {
+      delegate?.previewImageEngine(self, didChangePreviewImage: previewImage)
+    }
+  }
+
+  public var adjustmentImage: UIImage {
+    didSet {
+      delegate?.previewImageEngine(self, didChangeAdjustmentImage: adjustmentImage)
+    }
+  }
+
   public let scaleFromOriginal: CGFloat
 
   public let engine: ImageEngine
 
+  public weak var delegate: PreviewImageEngineDelegate?
+
   public init(
     engine: ImageEngine,
-    previewSize: CGSize
+    previewSize: CGSize,
+    screenScale: CGFloat = UIScreen.main.scale
     ) {
 
     self.engine = engine
@@ -131,41 +145,23 @@ public final class PreviewImageEngine : PreviewImageEngineDelegate {
 
     self.scaleFromOriginal = ratio
 
-    let cgImage = Static.cicontext.createCGImage(engine.targetImage, from: engine.targetImage.extent)!
+    self.adjustmentImage = UIImage.init(ciImage: engine.targetImage, scale: screenScale, orientation: .up)
 
-    let uiImage = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
+    let image = engine.targetImage
+    let scale = min(previewSize.width / image.extent.width * screenScale, previewSize.height / image.extent.height * screenScale)
 
-    self.imageForCropping = uiImage
+    self.previewImage = image//.transformed(by: .init(scaleX: scale, y: scale))
 
-//      UIImage.init(
-//      ciImage: engine.targetImage,
-//      scale: UIScreen.main.scale,
-//      orientation: .up
-//    )
-
-    self.previewImage = engine.targetImage
+//    DispatchQueue.global().async {
+//
+//      let cgImage = Static.cicontext.createCGImage(engine.targetImage, from: engine.targetImage.extent)!
+//      let uiImage = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
+//      self.adjustmentImage = uiImage
+//    }
   }
 
-  public func set(cropRect: CGRect, from displayingBounds: CGRect) {
-
-    assert(
-      engine.targetImage.extent.size == CGSize(
-        width: imageForCropping.size.width * imageForCropping.scale,
-        height: imageForCropping.size.height * imageForCropping.scale
-      )
-    )
-
-    let scale = _ratio(
-      to: engine.targetImage.extent.size,
-      from: displayingBounds.size
-    )
-
-    var _cropRect = cropRect
-    _cropRect.origin.x *= scale
-    _cropRect.origin.y *= scale
-    _cropRect.size.width *= scale
-    _cropRect.size.height *= scale
-
+  public func requestApplyingFilterImage() -> CIImage {
+    fatalError()
   }
 }
 

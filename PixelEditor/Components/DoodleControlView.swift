@@ -7,3 +7,40 @@
 //
 
 import Foundation
+
+open class DoodleControlViewBase : ControlViewBase, ControlChildViewType {
+
+}
+
+public final class DoodleControlView : DoodleControlViewBase {
+
+  private let navigationView = NavigationView()
+
+  public override func setup() {
+
+    super.setup()
+
+    backgroundColor = .white
+
+    addSubview(navigationView)
+
+    navigationView.translatesAutoresizingMaskIntoConstraints = false
+
+    NSLayoutConstraint.activate([
+      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
+      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
+      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
+      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
+      ])
+
+    navigationView.didTapCancelButton = { [weak self] in
+
+      self?.pop()
+    }
+
+    navigationView.didTapSaveButton = { [weak self] in
+
+      self?.pop()
+    }
+  }
+}

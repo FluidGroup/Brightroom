@@ -18,20 +18,14 @@ import class PixelEngine.MetalImageView
 
 final class ImagePreviewView : UIView {
 
-  let imageView: UIView & HardwareImageViewType = {
-    #if canImport(MetalKit) && !targetEnvironment(simulator)
-    return MetalImageView()
-    #else
-    return GLImageView()
-    #endif
-  }()
+  let imageView: UIImageView = .init()
 
   var image: CIImage? {
     get {
-      return imageView.image
+      return imageView.image?.ciImage
     }
     set {
-      imageView.image = newValue
+      imageView.image = newValue.map { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
     }
   }
 
@@ -39,6 +33,7 @@ final class ImagePreviewView : UIView {
     super.init(frame: .zero)
 
     addSubview(imageView)
+    imageView.contentMode = .scaleAspectFill
     imageView.frame = bounds
     imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
   }

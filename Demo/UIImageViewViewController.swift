@@ -29,7 +29,7 @@ final class UIImageViewViewController : UIViewController {
 
     let value = slider.value
 
-    let result = RealtimeFilterViewController.blur(image: image.transformed(by: .init(scaleX: 0.3, y: 0.3)), radius: Double(value * 50))!
+    let result = UIImageViewViewController.blur(image: image.transformed(by: .init(scaleX: 0.3, y: 0.3)), radius: Double(value * 50))!
 
     print(result)
     imageView.image = UIImage(ciImage: result)
