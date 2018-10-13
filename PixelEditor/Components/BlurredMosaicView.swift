@@ -12,22 +12,32 @@ import PixelEngine
 
 final class BlurredMosaicView : DryDrawingView {
 
-  var blurredImage: UIImage? {
+  var image: UIImage? {
     get {
       return imageView.image
     }
     set {
-      imageView.image = newValue
+
+      let blurredImage = newValue
+        .flatMap { $0.ciImage ?? CIImage(image: $0) }
+        .flatMap { BlurredMask.blur(image: $0) }
+        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+
+      imageView.image = blurredImage
     }
   }
 
-  let imageView = UIImageView()
+  private let imageView = UIImageView()
 
-  let brush: OvalBrush = OvalBrush(color: UIColor.black, width: 30)
+  private let brush: OvalBrush = OvalBrush(color: UIColor.black, width: 30)
 
   private let maskLayer = MaskLayer()
 
-  private var drawnPaths: [DrawnPath] = []
+  var drawnPaths: [DrawnPath] = [] {
+    didSet {
+      updateMask()
+    }
+  }
 
   // MARK: - Initializers
 
@@ -71,11 +81,6 @@ final class BlurredMosaicView : DryDrawingView {
   override func layoutSubviews() {
     super.layoutSubviews()
     imageView.frame = bounds
-  }
-
-  func set(drawnPaths: [DrawnPath]) {
-    self.drawnPaths = drawnPaths
-    updateMask()
   }
 
   private func updateMask() {

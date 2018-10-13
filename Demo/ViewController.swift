@@ -22,7 +22,7 @@ class ViewController: UIViewController {
 
     let image = UIImage(named: "small")!
 
-    let engine = ImageEngine(targetImage: image)
+    let engine = ImageEngine(source: ImageSource.init(source: image))
 
     var path = DrawnPath(
       brush: .init(color: .red, width: 30),
@@ -33,7 +33,8 @@ class ViewController: UIViewController {
 
     engine.edit.croppingRect = CGRect(x: 0, y: 0, width: 400, height: 400)
     engine.edit.drawer = [
-      path
+      path,
+      BlurredMask(paths: []),
     ]
 
     let result = engine.render()

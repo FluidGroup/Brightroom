@@ -183,12 +183,20 @@ extension TopControlView {
           itemsView.addArrangedSubview(button)
         }
 
+        mask: do {
+          let button = UIButton(type: .system)
+          button.addTarget(self, action: #selector(masking), for: .touchUpInside)
+          button.setTitle(TODOL10n("Mask"), for: .normal)
+          itemsView.addArrangedSubview(button)
+        }
+
         doodle: do {
           let button = UIButton(type: .system)
           button.addTarget(self, action: #selector(doodle), for: .touchUpInside)
           button.setTitle(TODOL10n("Doodle"), for: .normal)
           itemsView.addArrangedSubview(button)
         }
+
 
       }
     }
@@ -197,6 +205,12 @@ extension TopControlView {
     private func adjustment() {
 
       push(AdjustmentControlView(context: context))
+    }
+
+    @objc
+    private func masking() {
+
+      push(MaskControlView(context: context))
     }
 
     @objc

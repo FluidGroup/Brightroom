@@ -38,7 +38,7 @@
                                             </subviews>
                                         </tableViewCellContentView>
                                         <connections>
-                                            <segue destination="BYZ-38-t0r" kind="show" id="BNE-x7-2M7"/>
+                                            <segue destination="BYZ-38-t0r" kind="show" id="eGz-7c-R8u"/>
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" textLabel="xJY-lp-A6d" style="IBUITableViewCellStyleDefault" id="s1Y-xS-Qum">

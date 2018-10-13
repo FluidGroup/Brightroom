@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4B0077BE2170496E008330EA /* BlurredMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BD2170496E008330EA /* BlurredMask.swift */; };
+		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
 		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
@@ -33,6 +35,9 @@
 		4B600B3B216B7CDD001E1456 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3A216B7CDD001E1456 /* AVFoundation.framework */; };
 		4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3C216B7CE3001E1456 /* Foundation.framework */; };
 		4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */; };
+		4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C96F2171D6F8008F2A54 /* EditingStack.swift */; };
+		4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* PixelEngine.swift */; };
+		4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9732171D781008F2A54 /* ImageSource.swift */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
@@ -93,6 +98,8 @@
 
 /* Begin PBXFileReference section */
 		29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
+		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
 		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
 		4B112F14216C9B5400EF8E25 /* ImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTool.swift; sourceTree = "<group>"; };
@@ -120,6 +127,9 @@
 		4B600B3A216B7CDD001E1456 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		4B600B3C216B7CE3001E1456 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		4B66C96F2171D6F8008F2A54 /* EditingStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.swift; sourceTree = "<group>"; };
+		4B66C9712171D764008F2A54 /* PixelEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngine.swift; sourceTree = "<group>"; };
+		4B66C9732171D781008F2A54 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageViewViewController.swift; sourceTree = "<group>"; };
 		4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalImageView.swift; sourceTree = "<group>"; };
 		4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageView.swift; sourceTree = "<group>"; };
@@ -221,6 +231,8 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B66C9732171D781008F2A54 /* ImageSource.swift */,
+				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
 				4B9B0310216C58EB001593B9 /* Filters */,
 				4B9B030F216C58DE001593B9 /* Graphics */,
 				4B600B00216B7A94001E1456 /* PixelEngine.h */,
@@ -228,6 +240,7 @@
 				4B9B02EA216BBB6B001593B9 /* Engine */,
 				4B600B17216B7B93001E1456 /* ImageView */,
 				4B9D4579216E8013003A240A /* ContentRect.swift */,
+				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -288,6 +301,7 @@
 				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
 				4B9B030B216C55D9001593B9 /* OvalBrush.swift */,
 				4B9B030D216C58C6001593B9 /* DrawnPath.swift */,
+				4B0077BD2170496E008330EA /* BlurredMask.swift */,
 			);
 			path = Graphics;
 			sourceTree = "<group>";
@@ -312,6 +326,7 @@
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
 				4B9D4564216DD1E0003A240A /* TopControlView.swift */,
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
+				4B0077BF21704E7F008330EA /* MaskControlView.swift */,
 				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
 				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
 				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
@@ -545,6 +560,7 @@
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
+				4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */,
 				4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -557,9 +573,13 @@
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
 				4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */,
 				4B600B16216B7B79001E1456 /* GLImageView.swift in Sources */,
+				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
 				4B600B1B216B7BE2001E1456 /* Filter.swift in Sources */,
+				4B0077BE2170496E008330EA /* BlurredMask.swift in Sources */,
 				4B9B030C216C55DA001593B9 /* OvalBrush.swift in Sources */,
+				4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */,
+				4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */,
 				4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */,
 				4B600B19216B7BB9001E1456 /* Engine.swift in Sources */,
 				4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */,

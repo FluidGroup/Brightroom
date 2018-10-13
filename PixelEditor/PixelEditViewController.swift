@@ -20,6 +20,7 @@ public final class PixelEditContext {
   public enum Action {
     case setMode(PixelEditViewController.Mode)
     case endAdjustment(save: Bool)
+    case endMasking(save: Bool)
   }
 
   fileprivate var didReceiveAction: (Action) -> Void = { _ in }
@@ -68,9 +69,8 @@ public final class PixelEditViewController : UIViewController {
     action: #selector(didTapDoneButton)
   )
 
-  public let engine: ImageEngine
-
-  private var previewEngine: PreviewImageEngine!
+  private let imageSource: ImageSource
+  private var stack: EditingStack!
 
   public weak var delegate: PixelEditViewControllerDelegate?
 
@@ -79,12 +79,17 @@ public final class PixelEditViewController : UIViewController {
   // MARK: - Initializers
 
   public convenience init(image: UIImage) {
-    let engine = ImageEngine(targetImage: image)
-    self.init(engine: engine)
+    let surce = ImageSource(source: image)
+    self.init(source: surce)
   }
 
-  public init(engine: ImageEngine) {
-    self.engine = engine
+  public convenience init(stack: EditingStack) {
+    self.init(source: stack.source)
+    self.stack = stack
+  }
+
+  public init(source: ImageSource) {
+    self.imageSource = source
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -102,8 +107,8 @@ public final class PixelEditViewController : UIViewController {
 
       root: do {
 
-        previewEngine = PreviewImageEngine.init(
-          engine: engine,
+        stack = EditingStack.init(
+          source: imageSource,
           previewSize: CGSize(width: view.bounds.width, height: view.bounds.width)
         )
 
@@ -139,8 +144,8 @@ public final class PixelEditViewController : UIViewController {
 
         [
           adjustmentView,
+          previewView,
           maskingView,
-          previewView
           ].forEach { view in
             view.translatesAutoresizingMaskIntoConstraints = false
             editContainerView.addSubview(view)
@@ -180,16 +185,26 @@ public final class PixelEditViewController : UIViewController {
           self.set(mode: mode)
         case .endAdjustment(let save):
           if save {
-            self.previewEngine.setAdjustment(cropRect: self.adjustmentView.visibleExtent)
+            self.stack.setAdjustment(cropRect: self.adjustmentView.visibleExtent)
+            self.stack.commit()
           }
+          self.syncUI(edit: self.stack.currentEdit)
+        case .endMasking(let save):
+          if save {
+            print(self.maskingView.drawnPaths)
+            self.stack.set(blurringMaskPaths: self.maskingView.drawnPaths)
+            self.stack.commit()
+          }
+          self.syncUI(edit: self.stack.currentEdit)
         }
+
       }
 
     }
 
     start: do {
 
-      previewEngine.delegate = self
+      stack.delegate = self
       view.layoutIfNeeded()
 
       set(mode: mode)
@@ -200,49 +215,73 @@ public final class PixelEditViewController : UIViewController {
   @objc
   private func didTapDoneButton() {
 
-    let renderedImage = engine.render()
-    print("done", renderedImage)
+//    let renderedImage = engine.render()
+//    print("done", renderedImage)
   }
 
   private func set(mode: Mode) {
-
-
-    adjustmentView.isHidden = true
-    previewView.isHidden = true
-    maskingView.isHidden = true
 
     switch mode {
     case .adjustment:
       navigationItem.rightBarButtonItem = nil
 
       adjustmentView.isHidden = false
+      previewView.isHidden = true
+      maskingView.isHidden = true
+      maskingView.isUserInteractionEnabled = false
 
-      adjustmentView.image = previewEngine.adjustmentImage
-      if let croppingRect = engine.edit.croppingRect {
-        adjustmentView.visibleExtent = croppingRect
-      }
+      adjustmentView.image = stack.adjustmentImage
+
     case .masking:
 
       navigationItem.rightBarButtonItem = nil
+
+      adjustmentView.isHidden = true
+      previewView.isHidden = false
       maskingView.isHidden = false
+      maskingView.isUserInteractionEnabled = true
+
+      maskingView.image = stack.previewImage
 
     case .preview:
+
       navigationItem.rightBarButtonItem = doneButton
+
       previewView.isHidden = false
-      previewView.image = previewEngine.previewImage
+      adjustmentView.isHidden = true
+      maskingView.isUserInteractionEnabled = false
+      maskingView.isHidden = false
+
+      previewView.image = stack.previewImage
+
     }
+
+  }
+
+  private func syncUI(edit: EditingStack.Edit) {
+
+    if let cropRect = edit.cropRect {
+      adjustmentView.visibleExtent = cropRect
+    }
+
+    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
 
   }
 
 }
 
-extension PixelEditViewController : PreviewImageEngineDelegate {
+extension PixelEditViewController : EditingStackDelegate {
 
-  public func previewImageEngine(_ engine: PreviewImageEngine, didChangePreviewImage image: UIImage?) {
-    previewView.image = image
+  public func editingStack(_ stack: EditingStack, didChangeCurrentEdit: EditingStack.Edit) {
+
   }
 
-  public func previewImageEngine(_ engine: PreviewImageEngine, didChangeAdjustmentImage image: UIImage?) {
+  public func editingStack(_ stack: EditingStack, didChangePreviewImage image: UIImage?) {
+    previewView.image = image
+    maskingView.image = image
+  }
+
+  public func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: UIImage?) {
 
   }
 
