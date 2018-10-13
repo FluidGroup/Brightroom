@@ -10,5 +10,5 @@ import Foundation
 
 public protocol GraphicsDrawing {
 
-  func draw(in context: UIGraphicsImageRendererContext, canvasSize: CGSize)
+  func draw(in context: CGContext, canvasSize: CGSize)
 }

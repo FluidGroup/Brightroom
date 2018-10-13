@@ -12,7 +12,7 @@ public protocol EditingStackDelegate : class {
 
   func editingStack(_ stack: EditingStack, didChangePreviewImage image: UIImage?)
   func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: UIImage?)
-  func editingStack(_ stack: EditingStack, didChangeCurrentEdit: EditingStack.Edit)
+  func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
 }
 
 public final class EditingStack {
@@ -163,20 +163,24 @@ public final class EditingStack {
     }
   }
 
+  public func makeRenderer() -> ImageRenderer {
+
+    let renderer = ImageRenderer(source: source)
+
+    let edit = currentEdit
+
+    renderer.edit.croppingRect = edit.cropRect
+    renderer.edit.drawer = [BlurredMask(paths: edit.blurredMaskPaths)]
+
+    return renderer
+  }
+
   private func apply(_ perform: (inout Edit) -> Void) {
 
     perform(&currentEdit)
 
   }
 
-  private static func makeEdit(from: ImageEngine.Edit) -> Edit {
-
-    var to = EditingStack.Edit()
-    to.cropRect = from.croppingRect
-
-    return to
-
-  }
 
 }
 

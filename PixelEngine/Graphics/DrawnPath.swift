@@ -38,11 +38,11 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     return _bezierPath
   }
 
-  public func draw(in context: UIGraphicsImageRendererContext, canvasSize: CGSize) {
-    UIGraphicsPushContext(context.cgContext)
-    context.cgContext.saveGState()
+  public func draw(in context: CGContext, canvasSize: CGSize) {
+    UIGraphicsPushContext(context)
+    context.saveGState()
     defer {
-      context.cgContext.restoreGState()
+      context.restoreGState()
       UIGraphicsPopContext()
     }
 

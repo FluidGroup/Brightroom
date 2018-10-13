@@ -16,39 +16,49 @@ public struct BlurredMask : GraphicsDrawing {
     self.paths = paths
   }
 
-  public func draw(in context: UIGraphicsImageRendererContext, canvasSize: CGSize) {
+  public func draw(in context: CGContext, canvasSize: CGSize) {
 
-    let mainContext = context.cgContext
+    let mainContext = context
     let size = canvasSize
 
     guard
-      let cglayer: CGLayer = CGLayer(mainContext, size: size, auxiliaryInfo: nil),
+      let cglayer = CGLayer(mainContext, size: size, auxiliaryInfo: nil),
       let layerContext = cglayer.context else {
         assert(false, "Failed to create CGLayer")
         return
     }
 
-    let blurredImage = UIImage(ciImage: BlurredMask.blur(image: CIImage(image: context.currentImage)!)!)
+    let ciContext = CIContext(cgContext: layerContext, options: [:])
+    let ciImage = BlurredMask.blur(image: CIImage(image: UIGraphicsGetImageFromCurrentImageContext()!)!)!
+
+    UIGraphicsPushContext(layerContext)
 
     paths.forEach { path in
       layerContext.saveGState()
-//      let drawScale = scale(path.canvasSizeAtDrawing, targetImage.extent.size)
-//      layerContext.scaleBy(x: drawScale, y: drawScale)
-      UIGraphicsPushContext(layerContext)
+
       path.draw()
-      UIGraphicsPopContext()
 
       layerContext.restoreGState()
     }
 
     layerContext.saveGState()
 
-    layerContext.translateBy(x: 0, y: size.height)
-    layerContext.scaleBy(x: 1, y: -1)
     layerContext.setBlendMode(.sourceIn)
-    blurredImage.draw(at: .zero)
+    layerContext.translateBy(x: 0, y: canvasSize.height)
+    layerContext.scaleBy(x: 1, y: -1)
+
+    ciContext.draw(ciImage, in: ciImage.extent, from: ciImage.extent)
+//    blurredImage.draw(at: .zero)
 
     layerContext.restoreGState()
+
+    UIGraphicsPopContext()
+
+    UIGraphicsPushContext(mainContext)
+
+    mainContext.draw(cglayer, at: .zero)
+
+    UIGraphicsPopContext()
   }
 
   public static func blur(image: CIImage) -> CIImage? {

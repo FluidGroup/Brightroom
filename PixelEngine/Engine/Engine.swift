@@ -9,11 +9,11 @@
 import Foundation
 import CoreImage
 
-public protocol ImageEngineDelegate : class {
+public protocol ImageRendererDelegate : class {
 
 }
 
-public final class ImageEngine {
+public final class ImageRenderer {
 
   public struct Edit {
     public var croppingRect: CGRect?
@@ -29,7 +29,7 @@ public final class ImageEngine {
       ])
   }
 
-  public weak var delegate: ImageEngineDelegate?
+  public weak var delegate: ImageRendererDelegate?
 
   public let source: ImageSource
 
@@ -61,30 +61,27 @@ public final class ImageEngine {
 
     }()
 
-    let format = UIGraphicsImageRendererFormat.default()
-    format.scale = 1
-
     let canvasSize = resultImage.extent.size
-    let image = UIGraphicsImageRenderer(
-      size: canvasSize,
-      format: format
-      )
-      .image { (context) in
 
-        let cgContext = context.cgContext
+    UIGraphicsBeginImageContextWithOptions(canvasSize, true, 1)
 
-        let cgImage = Static.cicontext.createCGImage(resultImage, from: resultImage.extent, format: .ARGB8, colorSpace: resultImage.colorSpace)!
+    let cgContext = UIGraphicsGetCurrentContext()!
 
-        cgContext.saveGState()
-        cgContext.translateBy(x: 0, y: resultImage.extent.height)
-        cgContext.scaleBy(x: 1, y: -1)
-        cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
-        cgContext.restoreGState()
+    let cgImage = Static.cicontext.createCGImage(resultImage, from: resultImage.extent, format: .ARGB8, colorSpace: resultImage.colorSpace)!
 
-        self.edit.drawer.forEach { drawer in
-          drawer.draw(in: context, canvasSize: canvasSize)
-        }
+    cgContext.saveGState()
+    cgContext.translateBy(x: 0, y: resultImage.extent.height)
+    cgContext.scaleBy(x: 1, y: -1)
+    cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
+    cgContext.restoreGState()
+
+    self.edit.drawer.forEach { drawer in
+      drawer.draw(in: cgContext, canvasSize: canvasSize)
     }
+
+    let image = UIGraphicsGetImageFromCurrentImageContext()!
+
+    UIGraphicsEndImageContext()
 
     return image
 

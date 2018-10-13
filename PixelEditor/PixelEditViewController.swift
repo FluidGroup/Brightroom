@@ -180,23 +180,7 @@ public final class PixelEditViewController : UIViewController {
 
         guard let self = self else { return }
 
-        switch action {
-        case .setMode(let mode):
-          self.set(mode: mode)
-        case .endAdjustment(let save):
-          if save {
-            self.stack.setAdjustment(cropRect: self.adjustmentView.visibleExtent)
-            self.stack.commit()
-          }
-          self.syncUI(edit: self.stack.currentEdit)
-        case .endMasking(let save):
-          if save {
-            print(self.maskingView.drawnPaths)
-            self.stack.set(blurringMaskPaths: self.maskingView.drawnPaths)
-            self.stack.commit()
-          }
-          self.syncUI(edit: self.stack.currentEdit)
-        }
+        self.didReceive(action: action)
 
       }
 
@@ -215,8 +199,9 @@ public final class PixelEditViewController : UIViewController {
   @objc
   private func didTapDoneButton() {
 
-//    let renderedImage = engine.render()
-//    print("done", renderedImage)
+    let image = stack.makeRenderer().render()
+
+    print("done", image)
   }
 
   private func set(mode: Mode) {
@@ -229,8 +214,6 @@ public final class PixelEditViewController : UIViewController {
       previewView.isHidden = true
       maskingView.isHidden = true
       maskingView.isUserInteractionEnabled = false
-
-      adjustmentView.image = stack.adjustmentImage
 
     case .masking:
 
@@ -260,6 +243,10 @@ public final class PixelEditViewController : UIViewController {
 
   private func syncUI(edit: EditingStack.Edit) {
 
+    if adjustmentView.image != stack.adjustmentImage {
+      adjustmentView.image = stack.adjustmentImage
+    }
+
     if let cropRect = edit.cropRect {
       adjustmentView.visibleExtent = cropRect
     }
@@ -268,12 +255,33 @@ public final class PixelEditViewController : UIViewController {
 
   }
 
+  private func didReceive(action: PixelEditContext.Action) {
+    switch action {
+    case .setMode(let mode):
+      set(mode: mode)
+    case .endAdjustment(let save):
+      if save {
+        stack.setAdjustment(cropRect: adjustmentView.visibleExtent)
+        stack.commit()
+      } else {
+        syncUI(edit: self.stack.currentEdit)
+      }
+    case .endMasking(let save):
+      if save {
+        stack.set(blurringMaskPaths: maskingView.drawnPaths)
+        stack.commit()
+      } else {
+        syncUI(edit: stack.currentEdit)
+      }
+    }
+  }
+
 }
 
 extension PixelEditViewController : EditingStackDelegate {
 
-  public func editingStack(_ stack: EditingStack, didChangeCurrentEdit: EditingStack.Edit) {
-
+  public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
+    syncUI(edit: edit)
   }
 
   public func editingStack(_ stack: EditingStack, didChangePreviewImage image: UIImage?) {
