@@ -21,14 +21,11 @@ public final class ImageRenderer {
     public var drawer: [GraphicsDrawing] = []
   }
 
-  private enum Static {
-
-    static let cicontext = CIContext(options: [
-      .useSoftwareRenderer : false,
-      .highQualityDownsample : true,
-      ])
-  }
-
+  private let cicontext = CIContext(options: [
+    .useSoftwareRenderer : false,
+    .highQualityDownsample : true,
+    ])
+  
   public weak var delegate: ImageRendererDelegate?
 
   public let source: ImageSource
@@ -47,8 +44,12 @@ public final class ImageRenderer {
       let image: CIImage
 
       if var croppingRect = edit.croppingRect {
+        croppingRect.origin.x.round(.up)
+        croppingRect.origin.y.round(.up)
+        croppingRect.size.width.round(.up)
+        croppingRect.size.height.round(.up)
         croppingRect.origin.y = targetImage.extent.height - croppingRect.minY - croppingRect.height
-        image = targetImage.cropped(to: croppingRect.rounded())
+        image = targetImage.cropped(to: croppingRect)
       } else {
         image = targetImage
       }
@@ -67,7 +68,7 @@ public final class ImageRenderer {
 
     let cgContext = UIGraphicsGetCurrentContext()!
 
-    let cgImage = Static.cicontext.createCGImage(resultImage, from: resultImage.extent, format: .ARGB8, colorSpace: resultImage.colorSpace)!
+    let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .ARGB8, colorSpace: resultImage.colorSpace)!
 
     cgContext.saveGState()
     cgContext.translateBy(x: 0, y: resultImage.extent.height)

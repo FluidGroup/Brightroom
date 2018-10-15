@@ -15,21 +15,13 @@ public protocol EditingStackDelegate : class {
   func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
 }
 
-public final class EditingStack {
+open class EditingStack {
 
   public struct Edit : Equatable {
 
     public var cropRect: CGRect?
-    public var blurredMaskPaths: [DrawnPath] = []
+    public var blurredMaskPaths: [DrawnPathInRect] = []
     public var doodlePaths: [DrawnPath] = []
-
-  }
-
-  private enum Static {
-
-    static let cicontext = CIContext(options: [
-      .useSoftwareRenderer : false,
-      ])
 
   }
 
@@ -131,7 +123,12 @@ public final class EditingStack {
 
     let originalImage = source.image
 
-    var _cropRect = cropRect.rounded()
+    var _cropRect = cropRect
+
+    _cropRect.origin.x.round(.up)
+    _cropRect.origin.y.round(.up)
+    _cropRect.size.width.round(.up)
+    _cropRect.size.height.round(.up)
 
     apply {
       $0.cropRect = _cropRect
@@ -156,7 +153,7 @@ public final class EditingStack {
     originalPreviewImage = result
   }
 
-  public func set(blurringMaskPaths: [DrawnPath]) {
+  public func set(blurringMaskPaths: [DrawnPathInRect]) {
 
     apply {
       $0.blurredMaskPaths = blurringMaskPaths
@@ -165,12 +162,16 @@ public final class EditingStack {
 
   public func makeRenderer() -> ImageRenderer {
 
+    let scale = _ratio(to: source.image.extent.size, from: preferredPreviewSize)
+
     let renderer = ImageRenderer(source: source)
 
     let edit = currentEdit
 
     renderer.edit.croppingRect = edit.cropRect
-    renderer.edit.drawer = [BlurredMask(paths: edit.blurredMaskPaths)]
+    renderer.edit.drawer = [
+      BlurredMask(paths: edit.blurredMaskPaths)
+    ]
 
     return renderer
   }
@@ -181,7 +182,26 @@ public final class EditingStack {
 
   }
 
+}
 
+open class SquareEditingStack : EditingStack {
+
+  public override init(
+    source: ImageSource,
+    previewSize: CGSize,
+    screenScale: CGFloat = UIScreen.main.scale
+    ) {
+
+    super.init(source: source, previewSize: previewSize, screenScale: screenScale)
+
+    let cropRect = ContentRect.rectThatAspectFit(
+      aspectRatio: .init(width: 1, height: 1),
+      boundingRect: source.image.extent
+    )
+
+    setAdjustment(cropRect: cropRect)
+
+  }
 }
 
 private func _ratio(to: CGSize, from: CGSize) -> CGFloat {

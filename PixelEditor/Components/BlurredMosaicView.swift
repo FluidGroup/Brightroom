@@ -49,6 +49,7 @@ final class BlurredMosaicView : DryDrawingView {
 
     addSubview(imageView)
 
+    imageView.contentMode = .scaleAspectFill
     imageView.layer.mask = maskLayer
 
     maskLayer.contentsScale = UIScreen.main.scale
@@ -99,11 +100,7 @@ extension BlurredMosaicView {
     }
 
     override func draw(in ctx: CGContext) {
-      UIGraphicsPushContext(ctx)
-
-      drawnPaths.forEach { $0.draw() }
-
-      UIGraphicsPopContext()
+      drawnPaths.forEach { $0.draw(in: ctx, canvasSize: bounds.size) }
     }
   }
 }

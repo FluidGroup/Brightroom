@@ -160,11 +160,17 @@
             <objects>
                 <viewController id="ra8-Bb-A3k" customClass="EditorViewController" customModule="Demo" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="YjF-Ei-1KN">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="200"/>
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="azV-wO-AGn">
+                                <rect key="frame" x="20" y="84" width="335" height="335"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="azV-wO-AGn" secondAttribute="height" multiplier="1:1" id="rkq-4g-GKW"/>
+                                </constraints>
+                            </imageView>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="vwj-E5-JQy">
-                                <rect key="frame" x="161" y="66" width="53" height="68"/>
+                                <rect key="frame" x="161" y="435" width="53" height="68"/>
                                 <subviews>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5OI-XE-CkV">
                                         <rect key="frame" x="0.0" y="0.0" width="53" height="30"/>
@@ -185,17 +191,22 @@
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="vwj-E5-JQy" firstAttribute="centerY" secondItem="YjF-Ei-1KN" secondAttribute="centerY" id="EGT-3b-1Ct"/>
                             <constraint firstItem="vwj-E5-JQy" firstAttribute="centerX" secondItem="YjF-Ei-1KN" secondAttribute="centerX" id="dZA-Np-ga0"/>
+                            <constraint firstItem="azV-wO-AGn" firstAttribute="leading" secondItem="4sA-BM-Q5K" secondAttribute="leading" constant="20" id="ghF-c1-gL2"/>
+                            <constraint firstItem="azV-wO-AGn" firstAttribute="top" secondItem="4sA-BM-Q5K" secondAttribute="top" constant="20" id="i5p-hj-CuL"/>
+                            <constraint firstItem="vwj-E5-JQy" firstAttribute="top" secondItem="azV-wO-AGn" secondAttribute="bottom" constant="16" id="mdm-nv-ZfE"/>
+                            <constraint firstItem="4sA-BM-Q5K" firstAttribute="trailing" secondItem="azV-wO-AGn" secondAttribute="trailing" constant="20" id="rLo-jV-E9m"/>
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="4sA-BM-Q5K"/>
                     </view>
                     <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
-                    <size key="freeformSize" width="375" height="200"/>
+                    <connections>
+                        <outlet property="imageView" destination="azV-wO-AGn" id="uVa-g5-szh"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="QNl-KZ-Av6" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1270" y="-651"/>
+            <point key="canvasLocation" x="1270" y="-870"/>
         </scene>
         <!--View Controller-->
         <scene sceneID="tne-QT-ifu">

@@ -12,7 +12,7 @@ import PixelEngine
 
 public protocol PixelEditViewControllerDelegate : class {
 
-//  func pixelEditViewController(_ controller: PixelEditViewController, )
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
 }
 
 public final class PixelEditContext {
@@ -70,7 +70,7 @@ public final class PixelEditViewController : UIViewController {
   )
 
   private let imageSource: ImageSource
-  private var stack: EditingStack!
+  private var stack: SquareEditingStack!
 
   public weak var delegate: PixelEditViewControllerDelegate?
 
@@ -83,7 +83,7 @@ public final class PixelEditViewController : UIViewController {
     self.init(source: surce)
   }
 
-  public convenience init(stack: EditingStack) {
+  public convenience init(stack: SquareEditingStack) {
     self.init(source: stack.source)
     self.stack = stack
   }
@@ -107,7 +107,7 @@ public final class PixelEditViewController : UIViewController {
 
       root: do {
 
-        stack = EditingStack.init(
+        stack = SquareEditingStack.init(
           source: imageSource,
           previewSize: CGSize(width: view.bounds.width, height: view.bounds.width)
         )
@@ -201,7 +201,7 @@ public final class PixelEditViewController : UIViewController {
 
     let image = stack.makeRenderer().render()
 
-    print("done", image)
+    delegate?.pixelEditViewController(self, didEndEditing: image)
   }
 
   private func set(mode: Mode) {
@@ -214,6 +214,14 @@ public final class PixelEditViewController : UIViewController {
       previewView.isHidden = true
       maskingView.isHidden = true
       maskingView.isUserInteractionEnabled = false
+
+      if adjustmentView.image != stack.adjustmentImage {
+        adjustmentView.image = stack.adjustmentImage
+      }
+
+      if let cropRect = stack.currentEdit.cropRect {
+        adjustmentView.visibleExtent = cropRect
+      }
 
     case .masking:
 
@@ -251,7 +259,7 @@ public final class PixelEditViewController : UIViewController {
       adjustmentView.visibleExtent = cropRect
     }
 
-    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
+//    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
 
   }
 
@@ -264,11 +272,11 @@ public final class PixelEditViewController : UIViewController {
         stack.setAdjustment(cropRect: adjustmentView.visibleExtent)
         stack.commit()
       } else {
-        syncUI(edit: self.stack.currentEdit)
+        syncUI(edit: stack.currentEdit)
       }
     case .endMasking(let save):
       if save {
-        stack.set(blurringMaskPaths: maskingView.drawnPaths)
+//        stack.set(blurringMaskPaths: maskingView.drawnPaths)
         stack.commit()
       } else {
         syncUI(edit: stack.currentEdit)

@@ -17,11 +17,12 @@ public struct ImageSource {
     let image = CIImage(image: source)!
     let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(source.imageOrientation))
 
-    self.image = fixedOriantationImage
+    self.init(source: fixedOriantationImage)
   }
 
   public init(source: CIImage) {
 
+    precondition(source.extent.origin == .zero)
     self.image = source
   }
 

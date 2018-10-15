@@ -10,13 +10,17 @@ import Foundation
 
 public struct BlurredMask : GraphicsDrawing {
 
-  public var paths: [DrawnPath]
+  public var paths: [DrawnPathInRect]
 
-  public init(paths: [DrawnPath]) {
+  public init(paths: [DrawnPathInRect]) {
     self.paths = paths
   }
 
   public func draw(in context: CGContext, canvasSize: CGSize) {
+
+    guard !paths.isEmpty else {
+      return
+    }
 
     let mainContext = context
     let size = canvasSize
@@ -36,7 +40,7 @@ public struct BlurredMask : GraphicsDrawing {
     paths.forEach { path in
       layerContext.saveGState()
 
-      path.draw()
+      path.draw(in: context, canvasSize: canvasSize)
 
       layerContext.restoreGState()
     }

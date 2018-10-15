@@ -13,6 +13,8 @@ import PixelEditor
 
 final class EditorViewController : UIViewController {
 
+  @IBOutlet weak var imageView: UIImageView!
+
   override func viewDidLoad() {
     super.viewDidLoad()
   }
@@ -27,8 +29,19 @@ final class EditorViewController : UIViewController {
   @IBAction func didTapPushButton(_ sender: Any) {
 
     let controller = PixelEditViewController.init(image: UIImage(named: "unsplash1")!)
-
+    controller.delegate = self
+    
     navigationController?.pushViewController(controller, animated: true)
   }
 }
 
+extension EditorViewController : PixelEditViewControllerDelegate {
+
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
+
+    self.navigationController?.popToViewController(self, animated: true)
+    self.imageView.image = image
+    print(image)
+  }
+
+}

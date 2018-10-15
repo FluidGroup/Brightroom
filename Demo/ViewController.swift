@@ -24,12 +24,10 @@ class ViewController: UIViewController {
 
     let engine = ImageRenderer(source: ImageSource.init(source: image))
 
-    var path = DrawnPath(
+    let path = DrawnPath(
       brush: .init(color: .red, width: 30),
       path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
     )
-
-    path.drawScale = 0.5
 
     engine.edit.croppingRect = CGRect(x: 0, y: 0, width: 400, height: 400)
     engine.edit.drawer = [

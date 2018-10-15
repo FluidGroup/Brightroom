@@ -14,13 +14,15 @@ final class CropAndStraightenView : UIView {
 
   var image: UIImage? {
     get {
-      return imageView.image
+      return imageView.zoomView?.image
     }
     set {
       if let image = newValue {
         assert(image.scale == UIScreen.main.scale)
+        imageView.display(image: image)
+      } else {
+        imageView.zoomView?.removeFromSuperview()
       }
-      imageView.image = newValue
     }
   }
 
@@ -31,22 +33,27 @@ final class CropAndStraightenView : UIView {
         return .zero
       }
 
-      var _visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
+      var visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
 
       let scale = _ratio(
         to: CGSize(
           width: image.size.width * image.scale,
           height: image.size.height * image.scale
         ),
-        from: imageView.internalImageView.bounds.size
+        from: imageView.zoomView!.bounds.size
       )
 
-      _visibleRect.origin.x *= scale
-      _visibleRect.origin.y *= scale
-      _visibleRect.size.width *= scale
-      _visibleRect.size.height *= scale
+      visibleRect.origin.x *= scale
+      visibleRect.origin.y *= scale
+      visibleRect.size.width *= scale
+      visibleRect.size.height *= scale
 
-      return _visibleRect
+      visibleRect.origin.x.round(.up)
+      visibleRect.origin.y.round(.up)
+      visibleRect.size.width.round(.up)
+      visibleRect.size.height.round(.up)
+
+      return visibleRect
     }
     set {
 
@@ -55,7 +62,7 @@ final class CropAndStraightenView : UIView {
       imageView.zoomScale = 0
 
       let scale = _ratio(
-        to: imageView.internalImageView.bounds.size,
+        to: imageView.zoomView!.bounds.size,
         from: CGSize(
           width: image.size.width * image.scale,
           height: image.size.height * image.scale
@@ -72,10 +79,11 @@ final class CropAndStraightenView : UIView {
     }
   }
 
-  private let imageView: ZoomImageView = {
+  private let imageView: ImageScrollView = {
 
-    let view = ZoomImageView()
-    view.zoomMode = .fill
+    let view = ImageScrollView()
+    view.imageContentMode = .aspectFill
+    view.initialOffset = .center
     return view
   }()
 

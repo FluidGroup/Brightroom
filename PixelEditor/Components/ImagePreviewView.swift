@@ -26,6 +26,7 @@ final class ImagePreviewView : UIView {
     }
     set {
       imageView.image = newValue
+      Log.debug("ImagePreviewView.image set", newValue)
     }
   }
 

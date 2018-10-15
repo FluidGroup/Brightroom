@@ -64,5 +64,4 @@ public enum ContentRect {
     origin.y = (minimumRect.size.height - size.height) / 2.0
     return CGRect(origin: origin, size: size)
   }
-
 }

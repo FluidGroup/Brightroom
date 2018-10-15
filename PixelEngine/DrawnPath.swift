@@ -14,7 +14,6 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
 
   public let brush: OvalBrush
   public let bezierPath: UIBezierPath
-  public var drawScale: CGFloat = 1
 
   // MARK: - Initializers
 
@@ -49,7 +48,7 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     draw()
   }
 
-  public func draw() {
+  private func draw() {
 
     guard let context = UIGraphicsGetCurrentContext() else {
       return
@@ -60,7 +59,6 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
       context.restoreGState()
     }
 
-    context.scaleBy(x: drawScale, y: drawScale)
     brush.color.setStroke()
     let bezierPath = brushedPath()
     bezierPath.stroke(with: brush.blendMode, alpha: brush.alpha)
