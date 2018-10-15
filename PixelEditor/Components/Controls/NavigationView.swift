@@ -23,7 +23,7 @@ final class NavigationView : UIStackView {
     axis = .horizontal
     distribution = .fillEqually
 
-    heightAnchor.constraint(equalToConstant: 44).isActive = true
+    heightAnchor.constraint(equalToConstant: 50).isActive = true
 
     addArrangedSubview(cancelButton)
     addArrangedSubview(saveButton)

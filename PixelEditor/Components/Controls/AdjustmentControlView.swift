@@ -1,25 +1,25 @@
 //
-//  MaskControlView.swift
+//  EditControlView.swift
 //  PixelEditor
 //
-//  Created by muukii on 10/12/18.
+//  Created by muukii on 10/10/18.
 //  Copyright © 2018 muukii. All rights reserved.
 //
 
 import Foundation
 
-open class MaskControlViewBase : ControlViewBase, ControlChildViewType {
+open class AdjustmentControlViewBase : ControlViewBase, ControlChildViewType {
 
 }
 
-public final class MaskControlView : MaskControlViewBase {
+public final class AdjustmentControlView : AdjustmentControlViewBase {
 
   private let navigationView = NavigationView()
 
   public override func setup() {
     super.setup()
 
-    backgroundColor = .white
+    backgroundColor = Style.default.control.backgroundColor
 
     addSubview(navigationView)
 
@@ -35,13 +35,13 @@ public final class MaskControlView : MaskControlViewBase {
     navigationView.didTapCancelButton = { [weak self] in
 
       self?.pop()
-      self?.context.action(.endMasking(save: false))
+      self?.context.action(.endAdjustment(save: false))
     }
 
     navigationView.didTapSaveButton = { [weak self] in
 
       self?.pop()
-      self?.context.action(.endMasking(save: true))
+      self?.context.action(.endAdjustment(save: true))
     }
 
   }
@@ -50,10 +50,12 @@ public final class MaskControlView : MaskControlViewBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      context.action(.setMode(.masking))
+      context.action(.setMode(.adjustment))
     } else {
       context.action(.setMode(.preview))
     }
 
   }
+
 }
+

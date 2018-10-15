@@ -33,6 +33,6 @@ public final class BrightnessControlView : BrightnessControlViewBase {
   public override func setup() {
     super.setup()
 
-    backgroundColor = .white
+    backgroundColor = Style.default.control.backgroundColor
   }
 }

@@ -20,7 +20,7 @@ public final class DoodleControlView : DoodleControlViewBase {
 
     super.setup()
 
-    backgroundColor = .white
+    backgroundColor = Style.default.control.backgroundColor
 
     addSubview(navigationView)
 

@@ -168,7 +168,7 @@ public final class PixelEditViewController : UIViewController {
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
 
-        stackView.push(TopControlView(context: context))
+        stackView.push(RootControlView(context: context))
 
       }
 
