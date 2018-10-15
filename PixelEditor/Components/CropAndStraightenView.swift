@@ -12,13 +12,17 @@ final class CropAndStraightenView : UIView {
 
   // MARK: - Properties
 
-  var image: UIImage? {
+  var image: CIImage? {
     get {
-      return imageView.zoomView?.image
+      return imageView.zoomView?.image?.ciImage
     }
     set {
-      if let image = newValue {
-        assert(image.scale == UIScreen.main.scale)
+
+      let _image = newValue
+        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
+        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+
+      if let image = _image {
         imageView.display(image: image)
       } else {
         imageView.zoomView?.removeFromSuperview()
@@ -36,10 +40,7 @@ final class CropAndStraightenView : UIView {
       var visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
 
       let scale = _ratio(
-        to: CGSize(
-          width: image.size.width * image.scale,
-          height: image.size.height * image.scale
-        ),
+        to: image.extent.size,
         from: imageView.zoomView!.bounds.size
       )
 
@@ -63,10 +64,7 @@ final class CropAndStraightenView : UIView {
 
       let scale = _ratio(
         to: imageView.zoomView!.bounds.size,
-        from: CGSize(
-          width: image.size.width * image.scale,
-          height: image.size.height * image.scale
-        )
+        from: image.extent.size
       )
 
       var _visibleRect = newValue

@@ -8,9 +8,17 @@
 
 import Foundation
 
+import CoreImage
+
+#if canImport(UIKit)
+import UIKit
+#endif
+
 public struct ImageSource {
 
   public let image: CIImage
+
+  #if os(iOS)
 
   public init(source: UIImage) {
 
@@ -19,6 +27,8 @@ public struct ImageSource {
 
     self.init(source: fixedOriantationImage)
   }
+
+  #endif
 
   public init(source: CIImage) {
 

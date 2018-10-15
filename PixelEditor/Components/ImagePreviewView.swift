@@ -8,24 +8,18 @@
 
 import Foundation
 
-
-import protocol PixelEngine.HardwareImageViewType
-import class PixelEngine.GLImageView
-
-#if !targetEnvironment(simulator)
-import class PixelEngine.MetalImageView
-#endif
-
 final class ImagePreviewView : UIView {
 
   let imageView: UIImageView = .init()
 
-  var image: UIImage? {
+  var image: CIImage? {
     get {
-      return imageView.image
+      return imageView.image?.ciImage
     }
     set {
       imageView.image = newValue
+        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
+        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
       Log.debug("ImagePreviewView.image set", newValue)
     }
   }

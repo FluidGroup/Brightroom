@@ -12,14 +12,18 @@ import PixelEngine
 
 final class BlurredMosaicView : DryDrawingView {
 
-  var image: UIImage? {
+  private var displayingImageExtent: CGRect?
+
+  var image: CIImage? {
     get {
-      return imageView.image
+      return imageView.image?.ciImage
     }
     set {
 
+      displayingImageExtent = newValue?.extent
+
       let blurredImage = newValue
-        .flatMap { $0.ciImage ?? CIImage(image: $0) }
+        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
         .flatMap { BlurredMask.blur(image: $0) }
         .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
 
@@ -33,7 +37,7 @@ final class BlurredMosaicView : DryDrawingView {
 
   private let maskLayer = MaskLayer()
 
-  var drawnPaths: [DrawnPath] = [] {
+  var drawnPaths: [DrawnPathInRect] = [] {
     didSet {
       updateMask()
     }
@@ -61,7 +65,11 @@ final class BlurredMosaicView : DryDrawingView {
   }
 
   override func willBeginPan(path: UIBezierPath) {
-    let drawnPath = DrawnPath(brush: brush, path: path)
+
+//    guard let extent = displayingImageExtent else { return }
+
+    // TODO: Don't use bounds
+    let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path), in: bounds)
     drawnPaths.append(drawnPath)
   }
 
@@ -93,7 +101,7 @@ final class BlurredMosaicView : DryDrawingView {
 extension BlurredMosaicView {
   private class MaskLayer : CALayer {
 
-    var drawnPaths: [DrawnPath] = [] {
+    var drawnPaths: [GraphicsDrawing] = [] {
       didSet {
         setNeedsDisplay()
       }

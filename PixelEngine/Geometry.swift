@@ -1,5 +1,5 @@
 //
-//  ContentRect.swift
+//  Geometry.swift
 //  PixelEngine
 //
 //  Created by muukii on 10/11/18.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum ContentRect {
+public enum Geometry {
 
   public static func sizeThatAspectFit(aspectRatio: CGSize, boundingSize: CGSize) -> CGSize {
 
@@ -64,4 +64,13 @@ public enum ContentRect {
     origin.y = (minimumRect.size.height - size.height) / 2.0
     return CGRect(origin: origin, size: size)
   }
+
+  public static func diagonalRatio(to: CGSize, from: CGSize) -> CGFloat {
+
+    let _from = sqrt(pow(from.height, 2) + pow(from.width, 2))
+    let _to = sqrt(pow(to.height, 2) + pow(to.width, 2))
+
+    return _to / _from
+  }
+
 }

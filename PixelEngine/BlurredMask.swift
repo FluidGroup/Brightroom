@@ -40,7 +40,10 @@ public struct BlurredMask : GraphicsDrawing {
     paths.forEach { path in
       layerContext.saveGState()
 
-      path.draw(in: context, canvasSize: canvasSize)
+      let scale = Geometry.diagonalRatio(to: canvasSize, from: path.inRect.size)
+
+      layerContext.scaleBy(x: scale, y: scale)
+      path.draw(in: layerContext, canvasSize: canvasSize)
 
       layerContext.restoreGState()
     }
@@ -52,7 +55,6 @@ public struct BlurredMask : GraphicsDrawing {
     layerContext.scaleBy(x: 1, y: -1)
 
     ciContext.draw(ciImage, in: ciImage.extent, from: ciImage.extent)
-//    blurredImage.draw(at: .zero)
 
     layerContext.restoreGState()
 

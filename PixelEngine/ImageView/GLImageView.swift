@@ -70,7 +70,7 @@ public class GLImageView : GLKView, HardwareImageViewType {
     _bounds.size.width *= contentScaleFactor
     _bounds.size.height *= contentScaleFactor
 
-    let targetRect = ContentRect.rectThatAspectFill(
+    let targetRect = Geometry.rectThatAspectFill(
       aspectRatio: image.extent.size,
       minimumRect: _bounds
     )

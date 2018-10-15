@@ -18,21 +18,24 @@ public enum ImageTool {
     targetSize.height.round()
     targetSize.width.round()
 
-    if #available(iOS 12, *) {
+    let scaleX = targetSize.width / image.extent.width
+    let scaleY = targetSize.height / image.extent.height
 
-      let scaleX = targetSize.width / image.extent.width
-      let scaleY = targetSize.height / image.extent.height
+    if #available(iOS 12, *) {
 
       let resized = image
           .transformed(by: .init(scaleX: scaleX, y: scaleY))
 
-      let result = resized
-          .transformed(by: .init(translationX: -resized.extent.origin.x, y: -resized.extent.origin.y))
+      // TODO: round extent
+
+      let result = resized          
           .insertingIntermediate(cache: true)
 
       return result
 
     } else {
+
+      let originalExtent = image.extent
 
       UIGraphicsBeginImageContext(targetSize)
 
@@ -49,7 +52,7 @@ public enum ImageTool {
           return nil
       }
 
-      return image
+      return image.transformed(by: .init(translationX: originalExtent.origin.x * scaleX, y: originalExtent.origin.y * scaleY))
     }
   }
 

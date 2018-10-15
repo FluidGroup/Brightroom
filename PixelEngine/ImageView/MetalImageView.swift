@@ -64,7 +64,7 @@ open class MetalImageView : MTKView, HardwareImageViewType {
       size: drawableSize
     )
 
-    let targetRect = ContentRect.rectThatAspectFill(
+    let targetRect = Geometry.rectThatAspectFill(
       aspectRatio: image.extent.size,
       minimumRect: bounds
     )

@@ -259,7 +259,7 @@ public final class PixelEditViewController : UIViewController {
       adjustmentView.visibleExtent = cropRect
     }
 
-//    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
+    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
 
   }
 
@@ -276,7 +276,7 @@ public final class PixelEditViewController : UIViewController {
       }
     case .endMasking(let save):
       if save {
-//        stack.set(blurringMaskPaths: maskingView.drawnPaths)
+        stack.set(blurringMaskPaths: maskingView.drawnPaths)
         stack.commit()
       } else {
         syncUI(edit: stack.currentEdit)
@@ -292,12 +292,12 @@ extension PixelEditViewController : EditingStackDelegate {
     syncUI(edit: edit)
   }
 
-  public func editingStack(_ stack: EditingStack, didChangePreviewImage image: UIImage?) {
+  public func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?) {
     previewView.image = image
     maskingView.image = image
   }
 
-  public func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: UIImage?) {
+  public func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: CIImage?) {
 
   }
 

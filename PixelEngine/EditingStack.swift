@@ -10,8 +10,8 @@ import Foundation
 
 public protocol EditingStackDelegate : class {
 
-  func editingStack(_ stack: EditingStack, didChangePreviewImage image: UIImage?)
-  func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: UIImage?)
+  func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?)
+  func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: CIImage?)
   func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
 }
 
@@ -25,7 +25,7 @@ open class EditingStack {
 
   }
 
-  public var previewImage: UIImage? {
+  public var previewImage: CIImage? {
     didSet {
       delegate?.editingStack(self, didChangePreviewImage: previewImage)
     }
@@ -34,14 +34,13 @@ open class EditingStack {
   public var originalPreviewImage: CIImage? {
     didSet {
 
-      previewImage = originalPreviewImage.map {
-        UIImage(ciImage: $0, scale: targetScreenScale, orientation: .up)
-      }
+      // TODO apply Filter
+      previewImage = originalPreviewImage
 
     }
   }
 
-  public var adjustmentImage: UIImage? {
+  public var adjustmentImage: CIImage? {
     didSet {
       delegate?.editingStack(self, didChangeAdjustmentImage: adjustmentImage)
     }
@@ -85,16 +84,12 @@ open class EditingStack {
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
 
-    self.adjustmentImage = UIImage(
-      ciImage: source.image,
-      scale: screenScale,
-      orientation: .up
-    )
+    self.adjustmentImage = source.image
 
     self.edits = [.init()]
 
     originalPreviewImage = ImageTool.resize(
-      to: ContentRect.sizeThatAspectFill(
+      to: Geometry.sizeThatAspectFill(
         aspectRatio: source.image.extent.size,
         minimumSize: CGSize(
           width: preferredPreviewSize.width * targetScreenScale,
@@ -105,10 +100,7 @@ open class EditingStack {
     )
 
     setAdjustment(cropRect: source.image.extent)
-
-    self.adjustmentImage = source.image.cgImage
-      .flatMap { UIImage(cgImage: $0, scale: screenScale, orientation: .up) }
-      ?? UIImage(ciImage: source.image, scale: screenScale, orientation: .up)
+    
   }
 
   public func requestApplyingFilterImage() -> CIImage {
@@ -140,7 +132,7 @@ open class EditingStack {
       .cropped(to: _cropRect)
 
     let result = ImageTool.resize(
-      to: ContentRect.sizeThatAspectFit(
+      to: Geometry.sizeThatAspectFit(
         aspectRatio: croppedImage.extent.size,
         boundingSize: CGSize(
           width: preferredPreviewSize.width * targetScreenScale,
@@ -162,7 +154,11 @@ open class EditingStack {
 
   public func makeRenderer() -> ImageRenderer {
 
-    let scale = _ratio(to: source.image.extent.size, from: preferredPreviewSize)
+    guard let originalPreviewImage = originalPreviewImage else {
+      preconditionFailure()
+    }
+
+    let scale = _ratio(to: source.image.extent.size, from: originalPreviewImage.extent.size)
 
     let renderer = ImageRenderer(source: source)
 
@@ -194,7 +190,7 @@ open class SquareEditingStack : EditingStack {
 
     super.init(source: source, previewSize: previewSize, screenScale: screenScale)
 
-    let cropRect = ContentRect.rectThatAspectFit(
+    let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
       boundingRect: source.image.extent
     )
