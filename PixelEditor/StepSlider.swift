@@ -8,115 +8,256 @@
 
 import Foundation
 
-/// -100 <-> 100
-public final class StepSlider: UISlider {
+public final class StepSlider : UIControl {
 
-  public enum AmountType {
-    case plus
-    case minus
-    case plusMinus
-  }
-
-  public var maxPercent: Int = 100
-
-  public var offset: Int = 3
-
-  public var amountType: AmountType = .plusMinus {
+  public var minStep: Int = -100 {
     didSet {
-      self.setupValueType()
+      setupValues()
     }
   }
 
-  public var neutralAmount: Double = 0
-  public var maximumAmount: Double = 0
-  public var minimumAmount: Double = 0
-
-  var step: Int {
-    return Int(self.value)
-  }
-
-  public override var value: Float {
+  public var maxStep: Int = 100 {
     didSet {
-      let _offset = Float(self.offset) + 1
-      if -_offset <= value && _offset >= value {
+      setupValues()
+    }
+  }
 
-        self.value = 0
-        return self.calculateAmount(0)
-      } else {
+  public override var intrinsicContentSize: CGSize {
+    return internalSlider.intrinsicContentSize
+  }
 
-        return self.calculateAmount(Double(value))
+  private let feedbackGenerator = UISelectionFeedbackGenerator()
+
+  public var step: Int = 0 {
+    didSet {
+      if oldValue != step {
+        setValueFromStep()
+
+        if step == 0 {
+          feedbackGenerator.selectionChanged()
+          feedbackGenerator.prepare()
+        }
       }
+
+      sendActions(for: .valueChanged)
     }
   }
 
-  var amount: Double {
-    get {
-      return self.calculateAmount(Double(self.value))
-    }
-    set {
-
-      self.value = self.calculateValue(newValue)
-
-      DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + DispatchTimeInterval.microseconds(500)) {
-
-        self.updateStepLabel()
-      }
-    }
-  }
-
-  public convenience init(maxPercent: Int) {
-    self.init()
-    self.maxPercent = maxPercent
-  }
+  private let internalSlider = _StepSlider(frame: .zero)
 
   public override init(frame: CGRect) {
-
-    super.init(frame: frame)
-    self.setup()
-    self.setupValueType()
+    super.init(frame: .zero)
+    setup()
+    feedbackGenerator.prepare()
   }
 
   public required init?(coder aDecoder: NSCoder) {
-
-    super.init(coder: aDecoder)
-    self.setup()
-    self.setupValueType()
+    fatalError("init(coder:) has not been implemented")
   }
 
-  public override func draw(_ rect: CGRect) {
+  private func setup() {
 
-    let stepCount = self.maxPercent
+    internalSlider.addTarget(self, action: #selector(__didChangeValue), for: .valueChanged)
 
-    let interval = rect.width / CGFloat(stepCount)
+    addSubview(internalSlider)
+    internalSlider.frame = bounds
+    internalSlider.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-    do {
-      let y = rect.height/2
-      let bezierPath = UIBezierPath()
-      bezierPath.move(to: CGPoint(x: 10, y: y))
-      bezierPath.addLine(to: CGPoint(x: (interval * CGFloat(stepCount - 1)) - 10, y: y))
-      UIColor(white: 0, alpha: 0.2).setStroke()
-      bezierPath.stroke()
+    setupValues()
+    setValueFromStep()
+  }
+
+  private func setupValues() {
+
+    if minStep < 0 {
+      internalSlider.minimumValue = -1
+    } else {
+      internalSlider.minimumValue = 0
     }
 
-    do {
+    if maxStep > 0 {
+      internalSlider.maximumValue = 1
+    } else {
+      internalSlider.maximumValue = 0
+    }
 
-      let y = rect.height/2
-      let bezierPath = UIBezierPath()
+    step = 0
+  }
 
-      switch self.amountType {
-      case .plus:
-        bezierPath.move(to: CGPoint(x: 10, y: y - 6))
-        bezierPath.addLine(to: CGPoint(x: 10, y: y + 6))
-      case .minus:
-        bezierPath.move(to: CGPoint(x: (interval * CGFloat(stepCount - 1)) - 10, y: y - 6))
-        bezierPath.addLine(to: CGPoint(x: (interval * CGFloat(stepCount - 1)) - 10, y: y + 6))
-      case .plusMinus:
-        bezierPath.move(to: CGPoint(x: rect.width/2, y: y - 6))
-        bezierPath.addLine(to: CGPoint(x: rect.width/2, y: y + 6))
+  public func transition(min: Double, max: Double) -> Double {
+
+    if step == 0 {
+      return 0
+    } else {
+      if step > 0 {
+        return
+          CalcBox.init(Double(step))
+            .progress(start: Double(0), end: Double(maxStep))
+            .transition(start: 0, end: max)
+            .value
+        
+      } else {
+        return
+          CalcBox.init(Double(step))
+            .progress(start: Double(0), end: Double(minStep))
+            .transition(start: 0, end: min)
+            .value
       }
-      UIColor(white: 0, alpha: 0.2).setStroke()
-      bezierPath.stroke()
     }
+
+  }
+
+  private let offset: CGFloat = 0.05
+
+  @objc
+  private func __didChangeValue() {
+
+    let value = internalSlider.value
+
+    if case -offset ... offset = CGFloat(value) {
+      if self.step != 0 {
+        self.step = 0
+      }
+      // To fix thumb
+      internalSlider.value = 0
+      return
+    }
+
+    let step: Int
+
+    if value > 0 {
+      step = Int(
+        makeTransition(
+          progress: makeProgress(value: CGFloat(value), start: offset, end: CGFloat(internalSlider.maximumValue)),
+          start: 0,
+          end: CGFloat(maxStep)
+          )
+          .rounded()
+      )
+    } else {
+      step = Int(
+        makeTransition(
+          progress: makeProgress(value: CGFloat(value), start: -offset, end: CGFloat(internalSlider.minimumValue)),
+          start: 0,
+          end: CGFloat(minStep)
+          )
+          .rounded()
+      )
+    }
+
+    if self.step != Int(step) {
+      self.step = Int(step)
+    }
+  }
+
+  private func setValueFromStep() {
+
+    if !internalSlider.isTracking {
+      if step == 0 {
+        internalSlider.value = 0
+      } else {
+        if step > 0 {
+          internalSlider.value = Float(makeTransition(progress: makeProgress(value: CGFloat(step), start: 0, end: CGFloat(maxStep)), start: offset, end: CGFloat(internalSlider.maximumValue)))
+        } else {
+          internalSlider.value = Float(makeTransition(progress: makeProgress(value: CGFloat(step), start: 0, end: CGFloat(minStep)), start: -offset, end: CGFloat(internalSlider.minimumValue)))
+        }
+      }
+    }
+
+    if step == 0 {
+      internalSlider.stepLabel.text = ""
+    } else {
+      internalSlider.stepLabel.text = "\(step)"
+    }
+    internalSlider.updateStepLabel()
+  }
+
+  private func makeTransition(progress: CGFloat, start: CGFloat, end: CGFloat) -> CGFloat {
+    return ((end - start) * progress) + start
+  }
+
+  private func makeProgress(value: CGFloat, start: CGFloat, end: CGFloat) -> CGFloat {
+    return (value - start) / (end - start)
+  }
+
+}
+
+final class _StepSlider: UISlider {
+
+  enum DotLocation {
+    case start
+    case center
+    case end
+  }
+
+  let stepLabel: UILabel = .init()
+
+  var dotLocation: DotLocation = .center {
+    didSet {
+      setNeedsDisplay()
+    }
+  }
+
+  override init(frame: CGRect) {
+
+    super.init(frame: frame)
+    self.setup()
+  }
+
+  required init?(coder aDecoder: NSCoder) {
+    fatalError()
+  }
+
+  override func draw(_ rect: CGRect) {
+
+    guard let context = UIGraphicsGetCurrentContext() else {
+      return
+    }
+
+    let scale = contentScaleFactor
+
+    guard
+      let layer = CGLayer(context, size: CGSize(width: bounds.size.width * scale, height: bounds.size.height * scale), auxiliaryInfo: nil),
+      let layerContext = layer.context
+      else {
+        return
+    }
+
+    UIGraphicsPushContext(layerContext)
+
+    layerContext.scaleBy(x: scale, y: scale)
+
+    UIColor(white: 0, alpha: 1).setStroke()
+    UIColor(white: 0, alpha: 1).setFill()
+
+    line: do {
+      let path = UIBezierPath()
+      path.move(to: CGPoint.init(x: 10, y: bounds.midY))
+      path.addLine(to: CGPoint.init(x: bounds.maxX - 10, y: bounds.midY))
+      path.lineWidth = 1
+      path.stroke()
+    }
+
+    dot: do {
+
+      switch dotLocation {
+      case .start:
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: 10 - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
+        path.fill()
+      case .center:
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
+        path.fill()
+      case .end:
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.maxX - 10 - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
+        path.fill()
+      }
+
+    }
+
+    UIGraphicsPopContext()
+
+    context.setAlpha(0.2)
+    context.draw(layer, in: bounds)
   }
 
   private func setup() {
@@ -125,132 +266,38 @@ public final class StepSlider: UISlider {
     self.maximumTrackTintColor = UIColor.clear
     self.setThumbImage(UIImage(named: "slider_thumb", in: bundle, compatibleWith: nil), for: [])
 
-    self.rx.value.map
-      { [unowned self] value -> Double in
-
-        let _offset = Float(self.offset) + 1
-        if -_offset <= value && _offset >= value {
-
-          self.value = 0
-          return self.calculateAmount(0)
-        } else {
-
-          return self.calculateAmount(Double(value))
-        }
-      }
-      .bindTo(self.rx_amount)
-      .addDisposableTo(self.disposeBag)
-
-    self.rx_amount.subscribe(onNext: { [weak self] _ in
-
-      self?.updateStepLabel()
-
-    })
-      .addDisposableTo(self.disposeBag)
-
-    let label = UILabel()
+    let label = stepLabel
     label.backgroundColor = UIColor.clear
-    label.font = UIFont.systemFont(ofSize: 12)
-    label.textColor = UIColor.white
+    label.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+    label.textColor = UIColor.black
     label.textAlignment = .center
 
     self.addSubview(label)
-    self.stepLabel = label
   }
 
-  private func calculateAmount(_ value: Double) -> Double {
-
-    let step = self.step
-    if value > 0 {
-      return (((self.maximumAmount - self.neutralAmount) / Double(self.maxPercent)) * Double(step - offset)) + self.neutralAmount
-    } else if value < 0 {
-      return (((self.neutralAmount - self.minimumAmount) / Double(self.maxPercent)) * Double(step + offset)) + self.neutralAmount
-    } else {
-      return self.neutralAmount
-    }
+  override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+    super.touchesMoved(touches, with: event)
+    updateStepLabel()
   }
 
-  private func calculateValue(_ amount: Double) -> Float {
+  func updateStepLabel() {
 
-    var value: Double
-    if amount > self.neutralAmount {
-
-      value = (((amount - self.neutralAmount) / (self.maximumAmount - self.neutralAmount)) * Double(self.maxPercent))
-
-    } else if amount < self.neutralAmount {
-
-      value = -(((self.neutralAmount - amount) / (self.neutralAmount - self.minimumAmount)) * Double(self.maxPercent))
-
-    } else {
-
-      value = 0
-    }
-
-    let step: Int
-
-    guard value.isInfinite == false || value.isNaN == false else {
-      return 0
-    }
-
-    if value > 0 {
-      step = Int(value + 0.5) + offset
-    } else if value < 0 {
-      step = Int(value - 0.5) - offset
-    } else {
-      step = Int(value)
-    }
-
-    return Float(step)
-  }
-
-  private func setupValueType() {
-
-    switch self.amountType {
-    case .plus:
-      maximumValue = Float(maxPercent + offset)
-      minimumValue = 0
-    case .minus:
-      maximumValue = 0
-      minimumValue = -Float(maxPercent + offset)
-    case .plusMinus:
-      maximumValue = Float(maxPercent + offset)
-      minimumValue = -Float(maxPercent + offset)
-    }
-  }
-
-  private weak var stepLabel: UILabel?
-
-  private func updateStepLabel() {
-
-    var _trackImageView: UIImageView?
-
-    for imageView in self.subviews where imageView is UIImageView {
-
-      if imageView.bounds.width == imageView.bounds.height {
-        _trackImageView = imageView as? UIImageView
-      }
-    }
-
-    guard let trackImageView = _trackImageView else {
-      return
-    }
-
-    let _offset = Float(self.offset) + 1
-    if -_offset <= self.value && _offset >= self.value {
-      self.stepLabel?.isHidden = true
-    } else {
-      self.stepLabel?.isHidden = false
-    }
-
-    if self.step > 0 {
-      self.stepLabel?.text = String(self.step - self.offset)
-    } else {
-      self.stepLabel?.text = String(self.step + self.offset)
-    }
-
-    self.stepLabel?.sizeToFit()
-
-    let center = CGPoint(x: trackImageView.frame.midX, y: -10)
-    self.stepLabel?.center = center
+//    var _trackImageView: UIImageView?
+//
+//    for imageView in self.subviews where imageView is UIImageView {
+//
+//      if imageView.bounds.width == imageView.bounds.height {
+//        _trackImageView = imageView as? UIImageView
+//      }
+//    }
+//
+//    guard let trackImageView = _trackImageView else {
+//      return
+//    }
+//
+//    self.stepLabel.sizeToFit()
+//
+//    let center = CGPoint(x: trackImageView.frame.midX, y: -16)
+//    self.stepLabel.center = center
   }
 }

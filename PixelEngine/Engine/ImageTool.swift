@@ -29,7 +29,7 @@ public enum ImageTool {
       // TODO: round extent
 
       let result = resized          
-          .insertingIntermediate(cache: true)
+        .insertingIntermediate()
 
       return result
 

@@ -21,6 +21,14 @@ public final class PixelEditContext {
     case setMode(PixelEditViewController.Mode)
     case endAdjustment(save: Bool)
     case endMasking(save: Bool)
+
+    case setFilterBrightness(FilterBrightness?)
+    case setFilterGaussianBlur(FilterGaussianBlur?)
+    case setFilterColorCube(FilterColorCube?)
+
+    case commit
+    case revert
+    case undo
   }
 
   fileprivate var didReceiveAction: (Action) -> Void = { _ in }
@@ -30,7 +38,7 @@ public final class PixelEditContext {
   }
 
   func action(_ action: Action) {
-    didReceiveAction(action)
+    self.didReceiveAction(action)
   }
 }
 
@@ -40,6 +48,7 @@ public final class PixelEditViewController : UIViewController {
 
     case adjustment
     case masking
+    case filtering
     case preview
   }
 
@@ -168,6 +177,7 @@ public final class PixelEditViewController : UIViewController {
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
 
+        // TODO: Make customizable
         stackView.push(RootControlView(context: context))
 
       }
@@ -208,6 +218,7 @@ public final class PixelEditViewController : UIViewController {
 
     switch mode {
     case .adjustment:
+
       navigationItem.rightBarButtonItem = nil
 
       adjustmentView.isHidden = false
@@ -230,9 +241,22 @@ public final class PixelEditViewController : UIViewController {
       adjustmentView.isHidden = true
       previewView.isHidden = false
       maskingView.isHidden = false
+      
       maskingView.isUserInteractionEnabled = true
 
       maskingView.image = stack.previewImage
+
+    case .filtering:
+
+      navigationItem.rightBarButtonItem = nil
+
+      adjustmentView.isHidden = true
+      previewView.isHidden = false
+      maskingView.isHidden = true
+
+      maskingView.isUserInteractionEnabled = false
+
+      previewView.image = stack.previewImage
 
     case .preview:
 
@@ -240,8 +264,9 @@ public final class PixelEditViewController : UIViewController {
 
       previewView.isHidden = false
       adjustmentView.isHidden = true
-      maskingView.isUserInteractionEnabled = false
       maskingView.isHidden = false
+
+      maskingView.isUserInteractionEnabled = false
 
       previewView.image = stack.previewImage
 
@@ -281,6 +306,24 @@ public final class PixelEditViewController : UIViewController {
       } else {
         syncUI(edit: stack.currentEdit)
       }
+    case .setFilterBrightness(let f):
+      stack.set {
+        $0.brightness = f
+      }
+    case .setFilterGaussianBlur(let f):
+      stack.set {
+        $0.gaussianBlur = f
+      }
+    case .setFilterColorCube(let f):
+      stack.set {
+        $0.colorCube = f
+      }
+    case .commit:
+      stack.commit()
+    case .undo:
+      stack.undo()
+    case .revert:
+      stack.revert()
     }
   }
 

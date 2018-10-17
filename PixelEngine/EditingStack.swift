@@ -17,25 +17,33 @@ public protocol EditingStackDelegate : class {
 
 open class EditingStack {
 
-  public struct Edit : Equatable {
+  // MARK: - Stored Properties
 
-    public var cropRect: CGRect?
-    public var blurredMaskPaths: [DrawnPathInRect] = []
-    public var doodlePaths: [DrawnPath] = []
+  public let source: ImageSource
 
-  }
+  public weak var delegate: EditingStackDelegate?
+
+  public let preferredPreviewSize: CGSize
+
+  public let targetScreenScale: CGFloat
+
+  public var availableColorCubeFilters: [PreviewFilterColorCube] = []
+
+  private var cubeFilterPreviewSourceImage: CIImage!
+
+  // MARK: - Computed Properties
 
   public var previewImage: CIImage? {
     didSet {
+      Log.debug("Changed EditingStack.previewImage")
       delegate?.editingStack(self, didChangePreviewImage: previewImage)
     }
   }
 
   public var originalPreviewImage: CIImage? {
     didSet {
-
-      // TODO apply Filter
-      previewImage = originalPreviewImage
+      Log.debug("Changed EditingStack.originalPreviewImage")
+      updatePreviewImage()
 
     }
   }
@@ -46,37 +54,40 @@ open class EditingStack {
     }
   }
 
-  public let preferredPreviewSize: CGSize
-
-  public let targetScreenScale: CGFloat
-
-  public weak var delegate: EditingStackDelegate?
-
-  public let source: ImageSource
+  public var isDirty: Bool {
+    return draftEdit != nil
+  }
 
   public var canUndo: Bool {
     return edits.count > 1
   }
 
+  public var draftEdit: Edit? {
+    didSet {
+      if oldValue != draftEdit {
+        updatePreviewImage()
+      }
+    }
+  }
+
   public var currentEdit: Edit {
-    get {
-      return edits.last!
-    }
-    set {
-      edits[edits.indices.last!] = newValue
-    }
+    return draftEdit ?? edits.last!
   }
 
   public private(set) var edits: [Edit] {
     didSet {
+      Log.debug("Edits changed counnt -> \(edits.count)")
       delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
     }
   }
 
+  // MARK: - Initializers
+
   public init(
     source: ImageSource,
     previewSize: CGSize,
-    screenScale: CGFloat = UIScreen.main.scale
+    screenScale: CGFloat = UIScreen.main.scale,
+    colorCubeFilters: [FilterColorCube] = []
     ) {
 
     self.source = source
@@ -88,27 +99,50 @@ open class EditingStack {
 
     self.edits = [.init()]
 
-    originalPreviewImage = ImageTool.resize(
-      to: Geometry.sizeThatAspectFill(
-        aspectRatio: source.image.extent.size,
-        minimumSize: CGSize(
-          width: preferredPreviewSize.width * targetScreenScale,
-          height: preferredPreviewSize.height * targetScreenScale
-        )
-      ),
-      from: source.image
-    )
-
     setAdjustment(cropRect: source.image.extent)
-    
+    commit()
+    removeAllHistory()
+    updatePreviewFilterSizeImage()
+    set(availableColorCubeFilters: colorCubeFilters)
+
   }
+
+  // MARK: - Functions
 
   public func requestApplyingFilterImage() -> CIImage {
     fatalError()
   }
 
+  private func makeDraft() {
+    draftEdit = edits.last ?? .init()
+  }
+
   public func commit() {
-    edits.append(currentEdit)
+    guard let edit = draftEdit else {
+      assertionFailure("Call makeDraft()")
+      return
+    }
+    guard edits.last != edit else { return }
+    edits.append(edit)
+    draftEdit = nil
+  }
+
+  public func revert() {
+    draftEdit = nil
+  }
+
+  public func undo() {
+    edits.removeLast()
+  }
+
+  public func removeAllHistory() {
+    edits = [edits.last].compactMap { $0 }
+  }
+
+  public func set(filters: (inout Edit.Filters) -> Void) {
+    apply {
+      filters(&$0.filters)
+    }
   }
 
   public func setAdjustment(cropRect: CGRect) {
@@ -152,13 +186,18 @@ open class EditingStack {
     }
   }
 
-  public func makeRenderer() -> ImageRenderer {
+  public func set(availableColorCubeFilters: [FilterColorCube]) {
 
-    guard let originalPreviewImage = originalPreviewImage else {
-      preconditionFailure()
+    let items = availableColorCubeFilters.map {
+      PreviewFilterColorCube.init(sourceImage: cubeFilterPreviewSourceImage, filter: $0)
     }
 
-    let scale = _ratio(to: source.image.extent.size, from: originalPreviewImage.extent.size)
+    self.availableColorCubeFilters = items
+
+    items.forEach { $0.preheat() }
+  }
+
+  public func makeRenderer() -> ImageRenderer {
 
     let renderer = ImageRenderer(source: source)
 
@@ -169,12 +208,50 @@ open class EditingStack {
       BlurredMask(paths: edit.blurredMaskPaths)
     ]
 
+    renderer.edit.modifiers = edit.makeFilters()
+
     return renderer
   }
 
   private func apply(_ perform: (inout Edit) -> Void) {
 
-    perform(&currentEdit)
+    if draftEdit == nil {
+      makeDraft()
+    }
+    var draft = draftEdit!
+    perform(&draft)
+    draftEdit = draft
+
+  }
+
+  private func updatePreviewImage() {
+
+    guard let image = originalPreviewImage else {
+      previewImage = nil
+      return
+    }
+
+    previewImage = currentEdit
+      .makeFilters()
+      .reduce(image) { (image, filter) -> CIImage in
+        filter.apply(to: image)
+    }
+  }
+
+  private func updatePreviewFilterSizeImage() {
+
+    let smallSizeImage = ImageTool.resize(
+      to: Geometry.sizeThatAspectFit(
+        aspectRatio: CGSize(width: 1, height: 1),
+        boundingSize: CGSize(
+          width: 60 * targetScreenScale,
+          height: 60 * targetScreenScale
+        )
+      ),
+      from: source.image
+    )
+
+    cubeFilterPreviewSourceImage = smallSizeImage
 
   }
 
@@ -185,7 +262,8 @@ open class SquareEditingStack : EditingStack {
   public override init(
     source: ImageSource,
     previewSize: CGSize,
-    screenScale: CGFloat = UIScreen.main.scale
+    screenScale: CGFloat = UIScreen.main.scale,
+    colorCubeFilters: [FilterColorCube] = []
     ) {
 
     super.init(source: source, previewSize: previewSize, screenScale: screenScale)
@@ -196,6 +274,8 @@ open class SquareEditingStack : EditingStack {
     )
 
     setAdjustment(cropRect: cropRect)
+    commit()
+    removeAllHistory()
 
   }
 }
@@ -206,4 +286,32 @@ private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
   let _to = sqrt(pow(to.height, 2) + pow(to.width, 2))
 
   return _to / _from
+}
+
+extension EditingStack {
+
+  public struct Edit : Equatable {
+
+    public struct Filters : Equatable {
+      public var brightness: FilterBrightness?
+      public var gaussianBlur: FilterGaussianBlur?
+      public var colorCube: FilterColorCube?
+    }
+
+    public var cropRect: CGRect?
+    public var blurredMaskPaths: [DrawnPathInRect] = []
+    public var doodlePaths: [DrawnPath] = []
+
+    public var filters: Filters = .init()
+
+    func makeFilters() -> [Filtering] {
+      return ([
+        filters.brightness,
+        filters.colorCube,
+        filters.gaussianBlur,
+        ] as [Optional<Filtering>])
+        .compactMap { $0 }
+    }
+  }
+
 }

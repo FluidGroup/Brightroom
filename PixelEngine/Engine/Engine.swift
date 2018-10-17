@@ -68,7 +68,7 @@ public final class ImageRenderer {
 
     let cgContext = UIGraphicsGetCurrentContext()!
 
-    let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .ARGB8, colorSpace: resultImage.colorSpace)!
+    let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())!
 
     cgContext.saveGState()
     cgContext.translateBy(x: 0, y: resultImage.extent.height)

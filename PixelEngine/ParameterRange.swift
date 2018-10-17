@@ -8,10 +8,14 @@
 
 import Foundation
 
-public struct ParameterRange<T : Comparable> {
+public struct ParameterRange<T : Comparable, Target> {
 
-  public let max: T
-  public let neutral: T
   public let min: T
+  public let max: T
+
+  public init(min: T, max: T) {
+    self.min = min
+    self.max = max
+  }
 
 }
