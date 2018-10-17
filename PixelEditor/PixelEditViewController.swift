@@ -333,6 +333,7 @@ extension PixelEditViewController : EditingStackDelegate {
 
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     syncUI(edit: edit)
+    Log.debug("[EditingStackDelegate] didChagneCurrentEdit")
   }
 
   public func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?) {

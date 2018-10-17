@@ -12,7 +12,7 @@ import os.log
 
 enum Log {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEditor", category: "UI")
+  private static let osLog = OSLog.init(subsystem: "PixelEditor", category: "Editor")
 
   static func debug(_ object: Any...) {
 

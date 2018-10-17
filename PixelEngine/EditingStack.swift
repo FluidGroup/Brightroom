@@ -77,7 +77,6 @@ open class EditingStack {
   public private(set) var edits: [Edit] {
     didSet {
       Log.debug("Edits changed counnt -> \(edits.count)")
-      delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
     }
   }
 
@@ -133,6 +132,7 @@ open class EditingStack {
 
   public func undo() {
     edits.removeLast()
+    updatePreviewImage()
   }
 
   public func removeAllHistory() {
@@ -236,6 +236,8 @@ open class EditingStack {
       .reduce(image) { (image, filter) -> CIImage in
         filter.apply(to: image)
     }
+
+    delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
   }
 
   private func updatePreviewFilterSizeImage() {
