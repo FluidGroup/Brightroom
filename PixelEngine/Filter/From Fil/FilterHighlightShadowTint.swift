@@ -11,6 +11,8 @@ import JAYSON
 import LightRoomExtension
 import Hue
 
+// https://github.com/muukii/Fil/blob/919cc28c19b1aac05f2f8463e646319e3a701b0b/Modules/LightRoomExtension/ExternalFilter.swift
+
 public func == (lhs: FilterHighlightShadowTint, rhs: FilterHighlightShadowTint) -> Bool {
 
     if lhs.highlightTintColor == rhs.highlightTintColor &&

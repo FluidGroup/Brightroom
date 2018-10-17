@@ -10,6 +10,9 @@
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
 		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
+		4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */; };
+		4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */; };
+		4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */; };
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
 		4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456E216DEE95003A240A /* StepSlider.swift */; };
 		4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94B2217624A700E9DFB8 /* SliderViewController.swift */; };
@@ -18,7 +21,7 @@
 		4B1E951C21764DE700E9DFB8 /* GaussianBlurControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951B21764DE700E9DFB8 /* GaussianBlurControlView.swift */; };
 		4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */; };
 		4B1E95202176567300E9DFB8 /* FilterControlViewBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951F2176567300E9DFB8 /* FilterControlViewBase.swift */; };
-		4B1E95222176CC0300E9DFB8 /* FilterWarmth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FA217634A900E9DFB8 /* FilterWarmth.swift */; };
+		4B1E95222176CC0300E9DFB8 /* FilterTemperature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FA217634A900E9DFB8 /* FilterTemperature.swift */; };
 		4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94EE217634A800E9DFB8 /* FilterVignette.swift */; };
 		4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */; };
 		4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */; };
@@ -26,7 +29,7 @@
 		4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E952A2176F57800E9DFB8 /* ColorCube.swift */; };
 		4B1E95332176F80600E9DFB8 /* ColorCubeStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */; };
 		4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */; };
-		4B1E9537217714D500E9DFB8 /* EditControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditControlView.swift */; };
+		4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */; };
 		4B1E95572177162500E9DFB8 /* LUT_C4_safe.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B1E95382177162100E9DFB8 /* LUT_C4_safe.png */; };
 		4B1E95582177162500E9DFB8 /* LUT_C9_safe.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B1E95392177162100E9DFB8 /* LUT_C9_safe.png */; };
 		4B1E95592177162500E9DFB8 /* LUT_F3_safe.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B1E953A2177162100E9DFB8 /* LUT_F3_safe.png */; };
@@ -158,7 +161,6 @@
 		4B1E94B5217632C500E9DFB8 /* FilterBrightness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBrightness.swift; sourceTree = "<group>"; };
 		4B1E94E8217634A800E9DFB8 /* FilterHue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterHue.swift; sourceTree = "<group>"; };
 		4B1E94E9217634A800E9DFB8 /* FilterDiscBlur.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterDiscBlur.swift; sourceTree = "<group>"; };
-		4B1E94EA217634A800E9DFB8 /* _FilterBrightness.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = _FilterBrightness.swift; sourceTree = "<group>"; };
 		4B1E94EB217634A800E9DFB8 /* FilterBoxBlur.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterBoxBlur.swift; sourceTree = "<group>"; };
 		4B1E94EC217634A800E9DFB8 /* FilterFade.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterSaturation.swift; sourceTree = "<group>"; };
@@ -166,13 +168,10 @@
 		4B1E94EF217634A800E9DFB8 /* FilterCrystallize.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterCrystallize.swift; sourceTree = "<group>"; };
 		4B1E94F0217634A900E9DFB8 /* _FilterGaussianBlur.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = _FilterGaussianBlur.swift; sourceTree = "<group>"; };
 		4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterContrast.swift; sourceTree = "<group>"; };
-		4B1E94F3217634A900E9DFB8 /* FilterStructure.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterStructure.swift; sourceTree = "<group>"; };
 		4B1E94F4217634A900E9DFB8 /* FilterHighlightShadowTint.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterHighlightShadowTint.swift; sourceTree = "<group>"; };
 		4B1E94F5217634A900E9DFB8 /* FilterNoiseReduction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterNoiseReduction.swift; sourceTree = "<group>"; };
-		4B1E94F6217634A900E9DFB8 /* FilterPresetAmount.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterPresetAmount.swift; sourceTree = "<group>"; };
 		4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterUnsharpMask.swift; sourceTree = "<group>"; };
-		4B1E94F9217634A900E9DFB8 /* FilterToneCurve.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterToneCurve.swift; sourceTree = "<group>"; };
-		4B1E94FA217634A900E9DFB8 /* FilterWarmth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterWarmth.swift; sourceTree = "<group>"; };
+		4B1E94FA217634A900E9DFB8 /* FilterTemperature.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterTemperature.swift; sourceTree = "<group>"; };
 		4B1E94FB217634AA00E9DFB8 /* FilterGrain.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterGrain.swift; sourceTree = "<group>"; };
 		4B1E94FC217634AA00E9DFB8 /* FilterChannels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterChannels.swift; sourceTree = "<group>"; };
 		4B1E94FD217634AA00E9DFB8 /* FilterColorBalance.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterColorBalance.swift; sourceTree = "<group>"; };
@@ -187,7 +186,7 @@
 		4B1E952A2176F57800E9DFB8 /* ColorCube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCube.swift; sourceTree = "<group>"; };
 		4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeStorage.swift; sourceTree = "<group>"; };
 		4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeControlView.swift; sourceTree = "<group>"; };
-		4B1E9536217714D500E9DFB8 /* EditControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditControlView.swift; sourceTree = "<group>"; };
+		4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMenuControlView.swift; sourceTree = "<group>"; };
 		4B1E95382177162100E9DFB8 /* LUT_C4_safe.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_C4_safe.png; sourceTree = "<group>"; };
 		4B1E95392177162100E9DFB8 /* LUT_C9_safe.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_C9_safe.png; sourceTree = "<group>"; };
 		4B1E953A2177162100E9DFB8 /* LUT_F3_safe.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_F3_safe.png; sourceTree = "<group>"; };
@@ -315,9 +314,12 @@
 			isa = PBXGroup;
 			children = (
 				4B1E94E72176344100E9DFB8 /* From Fil */,
+				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
 				4B1E94B5217632C500E9DFB8 /* FilterBrightness.swift */,
+				4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */,
+				4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */,
 				4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */,
-				4B1E94FA217634A900E9DFB8 /* FilterWarmth.swift */,
+				4B1E94FA217634A900E9DFB8 /* FilterTemperature.swift */,
 				4B1E94EE217634A800E9DFB8 /* FilterVignette.swift */,
 				4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */,
 				4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */,
@@ -330,10 +332,8 @@
 			isa = PBXGroup;
 			children = (
 				4B1E94EB217634A800E9DFB8 /* FilterBoxBlur.swift */,
-				4B1E94EA217634A800E9DFB8 /* _FilterBrightness.swift */,
 				4B1E94FC217634AA00E9DFB8 /* FilterChannels.swift */,
 				4B1E94FD217634AA00E9DFB8 /* FilterColorBalance.swift */,
-				4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */,
 				4B1E94EF217634A800E9DFB8 /* FilterCrystallize.swift */,
 				4B1E94E9217634A800E9DFB8 /* FilterDiscBlur.swift */,
 				4B1E94EC217634A800E9DFB8 /* FilterFade.swift */,
@@ -342,11 +342,6 @@
 				4B1E94F4217634A900E9DFB8 /* FilterHighlightShadowTint.swift */,
 				4B1E94E8217634A800E9DFB8 /* FilterHue.swift */,
 				4B1E94F5217634A900E9DFB8 /* FilterNoiseReduction.swift */,
-				4B1E94F6217634A900E9DFB8 /* FilterPresetAmount.swift */,
-				4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */,
-				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
-				4B1E94F3217634A900E9DFB8 /* FilterStructure.swift */,
-				4B1E94F9217634A900E9DFB8 /* FilterToneCurve.swift */,
 				4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */,
 			);
 			path = "From Fil";
@@ -419,7 +414,7 @@
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
 				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
 				4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */,
-				4B1E9536217714D500E9DFB8 /* EditControlView.swift */,
+				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
 				4B0077BF21704E7F008330EA /* MaskControlView.swift */,
 				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
@@ -811,7 +806,7 @@
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,
 				4B9D4575216DF66F003A240A /* NavigationView.swift in Sources */,
-				4B1E9537217714D500E9DFB8 /* EditControlView.swift in Sources */,
+				4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */,
 				4B1E95332176F80600E9DFB8 /* ColorCubeStorage.swift in Sources */,
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
 				4B1E951C21764DE700E9DFB8 /* GaussianBlurControlView.swift in Sources */,
@@ -831,6 +826,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
@@ -845,18 +841,20 @@
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,
 				4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */,
 				4B1E94B6217632C500E9DFB8 /* FilterBrightness.swift in Sources */,
+				4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */,
 				4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */,
 				4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */,
 				4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */,
 				4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */,
 				4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */,
 				4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */,
+				4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */,
 				4B600B19216B7BB9001E1456 /* Engine.swift in Sources */,
 				4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */,
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
 				4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */,
 				4B9D457A216E8013003A240A /* Geometry.swift in Sources */,
-				4B1E95222176CC0300E9DFB8 /* FilterWarmth.swift in Sources */,
+				4B1E95222176CC0300E9DFB8 /* FilterTemperature.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

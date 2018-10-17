@@ -6,7 +6,7 @@
 //  Copyright © 2015 muukii. All rights reserved.
 //
 
-public struct FilterTemperature: Filtering {
+public struct FilterTemperature: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterTemperature> = .init(min: -3000, max: 3000)
 

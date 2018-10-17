@@ -185,6 +185,7 @@ public final class StepSlider : UIControl {
     } else {
       internalSlider.stepLabel.text = "\(step)"
     }
+    internalSlider.stepLabel.sizeToFit()
     internalSlider.updateStepLabel()
   }
 }
@@ -210,6 +211,8 @@ private final class _StepSlider: UISlider {
   }
 
   let stepLabel: UILabel = .init()
+
+  private var _trackImageView: UIImageView?
 
   var dotLocation: DotLocation = .center {
     didSet {
@@ -301,7 +304,21 @@ private final class _StepSlider: UISlider {
 
   func updateStepLabel() {
 
-    var _trackImageView: UIImageView?
+    findTrackViewIfNeeded()
+
+    guard let trackImageView = _trackImageView else {
+      return
+    }
+
+    let center = CGPoint(x: trackImageView.frame.midX, y: -16)
+    self.stepLabel.center = center
+  }
+
+  private func findTrackViewIfNeeded() {
+
+    guard _trackImageView == nil else {
+      return
+    }
 
     for imageView in self.subviews where imageView is UIImageView {
 
@@ -309,14 +326,5 @@ private final class _StepSlider: UISlider {
         _trackImageView = imageView as? UIImageView
       }
     }
-
-    guard let trackImageView = _trackImageView else {
-      return
-    }
-
-    self.stepLabel.sizeToFit()
-
-    let center = CGPoint(x: trackImageView.frame.midX, y: -16)
-    self.stepLabel.center = center
   }
 }

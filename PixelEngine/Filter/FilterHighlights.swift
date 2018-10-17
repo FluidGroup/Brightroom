@@ -6,7 +6,7 @@
 //  Copyright © 2015 muukii. All rights reserved.
 //
 
-public struct FilterHighlights: Filtering {
+public struct FilterHighlights: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 0.8)
 

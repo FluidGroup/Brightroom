@@ -59,7 +59,24 @@ public struct FilterColorCube : Filtering, Equatable {
       f.setValue(colorSpace, forKeyPath: "inputColorSpace")
     }
 
-    return f.outputImage!
+    let backgrounnd = image
+    let foreground = f.outputImage!.applyingFilter(
+      "CIColorMatrix", parameters: [
+        "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
+        "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
+        "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
+        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount)),
+        "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
+    ])
+
+    let composition = CIFilter(
+      name: "CISourceOverCompositing",
+      parameters: [
+        kCIInputImageKey : foreground,
+        kCIInputBackgroundImageKey : backgrounnd
+      ])!
+
+    return composition.outputImage!
 
   }
 }

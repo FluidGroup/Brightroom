@@ -9,6 +9,7 @@
 import LightRoom
 import LightRoomExtension
 
+// https://github.com/muukii/Fil/blob/919cc28c19b1aac05f2f8463e646319e3a701b0b/Modules/LightRoomExtension/ExternalFilter.swift
 public struct FilterFade: Filtering {
     
     public static let maximumValue: Double = 0.12

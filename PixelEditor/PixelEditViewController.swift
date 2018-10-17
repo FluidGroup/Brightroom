@@ -120,7 +120,8 @@ public final class PixelEditViewController : UIViewController {
 
         stack = SquareEditingStack.init(
           source: imageSource,
-          previewSize: CGSize(width: view.bounds.width, height: view.bounds.width)
+          previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
+          colorCubeFilters: ColorCubeStorage.filters
         )
 
         view.backgroundColor = .white
@@ -151,6 +152,10 @@ public final class PixelEditViewController : UIViewController {
 
       }
 
+      root: do {
+        view.backgroundColor = Style.default.control.backgroundColor
+      }
+
       edit: do {
 
         [
@@ -178,7 +183,15 @@ public final class PixelEditViewController : UIViewController {
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
 
         // TODO: Make customizable
-        stackView.push(RootControlView(context: context))
+        stackView.push(
+          RootControlView(
+            context: context,
+            colorCubeControlView: ColorCubeControlView(
+              context: context,
+              filters: stack.availableColorCubeFilters
+            )
+          )
+        )
         stackView.notify(changedEdit: stack.currentEdit)
 
       }

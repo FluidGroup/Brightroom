@@ -20,13 +20,13 @@ open class GaussianBlurControlViewBase : FilterControlViewBase {
 
 }
 
-public final class GaussianBlurControlView : GaussianBlurControlViewBase {
+open class GaussianBlurControlView : GaussianBlurControlViewBase {
 
   private let navigationView = NavigationView()
 
   public let slider = StepSlider(frame: .zero)
 
-  public override func setup() {
+  open override func setup() {
     super.setup()
 
     backgroundColor = Style.default.control.backgroundColor
@@ -62,7 +62,14 @@ public final class GaussianBlurControlView : GaussianBlurControlViewBase {
     navigationView.didTapSaveButton = { [weak self] in
 
       self?.pop()
+      self?.context.action(.commit)
     }
+  }
+
+  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+
+    slider.set(value: edit.filters.gaussianBlur?.value ?? 0, in: range)
+
   }
 
   @objc

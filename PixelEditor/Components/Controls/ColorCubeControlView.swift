@@ -16,13 +16,14 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
 
-  private var filters: [FilterColorCube] = [] {
-    didSet {
-      collectionView.reloadData()
-    }
-  }
+  private let filters: [PreviewFilterColorCube]
 
   // MARK: - Functions
+
+  public init(context: PixelEditContext, filters: [PreviewFilterColorCube]) {
+    self.filters = filters
+    super.init(context: context)
+  }
 
   open override func setup() {
     super.setup()
@@ -30,13 +31,19 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
     backgroundColor = Style.default.control.backgroundColor
 
     addSubview(collectionView)
-    collectionView.frame = bounds
-    collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    collectionView.translatesAutoresizingMaskIntoConstraints = false
+
+    NSLayoutConstraint.activate([
+      collectionView.topAnchor.constraint(greaterThanOrEqualTo: collectionView.superview!.topAnchor),
+      collectionView.rightAnchor.constraint(equalTo: collectionView.superview!.rightAnchor),
+      collectionView.leftAnchor.constraint(equalTo: collectionView.superview!.leftAnchor),
+      collectionView.bottomAnchor.constraint(lessThanOrEqualTo: collectionView.superview!.bottomAnchor),
+      collectionView.centerYAnchor.constraint(equalTo: collectionView.superview!.centerYAnchor),
+      collectionView.heightAnchor.constraint(equalToConstant: 80),
+      ])
 
     collectionView.dataSource = self
     collectionView.delegate = self
-
-    self.filters = ColorCubeStorage.filters
 
   }
 
@@ -44,7 +51,16 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
     let collectionView = UICollectionView(frame: .zero, collectionViewLayout: makeCollectionViewLayout())
 
+    if #available(iOS 11.0, *) {
+      collectionView.contentInsetAdjustmentBehavior = .never
+    } else {
+      // Fallback on earlier versions
+    }
     collectionView.backgroundColor = .clear
+    collectionView.showsVerticalScrollIndicator = false
+    collectionView.showsHorizontalScrollIndicator = false
+    collectionView.contentInset.right = 44
+    collectionView.contentInset.left = 44
 
     collectionView.register(Cell.self, forCellWithReuseIdentifier: Cell.identifier)
 
@@ -80,19 +96,20 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 
     let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Cell.identifier, for: indexPath) as! Cell
-
+    let filter = filters[indexPath.item]
+    cell.set(preview: filter)
     return cell
   }
 
   open func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
 
-    return CGSize(width: 60, height: collectionView.bounds.height)
+    return CGSize(width: 80, height: collectionView.bounds.height)
   }
 
   open func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
 
     let filter = filters[indexPath.item]
-    context.action(.setFilterColorCube(filter))
+    context.action(.setFilterColorCube(filter.filter))
     context.action(.commit)
   }
 
@@ -102,17 +119,43 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
     static let identifier = "me.muukii.PixelEditor.FilterCell"
 
-    public let imageView = UIImageView()
+    public let nameLabel: UILabel = .init()
+    public let imageView: UIImageView = .init()
 
     public override init(frame: CGRect) {
       super.init(frame: frame)
 
-      imageView.contentMode = .scaleAspectFill
-      contentView.backgroundColor = UIColor.init(white: 0.95, alpha: 1)
+      layout: do {
+        imageView.contentMode = .scaleAspectFill
+        contentView.backgroundColor = UIColor.init(white: 0.95, alpha: 1)
+        imageView.clipsToBounds = true
 
-      contentView.addSubview(imageView)
-      imageView.frame = contentView.bounds
-      imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        contentView.addSubview(nameLabel)
+        contentView.addSubview(imageView)
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+
+          nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+          nameLabel.rightAnchor.constraint(lessThanOrEqualTo: contentView.rightAnchor),
+          nameLabel.leftAnchor.constraint(greaterThanOrEqualTo: contentView.leftAnchor),
+
+          imageView.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
+          imageView.rightAnchor.constraint(equalTo: contentView.rightAnchor, constant: -8),
+          imageView.leftAnchor.constraint(equalTo: contentView.leftAnchor, constant: 8),
+          imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor, multiplier: 1),
+          //        imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 8),
+          ])
+      }
+
+      style: do {
+
+        nameLabel.textAlignment = .center
+        nameLabel.font = UIFont.systemFont(ofSize: 13)
+        nameLabel.textColor = UIColor(white: 0.05, alpha: 1)
+
+      }
     }
 
     open override func prepareForReuse() {
@@ -122,6 +165,12 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
     public required init?(coder aDecoder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
+    }
+
+    open func set(preview: PreviewFilterColorCube) {
+
+      nameLabel.text = "ABC"
+      imageView.image = UIImage(ciImage: preview.image, scale: contentScaleFactor, orientation: .up)
     }
 
   }

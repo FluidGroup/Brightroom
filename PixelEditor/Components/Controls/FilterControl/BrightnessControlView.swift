@@ -62,6 +62,7 @@ open class BrightnessControlView : BrightnessControlViewBase {
     navigationView.didTapSaveButton = { [weak self] in
 
       self?.pop()
+      self?.context.action(.commit)
     }
   }
 

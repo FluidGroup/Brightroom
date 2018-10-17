@@ -32,13 +32,15 @@ final class RootControlView : RootControlViewBase {
 
   private let containerView = UIView()
 
-  public lazy var filtesView = ColorCubeControlView(context: context)
+  public let colorCubeControlView: ColorCubeControlView
 
-  public lazy var editView = EditControlView(context: context)
+  public lazy var editView = EditMenuControlView(context: context)
 
   // MARK: - Initializers
 
-  override init(context: PixelEditContext) {
+  init(context: PixelEditContext, colorCubeControlView: ColorCubeControlView) {
+
+    self.colorCubeControlView = colorCubeControlView
 
     super.init(context: context)
 
@@ -125,11 +127,11 @@ final class RootControlView : RootControlViewBase {
 
     switch displayType {
     case .filter:
-      containerView.addSubview(filtesView)
-      subscribeChangedEdit(to: filtesView)
+      containerView.addSubview(colorCubeControlView)
+      subscribeChangedEdit(to: colorCubeControlView)
 
-      filtesView.frame = containerView.bounds
-      filtesView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      colorCubeControlView.frame = containerView.bounds
+      colorCubeControlView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
       filtersButton.isSelected = true
 

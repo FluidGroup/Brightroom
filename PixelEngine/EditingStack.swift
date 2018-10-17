@@ -85,8 +85,8 @@ open class EditingStack {
   public init(
     source: ImageSource,
     previewSize: CGSize,
-    screenScale: CGFloat = UIScreen.main.scale,
-    colorCubeFilters: [FilterColorCube] = []
+    colorCubeFilters: [FilterColorCube],
+    screenScale: CGFloat = UIScreen.main.scale
     ) {
 
     self.source = source
@@ -273,11 +273,16 @@ open class SquareEditingStack : EditingStack {
   public override init(
     source: ImageSource,
     previewSize: CGSize,
-    screenScale: CGFloat = UIScreen.main.scale,
-    colorCubeFilters: [FilterColorCube] = []
+    colorCubeFilters: [FilterColorCube] = [],
+    screenScale: CGFloat = UIScreen.main.scale
     ) {
 
-    super.init(source: source, previewSize: previewSize, screenScale: screenScale)
+    super.init(
+      source: source,
+      previewSize: previewSize,
+      colorCubeFilters: colorCubeFilters,
+      screenScale: screenScale
+    )
 
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
@@ -307,6 +312,29 @@ extension EditingStack {
       public var brightness: FilterBrightness?
       public var gaussianBlur: FilterGaussianBlur?
       public var colorCube: FilterColorCube?
+      public var contrast: FilterContrast?
+      public var saturation: FilterSaturation?
+      public var highlights: FilterHighlights?
+      public var shadows: FilterShadows?
+      public var sharpen: FilterSharpen?
+      public var temperature: FilterTemperature?
+      public var vignette: FilterVignette?
+
+      func makeFilters() -> [Filtering] {
+        return ([
+          sharpen,
+          gaussianBlur,
+          temperature,
+          highlights,
+          shadows,
+          brightness,
+          saturation,
+          contrast,
+          colorCube,
+          vignette,
+          ] as [Optional<Filtering>])
+          .compactMap { $0 }
+      }
     }
 
     public var cropRect: CGRect?
@@ -316,12 +344,7 @@ extension EditingStack {
     public var filters: Filters = .init()
 
     func makeFilters() -> [Filtering] {
-      return ([
-        filters.brightness,
-        filters.colorCube,
-        filters.gaussianBlur,
-        ] as [Optional<Filtering>])
-        .compactMap { $0 }
+      return filters.makeFilters()
     }
   }
 

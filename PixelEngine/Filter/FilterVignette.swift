@@ -6,7 +6,7 @@
 //  Copyright © 2015 muukii. All rights reserved.
 //
 
-public struct FilterVignette: Filtering {
+public struct FilterVignette: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterVignette> = .init(min: 0, max: 8)
 
