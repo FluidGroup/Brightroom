@@ -8,6 +8,8 @@
 
 import Foundation
 
+import PixelEngine
+
 public final class StepSlider : UIControl {
 
   public var minStep: Int = -100 {
@@ -28,16 +30,19 @@ public final class StepSlider : UIControl {
 
   private let feedbackGenerator = UISelectionFeedbackGenerator()
 
-  public var step: Int = 0 {
+  private let offset: Double = 0.05
+
+  public private(set) var step: Int = 0 {
     didSet {
       if oldValue != step {
-        setValueFromStep()
 
         if step == 0 {
           feedbackGenerator.selectionChanged()
           feedbackGenerator.prepare()
         }
       }
+
+      updateStepLabel()
 
       sendActions(for: .valueChanged)
     }
@@ -64,7 +69,6 @@ public final class StepSlider : UIControl {
     internalSlider.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
     setupValues()
-    setValueFromStep()
   }
 
   private func setupValues() {
@@ -82,6 +86,34 @@ public final class StepSlider : UIControl {
     }
 
     step = 0
+  }
+
+  public func set(value: Double, min: Double, max: Double) {
+
+    guard !internalSlider.isTracking else { return }
+
+    if value == 0 {
+      internalSlider.value = 0
+    } else {
+      if value > 0 {
+        internalSlider.value = Float(
+          CalcBox.init(value)
+            .progress(start: 0, end: max)
+            .transition(start: offset, end: Double(internalSlider.maximumValue))
+            .value
+        )
+      } else {
+        internalSlider.value = Float(
+          CalcBox.init(value)
+            .progress(start: 0, end: min)
+            .transition(start: -offset, end: Double(internalSlider.minimumValue))
+            .value
+        )
+      }
+    }
+
+    __didChangeValue()
+
   }
 
   public func transition(min: Double, max: Double) -> Double {
@@ -104,17 +136,14 @@ public final class StepSlider : UIControl {
             .value
       }
     }
-
   }
-
-  private let offset: CGFloat = 0.05
 
   @objc
   private func __didChangeValue() {
 
     let value = internalSlider.value
 
-    if case -offset ... offset = CGFloat(value) {
+    if case -offset ... offset = Double(value) {
       if self.step != 0 {
         self.step = 0
       }
@@ -126,44 +155,31 @@ public final class StepSlider : UIControl {
     let step: Int
 
     if value > 0 {
+
       step = Int(
-        makeTransition(
-          progress: makeProgress(value: CGFloat(value), start: offset, end: CGFloat(internalSlider.maximumValue)),
-          start: 0,
-          end: CGFloat(maxStep)
-          )
+        CalcBox(Double(value))
+          .progress(start: offset, end: Double(internalSlider.maximumValue))
+          .transition(start: 0, end: Double(maxStep))
+          .value
           .rounded()
       )
+
     } else {
+
       step = Int(
-        makeTransition(
-          progress: makeProgress(value: CGFloat(value), start: -offset, end: CGFloat(internalSlider.minimumValue)),
-          start: 0,
-          end: CGFloat(minStep)
-          )
+        CalcBox(Double(value))
+          .progress(start: -offset, end: Double(internalSlider.minimumValue))
+          .transition(start: 0, end: Double(minStep))
+          .value
           .rounded()
       )
+
     }
 
-    if self.step != Int(step) {
-      self.step = Int(step)
-    }
+    self.step = Int(step)
   }
 
-  private func setValueFromStep() {
-
-    if !internalSlider.isTracking {
-      if step == 0 {
-        internalSlider.value = 0
-      } else {
-        if step > 0 {
-          internalSlider.value = Float(makeTransition(progress: makeProgress(value: CGFloat(step), start: 0, end: CGFloat(maxStep)), start: offset, end: CGFloat(internalSlider.maximumValue)))
-        } else {
-          internalSlider.value = Float(makeTransition(progress: makeProgress(value: CGFloat(step), start: 0, end: CGFloat(minStep)), start: -offset, end: CGFloat(internalSlider.minimumValue)))
-        }
-      }
-    }
-
+  private func updateStepLabel() {
     if step == 0 {
       internalSlider.stepLabel.text = ""
     } else {
@@ -171,18 +187,21 @@ public final class StepSlider : UIControl {
     }
     internalSlider.updateStepLabel()
   }
-
-  private func makeTransition(progress: CGFloat, start: CGFloat, end: CGFloat) -> CGFloat {
-    return ((end - start) * progress) + start
-  }
-
-  private func makeProgress(value: CGFloat, start: CGFloat, end: CGFloat) -> CGFloat {
-    return (value - start) / (end - start)
-  }
-
 }
 
-final class _StepSlider: UISlider {
+extension StepSlider {
+
+  public func set<T>(value: Double, in range: ParameterRange<Double, T>) {
+
+    set(value: value, min: range.min, max: range.max)
+  }
+
+  public func transition<T>(in range: ParameterRange<Double, T>) -> Double {
+    return transition(min: range.min, max: range.max)
+  }
+}
+
+private final class _StepSlider: UISlider {
 
   enum DotLocation {
     case start
@@ -275,29 +294,29 @@ final class _StepSlider: UISlider {
     self.addSubview(label)
   }
 
-  override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-    super.touchesMoved(touches, with: event)
+  override func layoutSubviews() {
+    super.layoutSubviews()
     updateStepLabel()
   }
 
   func updateStepLabel() {
 
-//    var _trackImageView: UIImageView?
-//
-//    for imageView in self.subviews where imageView is UIImageView {
-//
-//      if imageView.bounds.width == imageView.bounds.height {
-//        _trackImageView = imageView as? UIImageView
-//      }
-//    }
-//
-//    guard let trackImageView = _trackImageView else {
-//      return
-//    }
-//
-//    self.stepLabel.sizeToFit()
-//
-//    let center = CGPoint(x: trackImageView.frame.midX, y: -16)
-//    self.stepLabel.center = center
+    var _trackImageView: UIImageView?
+
+    for imageView in self.subviews where imageView is UIImageView {
+
+      if imageView.bounds.width == imageView.bounds.height {
+        _trackImageView = imageView as? UIImageView
+      }
+    }
+
+    guard let trackImageView = _trackImageView else {
+      return
+    }
+
+    self.stepLabel.sizeToFit()
+
+    let center = CGPoint(x: trackImageView.frame.midX, y: -16)
+    self.stepLabel.center = center
   }
 }

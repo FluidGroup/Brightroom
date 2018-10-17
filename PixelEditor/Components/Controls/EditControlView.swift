@@ -8,7 +8,7 @@
 
 import Foundation
 
-open class EditControlView : ControlViewBase, ControlChildViewType {
+open class EditControlView : ControlViewBase {
 
   public let contentView = UIView()
   public let itemsView = UIStackView()

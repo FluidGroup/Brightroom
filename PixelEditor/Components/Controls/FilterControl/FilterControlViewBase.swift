@@ -8,7 +8,7 @@
 
 import Foundation
 
-open class FilterControlViewBase : ControlViewBase, ControlChildViewType {
+open class FilterControlViewBase : ControlViewBase {
 
   public override init(context: PixelEditContext) {
     super.init(context: context)

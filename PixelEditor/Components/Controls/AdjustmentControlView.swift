@@ -8,7 +8,7 @@
 
 import Foundation
 
-open class AdjustmentControlViewBase : ControlViewBase, ControlChildViewType {
+open class AdjustmentControlViewBase : ControlViewBase {
 
 }
 

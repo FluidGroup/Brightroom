@@ -20,13 +20,13 @@ open class BrightnessControlViewBase : FilterControlViewBase {
 
 }
 
-public final class BrightnessControlView : BrightnessControlViewBase {
+open class BrightnessControlView : BrightnessControlViewBase {
 
   private let navigationView = NavigationView()
 
   public let slider = StepSlider(frame: .zero)
 
-  public override func setup() {
+  open override func setup() {
     super.setup()
 
     backgroundColor = Style.default.control.backgroundColor
@@ -65,10 +65,16 @@ public final class BrightnessControlView : BrightnessControlViewBase {
     }
   }
 
+  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+
+    slider.set(value: edit.filters.brightness?.value ?? 0, in: range)
+
+  }
+
   @objc
   private func valueChanged() {
 
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: range)
     var f = FilterBrightness()
     f.value = value
     context.action(.setFilterBrightness(f))

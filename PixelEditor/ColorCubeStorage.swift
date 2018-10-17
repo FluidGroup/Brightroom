@@ -17,19 +17,22 @@ public enum ColorCubeStorage {
   public static func load() {
 
     do {
-      let bundle = Bundle.init(for: _Dummy.self)
-      let path = bundle.bundlePath as NSString
-      let fileList = try FileManager.default.contentsOfDirectory(atPath: path as String)
 
-      let filters = try fileList
-        .filter { $0.hasPrefix("LUT") && $0.hasSuffix(".png") }
-        .map { path.appendingPathComponent($0) }
-        .map { URL(fileURLWithPath: $0) }
-        .map { try Data(contentsOf: $0) }
-        .map { UIImage(data: $0)! }
-        .map { FilterColorCube.init(lutImage: $0, dimension: 64) }
+      try autoreleasepool {
+        let bundle = Bundle.init(for: _Dummy.self)
+        let path = bundle.bundlePath as NSString
+        let fileList = try FileManager.default.contentsOfDirectory(atPath: path as String)
 
-      self.filters = filters
+        let filters = try fileList
+          .filter { $0.hasPrefix("LUT") && $0.hasSuffix(".png") }
+          .map { path.appendingPathComponent($0) }
+          .map { URL(fileURLWithPath: $0) }
+          .map { try Data(contentsOf: $0) }
+          .map { UIImage(data: $0)! }
+          .map { FilterColorCube.init(lutImage: $0, dimension: 64) }
+
+        self.filters = filters
+      }
 
     } catch {
 

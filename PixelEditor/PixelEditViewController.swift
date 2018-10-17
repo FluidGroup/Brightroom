@@ -71,6 +71,8 @@ public final class PixelEditViewController : UIViewController {
 
   private let cropButton = UIButton(type: .system)
 
+  private let stackView = ControlStackView()
+
   private lazy var doneButton = UIBarButtonItem(
     title: TODOL10n("Done"),
     style: .plain,
@@ -170,8 +172,6 @@ public final class PixelEditViewController : UIViewController {
 
       control: do {
 
-        let stackView = ControlStackView()
-
         controlContainerView.addSubview(stackView)
 
         stackView.frame = stackView.bounds
@@ -179,6 +179,7 @@ public final class PixelEditViewController : UIViewController {
 
         // TODO: Make customizable
         stackView.push(RootControlView(context: context))
+        stackView.notify(changedEdit: stack.currentEdit)
 
       }
 
@@ -244,7 +245,9 @@ public final class PixelEditViewController : UIViewController {
       
       maskingView.isUserInteractionEnabled = true
 
-      maskingView.image = stack.previewImage
+      if maskingView.image != stack.previewImage {
+        maskingView.image = stack.previewImage
+      }
 
     case .filtering:
 
@@ -256,7 +259,9 @@ public final class PixelEditViewController : UIViewController {
 
       maskingView.isUserInteractionEnabled = false
 
-      previewView.image = stack.previewImage
+      if previewView.image != stack.previewImage {
+        previewView.image = stack.previewImage
+      }
 
     case .preview:
 
@@ -268,7 +273,9 @@ public final class PixelEditViewController : UIViewController {
 
       maskingView.isUserInteractionEnabled = false
 
-      previewView.image = stack.previewImage
+      if previewView.image != stack.previewImage {
+        previewView.image = stack.previewImage
+      }
 
     }
 
@@ -333,16 +340,19 @@ extension PixelEditViewController : EditingStackDelegate {
 
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     syncUI(edit: edit)
+    stackView.notify(changedEdit: edit)
     Log.debug("[EditingStackDelegate] didChagneCurrentEdit")
   }
 
   public func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?) {
+    
     previewView.image = image
     maskingView.image = image
   }
 
   public func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: CIImage?) {
 
+    adjustmentView.image = image
   }
 
 }

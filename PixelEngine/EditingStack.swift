@@ -140,7 +140,7 @@ open class EditingStack {
   }
 
   public func set(filters: (inout Edit.Filters) -> Void) {
-    apply {
+    applyIfChanged {
       filters(&$0.filters)
     }
   }
@@ -156,7 +156,7 @@ open class EditingStack {
     _cropRect.size.width.round(.up)
     _cropRect.size.height.round(.up)
 
-    apply {
+    applyIfChanged {
       $0.cropRect = _cropRect
     }
 
@@ -181,7 +181,7 @@ open class EditingStack {
 
   public func set(blurringMaskPaths: [DrawnPathInRect]) {
 
-    apply {
+    applyIfChanged {
       $0.blurredMaskPaths = blurringMaskPaths
     }
   }
@@ -213,13 +213,17 @@ open class EditingStack {
     return renderer
   }
 
-  private func apply(_ perform: (inout Edit) -> Void) {
+  private func applyIfChanged(_ perform: (inout Edit) -> Void) {
 
     if draftEdit == nil {
       makeDraft()
     }
+
     var draft = draftEdit!
     perform(&draft)
+
+    guard draftEdit != draft else { return }
+
     draftEdit = draft
 
   }
@@ -231,10 +235,15 @@ open class EditingStack {
       return
     }
 
-    previewImage = currentEdit
+    let filters = currentEdit
       .makeFilters()
-      .reduce(image) { (image, filter) -> CIImage in
-        filter.apply(to: image)
+
+    previewImage = filters.reduce(image) { (image, filter) -> CIImage in
+      filter.apply(to: image)
+    }
+
+    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
+      filter.apply(to: image)
     }
 
     delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)

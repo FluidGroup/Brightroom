@@ -8,7 +8,7 @@
 
 import Foundation
 
-open class MaskControlViewBase : ControlViewBase, ControlChildViewType {
+open class MaskControlViewBase : ControlViewBase {
 
 }
 

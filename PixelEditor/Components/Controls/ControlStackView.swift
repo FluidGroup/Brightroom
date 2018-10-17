@@ -8,8 +8,11 @@
 
 import UIKit
 
+import PixelEngine
+
 protocol ControlChildViewType {
 
+  func didReceiveCurrentEdit(_ edit: EditingStack.Edit)
 }
 
 extension ControlChildViewType where Self : UIView {
@@ -35,24 +38,56 @@ extension ControlChildViewType where Self : UIView {
   }
 
   func pop() {
-    let controlStackView = find()
-    controlStackView.pop()
+    find().pop()
+  }
+
+  func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
+    find().subscribeChangedEdit(to: view)
   }
 }
 
 
 final class ControlStackView : UIView {
 
+  private var subscribers: [UIView & ControlChildViewType] = []
+
+  private var latestNotifiedEdit: EditingStack.Edit?
+
   func push(_ view: UIView & ControlChildViewType) {
 
     addSubview(view)
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+    subscribeChangedEdit(to: view)
   }
 
   func pop() {
 
-    subviews.last?.removeFromSuperview()
+    guard let target = subviews.last else {
+      return
+    }
+    target.removeFromSuperview()
+
+    subscribers.removeAll { $0 == target }
+  }
+
+  func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
+    guard !subscribers.contains(where: { $0 == view }) else { return }
+    subscribers.append(view)
+    if let edit = latestNotifiedEdit {
+      view.didReceiveCurrentEdit(edit)
+    }
+  }
+
+  func notify(changedEdit: EditingStack.Edit) {
+
+    latestNotifiedEdit = changedEdit
+
+    subscribers
+      .forEach {
+        $0.didReceiveCurrentEdit(changedEdit)
+    }
   }
 }
 

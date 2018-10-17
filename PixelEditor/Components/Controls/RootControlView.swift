@@ -8,9 +8,7 @@
 
 import Foundation
 
-import PixelEngine
-
-open class RootControlViewBase : ControlViewBase, ControlChildViewType {
+open class RootControlViewBase : ControlViewBase {
 
 }
 
@@ -94,11 +92,17 @@ final class RootControlView : RootControlViewBase {
       editButton.addTarget(self, action: #selector(didTapEditButton), for: .touchUpInside)
     }
 
-    set(displayType: displayType)
-
   }
 
   // MARK: - Functions
+
+  override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+
+    if superview != nil {
+      set(displayType: displayType)
+    }
+  }
 
   @objc
   private func didTapFilterButton() {
@@ -122,6 +126,8 @@ final class RootControlView : RootControlViewBase {
     switch displayType {
     case .filter:
       containerView.addSubview(filtesView)
+      subscribeChangedEdit(to: filtesView)
+
       filtesView.frame = containerView.bounds
       filtesView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
@@ -129,6 +135,8 @@ final class RootControlView : RootControlViewBase {
 
     case .edit:
       containerView.addSubview(editView)
+      subscribeChangedEdit(to: editView)
+
       editView.frame = containerView.bounds
       editView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 

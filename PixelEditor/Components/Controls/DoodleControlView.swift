@@ -8,7 +8,7 @@
 
 import Foundation
 
-open class DoodleControlViewBase : ControlViewBase, ControlChildViewType {
+open class DoodleControlViewBase : ControlViewBase {
 
 }
 

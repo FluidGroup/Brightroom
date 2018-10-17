@@ -10,7 +10,7 @@ import Foundation
 
 import PixelEngine
 
-open class ColorCubeControlView : ControlViewBase, ControlChildViewType, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
 
   // MARK: - Properties
 
