@@ -45,7 +45,7 @@ public struct FilterColorCube : Filtering, Equatable {
   public init(
     lutImage: Image,
     dimension: Int,
-    colorSpace: CGColorSpace = CGColorSpaceCreateDeviceRGB()
+    colorSpace: CGColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
     ) {
 
     self.filter = ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)

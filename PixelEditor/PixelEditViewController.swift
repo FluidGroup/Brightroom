@@ -22,9 +22,7 @@ public final class PixelEditContext {
     case endAdjustment(save: Bool)
     case endMasking(save: Bool)
 
-    case setFilterBrightness(FilterBrightness?)
-    case setFilterGaussianBlur(FilterGaussianBlur?)
-    case setFilterColorCube(FilterColorCube?)
+    case setFilter((inout EditingStack.Edit.Filters) -> Void)
 
     case commit
     case revert
@@ -217,7 +215,6 @@ public final class PixelEditViewController : UIViewController {
       stack.delegate = self
       view.layoutIfNeeded()
       
-      updateAdjustmentUI()
       previewView.image = stack.previewImage
       maskingView.image = stack.previewImage
       maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
@@ -327,18 +324,8 @@ public final class PixelEditViewController : UIViewController {
       } else {
         syncUI(edit: stack.currentEdit)
       }
-    case .setFilterBrightness(let f):
-      stack.set {
-        $0.brightness = f
-      }
-    case .setFilterGaussianBlur(let f):
-      stack.set {
-        $0.gaussianBlur = f
-      }
-    case .setFilterColorCube(let f):
-      stack.set {
-        $0.colorCube = f
-      }
+    case .setFilter(let closure):
+      stack.set(filters: closure)   
     case .commit:
       stack.commit()
     case .undo:

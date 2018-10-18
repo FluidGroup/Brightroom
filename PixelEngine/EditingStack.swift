@@ -97,13 +97,18 @@ open class EditingStack {
     self.adjustmentImage = source.image
 
     self.edits = [.init()]
-
-    setAdjustment(cropRect: source.image.extent)
+    
+    initialCrop()
     commit()
     removeAllHistory()
+
     updatePreviewFilterSizeImage()
     set(availableColorCubeFilters: colorCubeFilters)
 
+  }
+  
+  open func initialCrop() {
+     setAdjustment(cropRect: source.image.extent)
   }
 
   // MARK: - Functions
@@ -239,11 +244,11 @@ open class EditingStack {
       .makeFilters()
 
     previewImage = filters.reduce(image) { (image, filter) -> CIImage in
-      filter.apply(to: image)
+      filter.apply(to: image).insertingIntermediateIfCanUse()
     }
 
     adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
-      filter.apply(to: image)
+      filter.apply(to: image).insertingIntermediateIfCanUse()
     }
 
     delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
@@ -259,7 +264,7 @@ open class EditingStack {
           height: 60 * targetScreenScale
         )
       ),
-      from: source.image
+      from: originalPreviewImage!
     )
 
     cubeFilterPreviewSourceImage = smallSizeImage
@@ -270,29 +275,14 @@ open class EditingStack {
 
 open class SquareEditingStack : EditingStack {
 
-  public override init(
-    source: ImageSource,
-    previewSize: CGSize,
-    colorCubeFilters: [FilterColorCube] = [],
-    screenScale: CGFloat = UIScreen.main.scale
-    ) {
-
-    super.init(
-      source: source,
-      previewSize: previewSize,
-      colorCubeFilters: colorCubeFilters,
-      screenScale: screenScale
-    )
-
+  open override func initialCrop() {
+    
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
       boundingRect: source.image.extent
     )
-
+    
     setAdjustment(cropRect: cropRect)
-    commit()
-    removeAllHistory()
-
   }
 }
 
@@ -348,4 +338,15 @@ extension EditingStack {
     }
   }
 
+}
+
+extension CIImage {
+  
+  fileprivate func insertingIntermediateIfCanUse() -> CIImage {
+    if #available(iOSApplicationExtension 12.0, *) {
+      return self.insertingIntermediate(cache: true)
+    } else {
+      return self
+    }
+  }
 }

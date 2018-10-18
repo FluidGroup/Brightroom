@@ -13,11 +13,10 @@ public struct FilterHighlights: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 0.8)
 
-  public var value: Double
+  public var value: Double = 0
 
-  public init(value: Double) {
+  public init() {
 
-    self.value = value
   }
 
   public func apply(to image: CIImage) -> CIImage {

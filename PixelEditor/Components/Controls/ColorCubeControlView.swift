@@ -109,7 +109,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
   open func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
 
     let filter = filters[indexPath.item]
-    context.action(.setFilterColorCube(filter.filter))
+    context.action(.setFilter( { $0.colorCube = filter.filter }))
     context.action(.commit)
   }
 

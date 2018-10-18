@@ -31,38 +31,20 @@ open class BrightnessControlView : BrightnessControlViewBase {
 
     backgroundColor = Style.default.control.backgroundColor
 
-    addSubview(slider)
-    addSubview(navigationView)
-
-    slider.translatesAutoresizingMaskIntoConstraints = false
-
-    navigationView.translatesAutoresizingMaskIntoConstraints = false
-
-    NSLayoutConstraint.activate([
-
-      slider.topAnchor.constraint(greaterThanOrEqualTo: topAnchor),
-      slider.rightAnchor.constraint(equalTo: rightAnchor, constant: -44),
-      slider.leftAnchor.constraint(equalTo: leftAnchor, constant: 44),
-      slider.centerYAnchor.constraint(equalTo: centerYAnchor),
-
-      navigationView.topAnchor.constraint(greaterThanOrEqualTo: slider.bottomAnchor),
-      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
-      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
-      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
-      ])
+    TempCode.layout(navigationView: navigationView, slider: slider, in: self)
 
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
 
     navigationView.didTapCancelButton = { [weak self] in
-
-      self?.pop()
+      
       self?.context.action(.revert)
-    }
-
-    navigationView.didTapSaveButton = { [weak self] in
-
       self?.pop()
+    }
+    
+    navigationView.didTapSaveButton = { [weak self] in
+      
       self?.context.action(.commit)
+      self?.pop()
     }
   }
 
@@ -78,6 +60,6 @@ open class BrightnessControlView : BrightnessControlViewBase {
     let value = slider.transition(in: range)
     var f = FilterBrightness()
     f.value = value
-    context.action(.setFilterBrightness(f))
+    context.action(.setFilter({ $0.brightness = f }))
   }
 }

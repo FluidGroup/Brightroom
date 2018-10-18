@@ -13,9 +13,9 @@ import AVFoundation
 public enum ImageTool {
 
   private static let ciContext = CIContext(options: [
-//    .useSoftwareRenderer : false,
+    .useSoftwareRenderer : false,
     .highQualityDownsample: true,
-//    .workingColorSpace : CGColorSpaceCreateDeviceRGB()
+    .workingColorSpace : CGColorSpaceCreateDeviceRGB()
     ]
   )
 
@@ -55,16 +55,33 @@ public enum ImageTool {
 
           let originalExtent = image.extent
 
-          let format = UIGraphicsImageRendererFormat.default()
+          /*
+          let format: UIGraphicsImageRendererFormat
+          if #available(iOSApplicationExtension 11.0, *) {
+            format = UIGraphicsImageRendererFormat.preferred()
+          } else {
+            format = UIGraphicsImageRendererFormat.default()
+          }
           format.scale = 1
-
+          format.opaque = true
+          
           let _data = UIGraphicsImageRenderer.init(size: targetSize, format: format)
             .image { c in
+              
               let cgContext = c.cgContext
+              
+              let ciContext = CIContext.init(
+                cgContext: cgContext,
+                options: [
+                  .useSoftwareRenderer : false,
+                ]
+              )
+              
+              cgContext.interpolationQuality = .medium
               cgContext.translateBy(x: 0, y: targetSize.height)
               cgContext.scaleBy(x: 1, y: -1)
-              let cgImage = ciContext.createCGImage(image, from: image.extent)!
-              cgContext.draw(cgImage, in: CGRect(origin: .zero, size: targetSize))
+              ciContext.draw(image, in: CGRect(origin: .zero, size: targetSize), from: image.extent)
+              
             }
             .pngData()
 
@@ -74,7 +91,23 @@ public enum ImageTool {
             else {
               return nil
           }
-
+ */
+          
+          UIGraphicsBeginImageContext(targetSize)
+          
+          UIImage(ciImage: image).draw(in: CGRect(origin: .zero, size: targetSize))
+          let drawImage = UIGraphicsGetImageFromCurrentImageContext()
+          
+          UIGraphicsEndImageContext()
+          
+          guard
+            let _drawImage = drawImage,
+            let data = _drawImage.pngData(),
+            let image = CIImage(data: data)
+            else {
+              return nil
+          }
+          
           let r = image.transformed(by: .init(
             translationX: (originalExtent.origin.x * scaleX).rounded(.down),
             y: (originalExtent.origin.y * scaleY).rounded(.down)

@@ -106,32 +106,52 @@ open class EditMenuControlView : ControlViewBase {
         itemsView.addArrangedSubview(button)
       }
 
-      /*
-
-       contrast: do {
-       let button = ButtonView(name: TODOL10n("Contrast"), image: .init())
-       button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-
-       structure: do {
-       let button = ButtonView(name: TODOL10n("Structure"), image: .init())
-       button.addTarget(self, action: #selector(structure), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-
-       warmth: do {
-       let button = ButtonView(name: TODOL10n("Warmth"), image: .init())
-       button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
+      
+      contrast: do {
+        let button = ButtonView(name: TODOL10n("Contrast"), image: .init())
+        button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
+        itemsView.addArrangedSubview(button)
+      }
+      
+      temperature: do {
+        let button = ButtonView(name: TODOL10n("Temperature"), image: .init())
+        button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
+        itemsView.addArrangedSubview(button)
+      }
 
        saturation: do {
        let button = ButtonView(name: TODOL10n("Saturation"), image: .init())
        button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
        itemsView.addArrangedSubview(button)
        }
+      
+      highlights: do {
+        let button = ButtonView(name: TODOL10n("Highlights"), image: .init())
+        button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
+        itemsView.addArrangedSubview(button)
+      }
+      
+      shadows: do {
+        let button = ButtonView(name: TODOL10n("Shadows"), image: .init())
+        button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
+        itemsView.addArrangedSubview(button)
+      }
+      
+      vignette: do {
+        let button = ButtonView(name: TODOL10n("Vignette"), image: .init())
+        button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
+        itemsView.addArrangedSubview(button)
+      }
+      
+       /*
 
+       
+       structure: do {
+       let button = ButtonView(name: TODOL10n("Structure"), image: .init())
+       button.addTarget(self, action: #selector(structure), for: .touchUpInside)
+       itemsView.addArrangedSubview(button)
+       }
+       
        color: do {
        let button = ButtonView(name: TODOL10n("Color"), image: .init())
        button.addTarget(self, action: #selector(color), for: .touchUpInside)
@@ -144,23 +164,7 @@ open class EditMenuControlView : ControlViewBase {
        itemsView.addArrangedSubview(button)
        }
 
-       highlights: do {
-       let button = ButtonView(name: TODOL10n("Highlights"), image: .init())
-       button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-
-       shadows: do {
-       let button = ButtonView(name: TODOL10n("Shadows"), image: .init())
-       button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-
-       vignette: do {
-       let button = ButtonView(name: TODOL10n("Vignette"), image: .init())
-       button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
+  
 
        sharpen: do {
        let button = ButtonView(name: TODOL10n("Sharpen"), image: .init())
@@ -206,7 +210,7 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func contrast() {
-
+    push(ContrastControlView(context: context))
   }
 
   @objc
@@ -216,12 +220,12 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func warmth() {
-
+    push(TemperatureControlView(context: context))
   }
 
   @objc
   private func saturation() {
-
+    push(SaturationControlView(context: context))
   }
 
   @objc
@@ -236,17 +240,17 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func highlights() {
-
+    push(HighlightsControlView(context: context))
   }
 
   @objc
   private func shadows() {
-
+    push(ShadowsControlView(context: context))
   }
 
   @objc
   private func vignette() {
-
+    push(VignetteControlView(context: context))
   }
 
   @objc

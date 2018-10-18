@@ -62,6 +62,13 @@
 		4B1E95742177162500E9DFB8 /* LUT_A9_safe.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B1E95552177162500E9DFB8 /* LUT_A9_safe.png */; };
 		4B1E95752177162500E9DFB8 /* LUT_E7_safe.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B1E95562177162500E9DFB8 /* LUT_E7_safe.png */; };
 		4B34578B217502F900716DA0 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34578A217502F900716DA0 /* Style.swift */; };
+		4B42A6A52178DF2600F18208 /* SaturationControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A42178DF2600F18208 /* SaturationControlView.swift */; };
+		4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A62178DF7D00F18208 /* TempCode.swift */; };
+		4B42A6A92178E12500F18208 /* ContrastControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A82178E12500F18208 /* ContrastControlView.swift */; };
+		4B42A6AB2178E13600F18208 /* TemperatureControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6AA2178E13600F18208 /* TemperatureControlView.swift */; };
+		4B42A6AD2178E14500F18208 /* VignetteControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6AC2178E14500F18208 /* VignetteControlView.swift */; };
+		4B42A6AF2178E14E00F18208 /* HighlightsControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6AE2178E14E00F18208 /* HighlightsControlView.swift */; };
+		4B42A6B12178E15600F18208 /* ShadowsControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6B02178E15600F18208 /* ShadowsControlView.swift */; };
 		4B47D056216CC5350007B594 /* PixelEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B47D054216CC5350007B594 /* PixelEditor.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B47D059216CC5350007B594 /* PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; };
 		4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -219,6 +226,13 @@
 		4B1E95552177162500E9DFB8 /* LUT_A9_safe.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_A9_safe.png; sourceTree = "<group>"; };
 		4B1E95562177162500E9DFB8 /* LUT_E7_safe.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_E7_safe.png; sourceTree = "<group>"; };
 		4B34578A217502F900716DA0 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
+		4B42A6A42178DF2600F18208 /* SaturationControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaturationControlView.swift; sourceTree = "<group>"; };
+		4B42A6A62178DF7D00F18208 /* TempCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempCode.swift; sourceTree = "<group>"; };
+		4B42A6A82178E12500F18208 /* ContrastControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContrastControlView.swift; sourceTree = "<group>"; };
+		4B42A6AA2178E13600F18208 /* TemperatureControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemperatureControlView.swift; sourceTree = "<group>"; };
+		4B42A6AC2178E14500F18208 /* VignetteControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VignetteControlView.swift; sourceTree = "<group>"; };
+		4B42A6AE2178E14E00F18208 /* HighlightsControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightsControlView.swift; sourceTree = "<group>"; };
+		4B42A6B02178E15600F18208 /* ShadowsControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShadowsControlView.swift; sourceTree = "<group>"; };
 		4B47D052216CC5350007B594 /* PixelEditor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEditor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
 		4B47D055216CC5350007B594 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -350,9 +364,16 @@
 		4B1E95212176CBD100E9DFB8 /* FilterControl */ = {
 			isa = PBXGroup;
 			children = (
+				4B42A6A62178DF7D00F18208 /* TempCode.swift */,
 				4B1E951F2176567300E9DFB8 /* FilterControlViewBase.swift */,
 				4B9D456A216DE9CA003A240A /* BrightnessControlView.swift */,
 				4B1E951B21764DE700E9DFB8 /* GaussianBlurControlView.swift */,
+				4B42A6A42178DF2600F18208 /* SaturationControlView.swift */,
+				4B42A6A82178E12500F18208 /* ContrastControlView.swift */,
+				4B42A6AA2178E13600F18208 /* TemperatureControlView.swift */,
+				4B42A6AC2178E14500F18208 /* VignetteControlView.swift */,
+				4B42A6AE2178E14E00F18208 /* HighlightsControlView.swift */,
+				4B42A6B02178E15600F18208 /* ShadowsControlView.swift */,
 			);
 			path = FilterControl;
 			sourceTree = "<group>";
@@ -801,23 +822,30 @@
 				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
 				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
+				4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */,
+				4B42A6B12178E15600F18208 /* ShadowsControlView.swift in Sources */,
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* BrightnessControlView.swift in Sources */,
+				4B42A6AB2178E13600F18208 /* TemperatureControlView.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,
 				4B9D4575216DF66F003A240A /* NavigationView.swift in Sources */,
 				4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */,
 				4B1E95332176F80600E9DFB8 /* ColorCubeStorage.swift in Sources */,
+				4B42A6A52178DF2600F18208 /* SaturationControlView.swift in Sources */,
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
+				4B42A6AF2178E14E00F18208 /* HighlightsControlView.swift in Sources */,
 				4B1E951C21764DE700E9DFB8 /* GaussianBlurControlView.swift in Sources */,
 				4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* Logger.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
+				4B42A6AD2178E14500F18208 /* VignetteControlView.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
 				4BEE650F21749E7A00F3578E /* ImageScrollView.swift in Sources */,
 				4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */,
+				4B42A6A92178E12500F18208 /* ContrastControlView.swift in Sources */,
 				4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
