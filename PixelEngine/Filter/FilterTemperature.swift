@@ -6,6 +6,9 @@
 //  Copyright © 2015 muukii. All rights reserved.
 //
 
+import Foundation
+import CoreImage
+
 public struct FilterTemperature: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterTemperature> = .init(min: -3000, max: 3000)

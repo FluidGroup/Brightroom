@@ -15,16 +15,6 @@ final class BlurredMosaicView : DryDrawingView {
   private var displayingImageExtent: CGRect?
 
   var image: CIImage? {
-    didSet {
-
-      guard !isHidden else {
-        return
-      }
-      _image = image
-    }
-  }
-
-  var _image: CIImage? {
     get {
       return imageView.image?.ciImage
     }
@@ -50,16 +40,6 @@ final class BlurredMosaicView : DryDrawingView {
   var drawnPaths: [DrawnPathInRect] = [] {
     didSet {
       updateMask()
-    }
-  }
-
-  override var isHidden: Bool {
-    didSet {
-
-      if !isHidden {
-        _image = image
-      }
-
     }
   }
 
@@ -116,6 +96,7 @@ final class BlurredMosaicView : DryDrawingView {
 
     maskLayer.drawnPaths = drawnPaths
   }
+  
 }
 
 extension BlurredMosaicView {

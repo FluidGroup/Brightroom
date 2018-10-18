@@ -6,6 +6,9 @@
 //  Copyright © 2018 muukii. All rights reserved.
 //
 
+import Foundation
+import CoreImage
+
 public struct FilterShadows: Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterShadows> = .init(min: 0, max: 0.6)

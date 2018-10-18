@@ -14,6 +14,12 @@ import PixelEditor
 final class EditorViewController : UIViewController {
 
   @IBOutlet weak var imageView: UIImageView!
+  
+  private lazy var stack = SquareEditingStack.init(
+    source: ImageSource(source: UIImage(named: "large")!),
+    previewSize: CGSize(width: 30, height: 30),
+    colorCubeFilters: ColorCubeStorage.filters
+  )
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -32,6 +38,15 @@ final class EditorViewController : UIViewController {
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)
+  }
+  
+  @IBAction func didTapPushKeepingButton(_ sender: Any) {
+    
+    let controller = PixelEditViewController.init(stack: stack)
+    controller.delegate = self
+    
+    navigationController?.pushViewController(controller, animated: true)
+    
   }
 }
 

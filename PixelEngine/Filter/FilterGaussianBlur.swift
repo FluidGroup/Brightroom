@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreImage
 
 public struct FilterGaussianBlur : Filtering, Equatable {
 

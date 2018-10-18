@@ -34,14 +34,14 @@ public final class AdjustmentControlView : AdjustmentControlViewBase {
 
     navigationView.didTapCancelButton = { [weak self] in
 
-      self?.pop()
       self?.context.action(.endAdjustment(save: false))
+      self?.pop()
     }
 
     navigationView.didTapSaveButton = { [weak self] in
 
-      self?.pop()
       self?.context.action(.endAdjustment(save: true))
+      self?.pop()
     }
 
   }

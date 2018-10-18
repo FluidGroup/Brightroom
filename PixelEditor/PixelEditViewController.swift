@@ -118,11 +118,13 @@ public final class PixelEditViewController : UIViewController {
 
       root: do {
 
-        stack = SquareEditingStack.init(
-          source: imageSource,
-          previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-          colorCubeFilters: ColorCubeStorage.filters
-        )
+        if stack == nil {
+          stack = SquareEditingStack.init(
+            source: imageSource,
+            previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
+            colorCubeFilters: ColorCubeStorage.filters
+          )
+        }
 
         view.backgroundColor = .white
 
@@ -214,6 +216,11 @@ public final class PixelEditViewController : UIViewController {
 
       stack.delegate = self
       view.layoutIfNeeded()
+      
+      updateAdjustmentUI()
+      previewView.image = stack.previewImage
+      maskingView.image = stack.previewImage
+      maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
 
       set(mode: mode)
     }
@@ -229,7 +236,7 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func set(mode: Mode) {
-
+    
     switch mode {
     case .adjustment:
 
@@ -240,13 +247,7 @@ public final class PixelEditViewController : UIViewController {
       maskingView.isHidden = true
       maskingView.isUserInteractionEnabled = false
 
-      if adjustmentView.image != stack.adjustmentImage {
-        adjustmentView.image = stack.adjustmentImage
-      }
-
-      if let cropRect = stack.currentEdit.cropRect {
-        adjustmentView.visibleExtent = cropRect
-      }
+      updateAdjustmentUI()
 
     case .masking:
 
@@ -272,10 +273,6 @@ public final class PixelEditViewController : UIViewController {
 
       maskingView.isUserInteractionEnabled = false
 
-      if previewView.image != stack.previewImage {
-        previewView.image = stack.previewImage
-      }
-
     case .preview:
 
       navigationItem.rightBarButtonItem = doneButton
@@ -286,26 +283,30 @@ public final class PixelEditViewController : UIViewController {
 
       maskingView.isUserInteractionEnabled = false
 
-      if previewView.image != stack.previewImage {
-        previewView.image = stack.previewImage
-      }
-
     }
 
   }
 
   private func syncUI(edit: EditingStack.Edit) {
 
+    if !adjustmentView.isHidden {
+      updateAdjustmentUI()
+    }
+    
+    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
+  }
+  
+  private func updateAdjustmentUI() {
+    
+    let edit = stack.currentEdit
+    
     if adjustmentView.image != stack.adjustmentImage {
       adjustmentView.image = stack.adjustmentImage
     }
-
+    
     if let cropRect = edit.cropRect {
       adjustmentView.visibleExtent = cropRect
     }
-
-    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
-
   }
 
   private func didReceive(action: PixelEditContext.Action) {
@@ -360,12 +361,13 @@ extension PixelEditViewController : EditingStackDelegate {
   public func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?) {
     
     previewView.image = image
-    maskingView.image = image
+    if !maskingView.isHidden {
+      maskingView.image = image
+    }
   }
 
   public func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: CIImage?) {
 
-    adjustmentView.image = image
   }
 
 }

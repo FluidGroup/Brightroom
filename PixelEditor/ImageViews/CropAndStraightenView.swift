@@ -13,16 +13,6 @@ final class CropAndStraightenView : UIView {
   // MARK: - Properties
 
   var image: CIImage? {
-    didSet {
-
-      guard !isHidden else {
-        return
-      }
-      _image = image
-    }
-  }
-
-  var _image: CIImage? {
     get {
       return imageView.zoomView?.image?.ciImage
     }
@@ -40,20 +30,10 @@ final class CropAndStraightenView : UIView {
     }
   }
 
-  override var isHidden: Bool {
-    didSet {
-
-      if !isHidden {
-        _image = image
-      }
-
-    }
-  }
-
   // return pixel
   var visibleExtent: CGRect {
     get {
-      guard let image = _image else {
+      guard let image = image else {
         return .zero
       }
 
@@ -78,7 +58,7 @@ final class CropAndStraightenView : UIView {
     }
     set {
 
-      guard let image = _image else { return }
+      guard let image = image else { return }
 
       imageView.zoomScale = 0
 

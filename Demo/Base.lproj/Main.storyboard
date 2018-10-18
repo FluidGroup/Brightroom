@@ -190,20 +190,27 @@
                                 </constraints>
                             </imageView>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="vwj-E5-JQy">
-                                <rect key="frame" x="161" y="435" width="53" height="68"/>
+                                <rect key="frame" x="145.5" y="435" width="84" height="106"/>
                                 <subviews>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5OI-XE-CkV">
-                                        <rect key="frame" x="0.0" y="0.0" width="53" height="30"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="84" height="30"/>
                                         <state key="normal" title="Present"/>
                                         <connections>
                                             <action selector="didTapPresentButton" destination="ra8-Bb-A3k" eventType="touchUpInside" id="0JH-4b-s5l"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="yql-ja-UAV">
-                                        <rect key="frame" x="0.0" y="38" width="53" height="30"/>
+                                        <rect key="frame" x="0.0" y="38" width="84" height="30"/>
                                         <state key="normal" title="Push"/>
                                         <connections>
                                             <action selector="didTapPushButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="hKV-Zl-PgD"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Syo-y4-U1n" userLabel="Push (Keep)">
+                                        <rect key="frame" x="0.0" y="76" width="84" height="30"/>
+                                        <state key="normal" title="Push (Keep)"/>
+                                        <connections>
+                                            <action selector="didTapPushKeepingButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="FZj-LT-phc"/>
                                         </connections>
                                     </button>
                                 </subviews>
