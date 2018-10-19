@@ -8,9 +8,8 @@
 
 import Foundation
 
-#if !COCOAPODS
 import PixelEngine
-#endif
+
 
 open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
 

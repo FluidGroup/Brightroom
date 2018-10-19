@@ -8,9 +8,8 @@
 
 import UIKit
 
-#if !COCOAPODS
 import PixelEngine
-#endif
+
 
 public protocol PixelEditViewControllerDelegate : class {
 
