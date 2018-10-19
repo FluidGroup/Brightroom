@@ -35,14 +35,14 @@ open class EditingStack {
 
   public var previewImage: CIImage? {
     didSet {
-      Log.debug("Changed EditingStack.previewImage")
+      EngineLog.debug("Changed EditingStack.previewImage")
       delegate?.editingStack(self, didChangePreviewImage: previewImage)
     }
   }
 
   public var originalPreviewImage: CIImage? {
     didSet {
-      Log.debug("Changed EditingStack.originalPreviewImage")
+      EngineLog.debug("Changed EditingStack.originalPreviewImage")
       updatePreviewImage()
 
     }
@@ -76,7 +76,7 @@ open class EditingStack {
 
   public private(set) var edits: [Edit] {
     didSet {
-      Log.debug("Edits changed counnt -> \(edits.count)")
+      EngineLog.debug("Edits changed counnt -> \(edits.count)")
     }
   }
 
@@ -343,7 +343,7 @@ extension EditingStack {
 extension CIImage {
   
   fileprivate func insertingIntermediateIfCanUse() -> CIImage {
-    if #available(iOSApplicationExtension 12.0, *) {
+    if #available(iOS 12.0, *) {
       return self.insertingIntermediate(cache: true)
     } else {
       return self

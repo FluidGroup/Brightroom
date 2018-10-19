@@ -20,7 +20,7 @@ final class ImagePreviewView : UIView {
       imageView.image = newValue
         .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
         .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-      Log.debug("ImagePreviewView.image set", newValue?.extent)
+      EditorLog.debug("ImagePreviewView.image set", newValue?.extent)
     }
   }
 

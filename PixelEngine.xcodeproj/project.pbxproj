@@ -120,8 +120,8 @@
 		4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030B216C55D9001593B9 /* OvalBrush.swift */; };
 		4BEE650D217479C600F3578E /* DrawnPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030D216C58C6001593B9 /* DrawnPath.swift */; };
 		4BEE650F21749E7A00F3578E /* ImageScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE650E21749E7A00F3578E /* ImageScrollView.swift */; };
-		4BEE65112174DC3800F3578E /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65102174DC3800F3578E /* Logger.swift */; };
-		4BEE65132174E99600F3578E /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65122174E99600F3578E /* Logger.swift */; };
+		4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65102174DC3800F3578E /* EditorLog.swift */; };
+		4BEE65132174E99600F3578E /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65122174E99600F3578E /* EngineLog.swift */; };
 		4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */; };
 		734FD1056420C24F002EE1FF /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */; };
 /* End PBXBuildFile section */
@@ -285,8 +285,8 @@
 		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
 		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
 		4BEE650E21749E7A00F3578E /* ImageScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageScrollView.swift; sourceTree = "<group>"; };
-		4BEE65102174DC3800F3578E /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
-		4BEE65122174E99600F3578E /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		4BEE65102174DC3800F3578E /* EditorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLog.swift; sourceTree = "<group>"; };
+		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPathInRect.swift; sourceTree = "<group>"; };
 		5746031AA05B70B21F9A640E /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		C0220044A87FC9A27E8277C4 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
@@ -328,7 +328,6 @@
 		4B1E94B4217632B300E9DFB8 /* Filter */ = {
 			isa = PBXGroup;
 			children = (
-				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
 				4B1E94B5217632C500E9DFB8 /* FilterBrightness.swift */,
 				4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */,
@@ -448,7 +447,6 @@
 		4B47D053216CC5350007B594 /* PixelEditor */ = {
 			isa = PBXGroup;
 			children = (
-				4B1E95292176F52100E9DFB8 /* Resource */,
 				4B3457882174FF6600716DA0 /* ImageViews */,
 				4B9D4578216E07BC003A240A /* Components */,
 				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
@@ -460,7 +458,7 @@
 				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
 				4B9D4570216DF1A1003A240A /* Media.xcassets */,
-				4BEE65102174DC3800F3578E /* Logger.swift */,
+				4BEE65102174DC3800F3578E /* EditorLog.swift */,
 				4B1E95192176462900E9DFB8 /* CalcBox.swift */,
 			);
 			path = PixelEditor;
@@ -469,9 +467,8 @@
 		4B600AF3216B7A94001E1456 = {
 			isa = PBXGroup;
 			children = (
-				4B600AFF216B7A94001E1456 /* PixelEngine */,
-				4B47D053216CC5350007B594 /* PixelEditor */,
-				4B600B21216B7C9C001E1456 /* Demo */,
+				4B1E94E72176344100E9DFB8 /* From Fil */,
+				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4B600AFE216B7A94001E1456 /* Products */,
 				4B600B37216B7CD6001E1456 /* Frameworks */,
 				868BF3B9AACA397101103395 /* Pods */,
@@ -507,7 +504,7 @@
 				4B600B17216B7B93001E1456 /* ImageView */,
 				4B9D4579216E8013003A240A /* Geometry.swift */,
 				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
-				4BEE65122174E99600F3578E /* Logger.swift */,
+				4BEE65122174E99600F3578E /* EngineLog.swift */,
 				4B1E952A2176F57800E9DFB8 /* ColorCube.swift */,
 			);
 			path = PixelEngine;
@@ -526,6 +523,7 @@
 		4B600B21216B7C9C001E1456 /* Demo */ = {
 			isa = PBXGroup;
 			children = (
+				4B1E95292176F52100E9DFB8 /* Resource */,
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
 				4B47D065216CC5DB0007B594 /* EditorViewController.swift */,
@@ -552,6 +550,16 @@
 				29409C0FA5BFEF6AF7B53CE0 /* Pods_Demo.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		4B6A5F5B2179D43A004D68DC /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				4B600AFF216B7A94001E1456 /* PixelEngine */,
+				4B47D053216CC5350007B594 /* PixelEditor */,
+				4B600B21216B7C9C001E1456 /* Demo */,
+			);
+			path = Sources;
 			sourceTree = "<group>";
 		};
 		4B9B02EA216BBB6B001593B9 /* Engine */ = {
@@ -840,7 +848,7 @@
 				4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
-				4BEE65112174DC3800F3578E /* Logger.swift in Sources */,
+				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
 				4B42A6AD2178E14500F18208 /* VignetteControlView.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
@@ -867,7 +875,7 @@
 				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
-				4BEE65132174E99600F3578E /* Logger.swift in Sources */,
+				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,
 				4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */,
 				4B1E94B6217632C500E9DFB8 /* FilterBrightness.swift in Sources */,
@@ -941,6 +949,7 @@
 		4B47D05B216CC5350007B594 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
@@ -949,7 +958,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = PixelEditor/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -968,6 +977,7 @@
 		4B47D05C216CC5350007B594 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
@@ -976,7 +986,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = PixelEditor/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1123,7 +1133,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = PixelEngine/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1151,7 +1161,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = PixelEngine/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1174,7 +1184,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
-				INFOPLIST_FILE = Demo/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1194,7 +1204,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
-				INFOPLIST_FILE = Demo/Info.plist;
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

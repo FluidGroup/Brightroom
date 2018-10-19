@@ -8,7 +8,9 @@
 
 import UIKit
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
 protocol ControlChildViewType {
 

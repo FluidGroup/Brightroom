@@ -1,5 +1,5 @@
 //
-//  ShadowsControlView.swift
+//  SaturationControlView.swift
 //  PixelEditor
 //
 //  Created by Hiroshi Kimura on 2018/10/19.
@@ -8,11 +8,13 @@
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
-open class ShadowsControlViewBase : FilterControlViewBase {
+open class SaturationControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterShadows.range
+  public final let range = FilterSaturation.range
   
   public override init(context: PixelEditContext) {
     super.init(context: context)
@@ -20,7 +22,7 @@ open class ShadowsControlViewBase : FilterControlViewBase {
   
 }
 
-open class ShadowsControlView : ShadowsControlViewBase {
+open class SaturationControlView : SaturationControlViewBase {
   
   private let navigationView = NavigationView()
   
@@ -50,7 +52,7 @@ open class ShadowsControlView : ShadowsControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.shadows?.value ?? 0, in: range)
+    slider.set(value: edit.filters.saturation?.value ?? 0, in: range)
     
   }
   
@@ -58,9 +60,9 @@ open class ShadowsControlView : ShadowsControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
-    var f = FilterShadows()
+    var f = FilterSaturation()
     f.value = value
-    context.action(.setFilter({ $0.shadows = f }))
+    context.action(.setFilter({ $0.saturation = f }))
   }
   
 }

@@ -1,40 +1,42 @@
 //
-//  BrightnessControlView.swift
+//  ShadowsControlView.swift
 //  PixelEditor
 //
-//  Created by muukii on 10/10/18.
+//  Created by Hiroshi Kimura on 2018/10/19.
 //  Copyright © 2018 muukii. All rights reserved.
 //
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
-open class BrightnessControlViewBase : FilterControlViewBase {
-
-  public final let range = FilterBrightness.range
-
+open class ShadowsControlViewBase : FilterControlViewBase {
+  
+  public final let range = FilterShadows.range
+  
   public override init(context: PixelEditContext) {
     super.init(context: context)
   }
-
+  
 }
 
-open class BrightnessControlView : BrightnessControlViewBase {
-
+open class ShadowsControlView : ShadowsControlViewBase {
+  
   private let navigationView = NavigationView()
-
+  
   public let slider = StepSlider(frame: .zero)
-
+  
   open override func setup() {
     super.setup()
-
+    
     backgroundColor = Style.default.control.backgroundColor
-
+    
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-
+    
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-
+    
     navigationView.didTapCancelButton = { [weak self] in
       
       self?.context.action(.revert)
@@ -47,19 +49,20 @@ open class BrightnessControlView : BrightnessControlViewBase {
       self?.pop()
     }
   }
-
+  
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-
-    slider.set(value: edit.filters.brightness?.value ?? 0, in: range)
-
+    
+    slider.set(value: edit.filters.shadows?.value ?? 0, in: range)
+    
   }
-
+  
   @objc
   private func valueChanged() {
-
-    let value = slider.transition(in: range)
-    var f = FilterBrightness()
+    
+    let value = slider.transition(min: range.min, max: range.max)
+    var f = FilterShadows()
     f.value = value
-    context.action(.setFilter({ $0.brightness = f }))
+    context.action(.setFilter({ $0.shadows = f }))
   }
+  
 }

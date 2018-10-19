@@ -10,10 +10,10 @@ import Foundation
 
 import os.log
 
-enum Log {
+enum EngineLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEditor", category: "Editor")
-  private static let queue = DispatchQueue.init(label: "me.muukii.PixelEditor.Log")
+  private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
+   private static let queue = DispatchQueue.init(label: "me.muukii.PixelEngine.Log")
 
   static func debug(_ object: Any...) {
 

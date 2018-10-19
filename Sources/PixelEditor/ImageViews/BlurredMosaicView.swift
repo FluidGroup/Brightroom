@@ -8,7 +8,9 @@
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
 final class BlurredMosaicView : DryDrawingView {
 

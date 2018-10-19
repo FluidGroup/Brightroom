@@ -8,7 +8,9 @@
 
 import UIKit
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
 public protocol PixelEditViewControllerDelegate : class {
 
@@ -342,7 +344,7 @@ extension PixelEditViewController : EditingStackDelegate {
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     syncUI(edit: edit)
     stackView.notify(changedEdit: edit)
-    Log.debug("[EditingStackDelegate] didChagneCurrentEdit")
+    EditorLog.debug("[EditingStackDelegate] didChagneCurrentEdit")
   }
 
   public func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?) {

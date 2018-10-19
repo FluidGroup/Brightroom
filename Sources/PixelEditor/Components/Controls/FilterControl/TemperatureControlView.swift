@@ -1,5 +1,5 @@
 //
-//  SaturationControlView.swift
+//  TemperatureControlView.swift
 //  PixelEditor
 //
 //  Created by Hiroshi Kimura on 2018/10/19.
@@ -8,11 +8,13 @@
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
-open class SaturationControlViewBase : FilterControlViewBase {
+open class TemperatureControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterSaturation.range
+  public final let range = FilterTemperature.range
   
   public override init(context: PixelEditContext) {
     super.init(context: context)
@@ -20,7 +22,7 @@ open class SaturationControlViewBase : FilterControlViewBase {
   
 }
 
-open class SaturationControlView : SaturationControlViewBase {
+open class TemperatureControlView : TemperatureControlViewBase {
   
   private let navigationView = NavigationView()
   
@@ -50,7 +52,7 @@ open class SaturationControlView : SaturationControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.saturation?.value ?? 0, in: range)
+    slider.set(value: edit.filters.temperature?.value ?? 0, in: range)
     
   }
   
@@ -58,9 +60,9 @@ open class SaturationControlView : SaturationControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
-    var f = FilterSaturation()
+    var f = FilterTemperature()
     f.value = value
-    context.action(.setFilter({ $0.saturation = f }))
+    context.action(.setFilter({ $0.temperature = f }))
   }
   
 }

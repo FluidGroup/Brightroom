@@ -1,41 +1,43 @@
 //
-//  VignetteControlView.swift
+//  GaussianBlurControlView.swift
 //  PixelEditor
 //
-//  Created by Hiroshi Kimura on 2018/10/19.
+//  Created by muukii on 10/17/18.
 //  Copyright © 2018 muukii. All rights reserved.
 //
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
-open class VignetteControlViewBase : FilterControlViewBase {
-  
-  public final let range = FilterVignette.range
-  
+open class GaussianBlurControlViewBase : FilterControlViewBase {
+
+  public final let range = FilterGaussianBlur.range
+
   public override init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
+
 }
 
-open class VignetteControlView : VignetteControlViewBase {
-  
+open class GaussianBlurControlView : GaussianBlurControlViewBase {
+
   private let navigationView = NavigationView()
-  
+
   public let slider = StepSlider(frame: .zero)
-  
+
   open override func setup() {
     super.setup()
-    
+
     backgroundColor = Style.default.control.backgroundColor
-    
+
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
+
     slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
     navigationView.didTapCancelButton = { [weak self] in
       
       self?.context.action(.revert)
@@ -48,20 +50,21 @@ open class VignetteControlView : VignetteControlViewBase {
       self?.pop()
     }
   }
-  
+
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    
-    slider.set(value: edit.filters.vignette?.value ?? 0, in: range)
-    
+
+    slider.set(value: edit.filters.gaussianBlur?.value ?? 0, in: range)
+
   }
-  
+
   @objc
   private func valueChanged() {
-    
+
     let value = slider.transition(min: range.min, max: range.max)
-    var f = FilterVignette()
+    var f = FilterGaussianBlur()
     f.value = value
-    context.action(.setFilter({ $0.vignette = f }))
+    context.action(.setFilter({ $0.gaussianBlur = f }))
   }
-  
+
 }
+

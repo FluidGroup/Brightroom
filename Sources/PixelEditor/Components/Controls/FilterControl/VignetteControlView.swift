@@ -1,5 +1,5 @@
 //
-//  ContrastControlView.swift
+//  VignetteControlView.swift
 //  PixelEditor
 //
 //  Created by Hiroshi Kimura on 2018/10/19.
@@ -8,11 +8,13 @@
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
-open class ContrastControlViewBase : FilterControlViewBase {
+open class VignetteControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterContrast.range
+  public final let range = FilterVignette.range
   
   public override init(context: PixelEditContext) {
     super.init(context: context)
@@ -20,7 +22,7 @@ open class ContrastControlViewBase : FilterControlViewBase {
   
 }
 
-open class ContrastControlView : ContrastControlViewBase {
+open class VignetteControlView : VignetteControlViewBase {
   
   private let navigationView = NavigationView()
   
@@ -33,6 +35,7 @@ open class ContrastControlView : ContrastControlViewBase {
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -50,7 +53,7 @@ open class ContrastControlView : ContrastControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.contrast?.value ?? 0, in: range)
+    slider.set(value: edit.filters.vignette?.value ?? 0, in: range)
     
   }
   
@@ -58,9 +61,9 @@ open class ContrastControlView : ContrastControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
-    var f = FilterContrast()
+    var f = FilterVignette()
     f.value = value
-    context.action(.setFilter({ $0.contrast = f }))
+    context.action(.setFilter({ $0.vignette = f }))
   }
   
 }

@@ -8,12 +8,14 @@
 
 import Foundation
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 
 open class ControlViewBase : UIView, ControlChildViewType {
   
   open func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    Log.debug("[Receive] edit on \(self)")
+    EditorLog.debug("[Receive] edit on \(self)")
   }
 
   public let context: PixelEditContext
