@@ -33,6 +33,7 @@ open class GaussianBlurControlView : GaussianBlurControlViewBase {
 
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
 
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
 
     navigationView.didTapCancelButton = { [weak self] in

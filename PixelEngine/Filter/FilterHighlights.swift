@@ -11,7 +11,7 @@ import CoreImage
 
 public struct FilterHighlights: Filtering, Equatable {
 
-  public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 0.8)
+  public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 1)
 
   public var value: Double = 0
 

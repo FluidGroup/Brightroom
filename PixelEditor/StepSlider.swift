@@ -11,18 +11,22 @@ import Foundation
 import PixelEngine
 
 public final class StepSlider : UIControl {
-
-  public var minStep: Int = -100 {
+  
+  public enum Mode {
+    case plus
+    case plusAndMinus
+    case minus
+  }
+  
+  public var mode: Mode = .plusAndMinus {
     didSet {
       setupValues()
     }
   }
 
-  public var maxStep: Int = 100 {
-    didSet {
-      setupValues()
-    }
-  }
+  private var minStep: Int = -100
+
+  private var maxStep: Int = 100
 
   public override var intrinsicContentSize: CGSize {
     return internalSlider.intrinsicContentSize
@@ -72,6 +76,20 @@ public final class StepSlider : UIControl {
   }
 
   private func setupValues() {
+    
+    switch mode {
+    case .plus:
+      maxStep = 100
+      minStep = 0
+    case .plusAndMinus:
+      maxStep = 100
+      minStep = -100
+    case .minus:
+      maxStep = 0
+      minStep = -100
+    }
+    
+    internalSlider.dotLocation = mode
 
     if minStep < 0 {
       internalSlider.minimumValue = -1
@@ -204,17 +222,11 @@ extension StepSlider {
 
 private final class _StepSlider: UISlider {
 
-  enum DotLocation {
-    case start
-    case center
-    case end
-  }
-
   let stepLabel: UILabel = .init()
 
   private var _trackImageView: UIImageView?
 
-  var dotLocation: DotLocation = .center {
+  var dotLocation: StepSlider.Mode = .plus {
     didSet {
       setNeedsDisplay()
     }
@@ -263,13 +275,13 @@ private final class _StepSlider: UISlider {
     dot: do {
 
       switch dotLocation {
-      case .start:
+      case .plus:
         let path = UIBezierPath(ovalIn: .init(origin: .init(x: 10 - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
         path.fill()
-      case .center:
+      case .plusAndMinus:
         let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
         path.fill()
-      case .end:
+      case .minus:
         let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.maxX - 10 - 3, y: bounds.midY - 3), size: .init(width: 6, height: 6)))
         path.fill()
       }

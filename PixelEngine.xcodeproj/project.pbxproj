@@ -94,6 +94,7 @@
 		4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C96F2171D6F8008F2A54 /* EditingStack.swift */; };
 		4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* PixelEngine.swift */; };
 		4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9732171D781008F2A54 /* ImageSource.swift */; };
+		4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
@@ -338,6 +339,7 @@
 				4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */,
 				4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */,
 				4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */,
+				4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */,
 			);
 			path = Filter;
 			sourceTree = "<group>";
@@ -356,7 +358,6 @@
 				4B1E94F4217634A900E9DFB8 /* FilterHighlightShadowTint.swift */,
 				4B1E94E8217634A800E9DFB8 /* FilterHue.swift */,
 				4B1E94F5217634A900E9DFB8 /* FilterNoiseReduction.swift */,
-				4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */,
 			);
 			path = "From Fil";
 			sourceTree = "<group>";
@@ -855,6 +856,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */,
+				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,

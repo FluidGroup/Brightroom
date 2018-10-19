@@ -11,7 +11,7 @@ import CoreImage
 
 public struct FilterVignette: Filtering, Equatable {
 
-  public static let range: ParameterRange<Double, FilterVignette> = .init(min: 0, max: 8)
+  public static let range: ParameterRange<Double, FilterVignette> = .init(min: 0, max: 2)
 
   public var value: Double = 0
 
