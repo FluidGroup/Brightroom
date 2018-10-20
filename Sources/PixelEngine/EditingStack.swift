@@ -29,7 +29,7 @@ open class EditingStack {
 
   public var availableColorCubeFilters: [PreviewFilterColorCube] = []
 
-  private var cubeFilterPreviewSourceImage: CIImage!
+  public var cubeFilterPreviewSourceImage: CIImage!
 
   // MARK: - Computed Properties
 
@@ -101,8 +101,29 @@ open class EditingStack {
     initialCrop()
     commit()
     removeAllHistory()
+    
+    precondition(originalPreviewImage != nil, "originalPreviewImage is nil")
 
-    updatePreviewFilterSizeImage()
+    updatePreviewFilterSizeImage: do {
+      let smallSizeImage = ImageTool.resize(
+        to: Geometry.sizeThatAspectFit(
+          aspectRatio: CGSize(width: 1, height: 1),
+          boundingSize: CGSize(
+            width: 60 * targetScreenScale,
+            height: 60 * targetScreenScale
+          )
+        ),
+        from: originalPreviewImage!
+        )!
+      
+      cubeFilterPreviewSourceImage = smallSizeImage
+        .transformed(
+          by: .init(
+            translationX: -smallSizeImage.extent.origin.x,
+            y: -smallSizeImage.extent.origin.y
+          )
+      )
+    }
     set(availableColorCubeFilters: colorCubeFilters)
 
   }
@@ -252,23 +273,6 @@ open class EditingStack {
     }
 
     delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
-  }
-
-  private func updatePreviewFilterSizeImage() {
-
-    let smallSizeImage = ImageTool.resize(
-      to: Geometry.sizeThatAspectFit(
-        aspectRatio: CGSize(width: 1, height: 1),
-        boundingSize: CGSize(
-          width: 60 * targetScreenScale,
-          height: 60 * targetScreenScale
-        )
-      ),
-      from: originalPreviewImage!
-    )
-
-    cubeFilterPreviewSourceImage = smallSizeImage
-
   }
 
 }

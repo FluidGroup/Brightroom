@@ -23,6 +23,10 @@ open class VignetteControlViewBase : FilterControlViewBase {
 
 open class VignetteControlView : VignetteControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Vignette")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -60,6 +64,12 @@ open class VignetteControlView : VignetteControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.vignette = nil }))
+      return
+    }
+    
     var f = FilterVignette()
     f.value = value
     context.action(.setFilter({ $0.vignette = f }))

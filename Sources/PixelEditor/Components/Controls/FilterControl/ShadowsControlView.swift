@@ -23,6 +23,10 @@ open class ShadowsControlViewBase : FilterControlViewBase {
 
 open class ShadowsControlView : ShadowsControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Shadows")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -59,6 +63,12 @@ open class ShadowsControlView : ShadowsControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.shadows = nil }))
+      return
+    }
+    
     var f = FilterShadows()
     f.value = value
     context.action(.setFilter({ $0.shadows = f }))

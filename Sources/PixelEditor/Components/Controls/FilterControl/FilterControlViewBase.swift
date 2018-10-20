@@ -9,6 +9,10 @@
 import Foundation
 
 open class FilterControlViewBase : ControlViewBase {
+  
+  open var title: String {
+    fatalError("Must be overrided")
+  }
 
   public override init(context: PixelEditContext) {
     super.init(context: context)
@@ -18,8 +22,10 @@ open class FilterControlViewBase : ControlViewBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      context.action(.setMode(.filtering))
+      context.action(.setMode(.editing))
+      context.action(.setTitle(title))
     } else {
+      context.action(.setTitle(""))
       context.action(.setMode(.preview))
     }
 

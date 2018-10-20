@@ -15,22 +15,36 @@ open class MaskControlViewBase : ControlViewBase {
 public final class MaskControlView : MaskControlViewBase {
 
   private let navigationView = NavigationView()
+  
+  private let removeAllButton = UIButton.init(type: .system)
 
   public override func setup() {
     super.setup()
 
     backgroundColor = Style.default.control.backgroundColor
 
+    addSubview(removeAllButton)
     addSubview(navigationView)
 
+    removeAllButton.translatesAutoresizingMaskIntoConstraints = false
     navigationView.translatesAutoresizingMaskIntoConstraints = false
 
     NSLayoutConstraint.activate([
+      
+      removeAllButton.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
+      removeAllButton.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
+      removeAllButton.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
+      
+      navigationView.topAnchor.constraint(greaterThanOrEqualTo: removeAllButton.bottomAnchor),
       navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
       navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
       navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
-      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
       ])
+    
+    removeAllButton.addTarget(self, action: #selector(didTapRemoveAllButton), for: .touchUpInside)
+    
+    removeAllButton.setTitle("RemoveAll", for: .normal)
+    removeAllButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
 
     navigationView.didTapCancelButton = { [weak self] in
 
@@ -55,5 +69,11 @@ public final class MaskControlView : MaskControlViewBase {
       context.action(.setMode(.preview))
     }
 
+  }
+  
+  @objc
+  private func didTapRemoveAllButton() {
+    
+    context.action(.removeAllMasking)
   }
 }

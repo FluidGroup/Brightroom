@@ -51,7 +51,10 @@ final class EditorViewController : UIViewController {
 }
 
 extension EditorViewController : PixelEditViewControllerDelegate {
-
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+    
+  }
+  
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
 
     self.navigationController?.popToViewController(self, animated: true)

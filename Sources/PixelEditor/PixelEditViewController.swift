@@ -14,14 +14,18 @@ import PixelEngine
 public protocol PixelEditViewControllerDelegate : class {
 
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
+  
 }
 
 public final class PixelEditContext {
 
   public enum Action {
+    case setTitle(String)
     case setMode(PixelEditViewController.Mode)
     case endAdjustment(save: Bool)
     case endMasking(save: Bool)
+    case removeAllMasking
 
     case setFilter((inout EditingStack.Edit.Filters) -> Void)
 
@@ -47,7 +51,7 @@ public final class PixelEditViewController : UIViewController {
 
     case adjustment
     case masking
-    case filtering
+    case editing
     case preview
   }
 
@@ -74,9 +78,16 @@ public final class PixelEditViewController : UIViewController {
 
   private lazy var doneButton = UIBarButtonItem(
     title: TODOL10n("Done"),
-    style: .plain,
+    style: .done,
     target: self,
     action: #selector(didTapDoneButton)
+  )
+  
+  private lazy var cancelButton = UIBarButtonItem(
+    title: TODOL10n("Cancel"),
+    style: .plain,
+    target: self,
+    action: #selector(didTapCancelButton)
   )
 
   private let imageSource: ImageSource
@@ -189,6 +200,7 @@ public final class PixelEditViewController : UIViewController {
             context: context,
             colorCubeControlView: ColorCubeControlView(
               context: context,
+              originalImage: stack.cubeFilterPreviewSourceImage,
               filters: stack.availableColorCubeFilters
             )
           )
@@ -216,6 +228,7 @@ public final class PixelEditViewController : UIViewController {
       stack.delegate = self
       view.layoutIfNeeded()
       
+      previewView.originalImage = stack.originalPreviewImage
       previewView.image = stack.previewImage
       maskingView.image = stack.previewImage
       maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
@@ -232,6 +245,12 @@ public final class PixelEditViewController : UIViewController {
 
     delegate?.pixelEditViewController(self, didEndEditing: image)
   }
+  
+  @objc
+  private func didTapCancelButton() {
+        
+    delegate?.pixelEditViewControllerDidCancelEditing(in: self)
+  }
 
   private func set(mode: Mode) {
     
@@ -239,17 +258,22 @@ public final class PixelEditViewController : UIViewController {
     case .adjustment:
 
       navigationItem.rightBarButtonItem = nil
+      navigationItem.leftBarButtonItem = nil
 
       adjustmentView.isHidden = false
       previewView.isHidden = true
       maskingView.isHidden = true
       maskingView.isUserInteractionEnabled = false
 
+      didReceive(action: .setTitle(TODOL10n("Adjustment")))
+      
       updateAdjustmentUI()
 
     case .masking:
 
       navigationItem.rightBarButtonItem = nil
+      navigationItem.leftBarButtonItem = nil
+      didReceive(action: .setTitle(TODOL10n("Mask")))
 
       adjustmentView.isHidden = true
       previewView.isHidden = false
@@ -261,9 +285,10 @@ public final class PixelEditViewController : UIViewController {
         maskingView.image = stack.previewImage
       }
 
-    case .filtering:
+    case .editing:
 
       navigationItem.rightBarButtonItem = nil
+      navigationItem.leftBarButtonItem = nil
 
       adjustmentView.isHidden = true
       previewView.isHidden = false
@@ -273,13 +298,21 @@ public final class PixelEditViewController : UIViewController {
 
     case .preview:
 
+      navigationItem.setHidesBackButton(true, animated: false)
       navigationItem.rightBarButtonItem = doneButton
+      navigationItem.leftBarButtonItem = cancelButton
+      
+      didReceive(action: .setTitle(""))
 
       previewView.isHidden = false
       adjustmentView.isHidden = true
       maskingView.isHidden = false
 
       maskingView.isUserInteractionEnabled = false
+      
+      if maskingView.image != stack.previewImage {
+        maskingView.image = stack.previewImage
+      }
 
     }
 
@@ -309,6 +342,8 @@ public final class PixelEditViewController : UIViewController {
 
   private func didReceive(action: PixelEditContext.Action) {
     switch action {
+    case .setTitle(let title):
+      navigationItem.title = title
     case .setMode(let mode):
       set(mode: mode)
     case .endAdjustment(let save):
@@ -325,6 +360,10 @@ public final class PixelEditViewController : UIViewController {
       } else {
         syncUI(edit: stack.currentEdit)
       }
+    case .removeAllMasking:
+      stack.set(blurringMaskPaths: [])
+      stack.commit()
+      syncUI(edit: stack.currentEdit)
     case .setFilter(let closure):
       stack.set(filters: closure)   
     case .commit:

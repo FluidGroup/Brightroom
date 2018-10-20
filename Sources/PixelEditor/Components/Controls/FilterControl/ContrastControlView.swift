@@ -23,6 +23,10 @@ open class ContrastControlViewBase : FilterControlViewBase {
 
 open class ContrastControlView : ContrastControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Contrast")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -59,6 +63,12 @@ open class ContrastControlView : ContrastControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.contrast = nil }))
+      return
+    }
+    
     var f = FilterContrast()
     f.value = value
     context.action(.setFilter({ $0.contrast = f }))

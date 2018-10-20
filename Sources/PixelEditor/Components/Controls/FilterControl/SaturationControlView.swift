@@ -23,6 +23,10 @@ open class SaturationControlViewBase : FilterControlViewBase {
 
 open class SaturationControlView : SaturationControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Saturation")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -59,6 +63,12 @@ open class SaturationControlView : SaturationControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.saturation = nil }))
+      return
+    }
+    
     var f = FilterSaturation()
     f.value = value
     context.action(.setFilter({ $0.saturation = f }))

@@ -23,6 +23,10 @@ open class HighlightsControlViewBase : FilterControlViewBase {
 
 open class HighlightsControlView : HighlightsControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Highlights")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -60,6 +64,12 @@ open class HighlightsControlView : HighlightsControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.highlights = nil }))
+      return
+    }
+    
     var f = FilterHighlights()
     f.value = value
     context.action(.setFilter({ $0.highlights = f }))

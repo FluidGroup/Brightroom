@@ -8,11 +8,73 @@
 
 import Foundation
 
+import PixelEngine
+
 open class EditMenuControlView : ControlViewBase {
 
   public let contentView = UIView()
   public let itemsView = UIStackView()
   public let scrollView = UIScrollView()
+  
+  public lazy var adjustmentButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Adjust"), image: .init())
+    button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var maskButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Mask"), image: .init())
+    button.addTarget(self, action: #selector(masking), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var brightnessButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Brightness"), image: .init())
+    button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var gaussianBlurButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Blur"), image: .init())
+    button.addTarget(self, action: #selector(blur), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var contrastButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Contrast"), image: .init())
+    button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var temperatureButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Temperature"), image: .init())
+    button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var saturationButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Saturation"), image: .init())
+    button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var highlightsButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Highlights"), image: .init())
+    button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var shadowsButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Shadows"), image: .init())
+    button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var vignetteButton: ButtonView = {
+    let button = ButtonView(name: TODOL10n("Vignette"), image: .init())
+    button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
+    return button
+  }()
 
   open override func setup() {
 
@@ -74,72 +136,21 @@ open class EditMenuControlView : ControlViewBase {
     }
 
     item: do {
-
-      adjustment: do {
-
-        let button = ButtonView(name: TODOL10n("Adjust"), image: .init())
-        button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-
-      mask: do {
-        let button = ButtonView(name: TODOL10n("Mask"), image: .init())
-        button.addTarget(self, action: #selector(masking), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-
-      //        doodle: do {
-      //          let button = ButtonView(name: TODOL10n("Doodle"), image: .init())
-      //          button.addTarget(self, action: #selector(doodle), for: .touchUpInside)
-      //          itemsView.addArrangedSubview(button)
-      //        }
-
-      brightness: do {
-        let button = ButtonView(name: TODOL10n("Brightness"), image: .init())
-        button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-
-      gaussianBlur: do {
-        let button = ButtonView(name: TODOL10n("Blur"), image: .init())
-        button.addTarget(self, action: #selector(blur), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-
       
-      contrast: do {
-        let button = ButtonView(name: TODOL10n("Contrast"), image: .init())
-        button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
+      let buttons: [ButtonView] = [
+        adjustmentButton,
+        maskButton,
+        brightnessButton,
+        temperatureButton,
+        saturationButton,
+        highlightsButton,
+        shadowsButton,
+        vignetteButton,
+        gaussianBlurButton
+      ]
       
-      temperature: do {
-        let button = ButtonView(name: TODOL10n("Temperature"), image: .init())
-        button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-
-       saturation: do {
-       let button = ButtonView(name: TODOL10n("Saturation"), image: .init())
-       button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-      
-      highlights: do {
-        let button = ButtonView(name: TODOL10n("Highlights"), image: .init())
-        button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-      
-      shadows: do {
-        let button = ButtonView(name: TODOL10n("Shadows"), image: .init())
-        button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
-        itemsView.addArrangedSubview(button)
-      }
-      
-      vignette: do {
-        let button = ButtonView(name: TODOL10n("Vignette"), image: .init())
-        button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
+      for button in buttons {
+        
         itemsView.addArrangedSubview(button)
       }
       
@@ -164,8 +175,6 @@ open class EditMenuControlView : ControlViewBase {
        itemsView.addArrangedSubview(button)
        }
 
-  
-
        sharpen: do {
        let button = ButtonView(name: TODOL10n("Sharpen"), image: .init())
        button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
@@ -177,6 +186,20 @@ open class EditMenuControlView : ControlViewBase {
       }
 
     }
+  }
+  
+  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+    
+    maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
+
+    brightnessButton.hasChanges = edit.filters.brightness != nil
+    temperatureButton.hasChanges = edit.filters.temperature != nil
+    saturationButton.hasChanges = edit.filters.saturation != nil
+    highlightsButton.hasChanges = edit.filters.highlights != nil
+    shadowsButton.hasChanges = edit.filters.shadows != nil
+    vignetteButton.hasChanges = edit.filters.vignette != nil
+    gaussianBlurButton.hasChanges = edit.filters.gaussianBlur != nil
+    
   }
 
   @objc
@@ -263,6 +286,14 @@ open class EditMenuControlView : ControlViewBase {
     public let nameLabel = UILabel()
 
     public let imageView = UIImageView()
+    
+    public let changesMarkView = UIView()
+    
+    public var hasChanges: Bool = false {
+      didSet {
+        changesMarkView.isHidden = !hasChanges
+      }
+    }
 
     public init(name: String, image: UIImage) {
       super.init(frame: .zero)
@@ -270,29 +301,40 @@ open class EditMenuControlView : ControlViewBase {
       layout: do {
         addSubview(nameLabel)
         addSubview(imageView)
+        addSubview(changesMarkView)
 
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        changesMarkView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-          imageView.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-          imageView.rightAnchor.constraint(equalTo: rightAnchor, constant: -8),
-          imageView.leftAnchor.constraint(equalTo: leftAnchor, constant: 8),
-          imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
-
-          nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 8),
+          nameLabel.topAnchor.constraint(equalTo: topAnchor, constant: 8),
           nameLabel.rightAnchor.constraint(equalTo: rightAnchor, constant: -8),
           nameLabel.leftAnchor.constraint(equalTo: leftAnchor, constant: 8),
-          nameLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+          nameLabel.widthAnchor.constraint(equalTo: imageView.heightAnchor),
+
+          imageView.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
+          imageView.rightAnchor.constraint(equalTo: rightAnchor, constant: -8),
+          imageView.leftAnchor.constraint(equalTo: leftAnchor, constant: 8),
+          
+          changesMarkView.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 8),
+          changesMarkView.centerXAnchor.constraint(equalTo: centerXAnchor),
+          changesMarkView.widthAnchor.constraint(equalToConstant: 4),
+          changesMarkView.heightAnchor.constraint(equalToConstant: 4),
+          changesMarkView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
           ])
       }
 
-      attributes: do {
+      style: do {
 
         imageView.contentMode = .center
-        nameLabel.font = UIFont.boldSystemFont(ofSize: 15)
+        nameLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
         nameLabel.textColor = .black
         nameLabel.textAlignment = .center
+        
+        changesMarkView.layer.cornerRadius = 2
+        changesMarkView.backgroundColor = UIColor(white: 0.4, alpha: 1)
+        changesMarkView.isHidden = true
 
       }
 

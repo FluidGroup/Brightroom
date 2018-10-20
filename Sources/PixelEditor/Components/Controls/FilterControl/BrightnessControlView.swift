@@ -22,6 +22,10 @@ open class BrightnessControlViewBase : FilterControlViewBase {
 }
 
 open class BrightnessControlView : BrightnessControlViewBase {
+  
+  open override var title: String {
+    return TODOL10n("Brightness")
+  }
 
   private let navigationView = NavigationView()
 
@@ -59,6 +63,10 @@ open class BrightnessControlView : BrightnessControlViewBase {
   private func valueChanged() {
 
     let value = slider.transition(in: range)
+    guard value != 0 else {
+      context.action(.setFilter({ $0.brightness = nil }))
+      return
+    }    
     var f = FilterBrightness()
     f.value = value
     context.action(.setFilter({ $0.brightness = f }))

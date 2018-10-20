@@ -22,6 +22,10 @@ open class GaussianBlurControlViewBase : FilterControlViewBase {
 }
 
 open class GaussianBlurControlView : GaussianBlurControlViewBase {
+  
+  open override var title: String {
+    return TODOL10n("Blur")
+  }
 
   private let navigationView = NavigationView()
 
@@ -60,6 +64,12 @@ open class GaussianBlurControlView : GaussianBlurControlViewBase {
   private func valueChanged() {
 
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.gaussianBlur = nil }))
+      return
+    }
+    
     var f = FilterGaussianBlur()
     f.value = value
     context.action(.setFilter({ $0.gaussianBlur = f }))

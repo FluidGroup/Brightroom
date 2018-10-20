@@ -10,6 +10,7 @@
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
 		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
+		4B0433AB217B962C0039293E /* InternalUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0433AA217B962C0039293E /* InternalUtils.swift */; };
 		4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */; };
 		4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */; };
 		4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */; };
@@ -95,6 +96,7 @@
 		4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* PixelEngine.swift */; };
 		4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9732171D781008F2A54 /* ImageSource.swift */; };
 		4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */; };
+		4B6A5F5E217B9141004D68DC /* YUCIColorLookup.cikernel in Resources */ = {isa = PBXBuildFile; fileRef = 4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
@@ -164,6 +166,7 @@
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
 		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
+		4B0433AA217B962C0039293E /* InternalUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternalUtils.swift; sourceTree = "<group>"; };
 		4B112F14216C9B5400EF8E25 /* ImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTool.swift; sourceTree = "<group>"; };
 		4B1E94B2217624A700E9DFB8 /* SliderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderViewController.swift; sourceTree = "<group>"; };
 		4B1E94B5217632C500E9DFB8 /* FilterBrightness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBrightness.swift; sourceTree = "<group>"; };
@@ -260,6 +263,7 @@
 		4B66C96F2171D6F8008F2A54 /* EditingStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.swift; sourceTree = "<group>"; };
 		4B66C9712171D764008F2A54 /* PixelEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngine.swift; sourceTree = "<group>"; };
 		4B66C9732171D781008F2A54 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
+		4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */ = {isa = PBXFileReference; lastKnownFileType = text; path = YUCIColorLookup.cikernel; sourceTree = "<group>"; };
 		4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageViewViewController.swift; sourceTree = "<group>"; };
 		4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalImageView.swift; sourceTree = "<group>"; };
 		4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageView.swift; sourceTree = "<group>"; };
@@ -488,6 +492,7 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B6A5F5C217B9125004D68DC /* Resource */,
 				4B1E94B4217632B300E9DFB8 /* Filter */,
 				4B66C9732171D781008F2A54 /* ImageSource.swift */,
 				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
@@ -506,6 +511,7 @@
 				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
 				4BEE65122174E99600F3578E /* EngineLog.swift */,
 				4B1E952A2176F57800E9DFB8 /* ColorCube.swift */,
+				4B0433AA217B962C0039293E /* InternalUtils.swift */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -560,6 +566,14 @@
 				4B600B21216B7C9C001E1456 /* Demo */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		4B6A5F5C217B9125004D68DC /* Resource */ = {
+			isa = PBXGroup;
+			children = (
+				4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */,
+			);
+			path = Resource;
 			sourceTree = "<group>";
 		};
 		4B9B02EA216BBB6B001593B9 /* Engine */ = {
@@ -757,6 +771,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B6A5F5E217B9141004D68DC /* YUCIColorLookup.cikernel in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -884,6 +899,7 @@
 				4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */,
 				4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */,
 				4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */,
+				4B0433AB217B962C0039293E /* InternalUtils.swift in Sources */,
 				4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */,
 				4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */,
 				4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */,

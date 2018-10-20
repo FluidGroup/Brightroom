@@ -40,14 +40,20 @@ public struct FilterColorCube : Filtering, Equatable {
 
   public let filter: CIFilter
 
+  public let name: String
+  public let identifier: String
   public var amount: Double = 1
 
   public init(
+    name: String,
+    identifier: String,
     lutImage: Image,
     dimension: Int,
     colorSpace: CGColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
     ) {
 
+    self.name = name
+    self.identifier = identifier
     self.filter = ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)
   }
 

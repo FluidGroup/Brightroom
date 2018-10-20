@@ -23,6 +23,10 @@ open class TemperatureControlViewBase : FilterControlViewBase {
 
 open class TemperatureControlView : TemperatureControlViewBase {
   
+  open override var title: String {
+    return TODOL10n("Temperature")
+  }
+  
   private let navigationView = NavigationView()
   
   public let slider = StepSlider(frame: .zero)
@@ -59,6 +63,12 @@ open class TemperatureControlView : TemperatureControlViewBase {
   private func valueChanged() {
     
     let value = slider.transition(min: range.min, max: range.max)
+    
+    guard value != 0 else {
+      context.action(.setFilter({ $0.temperature = nil }))
+      return
+    }
+    
     var f = FilterTemperature()
     f.value = value
     context.action(.setFilter({ $0.temperature = f }))
