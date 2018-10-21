@@ -29,6 +29,11 @@ The image editor and engine using CoreImage
   * [ ] Fade
   * [ ] Sharpen
   
+## Requirements
+ 
+* Swift 4.2 (Xcode10+)
+* iOS 10+
+  
 ## Getting Started
 
 // TODO:
@@ -38,12 +43,11 @@ The image editor and engine using CoreImage
 <img src="customize.png" width=375/>
 
 // TODO:
+
+## Other Options
+
+// TODO:
   
-## Requirements
- 
-* Swift 4.2 (Xcode10+)
-* iOS 10+
- 
 ## Installation
 
 ### CocoaPods
