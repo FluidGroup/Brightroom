@@ -29,6 +29,10 @@ The image editor and engine using CoreImage
   * [ ] Fade
   * [ ] Sharpen
   
+## Getting Started
+
+// TODO:
+  
 ## Customize Control UI
 
 <img src="customize.png" width=375/>
