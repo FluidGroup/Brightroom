@@ -10,8 +10,6 @@ import Foundation
 
 public protocol EditingStackDelegate : class {
 
-  func editingStack(_ stack: EditingStack, didChangePreviewImage image: CIImage?)
-  func editingStack(_ stack: EditingStack, didChangeAdjustmentImage image: CIImage?)
   func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
 }
 
@@ -33,12 +31,7 @@ open class EditingStack {
 
   // MARK: - Computed Properties
 
-  public var previewImage: CIImage? {
-    didSet {
-      EngineLog.debug("Changed EditingStack.previewImage")
-      delegate?.editingStack(self, didChangePreviewImage: previewImage)
-    }
-  }
+  public var previewImage: CIImage?
 
   public var originalPreviewImage: CIImage? {
     didSet {
@@ -48,11 +41,7 @@ open class EditingStack {
     }
   }
 
-  public var adjustmentImage: CIImage? {
-    didSet {
-      delegate?.editingStack(self, didChangeAdjustmentImage: adjustmentImage)
-    }
-  }
+  public var adjustmentImage: CIImage?
 
   public var isDirty: Bool {
     return draftEdit != nil
@@ -268,9 +257,10 @@ open class EditingStack {
       filter.apply(to: image, sourceImage: sourceImage).insertingIntermediateIfCanUse()
     }
 
-    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
-      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
-    }
+    // TODO: Ignore vignette and blur (convolutions)
+//    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
+//      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
+//    }
 
     delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
   }
