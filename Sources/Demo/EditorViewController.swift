@@ -35,16 +35,38 @@ final class EditorViewController : UIViewController {
   }
 
   @IBAction func didTapPushButton(_ sender: Any) {
-
-    let controller = PixelEditViewController.init(image: UIImage(named: "vertical")!)
-    controller.delegate = self
     
-    navigationController?.pushViewController(controller, animated: true)
+    let picker = UIImagePickerController()
+    picker.allowsEditing = false
+    picker.delegate = self
+    picker.sourceType = .photoLibrary
+    
+    present(picker, animated: true, completion: nil)
   }
   
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     
     let controller = PixelEditViewController.init(editingStack: stack)
+    controller.delegate = self
+    
+    navigationController?.pushViewController(controller, animated: true)
+    
+  }
+}
+
+extension EditorViewController : UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+  
+  func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+    picker.dismiss(animated: true, completion: nil)
+  }
+  
+  func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+    
+    let image = info[.originalImage] as! UIImage
+    
+    picker.dismiss(animated: true, completion: nil)
+    
+    let controller = PixelEditViewController.init(image: image, colorCubeFilters: ColorCubeStorage.filters)
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)

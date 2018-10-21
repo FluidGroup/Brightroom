@@ -27,8 +27,11 @@ extension ColorCubeStorage {
             let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
             let data = try Data(contentsOf: url)
             let image = UIImage(data: data)!
+            let name = path
+              .replacingOccurrences(of: "LUT_", with: "")
+              .replacingOccurrences(of: ".png", with: "")
             return FilterColorCube.init(
-              name: path,
+              name: name,
               identifier: path,
               lutImage: image,
               dimension: 64
