@@ -31,9 +31,6 @@ public struct PreviewFilterColorCube : Equatable {
   }
 }
 
-/**
- TODO: Add filter name
- */
 public struct FilterColorCube : Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterColorCube> = .init(min: 0, max: 1)

@@ -63,6 +63,8 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     }
   }
+  
+  public private(set) var editingStack: SquareEditingStack!
 
   private let maskingView = BlurredMosaicView()
 
@@ -93,7 +95,7 @@ public final class PixelEditViewController : UIViewController {
   )
 
   private let imageSource: ImageSource
-  private var stack: SquareEditingStack!
+  private var colorCubeFilters: [FilterColorCube] = []
 
   public weak var delegate: PixelEditViewControllerDelegate?
 
@@ -103,19 +105,20 @@ public final class PixelEditViewController : UIViewController {
 
   // MARK: - Initializers
 
-  public convenience init(image: UIImage, options: Options = .default) {
-    let surce = ImageSource(source: image)
-    self.init(source: surce, options: options)
+  public convenience init(editingStack: SquareEditingStack, options: Options = .default) {
+    self.init(source: editingStack.source, options: options)
+    self.editingStack = editingStack
+  }
+  
+  public convenience init(image: UIImage, colorCubeFilters: [FilterColorCube] = [], options: Options = .default) {
+    let source = ImageSource(source: image)
+    self.init(source: source, colorCubeFilters: colorCubeFilters, options: options)
   }
 
-  public convenience init(stack: SquareEditingStack, options: Options = .default) {
-    self.init(source: stack.source, options: options)
-    self.stack = stack
-  }
-
-  public init(source: ImageSource, options: Options = .default) {
+  public init(source: ImageSource, colorCubeFilters: [FilterColorCube] = [], options: Options = .default) {
     self.imageSource = source
     self.options = options
+    self.colorCubeFilters = colorCubeFilters
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -133,11 +136,11 @@ public final class PixelEditViewController : UIViewController {
 
       root: do {
 
-        if stack == nil {
-          stack = SquareEditingStack.init(
+        if editingStack == nil {
+          editingStack = SquareEditingStack.init(
             source: imageSource,
             previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-            colorCubeFilters: ColorCubeStorage.filters
+            colorCubeFilters: colorCubeFilters
           )
         }
 
@@ -199,18 +202,17 @@ public final class PixelEditViewController : UIViewController {
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
 
-        // TODO: Make customizable
         stackView.push(
           options.classes.control.rootControl.init(
             context: context,
             colorCubeControlView: options.classes.control.colorCubeControl.init(
               context: context,
-              originalImage: stack.cubeFilterPreviewSourceImage,
-              filters: stack.availableColorCubeFilters
+              originalImage: editingStack.cubeFilterPreviewSourceImage,
+              filters: editingStack.availableColorCubeFilters
             )
           )
         )
-        stackView.notify(changedEdit: stack.currentEdit)
+        stackView.notify(changedEdit: editingStack.currentEdit)
 
       }
 
@@ -230,13 +232,13 @@ public final class PixelEditViewController : UIViewController {
 
     start: do {
 
-      stack.delegate = self
+      editingStack.delegate = self
       view.layoutIfNeeded()
       
-      previewView.originalImage = stack.originalPreviewImage
-      previewView.image = stack.previewImage
-      maskingView.image = stack.previewImage
-      maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
+      previewView.originalImage = editingStack.originalPreviewImage
+      previewView.image = editingStack.previewImage
+      maskingView.image = editingStack.previewImage
+      maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
 
       set(mode: mode)
     }
@@ -246,7 +248,7 @@ public final class PixelEditViewController : UIViewController {
   @objc
   private func didTapDoneButton() {
 
-    let image = stack.makeRenderer().render()
+    let image = editingStack.makeRenderer().render()
 
     delegate?.pixelEditViewController(self, didEndEditing: image)
   }
@@ -286,8 +288,8 @@ public final class PixelEditViewController : UIViewController {
       
       maskingView.isUserInteractionEnabled = true
 
-      if maskingView.image != stack.previewImage {
-        maskingView.image = stack.previewImage
+      if maskingView.image != editingStack.previewImage {
+        maskingView.image = editingStack.previewImage
       }
 
     case .editing:
@@ -315,8 +317,8 @@ public final class PixelEditViewController : UIViewController {
 
       maskingView.isUserInteractionEnabled = false
       
-      if maskingView.image != stack.previewImage {
-        maskingView.image = stack.previewImage
+      if maskingView.image != editingStack.previewImage {
+        maskingView.image = editingStack.previewImage
       }
 
     }
@@ -329,15 +331,15 @@ public final class PixelEditViewController : UIViewController {
       updateAdjustmentUI()
     }
     
-    maskingView.drawnPaths = stack.currentEdit.blurredMaskPaths
+    maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
   }
   
   private func updateAdjustmentUI() {
     
-    let edit = stack.currentEdit
+    let edit = editingStack.currentEdit
     
-    if adjustmentView.image != stack.adjustmentImage {
-      adjustmentView.image = stack.adjustmentImage
+    if adjustmentView.image != editingStack.adjustmentImage {
+      adjustmentView.image = editingStack.adjustmentImage
     }
     
     if let cropRect = edit.cropRect {
@@ -353,30 +355,30 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     case .endAdjustment(let save):
       if save {
-        stack.setAdjustment(cropRect: adjustmentView.visibleExtent)
-        stack.commit()
+        editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
+        editingStack.commit()
       } else {
-        syncUI(edit: stack.currentEdit)
+        syncUI(edit: editingStack.currentEdit)
       }
     case .endMasking(let save):
       if save {
-        stack.set(blurringMaskPaths: maskingView.drawnPaths)
-        stack.commit()
+        editingStack.set(blurringMaskPaths: maskingView.drawnPaths)
+        editingStack.commit()
       } else {
-        syncUI(edit: stack.currentEdit)
+        syncUI(edit: editingStack.currentEdit)
       }
     case .removeAllMasking:
-      stack.set(blurringMaskPaths: [])
-      stack.commit()
-      syncUI(edit: stack.currentEdit)
+      editingStack.set(blurringMaskPaths: [])
+      editingStack.commit()
+      syncUI(edit: editingStack.currentEdit)
     case .setFilter(let closure):
-      stack.set(filters: closure)   
+      editingStack.set(filters: closure)
     case .commit:
-      stack.commit()
+      editingStack.commit()
     case .undo:
-      stack.undo()
+      editingStack.undo()
     case .revert:
-      stack.revert()
+      editingStack.revert()
     }
   }
 

@@ -28,8 +28,10 @@ final class EditorViewController : UIViewController {
   @IBAction func didTapPresentButton() {
 
     let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    
+    let nav = UINavigationController(rootViewController: controller)
 
-    present(controller, animated: true, completion: nil)
+    present(nav, animated: true, completion: nil)
   }
 
   @IBAction func didTapPushButton(_ sender: Any) {
@@ -42,7 +44,7 @@ final class EditorViewController : UIViewController {
   
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     
-    let controller = PixelEditViewController.init(stack: stack)
+    let controller = PixelEditViewController.init(editingStack: stack)
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)
@@ -51,15 +53,15 @@ final class EditorViewController : UIViewController {
 }
 
 extension EditorViewController : PixelEditViewControllerDelegate {
-  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
-    
-  }
-  
+
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
 
     self.navigationController?.popToViewController(self, animated: true)
     self.imageView.image = image
-    print(image)
   }
-
+  
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+    self.navigationController?.popToViewController(self, animated: true)
+  }
+  
 }
