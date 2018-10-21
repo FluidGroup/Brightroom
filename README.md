@@ -1,4 +1,4 @@
-# Pixel
+# Pixel - Engine • Editor
 
 The image editor and engine using CoreImage
 
