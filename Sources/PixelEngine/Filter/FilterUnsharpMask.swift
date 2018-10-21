@@ -8,10 +8,11 @@
 
 import CoreImage
 
-public struct FilterUnsharpMask: Filtering, Equatable {
+public struct FilterUnsharpMask: Filtering, Equatable, Codable {
   
   public enum Params {
-    public static let range: ParameterRange<Double, FilterShadows> = .init(min: -1, max: 1)
+    public static let intensity: ParameterRange<Double, FilterShadows> = .init(min: 0, max: 1)
+    public static let radius: ParameterRange<Double, FilterShadows> = .init(min: 0, max: 1)
   }
   
   
@@ -22,7 +23,7 @@ public struct FilterUnsharpMask: Filtering, Equatable {
     
   }
   
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
     
     return
       image

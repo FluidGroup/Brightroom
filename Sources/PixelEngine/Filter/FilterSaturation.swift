@@ -9,7 +9,7 @@
 import Foundation
 import CoreImage
 
-public struct FilterSaturation: Filtering, Equatable {
+public struct FilterSaturation: Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterSaturation> = .init(min: -1, max: 1)
     
@@ -19,7 +19,7 @@ public struct FilterSaturation: Filtering, Equatable {
 
   }
 
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
     return
       image
         .applyingFilter(

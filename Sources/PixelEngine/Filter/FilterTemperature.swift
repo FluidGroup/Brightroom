@@ -9,7 +9,7 @@
 import Foundation
 import CoreImage
 
-public struct FilterTemperature: Filtering, Equatable {
+public struct FilterTemperature: Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterTemperature> = .init(min: -3000, max: 3000)
 
@@ -19,7 +19,7 @@ public struct FilterTemperature: Filtering, Equatable {
 
   }
 
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
     return
       image
         .applyingFilter(

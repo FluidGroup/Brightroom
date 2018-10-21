@@ -41,7 +41,7 @@ public final class ImageRenderer {
     let resultImage: CIImage = {
 
       let targetImage = source.image
-      let image: CIImage
+      let sourceImage: CIImage
 
       if var croppingRect = edit.croppingRect {
         croppingRect.origin.x.round(.up)
@@ -49,13 +49,13 @@ public final class ImageRenderer {
         croppingRect.size.width.round(.up)
         croppingRect.size.height.round(.up)
         croppingRect.origin.y = targetImage.extent.height - croppingRect.minY - croppingRect.height
-        image = targetImage.cropped(to: croppingRect)
+        sourceImage = targetImage.cropped(to: croppingRect)
       } else {
-        image = targetImage
+        sourceImage = targetImage
       }
 
-      let result = edit.modifiers.reduce(image, { image, modifier in
-        return modifier.apply(to: image)
+      let result = edit.modifiers.reduce(sourceImage, { image, modifier in
+        return modifier.apply(to: image, sourceImage: sourceImage)
       })
 
       return result

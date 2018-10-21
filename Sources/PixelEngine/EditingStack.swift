@@ -256,7 +256,7 @@ open class EditingStack {
 
   private func updatePreviewImage() {
 
-    guard let image = originalPreviewImage else {
+    guard let sourceImage = originalPreviewImage else {
       previewImage = nil
       return
     }
@@ -264,12 +264,12 @@ open class EditingStack {
     let filters = currentEdit
       .makeFilters()
 
-    previewImage = filters.reduce(image) { (image, filter) -> CIImage in
-      filter.apply(to: image).insertingIntermediateIfCanUse()
+    previewImage = filters.reduce(sourceImage) { (image, filter) -> CIImage in
+      filter.apply(to: image, sourceImage: sourceImage).insertingIntermediateIfCanUse()
     }
 
     adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
-      filter.apply(to: image).insertingIntermediateIfCanUse()
+      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
     }
 
     delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)

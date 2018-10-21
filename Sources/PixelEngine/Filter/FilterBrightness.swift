@@ -9,7 +9,7 @@
 import Foundation
 import CoreImage
 
-public struct FilterBrightness : Filtering, Equatable {
+public struct FilterBrightness : Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterBrightness> = .init(min: -1.8, max: 1.8)
 
@@ -19,7 +19,7 @@ public struct FilterBrightness : Filtering, Equatable {
 
   }
   
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
     return
       image
         .applyingFilter(

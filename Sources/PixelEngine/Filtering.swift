@@ -23,5 +23,5 @@ enum RadiusCalculator {
 
 public protocol Filtering {
 
-  func apply(to image: CIImage) -> CIImage
+  func apply(to image: CIImage, sourceImage: CIImage) -> CIImage
 }

@@ -9,7 +9,7 @@
 import Foundation
 import CoreImage
 
-public struct FilterHighlights: Filtering, Equatable {
+public struct FilterHighlights: Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 1)
 
@@ -19,7 +19,7 @@ public struct FilterHighlights: Filtering, Equatable {
 
   }
 
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
     return
       image

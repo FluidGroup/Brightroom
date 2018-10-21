@@ -21,7 +21,7 @@ public struct PreviewFilterColorCube : Equatable {
 
   init(sourceImage: CIImage, filter: FilterColorCube) {
     self.filter = filter
-    self.image = filter.apply(to: sourceImage)
+    self.image = filter.apply(to: sourceImage, sourceImage: sourceImage)
   }
 
   public func preheat() {
@@ -57,7 +57,7 @@ public struct FilterColorCube : Filtering, Equatable {
     self.filter = ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)
   }
 
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
     let f = filter.copy() as! CIFilter
 
@@ -66,7 +66,7 @@ public struct FilterColorCube : Filtering, Equatable {
       f.setValue(colorSpace, forKeyPath: "inputColorSpace")
     }
 
-    let backgrounnd = image
+    let background = image
     let foreground = f.outputImage!.applyingFilter(
       "CIColorMatrix", parameters: [
         "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
@@ -80,7 +80,7 @@ public struct FilterColorCube : Filtering, Equatable {
       name: "CISourceOverCompositing",
       parameters: [
         kCIInputImageKey : foreground,
-        kCIInputBackgroundImageKey : backgrounnd
+        kCIInputBackgroundImageKey : background
       ])!
 
     return composition.outputImage!

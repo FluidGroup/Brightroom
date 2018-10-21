@@ -9,7 +9,7 @@
 import Foundation
 import CoreImage
 
-public struct FilterSharpen: Filtering, Equatable {
+public struct FilterSharpen: Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterSharpen> = .init(min: 0, max: 1.2)
 
@@ -19,7 +19,7 @@ public struct FilterSharpen: Filtering, Equatable {
 
   }
 
-  public func apply(to image: CIImage) -> CIImage {
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
     let radius = RadiusCalculator.radius(value: value, max: FilterGaussianBlur.range.max, imageExtent: image.extent)
 
