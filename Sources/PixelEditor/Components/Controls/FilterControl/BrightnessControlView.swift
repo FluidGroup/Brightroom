@@ -10,21 +10,17 @@ import Foundation
 
 import PixelEngine
 
-
 open class BrightnessControlViewBase : FilterControlViewBase {
 
-  public final let range = FilterBrightness.range
-
-  public override init(context: PixelEditContext) {
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-
 }
 
 open class BrightnessControlView : BrightnessControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Brightness")
+    return L10n.editBrightness
   }
 
   private let navigationView = NavigationView()
@@ -55,14 +51,14 @@ open class BrightnessControlView : BrightnessControlViewBase {
 
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
 
-    slider.set(value: edit.filters.brightness?.value ?? 0, in: range)
+    slider.set(value: edit.filters.brightness?.value ?? 0, in: FilterBrightness.range)
 
   }
 
   @objc
   private func valueChanged() {
 
-    let value = slider.transition(in: range)
+    let value = slider.transition(in: FilterBrightness.range)
     guard value != 0 else {
       context.action(.setFilter({ $0.brightness = nil }))
       return

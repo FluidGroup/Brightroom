@@ -12,19 +12,16 @@ import PixelEngine
 
 
 open class SaturationControlViewBase : FilterControlViewBase {
-  
-  public final let range = FilterSaturation.range
-  
-  public override init(context: PixelEditContext) {
+
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class SaturationControlView : SaturationControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Saturation")
+    return L10n.editSaturation
   }
   
   private let navigationView = NavigationView()
@@ -55,14 +52,14 @@ open class SaturationControlView : SaturationControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.saturation?.value ?? 0, in: range)
+    slider.set(value: edit.filters.saturation?.value ?? 0, in: FilterSaturation.range  )
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterSaturation.range  )
     
     guard value != 0 else {
       context.action(.setFilter({ $0.saturation = nil }))

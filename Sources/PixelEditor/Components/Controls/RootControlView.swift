@@ -10,6 +10,9 @@ import Foundation
 
 open class RootControlViewBase : ControlViewBase {
 
+  public required init(context: PixelEditContext, colorCubeControlView: ColorCubeControlViewBase) {
+    super.init(context: context)
+  }
 }
 
 final class RootControlView : RootControlViewBase {
@@ -32,17 +35,17 @@ final class RootControlView : RootControlViewBase {
 
   private let containerView = UIView()
 
-  public let colorCubeControlView: ColorCubeControlView
+  public let colorCubeControlView: ColorCubeControlViewBase
 
-  public lazy var editView = EditMenuControlView(context: context)
+  public lazy var editView = context.options.classes.control.editMenuControl.init(context: context)
 
   // MARK: - Initializers
 
-  init(context: PixelEditContext, colorCubeControlView: ColorCubeControlView) {
+  public required init(context: PixelEditContext, colorCubeControlView: ColorCubeControlViewBase) {
 
     self.colorCubeControlView = colorCubeControlView
 
-    super.init(context: context)
+    super.init(context: context, colorCubeControlView: colorCubeControlView)
 
     backgroundColor = Style.default.control.backgroundColor
 
@@ -75,8 +78,8 @@ final class RootControlView : RootControlViewBase {
 
     body: do {
 
-      filtersButton.setTitle(TODOL10n(raw: "Filter"), for: .normal)
-      editButton.setTitle(TODOL10n(raw: "Edit"), for: .normal)
+      filtersButton.setTitle(L10n.filter, for: .normal)
+      editButton.setTitle(L10n.edit, for: .normal)
 
       filtersButton.tintColor = .clear
       editButton.tintColor = .clear

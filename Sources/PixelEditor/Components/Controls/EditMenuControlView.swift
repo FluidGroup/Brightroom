@@ -10,68 +10,75 @@ import Foundation
 
 import PixelEngine
 
-open class EditMenuControlView : ControlViewBase {
+open class EditMenuControlViewBase : ControlViewBase {
+  
+  public required override init(context: PixelEditContext) {
+    super.init(context: context)
+  }
+}
+
+open class EditMenuControlView : EditMenuControlViewBase {
 
   public let contentView = UIView()
   public let itemsView = UIStackView()
   public let scrollView = UIScrollView()
   
   public lazy var adjustmentButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Adjust"), image: .init())
+    let button = ButtonView(name: L10n.editAdjustment, image: .init())
     button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
     return button
   }()
   
   public lazy var maskButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Mask"), image: .init())
+    let button = ButtonView(name: L10n.editMask, image: .init())
     button.addTarget(self, action: #selector(masking), for: .touchUpInside)
     return button
   }()
   
   public lazy var brightnessButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Brightness"), image: .init())
+    let button = ButtonView(name: L10n.editBrightness, image: .init())
     button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
     return button
   }()
   
   public lazy var gaussianBlurButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Blur"), image: .init())
+    let button = ButtonView(name: L10n.editBlur, image: .init())
     button.addTarget(self, action: #selector(blur), for: .touchUpInside)
     return button
   }()
   
   public lazy var contrastButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Contrast"), image: .init())
+    let button = ButtonView(name: L10n.editContrast, image: .init())
     button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
     return button
   }()
   
   public lazy var temperatureButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Temperature"), image: .init())
+    let button = ButtonView(name: L10n.editTemperature, image: .init())
     button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
     return button
   }()
   
   public lazy var saturationButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Saturation"), image: .init())
+    let button = ButtonView(name: L10n.editSaturation, image: .init())
     button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
     return button
   }()
   
   public lazy var highlightsButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Highlights"), image: .init())
+    let button = ButtonView(name: L10n.editHighlights, image: .init())
     button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
     return button
   }()
   
   public lazy var shadowsButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Shadows"), image: .init())
+    let button = ButtonView(name: L10n.editShadows, image: .init())
     button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
     return button
   }()
   
   public lazy var vignetteButton: ButtonView = {
-    let button = ButtonView(name: TODOL10n("Vignette"), image: .init())
+    let button = ButtonView(name: L10n.editVignette, image: .init())
     button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
     return button
   }()
@@ -204,7 +211,6 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func adjustment() {
-
     push(AdjustmentControlView(context: context))
   }
 
@@ -222,18 +228,18 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func brightness() {
-
-    push(BrightnessControlView(context: context))
+    
+    push(context.options.classes.control.brightnessControl.init(context: context))
   }
 
   @objc
   private func blur() {
-    push(GaussianBlurControlView(context: context))
+    push(context.options.classes.control.gaussianBlurControl.init(context: context))
   }
 
   @objc
   private func contrast() {
-    push(ContrastControlView(context: context))
+    push(context.options.classes.control.contrastControl.init(context: context))
   }
 
   @objc
@@ -243,12 +249,12 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func warmth() {
-    push(TemperatureControlView(context: context))
+    push(context.options.classes.control.temperatureControl.init(context: context))
   }
 
   @objc
   private func saturation() {
-    push(SaturationControlView(context: context))
+    push(context.options.classes.control.saturationControl.init(context: context))
   }
 
   @objc
@@ -263,12 +269,12 @@ open class EditMenuControlView : ControlViewBase {
 
   @objc
   private func highlights() {
-    push(HighlightsControlView(context: context))
+    push(context.options.classes.control.highlightsControl.init(context: context))
   }
 
   @objc
   private func shadows() {
-    push(ShadowsControlView(context: context))
+    push(context.options.classes.control.shadowsControl.init(context: context))
   }
 
   @objc

@@ -10,21 +10,17 @@ import Foundation
 
 import PixelEngine
 
-
 open class VignetteControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterVignette.range
-  
-  public override init(context: PixelEditContext) {
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class VignetteControlView : VignetteControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Vignette")
+    return L10n.editVignette
   }
   
   private let navigationView = NavigationView()
@@ -56,14 +52,14 @@ open class VignetteControlView : VignetteControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.vignette?.value ?? 0, in: range)
+    slider.set(value: edit.filters.vignette?.value ?? 0, in: FilterVignette.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterVignette.range)
     
     guard value != 0 else {
       context.action(.setFilter({ $0.vignette = nil }))

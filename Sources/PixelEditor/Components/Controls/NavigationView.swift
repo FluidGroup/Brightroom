@@ -8,15 +8,15 @@
 
 import Foundation
 
-final class NavigationView : UIStackView {
+open class NavigationView : UIStackView {
 
-  var didTapSaveButton: () -> Void = {}
-  var didTapCancelButton: () -> Void = {}
+  public var didTapSaveButton: () -> Void = {}
+  public var didTapCancelButton: () -> Void = {}
 
   private let saveButton = UIButton(type: .system)
   private let cancelButton = UIButton(type: .system)
 
-  init() {
+  public init() {
 
     super.init(frame: .zero)
 
@@ -28,8 +28,8 @@ final class NavigationView : UIStackView {
     addArrangedSubview(cancelButton)
     addArrangedSubview(saveButton)
 
-    cancelButton.setTitle(TODOL10n("Cancel"), for: .normal)
-    saveButton.setTitle(TODOL10n("Save"), for: .normal)
+    cancelButton.setTitle(L10n.cancel, for: .normal)
+    saveButton.setTitle(L10n.save, for: .normal)
 
     cancelButton.setTitleColor(.black, for: .normal)
     saveButton.setTitleColor(.black, for: .normal)
@@ -41,7 +41,7 @@ final class NavigationView : UIStackView {
     saveButton.addTarget(self, action: #selector(_didTapSaveButton), for: .touchUpInside)
   }
 
-  required init(coder: NSCoder) {
+  public required init(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 

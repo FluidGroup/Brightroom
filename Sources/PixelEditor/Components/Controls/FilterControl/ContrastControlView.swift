@@ -12,19 +12,15 @@ import PixelEngine
 
 
 open class ContrastControlViewBase : FilterControlViewBase {
-  
-  public final let range = FilterContrast.range
-  
-  public override init(context: PixelEditContext) {
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class ContrastControlView : ContrastControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Contrast")
+    return L10n.editContrast
   }
   
   private let navigationView = NavigationView()
@@ -55,14 +51,14 @@ open class ContrastControlView : ContrastControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.contrast?.value ?? 0, in: range)
+    slider.set(value: edit.filters.contrast?.value ?? 0, in: FilterContrast.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterContrast.range)
     
     guard value != 0 else {
       context.action(.setFilter({ $0.contrast = nil }))

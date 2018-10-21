@@ -10,21 +10,17 @@ import Foundation
 
 import PixelEngine
 
-
 open class ShadowsControlViewBase : FilterControlViewBase {
-  
-  public final let range = FilterShadows.range
-  
-  public override init(context: PixelEditContext) {
+
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class ShadowsControlView : ShadowsControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Shadows")
+    return L10n.editShadows
   }
   
   private let navigationView = NavigationView()
@@ -55,14 +51,14 @@ open class ShadowsControlView : ShadowsControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.shadows?.value ?? 0, in: range)
+    slider.set(value: edit.filters.shadows?.value ?? 0, in: FilterShadows.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterShadows.range)
     
     guard value != 0 else {
       context.action(.setFilter({ $0.shadows = nil }))

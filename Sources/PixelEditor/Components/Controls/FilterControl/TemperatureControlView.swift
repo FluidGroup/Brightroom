@@ -13,18 +13,15 @@ import PixelEngine
 
 open class TemperatureControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterTemperature.range
-  
-  public override init(context: PixelEditContext) {
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class TemperatureControlView : TemperatureControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Temperature")
+    return L10n.editTemperature
   }
   
   private let navigationView = NavigationView()
@@ -55,14 +52,14 @@ open class TemperatureControlView : TemperatureControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.temperature?.value ?? 0, in: range)
+    slider.set(value: edit.filters.temperature?.value ?? 0, in: FilterTemperature.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterTemperature.range)
     
     guard value != 0 else {
       context.action(.setFilter({ $0.temperature = nil }))

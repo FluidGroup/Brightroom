@@ -428,7 +428,6 @@
 		4B3457892174FF8600716DA0 /* Controls */ = {
 			isa = PBXGroup;
 			children = (
-				4B34578A217502F900716DA0 /* Style.swift */,
 				4B9D4574216DF66F003A240A /* NavigationView.swift */,
 				4B9D4562216DD143003A240A /* ControlStackView.swift */,
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
@@ -455,6 +454,7 @@
 				4B47D055216CC5350007B594 /* Info.plist */,
 				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
 				4B9D4570216DF1A1003A240A /* Media.xcassets */,
+				4B34578A217502F900716DA0 /* Style.swift */,
 				4BA8E73C217C716700940518 /* Options.swift */,
 			);
 			path = PixelEditor;

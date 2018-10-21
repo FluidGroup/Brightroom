@@ -14,7 +14,7 @@ open class FilterControlViewBase : ControlViewBase {
     fatalError("Must be overrided")
   }
 
-  public override init(context: PixelEditContext) {
+  public required override init(context: PixelEditContext) {
     super.init(context: context)
   }
 

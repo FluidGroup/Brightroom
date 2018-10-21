@@ -35,9 +35,11 @@ public final class PixelEditContext {
   }
 
   fileprivate var didReceiveAction: (Action) -> Void = { _ in }
+  
+  public let options: Options
 
-  fileprivate init() {
-
+  fileprivate init(options: Options) {
+    self.options = options
   }
 
   func action(_ action: Action) {
@@ -77,14 +79,14 @@ public final class PixelEditViewController : UIViewController {
   private let stackView = ControlStackView()
 
   private lazy var doneButton = UIBarButtonItem(
-    title: TODOL10n("Done"),
+    title: L10n.done,
     style: .done,
     target: self,
     action: #selector(didTapDoneButton)
   )
   
   private lazy var cancelButton = UIBarButtonItem(
-    title: TODOL10n("Cancel"),
+    title: L10n.cancel,
     style: .plain,
     target: self,
     action: #selector(didTapCancelButton)
@@ -95,22 +97,25 @@ public final class PixelEditViewController : UIViewController {
 
   public weak var delegate: PixelEditViewControllerDelegate?
 
-  public let context: PixelEditContext = .init()
+  public lazy var context: PixelEditContext = .init(options: options)
+  
+  public let options: Options
 
   // MARK: - Initializers
 
-  public convenience init(image: UIImage) {
+  public convenience init(image: UIImage, options: Options = .default) {
     let surce = ImageSource(source: image)
-    self.init(source: surce)
+    self.init(source: surce, options: options)
   }
 
-  public convenience init(stack: SquareEditingStack) {
-    self.init(source: stack.source)
+  public convenience init(stack: SquareEditingStack, options: Options = .default) {
+    self.init(source: stack.source, options: options)
     self.stack = stack
   }
 
-  public init(source: ImageSource) {
+  public init(source: ImageSource, options: Options = .default) {
     self.imageSource = source
+    self.options = options
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -196,9 +201,9 @@ public final class PixelEditViewController : UIViewController {
 
         // TODO: Make customizable
         stackView.push(
-          RootControlView(
+          options.classes.control.rootControl.init(
             context: context,
-            colorCubeControlView: ColorCubeControlView(
+            colorCubeControlView: options.classes.control.colorCubeControl.init(
               context: context,
               originalImage: stack.cubeFilterPreviewSourceImage,
               filters: stack.availableColorCubeFilters
@@ -265,7 +270,7 @@ public final class PixelEditViewController : UIViewController {
       maskingView.isHidden = true
       maskingView.isUserInteractionEnabled = false
 
-      didReceive(action: .setTitle(TODOL10n("Adjustment")))
+      didReceive(action: .setTitle(L10n.editAdjustment))
       
       updateAdjustmentUI()
 
@@ -273,7 +278,7 @@ public final class PixelEditViewController : UIViewController {
 
       navigationItem.rightBarButtonItem = nil
       navigationItem.leftBarButtonItem = nil
-      didReceive(action: .setTitle(TODOL10n("Mask")))
+      didReceive(action: .setTitle(L10n.editMask))
 
       adjustmentView.isHidden = true
       previewView.isHidden = false

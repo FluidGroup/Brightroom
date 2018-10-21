@@ -10,8 +10,20 @@ import Foundation
 
 import PixelEngine
 
+open class ColorCubeControlViewBase : ControlViewBase {
+  
+  public required init(
+    context: PixelEditContext,
+    originalImage: CIImage,
+    filters: [PreviewFilterColorCube]
+    ) {
+    
+    super.init(context: context)
+  }
+  
+}
 
-open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class ColorCubeControlView : ColorCubeControlViewBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
   
   private enum Section : Int, CaseIterable {
     
@@ -32,7 +44,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
   // MARK: - Functions
 
-  public init(
+  public required init(
     context: PixelEditContext,
     originalImage: CIImage,
     filters: [PreviewFilterColorCube]
@@ -40,7 +52,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
     
     self.originalImage = originalImage
     self.filters = filters
-    super.init(context: context)
+    super.init(context: context, originalImage: originalImage, filters: filters)
   }
 
   open override func setup() {
@@ -84,7 +96,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
     collectionView.delaysContentTouches = false
 
     collectionView.register(NormalCell.self, forCellWithReuseIdentifier: NormalCell.identifier)
-    collectionView.register(Cell.self, forCellWithReuseIdentifier: Cell.identifier)
+    collectionView.register(SelectionCell.self, forCellWithReuseIdentifier: SelectionCell.identifier)
 
     return collectionView
   }
@@ -132,7 +144,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
     switch cell {
     case let cell as NormalCell:
       cell._isSelected = current == nil
-    case let cell as Cell:
+    case let cell as SelectionCell:
       cell._isSelected = current == cell.preview?.filter
     default:
       break
@@ -148,7 +160,7 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
       updateSelected(cell: cell)
       return cell
     case .selections:
-      let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Cell.identifier, for: indexPath) as! Cell
+      let cell = collectionView.dequeueReusableCell(withReuseIdentifier: SelectionCell.identifier, for: indexPath) as! SelectionCell
       let filter = filters[indexPath.item]
       cell.set(preview: filter)
       updateSelected(cell: cell)
@@ -275,13 +287,13 @@ open class ColorCubeControlView : ControlViewBase, UICollectionViewDelegateFlowL
 
     open func set(originalImage: CIImage) {
       
-      nameLabel.text = TODOL10n("Normal")
+      nameLabel.text = L10n.normal
       imageView.image = UIImage(ciImage: originalImage, scale: contentScaleFactor, orientation: .up)
     }
     
   }
 
-  open class Cell : CellBase {
+  open class SelectionCell : CellBase {
 
     static let identifier = "me.muukii.PixelEditor.FilterCell"
     

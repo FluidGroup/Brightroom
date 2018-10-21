@@ -13,18 +13,15 @@ import PixelEngine
 
 open class HighlightsControlViewBase : FilterControlViewBase {
   
-  public final let range = FilterHighlights.range
-  
-  public override init(context: PixelEditContext) {
+  public required init(context: PixelEditContext) {
     super.init(context: context)
   }
-  
 }
 
 open class HighlightsControlView : HighlightsControlViewBase {
   
   open override var title: String {
-    return TODOL10n("Highlights")
+    return L10n.editHighlights
   }
   
   private let navigationView = NavigationView()
@@ -56,14 +53,14 @@ open class HighlightsControlView : HighlightsControlViewBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.highlights?.value ?? 0, in: range)
+    slider.set(value: edit.filters.highlights?.value ?? 0, in: FilterHighlights.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(min: range.min, max: range.max)
+    let value = slider.transition(in: FilterHighlights.range)
     
     guard value != 0 else {
       context.action(.setFilter({ $0.highlights = nil }))

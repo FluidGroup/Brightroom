@@ -10,7 +10,6 @@ import Foundation
 
 import PixelEngine
 
-
 open class ControlViewBase : UIView, ControlChildViewType {
   
   open func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
