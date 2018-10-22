@@ -28,9 +28,7 @@ open class EditingStack {
   public var availableColorCubeFilters: [PreviewFilterColorCube] = []
 
   public var cubeFilterPreviewSourceImage: CIImage!
-
-  // MARK: - Computed Properties
-
+  
   public var previewImage: CIImage?
 
   public var originalPreviewImage: CIImage? {
@@ -68,6 +66,12 @@ open class EditingStack {
       EngineLog.debug("Edits changed counnt -> \(edits.count)")
     }
   }
+  
+  private let queue = DispatchQueue(
+    label: "me.muukii.PixelEngine",
+    qos: .default,
+    attributes: []
+  )
 
   // MARK: - Initializers
 
@@ -249,20 +253,26 @@ open class EditingStack {
       previewImage = nil
       return
     }
-
-    let filters = currentEdit
-      .makeFilters()
-
-    previewImage = filters.reduce(sourceImage) { (image, filter) -> CIImage in
-      filter.apply(to: image, sourceImage: sourceImage).insertingIntermediateIfCanUse()
+    
+    queue.async {
+      let filters = self.currentEdit
+        .makeFilters()
+      
+      let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
+        filter.apply(to: image, sourceImage: sourceImage).insertingIntermediateIfCanUse()
+      }
+      
+      DispatchQueue.main.async {
+        self.previewImage = result
+        self.delegate?.editingStack(self, didChangeCurrentEdit: self.currentEdit)
+      }
     }
-
+    
     // TODO: Ignore vignette and blur (convolutions)
 //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
 //      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
 //    }
 
-    delegate?.editingStack(self, didChangeCurrentEdit: currentEdit)
   }
 
 }
@@ -303,10 +313,13 @@ extension EditingStack {
       public var sharpen: FilterSharpen?
       public var temperature: FilterTemperature?
       public var vignette: FilterVignette?
+      public var fade: FilterFade?
+      public var unsharpMask: FilterUnsharpMask?
 
       func makeFilters() -> [Filtering] {
         return ([
           sharpen,
+          unsharpMask,
           gaussianBlur,
           temperature,
           highlights,
@@ -315,6 +328,7 @@ extension EditingStack {
           saturation,
           contrast,
           colorCube,
+          fade,
           vignette,
           ] as [Optional<Filtering>])
           .compactMap { $0 }

@@ -267,16 +267,23 @@ open class ColorCubeControlView : ColorCubeControlViewBase, UICollectionViewDele
         
         super.isHighlighted = newValue
         
-        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
+        if newValue {
           
-          if newValue {
-            self.contentView.layer.transform = CATransform3DMakeScale(0.95, 0.95, 1)
-          } else {
+          UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
+              self.contentView.layer.transform = CATransform3DMakeScale(0.95, 0.95, 1)
+          }, completion: { (finish) -> Void in
+            
+          })
+          
+        } else {
+          
+          UIView.animate(withDuration: 0.5, delay: 0.05, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
             self.contentView.layer.transform = CATransform3DIdentity
-          }
-        }, completion: { (finish) -> Void in
-          
-        })
+          }, completion: { (finish) -> Void in
+            
+          })
+        }
+               
       }
     }
   }

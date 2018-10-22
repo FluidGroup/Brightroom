@@ -29,6 +29,9 @@ public struct L10nStorage {
   public var editTemperature = "Temperature"
   public var editBrightness = "Brightness"
   public var editVignette = "Vignette"
+  public var editFade = "Fade"
+  public var editClarity = "Clarity"
+  public var editSharpen = "Sharpen"
   
   public init() {
     
@@ -58,6 +61,9 @@ extension Options {
       public var vignetteControl: VignetteControlViewBase.Type = VignetteControlView.self
       public var highlightsControl: HighlightsControlViewBase.Type = HighlightsControlView.self
       public var shadowsControl: ShadowsControlViewBase.Type = ShadowsControlView.self
+      public var fadeControl: FadeControlViewBase.Type = FadeControlView.self
+      public var clarityControl: ClarityControlViewBase.Type = ClarityControlView.self
+      public var sharpenControl: SharpenControlViewBase.Type = SharpenControlView.self
       
       public init() {
         

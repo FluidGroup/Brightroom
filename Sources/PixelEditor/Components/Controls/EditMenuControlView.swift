@@ -82,6 +82,24 @@ open class EditMenuControlView : EditMenuControlViewBase {
     button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
     return button
   }()
+  
+  public lazy var fadeButton: ButtonView = {
+    let button = ButtonView(name: L10n.editFade, image: .init())
+    button.addTarget(self, action: #selector(fade), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var sharpenButton: ButtonView = {
+    let button = ButtonView(name: L10n.editSharpen, image: .init())
+    button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
+    return button
+  }()
+  
+  public lazy var clarityButton: ButtonView = {
+    let button = ButtonView(name: L10n.editClarity, image: .init())
+    button.addTarget(self, action: #selector(clarity), for: .touchUpInside)
+    return button
+  }()
 
   open override func setup() {
 
@@ -153,7 +171,10 @@ open class EditMenuControlView : EditMenuControlViewBase {
         highlightsButton,
         shadowsButton,
         vignetteButton,
-        gaussianBlurButton
+        gaussianBlurButton,
+        sharpenButton,
+        fadeButton,
+        clarityButton
       ]
       
       for button in buttons {
@@ -162,13 +183,6 @@ open class EditMenuControlView : EditMenuControlViewBase {
       }
       
        /*
-
-       
-       structure: do {
-       let button = ButtonView(name: TODOL10n("Structure"), image: .init())
-       button.addTarget(self, action: #selector(structure), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
        
        color: do {
        let button = ButtonView(name: TODOL10n("Color"), image: .init())
@@ -176,17 +190,6 @@ open class EditMenuControlView : EditMenuControlViewBase {
        itemsView.addArrangedSubview(button)
        }
 
-       fade: do {
-       let button = ButtonView(name: TODOL10n("Fade"), image: .init())
-       button.addTarget(self, action: #selector(fade), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
-
-       sharpen: do {
-       let button = ButtonView(name: TODOL10n("Sharpen"), image: .init())
-       button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
-       itemsView.addArrangedSubview(button)
-       }
        */
       hls: do {
         // http://flexmonkey.blogspot.com/2016/03/creating-selective-hsl-adjustment.html
@@ -206,6 +209,9 @@ open class EditMenuControlView : EditMenuControlViewBase {
     shadowsButton.hasChanges = edit.filters.shadows != nil
     vignetteButton.hasChanges = edit.filters.vignette != nil
     gaussianBlurButton.hasChanges = edit.filters.gaussianBlur != nil
+    fadeButton.hasChanges = edit.filters.fade != nil
+    sharpenButton.hasChanges = edit.filters.sharpen != nil
+    clarityButton.hasChanges = edit.filters.unsharpMask != nil
     
   }
 
@@ -243,8 +249,8 @@ open class EditMenuControlView : EditMenuControlViewBase {
   }
 
   @objc
-  private func structure() {
-
+  private func clarity() {
+    push(context.options.classes.control.clarityControl.init(context: context))
   }
 
   @objc
@@ -264,7 +270,7 @@ open class EditMenuControlView : EditMenuControlViewBase {
 
   @objc
   private func fade() {
-
+    push(context.options.classes.control.fadeControl.init(context: context))
   }
 
   @objc
@@ -279,12 +285,12 @@ open class EditMenuControlView : EditMenuControlViewBase {
 
   @objc
   private func vignette() {
-    push(VignetteControlView(context: context))
+    push(context.options.classes.control.vignetteControl.init(context: context))
   }
 
   @objc
   private func sharpen() {
-
+    push(context.options.classes.control.sharpenControl.init(context: context))
   }
 
   open class ButtonView : UIControl {

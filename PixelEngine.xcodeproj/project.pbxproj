@@ -14,6 +14,9 @@
 		4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */; };
 		4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */; };
 		4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */; };
+		4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0BDC9E217D6567001098B9 /* FadeControl.swift */; };
+		4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0BDCA0217D663D001098B9 /* ClarityControl.swift */; };
+		4B0BDCA3217D676D001098B9 /* SharpenControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0BDCA2217D676D001098B9 /* SharpenControl.swift */; };
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
 		4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456E216DEE95003A240A /* StepSlider.swift */; };
 		4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94B2217624A700E9DFB8 /* SliderViewController.swift */; };
@@ -168,6 +171,9 @@
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
 		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
 		4B0433AA217B962C0039293E /* InternalUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternalUtils.swift; sourceTree = "<group>"; };
+		4B0BDC9E217D6567001098B9 /* FadeControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FadeControl.swift; sourceTree = "<group>"; };
+		4B0BDCA0217D663D001098B9 /* ClarityControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClarityControl.swift; sourceTree = "<group>"; };
+		4B0BDCA2217D676D001098B9 /* SharpenControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharpenControl.swift; sourceTree = "<group>"; };
 		4B112F14216C9B5400EF8E25 /* ImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTool.swift; sourceTree = "<group>"; };
 		4B1E94B2217624A700E9DFB8 /* SliderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SliderViewController.swift; sourceTree = "<group>"; };
 		4B1E94B5217632C500E9DFB8 /* FilterBrightness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBrightness.swift; sourceTree = "<group>"; };
@@ -371,6 +377,9 @@
 				4B42A6AC2178E14500F18208 /* VignetteControlView.swift */,
 				4B42A6AE2178E14E00F18208 /* HighlightsControlView.swift */,
 				4B42A6B02178E15600F18208 /* ShadowsControlView.swift */,
+				4B0BDCA0217D663D001098B9 /* ClarityControl.swift */,
+				4B0BDC9E217D6567001098B9 /* FadeControl.swift */,
+				4B0BDCA2217D676D001098B9 /* SharpenControl.swift */,
 			);
 			path = FilterControl;
 			sourceTree = "<group>";
@@ -844,6 +853,7 @@
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
 				4B1E95202176567300E9DFB8 /* FilterControlViewBase.swift in Sources */,
 				4BA8E73D217C716700940518 /* Options.swift in Sources */,
+				4B0BDCA3217D676D001098B9 /* SharpenControl.swift in Sources */,
 				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
 				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
@@ -851,6 +861,7 @@
 				4B42A6B12178E15600F18208 /* ShadowsControlView.swift in Sources */,
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* BrightnessControlView.swift in Sources */,
+				4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */,
 				4B42A6AB2178E13600F18208 /* TemperatureControlView.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,
@@ -866,6 +877,7 @@
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
+				4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */,
 				4B42A6AD2178E14500F18208 /* VignetteControlView.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
 				4BEE650F21749E7A00F3578E /* ImageScrollView.swift in Sources */,
