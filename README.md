@@ -26,8 +26,10 @@ The image editor and engine using CoreImage
   * [x] GaussianBlur
   * [x] Vignette 
   * [ ] Color (Shadows / Highlights)
-  * [ ] Fade
-  * [ ] Sharpen
+  * [x] Fade
+  * [x] Sharpen
+  * [x] Clarity
+  * [ ] HLS
   
 ## Requirements
  
