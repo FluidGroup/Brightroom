@@ -1,6 +1,6 @@
 # Pixel - Engine • Editor
 
-The image editor and engine using CoreImage
+Image editor and engine using CoreImage
 
 > ⚠️ Currently, API is not stable. It may change in the future.
 
@@ -8,34 +8,34 @@ The image editor and engine using CoreImage
 
 ## Features
 
-**Currently it's accepting PR that impemented features.**
+**Currently accepting PRs that impement these features.**
 
 * Adjustment
-  * [x] Crop
-  * [ ] Straighten
-  * [ ] Perspective
+* [x] Crop
+* [ ] Straighten
+* [ ] Perspective
 
 * Filter
-  * [x] ColorCube (Look Up Table)
-  * [x] Brightness
-  * [x] Contrast
-  * [x] Saturation
-  * [x] Highlights
-  * [x] Shadows
-  * [x] Temperature
-  * [x] GaussianBlur
-  * [x] Vignette 
-  * [ ] Color (Shadows / Highlights)
-  * [x] Fade
-  * [x] Sharpen
-  * [x] Clarity
-  * [ ] HLS
-  
+* [x] ColorCube (Look Up Table)
+* [x] Brightness
+* [x] Contrast
+* [x] Saturation
+* [x] Highlights
+* [x] Shadows
+* [x] Temperature
+* [x] GaussianBlur
+* [x] Vignette 
+* [ ] Color (Shadows / Highlights)
+* [x] Fade
+* [x] Sharpen
+* [x] Clarity
+* [ ] HLS
+
 ## Requirements
- 
+
 * Swift 4.2 (Xcode10+)
 * iOS 10+
-  
+
 ## Getting Started
 
 Demo.app contains the sample code.
@@ -80,12 +80,12 @@ self.navigationController.push(controller, animated: true)
 
 ```swift
 public protocol PixelEditViewControllerDelegate : class {
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
-  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
+func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
+func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
 }
 ```
 
-💡`PixelEditViewController` does not have how to dismiss or pop.
+💡`PixelEditViewController` does not know how to dismiss or pop by itself.
 So we need to control `PixelEditViewController` outside.
 
 Basically, it's like following code, recommend dismiss or pop in methods of delegate.
@@ -93,15 +93,15 @@ Basically, it's like following code, recommend dismiss or pop in methods of dele
 ```swift
 extension EditorViewController : PixelEditViewControllerDelegate {
 
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
+func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
 
-    self.navigationController?.popToViewController(self, animated: true)
-  }
-  
-  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
-    self.navigationController?.popToViewController(self, animated: true)
-  }
-  
+self.navigationController?.popToViewController(self, animated: true)
+}
+
+func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+self.navigationController?.popToViewController(self, animated: true)
+}
+
 }
 ```
 
@@ -133,10 +133,10 @@ import PixelEngine
 let lutImage: UIImage
 
 let filter = FilterColorCube(
-  name: "Filter Name",
-  identifier: "Filter Identifier",
-  lutImage: lutImage,
-  dimension: 64
+name: "Filter Name",
+identifier: "Filter Identifier",
+lutImage: lutImage,
+dimension: 64
 )
 
 let controller = PixelEditViewController(image: image, colorCubeFilters: [filter])
@@ -151,7 +151,7 @@ ColorCubeStorage.load(filters: [filter])
 // get
 ColorCubeStorage.filters
 ```
-  
+
 ## Customize Control-UI
 
 We can customize UI for control area.
@@ -161,7 +161,7 @@ We can customize UI for control area.
 ### Customize Built-In Control-UI using override
 
 There is `Options` struct in PixelEditor.
-We can create options that fits our usecases.
+We can create options that fit our usecases.
 
 So, If we need to change BrightnessControl, override BrightnessControlBase class.
 Then set that class to Options.
@@ -192,7 +192,7 @@ PixelEditor.L10n.done = "保存"
 // or
 PixelEditor.L10n.done = NSLocalizedString...
 ```
-  
+
 ## Installation
 
 ### CocoaPods
@@ -216,7 +216,7 @@ github "muukii/Pixel"
 ## Contributing
 
 If you need more features, please open issue or submit PR!
-Muukii does not know all approach for features, So your PR will be very helpful.
+Muukii may not know the approach to take for implementing them, So your PR will be very helpful.
 
 ## Author
 
@@ -225,3 +225,4 @@ Muukii (muukii.app@gmail.com)
 ## License
 
 Pixel is available under the MIT license. See the LICENSE file for more info.
+

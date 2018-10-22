@@ -5,6 +5,9 @@
       location = "group:LUTViewer.playground">
    </FileRef>
    <FileRef
+      location = "group:README.md">
+   </FileRef>
+   <FileRef
       location = "group:PixelEngine.xcodeproj">
    </FileRef>
    <FileRef
