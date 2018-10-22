@@ -19,46 +19,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
+import Foundation
 
-import PixelEngine
-
-final class SmallUIImageViewController : UIViewController {
-
-  @IBOutlet weak var slider: UISlider!
-  @IBOutlet weak var imageView: UIImageView!
-
-  let image: CIImage = {
-    return ImageTool.resize(to: CGSize(width: 500, height: 500), from: CIImage(image: UIImage(named: "large")!)!)!
-  }()
-
-  override func viewDidLoad() {
-    super.viewDidLoad()
-
-    //    imageView.image = UIImage(ciImage: image)
+open class FilterControlBase : ControlBase {
+  
+  open var title: String {
+    fatalError("Must be overrided")
   }
 
-  @IBAction func didChangeSliderValue(_ sender: Any) {
-
-    let value = slider.value
-
-    let result = SmallUIImageViewController.blur(image: image, radius: Double(value * 50))!
-
-    print(result)
-    imageView.image = UIImage(ciImage: result)
+  public required override init(context: PixelEditContext) {
+    super.init(context: context)
   }
 
-  static func blur(image: CIImage, radius: Double) -> CIImage? {
+  open override func didMoveToSuperview() {
+    super.didMoveToSuperview()
 
-    let outputImage = image
-      .clamped(to: image.extent)
-      .applyingFilter(
-        "CIGaussianBlur",
-        parameters: [
-          "inputRadius" : radius
-        ])
-      .cropped(to: image.extent)
+    if superview != nil {
+      context.action(.setMode(.editing))
+      context.action(.setTitle(title))
+    } else {
+      context.action(.setTitle(""))
+      context.action(.setMode(.preview))
+    }
 
-    return outputImage
   }
 }

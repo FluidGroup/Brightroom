@@ -1,10 +1,23 @@
 //
-//  Options.swift
-//  PixelEditor
+// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
 //
-//  Created by Hiroshi Kimura on 2018/10/21.
-//  Copyright © 2018 muukii. All rights reserved.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 
 import Foundation
 
@@ -50,20 +63,20 @@ extension Options {
     
     public struct Control {
       
-      public var colorCubeControl: ColorCubeControlViewBase.Type = ColorCubeControlView.self
-      public var editMenuControl: EditMenuControlViewBase.Type = EditMenuControlView.self
-      public var rootControl: RootControlViewBase.Type = RootControlView.self
-      public var brightnessControl: BrightnessControlViewBase.Type = BrightnessControlView.self
-      public var gaussianBlurControl: GaussianBlurControlViewBase.Type = GaussianBlurControlView.self
-      public var saturationControl: SaturationControlViewBase.Type = SaturationControlView.self
-      public var contrastControl: ContrastControlViewBase.Type = ContrastControlView.self
-      public var temperatureControl: TemperatureControlViewBase.Type = TemperatureControlView.self
-      public var vignetteControl: VignetteControlViewBase.Type = VignetteControlView.self
-      public var highlightsControl: HighlightsControlViewBase.Type = HighlightsControlView.self
-      public var shadowsControl: ShadowsControlViewBase.Type = ShadowsControlView.self
-      public var fadeControl: FadeControlViewBase.Type = FadeControlView.self
-      public var clarityControl: ClarityControlViewBase.Type = ClarityControlView.self
-      public var sharpenControl: SharpenControlViewBase.Type = SharpenControlView.self
+      public var colorCubeControl: ColorCubeControlBase.Type = ColorCubeControl.self
+      public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
+      public var rootControl: RootControlBase.Type = RootControl.self
+      public var brightnessControl: BrightnessControlBase.Type = BrightnessControl.self
+      public var gaussianBlurControl: GaussianBlurControlBase.Type = GaussianBlurControl.self
+      public var saturationControl: SaturationControlBase.Type = SaturationControl.self
+      public var contrastControl: ContrastControlBase.Type = ContrastControl.self
+      public var temperatureControl: TemperatureControlBase.Type = TemperatureControl.self
+      public var vignetteControl: VignetteControlBase.Type = VignetteControl.self
+      public var highlightsControl: HighlightsControlBase.Type = HighlightsControl.self
+      public var shadowsControl: ShadowsControlBase.Type = ShadowsControl.self
+      public var fadeControl: FadeControlBase.Type = FadeControl.self
+      public var clarityControl: ClarityControlBase.Type = ClarityControl.self
+      public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
       
       public init() {
         

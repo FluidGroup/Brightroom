@@ -1,23 +1,36 @@
 //
-//  EditControlView.swift
-//  PixelEditor
+// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
 //
-//  Created by muukii on 10/17/18.
-//  Copyright © 2018 muukii. All rights reserved.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 
 import Foundation
 
 import PixelEngine
 
-open class EditMenuControlViewBase : ControlViewBase {
+open class EditMenuControlBase : ControlBase {
   
   public required override init(context: PixelEditContext) {
     super.init(context: context)
   }
 }
 
-open class EditMenuControlView : EditMenuControlViewBase {
+open class EditMenuControl : EditMenuControlBase {
 
   public let contentView = UIView()
   public let itemsView = UIStackView()
@@ -217,19 +230,19 @@ open class EditMenuControlView : EditMenuControlViewBase {
 
   @objc
   private func adjustment() {
-    push(AdjustmentControlView(context: context))
+    push(AdjustmentControl(context: context))
   }
 
   @objc
   private func masking() {
 
-    push(MaskControlView(context: context))
+    push(MaskControl(context: context))
   }
 
   @objc
   private func doodle() {
 
-    push(DoodleControlView(context: context))
+    push(DoodleControl(context: context))
   }
 
   @objc

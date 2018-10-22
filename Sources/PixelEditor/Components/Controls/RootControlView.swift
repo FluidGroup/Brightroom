@@ -1,21 +1,33 @@
 //
-//  TopControlView.swift
-//  PixelEditor
+// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
 //
-//  Created by muukii on 10/10/18.
-//  Copyright © 2018 muukii. All rights reserved.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
-
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 import Foundation
 
-open class RootControlViewBase : ControlViewBase {
+open class RootControlBase : ControlBase {
 
-  public required init(context: PixelEditContext, colorCubeControlView: ColorCubeControlViewBase) {
+  public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
     super.init(context: context)
   }
 }
 
-final class RootControlView : RootControlViewBase {
+final class RootControl : RootControlBase {
 
   public enum DisplayType {
     case filter
@@ -35,17 +47,17 @@ final class RootControlView : RootControlViewBase {
 
   private let containerView = UIView()
 
-  public let colorCubeControlView: ColorCubeControlViewBase
+  public let colorCubeControl: ColorCubeControlBase
 
   public lazy var editView = context.options.classes.control.editMenuControl.init(context: context)
 
   // MARK: - Initializers
 
-  public required init(context: PixelEditContext, colorCubeControlView: ColorCubeControlViewBase) {
+  public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
 
-    self.colorCubeControlView = colorCubeControlView
+    self.colorCubeControl = colorCubeControl
 
-    super.init(context: context, colorCubeControlView: colorCubeControlView)
+    super.init(context: context, colorCubeControl: colorCubeControl)
 
     backgroundColor = Style.default.control.backgroundColor
 
@@ -130,11 +142,11 @@ final class RootControlView : RootControlViewBase {
 
     switch displayType {
     case .filter:
-      containerView.addSubview(colorCubeControlView)
-      subscribeChangedEdit(to: colorCubeControlView)
+      containerView.addSubview(colorCubeControl)
+      subscribeChangedEdit(to: colorCubeControl)
 
-      colorCubeControlView.frame = containerView.bounds
-      colorCubeControlView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      colorCubeControl.frame = containerView.bounds
+      colorCubeControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
       filtersButton.isSelected = true
 
