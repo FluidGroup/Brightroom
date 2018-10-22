@@ -10,12 +10,14 @@ Image editor and engine using CoreImage
 
 **Currently accepting PRs that impement these features.**
 
-* Adjustment
+### Adjustment
+
 * [x] Crop
 * [ ] Straighten
 * [ ] Perspective
 
-* Filter
+### Filter
+
 * [x] ColorCube (Look Up Table)
 * [x] Brightness
 * [x] Contrast
