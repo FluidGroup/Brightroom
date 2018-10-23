@@ -10,6 +10,11 @@ Image editor and engine using CoreImage
 
 **Currently accepting PRs that impement these features.**
 
+### Performance
+
+* [x] ✈️Pretty Good
+* [ ] 🚀Blazing Fast
+
 ### Adjustment
 
 * [x] Crop
