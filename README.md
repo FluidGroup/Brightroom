@@ -82,8 +82,8 @@ self.navigationController.push(controller, animated: true)
 
 ```swift
 public protocol PixelEditViewControllerDelegate : class {
-func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
-func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
 }
 ```
 
@@ -95,14 +95,15 @@ Basically, it's like following code, recommend dismiss or pop in methods of dele
 ```swift
 extension EditorViewController : PixelEditViewControllerDelegate {
 
-func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
 
-self.navigationController?.popToViewController(self, animated: true)
-}
+    self.navigationController?.popToViewController(self, animated: true)
+  }
 
-func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
-self.navigationController?.popToViewController(self, animated: true)
-}
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+  
+    self.navigationController?.popToViewController(self, animated: true)
+  }
 
 }
 ```
@@ -135,10 +136,10 @@ import PixelEngine
 let lutImage: UIImage
 
 let filter = FilterColorCube(
-name: "Filter Name",
-identifier: "Filter Identifier",
-lutImage: lutImage,
-dimension: 64
+  name: "Filter Name",
+  identifier: "Filter Identifier",
+  lutImage: lutImage,
+  dimension: 64
 )
 
 let controller = PixelEditViewController(image: image, colorCubeFilters: [filter])
