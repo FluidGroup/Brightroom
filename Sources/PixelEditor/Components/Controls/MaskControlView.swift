@@ -24,40 +24,56 @@ open class MaskControlBase : ControlBase {
 
 }
 
-public final class MaskControl : MaskControlBase {
+open class MaskControl : MaskControlBase {
 
+  private let contentView = UIView()
   private let navigationView = NavigationView()
   
-  private let removeAllButton = UIButton.init(type: .system)
+  private let clearButton = UIButton.init(type: .system)
 
-  public override func setup() {
+  open override func setup() {
     super.setup()
 
     backgroundColor = Style.default.control.backgroundColor
-
-    addSubview(removeAllButton)
-    addSubview(navigationView)
-
-    removeAllButton.translatesAutoresizingMaskIntoConstraints = false
-    navigationView.translatesAutoresizingMaskIntoConstraints = false
-
-    NSLayoutConstraint.activate([
-      
-      removeAllButton.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
-      removeAllButton.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
-      removeAllButton.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
-      
-      navigationView.topAnchor.constraint(greaterThanOrEqualTo: removeAllButton.bottomAnchor),
-      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
-      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
-      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
-      ])
     
-    removeAllButton.addTarget(self, action: #selector(didTapRemoveAllButton), for: .touchUpInside)
+    base: do {
+      
+      addSubview(contentView)
+      addSubview(navigationView)
+      
+      contentView.translatesAutoresizingMaskIntoConstraints = false
+      navigationView.translatesAutoresizingMaskIntoConstraints = false
+      
+      NSLayoutConstraint.activate([
+        
+        contentView.topAnchor.constraint(equalTo: contentView.superview!.topAnchor),
+        contentView.rightAnchor.constraint(equalTo: contentView.superview!.rightAnchor),
+        contentView.leftAnchor.constraint(equalTo: contentView.superview!.leftAnchor),
+        
+        navigationView.topAnchor.constraint(equalTo: contentView.bottomAnchor),
+        navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
+        navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
+        navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
+        ])
+      
+    }
     
-    removeAllButton.setTitle("RemoveAll", for: .normal)
-    removeAllButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
-
+    clearButton: do {
+      
+      contentView.addSubview(clearButton)
+      clearButton.translatesAutoresizingMaskIntoConstraints = false
+      
+      NSLayoutConstraint.activate([
+        clearButton.centerXAnchor.constraint(equalTo: clearButton.superview!.centerXAnchor),
+        clearButton.topAnchor.constraint(equalTo: clearButton.superview!.topAnchor, constant: 16),        
+        ])
+      
+      clearButton.addTarget(self, action: #selector(didTapRemoveAllButton), for: .touchUpInside)
+      clearButton.setTitle(L10n.clear, for: .normal)
+      clearButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
+      
+    }
+    
     navigationView.didTapCancelButton = { [weak self] in
 
       self?.pop()
@@ -72,7 +88,7 @@ public final class MaskControl : MaskControlBase {
 
   }
 
-  public override func didMoveToSuperview() {
+  open override func didMoveToSuperview() {
     super.didMoveToSuperview()
 
     if superview != nil {

@@ -61,6 +61,11 @@ public final class PixelEditContext {
 }
 
 public final class PixelEditViewController : UIViewController {
+  
+  public final class Callbacks {
+    public var didEndEditing: (PixelEditViewController, UIImage) -> Void = { _ in }
+    public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
+  }
 
   public enum Mode {
 
@@ -76,6 +81,14 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     }
   }
+  
+  public weak var delegate: PixelEditViewControllerDelegate?
+  
+  public let callbacks: Callbacks = .init()
+  
+  public lazy var context: PixelEditContext = .init(options: options)
+  
+  public let options: Options
   
   public private(set) var editingStack: SquareEditingStack!
 
@@ -109,12 +122,6 @@ public final class PixelEditViewController : UIViewController {
 
   private let imageSource: ImageSource
   private var colorCubeFilters: [FilterColorCube] = []
-
-  public weak var delegate: PixelEditViewControllerDelegate?
-
-  public lazy var context: PixelEditContext = .init(options: options)
-  
-  public let options: Options
 
   // MARK: - Initializers
 
@@ -263,12 +270,14 @@ public final class PixelEditViewController : UIViewController {
 
     let image = editingStack.makeRenderer().render()
 
+    callbacks.didEndEditing(self, image)
     delegate?.pixelEditViewController(self, didEndEditing: image)
   }
   
   @objc
   private func didTapCancelButton() {
-        
+    
+    callbacks.didCancelEditing(self)
     delegate?.pixelEditViewControllerDidCancelEditing(in: self)
   }
 
