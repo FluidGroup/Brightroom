@@ -24,6 +24,17 @@ import UIKit
 import PixelEngine
 import PixelEditor
 
+extension Collection where Index == Int {
+  
+  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
+    var buffer = [U?].init(repeating: nil, count: count)
+    DispatchQueue.concurrentPerform(iterations: count) { i in
+      buffer[i] = transform(self[i])
+    }
+    return buffer.compactMap { $0 }
+  }
+}
+
 extension ColorCubeStorage {
   static func load() {
     
@@ -34,11 +45,11 @@ extension ColorCubeStorage {
         let rootPath = bundle.bundlePath as NSString
         let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
         
-        let filters = try fileList
+        let filters = fileList
           .filter { $0.hasPrefix("LUT") && $0.hasSuffix(".png") }
-          .map { path -> FilterColorCube in
+          .concurrentMap { path -> FilterColorCube in
             let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
-            let data = try Data(contentsOf: url)
+            let data = try! Data(contentsOf: url)
             let image = UIImage(data: data)!
             let name = path
               .replacingOccurrences(of: "LUT_", with: "")
