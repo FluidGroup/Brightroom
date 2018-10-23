@@ -108,17 +108,27 @@ public enum ImageTool {
           
           UIGraphicsBeginImageContext(targetSize)
           
-          UIImage(ciImage: image).draw(in: CGRect(origin: .zero, size: targetSize))
+          let context = UIGraphicsGetCurrentContext()!
+          let rect = CGRect(origin: .zero, size: targetSize)
+          if let cgImage = image.cgImage {
+            context.draw(cgImage, in: rect)
+          } else {
+            UIImage(ciImage: image).draw(in: rect)
+          }
+          
           let drawImage = UIGraphicsGetImageFromCurrentImageContext()
           
           UIGraphicsEndImageContext()
           
           guard
             let _drawImage = drawImage,
-            let data = _drawImage.pngData(),
-            let image = CIImage(data: data)
+            var image = CIImage(image: _drawImage)
             else {
               return nil
+          }
+          
+          if #available(iOS 12, *) {
+            image = image.insertingIntermediate(cache: true)
           }
           
           let r = image.transformed(by: .init(

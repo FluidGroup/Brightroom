@@ -219,14 +219,13 @@ open class EditingStack {
   }
 
   public func set(availableColorCubeFilters: [FilterColorCube]) {
-
-    let items = availableColorCubeFilters.map {
-      PreviewFilterColorCube.init(sourceImage: cubeFilterPreviewSourceImage, filter: $0)
+    
+    self.availableColorCubeFilters = availableColorCubeFilters.concurrentMap { item in
+      let r = PreviewFilterColorCube.init(sourceImage: cubeFilterPreviewSourceImage, filter: item)
+      r.preheat()
+      return r
     }
-
-    self.availableColorCubeFilters = items
-
-    items.forEach { $0.preheat() }
+    
   }
 
   public func makeRenderer() -> ImageRenderer {
@@ -374,5 +373,18 @@ extension CIImage {
     } else {
       return self
     }
+    
   }
 }
+
+extension Collection where Index == Int {
+  
+  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
+    var buffer = [U?].init(repeating: nil, count: count)
+    DispatchQueue.concurrentPerform(iterations: count) { i in
+      buffer[i] = transform(self[i])
+    }
+    return buffer.compactMap { $0 }
+  }
+}
+

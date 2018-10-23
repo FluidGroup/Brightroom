@@ -151,7 +151,7 @@ public final class PixelEditViewController : UIViewController {
 
   public override func viewDidLoad() {
     super.viewDidLoad()
-
+    
     layout: do {
 
       root: do {
