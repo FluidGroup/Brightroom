@@ -51,14 +51,10 @@ public final class StepSlider : UIControl {
 
   public private(set) var step: Int = 0 {
     didSet {
-      if oldValue != step {
-
-        if step == 0 {
-          feedbackGenerator.selectionChanged()
-          feedbackGenerator.prepare()
-        }
+      if oldValue != step, step == 0, internalSlider.isTracking {
+        feedbackGenerator.selectionChanged()
+        feedbackGenerator.prepare()
       }
-
       updateStepLabel()
 
       sendActions(for: .valueChanged)

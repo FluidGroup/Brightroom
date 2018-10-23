@@ -23,14 +23,14 @@ import Foundation
 
 import PixelEngine
 
-open class BrightnessControlBase : FilterControlBase {
+open class ExposureControlBase : FilterControlBase {
 
   public required init(context: PixelEditContext) {
     super.init(context: context)
   }
 }
 
-open class BrightnessControl : BrightnessControlBase {
+open class ExposureControl : ExposureControlBase {
   
   open override var title: String {
     return L10n.editBrightness
@@ -64,20 +64,20 @@ open class BrightnessControl : BrightnessControlBase {
 
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
 
-    slider.set(value: edit.filters.brightness?.value ?? 0, in: FilterBrightness.range)
+    slider.set(value: edit.filters.exposure?.value ?? 0, in: FilterExposure.range)
 
   }
 
   @objc
   private func valueChanged() {
 
-    let value = slider.transition(in: FilterBrightness.range)
+    let value = slider.transition(in: FilterExposure.range)
     guard value != 0 else {
-      context.action(.setFilter({ $0.brightness = nil }))
+      context.action(.setFilter({ $0.exposure = nil }))
       return
     }    
-    var f = FilterBrightness()
+    var f = FilterExposure()
     f.value = value
-    context.action(.setFilter({ $0.brightness = f }))
+    context.action(.setFilter({ $0.exposure = f }))
   }
 }

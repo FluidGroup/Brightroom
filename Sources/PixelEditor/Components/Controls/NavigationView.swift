@@ -27,6 +27,8 @@ open class NavigationView : UIStackView {
 
   private let saveButton = UIButton(type: .system)
   private let cancelButton = UIButton(type: .system)
+  
+  private let feedbacker = UIImpactFeedbackGenerator(style: .light)
 
   public init() {
 
@@ -60,10 +62,12 @@ open class NavigationView : UIStackView {
   @objc
   private func _didTapSaveButton() {
     didTapSaveButton()
+    feedbacker.impactOccurred()
   }
 
   @objc
   private func _didTapCancelButton() {
     didTapCancelButton()
+    feedbacker.impactOccurred()
   }
 }

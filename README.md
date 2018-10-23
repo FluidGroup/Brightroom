@@ -165,12 +165,12 @@ We can customize UI for control area.
 There is `Options` struct in PixelEditor.
 We can create options that fit our usecases.
 
-So, If we need to change BrightnessControl, override BrightnessControlBase class.
+So, If we need to change ExposureControl, override ExposureControlBase class.
 Then set that class to Options.
 
 ```swift
 let options = Options.default()
-options.classes.control.brightnessControl = MyBrightnessControl.self
+options.classes.control.brightnessControl = MyExposureControl.self
 ```
 
 It's like using custom Cell in UICollectionView.

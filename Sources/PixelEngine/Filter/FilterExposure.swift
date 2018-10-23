@@ -18,17 +18,18 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import Foundation
 import CoreImage
 
-public struct FilterBrightness : Filtering, Equatable, Codable {
-
-  public static let range: ParameterRange<Double, FilterBrightness> = .init(min: -1.8, max: 1.8)
-
+public struct FilterExposure : Filtering, Equatable, Codable {
+  
+  public static let range: ParameterRange<Double, FilterExposure> = .init(min: -1.8, max: 1.8)
+  
   public var value: Double = 0
-
+  
   public init() {
-
+    
   }
   
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
@@ -41,5 +42,5 @@ public struct FilterBrightness : Filtering, Equatable, Codable {
           ]
     )
   }
-
+  
 }

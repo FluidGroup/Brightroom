@@ -48,7 +48,7 @@ open class EditMenuControl : EditMenuControlBase {
     return button
   }()
   
-  public lazy var brightnessButton: ButtonView = {
+  public lazy var exposureButton: ButtonView = {
     let button = ButtonView(name: L10n.editBrightness, image: .init())
     button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
     return button
@@ -178,16 +178,17 @@ open class EditMenuControl : EditMenuControlBase {
       let buttons: [ButtonView] = [
         adjustmentButton,
         maskButton,
-        brightnessButton,
+        exposureButton,
+        contrastButton,
+        clarityButton,
         temperatureButton,
         saturationButton,
+        fadeButton,
         highlightsButton,
         shadowsButton,
         vignetteButton,
-        gaussianBlurButton,
         sharpenButton,
-        fadeButton,
-        clarityButton
+        gaussianBlurButton,
       ]
       
       for button in buttons {
@@ -215,7 +216,8 @@ open class EditMenuControl : EditMenuControlBase {
     
     maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
 
-    brightnessButton.hasChanges = edit.filters.brightness != nil
+    contrastButton.hasChanges = edit.filters.contrast != nil
+    exposureButton.hasChanges = edit.filters.exposure != nil
     temperatureButton.hasChanges = edit.filters.temperature != nil
     saturationButton.hasChanges = edit.filters.saturation != nil
     highlightsButton.hasChanges = edit.filters.highlights != nil
@@ -248,7 +250,7 @@ open class EditMenuControl : EditMenuControlBase {
   @objc
   private func brightness() {
     
-    push(context.options.classes.control.brightnessControl.init(context: context))
+    push(context.options.classes.control.exposureControl.init(context: context))
   }
 
   @objc
@@ -314,8 +316,11 @@ open class EditMenuControl : EditMenuControlBase {
     
     public let changesMarkView = UIView()
     
+    private let feedbackGenerator = UISelectionFeedbackGenerator()
+    
     public var hasChanges: Bool = false {
       didSet {
+        guard oldValue != hasChanges else { return }
         changesMarkView.isHidden = !hasChanges
       }
     }
@@ -369,6 +374,7 @@ open class EditMenuControl : EditMenuControlBase {
         nameLabel.text = name
       }
 
+      addTarget(self, action: #selector(didTapSelf), for: .touchUpInside)
     }
 
     public required init?(coder aDecoder: NSCoder) {
@@ -391,6 +397,10 @@ open class EditMenuControl : EditMenuControlBase {
           completion: nil
         )
       }
+    }
+    
+    @objc private func didTapSelf() {
+      feedbackGenerator.selectionChanged()
     }
 
   }

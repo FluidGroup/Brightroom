@@ -27,26 +27,22 @@ final class ImagePreviewView : UIView {
   let imageView: UIImageView = .init()
   
   var originalImage: CIImage? {
-    get {
-      return originalImageView.image?.ciImage
-    }
-    set {
-      originalImageView.image = newValue
+    didSet {
+      guard oldValue != originalImage else { return }
+      originalImageView.image = originalImage
         .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
         .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-      EditorLog.debug("ImagePreviewView.image set", newValue?.extent as Any)
+      EditorLog.debug("ImagePreviewView.image set", originalImage?.extent as Any)
     }
   }
 
   var image: CIImage? {
-    get {
-      return imageView.image?.ciImage
-    }
-    set {
-      imageView.image = newValue
+    didSet {
+      guard oldValue != image else { return }
+      imageView.image = image
         .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
         .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-      EditorLog.debug("ImagePreviewView.image set", newValue?.extent as Any)
+      EditorLog.debug("ImagePreviewView.image set", image?.extent as Any)
     }
   }
   

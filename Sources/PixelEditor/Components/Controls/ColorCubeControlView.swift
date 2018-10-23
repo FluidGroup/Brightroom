@@ -53,7 +53,8 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   
   private let originalImage: CIImage
   
-
+  private let feedbackGenerator = UISelectionFeedbackGenerator()
+  
   // MARK: - Functions
 
   public required init(
@@ -126,12 +127,14 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    current = edit.filters.colorCube
-    collectionView.visibleCells.forEach {
-      updateSelected(cell: $0)
+    if current != edit.filters.colorCube {
+      current = edit.filters.colorCube
+      collectionView.visibleCells.forEach {
+        updateSelected(cell: $0)
+      }
     }
   }
-
+  
   open override func layoutSubviews() {
     super.layoutSubviews()
     collectionView.collectionViewLayout.invalidateLayout()
@@ -192,6 +195,8 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       context.action(.setFilter( { $0.colorCube = filter.filter }))
       context.action(.commit)
     }
+    
+    feedbackGenerator.selectionChanged()
 
   }
   
@@ -279,23 +284,29 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
         
         super.isHighlighted = newValue
         
-        if newValue {
-          
-          UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
-              self.contentView.layer.transform = CATransform3DMakeScale(0.95, 0.95, 1)
-          }, completion: { (finish) -> Void in
-            
-          })
-          
-        } else {
-          
-          UIView.animate(withDuration: 0.5, delay: 0.05, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
-            self.contentView.layer.transform = CATransform3DIdentity
-          }, completion: { (finish) -> Void in
-            
-          })
-        }
-               
+        // FIXME: Apply highlight animation
+        // Currently animation disabled.
+        // These animations cause flicker in ImageView
+        /*
+         if newValue {
+         
+         UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
+         self.contentView.transform = .init(scaleX: 0.95, y: 0.95)
+         }, completion: { (finish) -> Void in
+         
+         })
+         
+         } else {
+         
+         UIView.animate(withDuration: 0.5, delay: 0.05, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
+         self.contentView.transform = .identity
+         }, completion: { (finish) -> Void in
+         
+         })
+         }
+         
+         */
+        
       }
     }
   }

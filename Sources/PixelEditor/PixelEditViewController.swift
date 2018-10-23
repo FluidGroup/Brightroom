@@ -411,25 +411,17 @@ extension PixelEditViewController : EditingStackDelegate {
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     
     EditorLog.debug("[EditingStackDelegate] didChagneCurrentEdit")
-
+    
+    UIView.performWithoutAnimation {
+      self.previewView.image = stack.previewImage
+      self.previewView.originalImage = stack.originalPreviewImage
+      if !self.maskingView.isHidden {
+        self.maskingView.image = stack.previewImage
+      }
+    }
+    
     syncUI(edit: edit)
     stackView.notify(changedEdit: edit)
-    
-    DispatchQueue.main.async {
-      
-      UIView.performWithoutAnimation {
-        if self.previewView.image != stack.previewImage {
-          self.previewView.image = stack.previewImage
-        }
-        if self.previewView.originalImage != stack.originalPreviewImage {
-          self.previewView.originalImage = stack.originalPreviewImage
-        }
-        if !self.maskingView.isHidden {
-          self.maskingView.image = stack.previewImage
-        }
-      }
-      
-    }
     
   }
 

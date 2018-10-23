@@ -150,7 +150,7 @@ open class EditingStack {
 
   public func commit() {
     guard let edit = draftEdit else {
-      assertionFailure("Call makeDraft()")
+      EngineLog.debug("No draft, no needs commit")
       return
     }
     guard edits.last != edit else { return }
@@ -267,19 +267,15 @@ open class EditingStack {
       return
     }
     
-    queue.async {
-      let filters = self.currentEdit
-        .makeFilters()
-      
-      let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
-        filter.apply(to: image, sourceImage: sourceImage).insertingIntermediateIfCanUse()
-      }
-      
-      DispatchQueue.main.async {
-        self.previewImage = result
-        self.delegate?.editingStack(self, didChangeCurrentEdit: self.currentEdit)
-      }
+    let filters = self.currentEdit
+      .makeFilters()
+    
+    let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
+      filter.apply(to: image, sourceImage: sourceImage)
     }
+    
+    self.previewImage = result
+    self.delegate?.editingStack(self, didChangeCurrentEdit: self.currentEdit)
     
     // TODO: Ignore vignette and blur (convolutions)
 //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
@@ -316,31 +312,41 @@ extension EditingStack {
   public struct Edit : Equatable {
 
     public struct Filters : Equatable {
-      public var brightness: FilterBrightness?
-      public var gaussianBlur: FilterGaussianBlur?
+      
       public var colorCube: FilterColorCube?
+      
       public var contrast: FilterContrast?
       public var saturation: FilterSaturation?
+      public var exposure: FilterExposure?
+      
       public var highlights: FilterHighlights?
       public var shadows: FilterShadows?
-      public var sharpen: FilterSharpen?
+      
       public var temperature: FilterTemperature?
+      
+      public var sharpen: FilterSharpen?
+      public var gaussianBlur: FilterGaussianBlur?
+      public var unsharpMask: FilterUnsharpMask?
+      
       public var vignette: FilterVignette?
       public var fade: FilterFade?
-      public var unsharpMask: FilterUnsharpMask?
 
       func makeFilters() -> [Filtering] {
         return ([
-          sharpen,
-          unsharpMask,
-          gaussianBlur,
+          
+          // Before
+          exposure,
           temperature,
           highlights,
           shadows,
-          brightness,
           saturation,
           contrast,
           colorCube,
+          
+          // After
+          sharpen,
+          unsharpMask,
+          gaussianBlur,
           fade,
           vignette,
           ] as [Optional<Filtering>])
@@ -350,7 +356,6 @@ extension EditingStack {
 
     public var cropRect: CGRect?
     public var blurredMaskPaths: [DrawnPathInRect] = []
-    public var doodlePaths: [DrawnPath] = []
 
     public var filters: Filters = .init()
 

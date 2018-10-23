@@ -26,7 +26,7 @@ import PixelEngine
 open class ControlBase : UIView, ControlChildViewType {
   
   open func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    EditorLog.debug("[Receive] edit on \(self)")
+    
   }
 
   public let context: PixelEditContext
