@@ -121,7 +121,7 @@ public final class PixelEditViewController : UIViewController {
   )
 
   private let imageSource: ImageSource
-  private var colorCubeFilters: [FilterColorCube] = []
+  private var colorCubeStorage: ColorCubeStorage = .default
 
   // MARK: - Initializers
 
@@ -130,15 +130,15 @@ public final class PixelEditViewController : UIViewController {
     self.editingStack = editingStack
   }
   
-  public convenience init(image: UIImage, colorCubeFilters: [FilterColorCube] = [], options: Options = .default) {
+  public convenience init(image: UIImage, colorCubeStorage: ColorCubeStorage = .default, options: Options = .default) {
     let source = ImageSource(source: image)
-    self.init(source: source, colorCubeFilters: colorCubeFilters, options: options)
+    self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
   }
 
-  public init(source: ImageSource, colorCubeFilters: [FilterColorCube] = [], options: Options = .default) {
+  public init(source: ImageSource, colorCubeStorage: ColorCubeStorage = .default, options: Options = .default) {
     self.imageSource = source
     self.options = options
-    self.colorCubeFilters = colorCubeFilters
+    self.colorCubeStorage = colorCubeStorage
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -160,7 +160,7 @@ public final class PixelEditViewController : UIViewController {
           editingStack = SquareEditingStack.init(
             source: imageSource,
             previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-            colorCubeFilters: colorCubeFilters
+            colorCubeStorage: colorCubeStorage
           )
         }
 

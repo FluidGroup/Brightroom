@@ -147,17 +147,18 @@ let filter = FilterColorCube(
   dimension: 64
 )
 
-let controller = PixelEditViewController(image: image, colorCubeFilters: [filter])
+let storage = ColorCubeStorage(filters: [filter])
+let controller = PixelEditViewController(image: image, colorCubeStorage: storage)
 ```
 
-And also, we can add the filters to cache storage called `ColorCubeStorage`.
+And also, if we don't specify colorCubeStorage, use `default`.
 
 ```swift
 // set
-ColorCubeStorage.load(filters: [filter])
+ColorCubeStorage.default.filters = filters
 
 // get
-ColorCubeStorage.filters
+ColorCubeStorage.default.filters
 ```
 
 ## Customize Control-UI

@@ -31,7 +31,7 @@ final class EditorViewController : UIViewController {
   private lazy var stack = SquareEditingStack.init(
     source: ImageSource(source: UIImage(named: "large")!),
     previewSize: CGSize(width: 30, height: 30),
-    colorCubeFilters: ColorCubeStorage.filters
+    colorCubeStorage: ColorCubeStorage.default
   )
 
   override func viewDidLoad() {
@@ -79,7 +79,10 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
     
     picker.dismiss(animated: true, completion: nil)
     
-    let controller = PixelEditViewController.init(image: image, colorCubeFilters: ColorCubeStorage.filters)
+    let controller = PixelEditViewController.init(
+      image: image
+    )
+    
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)

@@ -21,13 +21,13 @@
 
 import Foundation
 
-import PixelEngine
+open class ColorCubeStorage {
+    
+  public static let `default` = ColorCubeStorage(filters: [])
 
-public enum ColorCubeStorage {
-
-  public static var filters: [FilterColorCube] = []
+  public var filters: [FilterColorCube] = []
   
-  public static func load(filters: [FilterColorCube]) {
+  init(filters: [FilterColorCube]) {
     self.filters = filters
   }
 }

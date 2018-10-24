@@ -91,7 +91,7 @@ open class EditingStack {
   public init(
     source: ImageSource,
     previewSize: CGSize,
-    colorCubeFilters: [FilterColorCube],
+    colorCubeStorage: ColorCubeStorage,
     screenScale: CGFloat = UIScreen.main.scale
     ) {
 
@@ -130,7 +130,7 @@ open class EditingStack {
           )
       )
     }
-    set(availableColorCubeFilters: colorCubeFilters)
+    set(availableColorCubeFilters: colorCubeStorage.filters)
 
   }
   

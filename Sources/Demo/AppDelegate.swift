@@ -36,7 +36,7 @@ extension Collection where Index == Int {
 }
 
 extension ColorCubeStorage {
-  static func load() {
+  static func loadToDefault() {
     
     do {
       
@@ -62,7 +62,7 @@ extension ColorCubeStorage {
             )
         }
         
-        self.filters = filters
+        self.default.filters = filters
       }
       
     } catch {
@@ -81,7 +81,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     // Override point for customization after application launch.
 
-    ColorCubeStorage.load()
+    ColorCubeStorage.loadToDefault()
     return true
   }
 
