@@ -23,7 +23,15 @@ Image editor and engine using CoreImage
 
 ### Filter
 
+#### Presets
+
 * [x] ColorCube (Look Up Table)
+
+> ⚠ Currently, Pixel does not contain LUT.
+> Demo app has sample LUTs.
+
+#### Edits
+
 * [x] Brightness
 * [x] Contrast
 * [x] Saturation
