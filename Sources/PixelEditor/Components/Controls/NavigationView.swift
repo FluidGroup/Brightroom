@@ -22,7 +22,7 @@ import Foundation
 
 open class NavigationView : UIStackView {
 
-  public var didTapSaveButton: () -> Void = {}
+  public var didTapDoneButton: () -> Void = {}
   public var didTapCancelButton: () -> Void = {}
 
   private let saveButton = UIButton(type: .system)
@@ -43,7 +43,7 @@ open class NavigationView : UIStackView {
     addArrangedSubview(saveButton)
 
     cancelButton.setTitle(L10n.cancel, for: .normal)
-    saveButton.setTitle(L10n.save, for: .normal)
+    saveButton.setTitle(L10n.done, for: .normal)
 
     cancelButton.setTitleColor(.black, for: .normal)
     saveButton.setTitleColor(.black, for: .normal)
@@ -61,7 +61,7 @@ open class NavigationView : UIStackView {
 
   @objc
   private func _didTapSaveButton() {
-    didTapSaveButton()
+    didTapDoneButton()
     feedbacker.impactOccurred()
   }
 

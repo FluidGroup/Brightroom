@@ -55,7 +55,7 @@ open class ShadowsControl : ShadowsControlBase {
       self?.pop()
     }
     
-    navigationView.didTapSaveButton = { [weak self] in
+    navigationView.didTapDoneButton = { [weak self] in
       
       self?.context.action(.commit)
       self?.pop()

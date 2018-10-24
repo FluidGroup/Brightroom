@@ -50,7 +50,7 @@ public final class DoodleControl : DoodleControlBase {
       self?.pop()
     }
 
-    navigationView.didTapSaveButton = { [weak self] in
+    navigationView.didTapDoneButton = { [weak self] in
 
       self?.pop()
     }

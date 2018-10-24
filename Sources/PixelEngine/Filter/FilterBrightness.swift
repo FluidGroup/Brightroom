@@ -20,34 +20,27 @@
 // THE SOFTWARE.
 
 import Foundation
+import CoreImage
 
-public var L10n: L10nStorage = .init()
-
-public struct L10nStorage {
+public struct FilterBrightness: Filtering, Equatable, Codable {
   
-  public var done = "Done"
-  public var normal = "Normal"
-  public var cancel = "Cancel"
-  public var filter = "Filter"
-  public var edit = "Edit"
+  public static let range: ParameterRange<Double, FilterContrast> = .init(min: -0.2, max: 0.2)
   
-  public var editAdjustment = "Adjust"
-  public var editMask = "Mask"
-  public var editHighlights = "Highlights"
-  public var editShadows = "Shadows"
-  public var editSaturation = "Saturation"
-  public var editContrast = "Contrast"
-  public var editBlur = "Blur"
-  public var editTemperature = "Temperature"
-  public var editBrightness = "Brightness"
-  public var editVignette = "Vignette"
-  public var editFade = "Fade"
-  public var editClarity = "Clarity"
-  public var editSharpen = "Sharpen"
-  
-  public var clear = "Clear"
+  public var value: Double = 0
   
   public init() {
     
   }
+  
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+    return
+      image
+        .applyingFilter(
+          "CIColorControls",
+          parameters: [
+            "inputBrightness": value,
+            ]
+    )
+  }
+  
 }

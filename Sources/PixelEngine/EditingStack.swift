@@ -314,6 +314,7 @@ extension EditingStack {
       
       public var colorCube: FilterColorCube?
       
+      public var brightness: FilterBrightness?
       public var contrast: FilterContrast?
       public var saturation: FilterSaturation?
       public var exposure: FilterExposure?
@@ -335,6 +336,7 @@ extension EditingStack {
           
           // Before
           exposure,
+          brightness,
           temperature,
           highlights,
           shadows,

@@ -56,7 +56,7 @@ open class SaturationControl : SaturationControlBase {
       self?.pop()
     }
     
-    navigationView.didTapSaveButton = { [weak self] in
+    navigationView.didTapDoneButton = { [weak self] in
       
       self?.context.action(.commit)
       self?.pop()

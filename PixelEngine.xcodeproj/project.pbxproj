@@ -119,9 +119,11 @@
 		4B9D457A216E8013003A240A /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4579216E8013003A240A /* Geometry.swift */; };
 		4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D457D216EE1AF003A240A /* DoodleControlView.swift */; };
 		4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D457F216EE1BC003A240A /* ControlViewBase.swift */; };
+		4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */; };
 		4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */; };
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* Options.swift */; };
+		4BC9D1B82180B0C800B909B0 /* LUT_A0_1.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BC9D1B72180B0C800B909B0 /* LUT_A0_1.png */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -293,8 +295,10 @@
 		4B9D4579216E8013003A240A /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
 		4B9D457D216EE1AF003A240A /* DoodleControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleControlView.swift; sourceTree = "<group>"; };
 		4B9D457F216EE1BC003A240A /* ControlViewBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlViewBase.swift; sourceTree = "<group>"; };
+		4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBrightness.swift; sourceTree = "<group>"; };
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* Options.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
+		4BC9D1B72180B0C800B909B0 /* LUT_A0_1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_A0_1.png; sourceTree = "<group>"; };
 		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
 		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
 		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
@@ -345,6 +349,7 @@
 			children = (
 				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
 				4B01C55E217F6CD800C50EDE /* FilterExposure.swift */,
+				4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */,
 				4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */,
 				4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */,
 				4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */,
@@ -396,6 +401,7 @@
 		4B1E95292176F52100E9DFB8 /* Resource */ = {
 			isa = PBXGroup;
 			children = (
+				4BC9D1B72180B0C800B909B0 /* LUT_A0_1.png */,
 				4B3BE54A217CD75F00D4234C /* LUT_A5.png */,
 				4B3BE551217CD76000D4234C /* LUT_A6.png */,
 				4B3BE545217CD75F00D4234C /* LUT_A7.png */,
@@ -793,6 +799,7 @@
 				4B3BE562217CD76200D4234C /* LUT_C3.png in Resources */,
 				4B3BE56E217CD76200D4234C /* LUT_C1.png in Resources */,
 				4B3BE57B217CD76200D4234C /* LUT_E6.png in Resources */,
+				4BC9D1B82180B0C800B909B0 /* LUT_A0_1.png in Resources */,
 				4B3BE565217CD76200D4234C /* LUT_C2.png in Resources */,
 				4B3BE574217CD76200D4234C /* LUT_C8.png in Resources */,
 				4B3BE576217CD76200D4234C /* LUT_C6.png in Resources */,
@@ -918,6 +925,7 @@
 				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
+				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
 				4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */,
 				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,

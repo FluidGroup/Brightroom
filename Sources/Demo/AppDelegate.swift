@@ -47,6 +47,7 @@ extension ColorCubeStorage {
         
         let filters = fileList
           .filter { $0.hasPrefix("LUT") && $0.hasSuffix(".png") }
+          .sorted()
           .concurrentMap { path -> FilterColorCube in
             let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
             let data = try! Data(contentsOf: url)

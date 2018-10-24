@@ -105,9 +105,11 @@ public final class PixelEditViewController : UIViewController {
   private let cropButton = UIButton(type: .system)
 
   private let stackView = ControlStackView()
+  
+  private let doneButtonTitle: String
 
   private lazy var doneButton = UIBarButtonItem(
-    title: L10n.done,
+    title: doneButtonTitle,
     style: .done,
     target: self,
     action: #selector(didTapDoneButton)
@@ -125,20 +127,35 @@ public final class PixelEditViewController : UIViewController {
 
   // MARK: - Initializers
 
-  public convenience init(editingStack: SquareEditingStack, options: Options = .default) {
+  public convenience init(
+    editingStack: SquareEditingStack,
+    doneButtonTitle: String = L10n.done,
+    options: Options = .default
+    ) {
     self.init(source: editingStack.source, options: options)
     self.editingStack = editingStack
   }
   
-  public convenience init(image: UIImage, colorCubeStorage: ColorCubeStorage = .default, options: Options = .default) {
+  public convenience init(
+    image: UIImage,
+    doneButtonTitle: String = L10n.done,
+    colorCubeStorage: ColorCubeStorage = .default,
+    options: Options = .default
+    ) {
     let source = ImageSource(source: image)
     self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
   }
 
-  public init(source: ImageSource, colorCubeStorage: ColorCubeStorage = .default, options: Options = .default) {
+  public init(
+    source: ImageSource,
+    doneButtonTitle: String = L10n.done,
+    colorCubeStorage: ColorCubeStorage = .default,
+    options: Options = .default
+    ) {
     self.imageSource = source
     self.options = options
     self.colorCubeStorage = colorCubeStorage
+    self.doneButtonTitle = doneButtonTitle
     super.init(nibName: nil, bundle: nil)
   }
 
