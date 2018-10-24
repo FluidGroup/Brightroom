@@ -91,7 +91,7 @@ open class EditingStack {
   public init(
     source: ImageSource,
     previewSize: CGSize,
-    colorCubeStorage: ColorCubeStorage,
+    colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale
     ) {
 
