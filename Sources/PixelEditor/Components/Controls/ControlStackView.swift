@@ -77,15 +77,17 @@ final class ControlStackView : UIView {
     
     if animated {
       view.alpha = 0
+      view.transform = CGAffineTransform(translationX: 0, y: 8)
       UIView.animate(
-        withDuration: 0.2,
+        withDuration: 0.3,
         delay: 0,
-        options: [.beginFromCurrentState, .curveEaseOut],
+        usingSpringWithDamping: 1,
+        initialSpringVelocity: 0,
+        options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
         animations: {
           view.alpha = 1
-      },
-        completion: nil
-      )
+          view.transform = .identity
+      }, completion: nil)
     }
   }
   
@@ -102,14 +104,16 @@ final class ControlStackView : UIView {
     
     if animated {
       UIView.animate(
-        withDuration: 0.2,
+        withDuration: 0.3,
         delay: 0,
-        options: [.beginFromCurrentState, .curveEaseOut],
+        usingSpringWithDamping: 1,
+        initialSpringVelocity: 0,
+        options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
         animations: {
           target.alpha = 0
-      },
-        completion: { _ in
-          remove()
+          target.transform = CGAffineTransform(translationX: 0, y: 8)
+      }, completion: { _ in
+        remove()
       })
     }
     else {
