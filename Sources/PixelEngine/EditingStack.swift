@@ -383,8 +383,13 @@ extension Collection where Index == Int {
   
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
     var buffer = [U?].init(repeating: nil, count: count)
+    let lock = NSLock()
     DispatchQueue.concurrentPerform(iterations: count) { i in
-      buffer[i] = transform(self[i])
+      let e = self[i]
+      let r = transform(e)
+      lock.lock()
+      buffer[i] = r
+      lock.unlock()
     }
     return buffer.compactMap { $0 }
   }
