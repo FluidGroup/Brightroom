@@ -46,13 +46,13 @@ extension ControlChildViewType where Self : UIView {
 
   }
 
-  func push(_ view: UIView & ControlChildViewType) {
+  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
     let controlStackView = find()
-    controlStackView.push(view)
+    controlStackView.push(view, animated: animated)
   }
 
-  func pop() {
-    find().pop()
+  func pop(animated: Bool) {
+    find().pop(animated: animated)
   }
 
   func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
@@ -67,55 +67,54 @@ final class ControlStackView : UIView {
 
   private var latestNotifiedEdit: EditingStack.Edit?
   
-  func push(_ view: UIView & ControlChildViewType) {
+  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
     
     addSubview(view)
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    let duration = 0.2
-    
-    if let currentView = subscribers.last {
-      currentView.alpha = 0
-      UIView.animate(
-        withDuration: duration,
-        delay: 0,
-        options: [.beginFromCurrentState, .curveEaseOut],
-        animations: nil,
-        completion: { _ in
-          currentView.alpha = 1
-      })
-    }
     
     subscribeChangedEdit(to: view)
     
-    view.alpha = 0
-    UIView.animate(
-      withDuration: duration,
-      delay: 0,
-      options: [.beginFromCurrentState, .curveEaseOut],
-      animations: {
-        view.alpha = 1
-    },
-      completion: nil
-    )
+    if animated {
+      view.alpha = 0
+      UIView.animate(
+        withDuration: 0.2,
+        delay: 0,
+        options: [.beginFromCurrentState, .curveEaseOut],
+        animations: {
+          view.alpha = 1
+      },
+        completion: nil
+      )
+    }
   }
   
-  func pop() {
+  func pop(animated: Bool) {
     
     guard let target = subviews.last else {
       return
     }
-    UIView.animate(
-      withDuration: 0.2,
-      delay: 0,
-      options: [.beginFromCurrentState, .curveEaseOut],
-      animations: {
-        target.alpha = 0
-    },
-      completion: { _ in
-        target.removeFromSuperview()
-        self.subscribers.removeAll { $0 == target }
-    })
+    
+    let remove = {
+      target.removeFromSuperview()
+      self.subscribers.removeAll { $0 == target }
+    }
+    
+    if animated {
+      UIView.animate(
+        withDuration: 0.2,
+        delay: 0,
+        options: [.beginFromCurrentState, .curveEaseOut],
+        animations: {
+          target.alpha = 0
+      },
+        completion: { _ in
+          remove()
+      })
+    }
+    else {
+      remove()
+    }
   }
   
 
