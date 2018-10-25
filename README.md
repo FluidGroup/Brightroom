@@ -1,4 +1,4 @@
-<img src=top.jpg width=960/>
+<img src=top.png width=960/>
 
 # Pixel - Engine • Editor
 
