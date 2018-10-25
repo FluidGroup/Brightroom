@@ -76,27 +76,39 @@ public final class ImageRenderer {
     }()
 
     let canvasSize = resultImage.extent.size
-
-    UIGraphicsBeginImageContextWithOptions(canvasSize, true, 1)
-
-    let cgContext = UIGraphicsGetCurrentContext()!
-
-    let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())!
-
-    cgContext.saveGState()
-    cgContext.translateBy(x: 0, y: resultImage.extent.height)
-    cgContext.scaleBy(x: 1, y: -1)
-    cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
-    cgContext.restoreGState()
-
-    self.edit.drawer.forEach { drawer in
-      drawer.draw(in: cgContext, canvasSize: canvasSize)
+    
+    let format: UIGraphicsImageRendererFormat
+    if #available(iOS 11.0, *) {
+      format = UIGraphicsImageRendererFormat.preferred()
+    } else {
+      format = UIGraphicsImageRendererFormat.default()
     }
-
-    let image = UIGraphicsGetImageFromCurrentImageContext()!
-
-    UIGraphicsEndImageContext()
-
+    format.scale = 1
+    format.opaque = true
+    if #available(iOS 12.0, *) {
+      format.preferredRange = .automatic
+    } else {
+      format.prefersExtendedRange = true
+    }
+    
+    let image = UIGraphicsImageRenderer.init(size: canvasSize, format: format)
+      .image { c in
+        
+        let cgContext = UIGraphicsGetCurrentContext()!
+        
+        let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())!
+        
+        cgContext.saveGState()
+        cgContext.translateBy(x: 0, y: resultImage.extent.height)
+        cgContext.scaleBy(x: 1, y: -1)
+        cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
+        cgContext.restoreGState()
+        
+        self.edit.drawer.forEach { drawer in
+          drawer.draw(in: cgContext, canvasSize: canvasSize)
+        }
+    }
+    
     return image
 
   }

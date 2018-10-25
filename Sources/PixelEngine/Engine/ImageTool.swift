@@ -68,70 +68,40 @@ public enum ImageTool {
 
           let originalExtent = image.extent
 
-          /*
           let format: UIGraphicsImageRendererFormat
-          if #available(iOSApplicationExtension 11.0, *) {
+          if #available(iOS 11.0, *) {
             format = UIGraphicsImageRendererFormat.preferred()
           } else {
             format = UIGraphicsImageRendererFormat.default()
           }
           format.scale = 1
           format.opaque = true
+          if #available(iOS 12.0, *) {
+            format.preferredRange = .automatic
+          } else {
+            format.prefersExtendedRange = true
+          }
           
-          let _data = UIGraphicsImageRenderer.init(size: targetSize, format: format)
+          let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
             .image { c in
               
-              let cgContext = c.cgContext
-              
-              let ciContext = CIContext.init(
-                cgContext: cgContext,
-                options: [
-                  .useSoftwareRenderer : false,
-                ]
-              )
-              
-              cgContext.interpolationQuality = .medium
-              cgContext.translateBy(x: 0, y: targetSize.height)
-              cgContext.scaleBy(x: 1, y: -1)
-              ciContext.draw(image, in: CGRect(origin: .zero, size: targetSize), from: image.extent)
-              
-            }
-            .pngData()
-
-          guard
-            let data = _data,
-            let image = CIImage(data: data)
-            else {
-              return nil
-          }
- */
-          
-          UIGraphicsBeginImageContext(targetSize)
-          
-          let context = UIGraphicsGetCurrentContext()!
-          let rect = CGRect(origin: .zero, size: targetSize)
-          if let cgImage = image.cgImage {
-            context.draw(cgImage, in: rect)
-          } else {
-            UIImage(ciImage: image).draw(in: rect)
+              let rect = CGRect(origin: .zero, size: targetSize)
+              if let cgImage = image.cgImage {
+                c.cgContext.translateBy(x: 0, y: targetSize.height)
+                c.cgContext.scaleBy(x: 1, y: -1)
+                c.cgContext.draw(cgImage, in: rect)
+              } else {
+                UIImage(ciImage: image).draw(in: rect)
+              }
           }
           
-          let drawImage = UIGraphicsGetImageFromCurrentImageContext()
-          
-          UIGraphicsEndImageContext()
-          
-          guard
-            let _drawImage = drawImage,
-            var image = CIImage(image: _drawImage)
-            else {
-              return nil
-          }
+          var resizedImage = CIImage(image: uiImage)!
           
           if #available(iOS 12, *) {
-            image = image.insertingIntermediate(cache: true)
+            resizedImage = resizedImage.insertingIntermediate(cache: true)
           }
           
-          let r = image.transformed(by: .init(
+          let r = resizedImage.transformed(by: .init(
             translationX: (originalExtent.origin.x * scaleX).rounded(.down),
             y: (originalExtent.origin.y * scaleY).rounded(.down)
             )
