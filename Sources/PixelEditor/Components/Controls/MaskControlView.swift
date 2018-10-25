@@ -76,13 +76,13 @@ open class MaskControl : MaskControlBase {
     
     navigationView.didTapCancelButton = { [weak self] in
 
-      self?.pop()
+      self?.pop(animated: true)
       self?.context.action(.endMasking(save: false))
     }
 
     navigationView.didTapDoneButton = { [weak self] in
 
-      self?.pop()
+      self?.pop(animated: true)
       self?.context.action(.endMasking(save: true))
     }
 

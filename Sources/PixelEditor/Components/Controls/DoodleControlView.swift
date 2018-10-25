@@ -47,12 +47,12 @@ public final class DoodleControl : DoodleControlBase {
 
     navigationView.didTapCancelButton = { [weak self] in
 
-      self?.pop()
+      self?.pop(animated: true)
     }
 
     navigationView.didTapDoneButton = { [weak self] in
 
-      self?.pop()
+      self?.pop(animated: true)
     }
   }
 }

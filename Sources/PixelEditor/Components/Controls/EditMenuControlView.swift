@@ -232,50 +232,50 @@ open class EditMenuControl : EditMenuControlBase {
 
   @objc
   private func adjustment() {
-    push(AdjustmentControl(context: context))
+    push(AdjustmentControl(context: context), animated: true)
   }
 
   @objc
   private func masking() {
 
-    push(MaskControl(context: context))
+    push(MaskControl(context: context), animated: true)
   }
 
   @objc
   private func doodle() {
 
-    push(DoodleControl(context: context))
+    push(DoodleControl(context: context), animated: true)
   }
 
   @objc
   private func brightness() {
     
-    push(context.options.classes.control.exposureControl.init(context: context))
+    push(context.options.classes.control.exposureControl.init(context: context), animated: true)
   }
 
   @objc
   private func blur() {
-    push(context.options.classes.control.gaussianBlurControl.init(context: context))
+    push(context.options.classes.control.gaussianBlurControl.init(context: context), animated: true)
   }
 
   @objc
   private func contrast() {
-    push(context.options.classes.control.contrastControl.init(context: context))
+    push(context.options.classes.control.contrastControl.init(context: context), animated: true)
   }
 
   @objc
   private func clarity() {
-    push(context.options.classes.control.clarityControl.init(context: context))
+    push(context.options.classes.control.clarityControl.init(context: context), animated: true)
   }
 
   @objc
   private func warmth() {
-    push(context.options.classes.control.temperatureControl.init(context: context))
+    push(context.options.classes.control.temperatureControl.init(context: context), animated: true)
   }
 
   @objc
   private func saturation() {
-    push(context.options.classes.control.saturationControl.init(context: context))
+    push(context.options.classes.control.saturationControl.init(context: context), animated: true)
   }
 
   @objc
@@ -285,27 +285,27 @@ open class EditMenuControl : EditMenuControlBase {
 
   @objc
   private func fade() {
-    push(context.options.classes.control.fadeControl.init(context: context))
+    push(context.options.classes.control.fadeControl.init(context: context), animated: true)
   }
 
   @objc
   private func highlights() {
-    push(context.options.classes.control.highlightsControl.init(context: context))
+    push(context.options.classes.control.highlightsControl.init(context: context), animated: true)
   }
 
   @objc
   private func shadows() {
-    push(context.options.classes.control.shadowsControl.init(context: context))
+    push(context.options.classes.control.shadowsControl.init(context: context), animated: true)
   }
 
   @objc
   private func vignette() {
-    push(context.options.classes.control.vignetteControl.init(context: context))
+    push(context.options.classes.control.vignetteControl.init(context: context), animated: true)
   }
 
   @objc
   private func sharpen() {
-    push(context.options.classes.control.sharpenControl.init(context: context))
+    push(context.options.classes.control.sharpenControl.init(context: context), animated: true)
   }
 
   open class ButtonView : UIControl {

@@ -282,7 +282,7 @@
 		4B9B02EB216BBDA8001593B9 /* Layer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layer.swift; sourceTree = "<group>"; };
 		4B9B030B216C55D9001593B9 /* OvalBrush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OvalBrush.swift; sourceTree = "<group>"; };
 		4B9B030D216C58C6001593B9 /* DrawnPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPath.swift; sourceTree = "<group>"; };
-		4B9D4562216DD143003A240A /* ControlStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlStackView.swift; sourceTree = "<group>"; };
+		4B9D4562216DD143003A240A /* ControlStackView.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = ControlStackView.swift; sourceTree = "<group>"; tabWidth = 2; };
 		4B9D4564216DD1E0003A240A /* RootControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootControlView.swift; sourceTree = "<group>"; };
 		4B9D4566216DD40A003A240A /* PixelEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEditor.swift; sourceTree = "<group>"; };
 		4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentControlView.swift; sourceTree = "<group>"; };
@@ -1237,7 +1237,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = JX92XL88RZ;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1257,7 +1257,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = JX92XL88RZ;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

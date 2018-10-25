@@ -46,13 +46,13 @@ extension ControlChildViewType where Self : UIView {
 
   }
 
-  func push(_ view: UIView & ControlChildViewType) {
+  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
     let controlStackView = find()
-    controlStackView.push(view)
+    controlStackView.push(view, animated: animated)
   }
 
-  func pop() {
-    find().pop()
+  func pop(animated: Bool) {
+    find().pop(animated: animated)
   }
 
   func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
@@ -66,25 +66,57 @@ final class ControlStackView : UIView {
   private var subscribers: [UIView & ControlChildViewType] = []
 
   private var latestNotifiedEdit: EditingStack.Edit?
-
-  func push(_ view: UIView & ControlChildViewType) {
-
+  
+  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
+    
     addSubview(view)
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
+    
     subscribeChangedEdit(to: view)
+    
+    if animated {
+      view.alpha = 0
+      UIView.animate(
+        withDuration: 0.2,
+        delay: 0,
+        options: [.beginFromCurrentState, .curveEaseOut],
+        animations: {
+          view.alpha = 1
+      },
+        completion: nil
+      )
+    }
   }
-
-  func pop() {
-
+  
+  func pop(animated: Bool) {
+    
     guard let target = subviews.last else {
       return
     }
-    target.removeFromSuperview()
-
-    subscribers.removeAll { $0 == target }
+    
+    let remove = {
+      target.removeFromSuperview()
+      self.subscribers.removeAll { $0 == target }
+    }
+    
+    if animated {
+      UIView.animate(
+        withDuration: 0.2,
+        delay: 0,
+        options: [.beginFromCurrentState, .curveEaseOut],
+        animations: {
+          target.alpha = 0
+      },
+        completion: { _ in
+          remove()
+      })
+    }
+    else {
+      remove()
+    }
   }
+  
 
   func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
     guard !subscribers.contains(where: { $0 == view }) else { return }

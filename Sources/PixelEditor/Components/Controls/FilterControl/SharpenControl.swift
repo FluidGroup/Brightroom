@@ -53,13 +53,13 @@ open class SharpenControl : SharpenControlBase {
     navigationView.didTapCancelButton = { [weak self] in
       
       self?.context.action(.revert)
-      self?.pop()
+      self?.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
       self?.context.action(.commit)
-      self?.pop()
+      self?.pop(animated: true)
     }
   }
   
