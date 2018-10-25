@@ -86,7 +86,7 @@ public final class ImageRenderer {
     format.scale = 1
     format.opaque = true
     if #available(iOS 12.0, *) {
-      format.preferredRange = .automatic
+      format.preferredRange = .extended
     } else {
       format.prefersExtendedRange = true
     }
@@ -96,7 +96,7 @@ public final class ImageRenderer {
         
         let cgContext = UIGraphicsGetCurrentContext()!
         
-        let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: CGColorSpaceCreateDeviceRGB())!
+        let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
         
         cgContext.saveGState()
         cgContext.translateBy(x: 0, y: resultImage.extent.height)
