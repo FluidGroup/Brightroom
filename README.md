@@ -30,6 +30,8 @@ Image editor and engine using CoreImage
 > ⚠️ Currently, Pixel does not contain LUT.
 > Demo app has sample LUTs.
 
+And also, here is [interesting article](https://medium.com/the-bergen-company/recreating-vsco-filters-in-darkroom-291114051a0e)
+
 #### Edits
 
 * [x] Brightness
