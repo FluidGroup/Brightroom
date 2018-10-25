@@ -27,7 +27,7 @@ Image editor and engine using CoreImage
 
 * [x] ColorCube (Look Up Table)
 
-> ⚠ Currently, Pixel does not contain LUT.
+> ⚠️ Currently, Pixel does not contain LUT.
 > Demo app has sample LUTs.
 
 #### Edits
