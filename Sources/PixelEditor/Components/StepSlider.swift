@@ -45,15 +45,18 @@ public final class StepSlider : UIControl {
     return internalSlider.intrinsicContentSize
   }
 
+  private let feedbacker = UIImpactFeedbackGenerator(style: .light)
   private let feedbackGenerator = UISelectionFeedbackGenerator()
 
   private let offset: Double = 0.05
 
   public private(set) var step: Int = 0 {
     didSet {
-      if oldValue != step, step == 0, internalSlider.isTracking {
-        feedbackGenerator.selectionChanged()
-        feedbackGenerator.prepare()
+      if oldValue != step {
+        if step == 0, internalSlider.isTracking {
+          feedbackGenerator.selectionChanged()
+          feedbackGenerator.prepare()
+        }
       }
       updateStepLabel()
 

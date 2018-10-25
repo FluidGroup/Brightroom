@@ -119,7 +119,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     let layout = UICollectionViewFlowLayout()
 
     layout.scrollDirection = .horizontal
-    layout.minimumLineSpacing = 20
+    layout.minimumLineSpacing = 16
     layout.minimumInteritemSpacing = 0
     layout.itemSize = CGSize(width: 64, height: 100)
 
@@ -206,7 +206,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     case .original:
       return .zero
     case .selections:
-      return UIEdgeInsets(top: 0, left: 32, bottom: 0, right: 0)
+      return UIEdgeInsets(top: 0, left: 24, bottom: 0, right: 0)
     }
   }
 
