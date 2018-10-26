@@ -247,7 +247,8 @@ public final class PixelEditViewController : UIViewController {
               originalImage: editingStack.cubeFilterPreviewSourceImage,
               filters: editingStack.availableColorCubeFilters
             )
-            ), animated: true
+          ),
+          animated: false
         )
         stackView.notify(changedEdit: editingStack.currentEdit)
 

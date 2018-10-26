@@ -96,7 +96,7 @@ final class ControlStackView : UIView {
         
         if let view = currentTop {
           UIView.animate(
-            withDuration: 0.5,
+            withDuration: 0.3,
             delay: 0,
             usingSpringWithDamping: 1,
             initialSpringVelocity: 0,
@@ -127,7 +127,7 @@ final class ControlStackView : UIView {
     
     if animated {
       UIView.animate(
-        withDuration: 0.5,
+        withDuration: 0.3,
         delay: 0,
         usingSpringWithDamping: 1,
         initialSpringVelocity: 0,
