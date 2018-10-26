@@ -73,48 +73,85 @@ final class ControlStackView : UIView {
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     
+    let currentTop = subscribers.last
     subscribeChangedEdit(to: view)
     
     if animated {
-      view.alpha = 0
-      view.transform = CGAffineTransform(translationX: 0, y: 8)
-      UIView.animate(
-        withDuration: 0.3,
-        delay: 0,
-        usingSpringWithDamping: 1,
-        initialSpringVelocity: 0,
-        options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
-        animations: {
-          view.alpha = 1
-          view.transform = .identity
-      }, completion: nil)
+      foreground: do {
+        view.alpha = 0
+        view.transform = CGAffineTransform(translationX: 0, y: 8)
+        UIView.animate(
+          withDuration: 0.3,
+          delay: 0,
+          usingSpringWithDamping: 1,
+          initialSpringVelocity: 0,
+          options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
+          animations: {
+            view.alpha = 1
+            view.transform = .identity
+        }, completion: nil)
+      }
+      
+      background: do {
+        
+        if let view = currentTop {
+          UIView.animate(
+            withDuration: 0.5,
+            delay: 0,
+            usingSpringWithDamping: 1,
+            initialSpringVelocity: 0,
+            options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
+            animations: {
+              view.transform = CGAffineTransform(translationX: 0, y: 8)
+          }, completion: { _ in
+            view.transform = .identity
+          })
+        }
+        
+      }
     }
   }
   
   func pop(animated: Bool) {
     
-    guard let target = subviews.last else {
+    guard let currentTop = subscribers.last else {
       return
     }
     
+    let background = subscribers.dropLast().last
+    
     let remove = {
-      target.removeFromSuperview()
-      self.subscribers.removeAll { $0 == target }
+      currentTop.removeFromSuperview()
+      self.subscribers.removeAll { $0 == currentTop }
     }
     
     if animated {
       UIView.animate(
-        withDuration: 0.3,
+        withDuration: 0.5,
         delay: 0,
         usingSpringWithDamping: 1,
         initialSpringVelocity: 0,
         options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
         animations: {
-          target.alpha = 0
-          target.transform = CGAffineTransform(translationX: 0, y: 8)
+          currentTop.alpha = 0
+          currentTop.transform = CGAffineTransform(translationX: 0, y: 8)
       }, completion: { _ in
         remove()
       })
+      
+      if let view = background {
+        view.transform = CGAffineTransform(translationX: 0, y: 8)
+        UIView.animate(
+          withDuration: 0.3,
+          delay: 0,
+          usingSpringWithDamping: 1,
+          initialSpringVelocity: 0,
+          options: [.beginFromCurrentState, .curveEaseOut, .allowUserInteraction],
+          animations: {
+            view.transform = .identity
+        }, completion: { _ in
+        })
+      }
     }
     else {
       remove()

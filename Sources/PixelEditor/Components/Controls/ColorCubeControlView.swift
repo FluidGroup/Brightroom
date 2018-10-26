@@ -49,7 +49,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
 
-  private let filters: [PreviewFilterColorCube]
+  private let previews: [PreviewFilterColorCube]
   
   private let originalImage: CIImage
   
@@ -64,7 +64,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     ) {
     
     self.originalImage = originalImage
-    self.filters = filters
+    self.previews = filters
     super.init(context: context, originalImage: originalImage, filters: filters)
   }
 
@@ -132,6 +132,14 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       collectionView.visibleCells.forEach {
         updateSelected(cell: $0)
       }
+      scrollToSelectedItem(animated: true)
+    }
+  }
+  
+  open override func didMoveToSuperview() {
+    super.didMoveToSuperview()
+    if window != nil {
+      scrollToSelectedItem(animated: false)
     }
   }
   
@@ -151,7 +159,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     case .original:
       return 1
     case .selections:
-      return filters.count
+      return previews.count
     }
   }
   
@@ -176,7 +184,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       return cell
     case .selections:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: SelectionCell.identifier, for: indexPath) as! SelectionCell
-      let filter = filters[indexPath.item]
+      let filter = previews[indexPath.item]
       cell.set(preview: filter)
       updateSelected(cell: cell)
       return cell
@@ -191,7 +199,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       context.action(.setFilter( { $0.colorCube = nil }))
       context.action(.commit)
     case .selections:
-      let filter = filters[indexPath.item]
+      let filter = previews[indexPath.item]
       context.action(.setFilter( { $0.colorCube = filter.filter }))
       context.action(.commit)
     }
@@ -207,6 +215,23 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       return .zero
     case .selections:
       return UIEdgeInsets(top: 0, left: 24, bottom: 0, right: 0)
+    }
+  }
+  
+  private func scrollToSelectedItem(animated: Bool) {
+    layoutIfNeeded()
+    if let current = current, let index = previews.firstIndex(where: { $0.filter == current }) {
+      collectionView.scrollToItem(
+        at: IndexPath.init(item: index, section: Section.selections.rawValue),
+        at: .centeredHorizontally,
+        animated: animated
+      )
+    } else {
+      collectionView.scrollToItem(
+        at: IndexPath.init(item: 0, section: Section.original.rawValue),
+        at: .centeredHorizontally,
+        animated: animated
+      )
     }
   }
 
