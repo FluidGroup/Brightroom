@@ -672,7 +672,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "PixelEngine" */;
+			buildConfigurationList = 4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Pixel" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -1198,7 +1198,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "PixelEngine" */ = {
+		4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Pixel" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B600B03216B7A94001E1456 /* Debug */,
