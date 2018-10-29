@@ -2,6 +2,10 @@
 
 # Pixel - Engine • Editor
 
+![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) Engine
+
+![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
+
 Image editor and engine using CoreImage
 
 > ⚠️ Currently, API is not stable. It may change in the future.
