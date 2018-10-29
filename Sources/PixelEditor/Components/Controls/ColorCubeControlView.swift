@@ -136,16 +136,10 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     }
   }
   
-  open override func didMoveToSuperview() {
-    super.didMoveToSuperview()
-    if window != nil {
-      scrollToSelectedItem(animated: false)
-    }
-  }
-  
   open override func layoutSubviews() {
     super.layoutSubviews()
     collectionView.collectionViewLayout.invalidateLayout()
+    scrollToSelectedItem(animated: false)
   }
 
   // MARK: - UICollectionViewDeleagte / DataSource
@@ -219,7 +213,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
   
   private func scrollToSelectedItem(animated: Bool) {
-    layoutIfNeeded()
+
     if let current = current, let index = previews.firstIndex(where: { $0.filter == current }) {
       collectionView.scrollToItem(
         at: IndexPath.init(item: index, section: Section.selections.rawValue),

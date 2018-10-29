@@ -142,21 +142,22 @@ final class RootControl : RootControlBase {
 
     switch displayType {
     case .filter:
-      containerView.addSubview(colorCubeControl)
-      subscribeChangedEdit(to: colorCubeControl)
-
+      
       colorCubeControl.frame = containerView.bounds
       colorCubeControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
+      containerView.addSubview(colorCubeControl)
+      subscribeChangedEdit(to: colorCubeControl)
+      
       filtersButton.isSelected = true
 
     case .edit:
-      containerView.addSubview(editView)
-      subscribeChangedEdit(to: editView)
-
+      
       editView.frame = containerView.bounds
       editView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-
+      
+      containerView.addSubview(editView)
+      subscribeChangedEdit(to: editView)
+    
       editButton.isSelected = true
     }
   }
