@@ -237,6 +237,15 @@ github "muukii/Pixel"
 If you need more features, please open issue or submit PR!
 Muukii may not know the approach to take for implementing them, So your PR will be very helpful.
 
+### Development
+
+To develop Pixel, setup environment of development with following code.
+
+```ogdl
+$ pod install
+$ open Pixel.xcworkspace
+```
+
 ## Author
 
 Muukii (muukii.app@gmail.com)
