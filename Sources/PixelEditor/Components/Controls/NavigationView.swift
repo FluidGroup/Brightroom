@@ -45,8 +45,8 @@ open class NavigationView : UIStackView {
     cancelButton.setTitle(L10n.cancel, for: .normal)
     saveButton.setTitle(L10n.done, for: .normal)
 
-    cancelButton.setTitleColor(.black, for: .normal)
-    saveButton.setTitleColor(.black, for: .normal)
+    cancelButton.setTitleColor(Style.default.black, for: .normal)
+    saveButton.setTitleColor(Style.default.black, for: .normal)
 
     cancelButton.titleLabel!.font = UIFont.systemFont(ofSize: 17)
     saveButton.titleLabel!.font = UIFont.boldSystemFont(ofSize: 17)

@@ -250,24 +250,24 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
         
         NSLayoutConstraint.activate([
           
-          nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor),
+          imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+          imageView.rightAnchor.constraint(equalTo: contentView.rightAnchor),
+          imageView.leftAnchor.constraint(equalTo: contentView.leftAnchor),
+          imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
+          
+          nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 12),
           nameLabel.rightAnchor.constraint(lessThanOrEqualTo: contentView.rightAnchor, constant: -2),
           nameLabel.leftAnchor.constraint(greaterThanOrEqualTo: contentView.leftAnchor, constant: 2),
           nameLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
           
-          imageView.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
-          imageView.rightAnchor.constraint(equalTo: contentView.rightAnchor),
-          imageView.leftAnchor.constraint(equalTo: contentView.leftAnchor),
-          imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
-          //        imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 8),
           ])
       }
       
       style: do {
         
         nameLabel.textAlignment = .center
-        nameLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
-        nameLabel.textColor = UIColor(white: 0.05, alpha: 1)
+        nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        nameLabel.textColor = Style.default.black
         
       }
       
