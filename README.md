@@ -30,6 +30,7 @@ Image editor and engine using CoreImage
 #### Presets
 
 * [x] ColorCube (Look Up Table)
+  * [ ] Intensity
 
 > ⚠️ Currently, Pixel does not contain LUT.
 > Demo app has sample LUTs.
@@ -196,6 +197,7 @@ options.classes.control.brightnessControl = MyExposureControl.self
 
 It's like using custom Cell in UICollectionView.
 If you have any better idea for this, please tell us💡.
+And also Built-In UI may need expose some properties to customize from subclassing.
 
 ### Customize whole Control-UI
 
