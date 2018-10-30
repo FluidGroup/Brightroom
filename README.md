@@ -102,7 +102,7 @@ self.navigationController.push(controller, animated: true)
 
 ```swift
 public protocol PixelEditViewControllerDelegate : class {
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
 }
 ```
@@ -115,7 +115,7 @@ Basically, it's like following code, recommend dismiss or pop in methods of dele
 ```swift
 extension EditorViewController : PixelEditViewControllerDelegate {
 
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack) {
 
     self.navigationController?.popToViewController(self, animated: true)
   }
@@ -126,6 +126,15 @@ extension EditorViewController : PixelEditViewControllerDelegate {
   }
 
 }
+```
+
+### Render Image
+
+
+```swift
+let editingStack: SquareEditingStack
+
+let image = editingStack.makeRenderer().render(resolution: .full)
 ```
 
 ### Restore editing

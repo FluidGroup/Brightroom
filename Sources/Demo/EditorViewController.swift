@@ -91,11 +91,10 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
 }
 
 extension EditorViewController : PixelEditViewControllerDelegate {
-
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage) {
-
+  
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack) {
     self.navigationController?.popToViewController(self, animated: true)
-    self.imageView.image = image
+    self.imageView.image = editingStack.makeRenderer().render(resolution: .full)
   }
   
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
