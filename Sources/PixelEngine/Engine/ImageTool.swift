@@ -79,7 +79,7 @@ public enum ImageTool {
           if #available(iOS 12.0, *) {
             format.preferredRange = .automatic
           } else {
-            format.prefersExtendedRange = true
+            format.prefersExtendedRange = false
           }
           
           let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)

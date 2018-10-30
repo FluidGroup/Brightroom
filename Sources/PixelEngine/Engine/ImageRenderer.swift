@@ -94,7 +94,7 @@ public final class ImageRenderer {
     if #available(iOS 12.0, *) {
       format.preferredRange = .extended
     } else {
-      format.prefersExtendedRange = true
+      format.prefersExtendedRange = false
     }
     
     let image = UIGraphicsImageRenderer.init(size: canvasSize, format: format)
