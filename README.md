@@ -2,6 +2,9 @@
 
 # Pixel - Engine • Editor
 
+![](preview.gif)
+
+
 ![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) Engine
 
 ![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
