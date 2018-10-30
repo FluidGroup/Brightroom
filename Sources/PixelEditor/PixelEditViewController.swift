@@ -26,7 +26,7 @@ import PixelEngine
 
 public protocol PixelEditViewControllerDelegate : class {
 
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing image: UIImage)
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
   
 }
@@ -63,7 +63,7 @@ public final class PixelEditContext {
 public final class PixelEditViewController : UIViewController {
   
   public final class Callbacks {
-    public var didEndEditing: (PixelEditViewController, UIImage) -> Void = { _, _ in }
+    public var didEndEditing: (PixelEditViewController, SquareEditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
 
@@ -286,10 +286,8 @@ public final class PixelEditViewController : UIViewController {
   @objc
   private func didTapDoneButton() {
 
-    let image = editingStack.makeRenderer().render()
-
-    callbacks.didEndEditing(self, image)
-    delegate?.pixelEditViewController(self, didEndEditing: image)
+    callbacks.didEndEditing(self, editingStack)
+    delegate?.pixelEditViewController(self, didEndEditing: editingStack)
   }
   
   @objc
