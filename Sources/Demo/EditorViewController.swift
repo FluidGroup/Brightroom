@@ -94,7 +94,8 @@ extension EditorViewController : PixelEditViewControllerDelegate {
   
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack) {
     self.navigationController?.popToViewController(self, animated: true)
-    self.imageView.image = editingStack.makeRenderer().render(resolution: .full)
+    let image = editingStack.makeRenderer().render(resolution: .full)
+    self.imageView.image = image
   }
   
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
