@@ -97,26 +97,29 @@ public final class ImageRenderer {
       format.prefersExtendedRange = false
     }
     
-    let image = UIGraphicsImageRenderer.init(size: canvasSize, format: format)
-      .image { c in
-        
-        let cgContext = UIGraphicsGetCurrentContext()!
-        
-        let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
-        
-        cgContext.saveGState()
-        cgContext.translateBy(x: 0, y: canvasSize.height)
-        cgContext.scaleBy(x: 1, y: -1)
-        cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
-        cgContext.restoreGState()
-        
-        self.edit.drawer.forEach { drawer in
-          drawer.draw(in: cgContext, canvasSize: canvasSize)
-        }
+    let image = autoreleasepool { () -> UIImage in
+      
+      UIGraphicsImageRenderer.init(size: canvasSize, format: format)
+        .image { c in
+          
+          let cgContext = UIGraphicsGetCurrentContext()!
+          
+          let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
+          
+          cgContext.saveGState()
+          cgContext.translateBy(x: 0, y: canvasSize.height)
+          cgContext.scaleBy(x: 1, y: -1)
+          cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
+          cgContext.restoreGState()
+          
+          self.edit.drawer.forEach { drawer in
+            drawer.draw(in: cgContext, canvasSize: canvasSize)
+          }
+      }
+      
     }
     
     return image
-
   }
 }
 

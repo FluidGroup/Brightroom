@@ -85,20 +85,30 @@ public enum ImageTool {
           let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
             .image { c in
               
-              let rect = CGRect(origin: .zero, size: targetSize)
-              if let cgImage = image.cgImage {
-                c.cgContext.translateBy(x: 0, y: targetSize.height)
-                c.cgContext.scaleBy(x: 1, y: -1)
-                c.cgContext.draw(cgImage, in: rect)
-              } else {
-                UIImage(ciImage: image).draw(in: rect)
+              autoreleasepool {
+                let rect = CGRect(origin: .zero, size: targetSize)
+                if let cgImage = image.cgImage {
+                  c.cgContext.translateBy(x: 0, y: targetSize.height)
+                  c.cgContext.scaleBy(x: 1, y: -1)
+                  c.cgContext.draw(cgImage, in: rect)
+
+                } else {
+                  UIImage(ciImage: image).draw(in: rect)
+                }
               }
-          }
-          
-          var resizedImage = CIImage(image: uiImage)!
+            }
+                            
+          let resizedImage: CIImage
           
           if #available(iOS 12, *) {
-            resizedImage = resizedImage.insertingIntermediate(cache: true)
+            resizedImage = CIImage(image: uiImage)!
+              .insertingIntermediate(cache: true)
+          } else {
+            resizedImage = uiImage
+              .pngData()
+              .flatMap {
+                CIImage(data: $0, options: [.colorSpace : image.colorSpace ?? CGColorSpaceCreateDeviceRGB()])
+              }!
           }
           
           let r = resizedImage.transformed(by: .init(
