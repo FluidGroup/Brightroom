@@ -22,11 +22,12 @@
 import Foundation
 import CoreImage
 
-public protocol ImageRendererDelegate : class {
-
-}
-
 public final class ImageRenderer {
+  
+  public enum Resolution {
+    case full
+    case resize(boundingSize: CGSize)
+  }
 
   public struct Edit {
     public var croppingRect: CGRect?
@@ -39,8 +40,6 @@ public final class ImageRenderer {
     .highQualityDownsample : true,
     ])
   
-  public weak var delegate: ImageRendererDelegate?
-
   public let source: ImageSource
 
   public var edit: Edit = .init()
@@ -49,7 +48,7 @@ public final class ImageRenderer {
     self.source = source
   }
 
-  public func render() -> UIImage {
+  public func render(resolution: Resolution = .full) -> UIImage {
 
     let resultImage: CIImage = {
 
@@ -75,7 +74,14 @@ public final class ImageRenderer {
 
     }()
 
-    let canvasSize = resultImage.extent.size
+    let canvasSize: CGSize
+      
+    switch resolution {
+    case .full:
+      canvasSize = resultImage.extent.size
+    case .resize(let boundingSize):
+      canvasSize = Geometry.sizeThatAspectFit(aspectRatio: resultImage.extent.size, boundingSize: boundingSize)
+    }
     
     let format: UIGraphicsImageRendererFormat
     if #available(iOS 11.0, *) {
@@ -99,9 +105,9 @@ public final class ImageRenderer {
         let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
         
         cgContext.saveGState()
-        cgContext.translateBy(x: 0, y: resultImage.extent.height)
+        cgContext.translateBy(x: 0, y: canvasSize.height)
         cgContext.scaleBy(x: 1, y: -1)
-        cgContext.draw(cgImage, in: CGRect(origin: .zero, size: resultImage.extent.size))
+        cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
         cgContext.restoreGState()
         
         self.edit.drawer.forEach { drawer in

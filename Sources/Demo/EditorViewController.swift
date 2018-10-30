@@ -30,7 +30,7 @@ final class EditorViewController : UIViewController {
   
   private lazy var stack = SquareEditingStack.init(
     source: ImageSource(source: UIImage(named: "large")!),
-    previewSize: CGSize(width: 30, height: 30),
+    previewSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
   )
 
