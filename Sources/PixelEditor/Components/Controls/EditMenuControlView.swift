@@ -91,7 +91,7 @@ open class EditMenuControl : EditMenuControlBase {
   }()
   
   public lazy var vignetteButton: ButtonView = {
-    let button = ButtonView(name: L10n.editVignette, image: UIImage(named: "adjustment", in: bundle, compatibleWith: nil)!)
+    let button = ButtonView(name: L10n.editVignette, image: UIImage(named: "vignette", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
     return button
   }()
