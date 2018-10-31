@@ -74,7 +74,7 @@ open class ZoomImageView : UIScrollView, UIScrollViewDelegate {
   }
 
   public init(image: UIImage) {
-    super.init(frame: CGRect.zero)
+    super.init(frame: .zero)
     self.image = image
     setup()
   }
@@ -104,7 +104,7 @@ open class ZoomImageView : UIScrollView, UIScrollViewDelegate {
     }
     #endif
 
-    backgroundColor = UIColor.clear
+    backgroundColor = .clear
     delegate = self
     internalImageView.contentMode = .scaleAspectFill
     showsVerticalScrollIndicator = false

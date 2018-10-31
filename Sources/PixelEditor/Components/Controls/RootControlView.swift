@@ -102,8 +102,8 @@ final class RootControl : RootControlBase {
       filtersButton.setTitleColor(.black, for: .selected)
       editButton.setTitleColor(.black, for: .selected)
 
-      filtersButton.titleLabel!.font = UIFont.boldSystemFont(ofSize: 17)
-      editButton.titleLabel!.font = UIFont.boldSystemFont(ofSize: 17)
+      filtersButton.titleLabel!.font = .boldSystemFont(ofSize: 17)
+      editButton.titleLabel!.font = .boldSystemFont(ofSize: 17)
 
       filtersButton.addTarget(self, action: #selector(didTapFilterButton), for: .touchUpInside)
       editButton.addTarget(self, action: #selector(didTapEditButton), for: .touchUpInside)

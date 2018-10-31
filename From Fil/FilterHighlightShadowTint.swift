@@ -79,8 +79,8 @@ public struct FilterHighlightShadowTint: Filtering, MultipleParameters, Equatabl
 
     public var filterChain: FilterChain {
 
-        let highlightTintColor = CIColor(color: self.highlightTintColor?.withAlphaComponent(CGFloat(self.highlightTintAmount)) ?? UIColor.clear)
-        let shadowTintColor = CIColor(color: self.shadowTintColor?.withAlphaComponent(CGFloat(self.shadowTintAmount)) ?? UIColor.clear)
+        let highlightTintColor = CIColor(color: self.highlightTintColor?.withAlphaComponent(CGFloat(self.highlightTintAmount)) ?? .clear)
+        let shadowTintColor = CIColor(color: self.shadowTintColor?.withAlphaComponent(CGFloat(self.shadowTintAmount)) ?? .clear)
 
         return LightRoom.ExternalFilter.HighlightShadowTint(
             highlightTintColor: highlightTintColor,

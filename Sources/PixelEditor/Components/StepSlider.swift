@@ -23,6 +23,12 @@ import Foundation
 import PixelEngine
 
 
+extension CGSize {
+    static func *(lhs: CGSize, rhs: CGFloat) -> CGSize {
+        return .init(width: lhs.width * rhs, height: lhs.height * rhs)
+    }
+}
+
 public final class StepSlider : UIControl {
 
   public enum Mode {
@@ -263,8 +269,8 @@ private final class _StepSlider: UISlider {
     let scale = contentScaleFactor
 
     guard
-      let layer = CGLayer(context, size: CGSize(width: bounds.size.width * scale, height: bounds.size.height * scale), auxiliaryInfo: nil),
-      let layerContext = layer.context
+        let layer = CGLayer(context, size: bounds.size * scale, auxiliaryInfo: nil),
+        let layerContext = layer.context
       else {
         return
     }
@@ -308,15 +314,15 @@ private final class _StepSlider: UISlider {
 
   private func setup() {
 
-    minimumTrackTintColor = UIColor.clear
-    maximumTrackTintColor = UIColor.clear
+    minimumTrackTintColor = .clear
+    maximumTrackTintColor = .clear
     setThumbImage(UIImage(named: "slider_thumb", in: bundle, compatibleWith: nil), for: [])
     tintColor = Style.default.black
 
     let label = stepLabel
-    label.backgroundColor = UIColor.clear
-    label.font = UIFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-    label.textColor = UIColor.black
+    label.backgroundColor = .clear
+    label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+    label.textColor = .black
     label.textAlignment = .center
 
     self.addSubview(label)
