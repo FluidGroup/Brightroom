@@ -81,10 +81,10 @@ public enum ImageTool {
           } else {
             format.prefersExtendedRange = false
           }
-          
+
           let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
             .image { c in
-              
+
               autoreleasepool {
                 let rect = CGRect(origin: .zero, size: targetSize)
                 if let cgImage = image.cgImage {
@@ -97,9 +97,9 @@ public enum ImageTool {
                 }
               }
             }
-                            
+
           let resizedImage: CIImage
-          
+
           if #available(iOS 12, *) {
             resizedImage = CIImage(image: uiImage)!
               .insertingIntermediate(cache: true)
@@ -110,7 +110,7 @@ public enum ImageTool {
                 CIImage(data: $0, options: [.colorSpace : image.colorSpace ?? CGColorSpaceCreateDeviceRGB()])
               }!
           }
-          
+
           let r = resizedImage.transformed(by: .init(
             translationX: (originalExtent.origin.x * scaleX).rounded(.down),
             y: (originalExtent.origin.y * scaleY).rounded(.down)

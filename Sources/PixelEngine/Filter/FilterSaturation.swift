@@ -25,7 +25,7 @@ import CoreImage
 public struct FilterSaturation: Filtering, Equatable, Codable {
 
   public static let range: ParameterRange<Double, FilterSaturation> = .init(min: -1, max: 1)
-    
+
   public var value: Double = 0
 
   public init() {

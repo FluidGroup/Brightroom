@@ -30,7 +30,7 @@ public struct FilterVignette: Filtering, Equatable, Codable {
   public init() {
 
   }
-    
+
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
     let radius = RadiusCalculator.radius(value: value, max: FilterVignette.range.max, imageExtent: image.extent)

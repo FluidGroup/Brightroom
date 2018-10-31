@@ -27,7 +27,7 @@ import PixelEditor
 final class EditorViewController : UIViewController {
 
   @IBOutlet weak var imageView: UIImageView!
-  
+
   private lazy var stack = SquareEditingStack.init(
     source: ImageSource(source: UIImage(named: "large")!),
     previewSize: CGSize(width: 300, height: 300),
@@ -41,65 +41,65 @@ final class EditorViewController : UIViewController {
   @IBAction func didTapPresentButton() {
 
     let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
-    
+
     let nav = UINavigationController(rootViewController: controller)
 
     present(nav, animated: true, completion: nil)
   }
 
   @IBAction func didTapPushButton(_ sender: Any) {
-    
+
     let picker = UIImagePickerController()
     picker.allowsEditing = false
     picker.delegate = self
     picker.sourceType = .photoLibrary
-    
+
     present(picker, animated: true, completion: nil)
   }
-  
+
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
-    
+
     let controller = PixelEditViewController.init(editingStack: stack)
     controller.delegate = self
-    
+
     navigationController?.pushViewController(controller, animated: true)
-    
+
   }
 }
 
 extension EditorViewController : UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-  
+
   func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
     picker.dismiss(animated: true, completion: nil)
   }
-  
+
   func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-    
+
     let image = info[.originalImage] as! UIImage
-    
+
     picker.dismiss(animated: true, completion: nil)
-    
+
     let controller = PixelEditViewController.init(
       image: image
     )
-    
+
     controller.delegate = self
-    
+
     navigationController?.pushViewController(controller, animated: true)
-    
+
   }
 }
 
 extension EditorViewController : PixelEditViewControllerDelegate {
-  
+
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack) {
     self.navigationController?.popToViewController(self, animated: true)
     let image = editingStack.makeRenderer().render(resolution: .full)
     self.imageView.image = image
   }
-  
+
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
     self.navigationController?.popToViewController(self, animated: true)
   }
-  
+
 }

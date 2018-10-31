@@ -22,11 +22,11 @@
 import Foundation
 
 open class ColorCubeStorage {
-    
+
   public static let `default` = ColorCubeStorage(filters: [])
 
   public var filters: [FilterColorCube] = []
-  
+
   init(filters: [FilterColorCube]) {
     self.filters = filters
   }

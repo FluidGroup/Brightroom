@@ -22,17 +22,17 @@
 import Foundation
 
 public struct Options {
-  
+
   public static let `default`: Options = .init()
-  
+
   public var classes: Classes = .init()
 }
 
 extension Options {
   public struct Classes {
-    
+
     public struct Control {
-      
+
       public var colorCubeControl: ColorCubeControlBase.Type = ColorCubeControl.self
       public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
       public var rootControl: RootControlBase.Type = RootControl.self
@@ -47,16 +47,16 @@ extension Options {
       public var fadeControl: FadeControlBase.Type = FadeControl.self
       public var clarityControl: ClarityControlBase.Type = ClarityControl.self
       public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
-      
+
       public init() {
-        
+
       }
     }
-    
+
     public var control: Control = .init()
-    
+
     public init() {
-      
+
     }
   }
 }

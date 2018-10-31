@@ -32,7 +32,7 @@ open class GaussianBlurControlBase : FilterControlBase {
 }
 
 open class GaussianBlurControl : GaussianBlurControlBase {
-  
+
   open override var title: String {
     return L10n.editBlur
   }
@@ -52,13 +52,13 @@ open class GaussianBlurControl : GaussianBlurControlBase {
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
 
     navigationView.didTapCancelButton = { [weak self] in
-      
+
       self?.context.action(.revert)
       self?.pop(animated: true)
     }
-    
+
     navigationView.didTapDoneButton = { [weak self] in
-      
+
       self?.context.action(.commit)
       self?.pop(animated: true)
     }
@@ -74,12 +74,12 @@ open class GaussianBlurControl : GaussianBlurControlBase {
   private func valueChanged() {
 
     let value = slider.transition(in: FilterGaussianBlur.range)
-    
+
     guard value != 0 else {
       context.action(.setFilter({ $0.gaussianBlur = nil }))
       return
     }
-    
+
     var f = FilterGaussianBlur()
     f.value = value
     context.action(.setFilter({ $0.gaussianBlur = f }))

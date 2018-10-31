@@ -24,13 +24,13 @@ import Foundation
 public var L10n: L10nStorage = .init()
 
 public struct L10nStorage {
-  
+
   public var done = "Done"
   public var normal = "Normal"
   public var cancel = "Cancel"
   public var filter = "Filter"
   public var edit = "Edit"
-  
+
   public var editAdjustment = "Adjust"
   public var editMask = "Mask"
   public var editHighlights = "Highlights"
@@ -44,10 +44,10 @@ public struct L10nStorage {
   public var editFade = "Fade"
   public var editClarity = "Clarity"
   public var editSharpen = "Sharpen"
-  
+
   public var clear = "Clear"
-  
+
   public init() {
-    
+
   }
 }

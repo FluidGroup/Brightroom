@@ -110,7 +110,7 @@ final class BlurredMosaicView : DryDrawingView {
 
     maskLayer.drawnPaths = drawnPaths
   }
-  
+
 }
 
 extension BlurredMosaicView {

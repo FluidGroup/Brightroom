@@ -58,7 +58,7 @@ final class UIImageViewViewController : UIViewController {
           "inputRadius" : radius
         ])
       .cropped(to: image.extent)
-    
+
     return outputImage
   }
 }

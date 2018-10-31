@@ -23,7 +23,7 @@ import Foundation
 import CoreImage
 
 public struct FilterSharpen: Filtering, Equatable, Codable {
-  
+
   public enum Params {
     public static let radius: ParameterRange<Double, FilterSharpen> = .init(min: 0, max: 20)
     public static let sharpness: ParameterRange<Double, FilterSharpen> = .init(min: 0, max: 1)

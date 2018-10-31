@@ -66,16 +66,16 @@ final class ControlStackView : UIView {
   private var subscribers: [UIView & ControlChildViewType] = []
 
   private var latestNotifiedEdit: EditingStack.Edit?
-  
+
   func push(_ view: UIView & ControlChildViewType, animated: Bool) {
-    
+
     addSubview(view)
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    
+
     let currentTop = subscribers.last
     subscribeChangedEdit(to: view)
-    
+
     if animated {
       foreground: do {
         view.alpha = 0
@@ -91,9 +91,9 @@ final class ControlStackView : UIView {
             view.transform = .identity
         }, completion: nil)
       }
-      
+
       background: do {
-        
+
         if let view = currentTop {
           UIView.animate(
             withDuration: 0.3,
@@ -107,24 +107,24 @@ final class ControlStackView : UIView {
             view.transform = .identity
           })
         }
-        
+
       }
     }
   }
-  
+
   func pop(animated: Bool) {
-    
+
     guard let currentTop = subscribers.last else {
       return
     }
-    
+
     let background = subscribers.dropLast().last
-    
+
     let remove = {
       currentTop.removeFromSuperview()
       self.subscribers.removeAll { $0 == currentTop }
     }
-    
+
     if animated {
       UIView.animate(
         withDuration: 0.3,
@@ -138,7 +138,7 @@ final class ControlStackView : UIView {
       }, completion: { _ in
         remove()
       })
-      
+
       if let view = background {
         view.transform = CGAffineTransform(translationX: 0, y: 8)
         UIView.animate(
@@ -157,7 +157,7 @@ final class ControlStackView : UIView {
       remove()
     }
   }
-  
+
 
   func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
     guard !subscribers.contains(where: { $0 == view }) else { return }

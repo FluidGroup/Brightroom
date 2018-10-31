@@ -25,7 +25,7 @@ final class ImagePreviewView : UIView {
 
   let originalImageView: UIImageView = .init()
   let imageView: UIImageView = .init()
-  
+
   var originalImage: CIImage? {
     didSet {
       guard oldValue != originalImage else { return }
@@ -45,7 +45,7 @@ final class ImagePreviewView : UIView {
       EditorLog.debug("ImagePreviewView.image set", image?.extent as Any)
     }
   }
-  
+
   override init(frame: CGRect) {
     super.init(frame: .zero)
 
@@ -58,27 +58,27 @@ final class ImagePreviewView : UIView {
         imageView.frame = bounds
         imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
-    
+
     originalImageView.isHidden = true
-    
+
   }
 
   required init?(coder aDecoder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
   override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesBegan(touches, with: event)
     originalImageView.isHidden = false
     imageView.isHidden = true
   }
-  
+
   override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesEnded(touches, with: event)
     originalImageView.isHidden = true
     imageView.isHidden = false
   }
-  
+
   override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesCancelled(touches, with: event)
     originalImageView.isHidden = true

@@ -31,7 +31,7 @@ open class ExposureControlBase : FilterControlBase {
 }
 
 open class ExposureControl : ExposureControlBase {
-  
+
   open override var title: String {
     return L10n.editBrightness
   }
@@ -50,13 +50,13 @@ open class ExposureControl : ExposureControlBase {
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
 
     navigationView.didTapCancelButton = { [weak self] in
-      
+
       self?.context.action(.revert)
       self?.pop(animated: true)
     }
-    
+
     navigationView.didTapDoneButton = { [weak self] in
-      
+
       self?.context.action(.commit)
       self?.pop(animated: true)
     }
@@ -75,7 +75,7 @@ open class ExposureControl : ExposureControlBase {
     guard value != 0 else {
       context.action(.setFilter({ $0.exposure = nil }))
       return
-    }    
+    }
     var f = FilterExposure()
     f.value = value
     context.action(.setFilter({ $0.exposure = f }))

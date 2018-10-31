@@ -23,7 +23,7 @@ import Foundation
 import CoreImage
 
 public final class ImageRenderer {
-  
+
   public enum Resolution {
     case full
     case resize(boundingSize: CGSize)
@@ -39,7 +39,7 @@ public final class ImageRenderer {
     .useSoftwareRenderer : false,
     .highQualityDownsample : true,
     ])
-  
+
   public let source: ImageSource
 
   public var edit: Edit = .init()
@@ -75,14 +75,14 @@ public final class ImageRenderer {
     }()
 
     let canvasSize: CGSize
-      
+
     switch resolution {
     case .full:
       canvasSize = resultImage.extent.size
     case .resize(let boundingSize):
       canvasSize = Geometry.sizeThatAspectFit(aspectRatio: resultImage.extent.size, boundingSize: boundingSize)
     }
-    
+
     let format: UIGraphicsImageRendererFormat
     if #available(iOS 11.0, *) {
       format = UIGraphicsImageRendererFormat.preferred()
@@ -96,29 +96,29 @@ public final class ImageRenderer {
     } else {
       format.prefersExtendedRange = false
     }
-    
+
     let image = autoreleasepool { () -> UIImage in
-      
+
       UIGraphicsImageRenderer.init(size: canvasSize, format: format)
         .image { c in
-          
+
           let cgContext = UIGraphicsGetCurrentContext()!
-          
+
           let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
-          
+
           cgContext.saveGState()
           cgContext.translateBy(x: 0, y: canvasSize.height)
           cgContext.scaleBy(x: 1, y: -1)
           cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
           cgContext.restoreGState()
-          
+
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: cgContext, canvasSize: canvasSize)
           }
       }
-      
+
     }
-    
+
     return image
   }
 }

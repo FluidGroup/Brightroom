@@ -24,9 +24,9 @@ import Foundation
 import PixelEngine
 
 open class ControlBase : UIView, ControlChildViewType {
-  
+
   open func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    
+
   }
 
   public let context: PixelEditContext

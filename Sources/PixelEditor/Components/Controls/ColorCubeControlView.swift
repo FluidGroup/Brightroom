@@ -23,38 +23,38 @@ import Foundation
 import PixelEngine
 
 open class ColorCubeControlBase : ControlBase {
-  
+
   public required init(
     context: PixelEditContext,
     originalImage: CIImage,
     filters: [PreviewFilterColorCube]
     ) {
-    
+
     super.init(context: context)
   }
-  
+
 }
 
 open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
-  
+
   private enum Section : Int, CaseIterable {
-    
+
     case original
     case selections
   }
 
   // MARK: - Properties
-  
+
   public var current: FilterColorCube?
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
 
   private let previews: [PreviewFilterColorCube]
-  
+
   private let originalImage: CIImage
-  
+
   private let feedbackGenerator = UISelectionFeedbackGenerator()
-  
+
   // MARK: - Functions
 
   public required init(
@@ -62,7 +62,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     originalImage: CIImage,
     filters: [PreviewFilterColorCube]
     ) {
-    
+
     self.originalImage = originalImage
     self.previews = filters
     super.init(context: context, originalImage: originalImage, filters: filters)
@@ -74,7 +74,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     backgroundColor = Style.default.control.backgroundColor
 
     addSubview(collectionView)
-    
+
     let itemSize = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.itemSize
     collectionView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -125,7 +125,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
 
     return layout
   }
-  
+
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     if current != edit.filters.colorCube {
       current = edit.filters.colorCube
@@ -135,7 +135,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       scrollToSelectedItem(animated: true)
     }
   }
-  
+
   open override func layoutSubviews() {
     super.layoutSubviews()
     collectionView.collectionViewLayout.invalidateLayout()
@@ -156,7 +156,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       return previews.count
     }
   }
-  
+
   private func updateSelected(cell: UICollectionViewCell) {
     switch cell {
     case let cell as NormalCell:
@@ -169,7 +169,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
 
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-    
+
     switch Section.allCases[indexPath.section] {
     case .original:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NormalCell.identifier, for: indexPath) as! NormalCell
@@ -187,7 +187,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
 
   open func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-    
+
     switch Section.allCases[indexPath.section] {
     case .original:
       context.action(.setFilter( { $0.colorCube = nil }))
@@ -197,13 +197,13 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       context.action(.setFilter( { $0.colorCube = filter.filter }))
       context.action(.commit)
     }
-    
+
     feedbackGenerator.selectionChanged()
 
   }
-  
+
   public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
-    
+
     switch Section.allCases[section] {
     case .original:
       return .zero
@@ -211,7 +211,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
       return UIEdgeInsets(top: 0, left: 24, bottom: 0, right: 0)
     }
   }
-  
+
   private func scrollToSelectedItem(animated: Bool) {
 
     if let current = current, let index = previews.firstIndex(where: { $0.filter == current }) {
@@ -230,126 +230,126 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
 
   // MARK: - Nested Types
-  
+
   open class CellBase : UICollectionViewCell {
-    
+
     public let nameLabel: UILabel = .init()
     public let imageView: UIImageView = .init()
-    
+
     public override init(frame: CGRect) {
       super.init(frame: frame)
-      
+
       layout: do {
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        
+
         contentView.addSubview(nameLabel)
         contentView.addSubview(imageView)
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        
+
         NSLayoutConstraint.activate([
-          
+
           imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
           imageView.rightAnchor.constraint(equalTo: contentView.rightAnchor),
           imageView.leftAnchor.constraint(equalTo: contentView.leftAnchor),
           imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
-          
+
           nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 12),
           nameLabel.rightAnchor.constraint(lessThanOrEqualTo: contentView.rightAnchor, constant: -2),
           nameLabel.leftAnchor.constraint(greaterThanOrEqualTo: contentView.leftAnchor, constant: 2),
           nameLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-          
+
           ])
       }
-      
+
       style: do {
-        
+
         nameLabel.textAlignment = .center
         nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
         nameLabel.textColor = Style.default.black
-        
+
       }
-      
+
       initialStyle: do {
-        
+
         nameLabel.alpha = 0.3
       }
     }
-    
+
     public required init?(coder aDecoder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
-    
+
     open override func prepareForReuse() {
       super.prepareForReuse()
       imageView.image = nil
       nameLabel.text = nil
       _isSelected = false
     }
-    
+
     open var _isSelected: Bool = false {
       didSet {
         nameLabel.alpha = _isSelected ? 1 : 0.3
       }
     }
-    
+
     open override var isHighlighted: Bool {
       get {
-        
+
         return super.isHighlighted
       }
       set {
-        
+
         super.isHighlighted = newValue
-        
+
         // FIXME: Apply highlight animation
         // Currently animation disabled.
         // These animations cause flicker in ImageView
         /*
          if newValue {
-         
+
          UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
          self.contentView.transform = .init(scaleX: 0.95, y: 0.95)
          }, completion: { (finish) -> Void in
-         
+
          })
-         
+
          } else {
-         
+
          UIView.animate(withDuration: 0.5, delay: 0.05, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
          self.contentView.transform = .identity
          }, completion: { (finish) -> Void in
-         
+
          })
          }
-         
+
          */
-        
+
       }
     }
   }
-  
+
   open class NormalCell : CellBase {
-    
+
     static let identifier = "me.muukii.PixelEditor.FilterCellNormal"
 
     open func set(originalImage: CIImage) {
-      
+
       nameLabel.text = L10n.normal
       imageView.image = UIImage(ciImage: originalImage, scale: contentScaleFactor, orientation: .up)
     }
-    
+
   }
 
   open class SelectionCell : CellBase {
 
     static let identifier = "me.muukii.PixelEditor.FilterCell"
-    
+
     open var preview: PreviewFilterColorCube?
 
     open func set(preview: PreviewFilterColorCube) {
-      
+
       self.preview = preview
 
       nameLabel.text = preview.filter.name

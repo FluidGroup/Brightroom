@@ -78,10 +78,10 @@ public struct FilterHighlightShadowTint: Filtering, MultipleParameters, Equatabl
     }
 
     public var filterChain: FilterChain {
-        
+
         let highlightTintColor = CIColor(color: self.highlightTintColor?.withAlphaComponent(CGFloat(self.highlightTintAmount)) ?? UIColor.clear)
         let shadowTintColor = CIColor(color: self.shadowTintColor?.withAlphaComponent(CGFloat(self.shadowTintAmount)) ?? UIColor.clear)
-        
+
         return LightRoom.ExternalFilter.HighlightShadowTint(
             highlightTintColor: highlightTintColor,
             shadowTintColor: shadowTintColor)
@@ -98,18 +98,18 @@ public struct FilterHighlightShadowTint: Filtering, MultipleParameters, Equatabl
         }
 
         let highlightTintColor = UIColor(red: CGFloat(highlightTintColorRed), green: CGFloat(highlightTintColorGreen), blue: CGFloat(highlightTintColorBlue), alpha: CGFloat(highlightTintColorAlpha))
-        
+
 
         guard let shadowTintColorRed = jayson[Keys.shadowTintColorRed].double,
             let shadowTintColorGreen = jayson[Keys.shadowTintColorGreen].double,
             let shadowTintColorBlue = jayson[Keys.shadowTintColorBlue].double,
             let shadowTintColorAlpha = jayson[Keys.shadowTintColorAlpha].double else {
-                
+
                 return nil
         }
 
         let shadowTintColor = UIColor(red: CGFloat(shadowTintColorRed), green: CGFloat(shadowTintColorGreen), blue: CGFloat(shadowTintColorBlue), alpha: CGFloat(shadowTintColorAlpha))
-        
+
 
         guard let highlightTintAmount = jayson[Keys.highlightTintAmout].double, let shadowTintAmount = jayson[Keys.shadowTintAmount].double else {
             return nil

@@ -25,7 +25,7 @@ import PixelEngine
 import PixelEditor
 
 extension Collection where Index == Int {
-  
+
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
     var buffer = [U?].init(repeating: nil, count: count)
     let lock = NSLock()
@@ -44,14 +44,14 @@ extension Collection where Index == Int {
 
 extension ColorCubeStorage {
   static func loadToDefault() {
-    
+
     do {
-      
+
       try autoreleasepool {
         let bundle = Bundle.main
         let rootPath = bundle.bundlePath as NSString
         let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-        
+
         let filters = fileList
           .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
           .sorted()
@@ -70,12 +70,12 @@ extension ColorCubeStorage {
               dimension: 64
             )
         }
-        
+
         self.default.filters = filters
       }
-      
+
     } catch {
-      
+
       assertionFailure("\(error)")
     }
   }

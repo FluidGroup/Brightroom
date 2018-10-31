@@ -27,7 +27,7 @@ open class NavigationView : UIStackView {
 
   private let saveButton = UIButton(type: .system)
   private let cancelButton = UIButton(type: .system)
-  
+
   private let feedbacker = UIImpactFeedbackGenerator(style: .light)
 
   public init() {

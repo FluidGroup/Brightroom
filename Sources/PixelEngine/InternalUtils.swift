@@ -26,7 +26,7 @@ public enum RequireError: Swift.Error {
 }
 
 extension Optional {
-  
+
   @inline(__always)
   func require(_ failureDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) throws -> Wrapped {
     switch self {
@@ -36,7 +36,7 @@ extension Optional {
       return value
     }
   }
-  
+
   @inline(__always)
   func unsafeRequire(_ failureDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) -> Wrapped {
     switch self {

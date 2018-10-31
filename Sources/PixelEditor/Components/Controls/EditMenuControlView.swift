@@ -24,7 +24,7 @@ import Foundation
 import PixelEngine
 
 open class EditMenuControlBase : ControlBase {
-  
+
   public required override init(context: PixelEditContext) {
     super.init(context: context)
   }
@@ -35,79 +35,79 @@ open class EditMenuControl : EditMenuControlBase {
   public let contentView = UIView()
   public let itemsView = UIStackView()
   public let scrollView = UIScrollView()
-  
+
   public lazy var adjustmentButton: ButtonView = {
     let button = ButtonView(name: L10n.editAdjustment, image: UIImage(named: "adjustment", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var maskButton: ButtonView = {
     let button = ButtonView(name: L10n.editMask, image: UIImage(named: "mask", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(masking), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var exposureButton: ButtonView = {
     let button = ButtonView(name: L10n.editBrightness, image: UIImage(named: "brightness", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var gaussianBlurButton: ButtonView = {
     let button = ButtonView(name: L10n.editBlur, image: UIImage(named: "blur", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(blur), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var contrastButton: ButtonView = {
     let button = ButtonView(name: L10n.editContrast, image: UIImage(named: "contrast", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var temperatureButton: ButtonView = {
     let button = ButtonView(name: L10n.editTemperature, image: UIImage(named: "temperature", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var saturationButton: ButtonView = {
     let button = ButtonView(name: L10n.editSaturation, image: UIImage(named: "saturation", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var highlightsButton: ButtonView = {
     let button = ButtonView(name: L10n.editHighlights, image: UIImage(named: "highlights", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var shadowsButton: ButtonView = {
     let button = ButtonView(name: L10n.editShadows, image: UIImage(named: "shadows", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var vignetteButton: ButtonView = {
     let button = ButtonView(name: L10n.editVignette, image: UIImage(named: "vignette", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var fadeButton: ButtonView = {
     let button = ButtonView(name: L10n.editFade, image: UIImage(named: "fade", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(fade), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var sharpenButton: ButtonView = {
     let button = ButtonView(name: L10n.editSharpen, image: UIImage(named: "sharpen", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
     return button
   }()
-  
+
   public lazy var clarityButton: ButtonView = {
     let button = ButtonView(name: L10n.editClarity, image: UIImage(named: "structure", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(clarity), for: .touchUpInside)
@@ -174,7 +174,7 @@ open class EditMenuControl : EditMenuControlBase {
     }
 
     item: do {
-      
+
       let buttons: [ButtonView] = [
         adjustmentButton,
         maskButton,
@@ -190,14 +190,14 @@ open class EditMenuControl : EditMenuControlBase {
         sharpenButton,
         gaussianBlurButton,
       ]
-      
+
       for button in buttons {
-        
+
         itemsView.addArrangedSubview(button)
       }
-      
+
        /*
-       
+
        color: do {
        let button = ButtonView(name: TODOL10n("Color"), image: .init())
        button.addTarget(self, action: #selector(color), for: .touchUpInside)
@@ -211,9 +211,9 @@ open class EditMenuControl : EditMenuControlBase {
 
     }
   }
-  
+
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    
+
     maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
 
     contrastButton.hasChanges = edit.filters.contrast != nil
@@ -227,7 +227,7 @@ open class EditMenuControl : EditMenuControlBase {
     fadeButton.hasChanges = edit.filters.fade != nil
     sharpenButton.hasChanges = edit.filters.sharpen != nil
     clarityButton.hasChanges = edit.filters.unsharpMask != nil
-    
+
   }
 
   @objc
@@ -249,7 +249,7 @@ open class EditMenuControl : EditMenuControlBase {
 
   @objc
   private func brightness() {
-    
+
     push(context.options.classes.control.exposureControl.init(context: context), animated: true)
   }
 
@@ -313,11 +313,11 @@ open class EditMenuControl : EditMenuControlBase {
     public let nameLabel = UILabel()
 
     public let imageView = UIImageView()
-    
+
     public let changesMarkView = UIView()
-    
+
     private let feedbackGenerator = UISelectionFeedbackGenerator()
-    
+
     public var hasChanges: Bool = false {
       didSet {
         guard oldValue != hasChanges else { return }
@@ -329,7 +329,7 @@ open class EditMenuControl : EditMenuControlBase {
       super.init(frame: .zero)
 
       layout: do {
-        
+
         addSubview(nameLabel)
         addSubview(imageView)
         addSubview(changesMarkView)
@@ -339,24 +339,24 @@ open class EditMenuControl : EditMenuControlBase {
         changesMarkView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-          
+
           changesMarkView.topAnchor.constraint(equalTo: topAnchor, constant: 0),
           changesMarkView.centerXAnchor.constraint(equalTo: centerXAnchor),
           changesMarkView.widthAnchor.constraint(equalToConstant: 4),
           changesMarkView.heightAnchor.constraint(equalToConstant: 4),
-          
+
           imageView.topAnchor.constraint(equalTo: changesMarkView.bottomAnchor, constant: 8),
           imageView.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -4),
           imageView.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 4),
           imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
           imageView.widthAnchor.constraint(equalToConstant: 50),
           imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
-          
+
           nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 12),
           nameLabel.rightAnchor.constraint(equalTo: rightAnchor, constant: 0),
           nameLabel.leftAnchor.constraint(equalTo: leftAnchor, constant: 0),
           nameLabel.bottomAnchor.constraint(equalTo: bottomAnchor),
-          
+
           ])
       }
 
@@ -367,7 +367,7 @@ open class EditMenuControl : EditMenuControlBase {
         nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
         nameLabel.textColor = Style.default.black
         nameLabel.textAlignment = .center
-        
+
         changesMarkView.layer.cornerRadius = 2
         changesMarkView.backgroundColor = Style.default.black
         changesMarkView.isHidden = true
@@ -404,7 +404,7 @@ open class EditMenuControl : EditMenuControlBase {
         )
       }
     }
-    
+
     @objc private func didTapSelf() {
       feedbackGenerator.selectionChanged()
     }

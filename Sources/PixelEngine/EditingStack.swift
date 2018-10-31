@@ -41,7 +41,7 @@ open class EditingStack {
   public var availableColorCubeFilters: [PreviewFilterColorCube] = []
 
   public var cubeFilterPreviewSourceImage: CIImage!
-  
+
   public var previewImage: CIImage?
 
   public var originalPreviewImage: CIImage? {
@@ -79,7 +79,7 @@ open class EditingStack {
       EngineLog.debug("Edits changed counnt -> \(edits.count)")
     }
   }
-  
+
   private let queue = DispatchQueue(
     label: "me.muukii.PixelEngine",
     qos: .default,
@@ -103,11 +103,11 @@ open class EditingStack {
     self.adjustmentImage = source.image
 
     self.edits = [.init()]
-    
+
     initialCrop()
     commit()
     removeAllHistory()
-    
+
     precondition(originalPreviewImage != nil, "originalPreviewImage is nil")
 
     updatePreviewFilterSizeImage: do {
@@ -121,7 +121,7 @@ open class EditingStack {
         ),
         from: originalPreviewImage!
         )!
-      
+
       cubeFilterPreviewSourceImage = smallSizeImage
         .transformed(
           by: .init(
@@ -133,7 +133,7 @@ open class EditingStack {
     set(availableColorCubeFilters: colorCubeStorage.filters)
 
   }
-  
+
   open func initialCrop() {
      setAdjustment(cropRect: source.image.extent)
   }
@@ -219,13 +219,13 @@ open class EditingStack {
   }
 
   public func set(availableColorCubeFilters: [FilterColorCube]) {
-    
+
     self.availableColorCubeFilters = availableColorCubeFilters.concurrentMap { item in
       let r = PreviewFilterColorCube.init(sourceImage: cubeFilterPreviewSourceImage, filter: item)
       r.preheat()
       return r
     }
-    
+
   }
 
   public func makeRenderer() -> ImageRenderer {
@@ -265,17 +265,17 @@ open class EditingStack {
       previewImage = nil
       return
     }
-    
+
     let filters = self.currentEdit
       .makeFilters()
-    
+
     let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
       filter.apply(to: image, sourceImage: sourceImage)
     }
-    
+
     self.previewImage = result
     self.delegate?.editingStack(self, didChangeCurrentEdit: self.currentEdit)
-    
+
     // TODO: Ignore vignette and blur (convolutions)
 //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
 //      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
@@ -288,12 +288,12 @@ open class EditingStack {
 open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
-    
+
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
       boundingRect: source.image.extent
     )
-    
+
     setAdjustment(cropRect: cropRect)
   }
 }
@@ -311,29 +311,29 @@ extension EditingStack {
   public struct Edit : Equatable {
 
     public struct Filters : Equatable {
-      
+
       public var colorCube: FilterColorCube?
-      
+
       public var brightness: FilterBrightness?
       public var contrast: FilterContrast?
       public var saturation: FilterSaturation?
       public var exposure: FilterExposure?
-      
+
       public var highlights: FilterHighlights?
       public var shadows: FilterShadows?
-      
+
       public var temperature: FilterTemperature?
-      
+
       public var sharpen: FilterSharpen?
       public var gaussianBlur: FilterGaussianBlur?
       public var unsharpMask: FilterUnsharpMask?
-      
+
       public var vignette: FilterVignette?
       public var fade: FilterFade?
 
       func makeFilters() -> [Filtering] {
         return ([
-          
+
           // Before
           exposure,
           brightness,
@@ -343,7 +343,7 @@ extension EditingStack {
           saturation,
           contrast,
           colorCube,
-          
+
           // After
           sharpen,
           unsharpMask,
@@ -368,19 +368,19 @@ extension EditingStack {
 }
 
 extension CIImage {
-  
+
   fileprivate func insertingIntermediateIfCanUse() -> CIImage {
     if #available(iOS 12.0, *) {
       return self.insertingIntermediate(cache: true)
     } else {
       return self
     }
-    
+
   }
 }
 
 extension Collection where Index == Int {
-  
+
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
     var buffer = [U?].init(repeating: nil, count: count)
     let lock = NSLock()

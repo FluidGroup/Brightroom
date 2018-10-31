@@ -24,13 +24,13 @@ import PixelEngine
 
 
 public final class StepSlider : UIControl {
-  
+
   public enum Mode {
     case plus
     case plusAndMinus
     case minus
   }
-  
+
   public var mode: Mode = .plusAndMinus {
     didSet {
       setupValues()
@@ -88,7 +88,7 @@ public final class StepSlider : UIControl {
   }
 
   private func setupValues() {
-    
+
     switch mode {
     case .plus:
       maxStep = 100
@@ -100,7 +100,7 @@ public final class StepSlider : UIControl {
       maxStep = 0
       minStep = -100
     }
-    
+
     internalSlider.dotLocation = mode
 
     if minStep < 0 {
@@ -157,7 +157,7 @@ public final class StepSlider : UIControl {
             .progress(start: Double(0), end: Double(maxStep))
             .transition(start: 0, end: max)
             .value
-        
+
       } else {
         return
           CalcBox.init(Double(step))
