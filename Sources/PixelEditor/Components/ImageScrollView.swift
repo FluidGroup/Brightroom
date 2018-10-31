@@ -8,6 +8,12 @@
 
 import UIKit
 
+extension CGRect {
+    var center: CGPoint {
+        return .init(x: midX, y: midY)
+    }
+}
+
 open class ImageScrollView: UIScrollView {
 
   @objc public enum ScaleMode: Int {
@@ -30,19 +36,19 @@ open class ImageScrollView: UIScrollView {
   @objc public private(set) var zoomView: UIImageView? = nil
 
   var imageSize: CGSize = CGSize.zero
-  private var pointToCenterAfterResize: CGPoint = CGPoint.zero
+  private var pointToCenterAfterResize: CGPoint = .zero
   private var scaleToRestoreAfterResize: CGFloat = 1.0
   var maxScaleFromMinScale: CGFloat = 3.0
 
   override open var frame: CGRect {
     willSet {
-      if frame.equalTo(newValue) == false && newValue.equalTo(CGRect.zero) == false && imageSize.equalTo(CGSize.zero) == false {
+      if frame != newValue && newValue != .zero && imageSize != .zero {
         prepareToResize()
       }
     }
 
     didSet {
-      if frame.equalTo(oldValue) == false && frame.equalTo(CGRect.zero) == false && imageSize.equalTo(CGSize.zero) == false {
+      if frame != oldValue && frame != .zero && imageSize != .zero {
         recoverFromResizing()
       }
     }
@@ -68,10 +74,10 @@ open class ImageScrollView: UIScrollView {
     showsVerticalScrollIndicator = false
     showsHorizontalScrollIndicator = false
     bouncesZoom = true
-    decelerationRate = UIScrollView.DecelerationRate.fast
+    decelerationRate = .fast
     delegate = self
 
-    NotificationCenter.default.addObserver(self, selector: #selector(ImageScrollView.changeOrientationNotification), name: UIDevice.orientationDidChangeNotification, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(changeOrientationNotification), name: UIDevice.orientationDidChangeNotification, object: nil)
   }
 
   @objc public func adjustFrameToCenter() {
@@ -102,14 +108,13 @@ open class ImageScrollView: UIScrollView {
   }
 
   private func prepareToResize() {
-    let boundsCenter = CGPoint(x: bounds.midX, y: bounds.midY)
-    pointToCenterAfterResize = convert(boundsCenter, to: zoomView)
+    pointToCenterAfterResize = convert(bounds.center, to: zoomView)
 
     scaleToRestoreAfterResize = zoomScale
 
     // If we're at the minimum zoom scale, preserve that by returning 0, which will be converted to the minimum
     // allowable scale when the scale is restored.
-    if scaleToRestoreAfterResize <= minimumZoomScale + CGFloat(Float.ulpOfOne) {
+    if scaleToRestoreAfterResize <= minimumZoomScale + .ulpOfOne {
       scaleToRestoreAfterResize = 0
     }
   }
@@ -147,7 +152,7 @@ open class ImageScrollView: UIScrollView {
   }
 
   private func minimumContentOffset() -> CGPoint {
-    return CGPoint.zero
+    return .zero
   }
 
   // MARK: - Display image
@@ -177,14 +182,14 @@ open class ImageScrollView: UIScrollView {
 
     switch initialOffset {
     case .begining:
-      contentOffset =  CGPoint.zero
+      contentOffset = .zero
     case .center:
       let xOffset = contentSize.width < bounds.width ? 0 : (contentSize.width - bounds.width)/2
       let yOffset = contentSize.height < bounds.height ? 0 : (contentSize.height - bounds.height)/2
 
       switch imageContentMode {
       case .aspectFit:
-        contentOffset =  CGPoint.zero
+        contentOffset = .zero
       case .aspectFill:
         contentOffset = CGPoint(x: xOffset, y: yOffset)
       case .heightFill:

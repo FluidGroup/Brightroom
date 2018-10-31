@@ -261,10 +261,7 @@ private final class _StepSlider: UISlider {
   }
 
   override func draw(_ rect: CGRect) {
-
-    guard let context = UIGraphicsGetCurrentContext() else {
-      return
-    }
+    guard let context = UIGraphicsGetCurrentContext() else { return }
 
     let scale = contentScaleFactor
 
