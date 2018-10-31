@@ -127,14 +127,14 @@ public final class StepSlider : UIControl {
     } else {
       if value > 0 {
         internalSlider.value = Float(
-          CalcBox.init(value)
+          CalcBox(value)
             .progress(start: 0, end: max)
             .transition(start: offset, end: Double(internalSlider.maximumValue))
             .value
         )
       } else {
         internalSlider.value = Float(
-          CalcBox.init(value)
+          CalcBox(value)
             .progress(start: 0, end: min)
             .transition(start: -offset, end: Double(internalSlider.minimumValue))
             .value
@@ -153,14 +153,14 @@ public final class StepSlider : UIControl {
     } else {
       if step > 0 {
         return
-          CalcBox.init(Double(step))
+          CalcBox(Double(step))
             .progress(start: Double(0), end: Double(maxStep))
             .transition(start: 0, end: max)
             .value
 
       } else {
         return
-          CalcBox.init(Double(step))
+          CalcBox(Double(step))
             .progress(start: Double(0), end: Double(minStep))
             .transition(start: 0, end: min)
             .value
@@ -278,8 +278,8 @@ private final class _StepSlider: UISlider {
 
     line: do {
       let path = UIBezierPath()
-      path.move(to: CGPoint.init(x: 10, y: bounds.midY))
-      path.addLine(to: CGPoint.init(x: bounds.maxX - 10, y: bounds.midY))
+      path.move(to: CGPoint(x: 10, y: bounds.midY))
+      path.addLine(to: CGPoint(x: bounds.maxX - 10, y: bounds.midY))
       path.lineWidth = 1
       path.stroke()
     }

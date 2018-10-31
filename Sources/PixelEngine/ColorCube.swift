@@ -150,7 +150,7 @@ public enum ColorCube {
 
     free(bitmap)
 
-    let data = Data.init(bytes: array, count: dataSize)
+    let data = Data(bytes: array, count: dataSize)
     return data
   }
 }

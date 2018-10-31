@@ -85,9 +85,9 @@ public final class ImageRenderer {
 
     let format: UIGraphicsImageRendererFormat
     if #available(iOS 11.0, *) {
-      format = UIGraphicsImageRendererFormat.preferred()
+      format = .preferred()
     } else {
-      format = UIGraphicsImageRendererFormat.default()
+      format = .default()
     }
     format.scale = 1
     format.opaque = true
@@ -99,7 +99,7 @@ public final class ImageRenderer {
 
     let image = autoreleasepool { () -> UIImage in
 
-      UIGraphicsImageRenderer.init(size: canvasSize, format: format)
+      UIGraphicsImageRenderer(size: canvasSize, format: format)
         .image { c in
 
           let cgContext = UIGraphicsGetCurrentContext()!

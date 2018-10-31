@@ -59,7 +59,7 @@ final class EditorViewController : UIViewController {
 
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
 
-    let controller = PixelEditViewController.init(editingStack: stack)
+    let controller = PixelEditViewController(editingStack: stack)
     controller.delegate = self
 
     navigationController?.pushViewController(controller, animated: true)
@@ -79,7 +79,7 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
 
     picker.dismiss(animated: true, completion: nil)
 
-    let controller = PixelEditViewController.init(
+    let controller = PixelEditViewController(
       image: image
     )
 

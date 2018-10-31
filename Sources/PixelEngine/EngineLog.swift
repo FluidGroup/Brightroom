@@ -25,8 +25,8 @@ import os.log
 
 enum EngineLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
-   private static let queue = DispatchQueue.init(label: "me.muukii.PixelEngine.Log")
+  private static let osLog = OSLog(subsystem: "PixelEngine", category: "Engine")
+   private static let queue = DispatchQueue(label: "me.muukii.PixelEngine.Log")
 
   static func debug(_ object: Any...) {
 

@@ -23,11 +23,10 @@ import Foundation
 public struct OvalBrush : Equatable {
 
   public static func == (lhs: OvalBrush, rhs: OvalBrush) -> Bool {
-    guard lhs.color == rhs.color else { return false }
-    guard lhs.width == rhs.width else { return false }
-    guard lhs.alpha == rhs.alpha else { return false }
-    guard lhs.blendMode == rhs.blendMode else { return false }
-    return true
+    return lhs.color == rhs.color &&
+        lhs.width == rhs.width &&
+        lhs.alpha == rhs.alpha &&
+        lhs.blendMode == rhs.blendMode
   }
 
   // MARK: - Properties

@@ -216,13 +216,13 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
 
     if let current = current, let index = previews.firstIndex(where: { $0.filter == current }) {
       collectionView.scrollToItem(
-        at: IndexPath.init(item: index, section: Section.selections.rawValue),
+        at: IndexPath(item: index, section: Section.selections.rawValue),
         at: .centeredHorizontally,
         animated: animated
       )
     } else {
       collectionView.scrollToItem(
-        at: IndexPath.init(item: 0, section: Section.original.rawValue),
+        at: IndexPath(item: 0, section: Section.original.rawValue),
         at: .centeredHorizontally,
         animated: animated
       )

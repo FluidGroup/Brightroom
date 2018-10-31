@@ -25,8 +25,8 @@ import os.log
 
 enum EditorLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEditor", category: "Editor")
-  private static let queue = DispatchQueue.init(label: "me.muukii.PixelEditor.Log")
+  private static let osLog = OSLog(subsystem: "PixelEditor", category: "Editor")
+  private static let queue = DispatchQueue(label: "me.muukii.PixelEditor.Log")
 
   static func debug(_ object: Any...) {
 

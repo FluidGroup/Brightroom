@@ -382,7 +382,7 @@ extension CIImage {
 extension Collection where Index == Int {
 
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
-    var buffer = [U?].init(repeating: nil, count: count)
+    var buffer = [U?](repeating: nil, count: count)
     let lock = NSLock()
     DispatchQueue.concurrentPerform(iterations: count) { i in
       let e = self[i]

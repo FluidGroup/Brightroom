@@ -47,7 +47,7 @@ public class GLImageView : GLKView, HardwareImageViewType {
     coreImageContext = CIContext(eaglContext: eaglContext, options: [:])
 
     super.init(frame: frame, context: eaglContext)
-    backgroundColor = UIColor.clear
+    backgroundColor = .clear
     drawableDepthFormat = .format24
     layer.contentsScale = UIScreen.main.scale
   }

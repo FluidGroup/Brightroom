@@ -70,9 +70,9 @@ public enum ImageTool {
 
           let format: UIGraphicsImageRendererFormat
           if #available(iOS 11.0, *) {
-            format = UIGraphicsImageRendererFormat.preferred()
+            format = .preferred()
           } else {
-            format = UIGraphicsImageRendererFormat.default()
+            format = .default()
           }
           format.scale = 1
           format.opaque = true
@@ -82,7 +82,7 @@ public enum ImageTool {
             format.prefersExtendedRange = false
           }
 
-          let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
+          let uiImage = UIGraphicsImageRenderer(size: targetSize, format: format)
             .image { c in
 
               autoreleasepool {
