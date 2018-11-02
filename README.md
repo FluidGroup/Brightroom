@@ -20,13 +20,13 @@ Image editor and engine using CoreImage
 ### Performance
 
 * [x] ✈️Pretty Good
-* [ ] 🚀Blazing Fast
+* [ ] 🚀Blazing Fast (🌀Anyone help us!)
 
 ### Adjustment
 
 * [x] Crop
-* [ ] Straighten
-* [ ] Perspective
+* [ ] Straighten (🌀Anyone help us!)
+* [ ] Perspective (🌀Anyone help us!)
 
 ### Filter
 
@@ -54,7 +54,7 @@ And also, here is [interesting article](https://medium.com/the-bergen-company/re
 * [x] Fade
 * [x] Sharpen
 * [x] Clarity
-* [ ] HLS
+* [ ] HLS (🌀Anyone help us!)
 
 ## Requirements
 
