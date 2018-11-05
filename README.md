@@ -56,6 +56,11 @@ And also, here is [interesting article](https://medium.com/the-bergen-company/re
 * [x] Clarity
 * [ ] HLS (🌀Anyone help us!)
 
+#### Other
+
+* [Restore editing](#restore-editing)
+* [Customize Control-UI](#customize-control-ui)
+
 ## Requirements
 
 * Swift 4.2 (Xcode10+)
