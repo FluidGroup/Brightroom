@@ -40,6 +40,7 @@ public struct L10nStorage {
   public var editBlur = "Blur"
   public var editTemperature = "Temperature"
   public var editBrightness = "Brightness"
+  public var editColor = "Color"
   public var editVignette = "Vignette"
   public var editFade = "Fade"
   public var editClarity = "Clarity"

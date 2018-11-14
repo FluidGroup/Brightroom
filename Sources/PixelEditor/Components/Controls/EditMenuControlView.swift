@@ -54,6 +54,12 @@ open class EditMenuControl : EditMenuControlBase {
     return button
   }()
   
+  public lazy var colorButton: ButtonView = {
+    let button = ButtonView(name: L10n.editColor, image: UIImage(named: "color", in: bundle, compatibleWith: nil)!)
+    button.addTarget(self, action: #selector(color), for: .touchUpInside)
+    return button
+  }()
+  
   public lazy var gaussianBlurButton: ButtonView = {
     let button = ButtonView(name: L10n.editBlur, image: UIImage(named: "blur", in: bundle, compatibleWith: nil)!)
     button.addTarget(self, action: #selector(blur), for: .touchUpInside)
@@ -179,6 +185,7 @@ open class EditMenuControl : EditMenuControlBase {
         adjustmentButton,
         maskButton,
         exposureButton,
+        colorButton,
         contrastButton,
         clarityButton,
         temperatureButton,
@@ -218,6 +225,7 @@ open class EditMenuControl : EditMenuControlBase {
 
     contrastButton.hasChanges = edit.filters.contrast != nil
     exposureButton.hasChanges = edit.filters.exposure != nil
+    colorButton.hasChanges = edit.filters.color != nil
     temperatureButton.hasChanges = edit.filters.temperature != nil
     saturationButton.hasChanges = edit.filters.saturation != nil
     highlightsButton.hasChanges = edit.filters.highlights != nil
@@ -280,7 +288,7 @@ open class EditMenuControl : EditMenuControlBase {
 
   @objc
   private func color() {
-
+    push(context.options.classes.control.colorControl.init(context: context), animated: true)
   }
 
   @objc

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		27D530D48A4C829D53E9C773 /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */; };
+		3028DE5B219CBC5E0042250C /* FilterColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3028DE5A219CBC5E0042250C /* FilterColor.swift */; };
+		3028DE5E219CBF5E0042250C /* ColorControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3028DE5C219CBD3C0042250C /* ColorControl.swift */; };
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
 		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
@@ -150,6 +152,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3028DE5A219CBC5E0042250C /* FilterColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterColor.swift; sourceTree = "<group>"; };
+		3028DE5C219CBD3C0042250C /* ColorControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorControl.swift; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
@@ -305,6 +309,7 @@
 		4B1E94B4217632B300E9DFB8 /* Filter */ = {
 			isa = PBXGroup;
 			children = (
+				3028DE5A219CBC5E0042250C /* FilterColor.swift */,
 				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
 				4B01C55E217F6CD800C50EDE /* FilterExposure.swift */,
 				4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */,
@@ -352,6 +357,7 @@
 				4B0BDCA0217D663D001098B9 /* ClarityControl.swift */,
 				4B0BDC9E217D6567001098B9 /* FadeControl.swift */,
 				4B0BDCA2217D676D001098B9 /* SharpenControl.swift */,
+				3028DE5C219CBD3C0042250C /* ColorControl.swift */,
 			);
 			path = FilterControl;
 			sourceTree = "<group>";
@@ -794,6 +800,7 @@
 				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
 				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
+				3028DE5E219CBF5E0042250C /* ColorControl.swift in Sources */,
 				4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */,
 				4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */,
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
@@ -844,6 +851,7 @@
 				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
 				4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */,
 				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,
+				3028DE5B219CBC5E0042250C /* FilterColor.swift in Sources */,
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,
 				4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */,
 				4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */,

@@ -37,6 +37,7 @@ extension Options {
       public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
       public var rootControl: RootControlBase.Type = RootControl.self
       public var exposureControl: ExposureControlBase.Type = ExposureControl.self
+      public var colorControl: ColorControlBase.Type = ColorControl.self
       public var gaussianBlurControl: GaussianBlurControlBase.Type = GaussianBlurControl.self
       public var saturationControl: SaturationControlBase.Type = SaturationControl.self
       public var contrastControl: ContrastControlBase.Type = ContrastControl.self
