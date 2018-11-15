@@ -11,12 +11,16 @@ import CoreImage
 
 public struct FilterColor: Filtering, Equatable, Codable {
   
-  public static let range: ParameterRange<Double, FilterContrast> = .init(min: -0.18, max: 0.18)
+  public static let range: ParameterRange<Double, FilterColor> = .init(min: -180, max: 180)
   
   public var value: Double = 0
   
   public init() {
     
+  }
+  
+  func degreesToRadians(_ degrees: Double) -> Double {
+    return Double(Int(degrees)) * .pi / 180
   }
   
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
@@ -26,8 +30,8 @@ public struct FilterColor: Filtering, Equatable, Codable {
         .applyingFilter(
           "CIHueAdjust",
           parameters: [
-            kCIInputAngleKey: 1 + value,
-            ]
+            kCIInputAngleKey: degreesToRadians(value),
+          ]
     )
   }
   

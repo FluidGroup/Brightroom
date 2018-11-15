@@ -64,16 +64,17 @@ open class ColorControl : ColorControlBase {
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
     
-    slider.set(value: edit.filters.exposure?.value ?? 0, in: FilterExposure.range)
+    slider.set(value: edit.filters.color?.value ?? 0, in: FilterColor.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterExposure.range)
+    let value = slider.transition(in: FilterColor.range)
+    
     guard value != 0 else {
-      context.action(.setFilter({ $0.exposure = nil }))
+      context.action(.setFilter({ $0.color = nil }))
       return
     }
     var f = FilterColor()
