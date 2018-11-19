@@ -182,10 +182,10 @@ open class EditMenuControl : EditMenuControlBase {
     item: do {
       
       let buttons: [ButtonView] = [
+        colorButton,
         adjustmentButton,
         maskButton,
         exposureButton,
-        colorButton,
         contrastButton,
         clarityButton,
         temperatureButton,
