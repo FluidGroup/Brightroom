@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		27D530D48A4C829D53E9C773 /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */; };
-		3028DE5B219CBC5E0042250C /* FilterColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3028DE5A219CBC5E0042250C /* FilterColor.swift */; };
 		3028DE5E219CBF5E0042250C /* ColorControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3028DE5C219CBD3C0042250C /* ColorControl.swift */; };
 		30D47D2321A2FE9B002B5412 /* ColorShadowsControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D47D1F21A2FE14002B5412 /* ColorShadowsControl.swift */; };
 		30D47D2421A2FEAA002B5412 /* ColorHighlightsControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D47D2121A2FE1F002B5412 /* ColorHighlightsControl.swift */; };
@@ -156,7 +155,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3028DE5A219CBC5E0042250C /* FilterColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterColor.swift; sourceTree = "<group>"; };
 		3028DE5C219CBD3C0042250C /* ColorControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorControl.swift; sourceTree = "<group>"; };
 		30D47D1F21A2FE14002B5412 /* ColorShadowsControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorShadowsControl.swift; sourceTree = "<group>"; };
 		30D47D2121A2FE1F002B5412 /* ColorHighlightsControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorHighlightsControl.swift; sourceTree = "<group>"; };
@@ -325,7 +323,6 @@
 		4B1E94B4217632B300E9DFB8 /* Filter */ = {
 			isa = PBXGroup;
 			children = (
-				3028DE5A219CBC5E0042250C /* FilterColor.swift */,
 				4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */,
 				4B01C55E217F6CD800C50EDE /* FilterExposure.swift */,
 				4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */,
@@ -875,7 +872,6 @@
 				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
 				4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */,
 				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,
-				3028DE5B219CBC5E0042250C /* FilterColor.swift in Sources */,
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,
 				4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */,
 				4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */,

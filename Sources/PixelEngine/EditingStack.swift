@@ -314,7 +314,7 @@ extension EditingStack {
       
       public var colorCube: FilterColorCube?
       
-      public var color: FilterColor?
+      public var color: FilterHighlightShadowTint?
       public var brightness: FilterBrightness?
       public var contrast: FilterContrast?
       public var saturation: FilterSaturation?
