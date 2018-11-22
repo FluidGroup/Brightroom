@@ -9,7 +9,7 @@
 import Foundation
 import UIKit
 
-extension UIColor {
+public extension UIColor {
   convenience init(hex: UInt32) {
     let rgbaValue = hex
     let red   = CGFloat((rgbaValue >> 24) & 0xff) / 255.0

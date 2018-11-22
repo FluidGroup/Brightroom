@@ -50,7 +50,7 @@ open class ColorControlView : ColorControlViewBase {
   
   private let containerView = UIView()
   
-  public var shadowsColorControl = ColorSelectButtons(frame: .zero)
+  public var shadowsColorControl:ColorShadowsControlBase!
   
   public var highlightsColorControl:ColorHighlightsControlBase!
   
@@ -65,6 +65,7 @@ open class ColorControlView : ColorControlViewBase {
     
     backgroundColor = Style.default.control.backgroundColor
     
+    shadowsColorControl = ColorShadowsControl(context: context)
     highlightsColorControl = ColorHighlightsControl(context: context)
 
     navigationView.didTapCancelButton = { [weak self] in
@@ -114,8 +115,6 @@ open class ColorControlView : ColorControlViewBase {
     }
     
     body: do {
-      shadowsColorControl.colors = FilterHighlightShadowTint.HighlightTintColors.allCases.map { $0.rawValue }
-      
       shadowsButton.backgroundColor = UIColor.black.withAlphaComponent(0.1)
       highlightsButton.backgroundColor = UIColor.black.withAlphaComponent(0.1)
       
@@ -188,7 +187,7 @@ open class ColorControlView : ColorControlViewBase {
       shadowsColorControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
       containerView.addSubview(shadowsColorControl)
-//      subscribeChangedEdit(to: shadowsColorControl)
+      subscribeChangedEdit(to: shadowsColorControl)
 
       shadowsButton.isSelected = true
 

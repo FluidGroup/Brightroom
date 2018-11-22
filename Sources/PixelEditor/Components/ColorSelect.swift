@@ -11,7 +11,7 @@ import UIKit
 
 public class ColorSelectButtons : UIControl {
   
-  public var colors: [ColorName] = [] {
+  public var colors: [UIColor] = [] {
     didSet {
       setupButtons()
     }
@@ -57,9 +57,10 @@ public class ColorSelectButtons : UIControl {
       contentView.removeArrangedSubview(view)
     }
     
-    for color in colors {
-      let button = ColorSelectItem(type: .system)
-      button.color = UIColor(hex: color)
+    for (key, color) in colors.enumerated() {
+      let button = ColorSelectItem(type: .custom)
+      button.color = color
+      button.isSelected = key == step
       button.addTarget(self, action: #selector(__didChangeValue(_:)), for: .touchUpInside)
       contentView.addArrangedSubview(button)
     }
@@ -122,19 +123,44 @@ public class ColorSelectItem: UIButton {
     layerContext.scaleBy(x: scale, y: scale)
     
     if let color = self.color {
-      color.setStroke()
-      color.setFill()
+      let displayColor = color != .clear ? color : .black
+      displayColor.setStroke()
+      displayColor.setFill()
     }
     
     line: do {
-      let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX - 10 + 3, y: bounds.midY - 10 + 3), size: .init(width: 20, height: 20)))
-      path.lineWidth = 2
-      path.stroke()
+      if isSelected {
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX - 10 + 3, y: bounds.midY - 10 + 3), size: .init(width: 20, height: 20)))
+        path.lineWidth = 2
+        path.stroke()
+      }
     }
     
     dot: do {
-      let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX, y: bounds.midY), size: .init(width: 6, height: 6)))
-      path.fill()
+      if isSelected {
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX, y: bounds.midY), size: .init(width: 6, height: 6)))
+        path.fill()
+      }
+    }
+
+    circle: do {
+      if !isSelected {
+        let path = UIBezierPath(ovalIn: .init(origin: .init(x: bounds.midX - 10 + 4, y: bounds.midY - 10 + 4), size: .init(width: 18, height: 18)))
+        path.fill()
+      }
+    }
+    
+    none: do {
+      if !isSelected, color == .clear {
+        UIColor.white.setStroke()
+        UIColor.white.setFill()
+        
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: bounds.midX - 10 + 5, y: bounds.midY + 10))
+        path.addLine(to: CGPoint(x: bounds.midX + 10, y: bounds.midY - 10 + 5))
+        path.lineWidth = 2
+        path.stroke()
+      }
     }
     
     UIGraphicsPopContext()

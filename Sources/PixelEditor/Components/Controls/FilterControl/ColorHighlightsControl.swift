@@ -20,55 +20,63 @@ open class ColorHighlightsControlBase : FilterControlBase {
 open class ColorHighlightsControl : ColorHighlightsControlBase {
   
   open override var title: String {
-    return L10n.editBrightness
+    return L10n.editHighlights
   }
   
-  public let slider = StepSlider(frame: .zero)
+  public let colorButtons = ColorSelectButtons(frame: .zero)
+  private let colors = [UIColor.clear] + FilterHighlightShadowTint.HighlightTintColors.allCases.map { UIColor(hex: $0.rawValue) }
   
   open override func setup() {
     super.setup()
     
     backgroundColor = Style.default.control.backgroundColor
     
-    let containerGuide = UILayoutGuide()
-    
-    addLayoutGuide(containerGuide)
-    addSubview(slider)
-    
-    slider.translatesAutoresizingMaskIntoConstraints = false
-    
-    NSLayoutConstraint.activate([
+    layout: do {
+      addSubview(colorButtons)
       
-      containerGuide.topAnchor.constraint(equalTo: slider.superview!.topAnchor),
-      containerGuide.rightAnchor.constraint(equalTo: slider.superview!.rightAnchor, constant: -44),
-      containerGuide.leftAnchor.constraint(equalTo: slider.superview!.leftAnchor, constant: 44),
+      colorButtons.translatesAutoresizingMaskIntoConstraints = false
       
-      slider.topAnchor.constraint(greaterThanOrEqualTo: containerGuide.topAnchor),
-      slider.rightAnchor.constraint(equalTo: containerGuide.rightAnchor),
-      slider.leftAnchor.constraint(equalTo: containerGuide.leftAnchor),
-      slider.bottomAnchor.constraint(lessThanOrEqualTo: containerGuide.bottomAnchor),
-      slider.centerYAnchor.constraint(equalTo: containerGuide.centerYAnchor),
-      ])
+      NSLayoutConstraint.activate([
+        colorButtons.rightAnchor.constraint(equalTo: colorButtons.superview!.rightAnchor),
+        colorButtons.leftAnchor.constraint(equalTo: colorButtons.superview!.leftAnchor),
+        colorButtons.centerYAnchor.constraint(equalTo: colorButtons.superview!.centerYAnchor),
+        colorButtons.heightAnchor.constraint(equalToConstant: 100)
+        ])
+      
+      colorButtons.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
+    }
     
-    slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
+    body: do {
+      colorButtons.colors = colors
+    }
   }
   
   open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+    let valueOptional = colors.map { CIColor(color: $0) }.index(where: { $0 == edit.filters.color?.highlightColor })
     
-    slider.set(value: edit.filters.highlights?.value ?? 0, in: FilterHighlights.range)
+    if let value = valueOptional, value != colorButtons.step {
+      colorButtons.set(value: value)
+    }
+  }
+  
+  open override func didMoveToSuperview() {
+    super.didMoveToSuperview()
     
+    if superview != nil {
+      valueChanged()
+    }
   }
   
   @objc
   private func valueChanged() {
+    let value = colorButtons.step
     
-    let value = slider.transition(in: FilterHighlights.range)
     guard value != 0 else {
-      context.action(.setFilter({ $0.highlights = nil }))
+      context.action(.setFilter({ $0.color = nil }))
       return
     }
-    var f = FilterHighlights()
-    f.value = value
-    context.action(.setFilter({ $0.highlights = f }))
+    var f = FilterHighlightShadowTint()
+    f.highlightColor = CIColor(color: colors[value])
+    context.action(.setFilter({ $0.color = f }))
   }
 }
