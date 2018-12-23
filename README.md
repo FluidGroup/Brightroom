@@ -5,7 +5,8 @@
 ![](preview.gif)
 
 
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) Engine
+![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fmuukii%2FPixel.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fmuukii%2FPixel?ref=badge_shield)
+Engine
 
 ![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
 
@@ -279,3 +280,6 @@ Muukii (muukii.app@gmail.com)
 
 Pixel is available under the MIT license. See the LICENSE file for more info.
 
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fmuukii%2FPixel.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fmuukii%2FPixel?ref=badge_large)
