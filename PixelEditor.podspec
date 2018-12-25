@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name = "PixelEditor"
-  s.version = '0.0.4'
+  s.version = '0.0.5'
   s.summary = "The image editor and engine using CoreImage"
 
   s.homepage = "https://github.com/muukii/Pixel"
   s.license = 'MIT'
-  s.author = "eureka, Inc."
+  s.author = "muukii"
   s.source = { :git => "https://github.com/muukii/Pixel.git", :tag => s.version }
 
   s.source_files = ['Sources/PixelEditor/**/*.swift']
