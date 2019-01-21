@@ -44,6 +44,8 @@ public struct PreviewFilterColorCube : Equatable {
   }
 }
 
+/// A Filter using LUT Image (backed by CIColorCubeWithColorSpace)
+/// About LUT Image -> https://en.wikipedia.org/wiki/Lookup_table
 public struct FilterColorCube : Filtering, Equatable {
 
   public static let range: ParameterRange<Double, FilterColorCube> = .init(min: 0, max: 1)
