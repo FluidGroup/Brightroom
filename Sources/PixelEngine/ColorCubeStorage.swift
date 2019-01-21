@@ -27,7 +27,7 @@ open class ColorCubeStorage {
 
   public var filters: [FilterColorCube] = []
   
-  init(filters: [FilterColorCube]) {
+  public init(filters: [FilterColorCube]) {
     self.filters = filters
   }
 }
