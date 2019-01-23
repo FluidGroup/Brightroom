@@ -130,7 +130,7 @@ public final class PixelEditViewController : UIViewController {
   public convenience init(
     editingStack: SquareEditingStack,
     doneButtonTitle: String = L10n.done,
-    options: Options = .default
+    options: Options = .current
     ) {
     self.init(source: editingStack.source, options: options)
     self.editingStack = editingStack
@@ -140,7 +140,7 @@ public final class PixelEditViewController : UIViewController {
     image: UIImage,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
-    options: Options = .default
+    options: Options = .current
     ) {
     let source = ImageSource(source: image)
     self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
@@ -150,7 +150,7 @@ public final class PixelEditViewController : UIViewController {
     source: ImageSource,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
-    options: Options = .default
+    options: Options = .current
     ) {
     self.imageSource = source
     self.options = options

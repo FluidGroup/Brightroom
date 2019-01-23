@@ -25,6 +25,8 @@ public struct Options {
   
   public static let `default`: Options = .init()
   
+  public static var current: Options = .init()
+  
   public var classes: Classes = .init()
 }
 
