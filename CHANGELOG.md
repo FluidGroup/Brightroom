@@ -1,3 +1,7 @@
+## 0.0.8
+
+- Compatible Swift5
+
 ## 0.0.7
 
 - Add `current` to Options. We can now modify options globally.
