@@ -1,3 +1,7 @@
+## 0.0.9
+
+- Disable update when orientation changed
+
 ## 0.0.8
 
 - Compatible Swift5
