@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "PixelEngine"
-  s.version = '0.0.8'
+  s.version = '0.0.9'
   s.summary = "The image editor and engine using CoreImage"
 
   s.homepage = "https://github.com/muukii/Pixel"
