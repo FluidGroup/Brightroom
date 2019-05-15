@@ -21,7 +21,7 @@
 import Foundation
 
 import PixelEngine
-
+import TransitionPatch
 
 public final class StepSlider : UIControl {
   
@@ -127,16 +127,16 @@ public final class StepSlider : UIControl {
     } else {
       if value > 0 {
         internalSlider.value = Float(
-          CalcBox.init(value)
-            .progress(start: 0, end: max)
-            .transition(start: offset, end: Double(internalSlider.maximumValue))
+          ValuePatch(CGFloat(value))
+            .progress(start: 0, end: CGFloat(max))
+            .transition(start: CGFloat(offset), end: CGFloat(internalSlider.maximumValue))
             .value
         )
       } else {
         internalSlider.value = Float(
-          CalcBox.init(value)
-            .progress(start: 0, end: min)
-            .transition(start: -offset, end: Double(internalSlider.minimumValue))
+          ValuePatch(CGFloat(value))
+            .progress(start: 0, end: CGFloat(min))
+            .transition(start: CGFloat(-offset), end: CGFloat(internalSlider.minimumValue))
             .value
         )
       }
@@ -153,17 +153,21 @@ public final class StepSlider : UIControl {
     } else {
       if step > 0 {
         return
-          CalcBox.init(Double(step))
-            .progress(start: Double(0), end: Double(maxStep))
-            .transition(start: 0, end: max)
-            .value
+          Double(
+            ValuePatch(CGFloat(step))
+              .progress(start: CGFloat(0), end: CGFloat(maxStep))
+              .transition(start: 0, end: CGFloat(max))
+              .value
+        )
         
       } else {
         return
-          CalcBox.init(Double(step))
-            .progress(start: Double(0), end: Double(minStep))
-            .transition(start: 0, end: min)
-            .value
+          Double(
+            ValuePatch(CGFloat(step))
+              .progress(start: CGFloat(0), end: CGFloat(minStep))
+              .transition(start: 0, end: CGFloat(min))
+              .value
+        )
       }
     }
   }
@@ -187,9 +191,9 @@ public final class StepSlider : UIControl {
     if value > 0 {
 
       step = Int(
-        CalcBox(Double(value))
-          .progress(start: offset, end: Double(internalSlider.maximumValue))
-          .transition(start: 0, end: Double(maxStep))
+        ValuePatch(CGFloat(value))
+          .progress(start: CGFloat(offset), end: CGFloat(internalSlider.maximumValue))
+          .transition(start: 0, end: CGFloat(maxStep))
           .value
           .rounded()
       )
@@ -197,9 +201,9 @@ public final class StepSlider : UIControl {
     } else {
 
       step = Int(
-        CalcBox(Double(value))
-          .progress(start: -offset, end: Double(internalSlider.minimumValue))
-          .transition(start: 0, end: Double(minStep))
+        ValuePatch(CGFloat(value))
+          .progress(start: CGFloat(-offset), end: CGFloat(internalSlider.minimumValue))
+          .transition(start: 0, end: CGFloat(minStep))
           .value
           .rounded()
       )

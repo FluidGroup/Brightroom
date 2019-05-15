@@ -1,0 +1,6 @@
+framework module Pods_PixelEditor {
+  umbrella header "Pods-PixelEditor-umbrella.h"
+
+  export *
+  module * { export * }
+}

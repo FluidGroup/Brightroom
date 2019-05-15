@@ -17,4 +17,6 @@ Pod::Spec.new do |s|
 
   s.resources = "Sources/PixelEditor/Media.xcassets"
   s.dependency 'PixelEngine'
+
+  s.dependency 'TransitionPatch', '~> 1.0.0'
 end

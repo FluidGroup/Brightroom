@@ -25,7 +25,6 @@
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
 		4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456E216DEE95003A240A /* StepSlider.swift */; };
 		4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94B2217624A700E9DFB8 /* SliderViewController.swift */; };
-		4B1E951A2176462900E9DFB8 /* CalcBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95192176462900E9DFB8 /* CalcBox.swift */; };
 		4B1E951C21764DE700E9DFB8 /* GaussianBlurControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951B21764DE700E9DFB8 /* GaussianBlurControl.swift */; };
 		4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */; };
 		4B1E95202176567300E9DFB8 /* FilterControlBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951F2176567300E9DFB8 /* FilterControlBase.swift */; };
@@ -115,6 +114,7 @@
 		4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65102174DC3800F3578E /* EditorLog.swift */; };
 		4BEE65132174E99600F3578E /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65122174E99600F3578E /* EngineLog.swift */; };
 		4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */; };
+		5FEA3663DD99BD359BFF0ED4 /* Pods_PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -150,6 +150,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEditor.release.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEditor/Pods-PixelEditor.release.xcconfig"; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
@@ -177,7 +178,6 @@
 		4B1E94FC217634AA00E9DFB8 /* FilterChannels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterChannels.swift; sourceTree = "<group>"; };
 		4B1E94FE217634AA00E9DFB8 /* FilterSharpen.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterSharpen.swift; sourceTree = "<group>"; };
 		4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterHighlights.swift; sourceTree = "<group>"; };
-		4B1E95192176462900E9DFB8 /* CalcBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcBox.swift; sourceTree = "<group>"; };
 		4B1E951B21764DE700E9DFB8 /* GaussianBlurControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaussianBlurControl.swift; sourceTree = "<group>"; };
 		4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterGaussianBlur.swift; sourceTree = "<group>"; };
 		4B1E951F2176567300E9DFB8 /* FilterControlBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterControlBase.swift; sourceTree = "<group>"; };
@@ -265,6 +265,8 @@
 		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPathInRect.swift; sourceTree = "<group>"; };
 		58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
+		77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PixelEditor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEditor.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEditor/Pods-PixelEditor.debug.xcconfig"; sourceTree = "<group>"; };
 		9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -275,6 +277,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */,
+				5FEA3663DD99BD359BFF0ED4 /* Pods_PixelEditor.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -507,6 +510,7 @@
 				4B600B3A216B7CDD001E1456 /* AVFoundation.framework */,
 				4B600B38216B7CD6001E1456 /* CoreImage.framework */,
 				9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */,
+				77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -555,7 +559,6 @@
 			isa = PBXGroup;
 			children = (
 				4BEE65102174DC3800F3578E /* EditorLog.swift */,
-				4B1E95192176462900E9DFB8 /* CalcBox.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -565,6 +568,8 @@
 			children = (
 				D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */,
 				58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */,
+				98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */,
+				2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */,
 			);
 			name = Pods;
 			sourceTree = "<group>";
@@ -595,6 +600,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "PixelEditor" */;
 			buildPhases = (
+				B290028DADE3FEB401977859 /* [CP] Check Pods Manifest.lock */,
 				4B47D04D216CC5350007B594 /* Headers */,
 				4B47D04E216CC5350007B594 /* Sources */,
 				4B47D04F216CC5350007B594 /* Frameworks */,
@@ -755,6 +761,28 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		B290028DADE3FEB401977859 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-PixelEditor-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 		E72FAEC0768DA68CACAD9E68 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -765,12 +793,14 @@
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Demo/Pods-Demo-frameworks.sh",
 				"${PODS_ROOT}/Reveal-SDK/RevealServer-18/iOS/RevealServer.framework",
+				"${BUILT_PRODUCTS_DIR}/TransitionPatch/TransitionPatch.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/RevealServer.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/TransitionPatch.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -784,7 +814,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B1E951A2176462900E9DFB8 /* CalcBox.swift in Sources */,
 				4B47D061216CC5480007B594 /* ZoomImageView.swift in Sources */,
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
 				4B1E95202176567300E9DFB8 /* FilterControlBase.swift in Sources */,
@@ -918,6 +947,7 @@
 /* Begin XCBuildConfiguration section */
 		4B47D05B216CC5350007B594 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -945,6 +975,7 @@
 		};
 		4B47D05C216CC5350007B594 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;

@@ -1,3 +1,7 @@
+## 0.1.0
+
+- Use TransitionPatch, Remove CalcBox
+
 ## 0.0.9
 
 - Disable update when orientation changed

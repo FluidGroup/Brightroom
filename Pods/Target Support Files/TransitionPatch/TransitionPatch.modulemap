@@ -1,0 +1,6 @@
+framework module TransitionPatch {
+  umbrella header "TransitionPatch-umbrella.h"
+
+  export *
+  module * { export * }
+}
