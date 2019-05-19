@@ -22,43 +22,46 @@
 import Foundation
 
 public struct Options {
-  
-  public static let `default`: Options = .init()
-  
-  public static var current: Options = .init()
-  
-  public var classes: Classes = .init()
+
+    public static let `default`: Options = .init()
+
+    public static var current: Options = .init()
+
+    public var classes: Classes = .init()
 }
 
 extension Options {
-  public struct Classes {
-    
-    public struct Control {
-      
-      public var colorCubeControl: ColorCubeControlBase.Type = ColorCubeControl.self
-      public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
-      public var rootControl: RootControlBase.Type = RootControl.self
-      public var exposureControl: ExposureControlBase.Type = ExposureControl.self
-      public var gaussianBlurControl: GaussianBlurControlBase.Type = GaussianBlurControl.self
-      public var saturationControl: SaturationControlBase.Type = SaturationControl.self
-      public var contrastControl: ContrastControlBase.Type = ContrastControl.self
-      public var temperatureControl: TemperatureControlBase.Type = TemperatureControl.self
-      public var vignetteControl: VignetteControlBase.Type = VignetteControl.self
-      public var highlightsControl: HighlightsControlBase.Type = HighlightsControl.self
-      public var shadowsControl: ShadowsControlBase.Type = ShadowsControl.self
-      public var fadeControl: FadeControlBase.Type = FadeControl.self
-      public var clarityControl: ClarityControlBase.Type = ClarityControl.self
-      public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
-      
-      public init() {
-        
-      }
+    public struct Classes {
+
+        public struct Control {
+
+            public var colorCubeControl: ColorCubeControlBase.Type = ColorCubeControl.self
+            public var skinToneRootControl: SkinToneRootControlBase.Type = SkinToneRootControl.self
+            public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
+            public var rootControl: RootControlBase.Type = RootControl.self
+
+            public var exposureControl: ExposureControlBase.Type = ExposureControl.self
+            public var gaussianBlurControl: GaussianBlurControlBase.Type = GaussianBlurControl.self
+            public var saturationControl: SaturationControlBase.Type = SaturationControl.self
+            public var contrastControl: ContrastControlBase.Type = ContrastControl.self
+            public var skinToneControl: SkinToneControlBase.Type = SkinToneControl.self
+            public var temperatureControl: TemperatureControlBase.Type = TemperatureControl.self
+            public var vignetteControl: VignetteControlBase.Type = VignetteControl.self
+            public var highlightsControl: HighlightsControlBase.Type = HighlightsControl.self
+            public var shadowsControl: ShadowsControlBase.Type = ShadowsControl.self
+            public var fadeControl: FadeControlBase.Type = FadeControl.self
+            public var clarityControl: ClarityControlBase.Type = ClarityControl.self
+            public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
+
+            public init() {
+
+            }
+        }
+
+        public var control: Control = .init()
+
+        public init() {
+
+        }
     }
-    
-    public var control: Control = .init()
-    
-    public init() {
-      
-    }
-  }
 }

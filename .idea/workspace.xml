@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectFrameBounds">
+    <option name="y" value="23" />
+    <option name="width" value="1440" />
+    <option name="height" value="805" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+  </component>
+  <component name="RunManager">
+    <configuration name="PixelEngine" type="AppleRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Pixel" TARGET_NAME="PixelEngine" CONFIG_NAME="Debug" SCHEME_NAME="PixelEngine" IS_LOCATION_SIMULATION_ALLOWED="true" APPLICATION_LANGUAGE="IDELaunchSchemeLanguageUseSystemLanguage" APPLICATION_REGION="" MAKE_ACTIVE="TRUE" SHOULD_DEBUG_EXTENSIONS="false">
+      <EXTENSION ID="org.jetbrains.appcode.reveal.RevealRunConfigurationExtension">
+        <REVEAL_SETTINGS autoInject="false" autoInstall="true" askToEnableAutoInstall="true" />
+      </EXTENSION>
+      <embedded_app_extension_list />
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+</project>

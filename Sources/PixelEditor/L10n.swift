@@ -30,13 +30,15 @@ public struct L10nStorage {
   public var cancel = "Cancel"
   public var filter = "Filter"
   public var edit = "Edit"
-  
+  public var skinTone = "Skin Tone"
+
   public var editAdjustment = "Adjust"
   public var editMask = "Mask"
   public var editHighlights = "Highlights"
   public var editShadows = "Shadows"
   public var editSaturation = "Saturation"
   public var editContrast = "Contrast"
+  public var editSkinTone = "Skin Tone"
   public var editBlur = "Blur"
   public var editTemperature = "Temperature"
   public var editBrightness = "Brightness"

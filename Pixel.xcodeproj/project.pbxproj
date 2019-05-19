@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05D4E354228C7563007885F0 /* SkinToneControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7BC5890502A05211FD171F /* SkinToneControlView.swift */; };
+		05FD8C62228BBF5800374CBF /* FilterSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */; };
+		05FD8C65228BC02E00374CBF /* SkinToneControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C63228BBF9200374CBF /* SkinToneControl.swift */; };
 		27D530D48A4C829D53E9C773 /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */; };
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
@@ -150,6 +153,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterSkinTone.swift; sourceTree = "<group>"; };
+		05FD8C63228BBF9200374CBF /* SkinToneControl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SkinToneControl.swift; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
@@ -264,6 +269,7 @@
 		4BEE65102174DC3800F3578E /* EditorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLog.swift; sourceTree = "<group>"; };
 		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPathInRect.swift; sourceTree = "<group>"; };
+		4D7BC5890502A05211FD171F /* SkinToneControlView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SkinToneControlView.swift; sourceTree = "<group>"; };
 		58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
 		9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
@@ -312,6 +318,7 @@
 				4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */,
 				4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */,
 				4B1E94FA217634A900E9DFB8 /* FilterTemperature.swift */,
+				05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */,
 				4B1E94EE217634A800E9DFB8 /* FilterVignette.swift */,
 				4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */,
 				4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */,
@@ -345,6 +352,7 @@
 				4B1E951B21764DE700E9DFB8 /* GaussianBlurControl.swift */,
 				4B42A6A42178DF2600F18208 /* SaturationControl.swift */,
 				4B42A6A82178E12500F18208 /* ContrastControl.swift */,
+				05FD8C63228BBF9200374CBF /* SkinToneControl.swift */,
 				4B42A6AA2178E13600F18208 /* TemperatureControl.swift */,
 				4B42A6AC2178E14500F18208 /* VignetteControl.swift */,
 				4B42A6AE2178E14E00F18208 /* HighlightsControl.swift */,
@@ -391,6 +399,7 @@
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
 				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
 				4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */,
+				4D7BC5890502A05211FD171F /* SkinToneControlView.swift */,
 				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
 				4B0077BF21704E7F008330EA /* MaskControlView.swift */,
@@ -798,6 +807,7 @@
 				4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */,
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */,
+				05FD8C65228BC02E00374CBF /* SkinToneControl.swift in Sources */,
 				4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */,
 				4B42A6AB2178E13600F18208 /* TemperatureControl.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
@@ -812,6 +822,7 @@
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
+				05D4E354228C7563007885F0 /* SkinToneControlView.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
 				4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */,
 				4B42A6AD2178E14500F18208 /* VignetteControl.swift in Sources */,
@@ -843,6 +854,7 @@
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
 				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
 				4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */,
+				05FD8C62228BBF5800374CBF /* FilterSkinTone.swift in Sources */,
 				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,
 				4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */,
 				4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */,
@@ -1099,7 +1111,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = XNXHE58JZT;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
@@ -1126,7 +1138,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = XNXHE58JZT;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
@@ -1151,7 +1163,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = XNXHE58JZT;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1170,7 +1182,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = XNXHE58JZT;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

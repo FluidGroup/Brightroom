@@ -18,13 +18,13 @@ final class ResizeViewController : UIViewController {
   
   @IBAction private func didTapResizeButton() {
     
-    let uiImage = UIImage(named: "nasa.jpg")!
+//    let uiImage = UIImage(named: "nasa.jpg")!
     
-    let image = CIImage(image: uiImage)!
+//    let image = CIImage(image: uiImage)!
     
-    let r = ImageTool.resize(to: CGSize(width: 1000, height: 1000), from: image)
+//    let r = ImageTool.resize(to: CGSize(width: 1000, height: 1000), from: image)
     
-    print(r)
+//    print(r)
   }
   
   @IBAction private func didTapCGResizeButton() {
@@ -37,9 +37,9 @@ final class ResizeViewController : UIViewController {
     
     UIGraphicsGetCurrentContext()!.draw(image.cgImage!, in: .init(origin: .zero, size: CGSize(width: 1000, height: 1000)))
     
-    let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
+//    let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     
-    print(scaledImage)
+//    print(scaledImage)
   }
 }
