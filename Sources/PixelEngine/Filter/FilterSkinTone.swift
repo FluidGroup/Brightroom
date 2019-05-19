@@ -24,6 +24,8 @@ import CoreImage
 
 public struct FilterSkinTone: Filtering, Equatable, Codable {
 
+
+
     public static let range: ParameterRange<Double, FilterSkinTone> = .init(min: -0.18, max: 0.18)
 
     public var value: Double = 0
