@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		05D4E354228C7563007885F0 /* SkinToneControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D7BC5890502A05211FD171F /* SkinToneControlView.swift */; };
+		05D4E358229187F4007885F0 /* FilterSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */; };
+		05D4E359229187F9007885F0 /* FilterSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */; };
 		05FD8C62228BBF5800374CBF /* FilterSkinTone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C61228BBF5500374CBF /* FilterSkinTone.swift */; };
 		05FD8C65228BC02E00374CBF /* SkinToneControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FD8C63228BBF9200374CBF /* SkinToneControl.swift */; };
 		27D530D48A4C829D53E9C773 /* Pods_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9B38E5B35129587C07BF56E1 /* Pods_Demo.framework */; };
@@ -821,6 +823,7 @@
 				4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
+				05D4E358229187F4007885F0 /* FilterSkinTone.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				05D4E354228C7563007885F0 /* SkinToneControlView.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
@@ -881,6 +884,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05D4E359229187F9007885F0 /* FilterSkinTone.swift in Sources */,
 				4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */,
 				4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */,
 				4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */,
