@@ -1,14 +1,243 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="4f1fd0db-05cd-4ffa-9c7f-5303a9433efe" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/CHANGELOG.md" beforeDir="false" afterPath="$PROJECT_DIR$/CHANGELOG.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterChannels.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterChannels.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterCrystallize.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterCrystallize.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterGrain.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterGrain.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterHighlightShadowTint.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterHighlightShadowTint.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterHue.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterHue.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/From Fil/FilterNoiseReduction.swift" beforeDir="false" afterPath="$PROJECT_DIR$/From Fil/FilterNoiseReduction.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LUTViewer.playground/Contents.swift" beforeDir="false" afterPath="$PROJECT_DIR$/LUTViewer.playground/Contents.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LUTViewer.playground/Resources/LUT_A4_safe.png" beforeDir="false" afterPath="$PROJECT_DIR$/LUTViewer.playground/Resources/LUT_A4_safe.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LUTViewer.playground/Resources/sample.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/LUTViewer.playground/Resources/sample.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LUTViewer.playground/contents.xcplayground" beforeDir="false" afterPath="$PROJECT_DIR$/LUTViewer.playground/contents.xcplayground" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/Pixel.xcodeproj/project.pbxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcodeproj/project.xcworkspace/contents.xcworkspacedata" beforeDir="false" afterPath="$PROJECT_DIR$/Pixel.xcodeproj/project.xcworkspace/contents.xcworkspacedata" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Pixel.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcodeproj/xcshareddata/xcschemes/PixelEditor.xcscheme" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcodeproj/xcshareddata/xcschemes/PixelEngine.xcscheme" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcworkspace/contents.xcworkspacedata" beforeDir="false" afterPath="$PROJECT_DIR$/Pixel.xcworkspace/contents.xcworkspacedata" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Pixel.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Pixel.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PixelEditor.podspec" beforeDir="false" afterPath="$PROJECT_DIR$/PixelEditor.podspec" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PixelEngine.podspec" beforeDir="false" afterPath="$PROJECT_DIR$/PixelEngine.podspec" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Podfile" beforeDir="false" afterPath="$PROJECT_DIR$/Podfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Podfile.lock" beforeDir="false" afterPath="$PROJECT_DIR$/Podfile.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Resize.playground/Contents.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Resize.playground/Contents.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Resize.playground/Resources/nasa.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Resize.playground/Resources/nasa.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Resize.playground/contents.xcplayground" beforeDir="false" afterPath="$PROJECT_DIR$/Resize.playground/contents.xcplayground" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Resources/PixelEditor.sketch" beforeDir="false" afterPath="$PROJECT_DIR$/Resources/PixelEditor.sketch" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/AppDelegate.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/AppDelegate.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/AppIcon.appiconset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/AppIcon.appiconset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/large.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/large.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/large.imageset/large-1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/large.imageset/large-1.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/small.imageset/36912154_677107939288433_2252120879670493184_n.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/small.imageset/36912154_677107939288433_2252120879670493184_n.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/small.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/small.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/unsplash1.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/unsplash1.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/unsplash1.imageset/jakob-owens-422375-unsplash.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/unsplash1.imageset/jakob-owens-422375-unsplash.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/vertical.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/vertical.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/vertical.imageset/nathan-dumlao-1105821-unsplash.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Assets.xcassets/vertical.imageset/nathan-dumlao-1105821-unsplash.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Base.lproj/LaunchScreen.storyboard" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Base.lproj/LaunchScreen.storyboard" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Base.lproj/Main.storyboard" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Base.lproj/Main.storyboard" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/EditorViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/EditorViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M01.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M01.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M02.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M02.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M03.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M03.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M05.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M05.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M06.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M06.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M07.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M07.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M08.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M08.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M09.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M09.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M11.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M11.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M12.png" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Filters/LUT_M12.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/HardwareImageViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/HardwareImageViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/ResizeViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/ResizeViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/SliderViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/SliderViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/SmallHardwareImageViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/SmallHardwareImageViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/SmallUIImageViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/SmallUIImageViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/UIImageViewViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/UIImageViewViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/ViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/ViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/Demo/nasa.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/Demo/nasa.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/AdjustmentControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/AdjustmentControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ColorCubeControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ColorCubeControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ControlStackView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ControlStackView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ControlViewBase.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/ControlViewBase.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/DoodleControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/DoodleControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/EditMenuControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/EditMenuControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ClarityControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ClarityControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ContrastControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ContrastControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ExposureControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ExposureControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/FadeControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/FadeControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/FilterControlBase.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/FilterControlBase.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/GaussianBlurControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/GaussianBlurControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/HighlightsControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/HighlightsControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/SaturationControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/SaturationControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ShadowsControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/ShadowsControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/SharpenControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/SharpenControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/TempCode.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/TempCode.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/TemperatureControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/TemperatureControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/VignetteControl.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/FilterControl/VignetteControl.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/MaskControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/MaskControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/NavigationView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/NavigationView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/RootControlView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/Controls/RootControlView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/DryDrawingView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/DryDrawingView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/ImageScrollView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/ImageScrollView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/StepSlider.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/StepSlider.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Components/ZoomImageView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Components/ZoomImageView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/BlurredMosaicView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/BlurredMosaicView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/CropAndStraightenView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/CropAndStraightenView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/ImagePreviewView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/ImageViews/ImagePreviewView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/L10n.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/L10n.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/adjustment.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/adjustment.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/adjustment.imageset/adjustment.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/adjustment.imageset/adjustment.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/blur.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/blur.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/blur.imageset/blur.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/blur.imageset/blur.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/brightness.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/brightness.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/brightness.imageset/brightness.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/brightness.imageset/brightness.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/color.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/color.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/color.imageset/color.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/color.imageset/color.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/contrast.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/contrast.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/contrast.imageset/contrast.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/contrast.imageset/contrast.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/fade.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/fade.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/fade.imageset/fade.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/fade.imageset/fade.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/highlights.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/highlights.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/highlights.imageset/highlights.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/highlights.imageset/highlights.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/magic.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/magic.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/magic.imageset/magic.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/magic.imageset/magic.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/mask.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/mask.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/mask.imageset/mask.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/mask.imageset/mask.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/saturation.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/saturation.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/saturation.imageset/saturation.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/saturation.imageset/saturation.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/shadows.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/shadows.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/shadows.imageset/shadows.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/shadows.imageset/shadows.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/sharpen.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/sharpen.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/sharpen.imageset/sharpen.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/sharpen.imageset/sharpen.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/slider_thumb.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/slider_thumb.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/slider_thumb.imageset/slider_thumb.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/slider_thumb.imageset/slider_thumb.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/structure.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/structure.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/structure.imageset/structure.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/structure.imageset/structure.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/temperature.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/temperature.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/temperature.imageset/temperature.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/temperature.imageset/temperature.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/vignette.imageset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/vignette.imageset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/vignette.imageset/vignette.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Media.xcassets/vignette.imageset/vignette.pdf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Options.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Options.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditViewController.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditViewController.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditor.h" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditor.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/PixelEditor.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Style.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Style.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Utils/CalcBox.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Utils/CalcBox.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEditor/Utils/EditorLog.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEditor/Utils/EditorLog.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/BlurredMask.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/BlurredMask.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ColorCube.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ColorCube.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ColorCubeStorage.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ColorCubeStorage.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/DrawnPath.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/DrawnPath.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/DrawnPathInRect.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/DrawnPathInRect.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/EditingStack.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/EditingStack.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Engine/ImageRenderer.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Engine/ImageRenderer.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Engine/ImageTool.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Engine/ImageTool.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Engine/Layer.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Engine/Layer.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/EngineLog.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/EngineLog.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterBrightness.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterBrightness.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterColorCube.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterColorCube.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterContrast.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterContrast.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterExposure.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterExposure.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterFade.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterFade.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterGaussianBlur.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterGaussianBlur.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterHighlightShadowTint.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterHighlightShadowTint.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterHighlights.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterHighlights.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterSaturation.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterSaturation.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterShadows.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterShadows.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterSharpen.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterSharpen.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterTemperature.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterTemperature.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterUnsharpMask.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterUnsharpMask.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterVignette.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filter/FilterVignette.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Filtering.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Filtering.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Geometry.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Geometry.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/GraphicDrawing.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/GraphicDrawing.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ImageSource.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ImageSource.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/GLImageView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/GLImageView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/HardwareImageView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/HardwareImageView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/MetalImageView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ImageView/MetalImageView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/InternalUtils.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/InternalUtils.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/OvalBrush.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/OvalBrush.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/ParameterRange.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/ParameterRange.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/PixelEngine.h" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/PixelEngine.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/PixelEngine.swift" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/PixelEngine.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Sources/PixelEngine/Resource/YUCIColorLookup.cikernel" beforeDir="false" afterPath="$PROJECT_DIR$/Sources/PixelEngine/Resource/YUCIColorLookup.cikernel" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/customize.png" beforeDir="false" afterPath="$PROJECT_DIR$/customize.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/neutral-lut.png" beforeDir="false" afterPath="$PROJECT_DIR$/neutral-lut.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preview.gif" beforeDir="false" afterPath="$PROJECT_DIR$/preview.gif" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample1.png" beforeDir="false" afterPath="$PROJECT_DIR$/sample1.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample2.png" beforeDir="false" afterPath="$PROJECT_DIR$/sample2.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sample3.png" beforeDir="false" afterPath="$PROJECT_DIR$/sample3.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/top.png" beforeDir="false" afterPath="$PROJECT_DIR$/top.png" afterDir="false" />
+    </list>
+    <ignored path="$USER_HOME$/Library/Caches/AppCode2019.1/DerivedData/Pixel-gbnruzuotrpwjsbhvkwbloigxxdn/Build/Intermediates.noindex/" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="iphoneos_034d900958a6d6d6bd76791f2fe11a362153e5b4" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectFrameBounds">
     <option name="y" value="23" />
     <option name="width" value="1440" />
     <option name="height" value="805" />
   </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="Scope" />
+      <pane id="Cidr.FilesView" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="" type="efc3779f:XcodeRootNode" />
+              <item name="Pixel" type="1d218c8b:XcodeProjectNode" />
+            </path>
+            <path>
+              <item name="" type="efc3779f:XcodeRootNode" />
+              <item name="Pixel" type="1d218c8b:XcodeProjectNode" />
+              <item name="From Fil" type="fcab9f18:XcodeViewNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
+  </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
   </component>
   <component name="RunManager">
     <configuration name="PixelEngine" type="AppleRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Pixel" TARGET_NAME="PixelEngine" CONFIG_NAME="Debug" SCHEME_NAME="PixelEngine" IS_LOCATION_SIMULATION_ALLOWED="true" APPLICATION_LANGUAGE="IDELaunchSchemeLanguageUseSystemLanguage" APPLICATION_REGION="" MAKE_ACTIVE="TRUE" SHOULD_DEBUG_EXTENSIONS="false">
@@ -20,5 +249,50 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="4f1fd0db-05cd-4ffa-9c7f-5303a9433efe" name="Default Changelist" comment="" />
+      <created>1558267604902</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1558267604902</updated>
+      <workItem from="1558267606679" duration="207000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="207000" />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="0" y="23" width="1440" height="805" extended-state="0" />
+    <layout>
+      <window_info id="Designer" />
+      <window_info id="Favorites" side_tool="true" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.24964234" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Database Changes" />
+      <window_info anchor="bottom" id="Version Control" />
+      <window_info anchor="bottom" id="Terminal" />
+      <window_info anchor="bottom" id="Event Log" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="right" id="Palette&#9;" />
+      <window_info anchor="right" id="Database" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
   </component>
 </project>
