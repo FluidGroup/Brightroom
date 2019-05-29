@@ -213,6 +213,8 @@ Then set that class to Options.
 ```swift
 var options = Options.default
 options.classes.control.brightnessControl = MyExposureControl.self
+
+let picker = PixelEditViewController(image: image, options: options)
 ```
 
 It's like using custom Cell in UICollectionView.
