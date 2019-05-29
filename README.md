@@ -211,8 +211,10 @@ So, If we need to change ExposureControl, override ExposureControlBase class.
 Then set that class to Options.
 
 ```swift
-let options = Options.default()
+var options = Options.default
 options.classes.control.brightnessControl = MyExposureControl.self
+
+let picker = PixelEditViewController(image: image, options: options)
 ```
 
 It's like using custom Cell in UICollectionView.
@@ -224,6 +226,66 @@ And also Built-In UI may need expose some properties to customize from subclassi
 We can also customize whole UI.
 
 Override `options.classes.control.rootControl`, then build UI from scratch.
+
+For example, if you don't need the filter section but only the edit mode, you may want to create a control like: 
+```swift
+final class EditRootControl : RootControlBase {
+
+   private let containerView = UIView()
+
+   public let colorCubeControl: ColorCubeControlBase
+
+   public lazy var editView = context.options.classes.control.editMenuControl.init(context: context)
+
+   // MARK: - Initializers
+
+   public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
+
+       self.colorCubeControl = colorCubeControl
+
+       super.init(context: context, colorCubeControl: colorCubeControl)
+
+       backgroundColor = Style.default.control.backgroundColor
+
+       layout: do {
+
+           addSubview(containerView)
+
+           containerView.translatesAutoresizingMaskIntoConstraints = false
+
+           NSLayoutConstraint.activate([
+
+               containerView.topAnchor.constraint(equalTo: containerView.superview!.topAnchor),
+               containerView.leftAnchor.constraint(equalTo: containerView.superview!.leftAnchor),
+               containerView.rightAnchor.constraint(equalTo: containerView.superview!.rightAnchor),
+               containerView.bottomAnchor.constraint(equalTo: containerView.superview!.bottomAnchor)
+           ])
+       }
+   }
+
+   // MARK: - Functions
+
+   override func didMoveToSuperview() {
+       super.didMoveToSuperview()
+
+       if superview != nil {
+           editView.frame = containerView.bounds
+           editView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+           containerView.addSubview(editView)
+       }
+   }
+}
+```
+
+And use it this way:
+
+```swift
+var options = Options.default
+options.classes.control.rootControl = EditRootControl.self
+
+let picker = PixelEditViewController(image: image, options: options)
+```
 
 ## Localization
 
