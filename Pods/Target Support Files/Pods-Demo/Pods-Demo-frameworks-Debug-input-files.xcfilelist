@@ -1,0 +1,3 @@
+${PODS_ROOT}/Target Support Files/Pods-Demo/Pods-Demo-frameworks.sh
+${PODS_ROOT}/Reveal-SDK/RevealServer-22/iOS/RevealServer.framework
+${BUILT_PRODUCTS_DIR}/TransitionPatch/TransitionPatch.framework
