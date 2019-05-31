@@ -38,13 +38,13 @@ open class EditingStack {
 
   public let targetScreenScale: CGFloat
 
-  public var availableColorCubeFilters: [PreviewFilterColorCube] = []
+  private(set) public var availableColorCubeFilters: [PreviewFilterColorCube] = []
 
-  public var cubeFilterPreviewSourceImage: CIImage!
+  private(set) public var cubeFilterPreviewSourceImage: CIImage!
   
-  public var previewImage: CIImage?
+  private(set) public var previewImage: CIImage?
 
-  public var originalPreviewImage: CIImage? {
+  private(set) public var originalPreviewImage: CIImage? {
     didSet {
       EngineLog.debug("Changed EditingStack.originalPreviewImage")
       updatePreviewImage()
@@ -53,6 +53,10 @@ open class EditingStack {
   }
 
   public var adjustmentImage: CIImage?
+  
+  public var aspectRatio: CGSize {
+    return originalPreviewImage!.extent.size
+  }
 
   public var isDirty: Bool {
     return draftEdit != nil
@@ -288,13 +292,13 @@ open class EditingStack {
 open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
-    
-    let cropRect = Geometry.rectThatAspectFit(
-      aspectRatio: .init(width: 1, height: 1),
-      boundingRect: source.image.extent
-    )
-    
-    setAdjustment(cropRect: cropRect)
+    super.initialCrop()
+//    let cropRect = Geometry.rectThatAspectFit(
+//      aspectRatio: .init(width: 1, height: 1),
+//      boundingRect: source.image.extent
+//    )
+//    
+//    setAdjustment(cropRect: cropRect)
   }
 }
 

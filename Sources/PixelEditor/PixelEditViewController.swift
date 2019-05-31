@@ -91,6 +91,8 @@ public final class PixelEditViewController : UIViewController {
   public let options: Options
   
   public private(set) var editingStack: SquareEditingStack!
+  
+  // MARK: - Private Propaties
 
   private let maskingView = BlurredMosaicView()
 
@@ -107,6 +109,8 @@ public final class PixelEditViewController : UIViewController {
   private let stackView = ControlStackView()
   
   private let doneButtonTitle: String
+  
+  private var aspectConstraint: NSLayoutConstraint?
 
   private lazy var doneButton = UIBarButtonItem(
     title: doneButtonTitle,
@@ -182,6 +186,10 @@ public final class PixelEditViewController : UIViewController {
         }
 
         view.backgroundColor = .white
+        
+        let guide = UILayoutGuide()
+        
+        view.addLayoutGuide(guide)
 
         view.addSubview(editContainerView)
         view.addSubview(controlContainerView)
@@ -191,16 +199,23 @@ public final class PixelEditViewController : UIViewController {
 
         editContainerView.translatesAutoresizingMaskIntoConstraints = false
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
-
+        
         NSLayoutConstraint.activate([
-          editContainerView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
-          editContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
-          editContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
-          editContainerView.widthAnchor.constraint(equalTo: editContainerView.heightAnchor, multiplier: 1),
-
-          controlContainerView.topAnchor.constraint(equalTo: editContainerView.bottomAnchor),
-          controlContainerView.rightAnchor.constraint(equalTo: editContainerView.rightAnchor),
-          controlContainerView.leftAnchor.constraint(equalTo: editContainerView.leftAnchor),
+          guide.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+          guide.rightAnchor.constraint(equalTo: view.rightAnchor),
+          guide.leftAnchor.constraint(equalTo: view.leftAnchor),
+          guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
+          
+          editContainerView.topAnchor.constraint(greaterThanOrEqualTo: guide.topAnchor),
+          editContainerView.rightAnchor.constraint(lessThanOrEqualTo: guide.rightAnchor),
+          editContainerView.leftAnchor.constraint(greaterThanOrEqualTo: guide.leftAnchor),
+          editContainerView.bottomAnchor.constraint(lessThanOrEqualTo: guide.bottomAnchor),
+          editContainerView.centerXAnchor.constraint(equalTo: guide.centerXAnchor),
+          editContainerView.centerYAnchor.constraint(equalTo: guide.centerYAnchor),
+          
+          controlContainerView.topAnchor.constraint(equalTo: guide.bottomAnchor),
+          controlContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
+          controlContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
           {
             if #available(iOS 11.0, *) {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
@@ -210,6 +225,8 @@ public final class PixelEditViewController : UIViewController {
           }()
           ])
 
+        setAspect(editingStack.aspectRatio)
+        
       }
 
       root: do {
@@ -284,6 +301,25 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     }
 
+  }
+    
+  // MARK: - Private Functions
+  
+  private func setAspect(_ size: CGSize) {
+    
+    aspectConstraint?.isActive = false
+    
+    let newConstraint = editContainerView.widthAnchor.constraint(
+      equalTo: editContainerView.heightAnchor,
+      multiplier: size.width / size.height
+    )
+    
+    NSLayoutConstraint.activate([
+      newConstraint
+      ])
+    
+    aspectConstraint = newConstraint
+    
   }
 
   @objc
@@ -395,6 +431,7 @@ public final class PixelEditViewController : UIViewController {
     case .setMode(let mode):
       set(mode: mode)
     case .endAdjustment(let save):
+      setAspect(editingStack.aspectRatio)
       if save {
         editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
         editingStack.commit()
