@@ -293,12 +293,12 @@ open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
     super.initialCrop()
-//    let cropRect = Geometry.rectThatAspectFit(
-//      aspectRatio: .init(width: 1, height: 1),
-//      boundingRect: source.image.extent
-//    )
-//    
-//    setAdjustment(cropRect: cropRect)
+    let cropRect = Geometry.rectThatAspectFit(
+      aspectRatio: .init(width: 1, height: 1),
+      boundingRect: source.image.extent
+    )
+    
+    setAdjustment(cropRect: cropRect)
   }
 }
 

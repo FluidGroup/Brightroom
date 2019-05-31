@@ -26,7 +26,7 @@ import PixelEngine
 
 public protocol PixelEditViewControllerDelegate : class {
 
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack)
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
   
 }
@@ -63,7 +63,7 @@ public final class PixelEditContext {
 public final class PixelEditViewController : UIViewController {
   
   public final class Callbacks {
-    public var didEndEditing: (PixelEditViewController, SquareEditingStack) -> Void = { _, _ in }
+    public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
 
@@ -90,7 +90,7 @@ public final class PixelEditViewController : UIViewController {
   
   public let options: Options
   
-  public private(set) var editingStack: SquareEditingStack!
+  public private(set) var editingStack: EditingStack!
   
   // MARK: - Private Propaties
 
@@ -132,7 +132,7 @@ public final class PixelEditViewController : UIViewController {
   // MARK: - Initializers
 
   public convenience init(
-    editingStack: SquareEditingStack,
+    editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
     options: Options = .current
     ) {
@@ -206,10 +206,27 @@ public final class PixelEditViewController : UIViewController {
           guide.leftAnchor.constraint(equalTo: view.leftAnchor),
           guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
           
-          editContainerView.topAnchor.constraint(greaterThanOrEqualTo: guide.topAnchor),
-          editContainerView.rightAnchor.constraint(lessThanOrEqualTo: guide.rightAnchor),
-          editContainerView.leftAnchor.constraint(greaterThanOrEqualTo: guide.leftAnchor),
-          editContainerView.bottomAnchor.constraint(lessThanOrEqualTo: guide.bottomAnchor),
+          {
+            let c = editContainerView.topAnchor.constraint(equalTo: guide.topAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.rightAnchor.constraint(equalTo: guide.rightAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.leftAnchor.constraint(equalTo: guide.leftAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.bottomAnchor.constraint(equalTo: guide.bottomAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          
           editContainerView.centerXAnchor.constraint(equalTo: guide.centerXAnchor),
           editContainerView.centerYAnchor.constraint(equalTo: guide.centerYAnchor),
           
