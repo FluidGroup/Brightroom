@@ -185,6 +185,9 @@ public final class PixelEditViewController : UIViewController {
 
         view.addSubview(editContainerView)
         view.addSubview(controlContainerView)
+        
+        editContainerView.accessibilityIdentifier = "app.muukii.pixel.editContainerView"
+        controlContainerView.accessibilityIdentifier = "app.muukii.pixel.controlContainerView"
 
         editContainerView.translatesAutoresizingMaskIntoConstraints = false
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
