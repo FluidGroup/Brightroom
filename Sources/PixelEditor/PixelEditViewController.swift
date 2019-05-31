@@ -26,7 +26,7 @@ import PixelEngine
 
 public protocol PixelEditViewControllerDelegate : class {
 
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: SquareEditingStack)
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
   
 }
@@ -63,7 +63,7 @@ public final class PixelEditContext {
 public final class PixelEditViewController : UIViewController {
   
   public final class Callbacks {
-    public var didEndEditing: (PixelEditViewController, SquareEditingStack) -> Void = { _, _ in }
+    public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
 
@@ -90,7 +90,9 @@ public final class PixelEditViewController : UIViewController {
   
   public let options: Options
   
-  public private(set) var editingStack: SquareEditingStack!
+  public private(set) var editingStack: EditingStack!
+  
+  // MARK: - Private Propaties
 
   private let maskingView = BlurredMosaicView()
 
@@ -107,6 +109,8 @@ public final class PixelEditViewController : UIViewController {
   private let stackView = ControlStackView()
   
   private let doneButtonTitle: String
+  
+  private var aspectConstraint: NSLayoutConstraint?
 
   private lazy var doneButton = UIBarButtonItem(
     title: doneButtonTitle,
@@ -128,7 +132,7 @@ public final class PixelEditViewController : UIViewController {
   // MARK: - Initializers
 
   public convenience init(
-    editingStack: SquareEditingStack,
+    editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
     options: Options = .current
     ) {
@@ -182,22 +186,53 @@ public final class PixelEditViewController : UIViewController {
         }
 
         view.backgroundColor = .white
+        
+        let guide = UILayoutGuide()
+        
+        view.addLayoutGuide(guide)
 
         view.addSubview(editContainerView)
         view.addSubview(controlContainerView)
+        
+        editContainerView.accessibilityIdentifier = "app.muukii.pixel.editContainerView"
+        controlContainerView.accessibilityIdentifier = "app.muukii.pixel.controlContainerView"
 
         editContainerView.translatesAutoresizingMaskIntoConstraints = false
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
-
+        
         NSLayoutConstraint.activate([
-          editContainerView.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
-          editContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
-          editContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
-          editContainerView.widthAnchor.constraint(equalTo: editContainerView.heightAnchor, multiplier: 1),
-
-          controlContainerView.topAnchor.constraint(equalTo: editContainerView.bottomAnchor),
-          controlContainerView.rightAnchor.constraint(equalTo: editContainerView.rightAnchor),
-          controlContainerView.leftAnchor.constraint(equalTo: editContainerView.leftAnchor),
+          guide.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+          guide.rightAnchor.constraint(equalTo: view.rightAnchor),
+          guide.leftAnchor.constraint(equalTo: view.leftAnchor),
+          guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
+          
+          {
+            let c = editContainerView.topAnchor.constraint(equalTo: guide.topAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.rightAnchor.constraint(equalTo: guide.rightAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.leftAnchor.constraint(equalTo: guide.leftAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          {
+            let c = editContainerView.bottomAnchor.constraint(equalTo: guide.bottomAnchor)
+            c.priority = .defaultHigh
+            return c
+          }(),
+          
+          editContainerView.centerXAnchor.constraint(equalTo: guide.centerXAnchor),
+          editContainerView.centerYAnchor.constraint(equalTo: guide.centerYAnchor),
+          
+          controlContainerView.topAnchor.constraint(equalTo: guide.bottomAnchor),
+          controlContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
+          controlContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
           {
             if #available(iOS 11.0, *) {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
@@ -207,6 +242,8 @@ public final class PixelEditViewController : UIViewController {
           }()
           ])
 
+        setAspect(editingStack.aspectRatio)
+        
       }
 
       root: do {
@@ -281,6 +318,25 @@ public final class PixelEditViewController : UIViewController {
       set(mode: mode)
     }
 
+  }
+    
+  // MARK: - Private Functions
+  
+  private func setAspect(_ size: CGSize) {
+    
+    aspectConstraint?.isActive = false
+    
+    let newConstraint = editContainerView.widthAnchor.constraint(
+      equalTo: editContainerView.heightAnchor,
+      multiplier: size.width / size.height
+    )
+    
+    NSLayoutConstraint.activate([
+      newConstraint
+      ])
+    
+    aspectConstraint = newConstraint
+    
   }
 
   @objc
@@ -392,6 +448,7 @@ public final class PixelEditViewController : UIViewController {
     case .setMode(let mode):
       set(mode: mode)
     case .endAdjustment(let save):
+      setAspect(editingStack.aspectRatio)
       if save {
         editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
         editingStack.commit()
