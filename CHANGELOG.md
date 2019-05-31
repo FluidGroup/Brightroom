@@ -1,3 +1,7 @@
+## 0.2.0
+
+- Supports editing with oblong (Use EditingStack)
+
 ## 0.1.0
 
 - Use TransitionPatch, Remove CalcBox
