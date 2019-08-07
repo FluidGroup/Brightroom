@@ -36,7 +36,7 @@ extension Options {
     public struct Control {
       
       public var colorCubeControl: ColorCubeControlBase.Type = ColorCubeControl.self
-      public var editMenuControl: EditMenuControlBase.Type = EditMenuControl.self
+      public var editMenuControl: EditMenuControlBase.Type = EditMenu.EditMenuControl.self
       public var rootControl: RootControlBase.Type = RootControl.self
       public var exposureControl: ExposureControlBase.Type = ExposureControl.self
       public var gaussianBlurControl: GaussianBlurControlBase.Type = GaussianBlurControl.self
@@ -49,6 +49,8 @@ extension Options {
       public var fadeControl: FadeControlBase.Type = FadeControl.self
       public var clarityControl: ClarityControlBase.Type = ClarityControl.self
       public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
+      
+      public var ignoredEditMenu: [EditMenu] = []
       
       public init() {
         
