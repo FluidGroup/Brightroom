@@ -287,6 +287,16 @@ options.classes.control.rootControl = EditRootControl.self
 let picker = PixelEditViewController(image: image, options: options)
 ```
 
+### Filter some edit menu
+
+If there are some edit options you don't need in your app, you can choose edit options you want to ignore:
+
+```swift
+var options = Options.default
+options.classes.control.ignoredEditMenu = [.saturation, .gaussianBlur]
+let controller = PixelEditViewController.init(image: UIImage(named: "large")!, options: options)
+```
+
 ## Localization
 
 Strings in UI can be localized with `L10n`.
