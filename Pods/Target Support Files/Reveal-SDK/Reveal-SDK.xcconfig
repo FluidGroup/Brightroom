@@ -1,5 +1,5 @@
 CONFIGURATION_BUILD_DIR = ${PODS_CONFIGURATION_BUILD_DIR}/Reveal-SDK
-FRAMEWORK_SEARCH_PATHS = $(inherited) "${PODS_ROOT}/Reveal-SDK/RevealServer-22/iOS"
+FRAMEWORK_SEARCH_PATHS = $(inherited) "${PODS_ROOT}/Reveal-SDK/RevealServer/iOS"
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) COCOAPODS=1
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks
 OTHER_LDFLAGS = $(inherited) -l"z" -framework "CFNetwork" -framework "CoreGraphics" -framework "QuartzCore"

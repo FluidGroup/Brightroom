@@ -1,5 +1,5 @@
 PODS:
-  - Reveal-SDK (22)
+  - Reveal-SDK (24)
   - TransitionPatch (1.0.2)
 
 DEPENDENCIES:
@@ -12,9 +12,9 @@ SPEC REPOS:
     - TransitionPatch
 
 SPEC CHECKSUMS:
-  Reveal-SDK: 1385ab77aa15e9a3e21f798c74bd8e94cb54c651
+  Reveal-SDK: 5d7e56b8f018c0a88b3a2c10bf68d598bbd3b071
   TransitionPatch: c02b48b1429255b14ef82b7e411034e0958b9681
 
 PODFILE CHECKSUM: 14513452cfadd814324174bdaa1d7f46785b06d9
 
-COCOAPODS: 1.7.0
+COCOAPODS: 1.7.5
