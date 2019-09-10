@@ -26,14 +26,18 @@ final class CropAndStraightenView : UIView {
   // MARK: - Properties
 
   var image: CIImage? {
-    get {
-      return imageView.zoomView?.image?.ciImage
-    }
-    set {
-
-      let _image = newValue
-        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
-        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+    didSet {
+                  
+      let _image: UIImage?
+      
+      if let cgImage = image?.cgImage {
+        _image = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
+      } else {
+        // Displaying will be slow in iOS13
+        _image = image
+          .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
+          .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+      }
 
       if let image = _image {
         imageView.display(image: image)
