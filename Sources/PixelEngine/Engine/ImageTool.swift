@@ -81,7 +81,7 @@ public enum ImageTool {
           } else {
             format.prefersExtendedRange = false
           }
-          
+                    
           let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
             .image { c in
               
@@ -93,7 +93,16 @@ public enum ImageTool {
                   c.cgContext.draw(cgImage, in: rect)
 
                 } else {
-                  UIImage(ciImage: image).draw(in: rect)
+                  
+                  if #available(iOS 13, *) {
+                    c.cgContext.translateBy(x: 0, y: targetSize.height)
+                    c.cgContext.scaleBy(x: 1, y: -1)
+                    let context = CIContext(cgContext: c.cgContext, options: [:])
+                    context.draw(image, in: rect, from: image.extent)
+                  } else {
+                    UIImage(ciImage: image).draw(in: rect)
+                  }
+                  
                 }
               }
             }
