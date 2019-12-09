@@ -30,7 +30,7 @@ open class EditingStack {
 
   // MARK: - Stored Properties
 
-  public let source: ImageSource
+  public private(set) var source: ImageSource
 
   public weak var delegate: EditingStackDelegate?
 
@@ -80,8 +80,14 @@ open class EditingStack {
 
   public private(set) var edits: [Edit] {
     didSet {
-      EngineLog.debug("Edits changed counnt -> \(edits.count)")
+      EngineLog.debug("Edits changed count -> \(edits.count)")
     }
+  }
+
+  public func updateImage(_ image: UIImage) {
+    self.source = ImageSource(source: image)
+    self.adjustmentImage = source.image
+    initialCrop()
   }
   
   private let queue = DispatchQueue(
