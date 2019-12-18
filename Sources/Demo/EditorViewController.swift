@@ -100,6 +100,5 @@ extension EditorViewController : PixelEditViewControllerDelegate {
   
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
     self.navigationController?.popToViewController(self, animated: true)
-  }
-  
+  }x`
 }

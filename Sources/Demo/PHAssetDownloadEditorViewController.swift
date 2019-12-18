@@ -1,0 +1,74 @@
+//
+//  PHAssetDownloadEditorViewController.swift
+//  PixelEngine
+//
+//  Created by Antoine Marandon on 16/12/2019.
+//  Copyright © 2019 muukii. All rights reserved.
+//
+
+
+import PixelEngine
+import PixelEditor
+import AssetsPicker
+import Photos
+
+final class PHAssetDownloadEditorViewController : UIViewController {
+
+  @IBOutlet weak var imageView: UIImageView!
+  private var selectedAsset: PHAsset?
+
+  private lazy var stack = SquareEditingStack.init(
+    source: ImageSource(source: UIImage(named: "large")!),
+    previewSize: CGSize(width: 300, height: 300),
+    colorCubeStorage: ColorCubeStorage.default
+  )
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+  }
+
+
+  @IBAction func didTapPushButton(_ sender: Any) {
+
+    let picker = AssetPickerViewController()
+      .setSelectionMode(.single)
+      .setNumberOfItemsPerRow(3)
+    picker.pickerDelegate = self
+
+    present(picker, animated: true, completion: nil)
+  }
+
+  @IBAction func didTapPushKeepingButton(_ sender: Any) {
+    guard let selectedAsset = selectedAsset else { return }
+    let controller = PixelEditViewController(asset: selectedAsset)
+    controller.delegate = self
+
+    navigationController?.pushViewController(controller, animated: true)
+
+  }
+}
+
+extension PHAssetDownloadEditorViewController: AssetPickerDelegate {
+  func photoPickerDidCancel(_ pickerController: AssetPickerViewController) {
+    //XXX
+  }
+
+  func photoPicker(_ pickerController: AssetPickerViewController, didPickAssets assets: [AssetDownload]) {
+    self.selectedAsset = assets.first?.asset
+    pickerController.dismiss(animated: true, completion: nil)
+  }
+}
+
+
+extension PHAssetDownloadEditorViewController : PixelEditViewControllerDelegate {
+
+  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack) {
+    self.navigationController?.popToViewController(self, animated: true)
+    let image = editingStack.makeRenderer().render(resolution: .full)
+    self.imageView.image = image
+  }
+
+  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+    self.navigationController?.popToViewController(self, animated: true)
+  }
+}

@@ -30,7 +30,7 @@ open class EditingStack {
 
   // MARK: - Stored Properties
 
-  public let source: ImageSource
+  public var source: ImageSource
 
   public weak var delegate: EditingStackDelegate?
 
@@ -233,7 +233,6 @@ open class EditingStack {
   }
 
   public func makeRenderer() -> ImageRenderer {
-
     let renderer = ImageRenderer(source: source)
 
     let edit = currentEdit
