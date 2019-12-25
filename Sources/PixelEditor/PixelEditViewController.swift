@@ -133,9 +133,48 @@ public final class PixelEditViewController : UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  private(set) var isLoading = false {
-    didSet {
-      if isLoading == false {
+  /// Setting this to true will cause the UI to display a spinner and blurr the current image, while disabling the UI.
+  /// Set to false to remove
+  /// This is usefull in case you wish to present the PixelEditior while the image is still loading
+  public var isLoading: Bool {
+    get {
+      return loadingView != nil
+    }
+    set {
+      if newValue, self.isLoading == false {
+        let loadingView = UIView()
+        let disableView = UIView()
+        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        let spinner = UIActivityIndicatorView(style: .whiteLarge)
+        loadingView.backgroundColor = .clear
+        loadingView.addSubview(blurView)
+        loadingView.addSubview(spinner)
+        disableView.backgroundColor = .init(white: 1, alpha: 0.5)
+        self.loadingView = [loadingView, disableView]
+        view.addSubview(loadingView)
+        view.addSubview(disableView)
+        spinner.startAnimating()
+        spinner.isHidden = false
+        [loadingView, blurView, spinner, disableView].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
+        NSLayoutConstraint.activate([
+          loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
+          loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
+          loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
+          loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
+          blurView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
+          blurView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
+          blurView.topAnchor.constraint(equalTo: previewView.topAnchor),
+          blurView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
+          spinner.centerYAnchor.constraint(equalTo: previewView.centerYAnchor),
+          spinner.centerXAnchor.constraint(equalTo: previewView.centerXAnchor),
+          disableView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
+          disableView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
+          disableView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
+          disableView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
+        ])
+        doneButton.isEnabled = false
+      }
+      if !newValue {
         loadingView?.forEach { $0.removeFromSuperview() }
         loadingView = nil
         doneButton.isEnabled = true
@@ -190,7 +229,10 @@ public final class PixelEditViewController : UIViewController {
     self.setupDefaultEditingStack()
   }
 
-  public init(asset: PHAsset,
+  /// Builde the asset picker without providing an actual image.
+  /// If a `PHAsset` is provided, the UIImage will be retreived autmatically.
+  /// This will also set `isLoading` to true.
+  public init(asset: PHAsset? = nil,
               doneButtonTitle: String = L10n.done,
               colorCubeStorage: ColorCubeStorage = .default,
               options: Options = .current,
@@ -200,12 +242,12 @@ public final class PixelEditViewController : UIViewController {
     self.options = options
     self.colorCubeStorage = colorCubeStorage
     self.doneButtonTitle = doneButtonTitle
-    self.isLoading = true
     self.asset = asset
     if let editingStackBuilder = editingStackBuilder {
       self.editingStackBuilder = editingStackBuilder
     }
     super.init(nibName: nil, bundle: nil)
+    self.isLoading = true
   }
 
   @available(*, unavailable)
@@ -213,6 +255,11 @@ public final class PixelEditViewController : UIViewController {
     fatalError("init(coder:) has not been implemented")
   }
 
+  /// Dynamicaly change the image. The editing stack will be reinitialized using the `editingStackBuilder` provided in `init` or a default one.
+  public func replace(imageSource: ImageSource) {
+    self.imageSource = imageSource
+    self.setupDefaultEditingStack()
+  }
   // MARK: - Functions
 
   private func setupDefaultEditingStack() {
@@ -316,41 +363,6 @@ public final class PixelEditViewController : UIViewController {
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
       }
-      loading: do {
-        if isLoading {
-          let loadingView = UIView()
-          let disableView = UIView()
-          let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
-          let spinner = UIActivityIndicatorView(style: .whiteLarge)
-          loadingView.backgroundColor = .clear
-          loadingView.addSubview(blurView)
-          loadingView.addSubview(spinner)
-          disableView.backgroundColor = .init(white: 1, alpha: 0.5)
-          self.loadingView = [loadingView, disableView]
-          view.addSubview(loadingView)
-          view.addSubview(disableView)
-          spinner.startAnimating()
-          spinner.isHidden = false
-          [loadingView, blurView, spinner, disableView].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
-          NSLayoutConstraint.activate([
-            loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
-            loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
-            loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
-            loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-            blurView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
-            blurView.topAnchor.constraint(equalTo: previewView.topAnchor),
-            blurView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-            spinner.centerYAnchor.constraint(equalTo: previewView.centerYAnchor),
-            spinner.centerXAnchor.constraint(equalTo: previewView.centerXAnchor),
-            disableView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
-            disableView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
-            disableView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
-            disableView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
-          ])
-          doneButton.isEnabled = false
-        }
-      }
     }
 
     bind: do {
@@ -383,15 +395,13 @@ public final class PixelEditViewController : UIViewController {
     //TODO cancellation
     PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
       guard let image = image, let self = self, self.imageSource == nil else { return }
-      self.imageSource = ImageSource(source: image)
-      self.setupDefaultEditingStack()
+      self.replace(imageSource: .init(source: image))
     }
     PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
       guard let self = self else { return }
       if let image = image {
-        self.imageSource = ImageSource(source: image)
+        self.replace(imageSource: .init(source: image))
         self.isLoading = false
-        self.setupDefaultEditingStack()
       } else {
         // TODO Error handleing
       }
