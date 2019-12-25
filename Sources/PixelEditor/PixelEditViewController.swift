@@ -146,6 +146,13 @@ public final class PixelEditViewController : UIViewController {
   private var loadingView: [UIView]?
   private var imageSource: ImageSource?
   private var colorCubeStorage: ColorCubeStorage = .default
+  private var editingStackBuilder: (CGSize, ColorCubeStorage, ImageSource) -> EditingStack = { (bounds, storage, imageSource) in
+    return SquareEditingStack.init(
+      source: imageSource,
+      previewSize: CGSize(width: bounds.width, height: bounds.width),
+      colorCubeStorage: storage
+    )
+  }
 
   // MARK: - Initializers
 
@@ -186,13 +193,18 @@ public final class PixelEditViewController : UIViewController {
   public init(asset: PHAsset,
               doneButtonTitle: String = L10n.done,
               colorCubeStorage: ColorCubeStorage = .default,
-              options: Options = .current
+              options: Options = .current,
+              editingStackBuilder: ((CGSize, ColorCubeStorage, ImageSource) -> EditingStack)? = nil
+
   ) {
     self.options = options
     self.colorCubeStorage = colorCubeStorage
     self.doneButtonTitle = doneButtonTitle
     self.isLoading = true
     self.asset = asset
+    if let editingStackBuilder = editingStackBuilder {
+      self.editingStackBuilder = editingStackBuilder
+    }
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -205,11 +217,7 @@ public final class PixelEditViewController : UIViewController {
 
   private func setupDefaultEditingStack() {
     if let imageSource = self.imageSource {
-      editingStack = SquareEditingStack.init(
-        source: imageSource,
-        previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-        colorCubeStorage: colorCubeStorage
-      )
+      editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, imageSource)
     }
   }
 
