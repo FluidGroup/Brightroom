@@ -161,12 +161,12 @@ strip_invalid_archs() {
 
 
 if [[ "$CONFIGURATION" == "Debug" ]]; then
-  install_framework "${BUILT_PRODUCTS_DIR}/AssetsPicker/AssetsPicker.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/MosaiqueAssetsPicker/MosaiqueAssetsPicker.framework"
   install_framework "${PODS_ROOT}/Reveal-SDK/RevealServer/iOS/RevealServer.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/TransitionPatch/TransitionPatch.framework"
 fi
 if [[ "$CONFIGURATION" == "Release" ]]; then
-  install_framework "${BUILT_PRODUCTS_DIR}/AssetsPicker/AssetsPicker.framework"
+  install_framework "${BUILT_PRODUCTS_DIR}/MosaiqueAssetsPicker/MosaiqueAssetsPicker.framework"
   install_framework "${PODS_ROOT}/Reveal-SDK/RevealServer/iOS/RevealServer.framework"
   install_framework "${BUILT_PRODUCTS_DIR}/TransitionPatch/TransitionPatch.framework"
 fi

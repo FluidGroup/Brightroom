@@ -10,8 +10,7 @@
 #endif
 #endif
 
-#import "AssetsPicker.h"
 
-FOUNDATION_EXPORT double AssetsPickerVersionNumber;
-FOUNDATION_EXPORT const unsigned char AssetsPickerVersionString[];
+FOUNDATION_EXPORT double MosaiqueAssetsPickerVersionNumber;
+FOUNDATION_EXPORT const unsigned char MosaiqueAssetsPickerVersionString[];
 

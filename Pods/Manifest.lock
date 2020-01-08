@@ -1,10 +1,10 @@
 PODS:
-  - AssetsPicker (0.0.1)
+  - MosaiqueAssetsPicker (1.0.0)
   - Reveal-SDK (24)
   - TransitionPatch (1.0.2)
 
 DEPENDENCIES:
-  - "AssetsPicker (from `git@github.com:eure/AssetsPicker.git`, branch `promisedImages`)"
+  - "MosaiqueAssetsPicker (from `git@github.com:eure/AssetsPicker.git`)"
   - Reveal-SDK
   - TransitionPatch
 
@@ -14,20 +14,19 @@ SPEC REPOS:
     - TransitionPatch
 
 EXTERNAL SOURCES:
-  AssetsPicker:
-    :branch: promisedImages
+  MosaiqueAssetsPicker:
     :git: "git@github.com:eure/AssetsPicker.git"
 
 CHECKOUT OPTIONS:
-  AssetsPicker:
-    :commit: 139354489c258959de847685395985f2102ef224
+  MosaiqueAssetsPicker:
+    :commit: 6322f7d85e0a720d356c4fd4e55073bc853307f6
     :git: "git@github.com:eure/AssetsPicker.git"
 
 SPEC CHECKSUMS:
-  AssetsPicker: 169b8239160b363d30f302958b6e4f55d925305c
+  MosaiqueAssetsPicker: 2cdd49293075c7fe5fe9fe3a85c30fd8b5238c19
   Reveal-SDK: 5d7e56b8f018c0a88b3a2c10bf68d598bbd3b071
   TransitionPatch: c02b48b1429255b14ef82b7e411034e0958b9681
 
-PODFILE CHECKSUM: fcb69e8da6739cacc49ac8cd0133d1810a5df9ed
+PODFILE CHECKSUM: 1ea184385e5d74284c3d7c3ca4567dfc0ebb3b6c
 
 COCOAPODS: 1.8.4

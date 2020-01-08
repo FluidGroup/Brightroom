@@ -1,6 +1,6 @@
 {
-  "name": "AssetsPicker",
-  "version": "0.0.1",
+  "name": "MosaiqueAssetsPicker",
+  "version": "1.0.0",
   "summary": "Your customizable asset picker.",
   "description": "Your customizable asset picker.",
   "homepage": "https://github.com/eure/AssetsPicker",
@@ -10,12 +10,12 @@
   },
   "source": {
     "git": "https://github.com/eure/AssetsPicker.git",
-    "tag": "0.0.1"
+    "tag": "1.0.0"
   },
   "source_files": [
-    "Sources/AssetsPicker/**/*.{swift,h}"
+    "Sources/MosaiqueAssetsPicker/**/*.{swift,h}"
   ],
-  "public_header_files": "Sources/AssetsPicker/**/*.h",
+  "public_header_files": "Sources/MosaiqueAssetsPicker/**/*.h",
   "requires_arc": true,
   "platforms": {
     "ios": "10.0"

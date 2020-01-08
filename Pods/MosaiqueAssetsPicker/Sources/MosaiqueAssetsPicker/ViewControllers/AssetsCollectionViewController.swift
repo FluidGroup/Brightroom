@@ -15,7 +15,7 @@ final class AssetsCollectionViewController: UIViewController {
 
     private let viewModel = AssetCollectionViewModel()
     private var selectionContainer: SelectionContainer<AssetDetailCellViewModel>!
-    let configuration: AssetPickerConfiguration
+    let configuration: MosaiqueAssetPickerConfiguration
 
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -41,7 +41,7 @@ final class AssetsCollectionViewController: UIViewController {
         return collectionView
     }()
     
-    init(configuration: AssetPickerConfiguration) {
+    init(configuration: MosaiqueAssetPickerConfiguration) {
         self.configuration = configuration
         super.init(nibName: nil, bundle: nil)
         self.viewModel.delegate = self

@@ -9,7 +9,7 @@
 
 import PixelEngine
 import PixelEditor
-import AssetsPicker
+import MosaiqueAssetsPicker
 import Photos
 
 final class PHAssetDownloadEditorViewController : UIViewController {
@@ -30,7 +30,7 @@ final class PHAssetDownloadEditorViewController : UIViewController {
 
   @IBAction func didTapPushButton(_ sender: Any) {
 
-    let picker = AssetPickerViewController()
+    let picker = MosaiqueAssetPickerViewController()
       .setSelectionMode(.single)
       .setNumberOfItemsPerRow(3)
     picker.pickerDelegate = self
@@ -48,12 +48,12 @@ final class PHAssetDownloadEditorViewController : UIViewController {
   }
 }
 
-extension PHAssetDownloadEditorViewController: AssetPickerDelegate {
-  func photoPickerDidCancel(_ pickerController: AssetPickerViewController) {
+extension PHAssetDownloadEditorViewController: MosaiqueAssetPickerDelegate {
+  func photoPickerDidCancel(_ pickerController: MosaiqueAssetPickerViewController) {
     //XXX
   }
 
-  func photoPicker(_ pickerController: AssetPickerViewController, didPickAssets assets: [AssetDownload]) {
+  func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickAssets assets: [AssetFuture]) {
     self.selectedAsset = assets.first?.asset
     pickerController.dismiss(animated: true, completion: nil)
   }

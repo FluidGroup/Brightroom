@@ -12,7 +12,7 @@ import Photos
 
 final class SelectAssetCollectionContainerViewController: UIViewController {
  
-    let configuration: AssetPickerConfiguration
+    let configuration: MosaiqueAssetPickerConfiguration
     
     private lazy var changePermissionsButton: UIButton = {
         let button = UIButton(type: UIButton.ButtonType.custom)
@@ -24,7 +24,7 @@ final class SelectAssetCollectionContainerViewController: UIViewController {
  
     // MARK: Lifecycle
 
-    init(configuration: AssetPickerConfiguration) {
+    init(configuration: MosaiqueAssetPickerConfiguration) {
         self.configuration = configuration
         super.init(nibName: nil, bundle: nil)
     }

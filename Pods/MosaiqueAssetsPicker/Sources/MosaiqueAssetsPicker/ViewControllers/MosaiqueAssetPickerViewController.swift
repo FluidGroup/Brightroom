@@ -9,23 +9,27 @@
 import UIKit
 import enum Photos.PHAssetMediaType
 
-public protocol AssetPickerDelegate: class {
-    func photoPicker(_ pickerController: AssetPickerViewController, didPickImages images: [UIImage])
-    func photoPickerDidCancel(_ pickerController: AssetPickerViewController)
-    func photoPicker(_ pickerController: AssetPickerViewController, didPickAssets assets: [AssetDownload])
+public protocol MosaiqueAssetPickerDelegate: class {
+    func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickImages images: [UIImage])
+    func photoPickerDidCancel(_ pickerController: MosaiqueAssetPickerViewController)
+    /// [Optional] Will be called when the user press the done button. At this point, you can either:
+    /// - Keep or dissmiss the view controller and continue forward with the `AssetDownload` object
+    /// - Wait for the images to be ready (will be provided with by the `didPickImages`
+    func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickAssets assets: [AssetFuture])
 }
 
-public extension AssetPickerDelegate {
-    func photoPicker(_ pickerController: AssetPickerViewController, didPickAssets assets: [AssetDownload]) {}
-    func photoPicker(_ pickerController: AssetPickerViewController, didPickImages images: [UIImage]) {}
+public extension MosaiqueAssetPickerDelegate {
+    func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickAssets assets: [AssetFuture]) {}
+    func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickImages images: [UIImage]) {}
 }
 
-public final class AssetPickerViewController : UINavigationController {
+public final class MosaiqueAssetPickerViewController : UINavigationController {
     
     // MARK: - Properties
-    var configuration = AssetPickerConfiguration.shared
-    public weak var pickerDelegate: AssetPickerDelegate?
-    
+    var configuration = MosaiqueAssetPickerConfiguration.shared
+    public weak var pickerDelegate: MosaiqueAssetPickerDelegate?
+    private var assetFutures: [AssetFuture]?
+
     // MARK: - Lifecycle
     
     public init() {
@@ -74,10 +78,12 @@ public final class AssetPickerViewController : UINavigationController {
         if let images = notification.object as? [UIImage] {
             self.pickerDelegate?.photoPicker(self, didPickImages: images)
         }
+        assetFutures = nil
     }
     
     @objc func didCancel(notification: Notification) {
         self.pickerDelegate?.photoPickerDidCancel(self)
+        assetFutures = nil
     }
     
     @objc func dismissPicker(sender: Any) {
@@ -85,8 +91,9 @@ public final class AssetPickerViewController : UINavigationController {
     }
 
     @objc func didPickAssets(notification: Notification) {
-        if let downloads = notification.object as? [AssetDownload] {
+        if let downloads = notification.object as? [AssetFuture] {
             self.pickerDelegate?.photoPicker(self, didPickAssets: downloads)
+            assetFutures = downloads
         }
     }
 }
@@ -94,58 +101,58 @@ public final class AssetPickerViewController : UINavigationController {
 
 // MARK: Builder pattern
 
-extension AssetPickerViewController {
+extension MosaiqueAssetPickerViewController {
     @discardableResult
-    public func setSelectionMode(_ selectionMode: SelectionMode) -> AssetPickerViewController {
+    public func setSelectionMode(_ selectionMode: SelectionMode) -> MosaiqueAssetPickerViewController {
         configuration.selectionMode = selectionMode
         return self
     }
     
     @discardableResult
-    public func setSelectionMode(_ selectionColor: UIColor) -> AssetPickerViewController {
+    public func setSelectionMode(_ selectionColor: UIColor) -> MosaiqueAssetPickerViewController {
         configuration.selectionColor = selectionColor
         return self
     }
     
     @discardableResult
-    public func setSelectionColor(_ tintColor: UIColor) -> AssetPickerViewController {
+    public func setSelectionColor(_ tintColor: UIColor) -> MosaiqueAssetPickerViewController {
         configuration.tintColor = tintColor
         return self
     }
     
     @discardableResult
-    public func setNumberOfItemsPerRow(_ numberOfItemsPerRow: Int) -> AssetPickerViewController {
+    public func setNumberOfItemsPerRow(_ numberOfItemsPerRow: Int) -> MosaiqueAssetPickerViewController {
         configuration.numberOfItemsPerRow = numberOfItemsPerRow
         return self
     }
     
     @discardableResult
-    public func setHeaderView(_ headerView: UIView, isHeaderFloating: Bool) -> AssetPickerViewController {
+    public func setHeaderView(_ headerView: UIView, isHeaderFloating: Bool) -> MosaiqueAssetPickerViewController {
         configuration.headerView = headerView
         configuration.isHeaderFloating = isHeaderFloating
         return self
     }
     
     @discardableResult
-    public func setCellRegistrator(_ cellRegistrator: AssetPickerCellRegistrator) -> AssetPickerViewController {
+    public func setCellRegistrator(_ cellRegistrator: AssetPickerCellRegistrator) -> MosaiqueAssetPickerViewController {
         configuration.cellRegistrator = cellRegistrator
         return self
     }
     
     @discardableResult
-    public func setMediaTypes(_ supportOnlyMediaType: [PHAssetMediaType]) -> AssetPickerViewController {
+    public func setMediaTypes(_ supportOnlyMediaType: [PHAssetMediaType]) -> MosaiqueAssetPickerViewController {
         configuration.supportOnlyMediaType = supportOnlyMediaType
         return self
     }
     
     @discardableResult
-    public func disableOnLibraryScrollAnimation() -> AssetPickerViewController {
+    public func disableOnLibraryScrollAnimation() -> MosaiqueAssetPickerViewController {
         configuration.disableOnLibraryScrollAnimation = true
         return self
     }
     
     @discardableResult
-    public func localize(_ localize: LocalizedStrings) -> AssetPickerViewController {
+    public func localize(_ localize: LocalizedStrings) -> MosaiqueAssetPickerViewController {
         configuration.localize = localize
         return self
     }

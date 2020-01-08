@@ -1,4 +1,4 @@
-# 📸 AssetsPicker
+# 📸 MosaiqueAssetsPicker
 
 Your customizable asset picker.
 
@@ -18,19 +18,20 @@ Swift 4.2+
 - [x] Customize cells
 - [x] Customize style and localization
 - [x] Custom header
-- [x] Photo on the cloud?
-- [ ] Permissions handling ?
+- [x] Photo on the cloud
+- [x] Permissions handling
+- [x] Other asset ( LivePhoto, Video, Gif, .. )
+- [x] Background downloading
 - [ ] Selection counter ( badge ? )
-- [ ] Other asset ( LivePhoto, Video, Gif, .. )
 
 ## 👨🏻‍💻 Usage
 
 ### Default value
 
 ```swift
-let photoPicker = AssetPickerViewController()
+let photoPicker = MosaiqueAssetPickerViewController()
 photoPicker.pickerDelegate = self
-        
+
 present(photoPicker, animated: true, completion: nil)
 ```
 
@@ -43,7 +44,7 @@ let cellRegistrator = AssetPickerCellRegistrator()
 cellRegistrator.register(cellClass: Demo2AssetCell.self, forCellType: .asset)
 cellRegistrator.register(cellClass: Demo2AssetCollectionCell.self, forCellType: .assetCollection)
 
-let photoPicker = AssetPickerViewController()
+let photoPicker = MosaiqueAssetPickerViewController()
                     .setCellRegistrator(cellRegistrator)
 
 photoPicker.pickerDelegate = self
@@ -61,7 +62,7 @@ let cellRegistrator = AssetPickerCellRegistrator()
 cellRegistrator.register(nib: assetNib, forCellType: .asset)
 cellRegistrator.register(nib: assetCollectionNib, forCellType: .assetCollection)
 
-let photoPicker = AssetPickerViewController()
+let photoPicker = MosaiqueAssetPickerViewController()
                     .setCellRegistrator(cellRegistrator)
 
 photoPicker.pickerDelegate = self
@@ -77,7 +78,7 @@ headerView.backgroundColor = .orange
 headerView.translatesAutoresizingMaskIntoConstraints = false
 headerView.heightAnchor.constraint(equalToConstant: 120).isActive = true
 
-let photoPicker = AssetPickerViewController()
+let photoPicker = MosaiqueAssetPickerViewController()
                     .setHeaderView(headerView, isHeaderFloating: true)
 
 photoPicker.pickerDelegate = self
@@ -112,27 +113,34 @@ public struct LocalizedStrings {
 }
 ```
 
+### AssetFuture usage
+
+`AssetFuture` can be used to dismiss the view controller once the asset is selected but before the asset is ready/downloaded. It can be optained through the (optional)  delegate: 
+
+`    func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickAssets assets: [AssetFuture])`
+
+You can retreive asynchronously a thumbnail with `onThumbnailCompletion: ((Result<UIImage, NSError>) -> Void)?`
+And the final image  with `finalImageResult: Result<UIImage, NSError>?`
+
+As long as the `AssetFuture` is retained by you or the `MosaiqueAssetPickerViewController`, the asset will be fetched, using the network if needed, even if the app enters background. The fetch request is cancelled on release.
+
+
 ## Installation
 
 ### CocoaPods
 
-TODO
-
-### Carthage
-
-TODO
-
-### What's using AssetsPicker
+XXXX
 
 
-TODO
-## Author
+### What's using MosaiqueAssetsPicker
 
-TODO
+- Pairs Engage
 
-## Contributors
+## Authors
 
-TODO
+- Muukii <muukii.app@gmail.com>
+- Aymen Rebouh <aymenmse@gmail.com>
+- Antoine Marandon <antoine@marandon.fr>
 
 ## License
 

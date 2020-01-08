@@ -9,6 +9,6 @@ end
 target 'Demo' do
   # Comment the next line if you're not using Swift and don't want to use dynamic frameworks
   use_frameworks!
-  pod 'AssetsPicker', :git => 'git@github.com:eure/AssetsPicker.git', :branch => 'promisedImages'
+  pod 'MosaiqueAssetsPicker', :git => 'git@github.com:eure/AssetsPicker.git'
   pod 'Reveal-SDK'
 end

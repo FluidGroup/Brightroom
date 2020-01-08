@@ -8,8 +8,9 @@
 
 import Foundation
 import Photos
+import UIKit
 
-public class AssetDownload {
+public class AssetFuture {
     public let asset: PHAsset
     public var onComplete: ((Result<UIImage, NSError>) -> Void)? {
         didSet {

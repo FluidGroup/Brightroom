@@ -7,6 +7,7 @@
 //
 
 import Photos
+import UIKit.UIImage
 
 public protocol AssetDetailViewModelDelegate: class {
     func displayItemsChange(_ changes: PHFetchResultChangeDetails<PHAsset>)
@@ -21,7 +22,7 @@ public final class AssetDetailViewModel: NSObject {
     private(set) var assetCollection: PHAssetCollection
     private(set) var selectionContainer: SelectionContainer<AssetDetailCellViewModel>
     private(set) var displayItems: PHFetchResult<PHAsset>
-    let configuration: AssetPickerConfiguration
+    let configuration: MosaiqueAssetPickerConfiguration
     var selectedIndexs: [Int] {
         let selectedAssets = selectionContainer.selectedItems.map { $0.asset }
         return selectedAssets.compactMap { displayItems.contains($0) ? displayItems.index(of: $0) : nil }
@@ -29,7 +30,7 @@ public final class AssetDetailViewModel: NSObject {
 
     // MARK: Lifecycle
 
-    init(assetCollection: PHAssetCollection, selectionContainer: SelectionContainer<AssetDetailCellViewModel>, configuration: AssetPickerConfiguration) {
+    init(assetCollection: PHAssetCollection, selectionContainer: SelectionContainer<AssetDetailCellViewModel>, configuration: MosaiqueAssetPickerConfiguration) {
         self.assetCollection = assetCollection
         self.selectionContainer = selectionContainer
         self.displayItems = PHFetchResult<PHAsset>()
@@ -60,11 +61,11 @@ public final class AssetDetailViewModel: NSObject {
         }
     }
 
-    func downloadSelectedCells(onNext: @escaping (([UIImage]) -> Void)) -> [AssetDownload]{
+    func downloadSelectedCells(onNext: @escaping (([UIImage]) -> Void)) -> [AssetFuture] {
         let dispatchGroup = DispatchGroup()
         var images: [UIImage] = []
 
-        let assetsDownloads = selectionContainer.selectedItems.map { (cellViewModel) -> AssetDownload in
+        let assetsDownloads = selectionContainer.selectedItems.map { (cellViewModel) -> AssetFuture in
             dispatchGroup.enter()
             return cellViewModel.download(onNext: { image in
                 DispatchQueue.main.async {

@@ -6,8 +6,8 @@
 //  Copyright © 2018 eure. All rights reserved.
 //
 
-import Foundation
 import Photos
+import UIKit
 
 public final class AssetDetailViewController: UIViewController {
     // MARK: Properties
@@ -15,7 +15,7 @@ public final class AssetDetailViewController: UIViewController {
     let viewModel: AssetDetailViewModel
     var headerSizeCalculator: ViewSizeCalculator<UIView>?
     private var collectionView: UICollectionView!
-    let configuration: AssetPickerConfiguration
+    let configuration: MosaiqueAssetPickerConfiguration
     
     private var gridCount: Int {
         return viewModel.configuration.numberOfItemsPerRow
@@ -23,7 +23,7 @@ public final class AssetDetailViewController: UIViewController {
     
     // MARK: Lifecycle
     
-    init(withAssetCollection assetCollection: PHAssetCollection, andSelectionContainer selectionContainer: SelectionContainer<AssetDetailCellViewModel>, configuration: AssetPickerConfiguration) {
+    init(withAssetCollection assetCollection: PHAssetCollection, andSelectionContainer selectionContainer: SelectionContainer<AssetDetailCellViewModel>, configuration: MosaiqueAssetPickerConfiguration) {
         self.viewModel = AssetDetailViewModel(
             assetCollection: assetCollection,
             selectionContainer: selectionContainer,
@@ -234,22 +234,13 @@ extension AssetDetailViewController: UICollectionViewDataSource {
 
 extension AssetDetailViewController: UICollectionViewDelegateFlowLayout {
     @objc dynamic public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        func CalculateFittingGridSize(maxWidth: CGFloat, numberOfItemsInRow: Int, margin: CGFloat, index: Int) -> CGSize {
-            let totalMargin: CGFloat = margin * CGFloat(numberOfItemsInRow - 1)
-            let actualWidth: CGFloat = maxWidth - totalMargin
-            let width: CGFloat = CGFloat(floorf(Float(actualWidth) / Float(numberOfItemsInRow)))
-            let extraWidth: CGFloat = actualWidth - (width * CGFloat(numberOfItemsInRow))
-            
-            if index % numberOfItemsInRow == 0 || index % numberOfItemsInRow == (numberOfItemsInRow - 1) {
-                return CGSize(width: width + extraWidth / 2.0, height: width)
-            } else {
-                return CGSize(width: width, height: width)
-            }
-        }
         
-        let size = CalculateFittingGridSize(maxWidth: collectionView.bounds.width, numberOfItemsInRow: gridCount, margin: 1, index: (indexPath as NSIndexPath).item)
-        
-        return size
+        return HorizontalStackItemSizeCalculator.square(
+            width: collectionView.bounds.width,
+            spacing: 1,
+            itemCount: gridCount,
+            itemIndex: indexPath.item
+        )
     }
     
     @objc dynamic public func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
@@ -289,5 +280,42 @@ extension AssetDetailViewController: AssetDetailViewModelDelegate {
             collectionView.reloadData()
         }
         navigationItem.rightBarButtonItem?.isEnabled = viewModel.selectionContainer.selectedCount > 0
+    }
+}
+
+fileprivate enum HorizontalStackItemSizeCalculator {
+    
+    static func square(width: CGFloat, spacing: CGFloat, itemCount: Int, itemIndex: Int) -> CGSize {
+        
+        let (height, _) = components(width: width, spacing: spacing, itemCount: itemCount)
+        let width = cal(width: width, spacing: spacing, itemCount: itemCount, indexInRow: itemIndex % itemCount)
+        return CGSize(width: width, height: height)
+    }
+    
+    static func cal(width: CGFloat, spacing: CGFloat, itemCount: Int, itemIndex: Int) -> CGFloat {
+        
+        cal(width: width, spacing: spacing, itemCount: itemCount, indexInRow: itemIndex % itemCount)
+    }
+    
+    static func components(width: CGFloat, spacing: CGFloat, itemCount: Int) -> (unit: CGFloat, extra: CGFloat) {
+        
+        let itemCount_f = CGFloat(itemCount)
+        let targetWidth = width - (spacing * (itemCount_f - 1))
+        let extra = targetWidth.truncatingRemainder(dividingBy: itemCount_f)
+        let unit = (targetWidth - extra) / itemCount_f
+        
+        return (unit: unit, extra: extra)
+    }
+    
+    static func cal(width: CGFloat, spacing: CGFloat, itemCount: Int, indexInRow: Int) -> CGFloat {
+        assert(indexInRow < itemCount)
+        
+        let (unit, extra) = components(width: width, spacing: spacing, itemCount: itemCount)
+        
+        if indexInRow == 1 {
+            return unit + extra
+        } else {
+            return unit
+        }
     }
 }

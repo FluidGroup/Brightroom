@@ -10,7 +10,7 @@ import Foundation
 import UIKit
 
 final class AssetDetailCell: UICollectionViewCell, AssetDetailCellBindable {
-    var configuration: AssetPickerConfiguration!
+    var configuration: MosaiqueAssetPickerConfiguration!
     // MARK: Properties
     private var spinner: UIActivityIndicatorView?
     

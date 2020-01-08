@@ -24,9 +24,9 @@ public struct LocalizedStrings {
     public init() {}
 }
 
-struct AssetPickerConfiguration {
+struct MosaiqueAssetPickerConfiguration {
     
-    static var shared = AssetPickerConfiguration()
+    static var shared = MosaiqueAssetPickerConfiguration()
     
     /// Single of multiple select
     public var selectionMode: SelectionMode = .single
