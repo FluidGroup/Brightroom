@@ -138,35 +138,22 @@ public final class PixelEditViewController : UIViewController {
   /// This is usefull in case you wish to present the PixelEditior while the image is still loading
   public var isLoading: Bool {
     get {
-      return loadingView != nil
+      return loadingViews != nil
     }
     set {
       if newValue, self.isLoading == false {
-        let loadingView = UIView()
+        let loadingView = LoadingView(frame: .zero)
         let disableView = UIView()
-        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
-        let spinner = UIActivityIndicatorView(style: .whiteLarge)
-        loadingView.backgroundColor = .clear
-        loadingView.addSubview(blurView)
-        loadingView.addSubview(spinner)
         disableView.backgroundColor = .init(white: 1, alpha: 0.5)
-        self.loadingView = [loadingView, disableView]
+        self.loadingViews = [loadingView, disableView]
         view.addSubview(loadingView)
         view.addSubview(disableView)
-        spinner.startAnimating()
-        spinner.isHidden = false
-        [loadingView, blurView, spinner, disableView].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
+        disableView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
           loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
           loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
           loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
           loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-          blurView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
-          blurView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
-          blurView.topAnchor.constraint(equalTo: previewView.topAnchor),
-          blurView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-          spinner.centerYAnchor.constraint(equalTo: previewView.centerYAnchor),
-          spinner.centerXAnchor.constraint(equalTo: previewView.centerXAnchor),
           disableView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
           disableView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
           disableView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
@@ -175,14 +162,14 @@ public final class PixelEditViewController : UIViewController {
         doneButton.isEnabled = false
       }
       if !newValue {
-        loadingView?.forEach { $0.removeFromSuperview() }
-        loadingView = nil
+        loadingViews?.forEach { $0.removeFromSuperview() }
+        loadingViews = nil
         doneButton.isEnabled = true
       }
     }
   }
   private let asset: PHAsset?
-  private var loadingView: [UIView]?
+  private var loadingViews: [UIView]?
   private var imageSource: ImageSource?
   private var colorCubeStorage: ColorCubeStorage = .default
   private var editingStackBuilder: (CGSize, ColorCubeStorage, ImageSource) -> EditingStack = { (bounds, storage, imageSource) in
