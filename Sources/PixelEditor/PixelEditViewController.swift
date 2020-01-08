@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import UIKit
-
 import PixelEngine
 import Photos
 
@@ -170,7 +169,6 @@ public final class PixelEditViewController : UIViewController {
   }
   private let asset: PHAsset?
   private var loadingViews: [UIView]?
-  private var imageSource: ImageSource?
   private var colorCubeStorage: ColorCubeStorage = .default
   private var editingStackBuilder: (CGSize, ColorCubeStorage, ImageSource) -> EditingStack = { (bounds, storage, imageSource) in
     return SquareEditingStack.init(
@@ -207,13 +205,12 @@ public final class PixelEditViewController : UIViewController {
     colorCubeStorage: ColorCubeStorage = .default,
     options: Options = .current
   ) {
-    self.imageSource = source
     self.options = options
     self.colorCubeStorage = colorCubeStorage
     self.doneButtonTitle = doneButtonTitle
     self.asset = nil
     super.init(nibName: nil, bundle: nil)
-    self.setupDefaultEditingStack()
+    editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, source)
   }
 
   /// Builde the asset picker without providing an actual image.
@@ -244,16 +241,9 @@ public final class PixelEditViewController : UIViewController {
 
   /// Dynamicaly change the image. The editing stack will be reinitialized using the `editingStackBuilder` provided in `init` or a default one.
   public func replace(imageSource: ImageSource) {
-    self.imageSource = imageSource
-    self.setupDefaultEditingStack()
+    editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, imageSource)
   }
   // MARK: - Functions
-
-  private func setupDefaultEditingStack() {
-    if let imageSource = self.imageSource {
-      editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, imageSource)
-    }
-  }
 
   public override func viewDidLoad() {
     super.viewDidLoad()
@@ -381,7 +371,7 @@ public final class PixelEditViewController : UIViewController {
     finalImageRequestOptions.resizeMode = .none
     //TODO cancellation
     PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
-      guard let image = image, let self = self, self.imageSource == nil else { return }
+      guard let image = image, let self = self, self.isLoading else { return }
       self.replace(imageSource: .init(source: image))
     }
     PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
