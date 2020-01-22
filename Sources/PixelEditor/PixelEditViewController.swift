@@ -311,7 +311,12 @@ public final class PixelEditViewController : UIViewController {
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
       }
     }
-    self.isLoading = editingStack.previewImage == nil
+    switch self.imageSource.imageSource {
+    case .editable(_):
+      self.isLoading = false
+    default:
+      self.isLoading = true
+    }
 
     bind: do {
 
