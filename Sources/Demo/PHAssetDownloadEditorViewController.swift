@@ -18,7 +18,7 @@ final class PHAssetDownloadEditorViewController : UIViewController {
   private var selectedAsset: PHAsset?
 
   private lazy var stack = SquareEditingStack.init(
-    source: ImageSource(source: UIImage(named: "large")!),
+    source: StaticImageSource(source: UIImage(named: "large")!),
     previewSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
   )
@@ -40,7 +40,7 @@ final class PHAssetDownloadEditorViewController : UIViewController {
 
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     guard let selectedAsset = selectedAsset else { return }
-    let controller = PixelEditViewController(asset: selectedAsset)
+    let controller = PixelEditViewController(editingStack: SquareEditingStack(source: PHAssetImageSource(selectedAsset), previewSize: .init(width: view.frame.width, height: view.frame.width)))
     controller.delegate = self
 
     navigationController?.pushViewController(controller, animated: true)

@@ -40,19 +40,20 @@ public final class ImageRenderer {
     .highQualityDownsample : true,
     ])
   
-  public let source: ImageSource
+  public let source: ImageSourceType
 
   public var edit: Edit = .init()
 
-  public init(source: ImageSource) {
+  public init(source: ImageSourceType) {
     self.source = source
   }
 
   public func render(resolution: Resolution = .full) -> UIImage {
-
+    guard let targetImage = source.imageSource?.image else {
+      preconditionFailure("Nothing to render")
+    }
     let resultImage: CIImage = {
 
-      let targetImage = source.image
       let sourceImage: CIImage
 
       if var croppingRect = edit.croppingRect {

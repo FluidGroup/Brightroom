@@ -27,7 +27,7 @@ public protocol PixelEditViewControllerDelegate : class {
 
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
-  
+
 }
 
 public final class PixelEditContext {
@@ -89,12 +89,10 @@ public final class PixelEditViewController : UIViewController {
   
   public let options: Options
   
-  public private(set) var editingStack: EditingStack? {
+  public private(set) var editingStack: EditingStack! {
     didSet {
-      guard let editingStack = self.editingStack else { preconditionFailure("Do not set editing stack to nil") }
-      editingStack.delegate = self
-      stackView.notify(changedEdit: editingStack.currentEdit)
-      setupImagesViews(isUpdating: oldValue != nil)
+      guard editingStack != nil else { preconditionFailure("Do not set editing stack to nil") }
+      self.editingStack.delegate = self
     }
   }
   
@@ -132,10 +130,8 @@ public final class PixelEditViewController : UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  /// Setting this to true will cause the UI to display a spinner and blurr the current image, while disabling the UI.
-  /// Set to false to remove
-  /// This is usefull in case you wish to present the PixelEditior while the image is still loading
-  public var isLoading: Bool {
+  private let imageSource: ImageSourceType
+  private var isLoading: Bool {
     get {
       return loadingViews != nil
     }
@@ -167,16 +163,8 @@ public final class PixelEditViewController : UIViewController {
       }
     }
   }
-  private let asset: PHAsset?
   private var loadingViews: [UIView]?
   private var colorCubeStorage: ColorCubeStorage = .default
-  private var editingStackBuilder: (CGSize, ColorCubeStorage, ImageSource) -> EditingStack = { (bounds, storage, imageSource) in
-    return SquareEditingStack.init(
-      source: imageSource,
-      previewSize: CGSize(width: bounds.width, height: bounds.width),
-      colorCubeStorage: storage
-    )
-  }
 
   // MARK: - Initializers
 
@@ -187,6 +175,7 @@ public final class PixelEditViewController : UIViewController {
   ) {
     self.init(source: editingStack.source, options: options)
     self.editingStack = editingStack
+    editingStack.delegate = self
   }
 
   public convenience init(
@@ -195,43 +184,21 @@ public final class PixelEditViewController : UIViewController {
     colorCubeStorage: ColorCubeStorage = .default,
     options: Options = .current
   ) {
-    let source = ImageSource(source: image)
+    let source = StaticImageSource(source: image)
     self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
   }
 
   public init(
-    source: ImageSource,
+    source: ImageSourceType,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
     options: Options = .current
   ) {
+    self.imageSource = source
     self.options = options
     self.colorCubeStorage = colorCubeStorage
     self.doneButtonTitle = doneButtonTitle
-    self.asset = nil
     super.init(nibName: nil, bundle: nil)
-    editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, source)
-  }
-
-  /// Builde the asset picker without providing an actual image.
-  /// If a `PHAsset` is provided, the UIImage will be retreived autmatically.
-  /// This will also set `isLoading` to true.
-  public init(asset: PHAsset? = nil,
-              doneButtonTitle: String = L10n.done,
-              colorCubeStorage: ColorCubeStorage = .default,
-              options: Options = .current,
-              editingStackBuilder: ((CGSize, ColorCubeStorage, ImageSource) -> EditingStack)? = nil
-
-  ) {
-    self.options = options
-    self.colorCubeStorage = colorCubeStorage
-    self.doneButtonTitle = doneButtonTitle
-    self.asset = asset
-    if let editingStackBuilder = editingStackBuilder {
-      self.editingStackBuilder = editingStackBuilder
-    }
-    super.init(nibName: nil, bundle: nil)
-    self.isLoading = true
   }
 
   @available(*, unavailable)
@@ -239,40 +206,43 @@ public final class PixelEditViewController : UIViewController {
     fatalError("init(coder:) has not been implemented")
   }
 
-  /// Dynamicaly change the image. The editing stack will be reinitialized using the `editingStackBuilder` provided in `init` or a default one.
-  public func replace(imageSource: ImageSource) {
-    editingStack = editingStackBuilder(view.bounds.size, colorCubeStorage, imageSource)
-  }
   // MARK: - Functions
 
   public override func viewDidLoad() {
     super.viewDidLoad()
-    
+
     layout: do {
 
       root: do {
 
+        if editingStack == nil {
+          editingStack = SquareEditingStack.init(
+            source: imageSource,
+            previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
+            colorCubeStorage: colorCubeStorage
+          )
+        }
         view.backgroundColor = .white
-        
+
         let guide = UILayoutGuide()
-        
+
         view.addLayoutGuide(guide)
 
         view.addSubview(editContainerView)
         view.addSubview(controlContainerView)
-        
+
         editContainerView.accessibilityIdentifier = "app.muukii.pixel.editContainerView"
         controlContainerView.accessibilityIdentifier = "app.muukii.pixel.controlContainerView"
 
         editContainerView.translatesAutoresizingMaskIntoConstraints = false
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
-        
+
         NSLayoutConstraint.activate([
           guide.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
           guide.rightAnchor.constraint(equalTo: view.rightAnchor),
           guide.leftAnchor.constraint(equalTo: view.leftAnchor),
           guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
-          
+
           {
             let c = editContainerView.topAnchor.constraint(equalTo: guide.topAnchor)
             c.priority = .defaultHigh
@@ -296,7 +266,7 @@ public final class PixelEditViewController : UIViewController {
 
           editContainerView.centerXAnchor.constraint(equalTo: guide.centerXAnchor),
           editContainerView.centerYAnchor.constraint(equalTo: guide.centerYAnchor),
-          
+
           controlContainerView.topAnchor.constraint(equalTo: guide.bottomAnchor),
           controlContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
           controlContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
@@ -307,7 +277,7 @@ public final class PixelEditViewController : UIViewController {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             }
           }()
-          ])
+        ])
       }
 
       root: do {
@@ -328,9 +298,9 @@ public final class PixelEditViewController : UIViewController {
               view.rightAnchor.constraint(equalTo: view.superview!.rightAnchor),
               view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor),
               view.leftAnchor.constraint(equalTo: view.superview!.leftAnchor),
-              ])
+            ])
         }
-        
+
       }
 
       control: do {
@@ -341,6 +311,7 @@ public final class PixelEditViewController : UIViewController {
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
       }
     }
+    self.isLoading = editingStack.previewImage == nil
 
     bind: do {
 
@@ -352,57 +323,39 @@ public final class PixelEditViewController : UIViewController {
 
       }
     }
-    downloadAssetIfNeeded()
-  }
 
-  // MARK: - Private Functions
-
-  private func downloadAssetIfNeeded() {
-    guard let asset = self.asset else { return }
-    let previewRequestOptions = PHImageRequestOptions()
-    previewRequestOptions.deliveryMode = .highQualityFormat
-    previewRequestOptions.isNetworkAccessAllowed = true
-    previewRequestOptions.version = .current
-    previewRequestOptions.resizeMode = .fast
-    let finalImageRequestOptions = PHImageRequestOptions()
-    finalImageRequestOptions.deliveryMode = .highQualityFormat
-    finalImageRequestOptions.isNetworkAccessAllowed = true
-    finalImageRequestOptions.version = .current
-    finalImageRequestOptions.resizeMode = .none
-    //TODO cancellation
-    PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
-      guard let image = image, let self = self, self.isLoading else { return }
-      self.replace(imageSource: .init(source: image))
-    }
-    PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
-      guard let self = self else { return }
-      if let image = image {
-        self.replace(imageSource: .init(source: image))
-        self.isLoading = false
-      } else {
-        // TODO Error handleing
+    setupImagesViews()
+    UIView.performWithoutAnimation {
+      self.previewView.image = editingStack.previewImage
+      self.previewView.originalImage = editingStack.originalPreviewImage
+      if !self.maskingView.isHidden {
+        self.maskingView.image = editingStack.previewImage
       }
     }
   }
 
-  private func setupImagesViews(isUpdating: Bool) {
-    guard let editingStack = self.editingStack else { return }
-    setAspect(editingStack.aspectRatio)
-    if isUpdating == false {
+  // MARK: - Private Functions
+
+  private var hasSetupImageViews = false
+  private func setupImagesViews() {
+    guard let editingStack = editingStack else { preconditionFailure() }
+    guard let aspectRatio = editingStack.aspectRatio else { return }
+    if hasSetupImageViews == false {
+      setAspect(aspectRatio)
       stackView.push(
         options.classes.control.rootControl.init(
           context: context,
           colorCubeControl: options.classes.control.colorCubeControl.init(
             context: context,
-            originalImage: editingStack.cubeFilterPreviewSourceImage,
-            filters: editingStack.availableColorCubeFilters
+            originalImage: editingStack.cubeFilterPreviewSourceImage!,
+            filters: editingStack.previewColorCubeFilters
           )
         ),
         animated: false
       )
+      hasSetupImageViews = true
     }
     view.layoutIfNeeded()
-
     previewView.originalImage = editingStack.originalPreviewImage
     previewView.image = editingStack.previewImage
     maskingView.image = editingStack.previewImage
@@ -512,8 +465,6 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func syncUI(edit: EditingStack.Edit) {
-    guard let editingStack = self.editingStack else { return }
-
     if !adjustmentView.isHidden {
       updateAdjustmentUI()
     }
@@ -522,8 +473,6 @@ public final class PixelEditViewController : UIViewController {
   }
   
   private func updateAdjustmentUI() {
-    guard let editingStack = self.editingStack else { return }
-
     let edit = editingStack.currentEdit
     
     if adjustmentView.image != editingStack.adjustmentImage {
@@ -536,15 +485,14 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func didReceive(action: PixelEditContext.Action) {
-    guard let editingStack = self.editingStack else { return }
-
+    guard let aspectRatio = editingStack.aspectRatio else { preconditionFailure()}
     switch action {
     case .setTitle(let title):
       navigationItem.title = title
     case .setMode(let mode):
       set(mode: mode)
     case .endAdjustment(let save):
-      setAspect(editingStack.aspectRatio)
+      setAspect(aspectRatio)
       if save {
         editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
         editingStack.commit()
@@ -572,10 +520,26 @@ public final class PixelEditViewController : UIViewController {
       editingStack.revert()
     }
   }
-
 }
 
 extension PixelEditViewController : EditingStackDelegate {
+  public func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {
+    setupImagesViews()
+    switch stack.source.imageSource {
+    case .editable(_):
+      self.isLoading = false
+    default:
+      self.isLoading = true
+    }
+    UIView.performWithoutAnimation {
+      self.previewView.image = stack.previewImage
+      self.previewView.originalImage = stack.originalPreviewImage
+      if !self.maskingView.isHidden {
+        self.maskingView.image = stack.previewImage
+      }
+    }
+  }
+
 
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     
