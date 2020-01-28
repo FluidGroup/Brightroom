@@ -29,7 +29,7 @@ final class EditorViewController : UIViewController {
   @IBOutlet weak var imageView: UIImageView!
   
   private lazy var stack = SquareEditingStack.init(
-    source: ImageSource(source: UIImage(named: "large")!),
+    source: StaticImageSource(source: UIImage(named: "large")!),
     previewSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
   )
@@ -101,5 +101,4 @@ extension EditorViewController : PixelEditViewControllerDelegate {
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
     self.navigationController?.popToViewController(self, animated: true)
   }
-  
 }

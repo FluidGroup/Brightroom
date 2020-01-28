@@ -22,15 +22,19 @@
 import Foundation
 
 public protocol EditingStackDelegate : class {
-
+  func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType)
   func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
+}
+
+public extension EditingStackDelegate {
+  func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {}
 }
 
 open class EditingStack {
 
   // MARK: - Stored Properties
 
-  public let source: ImageSource
+  public let source: ImageSourceType
 
   public weak var delegate: EditingStackDelegate?
 
@@ -38,9 +42,14 @@ open class EditingStack {
 
   public let targetScreenScale: CGFloat
 
-  private(set) public var availableColorCubeFilters: [PreviewFilterColorCube] = []
+  @available(*, deprecated, renamed: "previewColorCubeFilters")
+  public var availableColorCubeFilters: [PreviewFilterColorCube] {
+    return previewColorCubeFilters
+  }
+  private(set) public var previewColorCubeFilters: [PreviewFilterColorCube] = []
+  private var colorCubeFilters: [FilterColorCube] = []
 
-  private(set) public var cubeFilterPreviewSourceImage: CIImage!
+  private(set) public var cubeFilterPreviewSourceImage: CIImage?
   
   private(set) public var previewImage: CIImage?
 
@@ -54,8 +63,8 @@ open class EditingStack {
 
   public var adjustmentImage: CIImage?
   
-  public var aspectRatio: CGSize {
-    return originalPreviewImage!.extent.size
+  public var aspectRatio: CGSize? {
+    return originalPreviewImage?.extent.size
   }
 
   public var isDirty: Bool {
@@ -80,7 +89,7 @@ open class EditingStack {
 
   public private(set) var edits: [Edit] {
     didSet {
-      EngineLog.debug("Edits changed counnt -> \(edits.count)")
+      EngineLog.debug("Edits changed count -> \(edits.count)")
     }
   }
   
@@ -93,7 +102,7 @@ open class EditingStack {
   // MARK: - Initializers
 
   public init(
-    source: ImageSource,
+    source: ImageSourceType,
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale
@@ -103,43 +112,47 @@ open class EditingStack {
 
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
-
-    self.adjustmentImage = source.image
+    self.adjustmentImage = source.imageSource?.image
 
     self.edits = [.init()]
     
     initialCrop()
     commit()
     removeAllHistory()
-    
-    precondition(originalPreviewImage != nil, "originalPreviewImage is nil")
+    self.source.setImageUpdateListener { [weak self] in
+      guard let self = self else { return }
+      self.adjustmentImage = $0.imageSource?.image
+      self.initialCrop()
+      guard $0.imageSource?.image != nil else { return }
+      self.set(colorCubeFilters: colorCubeStorage.filters)
 
-    updatePreviewFilterSizeImage: do {
-      let smallSizeImage = ImageTool.resize(
-        to: Geometry.sizeThatAspectFit(
-          aspectRatio: CGSize(width: 1, height: 1),
-          boundingSize: CGSize(
-            width: 60 * targetScreenScale,
-            height: 60 * targetScreenScale
-          )
-        ),
-        from: originalPreviewImage!
-        )!
-      
-      cubeFilterPreviewSourceImage = smallSizeImage
-        .transformed(
-          by: .init(
-            translationX: -smallSizeImage.extent.origin.x,
-            y: -smallSizeImage.extent.origin.y
-          )
-      )
+      updatePreviewFilterSizeImage: do {
+        let smallSizeImage = ImageTool.resize(
+          to: Geometry.sizeThatAspectFit(
+            aspectRatio: CGSize(width: 1, height: 1),
+            boundingSize: CGSize(
+              width: 60 * self.targetScreenScale,
+              height: 60 * self.targetScreenScale
+            )
+          ),
+          from: self.originalPreviewImage!
+          )!
+        self.cubeFilterPreviewSourceImage = smallSizeImage
+          .transformed(
+            by: .init(
+              translationX: -smallSizeImage.extent.origin.x,
+              y: -smallSizeImage.extent.origin.y
+            )
+        )
+      }
+      self.refreshColorCubeFilters()
+      self.delegate?.editingStack(self, didUpdate: self.source)
     }
-    set(availableColorCubeFilters: colorCubeStorage.filters)
-
   }
-  
+
   open func initialCrop() {
-     setAdjustment(cropRect: source.image.extent)
+    guard let image = source.imageSource?.image else { return }
+    setAdjustment(cropRect: image.extent)
   }
 
   // MARK: - Functions
@@ -183,7 +196,7 @@ open class EditingStack {
 
   public func setAdjustment(cropRect: CGRect) {
 
-    let originalImage = source.image
+    guard let originalImage = source.imageSource?.image else { return } //XXX check for croppability ?
 
     var _cropRect = cropRect
 
@@ -222,18 +235,26 @@ open class EditingStack {
     }
   }
 
-  public func set(availableColorCubeFilters: [FilterColorCube]) {
-    
-    self.availableColorCubeFilters = availableColorCubeFilters.concurrentMap { item in
-      let r = PreviewFilterColorCube.init(sourceImage: cubeFilterPreviewSourceImage, filter: item)
+  private func refreshColorCubeFilters() {
+    guard let cubeFilterPreviewSourceImage = cubeFilterPreviewSourceImage else { return }
+    self.previewColorCubeFilters = colorCubeFilters.concurrentMap {
+      let r = PreviewFilterColorCube(sourceImage: cubeFilterPreviewSourceImage, filter: $0)
       r.preheat()
       return r
     }
-    
+  }
+
+  @available(*, deprecated, renamed: "set(colorCubeFilters:)")
+  public func set(availableColorCubeFilters: [FilterColorCube]) {
+    set(colorCubeFilters: availableColorCubeFilters)
+  }
+
+  public func set(colorCubeFilters: [FilterColorCube]) {
+    self.colorCubeFilters = colorCubeFilters
+    refreshColorCubeFilters()
   }
 
   public func makeRenderer() -> ImageRenderer {
-
     let renderer = ImageRenderer(source: source)
 
     let edit = currentEdit
@@ -292,9 +313,10 @@ open class EditingStack {
 open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
+    guard let image = source.imageSource?.image else { return }
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
-      boundingRect: source.image.extent
+      boundingRect: image.extent
     )
     
     setAdjustment(cropRect: cropRect)

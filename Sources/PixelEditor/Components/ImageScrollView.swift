@@ -60,10 +60,6 @@ open class ImageScrollView: UIScrollView {
     initialize()
   }
 
-  deinit {
-    NotificationCenter.default.removeObserver(self)
-  }
-
   private func initialize() {
     showsVerticalScrollIndicator = false
     showsHorizontalScrollIndicator = false

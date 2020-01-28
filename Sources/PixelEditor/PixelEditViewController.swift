@@ -20,15 +20,14 @@
 // THE SOFTWARE.
 
 import UIKit
-
 import PixelEngine
-
+import Photos
 
 public protocol PixelEditViewControllerDelegate : class {
 
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack)
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
-  
+
 }
 
 public final class PixelEditContext {
@@ -90,7 +89,12 @@ public final class PixelEditViewController : UIViewController {
   
   public let options: Options
   
-  public private(set) var editingStack: EditingStack!
+  public private(set) var editingStack: EditingStack! {
+    didSet {
+      guard editingStack != nil else { preconditionFailure("Do not set editing stack to nil") }
+      self.editingStack.delegate = self
+    }
+  }
   
   // MARK: - Private Propaties
 
@@ -126,7 +130,40 @@ public final class PixelEditViewController : UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  private let imageSource: ImageSource
+  private let imageSource: ImageSourceType
+  private var isLoading: Bool {
+    get {
+      return loadingViews != nil
+    }
+    set {
+      if newValue, self.isLoading == false {
+        let loadingView = LoadingView(frame: .zero)
+        let disableView = UIView()
+        disableView.backgroundColor = .init(white: 1, alpha: 0.5)
+        self.loadingViews = [loadingView, disableView]
+        view.addSubview(loadingView)
+        view.addSubview(disableView)
+        disableView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+          loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
+          loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
+          loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
+          loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
+          disableView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
+          disableView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
+          disableView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
+          disableView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
+        ])
+        doneButton.isEnabled = false
+      }
+      if !newValue {
+        loadingViews?.forEach { $0.removeFromSuperview() }
+        loadingViews = nil
+        doneButton.isEnabled = true
+      }
+    }
+  }
+  private var loadingViews: [UIView]?
   private var colorCubeStorage: ColorCubeStorage = .default
 
   // MARK: - Initializers
@@ -135,27 +172,28 @@ public final class PixelEditViewController : UIViewController {
     editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
     options: Options = .current
-    ) {
+  ) {
     self.init(source: editingStack.source, options: options)
     self.editingStack = editingStack
+    editingStack.delegate = self
   }
-  
+
   public convenience init(
     image: UIImage,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
     options: Options = .current
-    ) {
-    let source = ImageSource(source: image)
+  ) {
+    let source = StaticImageSource(source: image)
     self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
   }
 
   public init(
-    source: ImageSource,
+    source: ImageSourceType,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
     options: Options = .current
-    ) {
+  ) {
     self.imageSource = source
     self.options = options
     self.colorCubeStorage = colorCubeStorage
@@ -172,7 +210,7 @@ public final class PixelEditViewController : UIViewController {
 
   public override func viewDidLoad() {
     super.viewDidLoad()
-    
+
     layout: do {
 
       root: do {
@@ -184,28 +222,27 @@ public final class PixelEditViewController : UIViewController {
             colorCubeStorage: colorCubeStorage
           )
         }
-
         view.backgroundColor = .white
-        
+
         let guide = UILayoutGuide()
-        
+
         view.addLayoutGuide(guide)
 
         view.addSubview(editContainerView)
         view.addSubview(controlContainerView)
-        
+
         editContainerView.accessibilityIdentifier = "app.muukii.pixel.editContainerView"
         controlContainerView.accessibilityIdentifier = "app.muukii.pixel.controlContainerView"
 
         editContainerView.translatesAutoresizingMaskIntoConstraints = false
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
-        
+
         NSLayoutConstraint.activate([
           guide.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
           guide.rightAnchor.constraint(equalTo: view.rightAnchor),
           guide.leftAnchor.constraint(equalTo: view.leftAnchor),
           guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
-          
+
           {
             let c = editContainerView.topAnchor.constraint(equalTo: guide.topAnchor)
             c.priority = .defaultHigh
@@ -226,10 +263,10 @@ public final class PixelEditViewController : UIViewController {
             c.priority = .defaultHigh
             return c
           }(),
-          
+
           editContainerView.centerXAnchor.constraint(equalTo: guide.centerXAnchor),
           editContainerView.centerYAnchor.constraint(equalTo: guide.centerYAnchor),
-          
+
           controlContainerView.topAnchor.constraint(equalTo: guide.bottomAnchor),
           controlContainerView.rightAnchor.constraint(equalTo: view.rightAnchor),
           controlContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
@@ -240,10 +277,7 @@ public final class PixelEditViewController : UIViewController {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             }
           }()
-          ])
-
-        setAspect(editingStack.aspectRatio)
-        
+        ])
       }
 
       root: do {
@@ -264,9 +298,9 @@ public final class PixelEditViewController : UIViewController {
               view.rightAnchor.constraint(equalTo: view.superview!.rightAnchor),
               view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor),
               view.leftAnchor.constraint(equalTo: view.superview!.leftAnchor),
-              ])
+            ])
         }
-        
+
       }
 
       control: do {
@@ -275,22 +309,13 @@ public final class PixelEditViewController : UIViewController {
 
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-
-        stackView.push(
-          options.classes.control.rootControl.init(
-            context: context,
-            colorCubeControl: options.classes.control.colorCubeControl.init(
-              context: context,
-              originalImage: editingStack.cubeFilterPreviewSourceImage,
-              filters: editingStack.availableColorCubeFilters
-            )
-          ),
-          animated: false
-        )
-        stackView.notify(changedEdit: editingStack.currentEdit)
-
       }
-
+    }
+    switch self.imageSource.imageSource {
+    case .editable(_):
+      self.isLoading = false
+    default:
+      self.isLoading = true
     }
 
     bind: do {
@@ -302,26 +327,47 @@ public final class PixelEditViewController : UIViewController {
         self.didReceive(action: action)
 
       }
-
     }
 
-    start: do {
-
-      editingStack.delegate = self
-      view.layoutIfNeeded()
-      
-      previewView.originalImage = editingStack.originalPreviewImage
-      previewView.image = editingStack.previewImage
-      maskingView.image = editingStack.previewImage
-      maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
-
-      set(mode: mode)
+    setupImagesViews()
+    UIView.performWithoutAnimation {
+      self.previewView.image = editingStack.previewImage
+      self.previewView.originalImage = editingStack.originalPreviewImage
+      if !self.maskingView.isHidden {
+        self.maskingView.image = editingStack.previewImage
+      }
     }
-
   }
-    
+
   // MARK: - Private Functions
-  
+
+  private var hasSetupImageViews = false
+  private func setupImagesViews() {
+    guard let editingStack = editingStack else { preconditionFailure() }
+    guard let aspectRatio = editingStack.aspectRatio else { return }
+    if hasSetupImageViews == false {
+      setAspect(aspectRatio)
+      stackView.push(
+        options.classes.control.rootControl.init(
+          context: context,
+          colorCubeControl: options.classes.control.colorCubeControl.init(
+            context: context,
+            originalImage: editingStack.cubeFilterPreviewSourceImage!,
+            filters: editingStack.previewColorCubeFilters
+          )
+        ),
+        animated: false
+      )
+      hasSetupImageViews = true
+    }
+    view.layoutIfNeeded()
+    previewView.originalImage = editingStack.originalPreviewImage
+    previewView.image = editingStack.previewImage
+    maskingView.image = editingStack.previewImage
+    maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
+    set(mode: mode)
+  }
+
   private func setAspect(_ size: CGSize) {
     
     aspectConstraint?.isActive = false
@@ -341,9 +387,12 @@ public final class PixelEditViewController : UIViewController {
 
   @objc
   private func didTapDoneButton() {
-
-    callbacks.didEndEditing(self, editingStack)
-    delegate?.pixelEditViewController(self, didEndEditing: editingStack)
+    if let editingStack = self.editingStack {
+      callbacks.didEndEditing(self, editingStack)
+      delegate?.pixelEditViewController(self, didEndEditing: editingStack)
+    } else {
+      delegate?.pixelEditViewControllerDidCancelEditing(in: self)
+    }
   }
   
   @objc
@@ -354,6 +403,7 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func set(mode: Mode) {
+    guard let editingStack = self.editingStack else { return }
     
     switch mode {
     case .adjustment:
@@ -420,7 +470,6 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func syncUI(edit: EditingStack.Edit) {
-
     if !adjustmentView.isHidden {
       updateAdjustmentUI()
     }
@@ -429,7 +478,6 @@ public final class PixelEditViewController : UIViewController {
   }
   
   private func updateAdjustmentUI() {
-    
     let edit = editingStack.currentEdit
     
     if adjustmentView.image != editingStack.adjustmentImage {
@@ -442,13 +490,14 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func didReceive(action: PixelEditContext.Action) {
+    guard let aspectRatio = editingStack.aspectRatio else { preconditionFailure()}
     switch action {
     case .setTitle(let title):
       navigationItem.title = title
     case .setMode(let mode):
       set(mode: mode)
     case .endAdjustment(let save):
-      setAspect(editingStack.aspectRatio)
+      setAspect(aspectRatio)
       if save {
         editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
         editingStack.commit()
@@ -476,10 +525,26 @@ public final class PixelEditViewController : UIViewController {
       editingStack.revert()
     }
   }
-
 }
 
 extension PixelEditViewController : EditingStackDelegate {
+  public func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {
+    setupImagesViews()
+    switch stack.source.imageSource {
+    case .editable(_):
+      self.isLoading = false
+    default:
+      self.isLoading = true
+    }
+    UIView.performWithoutAnimation {
+      self.previewView.image = stack.previewImage
+      self.previewView.originalImage = stack.originalPreviewImage
+      if !self.maskingView.isHidden {
+        self.maskingView.image = stack.previewImage
+      }
+    }
+  }
+
 
   public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
     
@@ -495,7 +560,6 @@ extension PixelEditViewController : EditingStackDelegate {
     
     syncUI(edit: edit)
     stackView.notify(changedEdit: edit)
-    
   }
 
 }
