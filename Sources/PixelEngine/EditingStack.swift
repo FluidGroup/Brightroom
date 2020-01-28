@@ -42,8 +42,10 @@ open class EditingStack {
 
   public let targetScreenScale: CGFloat
 
-  @available(*, unavailable, renamed: "previewColorCubeFilters")
-  private(set) public var availableColorCubeFilters: [PreviewFilterColorCube] = []
+  @available(*, deprecated, renamed: "previewColorCubeFilters")
+  public var availableColorCubeFilters: [PreviewFilterColorCube] {
+    return previewColorCubeFilters
+  }
   private(set) public var previewColorCubeFilters: [PreviewFilterColorCube] = []
   private var colorCubeFilters: [FilterColorCube] = []
 
@@ -122,7 +124,7 @@ open class EditingStack {
       self.adjustmentImage = $0.imageSource?.image
       self.initialCrop()
       guard $0.imageSource?.image != nil else { return }
-      self.set(availableColorCubeFilters: colorCubeStorage.filters)
+      self.set(colorCubeFilters: colorCubeStorage.filters)
 
       updatePreviewFilterSizeImage: do {
         let smallSizeImage = ImageTool.resize(
@@ -147,10 +149,10 @@ open class EditingStack {
       self.delegate?.editingStack(self, didUpdate: self.source)
     }
   }
-  
-  open func initialCrop() { // rename ?
+
+  open func initialCrop() {
     guard let image = source.imageSource?.image else { return }
-     setAdjustment(cropRect: image.extent)
+    setAdjustment(cropRect: image.extent)
   }
 
   // MARK: - Functions
@@ -242,8 +244,13 @@ open class EditingStack {
     }
   }
 
+  @available(*, deprecated, renamed: "set(colorCubeFilters:)")
   public func set(availableColorCubeFilters: [FilterColorCube]) {
-    self.colorCubeFilters = availableColorCubeFilters
+    set(colorCubeFilters: availableColorCubeFilters)
+  }
+
+  public func set(colorCubeFilters: [FilterColorCube]) {
+    self.colorCubeFilters = colorCubeFilters
     refreshColorCubeFilters()
   }
 
