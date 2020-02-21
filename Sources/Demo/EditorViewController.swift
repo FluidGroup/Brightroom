@@ -48,6 +48,15 @@ final class EditorViewController : UIViewController {
     present(nav, animated: true, completion: nil)
   }
 
+  @IBAction func didTapShowCustomRootView(_ sender: Any) {
+    let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    controller.delegate = self
+    
+    let nav = UINavigationController(rootViewController: controller)
+
+    present(nav, animated: true, completion: nil)
+  }
+  
   @IBAction func didTapPushButton(_ sender: Any) {
     
     let picker = UIImagePickerController()
