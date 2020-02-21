@@ -26,6 +26,11 @@ public struct ProgressPatch: PatchType {
   public func clip(min: CGFloat, max: CGFloat) -> ProgressPatch {
     return ProgressPatch(Swift.max(Swift.min(fractionCompleted, max), min))
   }
+  
+  public func progress(start: CGFloat, end: CGFloat) -> ProgressPatch {
+    return ValuePatch(fractionCompleted)
+      .progress(start: start, end: end)
+  }
 }
 
 public struct ValuePatch: PatchType {

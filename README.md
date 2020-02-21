@@ -287,7 +287,7 @@ options.classes.control.rootControl = EditRootControl.self
 let picker = PixelEditViewController(image: image, options: options)
 ```
 
-## Filter some edit menu
+### Filter some edit menu
 
 If there are some edit options you don't need in your app, you can choose edit options you want to ignore:
 

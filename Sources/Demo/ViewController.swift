@@ -36,7 +36,7 @@ class ViewController: UIViewController {
 
     let image = UIImage(named: "small")!
 
-    let engine = ImageRenderer(source: ImageSource.init(source: image))
+    let engine = ImageRenderer(source: StaticImageSource(source: image))
 
     let path = DrawnPath(
       brush: .init(color: .red, width: 30),

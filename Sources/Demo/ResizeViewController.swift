@@ -24,7 +24,7 @@ final class ResizeViewController : UIViewController {
     
     let r = ImageTool.resize(to: CGSize(width: 1000, height: 1000), from: image)
     
-    print(r)
+    print(r.debugDescription)
   }
   
   @IBAction private func didTapCGResizeButton() {
@@ -40,6 +40,6 @@ final class ResizeViewController : UIViewController {
     let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     
-    print(scaledImage)
+    print(scaledImage.debugDescription)
   }
 }

@@ -1,0 +1,4 @@
+${PODS_ROOT}/Target Support Files/Pods-Demo/Pods-Demo-frameworks.sh
+${BUILT_PRODUCTS_DIR}/MosaiqueAssetsPicker/MosaiqueAssetsPicker.framework
+${PODS_ROOT}/Reveal-SDK/RevealServer/iOS/RevealServer.framework
+${BUILT_PRODUCTS_DIR}/TransitionPatch/TransitionPatch.framework
