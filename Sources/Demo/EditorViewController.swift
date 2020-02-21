@@ -41,6 +41,7 @@ final class EditorViewController : UIViewController {
   @IBAction func didTapPresentButton() {
 
     let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    controller.delegate = self
     
     let nav = UINavigationController(rootViewController: controller)
 
@@ -93,12 +94,21 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
 extension EditorViewController : PixelEditViewControllerDelegate {
   
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack) {
-    self.navigationController?.popToViewController(self, animated: true)
     let image = editingStack.makeRenderer().render(resolution: .full)
     self.imageView.image = image
+    
+    if controller.presentingViewController != nil {
+      self.navigationController?.dismiss(animated: true, completion: nil)
+    } else {
+      self.navigationController?.popToViewController(self, animated: true)
+    }
   }
   
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
-    self.navigationController?.popToViewController(self, animated: true)
+    if controller.presentingViewController != nil {
+      self.navigationController?.dismiss(animated: true, completion: nil)
+    } else {
+      self.navigationController?.popToViewController(self, animated: true)
+    }
   }
 }
