@@ -24,6 +24,8 @@ import UIKit
 import PixelEngine
 import PixelEditor
 
+let pixelCustomActionTapButtonKey = "pixelCustomActionTapButtonKey"
+
 final class EditorViewController : UIViewController {
 
   @IBOutlet weak var imageView: UIImageView!
@@ -47,9 +49,16 @@ final class EditorViewController : UIViewController {
 
     present(nav, animated: true, completion: nil)
   }
-
+  
   @IBAction func didTapShowCustomRootView(_ sender: Any) {
-    let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    let image = UIImage(named: "large")!
+    
+    var options = Options.default
+    options.classes.control.rootControl = CertificateSubmissionlRootControl.self
+    options.classes.control.customActions = [pixelCustomActionTapButtonKey: { print("Do something!!")}]
+
+    let editingStack = SquareEditingStack(source: StaticImageSource(source: image), previewSize:.init(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width))
+    let controller = PixelEditViewController(editingStack: editingStack, options: options)
     controller.delegate = self
     
     let nav = UINavigationController(rootViewController: controller)
@@ -92,12 +101,63 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
     let controller = PixelEditViewController.init(
       image: image
     )
-    
+
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)
     
   }
+}
+
+final class CertificateSubmissionlRootControl: RootControlBase {
+    public let colorCubeControl: ColorCubeControlBase
+
+    public lazy var editView = context.options.classes.control.editMenuControl.init(context: context)
+    public lazy var helpButton = UIButton(type: .system)
+  
+    // MARK: - Initializers
+
+    public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
+        self.colorCubeControl = colorCubeControl
+      
+        super.init(context: context, colorCubeControl: colorCubeControl)
+
+        self.helpButton.setTitle("Help", for: .normal)
+        self.helpButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        self.helpButton.addTarget(self, action: #selector(onTap(gestureRecognizer:)), for: .touchUpInside)
+        
+        // Same style as the editor style component
+        backgroundColor = Style.default.control.backgroundColor
+    }
+  
+    @objc func onTap(gestureRecognizer: UITapGestureRecognizer) {
+        if let actionOnTap = context.options.classes.control.customActions[pixelCustomActionTapButtonKey] {
+          actionOnTap()
+        }
+    }
+
+    // MARK: - Functions
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+
+        let stackView = UIStackView(arrangedSubviews: [editView, helpButton])
+        stackView.axis = .vertical
+        stackView.distribution = .fillEqually
+        
+      if superview != nil {
+        addSubview(stackView)
+
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: stackView.superview!.topAnchor),
+            stackView.leftAnchor.constraint(equalTo: stackView.superview!.leftAnchor),
+            stackView.rightAnchor.constraint(equalTo: stackView.superview!.rightAnchor),
+            stackView.bottomAnchor.constraint(equalTo: stackView.superview!.bottomAnchor)
+        ])
+        }
+    }
 }
 
 extension EditorViewController : PixelEditViewControllerDelegate {

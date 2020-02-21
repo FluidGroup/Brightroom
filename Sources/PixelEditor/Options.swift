@@ -51,7 +51,8 @@ extension Options {
       public var sharpenControl: SharpenControlBase.Type = SharpenControl.self
       
       public var ignoredEditMenu: [EditMenu] = []
-      
+      public var customActions: [String: (() -> ())] = [:]
+
       public init() {
         
       }

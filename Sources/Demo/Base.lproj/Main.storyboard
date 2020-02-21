@@ -263,7 +263,6 @@
                                         <rect key="frame" x="0.0" y="114" width="119" height="30"/>
                                         <state key="normal" title="Custom Edit view"/>
                                         <connections>
-                                            <action selector="didTapPresentButton" destination="ra8-Bb-A3k" eventType="touchUpInside" id="iNA-lu-ALk"/>
                                             <action selector="didTapShowCustomRootView:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="sGU-OY-ySl"/>
                                         </connections>
                                     </button>
