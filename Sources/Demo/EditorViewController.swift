@@ -43,6 +43,7 @@ final class EditorViewController : UIViewController {
     let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
     
     let nav = UINavigationController(rootViewController: controller)
+    nav.modalPresentationStyle = .fullScreen
 
     present(nav, animated: true, completion: nil)
   }
@@ -59,9 +60,9 @@ final class EditorViewController : UIViewController {
   
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     
-    let controller = PixelEditViewController.init(editingStack: stack)
+    let controller = PixelEditViewController(editingStack: stack)
     controller.delegate = self
-    
+
     navigationController?.pushViewController(controller, animated: true)
     
   }
@@ -82,7 +83,7 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
     let controller = PixelEditViewController.init(
       image: image
     )
-    
+
     controller.delegate = self
     
     navigationController?.pushViewController(controller, animated: true)
