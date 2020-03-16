@@ -40,8 +40,16 @@ final class EditorViewController : UIViewController {
 
   @IBAction func didTapPresentButton() {
 
-    let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
-    
+    let imageSource = StaticImageSource(source: UIImage(named: "large")!)
+
+    let previewSize = CGSize(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.width)
+    let stack = EditingStack(source: imageSource, previewSize: previewSize)
+
+    let controller = PixelEditViewController(
+        editingStack: stack
+      )
+    controller.delegate = self
+        
     let nav = UINavigationController(rootViewController: controller)
     nav.modalPresentationStyle = .fullScreen
 
@@ -94,12 +102,21 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
 extension EditorViewController : PixelEditViewControllerDelegate {
   
   func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack) {
-    self.navigationController?.popToViewController(self, animated: true)
+    if controller.presentingViewController != nil {
+      self.navigationController?.dismiss(animated: true, completion: nil)
+    } else {
+      self.navigationController?.popToViewController(self, animated: true)
+    }
     let image = editingStack.makeRenderer().render(resolution: .full)
     self.imageView.image = image
   }
   
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController) {
+    if controller.presentingViewController != nil {
+      self.navigationController?.dismiss(animated: true, completion: nil)
+    } else {
+      self.navigationController?.popToViewController(self, animated: true)
+    }
     self.navigationController?.popToViewController(self, animated: true)
   }
 }

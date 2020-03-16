@@ -193,6 +193,12 @@ open class EditingStack {
       filters(&$0.filters)
     }
   }
+  
+  public func setRotation(angle: CGFloat) {
+    applyIfChanged {
+      $0.rotation = angle
+    }
+  }
 
   public func setAdjustment(cropRect: CGRect) {
 
@@ -265,6 +271,8 @@ open class EditingStack {
     ]
 
     renderer.edit.modifiers = edit.makeFilters()
+    
+    renderer.edit.rotation = edit.rotation
 
     return renderer
   }
@@ -382,9 +390,9 @@ extension EditingStack {
 
     public var cropRect: CGRect?
     public var blurredMaskPaths: [DrawnPathInRect] = []
-
     public var filters: Filters = .init()
-
+    public var rotation: CGFloat?
+    
     func makeFilters() -> [Filtering] {
       return filters.makeFilters()
     }

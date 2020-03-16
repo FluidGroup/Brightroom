@@ -33,6 +33,7 @@ public final class ImageRenderer {
     public var croppingRect: CGRect?
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
+    public var rotation: CGFloat?
   }
 
   private let cicontext = CIContext(options: [
@@ -52,6 +53,10 @@ public final class ImageRenderer {
     guard let targetImage = source.imageSource?.image else {
       preconditionFailure("Nothing to render")
     }
+    if let rotation = edit.rotation {
+        // rotation is necessary
+    }
+    
     let resultImage: CIImage = {
 
       let sourceImage: CIImage
@@ -70,9 +75,8 @@ public final class ImageRenderer {
       let result = edit.modifiers.reduce(sourceImage, { image, modifier in
         return modifier.apply(to: image, sourceImage: sourceImage)
       })
-
+      
       return result
-
     }()
 
     let canvasSize: CGSize
@@ -117,7 +121,6 @@ public final class ImageRenderer {
             drawer.draw(in: cgContext, canvasSize: canvasSize)
           }
       }
-      
     }
     
     return image

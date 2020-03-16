@@ -60,7 +60,6 @@ final class ImagePreviewView : UIView {
     }
     
     originalImageView.isHidden = true
-    
   }
 
   required init?(coder aDecoder: NSCoder) {
