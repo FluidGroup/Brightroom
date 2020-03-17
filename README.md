@@ -17,8 +17,8 @@ Image editor and engine using CoreImage
 ## In Production
 
 - [eureka, Inc.](https://eure.jp)
- - Pairs
- - Pairs Engage
+   - Pairs
+   - Pairs Engage
 
 ## Features
 
