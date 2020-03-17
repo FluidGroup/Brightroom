@@ -14,7 +14,11 @@ Engine
 
 Image editor and engine using CoreImage
 
-> ⚠️ Currently, API is not stable. It may change in the future.
+## In Production
+
+- [eureka, Inc.](https://eure.jp)
+ - Pairs
+ - Pairs Engage
 
 ## Features
 
