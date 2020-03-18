@@ -162,11 +162,13 @@ public final class PixelEditViewController : UIViewController {
           disableView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
         ])
         doneButton.isEnabled = false
+        rotateButton.isEnabled = false
       }
       if !newValue {
         loadingViews?.forEach { $0.removeFromSuperview() }
         loadingViews = nil
         doneButton.isEnabled = true
+        rotateButton.isEnabled = true
       }
     }
   }
@@ -467,7 +469,7 @@ public final class PixelEditViewController : UIViewController {
     switch mode {
     case .adjustment:
 
-      navigationItem.rightBarButtonItem = nil
+      navigationItem.rightBarButtonItems = [rotateButton]
       navigationItem.leftBarButtonItem = nil
 
       adjustmentView.isHidden = false
@@ -509,7 +511,7 @@ public final class PixelEditViewController : UIViewController {
     case .preview:
 
       navigationItem.setHidesBackButton(true, animated: false)
-      navigationItem.rightBarButtonItems = [doneButton, rotateButton]
+      navigationItem.rightBarButtonItems = [doneButton]
       navigationItem.leftBarButtonItem = cancelButton
       
       didReceive(action: .setTitle(""))
