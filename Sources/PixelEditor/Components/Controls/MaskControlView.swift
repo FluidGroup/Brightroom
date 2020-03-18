@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 import Foundation
+import PixelEngine
 
 open class MaskControlBase : ControlBase {
 
@@ -29,8 +30,8 @@ open class MaskControl : MaskControlBase {
   private let contentView = UIView()
   private let navigationView = NavigationView()
   
-  private let clearButton = UIButton.init(type: .system)
-  private let slider = UISlider()
+  private let clearButton = UIButton(type: .system)
+  private let slider = StepSlider()
   private let sizeIndicator = UIView()
 
   open override func setup() {
@@ -77,7 +78,9 @@ open class MaskControl : MaskControlBase {
     }
 
     sizeSlider: do {
-      slider.value = 0.5
+      slider.set(value: 0, min: -0.5, max: 0.5)
+      slider.mode = .plusAndMinus
+      slider.displayNumericValue = false
       valueChanged()
       let smallLabel = UILabel()
       let largeLabel = UILabel()
@@ -154,9 +157,11 @@ open class MaskControl : MaskControlBase {
 
   @objc
   private func valueChanged() {
+    let position = CGFloat(slider.transition(min: -0.5, max: 0.5) + 0.5)
     let min = CGFloat(5)
     let max = CGFloat(50)
-    let size = (min + CGFloat(slider.value) * (max - min)).rounded()
+    let size = (min + position * (max - min)).rounded()
+
     sizeIndicator.transform = .init(scaleX: size / max, y: size / max)
     context.action(.setMaskingBrushSize(size: size))
   }
