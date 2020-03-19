@@ -117,7 +117,7 @@ public final class ImageRenderer {
           cgContext.rotate(by: CGFloat(edit.angle))
           cgContext.scaleBy(x: 1, y: -1)
 
-          let rect =  CGRect(x: -rotatedCanvas.size.width/2, y: -rotatedCanvas.size.height/2, width: rotatedCanvas.size.width, height: rotatedCanvas.size.height)
+          let rect =  CGRect(x: -canvasSize.width/2, y: -canvasSize.height/2, width: canvasSize.width, height: canvasSize.height)
           cgContext.draw(cgImage, in: rect)
           
           cgContext.restoreGState()
