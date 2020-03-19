@@ -33,7 +33,7 @@ public final class ImageRenderer {
     public var croppingRect: CGRect?
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
-    public var rotation: CGFloat?
+    public var angle: Double = 0
   }
 
   private let cicontext = CIContext(options: [
@@ -52,9 +52,6 @@ public final class ImageRenderer {
   public func render(resolution: Resolution = .full) -> UIImage {
     guard let targetImage = source.imageSource?.image else {
       preconditionFailure("Nothing to render")
-    }
-    if let rotation = edit.rotation {
-        // rotation is necessary
     }
     
     let resultImage: CIImage = {
@@ -80,13 +77,17 @@ public final class ImageRenderer {
     }()
 
     let canvasSize: CGSize
-      
+    
     switch resolution {
     case .full:
       canvasSize = resultImage.extent.size
     case .resize(let boundingSize):
       canvasSize = Geometry.sizeThatAspectFit(aspectRatio: resultImage.extent.size, boundingSize: boundingSize)
     }
+    
+    let rotatedCanvas = CGRect(origin: .zero, size: canvasSize)
+      .applying(.init(rotationAngle: CGFloat(edit.angle)))
+      .integral
     
     let format: UIGraphicsImageRendererFormat
     if #available(iOS 11.0, *) {
@@ -104,7 +105,7 @@ public final class ImageRenderer {
     
     let image = autoreleasepool { () -> UIImage in
       
-      UIGraphicsImageRenderer.init(size: canvasSize, format: format)
+      UIGraphicsImageRenderer.init(size: rotatedCanvas.size, format: format)
         .image { c in
           
           let cgContext = UIGraphicsGetCurrentContext()!
@@ -112,9 +113,13 @@ public final class ImageRenderer {
           let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
           
           cgContext.saveGState()
-          cgContext.translateBy(x: 0, y: canvasSize.height)
+          cgContext.translateBy(x: rotatedCanvas.size.width/2, y: rotatedCanvas.size.height/2)
+          cgContext.rotate(by: CGFloat(edit.angle))
           cgContext.scaleBy(x: 1, y: -1)
-          cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
+
+          let rect =  CGRect(x: -rotatedCanvas.size.width/2, y: -rotatedCanvas.size.height/2, width: rotatedCanvas.size.width, height: rotatedCanvas.size.height)
+          cgContext.draw(cgImage, in: rect)
+          
           cgContext.restoreGState()
           
           self.edit.drawer.forEach { drawer in

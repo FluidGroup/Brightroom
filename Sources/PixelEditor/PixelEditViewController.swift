@@ -37,7 +37,7 @@ public final class PixelEditContext {
     case setMode(PixelEditViewController.Mode)
     case endAdjustment(save: Bool)
     case endMasking(save: Bool)
-    case setRotation(CGFloat)
+    case setAngle(PixelEditViewController.Angle)
     case removeAllMasking
 
     case setFilter((inout EditingStack.Edit.Filters) -> Void)
@@ -402,26 +402,32 @@ public final class PixelEditViewController : UIViewController {
     return _to / _from
   }
 
-  private var currentRotationIndex = 0 {
-    didSet {
-      if currentRotationIndex > allRotations.count-1 {
-        currentRotationIndex = 0
+  
+  public struct Angle: RawRepresentable {
+    public var rawValue: Double
+      
+    public init?(rawValue: Self.RawValue) {
+      self.rawValue = rawValue
+    }
+    
+    public mutating func rotateClockwise() {
+      self.rawValue = self.rawValue + (.pi / 2)
+
+      if self.rawValue * 180.0/Double.pi >= 360 {
+          self.rawValue = 0
       }
     }
   }
-  private let allRotations: [(angle: CGFloat, isPortrait: Bool)] = [
-    (0, false),
-    (.pi/2, true),
-    (.pi/2*2, false),
-    (.pi/2*3, true)
-  ]
   
+  private var angle: Angle = Angle(rawValue: 0)!
+  private var isPortraitMode = false
+
   private var ratioPortrait: CGFloat {
-    let previewViewRatio = self.previewView.bounds.width / self.previewView.bounds.height
-    let newWidth = self.previewView.bounds.height
+    let previewViewRatio = self.adjustmentView.bounds.width / self.adjustmentView.bounds.height
+    let newWidth = self.adjustmentView.bounds.height
     let newHeight = newWidth / previewViewRatio
 
-    let fromSize = CGSize(width: self.previewView.bounds.width, height: self.previewView.bounds.height)
+    let fromSize = CGSize(width: self.adjustmentView.bounds.width, height: self.adjustmentView.bounds.height)
     let toSize = CGSize(width: newWidth, height: newHeight)
     
     return self._ratio(to: toSize, from: fromSize)
@@ -429,24 +435,28 @@ public final class PixelEditViewController : UIViewController {
   
   @objc
   private func didTapRotateButton() {
-    self.currentRotationIndex += 1
+    angle.rotateClockwise()
+    isPortraitMode = !isPortraitMode
+
+    let ratio: CGFloat = self.isPortraitMode ? self.ratioPortrait : 1
+
+    let transform = CGAffineTransform(
+      scaleX: ratio,
+      y: ratio
+    )
+    .rotated(by: CGFloat(self.angle.rawValue))
+    
+    self.previewView.imageView.transform = transform
+    self.previewView.originalImageView.transform = transform
 
     UIView.animate(withDuration: 0.3) {
-      let orientation = self.allRotations[self.currentRotationIndex]
-      let ratio: CGFloat = orientation.isPortrait ? self.ratioPortrait : 1
-                  
-      self.previewView.imageView.transform = CGAffineTransform(
-          scaleX: ratio,
-          y: ratio
-        )
-        .rotated(by: orientation.angle)
+      self.adjustmentView.imageView.transform = transform
     }
   }
   
   @objc
   private func didTapDoneButton() {
-    let orientation = self.allRotations[self.currentRotationIndex]
-    self.didReceive(action: .setRotation(orientation.angle))
+    self.didReceive(action: .setAngle(angle))
     
     if let editingStack = self.editingStack {
       callbacks.didEndEditing(self, editingStack)
@@ -553,8 +563,8 @@ public final class PixelEditViewController : UIViewController {
     switch action {
     case .setTitle(let title):
       navigationItem.title = title
-    case .setRotation(let angle):
-      editingStack.setRotation(angle: angle)
+    case .setAngle(let angle):
+      editingStack.setAngle(angle: angle.rawValue)
       editingStack.commit()
     case .setMode(let mode):
       set(mode: mode)
@@ -623,5 +633,4 @@ extension PixelEditViewController : EditingStackDelegate {
     syncUI(edit: edit)
     stackView.notify(changedEdit: edit)
   }
-
 }
