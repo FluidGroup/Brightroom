@@ -80,7 +80,7 @@ open class MaskControl : MaskControlBase {
     sizeSlider: do {
       slider.set(value: 0, min: -0.5, max: 0.5)
       slider.mode = .plusAndMinus
-      slider.displayNumericValue = false
+      slider.isStepLabelHidden = true
       valueChanged()
       let smallLabel = UILabel()
       let largeLabel = UILabel()

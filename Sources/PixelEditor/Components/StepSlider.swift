@@ -36,9 +36,13 @@ public final class StepSlider : UIControl {
       setupValues()
     }
   }
-  public var displayNumericValue = true {
-    didSet {
-      internalSlider.stepLabel.isHidden = !displayNumericValue
+
+  public var isStepLabelHidden: Bool {
+    get {
+      return internalSlider.stepLabel.isHidden
+    }
+    set {
+      internalSlider.stepLabel.isHidden = newValue
     }
   }
 
