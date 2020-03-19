@@ -94,7 +94,7 @@ final class CropAndStraightenView : UIView {
     }
   }
 
-  private let imageView: ImageScrollView = {
+  let imageView: ImageScrollView = {
 
     let view = ImageScrollView()
     view.imageContentMode = .aspectFill
