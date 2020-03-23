@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 import Foundation
+import PixelEngine
 
 open class MaskControlBase : ControlBase {
 
@@ -29,7 +30,9 @@ open class MaskControl : MaskControlBase {
   private let contentView = UIView()
   private let navigationView = NavigationView()
   
-  private let clearButton = UIButton.init(type: .system)
+  private let clearButton = UIButton(type: .system)
+  private let slider = StepSlider()
+  private let sizeIndicator = UIView()
 
   open override func setup() {
     super.setup()
@@ -73,7 +76,61 @@ open class MaskControl : MaskControlBase {
       clearButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
       
     }
-    
+
+    sizeSlider: do {
+      slider.set(value: 0, min: -0.5, max: 0.5)
+      slider.mode = .plusAndMinus
+      slider.isStepLabelHidden = true
+      valueChanged()
+      let smallLabel = UILabel()
+      let largeLabel = UILabel()
+
+      smallLabel.translatesAutoresizingMaskIntoConstraints = false
+      largeLabel.translatesAutoresizingMaskIntoConstraints = false
+      slider.translatesAutoresizingMaskIntoConstraints = false
+
+      smallLabel.text = L10n.brushSizeSmall
+      smallLabel.textColor = .black
+      largeLabel.textColor = .black
+      largeLabel.text = L10n.brushSizeLarge
+
+      smallLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+      largeLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+      contentView.addSubview(smallLabel)
+      contentView.addSubview(largeLabel)
+      contentView.addSubview(slider)
+      NSLayoutConstraint.activate([
+        smallLabel.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.layoutMarginsGuide.leadingAnchor),
+        slider.leadingAnchor.constraint(equalTo: smallLabel.trailingAnchor, constant: 8),
+        largeLabel.leadingAnchor.constraint(equalTo: slider.trailingAnchor, constant: 8),
+        slider.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        largeLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentView.layoutMarginsGuide.trailingAnchor),
+        smallLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        largeLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        slider.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+        slider.widthAnchor.constraint(equalTo: contentView.superview!.widthAnchor, multiplier: 2.0/3.0)
+      ])
+      slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
+    }
+
+    sizeIndicator: do {
+      contentView.addSubview(sizeIndicator)
+      sizeIndicator.translatesAutoresizingMaskIntoConstraints = false
+      sizeIndicator.layer.cornerRadius = 50 / 2
+      sizeIndicator.clipsToBounds = false
+      sizeIndicator.backgroundColor = .white
+      sizeIndicator.layer.borderColor = UIColor.black.cgColor
+      sizeIndicator.layer.borderWidth = 1
+      NSLayoutConstraint.activate([
+        sizeIndicator.widthAnchor.constraint(equalToConstant: 50),
+        sizeIndicator.heightAnchor.constraint(equalToConstant: 50),
+        sizeIndicator.topAnchor.constraint(equalTo: slider.bottomAnchor, constant: 8),
+        sizeIndicator.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+      ])
+    }
+
+
     navigationView.didTapCancelButton = { [weak self] in
 
       self?.pop(animated: true)
@@ -96,9 +153,19 @@ open class MaskControl : MaskControlBase {
     } else {
       context.action(.setMode(.preview))
     }
-
   }
-  
+
+  @objc
+  private func valueChanged() {
+    let position = CGFloat(slider.transition(min: -0.5, max: 0.5) + 0.5)
+    let min = CGFloat(5)
+    let max = CGFloat(50)
+    let size = (min + position * (max - min)).rounded()
+
+    sizeIndicator.transform = .init(scaleX: size / max, y: size / max)
+    context.action(.setMaskingBrushSize(size: size))
+  }
+
   @objc
   private func didTapRemoveAllButton() {
     

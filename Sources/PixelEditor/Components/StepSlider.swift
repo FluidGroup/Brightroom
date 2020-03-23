@@ -37,6 +37,15 @@ public final class StepSlider : UIControl {
     }
   }
 
+  public var isStepLabelHidden: Bool {
+    get {
+      return internalSlider.stepLabel.isHidden
+    }
+    set {
+      internalSlider.stepLabel.isHidden = newValue
+    }
+  }
+
   private var minStep: Int = -100
 
   private var maxStep: Int = 100
@@ -332,7 +341,6 @@ private final class _StepSlider: UISlider {
   }
 
   func updateStepLabel() {
-
     findTrackViewIfNeeded()
 
     guard let trackImageView = _trackImageView else {
@@ -344,7 +352,6 @@ private final class _StepSlider: UISlider {
   }
 
   private func findTrackViewIfNeeded() {
-
     guard _trackImageView == nil else {
       return
     }
