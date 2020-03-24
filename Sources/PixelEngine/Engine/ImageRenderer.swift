@@ -106,24 +106,23 @@ public final class ImageRenderer {
     let image = autoreleasepool { () -> UIImage in
       
       UIGraphicsImageRenderer.init(size: rotatedCanvas.size, format: format)
-        .image { c in
-          
-          let cgContext = UIGraphicsGetCurrentContext()!
-          
+        .image { context in
+                             
           let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
           
-          cgContext.saveGState()
-          cgContext.translateBy(x: rotatedCanvas.size.width/2, y: rotatedCanvas.size.height/2)
-          cgContext.rotate(by: CGFloat(edit.angle))
-          cgContext.scaleBy(x: 1, y: -1)
-
-          let rect =  CGRect(x: -canvasSize.width/2, y: -canvasSize.height/2, width: canvasSize.width, height: canvasSize.height)
-          cgContext.draw(cgImage, in: rect)
+          context.cgContext.saveGState()
           
-          cgContext.restoreGState()
+          context.cgContext.translateBy(x: rotatedCanvas.size.width/2, y: rotatedCanvas.size.height/2)
+          context.cgContext.rotate(by: CGFloat(edit.angle))
+          context.cgContext.scaleBy(x: 1, y: -1)
+
+          let rect = CGRect(x: -canvasSize.width/2, y: -canvasSize.height/2, width: canvasSize.width, height: canvasSize.height)
+          context.cgContext.draw(cgImage, in: rect)
+          
+          context.cgContext.restoreGState()
           
           self.edit.drawer.forEach { drawer in
-            drawer.draw(in: cgContext, canvasSize: canvasSize)
+            drawer.draw(in: context.cgContext, canvasSize: canvasSize)
           }
       }
     }
