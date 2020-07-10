@@ -96,6 +96,9 @@ public final class PixelEditViewController : UIViewController {
       self.editingStack.delegate = self
     }
   }
+
+  /// - TODO: this flag won't be used when specified EditingStack outside.
+  private var usesSquareCropping: Bool
   
   // MARK: - Private Propaties
 
@@ -183,23 +186,36 @@ public final class PixelEditViewController : UIViewController {
     image: UIImage,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
+    usesSquareCropping: Bool = true,
     options: Options = .current
   ) {
+
     let source = StaticImageSource(source: image)
-    self.init(source: source, colorCubeStorage: colorCubeStorage, options: options)
+
+    self.init(
+      source: source,
+      colorCubeStorage: colorCubeStorage,
+      usesSquareCropping: usesSquareCropping,
+      options: options
+    )
+
   }
 
   public init(
     source: ImageSourceType,
     doneButtonTitle: String = L10n.done,
     colorCubeStorage: ColorCubeStorage = .default,
+    usesSquareCropping: Bool = true,
     options: Options = .current
   ) {
+
     self.imageSource = source
     self.options = options
     self.colorCubeStorage = colorCubeStorage
     self.doneButtonTitle = doneButtonTitle
+    self.usesSquareCropping = usesSquareCropping
     super.init(nibName: nil, bundle: nil)
+
   }
 
   @available(*, unavailable)
@@ -217,11 +233,21 @@ public final class PixelEditViewController : UIViewController {
       root: do {
 
         if editingStack == nil {
-          editingStack = SquareEditingStack.init(
-            source: imageSource,
-            previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-            colorCubeStorage: colorCubeStorage
-          )
+
+          if usesSquareCropping {
+            editingStack = SquareEditingStack.init(
+              source: imageSource,
+              previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
+              colorCubeStorage: colorCubeStorage
+            )
+          } else {
+            editingStack = EditingStack.init(
+              source: imageSource,
+              previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
+              colorCubeStorage: colorCubeStorage
+            )
+          }
+
         }
         view.backgroundColor = .white
 

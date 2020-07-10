@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15702" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Xv6-Ye-Vql">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="16097" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Xv6-Ye-Vql">
     <device id="retina4_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15704"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16087"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -236,24 +236,31 @@
                                 </constraints>
                             </imageView>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="vwj-E5-JQy">
-                                <rect key="frame" x="143" y="415" width="89" height="106"/>
+                                <rect key="frame" x="103" y="415" width="169" height="144"/>
                                 <subviews>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="yql-ja-UAV">
-                                        <rect key="frame" x="0.0" y="0.0" width="89" height="30"/>
-                                        <state key="normal" title="Select Image"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="169" height="30"/>
+                                        <state key="normal" title="Select Image(Square)"/>
                                         <connections>
-                                            <action selector="didTapPushButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="hKV-Zl-PgD"/>
+                                            <action selector="didTapSquarePushButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="i2F-Yt-Khk"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nvO-mR-uDW">
+                                        <rect key="frame" x="0.0" y="38" width="169" height="30"/>
+                                        <state key="normal" title="Select Image(Rectangle)"/>
+                                        <connections>
+                                            <action selector="didTapRectanglePushButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="3GJ-QU-L09"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Syo-y4-U1n" userLabel="Push (Keep)">
-                                        <rect key="frame" x="0.0" y="38" width="89" height="30"/>
+                                        <rect key="frame" x="0.0" y="76" width="169" height="30"/>
                                         <state key="normal" title="Push (Keep)"/>
                                         <connections>
                                             <action selector="didTapPushKeepingButton:" destination="ra8-Bb-A3k" eventType="touchUpInside" id="FZj-LT-phc"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5OI-XE-CkV">
-                                        <rect key="frame" x="0.0" y="76" width="89" height="30"/>
+                                        <rect key="frame" x="0.0" y="114" width="169" height="30"/>
                                         <state key="normal" title="Present"/>
                                         <connections>
                                             <action selector="didTapPresentButton" destination="ra8-Bb-A3k" eventType="touchUpInside" id="0JH-4b-s5l"/>
@@ -279,7 +286,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="QNl-KZ-Av6" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1334" y="-806"/>
+            <point key="canvasLocation" x="1535" y="-906"/>
         </scene>
         <!--View Controller-->
         <scene sceneID="tne-QT-ifu">
@@ -558,7 +565,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="xMH-ix-B2p" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1975" y="-805"/>
+            <point key="canvasLocation" x="3140" y="-1052"/>
         </scene>
         <!--Asset Download Editor View Controller-->
         <scene sceneID="3K0-as-67l">
@@ -612,7 +619,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="EYv-ag-Kyq" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1334" y="-1495"/>
+            <point key="canvasLocation" x="1489" y="-1697"/>
         </scene>
     </scenes>
 </document>
