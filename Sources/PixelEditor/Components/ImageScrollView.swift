@@ -251,7 +251,7 @@ final class ImageScrollView: UIScrollView {
     return zoomRect
   }
 
-  open func refresh() {
+  func refresh() {
     if let image = zoomView?.image {
       display(image: image)
     }
