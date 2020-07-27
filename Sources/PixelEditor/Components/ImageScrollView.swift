@@ -8,33 +8,33 @@
 
 import UIKit
 
-open class ImageScrollView: UIScrollView {
+final class ImageScrollView: UIScrollView {
 
-  @objc public enum ScaleMode: Int {
+  @objc enum ScaleMode: Int {
     case aspectFill
     case aspectFit
     case widthFill
     case heightFill
   }
 
-  @objc public enum Offset: Int {
+  @objc enum Offset: Int {
     case beginning
     case center
   }
 
   static let kZoomInFactorFromMinWhenDoubleTap: CGFloat = 2
 
-  @objc open var imageContentMode: ScaleMode = .widthFill
-  @objc open var initialOffset: Offset = .beginning
+  @objc var imageContentMode: ScaleMode = .widthFill
+  @objc var initialOffset: Offset = .beginning
 
-  @objc public private(set) var zoomView: UIImageView? = nil
+  @objc private(set) var zoomView: UIImageView? = nil
 
   var imageSize: CGSize = CGSize.zero
   private var pointToCenterAfterResize: CGPoint = CGPoint.zero
   private var scaleToRestoreAfterResize: CGFloat = 1.0
   var maxScaleFromMinScale: CGFloat = 3.0
 
-  override open var frame: CGRect {
+  override var frame: CGRect {
     willSet {
       if frame.equalTo(newValue) == false && newValue.equalTo(CGRect.zero) == false && imageSize.equalTo(CGSize.zero) == false {
         prepareToResize()
@@ -48,13 +48,13 @@ open class ImageScrollView: UIScrollView {
     }
   }
 
-  override public init(frame: CGRect) {
+  override init(frame: CGRect) {
     super.init(frame: frame)
 
     initialize()
   }
 
-  required public init?(coder aDecoder: NSCoder) {
+  required init?(coder aDecoder: NSCoder) {
     super.init(coder: aDecoder)
 
     initialize()
@@ -70,7 +70,7 @@ open class ImageScrollView: UIScrollView {
 //    NotificationCenter.default.addObserver(self, selector: #selector(ImageScrollView.changeOrientationNotification), name: UIDevice.orientationDidChangeNotification, object: nil)
   }
 
-  @objc public func adjustFrameToCenter() {
+  @objc func adjustFrameToCenter() {
 
     guard let unwrappedZoomView = zoomView else {
       return
@@ -148,7 +148,7 @@ open class ImageScrollView: UIScrollView {
 
   // MARK: - Display image
 
-  @objc open func display(image: UIImage) {
+  @objc func display(image: UIImage) {
 
     if let zoomView = zoomView {
       zoomView.removeFromSuperview()
@@ -264,13 +264,13 @@ open class ImageScrollView: UIScrollView {
 //  }
 }
 
-extension ImageScrollView: UIScrollViewDelegate{
+extension ImageScrollView: UIScrollViewDelegate {
 
-  public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+  func viewForZooming(in scrollView: UIScrollView) -> UIView? {
     return zoomView
   }
 
-  public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+  func scrollViewDidZoom(_ scrollView: UIScrollView) {
     adjustFrameToCenter()
   }
 
