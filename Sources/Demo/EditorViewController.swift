@@ -27,6 +27,8 @@ import PixelEditor
 final class EditorViewController : UIViewController {
 
   @IBOutlet weak var imageView: UIImageView!
+
+  private var usesSquare = true
   
   private lazy var stack = SquareEditingStack.init(
     source: StaticImageSource(source: UIImage(named: "large")!),
@@ -48,7 +50,7 @@ final class EditorViewController : UIViewController {
     present(nav, animated: true, completion: nil)
   }
 
-  @IBAction func didTapPushButton(_ sender: Any) {
+  @IBAction func didTapSquarePushButton(_ sender: Any) {
     
     let picker = UIImagePickerController()
     picker.allowsEditing = false
@@ -56,6 +58,20 @@ final class EditorViewController : UIViewController {
     picker.sourceType = .photoLibrary
     
     present(picker, animated: true, completion: nil)
+
+    usesSquare = true
+  }
+
+  @IBAction func didTapRectanglePushButton(_ sender: Any) {
+
+    let picker = UIImagePickerController()
+    picker.allowsEditing = false
+    picker.delegate = self
+    picker.sourceType = .photoLibrary
+
+    present(picker, animated: true, completion: nil)
+
+    usesSquare = false
   }
   
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
@@ -79,14 +95,27 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
     let image = info[.originalImage] as! UIImage
     
     picker.dismiss(animated: true, completion: nil)
-    
-    let controller = PixelEditViewController.init(
-      image: image
-    )
 
-    controller.delegate = self
-    
-    navigationController?.pushViewController(controller, animated: true)
+    if usesSquare {
+
+      let controller = PixelEditViewController.init(
+        image: image
+      )
+
+      controller.delegate = self
+
+      navigationController?.pushViewController(controller, animated: true)
+
+    } else {
+
+      let controller = PixelEditViewController(image: image, usesSquareCropping: false)
+
+      controller.delegate = self
+
+      navigationController?.pushViewController(controller, animated: true)
+
+
+    }
     
   }
 }
