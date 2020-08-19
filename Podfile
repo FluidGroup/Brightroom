@@ -1,9 +1,15 @@
 # Uncomment the next line to define a global platform for your project
 platform :ios, '10.0'
 
+target 'PixelEngine' do
+  use_frameworks!
+  pod 'Verge/Core'
+end
+
 target 'PixelEditor' do
   use_frameworks!
   pod 'TransitionPatch'
+  pod 'Verge/Core'
 end
 
 target 'Demo' do
