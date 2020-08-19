@@ -1,6 +1,6 @@
 PODS:
   - MosaiqueAssetsPicker (1.0.0)
-  - Reveal-SDK (24)
+  - Reveal-SDK (26)
   - TransitionPatch (1.0.2)
 
 DEPENDENCIES:
@@ -24,9 +24,9 @@ CHECKOUT OPTIONS:
 
 SPEC CHECKSUMS:
   MosaiqueAssetsPicker: 2cdd49293075c7fe5fe9fe3a85c30fd8b5238c19
-  Reveal-SDK: 5d7e56b8f018c0a88b3a2c10bf68d598bbd3b071
+  Reveal-SDK: 5f94f14aff3d5f2a49f246edcd266fa4472679e9
   TransitionPatch: c02b48b1429255b14ef82b7e411034e0958b9681
 
 PODFILE CHECKSUM: 1ea184385e5d74284c3d7c3ca4567dfc0ebb3b6c
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.9.3
