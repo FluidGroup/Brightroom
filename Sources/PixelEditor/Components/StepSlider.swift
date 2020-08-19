@@ -267,6 +267,11 @@ private final class _StepSlider: UISlider {
     fatalError()
   }
 
+  override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+    super.touchesMoved(touches, with: event)
+    updateStepLabel()
+  }
+
   override func draw(_ rect: CGRect) {
 
     guard let context = UIGraphicsGetCurrentContext() else {
@@ -341,7 +346,31 @@ private final class _StepSlider: UISlider {
   }
 
   func updateStepLabel() {
-    findTrackViewIfNeeded()
+
+    func __findTrackViewIfNeeded() {
+      guard _trackImageView == nil else {
+        return
+      }
+
+      if #available(iOS 14, *) {
+        for imageView in self.subviews.first?.subviews ?? [] where imageView is UIImageView {
+
+          if imageView.bounds.width == imageView.bounds.height {
+            _trackImageView = imageView as? UIImageView
+          }
+        }
+      } else {
+        for imageView in self.subviews where imageView is UIImageView {
+
+          if imageView.bounds.width == imageView.bounds.height {
+            _trackImageView = imageView as? UIImageView
+          }
+        }
+      }
+
+    }
+
+    __findTrackViewIfNeeded()
 
     guard let trackImageView = _trackImageView else {
       return
@@ -351,16 +380,4 @@ private final class _StepSlider: UISlider {
     self.stepLabel.center = center
   }
 
-  private func findTrackViewIfNeeded() {
-    guard _trackImageView == nil else {
-      return
-    }
-
-    for imageView in self.subviews where imageView is UIImageView {
-
-      if imageView.bounds.width == imageView.bounds.height {
-        _trackImageView = imageView as? UIImageView
-      }
-    }
-  }
 }
