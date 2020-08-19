@@ -141,5 +141,7 @@ fileprivate func imageOrientationToTiffOrientation(_ value: UIImage.Orientation)
     return 5
   case .rightMirrored:
     return 7
+  @unknown default:
+    fatalError()
   }
 }
