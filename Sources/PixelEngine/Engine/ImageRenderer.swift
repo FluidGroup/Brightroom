@@ -112,7 +112,7 @@ public final class ImageRenderer {
           cgContext.scaleBy(x: 1, y: -1)
           cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
           cgContext.restoreGState()
-          
+
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: cgContext, canvasSize: canvasSize)
           }
