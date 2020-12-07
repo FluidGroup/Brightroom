@@ -14,6 +14,13 @@ Engine
 
 Image editor and engine using CoreImage
 
+## Support Muukii
+
+Hi, I'm working on open-source software with a lot of time.
+Please help me continue my work. I appreciate it.
+
+https://github.com/sponsors/muukii
+
 ## In Production
 
 - [eureka, Inc.](https://eure.jp)
