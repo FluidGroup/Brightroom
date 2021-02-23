@@ -1,6 +1,0 @@
-framework module MosaiqueAssetsPicker {
-  umbrella header "MosaiqueAssetsPicker-umbrella.h"
-
-  export *
-  module * { export * }
-}
