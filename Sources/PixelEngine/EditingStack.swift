@@ -30,6 +30,10 @@ public extension EditingStackDelegate {
   func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {}
 }
 
+/**
+ A stateful object that manages current editing status from original image.
+ And supports rendering a result image.
+ */
 open class EditingStack {
 
   // MARK: - Stored Properties
