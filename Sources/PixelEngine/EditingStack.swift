@@ -36,6 +36,10 @@ open class EditingStack: Equatable, StoreComponentType {
         
     public let imageSize: ImageSize
     
+    public var aspectRatio: CGSize {
+      currentEdit.cropRect?.size ?? imageSize.aspectRatio
+    }
+    
     public fileprivate(set) var hasStartedEditing = false
     
     public fileprivate(set) var history: [Edit] = []

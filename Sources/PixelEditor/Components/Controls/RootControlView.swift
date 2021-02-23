@@ -146,7 +146,6 @@ final class RootControl : RootControlBase {
       colorCubeControl.frame = containerView.bounds
       colorCubeControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
       containerView.addSubview(colorCubeControl)
-      subscribeChangedEdit(to: colorCubeControl)
       
       filtersButton.isSelected = true
 
@@ -156,7 +155,6 @@ final class RootControl : RootControlBase {
       editView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
       
       containerView.addSubview(editView)
-      subscribeChangedEdit(to: editView)
     
       editButton.isSelected = true
     }

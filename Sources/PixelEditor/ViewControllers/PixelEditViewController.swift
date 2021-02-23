@@ -43,9 +43,6 @@ public final class PixelEditContext {
 
     case setFilter((inout EditingStack.Edit.Filters) -> Void)
 
-    case commit
-    case revert
-    case undo
   }
 
   fileprivate var didReceiveAction: (Action) -> Void = { _ in }

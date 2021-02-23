@@ -23,7 +23,6 @@ import UIKit
 
 import PixelEngine
 
-
 protocol ControlChildViewType {
 
   func didReceiveCurrentEdit(_ edit: EditingStack.Edit)
@@ -55,9 +54,6 @@ extension ControlChildViewType where Self : UIView {
     find().pop(animated: animated)
   }
 
-  func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
-    find().subscribeChangedEdit(to: view)
-  }
 }
 
 
@@ -74,7 +70,6 @@ final class ControlStackView : UIView {
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     
     let currentTop = subscribers.last
-    subscribeChangedEdit(to: view)
     
     if animated {
       foreground: do {
@@ -158,23 +153,5 @@ final class ControlStackView : UIView {
     }
   }
   
-
-  func subscribeChangedEdit(to view: UIView & ControlChildViewType) {
-    guard !subscribers.contains(where: { $0 == view }) else { return }
-    subscribers.append(view)
-    if let edit = latestNotifiedEdit {
-      view.didReceiveCurrentEdit(edit)
-    }
-  }
-
-  func notify(changedEdit: EditingStack.Edit) {
-
-    latestNotifiedEdit = changedEdit
-
-    subscribers
-      .forEach {
-        $0.didReceiveCurrentEdit(changedEdit)
-    }
-  }
 }
 

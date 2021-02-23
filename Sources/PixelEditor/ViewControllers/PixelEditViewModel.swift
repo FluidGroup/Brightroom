@@ -23,6 +23,7 @@ import Verge
 import PixelEngine
 
 public final class PixelEditViewModel: Equatable, StoreComponentType {
+  
   public static func == (lhs: PixelEditViewModel, rhs: PixelEditViewModel) -> Bool {
     lhs === rhs
   }
@@ -30,6 +31,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   public struct State: Equatable {
     public var editingState: Changes<EditingStack.State>
         
+    public fileprivate(set) var title: String = ""
   }
   
   public let store: DefaultStore
@@ -48,4 +50,11 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
     editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }
+  
+  public func set(title: String) {
+    commit {
+      $0.title = title
+    }
+  }
+
 }
