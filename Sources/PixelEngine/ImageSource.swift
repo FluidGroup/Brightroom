@@ -39,6 +39,15 @@ public struct EditingImage: Equatable {
   
 }
 
+public struct ImageSize: Equatable {
+  public let pixelWidth: Int
+  public let pixelHeight: Int
+  
+  public var aspectRatio: CGSize {
+    .init(width: pixelWidth, height: pixelHeight)
+  }
+}
+
 /**
  A stateful object that provides multiple image for EditingStack.
  */
@@ -49,7 +58,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
   }
     
   public struct State: Equatable {
-    var currentImage: EditingImage?
+    public fileprivate(set) var currentImage: EditingImage?
+    public let imageSize: ImageSize
   }
   
   public let store: DefaultStore
@@ -71,7 +81,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
   public init(image: CIImage) {
     
     precondition(image.extent.origin == .zero)
-    self.store = .init(initialState: .init(currentImage: .init(image: image, isEditable: true)))
+    self.store = .init(
+      initialState: .init(
+        currentImage: .init(image: image, isEditable: true),
+        imageSize: .init(pixelWidth: Int(image.extent.size.width), pixelHeight: Int(image.extent.size.height))
+      )
+    )
     self.pendingAction = { _ in }
   }
   
@@ -81,7 +96,15 @@ public final class ImageProvider: Equatable, StoreComponentType {
         
     //TODO cancellation, Error handeling
     
-    self.store = .init(initialState: .init())
+    self.store = .init(
+      initialState: .init(
+        currentImage: nil,
+        imageSize: .init(
+          pixelWidth: asset.pixelWidth,
+          pixelHeight: asset.pixelHeight
+        )
+      )
+    )
         
     self.pendingAction = { `self` in
       

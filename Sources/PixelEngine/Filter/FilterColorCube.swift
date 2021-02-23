@@ -37,24 +37,26 @@ public struct PreviewFilterColorCube : Equatable {
     self.image = filter.apply(to: sourceImage, sourceImage: sourceImage)
   }
 
-  public func preheat() {
-    Static.heatingQueue.async {
-      _ = Static.ciContext.createCGImage(self.image, from: self.image.extent)
-    }
-  }
 }
 
 /// A Filter using LUT Image (backed by CIColorCubeWithColorSpace)
 /// About LUT Image -> https://en.wikipedia.org/wiki/Lookup_table
-public struct FilterColorCube : Filtering, Equatable {
-
+public final class FilterColorCube : Filtering, Equatable {
+  
+  public static func == (lhs: FilterColorCube, rhs: FilterColorCube) -> Bool {
+    lhs === rhs
+  }
+  
   public static let range: ParameterRange<Double, FilterColorCube> = .init(min: 0, max: 1)
 
-  public let filter: CIFilter
-
+  private var loadedFilter: CIFilter?
+  
   public let name: String
   public let identifier: String
   public var amount: Double = 1
+  
+  private var loader: () -> CIFilter
+  private let lock = NSLock()
 
   public init(
     name: String,
@@ -66,10 +68,27 @@ public struct FilterColorCube : Filtering, Equatable {
 
     self.name = name
     self.identifier = identifier
-    self.filter = ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)
+    self.loader = {
+      ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)
+    }
   }
 
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+    
+    lock.lock()
+    defer {
+      lock.unlock()
+    }
+    
+    let filter: CIFilter
+    
+    if let loadedFilter = self.loadedFilter {
+      filter = loadedFilter
+    } else {
+      let createdFilter = loader()
+      self.loadedFilter = createdFilter
+      filter = createdFilter
+    }
 
     let f = filter.copy() as! CIFilter
 

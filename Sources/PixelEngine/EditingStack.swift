@@ -22,15 +22,6 @@
 import Foundation
 import Verge
 
-public protocol EditingStackDelegate : class {
-  func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType)
-  func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit)
-}
-
-public extension EditingStackDelegate {
-  func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {}
-}
-
 /**
  A stateful object that manages current editing status from original image.
  And supports rendering a result image.
@@ -42,10 +33,33 @@ open class EditingStack: Equatable, StoreComponentType {
   }
     
   public struct State: Equatable {
+        
+    public let imageSize: ImageSize
+    
+    public fileprivate(set) var hasStartedEditing = false
     
     public fileprivate(set) var history: [Edit] = []
     
     public fileprivate(set) var currentEdit: Edit = .init()
+        
+    /**
+     An original image
+     */
+    public fileprivate(set) var targetImage: CIImage?
+        
+    /**
+     An image that cropped but not effected.
+     */
+    public fileprivate(set) var croppedTargetImage: CIImage?
+    
+    /**
+     An image that applied editing and optimized for previewing.
+     */
+    public fileprivate(set) var previewImage: CIImage?
+    
+    public fileprivate(set) var cubeFilterPreviewSourceImage: CIImage?
+    
+    public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
     
     public var canUndo: Bool {
       return history.count > 0
@@ -65,35 +79,14 @@ open class EditingStack: Equatable, StoreComponentType {
   
   public let store: DefaultStore
 
-  public let source: ImageSourceType
-
-  public weak var delegate: EditingStackDelegate?
+  public let source: ImageProvider
 
   public let preferredPreviewSize: CGSize
 
   public let targetScreenScale: CGFloat
-
-  private(set) public var previewColorCubeFilters: [PreviewFilterColorCube] = []
-  private var colorCubeFilters: [FilterColorCube] = []
-
-  private(set) public var cubeFilterPreviewSourceImage: CIImage?
   
-  private(set) public var previewImage: CIImage?
-
-  private(set) public var originalPreviewImage: CIImage? {
-    didSet {
-      EngineLog.debug("Changed EditingStack.originalPreviewImage")
-      updatePreviewImage()
-
-    }
-  }
-
-  public var adjustmentImage: CIImage?
-  
-  public var aspectRatio: CGSize? {
-    return originalPreviewImage?.extent.size
-  }
-   
+  private let colorCubeFilters: [FilterColorCube]
+          
   private let queue = DispatchQueue(
     label: "me.muukii.PixelEngine",
     qos: .default,
@@ -105,44 +98,50 @@ open class EditingStack: Equatable, StoreComponentType {
   // MARK: - Initializers
 
   public init(
-    source: ImageSourceType,
+    source: ImageProvider,
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale
     ) {
     
-    self.store = .init(initialState: .init())
-
+    self.store = .init(initialState: .init(imageSize: source.state.imageSize))
+    self.colorCubeFilters = colorCubeStorage.filters
     self.source = source
 
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
-    self.adjustmentImage = source.imageSource?.image
-    
+        
     initialCrop()
     takeSnapshot()
     removeAllEditsHistory()
     
-    self.sinkState { [weak self] (state) in
-      
-      guard let self = self else { return }
-      
-      state.ifChanged(\.currentEdit) { currentEdit in
-        self.updatePreviewImage(from: currentEdit)
-      }
-      
+  }
+  
+  public func start() {
+    
+    guard state.hasStartedEditing == false else {
+      return
     }
-    .store(in: &subscriptions)
-        
-    self.source.setImageUpdateListener { [weak self] in
+    
+    commit {
+      $0.hasStartedEditing = true
+    }
+    
+    source.start()
+    
+    store.add(middleware: .unifiedMutation({ (ref) in
+      // TODO:
+    }))
+    
+    sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
+      
       guard let self = self else { return }
-      self.adjustmentImage = $0.imageSource?.image
-      self.initialCrop()
-      guard $0.imageSource?.image != nil else { return }
-      self.set(colorCubeFilters: colorCubeStorage.filters)
-
-      updatePreviewFilterSizeImage: do {
-        let smallSizeImage = ImageTool.resize(
+      
+      state.ifChanged(\.targetImage) { image in
+        
+        guard let image = image else { return }
+        
+        let smallSizeImage = ImageTool.makeNewResidedCIImage(
           to: Geometry.sizeThatAspectFit(
             aspectRatio: CGSize(width: 1, height: 1),
             boundingSize: CGSize(
@@ -150,32 +149,84 @@ open class EditingStack: Equatable, StoreComponentType {
               height: 60 * self.targetScreenScale
             )
           ),
-          from: self.originalPreviewImage!
-          )!
-        self.cubeFilterPreviewSourceImage = smallSizeImage
-          .transformed(
+          from: image
+        ).map {
+          $0.transformed(
             by: .init(
-              translationX: -smallSizeImage.extent.origin.x,
-              y: -smallSizeImage.extent.origin.y
+              translationX: -$0.extent.origin.x,
+              y: -$0.extent.origin.y
             )
-        )
+          )
+        }!
+          
+        self.commit {
+          $0.cubeFilterPreviewSourceImage = smallSizeImage
+          
+          $0.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
+            let r = PreviewFilterColorCube(sourceImage: smallSizeImage, filter: $0)
+            return r
+          }
+        }
+        
       }
-      self.refreshColorCubeFilters()
-      self.delegate?.editingStack(self, didUpdate: self.source)
+      
+      state.ifChanged(\.currentEdit, \.croppedTargetImage) { currentEdit, croppedTargetImage in
+        if let croppedTargetImage = croppedTargetImage {
+          self.updatePreviewImage(from: currentEdit, image: croppedTargetImage)
+        }
+      }
+      
+      state.ifChanged(\.currentEdit.cropRect, \.targetImage) { cropRect, targetImage in
+        
+        if var cropRect = cropRect, let targetImage = targetImage {
+          
+          cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
+          
+          let croppedImage = targetImage
+            .cropped(to: cropRect)
+          
+          let result = ImageTool.makeNewResidedCIImage(
+            to: Geometry.sizeThatAspectFit(
+              aspectRatio: croppedImage.extent.size,
+              boundingSize: CGSize(
+                width: self.preferredPreviewSize.width * self.targetScreenScale,
+                height: self.preferredPreviewSize.height * self.targetScreenScale
+              )
+            ),
+            from: croppedImage
+          )
+          
+          self.commit {
+            $0.croppedTargetImage = result
+          }
+        }
+        
+      }
+      
     }
+    .store(in: &subscriptions)
+        
+    source.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.currentImage) { image in
+        self.commit {
+          $0.targetImage = image?.image
+        }
+      }
+      
+    }
+    .store(in: &subscriptions)
+        
+    self.initialCrop()
   
   }
 
   open func initialCrop() {
-    guard let image = source.imageSource?.image else { return }
-    setAdjustment(cropRect: image.extent)
   }
 
   // MARK: - Functions
-
-  public func requestApplyingFilterImage() -> CIImage {
-    fatalError()
-  }
 
   public func takeSnapshot() {
     commit {
@@ -212,11 +263,9 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
-  public func setAdjustment(cropRect: CGRect) {
+  public func crop(in rect: CGRect) {
 
-    guard let originalImage = source.imageSource?.image else { return } //XXX check for croppability ?
-
-    var _cropRect = cropRect
+    var _cropRect = rect
 
     _cropRect.origin.x.round(.up)
     _cropRect.origin.y.round(.up)
@@ -226,24 +275,7 @@ open class EditingStack: Equatable, StoreComponentType {
     applyIfChanged {
       $0.cropRect = _cropRect
     }
-
-    _cropRect.origin.y = originalImage.extent.height - _cropRect.minY - _cropRect.height
-
-    let croppedImage = originalImage
-      .cropped(to: _cropRect)
-
-    let result = ImageTool.resize(
-      to: Geometry.sizeThatAspectFit(
-        aspectRatio: croppedImage.extent.size,
-        boundingSize: CGSize(
-          width: preferredPreviewSize.width * targetScreenScale,
-          height: preferredPreviewSize.height * targetScreenScale
-        )
-      ),
-      from: croppedImage
-    )
-
-    originalPreviewImage = result
+    
   }
 
   public func set(blurringMaskPaths: [DrawnPathInRect]) {
@@ -253,27 +285,13 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
-  private func refreshColorCubeFilters() {
-    guard let cubeFilterPreviewSourceImage = cubeFilterPreviewSourceImage else { return }
-    self.previewColorCubeFilters = colorCubeFilters.concurrentMap {
-      let r = PreviewFilterColorCube(sourceImage: cubeFilterPreviewSourceImage, filter: $0)
-      r.preheat()
-      return r
-    }
-  }
-
-  @available(*, deprecated, renamed: "set(colorCubeFilters:)")
-  public func set(availableColorCubeFilters: [FilterColorCube]) {
-    set(colorCubeFilters: availableColorCubeFilters)
-  }
-
-  public func set(colorCubeFilters: [FilterColorCube]) {
-    self.colorCubeFilters = colorCubeFilters
-    refreshColorCubeFilters()
-  }
-
   public func makeRenderer() -> ImageRenderer {
-    let renderer = ImageRenderer(source: source)
+    
+    guard let targetImage = state.targetImage else {
+      preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
+    }
+        
+    let renderer = ImageRenderer(source: targetImage)
 
     let edit = state.currentEdit
 
@@ -295,23 +313,19 @@ open class EditingStack: Equatable, StoreComponentType {
   
   }
 
-  private func updatePreviewImage(from edit: Edit) {
-
-    guard let sourceImage = originalPreviewImage else {
-      previewImage = nil
-      return
-    }
+  private func updatePreviewImage(from edit: Edit, image: CIImage) {
     
     let filters = edit
       .makeFilters()
     
-    let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
-      filter.apply(to: image, sourceImage: sourceImage)
+    let result = filters.reduce(image) { (image, filter) -> CIImage in
+      filter.apply(to: image, sourceImage: image)
     }
     
-    self.previewImage = result
-    self.delegate?.editingStack(self, didChangeCurrentEdit: edit)
-    
+    commit {
+      $0.previewImage = result
+    }
+
     // TODO: Ignore vignette and blur (convolutions)
 //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
 //      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
@@ -324,13 +338,15 @@ open class EditingStack: Equatable, StoreComponentType {
 open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
-    guard let image = source.imageSource?.image else { return }
+    
+    let imageSize = state.imageSize
+    
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
-      boundingRect: image.extent
+      boundingRect: .init(x: 0, y: 0, width: imageSize.pixelWidth, height: imageSize.pixelHeight)
     )
     
-    setAdjustment(cropRect: cropRect)
+    crop(in: cropRect)
   }
 }
 
@@ -417,18 +433,26 @@ extension CIImage {
   }
 }
 
-extension Collection where Index == Int {
+extension Array {
   
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
+    
     var buffer = [U?].init(repeating: nil, count: count)
-    let lock = NSLock()
-    DispatchQueue.concurrentPerform(iterations: count) { i in
-      let e = self[i]
-      let r = transform(e)
-      lock.lock()
-      buffer[i] = r
-      lock.unlock()
+    
+    buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
+      
+      self.withUnsafeBufferPointer { (sourceBuffer) -> Void in
+        
+        DispatchQueue.concurrentPerform(iterations: count) { i in
+          let sourcePointer = sourceBuffer.baseAddress!.advanced(by: i)
+          let r = transform(sourcePointer.pointee)
+          let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
+          targetPointer.pointee = r
+        }
+        
+      }
     }
+  
     return buffer.compactMap { $0 }
   }
 }

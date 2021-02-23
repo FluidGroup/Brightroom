@@ -507,8 +507,8 @@ public final class PixelEditViewController : UIViewController {
   private func updateAdjustmentUI() {
     let edit = editingStack.currentEdit
     
-    if adjustmentView.image != editingStack.adjustmentImage {
-      adjustmentView.image = editingStack.adjustmentImage
+    if adjustmentView.image != editingStack.targetImage {
+      adjustmentView.image = editingStack.targetImage
     }
     
     if let cropRect = edit.cropRect {

@@ -40,18 +40,15 @@ public final class ImageRenderer {
     .highQualityDownsample : true,
     ])
   
-  public let source: ImageSourceType
+  public let source: CIImage
 
   public var edit: Edit = .init()
 
-  public init(source: ImageSourceType) {
+  public init(source: CIImage) {
     self.source = source
   }
 
   public func render(resolution: Resolution = .full) -> UIImage {
-    guard let targetImage = source.imageSource?.image else {
-      preconditionFailure("Nothing to render")
-    }
     let resultImage: CIImage = {
 
       let sourceImage: CIImage
@@ -61,10 +58,10 @@ public final class ImageRenderer {
         croppingRect.origin.y.round(.up)
         croppingRect.size.width.round(.up)
         croppingRect.size.height.round(.up)
-        croppingRect.origin.y = targetImage.extent.height - croppingRect.minY - croppingRect.height
-        sourceImage = targetImage.cropped(to: croppingRect)
+        croppingRect.origin.y = source.extent.height - croppingRect.minY - croppingRect.height
+        sourceImage = source.cropped(to: croppingRect)
       } else {
-        sourceImage = targetImage
+        sourceImage = source
       }
 
       let result = edit.modifiers.reduce(sourceImage, { image, modifier in
