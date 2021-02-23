@@ -1,6 +1,10 @@
 Pod::Spec.new do |s|
-  s.name = "PixelEngine"
+  s.name = "PixelEditor"
+<<<<<<< HEAD
+  s.version = "0.2.2"
+=======
   s.version = '0.2.3'
+>>>>>>> origin/master
   s.summary = "The image editor and engine using CoreImage"
 
   s.homepage = "https://github.com/muukii/Pixel"
@@ -8,11 +12,15 @@ Pod::Spec.new do |s|
   s.author = "muukii"
   s.source = { :git => "https://github.com/muukii/Pixel.git", :tag => s.version }
 
-  s.source_files = ["Sources/PixelEngine/**/*.swift"]
+  s.source_files = ["Sources/PixelEditor/**/*.swift"]
 
   s.module_name = s.name
   s.requires_arc = true
   s.ios.deployment_target = "10.0"
   s.ios.frameworks = ["UIKit", "CoreImage"]
-  s.ios.dependency "Verge", "~> 8"
+
+  s.resources = "Sources/PixelEditor/Media.xcassets"
+  s.dependency "PixelEngine", "~> 0.2.2"
+
+  s.dependency "TransitionPatch", "~> 1.0.0"
 end

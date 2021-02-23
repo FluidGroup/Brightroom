@@ -27,9 +27,9 @@ final class CropAndStraightenView : UIView {
 
   var image: CIImage? {
     didSet {
-                  
+
       let _image: UIImage?
-      
+
       if let cgImage = image?.cgImage {
         _image = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
       } else {
@@ -77,7 +77,7 @@ final class CropAndStraightenView : UIView {
 
       guard let image = image else { return }
 
-      imageView.zoomScale = 0
+      imageView.zoomScale = 1
 
       let scale = _ratio(
         to: imageView.zoomView!.bounds.size,
@@ -121,7 +121,7 @@ final class CropAndStraightenView : UIView {
 
     layer.addSublayer(gridContainerLayer)
   }
-  
+
   required init?(coder aDecoder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
