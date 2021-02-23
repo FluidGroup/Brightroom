@@ -3,13 +3,13 @@ platform :ios, "10.0"
 
 target "PixelEngine" do
   use_frameworks!
-  pod "Verge", "~> 8"
+  pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
 end
 
 target "PixelEditor" do
   use_frameworks!
   pod "TransitionPatch"
-  pod "Verge/Core"
+  pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
 end
 
 target "Demo" do

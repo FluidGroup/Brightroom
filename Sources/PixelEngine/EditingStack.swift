@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import Foundation
+import Verge
 
 public protocol EditingStackDelegate : class {
   func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType)
@@ -34,9 +35,35 @@ public extension EditingStackDelegate {
  A stateful object that manages current editing status from original image.
  And supports rendering a result image.
  */
-open class EditingStack {
+open class EditingStack: Equatable, StoreComponentType {
+  
+  public static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
+    lhs === rhs
+  }
+    
+  public struct State: Equatable {
+    
+    public fileprivate(set) var history: [Edit] = []
+    
+    public fileprivate(set) var currentEdit: Edit = .init()
+    
+    public var canUndo: Bool {
+      return history.count > 0
+    }
+        
+    public var isDirty: Bool {
+      return currentEdit != .zero
+    }
+        
+    static func makeVersion(ref: InoutRef<Self>) {
+      ref.history.append(ref.currentEdit)
+    }
+    
+  }
 
   // MARK: - Stored Properties
+  
+  public let store: DefaultStore
 
   public let source: ImageSourceType
 
@@ -46,10 +73,6 @@ open class EditingStack {
 
   public let targetScreenScale: CGFloat
 
-  @available(*, deprecated, renamed: "previewColorCubeFilters")
-  public var availableColorCubeFilters: [PreviewFilterColorCube] {
-    return previewColorCubeFilters
-  }
   private(set) public var previewColorCubeFilters: [PreviewFilterColorCube] = []
   private var colorCubeFilters: [FilterColorCube] = []
 
@@ -70,38 +93,14 @@ open class EditingStack {
   public var aspectRatio: CGSize? {
     return originalPreviewImage?.extent.size
   }
-
-  public var isDirty: Bool {
-    return draftEdit != nil
-  }
-
-  public var canUndo: Bool {
-    return edits.count > 1
-  }
-
-  public var draftEdit: Edit? {
-    didSet {
-      if oldValue != draftEdit {
-        updatePreviewImage()
-      }
-    }
-  }
-
-  public var currentEdit: Edit {
-    return draftEdit ?? edits.last!
-  }
-
-  public private(set) var edits: [Edit] {
-    didSet {
-      EngineLog.debug("Edits changed count -> \(edits.count)")
-    }
-  }
-  
+   
   private let queue = DispatchQueue(
     label: "me.muukii.PixelEngine",
     qos: .default,
     attributes: []
   )
+  
+  private var subscriptions = Set<VergeAnyCancellable>()
 
   // MARK: - Initializers
 
@@ -111,18 +110,30 @@ open class EditingStack {
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale
     ) {
+    
+    self.store = .init(initialState: .init())
 
     self.source = source
 
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
     self.adjustmentImage = source.imageSource?.image
-
-    self.edits = [.init()]
     
     initialCrop()
-    commit()
-    removeAllHistory()
+    takeSnapshot()
+    removeAllEditsHistory()
+    
+    self.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.currentEdit) { currentEdit in
+        self.updatePreviewImage(from: currentEdit)
+      }
+      
+    }
+    .store(in: &subscriptions)
+        
     self.source.setImageUpdateListener { [weak self] in
       guard let self = self else { return }
       self.adjustmentImage = $0.imageSource?.image
@@ -152,6 +163,7 @@ open class EditingStack {
       self.refreshColorCubeFilters()
       self.delegate?.editingStack(self, didUpdate: self.source)
     }
+  
   }
 
   open func initialCrop() {
@@ -165,31 +177,33 @@ open class EditingStack {
     fatalError()
   }
 
-  private func makeDraft() {
-    draftEdit = edits.last ?? .init()
-  }
-
-  public func commit() {
-    guard let edit = draftEdit else {
-      EngineLog.debug("No draft, no needs commit")
-      return
+  public func takeSnapshot() {
+    commit {
+      $0.withType { (type, ref) -> Void in
+        type.makeVersion(ref: ref)
+      }
     }
-    guard edits.last != edit else { return }
-    edits.append(edit)
-    draftEdit = nil
   }
 
-  public func revert() {
-    draftEdit = nil
+  public func revertEdit() {
+    
+    commit {
+      $0.currentEdit = $0.history.last ?? .init()
+    }
+    
   }
 
-  public func undo() {
-    edits.removeLast()
-    updatePreviewImage()
+  public func undoEdit() {
+    
+    commit {
+      $0.currentEdit = $0.history.popLast() ?? .init()
+    }
   }
 
-  public func removeAllHistory() {
-    edits = [edits.last].compactMap { $0 }
+  public func removeAllEditsHistory() {
+    commit {
+      $0.history = []
+    }
   }
 
   public func set(filters: (inout Edit.Filters) -> Void) {
@@ -261,7 +275,7 @@ open class EditingStack {
   public func makeRenderer() -> ImageRenderer {
     let renderer = ImageRenderer(source: source)
 
-    let edit = currentEdit
+    let edit = state.currentEdit
 
     renderer.edit.croppingRect = edit.cropRect
     renderer.edit.drawer = [
@@ -273,29 +287,22 @@ open class EditingStack {
     return renderer
   }
 
-  private func applyIfChanged(_ perform: (inout Edit) -> Void) {
-
-    if draftEdit == nil {
-      makeDraft()
+  private func applyIfChanged(_ perform: (inout InoutRef<Edit>) -> Void) {
+    
+    commit {
+      $0.map(keyPath: \.currentEdit, perform: perform)
     }
-
-    var draft = draftEdit!
-    perform(&draft)
-
-    guard draftEdit != draft else { return }
-
-    draftEdit = draft
-
+  
   }
 
-  private func updatePreviewImage() {
+  private func updatePreviewImage(from edit: Edit) {
 
     guard let sourceImage = originalPreviewImage else {
       previewImage = nil
       return
     }
     
-    let filters = self.currentEdit
+    let filters = edit
       .makeFilters()
     
     let result = filters.reduce(sourceImage) { (image, filter) -> CIImage in
@@ -303,7 +310,7 @@ open class EditingStack {
     }
     
     self.previewImage = result
-    self.delegate?.editingStack(self, didChangeCurrentEdit: self.currentEdit)
+    self.delegate?.editingStack(self, didChangeCurrentEdit: edit)
     
     // TODO: Ignore vignette and blur (convolutions)
 //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
@@ -392,6 +399,8 @@ extension EditingStack {
     func makeFilters() -> [Filtering] {
       return filters.makeFilters()
     }
+        
+    static let zero: Self = .init()
   }
 
 }

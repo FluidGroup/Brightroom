@@ -1,43 +1,45 @@
 PODS:
   - MosaiqueAssetsPicker (1.2.0)
-  - Reveal-SDK (27)
+  - Reveal-SDK (28)
   - TransitionPatch (1.0.2)
-  - Verge (8.0.2):
-    - Verge/Store (= 8.0.2)
-  - Verge/Core (8.0.2):
+  - Verge (8.7.0):
+    - Verge/Store (= 8.7.0)
+  - Verge/ObjcBridge (8.7.0)
+  - Verge/Store (8.7.0):
     - Verge/ObjcBridge
-  - Verge/ObjcBridge (8.0.2)
-  - Verge/Store (8.0.2):
-    - Verge/Core
 
 DEPENDENCIES:
   - "MosaiqueAssetsPicker (from `git@github.com:eure/AssetsPicker.git`)"
   - Reveal-SDK
   - TransitionPatch
-  - Verge (~> 8)
-  - Verge/Core
+  - "Verge (from `git@github.com:VergeGroup/Verge.git`, branch `main`)"
 
 SPEC REPOS:
   trunk:
     - Reveal-SDK
     - TransitionPatch
-    - Verge
 
 EXTERNAL SOURCES:
   MosaiqueAssetsPicker:
     :git: "git@github.com:eure/AssetsPicker.git"
+  Verge:
+    :branch: main
+    :git: "git@github.com:VergeGroup/Verge.git"
 
 CHECKOUT OPTIONS:
   MosaiqueAssetsPicker:
     :commit: 93baa57a99be952c51588196d057694f7f28b73e
     :git: "git@github.com:eure/AssetsPicker.git"
+  Verge:
+    :commit: a66c1c0e219687cc034988901e484d015845f3cd
+    :git: "git@github.com:VergeGroup/Verge.git"
 
 SPEC CHECKSUMS:
   MosaiqueAssetsPicker: e3d2be37a1a7d91d60f2904347f556fc1811e4d7
-  Reveal-SDK: 306e2880395ee396f5a8b4c485c3a86dd19866c7
+  Reveal-SDK: 1a2a678648fc4d277bad71c86d15530424324288
   TransitionPatch: c02b48b1429255b14ef82b7e411034e0958b9681
-  Verge: c0ebde7aa835d727f7c26ca988c874917de68237
+  Verge: c523a3a524a815127d5600fc606c656a8f6296e7
 
-PODFILE CHECKSUM: 88c40e1ca2c9aca740e12286226498a5fbdb9bf3
+PODFILE CHECKSUM: 74c5f6f76f88630b03f52fbd1ef67b44d45e53f1
 
 COCOAPODS: 1.10.1
