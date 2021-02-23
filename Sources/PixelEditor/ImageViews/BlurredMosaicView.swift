@@ -128,3 +128,32 @@ extension BlurredMosaicView {
     }
   }
 }
+
+
+import PixelEngine
+import Verge
+
+extension BlurredMosaicView {
+  
+  func attach(editingStack: EditingStack) -> Set<VergeAnyCancellable> {
+    var subscriptions = Set<VergeAnyCancellable>()
+    
+    editingStack.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.previewImage) { previewImage in
+        UIView.performWithoutAnimation {
+//          if !self.maskingView.isHidden {
+          self.image = previewImage
+//          }
+        }
+      }
+          
+    }
+    .store(in: &subscriptions)
+    
+    return subscriptions
+  }
+  
+}

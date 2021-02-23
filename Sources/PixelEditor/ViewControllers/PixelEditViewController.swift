@@ -22,6 +22,7 @@
 import UIKit
 import PixelEngine
 import Photos
+import Verge
 
 public protocol PixelEditViewControllerDelegate : class {
 
@@ -87,16 +88,7 @@ public final class PixelEditViewController : UIViewController {
   public let callbacks: Callbacks = .init()
   
   public lazy var context: PixelEditContext = .init(options: options)
-  
-  public let options: Options
-  
-  public private(set) var editingStack: EditingStack! {
-    didSet {
-      guard editingStack != nil else { preconditionFailure("Do not set editing stack to nil") }
-      self.editingStack.delegate = self
-    }
-  }
-
+      
   /// - TODO: this flag won't be used when specified EditingStack outside.
   private var usesSquareCropping: Bool
   
@@ -133,89 +125,17 @@ public final class PixelEditViewController : UIViewController {
     target: self,
     action: #selector(didTapCancelButton)
   )
-
-  private let imageSource: ImageSourceType
-  private var isLoading: Bool {
-    get {
-      return loadingViews != nil
-    }
-    set {
-      if newValue, self.isLoading == false {
-        let loadingView = LoadingView(frame: .zero)
-        let disableView = UIView()
-        disableView.backgroundColor = .init(white: 1, alpha: 0.5)
-        self.loadingViews = [loadingView, disableView]
-        view.addSubview(loadingView)
-        view.addSubview(disableView)
-        disableView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-          loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
-          loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
-          loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
-          loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-          disableView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
-          disableView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
-          disableView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
-          disableView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
-        ])
-        doneButton.isEnabled = false
-      }
-      if !newValue {
-        loadingViews?.forEach { $0.removeFromSuperview() }
-        loadingViews = nil
-        doneButton.isEnabled = true
-      }
-    }
-  }
-  private var loadingViews: [UIView]?
-  private var colorCubeStorage: ColorCubeStorage = .default
+  
+  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  
+  private lazy var loadingView = LoadingView()
+  private lazy var touchGuardOverlayView = UIView()
+  
+  private let viewModel: PixelEditViewModel
 
   // MARK: - Initializers
-
-  public convenience init(
-    editingStack: EditingStack,
-    doneButtonTitle: String = L10n.done,
-    options: Options = .current
-  ) {
-    self.init(source: editingStack.source, options: options)
-    self.editingStack = editingStack
-    editingStack.delegate = self
-  }
-
-  public convenience init(
-    image: UIImage,
-    doneButtonTitle: String = L10n.done,
-    colorCubeStorage: ColorCubeStorage = .default,
-    usesSquareCropping: Bool = true,
-    options: Options = .current
-  ) {
-
-    let source = StaticImageSource(source: image)
-
-    self.init(
-      source: source,
-      colorCubeStorage: colorCubeStorage,
-      usesSquareCropping: usesSquareCropping,
-      options: options
-    )
-
-  }
-
-  public init(
-    source: ImageSourceType,
-    doneButtonTitle: String = L10n.done,
-    colorCubeStorage: ColorCubeStorage = .default,
-    usesSquareCropping: Bool = true,
-    options: Options = .current
-  ) {
-
-    self.imageSource = source
-    self.options = options
-    self.colorCubeStorage = colorCubeStorage
-    self.doneButtonTitle = doneButtonTitle
-    self.usesSquareCropping = usesSquareCropping
-    super.init(nibName: nil, bundle: nil)
-
+  public init(viewModel: PixelEditViewModel) {
+    self.viewModel = viewModel
   }
 
   @available(*, unavailable)
@@ -231,24 +151,6 @@ public final class PixelEditViewController : UIViewController {
     layout: do {
 
       root: do {
-
-        if editingStack == nil {
-
-          if usesSquareCropping {
-            editingStack = SquareEditingStack.init(
-              source: imageSource,
-              previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-              colorCubeStorage: colorCubeStorage
-            )
-          } else {
-            editingStack = EditingStack.init(
-              source: imageSource,
-              previewSize: CGSize(width: view.bounds.width, height: view.bounds.width),
-              colorCubeStorage: colorCubeStorage
-            )
-          }
-
-        }
         view.backgroundColor = .white
 
         let guide = UILayoutGuide()
@@ -357,13 +259,60 @@ public final class PixelEditViewController : UIViewController {
     }
 
     setupImagesViews()
-    UIView.performWithoutAnimation {
-      self.previewView.image = editingStack.previewImage
-      self.previewView.originalImage = editingStack.originalPreviewImage
-      if !self.maskingView.isHidden {
-        self.maskingView.image = editingStack.previewImage
+   
+  
+    subscriptions.formUnion(
+      previewView.attach(editingStack: viewModel.editingStack)
+    )
+    
+    subscriptions.formUnion(
+      maskingView.attach(editingStack: viewModel.editingStack)
+    )
+    
+    viewModel.sinkState(queue: .main) { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      let editingState = state.map(\.editingState)
+      
+      editingState.ifChanged(\.isLoading) { isLoading in
+        
+        switch isLoading {
+        case true:
+          
+          let loadingView = self.loadingView
+          let touchGuardOverlayView = self.touchGuardOverlayView
+          
+          touchGuardOverlayView.backgroundColor = .init(white: 1, alpha: 0.5)
+                    
+          self.view.addSubview(loadingView)
+          self.view.addSubview(touchGuardOverlayView)
+          
+          touchGuardOverlayView.translatesAutoresizingMaskIntoConstraints = false
+          
+          NSLayoutConstraint.activate([
+            loadingView.leadingAnchor.constraint(equalTo: self.previewView.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: self.previewView.trailingAnchor),
+            loadingView.topAnchor.constraint(equalTo: self.previewView.topAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: self.previewView.bottomAnchor),
+            touchGuardOverlayView.leadingAnchor.constraint(equalTo: self.controlContainerView.leadingAnchor),
+            touchGuardOverlayView.trailingAnchor.constraint(equalTo: self.controlContainerView.trailingAnchor),
+            touchGuardOverlayView.topAnchor.constraint(equalTo: self.controlContainerView.topAnchor),
+            touchGuardOverlayView.bottomAnchor.constraint(equalTo: self.controlContainerView.bottomAnchor),
+          ])
+          self.doneButton.isEnabled = false
+          
+        case false:
+          self.loadingView.removeFromSuperview()
+          self.touchGuardOverlayView.removeFromSuperview()
+          self.doneButton.isEnabled = true
+        }
+        
       }
+           
     }
+    .store(in: &subscriptions)
+    
   }
 
   // MARK: - Private Functions
@@ -414,12 +363,8 @@ public final class PixelEditViewController : UIViewController {
 
   @objc
   private func didTapDoneButton() {
-    if let editingStack = self.editingStack {
-      callbacks.didEndEditing(self, editingStack)
-      delegate?.pixelEditViewController(self, didEndEditing: editingStack)
-    } else {
-      delegate?.pixelEditViewControllerDidCancelEditing(in: self)
-    }
+    callbacks.didEndEditing(self, viewModel.editingStack)
+    delegate?.pixelEditViewController(self, didEndEditing: viewModel.editingStack)    
   }
   
   @objc
@@ -430,7 +375,6 @@ public final class PixelEditViewController : UIViewController {
   }
 
   private func set(mode: Mode) {
-    guard let editingStack = self.editingStack else { return }
     
     switch mode {
     case .adjustment:
@@ -559,19 +503,7 @@ public final class PixelEditViewController : UIViewController {
 extension PixelEditViewController : EditingStackDelegate {
   public func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {
     setupImagesViews()
-    switch stack.source.imageSource {
-    case .editable(_):
-      self.isLoading = false
-    default:
-      self.isLoading = true
-    }
-    UIView.performWithoutAnimation {
-      self.previewView.image = stack.previewImage
-      self.previewView.originalImage = stack.originalPreviewImage
-      if !self.maskingView.isHidden {
-        self.maskingView.image = stack.previewImage
-      }
-    }
+    
   }
 
 

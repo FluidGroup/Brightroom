@@ -8,27 +8,38 @@
 
 import UIKit
 
-class LoadingView: UIView {
+final class LoadingView: UIView {
   override init(frame: CGRect) {
+    
     super.init(frame: frame)
+    
     let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
     let spinner = UIActivityIndicatorView(style: .whiteLarge)
+    
     self.backgroundColor = .clear
-    self.addSubview(blurView)
-    self.addSubview(spinner)
+    
+    addSubview(blurView)
+    addSubview(spinner)
+    
     spinner.startAnimating()
     spinner.isHidden = false
-    [self, blurView, spinner].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
+    
+    [self, blurView, spinner].forEach {
+      $0.translatesAutoresizingMaskIntoConstraints = false
+    }
+    
     NSLayoutConstraint.activate([
-      blurView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
-      blurView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-      blurView.topAnchor.constraint(equalTo: self.topAnchor),
-      blurView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
-      spinner.centerYAnchor.constraint(equalTo: self.centerYAnchor),
-      spinner.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+      blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
+      blurView.topAnchor.constraint(equalTo: topAnchor),
+      blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+      spinner.centerYAnchor.constraint(equalTo: centerYAnchor),
+      spinner.centerXAnchor.constraint(equalTo: centerXAnchor),
     ])
+    
   }
 
+  @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }

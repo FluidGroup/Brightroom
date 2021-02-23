@@ -85,3 +85,34 @@ final class ImagePreviewView : UIView {
     imageView.isHidden = false
   }
 }
+
+import PixelEngine
+import Verge
+
+extension ImagePreviewView {
+  
+  func attach(editingStack: EditingStack) -> Set<VergeAnyCancellable> {
+    var subscriptions = Set<VergeAnyCancellable>()
+    
+    editingStack.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+      
+      UIView.performWithoutAnimation {
+        
+        state.ifChanged(\.previewImage) { previewImage in
+          self.image = previewImage
+        }
+        
+        state.ifChanged(\.croppedTargetImage) { croppedTargetImage in
+          self.originalImage = croppedTargetImage
+        }
+        
+      }
+    }
+    .store(in: &subscriptions)
+    
+    return subscriptions
+  }
+}
+

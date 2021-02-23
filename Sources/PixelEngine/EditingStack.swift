@@ -41,6 +41,8 @@ open class EditingStack: Equatable, StoreComponentType {
     public fileprivate(set) var history: [Edit] = []
     
     public fileprivate(set) var currentEdit: Edit = .init()
+    
+    public var isLoading = true
         
     /**
      An original image
