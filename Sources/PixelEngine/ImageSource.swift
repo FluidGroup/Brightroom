@@ -22,105 +22,111 @@
 import Foundation
 
 import CoreImage
+import Verge
 
 #if canImport(UIKit)
 import UIKit
 #endif
 
-public enum ImageSource {
-  case previewOnly(CIImage)
-  case editable(CIImage)
-
-  var image: CIImage {
-    switch self {
-    case .editable(let image):
-      return image
-    case .previewOnly(let image)  :
-      return image
-    }
-  }
-}
-
-public protocol ImageSourceType {
-  func setImageUpdateListener(_ listner: @escaping (ImageSourceType) -> Void)
-  var imageSource: ImageSource? { get }
-}
-
 #if canImport(Photos)
 import Photos
-
-public final class PHAssetImageSource: ImageSourceType {
-  private var listner: ((ImageSourceType) -> Void) = { _ in }
-  public var imageSource: ImageSource? {
-    didSet {
-      listner(self)
-    }
-  }
-
-  public init(_ asset: PHAsset) {
-    let previewRequestOptions = PHImageRequestOptions()
-    previewRequestOptions.deliveryMode = .highQualityFormat
-    previewRequestOptions.isNetworkAccessAllowed = true
-    previewRequestOptions.version = .current
-    previewRequestOptions.resizeMode = .fast
-    let finalImageRequestOptions = PHImageRequestOptions()
-    finalImageRequestOptions.deliveryMode = .highQualityFormat
-    finalImageRequestOptions.isNetworkAccessAllowed = true
-    finalImageRequestOptions.version = .current
-    finalImageRequestOptions.resizeMode = .none
-    //TODO cancellation, Error handeling
-
-    PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
-      guard let image = image, let self = self else { return }
-      let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-      self.imageSource = .previewOnly(ciImage)
-    }
-    PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
-      guard let image = image, let self = self else { return }
-      let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-      self.imageSource = .editable(ciImage)
-    }
-  }
-
-  public func setImageUpdateListener(_ listner: @escaping (ImageSourceType) -> Void) {
-    if imageSource != nil {
-      listner(self)
-    }
-    self.listner = listner
-  }
-}
-
 #endif
 
-public struct StaticImageSource: ImageSourceType {
-  private let image: CIImage
-  public var imageSource: ImageSource? {
-    return .editable(image)
-  }
+public struct EditingImage: Equatable {
+    
+  let image: CIImage
+  let isEditable: Bool
+  
+}
 
-  public func setImageUpdateListener(_ listner: @escaping (ImageSourceType) -> Void) {
-    listner(self)
+/**
+ A stateful object that provides multiple image for EditingStack.
+ */
+public final class ImageProvider: Equatable, StoreComponentType {
+  
+  public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
+    lhs === rhs
   }
-
+    
+  public struct State: Equatable {
+    var currentImage: EditingImage?
+  }
+  
+  public let store: DefaultStore
+  
+  private var pendingAction: (ImageProvider) -> Void
 
   #if os(iOS)
-
-  public init(source: UIImage) {
-
-    let image = CIImage(image: source)!
-    let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(source.imageOrientation))
-
-    self.init(source: fixedOriantationImage)
+  
+  public convenience init(image uiImage: UIImage) {
+    
+    let image = CIImage(image: uiImage)!
+    let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(uiImage.imageOrientation))
+    
+    self.init(image: fixedOriantationImage)
   }
-
+  
   #endif
-
-  public init(source: CIImage) {
-
-    precondition(source.extent.origin == .zero)
-    self.image = source
+  
+  public init(image: CIImage) {
+    
+    precondition(image.extent.origin == .zero)
+    self.store = .init(initialState: .init(currentImage: .init(image: image, isEditable: true)))
+    self.pendingAction = { _ in }
   }
-
+  
+  #if canImport(Photos)
+  
+  public init(asset: PHAsset) {
+        
+    //TODO cancellation, Error handeling
+    
+    self.store = .init(initialState: .init())
+        
+    self.pendingAction = { `self` in
+      
+      let previewRequestOptions = PHImageRequestOptions()
+      previewRequestOptions.deliveryMode = .highQualityFormat
+      previewRequestOptions.isNetworkAccessAllowed = true
+      previewRequestOptions.version = .current
+      previewRequestOptions.resizeMode = .fast
+      
+      let finalImageRequestOptions = PHImageRequestOptions()
+      finalImageRequestOptions.deliveryMode = .highQualityFormat
+      finalImageRequestOptions.isNetworkAccessAllowed = true
+      finalImageRequestOptions.version = .current
+      finalImageRequestOptions.resizeMode = .none
+      
+      PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
+        
+        guard let image = image, let self = self else { return }
+        let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
+        
+        self.commit {
+          $0.currentImage = .init(image: ciImage, isEditable: false)
+        }
+      }
+      
+      PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
+        
+        guard let image = image, let self = self else { return }
+        let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
+        
+        self.commit {
+          $0.currentImage = .init(image: ciImage, isEditable: true)
+        }
+      }
+      
+    }
+    
+  }
+  
+  #endif
+  
+  func start() {
+    pendingAction(self)
+  }
+  
 }
 
 fileprivate func imageOrientationToTiffOrientation(_ value: UIImage.Orientation) -> Int32 {
