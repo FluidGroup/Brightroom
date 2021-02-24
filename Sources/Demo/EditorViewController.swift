@@ -31,7 +31,7 @@ final class EditorViewController : UIViewController {
   private var usesSquare = true
   
   private lazy var stack = SquareEditingStack.init(
-    source: StaticImageSource(source: UIImage(named: "large")!),
+    source: .init(image: UIImage(named: "large")!),
     previewSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
   )
@@ -42,10 +42,25 @@ final class EditorViewController : UIViewController {
 
   @IBAction func didTapPresentButton() {
 
-    let controller = PixelEditViewController.init(image: UIImage(named: "large")!)
+    let controller = PixelEditViewController.init(
+      viewModel: .init(
+        editingStack: .init(
+          source: .init(image: UIImage(named: "large")!),
+          previewSize: CGSize(width: 300, height: 300)
+        )
+      )
+    )
     
     let nav = UINavigationController(rootViewController: controller)
     nav.modalPresentationStyle = .fullScreen
+    
+    controller.callbacks.didCancelEditing = { v in
+      v.dismiss(animated: true, completion: nil)
+    }
+    
+    controller.callbacks.didEndEditing = { v, stack in
+      v.dismiss(animated: true, completion: nil)
+    }
 
     present(nav, animated: true, completion: nil)
   }
@@ -76,7 +91,7 @@ final class EditorViewController : UIViewController {
   
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     
-    let controller = PixelEditViewController(editingStack: stack)
+    let controller = PixelEditViewController.init(viewModel: .init(editingStack: stack))
     controller.delegate = self
 
     navigationController?.pushViewController(controller, animated: true)
@@ -99,7 +114,12 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
     if usesSquare {
 
       let controller = PixelEditViewController.init(
-        image: image
+        viewModel: .init(
+          editingStack: .init(
+            source: .init(image: image),
+            previewSize: CGSize(width: 300, height: 300)
+          )
+        )
       )
 
       controller.delegate = self
@@ -107,13 +127,19 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
       navigationController?.pushViewController(controller, animated: true)
 
     } else {
-
-      let controller = PixelEditViewController(image: image, usesSquareCropping: false)
+      
+      let controller = PixelEditViewController(
+        viewModel: .init(
+          editingStack: SquareEditingStack(
+            source: .init(image: image),
+            previewSize: CGSize(width: 300, height: 300)
+          )
+        )
+      )
 
       controller.delegate = self
 
       navigationController?.pushViewController(controller, animated: true)
-
 
     }
     

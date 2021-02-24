@@ -22,20 +22,12 @@ import Foundation
 
 public struct OvalBrush : Equatable {
 
-  public static func == (lhs: OvalBrush, rhs: OvalBrush) -> Bool {
-    guard lhs.color == rhs.color else { return false }
-    guard lhs.width == rhs.width else { return false }
-    guard lhs.alpha == rhs.alpha else { return false }
-    guard lhs.blendMode == rhs.blendMode else { return false }
-    return true
-  }
-
   // MARK: - Properties
 
-  public let color: UIColor
-  public let width: CGFloat
-  public let alpha: CGFloat
-  public let blendMode: CGBlendMode
+  public var color: UIColor
+  public var width: CGFloat
+  public var alpha: CGFloat
+  public var blendMode: CGBlendMode
 
   // MARK: - Initializers
 

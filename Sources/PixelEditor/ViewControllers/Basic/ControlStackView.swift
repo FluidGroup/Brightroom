@@ -57,18 +57,16 @@ extension ControlChildViewType where Self : UIView {
 
 final class ControlStackView : UIView {
 
-  private var subscribers: [UIView & ControlChildViewType] = []
-
   private var latestNotifiedEdit: EditingStack.Edit?
   
   func push(_ view: UIView & ControlChildViewType, animated: Bool) {
     
+    let currentTop = subviews.last
+    
     addSubview(view)
     view.frame = bounds
     view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    
-    let currentTop = subscribers.last
-    
+        
     if animated {
       foreground: do {
         view.alpha = 0
@@ -107,15 +105,14 @@ final class ControlStackView : UIView {
   
   func pop(animated: Bool) {
     
-    guard let currentTop = subscribers.last else {
+    guard let currentTop = subviews.last else {
       return
     }
     
-    let background = subscribers.dropLast().last
+    let background = subviews.dropLast().last
     
     let remove = {
       currentTop.removeFromSuperview()
-      self.subscribers.removeAll { $0 == currentTop }
     }
     
     if animated {

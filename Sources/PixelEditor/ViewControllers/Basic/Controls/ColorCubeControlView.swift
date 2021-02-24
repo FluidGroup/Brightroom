@@ -25,23 +25,29 @@ import Verge
 
 open class ColorCubeControlBase : ControlBase {
   
-  public required init(
-    viewModel: PixelEditViewModel,
-    originalImage: CIImage,
-    filters: [PreviewFilterColorCube]
-    ) {
-    
+  public required override init(
+    viewModel: PixelEditViewModel
+  ) {    
     super.init(viewModel: viewModel)
   }
-  
 }
 
-open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
   
   private enum Section : Int, CaseIterable {
     
     case original
     case selections
+  }
+  
+  private struct State: Equatable {
+    
+    struct Content: Equatable {
+      var previews: [PreviewFilterColorCube]
+      var originalImage: CIImage
+    }
+   
+    var content: Content?
   }
 
   // MARK: - Properties
@@ -49,24 +55,54 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   public var current: FilterColorCube?
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
-
-  private let previews: [PreviewFilterColorCube]
-  
-  private let originalImage: CIImage
   
   private let feedbackGenerator = UISelectionFeedbackGenerator()
   
+  private let store: Store<State, Never>
+  
+  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  
   // MARK: - Functions
 
-  public required init(
-    viewModel: PixelEditViewModel,
-    originalImage: CIImage,
-    filters: [PreviewFilterColorCube]
+  public required override init(
+    viewModel: PixelEditViewModel
     ) {
     
-    self.originalImage = originalImage
-    self.previews = filters
-    super.init(viewModel: viewModel, originalImage: originalImage, filters: filters)
+    self.store = .init(initialState: .init())
+        
+    super.init(viewModel: viewModel)
+    
+    viewModel.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+        
+      self.store.commit { viewState in
+        
+        state.ifChanged(\.editingState.cubeFilterPreviewSourceImage, \.editingState.previewColorCubeFilters) { image, filters in
+          
+          if let image = image {
+            viewState.content = .init(previews: filters, originalImage: image)
+          } else {
+            viewState.content = nil
+          }
+        }
+        
+      }
+          
+    }
+    .store(in: &subscriptions)
+    
+    store.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      if state.hasChanges(\.content) {
+        self.collectionView.reloadData()
+      }
+      
+    }
+    .store(in: &subscriptions)
+    
   }
 
   open override func setup() {
@@ -148,15 +184,23 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   // MARK: - UICollectionViewDeleagte / DataSource
 
   open func numberOfSections(in collectionView: UICollectionView) -> Int {
+    guard store.state.content != nil else {
+      return 0
+    }
     return Section.allCases.count
   }
 
   open func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    
+    guard let content = store.state.content else {
+      return 0
+    }
+    
     switch Section.allCases[section] {
     case .original:
       return 1
     case .selections:
-      return previews.count
+      return content.previews.count
     }
   }
   
@@ -173,15 +217,19 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
 
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
     
+    guard let content = store.state.content else {
+      preconditionFailure()
+    }
+        
     switch Section.allCases[indexPath.section] {
     case .original:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NormalCell.identifier, for: indexPath) as! NormalCell
-      cell.set(originalImage: originalImage)
+      cell.set(originalImage: content.originalImage)
       updateSelected(cell: cell)
       return cell
     case .selections:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: SelectionCell.identifier, for: indexPath) as! SelectionCell
-      let filter = previews[indexPath.item]
+      let filter = content.previews[indexPath.item]
       cell.set(preview: filter)
       updateSelected(cell: cell)
       return cell
@@ -190,6 +238,10 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
 
   open func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    
+    guard let content = store.state.content else {
+      preconditionFailure()
+    }
     
     switch Section.allCases[indexPath.section] {
     case .original:
@@ -203,7 +255,7 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     case .selections:
             
       viewModel.editingStack.set(filters: {
-        let filter = previews[indexPath.item]
+        let filter = content.previews[indexPath.item]
         $0.colorCube = filter.filter
       })
       
@@ -225,8 +277,13 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   }
   
   private func scrollToSelectedItem(animated: Bool) {
+    
+    guard let content = store.state.content else {
+      
+      return
+    }
 
-    if let current = current, let index = previews.firstIndex(where: { $0.filter == current }) {
+    if let current = current, let index = content.previews.firstIndex(where: { $0.filter == current }) {
       collectionView.scrollToItem(
         at: IndexPath.init(item: index, section: Section.selections.rawValue),
         at: .centeredHorizontally,

@@ -131,15 +131,19 @@ open class MaskControl : MaskControlBase {
     }
 
     navigationView.didTapCancelButton = { [weak self] in
-
-      self?.pop(animated: true)
-      self?.context.action(.endMasking(save: false))
+      
+      guard let self = self else { return }
+            
+      self.pop(animated: true)
+      self.viewModel.endMasking(save: false)
     }
 
     navigationView.didTapDoneButton = { [weak self] in
 
-      self?.pop(animated: true)
-      self?.context.action(.endMasking(save: true))
+      guard let self = self else { return }
+      
+      self.pop(animated: true)
+      self.viewModel.endMasking(save: true)
     }
 
   }
@@ -148,9 +152,9 @@ open class MaskControl : MaskControlBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      context.action(.setMode(.masking))
+      viewModel.set(mode: .masking)
     } else {
-      context.action(.setMode(.preview))
+      viewModel.set(mode: .preview)
     }
   }
 
@@ -162,12 +166,12 @@ open class MaskControl : MaskControlBase {
     let size = (min + position * (max - min)).rounded()
 
     sizeIndicator.transform = .init(scaleX: size / max, y: size / max)
-    context.action(.setMaskingBrushSize(size: size))
+    viewModel.set(brushSize: size)
   }
 
   @objc
   private func didTapRemoveAllButton() {
-    
-    context.action(.removeAllMasking)
+    viewModel.editingStack.set(blurringMaskPaths: [])
+    viewModel.editingStack.takeSnapshot()
   }
 }

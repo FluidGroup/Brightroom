@@ -69,9 +69,11 @@ open class VignetteControl : VignetteControlBase {
   }
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
-        
-    slider.set(value: state.editingState.currentEdit.filters.vignette?.value ?? 0, in: FilterVignette.range)
     
+    if let vignette = state.takeIfChanged(\.editingState.currentEdit.filters.vignette) {
+      slider.set(value: vignette?.value ?? 0, in: FilterVignette.range)
+    }
+               
   }
   
   @objc

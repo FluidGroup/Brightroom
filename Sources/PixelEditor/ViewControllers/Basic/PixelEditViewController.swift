@@ -19,20 +19,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-import PixelEngine
 import Photos
+import PixelEngine
+import UIKit
 import Verge
 
-public protocol PixelEditViewControllerDelegate : class {
-
-  func pixelEditViewController(_ controller: PixelEditViewController, didEndEditing editingStack: EditingStack)
+public protocol PixelEditViewControllerDelegate: class {
+  func pixelEditViewController(
+    _ controller: PixelEditViewController,
+    didEndEditing editingStack: EditingStack
+  )
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
-
 }
 
 public final class PixelEditContext {
-
   public enum Action {
     case setTitle(String)
     case setMode(PixelEditViewModel.Mode)
@@ -42,11 +42,10 @@ public final class PixelEditContext {
     case removeAllMasking
 
     case setFilter((inout EditingStack.Edit.Filters) -> Void)
-
   }
 
   fileprivate var didReceiveAction: (Action) -> Void = { _ in }
-  
+
   public let options: Options
 
   fileprivate init(options: Options) {
@@ -54,24 +53,20 @@ public final class PixelEditContext {
   }
 
   func action(_ action: Action) {
-    self.didReceiveAction(action)
+    didReceiveAction(action)
   }
 }
 
-public final class PixelEditViewController : UIViewController {
-  
+public final class PixelEditViewController: UIViewController {
   public final class Callbacks {
     public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
-  
+
   public weak var delegate: PixelEditViewControllerDelegate?
-  
+
   public let callbacks: Callbacks = .init()
-        
-  /// - TODO: this flag won't be used when specified EditingStack outside.
-  private var usesSquareCropping: Bool
-  
+
   // MARK: - Private Propaties
 
   private let maskingView = BlurredMosaicView()
@@ -87,35 +82,35 @@ public final class PixelEditViewController : UIViewController {
   private let cropButton = UIButton(type: .system)
 
   private let stackView = ControlStackView()
-  
-  private let doneButtonTitle: String
-  
+
   private var aspectConstraint: NSLayoutConstraint?
 
   private lazy var doneButton = UIBarButtonItem(
-    title: doneButtonTitle,
+    title: viewModel.doneButtonTitle,
     style: .done,
     target: self,
     action: #selector(didTapDoneButton)
   )
-  
+
   private lazy var cancelButton = UIBarButtonItem(
     title: L10n.cancel,
     style: .plain,
     target: self,
     action: #selector(didTapCancelButton)
   )
-  
+
   private var subscriptions: Set<VergeAnyCancellable> = .init()
-  
+
   private lazy var loadingView = LoadingView()
   private lazy var touchGuardOverlayView = UIView()
-  
+
   private let viewModel: PixelEditViewModel
 
   // MARK: - Initializers
+
   public init(viewModel: PixelEditViewModel) {
     self.viewModel = viewModel
+    super.init(nibName: nil, bundle: nil)
   }
 
   @available(*, unavailable)
@@ -125,11 +120,10 @@ public final class PixelEditViewController : UIViewController {
 
   // MARK: - Functions
 
-  public override func viewDidLoad() {
+  override public func viewDidLoad() {
     super.viewDidLoad()
 
     layout: do {
-
       root: do {
         view.backgroundColor = .white
 
@@ -185,7 +179,7 @@ public final class PixelEditViewController : UIViewController {
             } else {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             }
-          }()
+          }(),
         ])
       }
 
@@ -194,160 +188,114 @@ public final class PixelEditViewController : UIViewController {
       }
 
       edit: do {
-
         [
           adjustmentView,
           previewView,
           maskingView,
-          ].forEach { view in
-            view.translatesAutoresizingMaskIntoConstraints = false
-            editContainerView.addSubview(view)
-            NSLayoutConstraint.activate([
-              view.topAnchor.constraint(equalTo: view.superview!.topAnchor),
-              view.rightAnchor.constraint(equalTo: view.superview!.rightAnchor),
-              view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor),
-              view.leftAnchor.constraint(equalTo: view.superview!.leftAnchor),
-            ])
+        ].forEach { view in
+          view.translatesAutoresizingMaskIntoConstraints = false
+          editContainerView.addSubview(view)
+          NSLayoutConstraint.activate([
+            view.topAnchor.constraint(equalTo: view.superview!.topAnchor),
+            view.rightAnchor.constraint(equalTo: view.superview!.rightAnchor),
+            view.bottomAnchor.constraint(equalTo: view.superview!.bottomAnchor),
+            view.leftAnchor.constraint(equalTo: view.superview!.leftAnchor),
+          ])
         }
-
       }
 
       control: do {
-
         controlContainerView.addSubview(stackView)
 
         stackView.frame = stackView.bounds
         stackView.autoresizingMask = [.flexibleHeight, .flexibleWidth]
       }
     }
-    switch self.imageSource.imageSource {
-    case .editable(_):
-      self.isLoading = false
-    default:
-      self.isLoading = true
-    }
-  
-    setupImagesViews()
-     
+    
+    stackView.push(
+      viewModel.options.classes.control.rootControl.init(
+        viewModel: viewModel,
+        colorCubeControl: viewModel.options.classes.control.colorCubeControl.init(
+          viewModel: viewModel
+        )
+      ),
+      animated: false
+    )
+
     subscriptions.formUnion(
       previewView.attach(editingStack: viewModel.editingStack)
     )
-    
+
     subscriptions.formUnion(
       maskingView.attach(editingStack: viewModel.editingStack)
     )
-    
-    viewModel.sinkState(queue: .main) { [weak self] (state) in
-      
+
+    viewModel.sinkState(queue: .main) { [weak self] state in
+
       guard let self = self else { return }
-      
-      let editingState = state.map(\.editingState)
-      
-      editingState.ifChanged(\.isLoading) { isLoading in
-        
-        switch isLoading {
-        case true:
-          
-          let loadingView = self.loadingView
-          let touchGuardOverlayView = self.touchGuardOverlayView
-          
-          touchGuardOverlayView.backgroundColor = .init(white: 1, alpha: 0.5)
-                    
-          self.view.addSubview(loadingView)
-          self.view.addSubview(touchGuardOverlayView)
-          
-          touchGuardOverlayView.translatesAutoresizingMaskIntoConstraints = false
-          
-          NSLayoutConstraint.activate([
-            loadingView.leadingAnchor.constraint(equalTo: self.previewView.leadingAnchor),
-            loadingView.trailingAnchor.constraint(equalTo: self.previewView.trailingAnchor),
-            loadingView.topAnchor.constraint(equalTo: self.previewView.topAnchor),
-            loadingView.bottomAnchor.constraint(equalTo: self.previewView.bottomAnchor),
-            touchGuardOverlayView.leadingAnchor.constraint(equalTo: self.controlContainerView.leadingAnchor),
-            touchGuardOverlayView.trailingAnchor.constraint(equalTo: self.controlContainerView.trailingAnchor),
-            touchGuardOverlayView.topAnchor.constraint(equalTo: self.controlContainerView.topAnchor),
-            touchGuardOverlayView.bottomAnchor.constraint(equalTo: self.controlContainerView.bottomAnchor),
-          ])
-          self.doneButton.isEnabled = false
-          
-        case false:
-          self.loadingView.removeFromSuperview()
-          self.touchGuardOverlayView.removeFromSuperview()
-          self.doneButton.isEnabled = true
-        }
-        
-      }
-           
+
+      self.updateUI(state: state)
     }
     .store(in: &subscriptions)
-    
+        
+    viewModel.editingStack.start()
   }
 
   // MARK: - Private Functions
 
-  private var hasSetupImageViews = false
-  private func setupImagesViews() {
-    guard let editingStack = editingStack else { preconditionFailure() }
-    guard let aspectRatio = editingStack.aspectRatio else { return }
-    if hasSetupImageViews == false {
-      setAspect(aspectRatio)
-      stackView.push(
-        options.classes.control.rootControl.init(
-          context: context,
-          colorCubeControl: options.classes.control.colorCubeControl.init(
-            context: context,
-            originalImage: editingStack.cubeFilterPreviewSourceImage!,
-            filters: editingStack.previewColorCubeFilters
-          )
-        ),
-        animated: false
-      )
-      hasSetupImageViews = true
-    }
-    view.layoutIfNeeded()
-    previewView.originalImage = editingStack.originalPreviewImage
-    previewView.image = editingStack.previewImage
-    maskingView.image = editingStack.previewImage
-    maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
-    set(mode: mode)
-  }
+//  private func setupImagesViews() {
+//
+//    guard let aspectRatio = editingStack.aspectRatio else { return }
+//    if hasSetupImageViews == false {
+//      setAspect(aspectRatio)
+//      stackView.push(
+//        options.classes.control.rootControl.init(
+//          context: context,
+//          colorCubeControl: options.classes.control.colorCubeControl.init(
+//            context: context,
+//            originalImage: editingStack.cubeFilterPreviewSourceImage!,
+//            filters: editingStack.previewColorCubeFilters
+//          )
+//        ),
+//        animated: false
+//      )
+//    }
+//    view.layoutIfNeeded()
+//    set(mode: mode)
+//  }
 
   private func setAspect(_ size: CGSize) {
-    
     aspectConstraint?.isActive = false
-    
+
     let newConstraint = editContainerView.widthAnchor.constraint(
       equalTo: editContainerView.heightAnchor,
       multiplier: size.width / size.height
     )
-    
+
     NSLayoutConstraint.activate([
-      newConstraint
-      ])
-    
+      newConstraint,
+    ])
+
     aspectConstraint = newConstraint
-    
   }
 
   @objc
   private func didTapDoneButton() {
     callbacks.didEndEditing(self, viewModel.editingStack)
-    delegate?.pixelEditViewController(self, didEndEditing: viewModel.editingStack)    
+    delegate?.pixelEditViewController(self, didEndEditing: viewModel.editingStack)
   }
-  
+
   @objc
   private func didTapCancelButton() {
-    
     callbacks.didCancelEditing(self)
     delegate?.pixelEditViewControllerDidCancelEditing(in: self)
   }
-  
+
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
-              
     if let paths = state.takeIfChanged(\.editingState.currentEdit.blurredMaskPaths) {
       maskingView.drawnPaths = paths
     }
-        
+
     if let cropRect = state.takeIfChanged(\.editingState.currentEdit.cropRect) {
       if let cropRect = cropRect {
         adjustmentView.visibleExtent = cropRect
@@ -355,103 +303,116 @@ public final class PixelEditViewController : UIViewController {
         // TODO:
       }
     }
-    
+
     if let targetImage = state.takeIfChanged(\.editingState.targetImage) {
       adjustmentView.image = targetImage
     }
-    
+
     if let previewImage = state.takeIfChanged(\.editingState.previewImage) {
       maskingView.image = previewImage
     }
-    
+
+    if let brush = state.takeIfChanged(\.brush) {
+      maskingView.brush = brush
+    }
+
     if let mode = state.takeIfChanged(\.mode) {
-      
       switch mode {
       case .adjustment:
-        
+
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
-        
+
         adjustmentView.isHidden = false
         previewView.isHidden = true
         maskingView.isHidden = true
         maskingView.isUserInteractionEnabled = false
-                
+
       case .masking:
-        
+
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
-        
+
         adjustmentView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = false
-        
+
         maskingView.isUserInteractionEnabled = true
-             
+
       case .editing:
-        
+
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
-        
+
         adjustmentView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = true
-        
+
         maskingView.isUserInteractionEnabled = false
-        
+
       case .preview:
-        
+
         navigationItem.setHidesBackButton(true, animated: false)
         navigationItem.rightBarButtonItem = doneButton
         navigationItem.leftBarButtonItem = cancelButton
-        
+
         previewView.isHidden = false
         adjustmentView.isHidden = true
         maskingView.isHidden = false
-        
+
         maskingView.isUserInteractionEnabled = false
-            
       }
     }
-    
+
+    let editingState = state.map(\.editingState)
+
+    editingState.ifChanged(\.isLoading) { isLoading in
+
+      switch isLoading {
+      case true:
+
+        let loadingView = self.loadingView
+        let touchGuardOverlayView = self.touchGuardOverlayView
+
+        touchGuardOverlayView.backgroundColor = .init(white: 1, alpha: 0.5)
+
+        view.addSubview(loadingView)
+        view.addSubview(touchGuardOverlayView)
+
+        touchGuardOverlayView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+          loadingView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
+          loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
+          loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
+          loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
+          touchGuardOverlayView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
+          touchGuardOverlayView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
+          touchGuardOverlayView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
+          touchGuardOverlayView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
+        ])
+        self.doneButton.isEnabled = false
+
+      case false:
+        self.loadingView.removeFromSuperview()
+        self.touchGuardOverlayView.removeFromSuperview()
+        self.doneButton.isEnabled = true
+      }
+    }
   }
 
-  private func didReceive(action: PixelEditContext.Action) {
-    guard let aspectRatio = editingStack.aspectRatio else { preconditionFailure()}
-    switch action {
-    case .setTitle(let title):
-      navigationItem.title = title
-    case .setMode(let mode):
-      set(mode: mode)
-    case .endAdjustment(let save):
-      setAspect(aspectRatio)
-      if save {
-        editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
-        editingStack.commit()
-      } else {
-        syncUI(edit: editingStack.currentEdit)
-      }
-    case .endMasking(let save):
-      if save {
-        editingStack.set(blurringMaskPaths: maskingView.drawnPaths)
-        editingStack.commit()
-      } else {
-        syncUI(edit: editingStack.currentEdit)
-      }
-    case .removeAllMasking:
-      editingStack.set(blurringMaskPaths: [])
-      editingStack.commit()
-      syncUI(edit: editingStack.currentEdit)
-    case .setFilter(let closure):
-      editingStack.set(filters: closure)
-    case .commit:
-      editingStack.commit()
-    case .undo:
-      editingStack.undo()
-    case .revert:
-      editingStack.revert()
-    case .setMaskingBrushSize(let size):
-      maskingView.brush = .init(color: maskingView.brush.color, width: size)
-    }
-  }
+//  private func didReceive(action: PixelEditContext.Action) {
+//    switch action {
+//
+//    case .endAdjustment(let save):
+//      setAspect(aspectRatio)
+//      if save {
+//        editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
+//        editingStack.commit()
+//      } else {
+//        syncUI(edit: editingStack.currentEdit)
+//      }
+//    case .endMasking(let save):
+//
+//  }
 }

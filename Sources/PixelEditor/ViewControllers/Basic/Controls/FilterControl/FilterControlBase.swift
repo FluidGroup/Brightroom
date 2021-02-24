@@ -35,10 +35,10 @@ open class FilterControlBase : ControlBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      context.action(.setMode(.editing))
+      viewModel.set(mode: .editing)
       viewModel.set(title: title)
     } else {
-      context.action(.setMode(.preview))
+      viewModel.set(mode: .preview)
       viewModel.set(title: "")
     }
 

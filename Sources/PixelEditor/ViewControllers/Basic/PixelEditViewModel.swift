@@ -41,6 +41,15 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
             
     public fileprivate(set) var title: String = ""
     public fileprivate(set) var mode: Mode = .preview
+    
+    // TODO: tantative
+    public fileprivate(set) var brush: OvalBrush = .init(
+      color: .white,
+      width: 30
+    )
+    
+    // TODO: Rename
+    fileprivate var drawnPaths: [DrawnPathInRect] = []
   }
   
   public let options: Options
@@ -50,6 +59,8 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   public let editingStack: EditingStack
   
   private var subscriptions: Set<VergeAnyCancellable> = .init()
+  
+  public let doneButtonTitle: String
 
   public init(
     editingStack: EditingStack,
@@ -57,6 +68,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     options: Options = .default
   ) {
     
+    self.doneButtonTitle = doneButtonTitle
     self.options = options
     self.editingStack = editingStack
     self.store = .init(initialState: .init(editingState: editingStack.state))
@@ -87,4 +99,32 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
+  public func endMasking(save: Bool) {
+    if save {
+      editingStack.set(blurringMaskPaths: state.drawnPaths)
+      editingStack.takeSnapshot()
+    } else {
+      // TODO:
+    }
+  }
+  
+  public func set(brush: OvalBrush) {
+    commit {
+      $0.brush = brush
+    }
+  }
+  
+  public func set(brushSize: CGFloat) {
+    commit {
+      var _brush = $0.brush
+      _brush.width = brushSize
+      $0.brush = _brush
+    }
+  }
+  
+  public func set(drawnPaths: [DrawnPathInRect]) {
+    commit {
+      $0.drawnPaths = drawnPaths
+    }
+  }
 }

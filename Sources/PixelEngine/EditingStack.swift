@@ -46,7 +46,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     public fileprivate(set) var currentEdit: Edit = .init()
     
-    public var isLoading = true
+    public fileprivate(set) var isLoading = true
         
     /**
      An original image
@@ -125,6 +125,8 @@ open class EditingStack: Equatable, StoreComponentType {
   
   public func start() {
     
+    ensureMainThread()
+    
     guard state.hasStartedEditing == false else {
       return
     }
@@ -184,7 +186,10 @@ open class EditingStack: Equatable, StoreComponentType {
       
       state.ifChanged(\.currentEdit.cropRect, \.targetImage) { cropRect, targetImage in
         
-        if var cropRect = cropRect, let targetImage = targetImage {
+        if let targetImage = targetImage {
+          
+          // TODO: ?? targetImage.extent
+          var cropRect = cropRect ?? targetImage.extent
           
           cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
           
@@ -217,8 +222,10 @@ open class EditingStack: Equatable, StoreComponentType {
       guard let self = self else { return }
       
       state.ifChanged(\.currentImage) { image in
+        guard let image = image else { return }
         self.commit {
-          $0.targetImage = image?.image
+          $0.isLoading = !image.isEditable
+          $0.targetImage = image.image
         }
       }
       
@@ -238,6 +245,9 @@ open class EditingStack: Equatable, StoreComponentType {
    Adds a new snapshot as a history.
    */
   public func takeSnapshot() {
+    
+    ensureMainThread()
+    
     commit {
       $0.withType { (type, ref) -> Void in
         type.makeVersion(ref: ref)
@@ -250,6 +260,8 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func revertEdit() {
     
+    ensureMainThread()
+    
     commit {
       $0.currentEdit = $0.history.last ?? .init()
     }
@@ -261,6 +273,8 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func undoEdit() {
     
+    ensureMainThread()
+    
     commit {
       $0.currentEdit = $0.history.popLast() ?? .init()
     }
@@ -270,18 +284,26 @@ open class EditingStack: Equatable, StoreComponentType {
    Purges the all of the history
    */
   public func removeAllEditsHistory() {
+    
+    ensureMainThread()
+    
     commit {
       $0.history = []
     }
   }
 
   public func set(filters: (inout Edit.Filters) -> Void) {
+    
+    ensureMainThread()
+    
     applyIfChanged {
       filters(&$0.filters)
     }
   }
 
   public func crop(in rect: CGRect) {
+    
+    ensureMainThread()
 
     var _cropRect = rect
 
@@ -297,6 +319,8 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 
   public func set(blurringMaskPaths: [DrawnPathInRect]) {
+    
+    ensureMainThread()
 
     applyIfChanged {
       $0.blurredMaskPaths = blurringMaskPaths
@@ -304,6 +328,8 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 
   public func makeRenderer() -> ImageRenderer {
+    
+    ensureMainThread()
     
     guard let targetImage = state.targetImage else {
       preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
@@ -356,6 +382,8 @@ open class EditingStack: Equatable, StoreComponentType {
 open class SquareEditingStack : EditingStack {
 
   open override func initialCrop() {
+    
+    ensureMainThread()
     
     let imageSize = state.imageSize
     

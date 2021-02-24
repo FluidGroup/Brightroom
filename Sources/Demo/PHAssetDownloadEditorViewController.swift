@@ -17,12 +17,6 @@ final class PHAssetDownloadEditorViewController : UIViewController {
   @IBOutlet weak var imageView: UIImageView!
   private var selectedAsset: PHAsset?
 
-  private lazy var stack = SquareEditingStack.init(
-    source: StaticImageSource(source: UIImage(named: "large")!),
-    previewSize: CGSize(width: 300, height: 300),
-    colorCubeStorage: ColorCubeStorage.default
-  )
-
   override func viewDidLoad() {
     super.viewDidLoad()
   }
@@ -40,19 +34,37 @@ final class PHAssetDownloadEditorViewController : UIViewController {
 
   @IBAction func didTapPushKeepingButton(_ sender: Any) {
     guard let selectedAsset = selectedAsset else { return }
-    let controller = PixelEditViewController(editingStack: SquareEditingStack(source: PHAssetImageSource(selectedAsset), previewSize: .init(width: view.frame.width, height: view.frame.width)))
+    
+    let controller = PixelEditViewController(
+      viewModel: .init(
+        editingStack: SquareEditingStack(
+          source: .init(asset: selectedAsset),
+          previewSize: .init(width: view.frame.width, height: view.frame.width)
+        )
+      )
+    )
+    
     controller.delegate = self
-
+    
     navigationController?.pushViewController(controller, animated: true)
-
+    
   }
 }
 
 extension PHAssetDownloadEditorViewController: MosaiqueAssetPickerDelegate {
-  func photoPickerDidCancel(_ pickerController: MosaiqueAssetPickerViewController) {
-    //XXX
+  
+  func photoPicker(_ controller: UIViewController, didPickImages images: [UIImage]) {
+    
   }
-
+  
+  func photoPicker(_ controller: UIViewController, didPickAssets assets: [AssetFuture]) {
+    
+  }
+  
+  func photoPickerDidCancel(_ controller: UIViewController) {
+    
+  }
+  
   func photoPicker(_ pickerController: MosaiqueAssetPickerViewController, didPickAssets assets: [AssetFuture]) {
     self.selectedAsset = assets.first?.asset
     pickerController.dismiss(animated: true, completion: nil)

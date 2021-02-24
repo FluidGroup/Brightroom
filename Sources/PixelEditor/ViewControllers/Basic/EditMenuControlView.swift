@@ -22,6 +22,7 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
 open class EditMenuControlBase : ControlBase {
   
@@ -189,7 +190,7 @@ public enum EditMenu: CaseIterable {
       
       item: do {
         
-        let ignoredEditMenu: [EditMenu] = self.context.options.classes.control.ignoredEditMenu
+        let ignoredEditMenu: [EditMenu] = self.viewModel.options.classes.control.ignoredEditMenu
         let displayedMenu = EditMenu.allCases.filter { ignoredEditMenu.contains($0) == false }
         
         var buttons: [ButtonView] = []
@@ -246,8 +247,10 @@ public enum EditMenu: CaseIterable {
       }
     }
     
-    open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
+    open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
       
+      let edit = state.editingState.currentEdit
+            
       maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
       
       contrastButton.hasChanges = edit.filters.contrast != nil
@@ -266,50 +269,50 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func adjustment() {
-      push(AdjustmentControl(context: context), animated: true)
+      push(AdjustmentControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func masking() {
       
-      push(MaskControl(context: context), animated: true)
+      push(MaskControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func doodle() {
       
-      push(DoodleControl(context: context), animated: true)
+      push(DoodleControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func brightness() {
       
-      push(context.options.classes.control.exposureControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.exposureControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func blur() {
-      push(context.options.classes.control.gaussianBlurControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.gaussianBlurControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func contrast() {
-      push(context.options.classes.control.contrastControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.contrastControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func clarity() {
-      push(context.options.classes.control.clarityControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.clarityControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func warmth() {
-      push(context.options.classes.control.temperatureControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.temperatureControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func saturation() {
-      push(context.options.classes.control.saturationControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.saturationControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
@@ -319,27 +322,27 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func fade() {
-      push(context.options.classes.control.fadeControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.fadeControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func highlights() {
-      push(context.options.classes.control.highlightsControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.highlightsControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func shadows() {
-      push(context.options.classes.control.shadowsControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.shadowsControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func vignette() {
-      push(context.options.classes.control.vignetteControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.vignetteControl.init(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func sharpen() {
-      push(context.options.classes.control.sharpenControl.init(context: context), animated: true)
+      push(viewModel.options.classes.control.sharpenControl.init(viewModel: viewModel), animated: true)
     }
     
     open class ButtonView : UIControl {

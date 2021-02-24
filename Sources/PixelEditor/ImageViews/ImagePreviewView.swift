@@ -49,6 +49,10 @@ final class ImagePreviewView : UIView {
   override init(frame: CGRect) {
     super.init(frame: .zero)
 
+    
+    originalImageView.accessibilityIdentifier = "pixel.originalImageView"
+    imageView.accessibilityIdentifier = "pixel.editedImageView"
+    
     [
       originalImageView,
       imageView
