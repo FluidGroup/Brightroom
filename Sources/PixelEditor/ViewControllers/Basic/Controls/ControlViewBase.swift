@@ -22,19 +22,27 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
 open class ControlBase : UIView, ControlChildViewType {
   
-  open func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
   }
 
-  public let context: PixelEditContext
+  public let viewModel: PixelEditViewModel
+  
+  private var subscriptions: Set<VergeAnyCancellable> = .init()
 
-  public init(context: PixelEditContext) {
-    self.context = context
+  public init(viewModel: PixelEditViewModel) {
+    self.viewModel = viewModel
     super.init(frame: .zero)
     setup()
+    
+    viewModel.sinkState { [weak self] (state) in
+      self?.didReceiveCurrentEdit(state: state)
+    }
+    .store(in: &subscriptions)
   }
 
   @available(*, unavailable)

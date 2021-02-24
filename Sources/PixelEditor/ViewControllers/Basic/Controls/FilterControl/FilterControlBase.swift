@@ -27,8 +27,8 @@ open class FilterControlBase : ControlBase {
     fatalError("Must be overrided")
   }
 
-  public required override init(context: PixelEditContext) {
-    super.init(context: context)
+  public required override init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 
   open override func didMoveToSuperview() {
@@ -36,10 +36,10 @@ open class FilterControlBase : ControlBase {
 
     if superview != nil {
       context.action(.setMode(.editing))
-      context.action(.setTitle(title))
+      viewModel.set(title: title)
     } else {
-      context.action(.setTitle(""))
       context.action(.setMode(.preview))
+      viewModel.set(title: "")
     }
 
   }

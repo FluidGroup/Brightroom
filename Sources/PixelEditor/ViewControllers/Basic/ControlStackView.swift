@@ -24,8 +24,6 @@ import UIKit
 import PixelEngine
 
 protocol ControlChildViewType {
-
-  func didReceiveCurrentEdit(_ edit: EditingStack.Edit)
 }
 
 extension ControlChildViewType where Self : UIView {

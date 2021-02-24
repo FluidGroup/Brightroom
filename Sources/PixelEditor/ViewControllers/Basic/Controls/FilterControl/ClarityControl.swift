@@ -22,18 +22,19 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
-open class VignetteControlBase : FilterControlBase {
+open class ClarityControlBase : FilterControlBase {
   
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class VignetteControl : VignetteControlBase {
+open class ClarityControl : ClarityControlBase {
   
   open override var title: String {
-    return L10n.editVignette
+    return L10n.editClarity
   }
   
   private let navigationView = NavigationView()
@@ -52,36 +53,47 @@ open class VignetteControl : VignetteControlBase {
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    slider.set(value: edit.filters.vignette?.value ?? 0, in: FilterVignette.range)
-    
+    if let unsharpMask = state.takeIfChanged(\.editingState.currentEdit.filters.unsharpMask) {
+      slider.set(value: unsharpMask?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
+    }
+
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterVignette.range)
+    let value = slider.transition(in: FilterUnsharpMask.Params.intensity)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.vignette = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.unsharpMask = nil
+      })
       return
     }
     
-    var f = FilterVignette()
-    f.value = value
-    context.action(.setFilter({ $0.vignette = f }))
+    viewModel.editingStack.set(filters: {
+      var f = FilterUnsharpMask()
+      f.intensity = value
+      f.radius = 0.12
+      $0.unsharpMask = f
+    })
   }
   
 }

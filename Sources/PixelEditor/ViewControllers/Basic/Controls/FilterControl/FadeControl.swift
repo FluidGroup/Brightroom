@@ -22,18 +22,19 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
-open class ClarityControlBase : FilterControlBase {
+open class FadeControlBase : FilterControlBase {
   
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class ClarityControl : ClarityControlBase {
+open class FadeControl : FadeControlBase {
   
   open override var title: String {
-    return L10n.editClarity
+    return L10n.editFade
   }
   
   private let navigationView = NavigationView()
@@ -52,37 +53,47 @@ open class ClarityControl : ClarityControlBase {
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
     
-    slider.set(value: edit.filters.unsharpMask?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
+    if let fade = state.takeIfChanged(\.editingState.currentEdit.filters.fade) {
+      slider.set(value: fade?.intensity ?? 0, in: FilterFade.Params.intensity)
+    }
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterUnsharpMask.Params.intensity)
+    let value = slider.transition(in: FilterFade.Params.intensity)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.unsharpMask = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.fade = nil
+      })
       return
     }
+      
+    viewModel.editingStack.set(filters: {
+      var f = FilterFade()
+      f.intensity = value
+      $0.fade = f
+    })
     
-    var f = FilterUnsharpMask()
-    f.intensity = value
-    f.radius = 0.12
-    context.action(.setFilter({ $0.unsharpMask = f }))
   }
   
 }

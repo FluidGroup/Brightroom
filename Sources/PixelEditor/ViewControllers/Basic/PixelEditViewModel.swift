@@ -27,12 +27,23 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   public static func == (lhs: PixelEditViewModel, rhs: PixelEditViewModel) -> Bool {
     lhs === rhs
   }
+  
+  public enum Mode {
+    
+    case adjustment
+    case masking
+    case editing
+    case preview
+  }
     
   public struct State: Equatable {
     public var editingState: Changes<EditingStack.State>
-        
+            
     public fileprivate(set) var title: String = ""
+    public fileprivate(set) var mode: Mode = .preview
   }
+  
+  public let options: Options
   
   public let store: DefaultStore
   
@@ -45,6 +56,8 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     doneButtonTitle: String = L10n.done,
     options: Options = .default
   ) {
+    
+    self.options = options
     self.editingStack = editingStack
     self.store = .init(initialState: .init(editingState: editingStack.state))
     
@@ -56,5 +69,22 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
       $0.title = title
     }
   }
-
+  
+  public func set(mode: Mode) {
+    commit {
+      $0.mode = mode
+      
+      switch mode {
+      case .adjustment:
+        $0.title = L10n.editAdjustment
+      case .masking:
+        $0.title = L10n.editMask
+      case .editing:
+        break
+      case .preview:
+        $0.title = ""
+      }
+    }
+  }
+  
 }

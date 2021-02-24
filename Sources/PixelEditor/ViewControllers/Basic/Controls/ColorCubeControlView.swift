@@ -21,16 +21,17 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
 open class ColorCubeControlBase : ControlBase {
   
   public required init(
-    context: PixelEditContext,
+    viewModel: PixelEditViewModel,
     originalImage: CIImage,
     filters: [PreviewFilterColorCube]
     ) {
     
-    super.init(context: context)
+    super.init(viewModel: viewModel)
   }
   
 }
@@ -58,14 +59,14 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
   // MARK: - Functions
 
   public required init(
-    context: PixelEditContext,
+    viewModel: PixelEditViewModel,
     originalImage: CIImage,
     filters: [PreviewFilterColorCube]
     ) {
     
     self.originalImage = originalImage
     self.previews = filters
-    super.init(context: context, originalImage: originalImage, filters: filters)
+    super.init(viewModel: viewModel, originalImage: originalImage, filters: filters)
   }
 
   open override func setup() {
@@ -126,14 +127,16 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     return layout
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    if current != edit.filters.colorCube {
-      current = edit.filters.colorCube
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+    
+    if let value = state.takeIfChanged(\.editingState.currentEdit.filters.colorCube) {
+      current = value
       collectionView.visibleCells.forEach {
         updateSelected(cell: $0)
       }
       scrollToSelectedItem(animated: true)
     }
+    
   }
   
   open override func layoutSubviews() {
@@ -190,12 +193,21 @@ open class ColorCubeControl : ColorCubeControlBase, UICollectionViewDelegateFlow
     
     switch Section.allCases[indexPath.section] {
     case .original:
-      context.action(.setFilter( { $0.colorCube = nil }))
-      context.action(.commit)
+      
+      viewModel.editingStack.set(filters: {
+        $0.colorCube = nil
+      })
+      
+      viewModel.editingStack.takeSnapshot()
+      
     case .selections:
-      let filter = previews[indexPath.item]
-      context.action(.setFilter( { $0.colorCube = filter.filter }))
-      context.action(.commit)
+            
+      viewModel.editingStack.set(filters: {
+        let filter = previews[indexPath.item]
+        $0.colorCube = filter.filter
+      })
+      
+      viewModel.editingStack.takeSnapshot()
     }
     
     feedbackGenerator.selectionChanged()

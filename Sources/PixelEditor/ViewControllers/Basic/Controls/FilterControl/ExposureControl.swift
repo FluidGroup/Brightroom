@@ -22,67 +22,75 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
-open class SharpenControlBase : FilterControlBase {
-  
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+open class ExposureControlBase : FilterControlBase {
+
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class SharpenControl : SharpenControlBase {
+open class ExposureControl : ExposureControlBase {
   
   open override var title: String {
-    return L10n.editSharpen
+    return L10n.editBrightness
   }
-  
+
   private let navigationView = NavigationView()
-  
+
   public let slider = StepSlider(frame: .zero)
-  
+
   open override func setup() {
     super.setup()
-    
+
     backgroundColor = Style.default.control.backgroundColor
-    
+
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
-    slider.mode = .plus
+
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
-  
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    
-    slider.set(value: edit.filters.sharpen?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
+
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+
+    if let exposure = state.takeIfChanged(\.editingState.currentEdit.filters.exposure) {
+      slider.set(value: exposure?.value ?? 0, in: FilterExposure.range)
+    }
     
   }
-  
+
   @objc
   private func valueChanged() {
-    
-    let value = slider.transition(in: FilterSharpen.Params.sharpness)
-    
+
+    let value = slider.transition(in: FilterExposure.range)
     guard value != 0 else {
-      context.action(.setFilter({ $0.sharpen = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.exposure = nil
+      })
       return
-    }
+    }    
+        
+    viewModel.editingStack.set(filters: {
+      var f = FilterExposure()
+      f.value = value
+      $0.exposure = f
+    })
     
-    var f = FilterSharpen()
-    f.sharpness = value
-    f.radius = 1.2
-    context.action(.setFilter({ $0.sharpen = f }))
   }
-  
 }

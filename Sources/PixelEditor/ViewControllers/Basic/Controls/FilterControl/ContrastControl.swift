@@ -18,23 +18,21 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import Foundation
 
 import PixelEngine
+import Verge
 
-
-open class SaturationControlBase : FilterControlBase {
-
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+open class ContrastControlBase : FilterControlBase {
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class SaturationControl : SaturationControlBase {
+open class ContrastControl : ContrastControlBase {
   
   open override var title: String {
-    return L10n.editSaturation
+    return L10n.editContrast
   }
   
   private let navigationView = NavigationView()
@@ -52,36 +50,47 @@ open class SaturationControl : SaturationControlBase {
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-        self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-        self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
+      
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
     
-    slider.set(value: edit.filters.saturation?.value ?? 0, in: FilterSaturation.range  )
-    
+    if let contrast = state.takeIfChanged(\.editingState.currentEdit.filters.contrast) {
+      slider.set(value: contrast?.value ?? 0, in: FilterContrast.range)
+    }
+        
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterSaturation.range  )
+    let value = slider.transition(in: FilterContrast.range)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.saturation = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.contrast = nil
+      })
       return
     }
     
-    var f = FilterSaturation()
-    f.value = value
-    context.action(.setFilter({ $0.saturation = f }))
+    viewModel.editingStack.set(filters: {
+      var f = FilterContrast()
+      f.value = value
+      $0.contrast = f
+    })
   }
   
 }

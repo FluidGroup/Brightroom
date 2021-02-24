@@ -25,8 +25,8 @@ import PixelEngine
 
 open class EditMenuControlBase : ControlBase {
   
-  public required override init(context: PixelEditContext) {
-    super.init(context: context)
+  public required override init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
@@ -246,7 +246,7 @@ public enum EditMenu: CaseIterable {
       }
     }
     
-    open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+    open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
       
       maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
       

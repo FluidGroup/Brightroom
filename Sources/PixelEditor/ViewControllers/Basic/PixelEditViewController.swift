@@ -35,7 +35,7 @@ public final class PixelEditContext {
 
   public enum Action {
     case setTitle(String)
-    case setMode(PixelEditViewController.Mode)
+    case setMode(PixelEditViewModel.Mode)
     case endAdjustment(save: Bool)
     case setMaskingBrushSize(size: CGFloat)
     case endMasking(save: Bool)
@@ -64,28 +64,11 @@ public final class PixelEditViewController : UIViewController {
     public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
-
-  public enum Mode {
-
-    case adjustment
-    case masking
-    case editing
-    case preview
-  }
-
-  public var mode: Mode = .preview {
-    didSet {
-      guard oldValue != mode else { return }
-      set(mode: mode)
-    }
-  }
   
   public weak var delegate: PixelEditViewControllerDelegate?
   
   public let callbacks: Callbacks = .init()
-  
-  public lazy var context: PixelEditContext = .init(options: options)
-      
+        
   /// - TODO: this flag won't be used when specified EditingStack outside.
   private var usesSquareCropping: Bool
   
@@ -243,21 +226,9 @@ public final class PixelEditViewController : UIViewController {
     default:
       self.isLoading = true
     }
-
-    bind: do {
-
-      context.didReceiveAction = { [weak self] action in
-
-        guard let self = self else { return }
-
-        self.didReceive(action: action)
-
-      }
-    }
-
-    setupImagesViews()
-   
   
+    setupImagesViews()
+     
     subscriptions.formUnion(
       previewView.attach(editingStack: viewModel.editingStack)
     )
@@ -370,91 +341,79 @@ public final class PixelEditViewController : UIViewController {
     callbacks.didCancelEditing(self)
     delegate?.pixelEditViewControllerDidCancelEditing(in: self)
   }
-
-  private func set(mode: Mode) {
-    
-    switch mode {
-    case .adjustment:
-
-      navigationItem.rightBarButtonItem = nil
-      navigationItem.leftBarButtonItem = nil
-
-      adjustmentView.isHidden = false
-      previewView.isHidden = true
-      maskingView.isHidden = true
-      maskingView.isUserInteractionEnabled = false
-
-      didReceive(action: .setTitle(L10n.editAdjustment))
-      
-      updateAdjustmentUI()
-
-    case .masking:
-
-      navigationItem.rightBarButtonItem = nil
-      navigationItem.leftBarButtonItem = nil
-      didReceive(action: .setTitle(L10n.editMask))
-
-      adjustmentView.isHidden = true
-      previewView.isHidden = false
-      maskingView.isHidden = false
-      
-      maskingView.isUserInteractionEnabled = true
-
-      if maskingView.image != editingStack.previewImage {
-        maskingView.image = editingStack.previewImage
-      }
-
-    case .editing:
-
-      navigationItem.rightBarButtonItem = nil
-      navigationItem.leftBarButtonItem = nil
-
-      adjustmentView.isHidden = true
-      previewView.isHidden = false
-      maskingView.isHidden = true
-
-      maskingView.isUserInteractionEnabled = false
-
-    case .preview:
-
-      navigationItem.setHidesBackButton(true, animated: false)
-      navigationItem.rightBarButtonItem = doneButton
-      navigationItem.leftBarButtonItem = cancelButton
-      
-      didReceive(action: .setTitle(""))
-
-      previewView.isHidden = false
-      adjustmentView.isHidden = true
-      maskingView.isHidden = false
-
-      maskingView.isUserInteractionEnabled = false
-      
-      if maskingView.image != editingStack.previewImage {
-        maskingView.image = editingStack.previewImage
-      }
-
-    }
-
-  }
-
-  private func syncUI(edit: EditingStack.Edit) {
-    if !adjustmentView.isHidden {
-      updateAdjustmentUI()
-    }
-    
-    maskingView.drawnPaths = editingStack.currentEdit.blurredMaskPaths
-  }
   
-  private func updateAdjustmentUI() {
-    let edit = editingStack.currentEdit
-    
-    if adjustmentView.image != editingStack.targetImage {
-      adjustmentView.image = editingStack.targetImage
+  private func updateUI(state: Changes<PixelEditViewModel.State>) {
+              
+    if let paths = state.takeIfChanged(\.editingState.currentEdit.blurredMaskPaths) {
+      maskingView.drawnPaths = paths
+    }
+        
+    if let cropRect = state.takeIfChanged(\.editingState.currentEdit.cropRect) {
+      if let cropRect = cropRect {
+        adjustmentView.visibleExtent = cropRect
+      } else {
+        // TODO:
+      }
     }
     
-    if let cropRect = edit.cropRect {
-      adjustmentView.visibleExtent = cropRect
+    if let targetImage = state.takeIfChanged(\.editingState.targetImage) {
+      adjustmentView.image = targetImage
     }
+    
+    if let previewImage = state.takeIfChanged(\.editingState.previewImage) {
+      maskingView.image = previewImage
+    }
+    
+    if let mode = state.takeIfChanged(\.mode) {
+      
+      switch mode {
+      case .adjustment:
+        
+        navigationItem.rightBarButtonItem = nil
+        navigationItem.leftBarButtonItem = nil
+        
+        adjustmentView.isHidden = false
+        previewView.isHidden = true
+        maskingView.isHidden = true
+        maskingView.isUserInteractionEnabled = false
+                
+      case .masking:
+        
+        navigationItem.rightBarButtonItem = nil
+        navigationItem.leftBarButtonItem = nil
+        
+        adjustmentView.isHidden = true
+        previewView.isHidden = false
+        maskingView.isHidden = false
+        
+        maskingView.isUserInteractionEnabled = true
+             
+      case .editing:
+        
+        navigationItem.rightBarButtonItem = nil
+        navigationItem.leftBarButtonItem = nil
+        
+        adjustmentView.isHidden = true
+        previewView.isHidden = false
+        maskingView.isHidden = true
+        
+        maskingView.isUserInteractionEnabled = false
+        
+      case .preview:
+        
+        navigationItem.setHidesBackButton(true, animated: false)
+        navigationItem.rightBarButtonItem = doneButton
+        navigationItem.leftBarButtonItem = cancelButton
+        
+        previewView.isHidden = false
+        adjustmentView.isHidden = true
+        maskingView.isHidden = false
+        
+        maskingView.isUserInteractionEnabled = false
+            
+      }
+    }
+    
   }
 
   private func didReceive(action: PixelEditContext.Action) {
@@ -495,29 +454,4 @@ public final class PixelEditViewController : UIViewController {
       maskingView.brush = .init(color: maskingView.brush.color, width: size)
     }
   }
-}
-
-extension PixelEditViewController : EditingStackDelegate {
-  public func editingStack(_ stack: EditingStack, didUpdate imageSource: ImageSourceType) {
-    setupImagesViews()
-    
-  }
-
-
-  public func editingStack(_ stack: EditingStack, didChangeCurrentEdit edit: EditingStack.Edit) {
-    
-    EditorLog.debug("[EditingStackDelegate] didChagneCurrentEdit")
-    
-    UIView.performWithoutAnimation {
-      self.previewView.image = stack.previewImage
-      self.previewView.originalImage = stack.originalPreviewImage
-      if !self.maskingView.isHidden {
-        self.maskingView.image = stack.previewImage
-      }
-    }
-    
-    syncUI(edit: edit)
-    stackView.notify(changedEdit: edit)
-  }
-
 }

@@ -18,21 +18,23 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import Foundation
 
 import PixelEngine
+import Verge
 
-
-open class ContrastControlBase : FilterControlBase {
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+open class VignetteControlBase : FilterControlBase {
+  
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class ContrastControl : ContrastControlBase {
+open class VignetteControl : VignetteControlBase {
   
   open override var title: String {
-    return L10n.editContrast
+    return L10n.editVignette
   }
   
   private let navigationView = NavigationView()
@@ -46,40 +48,49 @@ open class ContrastControl : ContrastControlBase {
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-        self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-        self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-    
-    slider.set(value: edit.filters.contrast?.value ?? 0, in: FilterContrast.range)
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+        
+    slider.set(value: state.editingState.currentEdit.filters.vignette?.value ?? 0, in: FilterVignette.range)
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterContrast.range)
+    let value = slider.transition(in: FilterVignette.range)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.contrast = nil }))
+      viewModel.editingStack.set(filters: { $0.vignette = nil })
       return
     }
-    
-    var f = FilterContrast()
-    f.value = value
-    context.action(.setFilter({ $0.contrast = f }))
+       
+    viewModel.editingStack.set(
+      filters: {
+        var f = FilterVignette()
+        f.value = value
+        $0.vignette = f
+    })
+
   }
   
 }

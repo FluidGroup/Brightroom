@@ -22,68 +22,74 @@
 import Foundation
 
 import PixelEngine
+import Verge
 
-
-open class GaussianBlurControlBase : FilterControlBase {
-
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+open class TemperatureControlBase : FilterControlBase {
+  
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class GaussianBlurControl : GaussianBlurControlBase {
+open class TemperatureControl : TemperatureControlBase {
   
   open override var title: String {
-    return L10n.editBlur
+    return L10n.editTemperature
   }
-
+  
   private let navigationView = NavigationView()
-
+  
   public let slider = StepSlider(frame: .zero)
-
+  
   open override func setup() {
     super.setup()
-
+    
     backgroundColor = Style.default.control.backgroundColor
-
+    
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-
-    slider.mode = .plus
+    
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-
+    
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
-
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
-
-    slider.set(value: edit.filters.gaussianBlur?.value ?? 0, in: FilterGaussianBlur.range)
-
+  
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+    
+    if let temperature = state.takeIfChanged(\.editingState.currentEdit.filters.temperature) {
+      slider.set(value: temperature?.value ?? 0, in: FilterTemperature.range)
+    }
+        
   }
-
+  
   @objc
   private func valueChanged() {
-
-    let value = slider.transition(in: FilterGaussianBlur.range)
+    
+    let value = slider.transition(in: FilterTemperature.range)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.gaussianBlur = nil }))
+      viewModel.editingStack.set(filters: { $0.temperature = nil })
       return
     }
-    
-    var f = FilterGaussianBlur()
-    f.value = value
-    context.action(.setFilter({ $0.gaussianBlur = f }))
+       
+    viewModel.editingStack.set(filters: {
+      var f = FilterTemperature()
+      f.value = value
+      $0.temperature = f
+    })
   }
-
+  
 }
-

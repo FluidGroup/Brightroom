@@ -234,6 +234,9 @@ open class EditingStack: Equatable, StoreComponentType {
 
   // MARK: - Functions
 
+  /**
+   Adds a new snapshot as a history.
+   */
   public func takeSnapshot() {
     commit {
       $0.withType { (type, ref) -> Void in
@@ -242,6 +245,9 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
+  /**
+   Reverts the current editing.
+   */
   public func revertEdit() {
     
     commit {
@@ -250,6 +256,9 @@ open class EditingStack: Equatable, StoreComponentType {
     
   }
 
+  /**
+   Undo editing, pulling the latest history back into the current edit.
+   */
   public func undoEdit() {
     
     commit {
@@ -257,6 +266,9 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
+  /**
+   Purges the all of the history
+   */
   public func removeAllEditsHistory() {
     commit {
       $0.history = []

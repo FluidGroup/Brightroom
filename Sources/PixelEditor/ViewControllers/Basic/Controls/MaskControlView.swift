@@ -130,7 +130,6 @@ open class MaskControl : MaskControlBase {
       ])
     }
 
-
     navigationView.didTapCancelButton = { [weak self] in
 
       self?.pop(animated: true)

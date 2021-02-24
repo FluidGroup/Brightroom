@@ -404,12 +404,8 @@
 		4B3457892174FF8600716DA0 /* Controls */ = {
 			isa = PBXGroup;
 			children = (
-				4B9D4574216DF66F003A240A /* NavigationView.swift */,
-				4B9D4562216DD143003A240A /* ControlStackView.swift */,
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
-				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
 				4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */,
-				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
 				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
 				4B0077BF21704E7F008330EA /* MaskControlView.swift */,
 				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
@@ -570,7 +566,6 @@
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
 				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
 				FCC7962523C58209009ACD8A /* LoadingView.swift */,
-				4B3457892174FF8600716DA0 /* Controls */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -586,12 +581,25 @@
 		4BC95D8925E5586B000595AE /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
-				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
-				4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */,
+				4BEEFF1B25E6827B008144EA /* Basic */,
 				4BC95D8525E55845000595AE /* PixelCropViewController.swift */,
 				4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */,
 			);
 			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		4BEEFF1B25E6827B008144EA /* Basic */ = {
+			isa = PBXGroup;
+			children = (
+				4B3457892174FF8600716DA0 /* Controls */,
+				4B9D4562216DD143003A240A /* ControlStackView.swift */,
+				4B9D4574216DF66F003A240A /* NavigationView.swift */,
+				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
+				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
+				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
+				4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */,
+			);
+			path = Basic;
 			sourceTree = "<group>";
 		};
 		E6BD27A8BEF5BCA522C4A89A /* Pods */ = {

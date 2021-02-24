@@ -18,22 +18,23 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import Foundation
 
 import PixelEngine
+import Verge
 
-
-open class TemperatureControlBase : FilterControlBase {
+open class SharpenControlBase : FilterControlBase {
   
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
-open class TemperatureControl : TemperatureControlBase {
+open class SharpenControl : SharpenControlBase {
   
   open override var title: String {
-    return L10n.editTemperature
+    return L10n.editSharpen
   }
   
   private let navigationView = NavigationView()
@@ -47,40 +48,52 @@ open class TemperatureControl : TemperatureControlBase {
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    slider.set(value: edit.filters.temperature?.value ?? 0, in: FilterTemperature.range)
+    if let sharpen = state.takeIfChanged(\.editingState.currentEdit.filters.sharpen) {
+      slider.set(value: sharpen?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
+    }
     
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterTemperature.range)
+    let value = slider.transition(in: FilterSharpen.Params.sharpness)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.temperature = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.sharpen = nil
+      })
       return
     }
-    
-    var f = FilterTemperature()
-    f.value = value
-    context.action(.setFilter({ $0.temperature = f }))
+       
+    viewModel.editingStack.set(filters: {
+      var f = FilterSharpen()
+      f.sharpness = value
+      f.radius = 1.2
+      $0.sharpen = f
+    })
   }
   
 }

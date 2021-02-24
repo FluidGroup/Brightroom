@@ -22,8 +22,8 @@ import Foundation
 
 open class RootControlBase : ControlBase {
 
-  public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
-    super.init(context: context)
+  public required init(viewModel: PixelEditViewModel, colorCubeControl: ColorCubeControlBase) {
+    super.init(viewModel: viewModel)
   }
 }
 
@@ -49,15 +49,15 @@ final class RootControl : RootControlBase {
 
   public let colorCubeControl: ColorCubeControlBase
 
-  public lazy var editView = context.options.classes.control.editMenuControl.init(context: context)
+  public lazy var editView = viewModel.options.classes.control.editMenuControl.init(viewModel: viewModel)
 
   // MARK: - Initializers
 
-  public required init(context: PixelEditContext, colorCubeControl: ColorCubeControlBase) {
+  public required init(viewModel: PixelEditViewModel, colorCubeControl: ColorCubeControlBase) {
 
     self.colorCubeControl = colorCubeControl
 
-    super.init(context: context, colorCubeControl: colorCubeControl)
+    super.init(viewModel: viewModel, colorCubeControl: colorCubeControl)
 
     backgroundColor = Style.default.control.backgroundColor
 

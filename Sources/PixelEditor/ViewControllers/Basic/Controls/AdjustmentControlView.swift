@@ -46,17 +46,20 @@ public final class AdjustmentControl : AdjustmentControlBase {
       ])
 
     navigationView.didTapCancelButton = { [weak self] in
-
-      self?.context.action(.endAdjustment(save: false))
-        self?.pop(animated: true)
+      
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
-
+    
     navigationView.didTapDoneButton = { [weak self] in
-
-      self?.context.action(.endAdjustment(save: true))
-        self?.pop(animated: true)
+      
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
-
   }
 
   public override func didMoveToSuperview() {

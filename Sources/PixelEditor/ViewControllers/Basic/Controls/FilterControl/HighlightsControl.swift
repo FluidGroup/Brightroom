@@ -21,12 +21,12 @@
 import Foundation
 
 import PixelEngine
-
+import Verge
 
 open class HighlightsControlBase : FilterControlBase {
   
-  public required init(context: PixelEditContext) {
-    super.init(context: context)
+  public required init(viewModel: PixelEditViewModel) {
+    super.init(viewModel: viewModel)
   }
 }
 
@@ -52,21 +52,27 @@ open class HighlightsControl : HighlightsControlBase {
     
     navigationView.didTapCancelButton = { [weak self] in
       
-      self?.context.action(.revert)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.revertEdit()
+      self.pop(animated: true)
     }
     
     navigationView.didTapDoneButton = { [weak self] in
       
-      self?.context.action(.commit)
-      self?.pop(animated: true)
+      guard let self = self else { return }
+      
+      self.viewModel.editingStack.takeSnapshot()
+      self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(_ edit: EditingStack.Edit) {
+  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    slider.set(value: edit.filters.highlights?.value ?? 0, in: FilterHighlights.range)
-    
+    if let highlights = state.takeIfChanged(\.editingState.currentEdit.filters.highlights) {
+      slider.set(value: highlights?.value ?? 0, in: FilterHighlights.range)
+    }
+            
   }
   
   @objc
@@ -75,13 +81,17 @@ open class HighlightsControl : HighlightsControlBase {
     let value = slider.transition(in: FilterHighlights.range)
     
     guard value != 0 else {
-      context.action(.setFilter({ $0.highlights = nil }))
+      viewModel.editingStack.set(filters: {
+        $0.highlights = nil
+      })
       return
     }
-    
-    var f = FilterHighlights()
-    f.value = value
-    context.action(.setFilter({ $0.highlights = f }))
+      
+    viewModel.editingStack.set(filters: {
+      var f = FilterHighlights()
+      f.value = value
+      $0.highlights = f
+    })
   }
   
 }
