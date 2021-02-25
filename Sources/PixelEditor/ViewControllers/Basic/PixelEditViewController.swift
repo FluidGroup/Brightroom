@@ -32,31 +32,6 @@ public protocol PixelEditViewControllerDelegate: class {
   func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
 }
 
-public final class PixelEditContext {
-  public enum Action {
-    case setTitle(String)
-    case setMode(PixelEditViewModel.Mode)
-    case endAdjustment(save: Bool)
-    case setMaskingBrushSize(size: CGFloat)
-    case endMasking(save: Bool)
-    case removeAllMasking
-
-    case setFilter((inout EditingStack.Edit.Filters) -> Void)
-  }
-
-  fileprivate var didReceiveAction: (Action) -> Void = { _ in }
-
-  public let options: Options
-
-  fileprivate init(options: Options) {
-    self.options = options
-  }
-
-  func action(_ action: Action) {
-    didReceiveAction(action)
-  }
-}
-
 public final class PixelEditViewController: UIViewController {
   public final class Callbacks {
     public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
@@ -105,6 +80,8 @@ public final class PixelEditViewController: UIViewController {
   private lazy var touchGuardOverlayView = UIView()
 
   private let viewModel: PixelEditViewModel
+  
+  private var hasStarted = false
 
   // MARK: - Initializers
 
@@ -229,16 +206,33 @@ public final class PixelEditViewController: UIViewController {
     subscriptions.formUnion(
       maskingView.attach(editingStack: viewModel.editingStack)
     )
-
-    viewModel.sinkState(queue: .main) { [weak self] state in
-
-      guard let self = self else { return }
-
-      self.updateUI(state: state)
-    }
-    .store(in: &subscriptions)
         
     viewModel.editingStack.start()
+  }
+  
+  public override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+  }
+  
+  public override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    view.layoutIfNeeded()
+  }
+  
+  public override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    
+    if hasStarted == false {
+      hasStarted = true
+      
+      viewModel.sinkState(queue: .main) { [weak self] state in
+        
+        guard let self = self else { return }
+        
+        self.updateUI(state: state)
+      }
+      .store(in: &subscriptions)
+    }
   }
 
   // MARK: - Private Functions
@@ -264,21 +258,6 @@ public final class PixelEditViewController: UIViewController {
 //    set(mode: mode)
 //  }
 
-  private func setAspect(_ size: CGSize) {
-    aspectConstraint?.isActive = false
-
-    let newConstraint = editContainerView.widthAnchor.constraint(
-      equalTo: editContainerView.heightAnchor,
-      multiplier: size.width / size.height
-    )
-
-    NSLayoutConstraint.activate([
-      newConstraint,
-    ])
-
-    aspectConstraint = newConstraint
-  }
-
   @objc
   private func didTapDoneButton() {
     callbacks.didEndEditing(self, viewModel.editingStack)
@@ -292,18 +271,14 @@ public final class PixelEditViewController: UIViewController {
   }
 
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
-    if let paths = state.takeIfChanged(\.editingState.currentEdit.blurredMaskPaths) {
+    if let paths = state.takeIfChanged(\.editingState.currentEdit.drawings.blurredMaskPaths) {
       maskingView.drawnPaths = paths
     }
-
-    if let cropRect = state.takeIfChanged(\.editingState.currentEdit.cropRect) {
-      if let cropRect = cropRect {
-        adjustmentView.visibleExtent = cropRect
-      } else {
-        // TODO:
-      }
+            
+    state.ifChanged(\.editingState.cropRect, \.editingState.imageSize) { cropRect, imageSize in
+      adjustmentView.set(imageSize: imageSize, proposedCropAndRotate: cropRect)
     }
-
+    
     if let targetImage = state.takeIfChanged(\.editingState.targetImage) {
       adjustmentView.image = targetImage
     }
@@ -365,7 +340,23 @@ public final class PixelEditViewController: UIViewController {
     }
 
     let editingState = state.map(\.editingState)
-
+    
+    editingState.ifChanged(\.aspectRatio) { aspectRatio in
+      
+      aspectConstraint?.isActive = false
+      
+      let newConstraint = editContainerView.widthAnchor.constraint(
+        equalTo: editContainerView.heightAnchor,
+        multiplier: aspectRatio.width / aspectRatio.height
+      )
+      
+      NSLayoutConstraint.activate([
+        newConstraint,
+      ])
+      
+      aspectConstraint = newConstraint
+    }
+        
     editingState.ifChanged(\.isLoading) { isLoading in
 
       switch isLoading {

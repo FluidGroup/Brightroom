@@ -49,7 +49,7 @@ public final class AdjustmentControl : AdjustmentControlBase {
       
       guard let self = self else { return }
       
-      self.viewModel.editingStack.revertEdit()
+      self.viewModel.endCropAndRotate(save: false)
       self.pop(animated: true)
     }
     
@@ -57,7 +57,7 @@ public final class AdjustmentControl : AdjustmentControlBase {
       
       guard let self = self else { return }
       
-      self.viewModel.editingStack.takeSnapshot()
+      self.viewModel.endCropAndRotate(save: true)
       self.pop(animated: true)
     }
   }

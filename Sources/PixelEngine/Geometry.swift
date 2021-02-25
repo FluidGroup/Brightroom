@@ -87,3 +87,76 @@ public enum Geometry {
   }
 
 }
+
+/**
+ A structure that contains width and height that represent pixels.
+ */
+public struct PixelSize: Equatable {
+  
+  public let width: Int
+  public let height: Int
+    
+  public init(width: Int, height: Int) {
+    self.width = width
+    self.height = height
+  }
+  
+  public init(cgSize: CGSize) {
+    self.width = Int(cgSize.width.rounded(.up))
+    self.height = Int(cgSize.height.rounded(.up))
+  }
+  
+  public init(image: CIImage) {
+    self.width = Int(image.extent.width.rounded(.up))
+    self.height = Int(image.extent.height.rounded(.up))
+  }
+
+  public var aspectRatio: CGSize {
+    .init(width: width, height: height)
+  }
+  
+  public var cgSize: CGSize {
+    .init(width: width, height: height)
+  }
+}
+
+public struct PixelPoint: Equatable  {
+  
+  public let x: Int
+  public let y: Int
+  
+  public init(x: Int, y: Int) {
+    self.x = x
+    self.y = y
+  }
+  
+  public init(cgPoint: CGPoint) {
+    self.x = Int(cgPoint.x.rounded(.up))
+    self.y = Int(cgPoint.y.rounded(.up))
+  }
+  
+  public var cgPoint: CGPoint {
+    .init(x: x, y: y)
+  }
+    
+}
+
+public struct PixelRect: Equatable {
+
+  public let origin: PixelPoint
+  public let size: PixelSize
+  
+  public init(cgRect: CGRect) {
+    self.init(origin: .init(cgPoint: cgRect.origin), size: .init(cgSize: cgRect.size))
+  }
+
+  public init(origin: PixelPoint, size: PixelSize) {
+    self.origin = origin
+    self.size = size
+  }
+  
+  public var cgRect: CGRect {
+    .init(origin: origin.cgPoint, size: size.cgSize)
+  }
+  
+}

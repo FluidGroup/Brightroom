@@ -46,7 +46,7 @@ final class EditorViewController : UIViewController {
       viewModel: .init(
         editingStack: .init(
           source: .init(image: UIImage(named: "large")!),
-          previewSize: CGSize(width: 300, height: 300)
+          previewSize: CGSize(width: 600, height: 600)
         )
       )
     )

@@ -20,77 +20,33 @@
 // THE SOFTWARE.
 
 import UIKit
+import PixelEngine
 
 final class CropAndStraightenView : UIView {
 
   // MARK: - Properties
+  
+  private var imageSize: PixelSize?
 
   var image: CIImage? {
     didSet {
-
+      
       let _image: UIImage?
 
       if let cgImage = image?.cgImage {
-        _image = UIImage(cgImage: cgImage, scale: UIScreen.main.scale, orientation: .up)
+        _image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
       } else {
         // Displaying will be slow in iOS13
         _image = image
           .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
-          .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
+          .flatMap { UIImage(ciImage: $0, scale: 1, orientation: .up) }
       }
 
       if let image = _image {
         imageView.display(image: image)
       } else {
-        imageView.zoomView?.removeFromSuperview()
+
       }
-    }
-  }
-
-  // return pixel
-  var visibleExtent: CGRect {
-    get {
-      guard let image = image else {
-        return .zero
-      }
-
-      var visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
-
-      let scale = _ratio(
-        to: image.extent.size,
-        from: imageView.zoomView!.bounds.size
-      )
-
-      visibleRect.origin.x *= scale
-      visibleRect.origin.y *= scale
-      visibleRect.size.width *= scale
-      visibleRect.size.height *= scale
-
-      visibleRect.origin.x.round(.up)
-      visibleRect.origin.y.round(.up)
-      visibleRect.size.width.round(.up)
-      visibleRect.size.height.round(.up)
-
-      return visibleRect
-    }
-    set {
-
-      guard let image = image else { return }
-
-      imageView.zoomScale = 1
-
-      let scale = _ratio(
-        to: imageView.zoomView!.bounds.size,
-        from: image.extent.size
-      )
-
-      var _visibleRect = newValue
-      _visibleRect.origin.x *= scale
-      _visibleRect.origin.y *= scale
-      _visibleRect.size.width *= scale
-      _visibleRect.size.height *= scale
-
-      imageView.zoom(to: _visibleRect, animated: false)
     }
   }
 
@@ -127,6 +83,58 @@ final class CropAndStraightenView : UIView {
   }
 
   // MARK: - Functions
+  
+  // TODO:
+  func set(imageSize: PixelSize, proposedCropAndRotate: CropAndRotate) {
+        
+    self.imageSize = imageSize
+    
+    imageView.configureImageForSize(imageSize.cgSize)
+    imageView.zoomScale = 1
+    
+    let scale = _ratio(
+      to: proposedCropAndRotate.imageSize.cgSize,
+      from: imageSize.cgSize
+    )
+        
+    var _visibleRect = proposedCropAndRotate.cropRect.cgRect
+    _visibleRect.origin.x *= scale
+    _visibleRect.origin.y *= scale
+    _visibleRect.size.width *= scale
+    _visibleRect.size.height *= scale
+    
+    imageView.zoom(to: _visibleRect, animated: false)
+    
+  }
+  
+  func currentProposedCropAndRotate() -> CropAndRotate {
+    
+    guard let imageSize = self.imageSize else {
+      preconditionFailure()
+    }
+    
+    var visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
+    
+    //      let scale = _ratio(
+    //        to: image.extent.size,
+    //        from: imageView.zoomView!.bounds.size
+    //      )
+    
+    // TODO:
+    let scale: CGFloat = 1
+    
+    visibleRect.origin.x *= scale
+    visibleRect.origin.y *= scale
+    visibleRect.size.width *= scale
+    visibleRect.size.height *= scale
+    
+    visibleRect.origin.x.round(.up)
+    visibleRect.origin.y.round(.up)
+    visibleRect.size.width.round(.up)
+    visibleRect.size.height.round(.up)
+    
+    return .init(imageSize: imageSize, cropRect: .init(cgRect: visibleRect))
+  }
 
   override func layoutSublayers(of layer: CALayer) {
     super.layoutSublayers(of: layer)

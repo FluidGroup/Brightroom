@@ -251,7 +251,7 @@ public enum EditMenu: CaseIterable {
       
       let edit = state.editingState.currentEdit
             
-      maskButton.hasChanges = !edit.blurredMaskPaths.isEmpty
+      maskButton.hasChanges = !edit.drawings.blurredMaskPaths.isEmpty
       
       contrastButton.hasChanges = edit.filters.contrast != nil
       exposureButton.hasChanges = edit.filters.exposure != nil

@@ -34,17 +34,25 @@ open class EditingStack: Equatable, StoreComponentType {
     
   public struct State: Equatable {
         
-    public let imageSize: ImageSize
+    public var imageSize: PixelSize {
+      initialEditing.imageSize
+    }
+    
+    private let initialEditing: Edit
     
     public var aspectRatio: CGSize {
-      currentEdit.cropRect?.size ?? imageSize.aspectRatio
+      currentEdit.cropAndRotate.cropRect?.aspectRatio ?? imageSize.aspectRatio
+    }
+    
+    public var cropRect: CropAndRotate {
+      currentEdit.cropAndRotate.cropRect ?? .init(imageSize: imageSize, cropRect: .init(origin: .init(x: 0, y: 0), size: imageSize))
     }
     
     public fileprivate(set) var hasStartedEditing = false
     
     public fileprivate(set) var history: [Edit] = []
     
-    public fileprivate(set) var currentEdit: Edit = .init()
+    public fileprivate(set) var currentEdit: Edit
     
     public fileprivate(set) var isLoading = true
         
@@ -72,11 +80,24 @@ open class EditingStack: Equatable, StoreComponentType {
     }
         
     public var isDirty: Bool {
-      return currentEdit != .zero
+      return currentEdit != initialEditing
+    }
+    
+    init(initialEdit: Edit) {
+      self.initialEditing = initialEdit
+      self.currentEdit = initialEdit
     }
         
     static func makeVersion(ref: InoutRef<Self>) {
       ref.history.append(ref.currentEdit)
+    }
+    
+    static func revertCurrentEditing(ref: InoutRef<Self>) {
+      ref.currentEdit = ref.history.last ?? ref.initialEditing
+    }
+        
+    static func undoEditing(ref: InoutRef<Self>) {
+      ref.currentEdit = ref.history.popLast() ?? ref.initialEditing
     }
     
   }
@@ -110,7 +131,12 @@ open class EditingStack: Equatable, StoreComponentType {
     screenScale: CGFloat = UIScreen.main.scale
     ) {
     
-    self.store = .init(initialState: .init(imageSize: source.state.imageSize))
+    self.store = .init(
+      initialState: .init(
+        initialEdit: Edit(imageSize: source.state.imageSize)
+      )
+    )
+    
     self.colorCubeFilters = colorCubeStorage.filters
     self.source = source
 
@@ -184,12 +210,14 @@ open class EditingStack: Equatable, StoreComponentType {
         }
       }
       
-      state.ifChanged(\.currentEdit.cropRect, \.targetImage) { cropRect, targetImage in
+      state.ifChanged(\.cropRect, \.targetImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
           
+          assert(_cropRect.imageSize == .init(image: targetImage))
+          
           // TODO: ?? targetImage.extent
-          var cropRect = cropRect ?? targetImage.extent
+          var cropRect = _cropRect.cropRect.cgRect
           
           cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
           
@@ -263,7 +291,9 @@ open class EditingStack: Equatable, StoreComponentType {
     ensureMainThread()
     
     commit {
-      $0.currentEdit = $0.history.last ?? .init()
+      $0.withType { (type, ref) -> Void in
+        type.revertCurrentEditing(ref: ref)
+      }
     }
     
   }
@@ -274,10 +304,13 @@ open class EditingStack: Equatable, StoreComponentType {
   public func undoEdit() {
     
     ensureMainThread()
-    
+        
     commit {
-      $0.currentEdit = $0.history.popLast() ?? .init()
+      $0.withType { (type, ref) -> Void in
+        type.undoEditing(ref: ref)
+      }
     }
+    
   }
 
   /**
@@ -301,19 +334,12 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
-  public func crop(in rect: CGRect) {
+  public func crop(_ value: CropAndRotate) {
     
     ensureMainThread()
-
-    var _cropRect = rect
-
-    _cropRect.origin.x.round(.up)
-    _cropRect.origin.y.round(.up)
-    _cropRect.size.width.round(.up)
-    _cropRect.size.height.round(.up)
-
+ 
     applyIfChanged {
-      $0.cropRect = _cropRect
+      $0.cropAndRotate.cropRect = value
     }
     
   }
@@ -323,7 +349,7 @@ open class EditingStack: Equatable, StoreComponentType {
     ensureMainThread()
 
     applyIfChanged {
-      $0.blurredMaskPaths = blurringMaskPaths
+      $0.drawings.blurredMaskPaths = blurringMaskPaths
     }
   }
 
@@ -337,11 +363,13 @@ open class EditingStack: Equatable, StoreComponentType {
         
     let renderer = ImageRenderer(source: targetImage)
 
+    // TODO: Clean up ImageRenderer.Edit
+    
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.cropRect
+    renderer.edit.croppingRect = edit.cropAndRotate.cropRect?.cropRect.cgRect
     renderer.edit.drawer = [
-      BlurredMask(paths: edit.blurredMaskPaths)
+      BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]
 
     renderer.edit.modifiers = edit.makeFilters()
@@ -389,10 +417,10 @@ open class SquareEditingStack : EditingStack {
     
     let cropRect = Geometry.rectThatAspectFit(
       aspectRatio: .init(width: 1, height: 1),
-      boundingRect: .init(x: 0, y: 0, width: imageSize.pixelWidth, height: imageSize.pixelHeight)
+      boundingRect: .init(x: 0, y: 0, width: imageSize.width, height: imageSize.height)
     )
     
-    crop(in: cropRect)
+    crop(.init(imageSize: imageSize, cropRect: .init(cgRect: cropRect)))
   }
 }
 
@@ -407,7 +435,47 @@ private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
 extension EditingStack {
 
   public struct Edit : Equatable {
-
+    
+    func makeFilters() -> [Filtering] {
+      return filters.makeFilters()
+    }
+  
+    public let imageSize: PixelSize
+    
+    public var cropAndRotate: CropAndRotate = .init()
+    public var filters: Filters = .init()
+    public var drawings: Drawings = .init()
+          
+    init(imageSize: PixelSize) {
+      self.imageSize = imageSize
+    }
+    
+    public struct Drawings: Equatable {
+      // TODO: Remove Rect from DrawnPath
+      public var blurredMaskPaths: [DrawnPathInRect] = []
+    }
+    
+    public struct CropAndRotate: Equatable {
+      public var cropRect: PixelEngine.CropAndRotate?
+            
+    }
+//
+//    public struct Light {
+//
+//    }
+//
+//    public struct Color {
+//
+//    }
+//
+//    public struct Effects {
+//
+//    }
+//
+//    public struct Detail {
+//
+//    }
+            
     public struct Filters : Equatable {
       
       public var colorCube: FilterColorCube?
@@ -428,7 +496,7 @@ extension EditingStack {
       
       public var vignette: FilterVignette?
       public var fade: FilterFade?
-
+      
       func makeFilters() -> [Filtering] {
         return ([
           
@@ -448,21 +516,11 @@ extension EditingStack {
           gaussianBlur,
           fade,
           vignette,
-          ] as [Optional<Filtering>])
-          .compactMap { $0 }
+        ] as [Optional<Filtering>])
+        .compactMap { $0 }
       }
     }
-
-    public var cropRect: CGRect?
-    public var blurredMaskPaths: [DrawnPathInRect] = []
-
-    public var filters: Filters = .init()
-
-    func makeFilters() -> [Filtering] {
-      return filters.makeFilters()
-    }
-        
-    static let zero: Self = .init()
+    
   }
 
 }

@@ -39,13 +39,20 @@ public struct EditingImage: Equatable {
   
 }
 
-public struct ImageSize: Equatable {
-  public let pixelWidth: Int
-  public let pixelHeight: Int
+public struct CropAndRotate: Equatable {
+
+  public var imageSize: PixelSize
+  public var cropRect: PixelRect
+
+  public init(imageSize: PixelSize, cropRect: PixelRect) {
+    self.imageSize = imageSize
+    self.cropRect = cropRect
+  }
   
   public var aspectRatio: CGSize {
-    .init(width: pixelWidth, height: pixelHeight)
+    cropRect.size.aspectRatio
   }
+    
 }
 
 /**
@@ -59,7 +66,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
   public struct State: Equatable {
     public fileprivate(set) var currentImage: EditingImage?
-    public let imageSize: ImageSize
+    public let imageSize: PixelSize
   }
   
   public let store: DefaultStore
@@ -84,7 +91,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     self.store = .init(
       initialState: .init(
         currentImage: .init(image: image, isEditable: true),
-        imageSize: .init(pixelWidth: Int(image.extent.size.width), pixelHeight: Int(image.extent.size.height))
+        imageSize: .init(width: Int(image.extent.size.width), height: Int(image.extent.size.height))
       )
     )
     self.pendingAction = { _ in }
@@ -100,8 +107,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
       initialState: .init(
         currentImage: nil,
         imageSize: .init(
-          pixelWidth: asset.pixelWidth,
-          pixelHeight: asset.pixelHeight
+          width: asset.pixelWidth,
+          height: asset.pixelHeight
         )
       )
     )
