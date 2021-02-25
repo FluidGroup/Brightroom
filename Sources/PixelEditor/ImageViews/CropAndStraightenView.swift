@@ -85,25 +85,14 @@ final class CropAndStraightenView : UIView {
   // MARK: - Functions
   
   // TODO:
-  func set(imageSize: PixelSize, proposedCropAndRotate: CropAndRotate) {
+  func set(proposedCropAndRotate: CropAndRotate) {
         
-    self.imageSize = imageSize
+    self.imageSize = proposedCropAndRotate.imageSize
     
-    imageView.configureImageForSize(imageSize.cgSize)
+    imageView.configureImageForSize(proposedCropAndRotate.imageSize.cgSize)
     imageView.zoomScale = 1
-    
-    let scale = _ratio(
-      to: proposedCropAndRotate.imageSize.cgSize,
-      from: imageSize.cgSize
-    )
-        
-    var _visibleRect = proposedCropAndRotate.cropRect.cgRect
-    _visibleRect.origin.x *= scale
-    _visibleRect.origin.y *= scale
-    _visibleRect.size.width *= scale
-    _visibleRect.size.height *= scale
-    
-    imageView.zoom(to: _visibleRect, animated: false)
+                 
+    imageView.zoom(to: proposedCropAndRotate.cropRect.cgRect, animated: false)
     
   }
   
@@ -113,25 +102,7 @@ final class CropAndStraightenView : UIView {
       preconditionFailure()
     }
     
-    var visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
-    
-    //      let scale = _ratio(
-    //        to: image.extent.size,
-    //        from: imageView.zoomView!.bounds.size
-    //      )
-    
-    // TODO:
-    let scale: CGFloat = 1
-    
-    visibleRect.origin.x *= scale
-    visibleRect.origin.y *= scale
-    visibleRect.size.width *= scale
-    visibleRect.size.height *= scale
-    
-    visibleRect.origin.x.round(.up)
-    visibleRect.origin.y.round(.up)
-    visibleRect.size.width.round(.up)
-    visibleRect.size.height.round(.up)
+    let visibleRect = imageView.convert(imageView.bounds, to: imageView.subviews.first!)
     
     return .init(imageSize: imageSize, cropRect: .init(cgRect: visibleRect))
   }

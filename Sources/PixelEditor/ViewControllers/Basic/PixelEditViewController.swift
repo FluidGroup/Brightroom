@@ -275,8 +275,8 @@ public final class PixelEditViewController: UIViewController {
       maskingView.drawnPaths = paths
     }
             
-    state.ifChanged(\.editingState.cropRect, \.editingState.imageSize) { cropRect, imageSize in
-      adjustmentView.set(imageSize: imageSize, proposedCropAndRotate: cropRect)
+    state.ifChanged(\.editingState.cropRect) { cropRect in
+      adjustmentView.set(proposedCropAndRotate: cropRect)
     }
     
     if let targetImage = state.takeIfChanged(\.editingState.targetImage) {
