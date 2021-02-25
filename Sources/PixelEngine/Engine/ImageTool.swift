@@ -32,7 +32,7 @@ public enum ImageTool {
     ]
   )
 
-  public static func makeNewResidedCIImage(to pixelSize: CGSize, from image: CIImage) -> CIImage? {
+  public static func makeNewResizedCIImage(to pixelSize: CGSize, from image: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
     targetSize.height.round(.down)

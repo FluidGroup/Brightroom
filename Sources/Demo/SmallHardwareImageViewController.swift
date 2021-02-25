@@ -36,7 +36,7 @@ final class SmallHardwareImageViewController : UIViewController {
   }()
 
   let image: CIImage = {
-    return ImageTool.makeNewResidedCIImage(to: CGSize(width: 500, height: 500), from: CIImage(image: UIImage(named: "large")!)!)!
+    return ImageTool.makeNewResizedCIImage(to: CGSize(width: 500, height: 500), from: CIImage(image: UIImage(named: "large")!)!)!
   }()
 
   override func viewDidLoad() {

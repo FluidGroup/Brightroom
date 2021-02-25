@@ -22,7 +22,7 @@ final class ResizeViewController : UIViewController {
     
     let image = CIImage(image: uiImage)!
     
-    let r = ImageTool.makeNewResidedCIImage(to: CGSize(width: 1000, height: 1000), from: image)
+    let r = ImageTool.makeNewResizedCIImage(to: CGSize(width: 1000, height: 1000), from: image)
     
     print(r.debugDescription)
   }

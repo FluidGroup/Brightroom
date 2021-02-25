@@ -279,11 +279,11 @@ public final class PixelEditViewController: UIViewController {
       adjustmentView.set(proposedCropAndRotate: cropRect)
     }
     
-    if let targetImage = state.takeIfChanged(\.editingState.targetImage) {
+    if let targetImage = state.takeIfChanged(\.editingState.targetOriginalSizeImage) {
       adjustmentView.image = targetImage
     }
 
-    if let previewImage = state.takeIfChanged(\.editingState.previewImage) {
+    if let previewImage = state.takeIfChanged(\.editingState.previewCroppedAndEffectedImage) {
       maskingView.image = previewImage
     }
 

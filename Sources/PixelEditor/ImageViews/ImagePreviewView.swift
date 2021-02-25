@@ -104,11 +104,11 @@ extension ImagePreviewView {
       
       UIView.performWithoutAnimation {
         
-        state.ifChanged(\.previewImage) { previewImage in
+        state.ifChanged(\.previewCroppedAndEffectedImage) { previewImage in
           self.image = previewImage
         }
         
-        state.ifChanged(\.croppedTargetImage) { croppedTargetImage in
+        state.ifChanged(\.previewCroppedOriginalImage) { croppedTargetImage in
           self.originalImage = croppedTargetImage
         }
         

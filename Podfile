@@ -17,4 +17,5 @@ target "Demo" do
   use_frameworks!
   pod "MosaiqueAssetsPicker", :git => "git@github.com:eure/AssetsPicker.git"
   pod "Reveal-SDK"
+  pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
 end

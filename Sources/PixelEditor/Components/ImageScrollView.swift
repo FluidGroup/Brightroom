@@ -7,8 +7,16 @@
 //
 
 import UIKit
+import Verge
+import PixelEngine
 
 final class ImageScrollView: UIScrollView {
+  
+  struct State: Equatable {
+    var imageSize: PixelSize?
+    var visibleRect: CGRect?
+  }
+  
   enum ScaleMode: Int {
     case aspectFill
     case aspectFit
@@ -46,6 +54,8 @@ final class ImageScrollView: UIScrollView {
       }
     }
   }
+  
+  let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
   
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -87,7 +97,7 @@ final class ImageScrollView: UIScrollView {
   }
   
   @objc func adjustFrameToCenter() {
-   
+    
     var frameToCenter = zoomView.frame
     
     // center horizontally
@@ -255,7 +265,7 @@ final class ImageScrollView: UIScrollView {
     
     return zoomRect
   }
-    
+  
   // MARK: - Actions
   
   @objc func changeOrientationNotification() {
@@ -270,5 +280,30 @@ extension ImageScrollView: UIScrollViewDelegate {
   
   func scrollViewDidZoom(_ scrollView: UIScrollView) {
     adjustFrameToCenter()
+  }
+  
+  func scrollViewDidScroll(_ scrollView: UIScrollView) {
+  }
+  
+  func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    if !decelerate {
+      updateState()
+    }
+  }
+  
+  func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+    updateState()
+  }
+  
+  func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+    updateState()
+  }
+  
+  private func updateState() {
+    
+    store.commit {
+      $0.visibleRect = convert(bounds, to: subviews.first!)
+    }
+    
   }
 }

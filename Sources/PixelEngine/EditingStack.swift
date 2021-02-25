@@ -59,17 +59,17 @@ open class EditingStack: Equatable, StoreComponentType {
     /**
      An original image
      */
-    public fileprivate(set) var targetImage: CIImage?
+    public fileprivate(set) var targetOriginalSizeImage: CIImage?
         
     /**
      An image that cropped but not effected.
      */
-    public fileprivate(set) var croppedTargetImage: CIImage?
+    public fileprivate(set) var previewCroppedOriginalImage: CIImage?
     
     /**
      An image that applied editing and optimized for previewing.
      */
-    public fileprivate(set) var previewImage: CIImage?
+    public fileprivate(set) var previewCroppedAndEffectedImage: CIImage?
     
     public fileprivate(set) var cubeFilterPreviewSourceImage: CIImage?
     
@@ -171,11 +171,11 @@ open class EditingStack: Equatable, StoreComponentType {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.targetImage) { image in
+      state.ifChanged(\.targetOriginalSizeImage) { image in
         
         guard let image = image else { return }
         
-        let smallSizeImage = ImageTool.makeNewResidedCIImage(
+        let smallSizeImage = ImageTool.makeNewResizedCIImage(
           to: Geometry.sizeThatAspectFit(
             aspectRatio: CGSize(width: 1, height: 1),
             boundingSize: CGSize(
@@ -204,19 +204,18 @@ open class EditingStack: Equatable, StoreComponentType {
         
       }
       
-      state.ifChanged(\.currentEdit, \.croppedTargetImage) { currentEdit, croppedTargetImage in
+      state.ifChanged(\.currentEdit, \.previewCroppedOriginalImage) { currentEdit, croppedTargetImage in
         if let croppedTargetImage = croppedTargetImage {
           self.updatePreviewImage(from: currentEdit, image: croppedTargetImage)
         }
       }
       
-      state.ifChanged(\.cropRect, \.targetImage) { _cropRect, targetImage in
+      state.ifChanged(\.cropRect, \.targetOriginalSizeImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
           
           assert(_cropRect.imageSize == .init(image: targetImage))
           
-          // TODO: ?? targetImage.extent
           var cropRect = _cropRect.cropRect.cgRect
           
           cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
@@ -224,7 +223,7 @@ open class EditingStack: Equatable, StoreComponentType {
           let croppedImage = targetImage
             .cropped(to: cropRect)
           
-          let result = ImageTool.makeNewResidedCIImage(
+          let result = ImageTool.makeNewResizedCIImage(
             to: Geometry.sizeThatAspectFit(
               aspectRatio: croppedImage.extent.size,
               boundingSize: CGSize(
@@ -236,7 +235,7 @@ open class EditingStack: Equatable, StoreComponentType {
           )
           
           self.commit {
-            $0.croppedTargetImage = result
+            $0.previewCroppedOriginalImage = result
           }
         }
         
@@ -253,7 +252,7 @@ open class EditingStack: Equatable, StoreComponentType {
         guard let image = image else { return }
         self.commit {
           $0.isLoading = !image.isEditable
-          $0.targetImage = image.image
+          $0.targetOriginalSizeImage = image.image
         }
       }
       
@@ -357,7 +356,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     ensureMainThread()
     
-    guard let targetImage = state.targetImage else {
+    guard let targetImage = state.targetOriginalSizeImage else {
       preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
     }
         
@@ -395,7 +394,7 @@ open class EditingStack: Equatable, StoreComponentType {
     }
     
     commit {
-      $0.previewImage = result
+      $0.previewCroppedAndEffectedImage = result
     }
 
     // TODO: Ignore vignette and blur (convolutions)
