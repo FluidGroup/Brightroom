@@ -36,22 +36,21 @@ final class ImageScrollView: UIScrollView {
   
   let zoomView: UIImageView = .init()
   
-  private var imageSize = CGSize.zero
   private var pointToCenterAfterResize = CGPoint.zero
   private var scaleToRestoreAfterResize: CGFloat = 1.0
   private var maxScaleFromMinScale: CGFloat = 3.0
   
   override var frame: CGRect {
     willSet {
-      if frame.equalTo(newValue) == false, newValue.equalTo(CGRect.zero) == false, imageSize.equalTo(CGSize.zero) == false {
-        prepareToResize()
-      }
+//      if frame.equalTo(newValue) == false, newValue.equalTo(CGRect.zero) == false, store.state.imageSize?.cgSize.equalTo(CGSize.zero) == false {
+//        prepareToResize()
+//      }
     }
     
     didSet {
-      if frame.equalTo(oldValue) == false, frame.equalTo(CGRect.zero) == false, imageSize.equalTo(CGSize.zero) == false {
-        recoverFromResizing()
-      }
+//      if frame.equalTo(oldValue) == false, frame.equalTo(CGRect.zero) == false, store.state.imageSize?.cgSize.equalTo(CGSize.zero) == false {
+//        recoverFromResizing()
+//      }
     }
   }
   
@@ -96,7 +95,7 @@ final class ImageScrollView: UIScrollView {
     )
   }
   
-  @objc func adjustFrameToCenter() {
+  private func adjustFrameToCenter() {
     
     var frameToCenter = zoomView.frame
     
@@ -117,6 +116,7 @@ final class ImageScrollView: UIScrollView {
     zoomView.frame = frameToCenter
   }
   
+  /*
   private func prepareToResize() {
     let boundsCenter = CGPoint(x: bounds.midX, y: bounds.midY)
     pointToCenterAfterResize = convert(boundsCenter, to: zoomView)
@@ -129,7 +129,9 @@ final class ImageScrollView: UIScrollView {
       scaleToRestoreAfterResize = 0
     }
   }
+ */
   
+  /*
   private func recoverFromResizing() {
     setMaxMinZoomScalesForCurrentBounds()
     
@@ -160,7 +162,9 @@ final class ImageScrollView: UIScrollView {
     
     contentOffset = offset
   }
+ */
   
+  /*
   private func maximumContentOffset() -> CGPoint {
     return CGPoint(x: contentSize.width - bounds.width, y: contentSize.height - bounds.height)
   }
@@ -168,21 +172,42 @@ final class ImageScrollView: UIScrollView {
   private func minimumContentOffset() -> CGPoint {
     return CGPoint.zero
   }
+ */
+  
+  private var oldSize: CGSize?
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    
+    if oldSize != bounds.size {
+      oldSize = bounds.size
+      if let imageSize = store.state.imageSize {
+        configureImageForSize(imageSize)
+      }
+    }
+  }
   
   // MARK: - Display image
   
   func display(image: UIImage) {
     
+    guard let imageSize = store.state.imageSize else {
+      assertionFailure("Call configureImageForSize before.")
+      return
+    }
+    
     assert(image.scale == 1)    
-    assert(image.size == imageSize)
+    assert(image.size == imageSize.cgSize)
     zoomView.image = image
   }
   
-  func configureImageForSize(_ size: CGSize) {
-    imageSize = size
-    zoomView.frame = .init(origin: .zero, size: size)
-    contentSize = imageSize
-    setMaxMinZoomScalesForCurrentBounds()
+  func configureImageForSize(_ size: PixelSize) {
+    store.commit {
+      $0.imageSize = size
+    }
+    zoomView.bounds = .init(origin: .zero, size: size.cgSize)
+    contentSize = size.cgSize
+    setMaxMinZoomScalesForCurrentBounds(imageSize: size.cgSize)
     zoomScale = minimumZoomScale
     
     switch initialOffset {
@@ -205,7 +230,7 @@ final class ImageScrollView: UIScrollView {
     }
   }
   
-  private func setMaxMinZoomScalesForCurrentBounds() {
+  private func setMaxMinZoomScalesForCurrentBounds(imageSize: CGSize) {
     // calculate min/max zoomscale
     let xScale = bounds.width / imageSize.width // the scale needed to perfectly fit the image width-wise
     let yScale = bounds.height / imageSize.height // the scale needed to perfectly fit the image height-wise
@@ -269,7 +294,9 @@ final class ImageScrollView: UIScrollView {
   // MARK: - Actions
   
   @objc func changeOrientationNotification() {
-    configureImageForSize(imageSize)
+    if let imageSize = store.state.imageSize {
+      configureImageForSize(imageSize)
+    }
   }
 }
 

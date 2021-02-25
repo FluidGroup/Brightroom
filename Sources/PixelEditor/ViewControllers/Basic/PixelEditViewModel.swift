@@ -138,4 +138,11 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     editingStack.crop(proposed)
     
   }
+  
+  public func set(proposedCropAndRotate: CropAndRotate) {
+    commit {
+      $0.proposedCropAndRotate = proposedCropAndRotate
+    }
+  }
+  
 }

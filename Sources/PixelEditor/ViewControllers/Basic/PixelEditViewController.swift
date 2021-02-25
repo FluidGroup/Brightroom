@@ -206,6 +206,18 @@ public final class PixelEditViewController: UIViewController {
     subscriptions.formUnion(
       maskingView.attach(editingStack: viewModel.editingStack)
     )
+    
+    adjustmentView.store.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.proposedCropAndRotate) { value in
+        if let value = value {
+          self.viewModel.set(proposedCropAndRotate: value)
+        }
+      }
+    }
+    .store(in: &subscriptions)
         
     viewModel.editingStack.start()
   }
