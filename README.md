@@ -1,11 +1,11 @@
-<img src=top.png width=960/>
-
-# Pixel - Engine • Editor
-
 > 💥 The next major version development has been started.  
 > https://github.com/muukii/Pixel/pull/53  
 > This obviously takes many breaking changes.  
 > Feel free to start a discussion about enhancement from the current released version.
+
+<img src=top.png width=960/>
+
+# Pixel - Engine • Editor
 
 ![](preview.gif)
 
