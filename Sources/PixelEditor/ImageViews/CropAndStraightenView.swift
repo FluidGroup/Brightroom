@@ -62,10 +62,6 @@ final class CropAndStraightenView: UIView {
     return view
   }()
   
-  private var gridLayers: [CALayer] = []
-  
-  private let gridContainerLayer = CALayer()
-  
   let store: UIStateStore<State, Never> = .init(initialState: .init())
   
   private var subscriptions = Set<VergeAnyCancellable>()
@@ -82,8 +78,6 @@ final class CropAndStraightenView: UIView {
     imageView.rightAnchor.constraint(equalTo: rightAnchor).isActive = true
     imageView.bottomAnchor.constraint(equalTo: bottomAnchor).isActive = true
     imageView.leftAnchor.constraint(equalTo: leftAnchor).isActive = true
-    
-    layer.addSublayer(gridContainerLayer)
     
     imageView.store.sinkState(queue: .passthrough) { [weak self] state in
       
@@ -120,11 +114,19 @@ final class CropAndStraightenView: UIView {
     
     imageView.zoom(to: proposedCropAndRotate.cropRect.cgRect, animated: false)
   }
+   
+}
+
+private final class GridView: UIView {
+  
+  private var gridLayers: [CALayer] = []
+  
+  private let gridContainerLayer = CALayer()
   
   override func layoutSublayers(of layer: CALayer) {
     super.layoutSublayers(of: layer)
     
-    gridContainerLayer.frame = imageView.layer.frame
+    gridContainerLayer.frame = self.layer.frame
     
     gridLayers.forEach { $0.removeFromSuperlayer() }
     gridLayers = []
@@ -161,6 +163,7 @@ final class CropAndStraightenView: UIView {
       }
     }
   }
+  
 }
 
 private func _ratio(to: CGSize, from: CGSize) -> CGFloat {

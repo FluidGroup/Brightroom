@@ -58,6 +58,7 @@ open class EditingStack: Equatable, StoreComponentType {
         
     /**
      An original image
+     Can be used in cropping
      */
     public fileprivate(set) var targetOriginalSizeImage: CIImage?
         
