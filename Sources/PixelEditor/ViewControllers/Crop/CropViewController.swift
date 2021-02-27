@@ -99,9 +99,7 @@ enum _Crop {
         state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
           
           if let cropAndRotate = cropAndRotate {
-            
-            cropAndRotate.aspectRatio
-            
+            self.updateScrollViewFrame(by: cropAndRotate)
             self.updateScrollViewZoomScale(by: cropAndRotate)
           } else {
             // TODO: consider needs to do something
@@ -131,14 +129,18 @@ enum _Crop {
       scrollView.zoom(to: cropAndRotate.cropRect.cgRect, animated: false)
     }
     
+    private func updateScrollViewFrame(by cropAndRotate: CropAndRotate) {
+      let bounds = self.bounds.insetBy(dx: 20, dy: 20)
+      scrollView.frame = .init(origin: .init(x: 20, y: 20), size: cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size))
+    }
+    
     override func layoutSubviews() {
       super.layoutSubviews()
-      
-      scrollView.frame = .init(x: 30, y: 30, width: 300, height: 300)
-      
+            
       if scrollViewOldSize != scrollView.bounds.size {
         scrollViewOldSize = scrollView.bounds.size
         store.state.proposedCropAndRotate.map {
+          updateScrollViewFrame(by: $0)
           updateScrollViewZoomScale(by: $0)
         }
       }

@@ -13,9 +13,27 @@ import PixelEditor
 
 final class DemoCropViewController: UIViewController {
   
-  @IBAction func onTap(_ sender: Any) {
+  @IBAction func onTapHorizontal(_ sender: Any) {
     
-    let stack = Mocks.makeEditingStack()
+    let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+    stack.start()
+    let controller = CropViewController(editingStack: stack)
+    
+    present(controller, animated: true, completion: nil)
+  }
+  
+  @IBAction func onTapVertical(_ sender: Any) {
+    
+    let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
+    stack.start()
+    let controller = CropViewController(editingStack: stack)
+    
+    present(controller, animated: true, completion: nil)
+  }
+  
+  @IBAction func onTapSquare(_ sender: Any) {
+    
+    let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
     stack.start()
     let controller = CropViewController(editingStack: stack)
     

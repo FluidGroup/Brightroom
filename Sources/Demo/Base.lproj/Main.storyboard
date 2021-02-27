@@ -372,19 +372,38 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FPQ-MK-z49">
-                                <rect key="frame" x="161" y="318.5" width="53" height="30"/>
-                                <state key="normal" title="Present"/>
-                                <connections>
-                                    <action selector="onTap:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="Wao-UB-qOd"/>
-                                </connections>
-                            </button>
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="63u-oK-1mS">
+                                <rect key="frame" x="152" y="288.5" width="71" height="90"/>
+                                <subviews>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FPQ-MK-z49">
+                                        <rect key="frame" x="0.0" y="0.0" width="71" height="30"/>
+                                        <state key="normal" title="Horizontal"/>
+                                        <connections>
+                                            <action selector="onTapHorizontal:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="kP6-Wp-eER"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="dcd-QO-XWG">
+                                        <rect key="frame" x="0.0" y="30" width="71" height="30"/>
+                                        <state key="normal" title="Vertical"/>
+                                        <connections>
+                                            <action selector="onTapVertical:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="zKB-wh-ee3"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ZH3-Kg-hN7">
+                                        <rect key="frame" x="0.0" y="60" width="71" height="30"/>
+                                        <state key="normal" title="Square"/>
+                                        <connections>
+                                            <action selector="onTapSquare:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="TDW-dr-SR5"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                            </stackView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="FRM-0x-ROq"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
-                            <constraint firstItem="FPQ-MK-z49" firstAttribute="centerY" secondItem="BR8-K1-ZZa" secondAttribute="centerY" id="PHN-hi-jY0"/>
-                            <constraint firstItem="FPQ-MK-z49" firstAttribute="centerX" secondItem="BR8-K1-ZZa" secondAttribute="centerX" id="eUQ-9i-iou"/>
+                            <constraint firstItem="63u-oK-1mS" firstAttribute="centerX" secondItem="BR8-K1-ZZa" secondAttribute="centerX" id="F1d-PS-nAA"/>
+                            <constraint firstItem="63u-oK-1mS" firstAttribute="centerY" secondItem="BR8-K1-ZZa" secondAttribute="centerY" id="HJ4-lN-FGP"/>
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" id="MX0-Uj-CMV"/>
