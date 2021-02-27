@@ -49,7 +49,7 @@ public struct CropAndRotate: Equatable {
     self.cropRect = cropRect
   }
   
-  public var aspectRatio: CGSize {
+  public var aspectRatio: PixelAspectRatio {
     cropRect.size.aspectRatio
   }
     

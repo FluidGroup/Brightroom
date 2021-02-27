@@ -40,7 +40,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     private let initialEditing: Edit
     
-    public var aspectRatio: CGSize {
+    public var aspectRatio: PixelAspectRatio {
       currentEdit.cropAndRotate.cropRect?.aspectRatio ?? imageSize.aspectRatio
     }
     

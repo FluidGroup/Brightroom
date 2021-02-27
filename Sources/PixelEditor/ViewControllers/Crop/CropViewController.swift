@@ -40,9 +40,9 @@ public final class CropViewController: UIViewController {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.imageSize) { imageSize in
+      state.ifChanged(\.cropRect) { cropRect in
         
-        self.containerView.setImageSize(imageSize)
+        self.containerView.setCropAndRotate(cropRect)
       }
       
       state.ifChanged(\.targetOriginalSizeImage) { image in
@@ -60,8 +60,7 @@ enum _Crop {
   final class CropScrollContainerView: UIView, UIScrollViewDelegate {
         
     struct State: Equatable {
-      var imageSize: PixelSize?
-      var visibleRect: CGRect?
+      var proposedCropAndRotate: CropAndRotate?
     }
         
     struct ScrollViewContentSizeDescriptor {
@@ -70,6 +69,8 @@ enum _Crop {
     
     private let imageView = UIImageView()
     private let scrollView = CropScrollView()
+    
+    private var scrollViewOldSize: CGSize?
     
     let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
     
@@ -90,14 +91,45 @@ enum _Crop {
       }
       .store(in: &subscriptions)
       #endif
+      
+      store.sinkState { [weak self] (state) in
+        
+        guard let self = self else { return }
+        
+        state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
+          
+          if let cropAndRotate = cropAndRotate {
+            
+            cropAndRotate.aspectRatio
+            
+            self.updateScrollViewZoomScale(by: cropAndRotate)
+          } else {
+            // TODO: consider needs to do something
+          }
+                  
+        }
+                       
+      }
+      .store(in: &subscriptions)
     }
-    
+        
     @available(*, unavailable)
     required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
           
-    private var scrollViewOldSize: CGSize?
+    private func updateScrollViewZoomScale(by cropAndRotate: CropAndRotate) {
+      
+      imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
+      scrollView.contentSize = cropAndRotate.scrollViewContentSize()
+      
+      let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+      
+      scrollView.minimumZoomScale = min
+      scrollView.maximumZoomScale = max
+            
+      scrollView.zoom(to: cropAndRotate.cropRect.cgRect, animated: false)
+    }
     
     override func layoutSubviews() {
       super.layoutSubviews()
@@ -106,8 +138,8 @@ enum _Crop {
       
       if scrollViewOldSize != scrollView.bounds.size {
         scrollViewOldSize = scrollView.bounds.size
-        if let imageSize = store.state.imageSize {
-          setImageSize(imageSize)
+        store.state.proposedCropAndRotate.map {
+          updateScrollViewZoomScale(by: $0)
         }
       }
     }
@@ -138,7 +170,7 @@ enum _Crop {
         
     func setImage(image: UIImage) {
       
-      guard let imageSize = store.state.imageSize else {
+      guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
         assertionFailure("Call configureImageForSize before.")
         return
       }
@@ -146,48 +178,17 @@ enum _Crop {
       assert(image.scale == 1)
       assert(image.size == imageSize.cgSize)
       imageView.image = image
+      
     }
     
-    func setImageSize(_ size: PixelSize) {
+    func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
+      
       store.commit {
-        $0.imageSize = size
+        $0.proposedCropAndRotate = cropAndRotate
       }
-      imageView.bounds = .init(origin: .zero, size: size.cgSize)
-      scrollView.contentSize = size.cgSize
-      setMaxMinZoomScalesForCurrentBounds(imageSize: size.cgSize)
-      scrollView.zoomScale = scrollView.minimumZoomScale
-      
-      let contentSize = scrollView.contentSize
-      let xOffset = contentSize.width < bounds.width ? 0 : (contentSize.width - bounds.width) / 2
-      let yOffset = contentSize.height < bounds.height ? 0 : (contentSize.height - bounds.height) / 2
-      
-      scrollView.contentOffset = CGPoint(x: xOffset, y: yOffset)
+          
     }
-    
-    private func setMaxMinZoomScalesForCurrentBounds(imageSize: CGSize) {
       
-      let maxScaleFromMinScale: CGFloat = 3.0
-      
-      // calculate min/max zoomscale
-      let xScale = scrollView.bounds.width / imageSize.width // the scale needed to perfectly fit the image width-wise
-      let yScale = scrollView.bounds.height / imageSize.height // the scale needed to perfectly fit the image height-wise
-      
-      /**
-       max meaning scale aspect fill
-       */
-      var minScale: CGFloat = max(xScale, yScale)
-      
-      let maxScale = maxScaleFromMinScale * minScale
-      
-      // don't let minScale exceed maxScale. (If the image is smaller than the screen, we don't want to force it to be zoomed.)
-      if minScale > maxScale {
-        minScale = maxScale
-      }
-      
-      scrollView.maximumZoomScale = maxScale
-      scrollView.minimumZoomScale = minScale * 0.999 // the multiply factor to prevent user cannot scroll page while they use this control in UIPageViewController
-    }
-    
     private func adjustFrameToCenter() {
       
       var frameToCenter = imageView.frame
@@ -238,9 +239,22 @@ enum _Crop {
     private func updateState() {
       
       store.commit {
-        $0.visibleRect = scrollView.convert(scrollView.bounds, to: imageView)
+        
+        var rect = scrollView.convert(scrollView.bounds, to: imageView)
+        rect.origin.x.round(.up)
+        rect.origin.y.round(.up)
+        rect.size.width.round(.up)
+        rect.size.height.round(.up)
+        
+        if var crop = $0.proposedCropAndRotate {
+          crop.cropRect = .init(cgRect: rect)
+          $0.proposedCropAndRotate = crop
+        } else {
+          assertionFailure()
+        }
+        
       }
-      
+            
     }
     
   }
@@ -283,4 +297,35 @@ enum _Crop {
         
   }
 
+}
+
+extension CropAndRotate {
+  
+  fileprivate func scrollViewContentSize() -> CGSize {
+    imageSize.cgSize
+  }
+  
+  fileprivate func calculateZoomScale(scrollViewBounds: CGRect) -> (min: CGFloat, max: CGFloat) {
+            
+    let minXScale = scrollViewBounds.width / imageSize.cgSize.width
+    let minYScale = scrollViewBounds.height / imageSize.cgSize.height
+    
+    let maxXScale = imageSize.cgSize.width / scrollViewBounds.width
+    let maxYScale = imageSize.cgSize.height / scrollViewBounds.height
+    
+    /**
+     max meaning scale aspect fill
+     */
+    let minScale = max(minXScale, minYScale)
+    let maxScale = max(maxXScale, maxYScale)
+    
+    // don't let minScale exceed maxScale. (If the image is smaller than the screen, we don't want to force it to be zoomed.)
+    if minScale > maxScale {
+      return (min: maxScale, max: maxScale)
+    }
+    
+    return (min: minScale, max: maxScale)
+  }
+  
+  
 }

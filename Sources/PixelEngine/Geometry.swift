@@ -22,17 +22,14 @@
 import Foundation
 
 public enum Geometry {
-
   public static func sizeThatAspectFit(aspectRatio: CGSize, boundingSize: CGSize) -> CGSize {
-
     let widthRatio = boundingSize.width / aspectRatio.width
     let heightRatio = boundingSize.height / aspectRatio.height
     var size = boundingSize
 
     if widthRatio < heightRatio {
       size.height = boundingSize.width / aspectRatio.width * aspectRatio.height
-    }
-    else if (heightRatio < widthRatio) {
+    } else if heightRatio < widthRatio {
       size.width = boundingSize.height / aspectRatio.height * aspectRatio.width
     }
 
@@ -43,17 +40,15 @@ public enum Geometry {
   }
 
   public static func sizeThatAspectFill(aspectRatio: CGSize, minimumSize: CGSize) -> CGSize {
-
     let widthRatio = minimumSize.width / aspectRatio.width
     let heightRatio = minimumSize.height / aspectRatio.height
 
     var size = minimumSize
 
     if widthRatio > heightRatio {
-      size.height = minimumSize.width / aspectRatio.width * aspectRatio.height;
-    }
-    else if heightRatio > widthRatio {
-      size.width = minimumSize.height / aspectRatio.height * aspectRatio.width;
+      size.height = minimumSize.width / aspectRatio.width * aspectRatio.height
+    } else if heightRatio > widthRatio {
+      size.width = minimumSize.height / aspectRatio.height * aspectRatio.width
     }
 
     return CGSize(
@@ -79,73 +74,67 @@ public enum Geometry {
   }
 
   public static func diagonalRatio(to: CGSize, from: CGSize) -> CGFloat {
-
     let _from = sqrt(pow(from.height, 2) + pow(from.width, 2))
     let _to = sqrt(pow(to.height, 2) + pow(to.width, 2))
 
     return _to / _from
   }
-
 }
 
 /**
  A structure that contains width and height that represent pixels.
  */
 public struct PixelSize: Equatable {
-  
   public let width: Int
   public let height: Int
-    
+
   public init(width: Int, height: Int) {
     self.width = width
     self.height = height
   }
-  
+
   public init(cgSize: CGSize) {
-    self.width = Int(cgSize.width.rounded(.up))
-    self.height = Int(cgSize.height.rounded(.up))
-  }
-  
-  public init(image: CIImage) {
-    self.width = Int(image.extent.width.rounded(.up))
-    self.height = Int(image.extent.height.rounded(.up))
+    width = Int(cgSize.width.rounded(.up))
+    height = Int(cgSize.height.rounded(.up))
   }
 
-  public var aspectRatio: CGSize {
-    .init(width: width, height: height)
+  public init(image: CIImage) {
+    width = Int(image.extent.width.rounded(.up))
+    height = Int(image.extent.height.rounded(.up))
   }
-  
+
+  public var aspectRatio: PixelAspectRatio {
+    .init(width: CGFloat(width), height: CGFloat(height))
+  }
+
   public var cgSize: CGSize {
     .init(width: width, height: height)
   }
 }
 
-public struct PixelPoint: Equatable  {
-  
+public struct PixelPoint: Equatable {
   public let x: Int
   public let y: Int
-  
+
   public init(x: Int, y: Int) {
     self.x = x
     self.y = y
   }
-  
+
   public init(cgPoint: CGPoint) {
-    self.x = Int(cgPoint.x.rounded(.up))
-    self.y = Int(cgPoint.y.rounded(.up))
+    x = Int(cgPoint.x.rounded(.up))
+    y = Int(cgPoint.y.rounded(.up))
   }
-  
+
   public var cgPoint: CGPoint {
     .init(x: x, y: y)
   }
-    
 }
 
 public struct PixelRect: Equatable {
-
   public let origin: PixelPoint
   public let size: PixelSize
-  
+
   public init(cgRect: CGRect) {
     self.init(origin: .init(cgPoint: cgRect.origin), size: .init(cgSize: cgRect.size))
   }
@@ -154,9 +143,42 @@ public struct PixelRect: Equatable {
     self.origin = origin
     self.size = size
   }
-  
+
   public var cgRect: CGRect {
     .init(origin: origin.cgPoint, size: size.cgSize)
   }
-  
+}
+
+public struct PixelAspectRatio: Equatable {
+  public let width: CGFloat
+  public let height: CGFloat
+
+  public init(width: CGFloat, height: CGFloat) {
+    self.width = width
+    self.height = height
+  }
+
+  public init(_ cgSize: CGSize) {
+    self.init(width: cgSize.width, height: cgSize.height)
+  }
+
+  public func height(forWidth: CGFloat) -> CGFloat {
+    forWidth * (height / width)
+  }
+
+  public func width(forHeight: CGFloat) -> CGFloat {
+    forHeight * (width / height)
+  }
+
+  public func size(byWidth: CGFloat) -> CGSize {
+    CGSize(width: byWidth, height: height(forWidth: byWidth))
+  }
+
+  public func size(byHeight: CGFloat) -> CGSize {
+    CGSize(width: width(forHeight: byHeight), height: byHeight)
+  }
+
+  public func asCGSize() -> CGSize {
+    .init(width: width, height: height)
+  }
 }
