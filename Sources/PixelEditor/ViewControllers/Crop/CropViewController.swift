@@ -61,6 +61,7 @@ enum _Crop {
         
     struct State: Equatable {
       var proposedCropAndRotate: CropAndRotate?
+      var frame: CGRect = .zero
     }
                 
     /**
@@ -119,20 +120,22 @@ enum _Crop {
         
         guard let self = self else { return }
         
-        state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
-          
+        state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
+                              
+          self.layoutIfNeeded()
+
+          // TODO: switch whether it runs animation 
           UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
             if let cropAndRotate = cropAndRotate {
               self.updateScrollViewFrame(by: cropAndRotate)
               self.updateScrollViewZoomScale(by: cropAndRotate)
+              self.layoutIfNeeded()
             } else {
               // TODO: consider needs to do something
             }
           }
           .startAnimation()
-          
-        
-                  
+                                    
         }
                        
       }
@@ -176,16 +179,14 @@ enum _Crop {
     
     override func layoutSubviews() {
       super.layoutSubviews()
-            
-      if scrollViewOldSize != scrollView.bounds.size {
-        scrollViewOldSize = scrollView.bounds.size
-        guideContainerView.frame = scrollView.frame
-        guideView.frame = guideContainerView.bounds
-        store.state.proposedCropAndRotate.map {
-          updateScrollViewFrame(by: $0)
-          updateScrollViewZoomScale(by: $0)
-        }
+      
+      store.commit {
+        $0.frame = frame
       }
+            
+      scrollViewOldSize = scrollView.bounds.size
+      guideContainerView.frame = scrollView.frame
+      guideView.frame = guideContainerView.bounds
     }
     
     func setImage(_ image: CIImage) {
@@ -604,6 +605,11 @@ enum _Crop {
     }
     
     private func initialize() {
+      if #available(iOS 11.0, *) {
+        contentInsetAdjustmentBehavior = .never
+      } else {
+        // Fallback on earlier versions
+      }
       showsVerticalScrollIndicator = false
       showsHorizontalScrollIndicator = false
       bouncesZoom = true
