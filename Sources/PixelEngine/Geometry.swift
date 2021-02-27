@@ -93,14 +93,22 @@ public struct PixelSize: Equatable {
     self.height = height
   }
 
+  /**
+   Creates an instance from CGPoint.
+   The values would be rounded.
+   */
   public init(cgSize: CGSize) {
-    width = Int(cgSize.width.rounded(.up))
-    height = Int(cgSize.height.rounded(.up))
+    width = Int(cgSize.width.rounded(.down))
+    height = Int(cgSize.height.rounded(.down))
   }
 
+  /**
+   Creates an instance from CGPoint.
+   The values would be rounded.
+   */
   public init(image: CIImage) {
-    width = Int(image.extent.width.rounded(.up))
-    height = Int(image.extent.height.rounded(.up))
+    width = Int(image.extent.width.rounded(.down))
+    height = Int(image.extent.height.rounded(.down))
   }
 
   public var aspectRatio: PixelAspectRatio {
@@ -121,9 +129,13 @@ public struct PixelPoint: Equatable {
     self.y = y
   }
 
+  /**
+   Creates an instance from CGPoint.
+   The values would be rounded.
+   */
   public init(cgPoint: CGPoint) {
-    x = Int(cgPoint.x.rounded(.up))
-    y = Int(cgPoint.y.rounded(.up))
+    x = Int(cgPoint.x.rounded(.down))
+    y = Int(cgPoint.y.rounded(.down))
   }
 
   public var cgPoint: CGPoint {
@@ -135,6 +147,10 @@ public struct PixelRect: Equatable {
   public let origin: PixelPoint
   public let size: PixelSize
 
+  /**
+   Creates an instance from CGPoint.
+   The values would be rounded.
+   */
   public init(cgRect: CGRect) {
     self.init(origin: .init(cgPoint: cgRect.origin), size: .init(cgSize: cgRect.size))
   }
@@ -195,8 +211,8 @@ public struct PixelAspectRatio: Equatable {
     }
     
     return CGSize(
-      width: size.width.rounded(.up),
-      height: size.height.rounded(.up)
+      width: size.width.rounded(.down),
+      height: size.height.rounded(.down)
     )
     
   }

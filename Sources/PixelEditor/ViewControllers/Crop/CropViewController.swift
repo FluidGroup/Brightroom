@@ -82,6 +82,11 @@ enum _Crop {
     
     private var subscriptions = Set<VergeAnyCancellable>()
     
+    /// A throttling timer to apply guide changed event.
+    ///
+    /// This's waiting for Combine availability in minimum iOS Version.
+    private let throttle = Debounce(interval: 1)
+    
     init() {
       super.init(frame: .zero)
       
@@ -92,6 +97,16 @@ enum _Crop {
       imageView.isUserInteractionEnabled = true
       scrollView.addSubview(imageView)
       scrollView.delegate = self
+      
+      guideView.didChange = { [weak self] in
+        guard let self = self else { return }
+        self.didChangeGuideViewWithDelay()
+      }
+      
+      guideView.willChange = { [weak self] in
+        guard let self = self else { return }
+        self.willChangeGuideView()
+      }
       
       #if DEBUG
       store.sinkState { (state) in
@@ -106,12 +121,17 @@ enum _Crop {
         
         state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
           
-          if let cropAndRotate = cropAndRotate {
-            self.updateScrollViewFrame(by: cropAndRotate)
-            self.updateScrollViewZoomScale(by: cropAndRotate)
-          } else {
-            // TODO: consider needs to do something
+          UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+            if let cropAndRotate = cropAndRotate {
+              self.updateScrollViewFrame(by: cropAndRotate)
+              self.updateScrollViewZoomScale(by: cropAndRotate)
+            } else {
+              // TODO: consider needs to do something
+            }
           }
+          .startAnimation()
+          
+        
                   
         }
                        
@@ -252,29 +272,51 @@ enum _Crop {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
       if !decelerate {
-        updateState()
+        didChangeScrollView()
       }
     }
     
     func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-      updateState()
+      didChangeScrollView()
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-      updateState()
+      didChangeScrollView()
     }
     
     @inline(__always)
-    private func updateState() {
+    private func willChangeGuideView() {
+      throttle.on { /* for debounce */ }
+    }
+    
+    @inline(__always)
+    private func didChangeGuideViewWithDelay() {
+      
+      throttle.on { [weak self] in
+        
+        guard let self = self else { return }
+        
+        self.store.commit {
+          let rect = self.guideView.convert(self.guideView.bounds, to: self.imageView)
+          if var crop = $0.proposedCropAndRotate {
+            crop.cropRect = .init(cgRect: rect)
+            $0.proposedCropAndRotate = crop
+          } else {
+            assertionFailure()
+          }
+        }
+        
+      }
+           
+    }
+        
+    @inline(__always)
+    private func didChangeScrollView() {
       
       store.commit {
         
-        var rect = scrollView.convert(scrollView.bounds, to: imageView)
-        rect.origin.x.round(.up)
-        rect.origin.y.round(.up)
-        rect.size.width.round(.up)
-        rect.size.height.round(.up)
-        
+        let rect = scrollView.convert(scrollView.bounds, to: imageView)
+            
         if var crop = $0.proposedCropAndRotate {
           crop.cropRect = .init(cgRect: rect)
           $0.proposedCropAndRotate = crop
@@ -288,6 +330,9 @@ enum _Crop {
     
   }
   
+  /**
+   A container view to layout the crop guide view.
+   */
   private final class GuideContainerView: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
@@ -298,14 +343,17 @@ enum _Crop {
     }
   }
   
-  class CropGuideView: UIView, UIGestureRecognizerDelegate {
+  open class CropGuideView: UIView, UIGestureRecognizerDelegate {
+    
+    var willChange: () -> Void = {}
+    var didChange: () -> Void = {}
     
     private let topLeftControlPointView = UIView()
     private let topRightControlPointView = UIView()
     private let bottomLeftControlPointView = UIView()
     private let bottomRightControlPointView = UIView()
     
-    init() {
+    public init() {
       super.init(frame: .zero)
       
       [
@@ -363,15 +411,15 @@ enum _Crop {
     }
     
     @available(*, unavailable)
-    required init?(coder: NSCoder) {
+    public required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
     
-    override func layoutSubviews() {
+    open override func layoutSubviews() {
       super.layoutSubviews()
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    open override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
       
       if view == self {
@@ -381,7 +429,7 @@ enum _Crop {
       return view
     }
     
-    override func didMoveToSuperview() {
+    open override func didMoveToSuperview() {
       super.didMoveToSuperview()
       
       if let superview = superview {
@@ -408,7 +456,10 @@ enum _Crop {
     private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
             
       switch gesture.state {
-      case .began, .changed:
+      case .began:
+        willChange()
+        fallthrough
+      case .changed:
         let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
@@ -426,6 +477,8 @@ enum _Crop {
         
         frame = nextFrame
         
+      case .cancelled, .ended:
+        didChange()
       default:
         break
       }
@@ -436,7 +489,10 @@ enum _Crop {
     private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
             
       switch gesture.state {
-      case .began, .changed:
+      case .began:
+        willChange()
+        fallthrough
+      case .changed:
         let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
@@ -453,6 +509,9 @@ enum _Crop {
         
         frame = nextFrame
         
+      case .cancelled, .ended:
+        didChange()
+        
       default:
         break
       }
@@ -463,7 +522,10 @@ enum _Crop {
     private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
             
       switch gesture.state {
-      case .began, .changed:
+      case .began:
+        willChange()
+        fallthrough
+      case .changed:
         let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
@@ -479,6 +541,8 @@ enum _Crop {
         CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
         
         frame = nextFrame
+      case .cancelled, .ended:
+        didChange()
       default:
         break
       }
@@ -489,7 +553,10 @@ enum _Crop {
     private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
       
       switch gesture.state {
-      case .began, .changed:
+      case .began:
+        willChange()
+        fallthrough
+      case .changed:
         let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
@@ -504,7 +571,8 @@ enum _Crop {
         CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
         
         frame = nextFrame
-
+      case .cancelled, .ended:
+        didChange()
       default:
         break
       }
@@ -591,4 +659,43 @@ extension CropAndRotate {
   }
   
   
+}
+
+final class Debounce {
+  
+  private var timerReference: DispatchSourceTimer?
+  
+  let interval: TimeInterval
+  let queue: DispatchQueue
+  
+  private var lastSendTime: Date?
+  
+  init(interval: TimeInterval, queue: DispatchQueue = .main) {
+    self.interval = interval
+    self.queue = queue
+  }
+  
+  func on(handler: @escaping () -> Void) {
+          
+    let deadline = DispatchTime.now() + DispatchTimeInterval.milliseconds(Int(interval * 1000.0))
+    
+    timerReference?.cancel()
+    
+    let timer = DispatchSource.makeTimerSource(queue: queue)
+    timer.schedule(deadline: deadline)
+    
+    timer.setEventHandler(handler: { [weak timer, weak self] in
+      self?.lastSendTime = nil
+      handler()
+      timer?.cancel()
+      self?.timerReference = nil
+    })
+    timer.resume()
+    
+    timerReference = timer
+  }
+  
+  func cancel() {
+    timerReference = nil
+  }
 }
