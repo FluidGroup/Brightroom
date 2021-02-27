@@ -63,8 +63,18 @@ enum _Crop {
       var proposedCropAndRotate: CropAndRotate?
     }
                 
+    /**
+     An image view that displayed in the scroll view.
+     */
     private let imageView = UIImageView()
     private let scrollView = CropScrollView()
+    
+    private let guideContainerView = GuideContainerView()
+    
+    /**
+     a guide view that displayed on guide container view.
+     */
+    private let guideView = ExampleCropGuideView()
     
     private var scrollViewOldSize: CGSize?
     
@@ -76,6 +86,8 @@ enum _Crop {
       super.init(frame: .zero)
       
       addSubview(scrollView)
+      addSubview(guideContainerView)
+      guideContainerView.addSubview(guideView)
       
       imageView.isUserInteractionEnabled = true
       scrollView.addSubview(imageView)
@@ -147,6 +159,8 @@ enum _Crop {
             
       if scrollViewOldSize != scrollView.bounds.size {
         scrollViewOldSize = scrollView.bounds.size
+        guideContainerView.frame = scrollView.frame
+        guideView.frame = guideContainerView.bounds
         store.state.proposedCropAndRotate.map {
           updateScrollViewFrame(by: $0)
           updateScrollViewZoomScale(by: $0)
@@ -274,6 +288,240 @@ enum _Crop {
     
   }
   
+  private final class GuideContainerView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+      let view = super.hitTest(point, with: event)
+      if view == self {
+        return nil
+      }
+      return view
+    }
+  }
+  
+  class CropGuideView: UIView, UIGestureRecognizerDelegate {
+    
+    private let topLeftControlPointView = UIView()
+    private let topRightControlPointView = UIView()
+    private let bottomLeftControlPointView = UIView()
+    private let bottomRightControlPointView = UIView()
+    
+    init() {
+      super.init(frame: .zero)
+      
+      [
+        topLeftControlPointView,
+        topRightControlPointView,
+        bottomLeftControlPointView,
+        bottomRightControlPointView,
+      ].forEach { view in
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+      }
+      
+      do {
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGestureInTopLeft(gesture:)))
+        topLeftControlPointView.addGestureRecognizer(panGesture)
+      }
+      
+      do {
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGestureInTopRight(gesture:)))
+        topRightControlPointView.addGestureRecognizer(panGesture)
+      }
+      
+      do {
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGestureInBottomLeft(gesture:)))
+        bottomLeftControlPointView.addGestureRecognizer(panGesture)
+      }
+      
+      do {
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGestureInBottomRight(gesture:)))
+        bottomRightControlPointView.addGestureRecognizer(panGesture)
+      }
+      
+      NSLayoutConstraint.activate([
+        topLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        topLeftControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topLeftControlPointView.heightAnchor.constraint(equalToConstant: 20),
+        topLeftControlPointView.widthAnchor.constraint(equalToConstant: 20),
+        
+        topRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        topRightControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topRightControlPointView.heightAnchor.constraint(equalToConstant: 20),
+        topRightControlPointView.widthAnchor.constraint(equalToConstant: 20),
+        
+        bottomLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        bottomLeftControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomLeftControlPointView.heightAnchor.constraint(equalToConstant: 20),
+        bottomLeftControlPointView.widthAnchor.constraint(equalToConstant: 20),
+        
+        bottomRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        bottomRightControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomRightControlPointView.heightAnchor.constraint(equalToConstant: 20),
+        bottomRightControlPointView.widthAnchor.constraint(equalToConstant: 20),
+      ])
+      
+    }
+    
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+      fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+      super.layoutSubviews()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+      let view = super.hitTest(point, with: event)
+      
+      if view == self {
+        return nil
+      }
+      
+      return view
+    }
+    
+    override func didMoveToSuperview() {
+      super.didMoveToSuperview()
+      
+      if let superview = superview {
+        assert(superview is GuideContainerView)
+      }
+    }
+    
+    private static func postprocess(proposedFrame: inout CGRect, currentFrame: CGRect, in maximumRect: CGRect) {
+            
+      if proposedFrame.width < 100 {
+        proposedFrame.origin.x = currentFrame.origin.x
+        proposedFrame.size.width = currentFrame.size.width
+      }
+      
+      if proposedFrame.height < 100 {
+        proposedFrame.origin.y = currentFrame.origin.y
+        proposedFrame.size.height = currentFrame.size.height
+      }
+      
+      proposedFrame = proposedFrame.intersection(maximumRect)
+    }
+    
+    @objc
+    private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
+            
+      switch gesture.state {
+      case .began, .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.origin.x += translation.x
+        nextFrame.origin.y += translation.y
+        nextFrame.size.width -= translation.x
+        nextFrame.size.height -= translation.y
+          
+        CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
+        
+        frame = nextFrame
+        
+      default:
+        break
+      }
+      
+    }
+    
+    @objc
+    private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
+            
+      switch gesture.state {
+      case .began, .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.origin.y += translation.y
+        nextFrame.size.width += translation.x
+        nextFrame.size.height -= translation.y
+        
+        CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
+        
+        frame = nextFrame
+        
+      default:
+        break
+      }
+      
+    }
+    
+    @objc
+    private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
+            
+      switch gesture.state {
+      case .began, .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.origin.x += translation.x
+        nextFrame.size.width -= translation.x
+        nextFrame.size.height += translation.y
+        
+        CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
+        
+        frame = nextFrame
+      default:
+        break
+      }
+      
+    }
+    
+    @objc
+    private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
+      
+      switch gesture.state {
+      case .began, .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.size.width += translation.x
+        nextFrame.size.height += translation.y
+        
+        CropGuideView.postprocess(proposedFrame: &nextFrame, currentFrame: currentFrame, in: superview!.bounds)
+        
+        frame = nextFrame
+
+      default:
+        break
+      }
+      
+    }
+    
+  }
+  
+  final class ExampleCropGuideView: CropGuideView {
+    
+    override init() {
+      super.init()
+      
+      backgroundColor = .init(white: 0, alpha: 0.5)
+    }
+  }
+    
   final class CropScrollView: UIScrollView {
                            
     override init(frame: CGRect) {
