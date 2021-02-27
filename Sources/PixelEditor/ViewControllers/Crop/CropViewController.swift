@@ -62,11 +62,7 @@ enum _Crop {
     struct State: Equatable {
       var proposedCropAndRotate: CropAndRotate?
     }
-        
-    struct ScrollViewContentSizeDescriptor {
-      
-    }
-    
+                
     private let imageView = UIImageView()
     private let scrollView = CropScrollView()
     
@@ -130,8 +126,20 @@ enum _Crop {
     }
     
     private func updateScrollViewFrame(by cropAndRotate: CropAndRotate) {
-      let bounds = self.bounds.insetBy(dx: 20, dy: 20)
-      scrollView.frame = .init(origin: .init(x: 20, y: 20), size: cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size))
+      
+      let insets = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+      let bounds = self.bounds.inset(by: insets)
+      
+      let size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
+      
+      scrollView.frame = .init(
+        origin: .init(
+          x: insets.left + ((bounds.width - size.width) / 2) /* centering offset */,
+          y: insets.top + ((bounds.height - size.height) / 2) /* centering offset */
+        ),
+        size: size
+      )
+            
     }
     
     override func layoutSubviews() {
@@ -169,8 +177,20 @@ enum _Crop {
       setImage(image: _image)
       
     }
-        
-    func setImage(image: UIImage) {
+    
+    func setRotation() {
+      // FIXME
+    }
+            
+    func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
+      
+      store.commit {
+        $0.proposedCropAndRotate = cropAndRotate
+      }
+          
+    }
+      
+    private func setImage(image: UIImage) {
       
       guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
         assertionFailure("Call configureImageForSize before.")
@@ -182,42 +202,35 @@ enum _Crop {
       imageView.image = image
       
     }
-    
-    func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
-      
-      store.commit {
-        $0.proposedCropAndRotate = cropAndRotate
-      }
-          
-    }
-      
-    private func adjustFrameToCenter() {
-      
-      var frameToCenter = imageView.frame
-      
-      // center horizontally
-      if frameToCenter.size.width < scrollView.bounds.width {
-        frameToCenter.origin.x = (scrollView.bounds.width - frameToCenter.size.width) / 2
-      } else {
-        frameToCenter.origin.x = 0
-      }
-      
-      // center vertically
-      if frameToCenter.size.height < scrollView.bounds.height {
-        frameToCenter.origin.y = (scrollView.bounds.height - frameToCenter.size.height) / 2
-      } else {
-        frameToCenter.origin.y = 0
-      }
-      
-      imageView.frame = frameToCenter
-    }
-    
+           
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
       return imageView
     }
     
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-      adjustFrameToCenter()
+      
+      func adjustFrameToCenterOnZooming() {
+        
+        var frameToCenter = imageView.frame
+        
+        // center horizontally
+        if frameToCenter.size.width < scrollView.bounds.width {
+          frameToCenter.origin.x = (scrollView.bounds.width - frameToCenter.size.width) / 2
+        } else {
+          frameToCenter.origin.x = 0
+        }
+        
+        // center vertically
+        if frameToCenter.size.height < scrollView.bounds.height {
+          frameToCenter.origin.y = (scrollView.bounds.height - frameToCenter.size.height) / 2
+        } else {
+          frameToCenter.origin.y = 0
+        }
+        
+        imageView.frame = frameToCenter
+      }
+      
+      adjustFrameToCenterOnZooming()
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
