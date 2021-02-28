@@ -125,8 +125,7 @@ enum _Crop {
       public fileprivate(set) var proposedCropAndRotate: CropAndRotate?
       public fileprivate(set) var frame: CGRect = .zero
     }
-
-    public let scrollContainerView = UIView()
+    
     /**
      An image view that displayed in the scroll view.
      */
@@ -150,9 +149,8 @@ enum _Crop {
     public init() {
       super.init(frame: .zero)
 
-      addSubview(scrollContainerView)
-      scrollContainerView.addSubview(scrollView)
-      scrollContainerView.addSubview(guideView)
+      addSubview(scrollView)
+      addSubview(guideView)
 
       imageView.isUserInteractionEnabled = true
       scrollView.addSubview(imageView)
@@ -280,9 +278,9 @@ enum _Crop {
           size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
         }
 
-        scrollContainerView.transform = cropAndRotate.rotation.transform
+        scrollView.transform = cropAndRotate.rotation.transform
 
-        scrollContainerView.frame = .init(
+        scrollView.frame = .init(
           origin: .init(
             x: insets.left + ((bounds.width - size.width) / 2) /* centering offset */,
             y: insets.top + ((bounds.height - size.height) / 2) /* centering offset */
@@ -292,15 +290,14 @@ enum _Crop {
       }
       
       applyLayoutDescendants: do {
-        scrollView.frame = scrollContainerView.bounds
-        guideView.frame = scrollContainerView.bounds
+        guideView.frame = scrollView.frame
       }
 
       zoom: do {
         imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
         scrollView.contentSize = cropAndRotate.scrollViewContentSize()
 
-        let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollContainerView.bounds)
+        let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
 
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max
@@ -533,7 +530,7 @@ enum _Crop {
       proposedFrame: inout CGRect,
       currentFrame: CGRect
     ) {
-      
+            
       assert(self.maximumRect != nil)
       let maximumRect = self.maximumRect!
         
@@ -552,9 +549,12 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
+      
+      assert(containerView == superview)
+                
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: self)
+        maximumRect = imageView.convert(imageView.bounds, to: containerView)
         willChange()
         fallthrough
       case .changed:
@@ -562,7 +562,6 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -588,10 +587,12 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
+      
+      assert(containerView == superview)
+      
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: self)
-
+        maximumRect = imageView.convert(imageView.bounds, to: containerView)
         willChange()
         fallthrough
       case .changed:
@@ -599,7 +600,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-
+                       
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -625,10 +626,12 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
+      
+      assert(containerView == superview)
+
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: self)
-
+        maximumRect = imageView.convert(imageView.bounds, to: containerView)
         willChange()
         fallthrough
       case .changed:
@@ -636,7 +639,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-
+            
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -660,10 +663,12 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
+      
+      assert(containerView == superview)
+
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: self)
-
+        maximumRect = imageView.convert(imageView.bounds, to: containerView)
         willChange()
         fallthrough
       case .changed:
@@ -671,7 +676,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-
+            
         let currentFrame = frame
         var nextFrame = currentFrame
 
