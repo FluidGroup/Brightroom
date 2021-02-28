@@ -543,8 +543,13 @@ enum _Crop {
         proposedFrame.origin.y = currentFrame.origin.y
         proposedFrame.size.height = currentFrame.size.height
       }
-
       proposedFrame = proposedFrame.intersection(maximumRect)
+    }
+    
+    @inline(__always)
+    private func updateMaximumRect() {
+      maximumRect = imageView.convert(imageView.bounds, to: containerView)
+        .intersection(containerView.frame.insetBy(dx: 20, dy: 20))
     }
 
     @objc
@@ -554,7 +559,7 @@ enum _Crop {
                 
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: containerView)
+        updateMaximumRect()
         willChange()
         fallthrough
       case .changed:
@@ -592,7 +597,7 @@ enum _Crop {
       
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: containerView)
+        updateMaximumRect()
         willChange()
         fallthrough
       case .changed:
@@ -631,7 +636,7 @@ enum _Crop {
 
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: containerView)
+        updateMaximumRect()
         willChange()
         fallthrough
       case .changed:
@@ -668,7 +673,7 @@ enum _Crop {
 
       switch gesture.state {
       case .began:
-        maximumRect = imageView.convert(imageView.bounds, to: containerView)
+        updateMaximumRect()
         willChange()
         fallthrough
       case .changed:
