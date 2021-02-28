@@ -39,4 +39,13 @@ final class DemoCropViewController: UIViewController {
     
     present(controller, animated: true, completion: nil)
   }
+  
+  @IBAction func onTapSuperSmall(_ sender: Any) {
+    
+    let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
+    stack.start()
+    let controller = CropViewController(editingStack: stack)
+    
+    present(controller, animated: true, completion: nil)
+  }
 }

@@ -24,6 +24,10 @@ enum Mocks {
     UIImage(named: "square-rect")!
   }
   
+  static func imageSuperSmall() -> UIImage {
+    UIImage(named: "super-small")!
+  }
+  
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
       source: .init(image: image),
