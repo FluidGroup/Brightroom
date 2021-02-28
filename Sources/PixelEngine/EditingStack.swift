@@ -217,7 +217,7 @@ open class EditingStack: Equatable, StoreComponentType {
           
           assert(_cropRect.imageSize == .init(image: targetImage))
           
-          var cropRect = _cropRect.cropRect.cgRect
+          var cropRect = _cropRect.cropExtent.cgRect
           
           cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
           
@@ -367,7 +367,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.cropAndRotate.cropRect?.cropRect.cgRect
+    renderer.edit.croppingRect = edit.cropAndRotate.cropRect?.cropExtent.cgRect
     renderer.edit.drawer = [
       BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]

@@ -114,7 +114,7 @@ public struct PixelSize: Equatable {
   public var aspectRatio: PixelAspectRatio {
     .init(width: CGFloat(width), height: CGFloat(height))
   }
-
+  
   public var cgSize: CGSize {
     .init(width: width, height: height)
   }
@@ -196,6 +196,10 @@ public struct PixelAspectRatio: Equatable {
 
   public func asCGSize() -> CGSize {
     .init(width: width, height: height)
+  }
+    
+  public func swapped() -> PixelAspectRatio {
+    .init(width: height, height: width)
   }
   
   public func sizeThatFits(in boundingSize: CGSize) -> CGSize {

@@ -33,77 +33,108 @@ import Photos
 #endif
 
 public struct EditingImage: Equatable {
-    
   let image: CIImage
   let isEditable: Bool
-  
 }
 
 public struct CropAndRotate: Equatable {
-
-  public var imageSize: PixelSize
-  public var cropRect: PixelRect
-
-  public init(imageSize: PixelSize, cropRect: PixelRect) {
-    self.imageSize = imageSize
-    self.cropRect = cropRect
-  }
-  
-  public var aspectRatio: PixelAspectRatio {
-    cropRect.size.aspectRatio
-  }
+  public enum Rotation: Equatable {
     
+    /// 0 degree
+    case angle_0
+    
+    /// 90 degree
+    case angle_90
+    
+    /// 180 degree
+    case angle_180
+    
+    /// 270 degree
+    case angle_270
+
+    public var transform: CGAffineTransform {
+      switch self {
+      case .angle_0:
+        return .identity
+      case .angle_90:
+        return .init(rotationAngle: CGFloat.pi / 2)
+      case .angle_180:
+        return .init(rotationAngle: CGFloat.pi)
+      case .angle_270:
+        return .init(rotationAngle: CGFloat.pi + (CGFloat.pi / 2))
+      }
+    }
+  }
+
+  /// The dimensions in pixel for the image.
+  public var imageSize: PixelSize
+  
+  /// The rectangle that specifies the extent of the cropping.
+  public var cropExtent: PixelRect
+  
+  /// The angle that specifies rotation for the image.
+  public var rotation: Rotation = .angle_0
+
+  public init(imageSize: PixelSize, cropRect: PixelRect, rotation: Rotation = .angle_0) {
+    self.imageSize = imageSize
+    self.cropExtent = cropRect
+    self.rotation = rotation
+  }
+
+  /**
+   Returns aspect ratio.
+   Would not be affected by rotation.
+   */
+  public var aspectRatio: PixelAspectRatio {
+    cropExtent.size.aspectRatio
+  }
 }
 
 /**
  A stateful object that provides multiple image for EditingStack.
  */
 public final class ImageProvider: Equatable, StoreComponentType {
-  
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }
-    
+
   public struct State: Equatable {
     public fileprivate(set) var currentImage: EditingImage?
     public let imageSize: PixelSize
   }
-  
+
   public let store: DefaultStore
-  
+
   private var pendingAction: (ImageProvider) -> Void
 
   #if os(iOS)
-  
+
   public convenience init(image uiImage: UIImage) {
-    
     let image = CIImage(image: uiImage)!
     let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(uiImage.imageOrientation))
-    
+
     self.init(image: fixedOriantationImage)
   }
-  
+
   #endif
-  
+
   public init(image: CIImage) {
-    
     precondition(image.extent.origin == .zero)
-    self.store = .init(
+    store = .init(
       initialState: .init(
         currentImage: .init(image: image, isEditable: true),
         imageSize: .init(width: Int(image.extent.size.width), height: Int(image.extent.size.height))
       )
     )
-    self.pendingAction = { _ in }
+    pendingAction = { _ in }
   }
-  
+
   #if canImport(Photos)
-  
+
   public init(asset: PHAsset) {
-        
-    //TODO cancellation, Error handeling
-    
-    self.store = .init(
+    // TODO: cancellation, Error handeling
+
+    store = .init(
       initialState: .init(
         currentImage: nil,
         imageSize: .init(
@@ -112,55 +143,62 @@ public final class ImageProvider: Equatable, StoreComponentType {
         )
       )
     )
-        
-    self.pendingAction = { `self` in
-      
+
+    pendingAction = { `self` in
+
       let previewRequestOptions = PHImageRequestOptions()
       previewRequestOptions.deliveryMode = .highQualityFormat
       previewRequestOptions.isNetworkAccessAllowed = true
       previewRequestOptions.version = .current
       previewRequestOptions.resizeMode = .fast
-      
+
       let finalImageRequestOptions = PHImageRequestOptions()
       finalImageRequestOptions.deliveryMode = .highQualityFormat
       finalImageRequestOptions.isNetworkAccessAllowed = true
       finalImageRequestOptions.version = .current
       finalImageRequestOptions.resizeMode = .none
-      
-      PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 360, height: 360), contentMode: .aspectFit, options: previewRequestOptions) { [weak self] (image, _) in
-        
+
+      PHImageManager.default().requestImage(
+        for: asset,
+        targetSize: CGSize(width: 360, height: 360),
+        contentMode: .aspectFit,
+        options: previewRequestOptions
+      ) { [weak self] image, _ in
+
         guard let image = image, let self = self else { return }
         let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-        
+
         self.commit {
           $0.currentImage = .init(image: ciImage, isEditable: false)
         }
       }
-      
-      PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: finalImageRequestOptions) { [weak self] (image, _) in
-        
+
+      PHImageManager.default().requestImage(
+        for: asset,
+        targetSize: PHImageManagerMaximumSize,
+        contentMode: .aspectFit,
+        options: finalImageRequestOptions
+      ) { [weak self] image, _ in
+
         guard let image = image, let self = self else { return }
         let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-        
+
         self.commit {
           $0.currentImage = .init(image: ciImage, isEditable: true)
         }
       }
-      
     }
-    
   }
-  
+
   #endif
-  
+
   func start() {
     pendingAction(self)
   }
-  
 }
 
-fileprivate func imageOrientationToTiffOrientation(_ value: UIImage.Orientation) -> Int32 {
-  switch value{
+private func imageOrientationToTiffOrientation(_ value: UIImage.Orientation) -> Int32 {
+  switch value {
   case .up:
     return 1
   case .down:

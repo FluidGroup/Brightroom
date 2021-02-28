@@ -112,7 +112,7 @@ final class CropAndStraightenView: UIView {
     // TODO:
     imageView.zoomScale = 1
     
-    imageView.zoom(to: proposedCropAndRotate.cropRect.cgRect, animated: false)
+    imageView.zoom(to: proposedCropAndRotate.cropExtent.cgRect, animated: false)
   }
    
 }
