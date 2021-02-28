@@ -99,8 +99,8 @@ public enum ImageTool {
         }
 
         let r = resizedImage.transformed(by: .init(
-          translationX: (originalExtent.origin.x * scaleX).rounded(.down),
-          y: (originalExtent.origin.y * scaleY).rounded(.down)
+          translationX: (originalExtent.origin.x * scaleX).rounded(.up),
+          y: (originalExtent.origin.y * scaleY).rounded(.up)
         )
         )
 

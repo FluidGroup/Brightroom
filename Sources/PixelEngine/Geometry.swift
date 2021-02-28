@@ -98,8 +98,8 @@ public struct PixelSize: Equatable {
    The values would be rounded.
    */
   public init(cgSize: CGSize) {
-    width = Int(cgSize.width.rounded(.down))
-    height = Int(cgSize.height.rounded(.down))
+    width = Int(cgSize.width.rounded(.up))
+    height = Int(cgSize.height.rounded(.up))
   }
 
   /**
@@ -107,8 +107,8 @@ public struct PixelSize: Equatable {
    The values would be rounded.
    */
   public init(image: CIImage) {
-    width = Int(image.extent.width.rounded(.down))
-    height = Int(image.extent.height.rounded(.down))
+    width = Int(image.extent.width.rounded(.up))
+    height = Int(image.extent.height.rounded(.up))
   }
 
   public var aspectRatio: PixelAspectRatio {
@@ -134,8 +134,8 @@ public struct PixelPoint: Equatable {
    The values would be rounded.
    */
   public init(cgPoint: CGPoint) {
-    x = Int(cgPoint.x.rounded(.down))
-    y = Int(cgPoint.y.rounded(.down))
+    x = Int(cgPoint.x.rounded(.up))
+    y = Int(cgPoint.y.rounded(.up))
   }
 
   public var cgPoint: CGPoint {
@@ -215,8 +215,8 @@ public struct PixelAspectRatio: Equatable {
     }
     
     return CGSize(
-      width: size.width.rounded(.down),
-      height: size.height.rounded(.down)
+      width: size.width.rounded(.up),
+      height: size.height.rounded(.up)
     )
     
   }

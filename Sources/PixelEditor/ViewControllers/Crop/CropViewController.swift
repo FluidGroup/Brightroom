@@ -211,7 +211,9 @@ enum _Crop {
       super.layoutSubviews()
 
       store.commit {
-        $0.frame = frame
+        if $0.frame != frame {
+          $0.frame = frame
+        }
       }
     }
 
@@ -294,8 +296,14 @@ enum _Crop {
       }
 
       zoom: do {
+        UIView.performWithoutAnimation {
+          let currentZoomScale = scrollView.zoomScale
+          scrollView.zoomScale = 1
+          scrollView.contentSize = cropAndRotate.scrollViewContentSize()
+          scrollView.zoomScale = currentZoomScale
+        }
         imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
-        scrollView.contentSize = cropAndRotate.scrollViewContentSize()
+      
 
         let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
 
@@ -726,23 +734,10 @@ enum _Crop {
       bouncesZoom = true
       decelerationRate = UIScrollView.DecelerationRate.fast
       clipsToBounds = false
+      alwaysBounceVertical = true
+      alwaysBounceHorizontal = true
     }
 
-//    private func zoomRectForScale(_ scale: CGFloat, center: CGPoint) -> CGRect {
-//      var zoomRect = CGRect.zero
-//
-//      // the zoom rect is in the content view's coordinates.
-//      // at a zoom scale of 1.0, it would be the size of the imageScrollView's bounds.
-//      // as the zoom scale decreases, so more content is visible, the size of the rect grows.
-//      zoomRect.size.height = frame.size.height / scale
-//      zoomRect.size.width = frame.size.width / scale
-//
-//      // choose an origin so as to get the right center.
-//      zoomRect.origin.x = center.x - (zoomRect.size.width / 2.0)
-//      zoomRect.origin.y = center.y - (zoomRect.size.height / 2.0)
-//
-//      return zoomRect
-//    }
   }
 }
 
