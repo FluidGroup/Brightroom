@@ -39,7 +39,15 @@ public final class CropViewController: UIViewController {
         $0.setTitle("Rotate", for: .normal)
         $0.addTarget(self, action: #selector(handleRotateButton), for: .touchUpInside)
       }
+      
+      let resetButton = UIButton(type: .system)&>.do {
+        // TODO: Localize
+        $0.setTitle("Reset", for: .normal)
+        $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
+      }
+      
       $0.addArrangedSubview(rotateButton)
+      $0.addArrangedSubview(resetButton)
     }
 
     let bottomStackView = UIStackView()&>.do {
@@ -86,7 +94,7 @@ public final class CropViewController: UIViewController {
         $0.topAnchor.constraint(equalTo: containerView.bottomAnchor),
         $0.leftAnchor.constraint(equalTo: view.leftAnchor),
         $0.rightAnchor.constraint(equalTo: view.rightAnchor),
-        $0.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       ])
     }
 
@@ -112,6 +120,10 @@ public final class CropViewController: UIViewController {
     rotation.map {
       containerView.setRotation($0)
     }
+  }
+  
+  @objc private func handleResetButton() {
+    containerView.resetCropAndRotate()
   }
 
   @objc private func handleCancelButton() {}
@@ -228,7 +240,7 @@ enum _Crop {
       }
     }
 
-    func setImage(_ image: CIImage) {
+    public func setImage(_ image: CIImage) {
       let _image: UIImage
 
       if let cgImage = image.cgImage {
@@ -248,14 +260,20 @@ enum _Crop {
 
       setImage(image: _image)
     }
+    
+    public func resetCropAndRotate() {
+      store.commit {
+        $0.proposedCropAndRotate = $0.proposedCropAndRotate?.makeInitial()
+      }
+    }
 
-    func setRotation(_ rotation: CropAndRotate.Rotation) {
+    public func setRotation(_ rotation: CropAndRotate.Rotation) {
       store.commit {
         $0.proposedCropAndRotate?.rotation = rotation
       }
     }
 
-    func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
+    public func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
       store.commit {
         $0.proposedCropAndRotate = cropAndRotate
       }

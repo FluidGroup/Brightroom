@@ -89,6 +89,10 @@ public struct CropAndRotate: Equatable {
     self.cropExtent = cropRect
     self.rotation = rotation
   }
+  
+  public func makeInitial() -> Self {
+    .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
+  }
 
   /**
    Returns aspect ratio.

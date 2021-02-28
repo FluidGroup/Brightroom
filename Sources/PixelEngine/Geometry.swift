@@ -85,6 +85,11 @@ public enum Geometry {
  A structure that contains width and height that represent pixels.
  */
 public struct PixelSize: Equatable {
+  
+  public static var zero: Self {
+    .init(width: 0, height: 0)
+  }
+  
   public let width: Int
   public let height: Int
 
@@ -121,6 +126,11 @@ public struct PixelSize: Equatable {
 }
 
 public struct PixelPoint: Equatable {
+  
+  public static var zero: Self {
+    .init(x: 0, y: 0)
+  }
+  
   public let x: Int
   public let y: Int
 
