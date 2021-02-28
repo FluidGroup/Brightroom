@@ -136,7 +136,7 @@ enum _Crop {
     /**
      a guide view that displayed on guide container view.
      */
-    private let guideView = ExampleCropGuideView()
+    private lazy var guideView = CropGuideView(containerView: self, imageView: self.imageView)
 
     public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
 
@@ -157,6 +157,12 @@ enum _Crop {
       imageView.isUserInteractionEnabled = true
       scrollView.addSubview(imageView)
       scrollView.delegate = self
+      
+      let overlay = UIView()&>.do {
+        $0.backgroundColor = .init(white: 0, alpha: 0.7)
+      }
+      
+      guideView.setOverlay(overlay)
 
       guideView.didChange = { [weak self] in
         guard let self = self else { return }
@@ -402,7 +408,7 @@ enum _Crop {
     }
   }
  
-  open class CropGuideView: UIView, UIGestureRecognizerDelegate {
+  public final class CropGuideView: UIView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
 
@@ -410,8 +416,19 @@ enum _Crop {
     private let topRightControlPointView = UIView()
     private let bottomLeftControlPointView = UIView()
     private let bottomRightControlPointView = UIView()
+    
+    private weak var overlay: UIView?
+    
+    private unowned let containerView: CropView
+    private unowned let imageView: UIImageView
+    
+    private var maximumRect: CGRect?
 
-    public init() {
+    init(containerView: CropView, imageView: UIImageView) {
+      
+      self.containerView = containerView
+      self.imageView = imageView
+      
       super.init(frame: .zero)
 
       [
@@ -483,12 +500,26 @@ enum _Crop {
     public required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
-
-    override open func layoutSubviews() {
-      super.layoutSubviews()
+    
+    // MARK: - Functions
+    
+    public func setOverlay(_ newOverlay: UIView?) {
+      
+      self.overlay?.removeFromSuperview()
+      
+      if let overlay = newOverlay {
+        overlay.isUserInteractionEnabled = false
+        addSubview(overlay)
+        self.overlay = overlay
+      }
     }
 
-    override open func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    public override func layoutSubviews() {
+      super.layoutSubviews()
+      self.overlay?.frame = bounds
+    }
+
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
 
       if view == self {
@@ -498,11 +529,14 @@ enum _Crop {
       return view
     }
 
-    private static func postprocess(
+    private func postprocess(
       proposedFrame: inout CGRect,
-      currentFrame: CGRect,
-      in maximumRect: CGRect
+      currentFrame: CGRect
     ) {
+      
+      assert(self.maximumRect != nil)
+      let maximumRect = self.maximumRect!
+        
       if proposedFrame.width < 100 {
         proposedFrame.origin.x = currentFrame.origin.x
         proposedFrame.size.width = currentFrame.size.width
@@ -520,6 +554,7 @@ enum _Crop {
     private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
       switch gesture.state {
       case .began:
+        maximumRect = imageView.convert(imageView.bounds, to: self)
         willChange()
         fallthrough
       case .changed:
@@ -535,11 +570,10 @@ enum _Crop {
         nextFrame.origin.y += translation.y
         nextFrame.size.width -= translation.x
         nextFrame.size.height -= translation.y
-
-        CropGuideView.postprocess(
+                        
+        postprocess(
           proposedFrame: &nextFrame,
-          currentFrame: currentFrame,
-          in: superview!.bounds
+          currentFrame: currentFrame
         )
 
         frame = nextFrame
@@ -556,6 +590,8 @@ enum _Crop {
     private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
       switch gesture.state {
       case .began:
+        maximumRect = imageView.convert(imageView.bounds, to: self)
+
         willChange()
         fallthrough
       case .changed:
@@ -571,12 +607,11 @@ enum _Crop {
         nextFrame.size.width += translation.x
         nextFrame.size.height -= translation.y
 
-        CropGuideView.postprocess(
+        postprocess(
           proposedFrame: &nextFrame,
-          currentFrame: currentFrame,
-          in: superview!.bounds
+          currentFrame: currentFrame
         )
-
+        
         frame = nextFrame
 
       case .cancelled,
@@ -592,6 +627,8 @@ enum _Crop {
     private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
       switch gesture.state {
       case .began:
+        maximumRect = imageView.convert(imageView.bounds, to: self)
+
         willChange()
         fallthrough
       case .changed:
@@ -607,10 +644,9 @@ enum _Crop {
         nextFrame.size.width -= translation.x
         nextFrame.size.height += translation.y
 
-        CropGuideView.postprocess(
+        postprocess(
           proposedFrame: &nextFrame,
-          currentFrame: currentFrame,
-          in: superview!.bounds
+          currentFrame: currentFrame
         )
 
         frame = nextFrame
@@ -626,6 +662,8 @@ enum _Crop {
     private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
       switch gesture.state {
       case .began:
+        maximumRect = imageView.convert(imageView.bounds, to: self)
+
         willChange()
         fallthrough
       case .changed:
@@ -640,10 +678,9 @@ enum _Crop {
         nextFrame.size.width += translation.x
         nextFrame.size.height += translation.y
 
-        CropGuideView.postprocess(
+        postprocess(
           proposedFrame: &nextFrame,
-          currentFrame: currentFrame,
-          in: superview!.bounds
+          currentFrame: currentFrame
         )
 
         frame = nextFrame
@@ -653,14 +690,6 @@ enum _Crop {
       default:
         break
       }
-    }
-  }
-
-  final class ExampleCropGuideView: CropGuideView {
-    override init() {
-      super.init()
-
-      backgroundColor = .init(white: 0, alpha: 0.5)
     }
   }
 
@@ -686,6 +715,7 @@ enum _Crop {
       showsHorizontalScrollIndicator = false
       bouncesZoom = true
       decelerationRate = UIScrollView.DecelerationRate.fast
+      clipsToBounds = false
     }
 
 //    private func zoomRectForScale(_ scale: CGFloat, center: CGPoint) -> CGRect {
