@@ -108,7 +108,10 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleRotateButton() {
-    containerView.setRotation(.angle_90)
+    let rotation = containerView.store.state.proposedCropAndRotate?.rotation.next()
+    rotation.map {
+      containerView.setRotation($0)
+    }
   }
 
   @objc private func handleCancelButton() {}
@@ -124,8 +127,9 @@ enum _Crop {
     public struct State: Equatable {
       public fileprivate(set) var proposedCropAndRotate: CropAndRotate?
       public fileprivate(set) var frame: CGRect = .zero
+      fileprivate var hasLoaded = false
     }
-    
+
     /**
      An image view that displayed in the scroll view.
      */
@@ -155,11 +159,11 @@ enum _Crop {
       imageView.isUserInteractionEnabled = true
       scrollView.addSubview(imageView)
       scrollView.delegate = self
-      
+
       let overlay = UIView()&>.do {
         $0.backgroundColor = .init(white: 0, alpha: 0.7)
       }
-      
+
       guideView.setOverlay(overlay)
 
       guideView.didChange = { [weak self] in
@@ -179,24 +183,23 @@ enum _Crop {
       .store(in: &subscriptions)
       #endif
 
-      store.sinkState(queue: .asyncMain) { [weak self] state in
+      store.sinkState(queue: .mainIsolated()) { [weak self] state in
 
         guard let self = self else { return }
 
         state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
+          
+          guard frame != .zero else { return }
 
-          self.layoutIfNeeded()
-
-          // TODO: switch whether it runs animation
-          UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
-            if let cropAndRotate = cropAndRotate {
-              self.updateScrollContainerView(by: cropAndRotate)
-              self.layoutIfNeeded()
-            } else {
-              // TODO: consider needs to do something
-            }
+          if let cropAndRotate = cropAndRotate {
+            self.updateScrollContainerView(
+              by: cropAndRotate,
+              animated: state.hasLoaded,
+              animatesRotation: state.hasChanges(\.proposedCropAndRotate?.rotation)
+            )
+          } else {
+            // TODO:
           }
-          .startAnimation()
         }
       }
       .store(in: &subscriptions)
@@ -214,6 +217,14 @@ enum _Crop {
         if $0.frame != frame {
           $0.frame = frame
         }
+      }
+    }
+
+    override public func didMoveToSuperview() {
+      super.didMoveToSuperview()
+
+      store.commit {
+        $0.hasLoaded = superview != nil
       }
     }
 
@@ -250,70 +261,102 @@ enum _Crop {
       }
     }
 
-    private func updateScrollContainerView(by cropAndRotate: CropAndRotate) {
-      
-      func getFrameWithoutTransform(from view: UIView) -> CGRect {
-        let center = view.center
-        let size = view.bounds.size
+    private func updateScrollContainerView(
+      by cropAndRotate: CropAndRotate,
+      animated: Bool,
+      animatesRotation: Bool
+    ) {
 
-        return CGRect(
-          x: center.x - size.width / 2,
-          y: center.y - size.height / 2,
-          width: size.width,
-          height: size.height
-        )
-      }
+      func perform() {
+        frame: do {
+          let insets = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+          let bounds = self.bounds.inset(by: insets)
 
-      frame: do {
-        let insets = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
-        let bounds = self.bounds.inset(by: insets)
+          let size: CGSize
+          switch cropAndRotate.rotation {
+          case .angle_0:
+            size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
+          case .angle_90:
+            size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          case .angle_180:
+            size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
+          case .angle_270:
+            size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          }
 
-        let size: CGSize
-        switch cropAndRotate.rotation {
-        case .angle_0:
-          size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
-        case .angle_90:
-          size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
-        case .angle_180:
-          size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
-        case .angle_270:
-          size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          scrollView.transform = cropAndRotate.rotation.transform
+
+          scrollView.frame = .init(
+            origin: .init(
+              x: insets.left + ((bounds.width - size.width) / 2) /* centering offset */,
+              y: insets.top + ((bounds.height - size.height) / 2) /* centering offset */
+            ),
+            size: size
+          )
         }
 
-        scrollView.transform = cropAndRotate.rotation.transform
+        applyLayoutDescendants: do {
+          guideView.frame = scrollView.frame
+        }
 
-        scrollView.frame = .init(
-          origin: .init(
-            x: insets.left + ((bounds.width - size.width) / 2) /* centering offset */,
-            y: insets.top + ((bounds.height - size.height) / 2) /* centering offset */
-          ),
-          size: size
-        )
-      }
-      
-      applyLayoutDescendants: do {
-        guideView.frame = scrollView.frame
+        zoom: do {
+          UIView.performWithoutAnimation {
+            let currentZoomScale = scrollView.zoomScale
+            scrollView.zoomScale = 1
+            scrollView.contentSize = cropAndRotate.scrollViewContentSize()
+            scrollView.zoomScale = currentZoomScale
+          }
+          imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
+
+          let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+
+          scrollView.minimumZoomScale = min
+          scrollView.maximumZoomScale = max
+
+          scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
+        }
       }
 
-      zoom: do {
+      if animated {
+        layoutIfNeeded()
+        
+        print("animate")
+        
+        if animatesRotation {
+                    
+          UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+            perform()
+          }
+          .startAnimation()
+                             
+          let animator = UIViewPropertyAnimator(duration: 0.12, dampingRatio: 1) {
+            self.guideView.alpha = 0
+          }
+           
+          animator.addCompletion { _ in
+            UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
+              self.guideView.alpha = 1
+            }
+            .startAnimation(afterDelay: 0.8)
+          }
+          
+          animator.startAnimation()
+            
+                                              
+        } else {
+          UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+            perform()
+            self.layoutIfNeeded()
+          }
+          .startAnimation()
+        }
+        
+      } else {
         UIView.performWithoutAnimation {
-          let currentZoomScale = scrollView.zoomScale
-          scrollView.zoomScale = 1
-          scrollView.contentSize = cropAndRotate.scrollViewContentSize()
-          scrollView.zoomScale = currentZoomScale
+          layoutIfNeeded()
+          perform()
         }
-        imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
-      
-
-        let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
-
-        scrollView.minimumZoomScale = min
-        scrollView.maximumZoomScale = max
-
-        scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
       }
-
-      
     }
 
     private func setImage(image: UIImage) {
@@ -412,7 +455,7 @@ enum _Crop {
       didChangeScrollView()
     }
   }
- 
+
   public final class CropGuideView: UIView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
@@ -421,19 +464,18 @@ enum _Crop {
     private let topRightControlPointView = UIView()
     private let bottomLeftControlPointView = UIView()
     private let bottomRightControlPointView = UIView()
-    
+
     private weak var overlay: UIView?
-    
+
     private unowned let containerView: CropView
     private unowned let imageView: UIImageView
-    
+
     private var maximumRect: CGRect?
 
     init(containerView: CropView, imageView: UIImageView) {
-      
       self.containerView = containerView
       self.imageView = imageView
-      
+
       super.init(frame: .zero)
 
       [
@@ -505,13 +547,12 @@ enum _Crop {
     public required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
-    
+
     // MARK: - Functions
-    
+
     public func setOverlay(_ newOverlay: UIView?) {
-      
-      self.overlay?.removeFromSuperview()
-      
+      overlay?.removeFromSuperview()
+
       if let overlay = newOverlay {
         overlay.isUserInteractionEnabled = false
         addSubview(overlay)
@@ -519,12 +560,12 @@ enum _Crop {
       }
     }
 
-    public override func layoutSubviews() {
+    override public func layoutSubviews() {
       super.layoutSubviews()
-      self.overlay?.frame = bounds
+      overlay?.frame = bounds
     }
 
-    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
 
       if view == self {
@@ -538,10 +579,9 @@ enum _Crop {
       proposedFrame: inout CGRect,
       currentFrame: CGRect
     ) {
-            
       assert(self.maximumRect != nil)
       let maximumRect = self.maximumRect!
-        
+
       if proposedFrame.width < 100 {
         proposedFrame.origin.x = currentFrame.origin.x
         proposedFrame.size.width = currentFrame.size.width
@@ -553,7 +593,7 @@ enum _Crop {
       }
       proposedFrame = proposedFrame.intersection(maximumRect)
     }
-    
+
     @inline(__always)
     private func updateMaximumRect() {
       maximumRect = imageView.convert(imageView.bounds, to: containerView)
@@ -562,9 +602,8 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
-      
       assert(containerView == superview)
-                
+
       switch gesture.state {
       case .began:
         updateMaximumRect()
@@ -582,7 +621,7 @@ enum _Crop {
         nextFrame.origin.y += translation.y
         nextFrame.size.width -= translation.x
         nextFrame.size.height -= translation.y
-                        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -600,9 +639,8 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
-      
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         updateMaximumRect()
@@ -613,7 +651,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-                       
+
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -625,7 +663,7 @@ enum _Crop {
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -639,7 +677,6 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
-      
       assert(containerView == superview)
 
       switch gesture.state {
@@ -652,7 +689,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-            
+
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -676,7 +713,6 @@ enum _Crop {
 
     @objc
     private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
-      
       assert(containerView == superview)
 
       switch gesture.state {
@@ -689,7 +725,7 @@ enum _Crop {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-            
+
         let currentFrame = frame
         var nextFrame = currentFrame
 
@@ -737,7 +773,6 @@ enum _Crop {
       alwaysBounceVertical = true
       alwaysBounceHorizontal = true
     }
-
   }
 }
 

@@ -38,9 +38,9 @@ public struct EditingImage: Equatable {
 }
 
 public struct CropAndRotate: Equatable {
-  public enum Rotation: Equatable {
+  public enum Rotation: Equatable, CaseIterable {
     
-    /// 0 degree
+    /// 0 degree - default
     case angle_0
     
     /// 90 degree
@@ -57,11 +57,20 @@ public struct CropAndRotate: Equatable {
       case .angle_0:
         return .identity
       case .angle_90:
-        return .init(rotationAngle: CGFloat.pi / 2)
+        return .init(rotationAngle: -CGFloat.pi / 2)
       case .angle_180:
-        return .init(rotationAngle: CGFloat.pi)
+        return .init(rotationAngle: -CGFloat.pi)
       case .angle_270:
-        return .init(rotationAngle: CGFloat.pi + (CGFloat.pi / 2))
+        return .init(rotationAngle: CGFloat.pi / 2)
+      }
+    }
+    
+    public func next() -> Self {
+      switch self {
+      case .angle_0: return .angle_90
+      case .angle_90: return .angle_180
+      case .angle_180: return .angle_270
+      case .angle_270: return .angle_0
       }
     }
   }
