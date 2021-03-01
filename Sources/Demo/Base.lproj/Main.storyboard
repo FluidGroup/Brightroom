@@ -373,31 +373,38 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="63u-oK-1mS">
-                                <rect key="frame" x="146.5" y="273.5" width="82" height="120"/>
+                                <rect key="frame" x="37.5" y="123.5" width="300" height="420"/>
                                 <subviews>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="PSe-lU-aWD">
+                                        <rect key="frame" x="0.0" y="0.0" width="300" height="300"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="300" id="92o-S0-aNc"/>
+                                            <constraint firstAttribute="width" constant="300" id="Jee-bO-kWU"/>
+                                        </constraints>
+                                    </imageView>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FPQ-MK-z49">
-                                        <rect key="frame" x="0.0" y="0.0" width="82" height="30"/>
+                                        <rect key="frame" x="0.0" y="300" width="300" height="30"/>
                                         <state key="normal" title="Horizontal"/>
                                         <connections>
                                             <action selector="onTapHorizontal:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="kP6-Wp-eER"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="dcd-QO-XWG">
-                                        <rect key="frame" x="0.0" y="30" width="82" height="30"/>
+                                        <rect key="frame" x="0.0" y="330" width="300" height="30"/>
                                         <state key="normal" title="Vertical"/>
                                         <connections>
                                             <action selector="onTapVertical:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="zKB-wh-ee3"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="ZH3-Kg-hN7">
-                                        <rect key="frame" x="0.0" y="60" width="82" height="30"/>
+                                        <rect key="frame" x="0.0" y="360" width="300" height="30"/>
                                         <state key="normal" title="Square"/>
                                         <connections>
                                             <action selector="onTapSquare:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="TDW-dr-SR5"/>
                                         </connections>
                                     </button>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="anB-tU-dgn">
-                                        <rect key="frame" x="0.0" y="90" width="82" height="30"/>
+                                        <rect key="frame" x="0.0" y="390" width="300" height="30"/>
                                         <state key="normal" title="Super Small"/>
                                         <connections>
                                             <action selector="onTapSuperSmall:" destination="Awu-Ec-Tz1" eventType="touchUpInside" id="PlH-5s-Aom"/>
@@ -414,6 +421,9 @@
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" id="MX0-Uj-CMV"/>
+                    <connections>
+                        <outlet property="previewImageView" destination="PSe-lU-aWD" id="YzX-BH-K2R"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="j6h-gc-SAe" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>

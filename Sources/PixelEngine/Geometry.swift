@@ -115,6 +115,11 @@ public struct PixelSize: Equatable {
     width = Int(image.extent.width.rounded(.up))
     height = Int(image.extent.height.rounded(.up))
   }
+  
+  public init(image: UIImage) {
+    width = Int((image.size.width * image.scale).rounded(.up))
+    height = Int((image.size.height * image.scale).rounded(.up))
+  }
 
   public var aspectRatio: PixelAspectRatio {
     .init(width: CGFloat(width), height: CGFloat(height))

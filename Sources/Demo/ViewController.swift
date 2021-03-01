@@ -43,7 +43,7 @@ class ViewController: UIViewController {
       path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
     )
 
-    engine.edit.croppingRect = CGRect(x: 0, y: 0, width: 400, height: 400)
+    engine.edit.croppingRect = .init(imageSize: .init(image: image), cropRect: .init(origin: .zero, size: .init(width: 400, height: 400)))
     engine.edit.drawer = [
       path,
       BlurredMask(paths: []),

@@ -12,12 +12,18 @@ import PixelEngine
 import Verge
 
 public final class CropViewController: UIViewController {
+  
+  public struct Handlers {
+    public var didFinish: () -> Void = {}
+  }
+  
   private let containerView: _Crop.CropView = .init()
 
   public let editingStack: EditingStack
+  public var handlers = Handlers()
 
   private var bag = Set<VergeAnyCancellable>()
-
+  
   public init(editingStack: EditingStack) {
     self.editingStack = editingStack
     super.init(nibName: nil, bundle: nil)
@@ -113,6 +119,17 @@ public final class CropViewController: UIViewController {
       }
     }
     .store(in: &bag)
+    
+    containerView.store.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.proposedCropAndRotate) { (cropAndRotate) in
+        guard let cropAndRotate = cropAndRotate else { return }
+        self.editingStack.crop(cropAndRotate)
+      }
+    }
+    .store(in: &bag)
   }
 
   @objc private func handleRotateButton() {
@@ -126,9 +143,13 @@ public final class CropViewController: UIViewController {
     containerView.resetCropAndRotate()
   }
 
-  @objc private func handleCancelButton() {}
+  @objc private func handleCancelButton() {
+    handlers.didFinish()
+  }
 
-  @objc private func handleDoneButton() {}
+  @objc private func handleDoneButton() {
+    handlers.didFinish()
+  }
 }
 
 enum _Crop {

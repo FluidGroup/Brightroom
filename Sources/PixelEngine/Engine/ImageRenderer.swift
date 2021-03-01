@@ -24,13 +24,15 @@ import CoreImage
 
 public final class ImageRenderer {
   
+  private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
+  
   public enum Resolution {
     case full
     case resize(boundingSize: CGSize)
   }
 
   public struct Edit {
-    public var croppingRect: CGRect?
+    public var croppingRect: CropAndRotate?
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
   }
@@ -42,24 +44,55 @@ public final class ImageRenderer {
   
   public let source: CIImage
 
-  public var edit: Edit = .init()
+  public var edit: Edit
 
   public init(source: CIImage) {
     self.source = source
+    self.edit = .init()
+  }
+  
+  public func asyncRender(resolution: Resolution = .full, completion: @escaping (UIImage) -> Void) {
+    type(of: self).queue.async {
+      let image = self.render()
+      DispatchQueue.main.async {
+        completion(image)
+      }
+    }
   }
 
   public func render(resolution: Resolution = .full) -> UIImage {
-    let resultImage: CIImage = {
+    
+    assert(
+      {
+        guard let crop = edit.croppingRect else { return true }
+        return crop.imageSize == PixelSize(image: source)
+      }())
+    
+    let croppedImage: CIImage = {
 
       let sourceImage: CIImage
-
-      if var croppingRect = edit.croppingRect {
-        croppingRect.origin.x.round(.up)
-        croppingRect.origin.y.round(.up)
-        croppingRect.size.width.round(.up)
-        croppingRect.size.height.round(.up)
-        croppingRect.origin.y = source.extent.height - croppingRect.minY - croppingRect.height
-        sourceImage = source.cropped(to: croppingRect)
+      
+      if let crop = edit.croppingRect {
+        
+        /**
+         The reason why here does transformed in pre and post:
+         Core Image's coordinate system mismatches with UIKIt.
+         Zero-point is bottom-left and UIKit's zero-point is top-left.
+         To solve this mismatch while cropping, flips and crops and finally flips.
+         */
+        
+        sourceImage = source          
+          /* pre */
+          .transformed(by: .init(scaleX: 1, y: -1))
+          .transformed(by: .init(translationX: 0, y: source.extent.height))
+          
+          /* apply */
+          .cropped(to: crop.cropExtent.cgRect)
+          .transformed(by: crop.rotation.transform)
+          
+          /* post */
+          .transformed(by: .init(scaleX: 1, y: -1))
+          .transformed(by: .init(translationX: 0, y: source.extent.height))
       } else {
         sourceImage = source
       }
@@ -71,16 +104,18 @@ public final class ImageRenderer {
       return result
 
     }()
+    
+    EngineLog.debug("Source.colorSpace :", source.colorSpace as Any)
 
-    let canvasSize: CGSize
+    var canvasSize: CGSize
       
     switch resolution {
     case .full:
-      canvasSize = resultImage.extent.size
+      canvasSize = croppedImage.extent.size
     case .resize(let boundingSize):
-      canvasSize = Geometry.sizeThatAspectFit(aspectRatio: resultImage.extent.size, boundingSize: boundingSize)
+      canvasSize = Geometry.sizeThatAspectFit(aspectRatio: croppedImage.extent.size, boundingSize: boundingSize)
     }
-    
+        
     let format: UIGraphicsImageRendererFormat
     if #available(iOS 11.0, *) {
       format = UIGraphicsImageRendererFormat.preferred()
@@ -92,7 +127,7 @@ public final class ImageRenderer {
     if #available(iOS 12.0, *) {
       format.preferredRange = .extended
     } else {
-      format.prefersExtendedRange = false
+      format.prefersExtendedRange = true
     }
     
     let image = autoreleasepool { () -> UIImage in
@@ -102,7 +137,7 @@ public final class ImageRenderer {
           
           let cgContext = UIGraphicsGetCurrentContext()!
           
-          let cgImage = cicontext.createCGImage(resultImage, from: resultImage.extent, format: .RGBA8, colorSpace: resultImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
+          let cgImage = cicontext.createCGImage(croppedImage, from: croppedImage.extent, format: .RGBA8, colorSpace: croppedImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
           
           cgContext.saveGState()
           cgContext.translateBy(x: 0, y: canvasSize.height)
@@ -113,6 +148,7 @@ public final class ImageRenderer {
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: cgContext, canvasSize: canvasSize)
           }
+          
       }
       
     }

@@ -39,16 +39,15 @@ public struct EditingImage: Equatable {
 
 public struct CropAndRotate: Equatable {
   public enum Rotation: Equatable, CaseIterable {
-    
     /// 0 degree - default
     case angle_0
-    
+
     /// 90 degree
     case angle_90
-    
+
     /// 180 degree
     case angle_180
-    
+
     /// 270 degree
     case angle_270
 
@@ -64,7 +63,7 @@ public struct CropAndRotate: Equatable {
         return .init(rotationAngle: CGFloat.pi / 2)
       }
     }
-    
+
     public func next() -> Self {
       switch self {
       case .angle_0: return .angle_90
@@ -77,19 +76,27 @@ public struct CropAndRotate: Equatable {
 
   /// The dimensions in pixel for the image.
   public var imageSize: PixelSize
-  
+
   /// The rectangle that specifies the extent of the cropping.
   public var cropExtent: PixelRect
-  
+
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
 
+  public init(from ciImage: CIImage) {
+    self.init(
+      imageSize: .init(image: ciImage),
+      cropRect: .init(cgRect: .init(origin: .zero, size: ciImage.extent.size)
+      )
+    )
+  }
+
   public init(imageSize: PixelSize, cropRect: PixelRect, rotation: Rotation = .angle_0) {
     self.imageSize = imageSize
-    self.cropExtent = cropRect
+    cropExtent = cropRect
     self.rotation = rotation
   }
-  
+
   public func makeInitial() -> Self {
     .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
   }

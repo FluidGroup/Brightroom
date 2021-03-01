@@ -367,7 +367,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.cropAndRotate.cropRect?.cropExtent.cgRect
+    renderer.edit.croppingRect = edit.cropAndRotate.cropRect
     renderer.edit.drawer = [
       BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]
