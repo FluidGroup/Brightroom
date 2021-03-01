@@ -501,11 +501,16 @@ enum _Crop {
   public final class InteractiveCropGuideView: UIView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
-
+    
     private let topLeftControlPointView = UIView()
     private let topRightControlPointView = UIView()
     private let bottomLeftControlPointView = UIView()
     private let bottomRightControlPointView = UIView()
+    
+    private let topControlPointView = UIView()
+    private let rightControlPointView = UIView()
+    private let leftControlPointView = UIView()
+    private let bottomControlPointView = UIView()
 
     private weak var overlay: UIView?
 
@@ -525,64 +530,159 @@ enum _Crop {
         topRightControlPointView,
         bottomLeftControlPointView,
         bottomRightControlPointView,
+        
+        topControlPointView,
+        rightControlPointView,
+        leftControlPointView,
+        bottomControlPointView,
       ].forEach { view in
         view.translatesAutoresizingMaskIntoConstraints = false
         addSubview(view)
       }
 
-      do {
-        let panGesture = UIPanGestureRecognizer(
-          target: self,
-          action: #selector(handlePanGestureInTopLeft(gesture:))
-        )
-        topLeftControlPointView.addGestureRecognizer(panGesture)
+      cornerGestures: do {
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTopLeft(gesture:))
+          )
+          topLeftControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTopRight(gesture:))
+          )
+          topRightControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottomLeft(gesture:))
+          )
+          bottomLeftControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottomRight(gesture:))
+          )
+          bottomRightControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+      }
+      
+      edgeGestures: do {
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTop(gesture:))
+          )
+          topControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInRight(gesture:))
+          )
+          rightControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInLeft(gesture:))
+          )
+          leftControlPointView.addGestureRecognizer(panGesture)
+        }
+        
+        do {
+          let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottom(gesture:))
+          )
+          bottomControlPointView.addGestureRecognizer(panGesture)
+        }
+      }
+      
+      let length: CGFloat = 40
+      
+      topLeftControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.leftAnchor.constraint(equalTo: leftAnchor),
+          $0.topAnchor.constraint(equalTo: topAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
+      }
+      
+      topRightControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.rightAnchor.constraint(equalTo: rightAnchor),
+          $0.topAnchor.constraint(equalTo: topAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
+      }
+      
+      bottomLeftControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.leftAnchor.constraint(equalTo: leftAnchor),
+          $0.bottomAnchor.constraint(equalTo: bottomAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
+      }
+      
+      bottomRightControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.rightAnchor.constraint(equalTo: rightAnchor),
+          $0.bottomAnchor.constraint(equalTo: bottomAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
+      }
+      
+      topControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.topAnchor.constraint(equalTo: topAnchor, constant: 0),
+          $0.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor),
+          $0.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+        ])
+      }
+      
+      rightControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor),
+          $0.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor),
+          $0.rightAnchor.constraint(equalTo: rightAnchor),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
       }
 
-      do {
-        let panGesture = UIPanGestureRecognizer(
-          target: self,
-          action: #selector(handlePanGestureInTopRight(gesture:))
-        )
-        topRightControlPointView.addGestureRecognizer(panGesture)
+      bottomControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
+          $0.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor),
+          $0.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor),
+          $0.heightAnchor.constraint(equalToConstant: length),
+        ])
       }
-
-      do {
-        let panGesture = UIPanGestureRecognizer(
-          target: self,
-          action: #selector(handlePanGestureInBottomLeft(gesture:))
-        )
-        bottomLeftControlPointView.addGestureRecognizer(panGesture)
+      
+      leftControlPointView&>.do {
+        NSLayoutConstraint.activate([
+          $0.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor),
+          $0.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor),
+          $0.leftAnchor.constraint(equalTo: leftAnchor),
+          $0.widthAnchor.constraint(equalToConstant: length),
+        ])
       }
-
-      do {
-        let panGesture = UIPanGestureRecognizer(
-          target: self,
-          action: #selector(handlePanGestureInBottomRight(gesture:))
-        )
-        bottomRightControlPointView.addGestureRecognizer(panGesture)
-      }
-
-      NSLayoutConstraint.activate([
-        topLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
-        topLeftControlPointView.topAnchor.constraint(equalTo: topAnchor),
-        topLeftControlPointView.heightAnchor.constraint(equalToConstant: 20),
-        topLeftControlPointView.widthAnchor.constraint(equalToConstant: 20),
-
-        topRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
-        topRightControlPointView.topAnchor.constraint(equalTo: topAnchor),
-        topRightControlPointView.heightAnchor.constraint(equalToConstant: 20),
-        topRightControlPointView.widthAnchor.constraint(equalToConstant: 20),
-
-        bottomLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
-        bottomLeftControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
-        bottomLeftControlPointView.heightAnchor.constraint(equalToConstant: 20),
-        bottomLeftControlPointView.widthAnchor.constraint(equalToConstant: 20),
-
-        bottomRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
-        bottomRightControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
-        bottomRightControlPointView.heightAnchor.constraint(equalToConstant: 20),
-        bottomRightControlPointView.widthAnchor.constraint(equalToConstant: 20),
-      ])
+    
     }
 
     @available(*, unavailable)
@@ -780,6 +880,144 @@ enum _Crop {
         )
 
         frame = nextFrame
+      case .cancelled,
+           .ended:
+        didChange()
+      default:
+        break
+      }
+    }
+    
+    @objc
+    private func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+      
+      switch gesture.state {
+      case .began:
+        updateMaximumRect()
+        willChange()
+        fallthrough
+      case .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.origin.y += translation.y
+        nextFrame.size.height -= translation.y
+        
+        postprocess(
+          proposedFrame: &nextFrame,
+          currentFrame: currentFrame
+        )
+        
+        frame = nextFrame
+        
+      case .cancelled,
+           .ended:
+        didChange()
+      default:
+        break
+      }
+    }
+    
+    @objc
+    private func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+      
+      switch gesture.state {
+      case .began:
+        updateMaximumRect()
+        willChange()
+        fallthrough
+      case .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.size.width += translation.x
+        
+        postprocess(
+          proposedFrame: &nextFrame,
+          currentFrame: currentFrame
+        )
+        
+        frame = nextFrame
+        
+      case .cancelled,
+           .ended:
+        didChange()
+      default:
+        break
+      }
+    }
+    
+    @objc
+    private func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+      
+      switch gesture.state {
+      case .began:
+        updateMaximumRect()
+        willChange()
+        fallthrough
+      case .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        let currentFrame = frame
+        var nextFrame = currentFrame
+        
+        nextFrame.origin.x += translation.x
+        nextFrame.size.width -= translation.x
+        
+        postprocess(
+          proposedFrame: &nextFrame,
+          currentFrame: currentFrame
+        )
+        
+        frame = nextFrame
+        
+      case .cancelled,
+           .ended:
+        didChange()
+      default:
+        break
+      }
+    }
+    
+    @objc
+    private func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+      
+      switch gesture.state {
+      case .began:
+        updateMaximumRect()
+        willChange()
+        fallthrough
+      case .changed:
+        let translation = gesture.translation(in: self)
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        let currentFrame = frame
+        var nextFrame = currentFrame
+          
+        nextFrame.size.height += translation.y
+        
+        postprocess(
+          proposedFrame: &nextFrame,
+          currentFrame: currentFrame
+        )
+        
+        frame = nextFrame
+        
       case .cancelled,
            .ended:
         didChange()
