@@ -172,7 +172,7 @@ enum _Crop {
     /**
      a guide view that displayed on guide container view.
      */
-    private lazy var guideView = CropGuideView(containerView: self, imageView: self.imageView)
+    private lazy var guideView = InteractiveCropGuideView(containerView: self, imageView: self.imageView)
 
     public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
 
@@ -498,7 +498,7 @@ enum _Crop {
     }
   }
 
-  public final class CropGuideView: UIView, UIGestureRecognizerDelegate {
+  public final class InteractiveCropGuideView: UIView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
 
