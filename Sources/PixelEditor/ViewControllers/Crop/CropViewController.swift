@@ -365,29 +365,32 @@ enum _Crop {
                     
           UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
             perform()
+          }&>.do {
+            $0.isUserInteractionEnabled = false
+            $0.startAnimation()
           }
-          .startAnimation()
                              
-          let animator = UIViewPropertyAnimator(duration: 0.12, dampingRatio: 1) {
+          UIViewPropertyAnimator(duration: 0.12, dampingRatio: 1) {
             self.guideView.alpha = 0
-          }
-           
-          animator.addCompletion { _ in
-            UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
-              self.guideView.alpha = 1
+          }&>.do {
+            $0.isUserInteractionEnabled = false
+            $0.addCompletion { _ in
+              UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
+                self.guideView.alpha = 1
+              }
+              .startAnimation(afterDelay: 0.8)
             }
-            .startAnimation(afterDelay: 0.8)
+            $0.startAnimation()
           }
-          
-          animator.startAnimation()
-            
-                                              
+                                                                            
         } else {
           UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
             perform()
             self.layoutIfNeeded()
+          }&>.do {
+            $0.isUserInteractionEnabled = false
+            $0.startAnimation()
           }
-          .startAnimation()
         }
         
       } else {
