@@ -106,6 +106,10 @@
 		4B9E8E7C2180E3C50071DE91 /* LUT_M11.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E702180E3C40071DE91 /* LUT_M11.png */; };
 		4B9E8E7D2180E3C50071DE91 /* LUT_M03.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E712180E3C40071DE91 /* LUT_M03.png */; };
 		4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */; };
+		4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */; };
+		4BA84F8425EE950900BAB430 /* CropView._CropScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */; };
+		4BA84F8825EE965400BAB430 /* CropView.CropOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */; };
+		4BA8513E25EE97A600BAB430 /* CodeBasedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */; };
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* Options.swift */; };
 		4BB8AD7C25E96B100018D769 /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB8AD7B25E96B100018D769 /* Mocks.swift */; };
@@ -272,6 +276,10 @@
 		4B9E8E6F2180E3C40071DE91 /* LUT_M09.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_M09.png; sourceTree = "<group>"; };
 		4B9E8E702180E3C40071DE91 /* LUT_M11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_M11.png; sourceTree = "<group>"; };
 		4B9E8E712180E3C40071DE91 /* LUT_M03.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_M03.png; sourceTree = "<group>"; };
+		4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._InteractiveCropGuideView.swift; sourceTree = "<group>"; };
+		4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._CropScrollView.swift; sourceTree = "<group>"; };
+		4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.CropOverlay.swift; sourceTree = "<group>"; };
+		4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBasedView.swift; sourceTree = "<group>"; };
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* Options.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
 		4BB8AD7B25E96B100018D769 /* Mocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
@@ -570,6 +578,9 @@
 			children = (
 				4B835DFC25E95D5000EC84D1 /* CropViewController.swift */,
 				4B4023BF25ED823B00D3DE47 /* CropView.swift */,
+				4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */,
+				4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */,
+				4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */,
 			);
 			path = Crop;
 			sourceTree = "<group>";
@@ -602,6 +613,7 @@
 				4BEE65102174DC3800F3578E /* EditorLog.swift */,
 				4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */,
 				4B4023C325ED82B700D3DE47 /* Debounce.swift */,
+				4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -903,6 +915,7 @@
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
 				4B1E95202176567300E9DFB8 /* FilterControlBase.swift in Sources */,
 				4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */,
+				4BA8513E25EE97A600BAB430 /* CodeBasedView.swift in Sources */,
 				4BA8E73D217C716700940518 /* Options.swift in Sources */,
 				4B0BDCA5217D979D001098B9 /* L10n.swift in Sources */,
 				4B0BDCA3217D676D001098B9 /* SharpenControl.swift in Sources */,
@@ -916,6 +929,7 @@
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */,
 				4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */,
+				4BA84F8825EE965400BAB430 /* CropView.CropOverlay.swift in Sources */,
 				4B42A6AB2178E13600F18208 /* TemperatureControl.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,
@@ -927,6 +941,8 @@
 				4B42A6A52178DF2600F18208 /* SaturationControl.swift in Sources */,
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
 				4BC95D8D25E5587F000595AE /* PixelCropViewModel.swift in Sources */,
+				4BA84F8425EE950900BAB430 /* CropView._CropScrollView.swift in Sources */,
+				4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */,
 				4B42A6AF2178E14E00F18208 /* HighlightsControl.swift in Sources */,
 				4B1E951C21764DE700E9DFB8 /* GaussianBlurControl.swift in Sources */,
 				4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */,
