@@ -112,7 +112,6 @@
 		4BA8513E25EE97A600BAB430 /* CodeBasedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */; };
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* Options.swift */; };
-		4BB7BED725EF7FDA00042581 /* ShapeLayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB7BED625EF7FD900042581 /* ShapeLayerView.swift */; };
 		4BB8AD7C25E96B100018D769 /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB8AD7B25E96B100018D769 /* Mocks.swift */; };
 		4BC95D8625E55845000595AE /* PixelCropViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC95D8525E55845000595AE /* PixelCropViewController.swift */; };
 		4BC95D8D25E5587F000595AE /* PixelCropViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */; };
@@ -283,7 +282,6 @@
 		4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBasedView.swift; sourceTree = "<group>"; };
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* Options.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
-		4BB7BED625EF7FD900042581 /* ShapeLayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeLayerView.swift; sourceTree = "<group>"; };
 		4BB8AD7B25E96B100018D769 /* Mocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
 		4BC95D8525E55845000595AE /* PixelCropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelCropViewController.swift; sourceTree = "<group>"; };
 		4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelCropViewModel.swift; sourceTree = "<group>"; };
@@ -616,7 +614,6 @@
 				4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */,
 				4B4023C325ED82B700D3DE47 /* Debounce.swift */,
 				4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */,
-				4BB7BED625EF7FD900042581 /* ShapeLayerView.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -955,7 +952,6 @@
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
-				4BB7BED725EF7FDA00042581 /* ShapeLayerView.swift in Sources */,
 				4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */,
 				4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */,
 				4B42A6AD2178E14500F18208 /* VignetteControl.swift in Sources */,
