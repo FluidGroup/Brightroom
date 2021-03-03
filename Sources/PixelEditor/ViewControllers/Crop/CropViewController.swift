@@ -66,9 +66,16 @@ public final class CropViewController: UIViewController {
         $0.setTitle("Reset", for: .normal)
         $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
       }
+      
+      let aspectRatioButton = UIButton(type: .system)&>.do {
+        // TODO: Localize
+        $0.setTitle("AspectRatio", for: .normal)
+        $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
+      }
 
       $0.addArrangedSubview(rotateButton)
       $0.addArrangedSubview(resetButton)
+      $0.addArrangedSubview(aspectRatioButton)
     }
 
     let bottomStackView = UIStackView()&>.do {
@@ -152,6 +159,10 @@ public final class CropViewController: UIViewController {
     rotation.map {
       containerView.setRotation($0)
     }
+  }
+  
+  @objc private func handleAspectRatioButton() {
+    containerView.setCroppingAspectRatio(.init(width: 16, height: 9))
   }
 
   @objc private func handleResetButton() {

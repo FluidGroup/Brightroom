@@ -47,7 +47,7 @@ extension CropView {
 
     private var maximumRect: CGRect?
 
-    private var lockedAspectRatio: PixelAspectRatio? = .square
+    private var lockedAspectRatio: PixelAspectRatio?
 
     init(containerView: CropView, imageView: UIImageView) {
       self.containerView = containerView

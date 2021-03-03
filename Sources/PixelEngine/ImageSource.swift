@@ -74,6 +74,14 @@ public struct CropAndRotate: Equatable {
     }
   }
 
+  /**
+   Returns aspect ratio.
+   Would not be affected by rotation.
+   */
+  public var aspectRatio: PixelAspectRatio {
+    cropExtent.size.aspectRatio
+  }
+
   /// The dimensions in pixel for the image.
   public var imageSize: PixelSize
 
@@ -102,11 +110,23 @@ public struct CropAndRotate: Equatable {
   }
 
   /**
-   Returns aspect ratio.
-   Would not be affected by rotation.
+   Set new aspect ratio with updating cropping extent.
+   Currently, the cropping extent changes to maximum size in the size of image.
+   
+   - TODO: Resizing cropping extent with keeping area by new aspect ratio.
    */
-  public var aspectRatio: PixelAspectRatio {
-    cropExtent.size.aspectRatio
+  public mutating func set(aspectRatio: PixelAspectRatio) {
+        
+    let maxSize = aspectRatio.sizeThatFits(in: imageSize.cgSize)
+
+    cropExtent = .init(
+      origin: .init(cgPoint: CGPoint(
+        x: imageSize.cgSize.width / 2,
+        y: imageSize.cgSize.height / 2
+      )),
+      size: .init(cgSize: maxSize)
+    )
+
   }
 }
 

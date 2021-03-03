@@ -178,6 +178,31 @@ public struct PixelRect: Equatable {
   public var cgRect: CGRect {
     .init(origin: origin.cgPoint, size: size.cgSize)
   }
+  
+  public var minX: Int {
+    origin.x
+  }
+  
+  public var minY: Int {
+    origin.y
+  }
+  
+  public var midX: Int {
+    Int(CGFloat(origin.x) + CGFloat(size.width) / CGFloat(2).rounded(.down))
+  }
+  
+  public var midY: Int {
+    Int(CGFloat(origin.y) + CGFloat(size.height) / CGFloat(2).rounded(.down))
+  }
+  
+  public var maxX: Int {
+    origin.x + size.width
+  }
+  
+  public var maxY: Int {
+    origin.y + size.height
+  }
+  
 }
 
 public struct PixelAspectRatio: Equatable {

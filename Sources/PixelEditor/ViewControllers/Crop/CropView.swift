@@ -152,11 +152,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
   }
   
-  public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
-    
-    guideView.setLockedAspectRatio(ratio)
-  }
-  
   public func setImage(_ image: CIImage) {
     let _image: UIImage
     
@@ -197,6 +192,15 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.proposedCropAndRotate = cropAndRotate
       $0.modifiedSource = .fromState
     }
+  }
+  
+  public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
+    
+    store.commit {
+      $0.proposedCropAndRotate?.set(aspectRatio: ratio)
+      $0.modifiedSource = .fromState
+    }
+    guideView.setLockedAspectRatio(ratio)
   }
   
   /**
