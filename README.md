@@ -1,3 +1,5 @@
+## ⚠️ v2 development is in progress. 
+
 > 💥 The next major version development has been started.  
 > https://github.com/muukii/Pixel/pull/53  
 > This obviously takes many breaking changes.  
