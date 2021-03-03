@@ -30,7 +30,15 @@ import PixelEngine
  */
 public final class CropView: UIView, UIScrollViewDelegate {
   public struct State: Equatable {
+    enum ModifiedSource: Equatable {
+      case fromState
+      case fromScrollView
+      case fromGuide
+    }
+    
     public fileprivate(set) var proposedCropAndRotate: CropAndRotate?
+    fileprivate var modifiedSource: ModifiedSource?
+    
     public fileprivate(set) var frame: CGRect = .zero
     fileprivate var hasLoaded = false
   }
@@ -100,8 +108,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
         
         guard frame != .zero else { return }
-        
-        if let cropAndRotate = cropAndRotate {
+                
+        if let cropAndRotate = cropAndRotate, state.modifiedSource != .fromScrollView {
           self.updateScrollContainerView(
             by: cropAndRotate,
             animated: state.hasLoaded,
@@ -128,7 +136,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
         $0.frame = frame
       }
     }
-    
+          
     if let outOfBoundsOverlay = outOfBoundsOverlay {
       outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
       outOfBoundsOverlay.center = center
@@ -138,9 +146,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
   override public func didMoveToSuperview() {
     super.didMoveToSuperview()
     
-    store.commit {
-      $0.hasLoaded = superview != nil
+    DispatchQueue.main.async { [self] in
+      store.commit {
+        $0.hasLoaded = superview != nil
+      }
     }
+    
   }
   
   public func setImage(_ image: CIImage) {
@@ -167,18 +178,21 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func resetCropAndRotate() {
     store.commit {
       $0.proposedCropAndRotate = $0.proposedCropAndRotate?.makeInitial()
+      $0.modifiedSource = .fromState
     }
   }
   
   public func setRotation(_ rotation: CropAndRotate.Rotation) {
     store.commit {
       $0.proposedCropAndRotate?.rotation = rotation
+      $0.modifiedSource = .fromState
     }
   }
   
   public func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
     store.commit {
       $0.proposedCropAndRotate = cropAndRotate
+      $0.modifiedSource = .fromState
     }
   }
   
@@ -331,6 +345,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
         if var crop = $0.proposedCropAndRotate {
           crop.cropExtent = .init(cgRect: rect)
           $0.proposedCropAndRotate = crop
+          $0.modifiedSource = .fromGuide
         } else {
           assertionFailure()
         }
@@ -346,6 +361,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       if var crop = $0.proposedCropAndRotate {
         crop.cropExtent = .init(cgRect: rect)
         $0.proposedCropAndRotate = crop
+        $0.modifiedSource = .fromScrollView
       } else {
         assertionFailure()
       }
