@@ -37,12 +37,12 @@ extension CropView {
     private let leftControlPointView = UIView()
     private let bottomControlPointView = UIView()
     
-    private weak var cropOverlay: CropOverlayBase?
+    private weak var cropInsideOverlay: CropInsideOverlayBase?
+    private weak var cropOutsideOverlay: CropOutsideOverlayBase?
     
     private unowned let containerView: CropView
     private unowned let imageView: UIImageView
     
-    private weak var outOfBoundsOverlayView: UIView?
     private lazy var invertedMaskShapeLayerView = MaskView()
     
     private var maximumRect: CGRect?
@@ -224,21 +224,21 @@ extension CropView {
      Displays a view as an overlay.
      e.g. grid view
      */
-    public func setCropOverlay(_ newOverlay: CropOverlayBase?) {
-      cropOverlay?.removeFromSuperview()
+    public func setCropInsideOverlay(_ newOverlay: CropInsideOverlayBase?) {
+      cropInsideOverlay?.removeFromSuperview()
       
       if let overlay = newOverlay {
         overlay.isUserInteractionEnabled = false
         addSubview(overlay)
-        self.cropOverlay = overlay
+        self.cropInsideOverlay = overlay
       }
     }
     
-    func setOutOfBoundsOverlay(_ view: UIView) {
+    func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
       assert(view.superview != nil)
       assert(view.superview is CropView)
       
-      outOfBoundsOverlayView = view
+      cropOutsideOverlay = view
 
       setNeedsLayout()
       layoutIfNeeded()
@@ -247,9 +247,9 @@ extension CropView {
     override public func layoutSubviews() {
       super.layoutSubviews()
       
-      cropOverlay?.frame = bounds
+      cropInsideOverlay?.frame = bounds
       
-      if let outOfBoundsOverlayView = outOfBoundsOverlayView {
+      if let outOfBoundsOverlayView = cropOutsideOverlay {
         let frame = convert(bounds, to: outOfBoundsOverlayView)
         
         invertedMaskShapeLayerView.frame = outOfBoundsOverlayView.bounds
@@ -309,12 +309,14 @@ extension CropView {
     private func onGestureTrackingStarted() {
       updateMaximumRect()
       willChange()
-      cropOverlay?.didBeginAdjustment()
+      cropInsideOverlay?.didBeginAdjustment()
+      cropOutsideOverlay?.didBeginAdjustment()
     }
     
     private func onGestureTrackingEnded() {
       didChange()
-      cropOverlay?.didEndAdjustment()
+      cropInsideOverlay?.didEndAdjustment()
+      cropOutsideOverlay?.didEndAdjustment()
     }
     
     @objc

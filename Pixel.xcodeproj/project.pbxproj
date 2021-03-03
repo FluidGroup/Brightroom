@@ -76,6 +76,7 @@
 		4B835DFD25E95D5000EC84D1 /* CropViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B835DFC25E95D5000EC84D1 /* CropViewController.swift */; };
 		4B835DFF25E9654A00EC84D1 /* AutoLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */; };
 		4B96DD8025EBCE8A000AAB1C /* Wrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */; };
+		4B98CA2C25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CA2B25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
@@ -108,7 +109,7 @@
 		4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */; };
 		4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */; };
 		4BA84F8425EE950900BAB430 /* CropView._CropScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */; };
-		4BA84F8825EE965400BAB430 /* CropView.CropOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */; };
+		4BA84F8825EE965400BAB430 /* CropView.CropInsideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8725EE965400BAB430 /* CropView.CropInsideOverlay.swift */; };
 		4BA8513E25EE97A600BAB430 /* CodeBasedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */; };
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* Options.swift */; };
@@ -244,6 +245,7 @@
 		4B835DFC25E95D5000EC84D1 /* CropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropViewController.swift; sourceTree = "<group>"; };
 		4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoLayout.swift; sourceTree = "<group>"; };
 		4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wrap.swift; sourceTree = "<group>"; };
+		4B98CA2B25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.CropOutsideOverlay.swift; sourceTree = "<group>"; };
 		4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageViewViewController.swift; sourceTree = "<group>"; };
 		4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalImageView.swift; sourceTree = "<group>"; };
 		4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageView.swift; sourceTree = "<group>"; };
@@ -278,7 +280,7 @@
 		4B9E8E712180E3C40071DE91 /* LUT_M03.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_M03.png; sourceTree = "<group>"; };
 		4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._InteractiveCropGuideView.swift; sourceTree = "<group>"; };
 		4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._CropScrollView.swift; sourceTree = "<group>"; };
-		4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.CropOverlay.swift; sourceTree = "<group>"; };
+		4BA84F8725EE965400BAB430 /* CropView.CropInsideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.CropInsideOverlay.swift; sourceTree = "<group>"; };
 		4BA8513D25EE97A600BAB430 /* CodeBasedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeBasedView.swift; sourceTree = "<group>"; };
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* Options.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
@@ -578,7 +580,8 @@
 			children = (
 				4B835DFC25E95D5000EC84D1 /* CropViewController.swift */,
 				4B4023BF25ED823B00D3DE47 /* CropView.swift */,
-				4BA84F8725EE965400BAB430 /* CropView.CropOverlay.swift */,
+				4BA84F8725EE965400BAB430 /* CropView.CropInsideOverlay.swift */,
+				4B98CA2B25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift */,
 				4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */,
 				4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */,
 			);
@@ -913,6 +916,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
+				4B98CA2C25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift in Sources */,
 				4B1E95202176567300E9DFB8 /* FilterControlBase.swift in Sources */,
 				4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */,
 				4BA8513E25EE97A600BAB430 /* CodeBasedView.swift in Sources */,
@@ -929,7 +933,7 @@
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */,
 				4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */,
-				4BA84F8825EE965400BAB430 /* CropView.CropOverlay.swift in Sources */,
+				4BA84F8825EE965400BAB430 /* CropView.CropInsideOverlay.swift in Sources */,
 				4B42A6AB2178E13600F18208 /* TemperatureControl.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,

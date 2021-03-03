@@ -109,8 +109,8 @@ extension CropView {
       
     }
   }
-  
-  open class CropOverlayBase: PixelEditorCodeBasedView {
+    
+  open class CropInsideOverlayBase: PixelEditorCodeBasedView {
     
     open func didBeginAdjustment() {
       
@@ -121,7 +121,7 @@ extension CropView {
     }
   }
 
-  public final class CropOverlayRuleOfThirds: CropOverlayBase {
+  public final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
     
     private let handlesView = CropOverlayHandlesView()
     
@@ -194,8 +194,8 @@ extension CropView {
     
     public override func didBeginAdjustment() {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
-        self.lines().forEach {
+      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+        self?.lines().forEach {
           $0.alpha = 1
         }
       }&>.do {
@@ -205,8 +205,8 @@ extension CropView {
     
     public override func didEndAdjustment() {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
-        self.lines().forEach {
+      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+        self?.lines().forEach {
           $0.alpha = 0
         }
       }&>.do {

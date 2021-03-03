@@ -57,7 +57,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    a guide view that displayed on guide container view.
    */
-  public private(set) lazy var guideView = _InteractiveCropGuideView(containerView: self, imageView: self.imageView)
+  private lazy var guideView = _InteractiveCropGuideView(containerView: self, imageView: self.imageView)
   
   public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
   
@@ -95,10 +95,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       EditorLog.debug(state.primitive)
     }
     .store(in: &subscriptions)
-    
-    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
-    setOutOfBoundsOverlay(effectView)
-    
+         
     #endif
     
     store.sinkState(queue: .mainIsolated()) { [weak self] state in
@@ -197,12 +194,20 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
   
   /**
+   Displays a view as an overlay.
+   e.g. grid view
+   */
+  public func setCropInsideOverlay(_ view: CropInsideOverlayBase) {
+    guideView.setCropInsideOverlay(view)
+  }
+  
+  /**
    Displays an overlay that covers the area out of cropping extent.
    Given view's frame would be adjusted automatically.
    
    - Attention: view's userIntereactionEnabled turns off
    */
-  public func setOutOfBoundsOverlay(_ view: UIView) {
+  public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
     
     outOfBoundsOverlay?.removeFromSuperview()
     
@@ -212,7 +217,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     // TODO: Unsafe operation.
     insertSubview(view, aboveSubview: scrollView)
     
-    guideView.setOutOfBoundsOverlay(view)
+    guideView.setCropOutsideOverlay(view)
     
     setNeedsLayout()
     layoutIfNeeded()
