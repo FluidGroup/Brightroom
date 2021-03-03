@@ -32,11 +32,6 @@ import UIKit
 import Photos
 #endif
 
-public struct EditingImage: Equatable {
-  let image: CIImage
-  let isEditable: Bool
-}
-
 public struct CropAndRotate: Equatable {
   public enum Rotation: Equatable, CaseIterable {
     /// 0 degree - default
@@ -112,11 +107,10 @@ public struct CropAndRotate: Equatable {
   /**
    Set new aspect ratio with updating cropping extent.
    Currently, the cropping extent changes to maximum size in the size of image.
-   
+
    - TODO: Resizing cropping extent with keeping area by new aspect ratio.
    */
   public mutating func set(aspectRatio: PixelAspectRatio) {
-        
     let maxSize = aspectRatio.sizeThatFits(in: imageSize.cgSize)
 
     cropExtent = .init(
@@ -126,8 +120,17 @@ public struct CropAndRotate: Equatable {
       )),
       size: .init(cgSize: maxSize)
     )
-
   }
+}
+
+public struct EditingImage: Equatable {
+  let image: CIImage
+  let isEditable: Bool
+}
+
+public enum ImageProviderError: Error {
+  case failedToDownload(underlyingError: Error)
+  case failedToDecode(Data)
 }
 
 /**
@@ -138,8 +141,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
     lhs === rhs
   }
 
-  public struct State: Equatable {
+  public struct State {
     public fileprivate(set) var currentImage: EditingImage?
+    public fileprivate(set) var loadingError: ImageProviderError?
     public let imageSize: PixelSize
   }
 
@@ -167,6 +171,47 @@ public final class ImageProvider: Equatable, StoreComponentType {
       )
     )
     pendingAction = { _ in }
+  }
+
+  public convenience init(url: URL, imageSize: PixelSize) {
+          
+    self.init(urlRequest: URLRequest(url: url), imageSize: imageSize)
+  }
+
+  public init(urlRequest: URLRequest, imageSize: PixelSize) {
+    
+    store = .init(
+      initialState: .init(
+        currentImage: nil,
+        imageSize: imageSize
+      )
+    )
+    
+    pendingAction = { `self` in
+      
+      URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+        
+        if let error = error {
+          self.store.commit {
+            $0.loadingError = .failedToDownload(underlyingError: error)
+          }
+        }
+        
+        if let data = data {
+          if let image = CIImage(data: data) {
+            assert(imageSize == .init(image: image))
+            self.store.commit {
+              $0.currentImage = .init(image: image, isEditable: true)
+            }
+          } else {
+            self.store.commit {
+              $0.loadingError = .failedToDecode(data)
+            }
+          }
+        }
+      }
+    }
+    
   }
 
   #if canImport(Photos)

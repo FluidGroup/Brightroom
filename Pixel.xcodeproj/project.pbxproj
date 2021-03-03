@@ -600,7 +600,6 @@
 				4BEE650E21749E7A00F3578E /* ImageScrollView.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
 				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
-				FCC7962523C58209009ACD8A /* LoadingView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -629,6 +628,7 @@
 		4BEEFF1B25E6827B008144EA /* Classic */ = {
 			isa = PBXGroup;
 			children = (
+				FCC7962523C58209009ACD8A /* LoadingView.swift */,
 				4B3457892174FF8600716DA0 /* Controls */,
 				4B9D4562216DD143003A240A /* ControlStackView.swift */,
 				4B9D4574216DF66F003A240A /* NavigationView.swift */,
