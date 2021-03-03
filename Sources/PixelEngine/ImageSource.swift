@@ -121,8 +121,8 @@ public struct CropAndRotate: Equatable {
 
     cropExtent = .init(
       origin: .init(cgPoint: CGPoint(
-        x: imageSize.cgSize.width / 2,
-        y: imageSize.cgSize.height / 2
+        x: (imageSize.cgSize.width - maxSize.width) / 2,
+        y: (imageSize.cgSize.height - maxSize.height) / 2
       )),
       size: .init(cgSize: maxSize)
     )

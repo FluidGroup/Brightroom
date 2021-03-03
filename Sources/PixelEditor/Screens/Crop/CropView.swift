@@ -358,6 +358,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       self.store.commit {
         let rect = self.guideView.convert(self.guideView.bounds, to: self.imageView)
         if var crop = $0.proposedCropAndRotate {
+          // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
           crop.cropExtent = .init(cgRect: rect)
           $0.proposedCropAndRotate = crop
           $0.modifiedSource = .fromGuide
@@ -374,6 +375,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       let rect = scrollView.convert(scrollView.bounds, to: imageView)
       
       if var crop = $0.proposedCropAndRotate {
+        // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
         crop.cropExtent = .init(cgRect: rect)
         $0.proposedCropAndRotate = crop
         $0.modifiedSource = .fromScrollView
@@ -451,21 +453,12 @@ extension CropAndRotate {
   fileprivate func calculateZoomScale(scrollViewBounds: CGRect) -> (min: CGFloat, max: CGFloat) {
     let minXScale = scrollViewBounds.width / imageSize.cgSize.width
     let minYScale = scrollViewBounds.height / imageSize.cgSize.height
-    
-    let maxXScale = imageSize.cgSize.width / scrollViewBounds.width
-    let maxYScale = imageSize.cgSize.height / scrollViewBounds.height
-    
+        
     /**
      max meaning scale aspect fill
      */
     let minScale = max(minXScale, minYScale)
-    let maxScale = max(maxXScale, maxYScale)
     
-    // don't let minScale exceed maxScale. (If the image is smaller than the screen, we don't want to force it to be zoomed.)
-    if minScale > maxScale {
-      return (min: maxScale, max: maxScale)
-    }
-    
-    return (min: minScale, max: maxScale)
+    return (min: minScale, max: .greatestFiniteMagnitude)
   }
 }
