@@ -181,6 +181,11 @@ public struct PixelRect: Equatable {
 }
 
 public struct PixelAspectRatio: Equatable {
+  
+  public static func == (lhs: Self, rhs: Self) -> Bool {
+    (lhs.height / lhs.width) == (rhs.height / rhs.width)
+  }
+  
   public let width: CGFloat
   public let height: CGFloat
 
@@ -234,5 +239,9 @@ public struct PixelAspectRatio: Equatable {
       height: size.height.rounded(.up)
     )
     
+  }
+  
+  public static var square: Self {
+    .init(width: 1, height: 1)
   }
 }

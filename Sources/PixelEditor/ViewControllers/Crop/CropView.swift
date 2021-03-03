@@ -29,6 +29,7 @@ import PixelEngine
  A view that previews how crops the image.
  */
 public final class CropView: UIView, UIScrollViewDelegate {
+  
   public struct State: Equatable {
     enum ModifiedSource: Equatable {
       case fromState
@@ -149,6 +150,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
     
+  }
+  
+  public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
+    
+    guideView.setLockedAspectRatio(ratio)
   }
   
   public func setImage(_ image: CIImage) {

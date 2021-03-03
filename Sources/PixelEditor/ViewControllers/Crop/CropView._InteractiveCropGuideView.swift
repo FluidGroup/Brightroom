@@ -20,45 +20,47 @@
 // THE SOFTWARE.
 
 import Foundation
+import PixelEngine
 
 extension CropView {
-  
   public final class _InteractiveCropGuideView: UIView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
-    
+
     private let topLeftControlPointView = UIView()
     private let topRightControlPointView = UIView()
     private let bottomLeftControlPointView = UIView()
     private let bottomRightControlPointView = UIView()
-    
+
     private let topControlPointView = UIView()
     private let rightControlPointView = UIView()
     private let leftControlPointView = UIView()
     private let bottomControlPointView = UIView()
-    
+
     private weak var cropInsideOverlay: CropInsideOverlayBase?
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
-    
+
     private unowned let containerView: CropView
     private unowned let imageView: UIImageView
-    
+
     private lazy var invertedMaskShapeLayerView = MaskView()
-    
+
     private var maximumRect: CGRect?
-    
+
+    private var lockedAspectRatio: PixelAspectRatio? = .square
+
     init(containerView: CropView, imageView: UIImageView) {
       self.containerView = containerView
       self.imageView = imageView
-      
+
       super.init(frame: .zero)
-      
+
       [
         topLeftControlPointView,
         topRightControlPointView,
         bottomLeftControlPointView,
         bottomRightControlPointView,
-        
+
         topControlPointView,
         rightControlPointView,
         leftControlPointView,
@@ -67,7 +69,7 @@ extension CropView {
         view.translatesAutoresizingMaskIntoConstraints = false
         addSubview(view)
       }
-      
+
       cornerGestures: do {
         do {
           let panGesture = UIPanGestureRecognizer(
@@ -76,7 +78,7 @@ extension CropView {
           )
           topLeftControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -84,7 +86,7 @@ extension CropView {
           )
           topRightControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -92,7 +94,7 @@ extension CropView {
           )
           bottomLeftControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -100,9 +102,8 @@ extension CropView {
           )
           bottomRightControlPointView.addGestureRecognizer(panGesture)
         }
-        
       }
-      
+
       edgeGestures: do {
         do {
           let panGesture = UIPanGestureRecognizer(
@@ -111,7 +112,7 @@ extension CropView {
           )
           topControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -119,7 +120,7 @@ extension CropView {
           )
           rightControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -127,7 +128,7 @@ extension CropView {
           )
           leftControlPointView.addGestureRecognizer(panGesture)
         }
-        
+
         do {
           let panGesture = UIPanGestureRecognizer(
             target: self,
@@ -136,9 +137,9 @@ extension CropView {
           bottomControlPointView.addGestureRecognizer(panGesture)
         }
       }
-      
+
       let length: CGFloat = 40
-      
+
       topLeftControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.leftAnchor.constraint(equalTo: leftAnchor),
@@ -147,7 +148,7 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       topRightControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.rightAnchor.constraint(equalTo: rightAnchor),
@@ -156,7 +157,7 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       bottomLeftControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.leftAnchor.constraint(equalTo: leftAnchor),
@@ -165,7 +166,7 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       bottomRightControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.rightAnchor.constraint(equalTo: rightAnchor),
@@ -174,7 +175,7 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       topControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.topAnchor.constraint(equalTo: topAnchor, constant: 0),
@@ -183,7 +184,7 @@ extension CropView {
           $0.heightAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       rightControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor),
@@ -192,7 +193,7 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       bottomControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
@@ -201,7 +202,7 @@ extension CropView {
           $0.heightAnchor.constraint(equalToConstant: length),
         ])
       }
-      
+
       leftControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor),
@@ -210,143 +211,167 @@ extension CropView {
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
       }
-      
     }
-    
+
     @available(*, unavailable)
     public required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
-    
+
     // MARK: - Functions
-        
+
     /**
      Displays a view as an overlay.
      e.g. grid view
      */
     public func setCropInsideOverlay(_ newOverlay: CropInsideOverlayBase?) {
       cropInsideOverlay?.removeFromSuperview()
-      
+
       if let overlay = newOverlay {
         overlay.isUserInteractionEnabled = false
         addSubview(overlay)
-        self.cropInsideOverlay = overlay
+        cropInsideOverlay = overlay
       }
     }
-    
+
     func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
       assert(view.superview != nil)
       assert(view.superview is CropView)
-      
+
       cropOutsideOverlay = view
 
       setNeedsLayout()
       layoutIfNeeded()
     }
-    
+
+    func setLockedAspectRatio(_ aspectRatio: PixelAspectRatio) {
+      lockedAspectRatio = aspectRatio
+    }
+
     override public func layoutSubviews() {
       super.layoutSubviews()
-      
+
       cropInsideOverlay?.frame = bounds
-      
+
       if let outOfBoundsOverlayView = cropOutsideOverlay {
         let frame = convert(bounds, to: outOfBoundsOverlayView)
-        
+
         invertedMaskShapeLayerView.frame = outOfBoundsOverlayView.bounds
         invertedMaskShapeLayerView.setUnmaskRect(frame)
-      
+
         if outOfBoundsOverlayView.mask == nil {
           outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
         }
-        
       }
-      
     }
-    
+
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
-      
+
       if view == self {
         return nil
       }
-      
+
       return view
     }
-    
+
     private func postprocess(
       proposedFrame: inout CGRect,
       currentFrame: CGRect
     ) {
-      assert(self.maximumRect != nil)
-      let maximumRect = self.maximumRect!
-      
-      if proposedFrame.width < 100 {
-        proposedFrame.origin.x = currentFrame.origin.x
-        proposedFrame.size.width = currentFrame.size.width
+      minimumSize: do {
+        if proposedFrame.width < 100 {
+          proposedFrame.origin.x = currentFrame.origin.x
+          proposedFrame.size.width = currentFrame.size.width
+        }
+
+        if proposedFrame.height < 100 {
+          proposedFrame.origin.y = currentFrame.origin.y
+          proposedFrame.size.height = currentFrame.size.height
+        }
       }
-      
-      if proposedFrame.height < 100 {
-        proposedFrame.origin.y = currentFrame.origin.y
-        proposedFrame.size.height = currentFrame.size.height
+
+      maximumSize: do {
+        assert(self.maximumRect != nil)
+        let maximumRect = self.maximumRect!
+        proposedFrame = proposedFrame.intersection(maximumRect)
+
+        if
+          let locked = lockedAspectRatio, locked != PixelAspectRatio(.init(
+            width: proposedFrame.size.width.rounded(.down),
+            height: proposedFrame.size.height.rounded(.down)
+          ))
+        {
+          proposedFrame = currentFrame
+          proposedFrame.size = locked.size(byHeight: currentFrame.height)
+        }
       }
-      proposedFrame = proposedFrame.intersection(maximumRect)
     }
-    
+
     func willBeginScrollViewAdjustment() {
       onGestureTrackingStarted()
     }
-    
+
     func didEndScrollViewAdjustment() {
       onGestureTrackingEnded()
     }
-    
+
     @inline(__always)
     private func updateMaximumRect() {
       maximumRect = imageView.convert(imageView.bounds, to: containerView)
         .intersection(containerView.frame.insetBy(dx: 20, dy: 20))
     }
-    
+
     private func onGestureTrackingStarted() {
       updateMaximumRect()
       willChange()
       cropInsideOverlay?.didBeginAdjustment()
       cropOutsideOverlay?.didBeginAdjustment()
     }
-    
+
     private func onGestureTrackingEnded() {
       didChange()
       cropInsideOverlay?.didEndAdjustment()
       cropOutsideOverlay?.didEndAdjustment()
     }
-    
+
     @objc
     private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
+        var translation = gesture.translation(in: self)
+        if let lockedAspectRatio = lockedAspectRatio {
+          let current = translation
+          if abs(current.x) > abs(current.y) {
+            translation.y = lockedAspectRatio.height(forWidth: current.x)
+          } else {
+            translation.x = lockedAspectRatio.width(forHeight: current.y)
+          }
+        }
+
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.origin.x += translation.x
         nextFrame.origin.y += translation.y
         nextFrame.size.width -= translation.x
         nextFrame.size.height -= translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -355,71 +380,87 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+        var translation = gesture.translation(in: self)
+        if let lockedAspectRatio = lockedAspectRatio {
+          let current = translation
+          if abs(current.x) > abs(current.y) {
+            translation.y = lockedAspectRatio.height(forWidth: -current.x)
+          } else {
+            translation.x = lockedAspectRatio.width(forHeight: -current.y)
+          }
+        }
+
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.origin.y += translation.y
         nextFrame.size.width += translation.x
         nextFrame.size.height -= translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
         onGestureTrackingEnded()
-        
+
       default:
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+        var translation = gesture.translation(in: self)
+        if let lockedAspectRatio = lockedAspectRatio {
+          let current = translation
+          if abs(current.x) > abs(current.y) {
+            translation.y = lockedAspectRatio.height(forWidth: -current.x)
+          } else {
+            translation.x = lockedAspectRatio.width(forHeight: -current.y)
+          }
+        }
+
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.origin.x += translation.x
         nextFrame.size.width -= translation.x
         nextFrame.size.height += translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
       case .cancelled,
            .ended,
@@ -429,32 +470,40 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+        var translation = gesture.translation(in: self)
+        if let lockedAspectRatio = lockedAspectRatio {
+          let current = translation
+          if abs(current.x) > abs(current.y) {
+            translation.y = lockedAspectRatio.height(forWidth: current.x)
+          } else {
+            translation.x = lockedAspectRatio.width(forHeight: current.y)
+          }
+        }
+
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.size.width += translation.x
         nextFrame.size.height += translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
       case .cancelled,
            .ended,
@@ -464,11 +513,15 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
+      guard lockedAspectRatio == nil else {
+        return
+      }
+
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
@@ -480,17 +533,17 @@ extension CropView {
         }
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.origin.y += translation.y
         nextFrame.size.height -= translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -499,11 +552,15 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
+      guard lockedAspectRatio == nil else {
+        return
+      }
+
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
@@ -515,16 +572,16 @@ extension CropView {
         }
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.size.width += translation.x
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -533,11 +590,15 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
+      guard lockedAspectRatio == nil else {
+        return
+      }
+
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
@@ -549,17 +610,17 @@ extension CropView {
         }
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.origin.x += translation.x
         nextFrame.size.width -= translation.x
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -568,11 +629,15 @@ extension CropView {
         break
       }
     }
-    
+
     @objc
     private func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
+      guard lockedAspectRatio == nil else {
+        return
+      }
+
       assert(containerView == superview)
-      
+
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
@@ -584,16 +649,16 @@ extension CropView {
         }
         let currentFrame = frame
         var nextFrame = currentFrame
-        
+
         nextFrame.size.height += translation.y
-        
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -603,41 +668,42 @@ extension CropView {
       }
     }
   }
-  
 }
 
-
 private final class MaskView: PixelEditorCodeBasedView {
-  
   private let topView = UIView()
   private let rightView = UIView()
   private let leftView = UIView()
   private let bottomView = UIView()
-  
+
   init() {
     super.init(frame: .zero)
-    
+
     backgroundColor = .clear
     [
       topView,
       rightView,
       leftView,
-      bottomView
+      bottomView,
     ].forEach {
       addSubview($0)
       $0.backgroundColor = .white
     }
-    
   }
-  
+
   func setUnmaskRect(_ rect: CGRect) {
-    
     topView.frame = .init(origin: .zero, size: .init(width: bounds.width, height: rect.minY))
-    rightView.frame = .init(origin: .init(x: rect.maxX, y: rect.minY), size: .init(width: bounds.width - rect.maxX, height: rect.height))
-    leftView.frame = .init(origin: .init(x: 0, y: rect.minY), size: .init(width: rect.minX, height: rect.height))
-    bottomView.frame = .init(origin: .init(x: 0, y: rect.maxY), size: .init(width: bounds.width, height: bounds.height - rect.maxY))
-    
+    rightView.frame = .init(
+      origin: .init(x: rect.maxX, y: rect.minY),
+      size: .init(width: bounds.width - rect.maxX, height: rect.height)
+    )
+    leftView.frame = .init(
+      origin: .init(x: 0, y: rect.minY),
+      size: .init(width: rect.minX, height: rect.height)
+    )
+    bottomView.frame = .init(
+      origin: .init(x: 0, y: rect.maxY),
+      size: .init(width: bounds.width, height: bounds.height - rect.maxY)
+    )
   }
-  
-  
 }
