@@ -41,7 +41,7 @@ extension CropView {
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
 
     private unowned let containerView: CropView
-    private unowned let imageView: UIImageView
+    private unowned let imageView: UIView
 
     private lazy var invertedMaskShapeLayerView = MaskView()
 
@@ -49,7 +49,7 @@ extension CropView {
 
     private var lockedAspectRatio: PixelAspectRatio?
 
-    init(containerView: CropView, imageView: UIImageView) {
+    init(containerView: CropView, imageView: UIView) {
       self.containerView = containerView
       self.imageView = imageView
 

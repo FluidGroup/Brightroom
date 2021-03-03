@@ -53,6 +53,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
    An image view that displayed in the scroll view.
    */
   private let imageView = UIImageView()
+//  let imageView: UIView & HardwareImageViewType = {
+//    #if canImport(MetalKit) && !targetEnvironment(simulator)
+//    return MetalImageView()
+//    #else
+//    return GLImageView()
+//    #endif
+//  }()
   private let scrollView = _CropScrollView()
   
   /**
@@ -153,6 +160,18 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
   
   public func setImage(_ image: CIImage) {
+        
+    func setImage(image: UIImage) {
+      guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
+        assertionFailure("Call configureImageForSize before.")
+        return
+      }
+      
+      assert(image.scale == 1)
+      assert(image.size == imageSize.cgSize)
+      imageView.image = image
+    }
+    
     let _image: UIImage
     
     if let cgImage = image.cgImage {
@@ -334,16 +353,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
   }
   
-  private func setImage(image: UIImage) {
-    guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
-      assertionFailure("Call configureImageForSize before.")
-      return
-    }
-    
-    assert(image.scale == 1)
-    assert(image.size == imageSize.cgSize)
-    imageView.image = image
-  }
+
   
   @inline(__always)
   private func willChangeGuideView() {

@@ -39,7 +39,7 @@ final class HardwareImageViewController : UIViewController {
   let image: CIImage = {
 
     if #available(iOS 12.0, *) {
-      return CIImage(image: UIImage(named: "large")!)!.transformed(by: .init(scaleX: 0.3, y: 0.3)).insertingIntermediate(cache: true)
+      return CIImage(image: UIImage(named: "large")!)!.insertingIntermediate(cache: true)
     } else {
       return CIImage(image: UIImage(named: "large")!)!
     }

@@ -106,7 +106,7 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: colorSpace
+      colorSpace: image.colorSpace ?? colorSpace
     )
 
     commandBuffer?.present(currentDrawable!)
