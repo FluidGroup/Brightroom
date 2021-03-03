@@ -159,7 +159,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
   }
   
-  public func setImage(_ image: CIImage) {
+  public func setImage(_ ciImage: CIImage) {
         
     func setImage(image: UIImage) {
       guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
@@ -172,25 +172,27 @@ public final class CropView: UIView, UIScrollViewDelegate {
       imageView.image = image
     }
     
-    let _image: UIImage
+    let uiImage: UIImage
     
-    if let cgImage = image.cgImage {
-      _image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    let _image = ciImage
+    
+    if let cgImage = _image.cgImage {
+      uiImage = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
     } else {
 //      assertionFailure()
       // Displaying will be slow in iOS13
-      _image = UIImage(
-        ciImage: image.transformed(
+      uiImage = UIImage(
+        ciImage: _image.transformed(
           by: .init(
-            translationX: -image.extent.origin.x,
-            y: -image.extent.origin.y
+            translationX: -_image.extent.origin.x,
+            y: -_image.extent.origin.y
           )),
         scale: 1,
         orientation: .up
       )
     }
     
-    setImage(image: _image)
+    setImage(image: uiImage)
   }
   
   public func resetCropAndRotate() {
