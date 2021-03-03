@@ -47,7 +47,7 @@ extension CropView {
 
     private var maximumRect: CGRect?
 
-    private var lockedAspectRatio: PixelAspectRatio?
+    private var lockedAspectRatio: PixelAspectRatio? = .square
 
     init(containerView: CropView, imageView: UIImageView) {
       self.containerView = containerView
@@ -294,12 +294,7 @@ extension CropView {
       maximumSize: do {
         assert(self.maximumRect != nil)
         let maximumRect = self.maximumRect!
-
-        if lockedAspectRatio != nil, maximumRect.contains(proposedFrame) == false {
-          proposedFrame = currentFrame
-        } else {
-          proposedFrame = proposedFrame.intersection(maximumRect)
-        }
+        proposedFrame = proposedFrame.intersection(maximumRect)
       }
     }
 
@@ -314,7 +309,7 @@ extension CropView {
     @inline(__always)
     private func updateMaximumRect() {
       maximumRect = imageView.convert(imageView.bounds, to: containerView)
-        .intersection(containerView.frame.insetBy(dx: 20, dy: 20))
+        .intersection(containerView.bounds.insetBy(dx: 20, dy: 20))
     }
 
     private func onGestureTrackingStarted() {
@@ -353,7 +348,7 @@ extension CropView {
         }
 
         let currentFrame = frame
-        
+
         var nextFrame = currentFrame.resizing(
           to: .init(
             width: currentFrame.width - translation.x,
@@ -361,6 +356,12 @@ extension CropView {
           ),
           anchor: .init(x: 1, y: 1)
         )
+        
+
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -401,7 +402,7 @@ extension CropView {
         }
 
         let currentFrame = frame
-        
+
         var nextFrame = currentFrame.resizing(
           to: .init(
             width: currentFrame.width + translation.x,
@@ -409,7 +410,12 @@ extension CropView {
           ),
           anchor: .init(x: 0, y: 1)
         )
-        
+
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -450,7 +456,7 @@ extension CropView {
         }
 
         let currentFrame = frame
-        
+
         var nextFrame = currentFrame.resizing(
           to: .init(
             width: currentFrame.width - translation.x,
@@ -458,6 +464,11 @@ extension CropView {
           ),
           anchor: .init(x: 1, y: 0)
         )
+
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -504,7 +515,12 @@ extension CropView {
           ),
           anchor: .init(x: 0, y: 0)
         )
-        
+
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -522,10 +538,6 @@ extension CropView {
 
     @objc
     private func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
-      guard lockedAspectRatio == nil else {
-        return
-      }
-
       assert(containerView == superview)
 
       switch gesture.state {
@@ -533,16 +545,28 @@ extension CropView {
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
+
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-     
+
+        let translation = gesture.translation(in: self)
+
         let currentFrame = frame
+
+        let width: CGFloat
+        let height = currentFrame.height - translation.y
+
+        if let locked = lockedAspectRatio {
+          width = locked.width(forHeight: height)
+        } else {
+          width = currentFrame.width
+        }
+
         var nextFrame = currentFrame.resizing(
           to: .init(
-            width: currentFrame.width,
-            height: currentFrame.height - translation.y
+            width: width,
+            height: height
           ),
           anchor: .init(x: 0.5, y: 1)
         )
@@ -551,6 +575,16 @@ extension CropView {
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
         )
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
 
         frame = nextFrame
 
@@ -565,10 +599,6 @@ extension CropView {
 
     @objc
     private func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
-      guard lockedAspectRatio == nil else {
-        return
-      }
-
       assert(containerView == superview)
 
       switch gesture.state {
@@ -576,20 +606,39 @@ extension CropView {
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
+
+        let translation = gesture.translation(in: self)
         let currentFrame = frame
-        var nextFrame = currentFrame
-        
-        nextFrame = currentFrame.resizing(
+
+        let width = currentFrame.width + translation.x
+        let height: CGFloat
+
+        if let locked = lockedAspectRatio {
+          height = locked.height(forWidth: width)
+        } else {
+          height = width
+        }
+
+        var nextFrame = currentFrame.resizing(
           to: .init(
-            width: currentFrame.width + translation.x,
-            height: currentFrame.height
+            width: width,
+            height: height
           ),
           anchor: .init(x: 0, y: 0.5)
         )
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -609,10 +658,6 @@ extension CropView {
 
     @objc
     private func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
-      guard lockedAspectRatio == nil else {
-        return
-      }
-
       assert(containerView == superview)
 
       switch gesture.state {
@@ -620,22 +665,41 @@ extension CropView {
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
+
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
+        let translation = gesture.translation(in: self)
         let currentFrame = frame
-        var nextFrame = currentFrame
-        
-        nextFrame = currentFrame.resizing(
+
+        let width = currentFrame.width - translation.x
+        let height: CGFloat
+
+        if let locked = lockedAspectRatio {
+          height = locked.height(forWidth: width)
+        } else {
+          height = width
+        }
+
+        var nextFrame = currentFrame.resizing(
           to: .init(
-            width: currentFrame.width - translation.x,
-            height: currentFrame.height
+            width: width,
+            height: height
           ),
           anchor: .init(x: 1, y: 0.5)
         )
         
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
+          nextFrame = currentFrame
+        }
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -654,10 +718,6 @@ extension CropView {
 
     @objc
     private func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
-      guard lockedAspectRatio == nil else {
-        return
-      }
-
       assert(containerView == superview)
 
       switch gesture.state {
@@ -669,18 +729,36 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
         let currentFrame = frame
-        var nextFrame = currentFrame
-        
-        nextFrame = currentFrame.resizing(
+
+        let width: CGFloat
+        let height = currentFrame.height + translation.y
+
+        if let locked = lockedAspectRatio {
+          width = locked.width(forHeight: height)
+        } else {
+          width = currentFrame.width
+        }
+
+        var nextFrame = currentFrame.resizing(
           to: .init(
-            width: currentFrame.width,
-            height: currentFrame.height + translation.y
+            width: width,
+            height: height
           ),
           anchor: .init(x: 0.5, y: 0)
         )
         
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
+        
+        // Keeping aspect ratio
+        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
+          nextFrame = currentFrame
+        }
+
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
