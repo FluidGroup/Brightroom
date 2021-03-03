@@ -24,11 +24,11 @@ import Foundation
 #if canImport(MetalKit) && !targetEnvironment(simulator)
 import MetalKit
 
-open class MetalImageView : MTKView, HardwareImageViewType {
-
+open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
+ 
   public var image: CIImage? {
     didSet {
-      renderImage()
+      setNeedsDisplay()
     }
   }
 
@@ -56,10 +56,20 @@ open class MetalImageView : MTKView, HardwareImageViewType {
       fatalError("Device doesn't support Metal")
     }
     framebufferOnly = false
+    self.delegate = self
+    self.enableSetNeedsDisplay = true
   }
 
   public required init(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+  
+  public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+    
+  }
+  
+  public func draw(in view: MTKView) {
+    renderImage()
   }
 
   func renderImage() {

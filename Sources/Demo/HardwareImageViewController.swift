@@ -38,7 +38,12 @@ final class HardwareImageViewController : UIViewController {
 
   let image: CIImage = {
 
-    return CIImage(image: UIImage(named: "large")!)!
+    if #available(iOS 12.0, *) {
+      return CIImage(image: UIImage(named: "large")!)!.transformed(by: .init(scaleX: 0.3, y: 0.3)).insertingIntermediate(cache: true)
+    } else {
+      return CIImage(image: UIImage(named: "large")!)!
+    }
+
 
   }()
 
@@ -55,7 +60,7 @@ final class HardwareImageViewController : UIViewController {
 
     let value = slider.value
 
-    let result = HardwareImageViewController.blur(image: image.transformed(by: .init(scaleX: 0.3, y: 0.3)), radius: Double(value * 50))!
+    let result = HardwareImageViewController.blur(image: image, radius: Double(value * 50))!
 
     imageView.image = result
   }

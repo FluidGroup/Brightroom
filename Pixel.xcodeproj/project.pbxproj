@@ -86,7 +86,7 @@
 		4B98CCDD25EFF4A400E4F61F /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
 		4B98CCDE25EFF4A400E4F61F /* PixelEngine.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
-		4B98CCFB25EFF6F700E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B98CCEC25EFF4F900E4F61F /* Assets.xcassets */; };
+		4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
 		4B9B02E3216BB6F8001593B9 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4B9B02E5216BB7B5001593B9 /* HardwareImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */; };
@@ -290,7 +290,6 @@
 		4B98CCC225EFF31400E4F61F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		4B98CCC425EFF31400E4F61F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B98CCE625EFF4EF00E4F61F /* Mocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
-		4B98CCEC25EFF4F900E4F61F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIImageViewViewController.swift; sourceTree = "<group>"; };
 		4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalImageView.swift; sourceTree = "<group>"; };
 		4B9B02E4216BB7B5001593B9 /* HardwareImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageView.swift; sourceTree = "<group>"; };
@@ -517,6 +516,7 @@
 				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
+				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
 				4B600AFE216B7A94001E1456 /* Products */,
 				4B600B37216B7CD6001E1456 /* Frameworks */,
 				E6BD27A8BEF5BCA522C4A89A /* Pods */,
@@ -588,7 +588,6 @@
 				4B600B26216B7C9C001E1456 /* Main.storyboard */,
 				4B98CCB125EFF27200E4F61F /* TopTableViewController.swift */,
 				4BE7DD0D25E95BDB006B3C74 /* DemoCropViewController.swift */,
-				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
 				4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */,
 				4B600B2E216B7C9E001E1456 /* Info.plist */,
 				4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */,
@@ -652,7 +651,6 @@
 				4B98CCE625EFF4EF00E4F61F /* Mocks.swift */,
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
-				4B98CCEC25EFF4F900E4F61F /* Assets.xcassets */,
 				4B98CCC425EFF31400E4F61F /* Info.plist */,
 				4B98CCC125EFF31400E4F61F /* Preview Content */,
 			);
@@ -931,7 +929,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B98CCFB25EFF6F700E4F61F /* Assets.xcassets in Resources */,
+				4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */,
 				4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

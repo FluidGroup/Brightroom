@@ -158,7 +158,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     if let cgImage = image.cgImage {
       _image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
     } else {
-      assertionFailure()
+//      assertionFailure()
       // Displaying will be slow in iOS13
       _image = UIImage(
         ciImage: image.transformed(
