@@ -51,15 +51,15 @@ extension CropView {
       super.layoutSubviews()
 
       edgeShapeLayer&>.do {
-        $0.frame = bounds.insetBy(dx: -2, dy: -2)
-        $0.layer.borderWidth = 2
+        $0.frame = bounds.insetBy(dx: -1, dy: -1)
+        $0.layer.borderWidth = 1
         $0.layer.borderColor = UIColor.white.cgColor
       }
       
       do {
         
-        let lineWidth: CGFloat = 4
-        let lineLength: CGFloat = 24
+        let lineWidth: CGFloat = 3
+        let lineLength: CGFloat = 20
         
         do {
           cornerTopLeftHorizontalShapeLayer.frame = .init(
