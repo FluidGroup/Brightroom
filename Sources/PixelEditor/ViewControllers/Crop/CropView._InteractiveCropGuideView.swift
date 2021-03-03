@@ -47,7 +47,7 @@ extension CropView {
 
     private var maximumRect: CGRect?
 
-    private var lockedAspectRatio: PixelAspectRatio? = .square
+    private var lockedAspectRatio: PixelAspectRatio?
 
     init(containerView: CropView, imageView: UIImageView) {
       self.containerView = containerView
@@ -294,16 +294,11 @@ extension CropView {
       maximumSize: do {
         assert(self.maximumRect != nil)
         let maximumRect = self.maximumRect!
-        proposedFrame = proposedFrame.intersection(maximumRect)
 
-        if
-          let locked = lockedAspectRatio, locked != PixelAspectRatio(.init(
-            width: proposedFrame.size.width.rounded(.down),
-            height: proposedFrame.size.height.rounded(.down)
-          ))
-        {
+        if lockedAspectRatio != nil, maximumRect.contains(proposedFrame) == false {
           proposedFrame = currentFrame
-          proposedFrame.size = locked.size(byHeight: currentFrame.height)
+        } else {
+          proposedFrame = proposedFrame.intersection(maximumRect)
         }
       }
     }
@@ -358,12 +353,14 @@ extension CropView {
         }
 
         let currentFrame = frame
-        var nextFrame = currentFrame
-
-        nextFrame.origin.x += translation.x
-        nextFrame.origin.y += translation.y
-        nextFrame.size.width -= translation.x
-        nextFrame.size.height -= translation.y
+        
+        var nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width - translation.x,
+            height: currentFrame.height - translation.y
+          ),
+          anchor: .init(x: 1, y: 1)
+        )
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -404,12 +401,15 @@ extension CropView {
         }
 
         let currentFrame = frame
-        var nextFrame = currentFrame
-
-        nextFrame.origin.y += translation.y
-        nextFrame.size.width += translation.x
-        nextFrame.size.height -= translation.y
-
+        
+        var nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width + translation.x,
+            height: currentFrame.height - translation.y
+          ),
+          anchor: .init(x: 0, y: 1)
+        )
+        
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -450,11 +450,14 @@ extension CropView {
         }
 
         let currentFrame = frame
-        var nextFrame = currentFrame
-
-        nextFrame.origin.x += translation.x
-        nextFrame.size.width -= translation.x
-        nextFrame.size.height += translation.y
+        
+        var nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width - translation.x,
+            height: currentFrame.height + translation.y
+          ),
+          anchor: .init(x: 1, y: 0)
+        )
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -494,11 +497,14 @@ extension CropView {
         }
 
         let currentFrame = frame
-        var nextFrame = currentFrame
-
-        nextFrame.size.width += translation.x
-        nextFrame.size.height += translation.y
-
+        var nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width + translation.x,
+            height: currentFrame.height + translation.y
+          ),
+          anchor: .init(x: 0, y: 0)
+        )
+        
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -531,11 +537,15 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
+     
         let currentFrame = frame
-        var nextFrame = currentFrame
-
-        nextFrame.origin.y += translation.y
-        nextFrame.size.height -= translation.y
+        var nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width,
+            height: currentFrame.height - translation.y
+          ),
+          anchor: .init(x: 0.5, y: 1)
+        )
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -572,8 +582,14 @@ extension CropView {
         }
         let currentFrame = frame
         var nextFrame = currentFrame
-
-        nextFrame.size.width += translation.x
+        
+        nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width + translation.x,
+            height: currentFrame.height
+          ),
+          anchor: .init(x: 0, y: 0.5)
+        )
 
         postprocess(
           proposedFrame: &nextFrame,
@@ -608,12 +624,18 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
+        
         let currentFrame = frame
         var nextFrame = currentFrame
-
-        nextFrame.origin.x += translation.x
-        nextFrame.size.width -= translation.x
-
+        
+        nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width - translation.x,
+            height: currentFrame.height
+          ),
+          anchor: .init(x: 1, y: 0.5)
+        )
+        
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -647,11 +669,18 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
+        
         let currentFrame = frame
         var nextFrame = currentFrame
-
-        nextFrame.size.height += translation.y
-
+        
+        nextFrame = currentFrame.resizing(
+          to: .init(
+            width: currentFrame.width,
+            height: currentFrame.height + translation.y
+          ),
+          anchor: .init(x: 0.5, y: 0)
+        )
+        
         postprocess(
           proposedFrame: &nextFrame,
           currentFrame: currentFrame
@@ -704,6 +733,19 @@ private final class MaskView: PixelEditorCodeBasedView {
     bottomView.frame = .init(
       origin: .init(x: 0, y: rect.maxY),
       size: .init(width: bounds.width, height: bounds.height - rect.maxY)
+    )
+  }
+}
+
+extension CGRect {
+  fileprivate func resizing(to size: CGSize, anchor: CGPoint = CGPoint(x: 0.5, y: 0.5)) -> CGRect {
+    let sizeDelta = CGSize(width: size.width - width, height: size.height - height)
+    return CGRect(
+      origin: CGPoint(
+        x: minX - sizeDelta.width * anchor.x,
+        y: minY - sizeDelta.height * anchor.y
+      ),
+      size: size
     )
   }
 }
