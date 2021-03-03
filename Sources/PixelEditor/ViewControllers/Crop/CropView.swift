@@ -36,6 +36,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
   
   /**
+   A view that covers the area out of cropping extent.
+   */
+  public private(set) weak var outOfBoundsOverlay: UIView?
+    
+  /**
    An image view that displayed in the scroll view.
    */
   private let imageView = UIImageView()
@@ -82,6 +87,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
       EditorLog.debug(state.primitive)
     }
     .store(in: &subscriptions)
+    
+    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+    setOutOfBoundsOverlay(effectView)
+    
     #endif
     
     store.sinkState(queue: .mainIsolated()) { [weak self] state in
@@ -118,6 +127,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
       if $0.frame != frame {
         $0.frame = frame
       }
+    }
+    
+    if let outOfBoundsOverlay = outOfBoundsOverlay {
+      outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
+      outOfBoundsOverlay.center = center
     }
   }
   
@@ -166,6 +180,28 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       $0.proposedCropAndRotate = cropAndRotate
     }
+  }
+  
+  /**
+   Displays an overlay that covers the area out of cropping extent.
+   Given view's frame would be adjusted automatically.
+   
+   - Attention: view's userIntereactionEnabled turns off
+   */
+  public func setOutOfBoundsOverlay(_ view: UIView) {
+    
+    outOfBoundsOverlay?.removeFromSuperview()
+    
+    outOfBoundsOverlay = view
+    view.isUserInteractionEnabled = false
+    
+    // TODO: Unsafe operation.
+    insertSubview(view, aboveSubview: scrollView)
+    
+    guideView.setOutOfBoundsOverlay(view)
+    
+    setNeedsLayout()
+    layoutIfNeeded()
   }
   
   private func updateScrollContainerView(

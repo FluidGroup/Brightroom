@@ -37,10 +37,13 @@ extension CropView {
     private let leftControlPointView = UIView()
     private let bottomControlPointView = UIView()
     
-    private weak var overlay: CropOverlayBase?
+    private weak var cropOverlay: CropOverlayBase?
     
     private unowned let containerView: CropView
     private unowned let imageView: UIImageView
+    
+    private weak var outOfBoundsOverlayView: UIView?
+    private lazy var invertedMaskShapeLayerView = MaskView()
     
     private var maximumRect: CGRect?
     
@@ -216,24 +219,48 @@ extension CropView {
     }
     
     // MARK: - Functions
-    
+        
     /**
      Displays a view as an overlay.
      e.g. grid view
      */
-    public func setOverlay(_ newOverlay: CropOverlayBase?) {
-      overlay?.removeFromSuperview()
+    public func setCropOverlay(_ newOverlay: CropOverlayBase?) {
+      cropOverlay?.removeFromSuperview()
       
       if let overlay = newOverlay {
         overlay.isUserInteractionEnabled = false
         addSubview(overlay)
-        self.overlay = overlay
+        self.cropOverlay = overlay
       }
+    }
+    
+    func setOutOfBoundsOverlay(_ view: UIView) {
+      assert(view.superview != nil)
+      assert(view.superview is CropView)
+      
+      outOfBoundsOverlayView = view
+
+      setNeedsLayout()
+      layoutIfNeeded()
     }
     
     override public func layoutSubviews() {
       super.layoutSubviews()
-      overlay?.frame = bounds
+      
+      cropOverlay?.frame = bounds
+      
+      if let outOfBoundsOverlayView = outOfBoundsOverlayView {
+        let frame = convert(bounds, to: outOfBoundsOverlayView)
+        
+        invertedMaskShapeLayerView.frame = outOfBoundsOverlayView.bounds
+        invertedMaskShapeLayerView.setUnmaskRect(frame)
+      
+        if outOfBoundsOverlayView.mask == nil {
+          outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
+        }
+        
+      }
+      
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -282,12 +309,12 @@ extension CropView {
     private func onGestureTrackingStarted() {
       updateMaximumRect()
       willChange()
-      overlay?.didBeginAdjustment()
+      cropOverlay?.didBeginAdjustment()
     }
     
     private func onGestureTrackingEnded() {
       didChange()
-      overlay?.didEndAdjustment()
+      cropOverlay?.didEndAdjustment()
     }
     
     @objc
@@ -574,5 +601,41 @@ extension CropView {
       }
     }
   }
+  
+}
+
+
+private final class MaskView: PixelEditorCodeBasedView {
+  
+  private let topView = UIView()
+  private let rightView = UIView()
+  private let leftView = UIView()
+  private let bottomView = UIView()
+  
+  init() {
+    super.init(frame: .zero)
+    
+    backgroundColor = .clear
+    [
+      topView,
+      rightView,
+      leftView,
+      bottomView
+    ].forEach {
+      addSubview($0)
+      $0.backgroundColor = .white
+    }
+    
+  }
+  
+  func setUnmaskRect(_ rect: CGRect) {
+    
+    topView.frame = .init(origin: .zero, size: .init(width: bounds.width, height: rect.minY))
+    rightView.frame = .init(origin: .init(x: rect.maxX, y: rect.minY), size: .init(width: bounds.width - rect.maxX, height: rect.height))
+    leftView.frame = .init(origin: .init(x: 0, y: rect.minY), size: .init(width: rect.minX, height: rect.height))
+    bottomView.frame = .init(origin: .init(x: 0, y: rect.maxY), size: .init(width: bounds.width, height: bounds.height - rect.maxY))
+    
+  }
+  
   
 }

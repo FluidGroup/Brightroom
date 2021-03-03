@@ -111,7 +111,6 @@ extension CropView {
   }
   
   open class CropOverlayBase: PixelEditorCodeBasedView {
-    // FIXME: add call-back methods
     
     open func didBeginAdjustment() {
       
