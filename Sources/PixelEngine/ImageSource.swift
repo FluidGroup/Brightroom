@@ -189,7 +189,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     pendingAction = { `self` in
       
-      URLSession.shared.dataTask(with: urlRequest) { data, response, error in
+      let task = URLSession.shared.dataTask(with: urlRequest) { data, response, error in
         
         if let error = error {
           self.store.commit {
@@ -198,7 +198,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
         }
         
         if let data = data {
-          if let image = CIImage(data: data) {
+          
+          // To make CIImage's backing storage as CGImage.
+          let uiImage = UIImage(data: data, scale: 1)!
+          assert(uiImage.cgImage != nil)
+          
+          if let image = CIImage(image: uiImage) {
             assert(imageSize == .init(image: image))
             self.store.commit {
               $0.currentImage = .init(image: image, isEditable: true)
@@ -210,6 +215,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
           }
         }
       }
+      
+      task.resume()
     }
     
   }

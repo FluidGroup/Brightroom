@@ -619,7 +619,7 @@ extension CropView {
         if let locked = lockedAspectRatio {
           height = locked.height(forWidth: width)
         } else {
-          height = width
+          height = currentFrame.height
         }
 
         var nextFrame = currentFrame.resizing(
@@ -679,7 +679,7 @@ extension CropView {
         if let locked = lockedAspectRatio {
           height = locked.height(forWidth: width)
         } else {
-          height = width
+          height = currentFrame.height
         }
 
         var nextFrame = currentFrame.resizing(
