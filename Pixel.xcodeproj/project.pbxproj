@@ -114,8 +114,6 @@
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* Options.swift */; };
 		4BB8AD7C25E96B100018D769 /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB8AD7B25E96B100018D769 /* Mocks.swift */; };
-		4BC95D8625E55845000595AE /* PixelCropViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC95D8525E55845000595AE /* PixelCropViewController.swift */; };
-		4BC95D8D25E5587F000595AE /* PixelCropViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -285,8 +283,6 @@
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* Options.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
 		4BB8AD7B25E96B100018D769 /* Mocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
-		4BC95D8525E55845000595AE /* PixelCropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelCropViewController.swift; sourceTree = "<group>"; };
-		4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelCropViewModel.swift; sourceTree = "<group>"; };
 		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
 		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
 		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
@@ -444,7 +440,7 @@
 				4BA8E73B217C712200940518 /* Utils */,
 				4B3457882174FF6600716DA0 /* ImageViews */,
 				4B9D4578216E07BC003A240A /* Components */,
-				4BC95D8925E5586B000595AE /* ViewControllers */,
+				4BC95D8925E5586B000595AE /* Screens */,
 				4B47D054216CC5350007B594 /* PixelEditor.h */,
 				4B47D055216CC5350007B594 /* Info.plist */,
 				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
@@ -621,18 +617,16 @@
 			path = Utils;
 			sourceTree = "<group>";
 		};
-		4BC95D8925E5586B000595AE /* ViewControllers */ = {
+		4BC95D8925E5586B000595AE /* Screens */ = {
 			isa = PBXGroup;
 			children = (
 				4B835DFB25E95D3C00EC84D1 /* Crop */,
-				4BEEFF1B25E6827B008144EA /* Basic */,
-				4BC95D8525E55845000595AE /* PixelCropViewController.swift */,
-				4BC95D8C25E5587F000595AE /* PixelCropViewModel.swift */,
+				4BEEFF1B25E6827B008144EA /* Classic */,
 			);
-			path = ViewControllers;
+			path = Screens;
 			sourceTree = "<group>";
 		};
-		4BEEFF1B25E6827B008144EA /* Basic */ = {
+		4BEEFF1B25E6827B008144EA /* Classic */ = {
 			isa = PBXGroup;
 			children = (
 				4B3457892174FF8600716DA0 /* Controls */,
@@ -643,7 +637,7 @@
 				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
 				4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */,
 			);
-			path = Basic;
+			path = Classic;
 			sourceTree = "<group>";
 		};
 		E6BD27A8BEF5BCA522C4A89A /* Pods */ = {
@@ -944,7 +938,6 @@
 				4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */,
 				4B42A6A52178DF2600F18208 /* SaturationControl.swift in Sources */,
 				4B47D062216CC5480007B594 /* CropAndStraightenView.swift in Sources */,
-				4BC95D8D25E5587F000595AE /* PixelCropViewModel.swift in Sources */,
 				4BA84F8425EE950900BAB430 /* CropView._CropScrollView.swift in Sources */,
 				4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */,
 				4B42A6AF2178E14E00F18208 /* HighlightsControl.swift in Sources */,
@@ -952,7 +945,6 @@
 				4B1E94B12175FB5800E9DFB8 /* StepSlider.swift in Sources */,
 				4B835DFF25E9654A00EC84D1 /* AutoLayout.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
-				4BC95D8625E55845000595AE /* PixelCropViewController.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
