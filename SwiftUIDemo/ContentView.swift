@@ -2,11 +2,11 @@
 import SwiftUI
 
 struct ContentView: View {
-  @State private var target: IdentifiableView?
+  @State private var target: FullscreenIdentifiableView?
   @State private var image: SwiftUI.Image?
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-  @State private var fullScreenView: IdentifiableView?
+  @State private var fullScreenView: FullscreenIdentifiableView?
 
   var body: some View {
     NavigationView {
@@ -93,7 +93,10 @@ struct ContentView: View {
   }
 }
 
-struct IdentifiableView: View, Identifiable {
+struct FullscreenIdentifiableView: View, Identifiable {
+  
+  @Environment(\.presentationMode) var presentationMode
+  
   let id = UUID()
   private let content: AnyView
 
@@ -102,7 +105,13 @@ struct IdentifiableView: View, Identifiable {
   }
 
   var body: some View {
-    content
+    VStack {
+      content
+      Button("Dismiss") {
+        presentationMode.wrappedValue.dismiss()
+      }
+      .padding(16)
+    }
   }
 }
 

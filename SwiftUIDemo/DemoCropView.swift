@@ -19,6 +19,7 @@ struct DemoCropView: View {
       Color.black
         .ignoresSafeArea()
       SwiftUICropView(editingStack: editingStack)
+        .clipped()
         .onAppear {
           editingStack.start()
         }
