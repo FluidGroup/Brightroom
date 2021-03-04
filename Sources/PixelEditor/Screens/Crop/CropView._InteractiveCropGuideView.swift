@@ -684,6 +684,11 @@ extension CGRect {
     var minimumSize = minimumSize
          
     if let aspectRatio = aspectRatio {
+      
+      /**
+       Resizing according to the aspect ratio
+       */
+
       if abs(deltaHeight) > abs(deltaWidth) {
         proposedRect.size.height += deltaHeight
         proposedRect.size.width = aspectRatio.width(forHeight: proposedRect.size.height)
@@ -699,6 +704,11 @@ extension CGRect {
       }
       
     } else {
+      
+      /**
+       Resizing with free form
+       */
+      
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
     }
@@ -831,15 +841,17 @@ extension CGRect {
         }
       }
     }
-
-    #if DEBUG
-    if constraintRect.contains(proposedRect) {
-      print("contains")
-    } else {
-      print("not contains")
+    
+    print("Prop", proposedRect)
+    
+    max: do {
+      
+      proposedRect = constraintRect.intersection(proposedRect)
+                  
     }
-    #endif
-
-    self = constraintRect.intersection(proposedRect)
+    
+    print("Fixed", proposedRect)
+    
+    self = proposedRect
   }
 }
