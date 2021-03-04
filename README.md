@@ -3,7 +3,7 @@
 > 💥 The next major version development has been started.  
 > https://github.com/muukii/Pixel/pull/53  
 > This obviously takes many breaking changes.  
-> Feel free to start a discussion about enhancement from the current released version.
+> Feel free to start a discussion about enhancement from the current released version.  
 > I often upload movies of features in development to the pull-request's comment.
 
 **Plannning features**
