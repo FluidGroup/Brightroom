@@ -322,7 +322,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .bottomRight,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -356,7 +356,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .bottomLeft,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -392,7 +392,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .topRight,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -426,7 +426,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .topLeft,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -462,7 +462,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: 0,
           deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .bottom,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -497,7 +497,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: 0,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .left,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -533,7 +533,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: 0,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .right,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -568,7 +568,7 @@ extension CropView {
         let nextFrame = frame.resized(
           deltaWidth: 0,
           deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio?.asCGSize(),
+          aspectRatio: lockedAspectRatio,
           anchorPoint: .top,
           constraintRect: maximumRect!,
           minimumSize: minimumSize
@@ -654,7 +654,7 @@ extension CGRect {
   func resized(
     deltaWidth: CGFloat,
     deltaHeight: CGFloat,
-    aspectRatio: CGSize?,
+    aspectRatio: PixelAspectRatio?,
     anchorPoint: AnchorPoint,
     constraintRect: CGRect,
     minimumSize: CGSize
@@ -674,7 +674,7 @@ extension CGRect {
   mutating func resizing(
     deltaWidth: CGFloat,
     deltaHeight: CGFloat,
-    aspectRatio: CGSize?,
+    aspectRatio: PixelAspectRatio?,
     anchorPoint: AnchorPoint,
     constraintRect: CGRect,
     minimumSize: CGSize
@@ -748,7 +748,6 @@ extension CGRect {
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
       
-      // TODO:
       if proposedRect.width < minimumSize.width {
         proposedRect.origin.x += proposedRect.width - minimumSize.width
         proposedRect.size.width = minimumSize.width
@@ -765,7 +764,6 @@ extension CGRect {
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
             
-      // TODO:
       if proposedRect.width < minimumSize.width {
         proposedRect.origin.x += proposedRect.width - minimumSize.width
         proposedRect.size.width = minimumSize.width
@@ -782,7 +780,6 @@ extension CGRect {
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
       
-      // TODO:
       if proposedRect.width < minimumSize.width {
         proposedRect.size.width = minimumSize.width
       }
@@ -800,7 +797,6 @@ extension CGRect {
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
       
-      // TODO:
       if proposedRect.width < minimumSize.width {
         proposedRect.origin.x += proposedRect.width - minimumSize.width
         proposedRect.size.width = minimumSize.width
@@ -813,6 +809,12 @@ extension CGRect {
       
     }
     
-    self = proposedRect
+    if constraintRect.contains(proposedRect) {
+      print("contains")
+    } else {
+      print("not contains")
+    }
+    
+    self = constraintRect.intersection(proposedRect)
   }
 }
