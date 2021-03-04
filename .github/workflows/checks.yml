@@ -1,0 +1,17 @@
+name: Checks
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1.1
+        with:
+          xcode-version: "12.4"
+      - uses: actions/checkout@v2
+      - name: Pod install
+        run: pod install
+      - name: Run test
+        run: fastlane build_demo_apps
