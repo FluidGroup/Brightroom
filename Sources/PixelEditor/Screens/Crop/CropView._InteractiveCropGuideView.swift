@@ -48,6 +48,8 @@ extension CropView {
     private var maximumRect: CGRect?
 
     private var lockedAspectRatio: PixelAspectRatio?
+    
+    private let minimumSize = CGSize(width: 160, height: 160)
 
     init(containerView: CropView, imageView: UIView) {
       self.containerView = containerView
@@ -275,29 +277,6 @@ extension CropView {
       return view
     }
 
-    private func postprocess(
-      proposedFrame: inout CGRect,
-      currentFrame: CGRect
-    ) {
-      minimumSize: do {
-        if proposedFrame.width < 100 {
-          proposedFrame.origin.x = currentFrame.origin.x
-          proposedFrame.size.width = currentFrame.size.width
-        }
-
-        if proposedFrame.height < 100 {
-          proposedFrame.origin.y = currentFrame.origin.y
-          proposedFrame.size.height = currentFrame.size.height
-        }
-      }
-
-      maximumSize: do {
-        assert(self.maximumRect != nil)
-        let maximumRect = self.maximumRect!
-        proposedFrame = proposedFrame.intersection(maximumRect)
-      }
-    }
-
     func willBeginScrollViewAdjustment() {
       onGestureTrackingStarted()
     }
@@ -337,37 +316,18 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        var translation = gesture.translation(in: self)
-        if let lockedAspectRatio = lockedAspectRatio {
-          let current = translation
-          if abs(current.x) > abs(current.y) {
-            translation.y = lockedAspectRatio.height(forWidth: current.x)
-          } else {
-            translation.x = lockedAspectRatio.width(forHeight: current.y)
-          }
-        }
-
-        let currentFrame = frame
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: currentFrame.width - translation.x,
-            height: currentFrame.height - translation.y
-          ),
-          anchor: .init(x: 1, y: 1)
+        
+        let translation = gesture.translation(in: self)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: -translation.x,
+          deltaHeight: -translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .bottomRight,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
         
-
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
         frame = nextFrame
 
       case .cancelled,
@@ -391,34 +351,15 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        var translation = gesture.translation(in: self)
-        if let lockedAspectRatio = lockedAspectRatio {
-          let current = translation
-          if abs(current.x) > abs(current.y) {
-            translation.y = lockedAspectRatio.height(forWidth: -current.x)
-          } else {
-            translation.x = lockedAspectRatio.width(forHeight: -current.y)
-          }
-        }
-
-        let currentFrame = frame
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: currentFrame.width + translation.x,
-            height: currentFrame.height - translation.y
-          ),
-          anchor: .init(x: 0, y: 1)
-        )
-
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
+        let translation = gesture.translation(in: self)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: translation.x,
+          deltaHeight: -translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .bottomLeft,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
 
         frame = nextFrame
@@ -445,36 +386,18 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        var translation = gesture.translation(in: self)
-        if let lockedAspectRatio = lockedAspectRatio {
-          let current = translation
-          if abs(current.x) > abs(current.y) {
-            translation.y = lockedAspectRatio.height(forWidth: -current.x)
-          } else {
-            translation.x = lockedAspectRatio.width(forHeight: -current.y)
-          }
-        }
-
-        let currentFrame = frame
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: currentFrame.width - translation.x,
-            height: currentFrame.height + translation.y
-          ),
-          anchor: .init(x: 1, y: 0)
+        
+        let translation = gesture.translation(in: self)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: -translation.x,
+          deltaHeight: translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .topRight,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
-
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
+        
         frame = nextFrame
       case .cancelled,
            .ended,
@@ -497,36 +420,20 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        var translation = gesture.translation(in: self)
-        if let lockedAspectRatio = lockedAspectRatio {
-          let current = translation
-          if abs(current.x) > abs(current.y) {
-            translation.y = lockedAspectRatio.height(forWidth: current.x)
-          } else {
-            translation.x = lockedAspectRatio.width(forHeight: current.y)
-          }
-        }
-
-        let currentFrame = frame
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: currentFrame.width + translation.x,
-            height: currentFrame.height + translation.y
-          ),
-          anchor: .init(x: 0, y: 0)
+        
+        let translation = gesture.translation(in: self)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: translation.x,
+          deltaHeight: translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .topLeft,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
-
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
+        
         frame = nextFrame
+        
       case .cancelled,
            .ended,
            .failed:
@@ -551,41 +458,16 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-
-        let currentFrame = frame
-
-        let width: CGFloat
-        let height = currentFrame.height - translation.y
-
-        if let locked = lockedAspectRatio {
-          width = locked.width(forHeight: height)
-        } else {
-          width = currentFrame.width
-        }
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: width,
-            height: height
-          ),
-          anchor: .init(x: 0.5, y: 1)
-        )
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
+        
+        let nextFrame = frame.resized(
+          deltaWidth: 0,
+          deltaHeight: -translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .bottom,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
         
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-        
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-
         frame = nextFrame
 
       case .cancelled,
@@ -611,40 +493,16 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-        let currentFrame = frame
-
-        let width = currentFrame.width + translation.x
-        let height: CGFloat
-
-        if let locked = lockedAspectRatio {
-          height = locked.height(forWidth: width)
-        } else {
-          height = currentFrame.height
-        }
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: width,
-            height: height
-          ),
-          anchor: .init(x: 0, y: 0.5)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: translation.x,
+          deltaHeight: 0,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .left,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
         
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-        
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
         frame = nextFrame
 
       case .cancelled,
@@ -669,42 +527,18 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-
+        
         let translation = gesture.translation(in: self)
-        let currentFrame = frame
-
-        let width = currentFrame.width - translation.x
-        let height: CGFloat
-
-        if let locked = lockedAspectRatio {
-          height = locked.height(forWidth: width)
-        } else {
-          height = currentFrame.height
-        }
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: width,
-            height: height
-          ),
-          anchor: .init(x: 1, y: 0.5)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: -translation.x,
+          deltaHeight: 0,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .right,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
         
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.minY)) == false {
-          nextFrame = currentFrame
-        }
-        
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
         frame = nextFrame
 
       case .cancelled,
@@ -725,45 +559,21 @@ extension CropView {
         onGestureTrackingStarted()
         fallthrough
       case .changed:
-        let translation = gesture.translation(in: self)
         defer {
           gesture.setTranslation(.zero, in: self)
         }
 
-        let currentFrame = frame
-
-        let width: CGFloat
-        let height = currentFrame.height + translation.y
-
-        if let locked = lockedAspectRatio {
-          width = locked.width(forHeight: height)
-        } else {
-          width = currentFrame.width
-        }
-
-        var nextFrame = currentFrame.resizing(
-          to: .init(
-            width: width,
-            height: height
-          ),
-          anchor: .init(x: 0.5, y: 0)
+        let translation = gesture.translation(in: self)
+        
+        let nextFrame = frame.resized(
+          deltaWidth: 0,
+          deltaHeight: translation.y,
+          aspectRatio: lockedAspectRatio?.asCGSize(),
+          anchorPoint: .top,
+          constraintRect: maximumRect!,
+          minimumSize: minimumSize
         )
         
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.minX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-        
-        // Keeping aspect ratio
-        if maximumRect!.contains(.init(x: nextFrame.maxX, y: nextFrame.maxY)) == false {
-          nextFrame = currentFrame
-        }
-
-        postprocess(
-          proposedFrame: &nextFrame,
-          currentFrame: currentFrame
-        )
-
         frame = nextFrame
 
       case .cancelled,
@@ -825,5 +635,187 @@ extension CGRect {
       ),
       size: size
     )
+  }
+}
+
+extension CGRect {
+  enum AnchorPoint {
+    case topLeft
+    case topRight
+    case bottomLeft
+    case bottomRight
+    
+    case top
+    case right
+    case left
+    case bottom
+  }
+  
+  func resized(
+    deltaWidth: CGFloat,
+    deltaHeight: CGFloat,
+    aspectRatio: CGSize?,
+    anchorPoint: AnchorPoint,
+    constraintRect: CGRect,
+    minimumSize: CGSize
+  ) -> CGRect {
+    var new = self
+    new.resizing(
+      deltaWidth: deltaWidth,
+      deltaHeight: deltaHeight,
+      aspectRatio: aspectRatio,
+      anchorPoint: anchorPoint,
+      constraintRect: constraintRect,
+      minimumSize: minimumSize
+    )
+    return new
+  }
+  
+  mutating func resizing(
+    deltaWidth: CGFloat,
+    deltaHeight: CGFloat,
+    aspectRatio: CGSize?,
+    anchorPoint: AnchorPoint,
+    constraintRect: CGRect,
+    minimumSize: CGSize
+  ) {
+    var proposedRect = self
+    
+    switch anchorPoint {
+    case .topLeft:
+      
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      if proposedRect.width < minimumSize.width {
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .topRight:
+      
+      proposedRect.origin.x -= deltaWidth
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .bottomLeft:
+      
+      proposedRect.origin.y -= deltaHeight
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      if proposedRect.width < minimumSize.width {
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .bottomRight:
+      
+      proposedRect.origin.x -= deltaWidth
+      proposedRect.origin.y -= deltaHeight
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .top:
+      
+      proposedRect.origin.x -= deltaWidth / 2
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      // TODO:
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .right:
+      
+      proposedRect.origin.x -= deltaWidth
+      proposedRect.origin.y -= deltaHeight / 2
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+            
+      // TODO:
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .left:
+      
+      proposedRect.origin.y -= deltaHeight / 2
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      // TODO:
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    case .bottom:
+      
+      proposedRect.origin.x -= deltaWidth / 2
+      proposedRect.origin.y -= deltaHeight
+
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+      
+      // TODO:
+      if proposedRect.width < minimumSize.width {
+        proposedRect.origin.x += proposedRect.width - minimumSize.width
+        proposedRect.size.width = minimumSize.width
+      }
+      
+      if proposedRect.height < minimumSize.height {
+        proposedRect.origin.y += proposedRect.height - minimumSize.height
+        proposedRect.size.height = minimumSize.height
+      }
+      
+    }
+    
+    self = proposedRect
   }
 }
