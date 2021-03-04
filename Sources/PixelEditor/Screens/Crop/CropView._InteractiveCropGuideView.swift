@@ -307,196 +307,190 @@ extension CropView {
       cropOutsideOverlay?.didEndAdjustment()
     }
 
-    private var topConstraint: NSLayoutConstraint!
-    private var topMaxConstraint: NSLayoutConstraint!
-
-    private var bottomConstraint: NSLayoutConstraint!
-    private var bottomMaxConstraint: NSLayoutConstraint!
-
-    private var rightConstraint: NSLayoutConstraint!
-    private var rightMaxConstraint: NSLayoutConstraint!
-
-    private var leftConstraint: NSLayoutConstraint!
-    private var leftMaxConstraint: NSLayoutConstraint!
-
     private var widthConstraint: NSLayoutConstraint!
-    private var widthMinConstraint: NSLayoutConstraint!
-    
-    private var centerXConstraint: NSLayoutConstraint!
-    private var centerYConstraint: NSLayoutConstraint!
-
     private var heightConstraint: NSLayoutConstraint!
-    private var heightMinConstraint: NSLayoutConstraint!
-    
-    private var aspectRatioConstraint: NSLayoutConstraint?
+
+    private var activeConstraints: [NSLayoutConstraint] = []
 
     private func activateRightConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      rightConstraint = rightAnchor.constraint(
-        equalTo: superview!.rightAnchor,
-        constant: frame.maxX - superview!.bounds.maxX
-      )&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        rightAnchor.constraint(
+          equalTo: superview!.rightAnchor,
+          constant: frame.maxX - superview!.bounds.maxX
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
 
     private func activateLeftMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      leftMaxConstraint = leftAnchor.constraint(
-        greaterThanOrEqualTo: superview!.leftAnchor,
-        constant: maximumRect!.minX
-      )&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        leftAnchor.constraint(
+          greaterThanOrEqualTo: superview!.leftAnchor,
+          constant: maximumRect!.minX
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
-    
+
     private func activateRightMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
-      
-      rightMaxConstraint = rightAnchor.constraint(
-        lessThanOrEqualTo: superview!.rightAnchor,
-        constant: maximumRect!.maxX - superview!.bounds.maxX
-      )&>.do {
-        $0.isActive = true
-      }
+
+      activeConstraints.append(
+        rightAnchor.constraint(
+          lessThanOrEqualTo: superview!.rightAnchor,
+          constant: maximumRect!.maxX - superview!.bounds.maxX
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
-    
+
     private func activateTopMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
-      
-      topMaxConstraint = topAnchor.constraint(
-        greaterThanOrEqualTo: superview!.topAnchor,
-        constant: maximumRect!.minY
-      )&>.do {
-        $0.isActive = true
-      }
+
+      activeConstraints.append(
+        topAnchor.constraint(
+          greaterThanOrEqualTo: superview!.topAnchor,
+          constant: maximumRect!.minY
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
-    
+
     private func activateBottomMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
-      
-      bottomMaxConstraint = bottomAnchor.constraint(
-        lessThanOrEqualTo: superview!.bottomAnchor,
-        constant: maximumRect!.maxY - superview!.bounds.maxY
-      )&>.do {
-        $0.isActive = true
-      }
+
+      activeConstraints.append(
+        bottomAnchor.constraint(
+          lessThanOrEqualTo: superview!.bottomAnchor,
+          constant: maximumRect!.maxY - superview!.bounds.maxY
+        )&>.do {
+          $0.isActive = true
+        })
     }
 
     private func activateLeftConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      leftConstraint = leftAnchor.constraint(
-        equalTo: superview!.leftAnchor,
-        constant: frame.minX - superview!.bounds.minX
-      )&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        leftAnchor.constraint(
+          equalTo: superview!.leftAnchor,
+          constant: frame.minX - superview!.bounds.minX
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
 
     private func activateBottomConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      bottomConstraint = bottomAnchor.constraint(
-        equalTo: superview!.bottomAnchor,
-        constant: frame.maxY - superview!.bounds.maxY
-      )&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        bottomAnchor.constraint(
+          equalTo: superview!.bottomAnchor,
+          constant: frame.maxY - superview!.bounds.maxY
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
 
     private func activateTopConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      topConstraint = topAnchor.constraint(
-        equalTo: superview!.topAnchor,
-        constant: frame.minY - superview!.bounds.minY
-      )&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        topAnchor.constraint(
+          equalTo: superview!.topAnchor,
+          constant: frame.minY - superview!.bounds.minY
+        )&>.do {
+          $0.isActive = true
+        }
+      )
     }
-    
+
     private func activateCenterXConstraint() {
-      centerXConstraint = centerXAnchor.constraint(
-        equalTo: superview!.centerXAnchor,
-        constant: superview!.bounds.midX - frame.midX
-      )&>.do {
-        $0.priority = .defaultLow
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        centerXAnchor.constraint(
+          equalTo: superview!.centerXAnchor,
+          constant: frame.midX - superview!.bounds.midX
+        )&>.do {
+          $0.priority = .defaultLow
+          $0.isActive = true
+        }
+      )
     }
-    
+
     private func activateCenterYConstraint() {
-      centerYConstraint = centerYAnchor.constraint(
-        equalTo: superview!.centerYAnchor,
-        constant: center.y
-      )&>.do {
-        $0.priority = .defaultLow
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        centerYAnchor.constraint(
+          equalTo: superview!.centerYAnchor,
+          constant: frame.midY - superview!.bounds.midY
+        )&>.do {
+          $0.priority = .defaultLow
+          $0.isActive = true
+        }
+      )
     }
 
     private func activateWidthConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
       widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width)&>.do {
-        $0.priority = .defaultHigh
+        $0.priority = .defaultLow
         $0.isActive = true
       }
 
-      widthMinConstraint = widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)&>.do {
-        $0.isActive = true
-      }
-   
-    }
-    
-    private func activateAspectRatioConstraint() {
-      if let aspectRatio = lockedAspectRatio {
-        aspectRatioConstraint = widthAnchor.constraint(equalTo: heightAnchor, multiplier: aspectRatio.width / aspectRatio.height, constant: 1)&>.do {
+      activeConstraints.append(
+        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)&>.do {
           $0.isActive = true
         }
-      }
+      )
     }
 
     private func activateHeightConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
       heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height)&>.do {
-        $0.priority = .defaultHigh
+        $0.priority = .defaultLow
         $0.isActive = true
       }
 
-      heightMinConstraint = heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)&>.do {
-        $0.isActive = true
-      }
+      activeConstraints.append(
+        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)&>.do {
+          $0.isActive = true
+        }
+      )
     }
     
+    
+    private func activateAspectRatioConstraint() {
+      if let aspectRatio = lockedAspectRatio {
+        activeConstraints.append(widthAnchor.constraint(
+          equalTo: heightAnchor,
+          multiplier: aspectRatio.width / aspectRatio.height,
+          constant: 1
+        )&>.do {
+          $0.isActive = true
+        })
+      }
+    }
+
+
     private func deactivateAllConstraints() {
       translatesAutoresizingMaskIntoConstraints = true
 
       NSLayoutConstraint.deactivate([
-        topConstraint,
-        bottomConstraint,
-        rightConstraint,
-        leftConstraint,
-        
-        topMaxConstraint,
-        bottomMaxConstraint,
-        rightMaxConstraint,
-        leftMaxConstraint,
-        
         widthConstraint,
         heightConstraint,
-        heightMinConstraint,
-        widthMinConstraint,
-        
-        centerXConstraint,
-        centerYConstraint,
-        
-        aspectRatioConstraint,
-      ].compactMap { $0 })
+
+      ].compactMap { $0 } + activeConstraints)
       
       layoutIfNeeded()
     }
@@ -511,10 +505,10 @@ extension CropView {
 
         activateConstraints: do {
           activateAspectRatioConstraint()
-          
+
           activateTopMaxConstraint()
           activateLeftMaxConstraint()
-          
+
           activateBottomConstraint()
           activateRightConstraint()
           activateWidthConstraint()
@@ -551,12 +545,11 @@ extension CropView {
         onGestureTrackingStarted()
 
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
-                    
+
           activateTopMaxConstraint()
           activateRightMaxConstraint()
-          
+
           activateBottomConstraint()
           activateLeftConstraint()
 
@@ -593,12 +586,11 @@ extension CropView {
         onGestureTrackingStarted()
 
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
-          
+
           activateBottomMaxConstraint()
           activateLeftMaxConstraint()
-          
+
           activateTopConstraint()
           activateRightConstraint()
 
@@ -635,12 +627,11 @@ extension CropView {
         onGestureTrackingStarted()
 
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
-          
+
           activateBottomMaxConstraint()
           activateRightMaxConstraint()
-          
+
           activateTopConstraint()
           activateLeftConstraint()
 
@@ -675,22 +666,24 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
-        
+
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
-          
+
           activateTopMaxConstraint()
-//          activateCenterXConstraint()
-          activateLeftConstraint()
-          activateRightConstraint()
+          activateCenterXConstraint()
+          
+          activateRightMaxConstraint()
+          activateLeftMaxConstraint()
           
           activateBottomConstraint()
-          
-//          activateWidthConstraint()
+
+          if lockedAspectRatio == nil {
+            activateWidthConstraint()
+          }
           activateHeightConstraint()
         }
-        
+
         fallthrough
       case .changed:
 
@@ -699,7 +692,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-       
+
         heightConstraint.constant -= translation.y
 
       case .cancelled,
@@ -718,21 +711,24 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
-        
+
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
           
           activateRightMaxConstraint()
+          activateCenterYConstraint()
           
-          activateTopConstraint()
+          activateTopMaxConstraint()
+          activateBottomMaxConstraint()
+          
           activateLeftConstraint()
-          activateBottomConstraint()
           
           activateWidthConstraint()
-          activateHeightConstraint()
+          if lockedAspectRatio == nil {
+            activateHeightConstraint()
+          }
         }
-        
+
         fallthrough
       case .changed:
         defer {
@@ -759,21 +755,24 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
-        
+
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
           
           activateLeftMaxConstraint()
+          activateCenterYConstraint()
           
-          activateTopConstraint()
+          activateTopMaxConstraint()
+          activateBottomMaxConstraint()
+          
           activateRightConstraint()
-          activateBottomConstraint()
           
           activateWidthConstraint()
-          activateHeightConstraint()
+          if lockedAspectRatio == nil {
+            activateHeightConstraint()
+          }
         }
-        
+
         fallthrough
       case .changed:
 
@@ -801,21 +800,24 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
-        
+
         activateConstraints: do {
-          
           activateAspectRatioConstraint()
           
           activateBottomMaxConstraint()
+          activateCenterXConstraint()
+          
+          activateRightMaxConstraint()
+          activateLeftMaxConstraint()
           
           activateTopConstraint()
-          activateLeftConstraint()
-          activateRightConstraint()
           
-          activateWidthConstraint()
+          if lockedAspectRatio == nil {
+            activateWidthConstraint()
+          }
           activateHeightConstraint()
         }
-        
+
         fallthrough
       case .changed:
         defer {
@@ -823,7 +825,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-        
+
         heightConstraint.constant += translation.y
 
       case .cancelled,
