@@ -48,8 +48,8 @@ extension CropView {
     private var maximumRect: CGRect?
 
     private var lockedAspectRatio: PixelAspectRatio?
-    
-    private let minimumSize = CGSize(width: 160, height: 160)
+
+    private let minimumSize = CGSize(width: 120, height: 120)
 
     init(containerView: CropView, imageView: UIView) {
       self.containerView = containerView
@@ -316,9 +316,9 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: -translation.y,
@@ -327,7 +327,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -352,7 +352,7 @@ extension CropView {
           gesture.setTranslation(.zero, in: self)
         }
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: -translation.y,
@@ -386,9 +386,9 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: translation.y,
@@ -397,7 +397,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
       case .cancelled,
            .ended,
@@ -420,9 +420,9 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: translation.y,
@@ -431,9 +431,9 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
-        
+
       case .cancelled,
            .ended,
            .failed:
@@ -458,7 +458,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: 0,
           deltaHeight: -translation.y,
@@ -467,7 +467,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -493,7 +493,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: translation.x,
           deltaHeight: 0,
@@ -502,7 +502,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -527,9 +527,9 @@ extension CropView {
         defer {
           gesture.setTranslation(.zero, in: self)
         }
-        
+
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: -translation.x,
           deltaHeight: 0,
@@ -538,7 +538,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -564,7 +564,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-        
+
         let nextFrame = frame.resized(
           deltaWidth: 0,
           deltaHeight: translation.y,
@@ -573,7 +573,7 @@ extension CropView {
           constraintRect: maximumRect!,
           minimumSize: minimumSize
         )
-        
+
         frame = nextFrame
 
       case .cancelled,
@@ -644,13 +644,13 @@ extension CGRect {
     case topRight
     case bottomLeft
     case bottomRight
-    
+
     case top
     case right
     case left
     case bottom
   }
-  
+
   func resized(
     deltaWidth: CGFloat,
     deltaHeight: CGFloat,
@@ -670,7 +670,7 @@ extension CGRect {
     )
     return new
   }
-  
+
   mutating func resizing(
     deltaWidth: CGFloat,
     deltaHeight: CGFloat,
@@ -679,142 +679,145 @@ extension CGRect {
     constraintRect: CGRect,
     minimumSize: CGSize
   ) {
+    
     var proposedRect = self
     
+    proposedRect.size.width += deltaWidth
+    proposedRect.size.height += deltaHeight
+       
     switch anchorPoint {
     case .topLeft:
-      
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .topRight:
-      
+
       proposedRect.origin.x -= deltaWidth
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.origin.x += proposedRect.width - minimumSize.width
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .bottomLeft:
-      
+
       proposedRect.origin.y -= deltaHeight
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.origin.y += proposedRect.height - minimumSize.height
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .bottomRight:
-      
+
       proposedRect.origin.x -= deltaWidth
       proposedRect.origin.y -= deltaHeight
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.origin.x += proposedRect.width - minimumSize.width
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.origin.y += proposedRect.height - minimumSize.height
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .top:
-      
+
       proposedRect.origin.x -= deltaWidth / 2
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.origin.x += proposedRect.width - minimumSize.width
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .right:
-      
+
       proposedRect.origin.x -= deltaWidth
       proposedRect.origin.y -= deltaHeight / 2
       proposedRect.size.width += deltaWidth
       proposedRect.size.height += deltaHeight
-            
-      if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.origin.x += proposedRect.width - minimumSize.width
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.origin.y += proposedRect.height - minimumSize.height
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .left:
-      
+
       proposedRect.origin.y -= deltaHeight / 2
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.size.width = minimumSize.width
+
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.origin.y += proposedRect.height - minimumSize.height
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
-        proposedRect.size.height = minimumSize.height
-      }
-      
+
     case .bottom:
-      
+
       proposedRect.origin.x -= deltaWidth / 2
       proposedRect.origin.y -= deltaHeight
 
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-      
-      if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
-        proposedRect.size.width = minimumSize.width
+      constraintMin: do {
+        if proposedRect.width < minimumSize.width {
+          proposedRect.origin.x += proposedRect.width - minimumSize.width
+          proposedRect.size.width = minimumSize.width
+        }
+
+        if proposedRect.height < minimumSize.height {
+          proposedRect.origin.y += proposedRect.height - minimumSize.height
+          proposedRect.size.height = minimumSize.height
+        }
       }
-      
-      if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
-        proposedRect.size.height = minimumSize.height
-      }
-      
     }
-    
+
     if constraintRect.contains(proposedRect) {
       print("contains")
     } else {
       print("not contains")
     }
-    
+
     self = constraintRect.intersection(proposedRect)
   }
 }
