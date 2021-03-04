@@ -25,40 +25,6 @@ import CoreImage
 import Verge
 import PixelEngine
 
-final class _ImageView: UIImageView, HardwareImageViewType {
-  
-  func display(image: CIImage) {
-    
-    func setImage(image: UIImage) {
-
-      assert(image.scale == 1)
-      self.image = image
-    }
-    
-    let uiImage: UIImage
-    
-    let _image = image
-    
-    if let cgImage = _image.cgImage {
-      uiImage = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
-    } else {
-      //      assertionFailure()
-      // Displaying will be slow in iOS13
-      uiImage = UIImage(
-        ciImage: _image.transformed(
-          by: .init(
-            translationX: -_image.extent.origin.x,
-            y: -_image.extent.origin.y
-          )),
-        scale: 1,
-        orientation: .up
-      )
-    }
-    
-    setImage(image: uiImage)
-  }
-}
-
 /**
  A view that previews how crops the image.
  */
@@ -215,36 +181,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     fatalError("init(coder:) has not been implemented")
   }
   
-  override public func layoutSubviews() {
-    super.layoutSubviews()
-    
-    store.commit {
-      if $0.frame != frame {
-        $0.frame = frame
-      }
-    }
-          
-    if let outOfBoundsOverlay = cropOutsideOverlay {
-      outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
-      outOfBoundsOverlay.center = center
-    }
-  }
-  
-  override public func didMoveToSuperview() {
-    super.didMoveToSuperview()
-    
-    DispatchQueue.main.async { [self] in
-      store.commit {
-        $0.hasLoaded = superview != nil
-      }
-    }
-    
-  }
-  
-  public func setImage(_ ciImage: CIImage) {        
-    imageView.display(image: ciImage)
-  }
-  
   public func resetCropAndRotate() {
     store.commit {
       $0.proposedCropAndRotate = $0.proposedCropAndRotate?.makeInitial()
@@ -305,6 +241,41 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     setNeedsLayout()
     layoutIfNeeded()
+  }
+  
+}
+
+// MARK: Internal
+extension CropView {
+  
+  private func setImage(_ ciImage: CIImage) {
+    imageView.display(image: ciImage)
+  }
+  
+  override public func layoutSubviews() {
+    super.layoutSubviews()
+    
+    store.commit {
+      if $0.frame != frame {
+        $0.frame = frame
+      }
+    }
+    
+    if let outOfBoundsOverlay = cropOutsideOverlay {
+      outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
+      outOfBoundsOverlay.center = center
+    }
+  }
+  
+  override public func didMoveToSuperview() {
+    super.didMoveToSuperview()
+    
+    DispatchQueue.main.async { [self] in
+      store.commit {
+        $0.hasLoaded = superview != nil
+      }
+    }
+    
   }
   
   private func updateScrollContainerView(
@@ -370,7 +341,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     if animated {
       layoutIfNeeded()
-            
+      
       if animatesRotation {
         
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
@@ -526,5 +497,39 @@ extension CropAndRotate {
     let minScale = max(minXScale, minYScale)
     
     return (min: minScale, max: .greatestFiniteMagnitude)
+  }
+}
+
+private final class _ImageView: UIImageView, HardwareImageViewType {
+  
+  func display(image: CIImage) {
+    
+    func setImage(image: UIImage) {
+      
+      assert(image.scale == 1)
+      self.image = image
+    }
+    
+    let uiImage: UIImage
+    
+    let _image = image
+    
+    if let cgImage = _image.cgImage {
+      uiImage = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    } else {
+      //      assertionFailure()
+      // Displaying will be slow in iOS13
+      uiImage = UIImage(
+        ciImage: _image.transformed(
+          by: .init(
+            translationX: -_image.extent.origin.x,
+            y: -_image.extent.origin.y
+          )),
+        scale: 1,
+        orientation: .up
+      )
+    }
+    
+    setImage(image: uiImage)
   }
 }
