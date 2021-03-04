@@ -59,7 +59,12 @@ public final class ImageRenderer {
       }
     }
   }
-
+  
+  /**
+   Renders an image according to the editing.
+   
+   - Attension: This operation can be run background-thread.
+   */
   public func render(resolution: Resolution = .full) -> UIImage {
     
     assert(

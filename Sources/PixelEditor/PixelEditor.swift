@@ -42,3 +42,8 @@ public typealias NonL10n = String
 let bundle = Bundle.init(for: Dummy.self)
 
 final class Dummy {}
+
+@inline(__always)
+func ensureMainThread() {
+  assert(Thread.isMainThread)
+}
