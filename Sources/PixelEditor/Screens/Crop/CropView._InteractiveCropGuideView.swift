@@ -681,14 +681,36 @@ extension CGRect {
   ) {
     
     var proposedRect = self
+    var minimumSize = minimumSize
+         
+    if let aspectRatio = aspectRatio {
+      if abs(deltaHeight) > abs(deltaWidth) {
+        proposedRect.size.height += deltaHeight
+        proposedRect.size.width = aspectRatio.width(forHeight: proposedRect.size.height)
+      } else {
+        proposedRect.size.width += deltaWidth
+        proposedRect.size.height = aspectRatio.height(forWidth: proposedRect.size.width)
+      }
+      
+      if minimumSize.width > minimumSize.height {
+        minimumSize = aspectRatio.size(byHeight: minimumSize.height)
+      } else {
+        minimumSize = aspectRatio.size(byWidth: minimumSize.width)
+      }
+      
+    } else {
+      proposedRect.size.width += deltaWidth
+      proposedRect.size.height += deltaHeight
+    }
     
-    proposedRect.size.width += deltaWidth
-    proposedRect.size.height += deltaHeight
+    let dx = proposedRect.width - self.width
+    let dy = proposedRect.height - self.height
        
     switch anchorPoint {
     case .topLeft:
 
       constraintMin: do {
+                
         if proposedRect.width < minimumSize.width {
           proposedRect.size.width = minimumSize.width
         }
@@ -700,7 +722,7 @@ extension CGRect {
 
     case .topRight:
 
-      proposedRect.origin.x -= deltaWidth
+      proposedRect.origin.x -= dx
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -715,7 +737,7 @@ extension CGRect {
 
     case .bottomLeft:
 
-      proposedRect.origin.y -= deltaHeight
+      proposedRect.origin.y -= dy
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -730,8 +752,8 @@ extension CGRect {
 
     case .bottomRight:
 
-      proposedRect.origin.x -= deltaWidth
-      proposedRect.origin.y -= deltaHeight
+      proposedRect.origin.x -= dx
+      proposedRect.origin.y -= dy
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -747,7 +769,7 @@ extension CGRect {
 
     case .top:
 
-      proposedRect.origin.x -= deltaWidth / 2
+      proposedRect.origin.x -= dx / 2
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -762,11 +784,9 @@ extension CGRect {
 
     case .right:
 
-      proposedRect.origin.x -= deltaWidth
-      proposedRect.origin.y -= deltaHeight / 2
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-
+      proposedRect.origin.x -= dx
+      proposedRect.origin.y -= dy / 2
+ 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
           proposedRect.origin.x += proposedRect.width - minimumSize.width
@@ -781,7 +801,7 @@ extension CGRect {
 
     case .left:
 
-      proposedRect.origin.y -= deltaHeight / 2
+      proposedRect.origin.y -= dy / 2
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -796,8 +816,8 @@ extension CGRect {
 
     case .bottom:
 
-      proposedRect.origin.x -= deltaWidth / 2
-      proposedRect.origin.y -= deltaHeight
+      proposedRect.origin.x -= dx / 2
+      proposedRect.origin.y -= dy
 
       constraintMin: do {
         if proposedRect.width < minimumSize.width {
@@ -812,11 +832,13 @@ extension CGRect {
       }
     }
 
+    #if DEBUG
     if constraintRect.contains(proposedRect) {
       print("contains")
     } else {
       print("not contains")
     }
+    #endif
 
     self = constraintRect.intersection(proposedRect)
   }
