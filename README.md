@@ -4,7 +4,13 @@
 > https://github.com/muukii/Pixel/pull/53  
 > This obviously takes many breaking changes.  
 > Feel free to start a discussion about enhancement from the current released version.
+> I often upload movies of features in development to the pull-request's comment.
 
+**Plannning features**
+
+- A crop-view component and standalone crop screen.
+  - It supports rotating each 90 degree and locking aspect-ratio.
+- SwiftUI wrappers each component
 
 ---
 
