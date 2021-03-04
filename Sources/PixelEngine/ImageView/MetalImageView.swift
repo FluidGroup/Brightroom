@@ -58,6 +58,7 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     framebufferOnly = false
     self.delegate = self
     self.enableSetNeedsDisplay = true
+    self.autoResizeDrawable = true
   }
 
   public required init(coder: NSCoder) {
