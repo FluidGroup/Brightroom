@@ -29,7 +29,7 @@ public final class CropViewController: UIViewController {
     public var didFinish: () -> Void = {}
   }
 
-  private let containerView: CropView = .init()
+  private let cropView: CropView
 
   public let editingStack: EditingStack
   public var handlers = Handlers()
@@ -38,6 +38,7 @@ public final class CropViewController: UIViewController {
 
   public init(editingStack: EditingStack) {
     self.editingStack = editingStack
+    self.cropView = .init(editingStack: editingStack)
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -51,8 +52,8 @@ public final class CropViewController: UIViewController {
 
     view.backgroundColor = .white
 
-    containerView.setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
-    containerView.setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
+    cropView.setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
+    cropView.setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
 
     let topStackView = UIStackView()&>.do {
       let rotateButton = UIButton(type: .system)&>.do {
@@ -94,7 +95,7 @@ public final class CropViewController: UIViewController {
       $0.addArrangedSubview(doneButton)
     }
 
-    view.addSubview(containerView)
+    view.addSubview(cropView)
     view.addSubview(topStackView)
     view.addSubview(bottomStackView)
 
@@ -107,7 +108,7 @@ public final class CropViewController: UIViewController {
       ])
     }
 
-    containerView&>.do {
+    cropView&>.do {
       $0.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
         $0.topAnchor.constraint(equalTo: topStackView.bottomAnchor),
@@ -119,30 +120,14 @@ public final class CropViewController: UIViewController {
     bottomStackView&>.do {
       $0.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
-        $0.topAnchor.constraint(equalTo: containerView.bottomAnchor),
+        $0.topAnchor.constraint(equalTo: cropView.bottomAnchor),
         $0.leftAnchor.constraint(equalTo: view.leftAnchor),
         $0.rightAnchor.constraint(equalTo: view.rightAnchor),
         $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       ])
     }
-
-    editingStack.sinkState { [weak self] state in
-
-      guard let self = self else { return }
-
-      state.ifChanged(\.cropRect) { cropRect in
-
-        self.containerView.setCropAndRotate(cropRect)
-      }
-
-      state.ifChanged(\.targetOriginalSizeImage) { image in
-        guard let image = image else { return }
-        self.containerView.setImage(image)
-      }
-    }
-    .store(in: &bag)
-
-    containerView.store.sinkState { [weak self] state in
+  
+    cropView.store.sinkState { [weak self] state in
 
       guard let self = self else { return }
 
@@ -155,18 +140,18 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleRotateButton() {
-    let rotation = containerView.store.state.proposedCropAndRotate?.rotation.next()
+    let rotation = cropView.store.state.proposedCropAndRotate?.rotation.next()
     rotation.map {
-      containerView.setRotation($0)
+      cropView.setRotation($0)
     }
   }
   
   @objc private func handleAspectRatioButton() {
-    containerView.setCroppingAspectRatio(.init(width: 16, height: 9))
+    cropView.setCroppingAspectRatio(.init(width: 16, height: 9))
   }
 
   @objc private func handleResetButton() {
-    containerView.resetCropAndRotate()
+    cropView.resetCropAndRotate()
   }
 
   @objc private func handleCancelButton() {

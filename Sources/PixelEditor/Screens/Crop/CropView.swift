@@ -113,6 +113,27 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /// This's waiting for Combine availability in minimum iOS Version.
   private let throttle = Debounce(interval: 1)
   
+  public convenience init(editingStack: EditingStack) {
+    self.init()
+    
+    editingStack.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.cropRect) { cropRect in
+        
+        self.setCropAndRotate(cropRect)
+      }
+      
+      state.ifChanged(\.targetOriginalSizeImage) { image in
+        guard let image = image else { return }
+        self.setImage(image)
+      }
+    }
+    .store(in: &subscriptions)
+    
+  }
+  
   public init() {
     super.init(frame: .zero)
     

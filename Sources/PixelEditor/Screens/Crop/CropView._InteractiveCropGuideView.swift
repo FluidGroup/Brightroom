@@ -140,7 +140,7 @@ extension CropView {
         }
       }
 
-      let length: CGFloat = 40
+      let length: CGFloat = 30
 
       topLeftControlPointView&>.do {
         NSLayoutConstraint.activate([
