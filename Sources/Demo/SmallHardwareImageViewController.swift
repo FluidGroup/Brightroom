@@ -54,7 +54,7 @@ final class SmallHardwareImageViewController : UIViewController {
 
     let result = SmallHardwareImageViewController.blur(image: image, radius: Double(value * 50))!
 
-    imageView.image = result
+    imageView.display(image: result)
   }
 
   static func blur(image: CIImage, radius: Double) -> CIImage? {
