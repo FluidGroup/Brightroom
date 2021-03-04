@@ -25,6 +25,40 @@ import CoreImage
 import Verge
 import PixelEngine
 
+final class _ImageView: UIImageView, HardwareImageViewType {
+  
+  func display(image: CIImage) {
+    
+    func setImage(image: UIImage) {
+
+      assert(image.scale == 1)
+      self.image = image
+    }
+    
+    let uiImage: UIImage
+    
+    let _image = image
+    
+    if let cgImage = _image.cgImage {
+      uiImage = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    } else {
+      //      assertionFailure()
+      // Displaying will be slow in iOS13
+      uiImage = UIImage(
+        ciImage: _image.transformed(
+          by: .init(
+            translationX: -_image.extent.origin.x,
+            y: -_image.extent.origin.y
+          )),
+        scale: 1,
+        orientation: .up
+      )
+    }
+    
+    setImage(image: uiImage)
+  }
+}
+
 /**
  A view that previews how crops the image.
  */
@@ -52,14 +86,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    An image view that displayed in the scroll view.
    */
-  private let imageView = UIImageView()
-//  let imageView: UIView & HardwareImageViewType = {
-//    #if canImport(MetalKit) && !targetEnvironment(simulator)
-//    return MetalImageView()
-//    #else
-//    return GLImageView()
-//    #endif
-//  }()
+  #if true
+  private let imageView = _ImageView()
+  #else
+  private let imageView: UIView & HardwareImageViewType = {
+    #if canImport(MetalKit) && !targetEnvironment(simulator)
+    return MetalImageView()
+    #else
+    return GLImageView()
+    #endif
+  }()
+  #endif
   private let scrollView = _CropScrollView()
   
   /**
@@ -159,40 +196,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
   }
   
-  public func setImage(_ ciImage: CIImage) {
-        
-    func setImage(image: UIImage) {
-      guard let imageSize = store.state.proposedCropAndRotate?.imageSize else {
-        assertionFailure("Call configureImageForSize before.")
-        return
-      }
-      
-      assert(image.scale == 1)
-      assert(image.size == imageSize.cgSize)
-      imageView.image = image
-    }
-    
-    let uiImage: UIImage
-    
-    let _image = ciImage
-    
-    if let cgImage = _image.cgImage {
-      uiImage = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
-    } else {
-//      assertionFailure()
-      // Displaying will be slow in iOS13
-      uiImage = UIImage(
-        ciImage: _image.transformed(
-          by: .init(
-            translationX: -_image.extent.origin.x,
-            y: -_image.extent.origin.y
-          )),
-        scale: 1,
-        orientation: .up
-      )
-    }
-    
-    setImage(image: uiImage)
+  public func setImage(_ ciImage: CIImage) {        
+    imageView.display(image: ciImage)
   }
   
   public func resetCropAndRotate() {

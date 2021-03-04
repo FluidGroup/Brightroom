@@ -26,13 +26,8 @@ import MetalKit
 
 open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
  
-  public var image: CIImage? {
-    didSet {
-      setNeedsDisplay()
-    }
-  }
-
   private let colorSpace = CGColorSpaceCreateDeviceRGB()
+  private var image: CIImage?
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in
     return self.device!.makeCommandQueue()!
@@ -55,7 +50,7 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     if super.device == nil {
       fatalError("Device doesn't support Metal")
     }
-    framebufferOnly = false
+    self.framebufferOnly = false
     self.delegate = self
     self.enableSetNeedsDisplay = true
     self.autoResizeDrawable = true
@@ -63,6 +58,11 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
 
   public required init(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+  
+  public func display(image: CIImage) {
+    self.image = image
+    setNeedsDisplay()
   }
   
   public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -113,18 +113,6 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     commandBuffer?.present(currentDrawable!)
     commandBuffer?.commit()
   }
-}
-
-private func makeCGAffineTransform(from: CGRect, to: CGRect) -> CGAffineTransform {
-
-  return .init(
-    a: to.width / from.width,
-    b: 0,
-    c: 0,
-    d: to.height / from.height,
-    tx: to.midX - from.midX,
-    ty: to.midY - from.midY
-  )
 }
 
 #endif

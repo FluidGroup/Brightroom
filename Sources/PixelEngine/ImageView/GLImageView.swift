@@ -29,13 +29,8 @@ public class GLImageView : GLKView, HardwareImageViewType {
   // MARK: - Properties
 
   let coreImageContext: CIContext
-
-  public var image: CIImage? {
-    didSet {
-      self.update()
-    }
-  }
-
+  private var image: CIImage?
+  
   // MARK: - Initializers
 
   public override convenience init(frame: CGRect) {
@@ -57,6 +52,11 @@ public class GLImageView : GLKView, HardwareImageViewType {
   }
 
   // MARK: - Functions
+  
+  public func display(image: CIImage) {
+    self.image = image
+    self.update()  
+  }
 
   public override func layoutSubviews() {
     super.layoutSubviews()
