@@ -278,11 +278,13 @@ extension CropView {
     }
 
     func willBeginScrollViewAdjustment() {
-      onGestureTrackingStarted()
+      cropInsideOverlay?.didBeginAdjustment(kind: .scrollView)
+      cropOutsideOverlay?.didBeginAdjustment(kind: .scrollView)
     }
 
     func didEndScrollViewAdjustment() {
-      onGestureTrackingEnded()
+      cropInsideOverlay?.didEndAdjustment(kind: .scrollView)
+      cropOutsideOverlay?.didEndAdjustment(kind: .scrollView)
     }
 
     @inline(__always)
@@ -296,15 +298,15 @@ extension CropView {
 
       updateMaximumRect()
       willChange()
-      cropInsideOverlay?.didBeginAdjustment()
-      cropOutsideOverlay?.didBeginAdjustment()
+      cropInsideOverlay?.didBeginAdjustment(kind: .guide)
+      cropOutsideOverlay?.didBeginAdjustment(kind: .guide)
     }
 
     private func onGestureTrackingEnded() {
       deactivateAllConstraints()
       didChange()
-      cropInsideOverlay?.didEndAdjustment()
-      cropOutsideOverlay?.didEndAdjustment()
+      cropInsideOverlay?.didEndAdjustment(kind: .guide)
+      cropOutsideOverlay?.didEndAdjustment(kind: .guide)
     }
 
     private var widthConstraint: NSLayoutConstraint!

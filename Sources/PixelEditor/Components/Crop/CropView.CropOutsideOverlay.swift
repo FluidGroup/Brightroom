@@ -12,51 +12,64 @@ extension CropView {
 
   open class CropOutsideOverlayBase: PixelEditorCodeBasedView {
     
-    open func didBeginAdjustment() {
+    open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
     
-    open func didEndAdjustment() {
+    open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
+    
   }
   
   public final class CropOutsideOverlayBlurredView: CropOutsideOverlayBase {
     
-    private let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
-    private let dimmingView = UIView()
+    private let effectView: UIVisualEffectView
+    private let dimmingView: UIView
         
     private var currentAnimator: UIViewPropertyAnimator?
-
     
-    init() {
+    public init(
+      blurEffect: UIBlurEffect = UIBlurEffect(style: .dark),
+      dimmingColor: UIColor = .init(white: 0, alpha: 0.6)
+    ) {
+      
+      self.effectView = UIVisualEffectView(effect: blurEffect)
+      self.dimmingView = UIView()&>.do {
+        $0.backgroundColor = dimmingColor
+      }
       
       super.init(frame: .zero)
       
       addSubview(dimmingView)
       addSubview(effectView)
-      
-      dimmingView.backgroundColor = .init(white: 0, alpha: 0.6)
-          
+                
       AutoLayoutTools.setEdge(dimmingView, self)
       AutoLayoutTools.setEdge(effectView, self)
     }
     
-    public override func didBeginAdjustment() {
-      currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.effectView.alpha = 0
-      }&>.do {
-        $0.startAnimation()
+    public override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+      
+      if kind == .guide {
+        
+        currentAnimator?.stopAnimation(true)
+        currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+          self?.effectView.alpha = 0
+        }&>.do {
+          $0.startAnimation()
+        }
       }
     }
     
-    public override func didEndAdjustment() {
-      currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.effectView.alpha = 1
-      }&>.do {
-        $0.startAnimation(afterDelay: 1)
+    public override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+      
+      if kind == .guide {
+        currentAnimator?.stopAnimation(true)
+        currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+          self?.effectView.alpha = 1
+        }&>.do {
+          $0.startAnimation(afterDelay: 1)
+        }
       }
     }
   }

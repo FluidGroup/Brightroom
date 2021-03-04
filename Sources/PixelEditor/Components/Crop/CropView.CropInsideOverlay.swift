@@ -112,11 +112,11 @@ extension CropView {
     
   open class CropInsideOverlayBase: PixelEditorCodeBasedView {
     
-    open func didBeginAdjustment() {
+    open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
     
-    open func didEndAdjustment() {
+    open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
   }
@@ -192,7 +192,7 @@ extension CropView {
       }
     }
     
-    public override func didBeginAdjustment() {
+    public override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.lines().forEach {
@@ -203,7 +203,7 @@ extension CropView {
       }
     }
     
-    public override func didEndAdjustment() {
+    public override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.lines().forEach {

@@ -52,9 +52,6 @@ public final class CropViewController: UIViewController {
 
     view.backgroundColor = .white
 
-    cropView.setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
-    cropView.setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
-
     let topStackView = UIStackView()&>.do {
       let rotateButton = UIButton(type: .system)&>.do {
         // TODO: Localize

@@ -65,6 +65,12 @@ final class _ImageView: UIImageView, HardwareImageViewType {
 public final class CropView: UIView, UIScrollViewDelegate {
   
   public struct State: Equatable {
+    
+    public enum AdjustmentKind: Equatable {
+      case scrollView
+      case guide
+    }
+    
     enum ModifiedSource: Equatable {
       case fromState
       case fromScrollView
@@ -72,7 +78,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     
     public fileprivate(set) var proposedCropAndRotate: CropAndRotate?
+    
     fileprivate var modifiedSource: ModifiedSource?
+    
+    public fileprivate(set) var adjustmentKind: AdjustmentKind?
     
     public fileprivate(set) var frame: CGRect = .zero
     fileprivate var hasLoaded = false
@@ -193,6 +202,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
     .store(in: &subscriptions)
+        
+    defaultAppearance: do {
+      setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
+      setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
+    }
+    
   }
   
   @available(*, unavailable)

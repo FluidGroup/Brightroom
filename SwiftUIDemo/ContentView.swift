@@ -2,10 +2,11 @@
 import SwiftUI
 
 struct ContentView: View {
-  @State private var target: CropViewWrapper?
+  @State private var target: IdentifiableView?
   @State private var image: SwiftUI.Image?
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  @State private var fullScreenView: IdentifiableView?
 
   var body: some View {
     NavigationView {
@@ -19,38 +20,48 @@ struct ContentView: View {
           Color.gray.frame(width: 300, height: 300, alignment: .center)
         }
         Form {
-          NavigationLink("Crop", destination: DemoCropView(editingStack: sharedStack))
+          Button("Component: Crop") {
+            fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
+          }
 
           Button("Horizontal") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-            target = CropViewWrapper(editingStack: stack, onCompleted: {
-              self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-              self.target = nil
-            })
+            target = .init {
+              CropViewWrapper(editingStack: stack, onCompleted: {
+                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                self.target = nil
+              })
+            }
           }
 
           Button("Vertical") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
-            target = CropViewWrapper(editingStack: stack, onCompleted: {
-              self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-              self.target = nil
-            })
+            target = .init {
+              CropViewWrapper(editingStack: stack, onCompleted: {
+                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                self.target = nil
+              })
+            }
           }
 
           Button("Square") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
-            target = CropViewWrapper(editingStack: stack, onCompleted: {
-              self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-              self.target = nil
-            })
+            target = .init {
+              CropViewWrapper(editingStack: stack, onCompleted: {
+                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                self.target = nil
+              })
+            }
           }
 
           Button("Super small") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
-            target = CropViewWrapper(editingStack: stack, onCompleted: {
-              self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-              self.target = nil
-            })
+            target = .init {
+              CropViewWrapper(editingStack: stack, onCompleted: {
+                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                self.target = nil
+              })
+            }
           }
 
           Button("Remote") {
@@ -62,15 +73,36 @@ struct ContentView: View {
               previewSize: .init(width: 1000, height: 1000)
             )
 
-            target = CropViewWrapper(editingStack: stack, onCompleted: {
-              self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-              self.target = nil
-            })
+            target = .init {
+              CropViewWrapper(editingStack: stack, onCompleted: {
+                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                self.target = nil
+              })
+            }
           }
         }
       }
       .sheet(item: $target, content: { $0 })
+      .fullScreenCover(
+        item: $fullScreenView,
+        onDismiss: {}, content: {
+          $0
+        }
+      )
     }
+  }
+}
+
+struct IdentifiableView: View, Identifiable {
+  let id = UUID()
+  private let content: AnyView
+
+  init<Content: View>(content: () -> Content) {
+    self.content = .init(content())
+  }
+
+  var body: some View {
+    content
   }
 }
 

@@ -7,19 +7,21 @@
 //
 
 import Foundation
-import SwiftUI
 import PixelEditor
 import PixelEngine
+import SwiftUI
 
 struct DemoCropView: View {
-  
   let editingStack: EditingStack
-    
+
   var body: some View {
-    SwiftUICropView(editingStack: editingStack)
-      .onAppear {
-        editingStack.start()
-      }
+    ZStack {
+      Color.black
+        .ignoresSafeArea()
+      SwiftUICropView(editingStack: editingStack)
+        .onAppear {
+          editingStack.start()
+        }
+    }
   }
-  
 }
