@@ -205,6 +205,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.proposedCropAndRotate = $0.proposedCropAndRotate?.makeInitial()
       $0.modifiedSource = .fromState
     }
+    
+    guideView.setLockedAspectRatio(nil)
   }
   
   public func setRotation(_ rotation: CropAndRotate.Rotation) {
@@ -314,13 +316,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
         
         scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
       }
+      
     }
     
     if animated {
       layoutIfNeeded()
-      
-      print("animate")
-      
+            
       if animatesRotation {
         
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {

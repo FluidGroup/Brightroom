@@ -246,7 +246,7 @@ extension CropView {
       layoutIfNeeded()
     }
 
-    func setLockedAspectRatio(_ aspectRatio: PixelAspectRatio) {
+    func setLockedAspectRatio(_ aspectRatio: PixelAspectRatio?) {
       lockedAspectRatio = aspectRatio
     }
 
@@ -292,6 +292,8 @@ extension CropView {
     }
 
     private func onGestureTrackingStarted() {
+      translatesAutoresizingMaskIntoConstraints = false
+
       updateMaximumRect()
       willChange()
       cropInsideOverlay?.didBeginAdjustment()
@@ -299,9 +301,204 @@ extension CropView {
     }
 
     private func onGestureTrackingEnded() {
+      deactivateAllConstraints()
       didChange()
       cropInsideOverlay?.didEndAdjustment()
       cropOutsideOverlay?.didEndAdjustment()
+    }
+
+    private var topConstraint: NSLayoutConstraint!
+    private var topMaxConstraint: NSLayoutConstraint!
+
+    private var bottomConstraint: NSLayoutConstraint!
+    private var bottomMaxConstraint: NSLayoutConstraint!
+
+    private var rightConstraint: NSLayoutConstraint!
+    private var rightMaxConstraint: NSLayoutConstraint!
+
+    private var leftConstraint: NSLayoutConstraint!
+    private var leftMaxConstraint: NSLayoutConstraint!
+
+    private var widthConstraint: NSLayoutConstraint!
+    private var widthMinConstraint: NSLayoutConstraint!
+    
+    private var centerXConstraint: NSLayoutConstraint!
+    private var centerYConstraint: NSLayoutConstraint!
+
+    private var heightConstraint: NSLayoutConstraint!
+    private var heightMinConstraint: NSLayoutConstraint!
+    
+    private var aspectRatioConstraint: NSLayoutConstraint?
+
+    private func activateRightConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      rightConstraint = rightAnchor.constraint(
+        equalTo: superview!.rightAnchor,
+        constant: frame.maxX - superview!.bounds.maxX
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+
+    private func activateLeftMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      leftMaxConstraint = leftAnchor.constraint(
+        greaterThanOrEqualTo: superview!.leftAnchor,
+        constant: maximumRect!.minX
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+    
+    private func activateRightMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+      
+      rightMaxConstraint = rightAnchor.constraint(
+        lessThanOrEqualTo: superview!.rightAnchor,
+        constant: maximumRect!.maxX - superview!.bounds.maxX
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+    
+    private func activateTopMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+      
+      topMaxConstraint = topAnchor.constraint(
+        greaterThanOrEqualTo: superview!.topAnchor,
+        constant: maximumRect!.minY
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+    
+    private func activateBottomMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+      
+      bottomMaxConstraint = bottomAnchor.constraint(
+        lessThanOrEqualTo: superview!.bottomAnchor,
+        constant: maximumRect!.maxY - superview!.bounds.maxY
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+
+    private func activateLeftConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      leftConstraint = leftAnchor.constraint(
+        equalTo: superview!.leftAnchor,
+        constant: frame.minX - superview!.bounds.minX
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+
+    private func activateBottomConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      bottomConstraint = bottomAnchor.constraint(
+        equalTo: superview!.bottomAnchor,
+        constant: frame.maxY - superview!.bounds.maxY
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+
+    private func activateTopConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      topConstraint = topAnchor.constraint(
+        equalTo: superview!.topAnchor,
+        constant: frame.minY - superview!.bounds.minY
+      )&>.do {
+        $0.isActive = true
+      }
+    }
+    
+    private func activateCenterXConstraint() {
+      centerXConstraint = centerXAnchor.constraint(
+        equalTo: superview!.centerXAnchor,
+        constant: superview!.bounds.midX - frame.midX
+      )&>.do {
+        $0.priority = .defaultLow
+        $0.isActive = true
+      }
+    }
+    
+    private func activateCenterYConstraint() {
+      centerYConstraint = centerYAnchor.constraint(
+        equalTo: superview!.centerYAnchor,
+        constant: center.y
+      )&>.do {
+        $0.priority = .defaultLow
+        $0.isActive = true
+      }
+    }
+
+    private func activateWidthConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width)&>.do {
+        $0.priority = .defaultHigh
+        $0.isActive = true
+      }
+
+      widthMinConstraint = widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)&>.do {
+        $0.isActive = true
+      }
+   
+    }
+    
+    private func activateAspectRatioConstraint() {
+      if let aspectRatio = lockedAspectRatio {
+        aspectRatioConstraint = widthAnchor.constraint(equalTo: heightAnchor, multiplier: aspectRatio.width / aspectRatio.height, constant: 1)&>.do {
+          $0.isActive = true
+        }
+      }
+    }
+
+    private func activateHeightConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height)&>.do {
+        $0.priority = .defaultHigh
+        $0.isActive = true
+      }
+
+      heightMinConstraint = heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)&>.do {
+        $0.isActive = true
+      }
+    }
+    
+    private func deactivateAllConstraints() {
+      translatesAutoresizingMaskIntoConstraints = true
+
+      NSLayoutConstraint.deactivate([
+        topConstraint,
+        bottomConstraint,
+        rightConstraint,
+        leftConstraint,
+        
+        topMaxConstraint,
+        bottomMaxConstraint,
+        rightMaxConstraint,
+        leftMaxConstraint,
+        
+        widthConstraint,
+        heightConstraint,
+        heightMinConstraint,
+        widthMinConstraint,
+        
+        centerXConstraint,
+        centerYConstraint,
+        
+        aspectRatioConstraint,
+      ].compactMap { $0 })
+      
+      layoutIfNeeded()
     }
 
     @objc
@@ -311,6 +508,19 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+          
+          activateTopMaxConstraint()
+          activateLeftMaxConstraint()
+          
+          activateBottomConstraint()
+          activateRightConstraint()
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
         fallthrough
       case .changed:
         defer {
@@ -319,20 +529,13 @@ extension CropView {
 
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: -translation.x,
-          deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .bottomRight,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        widthConstraint.constant -= translation.x
+        heightConstraint.constant -= translation.y
 
       case .cancelled,
            .ended,
            .failed:
+
         onGestureTrackingEnded()
       default:
         break
@@ -346,6 +549,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+                    
+          activateTopMaxConstraint()
+          activateRightMaxConstraint()
+          
+          activateBottomConstraint()
+          activateLeftConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
         fallthrough
       case .changed:
         defer {
@@ -353,16 +571,8 @@ extension CropView {
         }
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: translation.x,
-          deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .bottomLeft,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        widthConstraint.constant += translation.x
+        heightConstraint.constant -= translation.y
 
       case .cancelled,
            .ended,
@@ -381,6 +591,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateBottomMaxConstraint()
+          activateLeftMaxConstraint()
+          
+          activateTopConstraint()
+          activateRightConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
         fallthrough
       case .changed:
         defer {
@@ -389,16 +614,9 @@ extension CropView {
 
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: -translation.x,
-          deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .topRight,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
+        widthConstraint.constant -= translation.x
+        heightConstraint.constant += translation.y
 
-        frame = nextFrame
       case .cancelled,
            .ended,
            .failed:
@@ -415,6 +633,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateBottomMaxConstraint()
+          activateRightMaxConstraint()
+          
+          activateTopConstraint()
+          activateLeftConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
         fallthrough
       case .changed:
         defer {
@@ -423,16 +656,8 @@ extension CropView {
 
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: translation.x,
-          deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .topLeft,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        widthConstraint.constant += translation.x
+        heightConstraint.constant += translation.y
 
       case .cancelled,
            .ended,
@@ -450,6 +675,22 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+        
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateTopMaxConstraint()
+//          activateCenterXConstraint()
+          activateLeftConstraint()
+          activateRightConstraint()
+          
+          activateBottomConstraint()
+          
+//          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+        
         fallthrough
       case .changed:
 
@@ -458,17 +699,8 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-
-        let nextFrame = frame.resized(
-          deltaWidth: 0,
-          deltaHeight: -translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .bottom,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+       
+        heightConstraint.constant -= translation.y
 
       case .cancelled,
            .ended,
@@ -486,6 +718,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+        
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateRightMaxConstraint()
+          
+          activateTopConstraint()
+          activateLeftConstraint()
+          activateBottomConstraint()
+          
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+        
         fallthrough
       case .changed:
         defer {
@@ -494,16 +741,7 @@ extension CropView {
 
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: translation.x,
-          deltaHeight: 0,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .left,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        widthConstraint.constant += translation.x
 
       case .cancelled,
            .ended,
@@ -521,6 +759,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+        
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateLeftMaxConstraint()
+          
+          activateTopConstraint()
+          activateRightConstraint()
+          activateBottomConstraint()
+          
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+        
         fallthrough
       case .changed:
 
@@ -530,16 +783,7 @@ extension CropView {
 
         let translation = gesture.translation(in: self)
 
-        let nextFrame = frame.resized(
-          deltaWidth: -translation.x,
-          deltaHeight: 0,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .right,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        widthConstraint.constant -= translation.x
 
       case .cancelled,
            .ended,
@@ -557,6 +801,21 @@ extension CropView {
       switch gesture.state {
       case .began:
         onGestureTrackingStarted()
+        
+        activateConstraints: do {
+          
+          activateAspectRatioConstraint()
+          
+          activateBottomMaxConstraint()
+          
+          activateTopConstraint()
+          activateLeftConstraint()
+          activateRightConstraint()
+          
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+        
         fallthrough
       case .changed:
         defer {
@@ -564,17 +823,8 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-
-        let nextFrame = frame.resized(
-          deltaWidth: 0,
-          deltaHeight: translation.y,
-          aspectRatio: lockedAspectRatio,
-          anchorPoint: .top,
-          constraintRect: maximumRect!,
-          minimumSize: minimumSize
-        )
-
-        frame = nextFrame
+        
+        heightConstraint.constant += translation.y
 
       case .cancelled,
            .ended,
@@ -622,236 +872,5 @@ private final class MaskView: PixelEditorCodeBasedView {
       origin: .init(x: 0, y: rect.maxY),
       size: .init(width: bounds.width, height: bounds.height - rect.maxY)
     )
-  }
-}
-
-extension CGRect {
-  fileprivate func resizing(to size: CGSize, anchor: CGPoint = CGPoint(x: 0.5, y: 0.5)) -> CGRect {
-    let sizeDelta = CGSize(width: size.width - width, height: size.height - height)
-    return CGRect(
-      origin: CGPoint(
-        x: minX - sizeDelta.width * anchor.x,
-        y: minY - sizeDelta.height * anchor.y
-      ),
-      size: size
-    )
-  }
-}
-
-extension CGRect {
-  enum AnchorPoint {
-    case topLeft
-    case topRight
-    case bottomLeft
-    case bottomRight
-
-    case top
-    case right
-    case left
-    case bottom
-  }
-
-  func resized(
-    deltaWidth: CGFloat,
-    deltaHeight: CGFloat,
-    aspectRatio: PixelAspectRatio?,
-    anchorPoint: AnchorPoint,
-    constraintRect: CGRect,
-    minimumSize: CGSize
-  ) -> CGRect {
-    var new = self
-    new.resizing(
-      deltaWidth: deltaWidth,
-      deltaHeight: deltaHeight,
-      aspectRatio: aspectRatio,
-      anchorPoint: anchorPoint,
-      constraintRect: constraintRect,
-      minimumSize: minimumSize
-    )
-    return new
-  }
-
-  mutating func resizing(
-    deltaWidth: CGFloat,
-    deltaHeight: CGFloat,
-    aspectRatio: PixelAspectRatio?,
-    anchorPoint: AnchorPoint,
-    constraintRect: CGRect,
-    minimumSize: CGSize
-  ) {
-    
-    var proposedRect = self
-    var minimumSize = minimumSize
-         
-    if let aspectRatio = aspectRatio {
-      
-      /**
-       Resizing according to the aspect ratio
-       */
-
-      if abs(deltaHeight) > abs(deltaWidth) {
-        proposedRect.size.height += deltaHeight
-        proposedRect.size.width = aspectRatio.width(forHeight: proposedRect.size.height)
-      } else {
-        proposedRect.size.width += deltaWidth
-        proposedRect.size.height = aspectRatio.height(forWidth: proposedRect.size.width)
-      }
-      
-      if minimumSize.width > minimumSize.height {
-        minimumSize = aspectRatio.size(byHeight: minimumSize.height)
-      } else {
-        minimumSize = aspectRatio.size(byWidth: minimumSize.width)
-      }
-      
-    } else {
-      
-      /**
-       Resizing with free form
-       */
-      
-      proposedRect.size.width += deltaWidth
-      proposedRect.size.height += deltaHeight
-    }
-    
-    let dx = proposedRect.width - self.width
-    let dy = proposedRect.height - self.height
-       
-    switch anchorPoint {
-    case .topLeft:
-
-      constraintMin: do {
-                
-        if proposedRect.width < minimumSize.width {
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .topRight:
-
-      proposedRect.origin.x -= dx
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.origin.x += proposedRect.width - minimumSize.width
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .bottomLeft:
-
-      proposedRect.origin.y -= dy
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.origin.y += proposedRect.height - minimumSize.height
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .bottomRight:
-
-      proposedRect.origin.x -= dx
-      proposedRect.origin.y -= dy
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.origin.x += proposedRect.width - minimumSize.width
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.origin.y += proposedRect.height - minimumSize.height
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .top:
-
-      proposedRect.origin.x -= dx / 2
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.origin.x += proposedRect.width - minimumSize.width
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .right:
-
-      proposedRect.origin.x -= dx
-      proposedRect.origin.y -= dy / 2
- 
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.origin.x += proposedRect.width - minimumSize.width
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.origin.y += proposedRect.height - minimumSize.height
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .left:
-
-      proposedRect.origin.y -= dy / 2
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.origin.y += proposedRect.height - minimumSize.height
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-
-    case .bottom:
-
-      proposedRect.origin.x -= dx / 2
-      proposedRect.origin.y -= dy
-
-      constraintMin: do {
-        if proposedRect.width < minimumSize.width {
-          proposedRect.origin.x += proposedRect.width - minimumSize.width
-          proposedRect.size.width = minimumSize.width
-        }
-
-        if proposedRect.height < minimumSize.height {
-          proposedRect.origin.y += proposedRect.height - minimumSize.height
-          proposedRect.size.height = minimumSize.height
-        }
-      }
-    }
-    
-    print("Prop", proposedRect)
-    
-    max: do {
-      
-      proposedRect = constraintRect.intersection(proposedRect)
-                  
-    }
-    
-    print("Fixed", proposedRect)
-    
-    self = proposedRect
   }
 }
