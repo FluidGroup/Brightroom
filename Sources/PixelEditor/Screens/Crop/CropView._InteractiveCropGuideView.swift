@@ -707,7 +707,6 @@ extension CGRect {
       }
       
       if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
         proposedRect.size.height = minimumSize.height
       }
       
@@ -756,7 +755,6 @@ extension CGRect {
       }
       
       if proposedRect.height < minimumSize.height {
-        proposedRect.origin.y += proposedRect.height - minimumSize.height
         proposedRect.size.height = minimumSize.height
       }
       
@@ -786,7 +784,6 @@ extension CGRect {
       
       // TODO:
       if proposedRect.width < minimumSize.width {
-        proposedRect.origin.x += proposedRect.width - minimumSize.width
         proposedRect.size.width = minimumSize.width
       }
       
