@@ -126,17 +126,7 @@ public final class CropViewController: UIViewController {
         $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       ])
     }
-  
-    cropView.store.sinkState { [weak self] state in
-
-      guard let self = self else { return }
-
-      state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
-        guard let cropAndRotate = cropAndRotate else { return }
-        self.editingStack.crop(cropAndRotate)
-      }
-    }
-    .store(in: &bag)
+    
   }
 
   @objc private func handleRotateButton() {

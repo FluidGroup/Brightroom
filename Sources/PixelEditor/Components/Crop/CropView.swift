@@ -81,7 +81,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    A view that covers the area out of cropping extent.
    */
-  public private(set) weak var outOfBoundsOverlay: UIView?
+  public private(set) weak var cropOutsideOverlay: UIView?
     
   /**
    An image view that displayed in the scroll view.
@@ -132,9 +132,18 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     .store(in: &subscriptions)
     
+    store.sinkState { state in
+            
+      state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
+        guard let cropAndRotate = cropAndRotate else { return }
+        editingStack.crop(cropAndRotate)
+      }
+    }
+    .store(in: &subscriptions)
+    
   }
   
-  public init() {
+  private init() {
     super.init(frame: .zero)
     
     clipsToBounds = false
@@ -200,7 +209,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
           
-    if let outOfBoundsOverlay = outOfBoundsOverlay {
+    if let outOfBoundsOverlay = cropOutsideOverlay {
       outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
       outOfBoundsOverlay.center = center
     }
@@ -269,9 +278,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
     
-    outOfBoundsOverlay?.removeFromSuperview()
+    cropOutsideOverlay?.removeFromSuperview()
     
-    outOfBoundsOverlay = view
+    cropOutsideOverlay = view
     view.isUserInteractionEnabled = false
     
     // TODO: Unsafe operation.
@@ -385,8 +394,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
   }
-  
-
   
   @inline(__always)
   private func willChangeGuideView() {

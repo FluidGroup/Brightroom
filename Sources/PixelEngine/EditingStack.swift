@@ -150,6 +150,9 @@ open class EditingStack: Equatable, StoreComponentType {
     
   }
   
+  /**
+   EditingStack awakes from cold state.
+   */
   public func start() {
     
     ensureMainThread()

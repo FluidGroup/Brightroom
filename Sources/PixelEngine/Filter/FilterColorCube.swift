@@ -61,7 +61,7 @@ public final class FilterColorCube : Filtering, Equatable {
   public init(
     name: String,
     identifier: String,
-    lutImage: Image,
+    lutImage: PlatformImage,
     dimension: Int,
     colorSpace: CGColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
     ) {

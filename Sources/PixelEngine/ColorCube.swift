@@ -23,16 +23,16 @@ import Foundation
 
 #if os(macOS)
 import AppKit
-public typealias Image = NSImage
+public typealias PlatformImage = NSImage
 #elseif os(iOS)
 import UIKit
-public typealias Image = UIImage
+public typealias PlatformImage = UIImage
 #endif
 
 public enum ColorCube {
 
   public static func makeColorCubeFilter(
-    lutImage: Image,
+    lutImage: PlatformImage,
     dimension: Int,
     colorSpace: CGColorSpace
     ) -> CIFilter {
@@ -89,7 +89,7 @@ public enum ColorCube {
 
   // Imported from Objective-C code.
   // TODO: Improve more swifty.
-  public static func cubeData(lutImage: Image, dimension: Int, colorSpace: CGColorSpace) -> Data? {
+  public static func cubeData(lutImage: PlatformImage, dimension: Int, colorSpace: CGColorSpace) -> Data? {
 
     guard let cgImage = lutImage.cgImage else {
       return nil

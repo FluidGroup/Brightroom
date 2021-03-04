@@ -20,35 +20,32 @@
 // THE SOFTWARE.
 
 import Foundation
+import SwiftUI
+import PixelEngine
 
-extension CropView {
+/**
+ Still in development
+ */
+@available(iOS 14, *)
+public struct SwiftUICropView: UIViewRepresentable {
   
-  final class _CropScrollView: UIScrollView {
-    override init(frame: CGRect) {
-      super.init(frame: frame)
-      
-      initialize()
-    }
+  public typealias UIViewType = CropView
+  
+  private let editingStack: EditingStack
+  
+  public init(
+    editingStack: EditingStack
+  ) {
+    self.editingStack = editingStack
+  }
     
-    @available(*, unavailable)
-    required init?(coder aDecoder: NSCoder) {
-      fatalError()
-    }
-    
-    private func initialize() {
-      if #available(iOS 11.0, *) {
-        contentInsetAdjustmentBehavior = .never
-      } else {
-        // Fallback on earlier versions
-      }
-      showsVerticalScrollIndicator = false
-      showsHorizontalScrollIndicator = false
-      bouncesZoom = true
-      decelerationRate = UIScrollView.DecelerationRate.fast
-      clipsToBounds = false
-      alwaysBounceVertical = true
-      alwaysBounceHorizontal = true
-    }
+  public func makeUIView(context: Context) -> CropView {
+    let view = CropView(editingStack: editingStack)
+    return view
   }
   
+  public func updateUIView(_ uiView: CropView, context: Context) {
+    
+  }
+      
 }
