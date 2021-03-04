@@ -73,9 +73,7 @@ public struct CropAndRotate: Equatable {
    Returns aspect ratio.
    Would not be affected by rotation.
    */
-  public var aspectRatio: PixelAspectRatio {
-    cropExtent.size.aspectRatio
-  }
+  public var preferredAspectRatio: PixelAspectRatio?
 
   /// The dimensions in pixel for the image.
   public var imageSize: PixelSize
@@ -85,7 +83,7 @@ public struct CropAndRotate: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
-
+  
   public init(from ciImage: CIImage) {
     self.init(
       imageSize: .init(image: ciImage),
@@ -110,8 +108,9 @@ public struct CropAndRotate: Equatable {
 
    - TODO: Resizing cropping extent with keeping area by new aspect ratio.
    */
-  public mutating func set(aspectRatio: PixelAspectRatio) {
-    let maxSize = aspectRatio.sizeThatFits(in: imageSize.cgSize)
+  public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
+        
+    let maxSize = newAspectRatio.sizeThatFits(in: imageSize.cgSize)
 
     cropExtent = .init(
       origin: .init(cgPoint: CGPoint(
@@ -121,6 +120,7 @@ public struct CropAndRotate: Equatable {
       size: .init(cgSize: maxSize)
     )
   }
+  
 }
 
 public struct EditingImage: Equatable {

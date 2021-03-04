@@ -47,7 +47,7 @@ extension CropView {
 
     private var maximumRect: CGRect?
 
-    private var lockedAspectRatio: PixelAspectRatio?
+    private(set) var lockedAspectRatio: PixelAspectRatio?
 
     private let minimumSize = CGSize(width: 120, height: 120)
 

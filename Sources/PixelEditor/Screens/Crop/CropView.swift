@@ -226,10 +226,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
     
     store.commit {
-      $0.proposedCropAndRotate?.set(aspectRatio: ratio)
+      $0.proposedCropAndRotate?.updateCropExtent(by: ratio)
+      $0.proposedCropAndRotate?.preferredAspectRatio = ratio
       $0.modifiedSource = .fromState
     }
-    guideView.setLockedAspectRatio(ratio)
   }
   
   /**
@@ -276,13 +276,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
         let size: CGSize
         switch cropAndRotate.rotation {
         case .angle_0:
-          size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
+          size = cropAndRotate.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio)
         case .angle_90:
-          size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = cropAndRotate.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio?.swapped())
         case .angle_180:
-          size = cropAndRotate.aspectRatio.sizeThatFits(in: bounds.size)
+          size = cropAndRotate.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio)
         case .angle_270:
-          size = cropAndRotate.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = cropAndRotate.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio?.swapped())
         }
         
         scrollView.transform = cropAndRotate.rotation.transform

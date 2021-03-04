@@ -41,7 +41,7 @@ open class EditingStack: Equatable, StoreComponentType {
     private let initialEditing: Edit
     
     public var aspectRatio: PixelAspectRatio {
-      currentEdit.cropAndRotate.cropRect?.aspectRatio ?? imageSize.aspectRatio
+      currentEdit.cropAndRotate.cropRect?.preferredAspectRatio ?? imageSize.aspectRatio
     }
     
     public var cropRect: CropAndRotate {
