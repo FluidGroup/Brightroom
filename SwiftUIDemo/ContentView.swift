@@ -2,7 +2,6 @@
 import SwiftUI
 
 struct ContentView: View {
-  @State private var target: FullscreenIdentifiableView?
   @State private var image: SwiftUI.Image?
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
@@ -26,40 +25,40 @@ struct ContentView: View {
 
           Button("Horizontal") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-            target = .init {
+            fullScreenView = .init {
               CropViewWrapper(editingStack: stack, onCompleted: {
                 self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.target = nil
+                self.fullScreenView = nil
               })
             }
           }
 
           Button("Vertical") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
-            target = .init {
+            fullScreenView = .init {
               CropViewWrapper(editingStack: stack, onCompleted: {
                 self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.target = nil
+                self.fullScreenView = nil
               })
             }
           }
 
           Button("Square") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
-            target = .init {
+            fullScreenView = .init {
               CropViewWrapper(editingStack: stack, onCompleted: {
                 self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.target = nil
+                self.fullScreenView = nil
               })
             }
           }
 
           Button("Super small") {
             let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
-            target = .init {
+            fullScreenView = .init {
               CropViewWrapper(editingStack: stack, onCompleted: {
                 self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.target = nil
+                self.fullScreenView = nil
               })
             }
           }
@@ -73,16 +72,15 @@ struct ContentView: View {
               previewSize: .init(width: 1000, height: 1000)
             )
 
-            target = .init {
+            fullScreenView = .init {
               CropViewWrapper(editingStack: stack, onCompleted: {
                 self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.target = nil
+                self.fullScreenView = nil
               })
             }
           }
         }
       }
-      .sheet(item: $target, content: { $0 })
       .fullScreenCover(
         item: $fullScreenView,
         onDismiss: {}, content: {
@@ -112,6 +110,7 @@ struct FullscreenIdentifiableView: View, Identifiable {
       }
       .padding(16)
     }
+    .clipped()
   }
 }
 

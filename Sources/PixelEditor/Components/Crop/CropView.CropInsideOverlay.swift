@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/
 extension CropView {
@@ -112,6 +113,10 @@ extension CropView {
     
   open class CropInsideOverlayBase: PixelEditorCodeBasedView {
     
+    public init() {
+      super.init(frame: .zero)
+    }
+    
     open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
@@ -119,8 +124,23 @@ extension CropView {
     open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
+        
   }
 
+  @available(iOS 14, *)
+  open class SwiftUICropInsideOverlay<Content: View>: CropInsideOverlayBase {
+    
+    private let controller: UIHostingController<Content>
+    
+    public init(controller: UIHostingController<Content>) {
+      self.controller = controller
+      super.init()
+      addSubview(controller.view)
+      AutoLayoutTools.setEdge(controller.view, self)
+    }
+        
+  }
+  
   public final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
     
     private let handlesView = CropOverlayHandlesView()
@@ -133,9 +153,9 @@ extension CropView {
     
     private var currentAnimator: UIViewPropertyAnimator?
         
-    public init() {
-      super.init(frame: .zero)
-
+    public override init() {
+      super.init()
+      
       isUserInteractionEnabled = false
       addSubview(handlesView)
       AutoLayoutTools.setEdge(handlesView, self)

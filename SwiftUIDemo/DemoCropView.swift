@@ -18,11 +18,18 @@ struct DemoCropView: View {
     ZStack {
       Color.black
         .ignoresSafeArea()
-      SwiftUICropView(editingStack: editingStack)
-        .clipped()
-        .onAppear {
-          editingStack.start()
-        }
+      SwiftUICropView(
+        editingStack: editingStack,
+        cropInsideOverlay: .init(VStack {
+          Circle()
+            .foregroundColor(.white)
+            .frame(width: 50, height: 50, alignment: .center)
+        })
+      )
+      .clipped()
+      .onAppear {
+        editingStack.start()
+      }
     }
   }
 }
