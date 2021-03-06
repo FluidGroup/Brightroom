@@ -1,8 +1,10 @@
 ## ⚠️ v2 development is in progress. 
 
-> 💥 The next major version development has been started.  
+> 💥 The next major version (v2) development has been started.  
 > https://github.com/muukii/Pixel/pull/53  
-> This obviously takes many breaking changes.  
+> If you're excited in this, please hit the reaction button! 
+>
+> And this obviously takes many breaking changes.  
 > Feel free to start a discussion about enhancement from the current released version.  
 > I often upload movies of features in development to the pull-request's comment.
 
