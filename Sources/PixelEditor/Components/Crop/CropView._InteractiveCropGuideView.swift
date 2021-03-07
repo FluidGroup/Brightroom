@@ -23,7 +23,7 @@ import Foundation
 import PixelEngine
 
 extension CropView {
-  public final class _InteractiveCropGuideView: UIView, UIGestureRecognizerDelegate {
+  final class _InteractiveCropGuideView: PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
 
@@ -50,10 +50,17 @@ extension CropView {
     private(set) var lockedAspectRatio: PixelAspectRatio?
 
     private let minimumSize = CGSize(width: 120, height: 120)
+    
+    private let insetOfGuideFlexibility: UIEdgeInsets
 
-    init(containerView: CropView, imageView: UIView) {
+    init(
+      containerView: CropView,
+      imageView: UIView,
+      insetOfGuideFlexibility: UIEdgeInsets
+    ) {
       self.containerView = containerView
       self.imageView = imageView
+      self.insetOfGuideFlexibility = insetOfGuideFlexibility
 
       super.init(frame: .zero)
 
@@ -215,18 +222,13 @@ extension CropView {
       }
     }
 
-    @available(*, unavailable)
-    public required init?(coder: NSCoder) {
-      fatalError("init(coder:) has not been implemented")
-    }
-
     // MARK: - Functions
 
     /**
      Displays a view as an overlay.
      e.g. grid view
      */
-    public func setCropInsideOverlay(_ newOverlay: CropInsideOverlayBase?) {
+    func setCropInsideOverlay(_ newOverlay: CropInsideOverlayBase?) {
       cropInsideOverlay?.removeFromSuperview()
 
       if let overlay = newOverlay {
@@ -236,21 +238,29 @@ extension CropView {
       }
     }
 
-    func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
+    func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
+      defer {
+        setNeedsLayout()
+        layoutIfNeeded()
+      }
+      
+      guard let view = view else {
+        cropOutsideOverlay = nil
+        return
+      }
+      
       assert(view.superview != nil)
       assert(view.superview is CropView)
 
       cropOutsideOverlay = view
-
-      setNeedsLayout()
-      layoutIfNeeded()
+   
     }
 
     func setLockedAspectRatio(_ aspectRatio: PixelAspectRatio?) {
       lockedAspectRatio = aspectRatio
     }
 
-    override public func layoutSubviews() {
+    override func layoutSubviews() {
       super.layoutSubviews()
 
       cropInsideOverlay?.frame = bounds
@@ -267,7 +277,7 @@ extension CropView {
       }
     }
 
-    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let view = super.hitTest(point, with: event)
 
       if view == self {
@@ -290,7 +300,7 @@ extension CropView {
     @inline(__always)
     private func updateMaximumRect() {
       maximumRect = imageView.convert(imageView.bounds, to: containerView)
-        .intersection(containerView.bounds.insetBy(dx: 20, dy: 20))
+        .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
     }
 
     private func onGestureTrackingStarted() {

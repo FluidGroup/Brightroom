@@ -26,6 +26,10 @@ import Verge
 
 /**
  A view that previews how crops the image.
+ 
+ The cropping adjustument is avaibleble from 2 ways:
+   - Scrolling image
+   - Panning guide
  */
 public final class CropView: UIView, UIScrollViewDelegate {
   public struct State: Equatable {
@@ -48,12 +52,30 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     public fileprivate(set) var frame: CGRect = .zero
     fileprivate var hasLoaded = false
+    fileprivate var isGuideInteractionEnabled: Bool = true
   }
 
   /**
    A view that covers the area out of cropping extent.
    */
   public private(set) weak var cropOutsideOverlay: UIView?
+
+  public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
+  
+  /**
+   A Boolean value that indicates whether the guide is interactive.
+   If false, cropping adjustment is available only way from scrolling image-view.
+   */
+  public var isGuideInteractionEnabled: Bool {
+    get {
+      store.state.isGuideInteractionEnabled
+    }
+    set {
+      store.commit {
+        $0.isGuideInteractionEnabled = newValue
+      }
+    }
+  }
 
   /**
    An image view that displayed in the scroll view.
@@ -76,10 +98,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   private lazy var guideView = _InteractiveCropGuideView(
     containerView: self,
-    imageView: self.imageView
+    imageView: self.imageView,
+    insetOfGuideFlexibility: contentInset
   )
-
-  public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
 
   private var subscriptions = Set<VergeAnyCancellable>()
 
@@ -90,18 +111,31 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private let editingStack: EditingStack
 
-  public convenience init(image: UIImage) {
-    self.init(editingStack: .init(
-      source: .init(image: image),
-      previewSize: .init(width: 1000, height: 1000)
-    ))
+  private let contentInset: UIEdgeInsets
+
+  // MARK: - Initializers
+
+  public convenience init(
+    image: UIImage,
+    contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
+  ) {
+    self.init(
+      editingStack: .init(
+        source: .init(image: image),
+        previewSize: .init(width: 1000, height: 1000)
+      ),
+      contentInset: contentInset
+    )
   }
 
-  public init(editingStack: EditingStack) {
-    
+  public init(
+    editingStack: EditingStack,
+    contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
+  ) {
     ensureMainThread()
-    
+
     self.editingStack = editingStack
+    self.contentInset = contentInset
 
     super.init(frame: .zero)
 
@@ -156,6 +190,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
           guard let cropAndRotate = cropAndRotate else { return }
           editingStack.crop(cropAndRotate)
         }
+        
+        state.ifChanged(\.isGuideInteractionEnabled) { value in
+          self.guideView.isUserInteractionEnabled = value
+        }
+        
       }
       .store(in: &subscriptions)
 
@@ -186,10 +225,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
+  // MARK: - Functions
+
   /**
    Renders an image according to the editing.
-   
+
    - Attension: This operation can be run background-thread.
    */
   public func renderImage() -> UIImage {
@@ -208,9 +249,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setRotation(_ rotation: CropAndRotate.Rotation) {
-    
     ensureMainThread()
-    
+
     store.commit {
       $0.proposedCropAndRotate?.rotation = rotation
       $0.modifiedSource = .fromState
@@ -218,9 +258,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
-    
     ensureMainThread()
-    
+
     store.commit {
       $0.proposedCropAndRotate = cropAndRotate
       $0.modifiedSource = .fromState
@@ -228,9 +267,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
-    
     ensureMainThread()
-    
+
     store.commit {
       $0.proposedCropAndRotate?.updateCropExtent(by: ratio)
       $0.proposedCropAndRotate?.preferredAspectRatio = ratio
@@ -241,11 +279,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    Displays a view as an overlay.
    e.g. grid view
+   
+   - Parameters:
+     - view: In case of no needs to display overlay, pass nil.
    */
-  public func setCropInsideOverlay(_ view: CropInsideOverlayBase) {
-    
+  public func setCropInsideOverlay(_ view: CropInsideOverlayBase?) {
     ensureMainThread()
-    
+
     guideView.setCropInsideOverlay(view)
   }
 
@@ -254,17 +294,23 @@ public final class CropView: UIView, UIScrollViewDelegate {
    Given view's frame would be adjusted automatically.
 
    - Attention: view's userIntereactionEnabled turns off
+   - Parameters:
+     - view: In case of no needs to display overlay, pass nil.
    */
-  public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase) {
-    
+  public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
     ensureMainThread()
-    
+
     cropOutsideOverlay?.removeFromSuperview()
+    
+    guard let view = view else {
+      // just removing
+      return
+    }
 
     cropOutsideOverlay = view
     view.isUserInteractionEnabled = false
 
-    // TODO: Unsafe operation.
+    // TODO: Unstable operation.
     insertSubview(view, aboveSubview: scrollView)
 
     guideView.setCropOutsideOverlay(view)
@@ -313,8 +359,7 @@ extension CropView {
   ) {
     func perform() {
       frame: do {
-        let insets = UIEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
-        let bounds = self.bounds.inset(by: insets)
+        let bounds = self.bounds.inset(by: contentInset)
 
         let size: CGSize
         switch cropAndRotate.rotation {
@@ -336,8 +381,8 @@ extension CropView {
 
         scrollView.frame = .init(
           origin: .init(
-            x: insets.left + ((bounds.width - size.width) / 2) /* centering offset */,
-            y: insets.top + ((bounds.height - size.height) / 2) /* centering offset */
+            x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
+            y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
           ),
           size: size
         )

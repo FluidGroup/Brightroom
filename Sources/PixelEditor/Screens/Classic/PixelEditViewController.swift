@@ -48,7 +48,7 @@ public final class PixelEditViewController: UIViewController {
 
   private let previewView = ImagePreviewView()
 
-  private let adjustmentView = CropAndStraightenView()
+  private let cropView: CropView
 
   private let editContainerView = UIView()
 
@@ -87,6 +87,7 @@ public final class PixelEditViewController: UIViewController {
 
   public init(viewModel: PixelEditViewModel) {
     self.viewModel = viewModel
+    self.cropView = .init(editingStack: viewModel.editingStack, contentInset: .zero)
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -99,6 +100,11 @@ public final class PixelEditViewController: UIViewController {
 
   override public func viewDidLoad() {
     super.viewDidLoad()
+    
+    cropView.setCropOutsideOverlay(nil)
+    cropView.setCropInsideOverlay(nil)
+    cropView.isGuideInteractionEnabled = false
+    cropView.setCroppingAspectRatio(.square)
 
     layout: do {
       root: do {
@@ -166,7 +172,7 @@ public final class PixelEditViewController: UIViewController {
 
       edit: do {
         [
-          adjustmentView,
+          cropView,
           previewView,
           maskingView,
         ].forEach { view in
@@ -207,7 +213,7 @@ public final class PixelEditViewController: UIViewController {
       maskingView.attach(editingStack: viewModel.editingStack)
     )
     
-    adjustmentView.store.sinkState { [weak self] (state) in
+    cropView.store.sinkState { [weak self] (state) in
       
       guard let self = self else { return }
       
@@ -249,27 +255,6 @@ public final class PixelEditViewController: UIViewController {
 
   // MARK: - Private Functions
 
-//  private func setupImagesViews() {
-//
-//    guard let aspectRatio = editingStack.aspectRatio else { return }
-//    if hasSetupImageViews == false {
-//      setAspect(aspectRatio)
-//      stackView.push(
-//        options.classes.control.rootControl.init(
-//          context: context,
-//          colorCubeControl: options.classes.control.colorCubeControl.init(
-//            context: context,
-//            originalImage: editingStack.cubeFilterPreviewSourceImage!,
-//            filters: editingStack.previewColorCubeFilters
-//          )
-//        ),
-//        animated: false
-//      )
-//    }
-//    view.layoutIfNeeded()
-//    set(mode: mode)
-//  }
-
   @objc
   private func didTapDoneButton() {
     callbacks.didEndEditing(self, viewModel.editingStack)
@@ -285,14 +270,6 @@ public final class PixelEditViewController: UIViewController {
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
     if let paths = state.takeIfChanged(\.editingState.currentEdit.drawings.blurredMaskPaths) {
       maskingView.drawnPaths = paths
-    }
-            
-    state.ifChanged(\.editingState.cropRect) { cropRect in
-      adjustmentView.set(proposedCropAndRotate: cropRect)
-    }
-    
-    if let targetImage = state.takeIfChanged(\.editingState.targetOriginalSizeImage) {
-      adjustmentView.image = targetImage
     }
 
     if let previewImage = state.takeIfChanged(\.editingState.previewCroppedAndEffectedImage) {
@@ -310,7 +287,7 @@ public final class PixelEditViewController: UIViewController {
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
 
-        adjustmentView.isHidden = false
+        cropView.isHidden = false
         previewView.isHidden = true
         maskingView.isHidden = true
         maskingView.isUserInteractionEnabled = false
@@ -320,7 +297,7 @@ public final class PixelEditViewController: UIViewController {
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
 
-        adjustmentView.isHidden = true
+        cropView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = false
 
@@ -331,7 +308,7 @@ public final class PixelEditViewController: UIViewController {
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil
 
-        adjustmentView.isHidden = true
+        cropView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = true
 
@@ -344,7 +321,7 @@ public final class PixelEditViewController: UIViewController {
         navigationItem.leftBarButtonItem = cancelButton
 
         previewView.isHidden = false
-        adjustmentView.isHidden = true
+        cropView.isHidden = true
         maskingView.isHidden = false
 
         maskingView.isUserInteractionEnabled = false

@@ -12,20 +12,21 @@ target "PixelEditor" do
   pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
 end
 
-target "Demo" do
-  # Comment the next line if you're not using Swift and don't want to use dynamic frameworks
-  use_frameworks!
-  pod "MosaiqueAssetsPicker", :git => "git@github.com:eure/AssetsPicker.git"
-  pod "Reveal-SDK"
-  pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
-  pod "TransitionPatch"
-end
+abstract_target 'Demo_Apps' do
 
-target "SwiftUIDemo" do
-  # Comment the next line if you're not using Swift and don't want to use dynamic frameworks
   use_frameworks!
   pod "Reveal-SDK"
   pod "Verge", git: "git@github.com:VergeGroup/Verge.git", branch: "main"
   pod "TransitionPatch"
+  pod "SwiftGen"
+
+  target "Demo" do
+    pod "MosaiqueAssetsPicker", :git => "git@github.com:eure/AssetsPicker.git"
+  end
+
+  target "SwiftUIDemo" do
+    use_frameworks!
+  end
+
 end
 
