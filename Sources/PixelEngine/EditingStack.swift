@@ -128,7 +128,7 @@ open class EditingStack: Equatable, StoreComponentType {
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale,
-    modifyCrop: @escaping (CIImage, inout CropAndRotate) -> Void
+    modifyCrop: @escaping (CIImage, inout CropAndRotate) -> Void = { _, _ in }
     ) {
         
     self.modifyCrop = modifyCrop
