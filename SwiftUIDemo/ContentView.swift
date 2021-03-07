@@ -6,7 +6,7 @@ struct ContentView: View {
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State private var fullScreenView: FullscreenIdentifiableView?
-  
+
   @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)
   @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(image: Asset.verticalRect.image)
   @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(image: Asset.squareRect.image)
@@ -15,14 +15,16 @@ struct ContentView: View {
   var body: some View {
     NavigationView {
       VStack {
-        if let image = image {
-          image
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: 300, height: 300, alignment: .center)
-        } else {
-          Color.gray.frame(width: 300, height: 300, alignment: .center)
+        Group {
+          if let image = image {
+            image
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+          } else {
+            Color.gray
+          }
         }
+        .frame(width: 120, height: 120, alignment: .center)
         Form {
           Button("Component: Crop") {
             fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
@@ -82,10 +84,9 @@ struct ContentView: View {
               }
             }
           })
-          
+
           Section(content: {
-            
-            Button("PixelEditor") {
+            Button("PixelEditor Square") {
               let stack = EditingStack.init(
                 source: .init(image: Asset.l1000316.image),
                 previewSize: CGSize(width: 600, height: 600),
@@ -94,7 +95,20 @@ struct ContentView: View {
                 }
               )
               fullScreenView = .init {
-                return PixelEditWrapper(editingStack: stack) {
+                PixelEditWrapper(editingStack: stack) {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                }
+              }
+            }
+
+            Button("PixelEditor") {
+              let stack = EditingStack.init(
+                source: .init(image: Asset.l1000316.image),
+                previewSize: CGSize(width: 600, height: 600)
+              )
+              fullScreenView = .init {
+                PixelEditWrapper(editingStack: stack) {
                   self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
                   self.fullScreenView = nil
                 }
@@ -103,6 +117,7 @@ struct ContentView: View {
           })
         }
       }
+      .navigationTitle("Pixel")
       .fullScreenCover(
         item: $fullScreenView,
         onDismiss: {}, content: {
@@ -139,7 +154,6 @@ import PixelEditor
 import PixelEngine
 
 struct CropViewWrapper: UIViewControllerRepresentable {
-
   typealias UIViewControllerType = CropViewController
 
   private let editingStack: EditingStack
@@ -161,18 +175,17 @@ struct CropViewWrapper: UIViewControllerRepresentable {
 }
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
-  
   typealias UIViewControllerType = UINavigationController
-  
+
   private let editingStack: EditingStack
   private let onCompleted: () -> Void
-  
+
   init(editingStack: EditingStack, onCompleted: @escaping () -> Void) {
     self.editingStack = editingStack
     self.onCompleted = onCompleted
     editingStack.start()
   }
-  
+
   func makeUIViewController(context: Context) -> UINavigationController {
     let cropViewController = PixelEditViewController(viewModel: .init(editingStack: editingStack))
     cropViewController.callbacks.didEndEditing = { _, _ in
@@ -180,7 +193,6 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
     }
     return UINavigationController(rootViewController: cropViewController)
   }
-  
+
   func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
-  
 }

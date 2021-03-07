@@ -172,7 +172,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     #endif
 
     binding: do {
-      store.sinkState(queue: .asyncMain) { [weak self] state in
+      store.sinkState(queue: .mainIsolated()) { [weak self] state in
 
         guard let self = self else { return }
 
@@ -270,7 +270,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public func setCropAndRotate(_ cropAndRotate: EditingCrop) {
     ensureMainThread()
-
+    
     store.commit {
       $0.proposedCropAndRotate = cropAndRotate
       $0.modifiedSource = .fromState

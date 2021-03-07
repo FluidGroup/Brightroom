@@ -260,6 +260,7 @@ open class EditingStack: Equatable, StoreComponentType {
           self.applyIfChanged {
             self.modifyCrop(nil, &$0.crop)
           }
+          self.takeSnapshot()
           return
         }
         self.commit { s in
@@ -276,6 +277,9 @@ open class EditingStack: Equatable, StoreComponentType {
           s.targetOriginalSizeImage = image.image
           
           self.modifyCrop(nil, &s.currentEdit.crop)
+          s.withType { (type, ref) -> Void in
+            type.makeVersion(ref: ref)
+          }
           
         }
       }
@@ -291,9 +295,7 @@ open class EditingStack: Equatable, StoreComponentType {
    Adds a new snapshot as a history.
    */
   public func takeSnapshot() {
-    
-    ensureMainThread()
-    
+        
     commit {
       $0.withType { (type, ref) -> Void in
         type.makeVersion(ref: ref)

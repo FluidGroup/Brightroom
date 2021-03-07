@@ -103,6 +103,8 @@ public final class PixelEditViewController: UIViewController {
     cropView.setCropOutsideOverlay(nil)
     cropView.setCropInsideOverlay(nil)
     cropView.isGuideInteractionEnabled = false
+    
+    // FIXME: Demo
     cropView.setCroppingAspectRatio(.square)
 
     layout: do {
@@ -208,7 +210,7 @@ public final class PixelEditViewController: UIViewController {
       maskingView.attach(editingStack: viewModel.editingStack)
     )
     
-    viewModel.sinkState(queue: .main) { [weak self] state in
+    viewModel.sinkState(queue: .mainIsolated()) { [weak self] state in
       
       guard let self = self else { return }
       
@@ -259,6 +261,11 @@ public final class PixelEditViewController: UIViewController {
 
     if let brush = state.takeIfChanged(\.brush) {
       maskingView.brush = brush
+    }
+    
+    state.ifChanged(\.proposedCropAndRotate) { value in
+      guard let value = value else { return }      
+      cropView.setCropAndRotate(value)
     }
 
     if let mode = state.takeIfChanged(\.mode) {

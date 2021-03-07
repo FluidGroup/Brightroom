@@ -49,7 +49,8 @@ public final class AdjustmentControl : AdjustmentControlBase {
       
       guard let self = self else { return }
       
-      self.viewModel.endCropAndRotate(save: false)
+      self.viewModel.endCrop(save: false)
+      self.viewModel.setMode(.preview)
       self.pop(animated: true)
     }
     
@@ -57,20 +58,17 @@ public final class AdjustmentControl : AdjustmentControlBase {
       
       guard let self = self else { return }
       
-      self.viewModel.endCropAndRotate(save: true)
+      self.viewModel.endCrop(save: true)
+      self.viewModel.setMode(.preview)
       self.pop(animated: true)
     }
   }
-
-  public override func didMoveToSuperview() {
-    super.didMoveToSuperview()
-
-    if superview != nil {
+  
+  public override func willMove(toSuperview newSuperview: UIView?) {
+    super.willMove(toSuperview: newSuperview)
+    if newSuperview != nil {
       viewModel.setMode(.adjustment)
-    } else {
-      viewModel.setMode(.preview)
     }
-
   }
 
 }
