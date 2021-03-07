@@ -6,6 +6,11 @@ struct ContentView: View {
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State private var fullScreenView: FullscreenIdentifiableView?
+  
+  @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)
+  @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(image: Asset.verticalRect.image)
+  @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(image: Asset.squareRect.image)
+  @State private var stackForSmall: EditingStack = Mocks.makeEditingStack(image: Asset.superSmall.image)
 
   var body: some View {
     NavigationView {
@@ -25,40 +30,36 @@ struct ContentView: View {
 
           Section(content: {
             Button("Horizontal") {
-              let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                CropViewWrapper(editingStack: stackForHorizontal, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForHorizontal.makeRenderer().render())
                   self.fullScreenView = nil
                 })
               }
             }
 
             Button("Vertical") {
-              let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                CropViewWrapper(editingStack: stackForVertical, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForVertical.makeRenderer().render())
                   self.fullScreenView = nil
                 })
               }
             }
 
             Button("Square") {
-              let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                CropViewWrapper(editingStack: stackForSquare, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForSquare.makeRenderer().render())
                   self.fullScreenView = nil
                 })
               }
             }
 
             Button("Super small") {
-              let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                CropViewWrapper(editingStack: stackForSmall, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForSmall.makeRenderer().render())
                   self.fullScreenView = nil
                 })
               }
