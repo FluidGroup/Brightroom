@@ -19,36 +19,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import PixelEngine
+import Verge
 
-final class ImagePreviewView : UIView {
-
-  let originalImageView: UIImageView = .init()
-  let imageView: UIImageView = .init()
+/**
+ A view that displays the edited image, plus displays original image for comparison with touch-down interaction.
+ */
+public final class ImagePreviewView : PixelEditorCodeBasedView {
   
-  var originalImage: CIImage? {
-    didSet {
-      guard oldValue != originalImage else { return }
-      originalImageView.image = originalImage
-        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
-        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-      EditorLog.debug("ImagePreviewView.image set", originalImage?.extent as Any)
-    }
-  }
-
-  var image: CIImage? {
-    didSet {
-      guard oldValue != image else { return }
-      imageView.image = image
-        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
-        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-      EditorLog.debug("ImagePreviewView.image set", image?.extent as Any)
-    }
-  }
+  // MARK: - Properties
   
-  override init(frame: CGRect) {
+  #if false
+  private let originalImageView = _ImageView()
+  #else
+  private let originalImageView: UIView & HardwareImageViewType = {
+    return MetalImageView()
+  }()
+  #endif
+  
+  #if false
+  private let imageView = _ImageView()
+  #else
+  private let imageView: UIView & HardwareImageViewType = {
+    return MetalImageView()
+  }()
+  #endif
+  
+  private let editingStack: EditingStack
+  private var subscriptions = Set<VergeAnyCancellable>()
+  
+  // MARK: - Initializers
+  
+  public init(editingStack: EditingStack) {
+    
+    self.editingStack = editingStack
+    
     super.init(frame: .zero)
-
     
     originalImageView.accessibilityIdentifier = "pixel.originalImageView"
     imageView.accessibilityIdentifier = "pixel.editedImageView"
@@ -65,39 +71,6 @@ final class ImagePreviewView : UIView {
     
     originalImageView.isHidden = true
     
-  }
-
-  required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-  
-  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-    super.touchesBegan(touches, with: event)
-    originalImageView.isHidden = false
-    imageView.isHidden = true
-  }
-  
-  override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-    super.touchesEnded(touches, with: event)
-    originalImageView.isHidden = true
-    imageView.isHidden = false
-  }
-  
-  override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-    super.touchesCancelled(touches, with: event)
-    originalImageView.isHidden = true
-    imageView.isHidden = false
-  }
-}
-
-import PixelEngine
-import Verge
-
-extension ImagePreviewView {
-  
-  func attach(editingStack: EditingStack) -> Set<VergeAnyCancellable> {
-    var subscriptions = Set<VergeAnyCancellable>()
-    
     editingStack.sinkState { [weak self] state in
       
       guard let self = self else { return }
@@ -105,18 +78,42 @@ extension ImagePreviewView {
       UIView.performWithoutAnimation {
         
         state.ifChanged(\.previewCroppedAndEffectedImage) { previewImage in
-          self.image = previewImage
+          if let image = previewImage {
+            self.imageView.display(image: image)
+            EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
+          }
         }
         
         state.ifChanged(\.previewCroppedOriginalImage) { croppedTargetImage in
-          self.originalImage = croppedTargetImage
+          if let image = croppedTargetImage {
+            self.originalImageView.display(image: image)
+            EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)
+          }
         }
         
       }
     }
     .store(in: &subscriptions)
     
-    return subscriptions
+  }
+  
+  // MARK: - Functions
+  
+  public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+    super.touchesBegan(touches, with: event)
+    originalImageView.isHidden = false
+    imageView.isHidden = true
+  }
+  
+  public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+    super.touchesEnded(touches, with: event)
+    originalImageView.isHidden = true
+    imageView.isHidden = false
+  }
+  
+  public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+    super.touchesCancelled(touches, with: event)
+    originalImageView.isHidden = true
+    imageView.isHidden = false
   }
 }
-

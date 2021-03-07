@@ -23,6 +23,7 @@ import Foundation
 
 import GLKit
 import AVFoundation
+import PixelEngine
 
 public class GLImageView : GLKView, HardwareImageViewType {
 

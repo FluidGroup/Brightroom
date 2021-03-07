@@ -46,8 +46,8 @@ public final class PixelEditViewController: UIViewController {
 
   private let maskingView = BlurredMosaicView()
 
-  private let previewView = ImagePreviewView()
-
+  private let previewView: ImagePreviewView
+  
   private let cropView: CropView
 
   private let editContainerView = UIView()
@@ -88,6 +88,7 @@ public final class PixelEditViewController: UIViewController {
   public init(viewModel: PixelEditViewModel) {
     self.viewModel = viewModel
     self.cropView = .init(editingStack: viewModel.editingStack, contentInset: .zero)
+    self.previewView = .init(editingStack: viewModel.editingStack)
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -203,10 +204,6 @@ public final class PixelEditViewController: UIViewController {
         )
       ),
       animated: false
-    )
-
-    subscriptions.formUnion(
-      previewView.attach(editingStack: viewModel.editingStack)
     )
 
     subscriptions.formUnion(

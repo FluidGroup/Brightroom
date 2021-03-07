@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 
 import Foundation
-
-#if canImport(MetalKit) && !targetEnvironment(simulator)
 import MetalKit
+import PixelEngine
 
 open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
  
@@ -80,6 +79,12 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     {
       return
     }
+    
+    #if DEBUG
+    if image.cgImage != nil {
+      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
+    }
+    #endif
 
     let commandBuffer = commandQueue.makeCommandBuffer()
 
@@ -87,18 +92,20 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
       origin: .zero,
       size: drawableSize
     )
+    
+    let fixedImage = image.transformed(by: .init(translationX: -image.extent.origin.x, y: -image.extent.origin.y))
 
     let targetRect = Geometry.rectThatAspectFill(
-      preferredAspectRatio: image.extent.size,
+      aspectRatio: fixedImage.extent.size,
       minimumRect: bounds
     )
 
     let originX = targetRect.origin.x
     let originY = targetRect.origin.y
-    let scaleX = targetRect.width / image.extent.width
-    let scaleY = targetRect.height / image.extent.height
+    let scaleX = targetRect.width / fixedImage.extent.width
+    let scaleY = targetRect.height / fixedImage.extent.height
     let scale = min(scaleX, scaleY)
-    let scaledImage = image
+    let scaledImage = fixedImage
       .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
       .transformed(by: CGAffineTransform(translationX: originX, y: originY))
 
@@ -107,7 +114,7 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: image.colorSpace ?? colorSpace
+      colorSpace: fixedImage.colorSpace ?? colorSpace
     )
 
     commandBuffer?.present(currentDrawable!)
@@ -115,4 +122,4 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
   }
 }
 
-#endif
+

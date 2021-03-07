@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 import UIKit
 
+import PixelEditor
 import PixelEngine
 
 final class SmallHardwareImageViewController : UIViewController {
