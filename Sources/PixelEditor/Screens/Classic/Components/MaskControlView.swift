@@ -152,9 +152,9 @@ open class MaskControl : MaskControlBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      viewModel.set(mode: .masking)
+      viewModel.setMode(.masking)
     } else {
-      viewModel.set(mode: .preview)
+      viewModel.setMode(.preview)
     }
   }
 
@@ -166,7 +166,7 @@ open class MaskControl : MaskControlBase {
     let size = (min + position * (max - min)).rounded()
 
     sizeIndicator.transform = .init(scaleX: size / max, y: size / max)
-    viewModel.set(brushSize: size)
+    viewModel.setBrushSize(size)
   }
 
   @objc

@@ -222,7 +222,7 @@ public final class PixelEditViewController: UIViewController {
       
       state.ifChanged(\.proposedCropAndRotate) { value in
         if let value = value {
-          self.viewModel.set(proposedCropAndRotate: value)
+          self.viewModel.setProposedCropAndRotate(value)
         }
       }
     }

@@ -77,13 +77,13 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }
   
-  public func set(title: String) {
+  public func setTitle(_ title: String) {
     commit {
       $0.title = title
     }
   }
   
-  public func set(mode: Mode) {
+  public func setMode(_ mode: Mode) {
     commit {
       $0.mode = mode
       
@@ -109,13 +109,13 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
-  public func set(brush: OvalBrush) {
+  public func setBrush(_ brush: OvalBrush) {
     commit {
       $0.brush = brush
     }
   }
   
-  public func set(brushSize: CGFloat) {
+  public func setBrushSize(_ brushSize: CGFloat) {
     commit {
       var _brush = $0.brush
       _brush.width = brushSize
@@ -123,7 +123,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
-  public func set(drawnPaths: [DrawnPathInRect]) {
+  public func setDrawinPaths(_ drawnPaths: [DrawnPathInRect]) {
     commit {
       $0.drawnPaths = drawnPaths
     }
@@ -139,7 +139,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
   }
   
-  public func set(proposedCropAndRotate: CropAndRotate) {
+  public func setProposedCropAndRotate(_ proposedCropAndRotate: CropAndRotate) {
     commit {
       $0.proposedCropAndRotate = proposedCropAndRotate
     }

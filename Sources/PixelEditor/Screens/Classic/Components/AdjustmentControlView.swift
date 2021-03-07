@@ -66,9 +66,9 @@ public final class AdjustmentControl : AdjustmentControlBase {
     super.didMoveToSuperview()
 
     if superview != nil {
-      viewModel.set(mode: .adjustment)
+      viewModel.setMode(.adjustment)
     } else {
-      viewModel.set(mode: .preview)
+      viewModel.setMode(.preview)
     }
 
   }
