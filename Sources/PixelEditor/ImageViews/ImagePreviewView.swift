@@ -58,17 +58,19 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
     
     originalImageView.accessibilityIdentifier = "pixel.originalImageView"
     imageView.accessibilityIdentifier = "pixel.editedImageView"
+    clipsToBounds = true
     
     [
       originalImageView,
       imageView
       ].forEach { imageView in
         addSubview(imageView)
+        imageView.clipsToBounds = true
         imageView.contentMode = .scaleAspectFill
         imageView.frame = bounds
         imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
-    
+        
     originalImageView.isHidden = true
     
     editingStack.sinkState { [weak self] state in

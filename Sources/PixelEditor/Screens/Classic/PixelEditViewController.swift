@@ -81,8 +81,6 @@ public final class PixelEditViewController: UIViewController {
 
   private let viewModel: PixelEditViewModel
   
-  private var hasStarted = false
-
   // MARK: - Initializers
 
   public init(viewModel: PixelEditViewModel) {
@@ -210,6 +208,14 @@ public final class PixelEditViewController: UIViewController {
       maskingView.attach(editingStack: viewModel.editingStack)
     )
     
+    viewModel.sinkState(queue: .main) { [weak self] state in
+      
+      guard let self = self else { return }
+      
+      self.updateUI(state: state)
+    }
+    .store(in: &subscriptions)
+    
     cropView.store.sinkState { [weak self] (state) in
       
       guard let self = self else { return }
@@ -234,22 +240,6 @@ public final class PixelEditViewController: UIViewController {
     view.layoutIfNeeded()
   }
   
-  public override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-    
-    if hasStarted == false {
-      hasStarted = true
-      
-      viewModel.sinkState(queue: .main) { [weak self] state in
-        
-        guard let self = self else { return }
-        
-        self.updateUI(state: state)
-      }
-      .store(in: &subscriptions)
-    }
-  }
-
   // MARK: - Private Functions
 
   @objc
@@ -323,6 +313,7 @@ public final class PixelEditViewController: UIViewController {
 
         maskingView.isUserInteractionEnabled = false
       }
+
     }
 
     let editingState = state.map(\.editingState)

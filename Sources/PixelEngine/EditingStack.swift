@@ -342,9 +342,7 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 
   public func crop(_ value: CropAndRotate) {
-    
-    ensureMainThread()
- 
+     
     applyIfChanged {
       $0.cropAndRotate.cropRect = value
     }

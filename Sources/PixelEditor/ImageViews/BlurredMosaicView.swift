@@ -73,6 +73,8 @@ final class BlurredMosaicView : DryDrawingView {
 
     maskLayer.contentsScale = UIScreen.main.scale
     maskLayer.drawsAsynchronously = true
+    
+    clipsToBounds = true
   }
 
   required init?(coder aDecoder: NSCoder) {

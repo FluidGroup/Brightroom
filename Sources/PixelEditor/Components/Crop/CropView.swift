@@ -26,10 +26,10 @@ import Verge
 
 /**
  A view that previews how crops the image.
- 
+
  The cropping adjustument is avaibleble from 2 ways:
-   - Scrolling image
-   - Panning guide
+ - Scrolling image
+ - Panning guide
  */
 public final class CropView: UIView, UIScrollViewDelegate {
   public struct State: Equatable {
@@ -61,7 +61,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public private(set) weak var cropOutsideOverlay: UIView?
 
   public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
-  
+
   /**
    A Boolean value that indicates whether the guide is interactive.
    If false, cropping adjustment is available only way from scrolling image-view.
@@ -112,12 +112,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
   private let editingStack: EditingStack
 
   private let contentInset: UIEdgeInsets
-
+  
   // MARK: - Initializers
 
   /**
    Creates an instance for using as standalone.
-   
+
    This initializer offers us to get cropping function without detailed setup.
    To get a result image, call `renderImage()`.
    */
@@ -164,16 +164,15 @@ public final class CropView: UIView, UIScrollViewDelegate {
       self.willChangeGuideView()
     }
 
-    #if DEBUG
+    #if false
     store.sinkState { state in
       EditorLog.debug(state.primitive)
     }
     .store(in: &subscriptions)
-
     #endif
 
     binding: do {
-      store.sinkState(queue: .mainIsolated()) { [weak self] state in
+      store.sinkState(queue: .asyncMain) { [weak self] state in
 
         guard let self = self else { return }
 
@@ -192,15 +191,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
           }
         }
 
-        state.ifChanged(\.proposedCropAndRotate) { cropAndRotate in
-          guard let cropAndRotate = cropAndRotate else { return }
-          editingStack.crop(cropAndRotate)
-        }
-        
         state.ifChanged(\.isGuideInteractionEnabled) { value in
           self.guideView.isUserInteractionEnabled = value
         }
-        
       }
       .store(in: &subscriptions)
 
@@ -240,7 +233,19 @@ public final class CropView: UIView, UIScrollViewDelegate {
    - Attension: This operation can be run background-thread.
    */
   public func renderImage() -> UIImage {
-    editingStack.makeRenderer().render()
+    applyEditingStack()
+    return editingStack.makeRenderer().render()
+  }
+  
+  /**
+   Applies the current state to the EditingStack.
+   */
+  public func applyEditingStack() {
+    
+    guard let crop = store.state.proposedCropAndRotate else {
+      return
+    }
+    editingStack.crop(crop)
   }
 
   public func resetCropAndRotate() {
@@ -285,9 +290,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    Displays a view as an overlay.
    e.g. grid view
-   
+
    - Parameters:
-     - view: In case of no needs to display overlay, pass nil.
+   - view: In case of no needs to display overlay, pass nil.
    */
   public func setCropInsideOverlay(_ view: CropInsideOverlayBase?) {
     ensureMainThread()
@@ -301,13 +306,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
    - Attention: view's userIntereactionEnabled turns off
    - Parameters:
-     - view: In case of no needs to display overlay, pass nil.
+   - view: In case of no needs to display overlay, pass nil.
    */
   public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
     ensureMainThread()
 
     cropOutsideOverlay?.removeFromSuperview()
-    
+
     guard let view = view else {
       // just removing
       return
@@ -336,9 +341,11 @@ extension CropView {
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    store.commit {
-      if $0.frame != frame {
-        $0.frame = frame
+    DispatchQueue.main.async { [self] in
+      store.commit {
+        if $0.frame != frame {
+          $0.frame = frame
+        }
       }
     }
 
@@ -399,12 +406,6 @@ extension CropView {
       }
 
       zoom: do {
-        UIView.performWithoutAnimation {
-          let currentZoomScale = scrollView.zoomScale
-          scrollView.zoomScale = 1
-          scrollView.contentSize = cropAndRotate.scrollViewContentSize()
-          scrollView.zoomScale = currentZoomScale
-        }
         imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
 
         let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
@@ -412,10 +413,22 @@ extension CropView {
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max
 
+        UIView.performWithoutAnimation {
+          let currentZoomScale = scrollView.zoomScale
+          let contentSize = cropAndRotate.scrollViewContentSize()
+          scrollView.zoomScale = 1
+          scrollView.contentSize = contentSize
+          scrollView.zoomScale = currentZoomScale
+        }
+        
         scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
+        // WORKAROUND:
+        // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
+        scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
+        
       }
     }
-
+    
     if animated {
       layoutIfNeeded()
 

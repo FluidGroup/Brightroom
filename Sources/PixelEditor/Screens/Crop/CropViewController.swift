@@ -146,6 +146,7 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleDoneButton() {
+    cropView.applyEditingStack()
     handlers.didFinish()
   }
 }

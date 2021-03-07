@@ -153,8 +153,12 @@ extension CropView {
         NSLayoutConstraint.activate([
           $0.leftAnchor.constraint(equalTo: leftAnchor),
           $0.topAnchor.constraint(equalTo: topAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length),
-          $0.widthAnchor.constraint(equalToConstant: length),
+          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
+          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
         ])
       }
 
@@ -162,8 +166,12 @@ extension CropView {
         NSLayoutConstraint.activate([
           $0.rightAnchor.constraint(equalTo: rightAnchor),
           $0.topAnchor.constraint(equalTo: topAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length),
-          $0.widthAnchor.constraint(equalToConstant: length),
+          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
+          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
         ])
       }
 
@@ -171,8 +179,12 @@ extension CropView {
         NSLayoutConstraint.activate([
           $0.leftAnchor.constraint(equalTo: leftAnchor),
           $0.bottomAnchor.constraint(equalTo: bottomAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length),
-          $0.widthAnchor.constraint(equalToConstant: length),
+          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
+          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
         ])
       }
 
@@ -180,8 +192,12 @@ extension CropView {
         NSLayoutConstraint.activate([
           $0.rightAnchor.constraint(equalTo: rightAnchor),
           $0.bottomAnchor.constraint(equalTo: bottomAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length),
-          $0.widthAnchor.constraint(equalToConstant: length),
+          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
+          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
+            $0.priority = .defaultHigh
+          },
         ])
       }
 
