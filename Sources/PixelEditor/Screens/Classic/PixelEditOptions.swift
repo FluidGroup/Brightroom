@@ -21,16 +21,16 @@
 
 import Foundation
 
-public struct Options {
+public struct PixelEditOptions {
   
-  public static let `default`: Options = .init()
+  public static let `default`: PixelEditOptions = .init()
   
-  public static var current: Options = .init()
+  public static var current: PixelEditOptions = .init()
   
   public var classes: Classes = .init()
 }
 
-extension Options {
+extension PixelEditOptions {
   public struct Classes {
     
     public struct Control {

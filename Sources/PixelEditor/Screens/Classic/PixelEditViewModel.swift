@@ -53,7 +53,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     fileprivate var proposedCropAndRotate: CropAndRotate?
   }
   
-  public let options: Options
+  public let options: PixelEditOptions
   
   public let store: DefaultStore
   
@@ -66,7 +66,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   public init(
     editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
-    options: Options = .default
+    options: PixelEditOptions = .default
   ) {
     
     self.doneButtonTitle = doneButtonTitle
