@@ -127,6 +127,16 @@
 		4BB917EB25F5193C00C446B8 /* GLImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B15216B7B79001E1456 /* GLImageView.swift */; };
 		4BB917EC25F5193C00C446B8 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
 		4BB917F225F5211F00C446B8 /* CoreImageInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */; };
+		4BB917FB25F5409C00C446B8 /* LUT_M05.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E692180E3C40071DE91 /* LUT_M05.png */; };
+		4BB917FC25F5409C00C446B8 /* LUT_M08.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6D2180E3C40071DE91 /* LUT_M08.png */; };
+		4BB917FD25F5409C00C446B8 /* LUT_M01.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6C2180E3C40071DE91 /* LUT_M01.png */; };
+		4BB917FE25F5409C00C446B8 /* LUT_M11.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E702180E3C40071DE91 /* LUT_M11.png */; };
+		4BB917FF25F5409C00C446B8 /* LUT_M12.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E672180E3C30071DE91 /* LUT_M12.png */; };
+		4BB9180025F5409C00C446B8 /* LUT_M02.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E682180E3C30071DE91 /* LUT_M02.png */; };
+		4BB9180125F5409C00C446B8 /* LUT_M06.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6B2180E3C40071DE91 /* LUT_M06.png */; };
+		4BB9180225F5409C00C446B8 /* LUT_M03.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E712180E3C40071DE91 /* LUT_M03.png */; };
+		4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6F2180E3C40071DE91 /* LUT_M09.png */; };
+		4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6A2180E3C40071DE91 /* LUT_M07.png */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -462,7 +472,7 @@
 			path = FilterControl;
 			sourceTree = "<group>";
 		};
-		4B1E95292176F52100E9DFB8 /* Filters */ = {
+		4B1E95292176F52100E9DFB8 /* LUTs */ = {
 			isa = PBXGroup;
 			children = (
 				4B9E8E6C2180E3C40071DE91 /* LUT_M01.png */,
@@ -476,7 +486,7 @@
 				4B9E8E702180E3C40071DE91 /* LUT_M11.png */,
 				4B9E8E672180E3C30071DE91 /* LUT_M12.png */,
 			);
-			path = Filters;
+			path = LUTs;
 			sourceTree = "<group>";
 		};
 		4B3457882174FF6600716DA0 /* ImageViews */ = {
@@ -534,6 +544,7 @@
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
+				4B1E95292176F52100E9DFB8 /* LUTs */,
 				4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */,
 				4B600AFE216B7A94001E1456 /* Products */,
 				4B600B37216B7CD6001E1456 /* Frameworks */,
@@ -587,7 +598,6 @@
 			children = (
 				4BB8AD7B25E96B100018D769 /* Mocks.swift */,
 				4B01C562217F799E00C50EDE /* nasa.jpg */,
-				4B1E95292176F52100E9DFB8 /* Filters */,
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
 				4B01C560217F72BA00C50EDE /* ResizeViewController.swift */,
@@ -948,7 +958,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */,
+				4BB9180025F5409C00C446B8 /* LUT_M02.png in Resources */,
+				4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */,
+				4BB9180225F5409C00C446B8 /* LUT_M03.png in Resources */,
 				4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */,
+				4BB917FB25F5409C00C446B8 /* LUT_M05.png in Resources */,
+				4BB917FC25F5409C00C446B8 /* LUT_M08.png in Resources */,
+				4BB917FD25F5409C00C446B8 /* LUT_M01.png in Resources */,
+				4BB917FE25F5409C00C446B8 /* LUT_M11.png in Resources */,
+				4BB917FF25F5409C00C446B8 /* LUT_M12.png in Resources */,
+				4BB9180125F5409C00C446B8 /* LUT_M06.png in Resources */,
+				4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
