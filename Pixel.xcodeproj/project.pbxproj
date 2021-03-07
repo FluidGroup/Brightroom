@@ -136,7 +136,6 @@
 		4BEE650B217479C600F3578E /* BlurredMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BD2170496E008330EA /* BlurredMask.swift */; };
 		4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030B216C55D9001593B9 /* OvalBrush.swift */; };
 		4BEE650D217479C600F3578E /* DrawnPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B030D216C58C6001593B9 /* DrawnPath.swift */; };
-		4BEE650F21749E7A00F3578E /* ImageScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE650E21749E7A00F3578E /* ImageScrollView.swift */; };
 		4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65102174DC3800F3578E /* EditorLog.swift */; };
 		4BEE65132174E99600F3578E /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65122174E99600F3578E /* EngineLog.swift */; };
 		4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */; };
@@ -344,7 +343,6 @@
 		4BE7DD0D25E95BDB006B3C74 /* DemoCropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropViewController.swift; sourceTree = "<group>"; };
 		4BE81C03217EC58B00F6FA5C /* FilterHighlightShadowTint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterHighlightShadowTint.swift; sourceTree = "<group>"; };
 		4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEditViewModel.swift; sourceTree = "<group>"; };
-		4BEE650E21749E7A00F3578E /* ImageScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageScrollView.swift; sourceTree = "<group>"; };
 		4BEE65102174DC3800F3578E /* EditorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorLog.swift; sourceTree = "<group>"; };
 		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPathInRect.swift; sourceTree = "<group>"; };
@@ -685,7 +683,6 @@
 			isa = PBXGroup;
 			children = (
 				4BB917E425F518EF00C446B8 /* _ImageView.swift */,
-				4BEE650E21749E7A00F3578E /* ImageScrollView.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
 				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
 				4BF0255A25F12FAB0093A59B /* Crop */,
@@ -1134,7 +1131,6 @@
 				4B42A6AD2178E14500F18208 /* VignetteControl.swift in Sources */,
 				4B9D457E216EE1AF003A240A /* DoodleControlView.swift in Sources */,
 				4BB917EC25F5193C00C446B8 /* MetalImageView.swift in Sources */,
-				4BEE650F21749E7A00F3578E /* ImageScrollView.swift in Sources */,
 				4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */,
 				4B42A6A92178E12500F18208 /* ContrastControl.swift in Sources */,
 				4B9D4580216EE1BC003A240A /* ControlViewBase.swift in Sources */,
