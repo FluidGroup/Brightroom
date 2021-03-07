@@ -103,7 +103,7 @@ open class EditingStack: Equatable, StoreComponentType {
   
   public let store: DefaultStore
 
-  public let source: ImageProvider
+  public let imageSource: ImageProvider
 
   public let preferredPreviewSize: CGSize
 
@@ -118,6 +118,8 @@ open class EditingStack: Equatable, StoreComponentType {
   )
   
   private var subscriptions = Set<VergeAnyCancellable>()
+  
+  private let modifyCrop: (CIImage, inout CropAndRotate) -> Void
 
   // MARK: - Initializers
 
@@ -125,9 +127,11 @@ open class EditingStack: Equatable, StoreComponentType {
     source: ImageProvider,
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
-    screenScale: CGFloat = UIScreen.main.scale
+    screenScale: CGFloat = UIScreen.main.scale,
+    modifyCrop: @escaping (CIImage, inout CropAndRotate) -> Void
     ) {
-    
+        
+    self.modifyCrop = modifyCrop
     self.store = .init(
       initialState: .init(
         initialEdit: Edit(imageSize: source.state.imageSize)
@@ -135,7 +139,7 @@ open class EditingStack: Equatable, StoreComponentType {
     )
     
     self.colorCubeFilters = colorCubeStorage.filters
-    self.source = source
+    self.imageSource = source
 
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
@@ -159,9 +163,7 @@ open class EditingStack: Equatable, StoreComponentType {
     commit {
       $0.hasStartedEditing = true
     }
-    
-    source.start()
-    
+          
     store.add(middleware: .unifiedMutation({ (ref) in
       // TODO:
     }))
@@ -242,16 +244,30 @@ open class EditingStack: Equatable, StoreComponentType {
       
     }
     .store(in: &subscriptions)
-        
-    source.sinkState { [weak self] (state) in
+    
+    
+    /**
+     Start downloading image
+     */
+    imageSource.start()
+    imageSource.sinkState { [weak self] (state) in
       
       guard let self = self else { return }
       
       state.ifChanged(\.currentImage) { image in
         guard let image = image else { return }
-        self.commit {
-          $0.isLoading = !image.isEditable
-          $0.targetOriginalSizeImage = image.image
+        self.commit { s in
+          
+          let newLoading = !image.isEditable
+          assert({
+            if s.isLoading == false, newLoading == true {
+              return false
+            } else {
+              return true
+            }
+          }(), "ImageSource published non-editable image after published editable image.")
+          s.isLoading = newLoading
+          s.targetOriginalSizeImage = image.image
         }
       }
       
