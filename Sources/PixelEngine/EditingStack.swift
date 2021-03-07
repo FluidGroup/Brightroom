@@ -119,7 +119,7 @@ open class EditingStack: Equatable, StoreComponentType {
   
   private var subscriptions = Set<VergeAnyCancellable>()
   
-  private let modifyCrop: (CIImage, inout CropAndRotate) -> Void
+  private let modifyCrop: (CIImage?, inout CropAndRotate) -> Void
 
   // MARK: - Initializers
 
@@ -128,7 +128,7 @@ open class EditingStack: Equatable, StoreComponentType {
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale,
-    modifyCrop: @escaping (CIImage, inout CropAndRotate) -> Void = { _, _ in }
+    modifyCrop: @escaping (CIImage?, inout CropAndRotate) -> Void = { _, _ in }
     ) {
         
     self.modifyCrop = modifyCrop
@@ -250,12 +250,18 @@ open class EditingStack: Equatable, StoreComponentType {
      Start downloading image
      */
     imageSource.start()
-    imageSource.sinkState { [weak self] (state) in
+    imageSource.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
       
       guard let self = self else { return }
       
       state.ifChanged(\.currentImage) { image in
-        guard let image = image else { return }
+         
+        guard let image = image else {
+          self.applyIfChanged {
+            self.modifyCrop(nil, &$0.cropAndRotate.cropRect)
+          }
+          return
+        }
         self.commit { s in
           
           let newLoading = !image.isEditable
@@ -268,6 +274,9 @@ open class EditingStack: Equatable, StoreComponentType {
           }(), "ImageSource published non-editable image after published editable image.")
           s.isLoading = newLoading
           s.targetOriginalSizeImage = image.image
+          
+          self.modifyCrop(nil, &s.currentEdit.cropAndRotate.cropRect)
+          
         }
       }
       
@@ -414,14 +423,6 @@ open class EditingStack: Equatable, StoreComponentType {
 
 }
 
-private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
-
-  let _from = sqrt(pow(from.height, 2) + pow(from.width, 2))
-  let _to = sqrt(pow(to.height, 2) + pow(to.width, 2))
-
-  return _to / _from
-}
-
 extension EditingStack {
 
   // TODO: Consider more effective shape
@@ -516,18 +517,6 @@ extension EditingStack {
     
   }
 
-}
-
-extension CIImage {
-  
-  fileprivate func insertingIntermediateIfCanUse() -> CIImage {
-    if #available(iOS 12.0, *) {
-      return self.insertingIntermediate(cache: true)
-    } else {
-      return self
-    }
-    
-  }
 }
 
 extension Array {

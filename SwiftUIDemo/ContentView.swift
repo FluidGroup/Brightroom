@@ -86,7 +86,13 @@ struct ContentView: View {
           Section(content: {
             
             Button("PixelEditor") {
-              let stack = Mocks.makeEditingStack(image: Asset.l1000069.image)
+              let stack = EditingStack.init(
+                source: .init(image: Asset.l1000316.image),
+                previewSize: CGSize(width: 600, height: 600),
+                modifyCrop: { _, crop in
+                  crop.updateCropExtent(by: .square)
+                }
+              )
               fullScreenView = .init {
                 return PixelEditWrapper(editingStack: stack) {
                   self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())

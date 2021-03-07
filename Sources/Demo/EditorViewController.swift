@@ -30,7 +30,7 @@ final class EditorViewController : UIViewController {
 
   private var usesSquare = true
   
-  private lazy var stack = SquareEditingStack.init(
+  private lazy var stack = EditingStack.init(
     source: .init(image: UIImage(named: "large")!),
     previewSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
@@ -130,7 +130,7 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
       
       let controller = PixelEditViewController(
         viewModel: .init(
-          editingStack: SquareEditingStack(
+          editingStack: EditingStack(
             source: .init(image: image),
             previewSize: CGSize(width: 300, height: 300)
           )

@@ -34,4 +34,5 @@ enum Mocks {
       previewSize: CGSize(width: 600, height: 600)
     )
   }
+    
 }

@@ -108,9 +108,20 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     let scaledImage = fixedImage
       .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
       .transformed(by: CGAffineTransform(translationX: originX, y: originY))
+    
+    let resolvedImage: CIImage
+    
+    #if targetEnvironment(simulator)
+    // Fixes geometry in Metal
+    resolvedImage = scaledImage
+      .transformed(by: .init(scaleX: 1, y: -1))
+      .transformed(by: .init(translationX: 0, y: scaledImage.extent.height))
+    #else
+    resolvedImage = scaledImage
+    #endif
 
     ciContext.render(
-      scaledImage,
+      resolvedImage,
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,

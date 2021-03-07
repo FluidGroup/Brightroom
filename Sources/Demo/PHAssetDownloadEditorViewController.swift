@@ -37,7 +37,7 @@ final class PHAssetDownloadEditorViewController : UIViewController {
     
     let controller = PixelEditViewController(
       viewModel: .init(
-        editingStack: SquareEditingStack(
+        editingStack: EditingStack(
           source: .init(asset: selectedAsset),
           previewSize: .init(width: view.frame.width, height: view.frame.width)
         )
