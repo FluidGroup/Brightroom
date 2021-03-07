@@ -408,6 +408,7 @@ private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
 
 extension EditingStack {
 
+  // TODO: Consider more effective shape
   public struct Edit : Equatable {
     
     func makeFilters() -> [Filtering] {
