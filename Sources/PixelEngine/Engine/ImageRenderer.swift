@@ -32,7 +32,7 @@ public final class ImageRenderer {
   }
 
   public struct Edit {
-    public var croppingRect: CropAndRotate?
+    public var croppingRect: EditingCrop?
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
   }

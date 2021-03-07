@@ -44,7 +44,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       case fromGuide
     }
 
-    public fileprivate(set) var proposedCropAndRotate: CropAndRotate?
+    public fileprivate(set) var proposedCropAndRotate: EditingCrop?
 
     fileprivate var modifiedSource: ModifiedSource?
 
@@ -201,7 +201,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
         guard let self = self else { return }
 
-        state.ifChanged(\.currentEdit.cropAndRotate.cropRect) { cropRect in
+        state.ifChanged(\.currentEdit.crop) { cropRect in
 
           self.setCropAndRotate(cropRect)
         }
@@ -259,7 +259,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     guideView.setLockedAspectRatio(nil)
   }
 
-  public func setRotation(_ rotation: CropAndRotate.Rotation) {
+  public func setRotation(_ rotation: EditingCrop.Rotation) {
     ensureMainThread()
 
     store.commit {
@@ -268,7 +268,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
-  public func setCropAndRotate(_ cropAndRotate: CropAndRotate) {
+  public func setCropAndRotate(_ cropAndRotate: EditingCrop) {
     ensureMainThread()
 
     store.commit {
@@ -366,7 +366,7 @@ extension CropView {
   }
 
   private func updateScrollContainerView(
-    by cropAndRotate: CropAndRotate,
+    by cropAndRotate: EditingCrop,
     animated: Bool,
     animatesRotation: Bool
   ) {
@@ -571,7 +571,7 @@ extension CropView {
   }
 }
 
-extension CropAndRotate {
+extension EditingCrop {
   fileprivate func scrollViewContentSize() -> CGSize {
     imageSize.cgSize
   }

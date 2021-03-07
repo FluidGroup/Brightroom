@@ -119,7 +119,7 @@ open class EditingStack: Equatable, StoreComponentType {
   
   private var subscriptions = Set<VergeAnyCancellable>()
   
-  private let modifyCrop: (CIImage?, inout CropAndRotate) -> Void
+  private let modifyCrop: (CIImage?, inout EditingCrop) -> Void
 
   // MARK: - Initializers
 
@@ -128,7 +128,7 @@ open class EditingStack: Equatable, StoreComponentType {
     previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     screenScale: CGFloat = UIScreen.main.scale,
-    modifyCrop: @escaping (CIImage?, inout CropAndRotate) -> Void = { _, _ in }
+    modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
         
     self.modifyCrop = modifyCrop
@@ -211,7 +211,7 @@ open class EditingStack: Equatable, StoreComponentType {
         }
       }
       
-      state.ifChanged(\.currentEdit.cropAndRotate.cropRect, \.targetOriginalSizeImage) { _cropRect, targetImage in
+      state.ifChanged(\.currentEdit.crop, \.targetOriginalSizeImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
           
@@ -258,7 +258,7 @@ open class EditingStack: Equatable, StoreComponentType {
          
         guard let image = image else {
           self.applyIfChanged {
-            self.modifyCrop(nil, &$0.cropAndRotate.cropRect)
+            self.modifyCrop(nil, &$0.crop)
           }
           return
         }
@@ -275,7 +275,7 @@ open class EditingStack: Equatable, StoreComponentType {
           s.isLoading = newLoading
           s.targetOriginalSizeImage = image.image
           
-          self.modifyCrop(nil, &s.currentEdit.cropAndRotate.cropRect)
+          self.modifyCrop(nil, &s.currentEdit.crop)
           
         }
       }
@@ -352,10 +352,10 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
-  public func crop(_ value: CropAndRotate) {
+  public func crop(_ value: EditingCrop) {
      
     applyIfChanged {
-      $0.cropAndRotate.cropRect = value
+      $0.crop = value
     }
     
   }
@@ -383,7 +383,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.cropAndRotate.cropRect
+    renderer.edit.croppingRect = edit.crop
     renderer.edit.drawer = [
       BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]
@@ -433,15 +433,15 @@ extension EditingStack {
     }
   
     public var imageSize: PixelSize {
-      cropAndRotate.cropRect.imageSize
+      crop.imageSize
     }
-    
-    public var cropAndRotate: CropAndRotate
+        
+    public var crop: EditingCrop
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()
           
     init(imageSize: PixelSize) {
-      self.cropAndRotate = .init(cropRect: .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize)))
+      self.crop = .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
     }
     
     public struct Drawings: Equatable {
@@ -449,10 +449,6 @@ extension EditingStack {
       public var blurredMaskPaths: [DrawnPathInRect] = []
     }
     
-    public struct CropAndRotate: Equatable {
-      public var cropRect: PixelEngine.CropAndRotate
-            
-    }
 //
 //    public struct Light {
 //

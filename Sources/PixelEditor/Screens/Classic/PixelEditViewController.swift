@@ -216,23 +216,17 @@ public final class PixelEditViewController: UIViewController {
     }
     .store(in: &subscriptions)
     
-    cropView.store.sinkState { [weak self] (state) in
-      
-      guard let self = self else { return }
-      
+    cropView.store.sinkState { [viewModel] (state) in
+            
       state.ifChanged(\.proposedCropAndRotate) { value in
         if let value = value {
-          self.viewModel.setProposedCropAndRotate(value)
+          viewModel.setProposedCropAndRotate(value)
         }
       }
     }
     .store(in: &subscriptions)
-        
+           
     viewModel.editingStack.start()
-  }
-  
-  public override func viewDidLayoutSubviews() {
-    super.viewDidLayoutSubviews()
   }
   
   public override func viewWillAppear(_ animated: Bool) {

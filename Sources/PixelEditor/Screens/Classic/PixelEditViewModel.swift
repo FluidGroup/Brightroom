@@ -50,9 +50,9 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
     // TODO: Rename
     fileprivate var drawnPaths: [DrawnPathInRect] = []
-    fileprivate var proposedCropAndRotate: CropAndRotate?
+    fileprivate var proposedCropAndRotate: EditingCrop?
   }
-  
+    
   public let options: PixelEditOptions
   
   public let store: DefaultStore
@@ -62,7 +62,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   private var subscriptions: Set<VergeAnyCancellable> = .init()
   
   public let doneButtonTitle: String
-
+  
   public init(
     editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
@@ -77,13 +77,13 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }
   
-  public func setTitle(_ title: String) {
+  func setTitle(_ title: String) {
     commit {
       $0.title = title
     }
   }
   
-  public func setMode(_ mode: Mode) {
+  func setMode(_ mode: Mode) {
     commit {
       $0.mode = mode
       
@@ -100,7 +100,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
-  public func endMasking(save: Bool) {
+  func endMasking(save: Bool) {
     if save {
       editingStack.set(blurringMaskPaths: state.drawnPaths)
       editingStack.takeSnapshot()
@@ -109,13 +109,13 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
-  public func setBrush(_ brush: OvalBrush) {
+  func setBrush(_ brush: OvalBrush) {
     commit {
       $0.brush = brush
     }
   }
   
-  public func setBrushSize(_ brushSize: CGFloat) {
+  func setBrushSize(_ brushSize: CGFloat) {
     commit {
       var _brush = $0.brush
       _brush.width = brushSize
@@ -123,13 +123,15 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     }
   }
   
-  public func setDrawinPaths(_ drawnPaths: [DrawnPathInRect]) {
+  func setDrawinPaths(_ drawnPaths: [DrawnPathInRect]) {
     commit {
       $0.drawnPaths = drawnPaths
     }
   }
   
-  public func endCropAndRotate(save: Bool) {
+  func endCropAndRotate(save: Bool) {
+    
+    guard save else { return }
         
     guard let proposed = state.proposedCropAndRotate else {
       return
@@ -139,9 +141,9 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
   }
   
-  public func setProposedCropAndRotate(_ proposedCropAndRotate: CropAndRotate) {
+  func setProposedCropAndRotate(_ proposedCrop: EditingCrop) {
     commit {
-      $0.proposedCropAndRotate = proposedCropAndRotate
+      $0.proposedCropAndRotate = proposedCrop
     }
   }
   

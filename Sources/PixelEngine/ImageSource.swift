@@ -32,7 +32,7 @@ import UIKit
 import Photos
 #endif
 
-public struct CropAndRotate: Equatable {
+public struct EditingCrop: Equatable {
   public enum Rotation: Equatable, CaseIterable {
     /// 0 degree - default
     case angle_0
