@@ -23,62 +23,77 @@ struct ContentView: View {
             fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
           }
 
-          Button("Horizontal") {
-            let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-            fullScreenView = .init {
-              CropViewWrapper(editingStack: stack, onCompleted: {
-                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.fullScreenView = nil
-              })
+          Section(content: {
+            Button("Horizontal") {
+              let stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
             }
-          }
 
-          Button("Vertical") {
-            let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
-            fullScreenView = .init {
-              CropViewWrapper(editingStack: stack, onCompleted: {
-                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.fullScreenView = nil
-              })
+            Button("Vertical") {
+              let stack = Mocks.makeEditingStack(image: Mocks.imageVertical())
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
             }
-          }
 
-          Button("Square") {
-            let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
-            fullScreenView = .init {
-              CropViewWrapper(editingStack: stack, onCompleted: {
-                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.fullScreenView = nil
-              })
+            Button("Square") {
+              let stack = Mocks.makeEditingStack(image: Mocks.imageSquare())
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
             }
-          }
 
-          Button("Super small") {
-            let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
-            fullScreenView = .init {
-              CropViewWrapper(editingStack: stack, onCompleted: {
-                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.fullScreenView = nil
-              })
+            Button("Super small") {
+              let stack = Mocks.makeEditingStack(image: Mocks.imageSuperSmall())
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
             }
-          }
 
-          Button("Remote") {
-            let stack = EditingStack(
-              source: .init(
-                url: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
-                imageSize: .init(width: 4025, height: 6037)
-              ),
-              previewSize: .init(width: 1000, height: 1000)
-            )
+            Button("Remote") {
+              let stack = EditingStack(
+                source: .init(
+                  url: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
+                  imageSize: .init(width: 4025, height: 6037)
+                ),
+                previewSize: .init(width: 1000, height: 1000)
+              )
 
-            fullScreenView = .init {
-              CropViewWrapper(editingStack: stack, onCompleted: {
-                self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
-                self.fullScreenView = nil
-              })
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
             }
-          }
+          })
+          
+          Section(content: {
+            
+            Button("PixelEditor") {
+              let stack = Mocks.makeEditingStack(image: Asset.l1000069.image)
+              fullScreenView = .init {
+                return PixelEditWrapper(editingStack: stack) {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                }
+              }
+            }
+          })
         }
       }
       .fullScreenCover(
@@ -92,9 +107,8 @@ struct ContentView: View {
 }
 
 struct FullscreenIdentifiableView: View, Identifiable {
-  
   @Environment(\.presentationMode) var presentationMode
-  
+
   let id = UUID()
   private let content: AnyView
 
@@ -117,8 +131,7 @@ struct FullscreenIdentifiableView: View, Identifiable {
 import PixelEditor
 import PixelEngine
 
-struct CropViewWrapper: UIViewControllerRepresentable, Identifiable {
-  let id: UUID = .init()
+struct CropViewWrapper: UIViewControllerRepresentable {
 
   typealias UIViewControllerType = CropViewController
 
@@ -138,4 +151,29 @@ struct CropViewWrapper: UIViewControllerRepresentable, Identifiable {
   }
 
   func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
+}
+
+struct PixelEditWrapper: UIViewControllerRepresentable {
+  
+  typealias UIViewControllerType = PixelEditViewController
+  
+  private let editingStack: EditingStack
+  private let onCompleted: () -> Void
+  
+  init(editingStack: EditingStack, onCompleted: @escaping () -> Void) {
+    self.editingStack = editingStack
+    self.onCompleted = onCompleted
+    editingStack.start()
+  }
+  
+  func makeUIViewController(context: Context) -> UIViewControllerType {
+    let cropViewController = UIViewControllerType(viewModel: .init(editingStack: editingStack))
+    cropViewController.callbacks.didEndEditing = { _, _ in
+      onCompleted()
+    }
+    return cropViewController
+  }
+  
+  func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {}
+  
 }
