@@ -7,6 +7,8 @@
 > And this obviously takes many breaking changes.  
 > Feel free to start a discussion about enhancement from the current released version.  
 > I often upload movies of features in development to the pull-request's comment.
+> 
+> To use the stable version, please checkout master branch.
 
 **Plannning features**
 
