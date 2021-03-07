@@ -511,7 +511,6 @@
 				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
 				4B9D4570216DF1A1003A240A /* Media.xcassets */,
 				4B34578A217502F900716DA0 /* Style.swift */,
-				4BA8E73C217C716700940518 /* Options.swift */,
 				4B0BDCA4217D979D001098B9 /* L10n.swift */,
 				4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */,
 			);
@@ -721,6 +720,7 @@
 				4B9D4574216DF66F003A240A /* NavigationView.swift */,
 				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
 				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
+				4BA8E73C217C716700940518 /* Options.swift */,
 				4B47D060216CC5480007B594 /* PixelEditViewController.swift */,
 				4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */,
 			);
