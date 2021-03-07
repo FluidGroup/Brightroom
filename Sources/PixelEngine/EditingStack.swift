@@ -43,15 +43,7 @@ open class EditingStack: Equatable, StoreComponentType {
     }
     
     private let initialEditing: Edit
-    
-    public var aspectRatio: PixelAspectRatio {
-      currentEdit.cropAndRotate.cropRect?.preferredAspectRatio ?? imageSize.aspectRatio
-    }
-    
-    public var cropRect: CropAndRotate {
-      currentEdit.cropAndRotate.cropRect ?? .init(imageSize: imageSize, cropRect: .init(origin: .init(x: 0, y: 0), size: imageSize))
-    }
-    
+        
     public fileprivate(set) var hasStartedEditing = false
     
     public fileprivate(set) var history: [Edit] = []
@@ -148,10 +140,9 @@ open class EditingStack: Equatable, StoreComponentType {
     self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
         
-    initialCrop()
-    takeSnapshot()
-    removeAllEditsHistory()
-    
+    applyIfChanged { (s) in
+
+    }
   }
   
   /**
@@ -218,7 +209,7 @@ open class EditingStack: Equatable, StoreComponentType {
         }
       }
       
-      state.ifChanged(\.cropRect, \.targetOriginalSizeImage) { _cropRect, targetImage in
+      state.ifChanged(\.currentEdit.cropAndRotate.cropRect, \.targetOriginalSizeImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
           
@@ -266,12 +257,7 @@ open class EditingStack: Equatable, StoreComponentType {
       
     }
     .store(in: &subscriptions)
-        
-    self.initialCrop()
-  
-  }
-
-  open func initialCrop() {
+          
   }
 
   // MARK: - Functions
@@ -412,23 +398,6 @@ open class EditingStack: Equatable, StoreComponentType {
 
 }
 
-open class SquareEditingStack : EditingStack {
-
-  open override func initialCrop() {
-    
-    ensureMainThread()
-    
-    let imageSize = state.imageSize
-    
-    let cropRect = Geometry.rectThatAspectFit(
-      aspectRatio: .init(width: 1, height: 1),
-      boundingRect: .init(x: 0, y: 0, width: imageSize.width, height: imageSize.height)
-    )
-    
-    crop(.init(imageSize: imageSize, cropRect: .init(cgRect: cropRect)))
-  }
-}
-
 private func _ratio(to: CGSize, from: CGSize) -> CGFloat {
 
   let _from = sqrt(pow(from.height, 2) + pow(from.width, 2))
@@ -445,14 +414,16 @@ extension EditingStack {
       return filters.makeFilters()
     }
   
-    public let imageSize: PixelSize
+    public var imageSize: PixelSize {
+      cropAndRotate.cropRect.imageSize
+    }
     
-    public var cropAndRotate: CropAndRotate = .init()
+    public var cropAndRotate: CropAndRotate
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()
           
     init(imageSize: PixelSize) {
-      self.imageSize = imageSize
+      self.cropAndRotate = .init(cropRect: .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize)))
     }
     
     public struct Drawings: Equatable {
@@ -461,7 +432,7 @@ extension EditingStack {
     }
     
     public struct CropAndRotate: Equatable {
-      public var cropRect: PixelEngine.CropAndRotate?
+      public var cropRect: PixelEngine.CropAndRotate
             
     }
 //

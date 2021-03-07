@@ -12,7 +12,6 @@
 		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
 		4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C55E217F6CD800C50EDE /* FilterExposure.swift */; };
 		4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C560217F72BA00C50EDE /* ResizeViewController.swift */; };
-		4B01C563217F799E00C50EDE /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B01C562217F799E00C50EDE /* nasa.jpg */; };
 		4B0433AB217B962C0039293E /* InternalUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0433AA217B962C0039293E /* InternalUtils.swift */; };
 		4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F2217634A900E9DFB8 /* FilterContrast.swift */; };
 		4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */; };
@@ -137,6 +136,7 @@
 		4BB9180225F5409C00C446B8 /* LUT_M03.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E712180E3C40071DE91 /* LUT_M03.png */; };
 		4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6F2180E3C40071DE91 /* LUT_M09.png */; };
 		4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6A2180E3C40071DE91 /* LUT_M07.png */; };
+		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -227,7 +227,6 @@
 		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
 		4B01C55E217F6CD800C50EDE /* FilterExposure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterExposure.swift; sourceTree = "<group>"; };
 		4B01C560217F72BA00C50EDE /* ResizeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizeViewController.swift; sourceTree = "<group>"; };
-		4B01C562217F799E00C50EDE /* nasa.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = nasa.jpg; sourceTree = "<group>"; };
 		4B0433AA217B962C0039293E /* InternalUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternalUtils.swift; sourceTree = "<group>"; };
 		4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStateStore.swift; sourceTree = "<group>"; };
 		4B0BDC9E217D6567001098B9 /* FadeControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FadeControl.swift; sourceTree = "<group>"; };
@@ -347,6 +346,7 @@
 		4BB8AD7B25E96B100018D769 /* Mocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
+		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
 		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
 		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
@@ -597,7 +597,6 @@
 			isa = PBXGroup;
 			children = (
 				4BB8AD7B25E96B100018D769 /* Mocks.swift */,
-				4B01C562217F799E00C50EDE /* nasa.jpg */,
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
 				4B01C560217F72BA00C50EDE /* ResizeViewController.swift */,
@@ -667,6 +666,7 @@
 				4B75113F25F13276002D804A /* DemoCropView.swift */,
 				4B98CCC425EFF31400E4F61F /* Info.plist */,
 				4B98CCC125EFF31400E4F61F /* Preview Content */,
+				4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */,
 			);
 			path = SwiftUIDemo;
 			sourceTree = "<group>";
@@ -942,7 +942,6 @@
 				4B9E8E7C2180E3C50071DE91 /* LUT_M11.png in Resources */,
 				4B9E8E782180E3C40071DE91 /* LUT_M01.png in Resources */,
 				4B9E8E732180E3C40071DE91 /* LUT_M12.png in Resources */,
-				4B01C563217F799E00C50EDE /* nasa.jpg in Resources */,
 				4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */,
 				4B9E8E7D2180E3C50071DE91 /* LUT_M03.png in Resources */,
 				4B9E8E762180E3C40071DE91 /* LUT_M07.png in Resources */,
@@ -961,6 +960,7 @@
 				4BB9180025F5409C00C446B8 /* LUT_M02.png in Resources */,
 				4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */,
 				4BB9180225F5409C00C446B8 /* LUT_M03.png in Resources */,
+				4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */,
 				4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */,
 				4BB917FB25F5409C00C446B8 /* LUT_M05.png in Resources */,
 				4BB917FC25F5409C00C446B8 /* LUT_M08.png in Resources */,
@@ -1569,7 +1569,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.SwiftUIDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -1593,7 +1593,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.SwiftUIDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

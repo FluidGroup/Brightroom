@@ -317,23 +317,7 @@ public final class PixelEditViewController: UIViewController {
     }
 
     let editingState = state.map(\.editingState)
-    
-    editingState.ifChanged(\.aspectRatio) { aspectRatio in
-      
-      aspectConstraint?.isActive = false
-      
-      let newConstraint = editContainerView.widthAnchor.constraint(
-        equalTo: editContainerView.heightAnchor,
-        multiplier: aspectRatio.width / aspectRatio.height
-      )
-      
-      NSLayoutConstraint.activate([
-        newConstraint,
-      ])
-      
-      aspectConstraint = newConstraint
-    }
-        
+               
     editingState.ifChanged(\.isLoading) { isLoading in
 
       switch isLoading {
@@ -369,18 +353,4 @@ public final class PixelEditViewController: UIViewController {
     }
   }
 
-//  private func didReceive(action: PixelEditContext.Action) {
-//    switch action {
-//
-//    case .endAdjustment(let save):
-//      setAspect(aspectRatio)
-//      if save {
-//        editingStack.setAdjustment(cropRect: adjustmentView.visibleExtent)
-//        editingStack.commit()
-//      } else {
-//        syncUI(edit: editingStack.currentEdit)
-//      }
-//    case .endMasking(let save):
-//
-//  }
 }

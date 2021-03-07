@@ -201,7 +201,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
         guard let self = self else { return }
 
-        state.ifChanged(\.cropRect) { cropRect in
+        state.ifChanged(\.currentEdit.cropAndRotate.cropRect) { cropRect in
 
           self.setCropAndRotate(cropRect)
         }
