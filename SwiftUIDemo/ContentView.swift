@@ -162,7 +162,7 @@ struct CropViewWrapper: UIViewControllerRepresentable {
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
   
-  typealias UIViewControllerType = PixelEditViewController
+  typealias UIViewControllerType = UINavigationController
   
   private let editingStack: EditingStack
   private let onCompleted: () -> Void
@@ -173,14 +173,14 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
     editingStack.start()
   }
   
-  func makeUIViewController(context: Context) -> UIViewControllerType {
-    let cropViewController = UIViewControllerType(viewModel: .init(editingStack: editingStack))
+  func makeUIViewController(context: Context) -> UINavigationController {
+    let cropViewController = PixelEditViewController(viewModel: .init(editingStack: editingStack))
     cropViewController.callbacks.didEndEditing = { _, _ in
       onCompleted()
     }
-    return cropViewController
+    return UINavigationController(rootViewController: cropViewController)
   }
   
-  func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {}
+  func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
   
 }
