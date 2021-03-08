@@ -269,7 +269,7 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func adjustment() {
-      push(AdjustmentControl(viewModel: viewModel), animated: true)
+      push(CropControl(viewModel: viewModel), animated: true)
     }
     
     @objc

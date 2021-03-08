@@ -93,7 +93,7 @@
 		4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4562216DD143003A240A /* ControlStackView.swift */; };
 		4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4564216DD1E0003A240A /* RootControlView.swift */; };
 		4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4566216DD40A003A240A /* PixelEditor.swift */; };
-		4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */; };
+		4B9D4569216DD59D003A240A /* CropControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4568216DD59D003A240A /* CropControl.swift */; };
 		4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456A216DE9CA003A240A /* ExposureControl.swift */; };
 		4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456C216DEBB1003A240A /* ParameterRange.swift */; };
 		4B9D4571216DF1A1003A240A /* Media.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B9D4570216DF1A1003A240A /* Media.xcassets */; };
@@ -316,7 +316,7 @@
 		4B9D4562216DD143003A240A /* ControlStackView.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = ControlStackView.swift; sourceTree = "<group>"; tabWidth = 2; };
 		4B9D4564216DD1E0003A240A /* RootControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootControlView.swift; sourceTree = "<group>"; };
 		4B9D4566216DD40A003A240A /* PixelEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEditor.swift; sourceTree = "<group>"; };
-		4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdjustmentControlView.swift; sourceTree = "<group>"; };
+		4B9D4568216DD59D003A240A /* CropControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropControl.swift; sourceTree = "<group>"; };
 		4B9D456A216DE9CA003A240A /* ExposureControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureControl.swift; sourceTree = "<group>"; };
 		4B9D456C216DEBB1003A240A /* ParameterRange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParameterRange.swift; sourceTree = "<group>"; };
 		4B9D456E216DEE95003A240A /* StepSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSlider.swift; sourceTree = "<group>"; };
@@ -510,7 +510,7 @@
 				4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */,
 				4B9D457F216EE1BC003A240A /* ControlViewBase.swift */,
 				4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */,
-				4B9D4568216DD59D003A240A /* AdjustmentControlView.swift */,
+				4B9D4568216DD59D003A240A /* CropControl.swift */,
 				4B0077BF21704E7F008330EA /* MaskControlView.swift */,
 				4B9D457D216EE1AF003A240A /* DoodleControlView.swift */,
 				4B1E95212176CBD100E9DFB8 /* FilterControl */,
@@ -1115,7 +1115,7 @@
 				4BB917E525F518EF00C446B8 /* _ImageView.swift in Sources */,
 				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
 				4B835DFD25E95D5000EC84D1 /* CropViewController.swift in Sources */,
-				4B9D4569216DD59D003A240A /* AdjustmentControlView.swift in Sources */,
+				4B9D4569216DD59D003A240A /* CropControl.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
 				4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */,
 				4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */,

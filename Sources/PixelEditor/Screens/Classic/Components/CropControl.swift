@@ -21,11 +21,11 @@
 
 import Foundation
 
-open class AdjustmentControlBase : ControlBase {
+open class CropControlBase : ControlBase {
 
 }
 
-public final class AdjustmentControl : AdjustmentControlBase {
+public final class CropControl : CropControlBase {
 
   private let navigationView = NavigationView()
 
