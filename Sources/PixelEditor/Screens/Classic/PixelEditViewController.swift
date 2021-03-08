@@ -103,7 +103,9 @@ public final class PixelEditViewController: UIViewController {
   override public func viewDidLoad() {
     super.viewDidLoad()
     
-    cropView.setCropOutsideOverlay(nil)
+    cropView.setCropOutsideOverlay(.init()&>.do {
+      $0.backgroundColor = .white
+    })
     cropView.setCropInsideOverlay(nil)
     cropView.isGuideInteractionEnabled = false
     

@@ -177,6 +177,18 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     .store(in: &subscriptions)
     #endif
+    
+    editingStack.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.currentEdit.crop) { cropRect in
+        
+        self.setCrop(cropRect)
+      }
+           
+    }
+    .store(in: &subscriptions)
   
     defaultAppearance: do {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
@@ -239,11 +251,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           state.ifChanged(\.isLoading) { isLoading in
             self.updateLoadingOverlay(displays: isLoading)
-          }
-          
-          state.ifChanged(\.currentEdit.crop) { cropRect in
-            
-            self.setCrop(cropRect)
           }
           
           state.ifChanged(\.previewImage, \.targetOriginalSizeImage) { previewImage, image in
@@ -351,6 +358,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
+      assert($0.proposedCrop != nil)
       $0.proposedCrop?.updateCropExtent(by: ratio)
       $0.proposedCrop?.preferredAspectRatio = ratio
       $0.modifiedSource = .fromState
