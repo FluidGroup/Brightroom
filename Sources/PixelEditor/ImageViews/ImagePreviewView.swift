@@ -31,21 +31,13 @@ import UIKit
 public final class ImagePreviewView : PixelEditorCodeBasedView {
   
   // MARK: - Properties
-  
-  #if false
+
+  #if true
+  private let imageView = _ImageView()
   private let originalImageView = _ImageView()
   #else
-  private let originalImageView: UIView & HardwareImageViewType = {
-    return MetalImageView()
-  }()
-  #endif
-  
-  #if false
-  private let imageView = _ImageView()
-  #else
-  private let imageView: UIView & HardwareImageViewType = {
-    return MetalImageView()
-  }()
+  private let imageView = MetalImageView()
+  private let originalImageView = MetalImageView()
   #endif
   
   private let editingStack: EditingStack

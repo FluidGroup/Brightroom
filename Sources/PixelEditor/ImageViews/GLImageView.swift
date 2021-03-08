@@ -56,7 +56,7 @@ public class GLImageView : GLKView, HardwareImageViewType {
 
   // MARK: - Functions
   
-  public func display(image: CIImage) {
+  public func display(image: CIImage?) {
     self.image = image
     self.update()  
   }

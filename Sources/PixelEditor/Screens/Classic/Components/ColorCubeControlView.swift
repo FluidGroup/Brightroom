@@ -305,8 +305,8 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
   
   open class CellBase : UICollectionViewCell {
     
-    public let nameLabel: UILabel = .init()
-    public let imageView: UIImageView = .init()
+    let nameLabel: UILabel = .init()
+    let imageView: MetalImageView = .init()
     
     public override init(frame: CGRect) {
       super.init(frame: frame)
@@ -355,7 +355,6 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
     
     open override func prepareForReuse() {
       super.prepareForReuse()
-      imageView.image = nil
       nameLabel.text = nil
       _isSelected = false
     }
@@ -409,7 +408,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
     open func set(originalImage: CIImage) {
       
       nameLabel.text = L10n.normal
-      imageView.image = UIImage(ciImage: originalImage, scale: contentScaleFactor, orientation: .up)
+      imageView.display(image: originalImage)
     }
     
   }
@@ -425,8 +424,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
       self.preview = preview
 
       nameLabel.text = preview.filter.name
-      let image = UIImage(ciImage: preview.image, scale: UIScreen.main.scale, orientation: .up)
-      imageView.image = image
+      imageView.display(image: preview.image)
     }
 
   }

@@ -67,9 +67,15 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
     fatalError("init(coder:) has not been implemented")
   }
 
-  public func display(image: CIImage) {
+  public func display(image: CIImage?) {
     self.image = image
     setNeedsDisplay()
+  }
+  
+  open override var frame: CGRect {
+    didSet {
+      setNeedsDisplay()
+    }
   }
 
   public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -108,19 +114,9 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
 
     switch contentMode {
     case .scaleAspectFill:
-      let size = PixelAspectRatio(fixedImage.extent.size)
-        .sizeThatFill(in: bounds.size)
-      targetRect = .init(origin: .zero, size: size)
+      targetRect = Geometry.rectThatAspectFill(aspectRatio: fixedImage.extent.size, minimumRect: bounds)
     case .scaleAspectFit:
-
-      let size = PixelAspectRatio(fixedImage.extent.size)
-        .sizeThatFits(in: bounds.size)
-
-      targetRect = .init(
-        origin: .init(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2),
-        size: size
-      )
-
+      targetRect = Geometry.rectThatAspectFit(aspectRatio: fixedImage.extent.size, boundingRect: bounds)
     default:
       targetRect = Geometry.rectThatAspectFit(
         aspectRatio: fixedImage.extent.size,
@@ -149,7 +145,12 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
     
     #else
     resolvedImage = fixedImage
-      .transformed(by: CGAffineTransform(scaleX: scale, y: scale).concatenating(CGAffineTransform(translationX: originX, y: originY)))
+      .transformed(
+        by: CGAffineTransform(scaleX: scale, y: scale)
+          .concatenating(
+            CGAffineTransform(translationX: originX, y: originY)
+          )
+      )
     #endif
 
     ciContext.render(

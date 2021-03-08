@@ -107,7 +107,7 @@ struct ContentView: View {
             Button("PixelEditor Square") {
               let stack = EditingStack.init(
                 source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 600, height: 600),
+                previewSize: CGSize(width: 400, height: 400),
                 modifyCrop: { _, crop in
                   crop.updateCropExtent(by: .square)
                 }
@@ -123,7 +123,7 @@ struct ContentView: View {
             Button("PixelEditor") {
               let stack = EditingStack.init(
                 source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 600, height: 600)
+                previewSize: CGSize(width: 400, height: 400)
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {

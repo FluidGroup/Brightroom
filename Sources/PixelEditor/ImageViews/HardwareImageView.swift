@@ -22,5 +22,5 @@
 import UIKit
 
 public protocol HardwareImageViewType : class {
-  func display(image: CIImage)
+  func display(image: CIImage?)
 }

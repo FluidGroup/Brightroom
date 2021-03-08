@@ -32,26 +32,39 @@ public enum ImageTool {
     ]
   )
 
-  public static func makeNewResizedCIImage(to pixelSize: CGSize, from image: CIImage) -> CIImage? {
+  public static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
     targetSize.height.round(.down)
     targetSize.width.round(.down)
 
-    let scaleX = targetSize.width / image.extent.width
-    let scaleY = targetSize.height / image.extent.height
+    let scaleX = targetSize.width / sourceImage.extent.width
+    let scaleY = targetSize.height / sourceImage.extent.height
+    
+    /*
+    do {
+      let resizeFilter = CIFilter(name: "CILanczosScaleTransform")!
+      // Desired output size
+      
+      // Compute scale and corrective aspect ratio
+      let scale = pixelSize.height / sourceImage.extent.height
+      let aspectRatio = pixelSize.width / sourceImage.extent.width * scale
+      
+      // Apply resizing
+      resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
+      resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
+      resizeFilter.setValue(pixelSize.width / pixelSize.height, forKey: kCIInputAspectRatioKey)
+      let outputImage = resizeFilter.outputImage
+      
+      return outputImage!.insertingIntermediate(cache: true)
+    }
+     */
 
     return
       autoreleasepool { () -> CIImage? in
 
-        let originalExtent = image.extent
-
         let format: UIGraphicsImageRendererFormat
-        if #available(iOS 11.0, *) {
-          format = UIGraphicsImageRendererFormat.preferred()
-        } else {
-          format = UIGraphicsImageRendererFormat.default()
-        }
+        format = UIGraphicsImageRendererFormat.preferred()
         format.scale = 1
         format.opaque = true
         if #available(iOS 12.0, *) {
@@ -59,52 +72,26 @@ public enum ImageTool {
         } else {
           format.prefersExtendedRange = false
         }
-
+        
         let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
-
+            
             autoreleasepool {
+              EngineLog.debug("[Resizing] Use softwareRenderer => \(sourceImage.cgImage != nil)")
+              
               let rect = CGRect(origin: .zero, size: targetSize)
-              if let cgImage = image.cgImage {
-                c.cgContext.translateBy(x: 0, y: targetSize.height)
-                c.cgContext.scaleBy(x: 1, y: -1)
-                c.cgContext.draw(cgImage, in: rect)
-
-              } else {
-
-                if #available(iOS 13, *) {
-                  c.cgContext.translateBy(x: 0, y: targetSize.height)
-                  c.cgContext.scaleBy(x: 1, y: -1)
-                  let context = CIContext(cgContext: c.cgContext, options: [:])
-                  context.draw(image, in: rect, from: image.extent)
-                } else {
-                  UIImage(ciImage: image).draw(in: rect)
-                }
-
-              }
+              c.cgContext.translateBy(x: 0, y: targetSize.height)
+              c.cgContext.scaleBy(x: 1, y: -1)
+              let context = CIContext(cgContext: c.cgContext, options: [.useSoftwareRenderer : sourceImage.cgImage != nil])
+              context.draw(sourceImage, in: rect, from: sourceImage.extent)
+              
             }
           }
-
-        let resizedImage: CIImage
-
-        if #available(iOS 12, *) {
-          resizedImage = CIImage(image: uiImage)!
-            .insertingIntermediate(cache: true)
-        } else {
-          resizedImage = uiImage
-            .pngData()
-            .flatMap {
-              CIImage(data: $0, options: [.colorSpace : image.colorSpace ?? CGColorSpaceCreateDeviceRGB()])
-            }!
-        }
-
-        let r = resizedImage.transformed(by: .init(
-          translationX: (originalExtent.origin.x * scaleX).rounded(.up),
-          y: (originalExtent.origin.y * scaleY).rounded(.up)
-        )
-        )
-
-        return r
+                
+        let resizedImage = CIImage(image: uiImage)!
+          .insertingIntermediate(cache: true)
+      
+        return resizedImage
       }
   }
 

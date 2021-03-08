@@ -66,7 +66,11 @@ extension ColorCubeStorage {
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-  var window: UIWindow?
+  var window: UIWindow? {
+    didSet {
+      print("")
+    }
+  }
 
 
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {

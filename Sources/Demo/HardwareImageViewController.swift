@@ -38,14 +38,7 @@ final class HardwareImageViewController : UIViewController {
   }()
 
   let image: CIImage = {
-
-    if #available(iOS 12.0, *) {
-      return CIImage(image: UIImage(named: "large")!)!.insertingIntermediate(cache: true)
-    } else {
-      return CIImage(image: UIImage(named: "large")!)!
-    }
-
-
+    return CIImage(image: UIImage(named: "large")!)!.insertingIntermediate(cache: true)    
   }()
 
   override func viewDidLoad() {
