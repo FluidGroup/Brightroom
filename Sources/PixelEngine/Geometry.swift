@@ -247,6 +247,23 @@ public struct PixelAspectRatio: Equatable {
     .init(width: height, height: width)
   }
   
+  public func sizeThatFill(in boundingSize: CGSize) -> CGSize {
+    let widthRatio = boundingSize.width / width
+    let heightRatio = boundingSize.height / height
+    var size = boundingSize
+    
+    if widthRatio < heightRatio {
+      size.height = boundingSize.width / width * height
+    } else if heightRatio < widthRatio {
+      size.width = boundingSize.height / height * width
+    }
+    
+    return CGSize(
+      width: ceil(size.width),
+      height: ceil(size.height)
+    )
+  }
+  
   public func sizeThatFits(in boundingSize: CGSize) -> CGSize {
     
     let widthRatio = boundingSize.width / width

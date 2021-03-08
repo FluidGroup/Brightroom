@@ -57,7 +57,9 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
     super.init(frame: .zero)
     
     originalImageView.accessibilityIdentifier = "pixel.originalImageView"
+    
     imageView.accessibilityIdentifier = "pixel.editedImageView"
+    
     clipsToBounds = true
     
     [
@@ -66,7 +68,8 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
       ].forEach { imageView in
         addSubview(imageView)
         imageView.clipsToBounds = true
-        imageView.contentMode = .scaleAspectFill
+        imageView.contentMode = .scaleAspectFit
+        imageView.isOpaque = false
         imageView.frame = bounds
         imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }

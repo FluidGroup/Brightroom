@@ -23,24 +23,29 @@ import Foundation
 import MetalKit
 import PixelEngine
 
-open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
- 
+open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
   private let colorSpace = CGColorSpaceCreateDeviceRGB()
   private var image: CIImage?
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in
-    return self.device!.makeCommandQueue()!
-    }()
+    self.device!.makeCommandQueue()!
+  }()
 
   private lazy var ciContext: CIContext = {
     [unowned self] in
-    return CIContext(mtlDevice: self.device!)
-    }()
+    CIContext(mtlDevice: self.device!)
+  }()
 
-  public override init(
+  override open var contentMode: UIView.ContentMode {
+    didSet {
+      setNeedsDisplay()
+    }
+  }
+
+  override public init(
     frame frameRect: CGRect,
     device: MTLDevice?
-    ) {
+  ) {
     super.init(
       frame: frameRect,
       device: device ??
@@ -49,25 +54,24 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     if super.device == nil {
       fatalError("Device doesn't support Metal")
     }
-    self.framebufferOnly = false
-    self.delegate = self
-    self.enableSetNeedsDisplay = true
-    self.autoResizeDrawable = true
+    framebufferOnly = false
+    delegate = self
+    enableSetNeedsDisplay = true
+    autoResizeDrawable = true
+    contentMode = .scaleAspectFill
   }
 
   public required init(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
   public func display(image: CIImage) {
     self.image = image
     setNeedsDisplay()
   }
-  
-  public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-    
-  }
-  
+
+  public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+
   public func draw(in view: MTKView) {
     renderImage()
   }
@@ -75,11 +79,11 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
   func renderImage() {
     guard
       let image = image,
-      let targetTexture = currentDrawable?.texture else
-    {
+      let targetTexture = currentDrawable?.texture
+    else {
       return
     }
-    
+
     #if DEBUG
     if image.cgImage != nil {
       EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
@@ -92,32 +96,58 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
       origin: .zero,
       size: drawableSize
     )
-    
-    let fixedImage = image.transformed(by: .init(translationX: -image.extent.origin.x, y: -image.extent.origin.y))
 
-    let targetRect = Geometry.rectThatAspectFill(
-      aspectRatio: fixedImage.extent.size,
-      minimumRect: bounds
-    )
+    let fixedImage = image.transformed(by: .init(
+      translationX: -image.extent.origin.x,
+      y: -image.extent.origin.y
+    ))
+
+    let targetRect: CGRect
+
+    switch contentMode {
+    case .scaleAspectFill:
+      let size = PixelAspectRatio(fixedImage.extent.size)
+        .sizeThatFill(in: bounds.size)
+      targetRect = .init(origin: .zero, size: size)
+    case .scaleAspectFit:
+
+      let size = PixelAspectRatio(fixedImage.extent.size)
+        .sizeThatFits(in: bounds.size)
+
+      targetRect = .init(
+        origin: .init(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2),
+        size: size
+      )
+
+    default:
+      targetRect = Geometry.rectThatAspectFit(
+        aspectRatio: fixedImage.extent.size,
+        boundingRect: bounds
+      )
+      assertionFailure("ContentMode:\(contentMode) is not supported.")
+    }
 
     let originX = targetRect.origin.x
     let originY = targetRect.origin.y
     let scaleX = targetRect.width / fixedImage.extent.width
     let scaleY = targetRect.height / fixedImage.extent.height
     let scale = min(scaleX, scaleY)
-    let scaledImage = fixedImage
-      .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-      .transformed(by: CGAffineTransform(translationX: originX, y: originY))
-    
+         
     let resolvedImage: CIImage
-    
+
     #if targetEnvironment(simulator)
     // Fixes geometry in Metal
-    resolvedImage = scaledImage
-      .transformed(by: .init(scaleX: 1, y: -1))
-      .transformed(by: .init(translationX: 0, y: scaledImage.extent.height))
+    resolvedImage = fixedImage
+      .transformed(
+        by: CGAffineTransform(scaleX: 1, y: -1)
+          .concatenating(.init(translationX: 0, y: fixedImage.extent.height))
+          .concatenating(.init(scaleX: scale, y: scale))
+          .concatenating(.init(translationX: originX, y: originY))
+      )
+    
     #else
-    resolvedImage = scaledImage
+    resolvedImage = fixedImage
+      .transformed(by: CGAffineTransform(scaleX: scale, y: scale).concatenating(CGAffineTransform(translationX: originX, y: originY)))
     #endif
 
     ciContext.render(
@@ -132,5 +162,3 @@ open class MetalImageView : MTKView, HardwareImageViewType, MTKViewDelegate {
     commandBuffer?.commit()
   }
 }
-
-
