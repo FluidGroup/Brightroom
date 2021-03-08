@@ -220,9 +220,9 @@ public final class PixelEditViewController: UIViewController {
     
     cropView.store.sinkState { [viewModel] (state) in
             
-      state.ifChanged(\.proposedCropAndRotate) { value in
+      state.ifChanged(\.proposedCrop) { value in
         if let value = value {
-          viewModel.setProposedCropAndRotate(value)
+          viewModel.setProposedCrop(value)
         }
       }
     }
@@ -263,9 +263,9 @@ public final class PixelEditViewController: UIViewController {
       maskingView.brush = brush
     }
     
-    state.ifChanged(\.proposedCropAndRotate) { value in
+    state.ifChanged(\.proposedCrop) { value in
       guard let value = value else { return }      
-      cropView.setCropAndRotate(value)
+      cropView.setCrop(value)
     }
 
     if let mode = state.takeIfChanged(\.mode) {

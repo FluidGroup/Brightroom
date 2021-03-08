@@ -127,7 +127,7 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleRotateButton() {
-    let rotation = cropView.store.state.proposedCropAndRotate?.rotation.next()
+    let rotation = cropView.store.state.proposedCrop?.rotation.next()
     rotation.map {
       cropView.setRotation($0)
     }
@@ -138,7 +138,7 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleResetButton() {
-    cropView.resetCropAndRotate()
+    cropView.resetCrop()
   }
 
   @objc private func handleCancelButton() {

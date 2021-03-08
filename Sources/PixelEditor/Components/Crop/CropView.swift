@@ -44,7 +44,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       case fromGuide
     }
 
-    public fileprivate(set) var proposedCropAndRotate: EditingCrop?
+    public fileprivate(set) var proposedCrop: EditingCrop?
 
     fileprivate var modifiedSource: ModifiedSource?
 
@@ -205,15 +205,15 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           guard let self = self else { return }
           
-          state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
+          state.ifChanged(\.proposedCrop, \.frame) { crop, frame in
             
             guard frame != .zero else { return }
             
-            if let cropAndRotate = cropAndRotate, state.modifiedSource != .fromScrollView {
+            if let crop = crop, state.modifiedSource != .fromScrollView {
               self.updateScrollContainerView(
-                by: cropAndRotate,
+                by: crop,
                 animated: state.hasLoaded,
-                animatesRotation: state.hasChanges(\.proposedCropAndRotate?.rotation)
+                animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
               )
             } else {
               // TODO:
@@ -221,7 +221,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
           }
           
           if self.isAutoApplyEditingStackEnabled {
-            state.ifChanged(\.proposedCropAndRotate) { crop in
+            state.ifChanged(\.proposedCrop) { crop in
               guard let crop = crop else { return }
               self.editingStack.crop(crop)
             }
@@ -243,7 +243,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           state.ifChanged(\.currentEdit.crop) { cropRect in
             
-            self.setCropAndRotate(cropRect)
+            self.setCrop(cropRect)
           }
           
           state.ifChanged(\.targetOriginalSizeImage) { image in
@@ -305,17 +305,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public func applyEditingStack() {
     
-    guard let crop = store.state.proposedCropAndRotate else {
+    guard let crop = store.state.proposedCrop else {
       return
     }
     editingStack.crop(crop)
   }
 
-  public func resetCropAndRotate() {
+  public func resetCrop() {
     ensureMainThread()
 
     store.commit {
-      $0.proposedCropAndRotate = $0.proposedCropAndRotate?.makeInitial()
+      $0.proposedCrop = $0.proposedCrop?.makeInitial()
       $0.modifiedSource = .fromState
     }
 
@@ -326,16 +326,16 @@ public final class CropView: UIView, UIScrollViewDelegate {
     ensureMainThread()
 
     store.commit {
-      $0.proposedCropAndRotate?.rotation = rotation
+      $0.proposedCrop?.rotation = rotation
       $0.modifiedSource = .fromState
     }
   }
 
-  public func setCropAndRotate(_ cropAndRotate: EditingCrop) {
+  public func setCrop(_ crop: EditingCrop) {
     ensureMainThread()
     
     store.commit {
-      $0.proposedCropAndRotate = cropAndRotate
+      $0.proposedCrop = crop
       $0.modifiedSource = .fromState
     }
   }
@@ -344,8 +344,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     ensureMainThread()
 
     store.commit {
-      $0.proposedCropAndRotate?.updateCropExtent(by: ratio)
-      $0.proposedCropAndRotate?.preferredAspectRatio = ratio
+      $0.proposedCrop?.updateCropExtent(by: ratio)
+      $0.proposedCrop?.preferredAspectRatio = ratio
       $0.modifiedSource = .fromState
     }
   }
@@ -435,7 +435,7 @@ extension CropView {
   }
 
   private func updateScrollContainerView(
-    by cropAndRotate: EditingCrop,
+    by crop: EditingCrop,
     animated: Bool,
     animatesRotation: Bool
   ) {
@@ -444,22 +444,22 @@ extension CropView {
         let bounds = self.bounds.inset(by: contentInset)
 
         let size: CGSize
-        switch cropAndRotate.rotation {
+        switch crop.rotation {
         case .angle_0:
-          size = cropAndRotate.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio)
+          size = crop.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(crop.preferredAspectRatio)
         case .angle_90:
-          size = cropAndRotate.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio?.swapped())
+          size = crop.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
         case .angle_180:
-          size = cropAndRotate.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio)
+          size = crop.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(crop.preferredAspectRatio)
         case .angle_270:
-          size = cropAndRotate.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(cropAndRotate.preferredAspectRatio?.swapped())
+          size = crop.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
         }
 
-        scrollView.transform = cropAndRotate.rotation.transform
+        scrollView.transform = crop.rotation.transform
 
         scrollView.frame = .init(
           origin: .init(
@@ -475,25 +475,25 @@ extension CropView {
       }
 
       zoom: do {
-        imageView.bounds = .init(origin: .zero, size: cropAndRotate.scrollViewContentSize())
+        imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
 
-        let (min, max) = cropAndRotate.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
 
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max
 
         UIView.performWithoutAnimation {
           let currentZoomScale = scrollView.zoomScale
-          let contentSize = cropAndRotate.scrollViewContentSize()
+          let contentSize = crop.scrollViewContentSize()
           scrollView.zoomScale = 1
           scrollView.contentSize = contentSize
           scrollView.zoomScale = currentZoomScale
         }
         
-        scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
+        scrollView.zoom(to: crop.cropExtent.cgRect, animated: false)
         // WORKAROUND:
         // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
-        scrollView.zoom(to: cropAndRotate.cropExtent.cgRect, animated: false)
+        scrollView.zoom(to: crop.cropExtent.cgRect, animated: false)
         
       }
     }
@@ -552,10 +552,10 @@ extension CropView {
 
       self.store.commit {
         let rect = self.guideView.convert(self.guideView.bounds, to: self.imageView)
-        if var crop = $0.proposedCropAndRotate {
+        if var crop = $0.proposedCrop {
           // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
           crop.cropExtent = .init(cgRect: rect)
-          $0.proposedCropAndRotate = crop
+          $0.proposedCrop = crop
           $0.modifiedSource = .fromGuide
         } else {
           assertionFailure()
@@ -569,10 +569,10 @@ extension CropView {
     store.commit {
       let rect = scrollView.convert(scrollView.bounds, to: imageView)
 
-      if var crop = $0.proposedCropAndRotate {
+      if var crop = $0.proposedCrop {
         // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
         crop.cropExtent = .init(cgRect: rect)
-        $0.proposedCropAndRotate = crop
+        $0.proposedCrop = crop
         $0.modifiedSource = .fromScrollView
       } else {
         assertionFailure()

@@ -50,7 +50,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
     // TODO: Rename
     fileprivate var drawnPaths: [DrawnPathInRect] = []
-    fileprivate(set) var proposedCropAndRotate: EditingCrop?
+    fileprivate(set) var proposedCrop: EditingCrop?
   }
     
   public let options: PixelEditOptions
@@ -133,12 +133,12 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
     guard save else {
       commit {
-        $0.proposedCropAndRotate = $0.editingState.currentEdit.crop
+        $0.proposedCrop = $0.editingState.currentEdit.crop
       }
       return
     }
         
-    guard let proposed = state.proposedCropAndRotate else {
+    guard let proposed = state.proposedCrop else {
       return
     }
     
@@ -147,9 +147,9 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
   }
   
-  func setProposedCropAndRotate(_ proposedCrop: EditingCrop) {
+  func setProposedCrop(_ proposedCrop: EditingCrop) {
     commit {
-      $0.proposedCropAndRotate = proposedCrop
+      $0.proposedCrop = proposedCrop
     }
   }
   
