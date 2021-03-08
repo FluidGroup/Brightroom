@@ -9,6 +9,12 @@
 > I often upload movies of features in development to the pull-request's comment.
 > 
 > To use the stable version, please checkout master branch.
+> 
+
+
+> 📌 Pixel want to get another new name.  
+> Post your idea in https://github.com/muukii/Pixel/discussions/68  
+> And how about **BrightRoom**?
 
 ---
 
