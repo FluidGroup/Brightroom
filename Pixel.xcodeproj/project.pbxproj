@@ -155,7 +155,7 @@
 		B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */; };
 		ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
 		FC5DAE6E23A75ACB00DD51E6 /* PHAssetDownloadEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */; };
-		FCC7962623C58209009ACD8A /* LoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingView.swift */; };
+		FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -370,7 +370,7 @@
 		DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PHAssetDownloadEditorViewController.swift; sourceTree = "<group>"; };
-		FCC7962523C58209009ACD8A /* LoadingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingView.swift; sourceTree = "<group>"; };
+		FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingBlurryOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -504,7 +504,6 @@
 		4B3457892174FF8600716DA0 /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				FCC7962523C58209009ACD8A /* LoadingView.swift */,
 				4B9D4562216DD143003A240A /* ControlStackView.swift */,
 				4B9D4574216DF66F003A240A /* NavigationView.swift */,
 				4B9D4564216DD1E0003A240A /* RootControlView.swift */,
@@ -692,6 +691,7 @@
 		4B9D4578216E07BC003A240A /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */,
 				4BB917E425F518EF00C446B8 /* _ImageView.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
 				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
@@ -1128,7 +1128,7 @@
 				4B42A6AB2178E13600F18208 /* TemperatureControl.swift in Sources */,
 				4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */,
 				4B34578B217502F900716DA0 /* Style.swift in Sources */,
-				FCC7962623C58209009ACD8A /* LoadingView.swift in Sources */,
+				FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */,
 				4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */,
 				4B9D4575216DF66F003A240A /* NavigationView.swift in Sources */,
 				4BE9392F25E5501000F20341 /* PixelEditViewModel.swift in Sources */,
