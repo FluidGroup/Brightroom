@@ -10,17 +10,64 @@
 > 
 > To use the stable version, please checkout master branch.
 
-**Plannning features**
+---
 
-- A crop-view component and standalone crop screen.
-  - It supports rotating each 90 degree and locking aspect-ratio.
-- SwiftUI wrappers each component
+# v2(WIP) Pixel - Composable image editor
+
+Pixel v2 provides the followings:
+- The components are built separately and they run as standalone using `EditingStack`.
+- We can create our own image editor UI by composing the components.
+- `EditingStack` manages the history of editing and renders images. It's like a headless browser.
+
+## Use Built-in fullstack image editor
+
+- [ ] TODO
+
+## Build your own cropping screen
+
+CropView is a component that only supports cropping.
+
+![CleanShot 2021-03-08 at 20 51 11](https://user-images.githubusercontent.com/1888355/110317866-113ecf00-8050-11eb-923d-6c2dc6da1a30.gif)
+
+**UIKit**
+
+```swift
+let image: UIImage
+let view = CropView(image: image)
+
+let resultImage = view.renderImage()
+```
+
+**SwiftUI**
+
+```swift
+struct DemoCropView: View {
+  let editingStack: EditingStack
+
+  var body: some View {
+    VStack {
+      // ✅ Display a cropping view
+      SwiftUICropView(
+        editingStack: editingStack
+      )
+      // ✅ Renders a result image from the current editing.
+      Button("Done") {
+        let image: UIImage = editingStack.makeRenderer().render()
+      }
+    }
+    .onAppear {
+      editingStack.start()
+    }
+  }
+}
+```
+
 
 ---
 
-<img src=top.png width=960/>
+# (v1) Pixel - Engine • Editor
 
-# Pixel - Engine • Editor
+<img src=top.png width=960/>
 
 ![](preview.gif)
 
