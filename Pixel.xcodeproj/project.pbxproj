@@ -36,8 +36,6 @@
 		4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */; };
 		4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6F725F6720900DE0569 /* TransitionPatch */; };
 		4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6FC25F6723700DE0569 /* Verge */; };
-		4B1EC70A25F6756E00DE0569 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1EC70925F6756E00DE0569 /* Package.swift */; };
-		4B1EC70B25F6756E00DE0569 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1EC70925F6756E00DE0569 /* Package.swift */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
 		4B34578B217502F900716DA0 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34578A217502F900716DA0 /* Style.swift */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
@@ -1163,7 +1161,6 @@
 				4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */,
 				4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */,
 				4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
-				4B1EC70B25F6756E00DE0569 /* Package.swift in Sources */,
 				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
 				4BE7DD0E25E95BDB006B3C74 /* DemoCropViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
@@ -1179,7 +1176,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B1EC70A25F6756E00DE0569 /* Package.swift in Sources */,
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
