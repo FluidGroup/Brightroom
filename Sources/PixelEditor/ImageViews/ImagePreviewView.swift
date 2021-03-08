@@ -32,7 +32,7 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
   
   // MARK: - Properties
 
-  #if true
+  #if false
   private let imageView = _ImageView()
   private let originalImageView = _ImageView()
   #else

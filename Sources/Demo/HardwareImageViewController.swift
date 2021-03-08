@@ -38,7 +38,7 @@ final class HardwareImageViewController : UIViewController {
   }()
 
   let image: CIImage = {
-    return CIImage(image: UIImage(named: "large")!)!.insertingIntermediate(cache: true)    
+    return CIImage(contentsOf: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!)!.transformed(by: .init(scaleX: 0.2, y: 0.2)).insertingIntermediate()
   }()
 
   override func viewDidLoad() {

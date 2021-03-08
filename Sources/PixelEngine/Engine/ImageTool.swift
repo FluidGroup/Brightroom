@@ -37,9 +37,8 @@ public enum ImageTool {
     var targetSize = pixelSize
     targetSize.height.round(.down)
     targetSize.width.round(.down)
-
-    let scaleX = targetSize.width / sourceImage.extent.width
-    let scaleY = targetSize.height / sourceImage.extent.height
+    
+//    return sourceImage.transformed(by: .init(scaleX: 0.1, y: 0.1))
     
     /*
     do {
