@@ -182,29 +182,22 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.targetOriginalSizeImage) { image in
         
         guard let image = image else { return }
-        
+                        
         let smallSizeImage = ImageTool.makeNewResizedCIImage(
           to: Geometry.sizeThatAspectFit(
-            aspectRatio: CGSize(width: 1, height: 1),
+            aspectRatio: image.extent.size,
             boundingSize: CGSize(
               width: 60 * self.targetScreenScale,
               height: 60 * self.targetScreenScale
             )
           ),
           from: image
-        ).map {
-          $0.transformed(
-            by: .init(
-              translationX: -$0.extent.origin.x,
-              y: -$0.extent.origin.y
-            )
-          )
-        }!
+        )!
           
         self.commit {
           $0.cubeFilterPreviewSourceImage = smallSizeImage
           
-          $0.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
+          $0.previewColorCubeFilters = self.colorCubeFilters.map {
             let r = PreviewFilterColorCube(sourceImage: smallSizeImage, filter: $0)
             return r
           }
@@ -221,15 +214,9 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.currentEdit.crop, \.targetOriginalSizeImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
-          
-          assert(_cropRect.imageSize == .init(image: targetImage))
-          
-          var cropRect = _cropRect.cropExtent.cgRect
-          
-          cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
-          
+                   
           let croppedImage = targetImage
-            .cropped(to: cropRect)
+            .cropped(to: _cropRect)
           
           let result = ImageTool.makeNewResizedCIImage(
             to: Geometry.sizeThatAspectFit(
@@ -523,27 +510,21 @@ extension EditingStack {
 
 }
 
-extension Array {
+extension CIImage {
   
-  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
-    
-    var buffer = [U?].init(repeating: nil, count: count)
-    
-    buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
-      
-      self.withUnsafeBufferPointer { (sourceBuffer) -> Void in
+  func cropped(to _cropRect: EditingCrop) -> CIImage {
         
-        DispatchQueue.concurrentPerform(iterations: count) { i in
-          let sourcePointer = sourceBuffer.baseAddress!.advanced(by: i)
-          let r = transform(sourcePointer.pointee)
-          let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
-          targetPointer.pointee = r
-        }
-        
-      }
-    }
-  
-    return buffer.compactMap { $0 }
+    let targetImage = self
+    var cropRect = _cropRect.cropExtent.cgRect
+    
+    assert(_cropRect.imageSize == .init(image: targetImage))
+    
+    cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
+    
+    let croppedImage = targetImage
+      .cropped(to: cropRect)
+    
+    return croppedImage
   }
+  
 }
-

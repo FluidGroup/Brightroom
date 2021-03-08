@@ -425,7 +425,8 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
       self.preview = preview
 
       nameLabel.text = preview.filter.name
-      imageView.image = UIImage(ciImage: preview.image, scale: contentScaleFactor, orientation: .up)
+      let image = UIImage(ciImage: preview.image, scale: UIScreen.main.scale, orientation: .up)
+      imageView.image = image
     }
 
   }
