@@ -70,8 +70,26 @@ struct ContentView: View {
             Button("Remote") {
               let stack = EditingStack(
                 source: .init(
-                  url: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
+                  editableURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
                   imageSize: .init(width: 4025, height: 6037)
+                ),
+                previewSize: .init(width: 1000, height: 1000)
+              )
+
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stack, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
+            }
+
+            Button("Remote - preview") {
+              let stack = EditingStack(
+                source: .init(
+                  previewURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
+                  editableURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!,
+                  imageSize: .init(width: 4980, height: 3984)
                 ),
                 previewSize: .init(width: 1000, height: 1000)
               )

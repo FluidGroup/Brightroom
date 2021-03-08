@@ -109,7 +109,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /// A throttling timer to apply guide changed event.
   ///
   /// This's waiting for Combine availability in minimum iOS Version.
-  private let throttle = Debounce(interval: 1)
+  private let throttle = Debounce(interval: 0.8)
 
   private let contentInset: UIEdgeInsets
   
@@ -246,9 +246,16 @@ public final class CropView: UIView, UIScrollViewDelegate {
             self.setCrop(cropRect)
           }
           
-          state.ifChanged(\.targetOriginalSizeImage) { image in
-            guard let image = image else { return }
-            self.setImage(image)
+          state.ifChanged(\.previewImage, \.targetOriginalSizeImage) { previewImage, image in
+            
+            if let previewImage = previewImage {
+              self.setImage(previewImage)
+            }
+            
+            if let image = image {
+              self.setImage(image)
+            }
+          
           }
         }
         .store(in: &subscriptions)

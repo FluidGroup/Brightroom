@@ -55,7 +55,9 @@ open class EditingStack: Equatable, StoreComponentType {
     public fileprivate(set) var history: [Edit] = []
     
     public fileprivate(set) var currentEdit: Edit
-        
+    
+    public fileprivate(set) var previewImage: CIImage?
+    
     /**
      An original image
      Can be used in cropping
@@ -122,6 +124,7 @@ open class EditingStack: Equatable, StoreComponentType {
   )
   
   private var subscriptions = Set<VergeAnyCancellable>()
+  private var imageProviderSubscription: VergeAnyCancellable?
   
   private let modifyCrop: (CIImage?, inout EditingCrop) -> Void
 
@@ -254,11 +257,11 @@ open class EditingStack: Equatable, StoreComponentType {
      Start downloading image
      */
     imageSource.start()
-    imageSource.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
+    imageProviderSubscription = imageSource.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
       
       guard let self = self else { return }
       
-      state.ifChanged(\.currentImage) { image in
+      state.ifChanged(\.loadedImage) { image in
          
         guard let image = image else {
           self.applyIfChanged {
@@ -269,27 +272,26 @@ open class EditingStack: Equatable, StoreComponentType {
         }
         self.commit { s in
           
-          let newLoading = !image.isEditable
-          assert({
-            if s.isLoading == false, newLoading == true {
-              return false
-            } else {
-              return true
+          switch image {
+          case .preview(let image):
+            s.isLoading = true
+            s.previewImage = image
+          case .editable(let image):
+            s.isLoading = false
+            s.targetOriginalSizeImage = image
+            self.modifyCrop(image, &s.currentEdit.crop)
+            s.withType { (type, ref) -> Void in
+              type.makeVersion(ref: ref)
             }
-          }(), "ImageSource published non-editable image after published editable image.")
-          s.isLoading = newLoading
-          s.targetOriginalSizeImage = image.image
-          
-          self.modifyCrop(nil, &s.currentEdit.crop)
-          s.withType { (type, ref) -> Void in
-            type.makeVersion(ref: ref)
+            
+            self.imageProviderSubscription?.cancel()
           }
-          
+                                       
         }
       }
       
     }
-    .store(in: &subscriptions)
+
           
   }
 

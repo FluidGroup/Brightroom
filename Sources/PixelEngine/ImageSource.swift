@@ -83,7 +83,7 @@ public struct EditingCrop: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
-  
+
   public init(from ciImage: CIImage) {
     self.init(
       imageSize: .init(image: ciImage),
@@ -109,7 +109,6 @@ public struct EditingCrop: Equatable {
    - TODO: Resizing cropping extent with keeping area by new aspect ratio.
    */
   public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
-        
     let maxSize = newAspectRatio.sizeThatFits(in: imageSize.cgSize)
 
     cropExtent = .init(
@@ -120,17 +119,14 @@ public struct EditingCrop: Equatable {
       size: .init(cgSize: maxSize)
     )
   }
-  
-}
-
-public struct EditingImage: Equatable {
-  let image: CIImage
-  let isEditable: Bool
 }
 
 public enum ImageProviderError: Error {
-  case failedToDownload(underlyingError: Error)
-  case failedToDecode(Data)
+  case failedToDownloadPreviewImage(underlyingError: Error)
+  case failedToDownloadEditableImage(underlyingError: Error)
+
+  case failedToDecodePreviewImage(Data)
+  case failedToDecodeEditableImage(Data)
 }
 
 /**
@@ -142,8 +138,26 @@ public final class ImageProvider: Equatable, StoreComponentType {
   }
 
   public struct State {
-    public fileprivate(set) var currentImage: EditingImage?
-    public fileprivate(set) var loadingError: ImageProviderError?
+    public enum Image: Equatable {
+      case preview(CIImage)
+      case editable(CIImage)
+    }
+
+    public var loadedImage: Image? {
+      if let editable = editableImage {
+        return .editable(editable)
+      }
+
+      if let preview = previewImage {
+        return .preview(preview)
+      }
+
+      return nil
+    }
+
+    fileprivate var previewImage: CIImage?
+    fileprivate var editableImage: CIImage?
+    public fileprivate(set) var loadingErrors: [ImageProviderError] = []
     public let imageSize: PixelSize
   }
 
@@ -166,59 +180,102 @@ public final class ImageProvider: Equatable, StoreComponentType {
     precondition(image.extent.origin == .zero)
     store = .init(
       initialState: .init(
-        currentImage: .init(image: image, isEditable: true),
+        previewImage: nil,
+        editableImage: image,
         imageSize: .init(width: Int(image.extent.size.width), height: Int(image.extent.size.height))
       )
     )
     pendingAction = { _ in }
   }
 
-  public convenience init(url: URL, imageSize: PixelSize) {
-          
-    self.init(urlRequest: URLRequest(url: url), imageSize: imageSize)
+  public convenience init(
+    previewURL: URL? = nil,
+    editableURL: URL,
+    imageSize: PixelSize
+  ) {
+    self.init(
+      previewURLRequest: previewURL.map { URLRequest(url: $0) },
+      editableURLRequest: URLRequest(url: editableURL),
+      imageSize: imageSize
+    )
   }
 
-  public init(urlRequest: URLRequest, imageSize: PixelSize) {
-    
+  public init(
+    previewURLRequest: URLRequest? = nil,
+    editableURLRequest: URLRequest,
+    imageSize: PixelSize
+  ) {
     store = .init(
       initialState: .init(
-        currentImage: nil,
+        previewImage: nil,
+        editableImage: nil,
         imageSize: imageSize
       )
     )
-    
+
     pendingAction = { `self` in
-      
-      let task = URLSession.shared.dataTask(with: urlRequest) { data, response, error in
-        
-        if let error = error {
-          self.store.commit {
-            $0.loadingError = .failedToDownload(underlyingError: error)
-          }
-        }
-        
-        if let data = data {
-          
-          // To make CIImage's backing storage as CGImage.
-          let uiImage = UIImage(data: data, scale: 1)!
-          assert(uiImage.cgImage != nil)
-          
-          if let image = CIImage(image: uiImage) {
-            assert(imageSize == .init(image: image))
+
+      var previewTask: URLSessionDataTask?
+
+      if let previewURLRequest = previewURLRequest {
+        previewTask = URLSession.shared.dataTask(with: previewURLRequest) { data, response, error in
+
+          if let error = error {
             self.store.commit {
-              $0.currentImage = .init(image: image, isEditable: true)
+              $0.loadingErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
             }
-          } else {
-            self.store.commit {
-              $0.loadingError = .failedToDecode(data)
+          }
+
+          if let data = data {
+            // To make CIImage's backing storage as CGImage.
+            let uiImage = UIImage(data: data, scale: 1)!
+            assert(uiImage.cgImage != nil)
+
+            if let image = CIImage(image: uiImage) {
+              assert(imageSize.aspectRatio == PixelSize(image: image).aspectRatio)
+              self.store.commit {
+                $0.previewImage = image
+              }
+            } else {
+              self.store.commit {
+                $0.loadingErrors.append(.failedToDecodePreviewImage(data))
+              }
             }
           }
         }
       }
-      
-      task.resume()
+
+      let editableTask = URLSession.shared.dataTask(with: editableURLRequest) { data, response, error in
+
+        previewTask?.cancel()
+
+        if let error = error {
+          self.store.commit {
+            $0.loadingErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+          }
+        }
+
+        if let data = data {
+          // To make CIImage's backing storage as CGImage.
+          let uiImage = UIImage(data: data, scale: 1)!
+          assert(uiImage.cgImage != nil)
+
+          if let image = CIImage(image: uiImage) {
+            assert(imageSize == .init(image: image))
+            self.store.commit {
+              $0.editableImage = image
+            }
+          } else {
+            self.store.commit {
+              $0.loadingErrors.append(.failedToDecodeEditableImage(data))
+            }
+          }
+        }
+      }
+
+      previewTask?.resume()
+      editableTask.resume()
     }
-    
   }
 
   #if canImport(Photos)
@@ -228,7 +285,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
     store = .init(
       initialState: .init(
-        currentImage: nil,
+        previewImage: nil,
+        editableImage: nil,
         imageSize: .init(
           width: asset.pixelWidth,
           height: asset.pixelHeight
@@ -261,7 +319,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
         let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
 
         self.commit {
-          $0.currentImage = .init(image: ciImage, isEditable: false)
+          $0.previewImage = ciImage
         }
       }
 
@@ -276,7 +334,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
         let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
 
         self.commit {
-          $0.currentImage = .init(image: ciImage, isEditable: true)
+          $0.editableImage = ciImage
         }
       }
     }
