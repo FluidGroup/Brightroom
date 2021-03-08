@@ -76,6 +76,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
   }
+  
+  public let editingStack: EditingStack
 
   /**
    An image view that displayed in the scroll view.
@@ -109,14 +111,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /// This's waiting for Combine availability in minimum iOS Version.
   private let throttle = Debounce(interval: 1)
 
-  private let editingStack: EditingStack
-
   private let contentInset: UIEdgeInsets
   
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
   
   private var isBinding = false
+  
+  var isAutoApplyEditingStackEnabled = false
   
   // MARK: - Initializers
 
@@ -215,6 +217,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
               )
             } else {
               // TODO:
+            }
+          }
+          
+          if self.isAutoApplyEditingStackEnabled {
+            state.ifChanged(\.proposedCropAndRotate) { crop in
+              guard let crop = crop else { return }
+              self.editingStack.crop(crop)
             }
           }
           

@@ -23,7 +23,7 @@ import Foundation
 import SwiftUI
 import PixelEngine
 
-final class WrapperViewController<BodyView: UIView>: UIViewController {
+public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
   
   private let bodyView: BodyView
   
@@ -49,47 +49,37 @@ final class WrapperViewController<BodyView: UIView>: UIViewController {
  Still in development
  */
 @available(iOS 14, *)
-public struct SwiftUICropView: View {
-    
-  private let editingStack: EditingStack
+public struct SwiftUICropView: UIViewControllerRepresentable {
+  
+  public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
+      
   private let cropInsideOverlay: AnyView?
+  
+  private let factory: () -> CropView
+  
+//  public init(image: UIImage, cropInsideOverlay: AnyView? = nil) {
+//    self.cropInsideOverlay = cropInsideOverlay
+//    self.factory = {
+//      CropView(image: image)
+//    }
+//  }
   
   public init(
     editingStack: EditingStack,
     cropInsideOverlay: AnyView? = nil
   ) {
-    self.editingStack = editingStack
     self.cropInsideOverlay = cropInsideOverlay
-  }
-  
-  public var body: some View {
-    _SwiftUICropView(editingStack: editingStack, cropInsideOverlay: cropInsideOverlay)
-  }
-  
-}
-/**
- Still in development
- */
-@available(iOS 14, *)
-struct _SwiftUICropView: UIViewControllerRepresentable {
-  
-  typealias UIViewControllerType = WrapperViewController<CropView>
-      
-  private let editingStack: EditingStack
-  private let cropInsideOverlay: AnyView?
-  
-  init(
-    editingStack: EditingStack,
-    cropInsideOverlay: AnyView? = nil
-  ) {
-    self.editingStack = editingStack
-    self.cropInsideOverlay = cropInsideOverlay
-  }
-  
-  func makeUIViewController(context: Context) -> WrapperViewController<CropView> {
-    let view = CropView(editingStack: editingStack)
     
-    let controller = WrapperViewController.init(bodyView: view)
+    self.factory = {
+      CropView(editingStack: editingStack)
+    }
+  }
+  
+  public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
+    let view = factory()
+    view.isAutoApplyEditingStackEnabled = true
+    
+    let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
     
     if let cropInsideOverlay = cropInsideOverlay {
       
@@ -107,8 +97,8 @@ struct _SwiftUICropView: UIViewControllerRepresentable {
     return controller
   }
   
-  func updateUIViewController(_ uiViewController: WrapperViewController<CropView>, context: Context) {
-    
+  public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
+
   }
-    
+        
 }
