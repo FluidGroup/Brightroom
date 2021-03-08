@@ -19,7 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import CoreImage
+import UIKit
 import Verge
 
 /**
@@ -157,7 +158,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func start() {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
     
     guard state.hasStartedEditing == false else {
       return
@@ -311,7 +312,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func revertEdit() {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
     
     commit {
       $0.withType { (type, ref) -> Void in
@@ -326,7 +327,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func undoEdit() {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
         
     commit {
       $0.withType { (type, ref) -> Void in
@@ -341,7 +342,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func removeAllEditsHistory() {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
     
     commit {
       $0.history = []
@@ -350,7 +351,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public func set(filters: (inout Edit.Filters) -> Void) {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
     
     applyIfChanged {
       filters(&$0.filters)
@@ -367,7 +368,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public func set(blurringMaskPaths: [DrawnPathInRect]) {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
 
     applyIfChanged {
       $0.drawings.blurredMaskPaths = blurringMaskPaths
@@ -376,7 +377,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public func makeRenderer() -> ImageRenderer {
     
-    ensureMainThread()
+    _pixelengine_ensureMainThread()
     
     guard let targetImage = state.targetOriginalSizeImage else {
       preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")

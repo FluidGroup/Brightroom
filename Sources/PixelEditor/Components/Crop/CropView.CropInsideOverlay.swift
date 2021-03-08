@@ -6,7 +6,7 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import Foundation
+import UIKit
 import SwiftUI
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/

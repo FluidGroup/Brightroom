@@ -1,3 +1,4 @@
+import Foundation
 
 final class Debounce {
   private var timerReference: DispatchSourceTimer?

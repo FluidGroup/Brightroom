@@ -19,7 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import CoreImage
+import UIKit
 
 public struct FilterHighlightShadowTint : Filtering, Equatable {
   

@@ -6,7 +6,7 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import Foundation
+import UIKit
 
 /**
  A view that can be initializde only from code. (No supports to init from Nib)

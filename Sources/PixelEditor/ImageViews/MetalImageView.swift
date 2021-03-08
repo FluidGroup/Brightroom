@@ -19,9 +19,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import UIKit
 import MetalKit
+#if !COCOAPODS
 import PixelEngine
+#endif
 
 open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
   private let colorSpace = CGColorSpaceCreateDeviceRGB()

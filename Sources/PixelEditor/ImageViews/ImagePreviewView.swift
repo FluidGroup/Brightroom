@@ -19,8 +19,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if !COCOAPODS
 import PixelEngine
+#endif
 import Verge
+import UIKit
 
 /**
  A view that displays the edited image, plus displays original image for comparison with touch-down interaction.

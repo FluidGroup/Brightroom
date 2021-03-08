@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import UIKit
 
 public enum RequireError: Swift.Error {
   case missingRequiredValue(failureDescription: String?, file: StaticString, function: StaticString, line: UInt)

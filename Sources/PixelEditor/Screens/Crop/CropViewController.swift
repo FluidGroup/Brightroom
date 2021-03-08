@@ -19,10 +19,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import Foundation
+import UIKit
 
-import PixelEngine
 import Verge
+
+#if !COCOAPODS
+import PixelEngine
+#endif
 
 public final class CropViewController: UIViewController {
   public struct Handlers {

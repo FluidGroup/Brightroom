@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "RxSwift",
+        "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "7e01c05f25c025143073eaa3be3532f9375c614b",
+          "version": "6.1.0"
+        }
+      },
+      {
+        "package": "TransitionPatch",
+        "repositoryURL": "git@github.com:muukii/TransitionPatch.git",
+        "state": {
+          "branch": null,
+          "revision": "1f2e5930a68b11dae764ee7ffda14b2b7ffa8fce",
+          "version": "1.0.3"
+        }
+      },
+      {
+        "package": "Verge",
+        "repositoryURL": "git@github.com:VergeGroup/Verge.git",
+        "state": {
+          "branch": null,
+          "revision": "472a0273f6adf67132bb07f52ca4547ede6c9f6c",
+          "version": "8.8.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

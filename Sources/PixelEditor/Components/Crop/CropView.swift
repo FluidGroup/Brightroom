@@ -20,9 +20,13 @@
 // THE SOFTWARE.
 
 import CoreImage
-import PixelEngine
+
 import UIKit
 import Verge
+
+#if !COCOAPODS
+import PixelEngine
+#endif
 
 /**
  A view that previews how crops the image.
@@ -141,7 +145,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     editingStack: EditingStack,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     self.editingStack = editingStack
     self.contentInset = contentInset
@@ -308,7 +312,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func resetCrop() {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     store.commit {
       $0.proposedCrop = $0.proposedCrop?.makeInitial()
@@ -319,7 +323,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setRotation(_ rotation: EditingCrop.Rotation) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     store.commit {
       $0.proposedCrop?.rotation = rotation
@@ -328,7 +332,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setCrop(_ crop: EditingCrop) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
     
     store.commit {
       $0.proposedCrop = crop
@@ -337,7 +341,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     store.commit {
       $0.proposedCrop?.updateCropExtent(by: ratio)
@@ -354,7 +358,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    - view: In case of no needs to display overlay, pass nil.
    */
   public func setCropInsideOverlay(_ view: CropInsideOverlayBase?) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     guideView.setCropInsideOverlay(view)
   }
@@ -368,7 +372,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    - view: In case of no needs to display overlay, pass nil.
    */
   public func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
 
     cropOutsideOverlay?.removeFromSuperview()
 
@@ -390,7 +394,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
   
   public func setLoadingOverlay(factory: (() -> UIView)?) {
-    ensureMainThread()
+    _pixeleditor_ensureMainThread()
     loadingOverlayFactory = factory
   }
     

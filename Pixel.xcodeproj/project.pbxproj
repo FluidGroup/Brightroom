@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -34,6 +34,10 @@
 		4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E952A2176F57800E9DFB8 /* ColorCube.swift */; };
 		4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */; };
 		4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */; };
+		4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6F725F6720900DE0569 /* TransitionPatch */; };
+		4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6FC25F6723700DE0569 /* Verge */; };
+		4B1EC70A25F6756E00DE0569 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1EC70925F6756E00DE0569 /* Package.swift */; };
+		4B1EC70B25F6756E00DE0569 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1EC70925F6756E00DE0569 /* Package.swift */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
 		4B34578B217502F900716DA0 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34578A217502F900716DA0 /* Style.swift */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
@@ -150,8 +154,6 @@
 		4BEE65132174E99600F3578E /* EngineLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65122174E99600F3578E /* EngineLog.swift */; };
 		4BEE65152174EB5800F3578E /* DrawnPathInRect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE65142174EB5800F3578E /* DrawnPathInRect.swift */; };
 		4BF0256025F12FE30093A59B /* SwiftUICropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */; };
-		5FEA3663DD99BD359BFF0ED4 /* Pods_PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */; };
-		A109DB8411ADE351753F6BFD /* Pods_PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7AB10A5DBABA6AE5C49024D1 /* Pods_PixelEngine.framework */; };
 		B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */; };
 		ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
 		FC5DAE6E23A75ACB00DD51E6 /* PHAssetDownloadEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */; };
@@ -219,7 +221,6 @@
 /* Begin PBXFileReference section */
 		09A1BDCF3FDA5098277F9C8C /* Pods-SwiftUIDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftUIDemo.release.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftUIDemo/Pods-SwiftUIDemo.release.xcconfig"; sourceTree = "<group>"; };
 		1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEditor.release.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEditor/Pods-PixelEditor.release.xcconfig"; sourceTree = "<group>"; };
 		2CF37F8C417C1D8326226D92 /* Pods-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftUIDemo/Pods-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
@@ -257,6 +258,7 @@
 		4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeStorage.swift; sourceTree = "<group>"; };
 		4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeControlView.swift; sourceTree = "<group>"; };
 		4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMenuControlView.swift; sourceTree = "<group>"; };
+		4B1EC70925F6756E00DE0569 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Package.swift; path = /Users/muukii/.ghq/github.com/muukii/Pixel/Package.swift; sourceTree = "<absolute>"; };
 		4B34578A217502F900716DA0 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		4B4023BF25ED823B00D3DE47 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
 		4B4023C325ED82B700D3DE47 /* Debounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debounce.swift; sourceTree = "<group>"; };
@@ -359,12 +361,7 @@
 		4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUICropView.swift; sourceTree = "<group>"; };
 		58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
 		67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_SwiftUIDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PixelEditor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		7AB10A5DBABA6AE5C49024D1 /* Pods_PixelEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_PixelEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8046DAA7396C3CCB3D47AB67 /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; sourceTree = "<group>"; };
-		8A784BA5C091A8D559877E67 /* Pods-PixelEngine.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEngine.release.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEngine/Pods-PixelEngine.release.xcconfig"; sourceTree = "<group>"; };
-		8F4C533E8D52EA52E174950A /* Pods-PixelEngine.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEngine.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEngine/Pods-PixelEngine.debug.xcconfig"; sourceTree = "<group>"; };
-		98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PixelEditor.debug.xcconfig"; path = "Pods/Target Support Files/Pods-PixelEditor/Pods-PixelEditor.debug.xcconfig"; sourceTree = "<group>"; };
 		CB39D8B429E119590131983E /* Pods-Demo_Apps-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.release.xcconfig"; sourceTree = "<group>"; };
 		D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
@@ -379,7 +376,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */,
-				5FEA3663DD99BD359BFF0ED4 /* Pods_PixelEditor.framework in Frameworks */,
+				4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -387,11 +384,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */,
 				4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */,
 				4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */,
 				4B600B3B216B7CDD001E1456 /* AVFoundation.framework in Frameworks */,
 				4B600B39216B7CD6001E1456 /* CoreImage.framework in Frameworks */,
-				A109DB8411ADE351753F6BFD /* Pods_PixelEngine.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -539,6 +536,7 @@
 		4B600AF3216B7A94001E1456 = {
 			isa = PBXGroup;
 			children = (
+				4B1EC70925F6756E00DE0569 /* Package.swift */,
 				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
@@ -622,8 +620,6 @@
 				4B600B3C216B7CE3001E1456 /* Foundation.framework */,
 				4B600B3A216B7CDD001E1456 /* AVFoundation.framework */,
 				4B600B38216B7CD6001E1456 /* CoreImage.framework */,
-				77AF225663E1B55649C3398D /* Pods_PixelEditor.framework */,
-				7AB10A5DBABA6AE5C49024D1 /* Pods_PixelEngine.framework */,
 				1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */,
 				67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */,
 			);
@@ -750,10 +746,6 @@
 			children = (
 				D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */,
 				58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */,
-				98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */,
-				2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */,
-				8F4C533E8D52EA52E174950A /* Pods-PixelEngine.debug.xcconfig */,
-				8A784BA5C091A8D559877E67 /* Pods-PixelEngine.release.xcconfig */,
 				2CF37F8C417C1D8326226D92 /* Pods-SwiftUIDemo.debug.xcconfig */,
 				09A1BDCF3FDA5098277F9C8C /* Pods-SwiftUIDemo.release.xcconfig */,
 				EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */,
@@ -790,7 +782,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "PixelEditor" */;
 			buildPhases = (
-				B290028DADE3FEB401977859 /* [CP] Check Pods Manifest.lock */,
 				4B47D04D216CC5350007B594 /* Headers */,
 				4B47D04E216CC5350007B594 /* Sources */,
 				4B47D04F216CC5350007B594 /* Frameworks */,
@@ -801,6 +792,9 @@
 			dependencies = (
 			);
 			name = PixelEditor;
+			packageProductDependencies = (
+				4B1EC6F725F6720900DE0569 /* TransitionPatch */,
+			);
 			productName = PixelEditor;
 			productReference = 4B47D052216CC5350007B594 /* PixelEditor.framework */;
 			productType = "com.apple.product-type.framework";
@@ -809,7 +803,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B600B05216B7A94001E1456 /* Build configuration list for PBXNativeTarget "PixelEngine" */;
 			buildPhases = (
-				5D53402DB30BD48DFF5EA245 /* [CP] Check Pods Manifest.lock */,
 				4B600AF8216B7A94001E1456 /* Headers */,
 				4B600AF9216B7A94001E1456 /* Sources */,
 				4B600AFA216B7A94001E1456 /* Frameworks */,
@@ -820,6 +813,9 @@
 			dependencies = (
 			);
 			name = PixelEngine;
+			packageProductDependencies = (
+				4B1EC6FC25F6723700DE0569 /* Verge */,
+			);
 			productName = PixelEngine;
 			productReference = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */;
 			productType = "com.apple.product-type.framework";
@@ -903,6 +899,10 @@
 				Base,
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
+			packageReferences = (
+				4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */,
+				4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */,
+			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -975,28 +975,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		5D53402DB30BD48DFF5EA245 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-PixelEngine-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
 		776F34ECEF5AD7DDF8CCC6D4 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1052,28 +1030,6 @@
 			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Demo_Apps-SwiftUIDemo-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		B290028DADE3FEB401977859 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-PixelEditor-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1207,6 +1163,7 @@
 				4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */,
 				4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */,
 				4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
+				4B1EC70B25F6756E00DE0569 /* Package.swift in Sources */,
 				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
 				4BE7DD0E25E95BDB006B3C74 /* DemoCropViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
@@ -1222,6 +1179,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B1EC70A25F6756E00DE0569 /* Package.swift in Sources */,
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
@@ -1277,7 +1235,6 @@
 /* Begin XCBuildConfiguration section */
 		4B47D05B216CC5350007B594 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 98AC6E4BEF28CC71031BF300 /* Pods-PixelEditor.debug.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -1290,7 +1247,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1306,7 +1263,6 @@
 		};
 		4B47D05C216CC5350007B594 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2AE1CE09BB0852CA575DA207 /* Pods-PixelEditor.release.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -1319,7 +1275,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1456,7 +1412,6 @@
 		};
 		4B600B06216B7A94001E1456 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8F4C533E8D52EA52E174950A /* Pods-PixelEngine.debug.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -1469,6 +1424,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1484,7 +1440,6 @@
 		};
 		4B600B07216B7A94001E1456 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8A784BA5C091A8D559877E67 /* Pods-PixelEngine.release.xcconfig */;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
@@ -1497,6 +1452,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1518,7 +1474,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1538,7 +1494,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1646,6 +1602,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "git@github.com:muukii/TransitionPatch.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.3;
+			};
+		};
+		4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "git@github.com:VergeGroup/Verge.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4B1EC6F725F6720900DE0569 /* TransitionPatch */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */;
+			productName = TransitionPatch;
+		};
+		4B1EC6FC25F6723700DE0569 /* Verge */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */;
+			productName = Verge;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4B600AF4216B7A94001E1456 /* Project object */;
 }

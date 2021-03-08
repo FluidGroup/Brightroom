@@ -6,7 +6,7 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import Foundation
+import UIKit
 
 final class _ImageView: UIImageView, HardwareImageViewType {
   func display(image: CIImage) {

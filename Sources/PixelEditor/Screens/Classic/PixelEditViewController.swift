@@ -20,9 +20,12 @@
 // THE SOFTWARE.
 
 import Photos
-import PixelEngine
 import UIKit
 import Verge
+
+#if !COCOAPODS
+import PixelEngine
+#endif
 
 public protocol PixelEditViewControllerDelegate: class {
   func pixelEditViewController(
