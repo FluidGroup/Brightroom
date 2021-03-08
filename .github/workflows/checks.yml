@@ -33,7 +33,7 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - uses: actions/checkout@v2
       - name: Lint
-        run: pod lib lint
+        run: pod lib lint --allow-warnings
 
   # swiftpm:
   #   runs-on: macos-latest
