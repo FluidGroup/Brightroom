@@ -270,7 +270,7 @@ public final class PixelEditViewController: UIViewController {
 
     if let mode = state.takeIfChanged(\.mode) {
       switch mode {
-      case .adjustment:
+      case .crop:
 
         navigationItem.rightBarButtonItem = nil
         navigationItem.leftBarButtonItem = nil

@@ -86,11 +86,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   private let imageView = _ImageView()
   #else
   private let imageView: UIView & HardwareImageViewType = {
-    #if canImport(MetalKit) && !targetEnvironment(simulator)
     return MetalImageView()
-    #else
-    return GLImageView()
-    #endif
   }()
   #endif
   private let scrollView = _CropScrollView()

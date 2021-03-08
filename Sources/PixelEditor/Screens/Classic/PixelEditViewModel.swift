@@ -30,7 +30,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   
   public enum Mode {
     
-    case adjustment
+    case crop
     case masking
     case editing
     case preview
@@ -88,7 +88,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
       $0.mode = mode
       
       switch mode {
-      case .adjustment:
+      case .crop:
         $0.title = L10n.editAdjustment
       case .masking:
         $0.title = L10n.editMask

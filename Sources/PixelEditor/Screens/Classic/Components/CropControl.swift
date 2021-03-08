@@ -67,7 +67,7 @@ public final class CropControl : CropControlBase {
   public override func willMove(toSuperview newSuperview: UIView?) {
     super.willMove(toSuperview: newSuperview)
     if newSuperview != nil {
-      viewModel.setMode(.adjustment)
+      viewModel.setMode(.crop)
     }
   }
 
