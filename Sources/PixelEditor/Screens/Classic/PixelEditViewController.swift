@@ -76,7 +76,7 @@ public final class PixelEditViewController: UIViewController {
 
   private var subscriptions: Set<VergeAnyCancellable> = .init()
 
-  private lazy var loadingView = LoadingBlurryOverlayView()
+  private lazy var loadingView = LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
   private lazy var touchGuardOverlayView = UIView()
 
   private let viewModel: PixelEditViewModel

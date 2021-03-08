@@ -23,26 +23,28 @@ import UIKit
 
 public final class LoadingBlurryOverlayView: PixelEditorCodeBasedView {
   
-  public init() {
-    
+  public init(
+    effect: UIVisualEffect,
+    activityIndicatorStyle: UIActivityIndicatorView.Style
+  ) {
     super.init(frame: .zero)
-    
-    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+
+    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
     let activityIndicatorView = UIActivityIndicatorView(style: .whiteLarge)
-    
-    self.backgroundColor = .clear
-    
+
+    backgroundColor = .clear
+
     addSubview(effectView)
     addSubview(activityIndicatorView)
-    
+
     activityIndicatorView.startAnimating()
     activityIndicatorView.hidesWhenStopped = false
     activityIndicatorView.isHidden = false
-    
+
     [effectView, activityIndicatorView].forEach {
       $0.translatesAutoresizingMaskIntoConstraints = false
     }
-    
+
     NSLayoutConstraint.activate([
       effectView.leadingAnchor.constraint(equalTo: leadingAnchor),
       effectView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -51,7 +53,5 @@ public final class LoadingBlurryOverlayView: PixelEditorCodeBasedView {
       activityIndicatorView.centerYAnchor.constraint(equalTo: centerYAnchor),
       activityIndicatorView.centerXAnchor.constraint(equalTo: centerXAnchor),
     ])
-    
   }
-
 }

@@ -38,10 +38,15 @@ open class EditingStack: Equatable, StoreComponentType {
     
   public struct State: Equatable {
         
+    /**
+     A Boolean value that indicates whether the image is currently loading for editing.
+     */
+    public fileprivate(set) var isLoading = true
+        
     public var imageSize: PixelSize {
       initialEditing.imageSize
     }
-    
+            
     private let initialEditing: Edit
         
     public fileprivate(set) var hasStartedEditing = false
@@ -49,8 +54,6 @@ open class EditingStack: Equatable, StoreComponentType {
     public fileprivate(set) var history: [Edit] = []
     
     public fileprivate(set) var currentEdit: Edit
-    
-    public fileprivate(set) var isLoading = true
         
     /**
      An original image

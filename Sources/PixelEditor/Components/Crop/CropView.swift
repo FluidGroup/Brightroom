@@ -113,6 +113,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private let contentInset: UIEdgeInsets
   
+  private var loadingOverlayFactory: (() -> UIView)?
+  private weak var currentLoadingOverlay: UIView?
+  
+  private var isBinding = false
+  
   // MARK: - Initializers
 
   /**
@@ -170,53 +175,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     .store(in: &subscriptions)
     #endif
-
-    binding: do {
-      store.sinkState(queue: .mainIsolated()) { [weak self] state in
-
-        guard let self = self else { return }
-
-        state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
-
-          guard frame != .zero else { return }
-
-          if let cropAndRotate = cropAndRotate, state.modifiedSource != .fromScrollView {
-            self.updateScrollContainerView(
-              by: cropAndRotate,
-              animated: state.hasLoaded,
-              animatesRotation: state.hasChanges(\.proposedCropAndRotate?.rotation)
-            )
-          } else {
-            // TODO:
-          }
-        }
-
-        state.ifChanged(\.isGuideInteractionEnabled) { value in
-          self.guideView.isUserInteractionEnabled = value
-        }
-      }
-      .store(in: &subscriptions)
-
-      editingStack.sinkState { [weak self] state in
-
-        guard let self = self else { return }
-
-        state.ifChanged(\.currentEdit.crop) { cropRect in
-
-          self.setCropAndRotate(cropRect)
-        }
-
-        state.ifChanged(\.targetOriginalSizeImage) { image in
-          guard let image = image else { return }
-          self.setImage(image)
-        }
-      }
-      .store(in: &subscriptions)
-    }
-
+  
     defaultAppearance: do {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
       setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
+      setLoadingOverlay(factory: {
+        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
+      })
     }
   }
 
@@ -226,7 +191,96 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   // MARK: - Functions
-
+  
+  public override func willMove(toSuperview newSuperview: UIView?) {
+    super.willMove(toSuperview: newSuperview)
+    
+    if isBinding == false {
+      isBinding = true
+      
+      binding: do {
+        store.sinkState(queue: .mainIsolated()) { [weak self] state in
+          
+          guard let self = self else { return }
+          
+          state.ifChanged(\.proposedCropAndRotate, \.frame) { cropAndRotate, frame in
+            
+            guard frame != .zero else { return }
+            
+            if let cropAndRotate = cropAndRotate, state.modifiedSource != .fromScrollView {
+              self.updateScrollContainerView(
+                by: cropAndRotate,
+                animated: state.hasLoaded,
+                animatesRotation: state.hasChanges(\.proposedCropAndRotate?.rotation)
+              )
+            } else {
+              // TODO:
+            }
+          }
+          
+          state.ifChanged(\.isGuideInteractionEnabled) { value in
+            self.guideView.isUserInteractionEnabled = value
+          }
+        }
+        .store(in: &subscriptions)
+        
+        editingStack.sinkState { [weak self] state in
+          
+          guard let self = self else { return }
+          
+          state.ifChanged(\.isLoading) { isLoading in
+            self.updateLoadingOverlay(displays: isLoading)
+          }
+          
+          state.ifChanged(\.currentEdit.crop) { cropRect in
+            
+            self.setCropAndRotate(cropRect)
+          }
+          
+          state.ifChanged(\.targetOriginalSizeImage) { image in
+            guard let image = image else { return }
+            self.setImage(image)
+          }
+        }
+        .store(in: &subscriptions)
+      }
+      
+    }
+    
+  }
+  
+  private func updateLoadingOverlay(displays: Bool) {
+    
+    if displays, let factory = self.loadingOverlayFactory {
+      
+      let loadingOverlay = factory()
+      self.currentLoadingOverlay = loadingOverlay
+      self.addSubview(loadingOverlay)
+      AutoLayoutTools.setEdge(loadingOverlay, self.guideView)
+      
+      loadingOverlay.alpha = 0
+      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        loadingOverlay.alpha = 1
+      }
+      .startAnimation()
+      
+    } else {
+      
+      if let view = currentLoadingOverlay {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+          view.alpha = 0
+        }&>.do {
+          $0.addCompletion { _ in
+            view.removeFromSuperview()
+          }
+          $0.startAnimation()
+        }
+      }
+                 
+    }
+    
+  }
+    
   /**
    Renders an image according to the editing.
 
@@ -329,6 +383,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
     setNeedsLayout()
     layoutIfNeeded()
   }
+  
+  public func setLoadingOverlay(factory: (() -> UIView)?) {
+    ensureMainThread()
+    loadingOverlayFactory = factory
+  }
+    
 }
 
 // MARK: Internal
