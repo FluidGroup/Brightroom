@@ -21,6 +21,7 @@
 
 import UIKit
 
+import CoreImage
 import PixelEngine
 import PixelEditor
 
@@ -38,8 +39,17 @@ final class HardwareImageViewController : UIViewController {
   }()
 
   let image: CIImage = {
-    return CIImage(contentsOf: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!)!.transformed(by: .init(scaleX: 0.2, y: 0.2)).insertingIntermediate()
+    return CIImage(image: UIImage(named: "large")!)!
+      .transformed(by: .init(scaleX: 0.5, y: 0.5))
+      .insertingIntermediate(cache: true)
   }()
+  
+  let filter = CIFilter(
+    name: "CIGaussianBlur",
+    parameters: [:]
+  )
+  
+  var outputImage: CIImage?
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -48,18 +58,30 @@ final class HardwareImageViewController : UIViewController {
     imageView.frame = imageConatinerView.bounds
     imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
+    filter?.setValue(image.clamped(to: image.extent), forKey: kCIInputImageKey)
+    
+    outputImage = filter?.outputImage
+//    filter?.setValue(image, forKey: kCIInputImageKey)
+
   }
 
   @IBAction func didChangeSliderValue(_ sender: Any) {
-
+    
     let value = slider.value
 
-    let result = HardwareImageViewController.blur(image: image, radius: Double(value * 50))!
-
+    #if true
+    filter?.setValue(Double(value * 50), forKey: "inputRadius")
+//    print(filter?.outputImage, outputImage)
+    let result = filter?.outputImage?.cropped(to: image.extent)
     imageView.display(image: result)
+    #else
+    let result = HardwareImageViewController.makeBlur(image: image, radius: Double(value * 50))!
+    imageView.display(image: result)
+    #endif
   }
 
-  static func blur(image: CIImage, radius: Double) -> CIImage? {
+  static func makeBlur(image: CIImage, radius: Double) -> CIImage? {
+    
 
     let outputImage = image
       .clamped(to: image.extent)
