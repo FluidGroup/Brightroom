@@ -178,7 +178,7 @@ open class EditingStack: Equatable, StoreComponentType {
         
         guard let image = image else { return }
         
-        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetPixelSize: <#T##PixelSize#>)
+//        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetPixelSize: <#T##PixelSize#>)
                         
         let smallSizeImage = ImageTool.makeNewResizedCIImage(
           to: Geometry.sizeThatAspectFit(
