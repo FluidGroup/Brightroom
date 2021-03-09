@@ -23,41 +23,48 @@ import UIKit
 import CoreImage
 import AVFoundation
 
-public enum ImageTool {
-
-  private static let ciContext = CIContext(options: [
-    .useSoftwareRenderer : false,
-    .highQualityDownsample: true,
-    .workingColorSpace : CGColorSpaceCreateDeviceRGB()
+enum ImageTool {
+  
+  static func writeImageToTmpDirectory(image: UIImage) -> URL? {
+    let directory = NSTemporaryDirectory()
+    let fileName = UUID().uuidString
+    let path =  directory + "/" + fileName
+    let destination = URL(fileURLWithPath: path)
+    
+    guard let data = image.pngData() else {
+      return nil
+    }
+    
+    do {
+      try data.write(to: destination, options: [])
+    } catch {
+      return nil
+    }
+    
+    return destination
+  }
+  
+  static func makeResizedCIImage(provider: CGDataProvider, targetPixelSize: PixelSize) -> CIImage? {
+        
+    let imageSource = CGImageSourceCreateWithDataProvider(provider, [:] as CFDictionary)!
+    
+    let options: [AnyHashable : Any] = [
+      kCGImageSourceThumbnailMaxPixelSize: CGFloat(max(targetPixelSize.width, targetPixelSize.height)),
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true
     ]
-  )
+    
+    let scaledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary).flatMap { CIImage(cgImage: $0) }
+    
+    return scaledImage
+  }
 
-  public static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
+  static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
     targetSize.height.round(.down)
     targetSize.width.round(.down)
-    
-//    return sourceImage.transformed(by: .init(scaleX: 0.1, y: 0.1))
-    
-    /*
-    do {
-      let resizeFilter = CIFilter(name: "CILanczosScaleTransform")!
-      // Desired output size
-      
-      // Compute scale and corrective aspect ratio
-      let scale = pixelSize.height / sourceImage.extent.height
-      let aspectRatio = pixelSize.width / sourceImage.extent.width * scale
-      
-      // Apply resizing
-      resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
-      resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
-      resizeFilter.setValue(pixelSize.width / pixelSize.height, forKey: kCIInputAspectRatioKey)
-      let outputImage = resizeFilter.outputImage
-      
-      return outputImage!.insertingIntermediate(cache: true)
-    }
-     */
 
     return
       autoreleasepool { () -> CIImage? in

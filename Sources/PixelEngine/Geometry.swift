@@ -129,6 +129,13 @@ public struct PixelSize: Equatable {
   public var cgSize: CGSize {
     .init(width: width, height: height)
   }
+  
+  public func scaled(_ scale: CGFloat) -> Self {
+    .init(
+      width: Int((CGFloat(width) * scale).rounded(.up)),
+      height: Int((CGFloat(height) * scale).rounded(.up))
+    )
+  }
 }
 
 public struct PixelPoint: Equatable {
@@ -168,7 +175,8 @@ public struct PixelRect: Equatable {
    The values would be rounded.
    */
   public init(cgRect: CGRect) {
-    self.init(origin: .init(cgPoint: cgRect.origin), size: .init(cgSize: cgRect.size))
+    let rect = cgRect.integral
+    self.init(origin: .init(cgPoint: rect.origin), size: .init(cgSize: rect.size))
   }
 
   public init(origin: PixelPoint, size: PixelSize) {

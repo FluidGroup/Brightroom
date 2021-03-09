@@ -111,9 +111,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public let imageSource: ImageProvider
 
-  public let preferredPreviewSize: CGSize
-
-  public let targetScreenScale: CGFloat
+  public let preferredPreviewSize: PixelSize
   
   private let colorCubeFilters: [FilterColorCube]
           
@@ -132,9 +130,8 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public init(
     source: ImageProvider,
-    previewSize: CGSize,
+    previewSize: PixelSize,
     colorCubeStorage: ColorCubeStorage = .default,
-    screenScale: CGFloat = UIScreen.main.scale,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
         
@@ -147,8 +144,6 @@ open class EditingStack: Equatable, StoreComponentType {
     
     self.colorCubeFilters = colorCubeStorage.filters
     self.imageSource = source
-
-    self.targetScreenScale = screenScale
     self.preferredPreviewSize = previewSize
         
     applyIfChanged { (s) in
@@ -182,13 +177,15 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.targetOriginalSizeImage) { image in
         
         guard let image = image else { return }
+        
+        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetPixelSize: <#T##PixelSize#>)
                         
         let smallSizeImage = ImageTool.makeNewResizedCIImage(
           to: Geometry.sizeThatAspectFit(
             aspectRatio: image.extent.size,
             boundingSize: CGSize(
-              width: 60 * self.targetScreenScale,
-              height: 60 * self.targetScreenScale
+              width: 120,
+              height: 120
             )
           ),
           from: image
@@ -197,7 +194,7 @@ open class EditingStack: Equatable, StoreComponentType {
         self.commit {
           $0.cubeFilterPreviewSourceImage = smallSizeImage
           
-          $0.previewColorCubeFilters = self.colorCubeFilters.map {
+          $0.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
             let r = PreviewFilterColorCube(sourceImage: smallSizeImage, filter: $0)
             return r
           }
@@ -221,10 +218,7 @@ open class EditingStack: Equatable, StoreComponentType {
           let result = ImageTool.makeNewResizedCIImage(
             to: Geometry.sizeThatAspectFit(
               aspectRatio: croppedImage.extent.size,
-              boundingSize: CGSize(
-                width: self.preferredPreviewSize.width * self.targetScreenScale,
-                height: self.preferredPreviewSize.height * self.targetScreenScale
-              )
+              boundingSize: self.preferredPreviewSize.cgSize
             ),
             from: croppedImage
           )
@@ -527,4 +521,28 @@ extension CIImage {
     return croppedImage
   }
   
+}
+
+extension Array {
+  
+  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
+    
+    var buffer = [U?].init(repeating: nil, count: count)
+    
+    buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
+      
+      self.withUnsafeBufferPointer { (sourceBuffer) -> Void in
+        
+        DispatchQueue.concurrentPerform(iterations: count) { i in
+          let sourcePointer = sourceBuffer.baseAddress!.advanced(by: i)
+          let r = transform(sourcePointer.pointee)
+          let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
+          targetPointer.pointee = r
+        }
+        
+      }
+    }
+    
+    return buffer.compactMap { $0 }
+  }
 }
