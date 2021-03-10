@@ -139,6 +139,8 @@
 		4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6F2180E3C40071DE91 /* LUT_M09.png */; };
 		4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6A2180E3C40071DE91 /* LUT_M07.png */; };
 		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
+		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
+		4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -181,6 +183,13 @@
 			remoteInfo = PixelEditor;
 		};
 		4B98CCDF25EFF4A400E4F61F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4B600AF4216B7A94001E1456 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4B600AFC216B7A94001E1456;
+			remoteInfo = PixelEngine;
+		};
+		4BDEE24D25F8D19D00FA22CB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4B600AF4216B7A94001E1456 /* Project object */;
 			proxyType = 1;
@@ -347,6 +356,9 @@
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngineTests.swift; sourceTree = "<group>"; };
+		4BDEE09C25F8CF5800FA22CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
 		4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallUIImageViewController.swift; sourceTree = "<group>"; };
 		4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallHardwareImageViewController.swift; sourceTree = "<group>"; };
@@ -407,6 +419,14 @@
 				4B98CCDD25EFF4A400E4F61F /* PixelEngine.framework in Frameworks */,
 				4B98CCD925EFF4A400E4F61F /* PixelEditor.framework in Frameworks */,
 				ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BDEE09525F8CF5800FA22CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -537,6 +557,7 @@
 				4B1EC70925F6756E00DE0569 /* Package.swift */,
 				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
+				4BDEE0A625F8CF6800FA22CB /* Tests */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
 				4B1E95292176F52100E9DFB8 /* LUTs */,
@@ -556,6 +577,7 @@
 				4B600B20216B7C9C001E1456 /* Demo.app */,
 				4B47D052216CC5350007B594 /* PixelEditor.framework */,
 				4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */,
+				4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -715,6 +737,23 @@
 			path = Screens;
 			sourceTree = "<group>";
 		};
+		4BDEE09925F8CF5800FA22CB /* PixelEngineTests */ = {
+			isa = PBXGroup;
+			children = (
+				4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */,
+				4BDEE09C25F8CF5800FA22CB /* Info.plist */,
+			);
+			path = PixelEngineTests;
+			sourceTree = "<group>";
+		};
+		4BDEE0A625F8CF6800FA22CB /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				4BDEE09925F8CF5800FA22CB /* PixelEngineTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		4BEEFF1B25E6827B008144EA /* Classic */ = {
 			isa = PBXGroup;
 			children = (
@@ -862,6 +901,24 @@
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
 			productType = "com.apple.product-type.application";
 		};
+		4BDEE09725F8CF5800FA22CB /* PixelEngineTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "PixelEngineTests" */;
+			buildPhases = (
+				4BDEE09425F8CF5800FA22CB /* Sources */,
+				4BDEE09525F8CF5800FA22CB /* Frameworks */,
+				4BDEE09625F8CF5800FA22CB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4BDEE24E25F8D19D00FA22CB /* PBXTargetDependency */,
+			);
+			name = PixelEngineTests;
+			productName = PixelEngineTests;
+			productReference = 4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -886,6 +943,9 @@
 					4B98CCB825EFF31300E4F61F = {
 						CreatedOnToolsVersion = 12.4;
 					};
+					4BDEE09725F8CF5800FA22CB = {
+						CreatedOnToolsVersion = 12.4;
+					};
 				};
 			};
 			buildConfigurationList = 4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Pixel" */;
@@ -907,6 +967,7 @@
 			targets = (
 				4B600AFC216B7A94001E1456 /* PixelEngine */,
 				4B47D051216CC5350007B594 /* PixelEditor */,
+				4BDEE09725F8CF5800FA22CB /* PixelEngineTests */,
 				4B600B1F216B7C9C001E1456 /* Demo */,
 				4B98CCB825EFF31300E4F61F /* SwiftUIDemo */,
 			);
@@ -967,6 +1028,13 @@
 				4BB917FF25F5409C00C446B8 /* LUT_M12.png in Resources */,
 				4BB9180125F5409C00C446B8 /* LUT_M06.png in Resources */,
 				4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BDEE09625F8CF5800FA22CB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1184,6 +1252,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4BDEE09425F8CF5800FA22CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1206,6 +1282,11 @@
 			isa = PBXTargetDependency;
 			target = 4B600AFC216B7A94001E1456 /* PixelEngine */;
 			targetProxy = 4B98CCDF25EFF4A400E4F61F /* PBXContainerItemProxy */;
+		};
+		4BDEE24E25F8D19D00FA22CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4B600AFC216B7A94001E1456 /* PixelEngine */;
+			targetProxy = 4BDEE24D25F8D19D00FA22CB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1549,6 +1630,46 @@
 			};
 			name = Release;
 		};
+		4BDEE09D25F8CF5800FA22CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				INFOPLIST_FILE = Tests/PixelEngineTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.PixelEngineTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4BDEE09E25F8CF5800FA22CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				INFOPLIST_FILE = Tests/PixelEngineTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.PixelEngineTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1593,6 +1714,15 @@
 			buildConfigurations = (
 				4B98CCC625EFF31400E4F61F /* Debug */,
 				4B98CCC725EFF31400E4F61F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "PixelEngineTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4BDEE09D25F8CF5800FA22CB /* Debug */,
+				4BDEE09E25F8CF5800FA22CB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
