@@ -26,7 +26,7 @@ class PixelEngineTests: XCTestCase {
   
   func testHoge() {
     
-    let crop = _EditingCrop(
+    let crop = EditingCrop(
       imageSize: .init(width: 1280, height: 1280),
       cropRect: .init(
         origin: .init(x: 80, y: 80),
@@ -35,8 +35,8 @@ class PixelEngineTests: XCTestCase {
     )
     
     let scaled = crop.scaled(toWidth: 300)
-    
-    print(scaled.restoreFromScaled())
+        
+    XCTAssertEqual(crop, scaled.restoreFromScaled())
     
   }
 }

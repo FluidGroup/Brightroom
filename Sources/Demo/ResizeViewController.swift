@@ -8,7 +8,7 @@
 
 import UIKit
 
-import PixelEngine
+@testable import PixelEngine
 
 final class ResizeViewController : UIViewController {
   

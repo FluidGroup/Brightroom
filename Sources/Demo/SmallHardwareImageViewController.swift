@@ -21,7 +21,7 @@
 import UIKit
 
 import PixelEditor
-import PixelEngine
+@testable import PixelEngine
 
 final class SmallHardwareImageViewController : UIViewController {
 

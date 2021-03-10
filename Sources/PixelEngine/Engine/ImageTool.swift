@@ -64,12 +64,12 @@ enum ImageTool {
     return destination
   }
   
-  static func makeResizedCIImage(provider: CGDataProvider, targetPixelSize: PixelSize) -> CIImage? {
+  static func makeResizedCIImage(provider: CGDataProvider, targetCGSize: CGSize) -> CIImage? {
         
     let imageSource = CGImageSourceCreateWithDataProvider(provider, [:] as CFDictionary)!
     
     let options: [AnyHashable : Any] = [
-      kCGImageSourceThumbnailMaxPixelSize: CGFloat(max(targetPixelSize.width, targetPixelSize.height)),
+      kCGImageSourceThumbnailMaxPixelSize: max(targetCGSize.width, targetCGSize.height),
       kCGImageSourceShouldCacheImmediately: true,
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceCreateThumbnailWithTransform: true

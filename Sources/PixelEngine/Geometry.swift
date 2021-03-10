@@ -82,137 +82,26 @@ public enum Geometry {
   }
 }
 
-/**
- A structure that contains width and height that represent pixels.
- */
-public struct PixelSize: Equatable {
-  
-  public static var zero: Self {
-    .init(width: 0, height: 0)
-  }
-  
-  public var width: Int
-  public var height: Int
-
-  public init(width: Int, height: Int) {
-    self.width = width
-    self.height = height
-  }
+extension CGSize {
 
   /**
    Creates an instance from CGPoint.
    The values would be rounded.
    */
-  public init(cgSize: CGSize) {
-    width = Int(cgSize.width.rounded(.up))
-    height = Int(cgSize.height.rounded(.up))
-  }
-
-  /**
-   Creates an instance from CGPoint.
-   The values would be rounded.
-   */
-  public init(image: CIImage) {
-    width = Int(image.extent.width.rounded(.up))
-    height = Int(image.extent.height.rounded(.up))
+  init(image: CIImage) {
+    self = image.extent.size
   }
   
-  public init(image: UIImage) {
-    width = Int((image.size.width * image.scale).rounded(.up))
-    height = Int((image.size.height * image.scale).rounded(.up))
-  }
-
-  public var aspectRatio: PixelAspectRatio {
-    .init(width: CGFloat(width), height: CGFloat(height))
-  }
-  
-  public var cgSize: CGSize {
-    .init(width: width, height: height)
-  }
-  
-  public func scaled(_ scale: CGFloat) -> Self {
-    .init(
-      width: Int((CGFloat(width) * scale).rounded(.up)),
-      height: Int((CGFloat(height) * scale).rounded(.up))
+  init(image: UIImage) {
+    self.init(
+      width: image.size.width * image.scale,
+      height: image.size.height * image.scale
     )
   }
-}
 
-public struct PixelPoint: Equatable {
-  
-  public static var zero: Self {
-    .init(x: 0, y: 0)
+  var aspectRatio: PixelAspectRatio {
+    .init(width: CGFloat(width), height: CGFloat(height))
   }
-  
-  public var x: Int
-  public var y: Int
-
-  public init(x: Int, y: Int) {
-    self.x = x
-    self.y = y
-  }
-
-  /**
-   Creates an instance from CGPoint.
-   The values would be rounded.
-   */
-  public init(cgPoint: CGPoint) {
-    x = Int(cgPoint.x.rounded(.up))
-    y = Int(cgPoint.y.rounded(.up))
-  }
-
-  public var cgPoint: CGPoint {
-    .init(x: x, y: y)
-  }
-}
-
-public struct PixelRect: Equatable {
-  
-  public var origin: PixelPoint
-  public var size: PixelSize
-
-  /**
-   Creates an instance from CGPoint.
-   The values would be rounded.
-   */
-  public init(cgRect: CGRect) {
-    let rect = cgRect.integral
-    self.init(origin: .init(cgPoint: rect.origin), size: .init(cgSize: rect.size))
-  }
-
-  public init(origin: PixelPoint, size: PixelSize) {
-    self.origin = origin
-    self.size = size
-  }
-
-  public var cgRect: CGRect {
-    .init(origin: origin.cgPoint, size: size.cgSize)
-  }
-  
-  public var minX: Int {
-    origin.x
-  }
-  
-  public var minY: Int {
-    origin.y
-  }
-  
-  public var midX: Int {
-    Int(CGFloat(origin.x) + CGFloat(size.width) / CGFloat(2).rounded(.down))
-  }
-  
-  public var midY: Int {
-    Int(CGFloat(origin.y) + CGFloat(size.height) / CGFloat(2).rounded(.down))
-  }
-  
-  public var maxX: Int {
-    origin.x + size.width
-  }
-  
-  public var maxY: Int {
-    origin.y + size.height
-  }
- 
 }
 
 public struct PixelAspectRatio: Equatable {

@@ -44,7 +44,7 @@ open class EditingStack: Equatable, StoreComponentType {
      */
     public fileprivate(set) var isLoading = true
         
-    public var imageSize: PixelSize {
+    public var imageSize: CGSize {
       initialEditing.imageSize
     }
             
@@ -114,7 +114,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public let imageSource: ImageProvider
 
-  public let preferredPreviewSize: PixelSize
+  public let preferredPreviewSize: CGSize
   
   private let colorCubeFilters: [FilterColorCube]
           
@@ -133,7 +133,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public init(
     source: ImageProvider,
-    previewSize: PixelSize,
+    previewSize: CGSize,
     colorCubeStorage: ColorCubeStorage = .default,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
@@ -181,7 +181,7 @@ open class EditingStack: Equatable, StoreComponentType {
         
         guard let image = image else { return }
         
-//        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetPixelSize: <#T##PixelSize#>)
+//        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetCGSize: <#T##CGSize#>)
                         
         let smallSizeImage = ImageTool.makeNewResizedCIImage(
           to: Geometry.sizeThatAspectFit(
@@ -221,7 +221,7 @@ open class EditingStack: Equatable, StoreComponentType {
           let result = ImageTool.makeNewResizedCIImage(
             to: Geometry.sizeThatAspectFit(
               aspectRatio: croppedImage.extent.size,
-              boundingSize: self.preferredPreviewSize.cgSize
+              boundingSize: self.preferredPreviewSize
             ),
             from: croppedImage
           )
@@ -433,7 +433,7 @@ extension EditingStack {
       return filters.makeFilters()
     }
   
-    public var imageSize: PixelSize {
+    public var imageSize: CGSize {
       crop.imageSize
     }
         
@@ -441,7 +441,7 @@ extension EditingStack {
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()
           
-    init(imageSize: PixelSize) {
+    init(imageSize: CGSize) {
       self.crop = .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
     }
     
@@ -521,7 +521,7 @@ extension CIImage {
   func cropped(to _cropRect: EditingCrop) -> CIImage {
         
     let targetImage = self
-    var cropRect = _cropRect.cropExtent.cgRect
+    var cropRect = _cropRect.cropExtent
     
     assert(_cropRect.imageSize == .init(image: targetImage))
     

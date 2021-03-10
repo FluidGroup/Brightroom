@@ -70,7 +70,7 @@ public final class ImageRenderer {
     assert(
       {
         guard let crop = edit.croppingRect else { return true }
-        return crop.imageSize == PixelSize(image: source)
+        return crop.imageSize == CGSize(image: source)
       }())
     
     let croppedImage: CIImage = {
@@ -92,7 +92,7 @@ public final class ImageRenderer {
           .transformed(by: .init(translationX: 0, y: source.extent.height))
           
           /* apply */
-          .cropped(to: crop.cropExtent.cgRect)
+          .cropped(to: crop.cropExtent)
           .transformed(by: crop.rotation.transform)
           
           /* post */

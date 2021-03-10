@@ -459,18 +459,19 @@ extension CropView {
         let bounds = self.bounds.inset(by: contentInset)
 
         let size: CGSize
+        let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
         switch crop.rotation {
         case .angle_0:
-          size = crop.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          size = aspectRatio.sizeThatFits(in: bounds.size)
           guideView.setLockedAspectRatio(crop.preferredAspectRatio)
         case .angle_90:
-          size = crop.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
           guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
         case .angle_180:
-          size = crop.cropExtent.size.aspectRatio.sizeThatFits(in: bounds.size)
+          size = aspectRatio.sizeThatFits(in: bounds.size)
           guideView.setLockedAspectRatio(crop.preferredAspectRatio)
         case .angle_270:
-          size = crop.cropExtent.size.aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
           guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
         }
 
@@ -505,10 +506,10 @@ extension CropView {
           scrollView.zoomScale = currentZoomScale
         }
         
-        scrollView.zoom(to: crop.cropExtent.cgRect, animated: false)
+        scrollView.zoom(to: crop.cropExtent, animated: false)
         // WORKAROUND:
         // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
-        scrollView.zoom(to: crop.cropExtent.cgRect, animated: false)
+        scrollView.zoom(to: crop.cropExtent, animated: false)
         
       }
     }
@@ -569,7 +570,7 @@ extension CropView {
         let rect = self.guideView.convert(self.guideView.bounds, to: self.imageView)
         if var crop = $0.proposedCrop {
           // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-          crop.cropExtent = .init(cgRect: rect)
+          crop.cropExtent = rect
           $0.proposedCrop = crop
           $0.modifiedSource = .fromGuide
         } else {
@@ -586,7 +587,7 @@ extension CropView {
 
       if var crop = $0.proposedCrop {
         // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-        crop.cropExtent = .init(cgRect: rect)
+        crop.cropExtent = rect
         $0.proposedCrop = crop
         $0.modifiedSource = .fromScrollView
       } else {
@@ -657,12 +658,12 @@ extension CropView {
 
 extension EditingCrop {
   fileprivate func scrollViewContentSize() -> CGSize {
-    imageSize.cgSize
+    imageSize
   }
 
   fileprivate func calculateZoomScale(scrollViewBounds: CGRect) -> (min: CGFloat, max: CGFloat) {
-    let minXScale = scrollViewBounds.width / imageSize.cgSize.width
-    let minYScale = scrollViewBounds.height / imageSize.cgSize.height
+    let minXScale = scrollViewBounds.width / imageSize.width
+    let minYScale = scrollViewBounds.height / imageSize.height
 
     /**
      max meaning scale aspect fill
