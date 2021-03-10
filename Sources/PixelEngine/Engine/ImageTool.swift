@@ -25,6 +25,26 @@ import AVFoundation
 
 enum ImageTool {
   
+  /**
+   Returns a pixel size of image.
+   
+   https://oleb.net/blog/2011/09/accessing-image-properties-without-loading-the-image-into-memory/
+   */
+  static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
+    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+      return nil
+    }
+    
+    guard
+      let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+      let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
+    else {
+      return nil
+    }
+    return CGSize(width: width, height: height)
+  }
+  
   static func writeImageToTmpDirectory(image: UIImage) -> URL? {
     let directory = NSTemporaryDirectory()
     let fileName = UUID().uuidString
