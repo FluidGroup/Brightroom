@@ -56,6 +56,9 @@ open class EditingStack: Equatable, StoreComponentType {
     
     public fileprivate(set) var currentEdit: Edit
     
+    fileprivate(set) var previewImageProvider: CGDataProvider?
+    fileprivate(set) var editableImageProvider: CGDataProvider?
+    
     public fileprivate(set) var previewImage: CIImage?
     
     /**
@@ -245,10 +248,11 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.loadedImage) { image in
          
         guard let image = image else {
-          self.applyIfChanged {
-            self.modifyCrop(nil, &$0.crop)
-          }
-          self.takeSnapshot()
+          // FIXME:
+//          self.applyIfChanged {
+//            self.modifyCrop(nil, &$0.crop)
+//          }
+//          self.takeSnapshot()
           return
         }
         self.commit { s in
@@ -256,14 +260,16 @@ open class EditingStack: Equatable, StoreComponentType {
           switch image {
           case .preview(let image):
             s.isLoading = true
-            s.previewImage = image
+            s.previewImageProvider = image
           case .editable(let image):
             s.isLoading = false
-            s.targetOriginalSizeImage = image
-            self.modifyCrop(image, &s.currentEdit.crop)
-            s.withType { (type, ref) -> Void in
-              type.makeVersion(ref: ref)
-            }
+            s.editableImageProvider = image
+//            self.modifyCrop(image, &s.currentEdit.crop)
+//            s.withType { (type, ref) -> Void in
+//              type.makeVersion(ref: ref)
+//            }
+            
+            // FIXME:
             
             self.imageProviderSubscription?.cancel()
           }
@@ -275,8 +281,14 @@ open class EditingStack: Equatable, StoreComponentType {
 
           
   }
-
+  
   // MARK: - Functions
+  
+  func hoge() {
+    
+    
+    
+  }
 
   /**
    Adds a new snapshot as a history.

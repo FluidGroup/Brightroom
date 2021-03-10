@@ -91,8 +91,8 @@ public struct PixelSize: Equatable {
     .init(width: 0, height: 0)
   }
   
-  public let width: Int
-  public let height: Int
+  public var width: Int
+  public var height: Int
 
   public init(width: Int, height: Int) {
     self.width = width
@@ -144,8 +144,8 @@ public struct PixelPoint: Equatable {
     .init(x: 0, y: 0)
   }
   
-  public let x: Int
-  public let y: Int
+  public var x: Int
+  public var y: Int
 
   public init(x: Int, y: Int) {
     self.x = x
@@ -167,8 +167,9 @@ public struct PixelPoint: Equatable {
 }
 
 public struct PixelRect: Equatable {
-  public let origin: PixelPoint
-  public let size: PixelSize
+  
+  public var origin: PixelPoint
+  public var size: PixelSize
 
   /**
    Creates an instance from CGPoint.
@@ -211,7 +212,7 @@ public struct PixelRect: Equatable {
   public var maxY: Int {
     origin.y + size.height
   }
-  
+ 
 }
 
 public struct PixelAspectRatio: Equatable {

@@ -83,6 +83,8 @@ public struct EditingCrop: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
+  
+  public var scale: CGFloat = 1
 
   public init(from ciImage: CIImage) {
     self.init(
@@ -119,6 +121,23 @@ public struct EditingCrop: Equatable {
       size: .init(cgSize: maxSize)
     )
   }
+  
+  public func scaled(toWidth width: Int) -> Self {
+    
+    let scale = CGFloat(width) / CGFloat(imageSize.width)
+    
+    var modified = self
+    modified.scale = scale
+    modified.cropExtent.origin.x = Int(CGFloat(modified.cropExtent.origin.x) * scale)
+    modified.cropExtent.origin.y = Int(CGFloat(modified.cropExtent.origin.y) * scale)
+    modified.cropExtent.size.width = Int(CGFloat(modified.cropExtent.size.width) * scale)
+    modified.cropExtent.size.height = Int(CGFloat(modified.cropExtent.size.height) * scale)
+    
+    modified.imageSize.width = Int(CGFloat(modified.imageSize.width) * scale)
+    modified.imageSize.height = Int(CGFloat(modified.imageSize.height) * scale)
+    
+    return modified
+  }
 }
 
 public enum ImageProviderError: Error {
@@ -127,6 +146,12 @@ public enum ImageProviderError: Error {
 
   case failedToDecodePreviewImage(URL)
   case failedToDecodeEditableImage(URL)
+  
+  case urlIsNotFileURL(URL)
+  
+  case failedToCreateCGDataProvider
+  case failedToCreateCGImageSource
+  case failedToGetImageSize
 }
 
 /**
@@ -199,6 +224,35 @@ public final class ImageProvider: Equatable, StoreComponentType {
 //    )
 //    pendingAction = { _ in }
 //  }
+  
+  public init(
+    fileURL: URL
+  ) throws {
+    guard fileURL.isFileURL else {
+      throw ImageProviderError.urlIsNotFileURL(fileURL)
+    }
+    
+    guard let provider = CGDataProvider(url: fileURL as CFURL) else {
+      throw ImageProviderError.failedToCreateCGDataProvider
+    }
+    
+    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+      throw ImageProviderError.failedToCreateCGImageSource
+    }
+    
+    guard let size = ImageTool.readImageSize(from: imageSource) else {
+      throw ImageProviderError.failedToGetImageSize
+    }
+    
+    store = .init(
+      initialState: .init(
+        previewImage: nil,
+        editableImage: provider,
+        imageSize: PixelSize(cgSize: size)
+      )
+    )
+    pendingAction = { _ in }
+  }
 
   /**
    Creates an instance by most efficient way.
