@@ -102,6 +102,21 @@ extension CGSize {
   var aspectRatio: PixelAspectRatio {
     .init(width: CGFloat(width), height: CGFloat(height))
   }
+  
+  func scaled(maxPixelSize: CGFloat) -> CGSize {
+    
+    var s = self
+    
+    if width > height {
+      s.width = maxPixelSize
+      s.height *= maxPixelSize / width
+    } else {
+      s.height = maxPixelSize
+      s.width *= maxPixelSize / height
+    }
+    
+    return CGRect(origin: .zero, size: s).integral.size
+  }
 }
 
 public struct PixelAspectRatio: Equatable {

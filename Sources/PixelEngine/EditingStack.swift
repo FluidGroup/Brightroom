@@ -59,6 +59,7 @@ open class EditingStack: Equatable, StoreComponentType {
     fileprivate(set) var previewImageProvider: CGImageSource?
     fileprivate(set) var editableImageProvider: CGImageSource?
     
+    public fileprivate(set) var thumbnailImage: CIImage?
     public fileprivate(set) var previewImage: CIImage?
     
     /**
@@ -76,9 +77,7 @@ open class EditingStack: Equatable, StoreComponentType {
      An image that applied editing and optimized for previewing.
      */
     public fileprivate(set) var previewCroppedAndEffectedImage: CIImage?
-    
-    public fileprivate(set) var cubeFilterPreviewSourceImage: CIImage?
-    
+        
     public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
     
     public var canUndo: Bool {
@@ -128,6 +127,8 @@ open class EditingStack: Equatable, StoreComponentType {
   private var imageProviderSubscription: VergeAnyCancellable?
   
   private let modifyCrop: (CIImage?, inout EditingCrop) -> Void
+  
+  private let imageMaxLengthInEditing: CGFloat = 2560
 
   // MARK: - Initializers
 
@@ -141,7 +142,7 @@ open class EditingStack: Equatable, StoreComponentType {
     self.modifyCrop = modifyCrop
     self.store = .init(
       initialState: .init(
-        initialEdit: Edit(imageSize: source.state.imageSize)
+        initialEdit: Edit(imageSize: source.state.imageSize.scaled(maxPixelSize: imageMaxLengthInEditing))
       )
     )
     
@@ -177,28 +178,13 @@ open class EditingStack: Equatable, StoreComponentType {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.targetOriginalSizeImage) { image in
+      state.ifChanged(\.thumbnailImage) { image in
         
         guard let image = image else { return }
-        
-//        ImageTool.makeResizedCIImage(provider: CGDataProvider(data: image., targetCGSize: <#T##CGSize#>)
-                        
-        let smallSizeImage = ImageTool.makeNewResizedCIImage(
-          to: Geometry.sizeThatAspectFit(
-            aspectRatio: image.extent.size,
-            boundingSize: CGSize(
-              width: 120,
-              height: 120
-            )
-          ),
-          from: image
-        )!
-          
+
         self.commit {
-          $0.cubeFilterPreviewSourceImage = smallSizeImage
-          
           $0.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
-            let r = PreviewFilterColorCube(sourceImage: smallSizeImage, filter: $0)
+            let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
             return r
           }
         }
@@ -264,10 +250,18 @@ open class EditingStack: Equatable, StoreComponentType {
             
           case .editable(let image):
             s.isLoading = false
-            s.targetOriginalSizeImage = ImageTool.loadOriginalCGImage(from: image)
-//            (from: image, maxPixelSize: 2560)
-              .flatMap { CIImage(cgImage: $0) }
-                      
+            s.targetOriginalSizeImage = ImageTool.loadThumbnailCGImage(
+              from: image,
+              maxPixelSize: self.imageMaxLengthInEditing
+            )
+            .flatMap { CIImage(cgImage: $0) }
+            
+            s.thumbnailImage = ImageTool.loadThumbnailCGImage(
+              from: image,
+              maxPixelSize: 180
+            )
+            .flatMap { CIImage(cgImage: $0) }
+            
 //            self.modifyCrop(image, &s.currentEdit.crop)
 //            s.withType { (type, ref) -> Void in
 //              type.makeVersion(ref: ref)

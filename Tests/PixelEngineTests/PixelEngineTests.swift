@@ -24,7 +24,7 @@ class PixelEngineTests: XCTestCase {
     // Put teardown code here. This method is called after the invocation of each test method in the class.
   }
   
-  func testHoge() {
+  func testScalingCrop() {
     
     let crop = EditingCrop(
       imageSize: .init(width: 1280, height: 1280),
@@ -37,6 +37,26 @@ class PixelEngineTests: XCTestCase {
     let scaled = crop.scaled(toWidth: 300)
         
     XCTAssertEqual(crop, scaled.restoreFromScaled())
+    
+  }
+  
+  func testScalingCGSize() {
+    
+    do {
+      let size = CGSize(width: 5561, height: 3127)
+      
+      let scaled = size.scaled(maxPixelSize: 300)
+      
+      XCTAssertEqual(scaled, CGSize(width: 300, height: 169))
+    }
+    
+    do {
+      let size = CGSize(width: 3127, height: 5561)
+      
+      let scaled = size.scaled(maxPixelSize: 300)
+      
+      XCTAssertEqual(scaled, CGSize(width: 169, height: 300))
+    }
     
   }
 }

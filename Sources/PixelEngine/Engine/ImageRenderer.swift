@@ -92,7 +92,7 @@ public final class ImageRenderer {
           .transformed(by: .init(translationX: 0, y: source.extent.height))
           
           /* apply */
-          .cropped(to: crop.cropExtent)
+          .cropped(to: crop.cropExtent.integral)
           .transformed(by: crop.rotation.transform)
           
           /* post */
