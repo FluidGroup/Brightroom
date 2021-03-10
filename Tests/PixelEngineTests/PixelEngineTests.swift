@@ -25,6 +25,18 @@ class PixelEngineTests: XCTestCase {
   }
   
   func testHoge() {
-        
+    
+    let crop = _EditingCrop(
+      imageSize: .init(width: 1280, height: 1280),
+      cropRect: .init(
+        origin: .init(x: 80, y: 80),
+        size: .init(width: 100, height: 100)
+      )
+    )
+    
+    let scaled = crop.scaled(toWidth: 300)
+    
+    print(scaled.restoreFromScaled())
+    
   }
 }

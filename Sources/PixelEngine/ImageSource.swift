@@ -84,7 +84,7 @@ public struct EditingCrop: Equatable {
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
   
-  public var scale: CGFloat = 1
+  public private(set) var originalWidth: Int
 
   public init(from ciImage: CIImage) {
     self.init(
@@ -98,6 +98,7 @@ public struct EditingCrop: Equatable {
     self.imageSize = imageSize
     cropExtent = cropRect
     self.rotation = rotation
+    self.originalWidth = imageSize.width
   }
 
   public func makeInitial() -> Self {
@@ -126,8 +127,17 @@ public struct EditingCrop: Equatable {
     
     let scale = CGFloat(width) / CGFloat(imageSize.width)
     
+    return scaled(scale)
+  }
+  
+  public func restoreFromScaled() -> Self {
+    return scaled(toWidth: originalWidth)
+  }
+  
+  private func scaled(_ scale: CGFloat) -> Self {
+    
     var modified = self
-    modified.scale = scale
+    
     modified.cropExtent.origin.x = Int(CGFloat(modified.cropExtent.origin.x) * scale)
     modified.cropExtent.origin.y = Int(CGFloat(modified.cropExtent.origin.y) * scale)
     modified.cropExtent.size.width = Int(CGFloat(modified.cropExtent.size.width) * scale)
@@ -138,7 +148,99 @@ public struct EditingCrop: Equatable {
     
     return modified
   }
+  
 }
+
+public struct _EditingCrop: Equatable {
+  public enum Rotation: Equatable, CaseIterable {
+    /// 0 degree - default
+    case angle_0
+    
+    /// 90 degree
+    case angle_90
+    
+    /// 180 degree
+    case angle_180
+    
+    /// 270 degree
+    case angle_270
+    
+    public var transform: CGAffineTransform {
+      switch self {
+      case .angle_0:
+        return .identity
+      case .angle_90:
+        return .init(rotationAngle: -CGFloat.pi / 2)
+      case .angle_180:
+        return .init(rotationAngle: -CGFloat.pi)
+      case .angle_270:
+        return .init(rotationAngle: CGFloat.pi / 2)
+      }
+    }
+    
+    public func next() -> Self {
+      switch self {
+      case .angle_0: return .angle_90
+      case .angle_90: return .angle_180
+      case .angle_180: return .angle_270
+      case .angle_270: return .angle_0
+      }
+    }
+  }
+  
+  /**
+   Returns aspect ratio.
+   Would not be affected by rotation.
+   */
+  public var preferredAspectRatio: PixelAspectRatio?
+  
+  /// The dimensions in pixel for the image.
+  public var imageSize: CGSize
+  
+  /// The rectangle that specifies the extent of the cropping.
+  public var cropExtent: CGRect
+  
+  /// The angle that specifies rotation for the image.
+  public var rotation: Rotation = .angle_0
+  
+  public private(set) var originalWidth: CGFloat
+    
+  public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0) {
+    self.imageSize = imageSize
+    cropExtent = cropRect
+    self.rotation = rotation
+    self.originalWidth = imageSize.width
+  }
+
+
+  public func scaled(toWidth width: CGFloat) -> Self {
+    
+    let scale = CGFloat(width) / CGFloat(imageSize.width)
+    
+    return scaled(scale)
+  }
+  
+  public func restoreFromScaled() -> Self {
+    return scaled(toWidth: originalWidth)
+  }
+  
+  private func scaled(_ scale: CGFloat) -> Self {
+    
+    var modified = self
+    
+    modified.cropExtent.origin.x *= scale
+    modified.cropExtent.origin.y *= scale
+    modified.cropExtent.size.width *= scale
+    modified.cropExtent.size.height *= scale
+    
+    modified.imageSize.width *= scale
+    modified.imageSize.height *= scale
+    
+    return modified
+  }
+  
+}
+
 
 public enum ImageProviderError: Error {
   case failedToDownloadPreviewImage(underlyingError: Error)
