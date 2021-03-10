@@ -35,4 +35,11 @@ enum Mocks {
     )
   }
     
+  static func makeEditingStack(fileURL: URL) -> EditingStack {
+    .init(
+      source: try! .init(fileURL: fileURL),
+      previewSize: .init(width: 600, height: 600)
+    )
+  }
+  
 }

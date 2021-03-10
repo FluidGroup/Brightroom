@@ -154,9 +154,6 @@ public struct EditingCrop: Equatable {
 public enum ImageProviderError: Error {
   case failedToDownloadPreviewImage(underlyingError: Error)
   case failedToDownloadEditableImage(underlyingError: Error)
-
-  case failedToDecodePreviewImage(URL)
-  case failedToDecodeEditableImage(URL)
   
   case urlIsNotFileURL(URL)
   
@@ -175,25 +172,27 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
   public struct State {
     public enum Image: Equatable {
-      case preview(CGDataProvider)
-      case editable(CGDataProvider)
+      case preview(CGImageSource)
+      case editable(CGImageSource)
     }
 
     public var loadedImage: Image? {
-      if let editable = previewImage {
+      if let editable = editableImage {
         return .editable(editable)
       }
 
-      if let preview = editableImage {
+      if let preview = previewImage {
         return .preview(preview)
       }
 
       return nil
     }
 
-    fileprivate var previewImage: CGDataProvider?
-    fileprivate var editableImage: CGDataProvider?
-    public fileprivate(set) var loadingErrors: [ImageProviderError] = []
+    fileprivate var previewImage: CGImageSource?
+    fileprivate var editableImage: CGImageSource?
+    
+    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
+    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
     public let imageSize: CGSize
   }
 
@@ -204,11 +203,20 @@ public final class ImageProvider: Equatable, StoreComponentType {
   #if os(iOS)
   
   /// Creates an instance from data
-  public init(data: Data, imageSize: CGSize) {
+  public init(data: Data, imageSize: CGSize) throws {
+        
+    guard let provider = CGDataProvider(data: data as CFData) else {
+      throw ImageProviderError.failedToCreateCGDataProvider
+    }
+    
+    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+      throw ImageProviderError.failedToCreateCGImageSource
+    }
+    
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: CGDataProvider(data: data as CFData)!,
+        editableImage: imageSource,
         imageSize: imageSize
       )
     )
@@ -219,7 +227,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
   ///
   /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
   public convenience init(image uiImage: UIImage) {
-    self.init(data: uiImage.pngData()!, imageSize: .init(image: uiImage))
+    try! self.init(data: uiImage.pngData()!, imageSize: .init(image: uiImage))
   }
 
   #endif
@@ -258,7 +266,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: provider,
+        editableImage: imageSource,
         imageSize: size
       )
     )
@@ -302,24 +310,27 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
           if let error = error {
             self.store.commit {
-              $0.loadingErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
+              $0.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
             }
           }
-
-          if let url = url {
-            
-            if let provider = CGDataProvider(url: url as CFURL) {
+          
+          self.commit { state in
+            if let url = url {
               
-              self.store.commit {
-                $0.previewImage = provider
+              guard let provider = CGDataProvider(url: url as CFURL) else {
+                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+                return
               }
-            } else {
-              self.store.commit {
-                $0.loadingErrors.append(.failedToDecodePreviewImage(url))
+              
+              guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+                return
               }
+              
+              state.previewImage = imageSource
             }
-            
           }
+         
         }
       }
 
@@ -329,23 +340,25 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
         if let error = error {
           self.store.commit {
-            $0.loadingErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+            $0.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
           }
         }
        
-        if let url = url {
-          
-          if let provider = CGDataProvider(url: url as CFURL) {
+        self.commit { state in
+          if let url = url {
             
-            self.store.commit {
-              $0.previewImage = provider
+            guard let provider = CGDataProvider(url: url as CFURL) else {
+              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+              return
             }
-          } else {
-            self.store.commit {
-              $0.loadingErrors.append(.failedToDecodeEditableImage(url))
+            
+            guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+              return
             }
+            
+            state.editableImage = imageSource
           }
-          
         }
       }
 
@@ -389,17 +402,39 @@ public final class ImageProvider: Equatable, StoreComponentType {
         targetSize: CGSize(width: 360, height: 360),
         contentMode: .aspectFit,
         options: previewRequestOptions
-      ) { [weak self] image, _ in
+      ) { [weak self] image, info in
+        
+        // FIXME: Avoid loading image, get a url instead.
         
         guard let self = self else { return }
-        guard let image = image else { return }
-        guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
-          return
+               
+        self.commit { state in
+          
+          if let error = info?[PHImageErrorKey] as? Error {
+            state.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
+            return
+          }
+          
+          guard let image = image else { return }
+          guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
+            assertionFailure()
+            return
+          }
+          
+          guard let provider = CGDataProvider(url: url as CFURL) else {
+            state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+            return
+          }
+          
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+            state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+            return
+          }
+          
+          state.previewImage = imageSource
+          
         }
-
-        self.commit {
-          $0.previewImage = CGDataProvider(url: url as CFURL)
-        }
+        
       }
 
       PHImageManager.default().requestImage(
@@ -407,16 +442,37 @@ public final class ImageProvider: Equatable, StoreComponentType {
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
         options: finalImageRequestOptions
-      ) { [weak self] image, _ in
+      ) { [weak self] image, info in
+        
+        // FIXME: Avoid loading image, get a url instead.
 
         guard let self = self else { return }
-        guard let image = image else { return }
-        guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
-          return
-        }
-        
-        self.commit {
-          $0.previewImage = CGDataProvider(url: url as CFURL)
+             
+        self.commit { state in
+                    
+          if let error = info?[PHImageErrorKey] as? Error {
+            state.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+            return
+          }
+          
+          guard let image = image else { return }
+          guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
+            assertionFailure()
+            return
+          }
+          
+          guard let provider = CGDataProvider(url: url as CFURL) else {
+            state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+            return
+          }
+          
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+            state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+            return
+          }
+          
+          state.editableImage = imageSource
+          
         }
       }
     }

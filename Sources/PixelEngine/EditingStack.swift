@@ -56,8 +56,8 @@ open class EditingStack: Equatable, StoreComponentType {
     
     public fileprivate(set) var currentEdit: Edit
     
-    fileprivate(set) var previewImageProvider: CGDataProvider?
-    fileprivate(set) var editableImageProvider: CGDataProvider?
+    fileprivate(set) var previewImageProvider: CGImageSource?
+    fileprivate(set) var editableImageProvider: CGImageSource?
     
     public fileprivate(set) var previewImage: CIImage?
     
@@ -260,10 +260,14 @@ open class EditingStack: Equatable, StoreComponentType {
           switch image {
           case .preview(let image):
             s.isLoading = true
-            s.previewImageProvider = image
+            s.previewImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
+            
           case .editable(let image):
             s.isLoading = false
-            s.editableImageProvider = image
+            s.targetOriginalSizeImage = ImageTool.loadOriginalCGImage(from: image)
+//            (from: image, maxPixelSize: 2560)
+              .flatMap { CIImage(cgImage: $0) }
+                      
 //            self.modifyCrop(image, &s.currentEdit.crop)
 //            s.withType { (type, ref) -> Void in
 //              type.makeVersion(ref: ref)

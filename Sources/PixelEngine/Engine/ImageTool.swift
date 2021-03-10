@@ -45,6 +45,21 @@ enum ImageTool {
     return CGSize(width: width, height: height)
   }
   
+  static func loadOriginalCGImage(from imageSource: CGImageSource) -> CGImage? {
+    CGImageSourceCreateImageAtIndex(imageSource, 0, [:] as CFDictionary)
+  }
+  
+  static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat) -> CGImage? {
+    let scaledImage = CGImageSourceCreateThumbnailAtIndex(
+      imageSource, 0, [
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+      ] as CFDictionary
+    )
+    return scaledImage
+  }
+  
   static func writeImageToTmpDirectory(image: UIImage) -> URL? {
     let directory = NSTemporaryDirectory()
     let fileName = UUID().uuidString

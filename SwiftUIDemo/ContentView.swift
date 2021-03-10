@@ -10,6 +10,15 @@ struct ContentView: View {
   @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)
   @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(image: Asset.verticalRect.image)
   @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(image: Asset.squareRect.image)
+  @State private var stackForNasa: EditingStack = Mocks.makeEditingStack(
+    fileURL:
+    Bundle.main.path(
+      forResource: "nasa",
+      ofType: "jpg"
+    ).map {
+      URL(fileURLWithPath: $0)
+    }!
+  )
   @State private var stackForSmall: EditingStack = Mocks.makeEditingStack(image: Asset.superSmall.image)
 
   var body: some View {
@@ -53,6 +62,15 @@ struct ContentView: View {
               fullScreenView = .init {
                 CropViewWrapper(editingStack: stackForSquare, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForSquare.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
+            }
+
+            Button("Nasa") {
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stackForNasa, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForNasa.makeRenderer().render())
                   self.fullScreenView = nil
                 })
               }
@@ -220,21 +238,18 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
 
 var _loaded = false
 extension ColorCubeStorage {
-
   static func loadToDefault() {
-    
     guard _loaded == false else {
       return
     }
     _loaded = true
-    
+
     do {
-      
       try autoreleasepool {
         let bundle = Bundle.main
         let rootPath = bundle.bundlePath as NSString
         let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-        
+
         let filters = fileList
           .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
           .sorted()
@@ -253,12 +268,11 @@ extension ColorCubeStorage {
               dimension: 64
             )
           }
-        
+
         self.default.filters = filters
       }
-      
+
     } catch {
-      
       assertionFailure("\(error)")
     }
   }
