@@ -218,22 +218,34 @@ open class EditingStack: Equatable, StoreComponentType {
                              
           let croppedImage = targetImage
             .cropped(to: _cropRect.scaled(maxPixelSize: self.imageMaxLengthInEditing))
-                    
-          let targetSize = croppedImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
+          
+          let fixedOriginImage = croppedImage.transformed(by: .init(
+            translationX: -croppedImage.extent.origin.x,
+            y: -croppedImage.extent.origin.y
+          ))
+          
+          assert(fixedOriginImage.extent.origin == .zero)
+          
+          let targetSize = fixedOriginImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
           
           // FIXME: depending the scale, the scaled image includes alpha pixel in the edges.
+          
+          let scale = max(
+            targetSize.width / croppedImage.extent.width,
+            targetSize.height / croppedImage.extent.height
+          )
 
-          let scaled = croppedImage
+          let zoomedImage = croppedImage
             .transformed(
               by: .init(
-                scaleX: targetSize.width / croppedImage.extent.width,
-                y: targetSize.height / croppedImage.extent.height
+                scaleX: scale,
+                y: scale
               ),
               highQualityDownsample: true
             )
 
-          let translated = scaled
-            .transformed(by: .init(translationX: scaled.extent.origin.x, y: scaled.extent.origin.y))
+          let translated = zoomedImage
+            .transformed(by: .init(translationX: zoomedImage.extent.origin.x, y: zoomedImage.extent.origin.y))
             .insertingIntermediate(cache: true)
           
           EngineLog.debug("[Preview-Crop] \(_cropRect.cropExtent) -> \(translated.extent)")
