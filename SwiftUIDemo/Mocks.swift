@@ -30,15 +30,15 @@ enum Mocks {
   
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
-      source: .init(image: image),
-      previewSize: .init(width: 600, height: 600)
+      imageProvider: .init(image: image),
+      previewMaxPixelSize: .init(width: 600, height: 600)
     )
   }
     
   static func makeEditingStack(fileURL: URL) -> EditingStack {
     .init(
-      source: try! .init(fileURL: fileURL),
-      previewSize: .init(width: 600, height: 600)
+      imageProvider: try! .init(fileURL: fileURL),
+      previewMaxPixelSize: .init(width: 600, height: 600)
     )
   }
   

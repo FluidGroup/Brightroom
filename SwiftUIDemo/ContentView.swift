@@ -87,11 +87,11 @@ struct ContentView: View {
 
             Button("Remote") {
               let stack = EditingStack(
-                source: .init(
+                imageProvider: .init(
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
                   imageSize: .init(width: 4025, height: 6037)
                 ),
-                previewSize: .init(width: 1000, height: 1000)
+                previewMaxPixelSize: .init(width: 1000, height: 1000)
               )
 
               fullScreenView = .init {
@@ -104,12 +104,12 @@ struct ContentView: View {
 
             Button("Remote - preview") {
               let stack = EditingStack(
-                source: .init(
+                imageProvider: .init(
                   previewRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!,
                   imageSize: .init(width: 4980, height: 3984)
                 ),
-                previewSize: .init(width: 1000, height: 1000)
+                previewMaxPixelSize: .init(width: 1000, height: 1000)
               )
 
               fullScreenView = .init {
@@ -124,8 +124,8 @@ struct ContentView: View {
           Section(content: {
             Button("PixelEditor Square") {
               let stack = EditingStack.init(
-                source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 400 * 2, height: 400 * 2),
+                imageProvider: .init(image: Asset.l1000316.image),
+                previewMaxPixelSize: CGSize(width: 400 * 2, height: 400 * 2),
                 modifyCrop: { _, crop in
                   crop.updateCropExtent(by: .square)
                 }
@@ -140,8 +140,8 @@ struct ContentView: View {
 
             Button("PixelEditor") {
               let stack = EditingStack.init(
-                source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 400 * 2, height: 400 * 2)
+                imageProvider: .init(image: Asset.l1000316.image),
+                previewMaxPixelSize: CGSize(width: 400 * 2, height: 400 * 2)
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {

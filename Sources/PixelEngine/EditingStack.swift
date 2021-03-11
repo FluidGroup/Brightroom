@@ -116,9 +116,9 @@ open class EditingStack: Equatable, StoreComponentType {
   
   public let store: DefaultStore
 
-  public let imageSource: ImageProvider
+  public let imageProvider: ImageProvider
 
-  public let preferredPreviewSize: CGSize
+  public let previewMaxPixelSize: CGFloat
   
   private let colorCubeFilters: [FilterColorCube]
           
@@ -136,28 +136,34 @@ open class EditingStack: Equatable, StoreComponentType {
   private let imageMaxLengthInEditing: CGFloat = 2560
 
   // MARK: - Initializers
-
+  
+  /// Creates an instance
+  /// - Parameters:
+  ///   - source:
+  ///   - previewSize:
+  ///   - colorCubeStorage:
+  ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
   public init(
-    source: ImageProvider,
-    previewSize: CGSize,
+    imageProvider: ImageProvider,
+    previewMaxPixelSize: CGFloat,
     colorCubeStorage: ColorCubeStorage = .default,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
     
     let initialCrop = EditingCrop(
-      imageSize: source.state.imageSize
+      imageSize: imageProvider.state.imageSize
     )
         
     self.modifyCrop = modifyCrop
     self.store = .init(
       initialState: .init(
-        initialEdit: Edit(crop: initialCrop.scaled(maxPixelSize: imageMaxLengthInEditing))
+        initialEdit: Edit(crop: initialCrop)
       )
     )
     
     self.colorCubeFilters = colorCubeStorage.filters
-    self.imageSource = source
-    self.preferredPreviewSize = previewSize
+    self.imageProvider = imageProvider
+    self.previewMaxPixelSize = previewMaxPixelSize
         
     applyIfChanged { (s) in
 
@@ -211,18 +217,23 @@ open class EditingStack: Equatable, StoreComponentType {
         if let targetImage = targetImage {
                    
           let croppedImage = targetImage
-            .cropped(to: _cropRect)
-          
-          let result = ImageTool.makeNewResizedCIImage(
-            to: Geometry.sizeThatAspectFit(
-              aspectRatio: croppedImage.extent.size,
-              boundingSize: self.preferredPreviewSize
-            ),
-            from: croppedImage
+            .cropped(to: _cropRect.scaled(maxPixelSize: self.imageMaxLengthInEditing))
+                    
+          let targetSize = croppedImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
+
+          let scaled = croppedImage.transformed(
+            by: .init(
+              scaleX: targetSize.width / croppedImage.extent.width,
+              y: targetSize.height / croppedImage.extent.height
+            )
           )
-          
+
+          let translated = scaled
+            .transformed(by: .init(translationX: scaled.extent.origin.x, y: scaled.extent.origin.y))
+            .insertingIntermediate(cache: true)
+
           self.commit {
-            $0.editingCroppedImage = result
+            $0.editingCroppedImage = translated
           }
         }
         
@@ -235,18 +246,17 @@ open class EditingStack: Equatable, StoreComponentType {
     /**
      Start downloading image
      */
-    imageSource.start()
-    imageProviderSubscription = imageSource.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
+    imageProvider.start()
+    imageProviderSubscription = imageProvider.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
       
       guard let self = self else { return }
       
       state.ifChanged(\.loadedImage) { image in
          
         guard let image = image else {
-          self.applyIfChanged {
-            self.modifyCrop(nil, &$0.crop)
+          self.commit {
+            self._commit_adjustCropExtent(image: nil, ref: $0)
           }
-          self.takeSnapshot()
           return
         }
         self.commit { s in
@@ -276,10 +286,7 @@ open class EditingStack: Equatable, StoreComponentType {
             .flatMap { CIImage(cgImage: $0) }
             
             do {
-              self.modifyCrop(editingImage, &s.currentEdit.crop)
-              s.withType { (type, ref) -> Void in
-                type.makeVersion(ref: ref)
-              }
+              self._commit_adjustCropExtent(image: editingImage, ref: s)
             }
             
             self.imageProviderSubscription?.cancel()
@@ -295,10 +302,31 @@ open class EditingStack: Equatable, StoreComponentType {
   
   // MARK: - Functions
   
-  func hoge() {
+  func _commit_adjustCropExtent(image: CIImage?, ref: InoutRef<State>) {
     
+    let imageSize = ref.imageSize
+    var crop = EditingCrop(imageSize: ref.imageSize)
+          
+    let zoomedImage = image.map { image -> CIImage in
+      let scaled = image.transformed(
+        by: .init(
+          scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
+          y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
+        )
+      )
+      
+      let translated = scaled.transformed(by: .init(translationX: scaled.extent.origin.x, y: scaled.extent.origin.y))
+      
+      return translated
+    }
     
+    modifyCrop(zoomedImage, &crop)
     
+    ref.currentEdit.crop = crop
+    
+    ref.withType { (type, ref) -> Void in
+      type.makeVersion(ref: ref)
+    }
   }
 
   /**
@@ -395,7 +423,7 @@ open class EditingStack: Equatable, StoreComponentType {
     
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.crop.restoreFromScaled()
+    renderer.edit.croppingRect = edit.crop
     renderer.edit.drawer = [
       BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]
@@ -533,9 +561,7 @@ extension CIImage {
         
     let targetImage = self
     var cropRect = _cropRect.cropExtent
-    
-    assert(_cropRect.imageSize == .init(image: targetImage))
-    
+        
     cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
     
     let croppedImage = targetImage

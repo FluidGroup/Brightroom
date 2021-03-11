@@ -43,6 +43,12 @@ public enum ImageProviderError: Error {
   case failedToGetImageSize
 }
 
+final class ImageSource {
+  // multiple backing storage wrapper
+  // load from UIImage
+  // load from CGImageSource
+}
+
 /**
  A stateful object that provides multiple image for EditingStack.
  */
@@ -90,14 +96,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
       throw ImageProviderError.failedToCreateCGDataProvider
     }
     
-    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+    guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
       throw ImageProviderError.failedToCreateCGImageSource
     }
     
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: imageSource,
+        editableImage: imageProvider,
         imageSize: imageSize
       )
     )
@@ -299,12 +305,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
             return
           }
           
-          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+          guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
             state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
             return
           }
           
-          state.previewImage = imageSource
+          state.previewImage = imageProvider
           
         }
         
@@ -339,12 +345,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
             return
           }
           
-          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+          guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
             state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
             return
           }
           
-          state.editableImage = imageSource
+          state.editableImage = imageProvider
           
         }
       }

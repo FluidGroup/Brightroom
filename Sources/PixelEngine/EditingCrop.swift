@@ -128,7 +128,9 @@ public struct EditingCrop: Equatable {
   }
   
   public func restoreFromScaled() -> Self {
-    return scaled(scaleToRestore)
+    var s = scaled(scaleToRestore)
+    s.scaleToRestore = 1
+    return s
   }
   
   private func scaled(_ scale: CGFloat) -> Self {

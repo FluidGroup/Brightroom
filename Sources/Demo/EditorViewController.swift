@@ -31,8 +31,8 @@ final class EditorViewController : UIViewController {
   private var usesSquare = true
   
   private lazy var stack = EditingStack.init(
-    source: .init(image: UIImage(named: "large")!),
-    previewSize: CGSize(width: 300, height: 300),
+    imageProvider: .init(image: UIImage(named: "large")!),
+    previewMaxPixelSize: CGSize(width: 300, height: 300),
     colorCubeStorage: ColorCubeStorage.default
   )
 
@@ -45,8 +45,8 @@ final class EditorViewController : UIViewController {
     let controller = PixelEditViewController.init(
       viewModel: .init(
         editingStack: .init(
-          source: .init(image: UIImage(named: "large")!),
-          previewSize: CGSize(width: 600, height: 600)
+          imageProvider: .init(image: UIImage(named: "large")!),
+          previewMaxPixelSize: CGSize(width: 600, height: 600)
         )
       )
     )
@@ -116,8 +116,8 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
       let controller = PixelEditViewController.init(
         viewModel: .init(
           editingStack: .init(
-            source: .init(image: image),
-            previewSize: CGSize(width: 300, height: 300)
+            imageProvider: .init(image: image),
+            previewMaxPixelSize: CGSize(width: 300, height: 300)
           )
         )
       )
@@ -131,8 +131,8 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
       let controller = PixelEditViewController(
         viewModel: .init(
           editingStack: EditingStack(
-            source: .init(image: image),
-            previewSize: CGSize(width: 300, height: 300)
+            imageProvider: .init(image: image),
+            previewMaxPixelSize: CGSize(width: 300, height: 300)
           )
         )
       )

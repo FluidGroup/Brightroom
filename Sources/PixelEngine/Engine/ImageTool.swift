@@ -59,7 +59,7 @@ enum ImageTool {
     )
     
     #if DEBUG
-    let size = readImageSize(from: imageSource)!
+    let size = readImageSize(from: imageProvider)!
     let scaled = size.scaled(maxPixelSize: maxPixelSize)
     assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
     #endif
