@@ -39,7 +39,7 @@ final class PHAssetDownloadEditorViewController : UIViewController {
       viewModel: .init(
         editingStack: EditingStack(
           imageProvider: .init(asset: selectedAsset),
-          previewMaxPixelSize: .init(width: view.frame.width, height: view.frame.width)
+          previewMaxPixelSize: view.frame.width
         )
       )
     )

@@ -36,25 +36,25 @@ class ViewController: UIViewController {
 
     let image = UIImage(named: "small")!
 
-    let engine = ImageRenderer(source: CIImage(image: image)!)
-
-    let path = DrawnPath(
-      brush: .init(color: .red, width: 30),
-      path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
-    )
-
-    engine.edit.croppingRect = .init(
-      imageSize: CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale),
-      cropRect: .init(origin: .zero, size: .init(width: 400, height: 400)
-      )
-    )
-    engine.edit.drawer = [
-      path,
-      BlurredMask(paths: []),
-    ]
-
-    let result = engine.render()
-
-    imageView.image = result
+//    let engine = ImageRenderer(source: CIImage(image: image)!)
+//
+//    let path = DrawnPath(
+//      brush: .init(color: .red, width: 30),
+//      path: .init(rect: CGRect.init(x: 0, y: 0, width: 50, height: 50))
+//    )
+//
+//    engine.edit.croppingRect = .init(
+//      imageSize: CGSize(width: image.size.width * image.scale, height: image.size.height * image.scale),
+//      cropRect: .init(origin: .zero, size: .init(width: 400, height: 400)
+//      )
+//    )
+//    engine.edit.drawer = [
+//      path,
+//      BlurredMask(paths: []),
+//    ]
+//
+//    let result = engine.render()
+//
+//    imageView.image = result
   }
 }

@@ -58,12 +58,12 @@ enum ImageTool {
       ] as CFDictionary
     )
     
-    #if DEBUG
-    let size = readImageSize(from: imageProvider)!
-    let scaled = size.scaled(maxPixelSize: maxPixelSize)
-    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
-    #endif
-    
+//    #if DEBUG
+//    let size = readImageSize(from: imageProvider)!
+//    let scaled = size.scaled(maxPixelSize: maxPixelSize)
+//    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
+//    #endif
+//
     return scaledImage
   }
   
@@ -102,6 +102,7 @@ enum ImageTool {
     return scaledImage
   }
 
+  /*
   static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
@@ -142,5 +143,5 @@ enum ImageTool {
         return resizedImage
       }
   }
-
+   */
 }

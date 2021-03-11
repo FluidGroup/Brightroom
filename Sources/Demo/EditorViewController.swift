@@ -32,7 +32,7 @@ final class EditorViewController : UIViewController {
   
   private lazy var stack = EditingStack.init(
     imageProvider: .init(image: UIImage(named: "large")!),
-    previewMaxPixelSize: CGSize(width: 300, height: 300),
+    previewMaxPixelSize: 300,
     colorCubeStorage: ColorCubeStorage.default
   )
 
@@ -46,7 +46,7 @@ final class EditorViewController : UIViewController {
       viewModel: .init(
         editingStack: .init(
           imageProvider: .init(image: UIImage(named: "large")!),
-          previewMaxPixelSize: CGSize(width: 600, height: 600)
+          previewMaxPixelSize: 300
         )
       )
     )
@@ -117,7 +117,7 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
         viewModel: .init(
           editingStack: .init(
             imageProvider: .init(image: image),
-            previewMaxPixelSize: CGSize(width: 300, height: 300)
+            previewMaxPixelSize: 300
           )
         )
       )
@@ -132,7 +132,7 @@ extension EditorViewController : UIImagePickerControllerDelegate, UINavigationCo
         viewModel: .init(
           editingStack: EditingStack(
             imageProvider: .init(image: image),
-            previewMaxPixelSize: CGSize(width: 300, height: 300)
+            previewMaxPixelSize: 300
           )
         )
       )

@@ -31,7 +31,7 @@ enum Mocks {
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
       imageProvider: .init(image: image),
-      previewMaxPixelSize: CGSize(width: 600, height: 600)
+      previewMaxPixelSize: 600
     )
   }
 }

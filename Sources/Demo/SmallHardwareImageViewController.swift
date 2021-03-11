@@ -36,9 +36,9 @@ final class SmallHardwareImageViewController : UIViewController {
     #endif
   }()
 
-  let image: CIImage = {
-    return ImageTool.makeNewResizedCIImage(to: CGSize(width: 500, height: 500), from: CIImage(image: UIImage(named: "large")!)!)!
-  }()
+//  let image: CIImage = {
+//    return ImageTool.makeNewResizedCIImage(to: CGSize(width: 500, height: 500), from: CIImage(image: UIImage(named: "large")!)!)!
+//  }()
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -51,11 +51,11 @@ final class SmallHardwareImageViewController : UIViewController {
 
   @IBAction func didChangeSliderValue(_ sender: Any) {
 
-    let value = slider.value
-
-    let result = SmallHardwareImageViewController.blur(image: image, radius: Double(value * 50))!
-
-    imageView.display(image: result)
+//    let value = slider.value
+//
+//    let result = SmallHardwareImageViewController.blur(image: image, radius: Double(value * 50))!
+//
+//    imageView.display(image: result)
   }
 
   static func blur(image: CIImage, radius: Double) -> CIImage? {
