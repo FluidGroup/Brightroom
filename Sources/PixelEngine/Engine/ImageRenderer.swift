@@ -37,11 +37,11 @@ public final class ImageRenderer {
     public var drawer: [GraphicsDrawing] = []
   }
   
-  public let source: CGImageSource
+  public let source: ImageSource
 
   public var edit: Edit
 
-  public init(source: CGImageSource) {
+  public init(source: ImageSource) {
     self.source = source
     self.edit = .init()
   }
@@ -62,15 +62,7 @@ public final class ImageRenderer {
    */
   public func render(resolution: Resolution = .full) -> UIImage {
     
-    let ciImage: CIImage
-    
-    if #available(iOS 13.0, *) {
-      ciImage = CIImage(cgImageSource: source, index: 0, options: [:])
-    } else {
-      let cgImage = ImageTool.loadOriginalCGImage(from: source)!
-      ciImage = CIImage(cgImage: cgImage, options: [:])
-      // Fallback on earlier versions
-    }
+    let ciImage: CIImage = source.makeCIImage()
     
     assert(
       {

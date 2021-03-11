@@ -102,7 +102,6 @@ enum ImageTool {
     return scaledImage
   }
 
-  /*
   static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
@@ -143,5 +142,35 @@ enum ImageTool {
         return resizedImage
       }
   }
-   */
+  
+  static func makeResizedCGImage(maxPixelSize: CGFloat, from sourceImage: CGImage) -> CGImage? {
+    
+    let imageSize = CGSize(
+      width: sourceImage.width,
+      height: sourceImage.height
+    )
+    
+    let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
+    
+    let format: UIGraphicsImageRendererFormat
+    format = UIGraphicsImageRendererFormat.preferred()
+    format.scale = 1
+    format.opaque = true
+    if #available(iOS 12.0, *) {
+      format.preferredRange = .automatic
+    } else {
+      format.prefersExtendedRange = false
+    }
+    
+    let cgImage = UIGraphicsImageRenderer(size: targetSize, format: format)
+      .image { c in
+        c.cgContext.translateBy(x: 0, y: targetSize.height)
+        c.cgContext.scaleBy(x: 1, y: -1)
+        c.cgContext.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
+      }
+      .cgImage
+    
+    return cgImage
+
+  }
 }

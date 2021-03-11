@@ -54,8 +54,8 @@ open class EditingStack: Equatable, StoreComponentType {
     
     public fileprivate(set) var currentEdit: Edit
     
-    fileprivate(set) var previewImageProvider: CGImageSource?
-    fileprivate(set) var editableImageProvider: CGImageSource?
+    fileprivate(set) var previewImageProvider: ImageSource?
+    fileprivate(set) var editableImageProvider: ImageSource?
     
     public fileprivate(set) var thumbnailImage: CIImage?
     
@@ -241,25 +241,17 @@ open class EditingStack: Equatable, StoreComponentType {
             case let .preview(image):
               s.isLoading = true
               s.previewImageProvider = image
-              s.placeholderImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
+              s.placeholderImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 1280))
               
             case let .editable(image):
               s.isLoading = false
               s.editableImageProvider = image
               
-              let editingImage = ImageTool.loadThumbnailCGImage(
-                from: image,
-                maxPixelSize: self.imageMaxLengthInEditing
-              )
-              .flatMap { CIImage(cgImage: $0) }
+              let editingImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.imageMaxLengthInEditing))
               
               s.editingSourceImage = editingImage
               
-              s.thumbnailImage = ImageTool.loadThumbnailCGImage(
-                from: image,
-                maxPixelSize: 180
-              )
-              .flatMap { CIImage(cgImage: $0) }
+              s.thumbnailImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 180))
               
               do {
                 self._commit_adjustCropExtent(image: editingImage, ref: s)

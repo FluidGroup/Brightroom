@@ -43,10 +43,78 @@ public enum ImageProviderError: Error {
   case failedToGetImageSize
 }
 
-final class ImageSource {
-  // multiple backing storage wrapper
-  // load from UIImage
-  // load from CGImageSource
+/**
+ An object that provides an image-data from multiple backing storage.
+ */
+public final class ImageSource: Equatable {
+        
+  private struct Closures {
+    let readImageSize: () -> CGSize
+    let loadOriginalCGImage: () -> CGImage
+    let loadThumbnailCGImage: (CGFloat) -> CGImage
+    let makeCIImage: () -> CIImage
+  }
+  
+  public static func == (lhs: ImageSource, rhs: ImageSource) -> Bool {
+    lhs === rhs
+  }
+  
+  private let closures: Closures
+  
+  public init(image: UIImage) {
+    self.closures = .init(
+      readImageSize: {
+        image.size.applying(.init(scaleX: image.scale, y: image.scale))
+      },
+      loadOriginalCGImage: {
+        image.cgImage!
+      },
+      loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
+        ImageTool.makeResizedCGImage(maxPixelSize: maxPixelSize, from: image.cgImage!)!
+      },
+      makeCIImage: {
+        CIImage(image: image)!
+      }
+    )
+  }
+  
+  public init(cgImageSource: CGImageSource) {
+    self.closures = .init(
+      readImageSize: {
+        ImageTool.readImageSize(from: cgImageSource)!
+      },
+      loadOriginalCGImage: {
+        ImageTool.loadOriginalCGImage(from: cgImageSource)!
+      },
+      loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
+        ImageTool.loadThumbnailCGImage(from: cgImageSource, maxPixelSize: maxPixelSize)!
+      },
+      makeCIImage: {
+        if #available(iOS 13.0, *) {
+          return CIImage(cgImageSource: cgImageSource, index: 0, options: [:])
+        } else {
+          return CIImage(cgImage: ImageTool.loadOriginalCGImage(from: cgImageSource)!)
+        }
+      }
+    )
+  }
+  
+  public func readImageSize() -> CGSize {
+    closures.readImageSize()
+  }
+  
+  public func loadOriginalCGImage() -> CGImage {
+    closures.loadOriginalCGImage()
+  }
+  
+  public func loadThumbnailCGImage(maxPixelSize: CGFloat) -> CGImage {
+    closures.loadThumbnailCGImage(maxPixelSize)
+  }
+  
+  public func makeCIImage() -> CIImage {
+    closures.makeCIImage()
+  }
+      
 }
 
 /**
@@ -59,8 +127,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
   public struct State {
     public enum Image: Equatable {
-      case preview(CGImageSource)
-      case editable(CGImageSource)
+      case preview(ImageSource)
+      case editable(ImageSource)
     }
 
     public var loadedImage: Image? {
@@ -75,8 +143,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
       return nil
     }
 
-    fileprivate var previewImage: CGImageSource?
-    fileprivate var editableImage: CGImageSource?
+    fileprivate var previewImage: ImageSource?
+    fileprivate var editableImage: ImageSource?
     
     public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
     public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
@@ -96,14 +164,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
       throw ImageProviderError.failedToCreateCGDataProvider
     }
     
-    guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
+    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
       throw ImageProviderError.failedToCreateCGImageSource
     }
     
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: imageProvider,
+        editableImage: .init(cgImageSource: imageSource),
         imageSize: imageSize
       )
     )
@@ -145,7 +213,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: imageSource,
+        editableImage: .init(cgImageSource: imageSource),
         imageSize: size
       )
     )
@@ -206,7 +274,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
                 return
               }
               
-              state.previewImage = imageSource
+              state.previewImage = .init(cgImageSource: imageSource)
             }
           }
          
@@ -236,7 +304,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
               return
             }
             
-            state.editableImage = imageSource
+            state.editableImage = .init(cgImageSource: imageSource)
           }
         }
       }
@@ -305,12 +373,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
             return
           }
           
-          guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
             state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
             return
           }
           
-          state.previewImage = imageProvider
+          state.previewImage = .init(cgImageSource: imageSource)
           
         }
         
@@ -345,12 +413,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
             return
           }
           
-          guard let imageProvider = CGImageSourceCreateWithDataProvider(provider, nil) else {
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
             state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
             return
           }
           
-          state.editableImage = imageProvider
+          state.editableImage = .init(cgImageSource: imageSource)
           
         }
       }
