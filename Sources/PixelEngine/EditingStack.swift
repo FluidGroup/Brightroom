@@ -29,27 +29,25 @@ import Verge
  
  - Attension: Source text
  Please make sure of EditingStack is started state before editing in UI with calling `start()`.
-
+ 
  */
 open class EditingStack: Equatable, StoreComponentType {
-  
   public static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
     lhs === rhs
   }
-    
+  
   public struct State: Equatable {
-        
     /**
      A Boolean value that indicates whether the image is currently loading for editing.
      */
     public fileprivate(set) var isLoading = true
-        
+    
     public var imageSize: CGSize {
       initialEditing.imageSize
     }
-            
+    
     private let initialEditing: Edit
-        
+    
     public fileprivate(set) var hasStartedEditing = false
     
     public fileprivate(set) var history: [Edit] = []
@@ -72,7 +70,7 @@ open class EditingStack: Equatable, StoreComponentType {
      Can be used in cropping
      */
     public fileprivate(set) var editingSourceImage: CIImage?
-        
+    
     /**
      An image that cropped but not effected.
      */
@@ -82,22 +80,22 @@ open class EditingStack: Equatable, StoreComponentType {
      An image that applied editing and optimized for previewing.
      */
     public fileprivate(set) var editingCroppedPreviewImage: CIImage?
-        
+    
     public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
     
     public var canUndo: Bool {
       return history.count > 0
     }
-        
+    
     public var isDirty: Bool {
       return currentEdit != initialEditing
     }
     
     init(initialEdit: Edit) {
-      self.initialEditing = initialEdit
-      self.currentEdit = initialEdit
+      initialEditing = initialEdit
+      currentEdit = initialEdit
     }
-        
+    
     static func makeVersion(ref: InoutRef<Self>) {
       ref.history.append(ref.currentEdit)
     }
@@ -105,23 +103,22 @@ open class EditingStack: Equatable, StoreComponentType {
     static func revertCurrentEditing(ref: InoutRef<Self>) {
       ref.currentEdit = ref.history.last ?? ref.initialEditing
     }
-        
+    
     static func undoEditing(ref: InoutRef<Self>) {
       ref.currentEdit = ref.history.popLast() ?? ref.initialEditing
     }
-    
   }
-
+  
   // MARK: - Stored Properties
   
   public let store: DefaultStore
-
+  
   public let imageProvider: ImageProvider
-
+  
   public let previewMaxPixelSize: CGFloat
   
   private let colorCubeFilters: [FilterColorCube]
-          
+  
   private let queue = DispatchQueue(
     label: "me.muukii.PixelEngine",
     qos: .default,
@@ -134,7 +131,7 @@ open class EditingStack: Equatable, StoreComponentType {
   private let modifyCrop: (CIImage?, inout EditingCrop) -> Void
   
   private let imageMaxLengthInEditing: CGFloat = 2560
-
+  
   // MARK: - Initializers
   
   /// Creates an instance
@@ -148,25 +145,23 @@ open class EditingStack: Equatable, StoreComponentType {
     previewMaxPixelSize: CGFloat = 1000,
     colorCubeStorage: ColorCubeStorage = .default,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
-    ) {
-    
+  ) {
     let initialCrop = EditingCrop(
       imageSize: imageProvider.state.imageSize
     )
-        
+    
     self.modifyCrop = modifyCrop
-    self.store = .init(
+    store = .init(
       initialState: .init(
         initialEdit: Edit(crop: initialCrop)
       )
     )
     
-    self.colorCubeFilters = colorCubeStorage.filters
+    colorCubeFilters = colorCubeStorage.filters
     self.imageProvider = imageProvider
     self.previewMaxPixelSize = previewMaxPixelSize
-        
-    applyIfChanged { (s) in
-
+    
+    applyIfChanged { s in
     }
   }
   
@@ -174,7 +169,6 @@ open class EditingStack: Equatable, StoreComponentType {
    EditingStack awakes from cold state.
    */
   public func start() {
-    
     _pixelengine_ensureMainThread()
     
     guard state.hasStartedEditing == false else {
@@ -184,26 +178,25 @@ open class EditingStack: Equatable, StoreComponentType {
     commit {
       $0.hasStartedEditing = true
     }
-          
-    store.add(middleware: .unifiedMutation({ (ref) in
-      // TODO:
-    }))
     
-    sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
+    store.add(middleware: .unifiedMutation { ref in
+      // TODO:
+    })
+    
+    sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<EditingStack.State>) in
       
       guard let self = self else { return }
       
       state.ifChanged(\.thumbnailImage) { image in
         
         guard let image = image else { return }
-
+        
         self.commit {
           $0.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
             let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
             return r
           }
         }
-        
       }
       
       state.ifChanged(\.currentEdit, \.editingCroppedImage) { currentEdit, croppedTargetImage in
@@ -213,89 +206,82 @@ open class EditingStack: Equatable, StoreComponentType {
       }
       
       state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { _cropRect, targetImage in
-                
+        
         if let targetImage = targetImage {
-          
           let result = self._createPreviewImage(targetImage: targetImage, crop: _cropRect)
-                                       
+          
           self.commit {
             $0.editingCroppedImage = result
           }
         }
-        
       }
-      
     }
     .store(in: &subscriptions)
-        
+    
     /**
      Start downloading image
      */
     imageProvider.start()
-    imageProviderSubscription = imageProvider.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
-      
-      guard let self = self else { return }
-      
-      state.ifChanged(\.loadedImage) { image in
-         
-        guard let image = image else {
-          self.commit {
-            self._commit_adjustCropExtent(image: nil, ref: $0)
-          }
-          return
-        }
-        self.commit { s in
+    imageProviderSubscription = imageProvider
+      .sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<ImageProvider.State>) in
+        
+        guard let self = self else { return }
+        
+        state.ifChanged(\.loadedImage) { image in
           
-          switch image {
-          case .preview(let image):
-            s.isLoading = true
-            s.previewImageProvider = image
-            s.placeholderImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
-            
-          case .editable(let image):
-            s.isLoading = false
-            s.editableImageProvider = image
-            
-            let editingImage = ImageTool.loadThumbnailCGImage(
-              from: image,
-              maxPixelSize: self.imageMaxLengthInEditing
-            )
-            .flatMap { CIImage(cgImage: $0) }
-            
-            s.editingSourceImage = editingImage
-            
-            s.thumbnailImage = ImageTool.loadThumbnailCGImage(
-              from: image,
-              maxPixelSize: 180
-            )
-            .flatMap { CIImage(cgImage: $0) }
-            
-            do {
-              self._commit_adjustCropExtent(image: editingImage, ref: s)
+          guard let image = image else {
+            self.commit {
+              self._commit_adjustCropExtent(image: nil, ref: $0)
             }
-            
-            self.imageProviderSubscription?.cancel()
+            return
           }
-                                       
+          self.commit { s in
+            
+            switch image {
+            case let .preview(image):
+              s.isLoading = true
+              s.previewImageProvider = image
+              s.placeholderImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
+              
+            case let .editable(image):
+              s.isLoading = false
+              s.editableImageProvider = image
+              
+              let editingImage = ImageTool.loadThumbnailCGImage(
+                from: image,
+                maxPixelSize: self.imageMaxLengthInEditing
+              )
+              .flatMap { CIImage(cgImage: $0) }
+              
+              s.editingSourceImage = editingImage
+              
+              s.thumbnailImage = ImageTool.loadThumbnailCGImage(
+                from: image,
+                maxPixelSize: 180
+              )
+              .flatMap { CIImage(cgImage: $0) }
+              
+              do {
+                self._commit_adjustCropExtent(image: editingImage, ref: s)
+              }
+              
+              self.imageProviderSubscription?.cancel()
+            }
+          }
         }
       }
-      
-    }
-
-          
   }
   
   // MARK: - Functions
   
   /// Make an image that cropped and resized for previewing
   func _createPreviewImage(targetImage: CIImage, crop: EditingCrop) -> CIImage {
-  
     /**
      Crop image
      */
-
+    
     let croppedImage = targetImage
-      .cropped(to: crop.scaled(maxPixelSize: self.imageMaxLengthInEditing))
+      .cropped(to: crop.scaled(maxPixelSize: imageMaxLengthInEditing))
     
     /**
      Remove the offset from cropping
@@ -309,10 +295,10 @@ open class EditingStack: Equatable, StoreComponentType {
     assert(fixedOriginImage.extent.origin == .zero)
     
     /**
-    Make the image small
+     Make the image small
      */
     
-    let targetSize = fixedOriginImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
+    let targetSize = fixedOriginImage.extent.size.scaled(maxPixelSize: previewMaxPixelSize)
     
     // FIXME: depending the scale, the scaled image includes alpha pixel in the edges.
     
@@ -336,7 +322,10 @@ open class EditingStack: Equatable, StoreComponentType {
      */
     
     let translated = zoomedImage
-      .transformed(by: .init(translationX: zoomedImage.extent.origin.x, y: zoomedImage.extent.origin.y))
+      .transformed(by: .init(
+        translationX: zoomedImage.extent.origin.x,
+        y: zoomedImage.extent.origin.y
+      ))
       .insertingIntermediate(cache: true)
     
     EngineLog.debug("[Preview-Crop] \(crop.cropExtent) -> \(translated.extent)")
@@ -345,10 +334,9 @@ open class EditingStack: Equatable, StoreComponentType {
   }
   
   func _commit_adjustCropExtent(image: CIImage?, ref: InoutRef<State>) {
-    
     let imageSize = ref.imageSize
     var crop = EditingCrop(imageSize: ref.imageSize)
-          
+    
     let zoomedImage = image.map { image -> CIImage in
       let scaled = image.transformed(
         by: .init(
@@ -357,7 +345,10 @@ open class EditingStack: Equatable, StoreComponentType {
         )
       )
       
-      let translated = scaled.transformed(by: .init(translationX: scaled.extent.origin.x, y: scaled.extent.origin.y))
+      let translated = scaled.transformed(by: .init(
+        translationX: scaled.extent.origin.x,
+        y: scaled.extent.origin.y
+      ))
       
       return translated
     }
@@ -370,24 +361,22 @@ open class EditingStack: Equatable, StoreComponentType {
       type.makeVersion(ref: ref)
     }
   }
-
+  
   /**
    Adds a new snapshot as a history.
    */
   public func takeSnapshot() {
-        
     commit {
       $0.withType { (type, ref) -> Void in
         type.makeVersion(ref: ref)
       }
     }
   }
-
+  
   /**
    Reverts the current editing.
    */
   public func revertEdit() {
-    
     _pixelengine_ensureMainThread()
     
     commit {
@@ -395,96 +384,84 @@ open class EditingStack: Equatable, StoreComponentType {
         type.revertCurrentEditing(ref: ref)
       }
     }
-    
   }
-
+  
   /**
    Undo editing, pulling the latest history back into the current edit.
    */
   public func undoEdit() {
-    
     _pixelengine_ensureMainThread()
-        
+    
     commit {
       $0.withType { (type, ref) -> Void in
         type.undoEditing(ref: ref)
       }
     }
-    
   }
-
+  
   /**
    Purges the all of the history
    */
   public func removeAllEditsHistory() {
-    
     _pixelengine_ensureMainThread()
     
     commit {
       $0.history = []
     }
   }
-
+  
   public func set(filters: (inout Edit.Filters) -> Void) {
-    
     _pixelengine_ensureMainThread()
     
     applyIfChanged {
       filters(&$0.filters)
     }
   }
-
+  
   public func crop(_ value: EditingCrop) {
-     
     applyIfChanged {
       $0.crop = value
     }
-    
   }
-
+  
   public func set(blurringMaskPaths: [DrawnPathInRect]) {
-    
     _pixelengine_ensureMainThread()
-
+    
     applyIfChanged {
       $0.drawings.blurredMaskPaths = blurringMaskPaths
     }
   }
-
+  
   public func makeRenderer() -> ImageRenderer {
-    
     _pixelengine_ensureMainThread()
-        
+    
     guard let imageSource = state.editableImageProvider else {
       preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
     }
-        
+    
     let renderer = ImageRenderer(source: imageSource)
-
+    
     // TODO: Clean up ImageRenderer.Edit
     
     let edit = state.currentEdit
-
+    
     renderer.edit.croppingRect = edit.crop
     renderer.edit.drawer = [
-      BlurredMask(paths: edit.drawings.blurredMaskPaths)
+      BlurredMask(paths: edit.drawings.blurredMaskPaths),
     ]
-
+    
     renderer.edit.modifiers = edit.makeFilters()
-
+    
     return renderer
   }
-
+  
   private func applyIfChanged(_ perform: (inout InoutRef<Edit>) -> Void) {
-    
     commit {
       $0.map(keyPath: \.currentEdit, perform: perform)
     }
-  
   }
-
+  
   private func updatePreviewImage(from edit: Edit, image: CIImage) {
-    
     let filters = edit
       .makeFilters()
     
@@ -495,33 +472,29 @@ open class EditingStack: Equatable, StoreComponentType {
     commit {
       $0.editingCroppedPreviewImage = result
     }
-
+    
     // TODO: Ignore vignette and blur (convolutions)
-//    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
-//      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
-//    }
-
+    //    adjustmentImage = filters.reduce(source.image) { (image, filter) -> CIImage in
+    //      filter.apply(to: image, sourceImage: source.image).insertingIntermediateIfCanUse()
+    //    }
   }
-
 }
 
 extension EditingStack {
-
   // TODO: Consider more effective shape
-  public struct Edit : Equatable {
-    
+  public struct Edit: Equatable {
     func makeFilters() -> [Filtering] {
       return filters.makeFilters()
     }
-  
+    
     public var imageSize: CGSize {
       crop.imageSize
     }
-        
+    
     public var crop: EditingCrop
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()
-          
+    
     init(crop: EditingCrop) {
       self.crop = crop
     }
@@ -531,25 +504,24 @@ extension EditingStack {
       public var blurredMaskPaths: [DrawnPathInRect] = []
     }
     
-//
-//    public struct Light {
-//
-//    }
-//
-//    public struct Color {
-//
-//    }
-//
-//    public struct Effects {
-//
-//    }
-//
-//    public struct Detail {
-//
-//    }
-            
-    public struct Filters : Equatable {
-      
+    //
+    //    public struct Light {
+    //
+    //    }
+    //
+    //    public struct Color {
+    //
+    //    }
+    //
+    //    public struct Effects {
+    //
+    //    }
+    //
+    //    public struct Detail {
+    //
+    //    }
+    
+    public struct Filters: Equatable {
       public var colorCube: FilterColorCube?
       
       public var brightness: FilterBrightness?
@@ -571,7 +543,6 @@ extension EditingStack {
       
       func makeFilters() -> [Filtering] {
         return ([
-          
           // Before
           exposure,
           brightness,
@@ -588,22 +559,18 @@ extension EditingStack {
           gaussianBlur,
           fade,
           vignette,
-        ] as [Optional<Filtering>])
+        ] as [Filtering?])
         .compactMap { $0 }
       }
     }
-    
   }
-
 }
 
 extension CIImage {
-  
   func cropped(to _cropRect: EditingCrop) -> CIImage {
-        
     let targetImage = self
     var cropRect = _cropRect.cropExtent
-        
+    
     cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
     
     let croppedImage = targetImage
@@ -611,13 +578,10 @@ extension CIImage {
     
     return croppedImage
   }
-  
 }
 
 extension Array {
-  
   fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
-    
     var buffer = [U?].init(repeating: nil, count: count)
     
     buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
@@ -630,7 +594,6 @@ extension Array {
           let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
           targetPointer.pointee = r
         }
-        
       }
     }
     
