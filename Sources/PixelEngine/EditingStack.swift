@@ -138,11 +138,15 @@ open class EditingStack: Equatable, StoreComponentType {
     colorCubeStorage: ColorCubeStorage = .default,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
+    
+    let initialCrop = EditingCrop(
+      imageSize: source.state.imageSize
+    )
         
     self.modifyCrop = modifyCrop
     self.store = .init(
       initialState: .init(
-        initialEdit: Edit(imageSize: source.state.imageSize.scaled(maxPixelSize: imageMaxLengthInEditing))
+        initialEdit: Edit(crop: initialCrop.scaled(maxPixelSize: imageMaxLengthInEditing))
       )
     )
     
@@ -246,10 +250,12 @@ open class EditingStack: Equatable, StoreComponentType {
           switch image {
           case .preview(let image):
             s.isLoading = true
+            s.previewImageProvider = image
             s.previewImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
             
           case .editable(let image):
             s.isLoading = false
+            s.editableImageProvider = image
             s.targetOriginalSizeImage = ImageTool.loadThumbnailCGImage(
               from: image,
               maxPixelSize: self.imageMaxLengthInEditing
@@ -371,18 +377,18 @@ open class EditingStack: Equatable, StoreComponentType {
   public func makeRenderer() -> ImageRenderer {
     
     _pixelengine_ensureMainThread()
-    
-    guard let targetImage = state.targetOriginalSizeImage else {
+        
+    guard let imageSource = state.editableImageProvider else {
       preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
     }
         
-    let renderer = ImageRenderer(source: targetImage)
+    let renderer = ImageRenderer(source: imageSource)
 
     // TODO: Clean up ImageRenderer.Edit
     
     let edit = state.currentEdit
 
-    renderer.edit.croppingRect = edit.crop
+    renderer.edit.croppingRect = edit.crop.restoreFromScaled()
     renderer.edit.drawer = [
       BlurredMask(paths: edit.drawings.blurredMaskPaths)
     ]
@@ -439,8 +445,8 @@ extension EditingStack {
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()
           
-    init(imageSize: CGSize) {
-      self.crop = .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
+    init(crop: EditingCrop) {
+      self.crop = crop
     }
     
     public struct Drawings: Equatable {

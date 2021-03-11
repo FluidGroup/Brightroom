@@ -73,7 +73,7 @@ public struct EditingCrop: Equatable {
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
   
-  public private(set) var originalWidth: CGFloat
+  public private(set) var scaleToRestore: CGFloat
   
   public init(from ciImage: CIImage) {
     self.init(
@@ -82,15 +82,19 @@ public struct EditingCrop: Equatable {
     )
   }
   
-  public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0) {
+  public init(imageSize: CGSize) {
+    self.init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize), rotation: .angle_0)
+  }
+  
+  public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0, scaleToRestore: CGFloat = 1) {
     self.imageSize = imageSize
     cropExtent = cropRect
     self.rotation = rotation
-    self.originalWidth = imageSize.width
+    self.scaleToRestore = scaleToRestore
   }
   
   public func makeInitial() -> Self {
-    .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
+    .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize), scaleToRestore: scaleToRestore)
   }
   
   /**
@@ -111,15 +115,19 @@ public struct EditingCrop: Equatable {
     )
   }
   
-  public func scaled(toWidth width: CGFloat) -> Self {
+  public func scaled(maxPixelSize: CGFloat) -> Self {
     
-    let scale = CGFloat(width) / CGFloat(imageSize.width)
+    let scaledImageSize = imageSize.scaled(maxPixelSize: maxPixelSize)
+            
+    let scale = scaledImageSize.width / imageSize.width
     
-    return scaled(scale)
+    var new = scaled(scale)
+    new.scaleToRestore = imageSize.width / scaledImageSize.width
+    return new
   }
   
   public func restoreFromScaled() -> Self {
-    return scaled(toWidth: originalWidth)
+    return scaled(scaleToRestore)
   }
   
   private func scaled(_ scale: CGFloat) -> Self {
