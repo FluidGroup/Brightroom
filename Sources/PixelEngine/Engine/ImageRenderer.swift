@@ -36,17 +36,12 @@ public final class ImageRenderer {
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
   }
-
-  private let cicontext = CIContext(options: [
-    .useSoftwareRenderer : false,
-    .highQualityDownsample : true,
-    ])
   
-  public let source: CIImage
+  public let source: CGImageSource
 
   public var edit: Edit
 
-  public init(source: CIImage) {
+  public init(source: CGImageSource) {
     self.source = source
     self.edit = .init()
   }
@@ -67,10 +62,20 @@ public final class ImageRenderer {
    */
   public func render(resolution: Resolution = .full) -> UIImage {
     
+    let ciImage: CIImage
+    
+    if #available(iOS 13.0, *) {
+      ciImage = CIImage(cgImageSource: source, index: 0, options: [:])
+    } else {
+      let cgImage = ImageTool.loadOriginalCGImage(from: source)!
+      ciImage = CIImage(cgImage: cgImage, options: [:])
+      // Fallback on earlier versions
+    }
+    
     assert(
       {
         guard let crop = edit.croppingRect else { return true }
-        return crop.imageSize == PixelSize(image: source)
+        return crop.imageSize == CGSize(image: ciImage)
       }())
     
     let croppedImage: CIImage = {
@@ -86,20 +91,20 @@ public final class ImageRenderer {
          To solve this mismatch while cropping, flips and crops and finally flips.
          */
         
-        sourceImage = source          
+        sourceImage = ciImage
           /* pre */
           .transformed(by: .init(scaleX: 1, y: -1))
-          .transformed(by: .init(translationX: 0, y: source.extent.height))
+          .transformed(by: .init(translationX: 0, y: ciImage.extent.height))
           
           /* apply */
-          .cropped(to: crop.cropExtent.cgRect)
+          .cropped(to: crop.cropExtent.integral)
           .transformed(by: crop.rotation.transform)
           
           /* post */
           .transformed(by: .init(scaleX: 1, y: -1))
-          .transformed(by: .init(translationX: 0, y: source.extent.height))
+          .transformed(by: .init(translationX: 0, y: ciImage.extent.height))
       } else {
-        sourceImage = source
+        sourceImage = ciImage
       }
 
       let result = edit.modifiers.reduce(sourceImage, { image, modifier in
@@ -110,7 +115,7 @@ public final class ImageRenderer {
 
     }()
     
-    EngineLog.debug("Source.colorSpace :", source.colorSpace as Any)
+    EngineLog.debug("Source.colorSpace :", ciImage.colorSpace as Any)
 
     var canvasSize: CGSize
       
@@ -139,15 +144,14 @@ public final class ImageRenderer {
       
       UIGraphicsImageRenderer.init(size: canvasSize, format: format)
         .image { c in
-          
-          let cgContext = UIGraphicsGetCurrentContext()!
-          
-          let cgImage = cicontext.createCGImage(croppedImage, from: croppedImage.extent, format: .RGBA8, colorSpace: croppedImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
-          
+          let cgContext = c.cgContext
+          let ciContext = CIContext(cgContext: cgContext, options: [:])
+                              
           cgContext.saveGState()
           cgContext.translateBy(x: 0, y: canvasSize.height)
           cgContext.scaleBy(x: 1, y: -1)
-          cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
+          ciContext.draw(croppedImage, in: CGRect(origin: .zero, size: canvasSize), from: croppedImage.extent)
+
           cgContext.restoreGState()
 
           self.edit.drawer.forEach { drawer in
@@ -157,6 +161,8 @@ public final class ImageRenderer {
       }
       
     }
+    
+    EngineLog.debug("[Renderer] a rendering was successful. Image => \(image)")
     
     return image
   }

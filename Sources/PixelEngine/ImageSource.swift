@@ -32,101 +32,15 @@ import UIKit
 import Photos
 #endif
 
-public struct EditingCrop: Equatable {
-  public enum Rotation: Equatable, CaseIterable {
-    /// 0 degree - default
-    case angle_0
-
-    /// 90 degree
-    case angle_90
-
-    /// 180 degree
-    case angle_180
-
-    /// 270 degree
-    case angle_270
-
-    public var transform: CGAffineTransform {
-      switch self {
-      case .angle_0:
-        return .identity
-      case .angle_90:
-        return .init(rotationAngle: -CGFloat.pi / 2)
-      case .angle_180:
-        return .init(rotationAngle: -CGFloat.pi)
-      case .angle_270:
-        return .init(rotationAngle: CGFloat.pi / 2)
-      }
-    }
-
-    public func next() -> Self {
-      switch self {
-      case .angle_0: return .angle_90
-      case .angle_90: return .angle_180
-      case .angle_180: return .angle_270
-      case .angle_270: return .angle_0
-      }
-    }
-  }
-
-  /**
-   Returns aspect ratio.
-   Would not be affected by rotation.
-   */
-  public var preferredAspectRatio: PixelAspectRatio?
-
-  /// The dimensions in pixel for the image.
-  public var imageSize: PixelSize
-
-  /// The rectangle that specifies the extent of the cropping.
-  public var cropExtent: PixelRect
-
-  /// The angle that specifies rotation for the image.
-  public var rotation: Rotation = .angle_0
-
-  public init(from ciImage: CIImage) {
-    self.init(
-      imageSize: .init(image: ciImage),
-      cropRect: .init(cgRect: .init(origin: .zero, size: ciImage.extent.size)
-      )
-    )
-  }
-
-  public init(imageSize: PixelSize, cropRect: PixelRect, rotation: Rotation = .angle_0) {
-    self.imageSize = imageSize
-    cropExtent = cropRect
-    self.rotation = rotation
-  }
-
-  public func makeInitial() -> Self {
-    .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize))
-  }
-
-  /**
-   Set new aspect ratio with updating cropping extent.
-   Currently, the cropping extent changes to maximum size in the size of image.
-
-   - TODO: Resizing cropping extent with keeping area by new aspect ratio.
-   */
-  public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
-    let maxSize = newAspectRatio.sizeThatFits(in: imageSize.cgSize)
-
-    cropExtent = .init(
-      origin: .init(cgPoint: CGPoint(
-        x: (imageSize.cgSize.width - maxSize.width) / 2,
-        y: (imageSize.cgSize.height - maxSize.height) / 2
-      )),
-      size: .init(cgSize: maxSize)
-    )
-  }
-}
-
 public enum ImageProviderError: Error {
   case failedToDownloadPreviewImage(underlyingError: Error)
   case failedToDownloadEditableImage(underlyingError: Error)
-
-  case failedToDecodePreviewImage(Data)
-  case failedToDecodeEditableImage(Data)
+  
+  case urlIsNotFileURL(URL)
+  
+  case failedToCreateCGDataProvider
+  case failedToCreateCGImageSource
+  case failedToGetImageSize
 }
 
 /**
@@ -139,8 +53,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
   public struct State {
     public enum Image: Equatable {
-      case preview(CIImage)
-      case editable(CIImage)
+      case preview(CGImageSource)
+      case editable(CGImageSource)
     }
 
     public var loadedImage: Image? {
@@ -155,10 +69,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
       return nil
     }
 
-    fileprivate var previewImage: CIImage?
-    fileprivate var editableImage: CIImage?
-    public fileprivate(set) var loadingErrors: [ImageProviderError] = []
-    public let imageSize: PixelSize
+    fileprivate var previewImage: CGImageSource?
+    fileprivate var editableImage: CGImageSource?
+    
+    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
+    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
+    public let imageSize: CGSize
   }
 
   public let store: DefaultStore
@@ -166,44 +82,89 @@ public final class ImageProvider: Equatable, StoreComponentType {
   private var pendingAction: (ImageProvider) -> Void
 
   #if os(iOS)
-
-  public convenience init(image uiImage: UIImage) {
-    let image = CIImage(image: uiImage)!
-    let fixedOriantationImage = image.oriented(forExifOrientation: imageOrientationToTiffOrientation(uiImage.imageOrientation))
-
-    self.init(image: fixedOriantationImage)
-  }
-
-  #endif
-
-  public init(image: CIImage) {
-    precondition(image.extent.origin == .zero)
+  
+  /// Creates an instance from data
+  public init(data: Data, imageSize: CGSize) throws {
+        
+    guard let provider = CGDataProvider(data: data as CFData) else {
+      throw ImageProviderError.failedToCreateCGDataProvider
+    }
+    
+    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+      throw ImageProviderError.failedToCreateCGImageSource
+    }
+    
     store = .init(
       initialState: .init(
         previewImage: nil,
-        editableImage: image,
-        imageSize: .init(width: Int(image.extent.size.width), height: Int(image.extent.size.height))
+        editableImage: imageSource,
+        imageSize: imageSize
       )
     )
     pendingAction = { _ in }
   }
 
+  /// Creates an instance from UIImage
+  ///
+  /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
+  public convenience init(image uiImage: UIImage) {
+    try! self.init(data: uiImage.pngData()!, imageSize: .init(image: uiImage))
+  }
+
+  #endif
+  
+  /**
+   Creates an instance from fileURL.
+   This is most efficient way to edit image without large memory footprint.
+   */
+  public init(
+    fileURL: URL
+  ) throws {
+    guard fileURL.isFileURL else {
+      throw ImageProviderError.urlIsNotFileURL(fileURL)
+    }
+    
+    guard let provider = CGDataProvider(url: fileURL as CFURL) else {
+      throw ImageProviderError.failedToCreateCGDataProvider
+    }
+    
+    guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+      throw ImageProviderError.failedToCreateCGImageSource
+    }
+    
+    guard let size = ImageTool.readImageSize(from: imageSource) else {
+      throw ImageProviderError.failedToGetImageSize
+    }
+    
+    store = .init(
+      initialState: .init(
+        previewImage: nil,
+        editableImage: imageSource,
+        imageSize: size
+      )
+    )
+    pendingAction = { _ in }
+  }
+
+  /**
+   Creates an instance
+   */
   public convenience init(
-    previewURL: URL? = nil,
-    editableURL: URL,
-    imageSize: PixelSize
+    previewRemoteURL: URL? = nil,
+    editableRemoteURL: URL,
+    imageSize: CGSize
   ) {
     self.init(
-      previewURLRequest: previewURL.map { URLRequest(url: $0) },
-      editableURLRequest: URLRequest(url: editableURL),
+      previewRemoteURLRequest: previewRemoteURL.map { URLRequest(url: $0) },
+      editableRemoteURLRequest: URLRequest(url: editableRemoteURL),
       imageSize: imageSize
     )
   }
 
   public init(
-    previewURLRequest: URLRequest? = nil,
-    editableURLRequest: URLRequest,
-    imageSize: PixelSize
+    previewRemoteURLRequest: URLRequest? = nil,
+    editableRemoteURLRequest: URLRequest,
+    imageSize: CGSize
   ) {
     store = .init(
       initialState: .init(
@@ -215,60 +176,61 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
     pendingAction = { `self` in
 
-      var previewTask: URLSessionDataTask?
+      var previewTask: URLSessionDownloadTask?
 
-      if let previewURLRequest = previewURLRequest {
-        previewTask = URLSession.shared.dataTask(with: previewURLRequest) { data, response, error in
+      if let previewURLRequest = previewRemoteURLRequest {
+        previewTask = URLSession.shared.downloadTask(with: previewURLRequest) { url, response, error in
 
           if let error = error {
             self.store.commit {
-              $0.loadingErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
+              $0.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
             }
           }
-
-          if let data = data {
-            // To make CIImage's backing storage as CGImage.
-            let uiImage = UIImage(data: data, scale: 1)!
-            assert(uiImage.cgImage != nil)
-
-            if let image = CIImage(image: uiImage) {
-              assert(imageSize.aspectRatio == PixelSize(image: image).aspectRatio)
-              self.store.commit {
-                $0.previewImage = image
+          
+          self.commit { state in
+            if let url = url {
+              
+              guard let provider = CGDataProvider(url: url as CFURL) else {
+                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+                return
               }
-            } else {
-              self.store.commit {
-                $0.loadingErrors.append(.failedToDecodePreviewImage(data))
+              
+              guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+                return
               }
+              
+              state.previewImage = imageSource
             }
           }
+         
         }
       }
 
-      let editableTask = URLSession.shared.dataTask(with: editableURLRequest) { data, response, error in
+      let editableTask = URLSession.shared.downloadTask(with: editableRemoteURLRequest) { url, response, error in
 
         previewTask?.cancel()
 
         if let error = error {
           self.store.commit {
-            $0.loadingErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+            $0.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
           }
         }
-
-        if let data = data {
-          // To make CIImage's backing storage as CGImage.
-          let uiImage = UIImage(data: data, scale: 1)!
-          assert(uiImage.cgImage != nil)
-
-          if let image = CIImage(image: uiImage) {
-            assert(imageSize == .init(image: image))
-            self.store.commit {
-              $0.editableImage = image
+       
+        self.commit { state in
+          if let url = url {
+            
+            guard let provider = CGDataProvider(url: url as CFURL) else {
+              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+              return
             }
-          } else {
-            self.store.commit {
-              $0.loadingErrors.append(.failedToDecodeEditableImage(data))
+            
+            guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+              return
             }
+            
+            state.editableImage = imageSource
           }
         }
       }
@@ -313,14 +275,39 @@ public final class ImageProvider: Equatable, StoreComponentType {
         targetSize: CGSize(width: 360, height: 360),
         contentMode: .aspectFit,
         options: previewRequestOptions
-      ) { [weak self] image, _ in
-
-        guard let image = image, let self = self else { return }
-        let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-
-        self.commit {
-          $0.previewImage = ciImage
+      ) { [weak self] image, info in
+        
+        // FIXME: Avoid loading image, get a url instead.
+        
+        guard let self = self else { return }
+               
+        self.commit { state in
+          
+          if let error = info?[PHImageErrorKey] as? Error {
+            state.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
+            return
+          }
+          
+          guard let image = image else { return }
+          guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
+            assertionFailure()
+            return
+          }
+          
+          guard let provider = CGDataProvider(url: url as CFURL) else {
+            state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+            return
+          }
+          
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+            state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+            return
+          }
+          
+          state.previewImage = imageSource
+          
         }
+        
       }
 
       PHImageManager.default().requestImage(
@@ -328,13 +315,37 @@ public final class ImageProvider: Equatable, StoreComponentType {
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
         options: finalImageRequestOptions
-      ) { [weak self] image, _ in
+      ) { [weak self] image, info in
+        
+        // FIXME: Avoid loading image, get a url instead.
 
-        guard let image = image, let self = self else { return }
-        let ciImage = image.ciImage ?? CIImage(cgImage: image.cgImage!)
-
-        self.commit {
-          $0.editableImage = ciImage
+        guard let self = self else { return }
+             
+        self.commit { state in
+                    
+          if let error = info?[PHImageErrorKey] as? Error {
+            state.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+            return
+          }
+          
+          guard let image = image else { return }
+          guard let url = ImageTool.writeImageToTmpDirectory(image: image) else {
+            assertionFailure()
+            return
+          }
+          
+          guard let provider = CGDataProvider(url: url as CFURL) else {
+            state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+            return
+          }
+          
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+            state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+            return
+          }
+          
+          state.editableImage = imageSource
+          
         }
       }
     }
@@ -344,28 +355,5 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
   func start() {
     pendingAction(self)
-  }
-}
-
-private func imageOrientationToTiffOrientation(_ value: UIImage.Orientation) -> Int32 {
-  switch value {
-  case .up:
-    return 1
-  case .down:
-    return 3
-  case .left:
-    return 8
-  case .right:
-    return 6
-  case .upMirrored:
-    return 2
-  case .downMirrored:
-    return 4
-  case .leftMirrored:
-    return 5
-  case .rightMirrored:
-    return 7
-  @unknown default:
-    fatalError()
   }
 }

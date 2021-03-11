@@ -10,6 +10,15 @@ struct ContentView: View {
   @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)
   @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(image: Asset.verticalRect.image)
   @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(image: Asset.squareRect.image)
+  @State private var stackForNasa: EditingStack = Mocks.makeEditingStack(
+    fileURL:
+    Bundle.main.path(
+      forResource: "nasa",
+      ofType: "jpg"
+    ).map {
+      URL(fileURLWithPath: $0)
+    }!
+  )
   @State private var stackForSmall: EditingStack = Mocks.makeEditingStack(image: Asset.superSmall.image)
 
   var body: some View {
@@ -58,6 +67,15 @@ struct ContentView: View {
               }
             }
 
+            Button("Nasa") {
+              fullScreenView = .init {
+                CropViewWrapper(editingStack: stackForNasa, onCompleted: {
+                  self.image = SwiftUI.Image.init(uiImage: stackForNasa.makeRenderer().render())
+                  self.fullScreenView = nil
+                })
+              }
+            }
+
             Button("Super small") {
               fullScreenView = .init {
                 CropViewWrapper(editingStack: stackForSmall, onCompleted: {
@@ -70,7 +88,7 @@ struct ContentView: View {
             Button("Remote") {
               let stack = EditingStack(
                 source: .init(
-                  editableURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
+                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
                   imageSize: .init(width: 4025, height: 6037)
                 ),
                 previewSize: .init(width: 1000, height: 1000)
@@ -87,8 +105,8 @@ struct ContentView: View {
             Button("Remote - preview") {
               let stack = EditingStack(
                 source: .init(
-                  previewURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
-                  editableURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!,
+                  previewRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
+                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!,
                   imageSize: .init(width: 4980, height: 3984)
                 ),
                 previewSize: .init(width: 1000, height: 1000)
@@ -107,7 +125,7 @@ struct ContentView: View {
             Button("PixelEditor Square") {
               let stack = EditingStack.init(
                 source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 400, height: 400),
+                previewSize: CGSize(width: 400 * 2, height: 400 * 2),
                 modifyCrop: { _, crop in
                   crop.updateCropExtent(by: .square)
                 }
@@ -123,7 +141,7 @@ struct ContentView: View {
             Button("PixelEditor") {
               let stack = EditingStack.init(
                 source: .init(image: Asset.l1000316.image),
-                previewSize: CGSize(width: 400, height: 400)
+                previewSize: CGSize(width: 400 * 2, height: 400 * 2)
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
@@ -220,21 +238,18 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
 
 var _loaded = false
 extension ColorCubeStorage {
-
   static func loadToDefault() {
-    
     guard _loaded == false else {
       return
     }
     _loaded = true
-    
+
     do {
-      
       try autoreleasepool {
         let bundle = Bundle.main
         let rootPath = bundle.bundlePath as NSString
         let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-        
+
         let filters = fileList
           .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
           .sorted()
@@ -253,12 +268,11 @@ extension ColorCubeStorage {
               dimension: 64
             )
           }
-        
+
         self.default.filters = filters
       }
-      
+
     } catch {
-      
       assertionFailure("\(error)")
     }
   }

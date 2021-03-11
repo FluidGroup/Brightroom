@@ -81,7 +81,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
         
       self.store.commit { viewState in
         
-        state.ifChanged(\.editingState.cubeFilterPreviewSourceImage, \.editingState.previewColorCubeFilters) { image, filters in
+        state.ifChanged(\.editingState.thumbnailImage, \.editingState.previewColorCubeFilters) { image, filters in
           
           if let image = image {
             viewState.content = .init(previews: filters, originalImage: image)

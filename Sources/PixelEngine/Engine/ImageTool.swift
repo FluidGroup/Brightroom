@@ -23,41 +23,90 @@ import UIKit
 import CoreImage
 import AVFoundation
 
-public enum ImageTool {
-
-  private static let ciContext = CIContext(options: [
-    .useSoftwareRenderer : false,
-    .highQualityDownsample: true,
-    .workingColorSpace : CGColorSpaceCreateDeviceRGB()
+enum ImageTool {
+  
+  /**
+   Returns a pixel size of image.
+   
+   https://oleb.net/blog/2011/09/accessing-image-properties-without-loading-the-image-into-memory/
+   */
+  static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
+    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+      return nil
+    }
+    
+    guard
+      let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+      let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
+    else {
+      return nil
+    }
+    return CGSize(width: width, height: height)
+  }
+  
+  static func loadOriginalCGImage(from imageSource: CGImageSource) -> CGImage? {
+    CGImageSourceCreateImageAtIndex(imageSource, 0, [:] as CFDictionary)
+  }
+  
+  static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat) -> CGImage? {
+    let scaledImage = CGImageSourceCreateThumbnailAtIndex(
+      imageSource, 0, [
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+      ] as CFDictionary
+    )
+    
+    #if DEBUG
+    let size = readImageSize(from: imageSource)!
+    let scaled = size.scaled(maxPixelSize: maxPixelSize)
+    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
+    #endif
+    
+    return scaledImage
+  }
+  
+  static func writeImageToTmpDirectory(image: UIImage) -> URL? {
+    let directory = NSTemporaryDirectory()
+    let fileName = UUID().uuidString
+    let path =  directory + "/" + fileName
+    let destination = URL(fileURLWithPath: path)
+    
+    guard let data = image.pngData() else {
+      return nil
+    }
+    
+    do {
+      try data.write(to: destination, options: [])
+    } catch {
+      return nil
+    }
+    
+    return destination
+  }
+  
+  static func makeResizedCIImage(provider: CGDataProvider, targetCGSize: CGSize) -> CIImage? {
+        
+    let imageSource = CGImageSourceCreateWithDataProvider(provider, [:] as CFDictionary)!
+    
+    let options: [AnyHashable : Any] = [
+      kCGImageSourceThumbnailMaxPixelSize: max(targetCGSize.width, targetCGSize.height),
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true
     ]
-  )
+    
+    let scaledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary).flatMap { CIImage(cgImage: $0) }
+    
+    return scaledImage
+  }
 
-  public static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
+  static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
 
     var targetSize = pixelSize
     targetSize.height.round(.down)
     targetSize.width.round(.down)
-    
-//    return sourceImage.transformed(by: .init(scaleX: 0.1, y: 0.1))
-    
-    /*
-    do {
-      let resizeFilter = CIFilter(name: "CILanczosScaleTransform")!
-      // Desired output size
-      
-      // Compute scale and corrective aspect ratio
-      let scale = pixelSize.height / sourceImage.extent.height
-      let aspectRatio = pixelSize.width / sourceImage.extent.width * scale
-      
-      // Apply resizing
-      resizeFilter.setValue(sourceImage, forKey: kCIInputImageKey)
-      resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
-      resizeFilter.setValue(pixelSize.width / pixelSize.height, forKey: kCIInputAspectRatioKey)
-      let outputImage = resizeFilter.outputImage
-      
-      return outputImage!.insertingIntermediate(cache: true)
-    }
-     */
 
     return
       autoreleasepool { () -> CIImage? in
