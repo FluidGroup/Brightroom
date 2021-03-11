@@ -36,11 +36,6 @@ public final class ImageRenderer {
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
   }
-
-  private let cicontext = CIContext(options: [
-    .useSoftwareRenderer : false,
-    .highQualityDownsample : true,
-    ])
   
   public let source: CGImageSource
 
@@ -149,15 +144,14 @@ public final class ImageRenderer {
       
       UIGraphicsImageRenderer.init(size: canvasSize, format: format)
         .image { c in
-          
-          let cgContext = UIGraphicsGetCurrentContext()!
-          
-          let cgImage = cicontext.createCGImage(croppedImage, from: croppedImage.extent, format: .RGBA8, colorSpace: croppedImage.colorSpace ?? CGColorSpaceCreateDeviceRGB())!
-          
+          let cgContext = c.cgContext
+          let ciContext = CIContext(cgContext: cgContext, options: [:])
+                              
           cgContext.saveGState()
           cgContext.translateBy(x: 0, y: canvasSize.height)
           cgContext.scaleBy(x: 1, y: -1)
-          cgContext.draw(cgImage, in: CGRect(origin: .zero, size: canvasSize))
+          ciContext.draw(croppedImage, in: CGRect(origin: .zero, size: canvasSize), from: croppedImage.extent)
+
           cgContext.restoreGState()
 
           self.edit.drawer.forEach { drawer in
