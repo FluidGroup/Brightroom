@@ -145,7 +145,7 @@ open class EditingStack: Equatable, StoreComponentType {
   ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
   public init(
     imageProvider: ImageProvider,
-    previewMaxPixelSize: CGFloat,
+    previewMaxPixelSize: CGFloat = 1000,
     colorCubeStorage: ColorCubeStorage = .default,
     modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
     ) {
@@ -215,22 +215,28 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
-                   
+                             
           let croppedImage = targetImage
             .cropped(to: _cropRect.scaled(maxPixelSize: self.imageMaxLengthInEditing))
                     
           let targetSize = croppedImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
+          
+          // FIXME: depending the scale, the scaled image includes alpha pixel in the edges.
 
-          let scaled = croppedImage.transformed(
-            by: .init(
-              scaleX: targetSize.width / croppedImage.extent.width,
-              y: targetSize.height / croppedImage.extent.height
+          let scaled = croppedImage
+            .transformed(
+              by: .init(
+                scaleX: targetSize.width / croppedImage.extent.width,
+                y: targetSize.height / croppedImage.extent.height
+              ),
+              highQualityDownsample: true
             )
-          )
 
           let translated = scaled
             .transformed(by: .init(translationX: scaled.extent.origin.x, y: scaled.extent.origin.y))
             .insertingIntermediate(cache: true)
+          
+          EngineLog.debug("[Preview-Crop] \(_cropRect.cropExtent) -> \(translated.extent)")
 
           self.commit {
             $0.editingCroppedImage = translated

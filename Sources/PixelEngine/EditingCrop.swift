@@ -68,7 +68,11 @@ public struct EditingCrop: Equatable {
   public var imageSize: CGSize
   
   /// The rectangle that specifies the extent of the cropping.
-  public var cropExtent: CGRect
+  public var cropExtent: CGRect {
+    didSet {
+      self.cropExtent = cropExtent.integral
+    }
+  }
   
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
