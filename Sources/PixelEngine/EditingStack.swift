@@ -213,45 +213,13 @@ open class EditingStack: Equatable, StoreComponentType {
       }
       
       state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { _cropRect, targetImage in
-        
+                
         if let targetImage = targetImage {
-                             
-          let croppedImage = targetImage
-            .cropped(to: _cropRect.scaled(maxPixelSize: self.imageMaxLengthInEditing))
           
-          let fixedOriginImage = croppedImage.transformed(by: .init(
-            translationX: -croppedImage.extent.origin.x,
-            y: -croppedImage.extent.origin.y
-          ))
-          
-          assert(fixedOriginImage.extent.origin == .zero)
-          
-          let targetSize = fixedOriginImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
-          
-          // FIXME: depending the scale, the scaled image includes alpha pixel in the edges.
-          
-          let scale = max(
-            targetSize.width / croppedImage.extent.width,
-            targetSize.height / croppedImage.extent.height
-          )
-
-          let zoomedImage = croppedImage
-            .transformed(
-              by: .init(
-                scaleX: scale,
-                y: scale
-              ),
-              highQualityDownsample: true
-            )
-
-          let translated = zoomedImage
-            .transformed(by: .init(translationX: zoomedImage.extent.origin.x, y: zoomedImage.extent.origin.y))
-            .insertingIntermediate(cache: true)
-          
-          EngineLog.debug("[Preview-Crop] \(_cropRect.cropExtent) -> \(translated.extent)")
-
+          let result = self._createPreviewImage(targetImage: targetImage, crop: _cropRect)
+                                       
           self.commit {
-            $0.editingCroppedImage = translated
+            $0.editingCroppedImage = result
           }
         }
         
@@ -259,8 +227,7 @@ open class EditingStack: Equatable, StoreComponentType {
       
     }
     .store(in: &subscriptions)
-    
-    
+        
     /**
      Start downloading image
      */
@@ -319,6 +286,63 @@ open class EditingStack: Equatable, StoreComponentType {
   }
   
   // MARK: - Functions
+  
+  /// Make an image that cropped and resized for previewing
+  func _createPreviewImage(targetImage: CIImage, crop: EditingCrop) -> CIImage {
+  
+    /**
+     Crop image
+     */
+
+    let croppedImage = targetImage
+      .cropped(to: crop.scaled(maxPixelSize: self.imageMaxLengthInEditing))
+    
+    /**
+     Remove the offset from cropping
+     */
+    
+    let fixedOriginImage = croppedImage.transformed(by: .init(
+      translationX: -croppedImage.extent.origin.x,
+      y: -croppedImage.extent.origin.y
+    ))
+    
+    assert(fixedOriginImage.extent.origin == .zero)
+    
+    /**
+    Make the image small
+     */
+    
+    let targetSize = fixedOriginImage.extent.size.scaled(maxPixelSize: self.previewMaxPixelSize)
+    
+    // FIXME: depending the scale, the scaled image includes alpha pixel in the edges.
+    
+    let scale = max(
+      targetSize.width / croppedImage.extent.width,
+      targetSize.height / croppedImage.extent.height
+    )
+    
+    let zoomedImage = croppedImage
+      .transformed(
+        by: .init(
+          scaleX: scale,
+          y: scale
+        ),
+        highQualityDownsample: true
+      )
+    
+    /**
+     Remove the offset from transforming
+     Plus insert intermediate
+     */
+    
+    let translated = zoomedImage
+      .transformed(by: .init(translationX: zoomedImage.extent.origin.x, y: zoomedImage.extent.origin.y))
+      .insertingIntermediate(cache: true)
+    
+    EngineLog.debug("[Preview-Crop] \(crop.cropExtent) -> \(translated.extent)")
+    
+    return translated
+  }
   
   func _commit_adjustCropExtent(image: CIImage?, ref: InoutRef<State>) {
     
