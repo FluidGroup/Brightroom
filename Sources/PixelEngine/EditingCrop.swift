@@ -122,6 +122,7 @@ public struct EditingCrop: Equatable {
     let scale = scaledImageSize.width / imageSize.width
     
     var new = scaled(scale)
+    new.imageSize = scaledImageSize
     new.scaleToRestore = imageSize.width / scaledImageSize.width
     return new
   }
@@ -138,10 +139,10 @@ public struct EditingCrop: Equatable {
     modified.cropExtent.origin.y *= scale
     modified.cropExtent.size.width *= scale
     modified.cropExtent.size.height *= scale
-    
+        
     modified.imageSize.width *= scale
     modified.imageSize.height *= scale
-    
+       
     return modified
   }
   

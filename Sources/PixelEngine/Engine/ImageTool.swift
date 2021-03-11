@@ -57,6 +57,13 @@ enum ImageTool {
         kCGImageSourceCreateThumbnailWithTransform: true,
       ] as CFDictionary
     )
+    
+    #if DEBUG
+    let size = readImageSize(from: imageSource)!
+    let scaled = size.scaled(maxPixelSize: maxPixelSize)
+    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
+    #endif
+    
     return scaledImage
   }
   

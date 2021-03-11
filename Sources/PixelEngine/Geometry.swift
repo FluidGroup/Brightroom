@@ -105,6 +105,10 @@ extension CGSize {
   
   func scaled(maxPixelSize: CGFloat) -> CGSize {
     
+    guard width >= maxPixelSize || height >= maxPixelSize else {
+      return self
+    }
+    
     var s = self
     
     if width > height {
@@ -115,7 +119,10 @@ extension CGSize {
       s.width *= maxPixelSize / height
     }
     
-    return CGRect(origin: .zero, size: s).integral.size
+    s.width.round()
+    s.height.round()
+    
+    return s
   }
 }
 
