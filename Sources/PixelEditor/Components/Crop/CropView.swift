@@ -253,7 +253,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
             self.updateLoadingOverlay(displays: isLoading)
           }
           
-          state.ifChanged(\.previewImage, \.targetOriginalSizeImage) { previewImage, image in
+          state.ifChanged(\.placeholderImage, \.editingSourceImage) { previewImage, image in
             
             if let previewImage = previewImage {
               self.setImage(previewImage)

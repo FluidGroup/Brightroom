@@ -60,23 +60,28 @@ open class EditingStack: Equatable, StoreComponentType {
     fileprivate(set) var editableImageProvider: CGImageSource?
     
     public fileprivate(set) var thumbnailImage: CIImage?
-    public fileprivate(set) var previewImage: CIImage?
+    
+    /**
+     An image for placeholder, not editable.
+     Uses in waiting for loading an editable image.
+     */
+    public fileprivate(set) var placeholderImage: CIImage?
     
     /**
      An original image
      Can be used in cropping
      */
-    public fileprivate(set) var targetOriginalSizeImage: CIImage?
+    public fileprivate(set) var editingSourceImage: CIImage?
         
     /**
      An image that cropped but not effected.
      */
-    public fileprivate(set) var previewCroppedOriginalImage: CIImage?
+    public fileprivate(set) var editingCroppedImage: CIImage?
     
     /**
      An image that applied editing and optimized for previewing.
      */
-    public fileprivate(set) var previewCroppedAndEffectedImage: CIImage?
+    public fileprivate(set) var editingCroppedPreviewImage: CIImage?
         
     public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
     
@@ -195,13 +200,13 @@ open class EditingStack: Equatable, StoreComponentType {
         
       }
       
-      state.ifChanged(\.currentEdit, \.previewCroppedOriginalImage) { currentEdit, croppedTargetImage in
+      state.ifChanged(\.currentEdit, \.editingCroppedImage) { currentEdit, croppedTargetImage in
         if let croppedTargetImage = croppedTargetImage {
           self.updatePreviewImage(from: currentEdit, image: croppedTargetImage)
         }
       }
       
-      state.ifChanged(\.currentEdit.crop, \.targetOriginalSizeImage) { _cropRect, targetImage in
+      state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { _cropRect, targetImage in
         
         if let targetImage = targetImage {
                    
@@ -217,7 +222,7 @@ open class EditingStack: Equatable, StoreComponentType {
           )
           
           self.commit {
-            $0.previewCroppedOriginalImage = result
+            $0.editingCroppedImage = result
           }
         }
         
@@ -250,7 +255,7 @@ open class EditingStack: Equatable, StoreComponentType {
           case .preview(let image):
             s.isLoading = true
             s.previewImageProvider = image
-            s.previewImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
+            s.placeholderImage = ImageTool.loadThumbnailCGImage(from: image, maxPixelSize: 1280).flatMap { CIImage(cgImage: $0) }
             
           case .editable(let image):
             s.isLoading = false
@@ -262,7 +267,7 @@ open class EditingStack: Equatable, StoreComponentType {
             )
             .flatMap { CIImage(cgImage: $0) }
             
-            s.targetOriginalSizeImage = editingImage
+            s.editingSourceImage = editingImage
             
             s.thumbnailImage = ImageTool.loadThumbnailCGImage(
               from: image,
@@ -418,7 +423,7 @@ open class EditingStack: Equatable, StoreComponentType {
     }
     
     commit {
-      $0.previewCroppedAndEffectedImage = result
+      $0.editingCroppedPreviewImage = result
     }
 
     // TODO: Ignore vignette and blur (convolutions)

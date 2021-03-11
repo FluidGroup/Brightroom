@@ -147,7 +147,7 @@ extension BlurredMosaicView {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.previewCroppedAndEffectedImage) { previewImage in
+      state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
         UIView.performWithoutAnimation {
 //          if !self.maskingView.isHidden {
           self.image = previewImage

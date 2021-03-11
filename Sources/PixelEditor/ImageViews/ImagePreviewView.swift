@@ -77,14 +77,14 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
       
       UIView.performWithoutAnimation {
         
-        state.ifChanged(\.previewCroppedAndEffectedImage) { previewImage in
+        state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
           if let image = previewImage {
             self.imageView.display(image: image)
             EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
           }
         }
         
-        state.ifChanged(\.previewCroppedOriginalImage) { croppedTargetImage in
+        state.ifChanged(\.editingCroppedImage) { croppedTargetImage in
           if let image = croppedTargetImage {
             self.originalImageView.display(image: image)
             EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)

@@ -260,7 +260,7 @@ public final class PixelEditViewController: UIViewController {
       maskingView.drawnPaths = paths
     }
 
-    if let previewImage = state.takeIfChanged(\.editingState.previewCroppedAndEffectedImage) {
+    if let previewImage = state.takeIfChanged(\.editingState.editingCroppedPreviewImage) {
       maskingView.image = previewImage
     }
 
