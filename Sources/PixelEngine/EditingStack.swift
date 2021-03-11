@@ -238,11 +238,10 @@ open class EditingStack: Equatable, StoreComponentType {
       state.ifChanged(\.loadedImage) { image in
          
         guard let image = image else {
-          // FIXME:
-//          self.applyIfChanged {
-//            self.modifyCrop(nil, &$0.crop)
-//          }
-//          self.takeSnapshot()
+          self.applyIfChanged {
+            self.modifyCrop(nil, &$0.crop)
+          }
+          self.takeSnapshot()
           return
         }
         self.commit { s in
@@ -256,11 +255,14 @@ open class EditingStack: Equatable, StoreComponentType {
           case .editable(let image):
             s.isLoading = false
             s.editableImageProvider = image
-            s.targetOriginalSizeImage = ImageTool.loadThumbnailCGImage(
+            
+            let editingImage = ImageTool.loadThumbnailCGImage(
               from: image,
               maxPixelSize: self.imageMaxLengthInEditing
             )
             .flatMap { CIImage(cgImage: $0) }
+            
+            s.targetOriginalSizeImage = editingImage
             
             s.thumbnailImage = ImageTool.loadThumbnailCGImage(
               from: image,
@@ -268,12 +270,12 @@ open class EditingStack: Equatable, StoreComponentType {
             )
             .flatMap { CIImage(cgImage: $0) }
             
-//            self.modifyCrop(image, &s.currentEdit.crop)
-//            s.withType { (type, ref) -> Void in
-//              type.makeVersion(ref: ref)
-//            }
-            
-            // FIXME:
+            do {
+              self.modifyCrop(editingImage, &s.currentEdit.crop)
+              s.withType { (type, ref) -> Void in
+                type.makeVersion(ref: ref)
+              }
+            }
             
             self.imageProviderSubscription?.cancel()
           }
