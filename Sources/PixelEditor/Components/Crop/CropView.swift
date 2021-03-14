@@ -50,13 +50,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     public fileprivate(set) var proposedCrop: EditingCrop?
 
-    fileprivate var modifiedSource: ModifiedSource?
-
     public fileprivate(set) var adjustmentKind: AdjustmentKind?
 
     public fileprivate(set) var frame: CGRect = .zero
     fileprivate var hasLoaded = false
     fileprivate var isGuideInteractionEnabled: Bool = true
+    fileprivate var layoutVersion: UInt64 = 0
   }
 
   /**
@@ -94,6 +93,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }()
   #endif
   private let scrollView = _CropScrollView()
+  private let scrollBackdropView = UIView()
 
   /**
    a guide view that displayed on guide container view.
@@ -109,7 +109,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /// A throttling timer to apply guide changed event.
   ///
   /// This's waiting for Combine availability in minimum iOS Version.
-  private let throttle = Debounce(interval: 0.8)
+  private let debounce = Debounce(interval: 0.8)
 
   private let contentInset: UIEdgeInsets
   
@@ -154,6 +154,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     clipsToBounds = false
 
+    addSubview(scrollBackdropView)
     addSubview(scrollView)
     addSubview(guideView)
 
@@ -181,12 +182,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
     editingStack.sinkState { [weak self] state in
       
       guard let self = self else { return }
-      
+            
       state.ifChanged(\.currentEdit.crop) { cropRect in
         
         self.setCrop(cropRect)
       }
-           
+
     }
     .store(in: &subscriptions)
   
@@ -217,11 +218,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           guard let self = self else { return }
           
-          state.ifChanged(\.proposedCrop, \.frame) { crop, frame in
+          state.ifChanged(\.frame, \.layoutVersion) { frame, _ in
+            
+            let crop = state.proposedCrop
             
             guard frame != .zero else { return }
             
-            if let crop = crop, state.modifiedSource != .fromScrollView {
+            if let crop = crop {
               self.updateScrollContainerView(
                 by: crop,
                 animated: state.hasLoaded,
@@ -330,7 +333,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     store.commit {
       $0.proposedCrop = $0.proposedCrop?.makeInitial()
-      $0.modifiedSource = .fromState
+      $0.layoutVersion += 1
     }
 
     guideView.setLockedAspectRatio(nil)
@@ -341,7 +344,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     store.commit {
       $0.proposedCrop?.rotation = rotation
-      $0.modifiedSource = .fromState
+      $0.layoutVersion += 1
     }
   }
 
@@ -350,7 +353,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     store.commit {
       $0.proposedCrop = crop
-      $0.modifiedSource = .fromState
+      $0.layoutVersion += 1
     }
   }
 
@@ -361,7 +364,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       assert($0.proposedCrop != nil)
       $0.proposedCrop?.updateCropExtent(by: ratio)
       $0.proposedCrop?.preferredAspectRatio = ratio
-      $0.modifiedSource = .fromState
+      $0.layoutVersion += 1
     }
   }
 
@@ -425,14 +428,12 @@ extension CropView {
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    DispatchQueue.main.async { [self] in
-      store.commit {
-        if $0.frame != frame {
-          $0.frame = frame
-        }
+    store.commit {
+      if $0.frame != frame {
+        $0.frame = frame
       }
     }
-
+    
     if let outOfBoundsOverlay = cropOutsideOverlay {
       outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
       outOfBoundsOverlay.center = center
@@ -476,7 +477,7 @@ extension CropView {
         }
 
         scrollView.transform = crop.rotation.transform
-
+        
         scrollView.frame = .init(
           origin: .init(
             x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
@@ -484,6 +485,8 @@ extension CropView {
           ),
           size: size
         )
+        
+        scrollBackdropView.frame = scrollView.frame
       }
 
       applyLayoutDescendants: do {
@@ -501,6 +504,7 @@ extension CropView {
         UIView.performWithoutAnimation {
           let currentZoomScale = scrollView.zoomScale
           let contentSize = crop.scrollViewContentSize()
+          scrollView.contentInset = .zero
           scrollView.zoomScale = 1
           scrollView.contentSize = contentSize
           scrollView.zoomScale = currentZoomScale
@@ -557,25 +561,45 @@ extension CropView {
 
   @inline(__always)
   private func willChangeGuideView() {
-    throttle.on { /* for debounce */ }
+    debounce.on { /* for debounce */ }
   }
 
   @inline(__always)
   private func didChangeGuideViewWithDelay() {
-    throttle.on { [weak self] in
+    
+    // TODO: Apply only value immediately, and updates UI later.
+    
+    let visibleRect = guideView.convert(guideView.bounds, to: imageView)
+    
+    updateContentInset: do {
+      let rect = self.guideView.convert(self.guideView.bounds, to: scrollBackdropView)
+      let bounds = scrollBackdropView.bounds
+      let insets = UIEdgeInsets.init(
+        top: rect.minY,
+        left: rect.minX,
+        bottom: bounds.maxY - rect.maxY,
+        right: bounds.maxX - rect.maxX
+      )
+      
+      scrollView.contentInset = insets
+    }
+    
+    store.commit {
+      if var crop = $0.proposedCrop {
+        // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+        crop.cropExtent = visibleRect
+        $0.proposedCrop = crop
+      } else {
+        assertionFailure()
+      }
+    }
+        
+    debounce.on { [weak self] in
 
       guard let self = self else { return }
 
       self.store.commit {
-        let rect = self.guideView.convert(self.guideView.bounds, to: self.imageView)
-        if var crop = $0.proposedCrop {
-          // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-          crop.cropExtent = rect
-          $0.proposedCrop = crop
-          $0.modifiedSource = .fromGuide
-        } else {
-          assertionFailure()
-        }
+        $0.layoutVersion += 1
       }
     }
   }
@@ -583,13 +607,12 @@ extension CropView {
   @inline(__always)
   private func didChangeScrollView() {
     store.commit {
-      let rect = scrollView.convert(scrollView.bounds, to: imageView)
-
+      let rect = guideView.convert(guideView.bounds, to: imageView)
+      
       if var crop = $0.proposedCrop {
         // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
         crop.cropExtent = rect
         $0.proposedCrop = crop
-        $0.modifiedSource = .fromScrollView
       } else {
         assertionFailure()
       }
@@ -624,6 +647,27 @@ extension CropView {
     }
 
     adjustFrameToCenterOnZooming()
+    
+    debounce.on { [weak self] in
+      
+      guard let self = self else { return }
+      
+      self.store.commit {
+        $0.layoutVersion += 1
+      }
+    }
+  }
+  
+  public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+    
+    debounce.on { [weak self] in
+      
+      guard let self = self else { return }
+      
+      self.store.commit {
+        $0.layoutVersion += 1
+      }
+    }
   }
 
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
