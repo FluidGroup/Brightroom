@@ -185,7 +185,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
             
       state.ifChanged(\.currentEdit.crop) { cropRect in
         
-        self.setCrop(cropRect)
+        /**
+         To avoid running pending layout operations from User Initiated actions.
+         */
+        if cropRect != self.store.state.proposedCrop {
+          self.setCrop(cropRect)
+        }
       }
 
     }
