@@ -56,6 +56,8 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
     if super.device == nil {
       fatalError("Device doesn't support Metal")
     }
+    isOpaque = false
+    backgroundColor = .clear
     framebufferOnly = false
     delegate = self
     enableSetNeedsDisplay = true

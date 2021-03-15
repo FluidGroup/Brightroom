@@ -11,7 +11,7 @@ struct IsolatedEditinView: View {
     
     Form {
       Button("Crop") {
-        fullScreenView = .init { CropViewWrapper(editingStack: editingStack, onCompleted: {}) }
+        fullScreenView = .init { CropViewControllerWrapper(editingStack: editingStack, onCompleted: {}) }
       }
       
       Button("Custom Crop") {
@@ -19,7 +19,7 @@ struct IsolatedEditinView: View {
       }
             
       Button("Blur Mask") {
-        fullScreenView = .init { DemoCropView(editingStack: editingStack) }
+        fullScreenView = .init { MaskingViewWrapper(editingStack: editingStack) }
       }
     }
     .navigationTitle("Isolated-Editing")

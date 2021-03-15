@@ -26,11 +26,11 @@ import PixelEngine
 #endif
 import Verge
 
-final class BlurredMosaicView: DryDrawingView {
+public final class BlurryMaskingView: DryDrawingView {
   private var displayingImageExtent: CGRect?
- 
-  private let imageView = MetalImageView()
-  private let blurrSizeSlider = UISlider()
+
+  private let backdropImageView = MetalImageView()
+  private let blurryImageView = MetalImageView()
 
   var brush = OvalBrush(color: UIColor.black, width: 30)
 
@@ -51,16 +51,24 @@ final class BlurredMosaicView: DryDrawingView {
   public init(editingStack: EditingStack) {
     
     self.editingStack = editingStack
+    editingStack.start()
     
     super.init()
 
     setUp: do {
       backgroundColor = .clear
 
-      addSubview(imageView)
+      addSubview(backdropImageView)
+      backdropImageView.accessibilityIdentifier = "backdropImageView"
+      backdropImageView.isUserInteractionEnabled = false
+      backdropImageView.contentMode = .scaleAspectFit
+      
+      addSubview(blurryImageView)
+      blurryImageView.accessibilityIdentifier = "blurryImageView"
+      blurryImageView.isUserInteractionEnabled = false
+      blurryImageView.contentMode = .scaleAspectFit
 
-      imageView.contentMode = .scaleAspectFill
-      imageView.layer.mask = maskLayer
+      blurryImageView.layer.mask = maskLayer
 
       maskLayer.contentsScale = UIScreen.main.scale
       maskLayer.drawsAsynchronously = true
@@ -74,7 +82,8 @@ final class BlurredMosaicView: DryDrawingView {
 
       state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
         UIView.performWithoutAnimation {
-          self.imageView.display(image: previewImage.flatMap { BlurredMask.blur(image: $0) })
+          self.backdropImageView.display(image: previewImage)
+          self.blurryImageView.display(image: previewImage.flatMap { BlurredMask.blur(image: $0) })
         }
       }
       
@@ -88,7 +97,7 @@ final class BlurredMosaicView: DryDrawingView {
     .store(in: &subscriptions)
   }
 
-  override func willBeginPan(path: UIBezierPath) {
+  public override func willBeginPan(path: UIBezierPath) {
 //    guard let extent = displayingImageExtent else { return }
 
     // TODO: Don't use bounds
@@ -96,25 +105,26 @@ final class BlurredMosaicView: DryDrawingView {
     drawnPaths.append(drawnPath)
   }
 
-  override func panning(path: UIBezierPath) {
+  public override func panning(path: UIBezierPath) {
     updateMask()
   }
 
-  override func didFinishPan(path: UIBezierPath) {
+  public override func didFinishPan(path: UIBezierPath) {
     updateMask()
     
     editingStack.set(blurringMaskPaths: drawnPaths)
   }
 
-  override func layoutSublayers(of layer: CALayer) {
+  public override func layoutSublayers(of layer: CALayer) {
     super.layoutSublayers(of: layer)
 
     maskLayer.frame = bounds
   }
 
-  override func layoutSubviews() {
+  public override func layoutSubviews() {
     super.layoutSubviews()
-    imageView.frame = bounds
+    backdropImageView.frame = bounds
+    blurryImageView.frame = bounds
   }
 
   private func updateMask() {
@@ -122,7 +132,7 @@ final class BlurredMosaicView: DryDrawingView {
   }
 }
 
-extension BlurredMosaicView {
+extension BlurryMaskingView {
   private final class MaskLayer: CALayer {
     var drawnPaths: [GraphicsDrawing] = [] {
       didSet {

@@ -45,7 +45,7 @@ struct ContentView: View {
           Section(content: {
             Button("Horizontal") {
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stackForHorizontal, onCompleted: {
+                CropViewControllerWrapper(editingStack: stackForHorizontal, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForHorizontal.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -54,7 +54,7 @@ struct ContentView: View {
 
             Button("Vertical") {
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stackForVertical, onCompleted: {
+                CropViewControllerWrapper(editingStack: stackForVertical, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForVertical.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -63,7 +63,7 @@ struct ContentView: View {
 
             Button("Square") {
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stackForSquare, onCompleted: {
+                CropViewControllerWrapper(editingStack: stackForSquare, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForSquare.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -72,7 +72,7 @@ struct ContentView: View {
 
             Button("Nasa") {
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stackForNasa, onCompleted: {
+                CropViewControllerWrapper(editingStack: stackForNasa, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForNasa.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -81,7 +81,7 @@ struct ContentView: View {
 
             Button("Super small") {
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stackForSmall, onCompleted: {
+                CropViewControllerWrapper(editingStack: stackForSmall, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stackForSmall.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -98,7 +98,7 @@ struct ContentView: View {
               )
 
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
+                CropViewControllerWrapper(editingStack: stack, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -116,7 +116,7 @@ struct ContentView: View {
               )
 
               fullScreenView = .init {
-                CropViewWrapper(editingStack: stack, onCompleted: {
+                CropViewControllerWrapper(editingStack: stack, onCompleted: {
                   self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
                   self.fullScreenView = nil
                 })
@@ -170,30 +170,9 @@ struct ContentView: View {
   }
 }
 
-
 import PixelEditor
 import PixelEngine
 
-struct CropViewWrapper: UIViewControllerRepresentable {
-  typealias UIViewControllerType = CropViewController
-
-  private let editingStack: EditingStack
-  private let onCompleted: () -> Void
-
-  init(editingStack: EditingStack, onCompleted: @escaping () -> Void) {
-    self.editingStack = editingStack
-    self.onCompleted = onCompleted
-    editingStack.start()
-  }
-
-  func makeUIViewController(context: Context) -> CropViewController {
-    let cropViewController = CropViewController(editingStack: editingStack)
-    cropViewController.handlers.didFinish = onCompleted
-    return cropViewController
-  }
-
-  func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
-}
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
   typealias UIViewControllerType = UINavigationController

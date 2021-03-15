@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
 		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
-		4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */; };
+		4B011380216FBAA200CF09F6 /* BlurryMaskingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurryMaskingView.swift */; };
 		4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C55E217F6CD800C50EDE /* FilterExposure.swift */; };
 		4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C560217F72BA00C50EDE /* ResizeViewController.swift */; };
 		4B0433AB217B962C0039293E /* InternalUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0433AA217B962C0039293E /* InternalUtils.swift */; };
@@ -78,6 +78,8 @@
 		4B835DFF25E9654A00EC84D1 /* AutoLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */; };
 		4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */; };
 		4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */; };
+		4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */; };
+		4B8CAF7825FFD17F0075032A /* CropViewControllerWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */; };
 		4B9369E825F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4B9369E925F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4B9369EE25F94A1300B18571 /* EditingCrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9369ED25F94A1300B18571 /* EditingCrop.swift */; };
@@ -237,7 +239,7 @@
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
-		4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMosaicView.swift; sourceTree = "<group>"; };
+		4B01137F216FBAA200CF09F6 /* BlurryMaskingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingView.swift; sourceTree = "<group>"; };
 		4B01C55E217F6CD800C50EDE /* FilterExposure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterExposure.swift; sourceTree = "<group>"; };
 		4B01C560217F72BA00C50EDE /* ResizeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizeViewController.swift; sourceTree = "<group>"; };
 		4B0433AA217B962C0039293E /* InternalUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InternalUtils.swift; sourceTree = "<group>"; };
@@ -312,6 +314,8 @@
 		4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoLayout.swift; sourceTree = "<group>"; };
 		4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedEditingView.swift; sourceTree = "<group>"; };
 		4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenIdentifiableView.swift; sourceTree = "<group>"; };
+		4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingViewWrapper.swift; sourceTree = "<group>"; };
+		4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropViewControllerWrapper.swift; sourceTree = "<group>"; };
 		4B9369E725F940E600B18571 /* nasa.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = nasa.jpg; path = Assets.xcassets/nasa.imageset/nasa.jpg; sourceTree = "<group>"; };
 		4B9369ED25F94A1300B18571 /* EditingCrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingCrop.swift; sourceTree = "<group>"; };
 		4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wrap.swift; sourceTree = "<group>"; };
@@ -520,7 +524,7 @@
 				4B600B15216B7B79001E1456 /* GLImageView.swift */,
 				4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */,
 				4B9D4576216E0694003A240A /* ImagePreviewView.swift */,
-				4B01137F216FBAA200CF09F6 /* BlurredMosaicView.swift */,
+				4B01137F216FBAA200CF09F6 /* BlurryMaskingView.swift */,
 			);
 			path = ImageViews;
 			sourceTree = "<group>";
@@ -689,8 +693,10 @@
 				4B98CCE625EFF4EF00E4F61F /* Mocks.swift */,
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
+				4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */,
 				4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */,
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
+				4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */,
 				4B75113F25F13276002D804A /* DemoCropView.swift */,
 				4B98CCC425EFF31400E4F61F /* Info.plist */,
 				4B98CCC125EFF31400E4F61F /* Preview Content */,
@@ -1182,7 +1188,7 @@
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
-				4B011380216FBAA200CF09F6 /* BlurredMosaicView.swift in Sources */,
+				4B011380216FBAA200CF09F6 /* BlurryMaskingView.swift in Sources */,
 				4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */,
 				4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */,
 				4B42A6AD2178E14500F18208 /* VignetteControl.swift in Sources */,
@@ -1261,9 +1267,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */,
+				4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */,
 				4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */,
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
+				4B8CAF7825FFD17F0075032A /* CropViewControllerWrapper.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
 				4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */,
 				4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */,

@@ -59,13 +59,6 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   
   private let factory: () -> CropView
   
-//  public init(image: UIImage, cropInsideOverlay: AnyView? = nil) {
-//    self.cropInsideOverlay = cropInsideOverlay
-//    self.factory = {
-//      CropView(image: image)
-//    }
-//  }
-  
   public init(
     editingStack: EditingStack,
     cropInsideOverlay: AnyView? = nil

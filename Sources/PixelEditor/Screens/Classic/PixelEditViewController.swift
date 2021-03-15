@@ -47,7 +47,7 @@ public final class PixelEditViewController: UIViewController {
 
   // MARK: - Private Propaties
 
-  private let maskingView: BlurredMosaicView
+  private let maskingView: BlurryMaskingView
 
   private let previewView: ImagePreviewView
   
