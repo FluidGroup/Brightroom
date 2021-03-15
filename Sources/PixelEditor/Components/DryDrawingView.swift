@@ -21,7 +21,7 @@
 
 import UIKit
 
-public class DryDrawingView : UIView {
+public class DryDrawingView : PixelEditorCodeBasedView {
 
   private var bezierPath: UIBezierPath = UIBezierPath()
   private var controlPoint: Int = 0
@@ -32,10 +32,6 @@ public class DryDrawingView : UIView {
   public init() {
     super.init(frame: .zero)
     backgroundColor = .clear
-  }
-
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError()
   }
 
   public func willBeginPan(path: UIBezierPath) {

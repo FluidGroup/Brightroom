@@ -105,10 +105,9 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   
   func endMasking(save: Bool) {
     if save {
-      editingStack.set(blurringMaskPaths: state.drawnPaths)
       editingStack.takeSnapshot()
     } else {
-      // TODO:
+      editingStack.revertEdit()
     }
   }
   

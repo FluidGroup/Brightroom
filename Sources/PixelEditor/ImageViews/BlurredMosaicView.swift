@@ -24,66 +24,71 @@ import UIKit
 #if !COCOAPODS
 import PixelEngine
 #endif
+import Verge
 
-final class BlurredMosaicView : DryDrawingView {
-
+final class BlurredMosaicView: DryDrawingView {
   private var displayingImageExtent: CGRect?
-
-  var image: CIImage? {
-    get {
-      return imageView.image?.ciImage
-    }
-    set {
-
-      displayingImageExtent = newValue?.extent
-
-      let blurredImage = newValue
-        .flatMap { $0.transformed(by: .init(translationX: -$0.extent.origin.x, y: -$0.extent.origin.y)) }
-        .flatMap { BlurredMask.blur(image: $0) }
-        .flatMap { UIImage(ciImage: $0, scale: UIScreen.main.scale, orientation: .up) }
-
-      imageView.image = blurredImage
-    }
-  }
-
-  private let imageView = UIImageView()
+ 
+  private let imageView = MetalImageView()
   private let blurrSizeSlider = UISlider()
 
-  var brush: OvalBrush = OvalBrush(color: UIColor.black, width: 30)
+  var brush = OvalBrush(color: UIColor.black, width: 30)
 
   private let maskLayer = MaskLayer()
 
-  var drawnPaths: [DrawnPathInRect] = [] {
+  private var subscriptions = Set<VergeAnyCancellable>()
+
+  private var drawnPaths: [DrawnPathInRect] = [] {
     didSet {
       updateMask()
     }
   }
+  
+  private let editingStack: EditingStack
 
   // MARK: - Initializers
 
-  override init() {
-
+  public init(editingStack: EditingStack) {
+    
+    self.editingStack = editingStack
+    
     super.init()
 
-    backgroundColor = .clear
+    setUp: do {
+      backgroundColor = .clear
 
-    addSubview(imageView)
+      addSubview(imageView)
 
-    imageView.contentMode = .scaleAspectFill
-    imageView.layer.mask = maskLayer
+      imageView.contentMode = .scaleAspectFill
+      imageView.layer.mask = maskLayer
 
-    maskLayer.contentsScale = UIScreen.main.scale
-    maskLayer.drawsAsynchronously = true
-    
-    clipsToBounds = true
-  }
+      maskLayer.contentsScale = UIScreen.main.scale
+      maskLayer.drawsAsynchronously = true
 
-  required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
+      clipsToBounds = true
+    }
+
+    editingStack.sinkState { [weak self] state in
+
+      guard let self = self else { return }
+
+      state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
+        UIView.performWithoutAnimation {
+          self.imageView.display(image: previewImage.flatMap { BlurredMask.blur(image: $0) })
+        }
+      }
+      
+      state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
+        if self.drawnPaths != paths {
+          self.drawnPaths = paths
+        }
+      }
+
+    }
+    .store(in: &subscriptions)
   }
 
   override func willBeginPan(path: UIBezierPath) {
-
 //    guard let extent = displayingImageExtent else { return }
 
     // TODO: Don't use bounds
@@ -97,6 +102,8 @@ final class BlurredMosaicView : DryDrawingView {
 
   override func didFinishPan(path: UIBezierPath) {
     updateMask()
+    
+    editingStack.set(blurringMaskPaths: drawnPaths)
   }
 
   override func layoutSublayers(of layer: CALayer) {
@@ -111,15 +118,12 @@ final class BlurredMosaicView : DryDrawingView {
   }
 
   private func updateMask() {
-
     maskLayer.drawnPaths = drawnPaths
   }
-  
 }
 
 extension BlurredMosaicView {
-  private class MaskLayer : CALayer {
-
+  private final class MaskLayer: CALayer {
     var drawnPaths: [GraphicsDrawing] = [] {
       didSet {
         setNeedsDisplay()
@@ -130,35 +134,4 @@ extension BlurredMosaicView {
       drawnPaths.forEach { $0.draw(in: ctx, canvasSize: bounds.size) }
     }
   }
-}
-
-
-#if !COCOAPODS
-import PixelEngine
-#endif
-import Verge
-
-extension BlurredMosaicView {
-  
-  func attach(editingStack: EditingStack) -> Set<VergeAnyCancellable> {
-    var subscriptions = Set<VergeAnyCancellable>()
-    
-    editingStack.sinkState { [weak self] state in
-      
-      guard let self = self else { return }
-      
-      state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
-        UIView.performWithoutAnimation {
-//          if !self.maskingView.isHidden {
-          self.image = previewImage
-//          }
-        }
-      }
-          
-    }
-    .store(in: &subscriptions)
-    
-    return subscriptions
-  }
-  
 }

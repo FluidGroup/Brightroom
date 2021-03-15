@@ -23,6 +23,13 @@ import CoreImage
 import UIKit
 import Verge
 
+import SwiftUI
+
+@available(iOS 13, *)
+extension EditingStack: ObservableObject {
+  
+}
+
 /**
  A stateful object that manages current editing status from original image.
  And supports rendering a result image.
@@ -161,8 +168,12 @@ open class EditingStack: Equatable, StoreComponentType {
     self.imageProvider = imageProvider
     self.previewMaxPixelSize = previewMaxPixelSize
     
-    applyIfChanged { s in
+    #if DEBUG
+    sinkState(queue: .asyncSerialBackground) { (state) in
+      print(state.primitive)
     }
+    .store(in: &subscriptions)
+    #endif
   }
   
   /**

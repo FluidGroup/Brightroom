@@ -35,6 +35,9 @@ struct ContentView: View {
         }
         .frame(width: 120, height: 120, alignment: .center)
         Form {
+          
+          NavigationLink("Isolated", destination: IsolatedEditinView())
+          
           Button("Component: Crop") {
             fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
           }
@@ -167,27 +170,6 @@ struct ContentView: View {
   }
 }
 
-struct FullscreenIdentifiableView: View, Identifiable {
-  @Environment(\.presentationMode) var presentationMode
-
-  let id = UUID()
-  private let content: AnyView
-
-  init<Content: View>(content: () -> Content) {
-    self.content = .init(content())
-  }
-
-  var body: some View {
-    VStack {
-      content
-      Button("Dismiss") {
-        presentationMode.wrappedValue.dismiss()
-      }
-      .padding(16)
-    }
-    .clipped()
-  }
-}
 
 import PixelEditor
 import PixelEngine

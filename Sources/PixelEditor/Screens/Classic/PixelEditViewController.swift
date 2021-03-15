@@ -47,7 +47,7 @@ public final class PixelEditViewController: UIViewController {
 
   // MARK: - Private Propaties
 
-  private let maskingView = BlurredMosaicView()
+  private let maskingView: BlurredMosaicView
 
   private let previewView: ImagePreviewView
   
@@ -85,11 +85,27 @@ public final class PixelEditViewController: UIViewController {
   private let viewModel: PixelEditViewModel
   
   // MARK: - Initializers
+  
+  public convenience init(imageProvider: ImageProvider) {
+    
+    let editingStack = EditingStack(imageProvider: imageProvider)
+    let viewModel = PixelEditViewModel(editingStack: editingStack)
+    
+    self.init(viewModel: viewModel)
+  }
+  
+  public convenience init(editingStack: EditingStack) {
+    
+    let viewModel = PixelEditViewModel(editingStack: editingStack)
+    
+    self.init(viewModel: viewModel)
+  }
 
   public init(viewModel: PixelEditViewModel) {
     self.viewModel = viewModel
     self.cropView = .init(editingStack: viewModel.editingStack, contentInset: .zero)
     self.previewView = .init(editingStack: viewModel.editingStack)
+    self.maskingView = .init(editingStack: viewModel.editingStack)
     super.init(nibName: nil, bundle: nil)
   }
 
@@ -210,11 +226,7 @@ public final class PixelEditViewController: UIViewController {
       ),
       animated: false
     )
-
-    subscriptions.formUnion(
-      maskingView.attach(editingStack: viewModel.editingStack)
-    )
-    
+   
     viewModel.sinkState(queue: .mainIsolated()) { [weak self] state in
       
       guard let self = self else { return }
@@ -256,14 +268,7 @@ public final class PixelEditViewController: UIViewController {
   }
 
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
-    if let paths = state.takeIfChanged(\.editingState.currentEdit.drawings.blurredMaskPaths) {
-      maskingView.drawnPaths = paths
-    }
-
-    if let previewImage = state.takeIfChanged(\.editingState.editingCroppedPreviewImage) {
-      maskingView.image = previewImage
-    }
-
+ 
     if let brush = state.takeIfChanged(\.brush) {
       maskingView.brush = brush
     }

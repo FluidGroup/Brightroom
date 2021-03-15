@@ -6,10 +6,10 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import UIKit
 import PixelEditor
 import PixelEngine
 import SwiftUI
+import UIKit
 
 struct DemoCropView: View {
   let editingStack: EditingStack
@@ -19,13 +19,18 @@ struct DemoCropView: View {
       ZStack {
         Color.black
           .ignoresSafeArea()
+        
         SwiftUICropView(
           editingStack: editingStack,
-          cropInsideOverlay: .init(VStack {
-            Circle()
-              .foregroundColor(.white)
-              .frame(width: 50, height: 50, alignment: .center)
-          })
+          cropInsideOverlay: .init(
+            /**
+             Here is how to create a customized overlay view.
+             */
+            VStack {
+              Circle()
+                .foregroundColor(.white)
+                .frame(width: 50, height: 50, alignment: .center)
+            })
         )
         .clipped()
       }
