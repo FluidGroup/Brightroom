@@ -284,8 +284,8 @@ extension CropView {
       cropInsideOverlay?.frame = bounds
 
       if let outOfBoundsOverlayView = cropOutsideOverlay {
+        // Take care `outOfBoundsOverlayView` has the latest layout.
         let frame = convert(bounds, to: outOfBoundsOverlayView)
-
         invertedMaskShapeLayerView.frame = outOfBoundsOverlayView.bounds
         invertedMaskShapeLayerView.setUnmaskRect(frame)
 

@@ -53,6 +53,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     public fileprivate(set) var adjustmentKind: AdjustmentKind?
 
     public fileprivate(set) var frame: CGRect = .zero
+    
     fileprivate var hasLoaded = false
     fileprivate var isGuideInteractionEnabled: Bool = true
     fileprivate var layoutVersion: UInt64 = 0
@@ -223,8 +224,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           guard let self = self else { return }
           
-          state.ifChanged(\.frame, \.layoutVersion) { frame, _ in
-            
+          state.ifChanged({
+            (
+              $0.frame,
+              $0.layoutVersion
+            )
+          }, .init(==)) { (frame, _) in
+       
             let crop = state.proposedCrop
             
             guard frame != .zero else { return }
@@ -429,20 +435,21 @@ extension CropView {
   private func setImage(_ ciImage: CIImage) {
     imageView.display(image: ciImage)
   }
-
+  
   override public func layoutSubviews() {
     super.layoutSubviews()
-
-    store.commit {
-      if $0.frame != frame {
-        $0.frame = frame
-      }
-    }
     
     if let outOfBoundsOverlay = cropOutsideOverlay {
       outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
       outOfBoundsOverlay.center = center
     }
+    
+    store.commit {
+      if $0.frame != frame {
+        $0.frame = frame
+      }
+    }
+       
   }
 
   override public func didMoveToSuperview() {
