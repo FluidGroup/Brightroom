@@ -95,6 +95,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   #endif
   private let scrollView = _CropScrollView()
   private let scrollBackdropView = UIView()
+  private var hasSetupScrollViewCompleted = false
 
   /**
    a guide view that displayed on guide container view.
@@ -236,6 +237,34 @@ public final class CropView: UIView, UIScrollViewDelegate {
             guard frame != .zero else { return }
             
             if let crop = crop {
+              
+              setupScrollViewOnce: do {
+                if self.hasSetupScrollViewCompleted == false {
+                  self.hasSetupScrollViewCompleted = true
+                  
+                  let scrollView = self.scrollView
+                  
+                  self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
+                  
+                  let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+                  
+                  scrollView.minimumZoomScale = min
+                  scrollView.maximumZoomScale = max
+                  
+                  // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+                  UIView.performWithoutAnimation {
+                    let currentZoomScale = scrollView.zoomScale
+                    let contentSize = crop.scrollViewContentSize()
+                    if scrollView.contentSize != contentSize {
+                      scrollView.contentInset = .zero
+                      scrollView.zoomScale = 1
+                      scrollView.contentSize = contentSize
+                      scrollView.zoomScale = currentZoomScale
+                    }
+                  }
+                }
+              }
+              
               self.updateScrollContainerView(
                 by: crop,
                 animated: state.hasLoaded,
@@ -506,30 +535,13 @@ extension CropView {
       }
 
       zoom: do {
-        imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
-
-        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
-
-        scrollView.minimumZoomScale = min
-        scrollView.maximumZoomScale = max
-
-        UIView.performWithoutAnimation {
-          let currentZoomScale = scrollView.zoomScale
-          let contentSize = crop.scrollViewContentSize()
-          scrollView.contentInset = .zero
-          scrollView.zoomScale = 1
-          scrollView.contentSize = contentSize
-          scrollView.zoomScale = currentZoomScale
-        }
-        
         scrollView.zoom(to: crop.cropExtent, animated: false)
         // WORKAROUND:
         // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
         scrollView.zoom(to: crop.cropExtent, animated: false)
-        
       }
     }
-    
+        
     if animated {
       layoutIfNeeded()
 
@@ -555,9 +567,9 @@ extension CropView {
         }
 
       } else {
-        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [self] in
           perform()
-          self.layoutIfNeeded()
+          layoutIfNeeded()
         }&>.do {
           $0.startAnimation()
         }
