@@ -165,6 +165,8 @@ extension BlurryMaskingView {
                   
       guard let crop = crop else { return }
       
+      // FIXME: CATiledLayer call this method by multiple times.
+      
       let inRect = ctx.boundingBoxOfClipPath
           
 //      ctx.boundingBoxOfClipPath
