@@ -48,6 +48,7 @@ open class EditingStack: Equatable, StoreComponentType {
      */
     public fileprivate(set) var isLoading = true
 
+    /// Won't change from initial state
     public var imageSize: CGSize {
       initialEditing.imageSize
     }

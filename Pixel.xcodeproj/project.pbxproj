@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4B0077C021704E7F008330EA /* MaskControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0077BF21704E7F008330EA /* MaskControlView.swift */; };
-		4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */; };
+		4B01137E216FBA5C00CF09F6 /* SmoothPathDrawingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137D216FBA5C00CF09F6 /* SmoothPathDrawingView.swift */; };
 		4B011380216FBAA200CF09F6 /* BlurryMaskingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01137F216FBAA200CF09F6 /* BlurryMaskingView.swift */; };
 		4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C55E217F6CD800C50EDE /* FilterExposure.swift */; };
 		4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01C560217F72BA00C50EDE /* ResizeViewController.swift */; };
@@ -238,7 +238,7 @@
 		2CF37F8C417C1D8326226D92 /* Pods-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftUIDemo/Pods-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
-		4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DryDrawingView.swift; sourceTree = "<group>"; };
+		4B01137D216FBA5C00CF09F6 /* SmoothPathDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmoothPathDrawingView.swift; sourceTree = "<group>"; };
 		4B01137F216FBAA200CF09F6 /* BlurryMaskingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingView.swift; sourceTree = "<group>"; };
 		4B01C55E217F6CD800C50EDE /* FilterExposure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterExposure.swift; sourceTree = "<group>"; };
 		4B01C560217F72BA00C50EDE /* ResizeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizeViewController.swift; sourceTree = "<group>"; };
@@ -729,7 +729,7 @@
 				FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */,
 				4BB917E425F518EF00C446B8 /* _ImageView.swift */,
 				4B9D456E216DEE95003A240A /* StepSlider.swift */,
-				4B01137D216FBA5C00CF09F6 /* DryDrawingView.swift */,
+				4B01137D216FBA5C00CF09F6 /* SmoothPathDrawingView.swift */,
 				4BF0255A25F12FAB0093A59B /* Crop */,
 			);
 			path = Components;
@@ -1156,7 +1156,7 @@
 				4B0BDCA5217D979D001098B9 /* L10n.swift in Sources */,
 				4B0BDCA3217D676D001098B9 /* SharpenControl.swift in Sources */,
 				4BB917E525F518EF00C446B8 /* _ImageView.swift in Sources */,
-				4B01137E216FBA5C00CF09F6 /* DryDrawingView.swift in Sources */,
+				4B01137E216FBA5C00CF09F6 /* SmoothPathDrawingView.swift in Sources */,
 				4B835DFD25E95D5000EC84D1 /* CropViewController.swift in Sources */,
 				4B9D4569216DD59D003A240A /* CropControl.swift in Sources */,
 				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,

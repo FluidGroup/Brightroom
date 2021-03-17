@@ -21,9 +21,17 @@
 
 import UIKit
 
-public class DryDrawingView : PixelEditorCodeBasedView {
+public class SmoothPathDrawingView : PixelEditorCodeBasedView {
+  
+  public struct Handlers {
+    public var willBeginPan: (UIBezierPath) -> Void = { _ in }
+    public var panning: (UIBezierPath) -> Void = { _ in }
+    public var didFinishPan: (UIBezierPath) -> Void = { _ in }
+  }
+  
+  public var handlers = Handlers()
 
-  private var bezierPath: UIBezierPath = UIBezierPath()
+  private var currentBezierPath: UIBezierPath?
   private var controlPoint: Int = 0
   private var points = [CGPoint](repeating: CGPoint(), count: 5)
 
@@ -35,15 +43,15 @@ public class DryDrawingView : PixelEditorCodeBasedView {
   }
 
   public func willBeginPan(path: UIBezierPath) {
-
+    handlers.willBeginPan(path)
   }
 
   public func panning(path: UIBezierPath) {
-
+    handlers.panning(path)
   }
 
   public func didFinishPan(path: UIBezierPath) {
-
+    handlers.didFinishPan(path)
   }
 
   // MARK: - Touch
@@ -52,9 +60,9 @@ public class DryDrawingView : PixelEditorCodeBasedView {
     guard let touch = touches.first else { return }
 
     let touchPoint = touch.location(in: self)
-    bezierPath = UIBezierPath()
+    currentBezierPath = UIBezierPath()
 
-    willBeginPan(path: bezierPath)
+    willBeginPan(path: currentBezierPath!)
 
     controlPoint = 0
     points[0] = touchPoint
@@ -74,15 +82,15 @@ public class DryDrawingView : PixelEditorCodeBasedView {
         x: (points[2].x + points[4].x)/2.0,
         y: (points[2].y + points[4].y)/2.0)
 
-      bezierPath.move(to: points[0])
+      currentBezierPath!.move(to: points[0])
 
-      bezierPath.addCurve(
+      currentBezierPath!.addCurve(
         to: self.points[3],
         controlPoint1: points[1],
         controlPoint2: points[2])
 
       setNeedsDisplay()
-      panning(path: bezierPath)
+      panning(path: currentBezierPath!)
 
       points[0] = points[3]
       points[1] = points[4]
@@ -91,7 +99,7 @@ public class DryDrawingView : PixelEditorCodeBasedView {
     }
 
     setNeedsDisplay()
-    panning(path: bezierPath)
+    panning(path: currentBezierPath!)
   }
 
   public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -99,11 +107,11 @@ public class DryDrawingView : PixelEditorCodeBasedView {
     if controlPoint == 0 {
       let touchPoint = points[0]
 
-      bezierPath.move(to: CGPoint(
+      currentBezierPath!.move(to: CGPoint(
         x: touchPoint.x-1.0,
         y: touchPoint.y))
 
-      bezierPath.addLine(to: CGPoint(
+      currentBezierPath!.addLine(to: CGPoint(
         x: touchPoint.x+1.0,
         y: touchPoint.y))
 
@@ -113,6 +121,7 @@ public class DryDrawingView : PixelEditorCodeBasedView {
       controlPoint = 0
     }
 
-    didFinishPan(path: bezierPath)
+    didFinishPan(path: currentBezierPath!)
+    currentBezierPath = nil
   }
 }
