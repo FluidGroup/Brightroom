@@ -535,6 +535,7 @@ extension CropView {
       }
 
       zoom: do {
+        scrollView.contentInset = .zero
         scrollView.zoom(to: crop.cropExtent, animated: false)
         // WORKAROUND:
         // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
