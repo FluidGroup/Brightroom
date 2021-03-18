@@ -26,44 +26,48 @@ import PixelEngine
 #endif
 import Verge
 
-public final class BlurryMaskingView: DryDrawingView {
-  private var displayingImageExtent: CGRect?
-
-  private let backdropImageView = MetalImageView()
-  private let blurryImageView = MetalImageView()
-
+public final class BlurryMaskingView: PixelEditorCodeBasedView {
+  
   var brush = OvalBrush(color: UIColor.black, width: 30)
 
-  private let maskLayer = MaskLayer()
-
-  private var subscriptions = Set<VergeAnyCancellable>()
-
-  private var drawnPaths: [DrawnPathInRect] = [] {
-    didSet {
-      updateMask()
-    }
-  }
+  private let backdropImageView = MetalImageView()
   
+  private let blurryImageView = MetalImageView()
+  
+  private let drawingView = SmoothPathDrawingView()
+  
+  private let maskLayer = CanvasLayer()
+  
+  private var subscriptions = Set<VergeAnyCancellable>()
+ 
   private let editingStack: EditingStack
+  private let imageSize: CGSize
+  private var crop: EditingCrop
 
   // MARK: - Initializers
 
   public init(editingStack: EditingStack) {
-    
     self.editingStack = editingStack
     editingStack.start()
     
-    super.init()
+    let state = editingStack.state
+    
+    self.imageSize = state.imageSize
+    self.crop = state.currentEdit.crop
 
+    super.init(frame: .zero)
+      
     setUp: do {
       backgroundColor = .clear
-
+            
       addSubview(backdropImageView)
+      addSubview(blurryImageView)
+      addSubview(drawingView)
+      
       backdropImageView.accessibilityIdentifier = "backdropImageView"
       backdropImageView.isUserInteractionEnabled = false
       backdropImageView.contentMode = .scaleAspectFit
-      
-      addSubview(blurryImageView)
+
       blurryImageView.accessibilityIdentifier = "blurryImageView"
       blurryImageView.isUserInteractionEnabled = false
       blurryImageView.contentMode = .scaleAspectFit
@@ -94,6 +98,7 @@ public final class BlurryMaskingView: DryDrawingView {
         
         let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path), in: bounds)
         
+        maskLayer.previewDrawnPaths = []
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
       }
     }
@@ -101,8 +106,12 @@ public final class BlurryMaskingView: DryDrawingView {
     editingStack.sinkState { [weak self] state in
 
       guard let self = self else { return }
-
+                
       state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
+        
+        self.crop = state.currentEdit.crop
+        self.maskLayer.crop = state.currentEdit.crop
+        
         UIView.performWithoutAnimation {
           self.backdropImageView.display(image: previewImage)
           self.blurryImageView.display(image: previewImage.flatMap { BlurredMask.blur(image: $0) })
@@ -110,59 +119,49 @@ public final class BlurryMaskingView: DryDrawingView {
       }
       
       state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
-        if self.drawnPaths != paths {
-          self.drawnPaths = paths
+        if self.maskLayer.resolvedDrawnPaths != paths {
+          self.maskLayer.resolvedDrawnPaths = paths
         }
       }
-
+      
     }
     .store(in: &subscriptions)
   }
 
-  public override func willBeginPan(path: UIBezierPath) {
-//    guard let extent = displayingImageExtent else { return }
-
-    // TODO: Don't use bounds
-    let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path), in: bounds)
-    drawnPaths.append(drawnPath)
-  }
-
-  public override func panning(path: UIBezierPath) {
-    updateMask()
-  }
-
-  public override func didFinishPan(path: UIBezierPath) {
-    updateMask()
-    
-    editingStack.set(blurringMaskPaths: drawnPaths)
-  }
-
-  public override func layoutSublayers(of layer: CALayer) {
-    super.layoutSublayers(of: layer)
-
-    maskLayer.frame = bounds
-  }
-
-  public override func layoutSubviews() {
+  override public func layoutSubviews() {
     super.layoutSubviews()
-    backdropImageView.frame = bounds
-    blurryImageView.frame = bounds
+        
+    let fittingFrame = Geometry.rectThatAspectFit(aspectRatio: crop.cropExtent.size, boundingRect: bounds)
+
+    backdropImageView.frame = fittingFrame
+    blurryImageView.frame = fittingFrame
+    drawingView.frame = fittingFrame
+    maskLayer.frame = blurryImageView.bounds
   }
 
-  private func updateMask() {
-    maskLayer.drawnPaths = drawnPaths
-  }
 }
 
 extension BlurryMaskingView {
-  private final class _MaskLayer: CALayer {
+  private final class CanvasLayer: CALayer {
     
     var crop: EditingCrop? {
       didSet {
         setNeedsDisplay()
       }
     }
-
+    
+    var previewDrawnPaths: [DrawnPathInRect] = [] {
+      didSet {
+        setNeedsDisplay()
+      }
+    }
+    
+    var resolvedDrawnPaths: [DrawnPathInRect] = [] {
+      didSet {
+        setNeedsDisplay()
+      }
+    }
+    
     override func draw(in ctx: CGContext) {
                   
       guard let crop = crop else { return }

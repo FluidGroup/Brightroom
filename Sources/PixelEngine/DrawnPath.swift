@@ -51,10 +51,13 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     return _bezierPath
   }
 
-  public func draw(in context: CGContext, canvasSize: CGSize) {
+  public func draw(in context: CGContext, crop: EditingCrop, canvasSize: CGSize) {
     UIGraphicsPushContext(context)
     context.saveGState()
-    context.translateBy(x: crop.cropExtent.minX, y: crop.cropExtent.minY)
+    
+    let scale: CGFloat = 1.5;// min(canvasSize.width / crop.cropExtent.width, canvasSize.height / crop.cropExtent.height)
+    context.translateBy(x: -crop.cropExtent.minX, y: -crop.cropExtent.minY)
+    context.scaleBy(x: scale, y: scale)
     defer {
       context.restoreGState()
       UIGraphicsPopContext()

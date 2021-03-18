@@ -23,5 +23,5 @@ import CoreGraphics
 
 public protocol GraphicsDrawing {
 
-  func draw(in context: CGContext, canvasSize: CGSize)
+  func draw(in context: CGContext, crop: EditingCrop, canvasSize: CGSize)
 }

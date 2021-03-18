@@ -30,7 +30,7 @@ public struct BlurredMask : GraphicsDrawing {
     self.paths = paths
   }
 
-  public func draw(in context: CGContext, canvasSize: CGSize) {
+  public func draw(in context: CGContext, crop: EditingCrop, canvasSize: CGSize) {
 
     guard !paths.isEmpty else {
       return
@@ -57,7 +57,7 @@ public struct BlurredMask : GraphicsDrawing {
       let scale = Geometry.diagonalRatio(to: canvasSize, from: path.inRect.size)
 
       layerContext.scaleBy(x: scale, y: scale)
-      path.draw(in: layerContext, canvasSize: canvasSize)
+      path.draw(in: layerContext, crop: crop, canvasSize: canvasSize)
 
       layerContext.restoreGState()
     }

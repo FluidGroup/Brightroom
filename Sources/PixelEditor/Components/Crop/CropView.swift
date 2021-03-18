@@ -86,13 +86,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    An image view that displayed in the scroll view.
    */
-  #if true
-  private let imageView = _ImageView()
-  #else
-  private let imageView: UIView & HardwareImageViewType = {
-    return MetalImageView()
-  }()
-  #endif
+
+  private let imageView = TiledImageView() 
   private let scrollView = _CropScrollView()
   private let scrollBackdropView = UIView()
   private var hasSetupScrollViewCompleted = false

@@ -85,7 +85,7 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
   public func draw(in view: MTKView) {
     renderImage()
   }
-
+  
   func renderImage() {
     guard
       let image = image,
