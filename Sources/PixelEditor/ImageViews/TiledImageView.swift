@@ -27,7 +27,7 @@ public final class TiledImageView: PixelEditorCodeBasedView, HardwareImageViewTy
     
     let tiledLayer = layer as! CATiledLayer
     
-    tiledLayer.tileSize = .init(width: 256, height: 256)
+    tiledLayer.tileSize = .init(width: 1280, height: 1280)
   }
   
   public override func draw(_ rect: CGRect) {
@@ -37,7 +37,7 @@ public final class TiledImageView: PixelEditorCodeBasedView, HardwareImageViewTy
     let currentContext = UIGraphicsGetCurrentContext()!
     let ciContext = CIContext(cgContext: currentContext, options: [:])
     
-    ciContext.draw(image, in: rect, from: image.extent)
+    ciContext.draw(image, in: rect, from: rect)
   }
   
 }
