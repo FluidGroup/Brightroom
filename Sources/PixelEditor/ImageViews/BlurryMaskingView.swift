@@ -93,17 +93,13 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView {
         
         let _path = (path.copy() as! UIBezierPath)
         
-        let scale = crop.cropExtent.width / drawingView.bounds.width
+        let scale = min(crop.cropExtent.width / drawingView.bounds.width, crop.cropExtent.height / drawingView.bounds.height)
         
         _path
           .apply(.init(scaleX: scale, y: scale))
-        
         _path
           .apply(.init(translationX: crop.cropExtent.minX, y: crop.cropExtent.minY))
-     
-        
-        print(_path)
-        
+                          
         let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path), in: bounds)
         
         maskLayer.previewDrawnPaths = []
@@ -175,10 +171,14 @@ extension BlurryMaskingView {
       guard let crop = crop else { return }
       
       // FIXME: If we use CATiledLayer, it calls this method by multiple times.
+            
+      previewDrawnPaths.forEach {
+        $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
+      }
       
-      let inRect = ctx.boundingBoxOfClipPath
+//      let inRect = ctx.boundingBoxOfClipPath
       
-      let scale = bounds.width / crop.cropExtent.width
+      let scale = min(bounds.width / crop.cropExtent.width, bounds.height / crop.cropExtent.height)
       
       ctx.translateBy(x: -crop.cropExtent.minX * scale, y: -crop.cropExtent.minY * scale)
       ctx.scaleBy(x: scale, y: scale)
@@ -186,10 +186,7 @@ extension BlurryMaskingView {
       resolvedDrawnPaths.forEach {
         $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
       }
-      
-      previewDrawnPaths.forEach {
-        $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
-      }
+  
     }
   }
 }
