@@ -92,7 +92,15 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView {
         maskLayer.setNeedsDisplay()
         
         let _path = (path.copy() as! UIBezierPath)
-        _path.apply(.init(translationX: crop.cropExtent.minX, y: crop.cropExtent.minY))
+        
+        let scale = crop.cropExtent.width / drawingView.bounds.width
+        
+        _path
+          .apply(.init(scaleX: scale, y: scale))
+        
+        _path
+          .apply(.init(translationX: crop.cropExtent.minX, y: crop.cropExtent.minY))
+     
         
         print(_path)
         
@@ -169,9 +177,12 @@ extension BlurryMaskingView {
       // FIXME: If we use CATiledLayer, it calls this method by multiple times.
       
       let inRect = ctx.boundingBoxOfClipPath
-          
-//      ctx.boundingBoxOfClipPath
       
+      let scale = bounds.width / crop.cropExtent.width
+      
+      ctx.translateBy(x: -crop.cropExtent.minX * scale, y: -crop.cropExtent.minY * scale)
+      ctx.scaleBy(x: scale, y: scale)
+                  
       resolvedDrawnPaths.forEach {
         $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
       }

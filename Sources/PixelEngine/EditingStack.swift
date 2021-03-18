@@ -168,7 +168,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
     #if DEBUG
     sinkState(queue: .asyncSerialBackground) { state in
-      print(state.primitive)
+//      print(state.primitive)
     }
     .store(in: &subscriptions)
     #endif
