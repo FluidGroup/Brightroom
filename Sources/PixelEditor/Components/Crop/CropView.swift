@@ -245,12 +245,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
                   let scrollView = self.scrollView
                   
                   self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
-                  
-                  let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
-                  
-                  scrollView.minimumZoomScale = min
-                  scrollView.maximumZoomScale = max
-                  
+                                                     
                   // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
                   UIView.performWithoutAnimation {
                     let currentZoomScale = scrollView.zoomScale
@@ -533,8 +528,14 @@ extension CropView {
       applyLayoutDescendants: do {
         guideView.frame = scrollView.frame
       }
-
+                
       zoom: do {
+        
+        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+        
+        scrollView.minimumZoomScale = min
+        scrollView.maximumZoomScale = max
+        
         scrollView.contentInset = .zero
         scrollView.zoom(to: crop.cropExtent, animated: false)
         // WORKAROUND:
@@ -738,6 +739,8 @@ extension EditingCrop {
      max meaning scale aspect fill
      */
     let minScale = max(minXScale, minYScale)
+    
+    assert(minScale > 0)
 
     return (min: minScale, max: .greatestFiniteMagnitude)
   }

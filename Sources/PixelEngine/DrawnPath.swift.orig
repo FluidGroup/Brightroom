@@ -54,7 +54,10 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
   public func draw(in context: CGContext, canvasSize: CGSize) {
     UIGraphicsPushContext(context)
     context.saveGState()
+<<<<<<< Updated upstream
+=======
     context.translateBy(x: crop.cropExtent.minX, y: crop.cropExtent.minY)
+>>>>>>> Stashed changes
     defer {
       context.restoreGState()
       UIGraphicsPopContext()

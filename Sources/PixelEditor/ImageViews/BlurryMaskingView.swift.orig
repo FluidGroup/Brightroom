@@ -75,6 +75,8 @@ public final class BlurryMaskingView: DryDrawingView {
 
       clipsToBounds = true
     }
+<<<<<<< Updated upstream
+=======
     
     drawingView.handlers = drawingView.handlers&>.modify {
       $0.willBeginPan = { [unowned self] path in
@@ -97,6 +99,7 @@ public final class BlurryMaskingView: DryDrawingView {
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
       }
     }
+>>>>>>> Stashed changes
 
     editingStack.sinkState { [weak self] state in
 
@@ -155,15 +158,23 @@ public final class BlurryMaskingView: DryDrawingView {
 }
 
 extension BlurryMaskingView {
+<<<<<<< Updated upstream
+  private final class MaskLayer: CALayer {
+    var drawnPaths: [GraphicsDrawing] = [] {
+=======
   private final class _MaskLayer: CALayer {
     
     var crop: EditingCrop? {
+>>>>>>> Stashed changes
       didSet {
         setNeedsDisplay()
       }
     }
 
     override func draw(in ctx: CGContext) {
+<<<<<<< Updated upstream
+      drawnPaths.forEach { $0.draw(in: ctx, canvasSize: bounds.size) }
+=======
                   
       guard let crop = crop else { return }
       
@@ -180,6 +191,7 @@ extension BlurryMaskingView {
       previewDrawnPaths.forEach {
         $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
       }
+>>>>>>> Stashed changes
     }
   }
 }

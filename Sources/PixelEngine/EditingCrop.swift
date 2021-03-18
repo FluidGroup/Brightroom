@@ -152,4 +152,13 @@ public struct EditingCrop: Equatable {
     return modified
   }
   
+  /*
+  @objc
+  public func debugQuickLookObject() -> AnyObject? {
+    
+    let path = UIBezierPath(rect: CGRect(origin: .zero, size: imageSize))
+    
+    return path
+  }
+   */
 }

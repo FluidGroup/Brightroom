@@ -437,6 +437,14 @@ open class EditingStack: Equatable, StoreComponentType {
       $0.drawings.blurredMaskPaths = blurringMaskPaths
     }
   }
+  
+  public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPathInRect {
+    _pixelengine_ensureMainThread()
+    
+    applyIfChanged {
+      $0.drawings.blurredMaskPaths += blurringMaskPaths
+    }
+  }
 
   public func makeRenderer() -> ImageRenderer {
     _pixelengine_ensureMainThread()
