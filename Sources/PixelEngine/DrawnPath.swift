@@ -51,7 +51,7 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     return _bezierPath
   }
 
-  public func draw(in context: CGContext, crop: EditingCrop, canvasSize: CGSize) {
+  public func draw(in context: CGContext, canvasSize: CGSize) {
     UIGraphicsPushContext(context)
     context.saveGState()       
     defer {

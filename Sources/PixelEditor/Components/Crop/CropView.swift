@@ -42,15 +42,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       case guide
     }
 
-    enum ModifiedSource: Equatable {
-      case fromState
-      case fromScrollView
-      case fromGuide
-    }
-
     public fileprivate(set) var proposedCrop: EditingCrop?
-
-    public fileprivate(set) var adjustmentKind: AdjustmentKind?
 
     public fileprivate(set) var frame: CGRect = .zero
     
@@ -718,25 +710,5 @@ extension CropView {
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
     didChangeScrollView()
     guideView.didEndScrollViewAdjustment()
-  }
-}
-
-extension EditingCrop {
-  fileprivate func scrollViewContentSize() -> CGSize {
-    imageSize
-  }
-
-  fileprivate func calculateZoomScale(scrollViewBounds: CGRect) -> (min: CGFloat, max: CGFloat) {
-    let minXScale = scrollViewBounds.width / imageSize.width
-    let minYScale = scrollViewBounds.height / imageSize.height
-
-    /**
-     max meaning scale aspect fill
-     */
-    let minScale = max(minXScale, minYScale)
-    
-    assert(minScale > 0)
-
-    return (min: minScale, max: .greatestFiniteMagnitude)
   }
 }

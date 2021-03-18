@@ -147,7 +147,7 @@ public final class ImageRenderer {
           cgContext.restoreGState()
 
           self.edit.drawer.forEach { drawer in
-            drawer.draw(in: cgContext, crop: .init(from: croppedImage), canvasSize: canvasSize)
+            drawer.draw(in: cgContext, canvasSize: canvasSize)
           }
           
       }

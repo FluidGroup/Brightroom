@@ -31,7 +31,7 @@ public struct DrawnPathInRect: GraphicsDrawing, Equatable {
     self.inRect = rect
   }
 
-  public func draw(in context: CGContext, crop: EditingCrop, canvasSize: CGSize) {
-    path.draw(in: context, crop: crop, canvasSize: canvasSize)
+  public func draw(in context: CGContext, canvasSize: CGSize) {
+    path.draw(in: context, canvasSize: canvasSize)
   }
 }

@@ -26,44 +26,78 @@ import PixelEngine
 #endif
 import Verge
 
-public final class BlurryMaskingView: PixelEditorCodeBasedView {
-  
+public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
+  private struct State: Equatable {
+    fileprivate(set) var frame: CGRect = .zero
+    fileprivate var hasLoaded = false
+    fileprivate(set) var proposedCrop: EditingCrop?
+  }
+
+  private final class ContainerView: PixelEditorCodeBasedView {
+    func addContent(_ view: UIView) {
+      addSubview(view)
+      view.frame = bounds
+      view.autoresizingMask = [.flexibleHeight, .flexibleWidth]
+    }
+  }
+
   var brush = OvalBrush(color: UIColor.black, pixelSize: 30)
 
-  private let backdropImageView = MetalImageView()
-  
-  private let blurryImageView = MetalImageView()
-  
+  private let scrollView = CropView._CropScrollView()
+
+  private let containerView = ContainerView()
+
+  private let backdropImageView = _ImageView()
+
+  private let blurryImageView = _ImageView()
+
   private let drawingView = SmoothPathDrawingView()
-  
-  private let maskLayer = CanvasLayer()
-  
+
+  private let canvasView = CanvasView()
+
   private var subscriptions = Set<VergeAnyCancellable>()
- 
+
   private let editingStack: EditingStack
   private let imageSize: CGSize
   private var crop: EditingCrop
+
+  private var hasSetupScrollViewCompleted = false
+
+  private let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
+
+  private let contentInset: UIEdgeInsets = .zero
+
+  private var isBinding = false
 
   // MARK: - Initializers
 
   public init(editingStack: EditingStack) {
     self.editingStack = editingStack
     editingStack.start()
-    
+
     let state = editingStack.state
-    
-    self.imageSize = state.imageSize
-    self.crop = state.currentEdit.crop
+
+    imageSize = state.imageSize
+    crop = state.currentEdit.crop
 
     super.init(frame: .zero)
-      
+
     setUp: do {
       backgroundColor = .clear
-            
-      addSubview(backdropImageView)
-      addSubview(blurryImageView)
-      addSubview(drawingView)
-      
+
+      addSubview(scrollView)
+
+      scrollView.clipsToBounds = true
+      scrollView.delegate = self
+      scrollView.isScrollEnabled = false
+
+      scrollView.addSubview(containerView)
+
+      containerView.addContent(backdropImageView)
+      containerView.addContent(blurryImageView)
+      containerView.addContent(canvasView)
+      containerView.addContent(drawingView)
+
       backdropImageView.accessibilityIdentifier = "backdropImageView"
       backdropImageView.isUserInteractionEnabled = false
       backdropImageView.contentMode = .scaleAspectFit
@@ -72,37 +106,30 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView {
       blurryImageView.isUserInteractionEnabled = false
       blurryImageView.contentMode = .scaleAspectFit
 
-      blurryImageView.layer.mask = maskLayer
+//      blurryImageView.layer.mask = maskLayer
 
-      maskLayer.contentsScale = UIScreen.main.scale
-      maskLayer.drawsAsynchronously = true
+//      maskLayer.contentsScale = UIScreen.main.scale
+//      maskLayer.drawsAsynchronously = true
 
       clipsToBounds = true
     }
-    
+
     drawingView.handlers = drawingView.handlers&>.modify {
       $0.willBeginPan = { [unowned self] path in
         let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path), in: bounds)
-        maskLayer.previewDrawnPaths = [drawnPath]
+        canvasView.previewDrawnPaths = [drawnPath]
       }
       $0.panning = { [unowned self] path in
-        maskLayer.setNeedsDisplay()
+        canvasView.setNeedsDisplay()
       }
       $0.didFinishPan = { [unowned self] path in
-        maskLayer.setNeedsDisplay()
-        
+        canvasView.setNeedsDisplay()
+
         let _path = (path.copy() as! UIBezierPath)
-        
-        let scale = min(crop.cropExtent.width / drawingView.bounds.width, crop.cropExtent.height / drawingView.bounds.height)
-        
-        _path
-          .apply(.init(scaleX: scale, y: scale))
-        _path
-          .apply(.init(translationX: crop.cropExtent.minX, y: crop.cropExtent.minY))
-                          
+
         let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path), in: bounds)
-        
-        maskLayer.previewDrawnPaths = []
+
+        canvasView.previewDrawnPaths = []
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
       }
     }
@@ -110,83 +137,272 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView {
     editingStack.sinkState { [weak self] state in
 
       guard let self = self else { return }
-                
-      state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
-        
-        self.crop = state.currentEdit.crop
-        self.maskLayer.crop = state.currentEdit.crop
-        
-        UIView.performWithoutAnimation {
-          self.backdropImageView.display(image: previewImage)
-          self.blurryImageView.display(image: previewImage.flatMap { BlurredMask.blur(image: $0) })
+
+      state.ifChanged(\.currentEdit.crop) { cropRect in
+
+        /**
+         To avoid running pending layout operations from User Initiated actions.
+         */
+        if cropRect != self.store.state.proposedCrop {
+          self.store.commit {
+            $0.proposedCrop = cropRect
+          }
         }
       }
-      
+
       state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
-        if self.maskLayer.resolvedDrawnPaths != paths {
-          self.maskLayer.resolvedDrawnPaths = paths
+        if self.canvasView.resolvedDrawnPaths != paths {
+          self.canvasView.resolvedDrawnPaths = paths
         }
       }
-      
     }
     .store(in: &subscriptions)
+
+  }
+
+  override public func willMove(toSuperview newSuperview: UIView?) {
+    super.willMove(toSuperview: newSuperview)
+
+    if isBinding == false {
+      isBinding = true
+
+      binding: do {
+        store.sinkState(queue: .mainIsolated()) { [weak self] state in
+
+          guard let self = self else { return }
+
+          state.ifChanged(\.frame, \.proposedCrop) { frame, crop in
+
+            guard frame != .zero else { return }
+
+            if let crop = crop {
+              setupScrollViewOnce: do {
+                if self.hasSetupScrollViewCompleted == false {
+                  self.hasSetupScrollViewCompleted = true
+
+                  let scrollView = self.scrollView
+
+                  self.containerView.bounds = .init(
+                    origin: .zero,
+                    size: crop.scrollViewContentSize()
+                  )
+
+                  // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+                  UIView.performWithoutAnimation {
+                    let currentZoomScale = scrollView.zoomScale
+                    let contentSize = crop.scrollViewContentSize()
+                    if scrollView.contentSize != contentSize {
+                      scrollView.contentInset = .zero
+                      scrollView.zoomScale = 1
+                      scrollView.contentSize = contentSize
+                      scrollView.zoomScale = currentZoomScale
+                    }
+                  }
+                }
+              }
+
+              self.updateScrollContainerView(
+                by: crop,
+                animated: state.hasLoaded,
+                animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
+              )
+            } else {
+              // TODO:
+            }
+          }
+        }
+        .store(in: &subscriptions)
+
+        editingStack.sinkState { [weak self] state in
+
+          guard let self = self else { return }
+
+          state.ifChanged(\.isLoading) { isLoading in
+            //          self.updateLoadingOverlay(displays: isLoading)
+          }
+
+          state.ifChanged(\.placeholderImage, \.editingSourceImage) { previewImage, image in
+
+            if let previewImage = previewImage {
+              self.backdropImageView.display(image: previewImage)
+            }
+
+            if let image = image {
+              self.backdropImageView.display(image: image)
+            }
+          }
+        }
+        .store(in: &subscriptions)
+      }
+    }
+  }
+
+  private func updateScrollContainerView(
+    by crop: EditingCrop,
+    animated: Bool,
+    animatesRotation: Bool
+  ) {
+    func perform() {
+      frame: do {
+        let bounds = self.bounds.inset(by: contentInset)
+
+        let size: CGSize
+        let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
+        switch crop.rotation {
+        case .angle_0:
+          size = aspectRatio.sizeThatFits(in: bounds.size)
+        case .angle_90:
+          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+        case .angle_180:
+          size = aspectRatio.sizeThatFits(in: bounds.size)
+        case .angle_270:
+          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+        }
+
+        scrollView.transform = crop.rotation.transform
+
+        scrollView.frame = .init(
+          origin: .init(
+            x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
+            y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
+          ),
+          size: size
+        )
+
+//        scrollBackdropView.frame = scrollView.frame
+      }
+
+      zoom: do {
+        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+
+        scrollView.minimumZoomScale = min
+        scrollView.maximumZoomScale = max
+
+        scrollView.contentInset = .zero
+        scrollView.zoom(to: crop.cropExtent, animated: false)
+        // WORKAROUND:
+        // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
+        scrollView.zoom(to: crop.cropExtent, animated: false)
+      }
+    }
+
+    if animated {
+      layoutIfNeeded()
+
+      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [self] in
+        perform()
+        layoutIfNeeded()
+      }&>.do {
+        $0.startAnimation()
+      }
+
+    } else {
+      UIView.performWithoutAnimation {
+        layoutIfNeeded()
+        perform()
+      }
+    }
   }
 
   override public func layoutSubviews() {
     super.layoutSubviews()
-        
-    let fittingFrame = Geometry.rectThatAspectFit(aspectRatio: crop.cropExtent.size, boundingRect: bounds)
 
-    backdropImageView.frame = fittingFrame
-    blurryImageView.frame = fittingFrame
-    drawingView.frame = fittingFrame
-    maskLayer.frame = blurryImageView.bounds
+    store.commit {
+      if $0.frame != frame {
+        $0.frame = frame
+      }
+    }
+
+//    maskLayer.frame = blurryImageView.bounds
   }
 
+  // MARK: UIScrollViewDelegate
+
+  public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+    return containerView
+  }
+
+  public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+    func adjustFrameToCenterOnZooming() {
+      var frameToCenter = containerView.frame
+
+      // center horizontally
+      if frameToCenter.size.width < scrollView.bounds.width {
+        frameToCenter.origin.x = (scrollView.bounds.width - frameToCenter.size.width) / 2
+      } else {
+        frameToCenter.origin.x = 0
+      }
+
+      // center vertically
+      if frameToCenter.size.height < scrollView.bounds.height {
+        frameToCenter.origin.y = (scrollView.bounds.height - frameToCenter.size.height) / 2
+      } else {
+        frameToCenter.origin.y = 0
+      }
+
+      containerView.frame = frameToCenter
+    }
+
+    adjustFrameToCenterOnZooming()
+  }
 }
 
 extension BlurryMaskingView {
-  private final class CanvasLayer: CALayer {
+  private final class CanvasView: PixelEditorCodeBasedView {
     
-    var crop: EditingCrop? {
-      didSet {
-        setNeedsDisplay()
-      }
+    override class var layerClass: AnyClass {
+      CATiledLayer.self
     }
     
+    override init(frame: CGRect) {
+      super.init(frame: frame)
+      isOpaque = false
+      
+      let tiledLayer = layer as! CATiledLayer
+      
+      tiledLayer.tileSize = .init(width: 512, height: 512)
+//      tiledLayer.levelsOfDetail
+//      tiledLayer.levelsOfDetailBias
+    }
+
     var previewDrawnPaths: [DrawnPathInRect] = [] {
       didSet {
-        setNeedsDisplay()
+        
+        var rect = CGRect.zero
+        
+        previewDrawnPaths.forEach {
+          rect = rect.union($0.path.bezierPath.cgPath.boundingBox)
+        }
+        setNeedsDisplay(rect)
+//        setNeedsDisplay()
       }
     }
-    
+
     var resolvedDrawnPaths: [DrawnPathInRect] = [] {
       didSet {
         setNeedsDisplay()
       }
     }
-    
-    override func draw(in ctx: CGContext) {
-                  
-      guard let crop = crop else { return }
-      
+
+    override func draw(_ rect: CGRect) {
+      let ctx = UIGraphicsGetCurrentContext()!
+
       // FIXME: If we use CATiledLayer, it calls this method by multiple times.
-            
+
       previewDrawnPaths.forEach {
-        $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
+        $0.draw(in: ctx, canvasSize: bounds.size)
       }
-      
+
 //      let inRect = ctx.boundingBoxOfClipPath
-      
-      let scale = min(bounds.width / crop.cropExtent.width, bounds.height / crop.cropExtent.height)
-      
-      ctx.translateBy(x: -crop.cropExtent.minX * scale, y: -crop.cropExtent.minY * scale)
-      ctx.scaleBy(x: scale, y: scale)
-                  
+
+//      let scale = min(bounds.width / crop.cropExtent.width, bounds.height / crop.cropExtent.height)
+//
+//      ctx.translateBy(x: -crop.cropExtent.minX * scale, y: -crop.cropExtent.minY * scale)
+//      ctx.scaleBy(x: scale, y: scale)
+//
       resolvedDrawnPaths.forEach {
-        $0.draw(in: ctx, crop: crop, canvasSize: bounds.size)
+        $0.draw(in: ctx, canvasSize: bounds.size)
       }
-  
     }
   }
 }
