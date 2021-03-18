@@ -181,8 +181,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
   /// Creates an instance from UIImage
   ///
   /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
-  public convenience init(image uiImage: UIImage) {
-    try! self.init(data: uiImage.pngData()!, imageSize: .init(image: uiImage))
+  public init(image uiImage: UIImage) {
+    
+    store = .init(
+      initialState: .init(
+        previewImage: nil,
+        editableImage: .init(image: uiImage),
+        imageSize: .init(image: uiImage)
+      )
+    )
+    pendingAction = { _ in }
+    
   }
 
   #endif

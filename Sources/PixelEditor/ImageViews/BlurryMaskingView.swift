@@ -120,10 +120,10 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
         canvasView.previewDrawnPaths = [drawnPath]
       }
       $0.panning = { [unowned self] path in
-        canvasView.setNeedsDisplay()
+        canvasView.update()
       }
       $0.didFinishPan = { [unowned self] path in
-        canvasView.setNeedsDisplay()
+        canvasView.update()
 
         let _path = (path.copy() as! UIBezierPath)
 
@@ -351,37 +351,66 @@ extension BlurryMaskingView {
   private final class CanvasView: PixelEditorCodeBasedView {
     
     override class var layerClass: AnyClass {
-      CATiledLayer.self
+      #if false
+      return CATiledLayer.self
+      #else
+      return CALayer.self
+      #endif
     }
+    
+    private let shapeLayer = CAShapeLayer()
     
     override init(frame: CGRect) {
       super.init(frame: frame)
       isOpaque = false
       
-      let tiledLayer = layer as! CATiledLayer
-      
-      tiledLayer.tileSize = .init(width: 512, height: 512)
+      if let tiledLayer = layer as? CATiledLayer {
+        tiledLayer.tileSize = .init(width: 512, height: 512)
+      }
 //      tiledLayer.levelsOfDetail
 //      tiledLayer.levelsOfDetailBias
+      
+      layer.addSublayer(shapeLayer)
+      
+      shapeLayer.lineWidth = 30
+      shapeLayer.strokeColor = UIColor.blue.cgColor
+      shapeLayer.lineCap = .round
     }
 
     var previewDrawnPaths: [DrawnPathInRect] = [] {
       didSet {
-        
-        var rect = CGRect.zero
-        
-        previewDrawnPaths.forEach {
-          rect = rect.union($0.path.bezierPath.cgPath.boundingBox)
-        }
-        setNeedsDisplay(rect)
+                       
+//        var rect = CGRect.zero
+//
+//        previewDrawnPaths.forEach {
+//          rect = rect.union($0.path.bezierPath.cgPath.boundingBox)
+//        }
+//        setNeedsDisplay(rect)
+                              
 //        setNeedsDisplay()
+        update()
       }
     }
 
     var resolvedDrawnPaths: [DrawnPathInRect] = [] {
       didSet {
-        setNeedsDisplay()
+        update()
       }
+    }
+    
+    func update() {
+      
+      let path = UIBezierPath()
+      
+      previewDrawnPaths.forEach {
+        path.append($0.path.bezierPath)
+      }
+      
+      resolvedDrawnPaths.forEach {
+        path.append($0.path.bezierPath)
+      }
+      
+      shapeLayer.path = path.cgPath
     }
 
     override func draw(_ rect: CGRect) {
@@ -389,9 +418,9 @@ extension BlurryMaskingView {
 
       // FIXME: If we use CATiledLayer, it calls this method by multiple times.
 
-      previewDrawnPaths.forEach {
-        $0.draw(in: ctx, canvasSize: bounds.size)
-      }
+//      previewDrawnPaths.forEach {
+//        $0.draw(in: ctx, canvasSize: bounds.size)
+//      }
 
 //      let inRect = ctx.boundingBoxOfClipPath
 
@@ -400,9 +429,9 @@ extension BlurryMaskingView {
 //      ctx.translateBy(x: -crop.cropExtent.minX * scale, y: -crop.cropExtent.minY * scale)
 //      ctx.scaleBy(x: scale, y: scale)
 //
-      resolvedDrawnPaths.forEach {
-        $0.draw(in: ctx, canvasSize: bounds.size)
-      }
+//      resolvedDrawnPaths.forEach {
+//        $0.draw(in: ctx, canvasSize: bounds.size)
+//      }
     }
   }
 }
