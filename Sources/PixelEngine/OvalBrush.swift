@@ -26,7 +26,7 @@ public struct OvalBrush : Equatable {
   // MARK: - Properties
 
   public var color: UIColor
-  public var width: CGFloat
+  public var pixelSize: CGFloat
   public var alpha: CGFloat
   public var blendMode: CGBlendMode
 
@@ -34,13 +34,13 @@ public struct OvalBrush : Equatable {
 
   public init(
     color: UIColor,
-    width: CGFloat,
+    pixelSize: CGFloat,
     alpha: CGFloat = 1,
     blendMode: CGBlendMode = .normal
     ) {
 
     self.color = color
-    self.width = width
+    self.pixelSize = pixelSize
     self.alpha = alpha
     self.blendMode = blendMode
   }

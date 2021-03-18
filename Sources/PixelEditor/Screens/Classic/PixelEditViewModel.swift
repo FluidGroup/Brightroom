@@ -48,7 +48,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     // TODO: tantative
     public fileprivate(set) var brush: OvalBrush = .init(
       color: .white,
-      width: 30
+      pixelSize: 30
     )
     
     // TODO: Rename
@@ -120,7 +120,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   func setBrushSize(_ brushSize: CGFloat) {
     commit {
       var _brush = $0.brush
-      _brush.width = brushSize
+      _brush.pixelSize = brushSize
       $0.brush = _brush
     }
   }

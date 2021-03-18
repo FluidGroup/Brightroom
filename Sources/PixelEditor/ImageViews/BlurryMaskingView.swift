@@ -28,7 +28,7 @@ import Verge
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView {
   
-  var brush = OvalBrush(color: UIColor.black, width: 30)
+  var brush = OvalBrush(color: UIColor.black, pixelSize: 30)
 
   private let backdropImageView = MetalImageView()
   

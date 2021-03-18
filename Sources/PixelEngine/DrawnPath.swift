@@ -46,7 +46,7 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     let _bezierPath = bezierPath.copy() as! UIBezierPath
     _bezierPath.lineJoinStyle = .round
     _bezierPath.lineCapStyle = .round
-    _bezierPath.lineWidth = brush.width
+    _bezierPath.lineWidth = brush.pixelSize
 
     return _bezierPath
   }
