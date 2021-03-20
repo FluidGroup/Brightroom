@@ -75,7 +75,7 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
 
     brush.color.setStroke()
     let bezierPath = brushedPath()
-    bezierPath.stroke(with: brush.blendMode, alpha: brush.alpha)
+    bezierPath.stroke(with: .normal, alpha: brush.alpha)
   }
 
 }
