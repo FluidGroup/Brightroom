@@ -62,8 +62,6 @@ public struct BlurredMask: GraphicsDrawing {
       layerCGContext.saveGState()
 
       layerCGContext.setBlendMode(.sourceIn)
-      layerCGContext.translateBy(x: 0, y: canvasSize.height)
-      layerCGContext.scaleBy(x: 1, y: -1)
 
       ciContext.draw(ciBlurredImage, in: ciBlurredImage.extent, from: ciBlurredImage.extent)
 
