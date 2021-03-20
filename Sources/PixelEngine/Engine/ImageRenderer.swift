@@ -136,15 +136,23 @@ public final class ImageRenderer {
       
       UIGraphicsImageRenderer.init(size: canvasSize, format: format)
         .image { c in
+          
+          /**
+           Render image
+           */
+          
           let cgContext = c.cgContext
           let ciContext = CIContext(cgContext: cgContext, options: [:])
-                              
-          cgContext.saveGState()
-          cgContext.translateBy(x: 0, y: canvasSize.height)
-          cgContext.scaleBy(x: 1, y: -1)
-          ciContext.draw(croppedImage, in: CGRect(origin: .zero, size: canvasSize), from: croppedImage.extent)
-
-          cgContext.restoreGState()
+                                        
+          cgContext.detached {
+            cgContext.translateBy(x: 0, y: canvasSize.height)
+            cgContext.scaleBy(x: 1, y: -1)
+            ciContext.draw(croppedImage, in: CGRect(origin: .zero, size: canvasSize), from: croppedImage.extent)
+          }
+                    
+          /**
+           Render drawings
+           */
 
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: cgContext, canvasSize: canvasSize)
@@ -158,5 +166,15 @@ public final class ImageRenderer {
     
     return image
   }
+}
+
+extension CGContext {
+  
+  fileprivate func detached(_ perform: () -> Void) {
+    saveGState()
+    perform()
+    restoreGState()
+  }
+  
 }
 
