@@ -22,8 +22,7 @@
 import CoreImage
 import UIKit
 
-public struct BlurredMask : GraphicsDrawing {
-
+public struct BlurredMask: GraphicsDrawing {
   public var paths: [DrawnPathInRect]
 
   public init(paths: [DrawnPathInRect]) {
@@ -31,7 +30,6 @@ public struct BlurredMask : GraphicsDrawing {
   }
 
   public func draw(in context: CGContext, canvasSize: CGSize) {
-
     guard !paths.isEmpty else {
       return
     }
@@ -41,50 +39,50 @@ public struct BlurredMask : GraphicsDrawing {
 
     guard
       let cglayer = CGLayer(mainContext, size: size, auxiliaryInfo: nil),
-      let layerContext = cglayer.context else {
-        assert(false, "Failed to create CGLayer")
-        return
+      let layerCGContext = cglayer.context
+    else {
+      assert(false, "Failed to create CGLayer")
+      return
     }
 
-    let ciContext = CIContext(cgContext: layerContext, options: [:])
-    let ciImage = BlurredMask.blur(image: CIImage(image: UIGraphicsGetImageFromCurrentImageContext()!)!)!
+    renderDrawings: do {
+            
+      let ciContext = CIContext(cgContext: layerCGContext, options: [:])
+      let ciBlurredImage = BlurredMask.blur(image: CIImage(cgImage: context.makeImage()!))!
+            
+      UIGraphicsPushContext(layerCGContext)
 
-    UIGraphicsPushContext(layerContext)
+      paths.forEach { path in
+        layerCGContext.saveGState()
+        path.draw(in: layerCGContext, canvasSize: canvasSize)
 
-    paths.forEach { path in
-      layerContext.saveGState()
+        layerCGContext.restoreGState()
+      }
 
-      let scale = Geometry.diagonalRatio(to: canvasSize, from: path.inRect.size)
+      layerCGContext.saveGState()
 
-      layerContext.scaleBy(x: scale, y: scale)
-      path.draw(in: layerContext, canvasSize: canvasSize)
+      layerCGContext.setBlendMode(.sourceIn)
+      layerCGContext.translateBy(x: 0, y: canvasSize.height)
+      layerCGContext.scaleBy(x: 1, y: -1)
 
-      layerContext.restoreGState()
+      ciContext.draw(ciBlurredImage, in: ciBlurredImage.extent, from: ciBlurredImage.extent)
+
+      layerCGContext.restoreGState()
+
+      UIGraphicsPopContext()
     }
 
-    layerContext.saveGState()
+    renderLayer: do {
+      UIGraphicsPushContext(mainContext)
 
-    layerContext.setBlendMode(.sourceIn)
-    layerContext.translateBy(x: 0, y: canvasSize.height)
-    layerContext.scaleBy(x: 1, y: -1)
+      mainContext.draw(cglayer, at: .zero)
 
-    ciContext.draw(ciImage, in: ciImage.extent, from: ciImage.extent)
-
-    layerContext.restoreGState()
-
-    UIGraphicsPopContext()
-
-    UIGraphicsPushContext(mainContext)
-
-    mainContext.draw(cglayer, at: .zero)
-
-    UIGraphicsPopContext()
+      UIGraphicsPopContext()
+    }
   }
 
   public static func blur(image: CIImage) -> CIImage? {
-
     func radius(_ imageExtent: CGRect) -> Double {
-
       let v = Double(sqrt(pow(imageExtent.width, 2) + pow(imageExtent.height, 2)))
       return v / 20 // ?
     }
@@ -100,9 +98,10 @@ public struct BlurredMask : GraphicsDrawing {
       .applyingFilter(
         "CIGaussianBlur",
         parameters: [
-          "inputRadius" : _radius
-        ])
-      .cropped(to: image.extent)
+          "inputRadius": _radius,
+        ]
+      )
+        .cropped(to: image.extent)
 
     return outputImage
   }

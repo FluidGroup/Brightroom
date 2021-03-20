@@ -23,14 +23,13 @@ import CoreImage
 import UIKit
 
 public final class ImageRenderer {
-  
   private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
   
   public enum Resolution {
     case full
-    case resize(boundingSize: CGSize)
+    case resize(maxPixelSize: CGFloat)
   }
-
+  
   public struct Edit {
     public var croppingRect: EditingCrop?
     public var modifiers: [Filtering] = []
@@ -38,12 +37,12 @@ public final class ImageRenderer {
   }
   
   public let source: ImageSource
-
+  
   public var edit: Edit
-
+  
   public init(source: ImageSource) {
     self.source = source
-    self.edit = .init()
+    edit = .init()
   }
   
   public func asyncRender(resolution: Resolution = .full, completion: @escaping (UIImage) -> Void) {
@@ -61,21 +60,21 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
-    
-    let ciImage: CIImage = source.makeCIImage()
+    let sourceCIImage: CIImage = source.makeCIImage()
     
     assert(
       {
         guard let crop = edit.croppingRect else { return true }
-        return crop.imageSize == CGSize(image: ciImage)
+        return crop.imageSize == CGSize(image: sourceCIImage)
       }())
     
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    
+    /*
     let croppedImage: CIImage = {
-
       let sourceImage: CIImage
       
       if let crop = edit.croppingRect {
-        
         /**
          The reason why here does transformed in pre and post:
          Core Image's coordinate system mismatches with UIKIt.
@@ -83,10 +82,10 @@ public final class ImageRenderer {
          To solve this mismatch while cropping, flips and crops and finally flips.
          */
         
-        sourceImage = ciImage
+        sourceImage = sourceCIImage
           /* pre */
           .transformed(by: .init(scaleX: 1, y: -1))
-          .transformed(by: .init(translationX: 0, y: ciImage.extent.height))
+          .transformed(by: .init(translationX: 0, y: sourceCIImage.extent.height))
           
           /* apply */
           .cropped(to: crop.cropExtent.integral)
@@ -94,87 +93,124 @@ public final class ImageRenderer {
           
           /* post */
           .transformed(by: .init(scaleX: 1, y: -1))
-          .transformed(by: .init(translationX: 0, y: ciImage.extent.height))
+          .transformed(by: .init(translationX: 0, y: sourceCIImage.extent.height))
       } else {
-        sourceImage = ciImage
+        sourceImage = sourceCIImage
       }
-
-      let result = edit.modifiers.reduce(sourceImage, { image, modifier in
-        return modifier.apply(to: image, sourceImage: sourceImage)
-      })
-
+      
+      let result = edit.modifiers.reduce(sourceImage) { image, modifier in
+        modifier.apply(to: image, sourceImage: sourceImage)
+      }
+      
       return result
-
+      
     }()
+    */
     
-    EngineLog.debug("Source.colorSpace :", ciImage.colorSpace as Any)
-
-    var canvasSize: CGSize
-      
-    switch resolution {
-    case .full:
-      canvasSize = croppedImage.extent.size
-    case .resize(let boundingSize):
-      canvasSize = Geometry.sizeThatAspectFit(aspectRatio: croppedImage.extent.size, boundingSize: boundingSize)
+    EngineLog.debug("Source.colorSpace :", sourceCIImage.colorSpace as Any)
+    
+    let effectedCIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
+      modifier.apply(to: image, sourceImage: sourceCIImage)
     }
-        
+    
+    let imagePixelSize: CGSize = effectedCIImage.extent.size
+          
     let format: UIGraphicsImageRendererFormat
-    if #available(iOS 11.0, *) {
-      format = UIGraphicsImageRendererFormat.preferred()
-    } else {
-      format = UIGraphicsImageRendererFormat.default()
-    }
-    format.scale = 1
-    format.opaque = true
-    if #available(iOS 12.0, *) {
-      format.preferredRange = .extended
-    } else {
-      format.prefersExtendedRange = true
+    do {
+      if #available(iOS 11.0, *) {
+        format = UIGraphicsImageRendererFormat.preferred()
+      } else {
+        format = UIGraphicsImageRendererFormat.default()
+      }
+      format.scale = 1
+      format.opaque = true
+      if #available(iOS 12.0, *) {
+        format.preferredRange = .extended
+      } else {
+        format.prefersExtendedRange = true
+      }
     }
     
-    let image = autoreleasepool { () -> UIImage in
+    let resultImage = autoreleasepool { () -> UIImage in
       
-      UIGraphicsImageRenderer.init(size: canvasSize, format: format)
+      let resultSize: CGSize = crop.cropExtent.integral
+        .applying(crop.rotation.transform)
+        .size
+            
+      return UIGraphicsImageRenderer.init(size: resultSize, format: format)
         .image { c in
           
           /**
-           Render image
+           Step: 1
            */
-          
-          let cgContext = c.cgContext
-          let ciContext = CIContext(cgContext: cgContext, options: [:])
-                                        
-          cgContext.detached {
-            cgContext.translateBy(x: 0, y: canvasSize.height)
-            cgContext.scaleBy(x: 1, y: -1)
-            ciContext.draw(croppedImage, in: CGRect(origin: .zero, size: canvasSize), from: croppedImage.extent)
+          let fullImageIayer = CGLayer(c.cgContext, size: imagePixelSize, auxiliaryInfo: nil)!
+          renderFullImage: do {
+            /**
+             Render image
+             */
+            
+            let cgContext = fullImageIayer.context!
+            let ciContext = CIContext(cgContext: cgContext, options: [.workingColorSpace : effectedCIImage.colorSpace as Any])
+            
+            cgContext.detached {
+              cgContext.translateBy(x: 0, y: imagePixelSize.height)
+              cgContext.scaleBy(x: 1, y: -1)
+              ciContext.draw(
+                effectedCIImage,
+                in: CGRect(origin: .zero, size: imagePixelSize),
+                from: effectedCIImage.extent
+              )
+            }
+            
+            /**
+             Render drawings
+             */
+            
+            self.edit.drawer.forEach { drawer in
+              drawer.draw(in: cgContext, canvasSize: imagePixelSize)
+            }
           }
-                    
+          
           /**
-           Render drawings
+           Step: 2
            */
-
-          self.edit.drawer.forEach { drawer in
-            drawer.draw(in: cgContext, canvasSize: canvasSize)
+          
+          let croppedImageLayer = CGLayer(c.cgContext, size: crop.cropExtent.size, auxiliaryInfo: nil)!
+          
+          renderCropped: do {
+            
+            let cgContext = croppedImageLayer.context!
+            
+            cgContext.translateBy(x: -crop.cropExtent.minX, y: -crop.cropExtent.minY)
+            cgContext.draw(fullImageIayer, at: .zero)
+                      
           }
           
-      }
-      
+          /**
+           Step: 3
+           */
+                              
+          do {
+            let layerSize = croppedImageLayer.size
+            c.cgContext.translateBy(x: resultSize.width / 2, y: resultSize.height / 2)
+            c.cgContext.rotate(by: crop.rotation.angle)
+            c.cgContext.translateBy(x: -layerSize.width / 2, y: -layerSize.height / 2)
+            c.cgContext.draw(croppedImageLayer, at: .zero)
+          }
+         
+        }
     }
     
-    EngineLog.debug("[Renderer] a rendering was successful. Image => \(image)")
+    EngineLog.debug("[Renderer] a rendering was successful. Image => \(resultImage)")
     
-    return image
+    return resultImage
   }
 }
 
 extension CGContext {
-  
   fileprivate func detached(_ perform: () -> Void) {
     saveGState()
     perform()
     restoreGState()
   }
-  
 }
-

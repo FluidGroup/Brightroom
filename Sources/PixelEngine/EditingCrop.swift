@@ -35,17 +35,21 @@ public struct EditingCrop: Equatable {
     /// 270 degree
     case angle_270
     
-    public var transform: CGAffineTransform {
+    public var angle: CGFloat {
       switch self {
       case .angle_0:
-        return .identity
+        return 0
       case .angle_90:
-        return .init(rotationAngle: -CGFloat.pi / 2)
+        return -CGFloat.pi / 2
       case .angle_180:
-        return .init(rotationAngle: -CGFloat.pi)
+        return -CGFloat.pi
       case .angle_270:
-        return .init(rotationAngle: CGFloat.pi / 2)
+        return CGFloat.pi / 2
       }
+    }
+    
+    public var transform: CGAffineTransform {
+      .init(rotationAngle: angle)
     }
     
     public func next() -> Self {

@@ -23,6 +23,29 @@ import CoreImage
 import UIKit
 
 public enum Geometry {
+  
+  public static func sizeThatAspectFit(size: CGSize, maxPixelSize: CGFloat) -> CGSize {
+    
+    guard size.width >= maxPixelSize || size.height >= maxPixelSize else {
+      return size
+    }
+    
+    var s = size
+    
+    if size.width > size.height {
+      s.width = maxPixelSize
+      s.height *= maxPixelSize / size.width
+    } else {
+      s.height = maxPixelSize
+      s.width *= maxPixelSize / size.height
+    }
+    
+    s.width.round()
+    s.height.round()
+    
+    return s
+  }
+  
   public static func sizeThatAspectFit(aspectRatio: CGSize, boundingSize: CGSize) -> CGSize {
     let widthRatio = boundingSize.width / aspectRatio.width
     let heightRatio = boundingSize.height / aspectRatio.height
@@ -105,24 +128,7 @@ extension CGSize {
   
   func scaled(maxPixelSize: CGFloat) -> CGSize {
     
-    guard width >= maxPixelSize || height >= maxPixelSize else {
-      return self
-    }
-    
-    var s = self
-    
-    if width > height {
-      s.width = maxPixelSize
-      s.height *= maxPixelSize / width
-    } else {
-      s.height = maxPixelSize
-      s.width *= maxPixelSize / height
-    }
-    
-    s.width.round()
-    s.height.round()
-    
-    return s
+    Geometry.sizeThatAspectFit(size: self, maxPixelSize: maxPixelSize)
   }
 }
 
