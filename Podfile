@@ -9,7 +9,10 @@ abstract_target 'Demo_Apps' do
 
   target "Demo" do
     pod "MosaiqueAssetsPicker", :git => "git@github.com:eure/AssetsPicker.git"
-  end
+    pod "Texture"
+    pod "TextureSwiftSupport"
+    pod "GlossButtonNode"
+  end  
 
   target "SwiftUIDemo" do
     use_frameworks!

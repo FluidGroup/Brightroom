@@ -1,17 +1,66 @@
 PODS:
+  - GlossButtonNode (2.1.0):
+    - Texture/Core (~> 3)
+    - TextureSwiftSupport
   - MosaiqueAssetsPicker (1.2.0)
+  - PINCache (3.0.3):
+    - PINCache/Arc-exception-safe (= 3.0.3)
+    - PINCache/Core (= 3.0.3)
+  - PINCache/Arc-exception-safe (3.0.3):
+    - PINCache/Core
+  - PINCache/Core (3.0.3):
+    - PINOperation (~> 1.2.1)
+  - PINOperation (1.2.1)
+  - PINRemoteImage/Core (3.0.3):
+    - PINOperation
+  - PINRemoteImage/iOS (3.0.3):
+    - PINRemoteImage/Core
+  - PINRemoteImage/PINCache (3.0.3):
+    - PINCache (~> 3.0.3)
+    - PINRemoteImage/Core
   - Reveal-SDK (28)
   - SwiftGen (6.4.0)
+  - Texture (3.0.0):
+    - Texture/AssetsLibrary (= 3.0.0)
+    - Texture/Core (= 3.0.0)
+    - Texture/MapKit (= 3.0.0)
+    - Texture/Photos (= 3.0.0)
+    - Texture/PINRemoteImage (= 3.0.0)
+    - Texture/Video (= 3.0.0)
+  - Texture/AssetsLibrary (3.0.0):
+    - Texture/Core
+  - Texture/Core (3.0.0)
+  - Texture/MapKit (3.0.0):
+    - Texture/Core
+  - Texture/Photos (3.0.0):
+    - Texture/Core
+  - Texture/PINRemoteImage (3.0.0):
+    - PINRemoteImage/iOS (~> 3.0.0)
+    - PINRemoteImage/PINCache
+    - Texture/Core
+  - Texture/Video (3.0.0):
+    - Texture/Core
+  - TextureSwiftSupport (3.3.0):
+    - Texture/Core (~> 3)
 
 DEPENDENCIES:
+  - GlossButtonNode
   - "MosaiqueAssetsPicker (from `git@github.com:eure/AssetsPicker.git`)"
   - Reveal-SDK
   - SwiftGen
+  - Texture
+  - TextureSwiftSupport
 
 SPEC REPOS:
   trunk:
+    - GlossButtonNode
+    - PINCache
+    - PINOperation
+    - PINRemoteImage
     - Reveal-SDK
     - SwiftGen
+    - Texture
+    - TextureSwiftSupport
 
 EXTERNAL SOURCES:
   MosaiqueAssetsPicker:
@@ -23,10 +72,16 @@ CHECKOUT OPTIONS:
     :git: "git@github.com:eure/AssetsPicker.git"
 
 SPEC CHECKSUMS:
+  GlossButtonNode: 0b1471447cb4cebc8a959bbca574247ff6b0592b
   MosaiqueAssetsPicker: e3d2be37a1a7d91d60f2904347f556fc1811e4d7
+  PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
+  PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
+  PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
   Reveal-SDK: 1a2a678648fc4d277bad71c86d15530424324288
   SwiftGen: 67860cc7c3cfc2ed25b9b74cfd55495fc89f9108
+  Texture: 2f109e937850d94d1d07232041c9c7313ccddb81
+  TextureSwiftSupport: f77fcb409983be5da7ef5b29566be0fcc0c440ed
 
-PODFILE CHECKSUM: 9d078b3b06beddd3690aa52067596c2770ff7181
+PODFILE CHECKSUM: 9e3af067736b992b26209e099b0b8eca7ddce955
 
 COCOAPODS: 1.10.1

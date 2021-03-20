@@ -38,6 +38,8 @@
 		4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6F725F6720900DE0569 /* TransitionPatch */; };
 		4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6FC25F6723700DE0569 /* Verge */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
+		4B3075922605F27400A1E7CB /* TopViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075912605F27400A1E7CB /* TopViewController.swift */; };
+		4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075962605F27C00A1E7CB /* StackScrollNode.swift */; };
 		4B34578B217502F900716DA0 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34578A217502F900716DA0 /* Style.swift */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
 		4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023C325ED82B700D3DE47 /* Debounce.swift */; };
@@ -278,6 +280,8 @@
 		4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeControlView.swift; sourceTree = "<group>"; };
 		4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMenuControlView.swift; sourceTree = "<group>"; };
 		4B1EC70925F6756E00DE0569 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Package.swift; path = /Users/muukii/.ghq/github.com/muukii/Pixel/Package.swift; sourceTree = "<absolute>"; };
+		4B3075912605F27400A1E7CB /* TopViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopViewController.swift; sourceTree = "<group>"; };
+		4B3075962605F27C00A1E7CB /* StackScrollNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNode.swift; sourceTree = "<group>"; };
 		4B34578A217502F900716DA0 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		4B4023BF25ED823B00D3DE47 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
 		4B4023C325ED82B700D3DE47 /* Debounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debounce.swift; sourceTree = "<group>"; };
@@ -524,6 +528,14 @@
 			path = LUTs;
 			sourceTree = "<group>";
 		};
+		4B30759B2605F2A800A1E7CB /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				4B3075962605F27C00A1E7CB /* StackScrollNode.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
 		4B3457882174FF6600716DA0 /* ImageViews */ = {
 			isa = PBXGroup;
 			children = (
@@ -570,6 +582,14 @@
 				4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */,
 			);
 			path = PixelEditor;
+			sourceTree = "<group>";
+		};
+		4B58DF5E2606047400D85F97 /* Contents */ = {
+			isa = PBXGroup;
+			children = (
+				4B3075912605F27400A1E7CB /* TopViewController.swift */,
+			);
+			path = Contents;
 			sourceTree = "<group>";
 		};
 		4B600AF3216B7A94001E1456 = {
@@ -636,6 +656,8 @@
 		4B600B21216B7C9C001E1456 /* Demo */ = {
 			isa = PBXGroup;
 			children = (
+				4B58DF5E2606047400D85F97 /* Contents */,
+				4B30759B2605F2A800A1E7CB /* Library */,
 				4BB8AD7B25E96B100018D769 /* Mocks.swift */,
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
@@ -1268,7 +1290,9 @@
 				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
 				4BE7DD0E25E95BDB006B3C74 /* DemoCropViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
+				4B3075922605F27400A1E7CB /* TopViewController.swift in Sources */,
 				4B47D066216CC5DB0007B594 /* EditorViewController.swift in Sources */,
+				4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */,
 				4B98CCB225EFF27200E4F61F /* TopTableViewController.swift in Sources */,
 				4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */,
 				4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */,
