@@ -579,7 +579,6 @@
 				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4BDEE0A625F8CF6800FA22CB /* Tests */,
-				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
 				4BF23C312603BCE0007019CB /* gaku.jpeg */,
 				4B9369E725F940E600B18571 /* nasa.jpg */,
@@ -676,6 +675,7 @@
 				4B600AFF216B7A94001E1456 /* PixelEngine */,
 				4B47D053216CC5350007B594 /* PixelEditor */,
 				4B600B21216B7C9C001E1456 /* Demo */,
+				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -1630,10 +1630,10 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_ASSET_PATHS = "\"SwiftUIDemo/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = SwiftUIDemo/Info.plist;
+				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1654,10 +1654,10 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_ASSET_PATHS = "\"SwiftUIDemo/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = SwiftUIDemo/Info.plist;
+				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
