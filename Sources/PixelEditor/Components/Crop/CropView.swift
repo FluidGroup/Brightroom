@@ -42,7 +42,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       case guide
     }
 
-    public fileprivate(set) var proposedCrop: EditingCrop?
+    public fileprivate(set) var proposedCrop: EditingCrop
 
     public fileprivate(set) var frame: CGRect = .zero
     
@@ -56,7 +56,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public private(set) weak var cropOutsideOverlay: UIView?
 
-  public let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
+  public let store: UIStateStore<State, Never>
 
   /**
    A Boolean value that indicates whether the guide is interactive.
@@ -138,8 +138,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     self.editingStack = editingStack
     self.contentInset = contentInset
+    
+    self.store = .init(initialState: .init(proposedCrop: editingStack.state.currentEdit.crop), logger: nil)
 
     super.init(frame: .zero)
+    
+    scrollBackdropView.accessibilityIdentifier = "scrollBackdropView"
 
     clipsToBounds = false
 
@@ -222,44 +226,39 @@ public final class CropView: UIView, UIScrollViewDelegate {
             let crop = state.proposedCrop
             
             guard frame != .zero else { return }
-            
-            if let crop = crop {
-              
-              setupScrollViewOnce: do {
-                if self.hasSetupScrollViewCompleted == false {
-                  self.hasSetupScrollViewCompleted = true
-                  
-                  let scrollView = self.scrollView
-                  
-                  self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
-                                                     
-                  // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
-                  UIView.performWithoutAnimation {
-                    let currentZoomScale = scrollView.zoomScale
-                    let contentSize = crop.scrollViewContentSize()
-                    if scrollView.contentSize != contentSize {
-                      scrollView.contentInset = .zero
-                      scrollView.zoomScale = 1
-                      scrollView.contentSize = contentSize
-                      scrollView.zoomScale = currentZoomScale
-                    }
+                        
+            setupScrollViewOnce: do {
+              if self.hasSetupScrollViewCompleted == false {
+                self.hasSetupScrollViewCompleted = true
+                
+                let scrollView = self.scrollView
+                
+                self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
+                
+                // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+                UIView.performWithoutAnimation {
+                  let currentZoomScale = scrollView.zoomScale
+                  let contentSize = crop.scrollViewContentSize()
+                  if scrollView.contentSize != contentSize {
+                    scrollView.contentInset = .zero
+                    scrollView.zoomScale = 1
+                    scrollView.contentSize = contentSize
+                    scrollView.zoomScale = currentZoomScale
                   }
                 }
               }
-              
-              self.updateScrollContainerView(
-                by: crop,
-                animated: state.hasLoaded,
-                animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
-              )
-            } else {
-              // TODO:
             }
+            
+            self.updateScrollContainerView(
+              by: crop,
+              animated: state.hasLoaded,
+              animatesRotation: state.hasChanges(\.proposedCrop.rotation)
+            )
+            
           }
           
           if self.isAutoApplyEditingStackEnabled {
             state.ifChanged(\.proposedCrop) { crop in
-              guard let crop = crop else { return }
               self.editingStack.crop(crop)
             }
           }
@@ -343,18 +342,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
    Applies the current state to the EditingStack.
    */
   public func applyEditingStack() {
-    
-    guard let crop = store.state.proposedCrop else {
-      return
-    }
-    editingStack.crop(crop)
+    editingStack.crop(store.state.proposedCrop)
   }
 
   public func resetCrop() {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop = $0.proposedCrop?.makeInitial()
+      $0.proposedCrop = $0.proposedCrop.makeInitial()
       $0.layoutVersion += 1
     }
 
@@ -365,7 +360,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop?.rotation = rotation
+      $0.proposedCrop.rotation = rotation
       $0.layoutVersion += 1
     }
   }
@@ -383,9 +378,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      assert($0.proposedCrop != nil)
-      $0.proposedCrop?.updateCropExtent(by: ratio)
-      $0.proposedCrop?.preferredAspectRatio = ratio
+      $0.proposedCrop.updateCropExtent(by: ratio)
+      $0.proposedCrop.preferredAspectRatio = ratio
       $0.layoutVersion += 1
     }
   }
@@ -579,13 +573,40 @@ extension CropView {
 
   @inline(__always)
   private func didChangeGuideViewWithDelay() {
-    
-    // TODO: Apply only value immediately, and updates UI later.
-    
+        
     let visibleRect = guideView.convert(guideView.bounds, to: imageView)
     
+    func applyCropRotation(rotation: EditingCrop.Rotation, insets: UIEdgeInsets) -> UIEdgeInsets {
+      switch rotation {
+      case .angle_0:
+        return insets
+      case .angle_90:
+        return .init(
+          top: insets.left,
+          left: insets.bottom,
+          bottom: insets.right,
+          right: insets.top
+        )
+      case .angle_180:
+        return .init(
+          top: insets.bottom,
+          left: insets.right,
+          bottom: insets.top,
+          right: insets.left
+        )
+      case .angle_270:
+        return .init(
+          top: insets.right,
+          left: insets.top,
+          bottom: insets.left,
+          right: insets.bottom
+        )
+      }
+    }
+             
     updateContentInset: do {
       let rect = self.guideView.convert(self.guideView.bounds, to: scrollBackdropView)
+
       let bounds = scrollBackdropView.bounds
       let insets = UIEdgeInsets.init(
         top: rect.minY,
@@ -593,20 +614,18 @@ extension CropView {
         bottom: bounds.maxY - rect.maxY,
         right: bounds.maxX - rect.maxX
       )
-      
-      scrollView.contentInset = insets
+            
+      let resolvedInsets = applyCropRotation(rotation: store.state.proposedCrop.rotation, insets: insets)
+                  
+      scrollView.contentInset = resolvedInsets
     }
     
     store.commit {
-      if var crop = $0.proposedCrop {
-        // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-        crop.cropExtent = visibleRect
-        $0.proposedCrop = crop
-      } else {
-        assertionFailure()
-      }
+      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+      $0.proposedCrop.cropExtent = visibleRect
     }
         
+    /// Triggers layout update later
     debounce.on { [weak self] in
 
       guard let self = self else { return }
@@ -621,14 +640,8 @@ extension CropView {
   private func didChangeScrollView() {
     store.commit {
       let rect = guideView.convert(guideView.bounds, to: imageView)
-      
-      if var crop = $0.proposedCrop {
-        // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-        crop.cropExtent = rect
-        $0.proposedCrop = crop
-      } else {
-        assertionFailure()
-      }
+      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+      $0.proposedCrop.cropExtent = rect
     }
   }
 

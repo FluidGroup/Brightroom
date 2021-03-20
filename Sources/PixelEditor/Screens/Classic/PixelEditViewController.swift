@@ -238,9 +238,7 @@ public final class PixelEditViewController: UIViewController {
     cropView.store.sinkState { [viewModel] (state) in
             
       state.ifChanged(\.proposedCrop) { value in
-        if let value = value {
-          viewModel.setProposedCrop(value)
-        }
+        viewModel.setProposedCrop(value)
       }
     }
     .store(in: &subscriptions)

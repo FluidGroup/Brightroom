@@ -130,10 +130,8 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleRotateButton() {
-    let rotation = cropView.store.state.proposedCrop?.rotation.next()
-    rotation.map {
-      cropView.setRotation($0)
-    }
+    let rotation = cropView.store.state.proposedCrop.rotation.next()
+    cropView.setRotation(rotation)
   }
   
   @objc private func handleAspectRatioButton() {
