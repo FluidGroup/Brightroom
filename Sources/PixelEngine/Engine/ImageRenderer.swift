@@ -174,7 +174,7 @@ public final class ImageRenderer {
             
             do {
               c.cgContext.translateBy(x: resultSize.width / 2, y: resultSize.height / 2)
-              c.cgContext.rotate(by: crop.rotation.angle)
+              c.cgContext.rotate(by: -crop.rotation.angle)
               c.cgContext.translateBy(x: -crop.cropExtent.size.width / 2, y: -crop.cropExtent.size.height / 2)
               c.cgContext.draw(croppedImage, in: .init(origin: .zero, size: crop.cropExtent.size))
             }
@@ -199,10 +199,7 @@ public final class ImageRenderer {
         
         return UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
-            
-            c.cgContext.translateBy(x: 0, y: targetSize.height)
-            c.cgContext.scaleBy(x: 1, y: -1)
-            c.cgContext.draw(croppedImage, in: .init(origin: .zero, size: targetSize))
+            c.cgContext.draw(rotatedImage, in: .init(origin: .zero, size: targetSize))
             
           }
           .cgImage!
