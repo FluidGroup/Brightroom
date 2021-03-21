@@ -132,7 +132,7 @@ extension CGSize {
   }
 }
 
-public struct PixelAspectRatio: Equatable {
+public struct PixelAspectRatio: Hashable {
   
   public static func == (lhs: Self, rhs: Self) -> Bool {
     (lhs.height / lhs.width) == (rhs.height / rhs.width)
@@ -169,7 +169,8 @@ public struct PixelAspectRatio: Equatable {
   public func asCGSize() -> CGSize {
     .init(width: width, height: height)
   }
-    
+      
+  /// Returns a new instance that swapped height and width
   public func swapped() -> PixelAspectRatio {
     .init(width: height, height: width)
   }

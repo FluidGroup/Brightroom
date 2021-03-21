@@ -85,6 +85,7 @@
 		4B8B9114260792D9009BF084 /* StackScrollNodeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */; };
 		4B8B911E2607961D009BF084 /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
 		4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */; };
+		4B8B94722607B126009BF084 /* UIButton+Closure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B946D2607B122009BF084 /* UIButton+Closure.swift */; };
 		4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */; };
 		4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */; };
 		4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */; };
@@ -329,6 +330,7 @@
 		4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropMenuViewController.swift; sourceTree = "<group>"; };
 		4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNodeViewController.swift; sourceTree = "<group>"; };
 		4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Picker.swift"; sourceTree = "<group>"; };
+		4B8B946D2607B122009BF084 /* UIButton+Closure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIButton+Closure.swift"; sourceTree = "<group>"; };
 		4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedEditingView.swift; sourceTree = "<group>"; };
 		4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenIdentifiableView.swift; sourceTree = "<group>"; };
 		4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingViewWrapper.swift; sourceTree = "<group>"; };
@@ -782,6 +784,7 @@
 				4B4023C325ED82B700D3DE47 /* Debounce.swift */,
 				4BA8513D25EE97A600BAB430 /* PixelEditorCodeBasedView.swift */,
 				4BEC14BD2603ADDB009CE218 /* EditingCrop+.swift */,
+				4B8B946D2607B122009BF084 /* UIButton+Closure.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -1205,6 +1208,7 @@
 				4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */,
 				4B96DD8025EBCE8A000AAB1C /* Wrap.swift in Sources */,
 				4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */,
+				4B8B94722607B126009BF084 /* UIButton+Closure.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */,
 				4B0BDCA1217D663D001098B9 /* ClarityControl.swift in Sources */,
 				4BA84F8825EE965400BAB430 /* CropView.CropInsideOverlay.swift in Sources */,
