@@ -141,14 +141,15 @@ public final class ImageRenderer {
         
         EngineLog.debug("[Renderer] Make cropped image \(crop)")
           
-        let targetSize = crop.cropExtent.size
+        let integral = crop.cropExtent.integral
+        let targetSize = integral.size
         
         let image = UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
             let cgContext = c.cgContext
             
             cgContext.detached {
-              cgContext.translateBy(x: -crop.cropExtent.minX, y: -crop.cropExtent.minY)
+              cgContext.translateBy(x: -integral.minX, y: -integral.minY)
               cgContext.draw(fullSizeImage, in: .init(origin: .zero, size: fullSizeImage.size))
             }
           }

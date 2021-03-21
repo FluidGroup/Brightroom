@@ -22,6 +22,8 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       URL(fileURLWithPath: $0)
     }!
   )
+  
+  private let resultCell = Components.ResultImageCell()
 
   override init() {
     super.init()
@@ -30,8 +32,11 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-
+        
     stackScrollNode.append(nodes: [
+      
+      resultCell,
+      
       Components.makeSelectionCell(title: "Horizontal rect from UIImage", onTap: { [unowned self] in
         _presentCropViewConroller(stackForHorizontal)
       }),
@@ -70,8 +75,11 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
     crop.handlers.didCancel = { controller in
       controller.dismiss(animated: true, completion: nil)
     }
-    crop.handlers.didFinish = { controller in
+    crop.handlers.didFinish = { [weak self] controller in
       controller.dismiss(animated: true, completion: nil)
+      controller.editingStack.makeRenderer().asyncRender { [weak self] (image) in
+        self?.resultCell.image = image
+      }
     }
     present(crop, animated: true, completion: nil)
   }
