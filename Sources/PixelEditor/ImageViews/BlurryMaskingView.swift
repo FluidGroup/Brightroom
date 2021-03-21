@@ -27,10 +27,14 @@ import PixelEngine
 import Verge
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
+  
   private struct State: Equatable {
+    
     fileprivate(set) var frame: CGRect = .zero
     fileprivate var hasLoaded = false
-    fileprivate(set) var proposedCrop: EditingCrop?
+    fileprivate(set) var proposedCrop: EditingCrop
+    
+  
   }
   
   private final class ContainerView: PixelEditorCodeBasedView {
@@ -41,7 +45,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
   
-  var brush = OvalBrush(color: UIColor.black, pixelSize: 30)
+  private var brush = OvalBrush(color: UIColor.black, pixelSize: 475)
   
   private let scrollView = CropView._CropScrollView()
   
@@ -63,7 +67,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   
   private var hasSetupScrollViewCompleted = false
   
-  private let store: UIStateStore<State, Never> = .init(initialState: .init(), logger: nil)
+  private let store: UIStateStore<State, Never>
   
   private let contentInset: UIEdgeInsets = .zero
   
@@ -72,9 +76,10 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   // MARK: - Initializers
   
   public init(editingStack: EditingStack) {
-    self.editingStack = editingStack
-    editingStack.start()
     
+    self.editingStack = editingStack
+    self.store = .init(initialState: .init(proposedCrop: editingStack.state.currentEdit.crop), logger: nil)
+        
     let state = editingStack.state
     
     imageSize = state.imageSize
@@ -115,7 +120,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     drawingView.handlers = drawingView.handlers&>.modify {
       $0.willBeginPan = { [unowned self] path in
-        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path), in: bounds)
+        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path))
         canvasView.previewDrawnPaths = [drawnPath]
       }
       $0.panning = { [unowned self] path in
@@ -126,7 +131,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
         
         let _path = (path.copy() as! UIBezierPath)
         
-        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path), in: bounds)
+        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path))
         
         canvasView.previewDrawnPaths = []
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
@@ -165,6 +170,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     if isBinding == false {
       isBinding = true
       
+      editingStack.start()
+      
       binding: do {
         store.sinkState(queue: .mainIsolated()) { [weak self] state in
           
@@ -174,7 +181,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             
             guard frame != .zero else { return }
             
-            if let crop = crop {
               setupScrollViewOnce: do {
                 if self.hasSetupScrollViewCompleted == false {
                   self.hasSetupScrollViewCompleted = true
@@ -203,11 +209,9 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
               self.updateScrollContainerView(
                 by: crop,
                 animated: state.hasLoaded,
-                animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
+                animatesRotation: state.hasChanges(\.proposedCrop.rotation)
               )
-            } else {
-              // TODO:
-            }
+          
           }
         }
         .store(in: &subscriptions)
@@ -268,7 +272,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           size: size
         )
         
-        //        scrollBackdropView.frame = scrollView.frame
       }
       
       zoom: do {
@@ -375,7 +378,7 @@ extension BlurryMaskingView {
       ]
       .forEach {
         
-        $0.lineWidth = 100
+        $0.lineWidth = 475
         $0.strokeColor = UIColor.blue.cgColor
         $0.lineCap = .round
         $0.fillColor = UIColor.clear.cgColor

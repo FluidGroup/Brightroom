@@ -23,12 +23,10 @@ import CoreImage
 import UIKit
 
 public struct DrawnPathInRect: GraphicsDrawing, Equatable {
-  public let inRect: CGRect
   public let path: DrawnPath
 
-  public init(path: DrawnPath, in rect: CGRect) {
+  public init(path: DrawnPath) {
     self.path = path
-    self.inRect = rect
   }
 
   public func draw(in context: CGContext, canvasSize: CGSize) {

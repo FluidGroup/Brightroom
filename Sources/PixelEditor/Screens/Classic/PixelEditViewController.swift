@@ -267,9 +267,10 @@ public final class PixelEditViewController: UIViewController {
 
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
  
-    if let brush = state.takeIfChanged(\.brush) {
-      maskingView.brush = brush
-    }
+    // FIXME: Brush size
+//    if let brush = state.takeIfChanged(\.brush) {
+//      maskingView.brush = brush
+//    }
     
     state.ifChanged(\.proposedCrop) { value in
       guard let value = value else { return }      
