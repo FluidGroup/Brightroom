@@ -25,19 +25,36 @@ import PixelEngine
 #endif
 
 extension CropView {
+  
+  private final class TapExpandedView: PixelEditorCodeBasedView {
+    
+    let horizontal: CGFloat
+    let vertical: CGFloat
+    
+    init(horizontal: CGFloat, vertical: CGFloat) {
+      self.horizontal = horizontal
+      self.vertical = vertical
+      super.init(frame: .zero)
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+      bounds.insetBy(dx: -horizontal, dy: -vertical).contains(point)
+    }
+  }
+  
   final class _InteractiveCropGuideView: PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
     var willChange: () -> Void = {}
     var didChange: () -> Void = {}
 
-    private let topLeftControlPointView = UIView()
-    private let topRightControlPointView = UIView()
-    private let bottomLeftControlPointView = UIView()
-    private let bottomRightControlPointView = UIView()
+    private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let bottomLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let bottomRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
 
-    private let topControlPointView = UIView()
-    private let rightControlPointView = UIView()
-    private let leftControlPointView = UIView()
-    private let bottomControlPointView = UIView()
+    private let topControlPointView = TapExpandedView(horizontal: 0, vertical: 16)
+    private let rightControlPointView = TapExpandedView(horizontal: 16, vertical: 0)
+    private let leftControlPointView = TapExpandedView(horizontal: 16, vertical: 0)
+    private let bottomControlPointView = TapExpandedView(horizontal: 0, vertical: 16)
 
     private weak var cropInsideOverlay: CropInsideOverlayBase?
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
@@ -149,7 +166,7 @@ extension CropView {
         }
       }
 
-      let length: CGFloat = 30
+      let length: CGFloat = 1
 
       topLeftControlPointView&>.do {
         NSLayoutConstraint.activate([
@@ -206,16 +223,16 @@ extension CropView {
       topControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.topAnchor.constraint(equalTo: topAnchor, constant: 0),
-          $0.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor),
-          $0.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor),
+          $0.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor, constant: 16),
+          $0.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor, constant: -16),
           $0.heightAnchor.constraint(equalToConstant: length),
         ])
       }
 
       rightControlPointView&>.do {
         NSLayoutConstraint.activate([
-          $0.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor),
-          $0.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor),
+          $0.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor, constant: 16),
+          $0.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor, constant: -16),
           $0.rightAnchor.constraint(equalTo: rightAnchor),
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
@@ -224,16 +241,16 @@ extension CropView {
       bottomControlPointView&>.do {
         NSLayoutConstraint.activate([
           $0.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
-          $0.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor),
-          $0.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor),
+          $0.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor, constant: 16),
+          $0.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor, constant: -16),
           $0.heightAnchor.constraint(equalToConstant: length),
         ])
       }
 
       leftControlPointView&>.do {
         NSLayoutConstraint.activate([
-          $0.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor),
-          $0.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor),
+          $0.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor, constant: 16),
+          $0.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor, constant: -16),
           $0.leftAnchor.constraint(equalTo: leftAnchor),
           $0.widthAnchor.constraint(equalToConstant: length),
         ])
@@ -294,10 +311,15 @@ extension CropView {
         }
       }
     }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+      bounds.insetBy(dx: -16, dy: -16).contains(point)
+    }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+      
       let view = super.hitTest(point, with: event)
-
+ 
       if view == self {
         return nil
       }
