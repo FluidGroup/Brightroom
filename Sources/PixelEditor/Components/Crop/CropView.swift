@@ -512,7 +512,7 @@ extension CropView {
                 
       zoom: do {
         
-        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+        let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
         
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max

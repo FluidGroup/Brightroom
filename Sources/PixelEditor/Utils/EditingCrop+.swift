@@ -17,17 +17,15 @@ extension EditingCrop {
     imageSize
   }
   
-  func calculateZoomScale(scrollViewBounds: CGRect) -> (min: CGFloat, max: CGFloat) {
-    let minXScale = scrollViewBounds.width / imageSize.width
-    let minYScale = scrollViewBounds.height / imageSize.height
+  func calculateZoomScale(scrollViewSize: CGSize) -> (min: CGFloat, max: CGFloat) {
+    let minXScale = scrollViewSize.width / imageSize.width
+    let minYScale = scrollViewSize.height / imageSize.height
     
     /**
      max meaning scale aspect fill
      */
     let minScale = max(minXScale, minYScale)
-    
-    assert(minScale > 0)
-    
+        
     return (min: minScale, max: .greatestFiniteMagnitude)
   }
 }

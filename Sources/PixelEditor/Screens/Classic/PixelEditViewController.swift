@@ -267,17 +267,16 @@ public final class PixelEditViewController: UIViewController {
 
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
  
-    // FIXME: Brush size
-//    if let brush = state.takeIfChanged(\.brush) {
-//      maskingView.brush = brush
-//    }
+    state.ifChanged(\.maskingBrushSize) {
+      maskingView.setBrushSize($0)
+    }
     
     state.ifChanged(\.proposedCrop) { value in
       guard let value = value else { return }      
       cropView.setCrop(value)
     }
-
-    if let mode = state.takeIfChanged(\.mode) {
+    
+    state.ifChanged(\.mode) { mode in
       switch mode {
       case .crop:
 

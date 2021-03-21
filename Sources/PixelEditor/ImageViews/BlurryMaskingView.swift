@@ -27,14 +27,58 @@ import PixelEngine
 import Verge
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
+
   
   private struct State: Equatable {
     
     fileprivate(set) var frame: CGRect = .zero
+    fileprivate(set) var bounds: CGRect = .zero
+    
     fileprivate var hasLoaded = false
+    
     fileprivate(set) var proposedCrop: EditingCrop
     
-  
+    fileprivate(set) var brushSize: CanvasView.BrushSize  = .point(30)
+    
+    fileprivate let contentInset: UIEdgeInsets = .zero
+    
+    func scrollViewFrame() -> CGRect {
+      
+      let bounds = self.bounds.inset(by: contentInset)
+      
+      let size: CGSize
+      let aspectRatio = PixelAspectRatio(proposedCrop.cropExtent.size)
+      switch proposedCrop.rotation {
+      case .angle_0:
+        size = aspectRatio.sizeThatFits(in: bounds.size)
+      case .angle_90:
+        size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+      case .angle_180:
+        size = aspectRatio.sizeThatFits(in: bounds.size)
+      case .angle_270:
+        size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+      }
+      
+      return .init(
+        origin: .init(
+          x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
+          y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
+        ),
+        size: size
+      )
+    }
+    
+    func brushPixelSize() -> CGFloat {
+      
+      let (min, _) = proposedCrop.calculateZoomScale(scrollViewSize: scrollViewFrame().size)
+      
+      switch brushSize {
+      case .point(let points):
+        return points / min
+      case .pixel(let pixels):
+        return pixels
+      }
+    }
   }
   
   private final class ContainerView: PixelEditorCodeBasedView {
@@ -44,9 +88,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       view.autoresizingMask = [.flexibleHeight, .flexibleWidth]
     }
   }
-  
-  private var brush = OvalBrush(color: UIColor.black, pixelSize: 475)
-  
+    
   private let scrollView = CropView._CropScrollView()
   
   private let containerView = ContainerView()
@@ -69,7 +111,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   
   private let store: UIStateStore<State, Never>
   
-  private let contentInset: UIEdgeInsets = .zero
+  private var currentBrush: OvalBrush?
   
   private var isBinding = false
   
@@ -120,21 +162,26 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     drawingView.handlers = drawingView.handlers&>.modify {
       $0.willBeginPan = { [unowned self] path in
-        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: path))
-        canvasView.previewDrawnPaths = [drawnPath]
+        
+        currentBrush = .init(color: .black, pixelSize: store.state.primitive.brushPixelSize())
+        
+        let drawnPath = DrawnPath(brush: currentBrush!, path: path)
+        canvasView.previewDrawnPath = drawnPath
       }
       $0.panning = { [unowned self] path in
-        canvasView.update()
+        canvasView.updatePreviewDrawing()
       }
       $0.didFinishPan = { [unowned self] path in
-        canvasView.update()
+        canvasView.updatePreviewDrawing()
         
         let _path = (path.copy() as! UIBezierPath)
         
-        let drawnPath = DrawnPathInRect(path: DrawnPath(brush: brush, path: _path))
+        let drawnPath = DrawnPath(brush: currentBrush!, path: _path)
         
-        canvasView.previewDrawnPaths = []
+        canvasView.previewDrawnPath = nil
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
+        
+        currentBrush = nil
       }
     }
     
@@ -155,9 +202,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
       
       state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
-        if self.canvasView.resolvedDrawnPaths != paths {
-          self.canvasView.resolvedDrawnPaths = paths
-        }
+        self.canvasView.setResolvedDrawnPaths(paths)
       }
     }
     .store(in: &subscriptions)
@@ -213,6 +258,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
               )
           
           }
+                             
         }
         .store(in: &subscriptions)
         
@@ -240,42 +286,27 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
   
+  public func setBrushSize(_ size: CanvasView.BrushSize) {
+    store.commit {
+      $0.brushSize = size
+    }
+  }
+  
   private func updateScrollContainerView(
     by crop: EditingCrop,
     animated: Bool,
     animatesRotation: Bool
   ) {
+    
     func perform() {
+      
       frame: do {
-        let bounds = self.bounds.inset(by: contentInset)
-        
-        let size: CGSize
-        let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
-        switch crop.rotation {
-        case .angle_0:
-          size = aspectRatio.sizeThatFits(in: bounds.size)
-        case .angle_90:
-          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
-        case .angle_180:
-          size = aspectRatio.sizeThatFits(in: bounds.size)
-        case .angle_270:
-          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
-        }
-        
         scrollView.transform = crop.rotation.transform
-        
-        scrollView.frame = .init(
-          origin: .init(
-            x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
-            y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
-          ),
-          size: size
-        )
-        
+        scrollView.frame = store.state.primitive.scrollViewFrame()
       }
       
       zoom: do {
-        let (min, max) = crop.calculateZoomScale(scrollViewBounds: scrollView.bounds)
+        let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
         
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max
@@ -313,6 +344,9 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       if $0.frame != frame {
         $0.frame = frame
       }
+      if $0.bounds != bounds {
+        $0.bounds = bounds
+      }
     }
     
     //    maskLayer.frame = blurryImageView.bounds
@@ -346,84 +380,5 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
     
     adjustFrameToCenterOnZooming()
-  }
-}
-
-extension BlurryMaskingView {
-  
-  private final class CanvasView: PixelEditorCodeBasedView {
-    
-    override class var layerClass: AnyClass {
-      #if false
-      return CATiledLayer.self
-      #else
-      return CALayer.self
-      #endif
-    }
-    
-    private let resolvedShapeLayer = CAShapeLayer()
-    private let shapeLayer = CAShapeLayer()
-    
-    override init(frame: CGRect) {
-      super.init(frame: frame)
-      isOpaque = false
-      
-      if let tiledLayer = layer as? CATiledLayer {
-        tiledLayer.tileSize = .init(width: 512, height: 512)
-      }
-      
-      [
-        resolvedShapeLayer,
-        shapeLayer,
-      ]
-      .forEach {
-        
-        $0.lineWidth = 475
-        $0.strokeColor = UIColor.blue.cgColor
-        $0.lineCap = .round
-        $0.fillColor = UIColor.clear.cgColor
-        
-        layer.addSublayer($0)
-      }
-      
-    }
-    
-    var previewDrawnPaths: [DrawnPathInRect] = [] {
-      didSet {
-        update()
-      }
-    }
-    
-    var resolvedDrawnPaths: [DrawnPathInRect] = [] {
-      didSet {
-        
-        let path = UIBezierPath()
-        
-        resolvedDrawnPaths.forEach {
-          path.append($0.path.bezierPath)
-        }
-        
-        let cgPath = path.cgPath
-        resolvedShapeLayer.path = cgPath
-      }
-    }
-    
-    func update() {
-      
-      let path = UIBezierPath()
-      
-      previewDrawnPaths.forEach {
-        path.append($0.path.bezierPath)
-      }
-      
-      shapeLayer.path = path.cgPath
-    }
-    
-    override func layoutSubviews() {
-      super.layoutSubviews()
-      resolvedShapeLayer.frame = bounds
-      shapeLayer.frame = bounds
-    }
-    
   }
 }

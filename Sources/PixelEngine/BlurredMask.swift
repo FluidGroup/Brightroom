@@ -23,9 +23,9 @@ import CoreImage
 import UIKit
 
 public struct BlurredMask: GraphicsDrawing {
-  public var paths: [DrawnPathInRect]
+  public var paths: [DrawnPath]
 
-  public init(paths: [DrawnPathInRect]) {
+  public init(paths: [DrawnPath]) {
     self.paths = paths
   }
 

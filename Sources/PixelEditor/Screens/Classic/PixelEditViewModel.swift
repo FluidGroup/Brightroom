@@ -44,15 +44,11 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
             
     public fileprivate(set) var title: String = ""
     public fileprivate(set) var mode: Mode = .preview
-    
-    // TODO: tantative
-    public fileprivate(set) var brush: OvalBrush = .init(
-      color: .white,
-      pixelSize: 30
-    )
+     
+    public fileprivate(set) var maskingBrushSize: CanvasView.BrushSize = .point(30)
     
     // TODO: Rename
-    fileprivate var drawnPaths: [DrawnPathInRect] = []
+    fileprivate var drawnPaths: [DrawnPath] = []
     fileprivate(set) var proposedCrop: EditingCrop?
   }
     
@@ -110,22 +106,14 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
       editingStack.revertEdit()
     }
   }
-  
-  func setBrush(_ brush: OvalBrush) {
-    commit {
-      $0.brush = brush
-    }
-  }
-  
+   
   func setBrushSize(_ brushSize: CGFloat) {
     commit {
-      var _brush = $0.brush
-      _brush.pixelSize = brushSize
-      $0.brush = _brush
+      $0.maskingBrushSize = .point(brushSize)
     }
   }
   
-  func setDrawinPaths(_ drawnPaths: [DrawnPathInRect]) {
+  func setDrawinPaths(_ drawnPaths: [DrawnPath]) {
     commit {
       $0.drawnPaths = drawnPaths
     }

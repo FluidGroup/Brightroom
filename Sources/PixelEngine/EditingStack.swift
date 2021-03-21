@@ -431,7 +431,7 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 
-  public func set(blurringMaskPaths: [DrawnPathInRect]) {
+  public func set(blurringMaskPaths: [DrawnPath]) {
     _pixelengine_ensureMainThread()
 
     applyIfChanged {
@@ -439,7 +439,7 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
   
-  public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPathInRect {
+  public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPath {
     _pixelengine_ensureMainThread()
     
     applyIfChanged {
@@ -498,7 +498,7 @@ extension EditingStack {
 
     public struct Drawings: Equatable {
       // TODO: Remove Rect from DrawnPath
-      public var blurredMaskPaths: [DrawnPathInRect] = []
+      public var blurredMaskPaths: [DrawnPath] = []
     }
 
     //
