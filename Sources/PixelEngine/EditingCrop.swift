@@ -74,7 +74,33 @@ public struct EditingCrop: Equatable {
   /// The rectangle that specifies the extent of the cropping.
   public var cropExtent: CGRect {
     didSet {
-      self.cropExtent = cropExtent.integral
+      
+      var fixed = cropExtent
+            
+      if fixed.origin.x < 0 {
+        fixed.origin.x = 0
+        fixed.size.width -= fixed.origin.x
+      }
+      
+      if fixed.origin.y < 0 {
+        fixed.origin.y = 0
+        fixed.size.height -= fixed.origin.y
+      }
+      
+      if fixed.width > imageSize.width {
+        fixed.size.width = imageSize.width
+      }
+      
+      if fixed.height > imageSize.height {
+        fixed.size.height = imageSize.height
+      }
+            
+      assert(fixed.origin.x >= 0)
+      assert(fixed.origin.y >= 0)
+      assert(fixed.width <= imageSize.width)
+      assert(fixed.height <= imageSize.height)
+      
+      self.cropExtent = fixed
     }
   }
   

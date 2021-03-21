@@ -142,6 +142,10 @@ public final class ImageRenderer {
         EngineLog.debug("[Renderer] Make cropped image \(crop)")
           
         let integral = crop.cropExtent.integral
+        
+        assert(integral.origin.x >= 0)
+        assert(integral.origin.y >= 0)
+        
         let targetSize = integral.size
         
         let image = UIGraphicsImageRenderer.init(size: targetSize, format: format)
