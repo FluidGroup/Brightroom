@@ -68,14 +68,12 @@ public final class CropViewController: UIViewController {
     }
     
     let rotateButton = UIButton(type: .system)&>.do {
-      // TODO: Localize
       $0.setImage(UIImage(named: "rotate", in: bundle, compatibleWith: nil), for: .normal)
       $0.tintColor = .systemGray
       $0.addTarget(self, action: #selector(handleRotateButton), for: .touchUpInside)
     }
     
     let aspectRatioButton = UIButton(type: .system)&>.do {
-      // TODO: Localize
       $0.setImage(UIImage(named: "aspectratio", in: bundle, compatibleWith: nil), for: .normal)
       $0.tintColor = .systemGray
       $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
@@ -91,7 +89,7 @@ public final class CropViewController: UIViewController {
 
     let bottomStackView = UIStackView()&>.do {
       let cancelButton = UIButton(type: .system)&>.do {
-        // TODO: Localize
+        // FIXME: Localize
         $0.setTitle("Cancel", for: .normal)
         $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
         $0.setTitleColor(UIColor.white, for: .normal)
@@ -99,7 +97,7 @@ public final class CropViewController: UIViewController {
       }
 
       let doneButton = UIButton(type: .system)&>.do {
-        // TODO: Localize
+        // FIXME: Localize
         $0.setTitle("Done", for: .normal)
         $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
         $0.setTitleColor(UIColor.systemYellow, for: .normal)
