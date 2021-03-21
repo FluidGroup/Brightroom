@@ -124,6 +124,9 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   
   private var currentBrush: OvalBrush?
   
+  private var loadingOverlayFactory: (() -> UIView)?
+  private weak var currentLoadingOverlay: UIView?
+  
   private var isBinding = false
   
   // MARK: - Initializers
@@ -212,6 +215,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
     }
     .store(in: &subscriptions)
+    
+    defaultAppearance: do {
+      setLoadingOverlay(factory: {
+        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
+      })
+    }
   }
   
   override public func willMove(toSuperview newSuperview: UIView?) {
@@ -270,9 +279,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           guard let self = self else { return }
           
           state.ifChanged(\.isLoading) { isLoading in
-            
-            // FIXME: Loading
-            //          self.updateLoadingOverlay(displays: isLoading)
+            self.updateLoadingOverlay(displays: isLoading)
           }
           
           state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
@@ -298,11 +305,49 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
   
+  public func setLoadingOverlay(factory: (() -> UIView)?) {
+    _pixeleditor_ensureMainThread()
+    loadingOverlayFactory = factory
+  }
+    
   public func setBrushSize(_ size: CanvasView.BrushSize) {
     store.commit {
       $0.brushSize = size
     }
   }
+  
+  private func updateLoadingOverlay(displays: Bool) {
+    
+    if displays, let factory = self.loadingOverlayFactory {
+      
+      let loadingOverlay = factory()
+      self.currentLoadingOverlay = loadingOverlay
+      self.addSubview(loadingOverlay)
+      AutoLayoutTools.setEdge(loadingOverlay, self.scrollView)
+      
+      loadingOverlay.alpha = 0
+      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        loadingOverlay.alpha = 1
+      }
+      .startAnimation()
+      
+    } else {
+      
+      if let view = currentLoadingOverlay {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+          view.alpha = 0
+        }&>.do {
+          $0.addCompletion { _ in
+            view.removeFromSuperview()
+          }
+          $0.startAnimation()
+        }
+      }
+      
+    }
+    
+  }
+  
   
   private func updateScrollContainerView(
     by crop: EditingCrop,
