@@ -56,6 +56,7 @@ public final class CropViewController: UIViewController {
 
     cropView.isAutoApplyEditingStackEnabled = true
     view.backgroundColor = .black
+    view.clipsToBounds = true
     
     let resetButton = UIButton(type: .system)&>.do {
       // TODO: Localize
@@ -107,6 +108,8 @@ public final class CropViewController: UIViewController {
       $0.addArrangedSubview(cancelButton)
       $0.addArrangedSubview(doneButton)
       $0.distribution = .equalSpacing
+      $0.axis = .horizontal
+      $0.alignment = .fill
     }
 
     view.addSubview(cropView)
@@ -138,6 +141,7 @@ public final class CropViewController: UIViewController {
         $0.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 16),
         $0.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -16),
         $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+        $0.heightAnchor.constraint(equalToConstant: 50)
       ])
     }
     
@@ -145,7 +149,7 @@ public final class CropViewController: UIViewController {
       view.layoutIfNeeded()
     }
     
-    editingStack.sinkState { [weak self] state in
+    editingStack.sinkState { state in
       
       state.ifChanged(\.hasUncommitedChanges) { hasChanges in
         resetButton.isHidden = !hasChanges
