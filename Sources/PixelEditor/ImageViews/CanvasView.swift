@@ -121,14 +121,16 @@ public final class CanvasView: PixelEditorCodeBasedView {
   }
   
   public func updatePreviewDrawing() {
-    
+        
     guard let drawnPath = previewDrawnPath else {
       return
     }
     
     let path = drawnPath.bezierPath
-        
-    previewShapeLayer?.path = path.cgPath
+    let cgPath = path.cgPath
+    
+    self.previewShapeLayer?.path = cgPath
+    
   }
   
   public func setResolvedDrawnPaths(_ paths: [DrawnPath]) {

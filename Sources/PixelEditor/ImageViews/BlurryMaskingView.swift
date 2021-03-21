@@ -27,9 +27,7 @@ import PixelEngine
 import Verge
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
-
   private struct State: Equatable {
-    
     fileprivate(set) var frame: CGRect = .zero
     fileprivate(set) var bounds: CGRect = .zero
     
@@ -37,12 +35,11 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     fileprivate(set) var proposedCrop: EditingCrop
     
-    fileprivate(set) var brushSize: CanvasView.BrushSize  = .point(30)
+    fileprivate(set) var brushSize: CanvasView.BrushSize = .point(30)
     
     fileprivate let contentInset: UIEdgeInsets = .zero
     
     func scrollViewFrame() -> CGRect {
-      
       let bounds = self.bounds.inset(by: contentInset)
       
       let size: CGSize
@@ -68,13 +65,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
     
     func brushPixelSize() -> CGFloat {
-      
       let (min, _) = proposedCrop.calculateZoomScale(scrollViewSize: scrollViewFrame().size)
       
       switch brushSize {
-      case .point(let points):
+      case let .point(points):
         return points / min
-      case .pixel(let pixels):
+      case let .pixel(pixels):
         return pixels
       }
     }
@@ -96,7 +92,14 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       backdropImageView.isHidden = newValue
     }
   }
-      
+  
+  override public var isHidden: Bool {
+    didSet {
+      backdropImageView.isHidden = isHidden
+      blurryImageView.isHidden = isHidden
+    }
+  }
+  
   private let scrollView = CropView._CropScrollView()
   
   private let containerView = ContainerView()
@@ -126,10 +129,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   // MARK: - Initializers
   
   public init(editingStack: EditingStack) {
-    
     self.editingStack = editingStack
-    self.store = .init(initialState: .init(proposedCrop: editingStack.state.currentEdit.crop), logger: nil)
-        
+    store = .init(
+      initialState: .init(proposedCrop: editingStack.state.currentEdit.crop),
+      logger: nil
+    )
+    
     let state = editingStack.state
     
     imageSize = state.imageSize
@@ -161,7 +166,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       blurryImageView.isUserInteractionEnabled = false
       blurryImageView.contentMode = .scaleAspectFit
       
-      blurryImageView.mask = canvasView  
+      blurryImageView.mask = canvasView
       clipsToBounds = true
     }
     
@@ -205,13 +210,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           }
         }
       }
-      
-      state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
-        self.canvasView.setResolvedDrawnPaths(paths)
-      }
     }
     .store(in: &subscriptions)
-    
   }
   
   override public func willMove(toSuperview newSuperview: UIView?) {
@@ -231,39 +231,37 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             
             guard frame != .zero else { return }
             
-              setupScrollViewOnce: do {
-                if self.hasSetupScrollViewCompleted == false {
-                  self.hasSetupScrollViewCompleted = true
-                  
-                  let scrollView = self.scrollView
-                  
-                  self.containerView.bounds = .init(
-                    origin: .zero,
-                    size: crop.scrollViewContentSize()
-                  )
-                  
-                  // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
-                  UIView.performWithoutAnimation {
-                    let currentZoomScale = scrollView.zoomScale
-                    let contentSize = crop.scrollViewContentSize()
-                    if scrollView.contentSize != contentSize {
-                      scrollView.contentInset = .zero
-                      scrollView.zoomScale = 1
-                      scrollView.contentSize = contentSize
-                      scrollView.zoomScale = currentZoomScale
-                    }
+            setupScrollViewOnce: do {
+              if self.hasSetupScrollViewCompleted == false {
+                self.hasSetupScrollViewCompleted = true
+                
+                let scrollView = self.scrollView
+                
+                self.containerView.bounds = .init(
+                  origin: .zero,
+                  size: crop.scrollViewContentSize()
+                )
+                
+                // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+                UIView.performWithoutAnimation {
+                  let currentZoomScale = scrollView.zoomScale
+                  let contentSize = crop.scrollViewContentSize()
+                  if scrollView.contentSize != contentSize {
+                    scrollView.contentInset = .zero
+                    scrollView.zoomScale = 1
+                    scrollView.contentSize = contentSize
+                    scrollView.zoomScale = currentZoomScale
                   }
                 }
               }
-              
-              self.updateScrollContainerView(
-                by: crop,
-                animated: state.hasLoaded,
-                animatesRotation: state.hasChanges(\.proposedCrop.rotation)
-              )
-          
+            }
+            
+            self.updateScrollContainerView(
+              by: crop,
+              animated: state.hasLoaded,
+              animatesRotation: state.hasChanges(\.proposedCrop.rotation)
+            )
           }
-                             
         }
         .store(in: &subscriptions)
         
@@ -277,16 +275,21 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             //          self.updateLoadingOverlay(displays: isLoading)
           }
           
-          state.ifChanged(\.placeholderImage, \.editingPreviewImage) { previewImage, image in
-            
-            if let previewImage = previewImage {
-              self.backdropImageView.display(image: previewImage)
-              self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
-            }
+          state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
+            self.canvasView.setResolvedDrawnPaths(paths)
+          }
+          
+          state.ifChanged(
+            \.placeholderImage,
+            \.editingPreviewImage
+          ) { previewImage, image in
             
             if let image = image {
               self.backdropImageView.display(image: image)
               self.blurryImageView.display(image: BlurredMask.blur(image: image))
+            } else if let previewImage = previewImage {
+              self.backdropImageView.display(image: previewImage)
+              self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
             }
           }
         }
@@ -306,9 +309,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     animated: Bool,
     animatesRotation: Bool
   ) {
-    
     func perform() {
-      
       frame: do {
         scrollView.transform = crop.rotation.transform
         scrollView.frame = store.state.primitive.scrollViewFrame()
