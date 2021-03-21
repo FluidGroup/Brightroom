@@ -95,9 +95,9 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
     }
 
     #if DEBUG
-    if image.cgImage != nil {
-      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
-    }
+//    if image.cgImage != nil {
+//      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
+//    }
     #endif
 
     let commandBuffer = commandQueue.makeCommandBuffer()
