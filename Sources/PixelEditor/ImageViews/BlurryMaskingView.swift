@@ -28,7 +28,6 @@ import Verge
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
 
-  
   private struct State: Equatable {
     
     fileprivate(set) var frame: CGRect = .zero
@@ -88,7 +87,16 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       view.autoresizingMask = [.flexibleHeight, .flexibleWidth]
     }
   }
-    
+  
+  public var isBackdropImageViewHidden: Bool {
+    get {
+      backdropImageView.isHidden
+    }
+    set {
+      backdropImageView.isHidden = newValue
+    }
+  }
+      
   private let scrollView = CropView._CropScrollView()
   
   private let containerView = ContainerView()
@@ -153,10 +161,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       blurryImageView.isUserInteractionEnabled = false
       blurryImageView.contentMode = .scaleAspectFit
       
-      //      blurryImageView.layer.mask = maskLayer
-      //      maskLayer.contentsScale = UIScreen.main.scale
-      //      maskLayer.drawsAsynchronously = true
-      
+      blurryImageView.mask = canvasView  
       clipsToBounds = true
     }
     
@@ -267,17 +272,21 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           guard let self = self else { return }
           
           state.ifChanged(\.isLoading) { isLoading in
+            
+            // FIXME: Loading
             //          self.updateLoadingOverlay(displays: isLoading)
           }
           
-          state.ifChanged(\.placeholderImage, \.editingSourceImage) { previewImage, image in
+          state.ifChanged(\.placeholderImage, \.editingPreviewImage) { previewImage, image in
             
             if let previewImage = previewImage {
               self.backdropImageView.display(image: previewImage)
+              self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
             }
             
             if let image = image {
               self.backdropImageView.display(image: image)
+              self.blurryImageView.display(image: BlurredMask.blur(image: image))
             }
           }
         }

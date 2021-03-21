@@ -97,6 +97,7 @@ public final class CanvasView: PixelEditorCodeBasedView {
     layer.opacity = Float(brush.alpha)
     layer.lineCap = .round
     layer.fillColor = UIColor.clear.cgColor
+    layer.drawsAsynchronously = true
     
     return layer
     

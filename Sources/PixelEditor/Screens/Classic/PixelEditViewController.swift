@@ -127,6 +127,8 @@ public final class PixelEditViewController: UIViewController {
     
     // FIXME: Demo
     cropView.setCroppingAspectRatio(.square)
+    
+    maskingView.isBackdropImageViewHidden = true
 
     layout: do {
       root: do {

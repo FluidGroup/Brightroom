@@ -75,6 +75,8 @@ open class EditingStack: Equatable, StoreComponentType {
      Can be used in cropping
      */
     public fileprivate(set) var editingSourceImage: CIImage?
+    
+    public fileprivate(set) var editingPreviewImage: CIImage?
 
     /**
      An image that cropped but not effected.
@@ -187,47 +189,69 @@ open class EditingStack: Equatable, StoreComponentType {
     commit {
       $0.hasStartedEditing = true
     }
-
-    store.add(middleware: .unifiedMutation { [weak self] ref in
-      guard let self = self else { return }
     
-      if ref.hasModified(\.thumbnailImage), let image = ref.thumbnailImage {
-                
-        ref.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
-          let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
-          return r
+    store.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      self.commit { modifyingState in
+        
+        state.ifChanged(\.thumbnailImage) { image in
+          
+          guard let image = image else { return }
+          
+          modifyingState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
+            let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
+            return r
+          }
+
         }
         
-      }
-      
-      if ref.hasModified(\.currentEdit.crop) || ref.hasModified(\.editingSourceImage) {
-        if let targetImage = ref.editingSourceImage {
+        state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { crop, editingSourceImage in
+          
+          guard let editingSourceImage = editingSourceImage else { return }
+
           let result = Self._createPreviewImage(
-            targetImage: targetImage,
-            crop: ref.currentEdit.crop,
+            targetImage: editingSourceImage,
+            crop: crop,
             editingImageMaxPixelSize: self.editingImageMaxPixelSize,
             previewMaxPixelSize: self.previewMaxPixelSize
           )
-          
-          ref.editingCroppedImage = result
+            
+          modifyingState.editingCroppedImage = result
         }
-      }
-      
-      if ref.hasModified(\.currentEdit) || ref.hasModified(\.editingCroppedImage) {
-        if let croppedTargetImage = ref.editingCroppedImage {
-          let filters = ref.currentEdit
+        
+        state.ifChanged(\.currentEdit, \.editingCroppedImage, \.editingSourceImage) { currentEdit, editingCroppedImage, editingSourceImage in
+          
+          let filters = currentEdit
             .makeFilters()
           
-          let result = filters.reduce(croppedTargetImage) { (image, filter) -> CIImage in
-            filter.apply(to: image, sourceImage: image)
+          if let croppedTargetImage = editingCroppedImage {
+            
+            let result = filters.reduce(croppedTargetImage) { (image, filter) -> CIImage in
+              filter.apply(to: image, sourceImage: image)
+            }
+            
+            modifyingState.editingCroppedPreviewImage = result
           }
           
-          ref.editingCroppedPreviewImage = result
-        }
-      }
+          if let image = editingSourceImage {
             
-    })
-  
+            let result = filters.reduce(image) { (image, filter) -> CIImage in
+              filter.apply(to: image, sourceImage: image)
+            }
+            
+            modifyingState.editingPreviewImage = result
+          }
+          
+        }
+        
+      }
+                                  
+      
+    }
+    .store(in: &subscriptions)
+
     /**
      Start downloading image
      */

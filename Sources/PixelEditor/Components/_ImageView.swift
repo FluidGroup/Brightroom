@@ -9,13 +9,29 @@
 import UIKit
 
 final class _ImageView: UIImageView, HardwareImageViewType {
-  func display(image: CIImage?) {
-    func setImage(image: UIImage) {
-      assert(image.scale == 1)
-      self.image = image
+  
+  private var ciImage: CIImage?
+  
+  override var isHidden: Bool {
+    didSet {
+      if isHidden == false {
+        update()
+      }
     }
-        
-    guard let _image = image else {
+  }
+  
+  func display(image: CIImage?) {
+            
+    self.ciImage = image
+
+    if isHidden == false {
+      update()
+    }
+  }
+  
+  private func update() {
+
+    guard let _image = ciImage else {
       self.image = nil
       return
     }
@@ -38,7 +54,9 @@ final class _ImageView: UIImageView, HardwareImageViewType {
         orientation: .up
       )
     }
-    
-    setImage(image: uiImage)
+
+    assert(uiImage.scale == 1)
+    self.image = uiImage
+
   }
 }
