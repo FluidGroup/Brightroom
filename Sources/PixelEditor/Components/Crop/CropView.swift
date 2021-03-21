@@ -445,7 +445,8 @@ extension CropView {
     super.layoutSubviews()
     
     if let outOfBoundsOverlay = cropOutsideOverlay {
-      outOfBoundsOverlay.frame.size = .init(width: 1000, height: 1000)
+      // TODO: Get an optimized size
+      outOfBoundsOverlay.frame.size = .init(width: UIScreen.main.bounds.width * 1.5, height: UIScreen.main.bounds.height * 1.5)
       outOfBoundsOverlay.center = center
     }
     

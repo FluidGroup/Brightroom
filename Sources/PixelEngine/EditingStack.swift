@@ -97,6 +97,18 @@ open class EditingStack: Equatable, StoreComponentType {
     public var isDirty: Bool {
       return currentEdit != initialEditing
     }
+    
+    public var hasUncommitedChanges: Bool {
+      guard currentEdit == initialEditing else {
+        return true
+      }
+      
+      guard history.last == currentEdit else {
+        return true
+      }
+      
+      return false
+    }
 
     init(initialEdit: Edit) {
       initialEditing = initialEdit
@@ -398,6 +410,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func takeSnapshot() {
     commit {
+            
       $0.withType { (type, ref) -> Void in
         type.makeVersion(ref: ref)
       }

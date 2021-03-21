@@ -29,7 +29,8 @@ import PixelEngine
 
 public final class CropViewController: UIViewController {
   public struct Handlers {
-    public var didFinish: () -> Void = {}
+    public var didFinish: (CropViewController) -> Void = { _ in }
+    public var didCancel: (CropViewController) -> Void = { _ in }
   }
 
   private let cropView: CropView
@@ -37,7 +38,7 @@ public final class CropViewController: UIViewController {
   public let editingStack: EditingStack
   public var handlers = Handlers()
 
-  private var bag = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<VergeAnyCancellable>()
 
   public init(editingStack: EditingStack) {
     self.editingStack = editingStack
@@ -53,46 +54,59 @@ public final class CropViewController: UIViewController {
   override public func viewDidLoad() {
     super.viewDidLoad()
 
-    view.backgroundColor = .white
+    cropView.isAutoApplyEditingStackEnabled = true
+    view.backgroundColor = .black
+    
+    let resetButton = UIButton(type: .system)&>.do {
+      // TODO: Localize
+      $0.setTitle("RESET", for: .normal)
+      $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+      $0.setTitleColor(UIColor.systemYellow, for: .normal)
+      $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
+      $0.isHidden = true
+    }
+    
+    let rotateButton = UIButton(type: .system)&>.do {
+      // TODO: Localize
+      $0.setImage(UIImage(named: "rotate", in: bundle, compatibleWith: nil), for: .normal)
+      $0.tintColor = .systemGray
+      $0.addTarget(self, action: #selector(handleRotateButton), for: .touchUpInside)
+    }
+    
+    let aspectRatioButton = UIButton(type: .system)&>.do {
+      // TODO: Localize
+      $0.setImage(UIImage(named: "aspectratio", in: bundle, compatibleWith: nil), for: .normal)
+      $0.tintColor = .systemGray
+      $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
+    }
 
     let topStackView = UIStackView()&>.do {
-      let rotateButton = UIButton(type: .system)&>.do {
-        // TODO: Localize
-        $0.setTitle("Rotate", for: .normal)
-        $0.addTarget(self, action: #selector(handleRotateButton), for: .touchUpInside)
-      }
-
-      let resetButton = UIButton(type: .system)&>.do {
-        // TODO: Localize
-        $0.setTitle("Reset", for: .normal)
-        $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
-      }
-      
-      let aspectRatioButton = UIButton(type: .system)&>.do {
-        // TODO: Localize
-        $0.setTitle("AspectRatio", for: .normal)
-        $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
-      }
 
       $0.addArrangedSubview(rotateButton)
       $0.addArrangedSubview(resetButton)
       $0.addArrangedSubview(aspectRatioButton)
+      $0.distribution = .equalSpacing
     }
 
     let bottomStackView = UIStackView()&>.do {
       let cancelButton = UIButton(type: .system)&>.do {
         // TODO: Localize
         $0.setTitle("Cancel", for: .normal)
+        $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+        $0.setTitleColor(UIColor.white, for: .normal)
         $0.addTarget(self, action: #selector(handleCancelButton), for: .touchUpInside)
       }
 
       let doneButton = UIButton(type: .system)&>.do {
         // TODO: Localize
         $0.setTitle("Done", for: .normal)
+        $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+        $0.setTitleColor(UIColor.systemYellow, for: .normal)
         $0.addTarget(self, action: #selector(handleDoneButton), for: .touchUpInside)
       }
       $0.addArrangedSubview(cancelButton)
       $0.addArrangedSubview(doneButton)
+      $0.distribution = .equalSpacing
     }
 
     view.addSubview(cropView)
@@ -102,9 +116,9 @@ public final class CropViewController: UIViewController {
     topStackView&>.do {
       $0.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
-        $0.topAnchor.constraint(equalTo: view.topAnchor),
-        $0.leftAnchor.constraint(equalTo: view.leftAnchor),
-        $0.rightAnchor.constraint(equalTo: view.rightAnchor),
+        $0.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+        $0.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 16),
+        $0.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -16),
       ])
     }
 
@@ -121,12 +135,26 @@ public final class CropViewController: UIViewController {
       $0.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
         $0.topAnchor.constraint(equalTo: cropView.bottomAnchor),
-        $0.leftAnchor.constraint(equalTo: view.leftAnchor),
-        $0.rightAnchor.constraint(equalTo: view.rightAnchor),
+        $0.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 16),
+        $0.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -16),
         $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       ])
     }
     
+    UIView.performWithoutAnimation {
+      view.layoutIfNeeded()
+    }
+    
+    editingStack.sinkState { [weak self] state in
+      
+      state.ifChanged(\.hasUncommitedChanges) { hasChanges in
+        resetButton.isHidden = !hasChanges
+      }
+      
+    }
+    .store(in: &subscriptions)
+        
+    editingStack.start()
   }
 
   @objc private func handleRotateButton() {
@@ -143,11 +171,11 @@ public final class CropViewController: UIViewController {
   }
 
   @objc private func handleCancelButton() {
-    handlers.didFinish()
+    handlers.didCancel(self)
   }
 
   @objc private func handleDoneButton() {
     cropView.applyEditingStack()
-    handlers.didFinish()
+    handlers.didFinish(self)
   }
 }
