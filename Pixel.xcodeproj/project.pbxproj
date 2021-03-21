@@ -84,6 +84,7 @@
 		4B8B910C260792BD009BF084 /* DemoCropMenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */; };
 		4B8B9114260792D9009BF084 /* StackScrollNodeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */; };
 		4B8B911E2607961D009BF084 /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
+		4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */; };
 		4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */; };
 		4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */; };
 		4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */; };
@@ -327,6 +328,7 @@
 		4B8B910626079256009BF084 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropMenuViewController.swift; sourceTree = "<group>"; };
 		4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNodeViewController.swift; sourceTree = "<group>"; };
+		4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Picker.swift"; sourceTree = "<group>"; };
 		4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedEditingView.swift; sourceTree = "<group>"; };
 		4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenIdentifiableView.swift; sourceTree = "<group>"; };
 		4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingViewWrapper.swift; sourceTree = "<group>"; };
@@ -595,6 +597,7 @@
 				4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */,
 				4B3075912605F27400A1E7CB /* TopMenuViewController.swift */,
 				4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */,
+				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
 			sourceTree = "<group>";
@@ -1299,6 +1302,7 @@
 				4B47D066216CC5DB0007B594 /* EditorViewController.swift in Sources */,
 				4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */,
 				4B98CCB225EFF27200E4F61F /* TopTableViewController.swift in Sources */,
+				4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */,
 				4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */,
 				4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */,
 				4B8B910726079256009BF084 /* Components.swift in Sources */,

@@ -60,7 +60,7 @@ public final class CropViewController: UIViewController {
     let resetButton = UIButton(type: .system)&>.do {
       // TODO: Localize
       $0.setTitle("RESET", for: .normal)
-      $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+      $0.titleLabel?.font = UIFont.systemFont(ofSize: 15)
       $0.setTitleColor(UIColor.systemYellow, for: .normal)
       $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
       $0.isHidden = true

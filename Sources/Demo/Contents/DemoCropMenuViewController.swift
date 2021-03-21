@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
+import MosaiqueAssetsPicker
 
 import PixelEditor
 import PixelEngine
@@ -49,6 +50,16 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
 
       Components.makeSelectionCell(title: "Super large rect from file URL", onTap: { [unowned self] in
         _presentCropViewConroller(stackForNasa)
+      }),
+      
+      Components.makeSelectionCell(title: "Pick from library", onTap: { [unowned self] in
+        
+        self.__pickPhoto { (image) in
+          
+          let stack = EditingStack(imageProvider: .init(image: image))
+          _presentCropViewConroller(stack)
+        }
+        
       }),
     ])
   }
