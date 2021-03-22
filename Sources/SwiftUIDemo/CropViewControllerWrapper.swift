@@ -25,7 +25,12 @@ struct CropViewControllerWrapper: UIViewControllerRepresentable {
   
   func makeUIViewController(context: Context) -> CropViewController {
     let cropViewController = CropViewController(editingStack: editingStack)
-    cropViewController.handlers.didFinish = onCompleted
+    cropViewController.handlers.didFinish = { _ in
+      onCompleted()
+    }
+    cropViewController.handlers.didCancel = { _ in
+      onCompleted()
+    }
     return cropViewController
   }
   
