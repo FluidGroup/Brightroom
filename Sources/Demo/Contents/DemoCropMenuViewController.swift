@@ -77,7 +77,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
     }
     crop.handlers.didFinish = { [weak self] controller in
       controller.dismiss(animated: true, completion: nil)
-      controller.editingStack.makeRenderer().asyncRender { [weak self] (image) in
+      controller.editingStack.makeRenderer().render { [weak self] (image) in
         self?.resultCell.image = image
       }
     }

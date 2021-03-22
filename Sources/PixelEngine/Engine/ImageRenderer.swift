@@ -45,7 +45,7 @@ public final class ImageRenderer {
     edit = .init()
   }
   
-  public func asyncRender(resolution: Resolution = .full, completion: @escaping (UIImage) -> Void) {
+  public func render(resolution: Resolution = .full, completion: @escaping (UIImage) -> Void) {
     type(of: self).queue.async {
       let image = self.render()
       DispatchQueue.main.async {

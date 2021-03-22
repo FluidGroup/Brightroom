@@ -42,6 +42,8 @@ public final class CropViewController: UIViewController {
     var isSelectingAspectRatio = false
   }
   
+  // MARK: - Properties
+  
   private let store: UIStateStore<State, Never> = .init(initialState: .init())
   
   private let cropView: CropView
@@ -51,6 +53,8 @@ public final class CropViewController: UIViewController {
   public var handlers = Handlers()
   
   private var subscriptions = Set<VergeAnyCancellable>()
+  
+  // MARK: - Initializers
       
   public init(editingStack: EditingStack) {
     self.editingStack = editingStack
@@ -59,9 +63,37 @@ public final class CropViewController: UIViewController {
     super.init(nibName: nil, bundle: nil)
   }
   
+  /**
+   Creates an instance for using as standalone.
+   
+   This initializer offers us to get cropping function without detailed setup.
+   To get a result image, call `renderImage()`.
+   */
+  public convenience init(
+    imageProvider: ImageProvider
+  ) {
+    self.init(
+      editingStack: .init(
+        imageProvider: imageProvider,
+        previewMaxPixelSize: UIScreen.main.bounds.height * UIScreen.main.scale
+      )
+    )
+  }
+  
   @available(*, unavailable)
   public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+  
+  // MARK: - Functions
+  
+  /**
+   Renders an image according to the editing.
+   
+   - Attension: This operation can be run background-thread.
+   */
+  public func renderImage(resolution: ImageRenderer.Resolution, completion: @escaping (UIImage) -> Void) {
+    return editingStack.makeRenderer().render(resolution: resolution, completion: completion)
   }
   
   override public func viewDidLoad() {
