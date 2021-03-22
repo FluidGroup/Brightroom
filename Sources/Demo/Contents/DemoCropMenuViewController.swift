@@ -1,9 +1,9 @@
 
 import AsyncDisplayKit
 import GlossButtonNode
+import MosaiqueAssetsPicker
 import TextureSwiftSupport
 import UIKit
-import MosaiqueAssetsPicker
 
 import PixelEditor
 import PixelEngine
@@ -22,7 +22,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       URL(fileURLWithPath: $0)
     }!
   )
-  
+
   private let resultCell = Components.ResultImageCell()
 
   override init() {
@@ -32,11 +32,10 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-        
+
     stackScrollNode.append(nodes: [
-      
       resultCell,
-      
+
       Components.makeSelectionCell(title: "Horizontal rect from UIImage", onTap: { [unowned self] in
         _presentCropViewConroller(stackForHorizontal)
       }),
@@ -56,7 +55,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Super large rect from file URL", onTap: { [unowned self] in
         _presentCropViewConroller(stackForNasa)
       }),
-      
+
       Components.makeSelectionCell(
         title: "Square only",
         description: """
@@ -64,44 +63,51 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         Instead specify which aspect ratio fixes the cropping guide.
         """,
         onTap: { [unowned self] in
-          
+
           var options = CropViewController.Options()
           options.aspectRatioOptions = .fixed(.square)
-          
+
           let controller = CropViewController(editingStack: stackForVertical, options: options)
           _presentCropViewConroller(controller)
-      }),
-      
+        }
+      ),
+
       Components.makeSelectionCell(
         title: "Specified extent",
         description: """
         EditingStack can specify the extent of cropping while creating.
         """,
         onTap: { [unowned self] in
-          
-          let editingStack = EditingStack(imageProvider: .init(image: Asset.l1002725.image), modifyCrop: { image, crop in
-            crop.setCropExtentNormalizing(CGRect(origin: .zero, size: .init(width: 100, height: 300)))
-          })
-          
+
+          let editingStack = EditingStack(
+            imageProvider: .init(image: Asset.l1002725.image), cropModifier: .init { image, crop in
+              crop.setCropExtentNormalizing(CGRect(
+                origin: .zero,
+                size: .init(width: 100, height: 300)
+              ))
+            }
+          )
+
 //          var options = CropViewController.Options()
 //          options.aspectRatioOptions = .fixed(.square)
-          
+
           let controller = CropViewController(editingStack: editingStack)
           _presentCropViewConroller(controller)
-        }),
-      
+        }
+      ),
+
       Components.makeSelectionCell(title: "Pick from library", onTap: { [unowned self] in
-        
-        self.__pickPhoto { (image) in
-          
+
+        self.__pickPhoto { image in
+
           let stack = EditingStack(imageProvider: .init(image: image))
           _presentCropViewConroller(stack)
         }
-        
+
       }),
     ])
   }
-  
+
   private func _presentCropViewConroller(_ crop: CropViewController) {
     crop.modalPresentationStyle = .fullScreen
     crop.handlers.didCancel = { controller in
@@ -109,7 +115,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
     }
     crop.handlers.didFinish = { [weak self] controller in
       controller.dismiss(animated: true, completion: nil)
-      controller.editingStack.makeRenderer().render { [weak self] (image) in
+      controller.editingStack.makeRenderer().render { [weak self] image in
         self?.resultCell.image = image
       }
     }

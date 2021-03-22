@@ -129,7 +129,7 @@ struct ContentView: View {
               let stack = EditingStack.init(
                 imageProvider: .init(image: Asset.l1000316.image),
                 previewMaxPixelSize: 400 * 2,
-                modifyCrop: { _, crop in
+                cropModifier: .init { _, crop in
                   crop.updateCropExtent(by: .square)
                 }
               )

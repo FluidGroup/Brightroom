@@ -147,10 +147,10 @@ open class EditingStack: Equatable, StoreComponentType {
   private var subscriptions = Set<VergeAnyCancellable>()
   private var imageProviderSubscription: VergeAnyCancellable?
 
-  private let modifyCrop: (CIImage?, inout EditingCrop) -> Void
+  private let cropModifier: CropModifier
 
   private let editingImageMaxPixelSize: CGFloat = 2560
-
+  
   // MARK: - Initializers
 
   /// Creates an instance
@@ -163,13 +163,13 @@ open class EditingStack: Equatable, StoreComponentType {
     imageProvider: ImageProvider,
     previewMaxPixelSize: CGFloat = 1000,
     colorCubeStorage: ColorCubeStorage = .default,
-    modifyCrop: @escaping (CIImage?, inout EditingCrop) -> Void = { _, _ in }
+    cropModifier: CropModifier = .init(modify: { _, _ in })
   ) {
     let initialCrop = EditingCrop(
       imageSize: imageProvider.state.imageSize
     )
 
-    self.modifyCrop = modifyCrop
+    self.cropModifier = cropModifier
     store = .init(
       initialState: .init(
         initialEdit: Edit(crop: initialCrop)
@@ -380,7 +380,7 @@ open class EditingStack: Equatable, StoreComponentType {
     let imageSize = ref.imageSize
     var crop = EditingCrop(imageSize: ref.imageSize)
 
-    let zoomedImage = image.map { image -> CIImage in
+    let actualSizeFromDownsampledImage = image.map { image -> CIImage in
       let scaled = image.transformed(
         by: .init(
           scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
@@ -396,7 +396,7 @@ open class EditingStack: Equatable, StoreComponentType {
       return translated
     }
 
-    modifyCrop(zoomedImage, &crop)
+    cropModifier.run(actualSizeFromDownsampledImage, editingCrop: &crop)
 
     ref.currentEdit.crop = crop
 
@@ -634,3 +634,47 @@ extension Array {
     return buffer.compactMap { $0 }
   }
 }
+
+import Vision
+
+extension EditingStack {
+  
+  public struct CropModifier {
+    
+    private let modifier: (CIImage?, inout EditingCrop) -> Void
+    
+    public init(modify: @escaping (CIImage?, inout EditingCrop) -> Void) {
+      self.modifier = modify
+    }
+    
+    func run(_ image: CIImage?, editingCrop: inout EditingCrop) {
+      modifier(image, &editingCrop)
+    }
+    
+    public static func faceDetection() -> Self {
+      return .init { image, crop in
+        
+        // FIXME: 
+        
+        guard let image = image else {
+          return
+        }
+                      
+        let request = VNDetectFaceRectanglesRequest { (request, error) in
+          for observation in request.results as! [VNFaceObservation] {
+            print(observation)
+          }
+        }
+        
+        let handler = VNImageRequestHandler(ciImage: image, options: [:])
+        do {
+          try handler.perform([request])
+        } catch {
+          print(error)
+        }
+                
+      }
+    }
+  }
+}
+
