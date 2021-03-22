@@ -628,7 +628,7 @@ extension CropView {
     
     store.commit {
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop.cropExtent = visibleRect
+      $0.proposedCrop.setCropExtentNormalizing(visibleRect)
     }
         
     /// Triggers layout update later
@@ -647,7 +647,7 @@ extension CropView {
     store.commit {
       let rect = guideView.convert(guideView.bounds, to: imageView)
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop.cropExtent = rect
+      $0.proposedCrop.setCropExtentNormalizing(rect)
     }
   }
 

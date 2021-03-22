@@ -72,35 +72,9 @@ public struct EditingCrop: Equatable {
   public var imageSize: CGSize
   
   /// The rectangle that specifies the extent of the cropping.
-  public var cropExtent: CGRect {
+  public private(set) var cropExtent: CGRect {
     didSet {
-      
-      var fixed = cropExtent
-            
-      if fixed.origin.x < 0 {
-        fixed.origin.x = 0
-        fixed.size.width -= fixed.origin.x
-      }
-      
-      if fixed.origin.y < 0 {
-        fixed.origin.y = 0
-        fixed.size.height -= fixed.origin.y
-      }
-      
-      if fixed.width > imageSize.width {
-        fixed.size.width = imageSize.width
-      }
-      
-      if fixed.height > imageSize.height {
-        fixed.size.height = imageSize.height
-      }
-            
-      assert(fixed.origin.x >= 0)
-      assert(fixed.origin.y >= 0)
-      assert(fixed.width <= imageSize.width)
-      assert(fixed.height <= imageSize.height)
-      
-      self.cropExtent = fixed
+      EngineLog.debug("DidChange CropExtent \(cropExtent)")
     }
   }
   
@@ -122,9 +96,11 @@ public struct EditingCrop: Equatable {
   
   public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0, scaleToRestore: CGFloat = 1) {
     self.imageSize = imageSize
-    cropExtent = cropRect
+    self.cropExtent = cropRect
     self.rotation = rotation
     self.scaleToRestore = scaleToRestore
+    
+    normalizeRect()
   }
   
   public func makeInitial() -> Self {
@@ -182,6 +158,40 @@ public struct EditingCrop: Equatable {
     return modified
   }
   
+  public mutating func setCropExtentNormalizing(_ cropExtent: CGRect) {
+    self.cropExtent = cropExtent
+    normalizeRect()
+  }
+  
+  private mutating func normalizeRect() {
+    var fixed = cropExtent.integral
+    
+    if fixed.origin.x < 0 {
+      fixed.origin.x = 0
+      fixed.size.width -= fixed.origin.x
+    }
+    
+    if fixed.origin.y < 0 {
+      fixed.origin.y = 0
+      fixed.size.height -= fixed.origin.y
+    }
+    
+    if fixed.width > imageSize.width {
+      fixed.size.width = imageSize.width
+    }
+    
+    if fixed.height > imageSize.height {
+      fixed.size.height = imageSize.height
+    }
+    
+    assert(fixed.origin.x >= 0)
+    assert(fixed.origin.y >= 0)
+    assert(fixed.width <= imageSize.width)
+    assert(fixed.height <= imageSize.height)
+    
+    self.cropExtent = fixed
+  }
+      
   /*
   @objc
   public func debugQuickLookObject() -> AnyObject? {
