@@ -374,13 +374,18 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
-  public func setCroppingAspectRatio(_ ratio: PixelAspectRatio) {
+  public func setCroppingAspectRatio(_ ratio: PixelAspectRatio?) {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop.updateCropExtent(by: ratio)
-      $0.proposedCrop.preferredAspectRatio = ratio
-      $0.layoutVersion += 1
+      if let ratio = ratio {
+        $0.proposedCrop.updateCropExtent(by: ratio)
+        $0.proposedCrop.preferredAspectRatio = ratio
+        $0.layoutVersion += 1
+      } else {
+        $0.proposedCrop.preferredAspectRatio = nil
+        $0.layoutVersion += 1
+      }
     }
   }
 

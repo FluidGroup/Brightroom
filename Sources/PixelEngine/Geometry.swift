@@ -138,8 +138,8 @@ public struct PixelAspectRatio: Hashable {
     (lhs.height / lhs.width) == (rhs.height / rhs.width)
   }
   
-  public let width: CGFloat
-  public let height: CGFloat
+  public var width: CGFloat
+  public var height: CGFloat
 
   public init(width: CGFloat, height: CGFloat) {
     self.width = width

@@ -38,6 +38,12 @@ public final class CropViewController: UIViewController {
     public var didCancel: (CropViewController) -> Void = { _ in }
   }
   
+  private struct State: Equatable {
+    var isSelectingAspectRatio = false
+  }
+  
+  private let store: UIStateStore<State, Never> = .init(initialState: .init())
+  
   private let cropView: CropView
   private let aspectRatioControl: AspectRatioControl
   
@@ -163,11 +169,46 @@ public final class CropViewController: UIViewController {
       view.layoutIfNeeded()
     }
     
-    editingStack.sinkState { state in
+    aspectRatioControl.handlers.didSelectAspectRatio = { [unowned self] aspectRatio in
+      cropView.setCroppingAspectRatio(aspectRatio)
+    }
+    
+    aspectRatioControl.handlers.didSelectFreeform = { [unowned self] in
+      cropView.setCroppingAspectRatio(nil)
+    }
+    
+    editingStack.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
       
       state.ifChanged(\.hasUncommitedChanges) { hasChanges in
         resetButton.isHidden = !hasChanges
       }
+      
+      state.ifChanged(\.currentEdit.crop.preferredAspectRatio) { ratio in
+        self.aspectRatioControl.setSelected(ratio)
+      }
+      
+    }
+    .store(in: &subscriptions)
+    
+    store.sinkState { [weak self] state in
+      
+      guard let self = self else { return }
+            
+      state.ifChanged(\.isSelectingAspectRatio) { value in
+        UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) {
+          if value {
+            self.aspectRatioControl.alpha = 1
+            aspectRatioButton.tintColor = .systemYellow
+          } else {
+            self.aspectRatioControl.alpha = 0
+            aspectRatioButton.tintColor = .systemGray
+          }
+        }
+        .startAnimation()
+      }
+      
     }
     .store(in: &subscriptions)
     
@@ -180,7 +221,9 @@ public final class CropViewController: UIViewController {
   }
   
   @objc private func handleAspectRatioButton() {
-    cropView.setCroppingAspectRatio(.init(width: 16, height: 9))
+    store.commit {
+      $0.isSelectingAspectRatio.toggle()
+    }
   }
   
   @objc private func handleResetButton() {
@@ -217,8 +260,8 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
     
     var selectedAspectRatio: PixelAspectRatio?
     
-    var direction: Direction = .vertical
-    
+    var direction: Direction
+        
     var canSelectDirection: Bool {
       guard let selectedAspectRatio = selectedAspectRatio else {
         return false
@@ -232,7 +275,12 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
     }
   }
   
-  struct Handlers {}
+  struct Handlers {
+    
+    var didSelectAspectRatio: (PixelAspectRatio) -> Void = { _ in }
+    var didSelectFreeform: () -> Void = {}
+    
+  }
   
   var handlers: Handlers = .init()
   
@@ -241,15 +289,20 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
   
   private let scrollView = UIScrollView()
   
-  private let originalButton = UIButton(type: .system)
-  private let freeformButton = UIButton(type: .system)
-  private let aspectSquareButton = UIButton(type: .system)
+  private let originalButton = AspectRatioButton()
+  private let freeformButton = AspectRatioButton()
+  private let aspectSquareButton = AspectRatioButton()
   
   private let store: UIStateStore<State, Never>
   private var subscriptions = Set<VergeAnyCancellable>()
   
   init(originalAspectRatio: PixelAspectRatio) {
-    store = .init(initialState: .init(originalAspectRatio: originalAspectRatio))
+    store = .init(
+      initialState: .init(
+        originalAspectRatio: originalAspectRatio,
+        direction: originalAspectRatio.width > originalAspectRatio.height ? .horizontal : .vertical
+      )
+    )
     
     super.init(frame: .zero)
     
@@ -260,9 +313,12 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
     
     var buttons: [PixelAspectRatio: UIButton] = [:]
     
+    buttons[store.state.originalAspectRatio] = originalButton
+    buttons[.square] = aspectSquareButton
+    
     let itemsStackView = UIStackView()&>.do { stackView in
       
-      stackView.spacing = 20
+      stackView.spacing = 12
       
       [
         originalButton,
@@ -275,7 +331,7 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
       
       store.state.rectangleApectRatios.forEach { ratio in
         
-        let button = UIButton(type: .system)
+        let button = AspectRatioButton()
         
         stackView.addArrangedSubview(button)
         
@@ -360,6 +416,36 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
       
       guard let self = self else { return }
       
+      state.ifChanged(\.selectedAspectRatio) { selected in
+        
+        guard let selected = selected else {
+          // Freeform
+          
+          buttons.forEach {
+            $0.value.isSelected = false
+          }
+          
+          self.freeformButton.isSelected = true
+          
+          self.handlers.didSelectFreeform()
+          
+          return
+        }
+        
+        self.freeformButton.isSelected = false
+        
+        buttons.forEach {
+          if $0.key == selected {
+            $0.value.isSelected = true
+          } else {
+            $0.value.isSelected = false
+          }
+        }
+        
+        self.handlers.didSelectAspectRatio(selected)
+              
+      }
+            
       state.ifChanged(\.canSelectDirection) { canSelectDirection in
         
         self.horizontalButton.isEnabled = canSelectDirection
@@ -385,4 +471,78 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
     }
     .store(in: &subscriptions)
   }
+  
+  func setSelected(_ aspectRatio: PixelAspectRatio?) {
+    
+    guard var fixed = aspectRatio else {
+      store.commit {
+        $0.selectedAspectRatio = nil
+      }
+      return
+    }
+    
+    if fixed.width < fixed.height {
+      swap(&fixed.height, &fixed.width)
+    }
+        
+    store.commit {
+      $0.selectedAspectRatio = fixed
+    }
+  }
+}
+
+private final class AspectRatioButton: UIButton {
+  
+  private let backdropView = UIView()
+  
+  override var isSelected: Bool {
+    didSet {
+      setNeedsLayout()
+    }
+  }
+  
+  convenience init() {
+    self.init(frame: .zero)
+        
+    setTitleColor(.init(white: 1, alpha: 0.5), for: .normal)
+    setTitleColor(.white, for: .selected)
+    titleLabel?.font = .systemFont(ofSize: 14)
+
+  }
+  
+  override init(frame: CGRect) {
+    super.init(frame: .zero)
+       
+    if #available(iOSApplicationExtension 13.0, *) {
+      backdropView.layer.cornerCurve = .continuous
+    } else {
+      // Fallback on earlier versions
+    }
+    
+    backdropView.backgroundColor = .init(white: 1, alpha: 0.5)
+    
+    titleEdgeInsets = .init(top: -2, left: 6, bottom: -2, right: 6)
+  }
+  
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    
+    insertSubview(backdropView, at: 0)
+    backdropView.frame = bounds
+    backdropView.layer.cornerRadius = bounds.height / 2
+  
+    backdropView.isHidden = !isSelected
+  }
+  
+  override var intrinsicContentSize: CGSize {
+    let originalContentSize = super.intrinsicContentSize
+    let adjustedWidth = originalContentSize.width + titleEdgeInsets.left + titleEdgeInsets.right
+    let adjustedHeight = originalContentSize.height + titleEdgeInsets.top + titleEdgeInsets.bottom
+    return CGSize(width: adjustedWidth, height: adjustedHeight)
+  }
+  
 }
