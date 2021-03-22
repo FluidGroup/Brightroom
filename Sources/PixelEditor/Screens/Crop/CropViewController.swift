@@ -33,6 +33,21 @@ import PixelEngine
  You might use `CropView` to create a fully customized user interface.
  */
 public final class CropViewController: UIViewController {
+  
+  public struct Options: Equatable {
+    
+    public enum AspectRatioOptions: Equatable {
+      case selectable
+      case fixed(PixelAspectRatio?)
+    }
+    
+    public var aspectRatioOptions: AspectRatioOptions = .selectable
+    
+    public init() {
+      
+    }
+  }
+  
   public struct Handlers {
     public var didFinish: (CropViewController) -> Void = { _ in }
     public var didCancel: (CropViewController) -> Void = { _ in }
@@ -40,11 +55,12 @@ public final class CropViewController: UIViewController {
   
   private struct State: Equatable {
     var isSelectingAspectRatio = false
+    var options: Options
   }
   
   // MARK: - Properties
   
-  private let store: UIStateStore<State, Never> = .init(initialState: .init())
+  private let store: UIStateStore<State, Never>
   
   private let cropView: CropView
   private let aspectRatioControl: AspectRatioControl
@@ -52,11 +68,18 @@ public final class CropViewController: UIViewController {
   public let editingStack: EditingStack
   public var handlers = Handlers()
   
+  private let aspectRatioButton = UIButton(type: .system)
+  
+  private let resetButton = UIButton(type: .system)
+  
+  private let rotateButton = UIButton(type: .system)
+    
   private var subscriptions = Set<VergeAnyCancellable>()
   
   // MARK: - Initializers
       
-  public init(editingStack: EditingStack) {
+  public init(editingStack: EditingStack, options: Options = .init()) {
+    self.store = .init(initialState: .init(options: options))
     self.editingStack = editingStack
     cropView = .init(editingStack: editingStack)
     aspectRatioControl = .init(originalAspectRatio: .init(editingStack.state.imageSize))
@@ -70,13 +93,15 @@ public final class CropViewController: UIViewController {
    To get a result image, call `renderImage()`.
    */
   public convenience init(
-    imageProvider: ImageProvider
+    imageProvider: ImageProvider,
+    options: Options = .init()
   ) {
     self.init(
       editingStack: .init(
         imageProvider: imageProvider,
         previewMaxPixelSize: UIScreen.main.bounds.height * UIScreen.main.scale
-      )
+      ),
+      options: options
     )
   }
   
@@ -103,7 +128,13 @@ public final class CropViewController: UIViewController {
     view.backgroundColor = .black
     view.clipsToBounds = true
     
-    let resetButton = UIButton(type: .system)&>.do {
+    aspectRatioButton&>.do {
+      $0.setImage(UIImage(named: "aspectratio", in: bundle, compatibleWith: nil), for: .normal)
+      $0.tintColor = .systemGray
+      $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
+    }
+    
+    resetButton&>.do {
       // TODO: Localize
       $0.setTitle("RESET", for: .normal)
       $0.titleLabel?.font = UIFont.systemFont(ofSize: 15)
@@ -112,16 +143,10 @@ public final class CropViewController: UIViewController {
       $0.isHidden = true
     }
     
-    let rotateButton = UIButton(type: .system)&>.do {
+    rotateButton&>.do {
       $0.setImage(UIImage(named: "rotate", in: bundle, compatibleWith: nil), for: .normal)
       $0.tintColor = .systemGray
       $0.addTarget(self, action: #selector(handleRotateButton), for: .touchUpInside)
-    }
-    
-    let aspectRatioButton = UIButton(type: .system)&>.do {
-      $0.setImage(UIImage(named: "aspectratio", in: bundle, compatibleWith: nil), for: .normal)
-      $0.tintColor = .systemGray
-      $0.addTarget(self, action: #selector(handleAspectRatioButton), for: .touchUpInside)
     }
     
     let topStackView = UIStackView()&>.do {
@@ -214,10 +239,17 @@ public final class CropViewController: UIViewController {
       guard let self = self else { return }
       
       state.ifChanged(\.hasUncommitedChanges) { hasChanges in
-        resetButton.isHidden = !hasChanges
+        self.resetButton.isHidden = !hasChanges
       }
+                
+    }
+    .store(in: &subscriptions)
+    
+    cropView.store.sinkState { [weak self] (state) in
       
-      state.ifChanged(\.currentEdit.crop.preferredAspectRatio) { ratio in
+      guard let self = self else { return }
+      
+      state.ifChanged(\.preferredAspectRatio) { ratio in
         self.aspectRatioControl.setSelected(ratio)
       }
       
@@ -225,26 +257,42 @@ public final class CropViewController: UIViewController {
     .store(in: &subscriptions)
     
     store.sinkState { [weak self] state in
-      
       guard let self = self else { return }
-            
-      state.ifChanged(\.isSelectingAspectRatio) { value in
-        UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) {
-          if value {
-            self.aspectRatioControl.alpha = 1
-            aspectRatioButton.tintColor = .systemYellow
-          } else {
-            self.aspectRatioControl.alpha = 0
-            aspectRatioButton.tintColor = .systemGray
-          }
-        }
-        .startAnimation()
-      }
-      
+      self.update(with: state)
     }
     .store(in: &subscriptions)
     
     editingStack.start()
+  }
+  
+  private func update(with state: Changes<State>) {
+    
+    let options = state.map(\.options)
+    
+    options.ifChanged(\.aspectRatioOptions) { value in
+      switch value {
+      case .fixed(let aspectRatio):
+        aspectRatioButton.alpha = 0
+        cropView.setCroppingAspectRatio(aspectRatio)
+      case .selectable:
+        aspectRatioButton.alpha = 1
+        cropView.setCroppingAspectRatio(nil)
+      }
+    }
+    
+    state.ifChanged(\.isSelectingAspectRatio) { value in
+      UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) { [self] in
+        if value {
+          aspectRatioControl.alpha = 1
+          aspectRatioButton.tintColor = .systemYellow
+        } else {
+          aspectRatioControl.alpha = 0
+          aspectRatioButton.tintColor = .systemGray
+        }
+      }
+      .startAnimation()
+    }
+    
   }
   
   @objc private func handleRotateButton() {

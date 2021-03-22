@@ -49,6 +49,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
     fileprivate var hasLoaded = false
     fileprivate var isGuideInteractionEnabled: Bool = true
     fileprivate var layoutVersion: UInt64 = 0
+    
+    /**
+     Returns aspect ratio.
+     Would not be affected by rotation.
+     */
+    var preferredAspectRatio: PixelAspectRatio?
   }
 
   /**
@@ -181,7 +187,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
         /**
          To avoid running pending layout operations from User Initiated actions.
          */
-        if cropRect != self.store.state.proposedCrop {
+        if cropRect.cropExtent != self.store.state.proposedCrop.cropExtent {
           self.setCrop(cropRect)
         }
       }
@@ -251,6 +257,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
             
             self.updateScrollContainerView(
               by: crop,
+              preferredAspectRatio: state.preferredAspectRatio,
               animated: state.hasLoaded,
               animatesRotation: state.hasChanges(\.proposedCrop.rotation)
             )
@@ -350,6 +357,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     store.commit {
       $0.proposedCrop = $0.proposedCrop.makeInitial()
+      if let ratio = $0.preferredAspectRatio {
+        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
+      }
       $0.layoutVersion += 1
     }
 
@@ -370,6 +380,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     store.commit {
       $0.proposedCrop = crop
+      if let ratio = $0.preferredAspectRatio {
+        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
+      }
       $0.layoutVersion += 1
     }
   }
@@ -378,14 +391,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
+      $0.preferredAspectRatio = ratio
       if let ratio = ratio {
-        $0.proposedCrop.updateCropExtent(by: ratio)
-        $0.proposedCrop.preferredAspectRatio = ratio
-        $0.layoutVersion += 1
-      } else {
-        $0.proposedCrop.preferredAspectRatio = nil
-        $0.layoutVersion += 1
+        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
       }
+      $0.layoutVersion += 1
     }
   }
 
@@ -475,6 +485,7 @@ extension CropView {
 
   private func updateScrollContainerView(
     by crop: EditingCrop,
+    preferredAspectRatio: PixelAspectRatio?,
     animated: Bool,
     animatesRotation: Bool
   ) {
@@ -487,16 +498,16 @@ extension CropView {
         switch crop.rotation {
         case .angle_0:
           size = aspectRatio.sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(crop.preferredAspectRatio)
+          guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_90:
           size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
+          guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         case .angle_180:
           size = aspectRatio.sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(crop.preferredAspectRatio)
+          guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_270:
           size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
-          guideView.setLockedAspectRatio(crop.preferredAspectRatio?.swapped())
+          guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         }
 
         scrollView.transform = crop.rotation.transform

@@ -20,10 +20,10 @@ enum Components {
       automaticallyManagesSubnodes = true
       imageNode.contentMode = .scaleAspectFit
     }
-    
+
     override func didLoad() {
       super.didLoad()
-      
+
       shape.shapeFillColor = .init(white: 0.9, alpha: 1)
     }
 
@@ -40,11 +40,25 @@ enum Components {
     }
   }
 
-  static func makeSelectionCell(title: String, onTap: @escaping () -> Void) -> ASCellNode {
+  static func makeSelectionCell(
+    title: String,
+    description: String? = nil,
+    onTap: @escaping () -> Void
+  ) -> ASCellNode {
     let shape = ShapeLayerNode.roundedCorner(radius: 8)
 
     let button = GlossButtonNode()
     button.onTap = onTap
+
+    let descriptionLabel = ASTextNode()
+    descriptionLabel.attributedText = description.map { NSAttributedString(
+      string: $0,
+      attributes: [
+        .font: UIFont.preferredFont(forTextStyle: .caption1),
+        .foregroundColor: UIColor.lightGray,
+      ]
+    )
+    }
 
     button.setDescriptor(
       .init(
@@ -63,12 +77,17 @@ enum Components {
       return AnyDisplayNode { _, _ in
 
         LayoutSpec {
-          HStackLayout {
-            button
-              .padding(.horizontal, 8)
-              .padding(.vertical, 12)
-              .flexGrow(1)
+          VStackLayout(spacing: 8) {
+            HStackLayout {
+              button            
+                .flexGrow(1)
+            }
+            if description != nil {
+              descriptionLabel
+            }
           }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 12)
           .background(shape)
           .padding(8)
         }

@@ -57,6 +57,21 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         _presentCropViewConroller(stackForNasa)
       }),
       
+      Components.makeSelectionCell(
+        title: "Square only",
+        description: """
+        CropViewController supports to disable the selecting aspect-ratio.
+        Instead specify which aspect ratio fixes the cropping guide.
+        """,
+        onTap: { [unowned self] in
+          
+          var options = CropViewController.Options()
+          options.aspectRatioOptions = .fixed(.square)
+          
+          let controller = CropViewController(editingStack: stackForVertical, options: options)
+          _presentCropViewConroller(controller)
+      }),
+      
       Components.makeSelectionCell(title: "Pick from library", onTap: { [unowned self] in
         
         self.__pickPhoto { (image) in
@@ -68,9 +83,8 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       }),
     ])
   }
-
-  private func _presentCropViewConroller(_ editingStack: EditingStack) {
-    let crop = CropViewController(editingStack: editingStack)
+  
+  private func _presentCropViewConroller(_ crop: CropViewController) {
     crop.modalPresentationStyle = .fullScreen
     crop.handlers.didCancel = { controller in
       controller.dismiss(animated: true, completion: nil)
@@ -82,5 +96,10 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       }
     }
     present(crop, animated: true, completion: nil)
+  }
+
+  private func _presentCropViewConroller(_ editingStack: EditingStack) {
+    let crop = CropViewController(editingStack: editingStack)
+    _presentCropViewConroller(crop)
   }
 }

@@ -61,13 +61,7 @@ public struct EditingCrop: Equatable {
       }
     }
   }
-  
-  /**
-   Returns aspect ratio.
-   Would not be affected by rotation.
-   */
-  public var preferredAspectRatio: PixelAspectRatio?
-  
+    
   /// The dimensions in pixel for the image.
   public var imageSize: CGSize
   
@@ -123,6 +117,13 @@ public struct EditingCrop: Equatable {
       ),
       size: maxSize
     )
+  }
+  
+  public mutating func updateCropExtentIfNeeded(by newAspectRatio: PixelAspectRatio) {
+    guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
+      return
+    }    
+    updateCropExtent(by: newAspectRatio)
   }
   
   public func scaled(maxPixelSize: CGFloat) -> Self {
