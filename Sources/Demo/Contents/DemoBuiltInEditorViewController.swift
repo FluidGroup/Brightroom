@@ -23,7 +23,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       resultCell,
       
       Components.makeSelectionCell(title: "Example", onTap: { [unowned self] in
-        _present(.init(image: Asset.l1000069.image))
+        _present(.init(image: Asset.leica.image))
       }),
       
       Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in

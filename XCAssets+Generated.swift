@@ -24,6 +24,7 @@ internal enum Asset {
   internal static let l1002725 = ImageAsset(name: "L1002725")
   internal static let horizontalRect = ImageAsset(name: "horizontal-rect")
   internal static let large = ImageAsset(name: "large")
+  internal static let leica = ImageAsset(name: "leica")
   internal static let nasa = ImageAsset(name: "nasa")
   internal static let small = ImageAsset(name: "small")
   internal static let squareRect = ImageAsset(name: "square-rect")

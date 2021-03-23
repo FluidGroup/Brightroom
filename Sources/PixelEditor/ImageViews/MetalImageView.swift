@@ -26,7 +26,7 @@ import PixelEngine
 #endif
 
 open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
-  private let defaultColorSpace = CGColorSpaceCreateDeviceRGB()
+  private let defaultColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB)!
   private var image: CIImage?
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in

@@ -1,6 +1,9 @@
 
 import CoreImage
 
+/**
+ FIXME: In result CIImage does not work well. but rendered image is fine.
+ */
 public final class ColorLookup: CIFilter {
   private let kernel: CIKernel
 

@@ -28,6 +28,7 @@ public typealias PlatformImage = NSImage
 import UIKit
 public typealias PlatformImage = UIImage
 #endif
+import PixelEngineObjc
 
 public enum ColorCube {
 
@@ -36,13 +37,9 @@ public enum ColorCube {
     dimension: Int,
     colorSpace: CGColorSpace
     ) -> CIFilter {
-
-    let data = cubeData(
-      lutImage: lutImage,
-      dimension: dimension,
-      colorSpace: colorSpace
-    )!
-
+    
+    let data = Cube.colorCubeData(fromLUT: lutImage)!
+    
     let filter = CIFilter(
       name: "CIColorCubeWithColorSpace",
       parameters: [
@@ -54,6 +51,8 @@ public enum ColorCube {
 
     return filter!
   }
+  
+  #if false
 
   private static func createBitmap(image: CGImage, colorSpace: CGColorSpace) -> UnsafeMutablePointer<UInt8>? {
 
@@ -153,5 +152,7 @@ public enum ColorCube {
     let data = Data.init(bytes: array, count: dataSize)
     return data
   }
+  
+  #endif
 }
 

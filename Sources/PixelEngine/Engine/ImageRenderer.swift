@@ -107,7 +107,10 @@ public final class ImageRenderer {
             let cgContext = c.cgContext
             let ciContext = CIContext(
               cgContext: cgContext,
-              options: [.workingColorSpace: effectedCIImage.colorSpace as Any]
+              options: [
+                .workingColorSpace: effectedCIImage.colorSpace as Any,
+                .outputColorSpace: effectedCIImage.colorSpace as Any,
+              ]
             )
             
             cgContext.detached {

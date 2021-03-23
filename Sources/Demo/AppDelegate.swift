@@ -35,7 +35,7 @@ extension ColorCubeStorage {
         let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
         
         let filters = fileList
-          .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
+          .filter { $0.hasPrefix("LUT_") }
           .sorted()
           .map { path -> FilterColorCube in
             let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
@@ -45,6 +45,8 @@ extension ColorCubeStorage {
               .replacingOccurrences(of: "LUT_", with: "")
               .replacingOccurrences(of: ".png", with: "")
               .replacingOccurrences(of: ".PNG", with: "")
+              .replacingOccurrences(of: ".jpg", with: "")
+
             return FilterColorCube.init(
               name: name,
               identifier: path,

@@ -24,11 +24,6 @@ import CoreImage
 
 public struct PreviewFilterColorCube : Equatable {
 
-  private enum Static {
-    static let ciContext = CIContext(options: [.useSoftwareRenderer : false])
-    static let heatingQueue = DispatchQueue.init(label: "me.muukii.PixelEngine.Preheat", attributes: [.concurrent])
-  }
-
   public let image: CIImage
   public let filter: FilterColorCube
 
@@ -41,62 +36,47 @@ public struct PreviewFilterColorCube : Equatable {
 
 /// A Filter using LUT Image (backed by CIColorCubeWithColorSpace)
 /// About LUT Image -> https://en.wikipedia.org/wiki/Lookup_table
-public final class FilterColorCube : Filtering, Equatable {
-  
-  public static func == (lhs: FilterColorCube, rhs: FilterColorCube) -> Bool {
-    lhs === rhs
-  }
+public struct FilterColorCube : Filtering, Equatable {
   
   public static let range: ParameterRange<Double, FilterColorCube> = .init(min: 0, max: 1)
-
-  private var loadedFilter: CIFilter?
   
   public let name: String
   public let identifier: String
   public var amount: Double = 1
+  public let lutImage: PlatformImage
   
-  private var loader: () -> CIFilter
-  private let lock = NSLock()
-
   public init(
     name: String,
     identifier: String,
-    lutImage: PlatformImage,
-    dimension: Int,
-    colorSpace: CGColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    lutImage: PlatformImage
     ) {
 
+    self.lutImage = lutImage
     self.name = name
     self.identifier = identifier
-    self.loader = {
-      ColorCube.makeColorCubeFilter(lutImage: lutImage, dimension: dimension, colorSpace: colorSpace)
-    }
   }
 
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
-    
-    lock.lock()
-    defer {
-      lock.unlock()
-    }
-    
-    let filter: CIFilter
-    
-    if let loadedFilter = self.loadedFilter {
-      filter = loadedFilter
-    } else {
-      let createdFilter = loader()
-      self.loadedFilter = createdFilter
-      filter = createdFilter
-    }
+            
+    #if false
+            
+    let f = ColorLookup()
+    f.inputColorLookupTable = lutImage.ciImage ?? CIImage(image: lutImage)!
+    f.inputImage = image
+    f.inputIntensity = CGFloat(0.8)
 
-    let f = filter.copy() as! CIFilter
-
+    return f.outputImage!
+    
+    #else
+            
+    let f: CIFilter = ColorCube.makeColorCubeFilter(
+      lutImage: lutImage,
+      dimension: 64,
+      colorSpace: lutImage.cgImage!.colorSpace!
+    )
+          
     f.setValue(image, forKeyPath: kCIInputImageKey)
-    if let colorSpace = image.colorSpace {
-      f.setValue(colorSpace, forKeyPath: "inputColorSpace")
-    }
-
+        
     let background = image
     let foreground = f.outputImage!.applyingFilter(
       "CIColorMatrix", parameters: [
@@ -105,16 +85,17 @@ public final class FilterColorCube : Filtering, Equatable {
         "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
         "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount)),
         "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-    ])
-
+      ])
+    
     let composition = CIFilter(
       name: "CISourceOverCompositing",
       parameters: [
         kCIInputImageKey : foreground,
         kCIInputBackgroundImageKey : background
       ])!
-
+    
     return composition.outputImage!
-
+    
+    #endif
   }
 }

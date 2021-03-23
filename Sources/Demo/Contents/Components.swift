@@ -32,7 +32,7 @@ enum Components {
         HStackLayout(justifyContent: .center) {
           imageNode
             .aspectRatio(1)
-            .width(120)
+            .width(300)
             .background(shape)
             .padding(8)
         }
