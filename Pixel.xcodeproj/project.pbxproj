@@ -55,6 +55,8 @@
 		4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B47D060216CC5480007B594 /* PixelEditViewController.swift */; };
 		4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
+		4B4C7C7A260A69C50082240A /* LUT_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_X_2.jpg */; };
+		4B4C7C7B260A69C50082240A /* LUT_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_X_2.jpg */; };
 		4B58DF662607100600D85F97 /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58DF652607100600D85F97 /* CanvasView.swift */; };
 		4B600B02216B7A94001E1456 /* PixelEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* PixelEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B600B19216B7BB9001E1456 /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B18216B7BB9001E1456 /* ImageRenderer.swift */; };
@@ -329,6 +331,7 @@
 		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
 		4B47D055216CC5350007B594 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B47D060216CC5480007B594 /* PixelEditViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PixelEditViewController.swift; sourceTree = "<group>"; };
+		4B4C7C79260A69C50082240A /* LUT_X_2.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_X_2.jpg; sourceTree = "<group>"; };
 		4B58DF652607100600D85F97 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		4B600AFD216B7A94001E1456 /* PixelEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B600B00216B7A94001E1456 /* PixelEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEngine.h; sourceTree = "<group>"; };
@@ -573,6 +576,7 @@
 		4B1E95292176F52100E9DFB8 /* LUTs */ = {
 			isa = PBXGroup;
 			children = (
+				4B4C7C79260A69C50082240A /* LUT_X_2.jpg */,
 				4BD2767D260A56E40044B3D8 /* LUT_ABC.png */,
 				4BD275FE260A48FF0044B3D8 /* LUT_MMM.png */,
 				4BD27687260A58420044B3D8 /* LUT_X_JPG.jpg */,
@@ -1168,6 +1172,7 @@
 				4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */,
 				4B9E8E772180E3C40071DE91 /* LUT_M06.png in Resources */,
 				4BD2767E260A56E40044B3D8 /* LUT_ABC.png in Resources */,
+				4B4C7C7A260A69C50082240A /* LUT_X_2.jpg in Resources */,
 				4B9E8E7C2180E3C50071DE91 /* LUT_M11.png in Resources */,
 				4B9E8E782180E3C40071DE91 /* LUT_M01.png in Resources */,
 				4B9E8E732180E3C40071DE91 /* LUT_M12.png in Resources */,
@@ -1190,6 +1195,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */,
+				4B4C7C7B260A69C50082240A /* LUT_X_2.jpg in Resources */,
 				4BB9180025F5409C00C446B8 /* LUT_M02.png in Resources */,
 				4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */,
 				4BB9180225F5409C00C446B8 /* LUT_M03.png in Resources */,
