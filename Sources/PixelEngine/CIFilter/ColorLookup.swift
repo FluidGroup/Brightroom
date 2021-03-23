@@ -31,7 +31,7 @@ public final class ColorLookup: CIFilter {
       } else {
         return Self.neutralLUTImage.extent
       }
-    }, arguments: [inputImage, Self.neutralLUTImage, NSNumber(value: 1)])
+    }, arguments: [inputImage, inputColorLookupTable ?? Self.neutralLUTImage, inputIntensity])
     return result
   }
 

@@ -30,6 +30,13 @@ final class TopMenuViewController: StackScrollNodeViewController {
         self.navigationController?.pushViewController(menu, animated: true)
         
       }),
+      
+      Components.makeSelectionCell(title: "Editor", onTap: { [unowned self] in
+        
+        let menu = DemoBuiltInEditorViewController()
+        self.navigationController?.pushViewController(menu, animated: true)
+        
+      }),
     ])
     
 

@@ -26,7 +26,7 @@ import PixelEngine
 #endif
 
 open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
-  private let colorSpace = CGColorSpaceCreateDeviceRGB()
+  private let defaultColorSpace = CGColorSpaceCreateDeviceRGB()
   private var image: CIImage?
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in
@@ -160,7 +160,7 @@ open class MetalImageView: MTKView, HardwareImageViewType, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: fixedImage.colorSpace ?? colorSpace
+      colorSpace: fixedImage.colorSpace ?? defaultColorSpace
     )
 
     commandBuffer?.present(currentDrawable!)

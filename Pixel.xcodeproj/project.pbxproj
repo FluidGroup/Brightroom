@@ -55,7 +55,6 @@
 		4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B47D060216CC5480007B594 /* PixelEditViewController.swift */; };
 		4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
-		4B47D066216CC5DB0007B594 /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B47D065216CC5DB0007B594 /* EditorViewController.swift */; };
 		4B58DF662607100600D85F97 /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58DF652607100600D85F97 /* CanvasView.swift */; };
 		4B600B02216B7A94001E1456 /* PixelEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* PixelEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B600B19216B7BB9001E1456 /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B18216B7BB9001E1456 /* ImageRenderer.swift */; };
@@ -159,6 +158,7 @@
 		4BD27283260A03BA0044B3D8 /* ColorLookup.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4BD27282260A03BA0044B3D8 /* ColorLookup.metal */; };
 		4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */; };
 		4BD275DB260A20D20044B3D8 /* neutral-lut.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BD275DA260A20D10044B3D8 /* neutral-lut.png */; };
+		4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */; };
 		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
 		4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
@@ -304,7 +304,6 @@
 		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
 		4B47D055216CC5350007B594 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B47D060216CC5480007B594 /* PixelEditViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PixelEditViewController.swift; sourceTree = "<group>"; };
-		4B47D065216CC5DB0007B594 /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
 		4B58DF652607100600D85F97 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		4B600AFD216B7A94001E1456 /* PixelEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B600B00216B7A94001E1456 /* PixelEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEngine.h; sourceTree = "<group>"; };
@@ -395,6 +394,7 @@
 		4BD27282260A03BA0044B3D8 /* ColorLookup.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ColorLookup.metal; sourceTree = "<group>"; };
 		4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCIKernelViewController.swift; sourceTree = "<group>"; };
 		4BD275DA260A20D10044B3D8 /* neutral-lut.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "neutral-lut.png"; sourceTree = "<group>"; };
+		4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoBuiltInEditorViewController.swift; sourceTree = "<group>"; };
 		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngineTests.swift; sourceTree = "<group>"; };
 		4BDEE09C25F8CF5800FA22CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -608,6 +608,7 @@
 				4B3075912605F27400A1E7CB /* TopMenuViewController.swift */,
 				4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */,
 				4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */,
+				4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */,
 				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
@@ -683,7 +684,6 @@
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
 				4B01C560217F72BA00C50EDE /* ResizeViewController.swift */,
-				4B47D065216CC5DB0007B594 /* EditorViewController.swift */,
 				FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */,
 				4B600B26216B7C9C001E1456 /* Main.storyboard */,
 				4B98CCB125EFF27200E4F61F /* TopTableViewController.swift */,
@@ -1325,8 +1325,8 @@
 				4B8B9114260792D9009BF084 /* StackScrollNodeViewController.swift in Sources */,
 				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
+				4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */,
 				4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */,
-				4B47D066216CC5DB0007B594 /* EditorViewController.swift in Sources */,
 				4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */,
 				4B98CCB225EFF27200E4F61F /* TopTableViewController.swift in Sources */,
 				4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */,

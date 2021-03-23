@@ -36,14 +36,16 @@ public protocol PixelEditViewControllerDelegate: class {
 }
 
 public final class PixelEditViewController: UIViewController {
-  public final class Callbacks {
+  
+  public struct Handlers {
     public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
 
+  @available(*, deprecated)
   public weak var delegate: PixelEditViewControllerDelegate?
 
-  public let callbacks: Callbacks = .init()
+  public var handlers: Handlers = .init()
 
   // MARK: - Private Propaties
 
@@ -257,13 +259,13 @@ public final class PixelEditViewController: UIViewController {
 
   @objc
   private func didTapDoneButton() {
-    callbacks.didEndEditing(self, viewModel.editingStack)
+    handlers.didEndEditing(self, viewModel.editingStack)
     delegate?.pixelEditViewController(self, didEndEditing: viewModel.editingStack)
   }
 
   @objc
   private func didTapCancelButton() {
-    callbacks.didCancelEditing(self)
+    handlers.didCancelEditing(self)
     delegate?.pixelEditViewControllerDidCancelEditing(in: self)
   }
 

@@ -48,8 +48,7 @@ extension ColorCubeStorage {
             return FilterColorCube.init(
               name: name,
               identifier: path,
-              lutImage: image,
-              dimension: 64
+              lutImage: image
             )
         }
         

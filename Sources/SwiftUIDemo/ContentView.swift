@@ -188,7 +188,7 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
 
   func makeUIViewController(context: Context) -> UINavigationController {
     let cropViewController = PixelEditViewController(viewModel: .init(editingStack: editingStack))
-    cropViewController.callbacks.didEndEditing = { _, _ in
+    cropViewController.handlers.didEndEditing = { _, _ in
       onCompleted()
     }
     return UINavigationController(rootViewController: cropViewController)
@@ -225,8 +225,7 @@ extension ColorCubeStorage {
             return FilterColorCube.init(
               name: name,
               identifier: path,
-              lutImage: image,
-              dimension: 64
+              lutImage: image
             )
           }
 
