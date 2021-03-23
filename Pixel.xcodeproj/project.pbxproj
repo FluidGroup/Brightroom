@@ -76,6 +76,7 @@
 		4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */; };
 		4B6A5F5E217B9141004D68DC /* YUCIColorLookup.cikernel in Resources */ = {isa = PBXBuildFile; fileRef = 4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */; };
 		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
+		4B7C97F32609B5BE00FC541E /* ColorLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7C97F22609B5BE00FC541E /* ColorLookup.swift */; };
 		4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B835DFD25E95D5000EC84D1 /* CropViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B835DFC25E95D5000EC84D1 /* CropViewController.swift */; };
@@ -155,6 +156,8 @@
 		4BB9180325F5409C00C446B8 /* LUT_M09.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6F2180E3C40071DE91 /* LUT_M09.png */; };
 		4BB9180425F5409C00C446B8 /* LUT_M07.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B9E8E6A2180E3C40071DE91 /* LUT_M07.png */; };
 		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
+		4BD27283260A03BA0044B3D8 /* ColorLookup.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4BD27282260A03BA0044B3D8 /* ColorLookup.metal */; };
+		4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */; };
 		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
 		4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
@@ -323,6 +326,7 @@
 		4B66C9732171D781008F2A54 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */ = {isa = PBXFileReference; lastKnownFileType = text; path = YUCIColorLookup.cikernel; sourceTree = "<group>"; };
 		4B75113F25F13276002D804A /* DemoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView.swift; sourceTree = "<group>"; };
+		4B7C97F22609B5BE00FC541E /* ColorLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorLookup.swift; sourceTree = "<group>"; };
 		4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCAssets+Generated.swift"; sourceTree = "<group>"; };
 		4B835DFC25E95D5000EC84D1 /* CropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropViewController.swift; sourceTree = "<group>"; };
 		4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoLayout.swift; sourceTree = "<group>"; };
@@ -387,6 +391,8 @@
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		4BD27282260A03BA0044B3D8 /* ColorLookup.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ColorLookup.metal; sourceTree = "<group>"; };
+		4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCIKernelViewController.swift; sourceTree = "<group>"; };
 		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngineTests.swift; sourceTree = "<group>"; };
 		4BDEE09C25F8CF5800FA22CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -599,6 +605,7 @@
 				4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */,
 				4B3075912605F27400A1E7CB /* TopMenuViewController.swift */,
 				4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */,
+				4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */,
 				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
@@ -640,6 +647,7 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B7C97F12609B5AA00FC541E /* CIFilter */,
 				4B6A5F5C217B9125004D68DC /* Resource */,
 				4B1E94B4217632B300E9DFB8 /* Filter */,
 				4B66C9732171D781008F2A54 /* ImageSource.swift */,
@@ -718,6 +726,15 @@
 				4B6A5F5D217B9141004D68DC /* YUCIColorLookup.cikernel */,
 			);
 			path = Resource;
+			sourceTree = "<group>";
+		};
+		4B7C97F12609B5AA00FC541E /* CIFilter */ = {
+			isa = PBXGroup;
+			children = (
+				4B7C97F22609B5BE00FC541E /* ColorLookup.swift */,
+				4BD27282260A03BA0044B3D8 /* ColorLookup.metal */,
+			);
+			path = CIFilter;
 			sourceTree = "<group>";
 		};
 		4B835DFB25E95D3C00EC84D1 /* Crop */ = {
@@ -1257,9 +1274,11 @@
 				4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */,
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
+				4B7C97F32609B5BE00FC541E /* ColorLookup.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
 				4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */,
+				4BD27283260A03BA0044B3D8 /* ColorLookup.metal in Sources */,
 				4BEE650D217479C600F3578E /* DrawnPath.swift in Sources */,
 				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
@@ -1308,6 +1327,7 @@
 				4B98CCB225EFF27200E4F61F /* TopTableViewController.swift in Sources */,
 				4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */,
 				4B1E94B3217624A700E9DFB8 /* SliderViewController.swift in Sources */,
+				4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */,
 				4B01C561217F72BA00C50EDE /* ResizeViewController.swift in Sources */,
 				4B8B910726079256009BF084 /* Components.swift in Sources */,
 				4B8B911E2607961D009BF084 /* Mocks.swift in Sources */,
@@ -1585,6 +1605,8 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MTLLINKER_FLAGS = "-fcikernel";
+				MTL_COMPILER_FLAGS = "-fcikernel";
 				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEngine;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
@@ -1613,6 +1635,8 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MTLLINKER_FLAGS = "-fcikernel";
+				MTL_COMPILER_FLAGS = "-fcikernel";
 				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEngine;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;

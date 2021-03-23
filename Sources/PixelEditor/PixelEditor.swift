@@ -41,7 +41,7 @@ public typealias NonL10n = String
 
 let bundle = Bundle.init(for: Dummy.self)
 
-final class Dummy {}
+fileprivate final class Dummy {}
 
 @inline(__always)
 func _pixeleditor_ensureMainThread() {
