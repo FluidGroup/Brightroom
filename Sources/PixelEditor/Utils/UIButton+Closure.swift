@@ -1,3 +1,6 @@
+import UIKit
+import Foundation
+
 private final class Proxy {
   static var key: Void?
   private weak var base: UIControl?
