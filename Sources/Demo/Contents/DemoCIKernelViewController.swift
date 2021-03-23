@@ -22,13 +22,13 @@ final class DemoCIKernelViewController: StackScrollNodeViewController {
       
       resultCell,
            
-      Components.makeSelectionCell(title: "ColorLookup", onTap: { [unowned self] in
-       
-        let filter = ColorLookup()
-        filter.inputImage = CIImage(image: Asset.l1000069.image)!
-        let result = UIImage(ciImage: filter.outputImage!)
-        resultCell.image = result
-      }),
+//      Components.makeSelectionCell(title: "ColorLookup", onTap: { [unowned self] in
+//       
+//        let filter = ColorLookup()
+//        filter.inputImage = CIImage(image: Asset.l1000069.image)!
+//        let result = UIImage(ciImage: filter.outputImage!)
+//        resultCell.image = result
+//      }),
            
     ])
   }
