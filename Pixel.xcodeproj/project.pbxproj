@@ -35,8 +35,6 @@
 		4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E952A2176F57800E9DFB8 /* ColorCube.swift */; };
 		4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */; };
 		4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */; };
-		4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6F725F6720900DE0569 /* TransitionPatch */; };
-		4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1EC6FC25F6723700DE0569 /* Verge */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
 		4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075912605F27400A1E7CB /* TopMenuViewController.swift */; };
 		4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075962605F27C00A1E7CB /* StackScrollNode.swift */; };
@@ -155,6 +153,8 @@
 		4BF0256025F12FE30093A59B /* SwiftUICropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */; };
 		4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
+		A6ABB4F6260AA8F0006B46ED /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4F5260AA8F0006B46ED /* Verge */; };
+		A6ABB4FC260AA8FB006B46ED /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4FB260AA8FB006B46ED /* TransitionPatch */; };
 		B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */; };
 		ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
 		FC5DAE6E23A75ACB00DD51E6 /* PHAssetDownloadEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */; };
@@ -267,7 +267,6 @@
 		4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeStorage.swift; sourceTree = "<group>"; };
 		4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeControlView.swift; sourceTree = "<group>"; };
 		4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMenuControlView.swift; sourceTree = "<group>"; };
-		4B1EC70925F6756E00DE0569 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Package.swift; path = /Users/muukii/.ghq/github.com/muukii/Pixel/Package.swift; sourceTree = "<absolute>"; };
 		4B3075912605F27400A1E7CB /* TopMenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMenuViewController.swift; sourceTree = "<group>"; };
 		4B3075962605F27C00A1E7CB /* StackScrollNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNode.swift; sourceTree = "<group>"; };
 		4B34578A217502F900716DA0 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
@@ -397,7 +396,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */,
-				4B1EC6F825F6720900DE0569 /* TransitionPatch in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -405,7 +403,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B1EC6FD25F6723700DE0569 /* Verge in Frameworks */,
+				A6ABB4FC260AA8FB006B46ED /* TransitionPatch in Frameworks */,
+				A6ABB4F6260AA8F0006B46ED /* Verge in Frameworks */,
 				4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */,
 				4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */,
 				4BD27634260A4F000044B3D8 /* Accelerate.framework in Frameworks */,
@@ -591,7 +590,6 @@
 			isa = PBXGroup;
 			children = (
 				4B4C7C8E260A6EF70082240A /* Archives */,
-				4B1EC70925F6756E00DE0569 /* Package.swift */,
 				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4BDEE0A625F8CF6800FA22CB /* Tests */,
@@ -876,7 +874,6 @@
 			);
 			name = PixelEditor;
 			packageProductDependencies = (
-				4B1EC6F725F6720900DE0569 /* TransitionPatch */,
 			);
 			productName = PixelEditor;
 			productReference = 4B47D052216CC5350007B594 /* PixelEditor.framework */;
@@ -897,7 +894,8 @@
 			);
 			name = PixelEngine;
 			packageProductDependencies = (
-				4B1EC6FC25F6723700DE0569 /* Verge */,
+				A6ABB4F5260AA8F0006B46ED /* Verge */,
+				A6ABB4FB260AA8FB006B46ED /* TransitionPatch */,
 			);
 			productName = PixelEngine;
 			productReference = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */;
@@ -908,6 +906,7 @@
 			buildConfigurationList = 4B600B2F216B7C9E001E1456 /* Build configuration list for PBXNativeTarget "Demo" */;
 			buildPhases = (
 				776F34ECEF5AD7DDF8CCC6D4 /* [CP] Check Pods Manifest.lock */,
+				EE969DE15A445EB8D1C2421A /* [CP] Prepare Artifacts */,
 				4B600B1C216B7C9C001E1456 /* Sources */,
 				4B600B1D216B7C9C001E1456 /* Frameworks */,
 				4B600B1E216B7C9C001E1456 /* Resources */,
@@ -930,6 +929,7 @@
 			buildConfigurationList = 4B98CCC525EFF31400E4F61F /* Build configuration list for PBXNativeTarget "SwiftUIDemo" */;
 			buildPhases = (
 				8BB614A32A038356A635BCE2 /* [CP] Check Pods Manifest.lock */,
+				20582FB990DE7E6BC0289FC1 /* [CP] Prepare Artifacts */,
 				4B98CCB525EFF31300E4F61F /* Sources */,
 				4B98CCB625EFF31300E4F61F /* Frameworks */,
 				4B98CCB725EFF31300E4F61F /* Resources */,
@@ -972,7 +972,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 1240;
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1240;
 				ORGANIZATIONNAME = muukii;
 				TargetAttributes = {
 					4B47D051216CC5350007B594 = {
@@ -1005,8 +1005,8 @@
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
 			packageReferences = (
-				4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */,
-				4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */,
+				A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */,
+				A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -1074,6 +1074,23 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		20582FB990DE7E6BC0289FC1 /* [CP] Prepare Artifacts */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo-artifacts-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Prepare Artifacts";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo-artifacts-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo-artifacts.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		776F34ECEF5AD7DDF8CCC6D4 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -1150,6 +1167,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		EE969DE15A445EB8D1C2421A /* [CP] Prepare Artifacts */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo-artifacts-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Prepare Artifacts";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo-artifacts-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo-artifacts.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -1438,6 +1472,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1463,7 +1498,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1502,6 +1537,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1521,7 +1557,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -1539,7 +1575,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Automatic;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = "";
@@ -1786,34 +1822,34 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
+		A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "git@github.com:muukii/TransitionPatch.git";
+			repositoryURL = "https://github.com/VergeGroup/Verge.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.9.0;
+			};
+		};
+		A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/muukii/TransitionPatch.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.3;
 			};
 		};
-		4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "git@github.com:VergeGroup/Verge.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.8.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4B1EC6F725F6720900DE0569 /* TransitionPatch */ = {
+		A6ABB4F5260AA8F0006B46ED /* Verge */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4B1EC6F625F6720900DE0569 /* XCRemoteSwiftPackageReference "TransitionPatch" */;
-			productName = TransitionPatch;
-		};
-		4B1EC6FC25F6723700DE0569 /* Verge */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4B1EC6FB25F6723700DE0569 /* XCRemoteSwiftPackageReference "Verge" */;
+			package = A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */;
 			productName = Verge;
+		};
+		A6ABB4FB260AA8FB006B46ED /* TransitionPatch */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */;
+			productName = TransitionPatch;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

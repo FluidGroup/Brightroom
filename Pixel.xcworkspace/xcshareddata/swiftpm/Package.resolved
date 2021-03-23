@@ -12,7 +12,7 @@
       },
       {
         "package": "TransitionPatch",
-        "repositoryURL": "git@github.com:muukii/TransitionPatch.git",
+        "repositoryURL": "https://github.com/muukii/TransitionPatch.git",
         "state": {
           "branch": null,
           "revision": "1f2e5930a68b11dae764ee7ffda14b2b7ffa8fce",
@@ -21,11 +21,11 @@
       },
       {
         "package": "Verge",
-        "repositoryURL": "git@github.com:VergeGroup/Verge.git",
+        "repositoryURL": "https://github.com/VergeGroup/Verge.git",
         "state": {
           "branch": null,
-          "revision": "472a0273f6adf67132bb07f52ca4547ede6c9f6c",
-          "version": "8.8.0"
+          "revision": "541fa20a53bce1152f552595c12dc5d25eaf211b",
+          "version": "8.9.0"
         }
       }
     ]

@@ -45,7 +45,7 @@ PODS:
 
 DEPENDENCIES:
   - GlossButtonNode
-  - "MosaiqueAssetsPicker (from `git@github.com:eure/AssetsPicker.git`)"
+  - MosaiqueAssetsPicker
   - Reveal-SDK
   - SwiftGen
   - Texture
@@ -54,6 +54,7 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - GlossButtonNode
+    - MosaiqueAssetsPicker
     - PINCache
     - PINOperation
     - PINRemoteImage
@@ -61,15 +62,6 @@ SPEC REPOS:
     - SwiftGen
     - Texture
     - TextureSwiftSupport
-
-EXTERNAL SOURCES:
-  MosaiqueAssetsPicker:
-    :git: "git@github.com:eure/AssetsPicker.git"
-
-CHECKOUT OPTIONS:
-  MosaiqueAssetsPicker:
-    :commit: 93baa57a99be952c51588196d057694f7f28b73e
-    :git: "git@github.com:eure/AssetsPicker.git"
 
 SPEC CHECKSUMS:
   GlossButtonNode: 0b1471447cb4cebc8a959bbca574247ff6b0592b
@@ -82,6 +74,6 @@ SPEC CHECKSUMS:
   Texture: 2f109e937850d94d1d07232041c9c7313ccddb81
   TextureSwiftSupport: f77fcb409983be5da7ef5b29566be0fcc0c440ed
 
-PODFILE CHECKSUM: 9e3af067736b992b26209e099b0b8eca7ddce955
+PODFILE CHECKSUM: 3f9c5d92c44ffdeb4dee74f7acc8eec66da7fb3b
 
-COCOAPODS: 1.10.1
+COCOAPODS: 1.9.3
