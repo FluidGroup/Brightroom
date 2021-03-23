@@ -158,6 +158,7 @@
 		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
 		4BD27283260A03BA0044B3D8 /* ColorLookup.metal in Sources */ = {isa = PBXBuildFile; fileRef = 4BD27282260A03BA0044B3D8 /* ColorLookup.metal */; };
 		4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */; };
+		4BD275DB260A20D20044B3D8 /* neutral-lut.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BD275DA260A20D10044B3D8 /* neutral-lut.png */; };
 		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
 		4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
@@ -393,6 +394,7 @@
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		4BD27282260A03BA0044B3D8 /* ColorLookup.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ColorLookup.metal; sourceTree = "<group>"; };
 		4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCIKernelViewController.swift; sourceTree = "<group>"; };
+		4BD275DA260A20D10044B3D8 /* neutral-lut.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "neutral-lut.png"; sourceTree = "<group>"; };
 		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngineTests.swift; sourceTree = "<group>"; };
 		4BDEE09C25F8CF5800FA22CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -731,6 +733,7 @@
 		4B7C97F12609B5AA00FC541E /* CIFilter */ = {
 			isa = PBXGroup;
 			children = (
+				4BD275DA260A20D10044B3D8 /* neutral-lut.png */,
 				4B7C97F22609B5BE00FC541E /* ColorLookup.swift */,
 				4BD27282260A03BA0044B3D8 /* ColorLookup.metal */,
 			);
@@ -1066,6 +1069,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B6A5F5E217B9141004D68DC /* YUCIColorLookup.cikernel in Resources */,
+				4BD275DB260A20D20044B3D8 /* neutral-lut.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -7,9 +7,15 @@ using namespace metal;
 extern "C" {
   namespace coreimage {
     
-    float4 colorLookup(sample_t s) {
+    float4 colorLookup(
+                       sampler inputImage,
+                       sampler inputLUT,
+                       float intensity
+                       ) {
       
-      return s.grba;
+      float4 textureColor = sample(inputImage, samplerCoord(inputImage));
+
+      return textureColor.grba;
     }
     
   }
