@@ -67,16 +67,9 @@ struct DemoCropView: View {
 
 # (v1) Pixel - Engine • Editor
 
-<img src=top.png width=960/>
+<img src=top.png width=100%/>
 
 ![](preview.gif)
-
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fmuukii%2FPixel.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fmuukii%2FPixel?ref=badge_shield)
-Engine
-
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
-
-[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/0)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/0)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/1)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/1)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/2)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/2)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/3)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/3)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/4)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/4)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/5)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/5)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/6)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/6)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/7)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/7)
 
 Image editor and engine using CoreImage
 
