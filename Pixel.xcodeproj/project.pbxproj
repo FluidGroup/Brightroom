@@ -43,6 +43,8 @@
 		4B34578B217502F900716DA0 /* Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34578A217502F900716DA0 /* Style.swift */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
 		4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023C325ED82B700D3DE47 /* Debounce.swift */; };
+		4B422DFD260B91260011500C /* Orientation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422DFC260B91260011500C /* Orientation.swift */; };
+		4B422E05260B92E20011500C /* ImageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422E04260B92E20011500C /* ImageProvider.swift */; };
 		4B42A6A52178DF2600F18208 /* SaturationControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A42178DF2600F18208 /* SaturationControl.swift */; };
 		4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A62178DF7D00F18208 /* TempCode.swift */; };
 		4B42A6A92178E12500F18208 /* ContrastControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A82178E12500F18208 /* ContrastControl.swift */; };
@@ -272,6 +274,8 @@
 		4B34578A217502F900716DA0 /* Style.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Style.swift; sourceTree = "<group>"; };
 		4B4023BF25ED823B00D3DE47 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
 		4B4023C325ED82B700D3DE47 /* Debounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debounce.swift; sourceTree = "<group>"; };
+		4B422DFC260B91260011500C /* Orientation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Orientation.swift; sourceTree = "<group>"; };
+		4B422E04260B92E20011500C /* ImageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProvider.swift; sourceTree = "<group>"; };
 		4B42A6A42178DF2600F18208 /* SaturationControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaturationControl.swift; sourceTree = "<group>"; };
 		4B42A6A62178DF7D00F18208 /* TempCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempCode.swift; sourceTree = "<group>"; };
 		4B42A6A82178E12500F18208 /* ContrastControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContrastControl.swift; sourceTree = "<group>"; };
@@ -545,6 +549,23 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		4B422DFB260B91190011500C /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				4B422DFC260B91260011500C /* Orientation.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		4B422E09260B92E70011500C /* DataSource */ = {
+			isa = PBXGroup;
+			children = (
+				4B66C9732171D781008F2A54 /* ImageSource.swift */,
+				4B422E04260B92E20011500C /* ImageProvider.swift */,
+			);
+			path = DataSource;
+			sourceTree = "<group>";
+		};
 		4B47D053216CC5350007B594 /* PixelEditor */ = {
 			isa = PBXGroup;
 			children = (
@@ -622,8 +643,9 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B422E09260B92E70011500C /* DataSource */,
+				4B422DFB260B91190011500C /* Library */,
 				4B1E94B4217632B300E9DFB8 /* Filter */,
-				4B66C9732171D781008F2A54 /* ImageSource.swift */,
 				4B9369ED25F94A1300B18571 /* EditingCrop.swift */,
 				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
 				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
@@ -1222,6 +1244,7 @@
 				4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */,
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
+				4B422E05260B92E20011500C /* ImageProvider.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
 				4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */,
@@ -1247,6 +1270,7 @@
 				4B9369EE25F94A1300B18571 /* EditingCrop.swift in Sources */,
 				4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */,
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
+				4B422DFD260B91260011500C /* Orientation.swift in Sources */,
 				4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */,
 				4B9D457A216E8013003A240A /* Geometry.swift in Sources */,
 				4B1E95222176CC0300E9DFB8 /* FilterTemperature.swift in Sources */,

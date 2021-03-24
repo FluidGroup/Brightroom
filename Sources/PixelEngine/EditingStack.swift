@@ -165,6 +165,7 @@ open class EditingStack: Equatable, StoreComponentType {
     colorCubeStorage: ColorCubeStorage = .default,
     cropModifier: CropModifier = .init(modify: { _, _ in })
   ) {
+    
     let initialCrop = EditingCrop(
       imageSize: imageProvider.state.imageSize
     )

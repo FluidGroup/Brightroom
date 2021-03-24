@@ -25,6 +25,26 @@ import AVFoundation
 
 enum ImageTool {
   
+  static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State.ImageMetadata? {
+    
+    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+      return nil
+    }
+    
+    guard
+      let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+      let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
+    else {
+      return nil
+    }
+    
+    let orientation = (properties[kCGImagePropertyTIFFOrientation] as? CGImagePropertyOrientation) ?? .up
+    let size = CGSize(width: width, height: height)
+    
+    return .init(orientation: orientation, imageSize: size)
+  }
+  
   /**
    Returns a pixel size of image.
    
@@ -43,6 +63,23 @@ enum ImageTool {
       return nil
     }
     return CGSize(width: width, height: height)
+  }
+  
+  static func readOrientation(from imageSource: CGImageSource) -> CGImagePropertyOrientation? {
+    
+    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+      return nil
+    }
+    
+    guard
+      let orientation = properties[kCGImagePropertyTIFFOrientation] as? CGImagePropertyOrientation
+    else {
+      return nil
+    }
+    
+    return orientation
   }
   
   static func loadOriginalCGImage(from imageSource: CGImageSource) -> CGImage? {
