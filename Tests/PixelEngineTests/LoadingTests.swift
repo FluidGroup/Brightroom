@@ -7,11 +7,44 @@
 //
 
 import XCTest
+import Verge
 
 @testable import PixelEngine
 
 final class LoadingTests: XCTestCase {
   
+  var subs = Set<VergeAnyCancellable>()
+  
+  func testOrientation() throws {
+    
+    func expect(image: ImageProvider, orientation: CGImagePropertyOrientation) {
+               
+      image.start()
+      
+      let exp = expectation(description: "")
+      
+      image.sinkState { (state) in
+        
+        state.ifChanged(\.metadata) { metadata in
+          
+          if let metadata = metadata {
+            XCTAssertEqual(metadata.orientation, orientation)
+            exp.fulfill()
+          }
+          
+        }
+      }
+      .store(in: &subs)
+      
+      wait(for: [exp], timeout: 10)
+      withExtendedLifetime(subs) {}
+    }
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5529", ofType: "HEIC")), orientation: .up)
+      
+  }
   
   func testBasic() throws {
     

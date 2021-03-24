@@ -134,6 +134,18 @@ open class EditingStack: Equatable, StoreComponentType {
 
         return false
       }
+      
+      mutating func makeVersion() {
+        history.append(currentEdit)
+      }
+      
+      mutating func revertCurrentEditing() {
+        currentEdit = history.last ?? initialEditing
+      }
+      
+      mutating func undoEditing() {
+        currentEdit = history.popLast() ?? initialEditing
+      }
     }
 
     public fileprivate(set) var hasStartedEditing = false
@@ -149,21 +161,8 @@ open class EditingStack: Equatable, StoreComponentType {
     fileprivate(set) var loadedState: Loaded?
 
     init() {
-//      initialEditing = initialEdit
-//      currentEdit = initialEdit
     }
-
-//    static func makeVersion(ref: InoutRef<Self>) {
-//      ref.history.append(ref.currentEdit)
-//    }
-//
-//    static func revertCurrentEditing(ref: InoutRef<Self>) {
-//      ref.currentEdit = ref.history.last ?? ref.initialEditing
-//    }
-//
-//    static func undoEditing(ref: InoutRef<Self>) {
-//      ref.currentEdit = ref.history.popLast() ?? ref.initialEditing
-//    }
+  
   }
 
   // MARK: - Stored Properties
@@ -253,11 +252,9 @@ open class EditingStack: Equatable, StoreComponentType {
         state.ifChanged(\.loadedImage) { image in
 
           guard let image = image else {
-//            self.commit {
-//              self._commit_adjustCropExtent(image: nil, ref: $0)
-//            }
             return
           }
+          
           self.commit { (s: inout InoutRef<State>) in
 
             switch image {
@@ -272,12 +269,10 @@ open class EditingStack: Equatable, StoreComponentType {
             case let .editable(image, metadata):
 
               let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize))
-
-              let initialCrop = EditingCrop(
-                imageSize: metadata.imageSize
-              )
-
-              let initialEdit = Edit(crop: initialCrop)
+             
+              let crop = self.adjustCropExtent(image: editingSourceImage, imageSize: metadata.imageSize)
+                            
+              let initialEdit = Edit(crop: crop)
 
               let editingCroppedImage = Self._createPreviewImage(
                 targetImage: editingSourceImage,
@@ -407,49 +402,39 @@ open class EditingStack: Equatable, StoreComponentType {
 
     return translated
   }
+  
+  private func adjustCropExtent(image: CIImage?, imageSize: CGSize) -> EditingCrop {
+    
+    var crop = EditingCrop(imageSize: imageSize)
+    
+    let actualSizeFromDownsampledImage = image.map { image -> CIImage in
+      let scaled = image.transformed(
+        by: .init(
+          scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
+          y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
+        )
+      )
+      
+      let translated = scaled.transformed(by: .init(
+        translationX: scaled.extent.origin.x,
+        y: scaled.extent.origin.y
+      ))
+      
+      return translated
+    }
+    
+    cropModifier.run(actualSizeFromDownsampledImage, editingCrop: &crop)
+    
+    return crop
 
-  /*
-     func _commit_adjustCropExtent(image: CIImage?, ref: InoutRef<State>) {
-
-       let imageSize = ref.imageSize
-       var crop = EditingCrop(imageSize: ref.imageSize)
-
-       let actualSizeFromDownsampledImage = image.map { image -> CIImage in
-         let scaled = image.transformed(
-           by: .init(
-             scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
-             y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
-           )
-         )
-
-         let translated = scaled.transformed(by: .init(
-           translationX: scaled.extent.origin.x,
-           y: scaled.extent.origin.y
-         ))
-
-         return translated
-       }
-
-       cropModifier.run(actualSizeFromDownsampledImage, editingCrop: &crop)
-
-       ref.loaded?.currentEdit.crop = crop
-
-       // FIXME:
-   //    ref.withType { (type, ref) -> Void in
-   //      type.makeVersion(ref: ref)
-   //    }
-     }
-      */
+  }
 
   /**
    Adds a new snapshot as a history.
    */
   public func takeSnapshot() {
-    commit { _ in
-      // FIXME:
-//      $0.withType { (type, ref) -> Void in
-//        type.makeVersion(ref: ref)
-//      }
+    commit {
+      $0.loadedState?.makeVersion()
     }
   }
 
@@ -459,11 +444,8 @@ open class EditingStack: Equatable, StoreComponentType {
   public func revertEdit() {
     _pixelengine_ensureMainThread()
 
-    commit { _ in
-      // FIXME:
-//      $0.withType { (type, ref) -> Void in
-//        type.revertCurrentEditing(ref: ref)
-//      }
+    commit {
+      $0.loadedState?.revertCurrentEditing()
     }
   }
 
@@ -473,11 +455,8 @@ open class EditingStack: Equatable, StoreComponentType {
   public func undoEdit() {
     _pixelengine_ensureMainThread()
 
-    commit { _ in
-      // FIXME:
-//      $0.withType { (type, ref) -> Void in
-//        type.undoEditing(ref: ref)
-//      }
+    commit {
+      $0.loadedState?.undoEditing()
     }
   }
 
