@@ -55,7 +55,6 @@ open class EditingStack: Equatable, StoreComponentType {
     }
 
     public struct Loaded: Equatable {
-      
       init(
         editableImageProvider: ImageSource,
         metadata: ImageProvider.State.ImageMetadata,
@@ -236,68 +235,11 @@ open class EditingStack: Equatable, StoreComponentType {
       $0.hasStartedEditing = true
     }
 
-    /*
-     store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
-
-       guard let self = self else { return }
-
-       self.commit { (modifyingState: inout InoutRef<State>) in
-
-         state.ifChanged(\.thumbnailImage) { image in
-
-           guard let image = image else { return }
-
-           modifyingState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
-             let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
-             return r
-           }
-
-         }
-
-         state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { crop, editingSourceImage in
-
-           guard let editingSourceImage = editingSourceImage else { return }
-
-           let result = Self._createPreviewImage(
-             targetImage: editingSourceImage,
-             crop: crop,
-             editingImageMaxPixelSize: self.editingImageMaxPixelSize,
-             previewMaxPixelSize: self.previewMaxPixelSize
-           )
-
-           modifyingState.editingCroppedImage = result
-         }
-
-         state.ifChanged(\.currentEdit, \.editingCroppedImage, \.editingSourceImage) { currentEdit, editingCroppedImage, editingSourceImage in
-
-           let filters = currentEdit
-             .makeFilters()
-
-           if let croppedTargetImage = editingCroppedImage {
-
-             let result = filters.reduce(croppedTargetImage) { (image, filter) -> CIImage in
-               filter.apply(to: image, sourceImage: image)
-             }
-
-             modifyingState.editingCroppedPreviewImage = result
-           }
-
-           if let image = editingSourceImage {
-
-             let result = filters.reduce(image) { (image, filter) -> CIImage in
-               filter.apply(to: image, sourceImage: image)
-             }
-
-             modifyingState.editingPreviewImage = result
-           }
-
-         }
-
-       }
-
-     }
-     .store(in: &subscriptions)
-      */
+    store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
+      guard let self = self else { return }
+      self.receive(newState: state)
+    }
+    .store(in: &subscriptions)
 
     /**
      Start downloading image
@@ -328,15 +270,15 @@ open class EditingStack: Equatable, StoreComponentType {
               )
 
             case let .editable(image, metadata):
-              
+
               let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize))
-              
+
               let initialCrop = EditingCrop(
                 imageSize: metadata.imageSize
               )
-              
+
               let initialEdit = Edit(crop: initialCrop)
-              
+
               let editingCroppedImage = Self._createPreviewImage(
                 targetImage: editingSourceImage,
                 crop: initialEdit.crop,
@@ -361,6 +303,43 @@ open class EditingStack: Equatable, StoreComponentType {
           }
         }
       }
+  }
+
+  private func receive(newState state: Changes<State>) {
+    commit { (modifyingState: inout InoutRef<State>) in
+
+      if let loadedState = state._beta_map(\.loadedState) {
+        
+        modifyingState.map(keyPath: \.loadedState!) { (nextState) -> Void in
+
+          loadedState.ifChanged(\.thumbnailImage) { image in
+
+            nextState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
+              let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
+              return r
+            }
+          }
+
+          loadedState.ifChanged(\.currentEdit.crop, \.editingSourceImage) { crop, editingSourceImage in
+
+            let result = Self._createPreviewImage(
+              targetImage: editingSourceImage,
+              crop: crop,
+              editingImageMaxPixelSize: self.editingImageMaxPixelSize,
+              previewMaxPixelSize: self.previewMaxPixelSize
+            )
+
+            nextState.editingCroppedImage = result
+          }
+
+          loadedState.ifChanged(\.currentEdit, \.editingCroppedImage, \.editingSourceImage) { currentEdit, editingCroppedImage, editingSourceImage in
+
+            nextState.editingCroppedPreviewImage = currentEdit.filters.apply(to: editingCroppedImage)
+            nextState.editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
+          }
+        }
+      }
+    }
   }
 
   // MARK: - Functions
@@ -660,7 +639,7 @@ extension EditingStack {
         ] as [Filtering?])
           .compactMap { $0 }
       }
-      
+
       func apply(to ciImage: CIImage) -> CIImage {
         makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
           filter.apply(to: image, sourceImage: image)

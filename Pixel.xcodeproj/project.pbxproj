@@ -1844,8 +1844,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "git@github.com:VergeGroup/Verge.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.8.0;
+				branch = main;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
