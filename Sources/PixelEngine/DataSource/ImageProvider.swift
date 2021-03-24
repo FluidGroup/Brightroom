@@ -62,19 +62,24 @@ public final class ImageProvider: Equatable, StoreComponentType {
     }
     
     public enum Image: Equatable {
-      case preview(ImageSource)
-      case editable(ImageSource)
+      case preview(ImageSource, ImageMetadata)
+      case editable(ImageSource, ImageMetadata)
     }
     
     public var metadata: ImageMetadata?
     
     public var loadedImage: Image? {
+      
+      guard let metadata = metadata else {
+        return nil
+      }
+      
       if let editable = editableImage {
-        return .editable(editable)
+        return .editable(editable, metadata)
       }
       
       if let preview = previewImage {
-        return .preview(preview)
+        return .preview(preview, metadata)
       }
       
       return nil
