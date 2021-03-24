@@ -157,7 +157,6 @@
 		4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */; };
 		ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
-		FC5DAE6E23A75ACB00DD51E6 /* PHAssetDownloadEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */; };
 		FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */; };
 /* End PBXBuildFile section */
 
@@ -387,7 +386,6 @@
 		D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
 		DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.debug.xcconfig"; sourceTree = "<group>"; };
-		FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PHAssetDownloadEditorViewController.swift; sourceTree = "<group>"; };
 		FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingBlurryOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -656,7 +654,6 @@
 				4B600B22216B7C9C001E1456 /* AppDelegate.swift */,
 				4B600B24216B7C9C001E1456 /* ViewController.swift */,
 				4B01C560217F72BA00C50EDE /* ResizeViewController.swift */,
-				FC5DAE6C23A75A8A00DD51E6 /* PHAssetDownloadEditorViewController.swift */,
 				4B600B26216B7C9C001E1456 /* Main.storyboard */,
 				4B98CCB125EFF27200E4F61F /* TopTableViewController.swift */,
 				4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */,
@@ -1262,7 +1259,6 @@
 			files = (
 				4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */,
 				4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */,
-				FC5DAE6E23A75ACB00DD51E6 /* PHAssetDownloadEditorViewController.swift in Sources */,
 				4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */,
 				4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */,
 				4B8B910C260792BD009BF084 /* DemoCropMenuViewController.swift in Sources */,

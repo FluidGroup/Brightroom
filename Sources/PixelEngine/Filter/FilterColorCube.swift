@@ -69,6 +69,7 @@ public struct FilterColorCube : Filtering, Equatable {
     
     #else
             
+    // FIXME: Create a cache for Data
     let f: CIFilter = ColorCube.makeColorCubeFilter(
       lutImage: lutImage,
       dimension: 64,
