@@ -156,9 +156,9 @@ open class EditingStack: Equatable, StoreComponentType {
       loadedState == nil
     }
 
-    fileprivate(set) var loadingState: Loading = .init()
-    fileprivate(set) var previewingState: Previewing?
-    fileprivate(set) var loadedState: Loaded?
+    public fileprivate(set) var loadingState: Loading = .init()
+    public fileprivate(set) var previewingState: Previewing?
+    public fileprivate(set) var loadedState: Loaded?
 
     init() {
     }

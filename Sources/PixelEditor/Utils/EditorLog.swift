@@ -38,4 +38,15 @@ enum EditorLog {
       }
     }
   }
+  
+  static func warn(_ object: Any...) {
+    
+    queue.async {
+      if #available(iOS 12.0, *) {
+        os_log(.error, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
+      } else {
+        os_log("%@", log: osLog, type: .error, object.map { "\($0)" }.joined(separator: " "))
+      }
+    }
+  }
 }

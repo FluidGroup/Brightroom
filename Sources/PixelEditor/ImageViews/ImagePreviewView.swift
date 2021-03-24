@@ -47,6 +47,8 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
   
   public init(editingStack: EditingStack) {
     
+    // FIXME: Loading State
+    
     self.editingStack = editingStack
     
     super.init(frame: .zero)
@@ -77,20 +79,18 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
       
       UIView.performWithoutAnimation {
         
-        state.ifChanged(\.editingCroppedPreviewImage) { previewImage in
-          if let image = previewImage {
+        if let state = state._beta_map(\.loadedState) {
+          state.ifChanged(\.editingCroppedPreviewImage) { image in
             self.imageView.display(image: image)
             EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
           }
-        }
-        
-        state.ifChanged(\.editingCroppedImage) { croppedTargetImage in
-          if let image = croppedTargetImage {
+          
+          state.ifChanged(\.editingCroppedImage) { image in
             self.originalImageView.display(image: image)
             EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)
           }
         }
-        
+                       
       }
     }
     .store(in: &subscriptions)

@@ -42,7 +42,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       case guide
     }
 
-    public fileprivate(set) var proposedCrop: EditingCrop
+    public fileprivate(set) var proposedCrop: EditingCrop?
 
     public fileprivate(set) var frame: CGRect = .zero
     
@@ -145,7 +145,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     self.editingStack = editingStack
     self.contentInset = contentInset
     
-    self.store = .init(initialState: .init(proposedCrop: editingStack.state.currentEdit.crop), logger: nil)
+    self.store = .init(initialState: .init(), logger: nil)
 
     super.init(frame: .zero)
     
@@ -178,20 +178,23 @@ public final class CropView: UIView, UIScrollViewDelegate {
     .store(in: &subscriptions)
     #endif
     
-    editingStack.sinkState { [weak self] state in
+    editingStack.sinkState { [weak self] (state: Changes<EditingStack.State>) in
       
       guard let self = self else { return }
-            
-      state.ifChanged(\.currentEdit.crop) { cropRect in
+      
+      if let state = state._beta_map(\.loadedState) {
         
-        /**
-         To avoid running pending layout operations from User Initiated actions.
-         */
-        if cropRect.cropExtent != self.store.state.proposedCrop.cropExtent {
-          self.setCrop(cropRect)
+        state.ifChanged(\.currentEdit.crop) { cropRect in
+          
+          /**
+           To avoid running pending layout operations from User Initiated actions.
+           */
+          if cropRect.cropExtent != self.store.state.proposedCrop.cropExtent {
+            self.setCrop(cropRect)
+          }
         }
       }
-
+      
     }
     .store(in: &subscriptions)
   
@@ -340,27 +343,33 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
    - Attension: This operation can be run background-thread.
    */
-  public func renderImage() -> UIImage {
+  public func renderImage() -> UIImage? {
     applyEditingStack()
-    return editingStack.makeRenderer().render()
+    return editingStack.makeRenderer()?.render()
   }
   
   /**
    Applies the current state to the EditingStack.
    */
   public func applyEditingStack() {
-    editingStack.crop(store.state.proposedCrop)
+    guard let crop = store.state.proposedCrop else {
+      EditorLog.warn("EditingStack has not completed loading.")
+      return
+    }
+    editingStack.crop(crop)
   }
 
   public func resetCrop() {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop = $0.proposedCrop.makeInitial()
-      if let ratio = $0.preferredAspectRatio {
-        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
+      if let proposedCrop = $0.proposedCrop {
+        $0.proposedCrop = proposedCrop.makeInitial()
+        if let ratio = $0.preferredAspectRatio {
+          $0.proposedCrop!.updateCropExtentIfNeeded(by: ratio)
+        }
+        $0.layoutVersion += 1
       }
-      $0.layoutVersion += 1
     }
 
     guideView.setLockedAspectRatio(nil)
@@ -370,7 +379,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop.rotation = rotation
+      $0.proposedCrop?.rotation = rotation
       $0.layoutVersion += 1
     }
   }
@@ -381,7 +390,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       $0.proposedCrop = crop
       if let ratio = $0.preferredAspectRatio {
-        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
+        $0.proposedCrop?.updateCropExtentIfNeeded(by: ratio)
       }
       $0.layoutVersion += 1
     }
@@ -393,7 +402,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       $0.preferredAspectRatio = ratio
       if let ratio = ratio {
-        $0.proposedCrop.updateCropExtentIfNeeded(by: ratio)
+        $0.proposedCrop?.updateCropExtentIfNeeded(by: ratio)
       }
       $0.layoutVersion += 1
     }
@@ -639,7 +648,7 @@ extension CropView {
     
     store.commit {
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop.setCropExtentNormalizing(visibleRect)
+      $0.proposedCrop?.setCropExtentNormalizing(visibleRect)
     }
         
     /// Triggers layout update later
@@ -658,7 +667,7 @@ extension CropView {
     store.commit {
       let rect = guideView.convert(guideView.bounds, to: imageView)
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop.setCropExtentNormalizing(rect)
+      $0.proposedCrop?.setCropExtentNormalizing(rect)
     }
   }
 
