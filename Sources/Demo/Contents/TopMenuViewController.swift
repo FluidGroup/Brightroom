@@ -24,6 +24,17 @@ final class TopMenuViewController: StackScrollNodeViewController {
         
       }),
       
+      Components.makeSelectionCell(title: "Components: Masking", onTap: { [unowned self] in
+        
+        let menu = DemoMaskingViewController()
+        self.navigationController?.pushViewController(menu, animated: true)
+        
+      }),
+      
+      Components.makeSelectionCell(title: "Components: Preview", onTap: { [unowned self] in
+        // TODO:
+      }),
+      
       Components.makeSelectionCell(title: "CIKernel", onTap: { [unowned self] in
         
         let menu = DemoCIKernelViewController()

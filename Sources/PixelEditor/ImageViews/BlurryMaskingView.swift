@@ -387,6 +387,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
         // WORKAROUND:
         // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
         scrollView.zoom(to: crop.cropExtent, animated: false)
+        
+        disableZooming: do {
+          let zoomedScale = scrollView.zoomScale
+          scrollView.minimumZoomScale = zoomedScale
+          scrollView.maximumZoomScale = zoomedScale
+        }
       }
     }
     

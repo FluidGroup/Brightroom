@@ -42,6 +42,7 @@ PODS:
     - Texture/Core
   - TextureSwiftSupport (3.3.0):
     - Texture/Core (~> 3)
+  - TinyConstraints (4.0.1)
 
 DEPENDENCIES:
   - GlossButtonNode
@@ -50,6 +51,7 @@ DEPENDENCIES:
   - SwiftGen
   - Texture
   - TextureSwiftSupport
+  - TinyConstraints
 
 SPEC REPOS:
   trunk:
@@ -61,6 +63,7 @@ SPEC REPOS:
     - SwiftGen
     - Texture
     - TextureSwiftSupport
+    - TinyConstraints
 
 EXTERNAL SOURCES:
   MosaiqueAssetsPicker:
@@ -81,7 +84,8 @@ SPEC CHECKSUMS:
   SwiftGen: 67860cc7c3cfc2ed25b9b74cfd55495fc89f9108
   Texture: 2f109e937850d94d1d07232041c9c7313ccddb81
   TextureSwiftSupport: f77fcb409983be5da7ef5b29566be0fcc0c440ed
+  TinyConstraints: 8dd91295e56797648c7bc335dd20e1d91ec4c192
 
-PODFILE CHECKSUM: 9e3af067736b992b26209e099b0b8eca7ddce955
+PODFILE CHECKSUM: 4c5359ca86377ffa96aefdd1c208f1db1204fa4c
 
 COCOAPODS: 1.10.1

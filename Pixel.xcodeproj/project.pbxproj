@@ -149,6 +149,8 @@
 		4BA41C92260CE817005E6FA7 /* IMG_5528.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEA260BB32600F77E9A /* IMG_5528.HEIC */; };
 		4BA41C93260CE817005E6FA7 /* IMG_5531.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* IMG_5531.HEIC */; };
 		4BA41C94260CE817005E6FA7 /* IMG_5533.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE9260BB32600F77E9A /* IMG_5533.HEIC */; };
+		4BA41C99260CF035005E6FA7 /* DemoMaskingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA41C98260CF035005E6FA7 /* DemoMaskingViewController.swift */; };
+		4BA41C9E260CF04D005E6FA7 /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA41C9D260CF04D005E6FA7 /* Utilities.swift */; };
 		4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */; };
 		4BA84F8425EE950900BAB430 /* CropView._CropScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */; };
 		4BA84F8825EE965400BAB430 /* CropView.CropInsideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA84F8725EE965400BAB430 /* CropView.CropInsideOverlay.swift */; };
@@ -390,6 +392,8 @@
 		4B9D457D216EE1AF003A240A /* DoodleControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoodleControlView.swift; sourceTree = "<group>"; };
 		4B9D457F216EE1BC003A240A /* ControlViewBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlViewBase.swift; sourceTree = "<group>"; };
 		4B9E8E5D2180B6990071DE91 /* FilterBrightness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterBrightness.swift; sourceTree = "<group>"; };
+		4BA41C98260CF035005E6FA7 /* DemoMaskingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMaskingViewController.swift; sourceTree = "<group>"; };
+		4BA41C9D260CF04D005E6FA7 /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		4BA84F7D25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._InteractiveCropGuideView.swift; sourceTree = "<group>"; };
 		4BA84F8325EE950900BAB430 /* CropView._CropScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView._CropScrollView.swift; sourceTree = "<group>"; };
 		4BA84F8725EE965400BAB430 /* CropView.CropInsideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.CropInsideOverlay.swift; sourceTree = "<group>"; };
@@ -551,6 +555,7 @@
 			isa = PBXGroup;
 			children = (
 				4B3075962605F27C00A1E7CB /* StackScrollNode.swift */,
+				4BA41C9D260CF04D005E6FA7 /* Utilities.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -638,6 +643,7 @@
 				4B8B910B260792BD009BF084 /* DemoCropMenuViewController.swift */,
 				4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */,
 				4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */,
+				4BA41C98260CF035005E6FA7 /* DemoMaskingViewController.swift */,
 				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
@@ -1377,6 +1383,8 @@
 				4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4B8B9114260792D9009BF084 /* StackScrollNodeViewController.swift in Sources */,
 				4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */,
+				4BA41C99260CF035005E6FA7 /* DemoMaskingViewController.swift in Sources */,
+				4BA41C9E260CF04D005E6FA7 /* Utilities.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
 				4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */,
 				4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */,
@@ -1908,8 +1916,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "git@github.com:VergeGroup/Verge.git";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.9.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
