@@ -289,14 +289,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
         editingStack.sinkState { [weak self] state in
           
           guard let self = self else { return }
-          
+                    
           state.ifChanged(\.isLoading) { isLoading in
-            self.updateLoadingOverlay(displays: isLoading)
+            self.updateLoadingState(displays: isLoading)
           }
                                         
-          if let state = state._beta_map(\.loadedState) {
+          if let loaded = state._beta_map(\.loadedState) {
             
-            state.ifChanged(\.editingSourceImage) { image in
+            loaded.ifChanged(\.editingSourceImage) { image in
               self.setImage(image)
             }
           } else if let state = state._beta_map(\.previewingState) {
@@ -305,7 +305,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
               self.setImage(image)
             }
             
+          } else {
+            
           }
+          
         }
         .store(in: &subscriptions)
       }
@@ -314,7 +317,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
   }
   
-  private func updateLoadingOverlay(displays: Bool) {
+  private func updateLoadingState(displays: Bool) {
     
     if displays, let factory = self.loadingOverlayFactory {
       

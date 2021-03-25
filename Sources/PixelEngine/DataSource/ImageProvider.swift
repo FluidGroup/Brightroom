@@ -197,21 +197,29 @@ public final class ImageProvider: Equatable, StoreComponentType {
    */
   public convenience init(
     previewRemoteURL: URL? = nil,
-    editableRemoteURL: URL
+    editableRemoteURL: URL,
+    editableImageSize: CGSize? = nil,
+    editableOrientation: CGImagePropertyOrientation? = nil
   ) {
     self.init(
       previewRemoteURLRequest: previewRemoteURL.map { URLRequest(url: $0) },
-      editableRemoteURLRequest: URLRequest(url: editableRemoteURL)
+      editableRemoteURLRequest: URLRequest(url: editableRemoteURL),
+      editableImageSize: editableImageSize,
+      editableOrientation: editableOrientation
     )
   }
   
   public init(
     previewRemoteURLRequest: URLRequest? = nil,
-    editableRemoteURLRequest: URLRequest
+    editableRemoteURLRequest: URLRequest,
+    editableImageSize: CGSize? = nil,
+    editableOrientation: CGImagePropertyOrientation? = nil
   ) {
     
     store = .init(
       initialState: .init(
+        imageSize: editableImageSize,
+        orientation: editableOrientation,
         previewImage: nil,
         editableImage: nil
       )
