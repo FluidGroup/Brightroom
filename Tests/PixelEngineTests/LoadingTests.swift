@@ -17,18 +17,19 @@ final class LoadingTests: XCTestCase {
   
   func testOrientation() throws {
     
-    func expect(image: ImageProvider, orientation: CGImagePropertyOrientation) {
+    func fetch(image: ImageProvider) -> ImageProvider.State.ImageMetadata {
                
       image.start()
       
       let exp = expectation(description: "")
+      var result: ImageProvider.State.ImageMetadata?
       
       image.sinkState { (state) in
         
         state.ifChanged(\.metadata) { metadata in
           
           if let metadata = metadata {
-            XCTAssertEqual(metadata.orientation, orientation)
+            result = metadata
             exp.fulfill()
           }
           
@@ -38,23 +39,26 @@ final class LoadingTests: XCTestCase {
       
       wait(for: [exp], timeout: 10)
       withExtendedLifetime(subs) {}
+      
+      return result!
     }
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.right.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5529", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5529", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.down.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5530", ofType: "HEIC")), orientation: .up)
-      
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5531", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5530", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.left.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5532", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5531", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.up.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5533", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5532", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.leftMirrored.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5534", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5533", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.downMirrored.rawValue)
     
-    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5535", ofType: "HEIC")), orientation: .up)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5534", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.rightMirrored.rawValue)
+    
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5535", ofType: "HEIC"))).orientation.rawValue, CGImagePropertyOrientation.upMirrored.rawValue)
+    
   }
   
   func testBasic() throws {
