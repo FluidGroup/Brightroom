@@ -264,6 +264,11 @@ public final class PixelEditViewController: UIViewController {
       maskingView.setBrushSize($0)
     }
     
+    state.ifChanged(\.proposedCrop) { value in
+      guard let value = value else { return }
+      cropView.setCrop(value)
+    }
+    
     state.ifChanged(\.mode) { mode in
       switch mode {
       case .crop:

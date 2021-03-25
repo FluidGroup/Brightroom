@@ -150,20 +150,16 @@ public final class ImageRenderer {
       let croppedImage = autoreleasepool { () -> CGImage in
         
         EngineLog.debug("[Renderer] Make cropped image \(crop)")
-          
-        let integral = crop.cropExtent.integral
-        
-        assert(integral.origin.x >= 0)
-        assert(integral.origin.y >= 0)
-        
-        let targetSize = integral.size
+            
+        let targetRect = crop.cropExtent
+        let targetSize = crop.cropExtent.size
         
         let image = UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
             let cgContext = c.cgContext
             
             cgContext.detached {
-              cgContext.translateBy(x: -integral.minX, y: -integral.minY)
+              cgContext.translateBy(x: -targetRect.minX, y: -targetRect.minY)
               cgContext.draw(fullSizeImage, in: .init(origin: .zero, size: fullSizeImage.size))
             }
           }

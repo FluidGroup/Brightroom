@@ -90,11 +90,9 @@ public struct EditingCrop: Equatable {
   
   public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0, scaleToRestore: CGFloat = 1) {
     self.imageSize = imageSize
-    self.cropExtent = cropRect
+    self.cropExtent = Self.normalizeRect(rect: cropRect, in: imageSize)
     self.rotation = rotation
     self.scaleToRestore = scaleToRestore
-    
-    normalizeRect()
   }
   
   public func makeInitial() -> Self {
@@ -148,24 +146,35 @@ public struct EditingCrop: Equatable {
     
     var modified = self
     
-    modified.cropExtent.origin.x *= scale
-    modified.cropExtent.origin.y *= scale
-    modified.cropExtent.size.width *= scale
-    modified.cropExtent.size.height *= scale
+    var cropExtent = modified.cropExtent
+    var imageSize = modified.imageSize
+    
+    cropExtent.origin.x *= scale
+    cropExtent.origin.y *= scale
+    cropExtent.size.width *= scale
+    cropExtent.size.height *= scale
         
-    modified.imageSize.width *= scale
-    modified.imageSize.height *= scale
-       
+    imageSize.width *= scale
+    imageSize.height *= scale
+    imageSize.width.round(.down)
+    imageSize.height.round(.down)
+    
+    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize)
+    modified.imageSize = imageSize
+           
     return modified
   }
   
   public mutating func setCropExtentNormalizing(_ cropExtent: CGRect) {
-    self.cropExtent = cropExtent
-    normalizeRect()
+    self.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize)
   }
   
-  private mutating func normalizeRect() {
-    var fixed = cropExtent.integral
+  private static func normalizeRect(rect: CGRect, in imageSize: CGSize) -> CGRect {
+    var fixed = rect
+    fixed.origin.x.round(.down)
+    fixed.origin.y.round(.down)
+    fixed.size.width.round(.down)
+    fixed.size.height.round(.down)
     
     if fixed.origin.x < 0 {
       fixed.origin.x = 0
@@ -190,7 +199,7 @@ public struct EditingCrop: Equatable {
     assert(fixed.width <= imageSize.width)
     assert(fixed.height <= imageSize.height)
     
-    self.cropExtent = fixed
+    return fixed
   }
       
   /*
