@@ -44,17 +44,6 @@ open class EditingStack: Equatable, StoreComponentType {
   public struct State: Equatable {
     public struct Loading: Equatable {}
 
-    public struct Previewing: Equatable {
-      public let previewImageProvider: ImageSource
-      public let imageSize: CGSize?
-      public let orientation: CGImagePropertyOrientation
-      /**
-       An image for placeholder, not editable.
-       Uses in waiting for loading an editable image.
-       */
-      public let placeholderImage: CIImage
-    }
-
     public struct Loaded: Equatable {
       init(
         editableImageProvider: ImageSource,
@@ -158,7 +147,6 @@ open class EditingStack: Equatable, StoreComponentType {
     }
 
     public fileprivate(set) var loadingState: Loading = .init()
-    public fileprivate(set) var previewingState: Previewing?
     public fileprivate(set) var loadedState: Loaded?
 
     init() {
@@ -258,16 +246,7 @@ open class EditingStack: Equatable, StoreComponentType {
           
           self.commit { (s: inout InoutRef<State>) in
 
-            switch image {
-            case let .preview(image, imageSize, orientation):
-
-              s.previewingState = .init(
-                previewImageProvider: image,
-                imageSize: imageSize,
-                orientation: orientation,
-                placeholderImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 1280)).oriented(orientation)
-              )
-
+            switch image {       
             case let .editable(image, metadata):
 
               let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize)).oriented(metadata.orientation)

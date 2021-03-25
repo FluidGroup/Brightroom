@@ -303,22 +303,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
               self.blurryImageView.display(image: BlurredMask.blur(image: image))
             }
             
-          } else if let state = state._beta_map(\.previewingState) {
-            
-            state.ifChanged(\.placeholderImage) { (image) in
-              self.backdropImageView.display(image: image)
-              self.blurryImageView.display(image: BlurredMask.blur(image: image))
-            }
-            
-          }
-          
-          if let state = state._beta_map(\.loadedState) {
-            
             state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
               self.canvasView.setResolvedDrawnPaths(paths)
             }
-                        
+            
           }
+       
         }
         .store(in: &subscriptions)
       }

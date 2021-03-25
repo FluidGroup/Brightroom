@@ -62,7 +62,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     }
     
     public enum Image: Equatable {
-      case preview(imageSource: ImageSource, imageSize: CGSize?, orientation: CGImagePropertyOrientation)
+//      case preview(imageSource: ImageSource, imageSize: CGSize?, orientation: CGImagePropertyOrientation)
       case editable(imageSource: ImageSource, metadata: ImageMetadata)
     }
         
@@ -78,14 +78,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
         return .editable(imageSource: editable, metadata: .init(orientation: orientation, imageSize: imageSize))
       }
       
-      if let preview = previewImage, let orientation = orientation {
-        return .preview(imageSource: preview, imageSize: imageSize, orientation: orientation)
-      }
+//      if let preview = previewImage, let orientation = orientation {
+//        return .preview(imageSource: preview, imageSize: imageSize, orientation: orientation)
+//      }
       
       return nil
     }
     
-    fileprivate var previewImage: ImageSource?
+//    fileprivate var previewImage: ImageSource?
     fileprivate var editableImage: ImageSource?
     
     public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
@@ -121,7 +121,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        previewImage: nil,
         editableImage: .init(cgImageSource: imageSource)
       )
     )
@@ -140,7 +139,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        previewImage: nil,
         editableImage: .init(image: uiImage)
       )
     )
@@ -180,7 +178,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
         
     store = .init(
       initialState: .init(
-        previewImage: nil,
         editableImage: .init(cgImageSource: imageSource)
       )
     )
@@ -196,13 +193,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
    Creates an instance
    */
   public convenience init(
-    previewRemoteURL: URL? = nil,
     editableRemoteURL: URL,
     editableImageSize: CGSize? = nil,
     editableOrientation: CGImagePropertyOrientation? = nil
   ) {
     self.init(
-      previewRemoteURLRequest: previewRemoteURL.map { URLRequest(url: $0) },
       editableRemoteURLRequest: URLRequest(url: editableRemoteURL),
       editableImageSize: editableImageSize,
       editableOrientation: editableOrientation
@@ -210,7 +205,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
   }
   
   public init(
-    previewRemoteURLRequest: URLRequest? = nil,
     editableRemoteURLRequest: URLRequest,
     editableImageSize: CGSize? = nil,
     editableOrientation: CGImagePropertyOrientation? = nil
@@ -220,48 +214,13 @@ public final class ImageProvider: Equatable, StoreComponentType {
       initialState: .init(
         imageSize: editableImageSize,
         orientation: editableOrientation,
-        previewImage: nil,
         editableImage: nil
       )
     )
     
     pendingAction = { `self` in
       
-      var previewTask: URLSessionDownloadTask?
-      
-      if let previewURLRequest = previewRemoteURLRequest {
-        previewTask = URLSession.shared.downloadTask(with: previewURLRequest) { url, response, error in
-          
-          if let error = error {
-            self.store.commit {
-              $0.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
-            }
-          }
-          
-          self.commit { state in
-            if let url = url {
-              
-              guard let provider = CGDataProvider(url: url as CFURL) else {
-                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
-                return
-              }
-              
-              guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
-                state.loadingNonFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
-                return
-              }
-              
-              state.orientation = ImageTool.readOrientation(from: imageSource) ?? .up
-              state.previewImage = .init(cgImageSource: imageSource)
-            }
-          }
-          
-        }
-      }
-      
       let editableTask = URLSession.shared.downloadTask(with: editableRemoteURLRequest) { url, response, error in
-        
-        previewTask?.cancel()
         
         if let error = error {
           self.store.commit {
@@ -293,7 +252,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
         }
       }
       
-      previewTask?.resume()
       editableTask.resume()
     }
   }
@@ -305,63 +263,24 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        previewImage: nil,
         editableImage: nil
       )
     )
     
     pendingAction = { `self` in
       
-      let previewRequestOptions = PHImageRequestOptions()
-      previewRequestOptions.deliveryMode = .highQualityFormat
-      previewRequestOptions.isNetworkAccessAllowed = true
-      previewRequestOptions.version = .current
-      previewRequestOptions.resizeMode = .fast
-      
       let finalImageRequestOptions = PHImageRequestOptions()
       finalImageRequestOptions.deliveryMode = .highQualityFormat
       finalImageRequestOptions.isNetworkAccessAllowed = true
       finalImageRequestOptions.version = .current
       finalImageRequestOptions.resizeMode = .none
-            
-      let previewRequest = PHImageManager.default().requestImage(
-        for: asset,
-        targetSize: CGSize(width: 360, height: 360),
-        contentMode: .aspectFit,
-        options: previewRequestOptions
-      ) { [weak self] image, info in
-        
-        // FIXME: Avoid loading image, get a url instead.
-        
-        guard let self = self else { return }
-        
-        self.commit { state in
-          
-          if let error = info?[PHImageErrorKey] as? Error {
-            state.loadingNonFatalErrors.append(.failedToDownloadPreviewImage(underlyingError: error))
-            return
-          }
-          
-          guard let image = image else { return }
-                  
-          state.wrapped.resolve(with: .init(
-            orientation: .init(image.imageOrientation),
-            imageSize: .init(width: asset.pixelWidth, height: asset.pixelWidth)
-          ))
-          state.previewImage = .init(image: image)
-          
-        }
-        
-      }
-      
+
       PHImageManager.default().requestImage(
         for: asset,
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
         options: finalImageRequestOptions
       ) { [weak self] image, info in
-        
-        PHImageManager.default().cancelImageRequest(previewRequest)
         
         // FIXME: Avoid loading image, get a url instead.
         

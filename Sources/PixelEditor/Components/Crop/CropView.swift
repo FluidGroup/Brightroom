@@ -34,6 +34,9 @@ import PixelEngine
  The cropping adjustument is avaibleble from 2 ways:
  - Scrolling image
  - Panning guide
+ 
+ - TODO:
+   - Implicit animations occurs in first time load with remote image.
  */
 public final class CropView: UIView, UIScrollViewDelegate {
   public struct State: Equatable {
@@ -56,7 +59,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
      */
     var preferredAspectRatio: PixelAspectRatio?
   }
-
+  
   /**
    A view that covers the area out of cropping extent.
    */
@@ -177,26 +180,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     .store(in: &subscriptions)
     #endif
-    
-    editingStack.sinkState { [weak self] (state: Changes<EditingStack.State>) in
-      
-      guard let self = self else { return }
-      
-      if let state = state._beta_map(\.loadedState) {
-        
-        state.ifChanged(\.currentEdit.crop) { cropRect in
-          
-          /**
-           To avoid running pending layout operations from User Initiated actions.
-           */
-          if cropRect.cropExtent != self.store.state.proposedCrop?.cropExtent {
-            self.setCrop(cropRect)
-          }
-        }
-      }
-      
-    }
-    .store(in: &subscriptions)
   
     defaultAppearance: do {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
@@ -265,7 +248,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
             self.updateScrollContainerView(
               by: crop,
               preferredAspectRatio: state.preferredAspectRatio,
-              animated: state.hasLoaded,
+              animated: state.previous?.proposedCrop != nil /* whether first time load */,
               animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
             )
             
@@ -289,26 +272,29 @@ public final class CropView: UIView, UIScrollViewDelegate {
         editingStack.sinkState { [weak self] state in
           
           guard let self = self else { return }
-                    
-          state.ifChanged(\.isLoading) { isLoading in
-            self.updateLoadingState(displays: isLoading)
-          }
-                                        
+                                             
           if let loaded = state._beta_map(\.loadedState) {
             
             loaded.ifChanged(\.editingSourceImage) { image in
               self.setImage(image)
             }
-          } else if let state = state._beta_map(\.previewingState) {
-                        
-            state.ifChanged(\.placeholderImage) { (image) in
-              self.setImage(image)
-            }
             
-          } else {
+            loaded.ifChanged(\.currentEdit.crop) { cropRect in
+              
+              /**
+               To avoid running pending layout operations from User Initiated actions.
+               */
+              if cropRect.cropExtent != self.store.state.proposedCrop?.cropExtent {
+                self.setCrop(cropRect)
+              }
+            }
             
           }
           
+          state.ifChanged(\.isLoading) { isLoading in
+            self.updateLoadingState(displays: isLoading)
+          }
+                              
         }
         .store(in: &subscriptions)
       }
@@ -321,10 +307,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     if displays, let factory = self.loadingOverlayFactory {
       
+      guideView.isHidden = true
+      scrollView.isHidden = true
+      
       let loadingOverlay = factory()
       self.currentLoadingOverlay = loadingOverlay
       self.addSubview(loadingOverlay)
-      AutoLayoutTools.setEdge(loadingOverlay, self.guideView)
+      AutoLayoutTools.setEdge(loadingOverlay, self)
       
       loadingOverlay.alpha = 0
       UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
@@ -333,6 +322,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
       .startAnimation()
       
     } else {
+      
+      guideView.isHidden = false
+      scrollView.isHidden = false
       
       if let view = currentLoadingOverlay {
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
@@ -485,22 +477,15 @@ extension CropView {
       outOfBoundsOverlay.center = center
     }
     
+    /// to update masking with cropOutsideOverlay
+    guideView.setNeedsLayout()
+    
     store.commit {
       if $0.frame != frame {
         $0.frame = frame
       }
     }
        
-  }
-
-  override public func didMoveToSuperview() {
-    super.didMoveToSuperview()
-
-    DispatchQueue.main.async { [self] in
-      store.commit {
-        $0.hasLoaded = superview != nil
-      }
-    }
   }
 
   private func updateScrollContainerView(
