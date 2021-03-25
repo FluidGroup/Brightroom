@@ -43,7 +43,18 @@ final class LoadingTests: XCTestCase {
     expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")), orientation: .up)
     
     expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5529", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5530", ofType: "HEIC")), orientation: .up)
       
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5531", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5532", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5533", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5534", ofType: "HEIC")), orientation: .up)
+    
+    expect(image: try ImageProvider(fileURL: _url(forResource: "IMG_5535", ofType: "HEIC")), orientation: .up)
   }
   
   func testBasic() throws {
