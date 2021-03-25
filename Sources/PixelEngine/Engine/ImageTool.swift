@@ -19,43 +19,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-import CoreImage
 import AVFoundation
+import CoreImage
+import UIKit
 
 enum ImageTool {
-  
   static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State.ImageMetadata? {
-    
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
       return nil
     }
-    
+
     guard
       let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
       let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
     else {
       return nil
     }
+
+    let orientation: CGImagePropertyOrientation = (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
+      CGImagePropertyOrientation(rawValue: $0)
+    } ?? .up
     
-    let orientation = (properties[kCGImagePropertyTIFFOrientation] as? CGImagePropertyOrientation) ?? .up
     let size = CGSize(width: width, height: height)
-    
+
     return .init(orientation: orientation, imageSize: size)
   }
-  
+
   /**
    Returns a pixel size of image.
-   
+
    https://oleb.net/blog/2011/09/accessing-image-properties-without-loading-the-image-into-memory/
    */
   static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
       return nil
     }
-    
+
     guard
       let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
       let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
@@ -64,28 +65,27 @@ enum ImageTool {
     }
     return CGSize(width: width, height: height)
   }
-  
+
   static func readOrientation(from imageSource: CGImageSource) -> CGImagePropertyOrientation? {
-    
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString : Any] else {
+
+    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
       return nil
     }
-    
+
     guard
       let orientation = properties[kCGImagePropertyTIFFOrientation] as? CGImagePropertyOrientation
     else {
       return nil
     }
-    
+
     return orientation
   }
-  
+
   static func loadOriginalCGImage(from imageSource: CGImageSource) -> CGImage? {
     CGImageSourceCreateImageAtIndex(imageSource, 0, [:] as CFDictionary)
   }
-  
+
   static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat) -> CGImage? {
     let scaledImage = CGImageSourceCreateThumbnailAtIndex(
       imageSource, 0, [
@@ -94,7 +94,7 @@ enum ImageTool {
         kCGImageSourceCreateThumbnailWithTransform: true,
       ] as CFDictionary
     )
-    
+
 //    #if DEBUG
 //    let size = readImageSize(from: imageProvider)!
 //    let scaled = size.scaled(maxPixelSize: maxPixelSize)
@@ -103,44 +103,42 @@ enum ImageTool {
 //
     return scaledImage
   }
-  
+
   static func writeImageToTmpDirectory(image: UIImage) -> URL? {
     let directory = NSTemporaryDirectory()
     let fileName = UUID().uuidString
-    let path =  directory + "/" + fileName
+    let path = directory + "/" + fileName
     let destination = URL(fileURLWithPath: path)
-    
+
     guard let data = image.pngData() else {
       return nil
     }
-    
+
     do {
       try data.write(to: destination, options: [])
     } catch {
       return nil
     }
-    
+
     return destination
   }
-  
+
   static func makeResizedCIImage(provider: CGDataProvider, targetCGSize: CGSize) -> CIImage? {
-        
     let imageSource = CGImageSourceCreateWithDataProvider(provider, [:] as CFDictionary)!
-    
-    let options: [AnyHashable : Any] = [
+
+    let options: [AnyHashable: Any] = [
       kCGImageSourceThumbnailMaxPixelSize: max(targetCGSize.width, targetCGSize.height),
       kCGImageSourceShouldCacheImmediately: true,
       kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceCreateThumbnailWithTransform: true
+      kCGImageSourceCreateThumbnailWithTransform: true,
     ]
-    
+
     let scaledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary).flatMap { CIImage(cgImage: $0) }
-    
+
     return scaledImage
   }
 
   static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
-
     var targetSize = pixelSize
     targetSize.height.round(.down)
     targetSize.width.round(.down)
@@ -157,38 +155,39 @@ enum ImageTool {
         } else {
           format.prefersExtendedRange = false
         }
-        
+
         let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
-            
+
             autoreleasepool {
               EngineLog.debug("[Resizing] Use softwareRenderer => \(sourceImage.cgImage != nil)")
-              
+
               let rect = CGRect(origin: .zero, size: targetSize)
               c.cgContext.translateBy(x: 0, y: targetSize.height)
               c.cgContext.scaleBy(x: 1, y: -1)
-              let context = CIContext(cgContext: c.cgContext, options: [.useSoftwareRenderer : sourceImage.cgImage != nil])
+              let context = CIContext(
+                cgContext: c.cgContext,
+                options: [.useSoftwareRenderer: sourceImage.cgImage != nil]
+              )
               context.draw(sourceImage, in: rect, from: sourceImage.extent)
-              
             }
           }
-                
+
         let resizedImage = CIImage(image: uiImage)!
           .insertingIntermediate(cache: true)
-      
+
         return resizedImage
       }
   }
-  
+
   static func makeResizedCGImage(maxPixelSize: CGFloat, from sourceImage: CGImage) -> CGImage? {
-    
     let imageSize = CGSize(
       width: sourceImage.width,
       height: sourceImage.height
     )
-    
+
     let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
-    
+
     let format: UIGraphicsImageRendererFormat
     format = UIGraphicsImageRendererFormat.preferred()
     format.scale = 1
@@ -198,7 +197,7 @@ enum ImageTool {
     } else {
       format.prefersExtendedRange = false
     }
-    
+
     let cgImage = UIGraphicsImageRenderer(size: targetSize, format: format)
       .image { c in
         c.cgContext.translateBy(x: 0, y: targetSize.height)
@@ -206,8 +205,7 @@ enum ImageTool {
         c.cgContext.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
       }
       .cgImage
-    
-    return cgImage
 
+    return cgImage
   }
 }
