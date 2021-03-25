@@ -249,9 +249,12 @@ open class EditingStack: Equatable, StoreComponentType {
             switch image {       
             case let .editable(image, metadata):
 
-              let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize)).oriented(metadata.orientation)
+              let cgImage = image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize)
+              let editingSourceImage = CIImage(cgImage: cgImage).oriented(metadata.orientation)
              
               let crop = self.adjustCropExtent(image: editingSourceImage, imageSize: metadata.imageSize)
+              
+              assert((editingSourceImage.extent.width > editingSourceImage.extent.height) == (metadata.imageSize.width > metadata.imageSize.height))
                             
               let initialEdit = Edit(crop: crop)
 

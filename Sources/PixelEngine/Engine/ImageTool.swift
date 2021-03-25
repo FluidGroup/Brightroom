@@ -44,8 +44,8 @@ enum ImageTool {
     } ?? .up
     
     let size = CGSize(width: width, height: height)
-
-    return .init(orientation: orientation, imageSize: size)
+    
+    return .init(orientation: orientation, imageSize: size.applying(cgOrientation: orientation))
   }
 
   /**
@@ -93,7 +93,7 @@ enum ImageTool {
       imageSource, 0, [
         kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         kCGImageSourceCreateThumbnailFromImageAlways: true,
-        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceCreateThumbnailWithTransform: false,
       ] as CFDictionary
     )
 

@@ -1,6 +1,19 @@
 import CoreGraphics
 import UIKit
 
+extension CGSize {
+  
+  func applying(cgOrientation: CGImagePropertyOrientation) -> CGSize {
+    switch cgOrientation {
+    case .up, .upMirrored, .down, .downMirrored:
+      return self
+    case .left, .leftMirrored, .right, .rightMirrored:
+      return .init(width: height, height: width)
+    }
+  }
+  
+}
+
 extension CGImagePropertyOrientation {
   init(_ uiOrientation: UIImage.Orientation) {
     switch uiOrientation {
@@ -29,8 +42,6 @@ extension UIImage.Orientation {
     case .leftMirrored: self = .leftMirrored
     case .right: self = .right
     case .rightMirrored: self = .rightMirrored
-    @unknown default:
-      fatalError()
     }
   }
 }

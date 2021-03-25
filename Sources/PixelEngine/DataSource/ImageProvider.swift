@@ -58,6 +58,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     public struct ImageMetadata: Equatable {
       public var orientation: CGImagePropertyOrientation
+      
+      /// A size that applied orientation
       public var imageSize: CGSize
     }
     

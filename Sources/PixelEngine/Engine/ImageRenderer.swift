@@ -62,6 +62,11 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
+    
+    /**
+     TODO: Restores image-orientation
+     */
+    
     let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
     
     assert(

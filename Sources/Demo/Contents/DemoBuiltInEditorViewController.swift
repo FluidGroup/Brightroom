@@ -25,6 +25,14 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       
       resultCell,
       
+      Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in
+        
+        __pickPhoto { (image) in
+          self._present(.init(image: image))
+        }
+        
+      }),
+      
       Components.makeSelectionCell(title: "Example", onTap: { [unowned self] in
         _present(.init(image: Asset.leica.image))
       }),
@@ -33,13 +41,10 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
         _present(stack)
       }),
       
-      Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in
-        
-        __pickPhoto { (image) in
-          self._present(.init(image: image))
-        }
-        
+      Components.makeSelectionCell(title: "Oriented image", onTap: { [unowned self] in
+        _present(try! .init(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")))
       }),
+      
       
     ])
   }
@@ -79,3 +84,11 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
   }
 }
 
+func _url(forResource: String, ofType: String) -> URL {
+  Bundle.main.path(
+    forResource: forResource,
+    ofType: ofType
+  ).map {
+    URL(fileURLWithPath: $0)
+  }!
+}
