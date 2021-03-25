@@ -55,6 +55,31 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Super large rect from file URL", onTap: { [unowned self] in
         _presentCropViewConroller(stackForNasa)
       }),
+      
+      Components.makeSelectionCell(title: "Remote image (no retains stack)", onTap: { [unowned self] in
+        
+        let stack = EditingStack(
+          imageProvider: .init(
+            editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
+          ),
+          previewMaxPixelSize: 1000
+        )
+        
+        _presentCropViewConroller(stack)
+      }),
+      
+      Components.makeSelectionCell(title: "Remote image with preview (no retains stack)", onTap: { [unowned self] in
+        
+        let stack = EditingStack(
+          imageProvider: .init(
+            previewRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
+            editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
+          ),
+          previewMaxPixelSize: 1000
+        )
+        
+        _presentCropViewConroller(stack)
+      }),
 
       Components.makeSelectionCell(
         title: "Square only",

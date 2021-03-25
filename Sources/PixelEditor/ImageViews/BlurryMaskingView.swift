@@ -298,7 +298,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           
           if let state = state._beta_map(\.loadedState) {
             
-            state.ifChanged(\.editingSourceImage) { image in
+            state.ifChanged(\.editingPreviewImage) { image in
               self.backdropImageView.display(image: image)
               self.blurryImageView.display(image: BlurredMask.blur(image: image))
             }
@@ -430,7 +430,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
     }
     
-    //    maskLayer.frame = blurryImageView.bounds
   }
   
   // MARK: UIScrollViewDelegate

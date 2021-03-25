@@ -62,24 +62,24 @@ public final class ImageProvider: Equatable, StoreComponentType {
     }
     
     public enum Image: Equatable {
-      case preview(ImageSource, ImageMetadata)
-      case editable(ImageSource, ImageMetadata)
+      case preview(imageSource: ImageSource, imageSize: CGSize?, orientation: CGImagePropertyOrientation)
+      case editable(imageSource: ImageSource, metadata: ImageMetadata)
     }
-    
-    public var metadata: ImageMetadata?
-    
+        
+    /**
+     Editable image's size
+     */
+    public var imageSize: CGSize?
+    public var orientation: CGImagePropertyOrientation?
+        
     public var loadedImage: Image? {
-      
-      guard let metadata = metadata else {
-        return nil
+          
+      if let editable = editableImage, let imageSize = imageSize, let orientation = orientation {
+        return .editable(imageSource: editable, metadata: .init(orientation: orientation, imageSize: imageSize))
       }
       
-      if let editable = editableImage {
-        return .editable(editable, metadata)
-      }
-      
-      if let preview = previewImage {
-        return .preview(preview, metadata)
+      if let preview = previewImage, let orientation = orientation {
+        return .preview(imageSource: preview, imageSize: imageSize, orientation: orientation)
       }
       
       return nil
@@ -91,7 +91,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
     public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
     public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
     
- 
+    mutating func resolve(with metadata: ImageMetadata) {
+      imageSize = metadata.imageSize
+      orientation = metadata.orientation
+    }
+     
   }
   
   public let store: DefaultStore
@@ -117,11 +121,15 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        metadata: metadata,
         previewImage: nil,
         editableImage: .init(cgImageSource: imageSource)
       )
     )
+    
+    store.commit {
+      $0.wrapped.resolve(with: metadata)
+    }
+    
     pendingAction = { _ in }
   }
   
@@ -132,11 +140,15 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        metadata: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)),
         previewImage: nil,
         editableImage: .init(image: uiImage)
       )
     )
+    
+    store.commit {
+      $0.wrapped.resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
+    }
+    
     pendingAction = { _ in }
     
   }
@@ -168,11 +180,15 @@ public final class ImageProvider: Equatable, StoreComponentType {
         
     store = .init(
       initialState: .init(
-        metadata: metadata,
         previewImage: nil,
         editableImage: .init(cgImageSource: imageSource)
       )
     )
+    
+    store.commit {
+      $0.wrapped.resolve(with: metadata)
+    }
+    
     pendingAction = { _ in }
   }
   
@@ -181,25 +197,21 @@ public final class ImageProvider: Equatable, StoreComponentType {
    */
   public convenience init(
     previewRemoteURL: URL? = nil,
-    editableRemoteURL: URL,
-    imageSize: CGSize
+    editableRemoteURL: URL
   ) {
     self.init(
       previewRemoteURLRequest: previewRemoteURL.map { URLRequest(url: $0) },
-      editableRemoteURLRequest: URLRequest(url: editableRemoteURL),
-      imageSize: imageSize
+      editableRemoteURLRequest: URLRequest(url: editableRemoteURL)
     )
   }
   
   public init(
     previewRemoteURLRequest: URLRequest? = nil,
-    editableRemoteURLRequest: URLRequest,
-    imageOrientation: CGImagePropertyOrientation = .up,
-    imageSize: CGSize
+    editableRemoteURLRequest: URLRequest
   ) {
+    
     store = .init(
       initialState: .init(
-        metadata: .init(orientation: imageOrientation, imageSize: imageSize),
         previewImage: nil,
         editableImage: nil
       )
@@ -231,6 +243,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
                 return
               }
               
+              state.orientation = ImageTool.readOrientation(from: imageSource) ?? .up
               state.previewImage = .init(cgImageSource: imageSource)
             }
           }
@@ -261,6 +274,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
               return
             }
             
+            guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
+              state.loadingNonFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
+              return
+            }
+        
+            state.wrapped.resolve(with: metadata)
             state.editableImage = .init(cgImageSource: imageSource)
           }
         }
@@ -278,7 +297,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     store = .init(
       initialState: .init(
-        metadata: nil,
         previewImage: nil,
         editableImage: nil
       )
@@ -318,10 +336,10 @@ public final class ImageProvider: Equatable, StoreComponentType {
           
           guard let image = image else { return }
                   
-          state.metadata = .init(
+          state.wrapped.resolve(with: .init(
             orientation: .init(image.imageOrientation),
             imageSize: .init(width: asset.pixelWidth, height: asset.pixelWidth)
-          )
+          ))
           state.previewImage = .init(image: image)
           
         }
@@ -350,14 +368,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
           
           guard let image = image else { return }
           
-          if state.metadata == nil {
-            state.metadata = .init(
-              orientation: .init(image.imageOrientation),
-              imageSize: .init(width: asset.pixelWidth, height: asset.pixelWidth)
-            )
-          }
-          
-          state.previewImage = .init(image: image)
+          state.wrapped.resolve(with: .init(
+            orientation: .init(image.imageOrientation),
+            imageSize: .init(width: asset.pixelWidth, height: asset.pixelWidth)
+          ))
+          state.editableImage = .init(image: image)
           
         }
       }

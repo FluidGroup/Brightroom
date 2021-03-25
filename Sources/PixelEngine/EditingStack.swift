@@ -46,7 +46,8 @@ open class EditingStack: Equatable, StoreComponentType {
 
     public struct Previewing: Equatable {
       public let previewImageProvider: ImageSource
-      public let metadata: ImageProvider.State.ImageMetadata
+      public let imageSize: CGSize?
+      public let orientation: CGImagePropertyOrientation
       /**
        An image for placeholder, not editable.
        Uses in waiting for loading an editable image.
@@ -258,17 +259,18 @@ open class EditingStack: Equatable, StoreComponentType {
           self.commit { (s: inout InoutRef<State>) in
 
             switch image {
-            case let .preview(image, metadata):
+            case let .preview(image, imageSize, orientation):
 
               s.previewingState = .init(
                 previewImageProvider: image,
-                metadata: metadata,
-                placeholderImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 1280)).oriented(metadata.orientation)
+                imageSize: imageSize,
+                orientation: orientation,
+                placeholderImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 1280)).oriented(orientation)
               )
 
             case let .editable(image, metadata):
 
-              let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize))
+              let editingSourceImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize)).oriented(metadata.orientation)
              
               let crop = self.adjustCropExtent(image: editingSourceImage, imageSize: metadata.imageSize)
                             
@@ -510,7 +512,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
     let imageSource = loaded.editableImageProvider
 
-    let renderer = ImageRenderer(source: imageSource)
+    let renderer = ImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
 
     // TODO: Clean up ImageRenderer.Edit
 
