@@ -66,11 +66,7 @@ public struct EditingCrop: Equatable {
   public var imageSize: CGSize
   
   /// The rectangle that specifies the extent of the cropping.
-  public private(set) var cropExtent: CGRect {
-    didSet {
-      EngineLog.debug("DidChange CropExtent \(cropExtent)")
-    }
-  }
+  public private(set) var cropExtent: CGRect
   
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
@@ -198,6 +194,8 @@ public struct EditingCrop: Equatable {
     assert(fixed.origin.y >= 0)
     assert(fixed.width <= imageSize.width)
     assert(fixed.height <= imageSize.height)
+        
+    EngineLog.debug("Normalize CropExtent: \(fixed) from \(rect) in ImageSize:\(imageSize)")
     
     return fixed
   }

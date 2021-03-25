@@ -117,8 +117,12 @@ open class EditingStack: Equatable, StoreComponentType {
         guard currentEdit == initialEditing else {
           return true
         }
+        
+        guard let latestHistory = history.last else {
+          return false
+        }
 
-        guard history.last == currentEdit else {
+        guard latestHistory == currentEdit else {
           return true
         }
 
@@ -382,7 +386,7 @@ open class EditingStack: Equatable, StoreComponentType {
       ))
       .insertingIntermediate(cache: true)
 
-    EngineLog.debug("[Preview-Crop] \(crop.cropExtent) -> \(translated.extent)")
+//    EngineLog.debug("[Preview-Crop] \(crop.cropExtent) -> \(translated.extent)")
 
     return translated
   }

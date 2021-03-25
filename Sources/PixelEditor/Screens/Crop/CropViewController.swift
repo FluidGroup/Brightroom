@@ -255,18 +255,7 @@ public final class CropViewController: UIViewController {
                 
     }
     .store(in: &subscriptions)
-    
-    cropView.store.sinkState { [weak self] (state) in
-      
-      guard let self = self else { return }
-      
-      state.ifChanged(\.preferredAspectRatio) { ratio in
-        self.aspectRatioControl?.setSelected(ratio)
-      }
-      
-    }
-    .store(in: &subscriptions)
-    
+           
     store.sinkState { [weak self] state in
       guard let self = self else { return }
       self.update(with: state)
@@ -314,6 +303,20 @@ public final class CropViewController: UIViewController {
         $0.bottomAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.bottomAnchor),
       ])
     }
+    
+    /// refresh current state
+    update(with: store.state)
+    
+    cropView.store.sinkState { [weak self] (state) in
+      
+      guard let self = self else { return }
+      
+      state.ifChanged(\.preferredAspectRatio) { ratio in
+        self.aspectRatioControl?.setSelected(ratio)
+      }
+      
+    }
+    .store(in: &subscriptions)
         
   }
   
@@ -379,11 +382,33 @@ public final class CropViewController: UIViewController {
 private final class AspectRatioControl: PixelEditorCodeBasedView {
   private struct State: Equatable {
     enum Direction {
+      /**
+       +----+
+       |    |
+       |    |
+       |    |
+       |    |
+       |    |
+       |    |
+       +----+
+       */
       case vertical
+      /**
+       +---------------+
+       |               |
+       |               |
+       +---------------+
+       */
       case horizontal
     }
     
-    let rectangleApectRatios: [PixelAspectRatio] = [
+    /**
+     +---------------+
+     |               |
+     |               |
+     +---------------+
+     */
+    let horizontalRectangleApectRatios: [PixelAspectRatio] = [
       .init(width: 16, height: 9),
       .init(width: 10, height: 8),
       .init(width: 7, height: 5),
@@ -447,10 +472,10 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
       $0.addArrangedSubview(verticalButton)
     }
     
-    var buttons: [PixelAspectRatio: UIButton] = [:]
+    var buttons: [CGFloat: UIButton] = [:]
     
-    buttons[store.state.originalAspectRatio] = originalButton
-    buttons[.square] = aspectSquareButton
+    buttons[ratioValue(from: store.state.originalAspectRatio)] = originalButton
+    buttons[ratioValue(from: .square)] = aspectSquareButton
     
     let itemsStackView = UIStackView()&>.do { stackView in
       
@@ -465,7 +490,7 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
         stackView.addArrangedSubview($0)
       }
       
-      store.state.rectangleApectRatios.forEach { ratio in
+      store.state.horizontalRectangleApectRatios.forEach { ratio in
         
         let button = AspectRatioButton()
         
@@ -473,11 +498,21 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
         
         button.onTap { [unowned store] in
           store.commit {
-            $0.selectedAspectRatio = ratio
+            
+            switch $0.direction {
+            case .horizontal:
+              
+              $0.selectedAspectRatio = ratio
+              
+            case .vertical:
+              
+              $0.selectedAspectRatio = ratio.swapped()
+            }
+            
           }
         }
         
-        buttons[ratio] = button
+        buttons[ratioValue(from: ratio)] = button
       }
     }
     
@@ -571,13 +606,13 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
         self.freeformButton.isSelected = false
         
         buttons.forEach {
-          if $0.key == selected {
+          if $0.key == ratioValue(from: selected) {
             $0.value.isSelected = true
           } else {
             $0.value.isSelected = false
           }
         }
-        
+           
         self.handlers.didSelectAspectRatio(selected)
               
       }
@@ -590,17 +625,18 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
       
       state.ifChanged(\.direction) { direction in
         
+        /// Changes display according to image's rectangle direction.
         switch direction {
         case .horizontal:
           
-          state.rectangleApectRatios.forEach { ratio in
-            buttons[ratio]?.setTitle("\(Int(ratio.width)):\(Int(ratio.height))", for: .normal)
+          state.horizontalRectangleApectRatios.forEach { ratio in
+            buttons[ratioValue(from: ratio)]?.setTitle("\(Int(ratio.width)):\(Int(ratio.height))", for: .normal)
           }
           
         case .vertical:
           
-          state.rectangleApectRatios.forEach { ratio in
-            buttons[ratio]?.setTitle("\(Int(ratio.height)):\(Int(ratio.width))", for: .normal)
+          state.horizontalRectangleApectRatios.forEach { ratio in
+            buttons[ratioValue(from: ratio)]?.setTitle("\(Int(ratio.height)):\(Int(ratio.width))", for: .normal)
           }
         }
       }
@@ -610,19 +646,19 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
   
   func setSelected(_ aspectRatio: PixelAspectRatio?) {
     
-    guard var fixed = aspectRatio else {
+    guard let fixed = aspectRatio else {
       store.commit {
-        $0.selectedAspectRatio = nil
+        if $0.selectedAspectRatio != nil {
+          $0.selectedAspectRatio = nil
+        }
       }
       return
     }
-    
-    if fixed.width < fixed.height {
-      swap(&fixed.height, &fixed.width)
-    }
-        
+
     store.commit {
-      $0.selectedAspectRatio = fixed
+      if $0.selectedAspectRatio != fixed {
+        $0.selectedAspectRatio = fixed
+      }
     }
   }
 }
@@ -681,4 +717,8 @@ private final class AspectRatioButton: UIButton {
     return CGSize(width: adjustedWidth, height: adjustedHeight)
   }
   
+}
+
+func ratioValue(from ratio: PixelAspectRatio) -> CGFloat {
+  ratio.height * ratio.width
 }
