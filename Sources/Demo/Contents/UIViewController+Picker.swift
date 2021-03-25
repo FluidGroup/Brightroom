@@ -30,7 +30,10 @@ extension UIViewController {
       withExtendedLifetime(pickerDelegateProxy, {})
       completion(images.first!)
     }
-    
+    pickerDelegateProxy.onCancelled = { controller in
+      controller.dismiss(animated: true, completion: nil)
+    }
+        
     present(photoPicker, animated: true, completion: nil)
   }
 }
