@@ -26,9 +26,8 @@ import PixelEngine
 #endif
 import Verge
 
-open class EditMenuControlBase : ControlBase {
-  
-  public required override init(viewModel: PixelEditViewModel) {
+open class EditMenuControlBase: ControlBase {
+  override public required init(viewModel: PixelEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
@@ -48,98 +47,134 @@ public enum EditMenu: CaseIterable {
   case sharpen
   case gaussianBlur
   
-  open class EditMenuControl : EditMenuControlBase {
-    
+  open class EditMenuControl: EditMenuControlBase {
     public let contentView = UIView()
     public let itemsView = UIStackView()
     public let scrollView = UIScrollView()
     
     public lazy var adjustmentButton: ButtonView = {
-      let button = ButtonView(name: L10n.editAdjustment, image: UIImage(named: "adjustment", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editAdjustment,
+        image: UIImage(named: "adjustment", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
       return button
     }()
     
     public lazy var maskButton: ButtonView = {
-      let button = ButtonView(name: L10n.editMask, image: UIImage(named: "mask", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editMask,
+        image: UIImage(named: "mask", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(masking), for: .touchUpInside)
       return button
     }()
     
     public lazy var exposureButton: ButtonView = {
-      let button = ButtonView(name: L10n.editBrightness, image: UIImage(named: "brightness", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editBrightness,
+        image: UIImage(named: "brightness", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
       return button
     }()
     
     public lazy var gaussianBlurButton: ButtonView = {
-      let button = ButtonView(name: L10n.editBlur, image: UIImage(named: "blur", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editBlur,
+        image: UIImage(named: "blur", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(blur), for: .touchUpInside)
       return button
     }()
     
     public lazy var contrastButton: ButtonView = {
-      let button = ButtonView(name: L10n.editContrast, image: UIImage(named: "contrast", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editContrast,
+        image: UIImage(named: "contrast", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
       return button
     }()
     
     public lazy var temperatureButton: ButtonView = {
-      let button = ButtonView(name: L10n.editTemperature, image: UIImage(named: "temperature", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editTemperature,
+        image: UIImage(named: "temperature", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
       return button
     }()
     
     public lazy var saturationButton: ButtonView = {
-      let button = ButtonView(name: L10n.editSaturation, image: UIImage(named: "saturation", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editSaturation,
+        image: UIImage(named: "saturation", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
       return button
     }()
     
     public lazy var highlightsButton: ButtonView = {
-      let button = ButtonView(name: L10n.editHighlights, image: UIImage(named: "highlights", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editHighlights,
+        image: UIImage(named: "highlights", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
       return button
     }()
     
     public lazy var shadowsButton: ButtonView = {
-      let button = ButtonView(name: L10n.editShadows, image: UIImage(named: "shadows", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editShadows,
+        image: UIImage(named: "shadows", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
       return button
     }()
     
     public lazy var vignetteButton: ButtonView = {
-      let button = ButtonView(name: L10n.editVignette, image: UIImage(named: "vignette", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editVignette,
+        image: UIImage(named: "vignette", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
       return button
     }()
     
     public lazy var fadeButton: ButtonView = {
-      let button = ButtonView(name: L10n.editFade, image: UIImage(named: "fade", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editFade,
+        image: UIImage(named: "fade", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(fade), for: .touchUpInside)
       return button
     }()
     
     public lazy var sharpenButton: ButtonView = {
-      let button = ButtonView(name: L10n.editSharpen, image: UIImage(named: "sharpen", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editSharpen,
+        image: UIImage(named: "sharpen", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
       return button
     }()
     
     public lazy var clarityButton: ButtonView = {
-      let button = ButtonView(name: L10n.editClarity, image: UIImage(named: "structure", in: bundle, compatibleWith: nil)!)
+      let button = ButtonView(
+        name: L10n.editClarity,
+        image: UIImage(named: "structure", in: bundle, compatibleWith: nil)!
+      )
       button.addTarget(self, action: #selector(clarity), for: .touchUpInside)
       return button
     }()
     
-    open override func setup() {
-      
+    override open func setup() {
       super.setup()
       
       backgroundColor = Style.default.control.backgroundColor
       
       layout: do {
-        
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
         if #available(iOS 11.0, *) {
@@ -156,20 +191,23 @@ public enum EditMenu: CaseIterable {
           scrollView.rightAnchor.constraint(equalTo: scrollView.superview!.rightAnchor),
           scrollView.leftAnchor.constraint(equalTo: scrollView.superview!.leftAnchor),
           scrollView.bottomAnchor.constraint(equalTo: scrollView.superview!.bottomAnchor),
-          ])
+        ])
         
         scrollView.addSubview(contentView)
         
         contentView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-          contentView.widthAnchor.constraint(greaterThanOrEqualTo: contentView.superview!.widthAnchor, constant: -(scrollView.contentInset.right + scrollView.contentInset.left)),
+          contentView.widthAnchor.constraint(
+            greaterThanOrEqualTo: contentView.superview!.widthAnchor,
+            constant: -(scrollView.contentInset.right + scrollView.contentInset.left)
+          ),
           contentView.heightAnchor.constraint(equalTo: contentView.superview!.heightAnchor),
           contentView.topAnchor.constraint(equalTo: contentView.superview!.topAnchor),
           contentView.rightAnchor.constraint(equalTo: contentView.superview!.rightAnchor),
           contentView.leftAnchor.constraint(equalTo: contentView.superview!.leftAnchor),
           contentView.bottomAnchor.constraint(equalTo: contentView.superview!.bottomAnchor),
-          ])
+        ])
         
         contentView.addSubview(itemsView)
         
@@ -187,19 +225,17 @@ public enum EditMenu: CaseIterable {
           itemsView.leftAnchor.constraint(greaterThanOrEqualTo: itemsView.superview!.leftAnchor),
           itemsView.bottomAnchor.constraint(equalTo: itemsView.superview!.bottomAnchor),
           itemsView.centerXAnchor.constraint(equalTo: itemsView.superview!.centerXAnchor),
-          ])
+        ])
       }
       
       item: do {
-        
-        let ignoredEditMenu: [EditMenu] = self.viewModel.options.classes.control.ignoredEditMenu
+        let ignoredEditMenu: [EditMenu] = viewModel.options.classes.control.ignoredEditMenu
         let displayedMenu = EditMenu.allCases.filter { ignoredEditMenu.contains($0) == false }
         
         var buttons: [ButtonView] = []
         
         for editMenu in displayedMenu {
           switch editMenu {
-            
           case .adjustment:
             buttons.append(adjustmentButton)
           case .mask:
@@ -245,28 +281,25 @@ public enum EditMenu: CaseIterable {
         hls: do {
           // http://flexmonkey.blogspot.com/2016/03/creating-selective-hsl-adjustment.html
         }
-        
       }
     }
     
-    open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
-      
-      let edit = state.editingState.currentEdit
-            
-      maskButton.hasChanges = !edit.drawings.blurredMaskPaths.isEmpty
-      
-      contrastButton.hasChanges = edit.filters.contrast != nil
-      exposureButton.hasChanges = edit.filters.exposure != nil
-      temperatureButton.hasChanges = edit.filters.temperature != nil
-      saturationButton.hasChanges = edit.filters.saturation != nil
-      highlightsButton.hasChanges = edit.filters.highlights != nil
-      shadowsButton.hasChanges = edit.filters.shadows != nil
-      vignetteButton.hasChanges = edit.filters.vignette != nil
-      gaussianBlurButton.hasChanges = edit.filters.gaussianBlur != nil
-      fadeButton.hasChanges = edit.filters.fade != nil
-      sharpenButton.hasChanges = edit.filters.sharpen != nil
-      clarityButton.hasChanges = edit.filters.unsharpMask != nil
-      
+    override open func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+      if let edit = state.editingState.loadedState?.currentEdit {
+        maskButton.hasChanges = !edit.drawings.blurredMaskPaths.isEmpty
+        
+        contrastButton.hasChanges = edit.filters.contrast != nil
+        exposureButton.hasChanges = edit.filters.exposure != nil
+        temperatureButton.hasChanges = edit.filters.temperature != nil
+        saturationButton.hasChanges = edit.filters.saturation != nil
+        highlightsButton.hasChanges = edit.filters.highlights != nil
+        shadowsButton.hasChanges = edit.filters.shadows != nil
+        vignetteButton.hasChanges = edit.filters.vignette != nil
+        gaussianBlurButton.hasChanges = edit.filters.gaussianBlur != nil
+        fadeButton.hasChanges = edit.filters.fade != nil
+        sharpenButton.hasChanges = edit.filters.sharpen != nil
+        clarityButton.hasChanges = edit.filters.unsharpMask != nil
+      }
     }
     
     @objc
@@ -276,51 +309,64 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func masking() {
-      
       push(MaskControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func doodle() {
-      
       push(DoodleControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func brightness() {
-      
-      push(viewModel.options.classes.control.exposureControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.exposureControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func blur() {
-      push(viewModel.options.classes.control.gaussianBlurControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.gaussianBlurControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func contrast() {
-      push(viewModel.options.classes.control.contrastControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.contrastControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func clarity() {
-      push(viewModel.options.classes.control.clarityControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.clarityControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func warmth() {
-      push(viewModel.options.classes.control.temperatureControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.temperatureControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func saturation() {
-      push(viewModel.options.classes.control.saturationControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.saturationControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
-    private func color() {
-      
-    }
+    private func color() {}
     
     @objc
     private func fade() {
@@ -329,26 +375,37 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func highlights() {
-      push(viewModel.options.classes.control.highlightsControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.highlightsControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func shadows() {
-      push(viewModel.options.classes.control.shadowsControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.shadowsControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func vignette() {
-      push(viewModel.options.classes.control.vignetteControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.vignetteControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
     @objc
     private func sharpen() {
-      push(viewModel.options.classes.control.sharpenControl.init(viewModel: viewModel), animated: true)
+      push(
+        viewModel.options.classes.control.sharpenControl.init(viewModel: viewModel),
+        animated: true
+      )
     }
     
-    open class ButtonView : UIControl {
-      
+    open class ButtonView: UIControl {
       public let nameLabel = UILabel()
       
       public let imageView = UIImageView()
@@ -368,7 +425,6 @@ public enum EditMenu: CaseIterable {
         super.init(frame: .zero)
         
         layout: do {
-          
           addSubview(nameLabel)
           addSubview(imageView)
           addSubview(changesMarkView)
@@ -378,7 +434,6 @@ public enum EditMenu: CaseIterable {
           changesMarkView.translatesAutoresizingMaskIntoConstraints = false
           
           NSLayoutConstraint.activate([
-            
             changesMarkView.topAnchor.constraint(equalTo: topAnchor, constant: 0),
             changesMarkView.centerXAnchor.constraint(equalTo: centerXAnchor),
             changesMarkView.widthAnchor.constraint(equalToConstant: 4),
@@ -396,11 +451,10 @@ public enum EditMenu: CaseIterable {
             nameLabel.leftAnchor.constraint(equalTo: leftAnchor, constant: 0),
             nameLabel.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            ])
+          ])
         }
         
         style: do {
-          
           imageView.contentMode = .scaleAspectFill
           imageView.tintColor = Style.default.black
           nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
@@ -410,11 +464,9 @@ public enum EditMenu: CaseIterable {
           changesMarkView.layer.cornerRadius = 2
           changesMarkView.backgroundColor = Style.default.black
           changesMarkView.isHidden = true
-          
         }
         
         body: do {
-          
           imageView.image = image
           nameLabel.text = name
         }
@@ -426,7 +478,7 @@ public enum EditMenu: CaseIterable {
         fatalError("init(coder:) has not been implemented")
       }
       
-      open override var isHighlighted: Bool  {
+      override open var isHighlighted: Bool {
         didSet {
           UIView.animate(
             withDuration: 0.16,
@@ -438,7 +490,7 @@ public enum EditMenu: CaseIterable {
               } else {
                 self.alpha = 1
               }
-          },
+            },
             completion: nil
           )
         }
@@ -447,8 +499,6 @@ public enum EditMenu: CaseIterable {
       @objc private func didTapSelf() {
         feedbackGenerator.selectionChanged()
       }
-      
     }
-    
   }
 }

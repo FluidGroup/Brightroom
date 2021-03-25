@@ -189,7 +189,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
           /**
            To avoid running pending layout operations from User Initiated actions.
            */
-          if cropRect.cropExtent != self.store.state.proposedCrop.cropExtent {
+          if cropRect.cropExtent != self.store.state.proposedCrop?.cropExtent {
             self.setCrop(cropRect)
           }
         }
@@ -232,9 +232,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
             )
           }, .init(==)) { (frame, _) in
        
-            let crop = state.proposedCrop
+            guard let crop = state.proposedCrop else {
+              return
+            }
             
-            guard frame != .zero else { return }
+            guard frame != .zero else {
+              return
+            }
                         
             setupScrollViewOnce: do {
               if self.hasSetupScrollViewCompleted == false {
@@ -256,19 +260,22 @@ public final class CropView: UIView, UIScrollViewDelegate {
                   }
                 }
               }
-            }
-            
+            }            
+                                  
             self.updateScrollContainerView(
               by: crop,
               preferredAspectRatio: state.preferredAspectRatio,
               animated: state.hasLoaded,
-              animatesRotation: state.hasChanges(\.proposedCrop.rotation)
+              animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
             )
             
           }
           
           if self.isAutoApplyEditingStackEnabled {
             state.ifChanged(\.proposedCrop) { crop in
+              guard let crop = crop else {
+                return
+              }
               self.editingStack.crop(crop)
             }
           }
@@ -286,17 +293,18 @@ public final class CropView: UIView, UIScrollViewDelegate {
           state.ifChanged(\.isLoading) { isLoading in
             self.updateLoadingOverlay(displays: isLoading)
           }
-          
-          state.ifChanged(\.placeholderImage, \.editingSourceImage) { previewImage, image in
+                                        
+          if let state = state._beta_map(\.loadedState) {
             
-            if let previewImage = previewImage {
-              self.setImage(previewImage)
-            }
-            
-            if let image = image {
+            state.ifChanged(\.editingSourceImage) { image in
               self.setImage(image)
             }
-          
+          } else if let state = state._beta_map(\.previewingState) {
+                        
+            state.ifChanged(\.placeholderImage) { (image) in
+              self.setImage(image)
+            }
+            
           }
         }
         .store(in: &subscriptions)
@@ -599,9 +607,7 @@ extension CropView {
 
   @inline(__always)
   private func didChangeGuideViewWithDelay() {
-        
-    let visibleRect = guideView.convert(guideView.bounds, to: imageView)
-    
+            
     func applyCropRotation(rotation: EditingCrop.Rotation, insets: UIEdgeInsets) -> UIEdgeInsets {
       switch rotation {
       case .angle_0:
@@ -629,6 +635,12 @@ extension CropView {
         )
       }
     }
+    
+    guard let currentProposedCrop = store.state.proposedCrop else {
+      return
+    }
+    
+    let visibleRect = guideView.convert(guideView.bounds, to: imageView)
              
     updateContentInset: do {
       let rect = self.guideView.convert(self.guideView.bounds, to: scrollBackdropView)
@@ -641,7 +653,7 @@ extension CropView {
         right: bounds.maxX - rect.maxX
       )
             
-      let resolvedInsets = applyCropRotation(rotation: store.state.proposedCrop.rotation, insets: insets)
+      let resolvedInsets = applyCropRotation(rotation: currentProposedCrop.rotation, insets: insets)
                   
       scrollView.contentInset = resolvedInsets
     }

@@ -67,7 +67,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
   
   // MARK: - Functions
 
-  public required override init(
+  public required init(
     viewModel: PixelEditViewModel
     ) {
     
@@ -81,13 +81,13 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
         
       self.store.commit { viewState in
         
-        state.ifChanged(\.editingState.thumbnailImage, \.editingState.previewColorCubeFilters) { image, filters in
-          
-          if let image = image {
+        if let state = state._beta_map(\.editingState.loadedState) {
+        
+          state.ifChanged(\.thumbnailImage, \.previewColorCubeFilters) { image, filters in
+                      
             viewState.content = .init(previews: filters, originalImage: image)
-          } else {
-            viewState.content = nil
           }
+          
         }
         
       }
@@ -168,7 +168,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let value = state.takeIfChanged(\.editingState.currentEdit.filters.colorCube) {
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.colorCube) { value in
       current = value
       collectionView.visibleCells.forEach {
         updateSelected(cell: $0)

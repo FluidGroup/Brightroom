@@ -29,6 +29,8 @@ enum ImageTool {
     guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
       return nil
     }
+    
+    EngineLog.debug("\(properties)")
 
     guard
       let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,

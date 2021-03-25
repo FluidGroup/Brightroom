@@ -145,9 +145,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       initialState: .init(),
       logger: nil
     )
-    
-    let state = editingStack.state
-        
+            
     super.init(frame: .zero)
     
     setUp: do {
@@ -252,6 +250,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           
           state.ifChanged(\.frame, \.proposedCrop) { frame, crop in
             
+            guard let crop = crop else { return }
+            
             guard frame != .zero else { return }
             
             setupScrollViewOnce: do {
@@ -282,7 +282,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             self.updateScrollContainerView(
               by: crop,
               animated: state.hasLoaded,
-              animatesRotation: state.hasChanges(\.proposedCrop.rotation)
+              animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
             )
           }
         }
@@ -296,22 +296,28 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             self.updateLoadingOverlay(displays: isLoading)
           }
           
-          state.ifChanged(\.loadingState?.currentEdit.drawings.blurredMaskPaths) { paths in
-            self.canvasView.setResolvedDrawnPaths(paths)
-          }
-          
-          state.ifChanged(
-            \.placeholderImage,
-            \.editingPreviewImage
-          ) { previewImage, image in
+          if let state = state._beta_map(\.loadedState) {
             
-            if let image = image {
+            state.ifChanged(\.editingSourceImage) { image in
               self.backdropImageView.display(image: image)
               self.blurryImageView.display(image: BlurredMask.blur(image: image))
-            } else if let previewImage = previewImage {
-              self.backdropImageView.display(image: previewImage)
-              self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
             }
+            
+          } else if let state = state._beta_map(\.previewingState) {
+            
+            state.ifChanged(\.placeholderImage) { (image) in
+              self.backdropImageView.display(image: image)
+              self.blurryImageView.display(image: BlurredMask.blur(image: image))
+            }
+            
+          }
+          
+          if let state = state._beta_map(\.loadedState) {
+            
+            state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
+              self.canvasView.setResolvedDrawnPaths(paths)
+            }
+                        
           }
         }
         .store(in: &subscriptions)
@@ -368,10 +374,16 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     animated: Bool,
     animatesRotation: Bool
   ) {
+    
     func perform() {
+      
+      guard let scrollViewFrame = store.state.primitive.scrollViewFrame() else {
+        return
+      }
+      
       frame: do {
         scrollView.transform = crop.rotation.transform
-        scrollView.frame = store.state.primitive.scrollViewFrame()
+        scrollView.frame = scrollViewFrame
       }
       
       zoom: do {

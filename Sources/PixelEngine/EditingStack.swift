@@ -45,13 +45,13 @@ open class EditingStack: Equatable, StoreComponentType {
     public struct Loading: Equatable {}
 
     public struct Previewing: Equatable {
-      fileprivate(set) var previewImageProvider: ImageSource?
+      public let previewImageProvider: ImageSource
       public let metadata: ImageProvider.State.ImageMetadata
       /**
        An image for placeholder, not editable.
        Uses in waiting for loading an editable image.
        */
-      public fileprivate(set) var placeholderImage: CIImage?
+      public let placeholderImage: CIImage
     }
 
     public struct Loaded: Equatable {

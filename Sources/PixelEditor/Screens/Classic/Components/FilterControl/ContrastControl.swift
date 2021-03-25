@@ -69,9 +69,9 @@ open class ContrastControl : ContrastControlBase {
   }
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
-    
-    if let contrast = state.takeIfChanged(\.editingState.currentEdit.filters.contrast) {
-      slider.set(value: contrast?.value ?? 0, in: FilterContrast.range)
+
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast) { value in      
+      slider.set(value: value?.value ?? 0, in: FilterContrast.range)
     }
         
   }

@@ -123,7 +123,11 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     
     guard save else {
       commit {
-        $0.proposedCrop = $0.editingState.currentEdit.crop
+        guard let loadedState = $0.editingState.loadedState else {
+          assertionFailure()
+          return
+        }
+        $0.proposedCrop = loadedState.currentEdit.crop
       }
       return
     }

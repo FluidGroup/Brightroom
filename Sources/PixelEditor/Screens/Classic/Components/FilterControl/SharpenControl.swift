@@ -72,8 +72,8 @@ open class SharpenControl : SharpenControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let sharpen = state.takeIfChanged(\.editingState.currentEdit.filters.sharpen) {
-      slider.set(value: sharpen?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
+      slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
     }
     
   }

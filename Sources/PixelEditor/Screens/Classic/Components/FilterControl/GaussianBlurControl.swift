@@ -71,9 +71,9 @@ open class GaussianBlurControl : GaussianBlurControlBase {
   }
 
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
-
-    if let gaussianBlur = state.takeIfChanged(\.editingState.currentEdit.filters.gaussianBlur) {
-      slider.set(value: gaussianBlur?.value ?? 0, in: FilterGaussianBlur.range)
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
+      slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
     }
     
   }
