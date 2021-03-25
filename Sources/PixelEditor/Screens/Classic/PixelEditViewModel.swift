@@ -26,66 +26,63 @@ import PixelEngine
 #endif
 
 public final class PixelEditViewModel: Equatable, StoreComponentType {
-  
   public static func == (lhs: PixelEditViewModel, rhs: PixelEditViewModel) -> Bool {
     lhs === rhs
   }
-  
+
   public enum Mode {
-    
     case crop
     case masking
     case editing
     case preview
   }
-    
+
   public struct State: Equatable {
     public var editingState: Changes<EditingStack.State>
-            
+
     public fileprivate(set) var title: String = ""
     public fileprivate(set) var mode: Mode = .preview
-     
+
     public fileprivate(set) var maskingBrushSize: CanvasView.BrushSize = .point(30)
-    
+
     // TODO: Rename
     fileprivate var drawnPaths: [DrawnPath] = []
     fileprivate(set) var proposedCrop: EditingCrop?
   }
-    
+
   public let options: PixelEditOptions
-  
+
   public let store: DefaultStore
-  
+
   public let editingStack: EditingStack
-  
+
   private var subscriptions: Set<VergeAnyCancellable> = .init()
-  
+
   public let doneButtonTitle: String
-  
+
   public init(
     editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
     options: PixelEditOptions = .default
   ) {
-    
     self.doneButtonTitle = doneButtonTitle
     self.options = options
     self.editingStack = editingStack
-    self.store = .init(initialState: .init(editingState: editingStack.state))
-    
+    store = .init(initialState: .init(editingState: editingStack.state))
+
     editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }
-  
+
   func setTitle(_ title: String) {
     commit {
       $0.title = title
     }
   }
-  
+
   func setMode(_ mode: Mode) {
     commit {
       $0.mode = mode
-      
+
       switch mode {
       case .crop:
         $0.title = L10n.editAdjustment
@@ -98,7 +95,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
       }
     }
   }
-  
+
   func endMasking(save: Bool) {
     if save {
       editingStack.takeSnapshot()
@@ -106,22 +103,27 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
       editingStack.revertEdit()
     }
   }
-   
+
   func setBrushSize(_ brushSize: CGFloat) {
     commit {
       $0.maskingBrushSize = .point(brushSize)
     }
   }
-  
+
   func setDrawinPaths(_ drawnPaths: [DrawnPath]) {
     commit {
       $0.drawnPaths = drawnPaths
     }
   }
-  
+
   func endCrop(save: Bool) {
-    
-    guard save else {
+    if save {
+      if let proposed = state.proposedCrop {
+        editingStack.crop(proposed)
+        editingStack.takeSnapshot()
+      }
+
+    } else {
       commit {
         guard let loadedState = $0.editingState.loadedState else {
           assertionFailure()
@@ -129,22 +131,12 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
         }
         $0.proposedCrop = loadedState.currentEdit.crop
       }
-      return
     }
-        
-    guard let proposed = state.proposedCrop else {
-      return
-    }
-    
-    editingStack.crop(proposed)
-    editingStack.takeSnapshot()
-    
   }
-  
+
   func setProposedCrop(_ proposedCrop: EditingCrop) {
     commit {
       $0.proposedCrop = proposedCrop
     }
   }
-  
 }
