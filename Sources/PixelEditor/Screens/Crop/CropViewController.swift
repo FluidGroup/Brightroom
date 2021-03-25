@@ -64,18 +64,21 @@ public final class CropViewController: UIViewController {
   private let store: UIStateStore<State, Never>
   
   private let cropView: CropView
-  private let aspectRatioControl: AspectRatioControl
+  private var aspectRatioControl: AspectRatioControl?
   
   public let editingStack: EditingStack
   public var handlers = Handlers()
-  
+      
+  private let doneButton = UIButton(type: .system)
+  private let cancelButton = UIButton(type: .system)
   private let aspectRatioButton = UIButton(type: .system)
-  
   private let resetButton = UIButton(type: .system)
-  
   private let rotateButton = UIButton(type: .system)
+  
+  private let aspectRatioControlLayoutGuide = UILayoutGuide()
     
   private var subscriptions = Set<VergeAnyCancellable>()
+  private var hasSetupLoadedUICompleted = false
   
   // MARK: - Initializers
       
@@ -83,7 +86,6 @@ public final class CropViewController: UIViewController {
     self.store = .init(initialState: .init(options: options))
     self.editingStack = editingStack
     cropView = .init(editingStack: editingStack)
-    aspectRatioControl = .init(originalAspectRatio: .init(editingStack.state.imageSize))
     super.init(nibName: nil, bundle: nil)
   }
   
@@ -118,13 +120,14 @@ public final class CropViewController: UIViewController {
    
    - Attension: This operation can be run background-thread.
    */
-  public func renderImage(resolution: ImageRenderer.Resolution, completion: @escaping (UIImage) -> Void) {
-    return editingStack.makeRenderer().render(resolution: resolution, completion: completion)
+  public func renderImage(resolution: ImageRenderer.Resolution, completion: @escaping (UIImage?) -> Void) {
+    editingStack.makeRenderer()?.render(resolution: resolution, completion: completion) ?? completion(nil)
   }
   
   override public func viewDidLoad() {
     super.viewDidLoad()
     
+    editingStack.start()
     cropView.isAutoApplyEditingStackEnabled = true
     view.backgroundColor = .black
     view.clipsToBounds = true
@@ -156,23 +159,24 @@ public final class CropViewController: UIViewController {
       $0.addArrangedSubview(aspectRatioButton)
       $0.distribution = .equalSpacing
     }
+
+    cancelButton&>.do {
+      // FIXME: Localize
+      $0.setTitle("Cancel", for: .normal)
+      $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+      $0.setTitleColor(UIColor.white, for: .normal)
+      $0.addTarget(self, action: #selector(handleCancelButton), for: .touchUpInside)
+    }
+        
+    doneButton&>.do {
+      // FIXME: Localize
+      $0.setTitle("Done", for: .normal)
+      $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
+      $0.setTitleColor(UIColor.systemYellow, for: .normal)
+      $0.addTarget(self, action: #selector(handleDoneButton), for: .touchUpInside)
+    }
     
     let bottomStackView = UIStackView()&>.do {
-      let cancelButton = UIButton(type: .system)&>.do {
-        // FIXME: Localize
-        $0.setTitle("Cancel", for: .normal)
-        $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-        $0.setTitleColor(UIColor.white, for: .normal)
-        $0.addTarget(self, action: #selector(handleCancelButton), for: .touchUpInside)
-      }
-      
-      let doneButton = UIButton(type: .system)&>.do {
-        // FIXME: Localize
-        $0.setTitle("Done", for: .normal)
-        $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-        $0.setTitleColor(UIColor.systemYellow, for: .normal)
-        $0.addTarget(self, action: #selector(handleDoneButton), for: .touchUpInside)
-      }
       $0.addArrangedSubview(cancelButton)
       $0.addArrangedSubview(doneButton)
       $0.distribution = .equalSpacing
@@ -182,8 +186,9 @@ public final class CropViewController: UIViewController {
     
     view.addSubview(cropView)
     view.addSubview(topStackView)
-    view.addSubview(aspectRatioControl)
     view.addSubview(bottomStackView)
+    
+    view.addLayoutGuide(aspectRatioControlLayoutGuide)
     
     topStackView&>.do {
       $0.translatesAutoresizingMaskIntoConstraints = false
@@ -203,8 +208,7 @@ public final class CropViewController: UIViewController {
       ])
     }
     
-    aspectRatioControl&>.do {
-      $0.translatesAutoresizingMaskIntoConstraints = false
+    aspectRatioControlLayoutGuide&>.do {
       NSLayoutConstraint.activate([
         $0.topAnchor.constraint(equalTo: cropView.bottomAnchor),
         $0.leftAnchor.constraint(equalTo: view.leftAnchor),
@@ -215,7 +219,7 @@ public final class CropViewController: UIViewController {
     bottomStackView&>.do {
       $0.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
-        $0.topAnchor.constraint(equalTo: aspectRatioControl.bottomAnchor),
+        $0.topAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.bottomAnchor),
         $0.leftAnchor.constraint(equalTo: view.leftAnchor, constant: 16),
         $0.rightAnchor.constraint(equalTo: view.rightAnchor, constant: -16),
         $0.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
@@ -226,21 +230,28 @@ public final class CropViewController: UIViewController {
     UIView.performWithoutAnimation {
       view.layoutIfNeeded()
     }
-    
-    aspectRatioControl.handlers.didSelectAspectRatio = { [unowned self] aspectRatio in
-      cropView.setCroppingAspectRatio(aspectRatio)
-    }
-    
-    aspectRatioControl.handlers.didSelectFreeform = { [unowned self] in
-      cropView.setCroppingAspectRatio(nil)
-    }
-    
+         
     editingStack.sinkState { [weak self] state in
       
       guard let self = self else { return }
       
-      state.ifChanged(\.hasUncommitedChanges) { hasChanges in
-        self.resetButton.isHidden = !hasChanges
+      if let state = state._beta_map(\.loadedState) {
+        
+        self.setUpLoadedUI(state: state.primitive)
+                      
+        state.ifChanged(\.hasUncommitedChanges) { hasChanges in
+          self.resetButton.isHidden = !hasChanges
+        }
+        
+      } else {
+        
+        /// Loading
+        
+        self.aspectRatioButton.isEnabled = false
+        self.resetButton.isEnabled = false
+        self.rotateButton.isEnabled = false
+        self.doneButton.isEnabled = false
+             
       }
                 
     }
@@ -251,7 +262,7 @@ public final class CropViewController: UIViewController {
       guard let self = self else { return }
       
       state.ifChanged(\.preferredAspectRatio) { ratio in
-        self.aspectRatioControl.setSelected(ratio)
+        self.aspectRatioControl?.setSelected(ratio)
       }
       
     }
@@ -264,6 +275,47 @@ public final class CropViewController: UIViewController {
     .store(in: &subscriptions)
     
     editingStack.start()
+  }
+    
+  private func setUpLoadedUI(state: EditingStack.State.Loaded) {
+    
+    guard hasSetupLoadedUICompleted == false else {
+      return
+    }
+    hasSetupLoadedUICompleted = true
+    
+    /**
+     Setup
+     */
+        
+    self.aspectRatioButton.isEnabled = true
+    self.resetButton.isEnabled = true
+    self.rotateButton.isEnabled = true
+    self.doneButton.isEnabled = true
+    
+    let control = AspectRatioControl(originalAspectRatio: .init(state.imageSize))
+    control.handlers.didSelectAspectRatio = { [unowned self] aspectRatio in
+      cropView.setCroppingAspectRatio(aspectRatio)
+    }
+    
+    control.handlers.didSelectFreeform = { [unowned self] in
+      cropView.setCroppingAspectRatio(nil)
+    }
+    
+    self.aspectRatioControl = control
+    
+    view.addSubview(control)
+        
+    control&>.do {
+      $0.translatesAutoresizingMaskIntoConstraints = false
+      NSLayoutConstraint.activate([
+        $0.topAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.topAnchor),
+        $0.leftAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.leftAnchor),
+        $0.rightAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.rightAnchor),
+        $0.bottomAnchor.constraint(equalTo: aspectRatioControlLayoutGuide.bottomAnchor),
+      ])
+    }
+        
   }
   
   private func update(with state: Changes<State>) {
@@ -284,10 +336,10 @@ public final class CropViewController: UIViewController {
     state.ifChanged(\.isSelectingAspectRatio) { value in
       UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) { [self] in
         if value {
-          aspectRatioControl.alpha = 1
+          aspectRatioControl?.alpha = 1
           aspectRatioButton.tintColor = .systemYellow
         } else {
-          aspectRatioControl.alpha = 0
+          aspectRatioControl?.alpha = 0
           aspectRatioButton.tintColor = .systemGray
         }
       }
@@ -297,7 +349,11 @@ public final class CropViewController: UIViewController {
   }
   
   @objc private func handleRotateButton() {
-    let rotation = cropView.store.state.proposedCrop.rotation.next()
+    guard let proposedCrop = cropView.store.state.proposedCrop else {
+      return
+    }
+    
+    let rotation = proposedCrop.rotation.next()
     cropView.setRotation(rotation)
   }
   
@@ -337,7 +393,7 @@ private final class AspectRatioControl: PixelEditorCodeBasedView {
       .init(width: 3, height: 2),
     ]
     
-    let originalAspectRatio: PixelAspectRatio
+    var originalAspectRatio: PixelAspectRatio
     
     var selectedAspectRatio: PixelAspectRatio?
     

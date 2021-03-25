@@ -12,6 +12,7 @@ abstract_target 'Demo_Apps' do
     pod "Texture"
     pod "TextureSwiftSupport"
     pod "GlossButtonNode"
+    pod "TinyConstraints"
   end  
 
   target "SwiftUIDemo" do

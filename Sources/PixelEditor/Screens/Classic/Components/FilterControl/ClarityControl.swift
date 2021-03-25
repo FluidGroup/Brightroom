@@ -72,10 +72,10 @@ open class ClarityControl : ClarityControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let unsharpMask = state.takeIfChanged(\.editingState.currentEdit.filters.unsharpMask) {
-      slider.set(value: unsharpMask?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask) { value in
+      slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
     }
-
+    
   }
   
   @objc

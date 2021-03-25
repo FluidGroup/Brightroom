@@ -27,23 +27,12 @@ import Verge
 import PixelEngine
 #endif
 
-public protocol PixelEditViewControllerDelegate: class {
-  func pixelEditViewController(
-    _ controller: PixelEditViewController,
-    didEndEditing editingStack: EditingStack
-  )
-  func pixelEditViewControllerDidCancelEditing(in controller: PixelEditViewController)
-}
-
 public final class PixelEditViewController: UIViewController {
   
   public struct Handlers {
     public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
   }
-
-  @available(*, deprecated)
-  public weak var delegate: PixelEditViewControllerDelegate?
 
   public var handlers: Handlers = .init()
 
@@ -126,6 +115,7 @@ public final class PixelEditViewController: UIViewController {
     })
     cropView.setCropInsideOverlay(nil)
     cropView.isGuideInteractionEnabled = false
+    cropView.isAutoApplyEditingStackEnabled = false
     
     // FIXME: Demo
     cropView.setCroppingAspectRatio(.square)
@@ -150,7 +140,7 @@ public final class PixelEditViewController: UIViewController {
         controlContainerView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
-          guide.topAnchor.constraint(equalTo: topLayoutGuide.bottomAnchor),
+          guide.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
           guide.rightAnchor.constraint(equalTo: view.rightAnchor),
           guide.leftAnchor.constraint(equalTo: view.leftAnchor),
           guide.widthAnchor.constraint(equalTo: guide.heightAnchor, multiplier: 1),
@@ -242,6 +232,7 @@ public final class PixelEditViewController: UIViewController {
     cropView.store.sinkState { [viewModel] (state) in
             
       state.ifChanged(\.proposedCrop) { value in
+        guard let value = value else { return }
         viewModel.setProposedCrop(value)
       }
     }
@@ -260,24 +251,17 @@ public final class PixelEditViewController: UIViewController {
   @objc
   private func didTapDoneButton() {
     handlers.didEndEditing(self, viewModel.editingStack)
-    delegate?.pixelEditViewController(self, didEndEditing: viewModel.editingStack)
   }
 
   @objc
   private func didTapCancelButton() {
     handlers.didCancelEditing(self)
-    delegate?.pixelEditViewControllerDidCancelEditing(in: self)
   }
 
   private func updateUI(state: Changes<PixelEditViewModel.State>) {
  
     state.ifChanged(\.maskingBrushSize) {
       maskingView.setBrushSize($0)
-    }
-    
-    state.ifChanged(\.proposedCrop) { value in
-      guard let value = value else { return }      
-      cropView.setCrop(value)
     }
     
     state.ifChanged(\.mode) { mode in

@@ -71,10 +71,10 @@ open class ShadowsControl : ShadowsControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let shadows = state.takeIfChanged(\.editingState.currentEdit.filters.shadows) {
-      slider.set(value: shadows?.value ?? 0, in: FilterShadows.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
+      slider.set(value: value?.value ?? 0, in: FilterShadows.range)
     }
-    
+        
   }
   
   @objc
