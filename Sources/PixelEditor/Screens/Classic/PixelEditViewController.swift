@@ -115,6 +115,7 @@ public final class PixelEditViewController: UIViewController {
     })
     cropView.setCropInsideOverlay(nil)
     cropView.isGuideInteractionEnabled = false
+    cropView.isAutoApplyEditingStackEnabled = false
     
     // FIXME: Demo
     cropView.setCroppingAspectRatio(.square)
@@ -231,6 +232,7 @@ public final class PixelEditViewController: UIViewController {
     cropView.store.sinkState { [viewModel] (state) in
             
       state.ifChanged(\.proposedCrop) { value in
+        guard let value = value else { return }
         viewModel.setProposedCrop(value)
       }
     }

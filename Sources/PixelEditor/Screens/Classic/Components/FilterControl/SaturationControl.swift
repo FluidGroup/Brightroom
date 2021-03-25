@@ -71,10 +71,10 @@ open class SaturationControl : SaturationControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
     
-    if let saturation = state.takeIfChanged(\.editingState.currentEdit.filters.saturation) {
-      slider.set(value: saturation?.value ?? 0, in: FilterSaturation.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation) { value in
+      slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
     }
-    
+        
   }
   
   @objc

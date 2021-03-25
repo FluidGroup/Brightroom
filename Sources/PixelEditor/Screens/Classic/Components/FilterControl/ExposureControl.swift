@@ -70,9 +70,9 @@ open class ExposureControl : ExposureControlBase {
   }
 
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
-
-    if let exposure = state.takeIfChanged(\.editingState.currentEdit.filters.exposure) {
-      slider.set(value: exposure?.value ?? 0, in: FilterExposure.range)
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure) { value in
+      slider.set(value: value?.value ?? 0, in: FilterExposure.range)
     }
     
   }

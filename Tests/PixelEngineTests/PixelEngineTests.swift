@@ -34,7 +34,7 @@ class PixelEngineTests: XCTestCase {
       )
     )
     
-    let scaled = crop.scaled(toWidth: 300)
+    let scaled = crop.scaled(maxPixelSize: 300)
         
     XCTAssertEqual(crop, scaled.restoreFromScaled())
     

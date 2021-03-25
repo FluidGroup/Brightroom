@@ -23,9 +23,9 @@
         "package": "Verge",
         "repositoryURL": "git@github.com:VergeGroup/Verge.git",
         "state": {
-          "branch": null,
-          "revision": "472a0273f6adf67132bb07f52ca4547ede6c9f6c",
-          "version": "8.8.0"
+          "branch": "main",
+          "revision": "11a143180cf0e35871c5221cae4e017d50652906",
+          "version": null
         }
       }
     ]

@@ -42,90 +42,116 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 
   public struct State: Equatable {
+    public struct Loading: Equatable {}
+
+    public struct Loaded: Equatable {
+      init(
+        editableImageProvider: ImageSource,
+        metadata: ImageProvider.State.ImageMetadata,
+        initialEditing: EditingStack.Edit,
+        currentEdit: EditingStack.Edit,
+        history: [EditingStack.Edit] = [],
+        thumbnailImage: CIImage,
+        editingSourceImage: CIImage,
+        editingPreviewImage: CIImage,
+        editingCroppedImage: CIImage,
+        editingCroppedPreviewImage: CIImage,
+        previewColorCubeFilters: [PreviewFilterColorCube] = []
+      ) {
+        self.editableImageProvider = editableImageProvider
+        self.metadata = metadata
+        self.initialEditing = initialEditing
+        self.currentEdit = currentEdit
+        self.history = history
+        self.thumbnailImage = thumbnailImage
+        self.editingSourceImage = editingSourceImage
+        self.editingPreviewImage = editingPreviewImage
+        self.editingCroppedImage = editingCroppedImage
+        self.editingCroppedPreviewImage = editingCroppedPreviewImage
+        self.previewColorCubeFilters = previewColorCubeFilters
+      }
+
+      fileprivate let editableImageProvider: ImageSource
+      public let metadata: ImageProvider.State.ImageMetadata
+      private let initialEditing: Edit
+      public fileprivate(set) var currentEdit: Edit
+
+      /// Won't change from initial state
+      public var imageSize: CGSize {
+        initialEditing.imageSize
+      }
+
+      public fileprivate(set) var history: [Edit] = []
+
+      public fileprivate(set) var thumbnailImage: CIImage
+
+      /**
+       An original image
+       Can be used in cropping
+       */
+      public fileprivate(set) var editingSourceImage: CIImage
+
+      public fileprivate(set) var editingPreviewImage: CIImage
+
+      /**
+       An image that cropped but not effected.
+       */
+      public fileprivate(set) var editingCroppedImage: CIImage
+
+      /**
+       An image that applied editing and optimized for previewing.
+       */
+      public fileprivate(set) var editingCroppedPreviewImage: CIImage
+
+      public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
+
+      public var canUndo: Bool {
+        return history.count > 0
+      }
+
+      public var isDirty: Bool {
+        return currentEdit != initialEditing
+      }
+
+      public var hasUncommitedChanges: Bool {
+        guard currentEdit == initialEditing else {
+          return true
+        }
+
+        guard history.last == currentEdit else {
+          return true
+        }
+
+        return false
+      }
+      
+      mutating func makeVersion() {
+        history.append(currentEdit)
+      }
+      
+      mutating func revertCurrentEditing() {
+        currentEdit = history.last ?? initialEditing
+      }
+      
+      mutating func undoEditing() {
+        currentEdit = history.popLast() ?? initialEditing
+      }
+    }
+
     public fileprivate(set) var hasStartedEditing = false
     /**
      A Boolean value that indicates whether the image is currently loading for editing.
      */
-    public fileprivate(set) var isLoading = true
-
-    /// Won't change from initial state
-    public var imageSize: CGSize {
-      initialEditing.imageSize
+    public var isLoading: Bool {
+      loadedState == nil
     }
 
-    private let initialEditing: Edit
+    public fileprivate(set) var loadingState: Loading = .init()
+    public fileprivate(set) var loadedState: Loaded?
 
-    public fileprivate(set) var history: [Edit] = []
-
-    public fileprivate(set) var currentEdit: Edit
-
-    fileprivate(set) var previewImageProvider: ImageSource?
-    fileprivate(set) var editableImageProvider: ImageSource?
-
-    public fileprivate(set) var thumbnailImage: CIImage?
-
-    /**
-     An image for placeholder, not editable.
-     Uses in waiting for loading an editable image.
-     */
-    public fileprivate(set) var placeholderImage: CIImage?
-
-    /**
-     An original image
-     Can be used in cropping
-     */
-    public fileprivate(set) var editingSourceImage: CIImage?
-    
-    public fileprivate(set) var editingPreviewImage: CIImage?
-
-    /**
-     An image that cropped but not effected.
-     */
-    public fileprivate(set) var editingCroppedImage: CIImage?
-
-    /**
-     An image that applied editing and optimized for previewing.
-     */
-    public fileprivate(set) var editingCroppedPreviewImage: CIImage?
-
-    public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
-
-    public var canUndo: Bool {
-      return history.count > 0
+    init() {
     }
-
-    public var isDirty: Bool {
-      return currentEdit != initialEditing
-    }
-    
-    public var hasUncommitedChanges: Bool {
-      guard currentEdit == initialEditing else {
-        return true
-      }
-      
-      guard history.last == currentEdit else {
-        return true
-      }
-      
-      return false
-    }
-
-    init(initialEdit: Edit) {
-      initialEditing = initialEdit
-      currentEdit = initialEdit
-    }
-
-    static func makeVersion(ref: InoutRef<Self>) {
-      ref.history.append(ref.currentEdit)
-    }
-
-    static func revertCurrentEditing(ref: InoutRef<Self>) {
-      ref.currentEdit = ref.history.last ?? ref.initialEditing
-    }
-
-    static func undoEditing(ref: InoutRef<Self>) {
-      ref.currentEdit = ref.history.popLast() ?? ref.initialEditing
-    }
+  
   }
 
   // MARK: - Stored Properties
@@ -150,7 +176,7 @@ open class EditingStack: Equatable, StoreComponentType {
   private let cropModifier: CropModifier
 
   private let editingImageMaxPixelSize: CGFloat = 2560
-  
+
   // MARK: - Initializers
 
   /// Creates an instance
@@ -165,14 +191,9 @@ open class EditingStack: Equatable, StoreComponentType {
     colorCubeStorage: ColorCubeStorage = .default,
     cropModifier: CropModifier = .init(modify: { _, _ in })
   ) {
-    let initialCrop = EditingCrop(
-      imageSize: imageProvider.state.imageSize
-    )
-
     self.cropModifier = cropModifier
     store = .init(
       initialState: .init(
-        initialEdit: Edit(crop: initialCrop)
       )
     )
 
@@ -201,66 +222,10 @@ open class EditingStack: Equatable, StoreComponentType {
     commit {
       $0.hasStartedEditing = true
     }
-    
-    store.sinkState(queue: .asyncSerialBackground) { [weak self] (state) in
-      
+
+    store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
       guard let self = self else { return }
-      
-      self.commit { modifyingState in
-        
-        state.ifChanged(\.thumbnailImage) { image in
-          
-          guard let image = image else { return }
-          
-          modifyingState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
-            let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
-            return r
-          }
-
-        }
-        
-        state.ifChanged(\.currentEdit.crop, \.editingSourceImage) { crop, editingSourceImage in
-          
-          guard let editingSourceImage = editingSourceImage else { return }
-
-          let result = Self._createPreviewImage(
-            targetImage: editingSourceImage,
-            crop: crop,
-            editingImageMaxPixelSize: self.editingImageMaxPixelSize,
-            previewMaxPixelSize: self.previewMaxPixelSize
-          )
-            
-          modifyingState.editingCroppedImage = result
-        }
-        
-        state.ifChanged(\.currentEdit, \.editingCroppedImage, \.editingSourceImage) { currentEdit, editingCroppedImage, editingSourceImage in
-          
-          let filters = currentEdit
-            .makeFilters()
-          
-          if let croppedTargetImage = editingCroppedImage {
-            
-            let result = filters.reduce(croppedTargetImage) { (image, filter) -> CIImage in
-              filter.apply(to: image, sourceImage: image)
-            }
-            
-            modifyingState.editingCroppedPreviewImage = result
-          }
-          
-          if let image = editingSourceImage {
-            
-            let result = filters.reduce(image) { (image, filter) -> CIImage in
-              filter.apply(to: image, sourceImage: image)
-            }
-            
-            modifyingState.editingPreviewImage = result
-          }
-          
-        }
-        
-      }
-                                  
-      
+      self.receive(newState: state)
     }
     .store(in: &subscriptions)
 
@@ -276,38 +241,84 @@ open class EditingStack: Equatable, StoreComponentType {
         state.ifChanged(\.loadedImage) { image in
 
           guard let image = image else {
-            self.commit {
-              self._commit_adjustCropExtent(image: nil, ref: $0)
-            }
             return
           }
-          self.commit { s in
+          
+          self.commit { (s: inout InoutRef<State>) in
 
-            switch image {
-            case let .preview(image):
-              s.isLoading = true
-              s.previewImageProvider = image
-              s.placeholderImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 1280))
+            switch image {       
+            case let .editable(image, metadata):
 
-            case let .editable(image):
-              s.isLoading = false
-              s.editableImageProvider = image
+              let cgImage = image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize)
+              let editingSourceImage = CIImage(cgImage: cgImage).oriented(metadata.orientation)
+             
+              let crop = self.adjustCropExtent(image: editingSourceImage, imageSize: metadata.imageSize)
+              
+              assert((editingSourceImage.extent.width > editingSourceImage.extent.height) == (metadata.imageSize.width > metadata.imageSize.height))
+                            
+              let initialEdit = Edit(crop: crop)
 
-              let editingImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: self.editingImageMaxPixelSize))
+              let editingCroppedImage = Self._createPreviewImage(
+                targetImage: editingSourceImage,
+                crop: initialEdit.crop,
+                editingImageMaxPixelSize: self.editingImageMaxPixelSize,
+                previewMaxPixelSize: self.previewMaxPixelSize
+              )
 
-              s.editingSourceImage = editingImage
-
-              s.thumbnailImage = CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 180))
-
-              do {
-                self._commit_adjustCropExtent(image: editingImage, ref: s)
-              }
+              s.loadedState = .init(
+                editableImageProvider: image,
+                metadata: metadata,
+                initialEditing: initialEdit,
+                currentEdit: initialEdit,
+                thumbnailImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 180)).oriented(metadata.orientation),
+                editingSourceImage: editingSourceImage,
+                editingPreviewImage: initialEdit.filters.apply(to: editingSourceImage),
+                editingCroppedImage: editingCroppedImage,
+                editingCroppedPreviewImage: initialEdit.filters.apply(to: editingCroppedImage)
+              )
 
               self.imageProviderSubscription?.cancel()
             }
           }
         }
       }
+  }
+
+  private func receive(newState state: Changes<State>) {
+    commit { (modifyingState: inout InoutRef<State>) in
+
+      if let loadedState = state._beta_map(\.loadedState) {
+        
+        modifyingState.map(keyPath: \.loadedState!) { (nextState) -> Void in
+
+          loadedState.ifChanged(\.thumbnailImage) { image in
+
+            nextState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
+              let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
+              return r
+            }
+          }
+
+          loadedState.ifChanged(\.currentEdit.crop, \.editingSourceImage) { crop, editingSourceImage in
+
+            let result = Self._createPreviewImage(
+              targetImage: editingSourceImage,
+              crop: crop,
+              editingImageMaxPixelSize: self.editingImageMaxPixelSize,
+              previewMaxPixelSize: self.previewMaxPixelSize
+            )
+
+            nextState.editingCroppedImage = result
+          }
+
+          loadedState.ifChanged(\.currentEdit, \.editingCroppedImage, \.editingSourceImage) { currentEdit, editingCroppedImage, editingSourceImage in
+
+            nextState.editingCroppedPreviewImage = currentEdit.filters.apply(to: editingCroppedImage)
+            nextState.editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
+          }
+        }
+      }
+    }
   }
 
   // MARK: - Functions
@@ -375,11 +386,11 @@ open class EditingStack: Equatable, StoreComponentType {
 
     return translated
   }
-
-  func _commit_adjustCropExtent(image: CIImage?, ref: InoutRef<State>) {
-    let imageSize = ref.imageSize
-    var crop = EditingCrop(imageSize: ref.imageSize)
-
+  
+  private func adjustCropExtent(image: CIImage?, imageSize: CGSize) -> EditingCrop {
+    
+    var crop = EditingCrop(imageSize: imageSize)
+    
     let actualSizeFromDownsampledImage = image.map { image -> CIImage in
       let scaled = image.transformed(
         by: .init(
@@ -387,22 +398,19 @@ open class EditingStack: Equatable, StoreComponentType {
           y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
         )
       )
-
+      
       let translated = scaled.transformed(by: .init(
         translationX: scaled.extent.origin.x,
         y: scaled.extent.origin.y
       ))
-
+      
       return translated
     }
-
+    
     cropModifier.run(actualSizeFromDownsampledImage, editingCrop: &crop)
+    
+    return crop
 
-    ref.currentEdit.crop = crop
-
-    ref.withType { (type, ref) -> Void in
-      type.makeVersion(ref: ref)
-    }
   }
 
   /**
@@ -410,10 +418,7 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func takeSnapshot() {
     commit {
-            
-      $0.withType { (type, ref) -> Void in
-        type.makeVersion(ref: ref)
-      }
+      $0.loadedState?.makeVersion()
     }
   }
 
@@ -424,9 +429,7 @@ open class EditingStack: Equatable, StoreComponentType {
     _pixelengine_ensureMainThread()
 
     commit {
-      $0.withType { (type, ref) -> Void in
-        type.revertCurrentEditing(ref: ref)
-      }
+      $0.loadedState?.revertCurrentEditing()
     }
   }
 
@@ -437,9 +440,7 @@ open class EditingStack: Equatable, StoreComponentType {
     _pixelengine_ensureMainThread()
 
     commit {
-      $0.withType { (type, ref) -> Void in
-        type.undoEditing(ref: ref)
-      }
+      $0.loadedState?.undoEditing()
     }
   }
 
@@ -450,7 +451,7 @@ open class EditingStack: Equatable, StoreComponentType {
     _pixelengine_ensureMainThread()
 
     commit {
-      $0.history = []
+      $0.loadedState?.history = []
     }
   }
 
@@ -475,27 +476,29 @@ open class EditingStack: Equatable, StoreComponentType {
       $0.drawings.blurredMaskPaths = blurringMaskPaths
     }
   }
-  
+
   public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPath {
     _pixelengine_ensureMainThread()
-    
+
     applyIfChanged {
       $0.drawings.blurredMaskPaths += blurringMaskPaths
     }
   }
 
-  public func makeRenderer() -> ImageRenderer {
-    _pixelengine_ensureMainThread()
+  public func makeRenderer() -> ImageRenderer? {
+    let stateSnapshot = state
 
-    guard let imageSource = state.editableImageProvider else {
-      preconditionFailure("Image not loaded. You want to catch this error, please file an issue in GitHub.")
+    guard let loaded = stateSnapshot.loadedState else {
+      return nil
     }
 
-    let renderer = ImageRenderer(source: imageSource)
+    let imageSource = loaded.editableImageProvider
+
+    let renderer = ImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
 
     // TODO: Clean up ImageRenderer.Edit
 
-    let edit = state.currentEdit
+    let edit = loaded.currentEdit
 
     renderer.edit.croppingRect = edit.crop
     renderer.edit.drawer = [
@@ -509,7 +512,10 @@ open class EditingStack: Equatable, StoreComponentType {
 
   private func applyIfChanged(_ perform: (inout InoutRef<Edit>) -> Void) {
     commit {
-      $0.map(keyPath: \.currentEdit, perform: perform)
+      guard $0.loadedState != nil else {
+        return
+      }
+      $0.map(keyPath: \.loadedState!.currentEdit, perform: perform)
     }
   }
 }
@@ -596,6 +602,12 @@ extension EditingStack {
         ] as [Filtering?])
           .compactMap { $0 }
       }
+
+      func apply(to ciImage: CIImage) -> CIImage {
+        makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
+          filter.apply(to: image, sourceImage: image)
+        }
+      }
     }
   }
 }
@@ -638,43 +650,39 @@ extension Array {
 import Vision
 
 extension EditingStack {
-  
   public struct CropModifier {
-    
     private let modifier: (CIImage?, inout EditingCrop) -> Void
-    
+
     public init(modify: @escaping (CIImage?, inout EditingCrop) -> Void) {
-      self.modifier = modify
+      modifier = modify
     }
-    
+
     func run(_ image: CIImage?, editingCrop: inout EditingCrop) {
       modifier(image, &editingCrop)
     }
-    
+
     public static func faceDetection() -> Self {
       return .init { image, crop in
-        
-        // FIXME: 
-        
+
+        // FIXME:
+
         guard let image = image else {
           return
         }
-                      
-        let request = VNDetectFaceRectanglesRequest { (request, error) in
+
+        let request = VNDetectFaceRectanglesRequest { request, error in
           for observation in request.results as! [VNFaceObservation] {
             print(observation)
           }
         }
-        
+
         let handler = VNImageRequestHandler(ciImage: image, options: [:])
         do {
           try handler.perform([request])
         } catch {
           print(error)
         }
-                
       }
     }
   }
 }
-

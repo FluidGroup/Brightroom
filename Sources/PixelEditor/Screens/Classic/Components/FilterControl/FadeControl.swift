@@ -72,10 +72,10 @@ open class FadeControl : FadeControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
     
-    if let fade = state.takeIfChanged(\.editingState.currentEdit.filters.fade) {
-      slider.set(value: fade?.intensity ?? 0, in: FilterFade.Params.intensity)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade) { value in
+      slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
     }
-    
+        
   }
   
   @objc

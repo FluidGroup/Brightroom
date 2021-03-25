@@ -35,9 +35,8 @@ struct ContentView: View {
         }
         .frame(width: 120, height: 120, alignment: .center)
         Form {
-          
           NavigationLink("Isolated", destination: IsolatedEditinView())
-          
+
           Button("Component: Crop") {
             fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
           }
@@ -46,7 +45,7 @@ struct ContentView: View {
             Button("Horizontal") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForHorizontal, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stackForHorizontal.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -55,7 +54,7 @@ struct ContentView: View {
             Button("Vertical") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForVertical, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stackForVertical.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -64,7 +63,7 @@ struct ContentView: View {
             Button("Square") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForSquare, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stackForSquare.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -73,7 +72,7 @@ struct ContentView: View {
             Button("Nasa") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForNasa, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stackForNasa.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -82,7 +81,7 @@ struct ContentView: View {
             Button("Super small") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForSmall, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stackForSmall.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -91,15 +90,14 @@ struct ContentView: View {
             Button("Remote") {
               let stack = EditingStack(
                 imageProvider: .init(
-                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!,
-                  imageSize: .init(width: 4025, height: 6037)
+                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
                 ),
                 previewMaxPixelSize: 1000
               )
 
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -108,16 +106,14 @@ struct ContentView: View {
             Button("Remote - preview") {
               let stack = EditingStack(
                 imageProvider: .init(
-                  previewRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
-                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!,
-                  imageSize: .init(width: 4980, height: 3984)
+                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
                 ),
                 previewMaxPixelSize: 1000
               )
 
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stack, onCompleted: {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
               }
@@ -135,7 +131,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 }
               }
@@ -148,7 +144,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = SwiftUI.Image.init(uiImage: stack.makeRenderer().render())
+                  self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 }
               }
@@ -172,7 +168,6 @@ struct ContentView: View {
 
 import PixelEditor
 import PixelEngine
-
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
   typealias UIViewControllerType = UINavigationController

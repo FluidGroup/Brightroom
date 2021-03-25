@@ -37,11 +37,13 @@ public final class ImageRenderer {
   }
   
   public let source: ImageSource
+  public let orientation: CGImagePropertyOrientation
   
   public var edit: Edit
   
-  public init(source: ImageSource) {
+  public init(source: ImageSource, orientation: CGImagePropertyOrientation) {
     self.source = source
+    self.orientation = orientation
     edit = .init()
   }
   
@@ -60,7 +62,12 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
-    let sourceCIImage: CIImage = source.makeCIImage()
+    
+    /**
+     TODO: Restores image-orientation
+     */
+    
+    let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
     
     assert(
       {

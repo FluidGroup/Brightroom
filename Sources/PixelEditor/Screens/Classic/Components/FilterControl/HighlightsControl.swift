@@ -71,10 +71,10 @@ open class HighlightsControl : HighlightsControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let highlights = state.takeIfChanged(\.editingState.currentEdit.filters.highlights) {
-      slider.set(value: highlights?.value ?? 0, in: FilterHighlights.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights) { value in
+      slider.set(value: value?.value ?? 0, in: FilterHighlights.range)
     }
-            
+                
   }
   
   @objc

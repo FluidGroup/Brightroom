@@ -71,10 +71,11 @@ open class TemperatureControl : TemperatureControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
     
-    if let temperature = state.takeIfChanged(\.editingState.currentEdit.filters.temperature) {
-      slider.set(value: temperature?.value ?? 0, in: FilterTemperature.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
+
+      slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
     }
-        
+              
   }
   
   @objc
