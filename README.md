@@ -51,6 +51,7 @@ present(controller, animated: true, completion: nil)
 **SwiftUI**
 ```swift
 WIP
+SwiftUIPhotosCropView
 ```
 
 ## Components
