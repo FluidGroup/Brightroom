@@ -35,6 +35,17 @@ import PixelEngine
  */
 public final class PhotosCropViewController: UIViewController {
   
+  public struct LocalizedStrings {
+    public var button_done_title: String = "Done"
+    public var button_cancel_title: String = "Cancel"
+    public var button_reset_title: String = "Reset"
+    public var button_aspectratio_original: String = "ORIGINAL"
+    public var button_aspectratio_freeform: String = "FREEFORM"
+    public var button_aspectratio_square: String = "SQUARE"
+    
+    public init() {}
+  }
+  
   public struct Options: Equatable {
     
     public enum AspectRatioOptions: Equatable {
@@ -80,9 +91,16 @@ public final class PhotosCropViewController: UIViewController {
   private var subscriptions = Set<VergeAnyCancellable>()
   private var hasSetupLoadedUICompleted = false
   
+  public var localizedStrings: LocalizedStrings
+  
   // MARK: - Initializers
-      
-  public init(editingStack: EditingStack, options: Options = .init()) {
+        
+  public init(
+    editingStack: EditingStack,
+    options: Options = .init(),
+    localizedStrings: LocalizedStrings = .init()
+  ) {
+    self.localizedStrings = localizedStrings
     self.store = .init(initialState: .init(options: options))
     self.editingStack = editingStack
     cropView = .init(editingStack: editingStack)
@@ -97,14 +115,16 @@ public final class PhotosCropViewController: UIViewController {
    */
   public convenience init(
     imageProvider: ImageProvider,
-    options: Options = .init()
+    options: Options = .init(),
+    localizedStrings: LocalizedStrings = .init()
   ) {
     self.init(
       editingStack: .init(
         imageProvider: imageProvider,
         previewMaxPixelSize: UIScreen.main.bounds.height * UIScreen.main.scale
       ),
-      options: options
+      options: options,
+      localizedStrings: localizedStrings
     )
   }
   
@@ -140,7 +160,7 @@ public final class PhotosCropViewController: UIViewController {
     
     resetButton&>.do {
       // TODO: Localize
-      $0.setTitle("RESET", for: .normal)
+      $0.setTitle(localizedStrings.button_reset_title, for: .normal)
       $0.titleLabel?.font = UIFont.systemFont(ofSize: 14)
       $0.setTitleColor(UIColor.systemYellow, for: .normal)
       $0.addTarget(self, action: #selector(handleResetButton), for: .touchUpInside)
@@ -161,18 +181,17 @@ public final class PhotosCropViewController: UIViewController {
     }
 
     cancelButton&>.do {
-      // FIXME: Localize
-      $0.setTitle("Cancel", for: .normal)
+      $0.setTitle(localizedStrings.button_cancel_title, for: .normal)
       $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
       $0.setTitleColor(UIColor.white, for: .normal)
       $0.addTarget(self, action: #selector(handleCancelButton), for: .touchUpInside)
     }
         
     doneButton&>.do {
-      // FIXME: Localize
-      $0.setTitle("Done", for: .normal)
+      $0.setTitle(localizedStrings.button_done_title, for: .normal)
       $0.titleLabel?.font = UIFont.systemFont(ofSize: 17)
       $0.setTitleColor(UIColor.systemYellow, for: .normal)
+      $0.setTitleColor(UIColor.darkGray, for: .disabled)
       $0.addTarget(self, action: #selector(handleDoneButton), for: .touchUpInside)
     }
     
@@ -237,6 +256,8 @@ public final class PhotosCropViewController: UIViewController {
       
       if let state = state._beta_map(\.loadedState) {
         
+        /// Loaded
+        
         self.setUpLoadedUI(state: state.primitive)
                       
         state.ifChanged(\.hasUncommitedChanges) { hasChanges in
@@ -282,7 +303,11 @@ public final class PhotosCropViewController: UIViewController {
     self.rotateButton.isEnabled = true
     self.doneButton.isEnabled = true
     
-    let control = PhotosCropAspectRatioControl(originalAspectRatio: .init(state.imageSize))
+    let control = PhotosCropAspectRatioControl(
+      originalAspectRatio: .init(state.imageSize),
+      localizedStrings: localizedStrings
+    )
+    
     control.handlers.didSelectAspectRatio = { [unowned self] aspectRatio in
       cropView.setCroppingAspectRatio(aspectRatio)
     }

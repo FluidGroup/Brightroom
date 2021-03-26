@@ -125,9 +125,15 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   private var subscriptions = Set<VergeAnyCancellable>()
   
   private var isSupressingHandlers = false
+  private let localizedStrings: PhotosCropViewController.LocalizedStrings
   
-  init(originalAspectRatio: PixelAspectRatio) {
-    store = .init(
+  init(
+    originalAspectRatio: PixelAspectRatio,
+    localizedStrings: PhotosCropViewController.LocalizedStrings
+  ) {
+    
+    self.localizedStrings = localizedStrings
+    self.store = .init(
       initialState: .init(
         originalAspectRatio: originalAspectRatio,
         originalDirection: originalAspectRatio.width > originalAspectRatio.height ? .horizontal : .vertical,
@@ -212,8 +218,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
     
     originalButton&>.do {
-      // FIXME: Localize
-      $0.setTitle("ORIGINAL", for: .normal)
+      $0.setTitle(localizedStrings.button_aspectratio_original, for: .normal)
       $0.onTap { [unowned store] in
         store.commit {
           $0.selectedAspectRatio = $0.originalAspectRatio
@@ -223,8 +228,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
     
     freeformButton&>.do {
-      // FIXME: Localize
-      $0.setTitle("FREEFORM", for: .normal)
+      $0.setTitle(localizedStrings.button_aspectratio_freeform, for: .normal)
       $0.onTap { [unowned store] in
         store.commit {
           $0.selectedAspectRatio = nil
@@ -233,8 +237,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
     
     aspectSquareButton&>.do {
-      // FIXME: Localize
-      $0.setTitle("SQUARE", for: .normal)
+      $0.setTitle(localizedStrings.button_aspectratio_square, for: .normal)
       $0.onTap { [unowned store] in
         store.commit {
           $0.selectedAspectRatio = .square
