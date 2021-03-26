@@ -56,6 +56,11 @@ SwiftUIPhotosCropView
 
 ## Components
 
+- **CropView** - A view that previews how it crops the image. It supports zooming, scrolling, adjusting the guide and more customizable appearances.
+- **BlurryMaskingView** - A view that drawing mask shapes with blur.
+- **ImagePreviewView** - A view that previews the finalized image on `EditingStack`
+- **MetalImageView** - A view that displays the image powered by Metal.
+
 ## Build your own cropping screen
 
 CropView is a component that only supports cropping.
