@@ -8,7 +8,7 @@
 
 import UIKit
 
-final class _ImageView: UIImageView, HardwareImageViewType {
+final class _ImageView: UIImageView, CIImageDisplaying {
   
   private var ciImage: CIImage?
   

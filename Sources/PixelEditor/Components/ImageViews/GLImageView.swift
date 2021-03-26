@@ -27,7 +27,7 @@ import AVFoundation
 import PixelEngine
 #endif
 
-public class GLImageView : GLKView, HardwareImageViewType {
+public class GLImageView : GLKView, CIImageDisplaying {
 
   // MARK: - Properties
 

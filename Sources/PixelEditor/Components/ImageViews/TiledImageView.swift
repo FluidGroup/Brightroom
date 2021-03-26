@@ -10,7 +10,7 @@ import Foundation
 import CoreImage
 import UIKit
 
-public final class TiledImageView: PixelEditorCodeBasedView, HardwareImageViewType {
+public final class TiledImageView: PixelEditorCodeBasedView, CIImageDisplaying {
   
   private var image: CIImage?
     

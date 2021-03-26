@@ -89,10 +89,10 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         """,
         onTap: { [unowned self] in
           
-          var options = CropViewController.Options()
+          var options = PhotosCropViewController.Options()
           options.aspectRatioOptions = .fixed(.square)
 
-          let controller = CropViewController(editingStack: stackForVertical, options: options)
+          let controller = PhotosCropViewController(editingStack: stackForVertical, options: options)
           _presentCropViewConroller(controller)
         }
       ),
@@ -118,7 +118,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           //          var options = CropViewController.Options()
           //          options.aspectRatioOptions = .fixed(.square)
           
-          let controller = CropViewController(editingStack: editingStack)
+          let controller = PhotosCropViewController(editingStack: editingStack)
           _presentCropViewConroller(controller)
         }
       ),
@@ -135,7 +135,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
     ])
   }
 
-  private func _presentCropViewConroller(_ crop: CropViewController) {
+  private func _presentCropViewConroller(_ crop: PhotosCropViewController) {
     crop.modalPresentationStyle = .fullScreen
     crop.handlers.didCancel = { controller in
       controller.dismiss(animated: true, completion: nil)
@@ -150,7 +150,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
   }
 
   private func _presentCropViewConroller(_ editingStack: EditingStack) {
-    let crop = CropViewController(editingStack: editingStack)
+    let crop = PhotosCropViewController(editingStack: editingStack)
     _presentCropViewConroller(crop)
   }
 }

@@ -29,11 +29,11 @@ import PixelEngine
 #endif
 
 /**
- A view controller that specifies how it crops in the image.
+ Apple's Photos app like crop view controller.
  
  You might use `CropView` to create a fully customized user interface.
  */
-public final class CropViewController: UIViewController {
+public final class PhotosCropViewController: UIViewController {
   
   public struct Options: Equatable {
     
@@ -50,8 +50,8 @@ public final class CropViewController: UIViewController {
   }
   
   public struct Handlers {
-    public var didFinish: (CropViewController) -> Void = { _ in }
-    public var didCancel: (CropViewController) -> Void = { _ in }
+    public var didFinish: (PhotosCropViewController) -> Void = { _ in }
+    public var didCancel: (PhotosCropViewController) -> Void = { _ in }
   }
   
   private struct State: Equatable {
@@ -64,7 +64,7 @@ public final class CropViewController: UIViewController {
   private let store: UIStateStore<State, Never>
   
   private let cropView: CropView
-  private var aspectRatioControl: AspectRatioControl?
+  private var aspectRatioControl: PhotosCropAspectRatioControl?
   
   public let editingStack: EditingStack
   public var handlers = Handlers()
@@ -282,7 +282,7 @@ public final class CropViewController: UIViewController {
     self.rotateButton.isEnabled = true
     self.doneButton.isEnabled = true
     
-    let control = AspectRatioControl(originalAspectRatio: .init(state.imageSize))
+    let control = PhotosCropAspectRatioControl(originalAspectRatio: .init(state.imageSize))
     control.handlers.didSelectAspectRatio = { [unowned self] aspectRatio in
       cropView.setCroppingAspectRatio(aspectRatio)
     }

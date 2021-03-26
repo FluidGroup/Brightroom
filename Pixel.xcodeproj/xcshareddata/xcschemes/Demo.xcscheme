@@ -20,6 +20,20 @@
                ReferencedContainer = "container:Pixel.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
+               BuildableName = "SwiftUIDemo.app"
+               BlueprintName = "SwiftUIDemo"
+               ReferencedContainer = "container:Pixel.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

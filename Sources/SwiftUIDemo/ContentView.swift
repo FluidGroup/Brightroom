@@ -45,7 +45,7 @@ struct ContentView: View {
           Section(content: {
             Button("Crop: Horizontal") {
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stackForHorizontal, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stackForHorizontal, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -54,7 +54,7 @@ struct ContentView: View {
 
             Button("Crop: Vertical") {
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stackForVertical, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stackForVertical, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -63,7 +63,7 @@ struct ContentView: View {
 
             Button("Crop: Square") {
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stackForSquare, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stackForSquare, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -72,7 +72,7 @@ struct ContentView: View {
 
             Button("Crop: Nasa") {
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stackForNasa, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stackForNasa, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -81,7 +81,7 @@ struct ContentView: View {
 
             Button("Crop: Super small") {
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stackForSmall, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stackForSmall, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -97,7 +97,7 @@ struct ContentView: View {
               )
 
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stack, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })
@@ -113,7 +113,7 @@ struct ContentView: View {
               )
 
               fullScreenView = .init {
-                CropViewControllerWrapper(editingStack: stack, onCompleted: {
+                SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
                   self.fullScreenView = nil
                 })

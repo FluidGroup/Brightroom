@@ -28,7 +28,7 @@ import Verge
 import PixelEngine
 #endif
 
-final class AspectRatioControl: PixelEditorCodeBasedView {
+final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   struct State: Equatable {
     enum Direction {
       /**
@@ -476,7 +476,7 @@ private final class AspectRatioDirectionButton: UIControl {
     }
   }
   
-  init(direction: AspectRatioControl.State.Direction) {
+  init(direction: PhotosCropAspectRatioControl.State.Direction) {
     super.init(frame: .zero)
     
     layer.addSublayer(shapeLayer)
@@ -547,7 +547,7 @@ private final class AspectRatioDirectionButton: UIControl {
 }
 
 extension PixelAspectRatio {
-  var direction: AspectRatioControl.State.Direction {
+  var direction: PhotosCropAspectRatioControl.State.Direction {
     if height > width {
       return .vertical
     } else {

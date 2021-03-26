@@ -17,7 +17,7 @@ struct IsolatedEditinView: View {
   var body: some View {
     Form {
       Button("Crop") {
-        fullScreenView = .init { CropViewControllerWrapper(
+        fullScreenView = .init { SwiftUIPhotosCropView(
           editingStack: editingStack,
           onCompleted: {}
         ) }

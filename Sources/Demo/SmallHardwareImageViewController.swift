@@ -28,7 +28,7 @@ final class SmallHardwareImageViewController : UIViewController {
   @IBOutlet weak var slider: UISlider!
   @IBOutlet weak var imageConatinerView: UIView!
 
-  let imageView: UIView & HardwareImageViewType = {
+  let imageView: UIView & CIImageDisplaying = {
     #if canImport(MetalKit) && !targetEnvironment(simulator)
     return MetalImageView()
     #else

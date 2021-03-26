@@ -19,35 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import SwiftUI
+import UIKit
 
-#if !COCOAPODS
-import PixelEngine
-#endif
-
-@available(iOS 13, *)
-public struct CropViewControllerWrapper: UIViewControllerRepresentable {
-  public typealias UIViewControllerType = CropViewController
-  
-  private let editingStack: EditingStack
-  private let onCompleted: () -> Void
-  
-  public init(editingStack: EditingStack, onCompleted: @escaping () -> Void) {
-    self.editingStack = editingStack
-    self.onCompleted = onCompleted
-    editingStack.start()
-  }
-  
-  public func makeUIViewController(context: Context) -> CropViewController {
-    let cropViewController = CropViewController(editingStack: editingStack)
-    cropViewController.handlers.didFinish = { _ in
-      onCompleted()
-    }
-    cropViewController.handlers.didCancel = { _ in
-      onCompleted()
-    }
-    return cropViewController
-  }
-  
-  public func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
+public protocol CIImageDisplaying : class {
+  func display(image: CIImage?)
 }
