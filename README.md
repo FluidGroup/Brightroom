@@ -1,28 +1,22 @@
 ## ⚠️ v2 development is in progress. 
 
-> 💥 The next major version (v2) development has been started.  
-> https://github.com/muukii/Pixel/pull/53  
-> If you're excited in this, please hit the reaction button! 
+> 💥 Development for the next major version (v2) has started!
+> Find out more [here](https://github.com/muukii/Pixel/pull/53), and if you're excited please hit the reaction button! 
 >
-> And this obviously takes many breaking changes.  
-> Feel free to start a discussion about enhancement from the current released version.  
-> I often upload movies of features in development to the pull-request's comment.
+> This update will obviously include many breaking changes. Feel free to start a discussion. I often upload movies of features in development to the pull-request's comments.
 > 
-> To use the stable version, please checkout master branch.
+> To use the stable version, please checkout the master branch.
 > 
 
-
-> 📌 Pixel want to get another new name.  
-> Post your idea in https://github.com/muukii/Pixel/discussions/68  
-> And how about **BrightRoom**?
+> 📌 Pixel needs a new name! Post your idea [here](https://github.com/muukii/Pixel/discussions/68). The leading name right now is **BrightRoom**?
 
 ---
 
 # v2(WIP) Pixel - Composable image editor
 
-Pixel v2 provides the followings:
-- The components are built separately and they run as standalone using `EditingStack`.
-- We can create our own image editor UI by composing the components.
+Pixel v2 provides the following features:
+- Components are built separately and run standalone using an `EditingStack`.
+- Create your own image editor UI by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
 
 ## Use Built-in fullstack image editor
@@ -73,17 +67,9 @@ struct DemoCropView: View {
 
 # (v1) Pixel - Engine • Editor
 
-<img src=top.png width=960/>
+<img src=top.png width=100%/>
 
 ![](preview.gif)
-
-
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fmuukii%2FPixel.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fmuukii%2FPixel?ref=badge_shield)
-Engine
-
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
-
-[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/0)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/0)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/1)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/1)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/2)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/2)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/3)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/3)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/4)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/4)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/5)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/5)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/6)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/6)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/7)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/7)
 
 Image editor and engine using CoreImage
 
@@ -170,9 +156,7 @@ let controller = PixelEditViewController(image: image)
 
 * as Modal
 
-⚠️ Currently
-We need to wrap the controller with `UINavigationController`.
-Because, `PixelEditViewController` needs `UINavigationBar`.
+⚠️ Currently we need to wrap the controller with `UINavigationController`. This is because `PixelEditViewController` needs a `UINavigationBar`.
 
 ```swift
 let controller: PixelEditViewController
@@ -184,7 +168,7 @@ self.present(navigationController, animated: true, completion: nil)
 
 * as Push
 
-We can push the controller in UINavigationController.
+We can push the controller in `UINavigationController`.
 
 ```swift
 let controller: PixelEditViewController

@@ -8,6 +8,7 @@
 
 import Foundation
 import CoreImage
+import UIKit
 
 public final class TiledImageView: PixelEditorCodeBasedView, HardwareImageViewType {
   

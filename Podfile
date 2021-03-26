@@ -8,7 +8,7 @@ abstract_target 'Demo_Apps' do
   pod "SwiftGen"
 
   target "Demo" do
-    pod "MosaiqueAssetsPicker", :git => "git@github.com:eure/AssetsPicker.git"
+    pod "MosaiqueAssetsPicker"
     pod "Texture"
     pod "TextureSwiftSupport"
     pod "GlossButtonNode"

@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
   name: "Pixel",  
   platforms: [
-    .iOS(.v12)
+    .iOS(.v14)
   ],
   products: [
     .library(name: "PixelEngine", targets: ["PixelEngine"]),
