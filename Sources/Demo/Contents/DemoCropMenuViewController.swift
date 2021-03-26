@@ -88,7 +88,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         Instead specify which aspect ratio fixes the cropping guide.
         """,
         onTap: { [unowned self] in
-
+          
           var options = CropViewController.Options()
           options.aspectRatioOptions = .fixed(.square)
 

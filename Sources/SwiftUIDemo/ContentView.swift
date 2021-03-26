@@ -1,5 +1,6 @@
 
 import SwiftUI
+import PixelEditor
 
 struct ContentView: View {
   @State private var image: SwiftUI.Image?
@@ -42,7 +43,7 @@ struct ContentView: View {
           }
 
           Section(content: {
-            Button("Horizontal") {
+            Button("Crop: Horizontal") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForHorizontal, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
@@ -51,7 +52,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Vertical") {
+            Button("Crop: Vertical") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForVertical, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
@@ -60,7 +61,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Square") {
+            Button("Crop: Square") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForSquare, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
@@ -69,7 +70,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Nasa") {
+            Button("Crop: Nasa") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForNasa, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
@@ -78,7 +79,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Super small") {
+            Button("Crop: Super small") {
               fullScreenView = .init {
                 CropViewControllerWrapper(editingStack: stackForSmall, onCompleted: {
                   self.image = stackForHorizontal.makeRenderer().map { SwiftUI.Image.init(uiImage: $0.render()) }
@@ -87,7 +88,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Remote") {
+            Button("Crop: Remote") {
               let stack = EditingStack(
                 imageProvider: .init(
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
@@ -103,7 +104,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Remote - preview") {
+            Button("Crop: Remote - preview") {
               let stack = EditingStack(
                 imageProvider: .init(
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!

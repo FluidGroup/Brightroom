@@ -89,7 +89,6 @@
 		4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */; };
 		4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */; };
 		4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */; };
-		4B8CAF7825FFD17F0075032A /* CropViewControllerWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */; };
 		4B9369E825F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4B9369E925F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4B9369EE25F94A1300B18571 /* EditingCrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9369ED25F94A1300B18571 /* EditingCrop.swift */; };
@@ -164,6 +163,7 @@
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
 		4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE81C03217EC58B00F6FA5C /* FilterHighlightShadowTint.swift */; };
+		4BE8D40E260E60F600A33450 /* CropViewControllerWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */; };
 		4BE9392F25E5501000F20341 /* PixelEditViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE9392E25E5501000F20341 /* PixelEditViewModel.swift */; };
 		4BE9B3CC260BA69F000A3D09 /* LoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE9B3C4260BA641000A3D09 /* LoadingTests.swift */; };
 		4BE9B3D2260BA769000A3D09 /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
@@ -762,6 +762,7 @@
 			children = (
 				4B835DFC25E95D5000EC84D1 /* CropViewController.swift */,
 				4BD2D94B260E1A6F000BB51E /* AspectRatioControl.swift */,
+				4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */,
 			);
 			path = Crop;
 			sourceTree = "<group>";
@@ -771,7 +772,6 @@
 			children = (
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
-				4B8CAF7725FFD17F0075032A /* CropViewControllerWrapper.swift */,
 				4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */,
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
 				4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */,
@@ -1301,6 +1301,7 @@
 				4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
+				4BE8D40E260E60F600A33450 /* CropViewControllerWrapper.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurryMaskingView.swift in Sources */,
 				4B0BDC9F217D6567001098B9 /* FadeControl.swift in Sources */,
 				4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */,
@@ -1392,7 +1393,6 @@
 				4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */,
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
-				4B8CAF7825FFD17F0075032A /* CropViewControllerWrapper.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
 				4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */,
 				4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */,

@@ -1,6 +1,7 @@
 
 import PixelEngine
 import SwiftUI
+import PixelEditor
 
 struct IsolatedEditinView: View {
   @StateObject var editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
