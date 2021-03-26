@@ -686,7 +686,7 @@ private final class AspectRatioButton: UIButton {
   override init(frame: CGRect) {
     super.init(frame: .zero)
        
-    if #available(iOSApplicationExtension 13.0, *) {
+    if #available(iOS 13.0, *) {
       backdropView.layer.cornerCurve = .continuous
     } else {
       // Fallback on earlier versions
