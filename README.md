@@ -19,9 +19,39 @@ Pixel v2 provides the following features:
 - Create your own image editor UI by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
 
-## Use Built-in fullstack image editor
+## Built-in UI - Fullstack image editor
 
 - [ ] TODO
+
+## Built-in UI - Crop editor
+
+**UIKit**
+```swift
+let uiImage: UIImage = ...
+let controller = CropViewController(imageProvider: .init(image: uiImage))
+
+controller.modalPresentationStyle = .fullScreen
+
+controller.handlers.didCancel = { controller in
+  controller.dismiss(animated: true, completion: nil)
+}
+  
+controller.handlers.didFinish = { [weak self] controller in
+  controller.dismiss(animated: true, completion: nil)
+  controller.editingStack.makeRenderer()?.render { [weak self] image in
+    // ✅ handle the result image.
+  }
+}
+
+present(controller, animated: true, completion: nil)
+```
+
+**SwiftUI**
+```swift
+WIP
+```
+
+## Components
 
 ## Build your own cropping screen
 
