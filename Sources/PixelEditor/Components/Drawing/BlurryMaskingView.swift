@@ -140,6 +140,10 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   // MARK: - Initializers
   
   public init(editingStack: EditingStack) {
+    
+    // FIXME: check loading UI works
+    
+    
     self.editingStack = editingStack
     store = .init(
       initialState: .init(),

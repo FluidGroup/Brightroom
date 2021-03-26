@@ -213,6 +213,7 @@ public struct EditingCrop: Equatable {
         fixed.size.height = imageSize.height
       }
       
+      // FIXME:
       assert(fixed.maxX <= imageSize.width)
       assert(fixed.maxY <= imageSize.height)
       
