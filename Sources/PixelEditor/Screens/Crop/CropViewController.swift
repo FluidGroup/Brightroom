@@ -312,6 +312,11 @@ public final class CropViewController: UIViewController {
       
       guard let self = self else { return }
       
+      state.ifChanged(\.proposedCrop?.rotation) { rotation in
+        guard let rotation = rotation else { return }        
+        self.aspectRatioControl?.setRotation(rotation)
+      }
+      
       state.ifChanged(\.preferredAspectRatio) { ratio in
         self.aspectRatioControl?.setSelected(ratio)
       }

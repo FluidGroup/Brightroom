@@ -382,7 +382,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop?.rotation = rotation
+      $0.proposedCrop?.rotation = rotation        
       $0.layoutVersion += 1
     }
   }
