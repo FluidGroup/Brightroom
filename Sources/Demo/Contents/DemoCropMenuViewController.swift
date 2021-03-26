@@ -103,19 +103,21 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         EditingStack can specify the extent of cropping while creating.
         """,
         onTap: { [unowned self] in
-
+          
           let editingStack = EditingStack(
             imageProvider: .init(image: Asset.l1002725.image), cropModifier: .init { image, crop in
               crop.setCropExtentNormalizing(CGRect(
                 origin: .zero,
                 size: .init(width: 100, height: 300)
-              ))
+              ),
+              respectingAspectRatio: nil
+              )
             }
           )
-
-//          var options = CropViewController.Options()
-//          options.aspectRatioOptions = .fixed(.square)
-
+          
+          //          var options = CropViewController.Options()
+          //          options.aspectRatioOptions = .fixed(.square)
+          
           let controller = CropViewController(editingStack: editingStack)
           _presentCropViewConroller(controller)
         }

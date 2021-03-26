@@ -269,6 +269,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
         }
         .store(in: &subscriptions)
         
+        var appliedCrop = false
+        
         editingStack.sinkState { [weak self] state in
           
           guard let self = self else { return }
@@ -279,16 +281,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
               self.setImage(image)
             }
             
-            loaded.ifChanged(\.currentEdit.crop) { cropRect in
-              
-              /**
-               To avoid running pending layout operations from User Initiated actions.
-               */
-              if cropRect.cropExtent != self.store.state.proposedCrop?.cropExtent {
-                self.setCrop(cropRect)
-              }
+            if appliedCrop == false {
+              appliedCrop = true
+              self.setCrop(loaded.currentEdit.crop)
             }
-            
+                        
           }
           
           state.ifChanged(\.isLoading) { isLoading in
@@ -646,9 +643,11 @@ extension CropView {
       scrollView.contentInset = resolvedInsets
     }
     
-    store.commit {
+    EditorLog.debug("[CropView] visbleRect : \(visibleRect), guideViewFrame: \(guideView.frame)")
+                          
+    store.commit {      
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop?.setCropExtentNormalizing(visibleRect)
+      $0.proposedCrop?.setCropExtentNormalizing(visibleRect, respectingAspectRatio: $0.preferredAspectRatio)
     }
         
     /// Triggers layout update later
@@ -667,7 +666,7 @@ extension CropView {
     store.commit {
       let rect = guideView.convert(guideView.bounds, to: imageView)
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      $0.proposedCrop?.setCropExtentNormalizing(rect)
+      $0.proposedCrop?.setCropExtentNormalizing(rect, respectingAspectRatio: $0.preferredAspectRatio)
     }
   }
 

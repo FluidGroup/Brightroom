@@ -8,10 +8,18 @@ enum Components {
   final class ResultImageCell: ASCellNode {
     var image: UIImage? {
       didSet {
-        imageNode.image = image
+        if let image = image {
+          imageNode.image = image
+          metadataTextNode.attributedText = NSAttributedString(string: "\(image.size.width * image.scale), \(image.size.height * image.scale)")
+        } else {
+          imageNode.image = nil
+          metadataTextNode.attributedText = nil
+        }
+
       }
     }
 
+    private let metadataTextNode = ASTextNode()
     private let shape = ShapeLayerNode.roundedCorner(radius: 0)
     private let imageNode = ASImageNode()
 
@@ -29,12 +37,15 @@ enum Components {
 
     override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec {
       LayoutSpec {
-        HStackLayout(justifyContent: .center) {
-          imageNode
-            .aspectRatio(1)
-            .width(300)
-            .background(shape)
-            .padding(8)
+        VStackLayout(spacing: 8) {
+          HStackLayout(justifyContent: .center) {
+            imageNode
+              .aspectRatio(1)
+              .width(300)
+              .background(shape)
+              .padding(8)
+          }
+          metadataTextNode
         }
       }
     }
@@ -79,7 +90,7 @@ enum Components {
         LayoutSpec {
           VStackLayout(spacing: 8) {
             HStackLayout {
-              button            
+              button
                 .flexGrow(1)
             }
             if description != nil {

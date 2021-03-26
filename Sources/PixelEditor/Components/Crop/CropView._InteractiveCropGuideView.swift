@@ -310,6 +310,8 @@ extension CropView {
           outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
         }
       }
+      
+      EditorLog.debug("[CropGuide] \(frame)")
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -574,7 +576,7 @@ extension CropView {
         }
 
         let translation = gesture.translation(in: self)
-
+                
         widthConstraint.constant -= translation.x
         heightConstraint.constant -= translation.y
 
@@ -928,3 +930,29 @@ private final class MaskView: PixelEditorCodeBasedView {
     )
   }
 }
+
+/*
+extension UIPanGestureRecognizer {
+  
+  func pointTranslation(in view: UIView?) -> CGPoint {
+    
+    let translation = self.translation(in: view)
+
+    var point = CGPoint()
+    
+    if abs(translation.x) >= 1 {
+      point.x = translation.x
+      self.setTranslation(.init(x: 0, y: translation.y), in: view)
+    }
+    
+    if abs(translation.y) >= 1 {
+      point.y = translation.y
+      self.setTranslation(.init(x: translation.x, y: 0), in: view)
+    }
+            
+    return point
+    
+  }
+  
+}
+*/

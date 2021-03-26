@@ -21,6 +21,7 @@
 
 import UIKit
 
+/// A representation of cropping extent in Image.
 public struct EditingCrop: Equatable {
   public enum Rotation: Equatable, CaseIterable {
     /// 0 degree - default
@@ -63,6 +64,7 @@ public struct EditingCrop: Equatable {
   }
     
   /// The dimensions in pixel for the image.
+  /// Applied image-orientation.
   public var imageSize: CGSize
   
   /// The rectangle that specifies the extent of the cropping.
@@ -86,7 +88,7 @@ public struct EditingCrop: Equatable {
   
   public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0, scaleToRestore: CGFloat = 1) {
     self.imageSize = imageSize
-    self.cropExtent = Self.normalizeRect(rect: cropRect, in: imageSize)
+    self.cropExtent = Self.normalizeRect(rect: cropRect, in: imageSize, respectingAspectRatio: nil)
     self.rotation = rotation
     self.scaleToRestore = scaleToRestore
   }
@@ -155,47 +157,77 @@ public struct EditingCrop: Equatable {
     imageSize.width.round(.down)
     imageSize.height.round(.down)
     
-    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize)
+    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: nil)
     modified.imageSize = imageSize
            
     return modified
   }
-  
-  public mutating func setCropExtentNormalizing(_ cropExtent: CGRect) {
-    self.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize)
+    
+  /// Updates cropExtent with new specified rect and normalizing value using aspectRatio(optional).
+  /// cropExtent would be rounded in order to drop floating point value for fitting pixel.
+  /// With specifing `respectingAspectRatio`, it fixes cropExtent's size.
+  ///
+  /// - Parameters:
+  ///   - cropExtent:
+  ///   - respectingAspectRatio:
+  public mutating func setCropExtentNormalizing(_ cropExtent: CGRect, respectingAspectRatio: PixelAspectRatio?) {
+    self.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: respectingAspectRatio)
   }
   
-  private static func normalizeRect(rect: CGRect, in imageSize: CGSize) -> CGRect {
-    var fixed = rect
-    fixed.origin.x.round(.down)
-    fixed.origin.y.round(.down)
-    fixed.size.width.round(.down)
-    fixed.size.height.round(.down)
-    
-    if fixed.origin.x < 0 {
-      fixed.origin.x = 0
-      fixed.size.width -= fixed.origin.x
-    }
-    
-    if fixed.origin.y < 0 {
-      fixed.origin.y = 0
-      fixed.size.height -= fixed.origin.y
-    }
-    
-    if fixed.width > imageSize.width {
-      fixed.size.width = imageSize.width
-    }
-    
-    if fixed.height > imageSize.height {
-      fixed.size.height = imageSize.height
-    }
-    
-    assert(fixed.origin.x >= 0)
-    assert(fixed.origin.y >= 0)
-    assert(fixed.width <= imageSize.width)
-    assert(fixed.height <= imageSize.height)
+  private static func normalizeRect(rect: CGRect, in imageSize: CGSize, respectingAspectRatio: PixelAspectRatio?) -> CGRect {
         
-    EngineLog.debug("Normalize CropExtent: \(fixed) from \(rect) in ImageSize:\(imageSize)")
+    var fixed = rect
+    
+    respectAspectRatio: do {
+      
+      if let aspectRatio = respectingAspectRatio {
+        
+        fixed.size = aspectRatio.size(byWidth: fixed.size.width)
+        
+      }
+      
+    }
+    
+    roundFloatingPoint: do {
+          
+      fixed.origin.x.round(.down)
+      fixed.origin.y.round(.down)
+      fixed.size.width.round(.down)
+      fixed.size.height.round(.down)
+      
+      if fixed.origin.x < 0 {
+        fixed.origin.x = 0
+        fixed.size.width -= fixed.origin.x
+      }
+      
+      if fixed.origin.y < 0 {
+        fixed.origin.y = 0
+        fixed.size.height -= fixed.origin.y
+      }
+      
+      if fixed.width > imageSize.width {
+        fixed.size.width = imageSize.width
+      }
+      
+      if fixed.height > imageSize.height {
+        fixed.size.height = imageSize.height
+      }
+      
+      assert(fixed.origin.x >= 0)
+      assert(fixed.origin.y >= 0)
+      assert(fixed.width <= imageSize.width)
+      assert(fixed.height <= imageSize.height)
+      
+    }
+          
+    EngineLog.debug("""
+      Normalizing CropExtent
+      => \(fixed)
+        - resultAspectRatio: \(PixelAspectRatio(fixed.size)._minimized().localizedText)
+        - source: \(rect)
+        - imageSize: \(imageSize)
+        - respectingApectRatio: \(respectingAspectRatio.map { "\($0.width):\($0.height)" } ?? "null")
+      """)
     
     return fixed
   }

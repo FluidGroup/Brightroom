@@ -211,7 +211,27 @@ public struct PixelAspectRatio: Hashable {
     
   }
   
+  public func _minimized() -> Self {
+    func gcd(_ a: CGFloat, _ b: CGFloat) -> CGFloat {
+      let r = a.truncatingRemainder(dividingBy: b)
+      if r != 0 {
+        return gcd(b, r)
+      } else {
+        return b
+      }
+    }
+    
+    let v = gcd(width, height)
+    
+    return .init(width: width / v, height: height / v)
+  }
+  
+  public var localizedText: String {
+    "\(width):\(height)"
+  }
+  
   public static var square: Self {
     .init(width: 1, height: 1)
   }
+  
 }
