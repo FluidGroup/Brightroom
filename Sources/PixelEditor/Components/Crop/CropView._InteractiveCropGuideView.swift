@@ -311,7 +311,7 @@ extension CropView {
         }
       }
       
-      EditorLog.debug("[CropGuide] \(frame)")
+//      EditorLog.debug("[CropGuide] \(frame)")
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

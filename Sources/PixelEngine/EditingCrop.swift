@@ -181,7 +181,7 @@ public struct EditingCrop: Equatable {
     respectAspectRatio: do {
       
       if let aspectRatio = respectingAspectRatio {
-        
+                
         fixed.size = aspectRatio.size(byWidth: fixed.size.width)
         
       }
@@ -213,6 +213,9 @@ public struct EditingCrop: Equatable {
         fixed.size.height = imageSize.height
       }
       
+      assert(fixed.maxX <= imageSize.width)
+      assert(fixed.maxY <= imageSize.height)
+      
       assert(fixed.origin.x >= 0)
       assert(fixed.origin.y >= 0)
       assert(fixed.width <= imageSize.width)
@@ -220,6 +223,7 @@ public struct EditingCrop: Equatable {
       
     }
           
+    #if DEBUG
     EngineLog.debug("""
       Normalizing CropExtent
       => \(fixed)
@@ -228,6 +232,7 @@ public struct EditingCrop: Equatable {
         - imageSize: \(imageSize)
         - respectingApectRatio: \(respectingAspectRatio.map { "\($0.width):\($0.height)" } ?? "null")
       """)
+    #endif
     
     return fixed
   }
