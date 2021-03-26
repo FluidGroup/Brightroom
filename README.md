@@ -25,6 +25,8 @@ Pixel v2 provides the following features:
 
 ## Built-in UI - Crop editor
 
+![PhotosCropViewController](https://user-images.githubusercontent.com/1888355/112679774-e9ed5c00-8eaf-11eb-9178-c45e691a11a6.gif)
+
 **UIKit**
 ```swift
 let uiImage: UIImage = ...
