@@ -32,6 +32,36 @@ public typealias PixelEditViewController = ClassicImageEditViewController
 
 public final class ClassicImageEditViewController: UIViewController {
   
+  public struct LocalizedStrings {
+    
+    public var done = "Done"
+    public var normal = "Normal"
+    public var cancel = "Cancel"
+    public var filter = "Filter"
+    public var edit = "Edit"
+    
+    public var editAdjustment = "Adjust"
+    public var editMask = "Mask"
+    public var editHighlights = "Highlights"
+    public var editShadows = "Shadows"
+    public var editSaturation = "Saturation"
+    public var editContrast = "Contrast"
+    public var editBlur = "Blur"
+    public var editTemperature = "Temperature"
+    public var editBrightness = "Brightness"
+    public var editVignette = "Vignette"
+    public var editFade = "Fade"
+    public var editClarity = "Clarity"
+    public var editSharpen = "Sharpen"
+    public var brushSizeSmall = "◦"
+    public var brushSizeLarge = "◯"
+    public var clear = "Clear"
+    
+    public init() {
+      
+    }
+  }
+  
   public struct Handlers {
     public var didEndEditing: (ClassicImageEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (ClassicImageEditViewController) -> Void = { _ in }
