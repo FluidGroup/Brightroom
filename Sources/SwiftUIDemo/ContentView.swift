@@ -126,8 +126,10 @@ struct ContentView: View {
               let stack = EditingStack.init(
                 imageProvider: .init(image: Asset.l1000316.image),
                 previewMaxPixelSize: 400 * 2,
-                cropModifier: .init { _, crop in
-                  crop.updateCropExtent(by: .square)
+                cropModifier: .init { _, crop, completion in
+                  var new = crop
+                  new.updateCropExtent(by: .square)
+                  completion(new)
                 }
               )
               fullScreenView = .init {

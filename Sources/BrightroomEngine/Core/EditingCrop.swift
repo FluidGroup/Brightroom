@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import UIKit
+import Vision
 
 /// A representation of cropping extent in Image.
 public struct EditingCrop: Equatable {
@@ -97,31 +98,6 @@ public struct EditingCrop: Equatable {
     .init(imageSize: imageSize, cropRect: .init(origin: .zero, size: imageSize), scaleToRestore: scaleToRestore)
   }
   
-  /**
-   Set new aspect ratio with updating cropping extent.
-   Currently, the cropping extent changes to maximum size in the size of image.
-   
-   - TODO: Resizing cropping extent with keeping area by new aspect ratio.
-   */
-  public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
-    let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
-    
-    cropExtent = .init(
-      origin: .init(
-        x: (imageSize.width - maxSize.width) / 2,
-        y: (imageSize.height - maxSize.height) / 2
-      ),
-      size: maxSize
-    )
-  }
-  
-  public mutating func updateCropExtentIfNeeded(by newAspectRatio: PixelAspectRatio) {
-    guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
-      return
-    }    
-    updateCropExtent(by: newAspectRatio)
-  }
-  
   public func scaled(maxPixelSize: CGFloat) -> Self {
     
     let scaledImageSize = imageSize.scaled(maxPixelSize: maxPixelSize)
@@ -131,6 +107,7 @@ public struct EditingCrop: Equatable {
     var new = scaled(scale)
     new.imageSize = scaledImageSize
     new.scaleToRestore = imageSize.width / scaledImageSize.width
+        
     return new
   }
   
@@ -159,9 +136,52 @@ public struct EditingCrop: Equatable {
     
     // TODO: Consider
 //    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: nil)
+    modified.cropExtent = cropExtent
     modified.imageSize = imageSize
            
     return modified
+  }
+  
+  /**
+   Set new aspect ratio with updating cropping extent.
+   Currently, the cropping extent changes to maximum size in the size of image.
+   
+   - TODO: Resizing cropping extent with keeping area by new aspect ratio.
+   */
+  public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
+    let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
+    
+    cropExtent = .init(
+      origin: .init(
+        x: (imageSize.width - maxSize.width) / 2,
+        y: (imageSize.height - maxSize.height) / 2
+      ),
+      size: maxSize
+    )
+  }
+  
+  public mutating func updateCropExtentIfNeeded(by newAspectRatio: PixelAspectRatio) {
+    guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
+      return
+    }
+    updateCropExtent(by: newAspectRatio)
+  }
+  
+  public mutating func updateCropExtent(byBoundingBox boundingBox: CGRect) {
+                
+    //    var proposed = cropExtent
+    
+//    proposed.origin.x = proposed.maxX * boundingBox.origin.x
+//    proposed.origin.y = proposed.maxY * boundingBox.origin.y
+//
+//    proposed.size.width *= boundingBox.size.width
+//    proposed.size.height *= boundingBox.size.height
+    
+    var boundingBox = boundingBox
+
+    let proposed = VNImageRectForNormalizedRect(boundingBox, Int(imageSize.width), Int(imageSize.height))
+        
+    self.cropExtent = Self.normalizeRect(rect: proposed, in: imageSize, respectingAspectRatio: nil)
   }
     
   /// Updates cropExtent with new specified rect and normalizing value using aspectRatio(optional).
@@ -171,7 +191,7 @@ public struct EditingCrop: Equatable {
   /// - Parameters:
   ///   - cropExtent:
   ///   - respectingAspectRatio:
-  public mutating func setCropExtentNormalizing(_ cropExtent: CGRect, respectingAspectRatio: PixelAspectRatio?) {
+  public mutating func updateCropExtentNormalizing(_ cropExtent: CGRect, respectingAspectRatio: PixelAspectRatio?) {
     self.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: respectingAspectRatio)
   }
   

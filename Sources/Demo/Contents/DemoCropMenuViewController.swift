@@ -35,6 +35,31 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
 
     stackScrollNode.append(nodes: [
       resultCell,
+      
+      Components.makeSelectionCell(title: "Face detection", onTap: { [unowned self] in
+                
+        let stack = EditingStack.init(
+          imageProvider: .init(image: Asset.horizontalRect.image),
+          previewMaxPixelSize: 600,
+          cropModifier: .faceDetection()
+        )
+        
+        _presentCropViewConroller(stack)
+      }),
+      
+      Components.makeSelectionCell(title: "Face detection from picker", onTap: { [unowned self] in
+        
+        self.__pickPhoto { image in
+          
+          let stack = EditingStack.init(
+            imageProvider: .init(image: image),
+            previewMaxPixelSize: 600,
+            cropModifier: .faceDetection()
+          )
+          _presentCropViewConroller(stack)
+        }
+        
+      }),
 
       Components.makeSelectionCell(title: "Horizontal rect from UIImage", onTap: { [unowned self] in
         _presentCropViewConroller(stackForHorizontal)
@@ -105,13 +130,19 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         onTap: { [unowned self] in
           
           let editingStack = EditingStack(
-            imageProvider: .init(image: Asset.l1002725.image), cropModifier: .init { image, crop in
-              crop.setCropExtentNormalizing(CGRect(
+            imageProvider: .init(
+              image: Asset.l1002725.image),
+            cropModifier: .init { image, crop, completion in
+              
+              var new = crop
+              new.updateCropExtentNormalizing(CGRect(
                 origin: .zero,
                 size: .init(width: 100, height: 300)
               ),
               respectingAspectRatio: nil
               )
+              
+              completion(new)
             }
           )
           

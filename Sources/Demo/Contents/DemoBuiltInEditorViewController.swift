@@ -14,9 +14,14 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
   }
   
   private let resultCell = Components.ResultImageCell()
-  private let stack = EditingStack.init(imageProvider: .init(image: Asset.leica.image), cropModifier: .init { _, crop in
-    crop.updateCropExtent(by: .square)
-  })
+  private let stack = EditingStack.init(
+    imageProvider: .init(image: Asset.leica.image),
+    cropModifier: .init { _, crop, completion in
+      var new = crop
+      new.updateCropExtent(by: .square)
+      completion(new)
+    }
+  )
   
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -75,8 +80,10 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
     let stack = EditingStack.init(
       imageProvider: imageProvider,
       previewMaxPixelSize: 400 * 2,
-      cropModifier: .init { _, crop in
-        crop.updateCropExtent(by: .square)
+      cropModifier: .init { _, crop, completion in
+        var new = crop
+        new.updateCropExtent(by: .square)
+        completion(new)
       }
     )
     
