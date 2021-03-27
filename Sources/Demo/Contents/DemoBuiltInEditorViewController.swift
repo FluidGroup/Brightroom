@@ -42,6 +42,10 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
         _present(.init(image: Asset.leica.image))
       }),
       
+      Components.makeSelectionCell(title: "DisplayP3", onTap: { [unowned self] in
+        _present(.init(image: Asset.instaLogo.image))
+      }),
+      
       Components.makeSelectionCell(title: "Example with keeping", onTap: { [unowned self] in
         _present(stack)
       }),

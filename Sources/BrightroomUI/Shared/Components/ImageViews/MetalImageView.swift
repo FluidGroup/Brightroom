@@ -70,8 +70,11 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     autoResizeDrawable = true
     contentMode = .scaleAspectFill
     
+    #if targetEnvironment(simulator)
+    #else
     /// For supporting wide-color - extended sRGB
     colorPixelFormat = .bgra10_xr
+    #endif
   }
 
   public required init(coder: NSCoder) {

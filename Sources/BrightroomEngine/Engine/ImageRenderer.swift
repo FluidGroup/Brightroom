@@ -24,29 +24,29 @@ import UIKit
 
 public final class ImageRenderer {
   private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
-  
+
   public enum Resolution {
     case full
     case resize(maxPixelSize: CGFloat)
   }
-  
+
   public struct Edit {
     public var croppingRect: EditingCrop?
     public var modifiers: [Filtering] = []
     public var drawer: [GraphicsDrawing] = []
   }
-  
+
   public let source: ImageSource
   public let orientation: CGImagePropertyOrientation
-  
+
   public var edit: Edit
-  
+
   public init(source: ImageSource, orientation: CGImagePropertyOrientation) {
     self.source = source
     self.orientation = orientation
     edit = .init()
   }
-  
+
   public func render(resolution: Resolution = .full, completion: @escaping (UIImage) -> Void) {
     type(of: self).queue.async {
       let image = self.render()
@@ -55,36 +55,41 @@ public final class ImageRenderer {
       }
     }
   }
-  
+
   /**
    Renders an image according to the editing.
-   
+
    - Attension: This operation can be run background-thread.
    */
-  public func render(resolution: Resolution = .full, workingFormat: CIFormat = .RGBA8) -> UIImage {
+  public func render(resolution: Resolution = .full) -> UIImage {
     
     /**
+     FIXME: Super-Slow
+
      TODO: Restores image-orientation
+
      FIXME: support wide-color. Editing CIImage displayed with wide-color. but rendered image is not wide-color.
      For example, when the image is brighter, the result contains clipping.
+
+     FIMXE: To create DisplayP3, using `UIGraphicsImageRenderer.pngData`. I don't know why `.image` returns a CGImage that is not DisplayP3 against specified color-space. So this is slow.
      */
-    
+
     let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
-    
+
     assert(
       {
         guard let crop = edit.croppingRect else { return true }
         return crop.imageSize == CGSize(image: sourceCIImage)
       }())
-    
+
     let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
-    
+
     EngineLog.debug("Source.colorSpace :", sourceCIImage.colorSpace as Any)
-    
+
     let effectedCIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
       modifier.apply(to: image, sourceImage: sourceCIImage)
     }
-    
+
     let format: UIGraphicsImageRendererFormat
     do {
       if #available(iOS 11.0, *) {
@@ -95,44 +100,50 @@ public final class ImageRenderer {
       format.scale = 1
       format.opaque = true
       if #available(iOS 12.0, *) {
-        format.preferredRange = .standard
+        format.preferredRange = .automatic
       } else {
         format.prefersExtendedRange = true
       }
     }
-    
+
     let image = autoreleasepool { () -> UIImage in
-            
+
+      EngineLog.debug("[Renderer] Creates a full size image")
+
       /**
        Creates a full size image
        */
       let fullSizeImage = autoreleasepool { () -> CGImage in
-     
+
         let targetSize = effectedCIImage.extent.size
-        
-        return UIGraphicsImageRenderer.init(size: targetSize, format: format)
-          .image { c in
-                             
+
+        let cgImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
+          ._custom { c in
+
             let cgContext = c.cgContext
             let ciContext = CIContext(
               cgContext: cgContext,
               options: [
-                .workingFormat: workingFormat,
+                .workingFormat: CIFormat.RGBAh,
                 .highQualityDownsample: true,
                 .useSoftwareRenderer: true,
-//                .outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
+                .cacheIntermediates: false,
+                .outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
+//                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
+//                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedSRGB)!
               ]
             )
-                                    
+
             #if false
             cgContext.detached {
               let cgImage = ciContext.createCGImage(
                 effectedCIImage,
                 from: effectedCIImage.extent,
                 format: .RGBAh,
-                colorSpace: effectedCIImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+                colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB),
+                deferred: true
               )!
-              
+
               cgContext.draw(cgImage, in: CGRect(origin: .zero, size: targetSize))
             }
             #else
@@ -144,11 +155,11 @@ public final class ImageRenderer {
               )
             }
             #endif
-            
+
             /**
              Render drawings
              */
-            
+
             cgContext.detached {
               cgContext.translateBy(x: 0, y: targetSize.height)
               cgContext.scaleBy(x: 1, y: -1)
@@ -156,90 +167,102 @@ public final class ImageRenderer {
                 drawer.draw(in: cgContext, canvasSize: effectedCIImage.extent.size)
               }
             }
-            
           }
-          .cgImage!
+
+        return cgImage
       }
-            
+
       /**
        Creates a cropped image from the full size image.
        */
       let croppedImage = autoreleasepool { () -> CGImage in
-        
+
         EngineLog.debug("[Renderer] Make cropped image \(crop)")
-            
+
         let targetRect = crop.cropExtent
         let targetSize = crop.cropExtent.size
-        
-        let image = UIGraphicsImageRenderer.init(size: targetSize, format: format)
-          .image { c in
+
+        let cgImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
+          ._custom { c in
             let cgContext = c.cgContext
-            
+
             cgContext.detached {
               cgContext.translateBy(x: -targetRect.minX, y: -targetRect.minY)
               cgContext.draw(fullSizeImage, in: .init(origin: .zero, size: fullSizeImage.size))
             }
           }
-          .cgImage!
-        
-        return image
+
+        return cgImage
       }
-      
+
       /**
        Rotates the cropped image.
        */
       let rotatedImage = autoreleasepool { () -> CGImage in
-        
+
+        EngineLog.debug("[Renderer] Rotates the cropped image.")
+
         let resultSize: CGSize = crop.cropExtent.integral
           .applying(crop.rotation.transform)
           .size
-        
-        return UIGraphicsImageRenderer.init(size: resultSize, format: format)
-          .image { c in
+
+        let cgImage = UIGraphicsImageRenderer.init(size: resultSize, format: format)
+          ._custom { c in
             /**
              Step: 3
              */
-            
+
             do {
               c.cgContext.translateBy(x: resultSize.width / 2, y: resultSize.height / 2)
               c.cgContext.rotate(by: -crop.rotation.angle)
-              c.cgContext.translateBy(x: -crop.cropExtent.size.width / 2, y: -crop.cropExtent.size.height / 2)
+              c.cgContext.translateBy(
+                x: -crop.cropExtent.size.width / 2,
+                y: -crop.cropExtent.size.height / 2
+              )
               c.cgContext.draw(croppedImage, in: .init(origin: .zero, size: crop.cropExtent.size))
             }
-            
           }
-          .cgImage!
+
+        return cgImage
       }
-      
+
       /**
        Normalizes image coordinate and resizes to the target size.
        */
       let finalizedImage = autoreleasepool { () -> CGImage in
-        
+
+        EngineLog.debug("[Renderer] Normalizes image coordinate and resizes to the target size..")
+
         let targetSize: CGSize = {
           switch resolution {
           case .full:
             return rotatedImage.size
-          case .resize(let maxPixelSize):
+          case let .resize(maxPixelSize):
             return Geometry.sizeThatAspectFit(size: rotatedImage.size, maxPixelSize: maxPixelSize)
           }
         }()
-        
-        return UIGraphicsImageRenderer.init(size: targetSize, format: format)
-          .image { c in
+
+        let cgImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
+          ._custom { c in
             c.cgContext.draw(rotatedImage, in: .init(origin: .zero, size: targetSize))
-            
           }
-          .cgImage!
+        
+        return cgImage
       }
-      
+
       EngineLog.debug("[Renderer] a rendering was successful. Image => \(finalizedImage)")
-      
+
       return UIImage(cgImage: finalizedImage)
-      
     }
-    
+
     return image
+  }
+}
+
+extension UIGraphicsImageRenderer {
+  func _custom(_ perform: (UIGraphicsImageRendererContext) -> Void) -> CGImage {
+    let d = pngData(actions: perform)
+    return UIImage(data: d)!.cgImage!
   }
 }
 
@@ -252,9 +275,7 @@ extension CGContext {
 }
 
 extension CGImage {
-  
   fileprivate var size: CGSize {
     return .init(width: width, height: height)
   }
-  
 }

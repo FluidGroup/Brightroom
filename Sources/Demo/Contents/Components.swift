@@ -23,12 +23,12 @@ enum Components {
     var image: UIImage? {
       didSet {
         if let image = image {
-          imageNode.image = image
+          (imageNode.view as! UIImageView).image = image
 
           let meta = makeMetadataString(image: image)
           metadataTextNode.attributedText = NSAttributedString(string: meta)
         } else {
-          imageNode.image = nil
+          (imageNode.view as! UIImageView).image = nil
           metadataTextNode.attributedText = nil
         }
       }
@@ -37,7 +37,7 @@ enum Components {
     private let tutorialTextNode = ASTextNode()
     private let metadataTextNode = ASTextNode()
     private let shape = ShapeLayerNode.roundedCorner(radius: 0)
-    private let imageNode = ASImageNode()
+    private let imageNode = ASDisplayNode.init(viewBlock: { UIImageView() })
     private let saveButton = GlossButtonNode()
 
     override init() {
