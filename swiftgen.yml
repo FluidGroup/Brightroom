@@ -16,21 +16,18 @@
 #     - templateName: structured-swift5
 #       output: Strings+Generated.swift
 
-
 ## Generate constants for your Assets Catalogs, including constants for images, colors, ARKit resources, etc.
 ##   This example also shows how to provide additional parameters to your template to customize the output.
 ##   - Especially the `forceProvidesNamespaces: true` param forces to create sub-namespace for each folder/group used in your Asset Catalogs, even the ones without "Provides Namespace". Without this param, SwiftGen only generates sub-namespaces for folders/groups which have the "Provides Namespace" box checked in the Inspector pane.
 ##   - To know which params are supported for a template, use `swiftgen template doc xcassets swift5` to open the template documentation on GitHub.
- xcassets:
-   inputs:
-     - Assets.xcassets
-   outputs:
-     - templateName: swift5
-       params:
-         forceProvidesNamespaces: false
-       output: XCAssets+Generated.swift
-
-
+xcassets:
+  inputs:
+    - Sources/SharedForDemo/Assets.xcassets
+  outputs:
+    - templateName: swift5
+      params:
+        forceProvidesNamespaces: false
+      output: Sources/SharedForDemo/XCAssets+Generated.swift
 ## Generate constants for your storyboards and XIBs.
 ##   This one generates 2 output files, one containing the storyboard scenes, and another for the segues.
 ##    (You can remove the segues entry if you don't use segues in your IB files).
@@ -44,7 +41,6 @@
 #       output: IB-Scenes+Generated.swift
 #     - templateName: segues-swift5
 #       output: IB-Segues+Generated.swift
-
 
 ## There are other parsers available for you to use depending on your needs, for example:
 ##  - `fonts` (if you have custom ttf/ttc font files)

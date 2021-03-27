@@ -608,16 +608,16 @@
 		4B47D053216CC5350007B594 /* PixelEditor */ = {
 			isa = PBXGroup;
 			children = (
-				4BA8E73B217C712200940518 /* Utils */,
-				4B9D4578216E07BC003A240A /* Components */,
-				4BC95D8925E5586B000595AE /* Built-in UI */,
 				4B47D054216CC5350007B594 /* PixelEditor.h */,
 				4B47D055216CC5350007B594 /* Info.plist */,
-				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
-				4B9D4570216DF1A1003A240A /* Media.xcassets */,
-				4B34578A217502F900716DA0 /* Style.swift */,
 				4B0BDCA4217D979D001098B9 /* L10n.swift */,
+				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
+				4B34578A217502F900716DA0 /* Style.swift */,
 				4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */,
+				4B9D4570216DF1A1003A240A /* Media.xcassets */,
+				4BC95D8925E5586B000595AE /* Built-in UI */,
+				4B9D4578216E07BC003A240A /* Components */,
+				4BA8E73B217C712200940518 /* Utils */,
 			);
 			path = PixelEditor;
 			sourceTree = "<group>";
@@ -625,6 +625,7 @@
 		4B4C7C8E260A6EF70082240A /* Archives */ = {
 			isa = PBXGroup;
 			children = (
+				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B7C97F12609B5AA00FC541E /* CIFilter(NotActive) */,
 			);
 			path = Archives;
@@ -650,12 +651,8 @@
 			children = (
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
 				4B4C7C8E260A6EF70082240A /* Archives */,
-				4B1E94E72176344100E9DFB8 /* From Fil */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
 				4BDEE0A625F8CF6800FA22CB /* Tests */,
-				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
-				4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */,
-				4B98CCE625EFF4EF00E4F61F /* Mocks.swift */,
 				4B600AFE216B7A94001E1456 /* Products */,
 				4B600B37216B7CD6001E1456 /* Frameworks */,
 				E6BD27A8BEF5BCA522C4A89A /* Pods */,
@@ -679,15 +676,15 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
-				4B7B3688260EF9D3004FE2F4 /* Core */,
-				4B422E09260B92E70011500C /* DataSource */,
-				4B422DFB260B91190011500C /* Library */,
-				4B1E94B4217632B300E9DFB8 /* Filter */,
 				4B600B00216B7A94001E1456 /* PixelEngine.h */,
 				4B600B01216B7A94001E1456 /* Info.plist */,
-				4B9B02EA216BBB6B001593B9 /* Engine */,
 				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
 				4B7B3687260EF9B9004FE2F4 /* ColorCube */,
+				4B7B3688260EF9D3004FE2F4 /* Core */,
+				4B422E09260B92E70011500C /* DataSource */,
+				4B9B02EA216BBB6B001593B9 /* Engine */,
+				4B1E94B4217632B300E9DFB8 /* Filter */,
+				4B422DFB260B91190011500C /* Library */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -734,6 +731,7 @@
 				4B47D053216CC5350007B594 /* PixelEditor */,
 				4B600B21216B7C9C001E1456 /* Demo */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
+				4B7B368C260EFA6E004FE2F4 /* SharedForDemo */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -762,6 +760,16 @@
 				4B0077BD2170496E008330EA /* BlurredMask.swift */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		4B7B368C260EFA6E004FE2F4 /* SharedForDemo */ = {
+			isa = PBXGroup;
+			children = (
+				4B600B29216B7C9E001E1456 /* Assets.xcassets */,
+				4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */,
+				4B98CCE625EFF4EF00E4F61F /* Mocks.swift */,
+			);
+			path = SharedForDemo;
 			sourceTree = "<group>";
 		};
 		4B7C97F12609B5AA00FC541E /* CIFilter(NotActive) */ = {

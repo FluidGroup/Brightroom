@@ -2,18 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:/Users/muukii/.ghq/github.com/muukii/Pixel/Sources/PixelEngine/ColorCubeLoader.swift">
-   </FileRef>
-   <FileRef
-      location = "group:Resize.playground">
-   </FileRef>
-   <FileRef
-      location = "group:LUTViewer.playground">
-   </FileRef>
-   <FileRef
-      location = "group:CHANGELOG.md">
-   </FileRef>
-   <FileRef
       location = "group:Pixel.xcodeproj">
    </FileRef>
    <FileRef
