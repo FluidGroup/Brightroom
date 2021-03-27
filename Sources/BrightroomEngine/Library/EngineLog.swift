@@ -24,12 +24,14 @@ import UIKit
 import os.log
 
 enum EngineLog {
-
+  
   private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
-   private static let queue = DispatchQueue.init(label: "me.muukii.PixelEngine.Log")
-
+  private static let queue = DispatchQueue.init(label: "me.muukii.PixelEngine.Log")
+  
   static func debug(_ object: Any...) {
-
+    
+    #if DEBUG
+    
     queue.async {
       if #available(iOS 12.0, *) {
         os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
@@ -37,5 +39,7 @@ enum EngineLog {
         os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
       }
     }
+    
+    #endif
   }
 }

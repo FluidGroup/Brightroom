@@ -292,6 +292,10 @@ open class EditingStack: Equatable, StoreComponentType {
       }
   }
   
+  deinit {
+    EngineLog.debug("[EditingStack] deinit")
+  }
+  
   private func receive(newState state: Changes<State>) {
     commit { (modifyingState: inout InoutRef<State>) in
       

@@ -102,9 +102,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
   
   public let store: DefaultStore
   
-  private var pendingAction: (ImageProvider) -> Void
+  private var pendingAction: (ImageProvider) -> VergeAnyCancellable
   
   #if os(iOS)
+  
+  private var cancellable: VergeAnyCancellable?
   
   /// Creates an instance from data
   public init(data: Data) throws {
@@ -131,7 +133,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
       $0.wrapped.resolve(with: metadata)
     }
     
-    pendingAction = { _ in }
+    pendingAction = { _ in
+      return .init {}
+    }
   }
   
   /// Creates an instance from UIImage
@@ -149,7 +153,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
       $0.wrapped.resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
     }
     
-    pendingAction = { _ in }
+    pendingAction = { _ in  return .init {} }
     
   }
   
@@ -188,7 +192,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
       $0.wrapped.resolve(with: metadata)
     }
     
-    pendingAction = { _ in }
+    pendingAction = { _ in return .init {} }
   }
   
   /**
@@ -222,7 +226,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     pendingAction = { `self` in
       
-      let editableTask = URLSession.shared.downloadTask(with: editableRemoteURLRequest) { url, response, error in
+      let editableTask = URLSession.shared.downloadTask(with: editableRemoteURLRequest) { [weak self] url, response, error in
+        
+        guard let self = self else { return }
         
         if let error = error {
           self.store.commit {
@@ -255,6 +261,10 @@ public final class ImageProvider: Equatable, StoreComponentType {
       }
       
       editableTask.resume()
+      
+      return .init {
+        editableTask.cancel()
+      }
     }
   }
   
@@ -277,7 +287,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
       finalImageRequestOptions.version = .current
       finalImageRequestOptions.resizeMode = .none
 
-      PHImageManager.default().requestImage(
+     let request = PHImageManager.default().requestImage(
         for: asset,
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
@@ -305,12 +315,21 @@ public final class ImageProvider: Equatable, StoreComponentType {
           
         }
       }
+      
+      return .init {
+        PHImageManager.default().cancelImageRequest(request)
+      }
     }
   }
   
   #endif
   
   func start() {
-    pendingAction(self)
+    guard cancellable == nil else { return }
+    cancellable = pendingAction(self)
+  }
+  
+  deinit {
+    EngineLog.debug("[ImageProvider] deinit")
   }
 }
