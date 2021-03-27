@@ -1,5 +1,6 @@
 
 import Foundation
+import CoreGraphics
 
 public enum ColorCubeLoaderError: Error {
   case failedToGetDimensionFromFilename(String)

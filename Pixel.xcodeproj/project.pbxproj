@@ -49,34 +49,34 @@
 		4B42A6AD2178E14500F18208 /* VignetteControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6AC2178E14500F18208 /* VignetteControl.swift */; };
 		4B42A6AF2178E14E00F18208 /* HighlightsControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6AE2178E14E00F18208 /* HighlightsControl.swift */; };
 		4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6B02178E15600F18208 /* ShadowsControl.swift */; };
-		4B47D056216CC5350007B594 /* PixelEditor.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B47D054216CC5350007B594 /* PixelEditor.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		4B47D059216CC5350007B594 /* PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; };
-		4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4B47D056216CC5350007B594 /* BrightroomUI.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B47D054216CC5350007B594 /* BrightroomUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4B47D059216CC5350007B594 /* BrightroomUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* BrightroomUI.framework */; };
+		4B47D05A216CC5350007B594 /* BrightroomUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* BrightroomUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B47D060216CC5480007B594 /* PixelEditViewController.swift */; };
-		4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
+		4B47D064216CC5640007B594 /* BrightroomEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; };
 		4B49C1AA260EE8B30099BFBD /* ColorCubeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */; };
-		4B49C1B8260EEB250099BFBD /* ColorCubeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */; };
 		4B4C7C7A260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
 		4B4C7C7B260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
 		4B58DF662607100600D85F97 /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58DF652607100600D85F97 /* CanvasView.swift */; };
-		4B600B02216B7A94001E1456 /* PixelEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* PixelEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		4B600B02216B7A94001E1456 /* BrightroomEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* BrightroomEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B600B19216B7BB9001E1456 /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B18216B7BB9001E1456 /* ImageRenderer.swift */; };
 		4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B22216B7C9C001E1456 /* AppDelegate.swift */; };
 		4B600B25216B7C9C001E1456 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B24216B7C9C001E1456 /* ViewController.swift */; };
 		4B600B28216B7C9C001E1456 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B26216B7C9C001E1456 /* Main.storyboard */; };
 		4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */; };
-		4B600B32216B7CB4001E1456 /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
-		4B600B33216B7CB4001E1456 /* PixelEngine.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4B600B32216B7CB4001E1456 /* BrightroomEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; };
+		4B600B33216B7CB4001E1456 /* BrightroomEngine.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B600B39216B7CD6001E1456 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B38216B7CD6001E1456 /* CoreImage.framework */; };
 		4B600B3B216B7CDD001E1456 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3A216B7CDD001E1456 /* AVFoundation.framework */; };
 		4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3C216B7CE3001E1456 /* Foundation.framework */; };
 		4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */; };
 		4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C96F2171D6F8008F2A54 /* EditingStack.swift */; };
-		4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* PixelEngine.swift */; };
+		4B66C9722171D764008F2A54 /* BrightroomEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* BrightroomEngine.swift */; };
 		4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9732171D781008F2A54 /* ImageSource.swift */; };
 		4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */; };
 		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
+		4B7B36C0260EFDD8004FE2F4 /* ColorCubeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7B36BF260EFDD8004FE2F4 /* ColorCubeLoader.swift */; };
 		4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B835DFD25E95D5000EC84D1 /* PhotosCropViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B835DFC25E95D5000EC84D1 /* PhotosCropViewController.swift */; };
@@ -99,10 +99,10 @@
 		4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */; };
 		4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCBD25EFF31300E4F61F /* ContentView.swift */; };
 		4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B98CCC225EFF31400E4F61F /* Preview Assets.xcassets */; };
-		4B98CCD925EFF4A400E4F61F /* PixelEditor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; };
-		4B98CCDA25EFF4A400E4F61F /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		4B98CCDD25EFF4A400E4F61F /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
-		4B98CCDE25EFF4A400E4F61F /* PixelEngine.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4B98CCD925EFF4A400E4F61F /* BrightroomUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* BrightroomUI.framework */; };
+		4B98CCDA25EFF4A400E4F61F /* BrightroomUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* BrightroomUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4B98CCDD25EFF4A400E4F61F /* BrightroomEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; };
+		4B98CCDE25EFF4A400E4F61F /* BrightroomEngine.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
 		4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B9B02E1216BB6D4001593B9 /* UIImageViewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E0216BB6D4001593B9 /* UIImageViewViewController.swift */; };
@@ -111,7 +111,7 @@
 		4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02EB216BBDA8001593B9 /* Layer.swift */; };
 		4B9D4563216DD143003A240A /* ControlStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4562216DD143003A240A /* ControlStackView.swift */; };
 		4B9D4565216DD1E0003A240A /* RootControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4564216DD1E0003A240A /* RootControlView.swift */; };
-		4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4566216DD40A003A240A /* PixelEditor.swift */; };
+		4B9D4567216DD40A003A240A /* BrightroomUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4566216DD40A003A240A /* BrightroomUI.swift */; };
 		4B9D4569216DD59D003A240A /* CropControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4568216DD59D003A240A /* CropControl.swift */; };
 		4B9D456B216DE9CA003A240A /* ExposureControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456A216DE9CA003A240A /* ExposureControl.swift */; };
 		4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456C216DEBB1003A240A /* ParameterRange.swift */; };
@@ -159,7 +159,7 @@
 		4BD27634260A4F000044B3D8 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BD27633260A4F000044B3D8 /* Accelerate.framework */; };
 		4BD2D94C260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2D94B260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift */; };
 		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
-		4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
+		4BDEE24F25F8D1A100FA22CB /* BrightroomEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */; };
 		4BE01796216F08D80026DFD6 /* HardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */; };
 		4BE01798216F16120026DFD6 /* SmallUIImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01797216F16120026DFD6 /* SmallUIImageViewController.swift */; };
 		4BE0179A216F16250026DFD6 /* SmallHardwareImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE01799216F16250026DFD6 /* SmallHardwareImageViewController.swift */; };
@@ -178,10 +178,10 @@
 		4BF0256025F12FE30093A59B /* SwiftUICropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */; };
 		4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
+		885F407D62C3D3052641D397 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCAFAF965D675F1C5EA6B5D6 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
 		A6ABB4F6260AA8F0006B46ED /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4F5260AA8F0006B46ED /* Verge */; };
 		A6ABB4FC260AA8FB006B46ED /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4FB260AA8FB006B46ED /* TransitionPatch */; };
-		B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */; };
-		ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
+		F4E19E132DB57C78B38FA447 /* Pods_Demo_Apps_Demo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FC4B7D81E5A0A734CEBB2036 /* Pods_Demo_Apps_Demo.framework */; };
 		FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */; };
 /* End PBXBuildFile section */
 
@@ -230,8 +230,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */,
-				4B600B33216B7CB4001E1456 /* PixelEngine.framework in Embed Frameworks */,
+				4B47D05A216CC5350007B594 /* BrightroomUI.framework in Embed Frameworks */,
+				4B600B33216B7CB4001E1456 /* BrightroomEngine.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -242,8 +242,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				4B98CCDA25EFF4A400E4F61F /* PixelEditor.framework in Embed Frameworks */,
-				4B98CCDE25EFF4A400E4F61F /* PixelEngine.framework in Embed Frameworks */,
+				4B98CCDA25EFF4A400E4F61F /* BrightroomUI.framework in Embed Frameworks */,
+				4B98CCDE25EFF4A400E4F61F /* BrightroomEngine.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -251,9 +251,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		09A1BDCF3FDA5098277F9C8C /* Pods-SwiftUIDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftUIDemo.release.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftUIDemo/Pods-SwiftUIDemo.release.xcconfig"; sourceTree = "<group>"; };
-		1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		2CF37F8C417C1D8326226D92 /* Pods-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftUIDemo/Pods-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
+		2F7F4F6963C146CFC1C3704C /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; sourceTree = "<group>"; };
+		4291E0400B97AA8933911505 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
 		4B0077BD2170496E008330EA /* BlurredMask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurredMask.swift; sourceTree = "<group>"; };
 		4B0077BF21704E7F008330EA /* MaskControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaskControlView.swift; sourceTree = "<group>"; };
 		4B01137D216FBA5C00CF09F6 /* SmoothPathDrawingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmoothPathDrawingView.swift; sourceTree = "<group>"; };
@@ -312,16 +311,15 @@
 		4B42A6AC2178E14500F18208 /* VignetteControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VignetteControl.swift; sourceTree = "<group>"; };
 		4B42A6AE2178E14E00F18208 /* HighlightsControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightsControl.swift; sourceTree = "<group>"; };
 		4B42A6B02178E15600F18208 /* ShadowsControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShadowsControl.swift; sourceTree = "<group>"; };
-		4B47D052216CC5350007B594 /* PixelEditor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEditor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
+		4B47D052216CC5350007B594 /* BrightroomUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = BrightroomUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B47D054216CC5350007B594 /* BrightroomUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrightroomUI.h; sourceTree = "<group>"; };
 		4B47D055216CC5350007B594 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B47D060216CC5480007B594 /* PixelEditViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PixelEditViewController.swift; sourceTree = "<group>"; };
 		4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeHelper.swift; sourceTree = "<group>"; };
-		4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorCubeLoader.swift; path = /Users/muukii/.ghq/github.com/muukii/Pixel/Sources/PixelEngine/ColorCubeLoader.swift; sourceTree = "<absolute>"; };
 		4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_X_2.jpg; sourceTree = "<group>"; };
 		4B58DF652607100600D85F97 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
-		4B600AFD216B7A94001E1456 /* PixelEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		4B600B00216B7A94001E1456 /* PixelEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEngine.h; sourceTree = "<group>"; };
+		4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = BrightroomEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B600B00216B7A94001E1456 /* BrightroomEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BrightroomEngine.h; sourceTree = "<group>"; };
 		4B600B01216B7A94001E1456 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B600B15216B7B79001E1456 /* GLImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GLImageView.swift; sourceTree = "<group>"; };
 		4B600B18216B7BB9001E1456 /* ImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageRenderer.swift; sourceTree = "<group>"; };
@@ -337,9 +335,10 @@
 		4B600B3C216B7CE3001E1456 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		4B66C96F2171D6F8008F2A54 /* EditingStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.swift; sourceTree = "<group>"; };
-		4B66C9712171D764008F2A54 /* PixelEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngine.swift; sourceTree = "<group>"; };
+		4B66C9712171D764008F2A54 /* BrightroomEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightroomEngine.swift; sourceTree = "<group>"; };
 		4B66C9732171D781008F2A54 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
 		4B75113F25F13276002D804A /* DemoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView.swift; sourceTree = "<group>"; };
+		4B7B36BF260EFDD8004FE2F4 /* ColorCubeLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ColorCubeLoader.swift; sourceTree = "<group>"; };
 		4B7C97F22609B5BE00FC541E /* ColorLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorLookup.swift; sourceTree = "<group>"; };
 		4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCAssets+Generated.swift"; sourceTree = "<group>"; };
 		4B835DFC25E95D5000EC84D1 /* PhotosCropViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosCropViewController.swift; sourceTree = "<group>"; };
@@ -374,7 +373,7 @@
 		4B9B030D216C58C6001593B9 /* DrawnPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPath.swift; sourceTree = "<group>"; };
 		4B9D4562216DD143003A240A /* ControlStackView.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = ControlStackView.swift; sourceTree = "<group>"; tabWidth = 2; };
 		4B9D4564216DD1E0003A240A /* RootControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootControlView.swift; sourceTree = "<group>"; };
-		4B9D4566216DD40A003A240A /* PixelEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEditor.swift; sourceTree = "<group>"; };
+		4B9D4566216DD40A003A240A /* BrightroomUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightroomUI.swift; sourceTree = "<group>"; };
 		4B9D4568216DD59D003A240A /* CropControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropControl.swift; sourceTree = "<group>"; };
 		4B9D456A216DE9CA003A240A /* ExposureControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExposureControl.swift; sourceTree = "<group>"; };
 		4B9D456C216DEBB1003A240A /* ParameterRange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParameterRange.swift; sourceTree = "<group>"; };
@@ -419,13 +418,10 @@
 		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUICropView.swift; sourceTree = "<group>"; };
 		4BF23C312603BCE0007019CB /* gaku.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = gaku.jpeg; sourceTree = "<group>"; };
-		58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.release.xcconfig"; sourceTree = "<group>"; };
-		67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_SwiftUIDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		8046DAA7396C3CCB3D47AB67 /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.release.xcconfig"; sourceTree = "<group>"; };
-		CB39D8B429E119590131983E /* Pods-Demo_Apps-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.release.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.release.xcconfig"; sourceTree = "<group>"; };
-		D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo/Pods-Demo.debug.xcconfig"; sourceTree = "<group>"; };
-		DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig"; sourceTree = "<group>"; };
-		EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.debug.xcconfig"; sourceTree = "<group>"; };
+		7653AECA9BB64C155E1D3C76 /* Pods-Demo_Apps-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.release.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.release.xcconfig"; sourceTree = "<group>"; };
+		BCAFAF965D675F1C5EA6B5D6 /* Pods_Demo_Apps_SwiftUIDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_SwiftUIDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1F422FCF28F6156C6FB30B0 /* Pods-Demo_Apps-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.debug.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.debug.xcconfig"; sourceTree = "<group>"; };
+		FC4B7D81E5A0A734CEBB2036 /* Pods_Demo_Apps_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingBlurryOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -434,7 +430,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */,
+				4B47D064216CC5640007B594 /* BrightroomEngine.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,9 +452,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B47D059216CC5350007B594 /* PixelEditor.framework in Frameworks */,
-				4B600B32216B7CB4001E1456 /* PixelEngine.framework in Frameworks */,
-				B3D3502EDA65162385234243 /* Pods_Demo_Apps_Demo.framework in Frameworks */,
+				4B47D059216CC5350007B594 /* BrightroomUI.framework in Frameworks */,
+				4B600B32216B7CB4001E1456 /* BrightroomEngine.framework in Frameworks */,
+				F4E19E132DB57C78B38FA447 /* Pods_Demo_Apps_Demo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -466,9 +462,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B98CCDD25EFF4A400E4F61F /* PixelEngine.framework in Frameworks */,
-				4B98CCD925EFF4A400E4F61F /* PixelEditor.framework in Frameworks */,
-				ED9378562B24AD9C2AE16290 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */,
+				4B98CCDD25EFF4A400E4F61F /* BrightroomEngine.framework in Frameworks */,
+				4B98CCD925EFF4A400E4F61F /* BrightroomUI.framework in Frameworks */,
+				885F407D62C3D3052641D397 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,7 +472,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4BDEE24F25F8D1A100FA22CB /* PixelEngine.framework in Frameworks */,
+				4BDEE24F25F8D1A100FA22CB /* BrightroomEngine.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -605,13 +601,13 @@
 			path = DataSource;
 			sourceTree = "<group>";
 		};
-		4B47D053216CC5350007B594 /* PixelEditor */ = {
+		4B47D053216CC5350007B594 /* BrightroomUI */ = {
 			isa = PBXGroup;
 			children = (
-				4B47D054216CC5350007B594 /* PixelEditor.h */,
+				4B47D054216CC5350007B594 /* BrightroomUI.h */,
 				4B47D055216CC5350007B594 /* Info.plist */,
 				4B0BDCA4217D979D001098B9 /* L10n.swift */,
-				4B9D4566216DD40A003A240A /* PixelEditor.swift */,
+				4B9D4566216DD40A003A240A /* BrightroomUI.swift */,
 				4B34578A217502F900716DA0 /* Style.swift */,
 				4B96DD7F25EBCE8A000AAB1C /* Wrap.swift */,
 				4B9D4570216DF1A1003A240A /* Media.xcassets */,
@@ -619,7 +615,7 @@
 				4B9D4578216E07BC003A240A /* Components */,
 				4BA8E73B217C712200940518 /* Utils */,
 			);
-			path = PixelEditor;
+			path = BrightroomUI;
 			sourceTree = "<group>";
 		};
 		4B4C7C8E260A6EF70082240A /* Archives */ = {
@@ -655,7 +651,7 @@
 				4BDEE0A625F8CF6800FA22CB /* Tests */,
 				4B600AFE216B7A94001E1456 /* Products */,
 				4B600B37216B7CD6001E1456 /* Frameworks */,
-				E6BD27A8BEF5BCA522C4A89A /* Pods */,
+				8B5AF77CCD85658D372FF477 /* Pods */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -664,21 +660,21 @@
 		4B600AFE216B7A94001E1456 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4B600AFD216B7A94001E1456 /* PixelEngine.framework */,
+				4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */,
 				4B600B20216B7C9C001E1456 /* Demo.app */,
-				4B47D052216CC5350007B594 /* PixelEditor.framework */,
+				4B47D052216CC5350007B594 /* BrightroomUI.framework */,
 				4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */,
 				4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
+		4B600AFF216B7A94001E1456 /* BrightroomEngine */ = {
 			isa = PBXGroup;
 			children = (
-				4B600B00216B7A94001E1456 /* PixelEngine.h */,
+				4B600B00216B7A94001E1456 /* BrightroomEngine.h */,
 				4B600B01216B7A94001E1456 /* Info.plist */,
-				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
+				4B66C9712171D764008F2A54 /* BrightroomEngine.swift */,
 				4B7B3687260EF9B9004FE2F4 /* ColorCube */,
 				4B7B3688260EF9D3004FE2F4 /* Core */,
 				4B422E09260B92E70011500C /* DataSource */,
@@ -686,7 +682,7 @@
 				4B1E94B4217632B300E9DFB8 /* Filter */,
 				4B422DFB260B91190011500C /* Library */,
 			);
-			path = PixelEngine;
+			path = BrightroomEngine;
 			sourceTree = "<group>";
 		};
 		4B600B21216B7C9C001E1456 /* Demo */ = {
@@ -718,8 +714,8 @@
 				4B600B3C216B7CE3001E1456 /* Foundation.framework */,
 				4B600B3A216B7CDD001E1456 /* AVFoundation.framework */,
 				4B600B38216B7CD6001E1456 /* CoreImage.framework */,
-				1D8E35BB65FB3C47A07E43DF /* Pods_Demo_Apps_Demo.framework */,
-				67B591E90151712453A7B725 /* Pods_Demo_Apps_SwiftUIDemo.framework */,
+				FC4B7D81E5A0A734CEBB2036 /* Pods_Demo_Apps_Demo.framework */,
+				BCAFAF965D675F1C5EA6B5D6 /* Pods_Demo_Apps_SwiftUIDemo.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -727,8 +723,8 @@
 		4B6A5F5B2179D43A004D68DC /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				4B600AFF216B7A94001E1456 /* PixelEngine */,
-				4B47D053216CC5350007B594 /* PixelEditor */,
+				4B600AFF216B7A94001E1456 /* BrightroomEngine */,
+				4B47D053216CC5350007B594 /* BrightroomUI */,
 				4B600B21216B7C9C001E1456 /* Demo */,
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 				4B7B368C260EFA6E004FE2F4 /* SharedForDemo */,
@@ -742,7 +738,7 @@
 				4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */,
 				4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */,
 				4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */,
-				4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */,
+				4B7B36BF260EFDD8004FE2F4 /* ColorCubeLoader.swift */,
 			);
 			path = ColorCube;
 			sourceTree = "<group>";
@@ -940,19 +936,15 @@
 			path = Crop;
 			sourceTree = "<group>";
 		};
-		E6BD27A8BEF5BCA522C4A89A /* Pods */ = {
+		8B5AF77CCD85658D372FF477 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				D063024D47BA1B6BB7890F47 /* Pods-Demo.debug.xcconfig */,
-				58002AF806D93AB53E224855 /* Pods-Demo.release.xcconfig */,
-				2CF37F8C417C1D8326226D92 /* Pods-SwiftUIDemo.debug.xcconfig */,
-				09A1BDCF3FDA5098277F9C8C /* Pods-SwiftUIDemo.release.xcconfig */,
-				EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */,
-				CB39D8B429E119590131983E /* Pods-Demo_Apps-Demo.release.xcconfig */,
-				DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */,
-				8046DAA7396C3CCB3D47AB67 /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */,
+				E1F422FCF28F6156C6FB30B0 /* Pods-Demo_Apps-Demo.debug.xcconfig */,
+				7653AECA9BB64C155E1D3C76 /* Pods-Demo_Apps-Demo.release.xcconfig */,
+				4291E0400B97AA8933911505 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */,
+				2F7F4F6963C146CFC1C3704C /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */,
 			);
-			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -962,7 +954,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B47D056216CC5350007B594 /* PixelEditor.h in Headers */,
+				4B47D056216CC5350007B594 /* BrightroomUI.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -970,16 +962,16 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B600B02216B7A94001E1456 /* PixelEngine.h in Headers */,
+				4B600B02216B7A94001E1456 /* BrightroomEngine.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		4B47D051216CC5350007B594 /* PixelEditor */ = {
+		4B47D051216CC5350007B594 /* BrightroomUI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "PixelEditor" */;
+			buildConfigurationList = 4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "BrightroomUI" */;
 			buildPhases = (
 				4B47D04D216CC5350007B594 /* Headers */,
 				4B47D04E216CC5350007B594 /* Sources */,
@@ -990,14 +982,14 @@
 			);
 			dependencies = (
 			);
-			name = PixelEditor;
+			name = BrightroomUI;
 			productName = PixelEditor;
-			productReference = 4B47D052216CC5350007B594 /* PixelEditor.framework */;
+			productReference = 4B47D052216CC5350007B594 /* BrightroomUI.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		4B600AFC216B7A94001E1456 /* PixelEngine */ = {
+		4B600AFC216B7A94001E1456 /* BrightroomEngine */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4B600B05216B7A94001E1456 /* Build configuration list for PBXNativeTarget "PixelEngine" */;
+			buildConfigurationList = 4B600B05216B7A94001E1456 /* Build configuration list for PBXNativeTarget "BrightroomEngine" */;
 			buildPhases = (
 				4B600AF8216B7A94001E1456 /* Headers */,
 				4B600AF9216B7A94001E1456 /* Sources */,
@@ -1008,25 +1000,25 @@
 			);
 			dependencies = (
 			);
-			name = PixelEngine;
+			name = BrightroomEngine;
 			packageProductDependencies = (
 				A6ABB4F5260AA8F0006B46ED /* Verge */,
 				A6ABB4FB260AA8FB006B46ED /* TransitionPatch */,
 			);
 			productName = PixelEngine;
-			productReference = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */;
+			productReference = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 		4B600B1F216B7C9C001E1456 /* Demo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B600B2F216B7C9E001E1456 /* Build configuration list for PBXNativeTarget "Demo" */;
 			buildPhases = (
-				776F34ECEF5AD7DDF8CCC6D4 /* [CP] Check Pods Manifest.lock */,
+				59D2BA8B8254D95299F9FADC /* [CP] Check Pods Manifest.lock */,
 				4B600B1C216B7C9C001E1456 /* Sources */,
 				4B600B1D216B7C9C001E1456 /* Frameworks */,
 				4B600B1E216B7C9C001E1456 /* Resources */,
 				4B600B36216B7CB4001E1456 /* Embed Frameworks */,
-				E72FAEC0768DA68CACAD9E68 /* [CP] Embed Pods Frameworks */,
+				E0F739463B049CD93AAA763E /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -1043,12 +1035,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B98CCC525EFF31400E4F61F /* Build configuration list for PBXNativeTarget "SwiftUIDemo" */;
 			buildPhases = (
-				8BB614A32A038356A635BCE2 /* [CP] Check Pods Manifest.lock */,
+				A360507CD649D13C7B985EBA /* [CP] Check Pods Manifest.lock */,
 				4B98CCB525EFF31300E4F61F /* Sources */,
 				4B98CCB625EFF31300E4F61F /* Frameworks */,
 				4B98CCB725EFF31300E4F61F /* Resources */,
-				7ACE2331F83EE710E8B3BD31 /* [CP] Embed Pods Frameworks */,
 				4B98CCE125EFF4A400E4F61F /* Embed Frameworks */,
+				8A670BD94226378C0FAB800B /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -1126,8 +1118,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4B600AFC216B7A94001E1456 /* PixelEngine */,
-				4B47D051216CC5350007B594 /* PixelEditor */,
+				4B600AFC216B7A94001E1456 /* BrightroomEngine */,
+				4B47D051216CC5350007B594 /* BrightroomUI */,
 				4BDEE09725F8CF5800FA22CB /* PixelEngineTests */,
 				4B600B1F216B7C9C001E1456 /* Demo */,
 				4B98CCB825EFF31300E4F61F /* SwiftUIDemo */,
@@ -1205,7 +1197,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		776F34ECEF5AD7DDF8CCC6D4 /* [CP] Check Pods Manifest.lock */ = {
+		59D2BA8B8254D95299F9FADC /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1227,7 +1219,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7ACE2331F83EE710E8B3BD31 /* [CP] Embed Pods Frameworks */ = {
+		8A670BD94226378C0FAB800B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1244,7 +1236,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Demo_Apps-SwiftUIDemo/Pods-Demo_Apps-SwiftUIDemo-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		8BB614A32A038356A635BCE2 /* [CP] Check Pods Manifest.lock */ = {
+		A360507CD649D13C7B985EBA /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1266,7 +1258,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E72FAEC0768DA68CACAD9E68 /* [CP] Embed Pods Frameworks */ = {
+		E0F739463B049CD93AAA763E /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1302,7 +1294,7 @@
 				4B01137E216FBA5C00CF09F6 /* SmoothPathDrawingView.swift in Sources */,
 				4B835DFD25E95D5000EC84D1 /* PhotosCropViewController.swift in Sources */,
 				4B9D4569216DD59D003A240A /* CropControl.swift in Sources */,
-				4B9D4567216DD40A003A240A /* PixelEditor.swift in Sources */,
+				4B9D4567216DD40A003A240A /* BrightroomUI.swift in Sources */,
 				4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */,
 				4B42A6B12178E15600F18208 /* ShadowsControl.swift in Sources */,
 				4B96DD8025EBCE8A000AAB1C /* Wrap.swift in Sources */,
@@ -1357,15 +1349,15 @@
 				4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */,
 				4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */,
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
+				4B7B36C0260EFDD8004FE2F4 /* ColorCubeLoader.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
-				4B49C1B8260EEB250099BFBD /* ColorCubeLoader.swift in Sources */,
 				4B422E05260B92E20011500C /* ImageProvider.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
 				4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */,
 				4BEE650D217479C600F3578E /* DrawnPath.swift in Sources */,
 				4B49C1AA260EE8B30099BFBD /* ColorCubeHelper.swift in Sources */,
-				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
+				4B66C9722171D764008F2A54 /* BrightroomEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
 				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
@@ -1450,27 +1442,27 @@
 /* Begin PBXTargetDependency section */
 		4B47D058216CC5350007B594 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4B47D051216CC5350007B594 /* PixelEditor */;
+			target = 4B47D051216CC5350007B594 /* BrightroomUI */;
 			targetProxy = 4B47D057216CC5350007B594 /* PBXContainerItemProxy */;
 		};
 		4B600B35216B7CB4001E1456 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4B600AFC216B7A94001E1456 /* PixelEngine */;
+			target = 4B600AFC216B7A94001E1456 /* BrightroomEngine */;
 			targetProxy = 4B600B34216B7CB4001E1456 /* PBXContainerItemProxy */;
 		};
 		4B98CCDC25EFF4A400E4F61F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4B47D051216CC5350007B594 /* PixelEditor */;
+			target = 4B47D051216CC5350007B594 /* BrightroomUI */;
 			targetProxy = 4B98CCDB25EFF4A400E4F61F /* PBXContainerItemProxy */;
 		};
 		4B98CCE025EFF4A400E4F61F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4B600AFC216B7A94001E1456 /* PixelEngine */;
+			target = 4B600AFC216B7A94001E1456 /* BrightroomEngine */;
 			targetProxy = 4B98CCDF25EFF4A400E4F61F /* PBXContainerItemProxy */;
 		};
 		4BDEE24E25F8D19D00FA22CB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4B600AFC216B7A94001E1456 /* PixelEngine */;
+			target = 4B600AFC216B7A94001E1456 /* BrightroomEngine */;
 			targetProxy = 4BDEE24D25F8D19D00FA22CB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -1507,7 +1499,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/$(TARGET_NAME)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1515,7 +1507,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEditor;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1535,7 +1526,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEditor/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/$(TARGET_NAME)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1543,7 +1534,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEditor;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1606,6 +1596,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.brightroom.$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1664,6 +1655,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.brightroom.$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
@@ -1686,7 +1678,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/$(TARGET_NAME)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1696,7 +1688,6 @@
 				);
 				MTLLINKER_FLAGS = "-fcikernel";
 				MTL_COMPILER_FLAGS = "-fcikernel";
-				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEngine;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -1716,7 +1707,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "$(SRCROOT)/Sources/PixelEngine/Info.plist";
+				INFOPLIST_FILE = "$(SRCROOT)/Sources/$(TARGET_NAME)/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1726,7 +1717,6 @@
 				);
 				MTLLINKER_FLAGS = "-fcikernel";
 				MTL_COMPILER_FLAGS = "-fcikernel";
-				PRODUCT_BUNDLE_IDENTIFIER = me.muukii.PixelEngine;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1735,7 +1725,7 @@
 		};
 		4B600B30216B7C9E001E1456 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EA3C02710DDF4683A8803769 /* Pods-Demo_Apps-Demo.debug.xcconfig */;
+			baseConfigurationReference = E1F422FCF28F6156C6FB30B0 /* Pods-Demo_Apps-Demo.debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -1748,7 +1738,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.pixel-demo";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -1758,7 +1747,7 @@
 		};
 		4B600B31216B7C9E001E1456 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = CB39D8B429E119590131983E /* Pods-Demo_Apps-Demo.release.xcconfig */;
+			baseConfigurationReference = 7653AECA9BB64C155E1D3C76 /* Pods-Demo_Apps-Demo.release.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -1771,7 +1760,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.pixel-demo";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1780,7 +1768,7 @@
 		};
 		4B98CCC625EFF31400E4F61F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DDDDEBF6EC88922E67362165 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */;
+			baseConfigurationReference = 4291E0400B97AA8933911505 /* Pods-Demo_Apps-SwiftUIDemo.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -1795,7 +1783,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.SwiftUIDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1804,7 +1791,7 @@
 		};
 		4B98CCC725EFF31400E4F61F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 8046DAA7396C3CCB3D47AB67 /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */;
+			baseConfigurationReference = 2F7F4F6963C146CFC1C3704C /* Pods-Demo_Apps-SwiftUIDemo.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -1819,7 +1806,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.SwiftUIDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -1839,7 +1825,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.PixelEngineTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1859,7 +1844,6 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.pixel.PixelEngineTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1869,7 +1853,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "PixelEditor" */ = {
+		4B47D05D216CC5350007B594 /* Build configuration list for PBXNativeTarget "BrightroomUI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B47D05B216CC5350007B594 /* Debug */,
@@ -1887,7 +1871,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4B600B05216B7A94001E1456 /* Build configuration list for PBXNativeTarget "PixelEngine" */ = {
+		4B600B05216B7A94001E1456 /* Build configuration list for PBXNativeTarget "BrightroomEngine" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B600B06216B7A94001E1456 /* Debug */,

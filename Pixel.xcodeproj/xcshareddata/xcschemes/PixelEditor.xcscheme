@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4B47D051216CC5350007B594"
-               BuildableName = "PixelEditor.framework"
-               BlueprintName = "PixelEditor"
+               BuildableName = "BrightroomUI.framework"
+               BlueprintName = "BrightroomUI"
                ReferencedContainer = "container:Pixel.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -44,8 +44,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4B47D051216CC5350007B594"
-            BuildableName = "PixelEditor.framework"
-            BlueprintName = "PixelEditor"
+            BuildableName = "BrightroomUI.framework"
+            BlueprintName = "BrightroomUI"
             ReferencedContainer = "container:Pixel.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -60,8 +60,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4B47D051216CC5350007B594"
-            BuildableName = "PixelEditor.framework"
-            BlueprintName = "PixelEditor"
+            BuildableName = "BrightroomUI.framework"
+            BlueprintName = "BrightroomUI"
             ReferencedContainer = "container:Pixel.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

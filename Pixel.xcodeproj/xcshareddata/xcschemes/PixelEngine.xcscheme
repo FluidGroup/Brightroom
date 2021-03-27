@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4B600AFC216B7A94001E1456"
-               BuildableName = "PixelEngine.framework"
-               BlueprintName = "PixelEngine"
+               BuildableName = "BrightroomEngine.framework"
+               BlueprintName = "BrightroomEngine"
                ReferencedContainer = "container:Pixel.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -68,8 +68,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4B600AFC216B7A94001E1456"
-            BuildableName = "PixelEngine.framework"
-            BlueprintName = "PixelEngine"
+            BuildableName = "BrightroomEngine.framework"
+            BlueprintName = "BrightroomEngine"
             ReferencedContainer = "container:Pixel.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -84,8 +84,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4B600AFC216B7A94001E1456"
-            BuildableName = "PixelEngine.framework"
-            BlueprintName = "PixelEngine"
+            BuildableName = "BrightroomEngine.framework"
+            BlueprintName = "BrightroomEngine"
             ReferencedContainer = "container:Pixel.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
