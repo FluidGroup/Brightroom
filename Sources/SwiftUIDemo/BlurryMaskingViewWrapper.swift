@@ -9,7 +9,7 @@
 import SwiftUI
 
 import BrightroomEngine
-import PixelEditor
+import BrightroomUI
 
 struct MaskingViewWrapper: UIViewRepresentable {
   

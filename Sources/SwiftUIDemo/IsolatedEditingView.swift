@@ -1,7 +1,7 @@
 
 import BrightroomEngine
 import SwiftUI
-import PixelEditor
+import BrightroomUI
 
 struct IsolatedEditinView: View {
   @StateObject var editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())

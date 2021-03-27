@@ -374,29 +374,6 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
         
         super.isHighlighted = newValue
         
-        // FIXME: Apply highlight animation
-        // Currently animation disabled.
-        // These animations cause flicker in ImageView
-        /*
-         if newValue {
-         
-         UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
-         self.contentView.transform = .init(scaleX: 0.95, y: 0.95)
-         }, completion: { (finish) -> Void in
-         
-         })
-         
-         } else {
-         
-         UIView.animate(withDuration: 0.5, delay: 0.05, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [.beginFromCurrentState, .allowUserInteraction], animations: { () -> Void in
-         self.contentView.transform = .identity
-         }, completion: { (finish) -> Void in
-         
-         })
-         }
-         
-         */
-        
       }
     }
   }

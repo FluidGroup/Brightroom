@@ -6,7 +6,7 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 import SwiftUI
 import UIKit

@@ -141,9 +141,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   
   public init(editingStack: EditingStack) {
     
-    // FIXME: check loading UI works
-    
-    
     self.editingStack = editingStack
     store = .init(
       initialState: .init(),
@@ -334,10 +331,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     if displays, let factory = self.loadingOverlayFactory {
       
+      scrollView.isHidden = true
+      
       let loadingOverlay = factory()
       self.currentLoadingOverlay = loadingOverlay
       self.addSubview(loadingOverlay)
-      AutoLayoutTools.setEdge(loadingOverlay, self.scrollView)
+      AutoLayoutTools.setEdge(loadingOverlay, self)
       
       loadingOverlay.alpha = 0
       UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
@@ -346,6 +345,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       .startAnimation()
       
     } else {
+      
+      scrollView.isHidden = false
       
       if let view = currentLoadingOverlay {
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {

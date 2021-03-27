@@ -8,7 +8,7 @@ final class TopMenuViewController: StackScrollNodeViewController {
     
   override init() {
     super.init()
-    title = "Top"
+    title = "Brightroom"
     navigationItem.largeTitleDisplayMode = .always
   }
 
@@ -17,7 +17,7 @@ final class TopMenuViewController: StackScrollNodeViewController {
     super.viewDidLoad()
     
     stackScrollNode.append(nodes: [
-      Components.makeSelectionCell(title: "Components: Crop", onTap: { [unowned self] in
+      Components.makeSelectionCell(title: "Built-in UI : Crop", onTap: { [unowned self] in
         
         let menu = DemoCropMenuViewController()
         self.navigationController?.pushViewController(menu, animated: true)
@@ -32,6 +32,10 @@ final class TopMenuViewController: StackScrollNodeViewController {
       }),
       
       Components.makeSelectionCell(title: "Components: Preview", onTap: { [unowned self] in
+        // TODO:
+      }),
+      
+      Components.makeSelectionCell(title: "Components: MetalImageView", onTap: { [unowned self] in
         // TODO:
       }),
       

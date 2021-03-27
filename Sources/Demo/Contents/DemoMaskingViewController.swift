@@ -4,14 +4,14 @@ import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 final class DemoMaskingViewController: StackScrollNodeViewController {
   
   override init() {
     super.init()
-    title = "Editor"
+    title = "Masking"
   }
   
   private let resultCell = Components.ResultImageCell()
@@ -65,6 +65,13 @@ final class DemoMaskingViewController: StackScrollNodeViewController {
     
     let controller = MaskingViewWrapperViewController(editingStack: editingStack)
     
+    controller.handlers.didFinish = { [unowned self] in
+      self.navigationController?.popViewController(animated: true)
+      editingStack.makeRenderer()?.render(completion: { (image) in
+        self.resultCell.image = image
+      })
+    }
+    
     self.navigationController?.pushViewController(controller, animated: true)
   }
   
@@ -83,12 +90,19 @@ import TinyConstraints
 
 private final class MaskingViewWrapperViewController: UIViewController {
   
+  struct Handlers {
+    var didFinish: () -> Void = {}
+  }
+  
+  var handlers = Handlers()
   private let maskingView: BlurryMaskingView
     
   init(editingStack: EditingStack) {
     
     self.maskingView = BlurryMaskingView(editingStack: editingStack)
     super.init(nibName: nil, bundle: nil)
+    
+    navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(onTapDoneButton))
     
   }
   
@@ -104,6 +118,10 @@ private final class MaskingViewWrapperViewController: UIViewController {
     view.addSubview(maskingView)
     maskingView.edges(to: view.safeAreaLayoutGuide, insets: .init(top: 20, left: 20, bottom: 20, right: 20))
     
+  }
+  
+  @objc private func onTapDoneButton() {
+    handlers.didFinish()
   }
   
 }
