@@ -87,8 +87,6 @@ public final class ClassicImageEditViewController: UIViewController {
 
   private let stackView = ClassicImageEditControlStackView()
 
-  private var aspectConstraint: NSLayoutConstraint?
-
   private lazy var doneButton = UIBarButtonItem(
     title: viewModel.doneButtonTitle,
     style: .done,
@@ -143,6 +141,9 @@ public final class ClassicImageEditViewController: UIViewController {
   // MARK: - Functions
 
   override public func viewDidLoad() {
+    
+    // FIXME: Check loading
+    
     super.viewDidLoad()
     
     cropView.setCropOutsideOverlay(.init()&>.do {
