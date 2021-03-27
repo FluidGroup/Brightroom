@@ -89,7 +89,7 @@ public struct EditingCrop: Equatable {
   
   public init(imageSize: CGSize, cropRect: CGRect, rotation: Rotation = .angle_0, scaleToRestore: CGFloat = 1) {
     self.imageSize = imageSize
-    self.cropExtent = Self.normalizeRect(rect: cropRect, in: imageSize, respectingAspectRatio: nil)
+    self.cropExtent = Self.fittingRect(rect: cropRect, in: imageSize, respectingAspectRatio: nil)
     self.rotation = rotation
     self.scaleToRestore = scaleToRestore
   }
@@ -179,7 +179,7 @@ public struct EditingCrop: Equatable {
       .applying(scale)
       .applying(transform)
            
-    self.cropExtent = Self.normalizeRect(rect: proposed, in: imageSize, respectingAspectRatio: nil)
+    self.cropExtent = Self.fittingRect(rect: proposed, in: imageSize, respectingAspectRatio: nil)
   }
     
   /// Updates cropExtent with new specified rect and normalizing value using aspectRatio(optional).
@@ -190,47 +190,43 @@ public struct EditingCrop: Equatable {
   ///   - cropExtent:
   ///   - respectingAspectRatio:
   public mutating func updateCropExtentNormalizing(_ cropExtent: CGRect, respectingAspectRatio: PixelAspectRatio?) {
-    self.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: respectingAspectRatio)
+    self.cropExtent = Self.fittingRect(rect: cropExtent, in: imageSize, respectingAspectRatio: respectingAspectRatio)
   }
   
-  private static func normalizeRect(rect: CGRect, in imageSize: CGSize, respectingAspectRatio: PixelAspectRatio?) -> CGRect {
+  private static func fittingRect(rect: CGRect, in imageSize: CGSize, respectingAspectRatio: PixelAspectRatio?) -> CGRect {
         
     var fixed = rect
     
+    func clamp<T: Comparable>(value: T, lower: T, upper: T) -> T {
+      return min(max(value, lower), upper)
+    }
+    
+    fixed.origin.x.round(.down)
+    fixed.origin.y.round(.down)
+    fixed.size.width.round(.down)
+    fixed.size.height.round(.down)
+    
+    fixed = CGRect(origin: .zero, size: imageSize).intersection(fixed)
+        
     respectAspectRatio: do {
       
       if let aspectRatio = respectingAspectRatio {
+        
+        let maxWidth = imageSize.width - fixed.minX
+        let maxHeight = imageSize.height - fixed.minY
+        
+        var size = fixed.size
+        
+        size.width = clamp(value: size.width, lower: 0, upper: maxWidth)
+        size.height = clamp(value: size.height, lower: 0, upper: maxHeight)
                 
-        fixed.size = aspectRatio.size(byWidth: fixed.size.width)
+        fixed.size = aspectRatio.sizeThatFits(in: size)
         
       }
       
     }
     
-    roundFloatingPoint: do {
-          
-      fixed.origin.x.round(.down)
-      fixed.origin.y.round(.down)
-      fixed.size.width.round(.down)
-      fixed.size.height.round(.down)
-      
-      if fixed.origin.x < 0 {
-        fixed.origin.x = 0
-        fixed.size.width -= fixed.origin.x
-      }
-      
-      if fixed.origin.y < 0 {
-        fixed.origin.y = 0
-        fixed.size.height -= fixed.origin.y
-      }
-      
-      if fixed.width > imageSize.width {
-        fixed.size.width = imageSize.width
-      }
-      
-      if fixed.height > imageSize.height {
-        fixed.size.height = imageSize.height
-      }
+    validation: do {
       
       // FIXME:
       assert(fixed.maxX <= imageSize.width)
