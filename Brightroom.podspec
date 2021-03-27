@@ -16,11 +16,11 @@ Pod::Spec.new do |s|
   s.ios.dependency "Verge", "~> 8.9.1"
 
   s.subspec "Engine" do |ss|
-    ss.source_files = "Sources/PixelEngine/**/*.swift"
+    ss.source_files = "Sources/BrightroomEngine/**/*.swift"
   end
 
-  s.subspec "Editor" do |ss|
-    ss.source_files = "Sources/PixelEditor/**/*.swift"
+  s.subspec "UI" do |ss|
+    ss.source_files = "Sources/BrightroomUI/**/*.swift"
     ss.dependency "Brightroom/Engine"
     ss.dependency "TransitionPatch"
   end
