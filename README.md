@@ -126,15 +126,15 @@ Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up t
 **CocoaPods**
 
 ```ruby
-pod "Brightroom/Engine", tag: "2.0.0-beta.1"
-pod "Brightroom/UI", tag: "2.0.0-beta.1"
+pod "Brightroom/Engine", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
+pod "Brightroom/UI", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
 ```
 
 **Swift Package Manager**
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muukii/Brightroom.git", from: "2.0.0-beta.1")
+    .package(url: "https://github.com/muukii/Brightroom.git", branch: "muukii/v2")
 ]
 ```
 
