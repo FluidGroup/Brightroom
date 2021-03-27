@@ -140,6 +140,11 @@ open class EditingStack: Equatable, StoreComponentType {
       mutating func undoEditing() {
         currentEdit = history.popLast() ?? initialEditing
       }
+      
+//      public func makeCroppedPreviewImage() -> CIImage {
+//        
+//        
+//      }
     }
     
     public fileprivate(set) var hasStartedEditing = false
@@ -529,98 +534,6 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 }
 
-extension EditingStack {
-  // TODO: Consider more effective shape
-  public struct Edit: Equatable {
-    func makeFilters() -> [Filtering] {
-      return filters.makeFilters()
-    }
-    
-    public var imageSize: CGSize {
-      crop.imageSize
-    }
-    
-    public var crop: EditingCrop
-    public var filters: Filters = .init()
-    public var drawings: Drawings = .init()
-    
-    init(crop: EditingCrop) {
-      self.crop = crop
-    }
-    
-    public struct Drawings: Equatable {
-      // TODO: Remove Rect from DrawnPath
-      public var blurredMaskPaths: [DrawnPath] = []
-    }
-    
-    //
-    //    public struct Light {
-    //
-    //    }
-    //
-    //    public struct Color {
-    //
-    //    }
-    //
-    //    public struct Effects {
-    //
-    //    }
-    //
-    //    public struct Detail {
-    //
-    //    }
-    
-    public struct Filters: Equatable {
-      public var colorCube: FilterColorCube?
-      
-      public var brightness: FilterBrightness?
-      public var contrast: FilterContrast?
-      public var saturation: FilterSaturation?
-      public var exposure: FilterExposure?
-      
-      public var highlights: FilterHighlights?
-      public var shadows: FilterShadows?
-      
-      public var temperature: FilterTemperature?
-      
-      public var sharpen: FilterSharpen?
-      public var gaussianBlur: FilterGaussianBlur?
-      public var unsharpMask: FilterUnsharpMask?
-      
-      public var vignette: FilterVignette?
-      public var fade: FilterFade?
-      
-      func makeFilters() -> [Filtering] {
-        return ([
-          // Before
-          exposure,
-          brightness,
-          temperature,
-          highlights,
-          shadows,
-          saturation,
-          contrast,
-          colorCube,
-          
-          // After
-          sharpen,
-          unsharpMask,
-          gaussianBlur,
-          fade,
-          vignette,
-        ] as [Filtering?])
-        .compactMap { $0 }
-      }
-      
-      func apply(to ciImage: CIImage) -> CIImage {
-        makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
-          filter.apply(to: image, sourceImage: image)
-        }
-      }
-    }
-  }
-}
-
 extension CIImage {
   func cropped(to _cropRect: EditingCrop) -> CIImage {
     let targetImage = self
@@ -632,90 +545,5 @@ extension CIImage {
       .cropped(to: cropRect)
     
     return croppedImage
-  }
-}
-
-extension Array {
-  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
-    var buffer = [U?].init(repeating: nil, count: count)
-    
-    buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
-      
-      self.withUnsafeBufferPointer { (sourceBuffer) -> Void in
-        
-        DispatchQueue.concurrentPerform(iterations: count) { i in
-          let sourcePointer = sourceBuffer.baseAddress!.advanced(by: i)
-          let r = transform(sourcePointer.pointee)
-          let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
-          targetPointer.pointee = r
-        }
-      }
-    }
-    
-    return buffer.compactMap { $0 }
-  }
-}
-
-import Vision
-
-extension EditingStack {
-  public struct CropModifier {
-    public typealias Closure = (CIImage, EditingCrop, @escaping (EditingCrop) -> Void) -> Void
-    
-    private let modifier: Closure
-    
-    public init(modify: @escaping Closure) {
-      modifier = modify
-    }
-    
-    func run(_ image: CIImage, editingCrop: EditingCrop, completion: @escaping (EditingCrop) -> Void) {
-      modifier(image, editingCrop) { result in
-        completion(result)
-      }
-    }
-    
-    public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
-      return .init { image, crop, completion in
-                
-        let request = VNDetectFaceRectanglesRequest { request, error in
-          
-          if let error = error {
-            EngineLog.debug(error)
-            completion(crop)
-            return
-          }
-          
-          guard let results = request.results as? [VNFaceObservation] else {
-            completion(crop)
-            return
-          }
-          
-          guard let first = results.first else {
-            completion(crop)
-            return
-          }
-          
-          var new = crop
-          let box = first.boundingBox
-          
-          let denormalizedRect = VNImageRectForNormalizedRect(box, Int(crop.imageSize.width), Int(crop.imageSize.height))
-
-          let paddingRect = denormalizedRect.insetBy(dx: -denormalizedRect.width * paddingBias, dy: -denormalizedRect.height * paddingBias)
-          
-          let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(crop.imageSize.width), Int(crop.imageSize.height))
-                    
-          new.updateCropExtent(byBoundingBox: normalizedRect, respectingApectRatio: aspectRatio)
-          completion(new)
-        }
-        
-        request.revision = VNDetectFaceRectanglesRequestRevision2
-        let handler = VNImageRequestHandler(ciImage: image, orientation: .up, options: [:])
-        do {
-          try handler.perform([request])
-        } catch {
-          print(error)
-        }
-      }
-    }
   }
 }

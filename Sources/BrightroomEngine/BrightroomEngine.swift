@@ -36,3 +36,24 @@ public typealias PlatformImage = NSImage
 import UIKit
 public typealias PlatformImage = UIImage
 #endif
+
+extension Array {
+  func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
+    var buffer = [U?].init(repeating: nil, count: count)
+    
+    buffer.withUnsafeMutableBufferPointer { (targetBuffer) -> Void in
+      
+      self.withUnsafeBufferPointer { (sourceBuffer) -> Void in
+        
+        DispatchQueue.concurrentPerform(iterations: count) { i in
+          let sourcePointer = sourceBuffer.baseAddress!.advanced(by: i)
+          let r = transform(sourcePointer.pointee)
+          let targetPointer = targetBuffer.baseAddress!.advanced(by: i)
+          targetPointer.pointee = r
+        }
+      }
+    }
+    
+    return buffer.compactMap { $0 }
+  }
+}

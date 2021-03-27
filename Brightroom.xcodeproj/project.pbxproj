@@ -149,6 +149,8 @@
 		4BA8513E25EE97A600BAB430 /* PixelEditorCodeBasedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8513D25EE97A600BAB430 /* PixelEditorCodeBasedView.swift */; };
 		4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E737217C69DE00940518 /* FilterFade.swift */; };
 		4BA8E73D217C716700940518 /* ClassicImageEditOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* ClassicImageEditOptions.swift */; };
+		4BB4B0F8260F55AC007617D7 /* EditingStack.CropModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */; };
+		4BB4B0FD260F55D6007617D7 /* EditingStack.Edit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */; };
 		4BB917E525F518EF00C446B8 /* _ImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB917E425F518EF00C446B8 /* _ImageView.swift */; };
 		4BB917EA25F5193C00C446B8 /* CIImageDisplaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */; };
 		4BB917EC25F5193C00C446B8 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
@@ -384,6 +386,8 @@
 		4BA8513D25EE97A600BAB430 /* PixelEditorCodeBasedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEditorCodeBasedView.swift; sourceTree = "<group>"; };
 		4BA8E737217C69DE00940518 /* FilterFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterFade.swift; sourceTree = "<group>"; };
 		4BA8E73C217C716700940518 /* ClassicImageEditOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditOptions.swift; sourceTree = "<group>"; };
+		4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.CropModifier.swift; sourceTree = "<group>"; };
+		4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.Edit.swift; sourceTree = "<group>"; };
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
@@ -734,6 +738,8 @@
 			children = (
 				4B9369ED25F94A1300B18571 /* EditingCrop.swift */,
 				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
+				4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */,
+				4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */,
 				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
 				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
 				4B9D456C216DEBB1003A240A /* ParameterRange.swift */,
@@ -1342,6 +1348,7 @@
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B7B36C0260EFDD8004FE2F4 /* ColorCubeLoader.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
+				4BB4B0FD260F55D6007617D7 /* EditingStack.Edit.swift in Sources */,
 				4B422E05260B92E20011500C /* ImageProvider.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
@@ -1368,6 +1375,7 @@
 				4B9369EE25F94A1300B18571 /* EditingCrop.swift in Sources */,
 				4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */,
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
+				4BB4B0F8260F55AC007617D7 /* EditingStack.CropModifier.swift in Sources */,
 				4B422DFD260B91260011500C /* Orientation.swift in Sources */,
 				4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */,
 				4B9D457A216E8013003A240A /* Geometry.swift in Sources */,
