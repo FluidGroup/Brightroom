@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 enum Mocks {

@@ -21,7 +21,7 @@
 
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 extension ColorCubeStorage {

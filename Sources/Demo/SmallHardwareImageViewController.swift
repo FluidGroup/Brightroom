@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 @testable import BrightroomEngine
 
 final class SmallHardwareImageViewController : UIViewController {

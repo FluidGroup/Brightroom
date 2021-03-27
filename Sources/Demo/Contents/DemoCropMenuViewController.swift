@@ -5,7 +5,7 @@ import MosaiqueAssetsPicker
 import TextureSwiftSupport
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 final class DemoCropMenuViewController: StackScrollNodeViewController {

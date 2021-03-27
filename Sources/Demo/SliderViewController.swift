@@ -21,7 +21,7 @@
 
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 
 final class SliderViewController : UIViewController {
 

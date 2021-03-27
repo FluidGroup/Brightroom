@@ -1,5 +1,5 @@
 
-import PixelEditor
+import BrightroomUI
 import SwiftUI
 
 struct ContentView: View {
@@ -167,7 +167,7 @@ struct ContentView: View {
   }
 }
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 struct PixelEditWrapper: UIViewControllerRepresentable {

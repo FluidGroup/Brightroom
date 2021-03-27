@@ -3,7 +3,7 @@ import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
 
-import PixelEditor
+import BrightroomUI
 import BrightroomEngine
 
 final class DemoCIKernelViewController: StackScrollNodeViewController {
