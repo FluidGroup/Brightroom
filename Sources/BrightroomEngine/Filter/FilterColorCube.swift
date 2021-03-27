@@ -71,12 +71,13 @@ public struct FilterColorCube : Filtering, Equatable {
     return f.outputImage!
     
     #else
-                
+               
+    let colorSpace = CGColorSpace(name: CGColorSpace.extendedSRGB)!
     let f: CIFilter = ColorCubeHelper.makeColorCubeFilter(
       lutImage: lutImage,
       dimension: dimension,
-      colorSpace: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
-      cacheKey: identifier
+      colorSpace: colorSpace,
+      cacheKey: "\(identifier),\(colorSpace)"
     )
           
     f.setValue(image, forKeyPath: kCIInputImageKey)

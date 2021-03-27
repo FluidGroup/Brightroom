@@ -149,15 +149,18 @@ public struct EditingCrop: Equatable {
    - TODO: Resizing cropping extent with keeping area by new aspect ratio.
    */
   public mutating func updateCropExtent(by newAspectRatio: PixelAspectRatio) {
+    
     let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
     
-    cropExtent = .init(
+    let proposed = CGRect(
       origin: .init(
         x: (imageSize.width - maxSize.width) / 2,
         y: (imageSize.height - maxSize.height) / 2
       ),
       size: maxSize
     )
+    
+    self.cropExtent = Self.fittingRect(rect: proposed, in: imageSize, respectingAspectRatio: newAspectRatio)
   }
   
   public mutating func updateCropExtentIfNeeded(by newAspectRatio: PixelAspectRatio) {

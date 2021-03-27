@@ -10,7 +10,17 @@ enum Components {
       didSet {
         if let image = image {
           imageNode.image = image
-          metadataTextNode.attributedText = NSAttributedString(string: "\(image.size.width * image.scale), \(image.size.height * image.scale)")
+          
+          let formatter = ByteCountFormatter()
+          formatter.countStyle = .file
+          let jpegSize = formatter.string(fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count))
+          
+          let meta = """
+          size: \(image.size.width * image.scale), \(image.size.height * image.scale)
+          jpegSize: \(jpegSize)
+          """
+          
+          metadataTextNode.attributedText = NSAttributedString(string: meta)
         } else {
           imageNode.image = nil
           metadataTextNode.attributedText = nil
@@ -60,6 +70,7 @@ enum Components {
               .padding(8)
           }
           metadataTextNode
+            .padding(8)
         }
       }
     }

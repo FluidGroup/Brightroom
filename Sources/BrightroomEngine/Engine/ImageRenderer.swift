@@ -110,16 +110,31 @@ public final class ImageRenderer {
         
         return UIGraphicsImageRenderer.init(size: targetSize, format: format)
           .image { c in
-            
+                             
             let cgContext = c.cgContext
             let ciContext = CIContext(
               cgContext: cgContext,
               options: [
-                .workingColorSpace: effectedCIImage.colorSpace as Any,
-                .outputColorSpace: effectedCIImage.colorSpace as Any,
+                .workingFormat: CIFormat.RGBAh,
+                .highQualityDownsample: true,
+//                .workingColorSpace: effectedCIImage.colorSpace,
+                .useSoftwareRenderer: true,
+                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedSRGB)!,
               ]
             )
-            
+                                    
+            #if false
+            cgContext.detached {
+              let cgImage = ciContext.createCGImage(
+                effectedCIImage,
+                from: effectedCIImage.extent,
+                format: .RGBAh,
+                colorSpace: effectedCIImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+              )!
+              
+              cgContext.draw(cgImage, in: CGRect(origin: .zero, size: targetSize))
+            }
+            #else
             cgContext.detached {
               ciContext.draw(
                 effectedCIImage,
@@ -127,6 +142,7 @@ public final class ImageRenderer {
                 from: effectedCIImage.extent
               )
             }
+            #endif
             
             /**
              Render drawings

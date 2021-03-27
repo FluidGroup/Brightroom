@@ -71,6 +71,8 @@ final class DemoMaskingViewController: StackScrollNodeViewController {
     
     controller.handlers.didFinish = { [unowned self] in
       self.navigationController?.popViewController(animated: true)
+      self.resultCell.image = nil
+
       editingStack.makeRenderer()?.render(completion: { (image) in
         self.resultCell.image = image
       })

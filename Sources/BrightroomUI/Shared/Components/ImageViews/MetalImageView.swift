@@ -19,14 +19,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
 import MetalKit
+import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
 
 open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
-  private let defaultColorSpace = CGColorSpace.init(name: CGColorSpace.sRGB)!
+  public var postProcessing: (CIImage) -> CIImage = { $0 } {
+    didSet {
+      setNeedsDisplay()
+    }
+  }
+
+  private let defaultColorSpace = CGColorSpaceCreateDeviceRGB()
   private var image: CIImage?
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in
@@ -63,6 +69,9 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     enableSetNeedsDisplay = true
     autoResizeDrawable = true
     contentMode = .scaleAspectFill
+    
+    /// For supporting wide-color - extended sRGB
+    colorPixelFormat = .bgra10_xr
   }
 
   public required init(coder: NSCoder) {
@@ -73,8 +82,8 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     self.image = image
     setNeedsDisplay()
   }
-  
-  open override var frame: CGRect {
+
+  override open var frame: CGRect {
     didSet {
       setNeedsDisplay()
     }
@@ -85,7 +94,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   public func draw(in view: MTKView) {
     renderImage()
   }
-  
+
   func renderImage() {
     guard
       let image = image,
@@ -101,62 +110,25 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     #endif
 
     let commandBuffer = commandQueue.makeCommandBuffer()
-
+        
     let bounds = CGRect(
       origin: .zero,
       size: drawableSize
     )
-
+    
     let fixedImage = image.transformed(by: .init(
       translationX: -image.extent.origin.x,
       y: -image.extent.origin.y
     ))
-
-    let targetRect: CGRect
-
-    switch contentMode {
-    case .scaleAspectFill:
-      targetRect = Geometry.rectThatAspectFill(aspectRatio: fixedImage.extent.size, minimumRect: bounds)
-    case .scaleAspectFit:
-      targetRect = Geometry.rectThatAspectFit(aspectRatio: fixedImage.extent.size, boundingRect: bounds)
-    default:
-      targetRect = Geometry.rectThatAspectFit(
-        aspectRatio: fixedImage.extent.size,
-        boundingRect: bounds
-      )
-      assertionFailure("ContentMode:\(contentMode) is not supported.")
-    }
-
-    let originX = targetRect.origin.x
-    let originY = targetRect.origin.y
-    let scaleX = targetRect.width / fixedImage.extent.width
-    let scaleY = targetRect.height / fixedImage.extent.height
-    let scale = min(scaleX, scaleY)
-         
-    let resolvedImage: CIImage
-
-    #if targetEnvironment(simulator)
-    // Fixes geometry in Metal
-    resolvedImage = fixedImage
-      .transformed(
-        by: CGAffineTransform(scaleX: 1, y: -1)
-          .concatenating(.init(translationX: 0, y: fixedImage.extent.height))
-          .concatenating(.init(scaleX: scale, y: scale))
-          .concatenating(.init(translationX: originX, y: originY))
-      )
     
-    #else
-    resolvedImage = fixedImage
-      .transformed(
-        by: CGAffineTransform(scaleX: scale, y: scale)
-          .concatenating(
-            CGAffineTransform(translationX: originX, y: originY)
-          )
-      )
-    #endif
+    let resolvedImage = downsample(image: fixedImage, bounds: bounds, contentMode: contentMode)
 
+    let processedImage = postProcessing(resolvedImage)
+    
+    EditorLog.debug("[MetalImageView] image color-space \(processedImage.colorSpace as Any)")
+    
     ciContext.render(
-      resolvedImage,
+      processedImage,
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,

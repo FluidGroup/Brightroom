@@ -19,7 +19,6 @@
 		4B0BDCA1217D663D001098B9 /* ClassicImageEditClarityControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0BDCA0217D663D001098B9 /* ClassicImageEditClarityControl.swift */; };
 		4B0BDCA3217D676D001098B9 /* ClassicImageEditSharpenControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0BDCA2217D676D001098B9 /* ClassicImageEditSharpenControl.swift */; };
 		4B112F15216C9B5400EF8E25 /* ImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B112F14216C9B5400EF8E25 /* ImageTool.swift */; };
-		4B1C5E9E260374F40021F2A8 /* TiledImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1C5E9D260374F40021F2A8 /* TiledImageView.swift */; };
 		4B1E94B12175FB5800E9DFB8 /* ClassicImageEditStepSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D456E216DEE95003A240A /* ClassicImageEditStepSlider.swift */; };
 		4B1E951C21764DE700E9DFB8 /* ClassicImageEditGaussianBlurControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951B21764DE700E9DFB8 /* ClassicImageEditGaussianBlurControl.swift */; };
 		4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E951D21764E1800E9DFB8 /* FilterGaussianBlur.swift */; };
@@ -151,6 +150,7 @@
 		4BA8E73D217C716700940518 /* ClassicImageEditOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA8E73C217C716700940518 /* ClassicImageEditOptions.swift */; };
 		4BB4B0F8260F55AC007617D7 /* EditingStack.CropModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */; };
 		4BB4B0FD260F55D6007617D7 /* EditingStack.Edit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */; };
+		4BB4B105260F8589007617D7 /* LUT_64_Neutral.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */; };
 		4BB917E525F518EF00C446B8 /* _ImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB917E425F518EF00C446B8 /* _ImageView.swift */; };
 		4BB917EA25F5193C00C446B8 /* CIImageDisplaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */; };
 		4BB917EC25F5193C00C446B8 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
@@ -264,7 +264,6 @@
 		4B0BDCA0217D663D001098B9 /* ClassicImageEditClarityControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditClarityControl.swift; sourceTree = "<group>"; };
 		4B0BDCA2217D676D001098B9 /* ClassicImageEditSharpenControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditSharpenControl.swift; sourceTree = "<group>"; };
 		4B112F14216C9B5400EF8E25 /* ImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTool.swift; sourceTree = "<group>"; };
-		4B1C5E9D260374F40021F2A8 /* TiledImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TiledImageView.swift; sourceTree = "<group>"; };
 		4B1E94E8217634A800E9DFB8 /* FilterHue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterHue.swift; sourceTree = "<group>"; };
 		4B1E94ED217634A800E9DFB8 /* FilterSaturation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterSaturation.swift; sourceTree = "<group>"; };
 		4B1E94EE217634A800E9DFB8 /* FilterVignette.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FilterVignette.swift; sourceTree = "<group>"; };
@@ -388,6 +387,7 @@
 		4BA8E73C217C716700940518 /* ClassicImageEditOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditOptions.swift; sourceTree = "<group>"; };
 		4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.CropModifier.swift; sourceTree = "<group>"; };
 		4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.Edit.swift; sourceTree = "<group>"; };
+		4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LUT_64_Neutral.png; path = Resources/LUT_64_Neutral.png; sourceTree = SOURCE_ROOT; };
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
@@ -528,6 +528,7 @@
 		4B1E95292176F52100E9DFB8 /* LUTs */ = {
 			isa = PBXGroup;
 			children = (
+				4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */,
 				4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */,
 				4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */,
 			);
@@ -550,7 +551,6 @@
 				4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */,
 				4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */,
 				4B9D4576216E0694003A240A /* ImagePreviewView.swift */,
-				4B1C5E9D260374F40021F2A8 /* TiledImageView.swift */,
 			);
 			path = ImageViews;
 			sourceTree = "<group>";
@@ -1139,6 +1139,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4BB4B105260F8589007617D7 /* LUT_64_Neutral.png in Resources */,
 				4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */,
 				4BA41C89260CE817005E6FA7 /* IMG_5533.HEIC in Resources */,
 				4BA41C86260CE817005E6FA7 /* IMG_5529.HEIC in Resources */,
@@ -1317,7 +1318,6 @@
 				4BA84F7E25EE94B700BAB430 /* CropView._InteractiveCropGuideView.swift in Sources */,
 				4B42A6AF2178E14E00F18208 /* ClassicImageEditHighlightsControl.swift in Sources */,
 				4B58DF662607100600D85F97 /* CanvasView.swift in Sources */,
-				4B1C5E9E260374F40021F2A8 /* TiledImageView.swift in Sources */,
 				4B1E951C21764DE700E9DFB8 /* ClassicImageEditGaussianBlurControl.swift in Sources */,
 				4BEC14BE2603ADDB009CE218 /* EditingCrop+.swift in Sources */,
 				4B1E94B12175FB5800E9DFB8 /* ClassicImageEditStepSlider.swift in Sources */,

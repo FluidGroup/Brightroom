@@ -60,6 +60,9 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
     controller.handlers.didEndEditing = { [weak self] controller, stack in
       guard let self = self else { return }
       controller.dismiss(animated: true, completion: nil)
+      
+      self.resultCell.image = nil
+
       stack.makeRenderer()?.render { (image) in
         self.resultCell.image = image
       }

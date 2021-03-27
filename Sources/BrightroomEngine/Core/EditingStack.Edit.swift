@@ -84,6 +84,12 @@ extension EditingStack {
       
       func makeFilters() -> [Filtering] {
         return ([
+          
+          /**
+           Must be first filter since color-cube does not support wide range color.
+           */
+          colorCube,
+          
           // Before
           exposure,
           brightness,
@@ -92,8 +98,7 @@ extension EditingStack {
           shadows,
           saturation,
           contrast,
-          colorCube,
-          
+                    
           // After
           sharpen,
           unsharpMask,
@@ -104,7 +109,7 @@ extension EditingStack {
         .compactMap { $0 }
       }
       
-      func apply(to ciImage: CIImage) -> CIImage {
+      public func apply(to ciImage: CIImage) -> CIImage {
         makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
           filter.apply(to: image, sourceImage: image)
         }

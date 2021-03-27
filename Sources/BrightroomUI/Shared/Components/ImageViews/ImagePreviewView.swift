@@ -32,8 +32,8 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   // MARK: - Properties
 
   #if false
-  private let imageView = _ImageView()
-  private let originalImageView = _ImageView()
+  private let imageView = _ImageView(resizesOnDisplay: true)
+  private let originalImageView = _ImageView(resizesOnDisplay: true)
   #else
   private let imageView = MetalImageView()
   private let originalImageView = MetalImageView()
@@ -126,12 +126,12 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   }
   
   private func requestPreviewImage(state: EditingStack.State.Loaded) {
-    
-    let pixelSize = max(self.bounds.width, self.bounds.height) * UIScreen.main.scale
-    
-    imageView.display(image: state.makeCroppedPreviewImage(previewMaxPixelSize: pixelSize, appliesFilter: true))
-    originalImageView.display(image: state.makeCroppedPreviewImage(previewMaxPixelSize: pixelSize, appliesFilter: false))
-    
+        
+    let croppedImage = state.makeCroppedImage()
+    imageView.display(image: croppedImage)
+    imageView.postProcessing = state.currentEdit.filters.apply
+    originalImageView.display(image: croppedImage)
+        
   }
 
   private func updateLoadingOverlay(displays: Bool) {
