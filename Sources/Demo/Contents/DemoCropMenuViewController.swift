@@ -41,22 +41,36 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         let stack = EditingStack.init(
           imageProvider: .init(image: Asset.horizontalRect.image),
           previewMaxPixelSize: 600,
-          cropModifier: .faceDetection()
+          cropModifier: .faceDetection(aspectRatio: .square)
         )
         
         _presentCropViewConroller(stack)
       }),
       
-      Components.makeSelectionCell(title: "Face detection from picker", onTap: { [unowned self] in
+      Components.makeSelectionCell(title: "Face detection - picker", onTap: { [unowned self] in
         
         self.__pickPhoto { image in
           
           let stack = EditingStack.init(
             imageProvider: .init(image: image),
             previewMaxPixelSize: 600,
-            cropModifier: .faceDetection()
+            cropModifier: .faceDetection(aspectRatio: .square)
           )
           _presentCropViewConroller(stack)
+        }
+        
+      }),
+      
+      Components.makeSelectionCell(title: "Face detection - picker - square", onTap: { [unowned self] in
+        
+        self.__pickPhoto { image in
+          
+          let stack = EditingStack.init(
+            imageProvider: .init(image: image),
+            previewMaxPixelSize: 600,
+            cropModifier: .faceDetection(aspectRatio: .square)
+          )
+          _presentCropViewConroller(stack, fixedAspectRatio: .square)
         }
         
       }),
@@ -180,8 +194,13 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
     present(crop, animated: true, completion: nil)
   }
 
-  private func _presentCropViewConroller(_ editingStack: EditingStack) {
-    let crop = PhotosCropViewController(editingStack: editingStack)
+  private func _presentCropViewConroller(_ editingStack: EditingStack, fixedAspectRatio: PixelAspectRatio? = nil) {
+    var options = PhotosCropViewController.Options()
+    if let fixedAspectRatio = fixedAspectRatio {
+      options.aspectRatioOptions = .fixed(fixedAspectRatio)
+    }
+    let crop = PhotosCropViewController(editingStack: editingStack, options: options)
+    
     _presentCropViewConroller(crop)
   }
 }

@@ -167,7 +167,7 @@ public struct EditingCrop: Equatable {
     updateCropExtent(by: newAspectRatio)
   }
   
-  public mutating func updateCropExtent(byBoundingBox boundingBox: CGRect) {
+  public mutating func updateCropExtent(byBoundingBox boundingBox: CGRect, respectingApectRatio: PixelAspectRatio?) {
                 
     var proposed = cropExtent
         
@@ -179,7 +179,7 @@ public struct EditingCrop: Equatable {
       .applying(scale)
       .applying(transform)
            
-    self.cropExtent = Self.fittingRect(rect: proposed, in: imageSize, respectingAspectRatio: nil)
+    self.cropExtent = Self.fittingRect(rect: proposed, in: imageSize, respectingAspectRatio: respectingApectRatio)
   }
     
   /// Updates cropExtent with new specified rect and normalizing value using aspectRatio(optional).

@@ -670,11 +670,9 @@ extension EditingStack {
       }
     }
     
-    public static func faceDetection() -> Self {
+    public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
       return .init { image, crop, completion in
-        
-        // FIXME:
-        
+                
         let request = VNDetectFaceRectanglesRequest { request, error in
           
           if let error = error {
@@ -694,7 +692,15 @@ extension EditingStack {
           }
           
           var new = crop
-          new.updateCropExtent(byBoundingBox: first.boundingBox)
+          let box = first.boundingBox
+          
+          let denormalizedRect = VNImageRectForNormalizedRect(box, Int(crop.imageSize.width), Int(crop.imageSize.height))
+
+          let paddingRect = denormalizedRect.insetBy(dx: -denormalizedRect.width * paddingBias, dy: -denormalizedRect.height * paddingBias)
+          
+          let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(crop.imageSize.width), Int(crop.imageSize.height))
+                    
+          new.updateCropExtent(byBoundingBox: normalizedRect, respectingApectRatio: aspectRatio)
           completion(new)
         }
         
