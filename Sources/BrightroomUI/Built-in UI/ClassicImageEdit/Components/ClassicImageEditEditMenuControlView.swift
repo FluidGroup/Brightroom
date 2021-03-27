@@ -54,7 +54,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var adjustmentButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editAdjustment,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editAdjustment,
         image: UIImage(named: "adjustment", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(adjustment), for: .touchUpInside)
@@ -63,7 +63,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var maskButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editMask,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editMask,
         image: UIImage(named: "mask", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(masking), for: .touchUpInside)
@@ -72,7 +72,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var exposureButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editBrightness,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editBrightness,
         image: UIImage(named: "brightness", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(brightness), for: .touchUpInside)
@@ -81,7 +81,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var gaussianBlurButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editBlur,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editBlur,
         image: UIImage(named: "blur", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(blur), for: .touchUpInside)
@@ -90,7 +90,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var contrastButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editContrast,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editContrast,
         image: UIImage(named: "contrast", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(contrast), for: .touchUpInside)
@@ -99,7 +99,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var temperatureButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editTemperature,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editTemperature,
         image: UIImage(named: "temperature", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(warmth), for: .touchUpInside)
@@ -108,7 +108,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var saturationButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editSaturation,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editSaturation,
         image: UIImage(named: "saturation", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(saturation), for: .touchUpInside)
@@ -117,7 +117,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var highlightsButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editHighlights,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editHighlights,
         image: UIImage(named: "highlights", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(highlights), for: .touchUpInside)
@@ -126,7 +126,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var shadowsButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editShadows,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editShadows,
         image: UIImage(named: "shadows", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(shadows), for: .touchUpInside)
@@ -135,7 +135,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var vignetteButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editVignette,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editVignette,
         image: UIImage(named: "vignette", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(vignette), for: .touchUpInside)
@@ -144,7 +144,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var fadeButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editFade,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editFade,
         image: UIImage(named: "fade", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(fade), for: .touchUpInside)
@@ -153,7 +153,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var sharpenButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editSharpen,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editSharpen,
         image: UIImage(named: "sharpen", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(sharpen), for: .touchUpInside)
@@ -162,7 +162,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     
     public lazy var clarityButton: ButtonView = {
       let button = ButtonView(
-        name: L10n.editClarity,
+        name: ClassicImageEditViewController.LocalizedStrings.shared.editClarity,
         image: UIImage(named: "structure", in: bundle, compatibleWith: nil)!
       )
       button.addTarget(self, action: #selector(clarity), for: .touchUpInside)

@@ -34,6 +34,8 @@ public final class ClassicImageEditViewController: UIViewController {
   
   public struct LocalizedStrings {
     
+    public static var shared: Self = .init()
+  
     public var done = "Done"
     public var normal = "Normal"
     public var cancel = "Cancel"
@@ -61,7 +63,7 @@ public final class ClassicImageEditViewController: UIViewController {
       
     }
   }
-  
+      
   public struct Handlers {
     public var didEndEditing: (ClassicImageEditViewController, EditingStack) -> Void = { _, _ in }
     public var didCancelEditing: (ClassicImageEditViewController) -> Void = { _ in }
@@ -95,7 +97,7 @@ public final class ClassicImageEditViewController: UIViewController {
   )
 
   private lazy var cancelButton = UIBarButtonItem(
-    title: L10n.cancel,
+    title: ClassicImageEditViewController.LocalizedStrings.shared.cancel,
     style: .plain,
     target: self,
     action: #selector(didTapCancelButton)

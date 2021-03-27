@@ -74,7 +74,7 @@ open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
         ])
       
       clearButton.addTarget(self, action: #selector(didTapRemoveAllButton), for: .touchUpInside)
-      clearButton.setTitle(L10n.clear, for: .normal)
+      clearButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.clear, for: .normal)
       clearButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
       
     }
@@ -91,10 +91,10 @@ open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
       largeLabel.translatesAutoresizingMaskIntoConstraints = false
       slider.translatesAutoresizingMaskIntoConstraints = false
 
-      smallLabel.text = L10n.brushSizeSmall
+      smallLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.brushSizeSmall
       smallLabel.textColor = .black
       largeLabel.textColor = .black
-      largeLabel.text = L10n.brushSizeLarge
+      largeLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.brushSizeLarge
 
       smallLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
       largeLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)

@@ -36,7 +36,7 @@ open class ClassicImageEditVignetteControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditVignetteControl : ClassicImageEditVignetteControlBase {
   
   open override var title: String {
-    return L10n.editVignette
+    return ClassicImageEditViewController.LocalizedStrings.shared.editVignette
   }
   
   private let navigationView = ClassicImageEditNavigationView()

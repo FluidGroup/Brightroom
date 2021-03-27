@@ -42,8 +42,8 @@ open class ClassicImageEditNavigationView : UIStackView {
     addArrangedSubview(cancelButton)
     addArrangedSubview(saveButton)
 
-    cancelButton.setTitle(L10n.cancel, for: .normal)
-    saveButton.setTitle(L10n.done, for: .normal)
+    cancelButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.cancel, for: .normal)
+    saveButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.done, for: .normal)
 
     cancelButton.setTitleColor(ClassicImageEditStyle.default.black, for: .normal)
     saveButton.setTitleColor(ClassicImageEditStyle.default.black, for: .normal)

@@ -62,7 +62,7 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
   public init(
     editingStack: EditingStack,
-    doneButtonTitle: String = L10n.done,
+    doneButtonTitle: String = ClassicImageEditViewController.LocalizedStrings.shared.done,
     options: ClassicImageEditOptions = .default
   ) {
     self.doneButtonTitle = doneButtonTitle
@@ -85,9 +85,9 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
       switch mode {
       case .crop:
-        $0.title = L10n.editAdjustment
+        $0.title = ClassicImageEditViewController.LocalizedStrings.shared.editAdjustment
       case .masking:
-        $0.title = L10n.editMask
+        $0.title = ClassicImageEditViewController.LocalizedStrings.shared.editMask
       case .editing:
         break
       case .preview:

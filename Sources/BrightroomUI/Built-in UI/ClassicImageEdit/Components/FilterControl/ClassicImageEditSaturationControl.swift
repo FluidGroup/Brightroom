@@ -36,7 +36,7 @@ open class ClassicImageEditSaturationControlBase : ClassicImageEditFilterControl
 open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControlBase {
   
   open override var title: String {
-    return L10n.editSaturation
+    return ClassicImageEditViewController.LocalizedStrings.shared.editSaturation
   }
   
   private let navigationView = ClassicImageEditNavigationView()

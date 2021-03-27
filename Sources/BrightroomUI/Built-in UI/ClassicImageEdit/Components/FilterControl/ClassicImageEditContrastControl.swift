@@ -34,7 +34,7 @@ open class ClassicImageEditContrastControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase {
   
   open override var title: String {
-    return L10n.editContrast
+    return ClassicImageEditViewController.LocalizedStrings.shared.editContrast
   }
   
   private let navigationView = ClassicImageEditNavigationView()

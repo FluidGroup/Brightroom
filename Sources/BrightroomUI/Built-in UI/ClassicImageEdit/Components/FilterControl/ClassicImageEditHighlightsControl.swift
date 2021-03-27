@@ -35,7 +35,7 @@ open class ClassicImageEditHighlightsControlBase : ClassicImageEditFilterControl
 open class ClassicImageEditHighlightsControl : ClassicImageEditHighlightsControlBase {
   
   open override var title: String {
-    return L10n.editHighlights
+    return ClassicImageEditViewController.LocalizedStrings.shared.editHighlights
   }
   
   private let navigationView = ClassicImageEditNavigationView()

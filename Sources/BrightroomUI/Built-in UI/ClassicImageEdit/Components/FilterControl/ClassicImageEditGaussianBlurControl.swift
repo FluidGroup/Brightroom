@@ -36,7 +36,7 @@ open class ClassicImageEditGaussianBlurControlBase : ClassicImageEditFilterContr
 open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurControlBase {
   
   open override var title: String {
-    return L10n.editBlur
+    return ClassicImageEditViewController.LocalizedStrings.shared.editBlur
   }
 
   private let navigationView = ClassicImageEditNavigationView()

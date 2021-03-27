@@ -36,7 +36,7 @@ open class ClassicImageEditClarityControlBase : ClassicImageEditFilterControlBas
 open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
   
   open override var title: String {
-    return L10n.editClarity
+    return ClassicImageEditViewController.LocalizedStrings.shared.editClarity
   }
   
   private let navigationView = ClassicImageEditNavigationView()

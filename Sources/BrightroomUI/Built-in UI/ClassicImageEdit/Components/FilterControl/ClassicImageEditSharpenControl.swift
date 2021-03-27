@@ -36,7 +36,7 @@ open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBas
 open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
   
   open override var title: String {
-    return L10n.editSharpen
+    return ClassicImageEditViewController.LocalizedStrings.shared.editSharpen
   }
   
   private let navigationView = ClassicImageEditNavigationView()

@@ -90,8 +90,8 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
     body: do {
 
-      filtersButton.setTitle(L10n.filter, for: .normal)
-      editButton.setTitle(L10n.edit, for: .normal)
+      filtersButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.filter, for: .normal)
+      editButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.edit, for: .normal)
 
       filtersButton.tintColor = .clear
       editButton.tintColor = .clear

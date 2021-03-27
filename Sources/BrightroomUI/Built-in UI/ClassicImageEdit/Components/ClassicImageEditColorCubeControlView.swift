@@ -384,7 +384,7 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
 
     open func set(originalImage: CIImage) {
       
-      nameLabel.text = L10n.normal
+      nameLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.normal
       imageView.display(image: originalImage)
     }
     

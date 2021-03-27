@@ -36,7 +36,7 @@ open class ClassicImageEditShadowsControlBase : ClassicImageEditFilterControlBas
 open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
   
   open override var title: String {
-    return L10n.editShadows
+    return ClassicImageEditViewController.LocalizedStrings.shared.editShadows
   }
   
   private let navigationView = ClassicImageEditNavigationView()

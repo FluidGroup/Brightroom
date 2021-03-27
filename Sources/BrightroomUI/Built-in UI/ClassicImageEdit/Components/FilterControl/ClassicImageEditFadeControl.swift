@@ -36,7 +36,7 @@ open class ClassicImageEditFadeControlBase : ClassicImageEditFilterControlBase {
 open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
   
   open override var title: String {
-    return L10n.editFade
+    return ClassicImageEditViewController.LocalizedStrings.shared.editFade
   }
   
   private let navigationView = ClassicImageEditNavigationView()

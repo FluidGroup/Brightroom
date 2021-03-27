@@ -36,7 +36,7 @@ open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterContro
 open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureControlBase {
   
   open override var title: String {
-    return L10n.editTemperature
+    return ClassicImageEditViewController.LocalizedStrings.shared.editTemperature
   }
   
   private let navigationView = ClassicImageEditNavigationView()

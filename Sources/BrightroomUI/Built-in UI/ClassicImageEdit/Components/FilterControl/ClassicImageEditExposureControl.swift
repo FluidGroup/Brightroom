@@ -36,7 +36,7 @@ open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase {
   
   open override var title: String {
-    return L10n.editBrightness
+    return ClassicImageEditViewController.LocalizedStrings.shared.editBrightness
   }
 
   private let navigationView = ClassicImageEditNavigationView()
