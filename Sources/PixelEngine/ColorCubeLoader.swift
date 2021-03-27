@@ -6,6 +6,12 @@ public enum ColorCubeLoaderError: Error {
   case failedToCreageCGDataProvider(String)
 }
 
+/**
+ An object for loading color-cube image from bundle.
+ It finds based on specified naming-rule.
+ 
+ `LUT_<Dimension>_<filterName>.<extension {jpg, png}>`
+ */
 public final class ColorCubeLoader {
   public let bundle: Bundle
 
@@ -16,8 +22,6 @@ public final class ColorCubeLoader {
   public func load() throws -> [FilterColorCube] {
     let rootPath = bundle.bundlePath as NSString
     let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-
-    let targetExtensions: [String] = ["jpeg", "jpg", "png"]
 
     func takeDimension(from string: String) -> Int? {
       enum Static {
