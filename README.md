@@ -100,6 +100,25 @@ struct DemoCropView: View {
 }
 ```
 
+## LUT (Hald image)
+
+[How to create cube data from LUT Image for  CIColorCube / CIColorCubeWithColorSpace](https://www.notion.so/muukii/CoreImage-How-to-create-cube-data-from-LUT-Image-for-CIColorCube-CIColorCubeWithColorSpace-9e554fd418e8463abb25d6232613ac1c)
+
+Regarding LUT, the format of LUT changed from v2.
+
+<img width=120px src="https://user-images.githubusercontent.com/1888355/112709344-0ca56200-8efc-11eb-9812-523de3c0fdf3.png"/>
+
+We can download the neutral LUT image from [lutCreator.js](https://sirserch.github.io/lut-creator-js/#).
+Make sure to use HALD 64 SIZE
+
+### [Hald Images](https://3dlutcreator.com/3d-lut-creator---materials-and-luts.html)
+
+> Hald is a graphical representation of 3D LUT in a form of a color table which contains all of the color gradations of 3D LUT. If Hald is loaded into editing software and a color correction is applied to it, you can use 3D LUT Creator to convert your Hald into 3D LUT and apply it to a photo or a video in your editor.
+> 
+
+## Setting up to use LUT in your application
+
+- WIP
 
 ---
 
