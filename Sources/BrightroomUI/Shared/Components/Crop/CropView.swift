@@ -49,7 +49,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     public fileprivate(set) var frame: CGRect = .zero
     
-    fileprivate var hasLoaded = false
     fileprivate var isGuideInteractionEnabled: Bool = true
     fileprivate var layoutVersion: UInt64 = 0
     
@@ -304,8 +303,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     if displays, let factory = self.loadingOverlayFactory {
       
-      guideView.isHidden = true
-      scrollView.isHidden = true
+      guideView.alpha = 0
+      scrollView.alpha = 0
       
       let loadingOverlay = factory()
       self.currentLoadingOverlay = loadingOverlay
@@ -313,24 +312,25 @@ public final class CropView: UIView, UIScrollViewDelegate {
       AutoLayoutTools.setEdge(loadingOverlay, self)
       
       loadingOverlay.alpha = 0
-      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+      UIViewPropertyAnimator(duration: 0.4, dampingRatio: 1) {
         loadingOverlay.alpha = 1
       }
       .startAnimation()
       
     } else {
-      
-      guideView.isHidden = false
-      scrollView.isHidden = false
-      
+              
       if let view = currentLoadingOverlay {
+        
+        layoutIfNeeded()
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
           view.alpha = 0
+          self.guideView.alpha = 1
+          self.scrollView.alpha = 1
         }&>.do {
           $0.addCompletion { _ in
-            view.removeFromSuperview()
+            view.removeFromSuperview()                       
           }
-          $0.startAnimation()
+          $0.startAnimation(afterDelay: 0.2)
         }
       }
                  
