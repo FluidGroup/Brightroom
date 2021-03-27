@@ -26,13 +26,13 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class EditMenuControlBase: ControlBase {
-  override public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditEditMenuControlBase: ClassicImageEditControlBase {
+  override public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-public enum EditMenu: CaseIterable {
+public enum ClassicImageEditEditMenu: CaseIterable {
   case adjustment
   case mask
   case exposure
@@ -47,7 +47,7 @@ public enum EditMenu: CaseIterable {
   case sharpen
   case gaussianBlur
   
-  open class EditMenuControl: EditMenuControlBase {
+  open class EditMenuControl: ClassicImageEditEditMenuControlBase {
     public let contentView = UIView()
     public let itemsView = UIStackView()
     public let scrollView = UIScrollView()
@@ -229,8 +229,8 @@ public enum EditMenu: CaseIterable {
       }
       
       item: do {
-        let ignoredEditMenu: [EditMenu] = viewModel.options.classes.control.ignoredEditMenu
-        let displayedMenu = EditMenu.allCases.filter { ignoredEditMenu.contains($0) == false }
+        let ignoredEditMenu: [ClassicImageEditEditMenu] = viewModel.options.classes.control.ignoredEditMenu
+        let displayedMenu = ClassicImageEditEditMenu.allCases.filter { ignoredEditMenu.contains($0) == false }
         
         var buttons: [ButtonView] = []
         
@@ -284,7 +284,7 @@ public enum EditMenu: CaseIterable {
       }
     }
     
-    override open func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+    override open func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
       if let edit = state.editingState.loadedState?.currentEdit {
         maskButton.hasChanges = !edit.drawings.blurredMaskPaths.isEmpty
         
@@ -304,17 +304,17 @@ public enum EditMenu: CaseIterable {
     
     @objc
     private func adjustment() {
-      push(CropControl(viewModel: viewModel), animated: true)
+      push(ClassicImageEditCropControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func masking() {
-      push(MaskControl(viewModel: viewModel), animated: true)
+      push(ClassicImageEditMaskControl(viewModel: viewModel), animated: true)
     }
     
     @objc
     private func doodle() {
-      push(DoodleControl(viewModel: viewModel), animated: true)
+      push(ClassicImageEditDoodleControl(viewModel: viewModel), animated: true)
     }
     
     @objc

@@ -21,43 +21,36 @@
 
 import UIKit
 
-#if !COCOAPODS
-import BrightroomEngine
-#endif
-import Verge
+open class ClassicImageEditCropControlBase : ClassicImageEditControlBase {
 
-open class FadeControlBase : FilterControlBase {
-  
-  public required init(viewModel: PixelEditViewModel) {
-    super.init(viewModel: viewModel)
-  }
 }
 
-open class FadeControl : FadeControlBase {
-  
-  open override var title: String {
-    return L10n.editFade
-  }
-  
-  private let navigationView = NavigationView()
-  
-  public let slider = StepSlider(frame: .zero)
-  
-  open override func setup() {
+public final class ClassicImageEditCropControl : ClassicImageEditCropControlBase {
+
+  private let navigationView = ClassicImageEditNavigationView()
+
+  public override func setup() {
     super.setup()
-    
+
     backgroundColor = Style.default.control.backgroundColor
-    
-    TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
-    slider.mode = .plus
-    slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
+    addSubview(navigationView)
+
+    navigationView.translatesAutoresizingMaskIntoConstraints = false
+
+    NSLayoutConstraint.activate([
+      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
+      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
+      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
+      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
+      ])
+
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
       
-      self.viewModel.editingStack.revertEdit()
+      self.viewModel.endCrop(save: false)
+      self.viewModel.setMode(.preview)
       self.pop(animated: true)
     }
     
@@ -65,37 +58,18 @@ open class FadeControl : FadeControlBase {
       
       guard let self = self else { return }
       
-      self.viewModel.editingStack.takeSnapshot()
+      self.viewModel.endCrop(save: true)
+      self.viewModel.setMode(.preview)
       self.pop(animated: true)
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade) { value in
-      slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
+  public override func willMove(toSuperview newSuperview: UIView?) {
+    super.willMove(toSuperview: newSuperview)
+    if newSuperview != nil {
+      viewModel.setMode(.crop)
     }
-        
   }
-  
-  @objc
-  private func valueChanged() {
-    
-    let value = slider.transition(in: FilterFade.Params.intensity)
-    
-    guard value != 0 else {
-      viewModel.editingStack.set(filters: {
-        $0.fade = nil
-      })
-      return
-    }
-      
-    viewModel.editingStack.set(filters: {
-      var f = FilterFade()
-      f.intensity = value
-      $0.fade = f
-    })
-    
-  }
-  
+
 }
+

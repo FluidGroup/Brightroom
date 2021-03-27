@@ -18,6 +18,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import UIKit
 
 #if !COCOAPODS
@@ -25,19 +26,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ContrastControlBase : FilterControlBase {
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterControlBase {
+  
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ContrastControl : ContrastControlBase {
+open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureControlBase {
   
   open override var title: String {
-    return L10n.editContrast
+    return L10n.editTemperature
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -65,33 +67,31 @@ open class ContrastControl : ContrastControlBase {
       self.viewModel.editingStack.takeSnapshot()
       self.pop(animated: true)
     }
-      
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
 
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast) { value in      
-      slider.set(value: value?.value ?? 0, in: FilterContrast.range)
+      slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
     }
-        
+              
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterContrast.range)
+    let value = slider.transition(in: FilterTemperature.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: {
-        $0.contrast = nil
-      })
+      viewModel.editingStack.set(filters: { $0.temperature = nil })
       return
     }
-    
+       
     viewModel.editingStack.set(filters: {
-      var f = FilterContrast()
+      var f = FilterTemperature()
       f.value = value
-      $0.contrast = f
+      $0.temperature = f
     })
   }
   

@@ -18,18 +18,18 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import UIKit
 
-open class CropControlBase : ControlBase {
+open class ClassicImageEditDoodleControlBase : ClassicImageEditControlBase {
 
 }
 
-public final class CropControl : CropControlBase {
+public final class ClassicImageEditDoodleControl : ClassicImageEditDoodleControlBase {
 
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
 
   public override func setup() {
+
     super.setup()
 
     backgroundColor = Style.default.control.backgroundColor
@@ -46,30 +46,13 @@ public final class CropControl : CropControlBase {
       ])
 
     navigationView.didTapCancelButton = { [weak self] in
-      
-      guard let self = self else { return }
-      
-      self.viewModel.endCrop(save: false)
-      self.viewModel.setMode(.preview)
-      self.pop(animated: true)
+
+      self?.pop(animated: true)
     }
-    
+
     navigationView.didTapDoneButton = { [weak self] in
-      
-      guard let self = self else { return }
-      
-      self.viewModel.endCrop(save: true)
-      self.viewModel.setMode(.preview)
-      self.pop(animated: true)
-    }
-  }
-  
-  public override func willMove(toSuperview newSuperview: UIView?) {
-    super.willMove(toSuperview: newSuperview)
-    if newSuperview != nil {
-      viewModel.setMode(.crop)
-    }
-  }
 
+      self?.pop(animated: true)
+    }
+  }
 }
-

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 import UIKit
 
-open class NavigationView : UIStackView {
+open class ClassicImageEditNavigationView : UIStackView {
 
   public var didTapDoneButton: () -> Void = {}
   public var didTapCancelButton: () -> Void = {}

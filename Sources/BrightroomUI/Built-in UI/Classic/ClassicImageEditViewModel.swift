@@ -25,8 +25,8 @@ import Verge
 import BrightroomEngine
 #endif
 
-public final class PixelEditViewModel: Equatable, StoreComponentType {
-  public static func == (lhs: PixelEditViewModel, rhs: PixelEditViewModel) -> Bool {
+public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
+  public static func == (lhs: ClassicImageEditViewModel, rhs: ClassicImageEditViewModel) -> Bool {
     lhs === rhs
   }
 
@@ -50,7 +50,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
     fileprivate(set) var proposedCrop: EditingCrop?
   }
 
-  public let options: PixelEditOptions
+  public let options: ClassicImageEditOptions
 
   public let store: DefaultStore
 
@@ -63,7 +63,7 @@ public final class PixelEditViewModel: Equatable, StoreComponentType {
   public init(
     editingStack: EditingStack,
     doneButtonTitle: String = L10n.done,
-    options: PixelEditOptions = .default
+    options: ClassicImageEditOptions = .default
   ) {
     self.doneButtonTitle = doneButtonTitle
     self.options = options

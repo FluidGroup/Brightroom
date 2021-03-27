@@ -25,17 +25,17 @@ import UIKit
 import BrightroomEngine
 #endif
 
-protocol ControlChildViewType {
+protocol ClassicImageEditControlChildViewType {
 }
 
-extension ControlChildViewType where Self : UIView {
+extension ClassicImageEditControlChildViewType where Self : UIView {
 
-  private func find() -> ControlStackView {
+  private func find() -> ClassicImageEditControlStackView {
 
     var _super: UIView?
     _super = superview
     while _super != nil {
-      if let target = _super as? ControlStackView {
+      if let target = _super as? ClassicImageEditControlStackView {
         return target
       }
       _super = _super?.superview
@@ -45,7 +45,7 @@ extension ControlChildViewType where Self : UIView {
 
   }
 
-  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
+  func push(_ view: UIView & ClassicImageEditControlChildViewType, animated: Bool) {
     let controlStackView = find()
     controlStackView.push(view, animated: animated)
   }
@@ -57,11 +57,11 @@ extension ControlChildViewType where Self : UIView {
 }
 
 
-final class ControlStackView : UIView {
+final class ClassicImageEditControlStackView : UIView {
 
   private var latestNotifiedEdit: EditingStack.Edit?
   
-  func push(_ view: UIView & ControlChildViewType, animated: Bool) {
+  func push(_ view: UIView & ClassicImageEditControlChildViewType, animated: Bool) {
     
     let currentTop = subviews.last
     

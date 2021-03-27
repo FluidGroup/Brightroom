@@ -26,20 +26,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class SharpenControlBase : FilterControlBase {
-  
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditShadowsControlBase : ClassicImageEditFilterControlBase {
+
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class SharpenControl : SharpenControlBase {
+open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
   
   open override var title: String {
-    return L10n.editSharpen
+    return L10n.editShadows
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -50,7 +50,6 @@ open class SharpenControl : SharpenControlBase {
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
-    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -70,32 +69,30 @@ open class SharpenControl : SharpenControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
-      slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
+      slider.set(value: value?.value ?? 0, in: FilterShadows.range)
     }
-    
+        
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterSharpen.Params.sharpness)
+    let value = slider.transition(in: FilterShadows.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: {
-        $0.sharpen = nil
-      })
+      viewModel.editingStack.set(filters: { $0.shadows = nil })
       return
     }
-       
+           
     viewModel.editingStack.set(filters: {
-      var f = FilterSharpen()
-      f.sharpness = value
-      f.radius = 1.2
-      $0.sharpen = f
+      var f = FilterShadows()
+      f.value = value
+      $0.shadows = f
     })
+    
   }
   
 }

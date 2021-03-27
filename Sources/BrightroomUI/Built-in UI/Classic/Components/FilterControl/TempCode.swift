@@ -23,7 +23,7 @@ import UIKit
 
 enum TempCode {
   
-  static func layout(navigationView: NavigationView, slider: StepSlider, in view: UIView) {
+  static func layout(navigationView: ClassicImageEditNavigationView, slider: StepSlider, in view: UIView) {
     
     let containerGuide = UILayoutGuide()
     

@@ -18,7 +18,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import UIKit
 
 #if !COCOAPODS
@@ -26,20 +25,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class SaturationControlBase : FilterControlBase {
-
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditHighlightsControlBase : ClassicImageEditFilterControlBase {
+  
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class SaturationControl : SaturationControlBase {
+open class ClassicImageEditHighlightsControl : ClassicImageEditHighlightsControlBase {
   
   open override var title: String {
-    return L10n.editSaturation
+    return L10n.editHighlights
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -50,6 +49,7 @@ open class SaturationControl : SaturationControlBase {
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -69,30 +69,30 @@ open class SaturationControl : SaturationControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>)     {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation) { value in
-      slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights) { value in
+      slider.set(value: value?.value ?? 0, in: FilterHighlights.range)
     }
-        
+                
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterSaturation.range  )
+    let value = slider.transition(in: FilterHighlights.range)
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.saturation = nil
+        $0.highlights = nil
       })
       return
     }
-     
+      
     viewModel.editingStack.set(filters: {
-      var f = FilterSaturation()
+      var f = FilterHighlights()
       f.value = value
-      $0.saturation = f
+      $0.highlights = f
     })
   }
   

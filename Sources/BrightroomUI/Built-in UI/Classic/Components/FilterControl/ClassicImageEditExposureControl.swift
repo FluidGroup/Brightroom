@@ -26,32 +26,32 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class TemperatureControlBase : FilterControlBase {
-  
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBase {
+
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class TemperatureControl : TemperatureControlBase {
+open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase {
   
   open override var title: String {
-    return L10n.editTemperature
+    return L10n.editBrightness
   }
-  
-  private let navigationView = NavigationView()
-  
+
+  private let navigationView = ClassicImageEditNavigationView()
+
   public let slider = StepSlider(frame: .zero)
-  
+
   open override func setup() {
     super.setup()
-    
+
     backgroundColor = Style.default.control.backgroundColor
-    
+
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
+
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
@@ -68,31 +68,31 @@ open class TemperatureControl : TemperatureControlBase {
       self.pop(animated: true)
     }
   }
-  
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
 
-      slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure) { value in
+      slider.set(value: value?.value ?? 0, in: FilterExposure.range)
     }
-              
+    
   }
-  
+
   @objc
   private func valueChanged() {
-    
-    let value = slider.transition(in: FilterTemperature.range)
-    
+
+    let value = slider.transition(in: FilterExposure.range)
     guard value != 0 else {
-      viewModel.editingStack.set(filters: { $0.temperature = nil })
+      viewModel.editingStack.set(filters: {
+        $0.exposure = nil
+      })
       return
-    }
-       
+    }    
+        
     viewModel.editingStack.set(filters: {
-      var f = FilterTemperature()
+      var f = FilterExposure()
       f.value = value
-      $0.temperature = f
+      $0.exposure = f
     })
+    
   }
-  
 }

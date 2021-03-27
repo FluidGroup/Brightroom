@@ -21,26 +21,38 @@
 
 import UIKit
 
-open class FilterControlBase : ControlBase {
+#if !COCOAPODS
+import BrightroomEngine
+#endif
+import Verge
+
+open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildViewType {
   
-  open var title: String {
-    fatalError("Must be overrided")
+  open func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+    
   }
 
-  public required override init(viewModel: PixelEditViewModel) {
-    super.init(viewModel: viewModel)
-  }
+  public let viewModel: ClassicImageEditViewModel
+  
+  private var subscriptions: Set<VergeAnyCancellable> = .init()
 
-  open override func didMoveToSuperview() {
-    super.didMoveToSuperview()
-
-    if superview != nil {
-      viewModel.setMode(.editing)
-      viewModel.setTitle(title)
-    } else {
-      viewModel.setMode(.preview)
-      viewModel.setTitle("")
+  public init(viewModel: ClassicImageEditViewModel) {
+    self.viewModel = viewModel
+    super.init(frame: .zero)
+    setup()
+    
+    viewModel.sinkState { [weak self] (state) in
+      self?.didReceiveCurrentEdit(state: state)
     }
+    .store(in: &subscriptions)
+  }
+
+  @available(*, unavailable)
+  public required init?(coder aDecoder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  open func setup() {
 
   }
 }

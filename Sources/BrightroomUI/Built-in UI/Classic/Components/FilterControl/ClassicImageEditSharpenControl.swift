@@ -26,33 +26,33 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class GaussianBlurControlBase : FilterControlBase {
-
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBase {
+  
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class GaussianBlurControl : GaussianBlurControlBase {
+open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
   
   open override var title: String {
-    return L10n.editBlur
+    return L10n.editSharpen
   }
-
-  private let navigationView = NavigationView()
-
+  
+  private let navigationView = ClassicImageEditNavigationView()
+  
   public let slider = StepSlider(frame: .zero)
-
+  
   open override func setup() {
     super.setup()
-
+    
     backgroundColor = Style.default.control.backgroundColor
-
+    
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-
+    
     slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-
+    
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
@@ -69,34 +69,33 @@ open class GaussianBlurControl : GaussianBlurControlBase {
       self.pop(animated: true)
     }
   }
-
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
-      slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
+      slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
     }
     
   }
-
+  
   @objc
   private func valueChanged() {
-
-    let value = slider.transition(in: FilterGaussianBlur.range)
+    
+    let value = slider.transition(in: FilterSharpen.Params.sharpness)
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.gaussianBlur = nil
+        $0.sharpen = nil
       })
       return
     }
-        
+       
     viewModel.editingStack.set(filters: {
-      var f = FilterGaussianBlur()
-      f.value = value
-      $0.gaussianBlur = f
+      var f = FilterSharpen()
+      f.sharpness = value
+      f.radius = 1.2
+      $0.sharpen = f
     })
-
   }
-
+  
 }
-

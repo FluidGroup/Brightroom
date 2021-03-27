@@ -20,14 +20,14 @@
 // THE SOFTWARE.
 import UIKit
 
-open class RootControlBase : ControlBase {
+open class ClassicImageEditRootControlBase : ClassicImageEditControlBase {
 
-  public required init(viewModel: PixelEditViewModel, colorCubeControl: ColorCubeControlBase) {
+  public required init(viewModel: ClassicImageEditViewModel, colorCubeControl: ClassicImageEditColorCubeControlBase) {
     super.init(viewModel: viewModel)
   }
 }
 
-final class RootControl : RootControlBase {
+final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
   public enum DisplayType {
     case filter
@@ -47,13 +47,13 @@ final class RootControl : RootControlBase {
 
   private let containerView = UIView()
 
-  public let colorCubeControl: ColorCubeControlBase
+  public let colorCubeControl: ClassicImageEditColorCubeControlBase
 
   public lazy var editView = viewModel.options.classes.control.editMenuControl.init(viewModel: viewModel)
 
   // MARK: - Initializers
 
-  public required init(viewModel: PixelEditViewModel, colorCubeControl: ColorCubeControlBase) {
+  public required init(viewModel: ClassicImageEditViewModel, colorCubeControl: ClassicImageEditColorCubeControlBase) {
 
     self.colorCubeControl = colorCubeControl
 

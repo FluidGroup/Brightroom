@@ -183,7 +183,7 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
   }
 
   func makeUIViewController(context: Context) -> UINavigationController {
-    let cropViewController = PixelEditViewController(viewModel: .init(editingStack: editingStack))
+    let cropViewController = ClassicImageEditViewController(viewModel: .init(editingStack: editingStack))
     cropViewController.handlers.didEndEditing = { _, _ in
       onCompleted()
     }

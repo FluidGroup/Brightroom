@@ -26,33 +26,33 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class VignetteControlBase : FilterControlBase {
-  
-  public required init(viewModel: PixelEditViewModel) {
+open class ClassicImageEditGaussianBlurControlBase : ClassicImageEditFilterControlBase {
+
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class VignetteControl : VignetteControlBase {
+open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurControlBase {
   
   open override var title: String {
-    return L10n.editVignette
+    return L10n.editBlur
   }
-  
-  private let navigationView = NavigationView()
-  
+
+  private let navigationView = ClassicImageEditNavigationView()
+
   public let slider = StepSlider(frame: .zero)
-  
+
   open override func setup() {
     super.setup()
-    
+
     backgroundColor = Style.default.control.backgroundColor
-    
+
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
+
     slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
@@ -69,31 +69,34 @@ open class VignetteControl : VignetteControlBase {
       self.pop(animated: true)
     }
   }
-  
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.vignette) { value in
-      slider.set(value: value?.value ?? 0, in: FilterVignette.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
+      slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
     }
+    
   }
-  
+
   @objc
   private func valueChanged() {
-    
-    let value = slider.transition(in: FilterVignette.range)
+
+    let value = slider.transition(in: FilterGaussianBlur.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: { $0.vignette = nil })
+      viewModel.editingStack.set(filters: {
+        $0.gaussianBlur = nil
+      })
       return
     }
-       
-    viewModel.editingStack.set(
-      filters: {
-        var f = FilterVignette()
-        f.value = value
-        $0.vignette = f
+        
+    viewModel.editingStack.set(filters: {
+      var f = FilterGaussianBlur()
+      f.value = value
+      $0.gaussianBlur = f
     })
 
   }
-  
+
 }
+

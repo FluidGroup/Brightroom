@@ -26,20 +26,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClarityControlBase : FilterControlBase {
+open class ClassicImageEditClarityControlBase : ClassicImageEditFilterControlBase {
   
-  public required init(viewModel: PixelEditViewModel) {
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClarityControl : ClarityControlBase {
+open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
   
   open override var title: String {
     return L10n.editClarity
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -70,7 +70,7 @@ open class ClarityControl : ClarityControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
     state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask) { value in
       slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)

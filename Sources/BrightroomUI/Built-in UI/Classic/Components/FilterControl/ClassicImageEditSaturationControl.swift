@@ -26,20 +26,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ShadowsControlBase : FilterControlBase {
+open class ClassicImageEditSaturationControlBase : ClassicImageEditFilterControlBase {
 
-  public required init(viewModel: PixelEditViewModel) {
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ShadowsControl : ShadowsControlBase {
+open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControlBase {
   
   open override var title: String {
-    return L10n.editShadows
+    return L10n.editSaturation
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -69,10 +69,10 @@ open class ShadowsControl : ShadowsControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
-      slider.set(value: value?.value ?? 0, in: FilterShadows.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation) { value in
+      slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
     }
         
   }
@@ -80,19 +80,20 @@ open class ShadowsControl : ShadowsControlBase {
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterShadows.range)
+    let value = slider.transition(in: FilterSaturation.range  )
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: { $0.shadows = nil })
+      viewModel.editingStack.set(filters: {
+        $0.saturation = nil
+      })
       return
     }
-           
+     
     viewModel.editingStack.set(filters: {
-      var f = FilterShadows()
+      var f = FilterSaturation()
       f.value = value
-      $0.shadows = f
+      $0.saturation = f
     })
-    
   }
   
 }

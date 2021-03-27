@@ -18,41 +18,29 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import UIKit
 
-open class DoodleControlBase : ControlBase {
+open class ClassicImageEditFilterControlBase : ClassicImageEditControlBase {
+  
+  open var title: String {
+    fatalError("Must be overrided")
+  }
 
-}
+  public required override init(viewModel: ClassicImageEditViewModel) {
+    super.init(viewModel: viewModel)
+  }
 
-public final class DoodleControl : DoodleControlBase {
+  open override func didMoveToSuperview() {
+    super.didMoveToSuperview()
 
-  private let navigationView = NavigationView()
-
-  public override func setup() {
-
-    super.setup()
-
-    backgroundColor = Style.default.control.backgroundColor
-
-    addSubview(navigationView)
-
-    navigationView.translatesAutoresizingMaskIntoConstraints = false
-
-    NSLayoutConstraint.activate([
-      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
-      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
-      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
-      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
-      ])
-
-    navigationView.didTapCancelButton = { [weak self] in
-
-      self?.pop(animated: true)
+    if superview != nil {
+      viewModel.setMode(.editing)
+      viewModel.setTitle(title)
+    } else {
+      viewModel.setMode(.preview)
+      viewModel.setTitle("")
     }
 
-    navigationView.didTapDoneButton = { [weak self] in
-
-      self?.pop(animated: true)
-    }
   }
 }

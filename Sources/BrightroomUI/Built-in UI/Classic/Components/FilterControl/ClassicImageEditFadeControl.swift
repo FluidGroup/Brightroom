@@ -18,6 +18,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import UIKit
 
 #if !COCOAPODS
@@ -25,20 +26,20 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class HighlightsControlBase : FilterControlBase {
+open class ClassicImageEditFadeControlBase : ClassicImageEditFilterControlBase {
   
-  public required init(viewModel: PixelEditViewModel) {
+  public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class HighlightsControl : HighlightsControlBase {
+open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
   
   open override var title: String {
-    return L10n.editHighlights
+    return L10n.editFade
   }
   
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   public let slider = StepSlider(frame: .zero)
   
@@ -69,31 +70,32 @@ open class HighlightsControl : HighlightsControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights) { value in
-      slider.set(value: value?.value ?? 0, in: FilterHighlights.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade) { value in
+      slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
     }
-                
+        
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterHighlights.range)
+    let value = slider.transition(in: FilterFade.Params.intensity)
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.highlights = nil
+        $0.fade = nil
       })
       return
     }
       
     viewModel.editingStack.set(filters: {
-      var f = FilterHighlights()
-      f.value = value
-      $0.highlights = f
+      var f = FilterFade()
+      f.intensity = value
+      $0.fade = f
     })
+    
   }
   
 }

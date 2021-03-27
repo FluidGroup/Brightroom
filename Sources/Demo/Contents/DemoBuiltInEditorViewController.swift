@@ -51,7 +51,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
   
   private func _present(_ editingStack: EditingStack) {
            
-    let controller = PixelEditViewController(editingStack: editingStack)
+    let controller = ClassicImageEditViewController(editingStack: editingStack)
     controller.handlers.didEndEditing = { [weak self] controller, stack in
       guard let self = self else { return }
       controller.dismiss(animated: true, completion: nil)

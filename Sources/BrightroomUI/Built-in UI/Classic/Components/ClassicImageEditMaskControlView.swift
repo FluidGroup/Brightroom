@@ -23,14 +23,14 @@ import UIKit
 import BrightroomEngine
 #endif
 
-open class MaskControlBase : ControlBase {
+open class ClassicImageEditMaskControlBase : ClassicImageEditControlBase {
 
 }
 
-open class MaskControl : MaskControlBase {
+open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
 
   private let contentView = UIView()
-  private let navigationView = NavigationView()
+  private let navigationView = ClassicImageEditNavigationView()
   
   private let clearButton = UIButton(type: .system)
   private let slider = StepSlider()

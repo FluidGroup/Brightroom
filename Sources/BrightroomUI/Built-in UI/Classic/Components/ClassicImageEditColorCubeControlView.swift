@@ -26,16 +26,16 @@ import BrightroomEngine
 
 import Verge
 
-open class ColorCubeControlBase : ControlBase {
+open class ClassicImageEditColorCubeControlBase : ClassicImageEditControlBase {
   
   public required override init(
-    viewModel: PixelEditViewModel
+    viewModel: ClassicImageEditViewModel
   ) {    
     super.init(viewModel: viewModel)
   }
 }
 
-open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
   
   private enum Section : Int, CaseIterable {
     
@@ -68,7 +68,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
   // MARK: - Functions
 
   public required init(
-    viewModel: PixelEditViewModel
+    viewModel: ClassicImageEditViewModel
     ) {
     
     self.store = .init(initialState: .init())
@@ -166,7 +166,7 @@ open class ColorCubeControl: ColorCubeControlBase, UICollectionViewDelegateFlowL
     return layout
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<PixelEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
     state.ifChanged(\.editingState.loadedState?.currentEdit.filters.colorCube) { value in
       current = value

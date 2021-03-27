@@ -27,11 +27,14 @@ import Verge
 import BrightroomEngine
 #endif
 
-public final class PixelEditViewController: UIViewController {
+@available(*, deprecated, renamed: "ClassicImageEditViewController")
+public typealias PixelEditViewController = ClassicImageEditViewController
+
+public final class ClassicImageEditViewController: UIViewController {
   
   public struct Handlers {
-    public var didEndEditing: (PixelEditViewController, EditingStack) -> Void = { _, _ in }
-    public var didCancelEditing: (PixelEditViewController) -> Void = { _ in }
+    public var didEndEditing: (ClassicImageEditViewController, EditingStack) -> Void = { _, _ in }
+    public var didCancelEditing: (ClassicImageEditViewController) -> Void = { _ in }
   }
 
   public var handlers: Handlers = .init()
@@ -50,7 +53,7 @@ public final class PixelEditViewController: UIViewController {
 
   private let cropButton = UIButton(type: .system)
 
-  private let stackView = ControlStackView()
+  private let stackView = ClassicImageEditControlStackView()
 
   private var aspectConstraint: NSLayoutConstraint?
 
@@ -73,26 +76,26 @@ public final class PixelEditViewController: UIViewController {
   private lazy var loadingView = LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
   private lazy var touchGuardOverlayView = UIView()
 
-  private let viewModel: PixelEditViewModel
+  private let viewModel: ClassicImageEditViewModel
   
   // MARK: - Initializers
   
   public convenience init(imageProvider: ImageProvider) {
     
     let editingStack = EditingStack(imageProvider: imageProvider)
-    let viewModel = PixelEditViewModel(editingStack: editingStack)
+    let viewModel = ClassicImageEditViewModel(editingStack: editingStack)
     
     self.init(viewModel: viewModel)
   }
   
   public convenience init(editingStack: EditingStack) {
     
-    let viewModel = PixelEditViewModel(editingStack: editingStack)
+    let viewModel = ClassicImageEditViewModel(editingStack: editingStack)
     
     self.init(viewModel: viewModel)
   }
 
-  public init(viewModel: PixelEditViewModel) {
+  public init(viewModel: ClassicImageEditViewModel) {
     self.viewModel = viewModel
     self.cropView = .init(editingStack: viewModel.editingStack, contentInset: .zero)
     self.previewView = .init(editingStack: viewModel.editingStack)
@@ -258,7 +261,7 @@ public final class PixelEditViewController: UIViewController {
     handlers.didCancelEditing(self)
   }
 
-  private func updateUI(state: Changes<PixelEditViewModel.State>) {
+  private func updateUI(state: Changes<ClassicImageEditViewModel.State>) {
  
     state.ifChanged(\.maskingBrushSize) {
       maskingView.setBrushSize($0)
