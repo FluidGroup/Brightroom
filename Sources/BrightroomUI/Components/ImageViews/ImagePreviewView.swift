@@ -22,14 +22,13 @@
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
 import UIKit
+import Verge
 
 /**
  A view that displays the edited image, plus displays original image for comparison with touch-down interaction.
  */
-public final class ImagePreviewView : PixelEditorCodeBasedView {
-  
+public final class ImagePreviewView: PixelEditorCodeBasedView {
   // MARK: - Properties
 
   #if false
@@ -39,79 +38,136 @@ public final class ImagePreviewView : PixelEditorCodeBasedView {
   private let imageView = MetalImageView()
   private let originalImageView = MetalImageView()
   #endif
-  
+
   private let editingStack: EditingStack
   private var subscriptions = Set<VergeAnyCancellable>()
-  
+
+  private var loadingOverlayFactory: (() -> UIView)?
+  private weak var currentLoadingOverlay: UIView?
+
+  private var isBinding = false
+
   // MARK: - Initializers
-  
+
   public init(editingStack: EditingStack) {
-    
     // FIXME: Loading State
-    
+
     self.editingStack = editingStack
-    
+
     super.init(frame: .zero)
-    
+
     originalImageView.accessibilityIdentifier = "pixel.originalImageView"
-    
+
     imageView.accessibilityIdentifier = "pixel.editedImageView"
-    
+
     clipsToBounds = true
-    
+
     [
       originalImageView,
-      imageView
-      ].forEach { imageView in
-        addSubview(imageView)
-        imageView.clipsToBounds = true
-        imageView.contentMode = .scaleAspectFit
-        imageView.isOpaque = false
-        imageView.frame = bounds
-        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      imageView,
+    ].forEach { imageView in
+      addSubview(imageView)
+      imageView.clipsToBounds = true
+      imageView.contentMode = .scaleAspectFit
+      imageView.isOpaque = false
+      imageView.frame = bounds
+      imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
-        
+
     originalImageView.isHidden = true
-    
-    editingStack.sinkState { [weak self] state in
-      
-      guard let self = self else { return }
-      
-      UIView.performWithoutAnimation {
-        
-        if let state = state._beta_map(\.loadedState) {
-          state.ifChanged(\.editingCroppedPreviewImage) { image in
-            self.imageView.display(image: image)
-            EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
+
+    defaultAppearance: do {
+      setLoadingOverlay(factory: {
+        LoadingBlurryOverlayView(
+          effect: UIBlurEffect(style: .dark),
+          activityIndicatorStyle: .whiteLarge
+        )
+      })
+    }
+  }
+
+  // MARK: - Functions
+
+  public func setLoadingOverlay(factory: (() -> UIView)?) {
+    _pixeleditor_ensureMainThread()
+    loadingOverlayFactory = factory
+  }
+
+  override public func willMove(toWindow newWindow: UIWindow?) {
+    super.willMove(toWindow: newWindow)
+
+    if newWindow != nil {
+      editingStack.start()
+
+      if isBinding == false {
+        isBinding = true
+        editingStack.sinkState { [weak self] state in
+
+          guard let self = self else { return }
+
+          state.ifChanged(\.isLoading) { isLoading in
+            self.updateLoadingOverlay(displays: isLoading)
           }
-          
-          state.ifChanged(\.editingCroppedImage) { image in
-            self.originalImageView.display(image: image)
-            EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)
+
+          UIView.performWithoutAnimation {
+            if let state = state._beta_map(\.loadedState) {
+              state.ifChanged(\.editingCroppedPreviewImage) { image in
+                self.imageView.display(image: image)
+                EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
+              }
+
+              state.ifChanged(\.editingCroppedImage) { image in
+                self.originalImageView.display(image: image)
+                EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)
+              }
+            }
           }
         }
-                       
+        .store(in: &subscriptions)
       }
     }
-    .store(in: &subscriptions)
-    
   }
-  
-  // MARK: - Functions
-  
-  public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+
+  private func updateLoadingOverlay(displays: Bool) {
+    if displays, let factory = loadingOverlayFactory {
+      let loadingOverlay = factory()
+      currentLoadingOverlay = loadingOverlay
+      addSubview(loadingOverlay)
+      AutoLayoutTools.setEdge(loadingOverlay, self)
+
+      loadingOverlay.alpha = 0
+      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        loadingOverlay.alpha = 1
+      }
+      .startAnimation()
+
+    } else {
+      if let view = currentLoadingOverlay {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+          view.alpha = 0
+        }&>.do {
+          $0.addCompletion { _ in
+            view.removeFromSuperview()
+          }
+          $0.startAnimation()
+        }
+      }
+    }
+  }
+
+  override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesBegan(touches, with: event)
     originalImageView.isHidden = false
     imageView.isHidden = true
   }
-  
-  public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+
+  override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesEnded(touches, with: event)
     originalImageView.isHidden = true
     imageView.isHidden = false
   }
-  
-  public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+
+  override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
     super.touchesCancelled(touches, with: event)
     originalImageView.isHidden = true
     imageView.isHidden = false

@@ -32,7 +32,8 @@ final class TopMenuViewController: StackScrollNodeViewController {
       }),
       
       Components.makeSelectionCell(title: "Components: Preview", onTap: { [unowned self] in
-        // TODO:
+        let menu = DemoPreviewViewController()
+        self.navigationController?.pushViewController(menu, animated: true)
       }),
       
       Components.makeSelectionCell(title: "Components: MetalImageView", onTap: { [unowned self] in

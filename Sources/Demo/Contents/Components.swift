@@ -19,6 +19,7 @@ enum Components {
       }
     }
 
+    private let tutorialTextNode = ASTextNode()
     private let metadataTextNode = ASTextNode()
     private let shape = ShapeLayerNode.roundedCorner(radius: 0)
     private let imageNode = ASImageNode()
@@ -27,6 +28,14 @@ enum Components {
       super.init()
       automaticallyManagesSubnodes = true
       imageNode.contentMode = .scaleAspectFit
+      
+      tutorialTextNode.attributedText = NSAttributedString(
+        string: "Rendered image preview",
+        attributes: [
+          .font : UIFont.preferredFont(forTextStyle: .headline),
+          .foregroundColor : UIColor.systemGray
+        ]
+      )
     }
 
     override func didLoad() {
@@ -42,7 +51,12 @@ enum Components {
             imageNode
               .aspectRatio(1)
               .width(300)
-              .background(shape)
+              .background(ZStackLayout {
+                shape
+                CenterLayout {
+                  tutorialTextNode
+                }
+              })
               .padding(8)
           }
           metadataTextNode

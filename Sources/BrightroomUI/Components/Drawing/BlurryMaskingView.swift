@@ -239,6 +239,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   override public func willMove(toSuperview newSuperview: UIView?) {
     super.willMove(toSuperview: newSuperview)
     
+    guard newSuperview != nil else { return }
+    
     if isBinding == false {
       isBinding = true
       
