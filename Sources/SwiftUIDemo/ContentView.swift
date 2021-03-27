@@ -1,6 +1,6 @@
 
-import SwiftUI
 import PixelEditor
+import SwiftUI
 
 struct ContentView: View {
   @State private var image: SwiftUI.Image?
@@ -202,31 +202,8 @@ extension ColorCubeStorage {
     _loaded = true
 
     do {
-      try autoreleasepool {
-        let bundle = Bundle.main
-        let rootPath = bundle.bundlePath as NSString
-        let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-
-        let filters = fileList
-          .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
-          .sorted()
-          .map { path -> FilterColorCube in
-            let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
-            let data = try! Data(contentsOf: url)
-            let image = UIImage(data: data)!
-            let name = path
-              .replacingOccurrences(of: "LUT_", with: "")
-              .replacingOccurrences(of: ".png", with: "")
-              .replacingOccurrences(of: ".PNG", with: "")
-            return FilterColorCube.init(
-              name: name,
-              identifier: path,
-              lutImage: image
-            )
-          }
-
-        self.default.filters = filters
-      }
+      let loader = ColorCubeLoader(bundle: .main)
+      self.default.filters = try loader.load()
 
     } catch {
       assertionFailure("\(error)")

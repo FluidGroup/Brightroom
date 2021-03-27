@@ -43,14 +43,17 @@ public struct FilterColorCube : Filtering, Equatable {
   public let name: String
   public let identifier: String
   public var amount: Double = 1
-  public let lutImage: PlatformImage
+  public let lutImage: CGDataProvider
+  public let dimension: Int
   
   public init(
     name: String,
     identifier: String,
-    lutImage: PlatformImage
+    lutImage: CGDataProvider,
+    dimension: Int
     ) {
 
+    self.dimension = dimension
     self.lutImage = lutImage
     self.name = name
     self.identifier = identifier
@@ -68,12 +71,13 @@ public struct FilterColorCube : Filtering, Equatable {
     return f.outputImage!
     
     #else
-            
+                
     // FIXME: Create a cache for Data
-    let f: CIFilter = ColorCube.makeColorCubeFilter(
+    let f: CIFilter = ColorCubeHelper.makeColorCubeFilter(
       lutImage: lutImage,
-      dimension: 64,
-      colorSpace: lutImage.cgImage!.colorSpace!
+      dimension: dimension,
+      colorSpace: image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+      cacheKey: identifier
     )
           
     f.setValue(image, forKeyPath: kCIInputImageKey)

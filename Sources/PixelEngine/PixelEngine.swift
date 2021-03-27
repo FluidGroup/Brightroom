@@ -28,3 +28,11 @@ func _pixelengine_ensureMainThread() {
 let _pixelengine_bundle = Bundle.init(for: Dummy.self)
 
 fileprivate final class Dummy {}
+
+#if os(macOS)
+import AppKit
+public typealias PlatformImage = NSImage
+#elseif os(iOS)
+import UIKit
+public typealias PlatformImage = UIImage
+#endif

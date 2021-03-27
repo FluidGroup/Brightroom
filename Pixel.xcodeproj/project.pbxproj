@@ -32,7 +32,6 @@
 		4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */; };
 		4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */; };
 		4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */; };
-		4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E952A2176F57800E9DFB8 /* ColorCube.swift */; };
 		4B1E9535217714A800E9DFB8 /* ColorCubeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */; };
 		4B1E9537217714D500E9DFB8 /* EditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
@@ -55,8 +54,10 @@
 		4B47D05A216CC5350007B594 /* PixelEditor.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4B47D052216CC5350007B594 /* PixelEditor.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4B47D063216CC5480007B594 /* PixelEditViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B47D060216CC5480007B594 /* PixelEditViewController.swift */; };
 		4B47D064216CC5640007B594 /* PixelEngine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4B600AFD216B7A94001E1456 /* PixelEngine.framework */; };
-		4B4C7C7A260A69C50082240A /* LUT_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_X_2.jpg */; };
-		4B4C7C7B260A69C50082240A /* LUT_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_X_2.jpg */; };
+		4B49C1AA260EE8B30099BFBD /* ColorCubeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */; };
+		4B49C1B8260EEB250099BFBD /* ColorCubeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */; };
+		4B4C7C7A260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
+		4B4C7C7B260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
 		4B58DF662607100600D85F97 /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58DF652607100600D85F97 /* CanvasView.swift */; };
 		4B600B02216B7A94001E1456 /* PixelEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* PixelEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B600B19216B7BB9001E1456 /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B18216B7BB9001E1456 /* ImageRenderer.swift */; };
@@ -154,7 +155,7 @@
 		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
 		4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */; };
 		4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */; };
-		4BD275FF260A48FF0044B3D8 /* LUT_MMM.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BD275FE260A48FF0044B3D8 /* LUT_MMM.png */; };
+		4BD275FF260A48FF0044B3D8 /* LUT_64_MMM.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */; };
 		4BD27634260A4F000044B3D8 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BD27633260A4F000044B3D8 /* Accelerate.framework */; };
 		4BD2D94C260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD2D94B260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift */; };
 		4BDEE09B25F8CF5800FA22CB /* PixelEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */; };
@@ -286,7 +287,6 @@
 		4B1E951F2176567300E9DFB8 /* FilterControlBase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterControlBase.swift; sourceTree = "<group>"; };
 		4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterShadows.swift; sourceTree = "<group>"; };
 		4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterColorCube.swift; sourceTree = "<group>"; };
-		4B1E952A2176F57800E9DFB8 /* ColorCube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCube.swift; sourceTree = "<group>"; };
 		4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeStorage.swift; sourceTree = "<group>"; };
 		4B1E9534217714A800E9DFB8 /* ColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeControlView.swift; sourceTree = "<group>"; };
 		4B1E9536217714D500E9DFB8 /* EditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditMenuControlView.swift; sourceTree = "<group>"; };
@@ -316,7 +316,9 @@
 		4B47D054216CC5350007B594 /* PixelEditor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEditor.h; sourceTree = "<group>"; };
 		4B47D055216CC5350007B594 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4B47D060216CC5480007B594 /* PixelEditViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PixelEditViewController.swift; sourceTree = "<group>"; };
-		4B4C7C79260A69C50082240A /* LUT_X_2.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_X_2.jpg; sourceTree = "<group>"; };
+		4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeHelper.swift; sourceTree = "<group>"; };
+		4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorCubeLoader.swift; path = /Users/muukii/.ghq/github.com/muukii/Pixel/Sources/PixelEngine/ColorCubeLoader.swift; sourceTree = "<absolute>"; };
+		4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_X_2.jpg; sourceTree = "<group>"; };
 		4B58DF652607100600D85F97 /* CanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasView.swift; sourceTree = "<group>"; };
 		4B600AFD216B7A94001E1456 /* PixelEngine.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PixelEngine.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B600B00216B7A94001E1456 /* PixelEngine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PixelEngine.h; sourceTree = "<group>"; };
@@ -399,7 +401,7 @@
 		4BD2728D260A05440044B3D8 /* DemoCIKernelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCIKernelViewController.swift; sourceTree = "<group>"; };
 		4BD275DA260A20D10044B3D8 /* neutral-lut.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "neutral-lut.png"; sourceTree = "<group>"; };
 		4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoBuiltInEditorViewController.swift; sourceTree = "<group>"; };
-		4BD275FE260A48FF0044B3D8 /* LUT_MMM.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_MMM.png; sourceTree = "<group>"; };
+		4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_MMM.png; sourceTree = "<group>"; };
 		4BD27633260A4F000044B3D8 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		4BD2D94B260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosCropAspectRatioControl.swift; sourceTree = "<group>"; };
 		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -538,8 +540,8 @@
 		4B1E95292176F52100E9DFB8 /* LUTs */ = {
 			isa = PBXGroup;
 			children = (
-				4B4C7C79260A69C50082240A /* LUT_X_2.jpg */,
-				4BD275FE260A48FF0044B3D8 /* LUT_MMM.png */,
+				4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */,
+				4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */,
 			);
 			path = LUTs;
 			sourceTree = "<group>";
@@ -691,10 +693,11 @@
 				4B9D4579216E8013003A240A /* Geometry.swift */,
 				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
 				4BEE65122174E99600F3578E /* EngineLog.swift */,
-				4B1E952A2176F57800E9DFB8 /* ColorCube.swift */,
+				4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */,
 				4B0433AA217B962C0039293E /* InternalUtils.swift */,
 				4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */,
 				4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */,
+				4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -1133,12 +1136,12 @@
 				4BA41C86260CE817005E6FA7 /* IMG_5529.HEIC in Resources */,
 				4BA41C85260CE817005E6FA7 /* IMG_5530.HEIC in Resources */,
 				4BA41C84260CE817005E6FA7 /* IMG_5532.HEIC in Resources */,
-				4B4C7C7A260A69C50082240A /* LUT_X_2.jpg in Resources */,
+				4B4C7C7A260A69C50082240A /* LUT_64_X_2.jpg in Resources */,
 				4BA41C82260CE817005E6FA7 /* IMG_5535.HEIC in Resources */,
 				4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */,
 				4BA41C83260CE817005E6FA7 /* IMG_5534.HEIC in Resources */,
 				4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */,
-				4BD275FF260A48FF0044B3D8 /* LUT_MMM.png in Resources */,
+				4BD275FF260A48FF0044B3D8 /* LUT_64_MMM.png in Resources */,
 				4BA41C88260CE817005E6FA7 /* IMG_5531.HEIC in Resources */,
 				4B600B28216B7C9C001E1456 /* Main.storyboard in Resources */,
 				4B9369E825F940E600B18571 /* nasa.jpg in Resources */,
@@ -1153,7 +1156,7 @@
 				4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */,
 				4BA41C90260CE817005E6FA7 /* IMG_5530.HEIC in Resources */,
 				4BA41C8E260CE817005E6FA7 /* IMG_5534.HEIC in Resources */,
-				4B4C7C7B260A69C50082240A /* LUT_X_2.jpg in Resources */,
+				4B4C7C7B260A69C50082240A /* LUT_64_X_2.jpg in Resources */,
 				4BA41C92260CE817005E6FA7 /* IMG_5528.HEIC in Resources */,
 				4BA41C93260CE817005E6FA7 /* IMG_5531.HEIC in Resources */,
 				4BA41C94260CE817005E6FA7 /* IMG_5533.HEIC in Resources */,
@@ -1331,11 +1334,13 @@
 				4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */,
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */,
+				4B49C1B8260EEB250099BFBD /* ColorCubeLoader.swift in Sources */,
 				4B422E05260B92E20011500C /* ImageProvider.swift in Sources */,
 				4B1E95232176CF1400E9DFB8 /* FilterVignette.swift in Sources */,
 				4B9D456D216DEBB1003A240A /* ParameterRange.swift in Sources */,
 				4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */,
 				4BEE650D217479C600F3578E /* DrawnPath.swift in Sources */,
+				4B49C1AA260EE8B30099BFBD /* ColorCubeHelper.swift in Sources */,
 				4B66C9722171D764008F2A54 /* PixelEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
 				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
@@ -1346,7 +1351,6 @@
 				4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */,
 				4BB917F225F5211F00C446B8 /* CoreImageInspector.swift in Sources */,
 				4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */,
-				4B1E952B2176F57800E9DFB8 /* ColorCube.swift in Sources */,
 				4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */,
 				4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */,
 				4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */,

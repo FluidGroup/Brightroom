@@ -32,4 +32,3 @@ open class ColorCubeStorage {
   }
 }
 
-fileprivate class _Dummy {}

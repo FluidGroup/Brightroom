@@ -21,44 +21,16 @@
 
 import UIKit
 
-import PixelEngine
 import PixelEditor
+import PixelEngine
 
 extension ColorCubeStorage {
   static func loadToDefault() {
-    
     do {
-      
-      try autoreleasepool {
-        let bundle = Bundle.main
-        let rootPath = bundle.bundlePath as NSString
-        let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-        
-        let filters = fileList
-          .filter { $0.hasPrefix("LUT_") }
-          .sorted()
-          .map { path -> FilterColorCube in
-            let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
-            let data = try! Data(contentsOf: url)
-            let image = UIImage(data: data)!
-            let name = path
-              .replacingOccurrences(of: "LUT_", with: "")
-              .replacingOccurrences(of: ".png", with: "")
-              .replacingOccurrences(of: ".PNG", with: "")
-              .replacingOccurrences(of: ".jpg", with: "")
+      let loader = ColorCubeLoader(bundle: .main)
+      self.default.filters = try loader.load()
 
-            return FilterColorCube.init(
-              name: name,
-              identifier: path,
-              lutImage: image
-            )
-        }
-        
-        self.default.filters = filters
-      }
-      
     } catch {
-      
       assertionFailure("\(error)")
     }
   }
@@ -66,16 +38,18 @@ extension ColorCubeStorage {
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
   var window: UIWindow? {
     didSet {
       print("")
     }
   }
 
-  func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
     // Override point for customization after application launch.
-    
+
     window = UIWindow(frame: UIScreen.main.bounds)
     let navigationController = UINavigationController(rootViewController: TopMenuViewController())
     navigationController.navigationBar.prefersLargeTitles = true
@@ -107,7 +81,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func applicationWillTerminate(_ application: UIApplication) {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
   }
-
-
 }
-
