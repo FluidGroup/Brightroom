@@ -125,21 +125,6 @@ enum ImageTool {
     return destination
   }
 
-  static func makeResizedCIImage(provider: CGDataProvider, targetCGSize: CGSize) -> CIImage? {
-    let imageSource = CGImageSourceCreateWithDataProvider(provider, [:] as CFDictionary)!
-
-    let options: [AnyHashable: Any] = [
-      kCGImageSourceThumbnailMaxPixelSize: max(targetCGSize.width, targetCGSize.height),
-      kCGImageSourceShouldCacheImmediately: true,
-      kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceCreateThumbnailWithTransform: true,
-    ]
-
-    let scaledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary).flatMap { CIImage(cgImage: $0) }
-
-    return scaledImage
-  }
-
   static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
     var targetSize = pixelSize
     targetSize.height.round(.down)

@@ -169,18 +169,16 @@ public struct EditingCrop: Equatable {
   
   public mutating func updateCropExtent(byBoundingBox boundingBox: CGRect) {
                 
-    //    var proposed = cropExtent
-    
-//    proposed.origin.x = proposed.maxX * boundingBox.origin.x
-//    proposed.origin.y = proposed.maxY * boundingBox.origin.y
-//
-//    proposed.size.width *= boundingBox.size.width
-//    proposed.size.height *= boundingBox.size.height
-    
-    var boundingBox = boundingBox
-
-    let proposed = VNImageRectForNormalizedRect(boundingBox, Int(imageSize.width), Int(imageSize.height))
+    var proposed = cropExtent
         
+    let transform = CGAffineTransform(scaleX: 1, y: -1).translatedBy(x: 0, y: -proposed.height)
+    
+    let scale = CGAffineTransform.identity.scaledBy(x: proposed.width, y: proposed.height)
+    
+    proposed = boundingBox
+      .applying(scale)
+      .applying(transform)
+           
     self.cropExtent = Self.normalizeRect(rect: proposed, in: imageSize, respectingAspectRatio: nil)
   }
     

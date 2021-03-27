@@ -699,8 +699,7 @@ extension EditingStack {
         }
         
         request.revision = VNDetectFaceRectanglesRequestRevision2
-        
-        let handler = VNImageRequestHandler(ciImage: image, options: [:])
+        let handler = VNImageRequestHandler(ciImage: image, orientation: .up, options: [:])
         do {
           try handler.perform([request])
         } catch {
