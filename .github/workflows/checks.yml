@@ -37,7 +37,7 @@ jobs:
       - name: Lint
         run: pod lib lint --allow-warnings
 
-  pod-lint:
+  tests:
     runs-on: macos-latest
 
     steps:
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Lint
         run: fastlane run_tests
-        
+
   # swiftpm:
   #   runs-on: macos-latest
 
