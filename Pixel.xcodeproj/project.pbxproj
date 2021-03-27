@@ -588,6 +588,9 @@
 		4B422DFB260B91190011500C /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				4B9D4579216E8013003A240A /* Geometry.swift */,
+				4BEE65122174E99600F3578E /* EngineLog.swift */,
+				4B0433AA217B962C0039293E /* InternalUtils.swift */,
 				4B422DFC260B91260011500C /* Orientation.swift */,
 			);
 			path = Library;
@@ -676,28 +679,15 @@
 		4B600AFF216B7A94001E1456 /* PixelEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B7B3688260EF9D3004FE2F4 /* Core */,
 				4B422E09260B92E70011500C /* DataSource */,
 				4B422DFB260B91190011500C /* Library */,
 				4B1E94B4217632B300E9DFB8 /* Filter */,
-				4B9369ED25F94A1300B18571 /* EditingCrop.swift */,
-				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
-				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
-				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
-				4B9D456C216DEBB1003A240A /* ParameterRange.swift */,
-				4B9B030B216C55D9001593B9 /* OvalBrush.swift */,
-				4B9B030D216C58C6001593B9 /* DrawnPath.swift */,
-				4B0077BD2170496E008330EA /* BlurredMask.swift */,
 				4B600B00216B7A94001E1456 /* PixelEngine.h */,
 				4B600B01216B7A94001E1456 /* Info.plist */,
 				4B9B02EA216BBB6B001593B9 /* Engine */,
-				4B9D4579216E8013003A240A /* Geometry.swift */,
 				4B66C9712171D764008F2A54 /* PixelEngine.swift */,
-				4BEE65122174E99600F3578E /* EngineLog.swift */,
-				4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */,
-				4B0433AA217B962C0039293E /* InternalUtils.swift */,
-				4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */,
-				4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */,
-				4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */,
+				4B7B3687260EF9B9004FE2F4 /* ColorCube */,
 			);
 			path = PixelEngine;
 			sourceTree = "<group>";
@@ -746,6 +736,32 @@
 				4B98CCBA25EFF31300E4F61F /* SwiftUIDemo */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		4B7B3687260EF9B9004FE2F4 /* ColorCube */ = {
+			isa = PBXGroup;
+			children = (
+				4B49C1A9260EE8B30099BFBD /* ColorCubeHelper.swift */,
+				4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */,
+				4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */,
+				4B49C1B7260EEB250099BFBD /* ColorCubeLoader.swift */,
+			);
+			path = ColorCube;
+			sourceTree = "<group>";
+		};
+		4B7B3688260EF9D3004FE2F4 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				4B9369ED25F94A1300B18571 /* EditingCrop.swift */,
+				4B66C96F2171D6F8008F2A54 /* EditingStack.swift */,
+				4B9B02E8216BBA8A001593B9 /* Filtering.swift */,
+				4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */,
+				4B9D456C216DEBB1003A240A /* ParameterRange.swift */,
+				4B9B030B216C55D9001593B9 /* OvalBrush.swift */,
+				4B9B030D216C58C6001593B9 /* DrawnPath.swift */,
+				4B0077BD2170496E008330EA /* BlurredMask.swift */,
+			);
+			path = Core;
 			sourceTree = "<group>";
 		};
 		4B7C97F12609B5AA00FC541E /* CIFilter(NotActive) */ = {
