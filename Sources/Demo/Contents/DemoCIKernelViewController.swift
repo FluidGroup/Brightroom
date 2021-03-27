@@ -4,7 +4,7 @@ import TextureSwiftSupport
 import UIKit
 
 import PixelEditor
-import PixelEngine
+import BrightroomEngine
 
 final class DemoCIKernelViewController: StackScrollNodeViewController {
   

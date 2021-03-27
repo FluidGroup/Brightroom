@@ -25,7 +25,7 @@ import SwiftUI
 import Verge
 
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 /**

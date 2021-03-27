@@ -22,7 +22,7 @@
 import UIKit
 
 import PixelEditor
-import PixelEngine
+import BrightroomEngine
 
 extension ColorCubeStorage {
   static func loadToDefault() {

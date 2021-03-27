@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 import UIKit
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 open class MaskControlBase : ControlBase {

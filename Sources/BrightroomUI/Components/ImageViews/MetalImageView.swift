@@ -22,7 +22,7 @@
 import UIKit
 import MetalKit
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {

@@ -14,24 +14,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4B600B1F216B7C9C001E1456"
-               BuildableName = "Demo.app"
-               BlueprintName = "Demo"
-               ReferencedContainer = "container:Pixel.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
                BuildableName = "SwiftUIDemo.app"
                BlueprintName = "SwiftUIDemo"
-               ReferencedContainer = "container:Pixel.xcodeproj">
+               ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -59,10 +45,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B600B1F216B7C9C001E1456"
-            BuildableName = "Demo.app"
-            BlueprintName = "Demo"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
+            BuildableName = "SwiftUIDemo.app"
+            BlueprintName = "SwiftUIDemo"
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -76,10 +62,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B600B1F216B7C9C001E1456"
-            BuildableName = "Demo.app"
-            BlueprintName = "Demo"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
+            BuildableName = "SwiftUIDemo.app"
+            BlueprintName = "SwiftUIDemo"
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -6,7 +6,7 @@ import TextureSwiftSupport
 import UIKit
 
 import PixelEditor
-import PixelEngine
+import BrightroomEngine
 
 final class DemoCropMenuViewController: StackScrollNodeViewController {
   private lazy var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)

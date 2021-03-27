@@ -10,7 +10,7 @@ import Foundation
 import CoreGraphics
 
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 extension EditingCrop {

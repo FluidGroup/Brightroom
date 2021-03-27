@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
-  s.name = "PixelLib"
+  s.name = "Brightroom"
   s.version = "2.0.0-beta.1"
   s.summary = "The image editor and engine using CoreImage"
 
@@ -21,7 +21,7 @@ Pod::Spec.new do |s|
 
   s.subspec "Editor" do |ss|
     ss.source_files = "Sources/PixelEditor/**/*.swift"
-    ss.dependency "PixelLib/Engine"
+    ss.dependency "Brightroom/Engine"
     ss.dependency "TransitionPatch"
   end
 end

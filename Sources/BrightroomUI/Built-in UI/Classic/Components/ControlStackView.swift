@@ -22,7 +22,7 @@
 import UIKit
 
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 protocol ControlChildViewType {

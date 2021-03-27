@@ -22,7 +22,7 @@
 import SwiftUI
 
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 /**

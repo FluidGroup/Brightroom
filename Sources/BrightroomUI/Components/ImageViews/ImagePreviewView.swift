@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 import Verge
 import UIKit

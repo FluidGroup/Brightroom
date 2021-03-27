@@ -8,7 +8,7 @@
 
 import XCTest
 
-@testable import PixelEngine
+@testable import BrightroomEngine
 
 class PixelEngineTests: XCTestCase {
   override func setUpWithError() throws {

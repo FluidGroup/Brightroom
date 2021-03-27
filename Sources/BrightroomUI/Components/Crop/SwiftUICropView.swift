@@ -22,7 +22,7 @@
 import UIKit
 import SwiftUI
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {

@@ -21,7 +21,7 @@
 
 import UIKit
 
-@testable import PixelEngine
+@testable import BrightroomEngine
 
 final class SmallUIImageViewController : UIViewController {
 

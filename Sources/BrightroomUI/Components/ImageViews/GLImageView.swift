@@ -24,7 +24,7 @@ import UIKit
 import GLKit
 import AVFoundation
 #if !COCOAPODS
-import PixelEngine
+import BrightroomEngine
 #endif
 
 public class GLImageView : GLKView, CIImageDisplaying {

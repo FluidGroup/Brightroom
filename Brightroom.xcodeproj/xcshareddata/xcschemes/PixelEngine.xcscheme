@@ -9,15 +9,29 @@
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "4B600AFC216B7A94001E1456"
+               BuildableName = "BrightroomEngine.framework"
+               BlueprintName = "BrightroomEngine"
+               ReferencedContainer = "container:Brightroom.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
             buildForProfiling = "NO"
             buildForArchiving = "NO"
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
-               BuildableName = "PixelEngineTests.xctest"
-               BlueprintName = "PixelEngineTests"
-               ReferencedContainer = "container:Pixel.xcodeproj">
+               BuildableName = "BrightroomEngineTests.xctest"
+               BlueprintName = "BrightroomEngineTests"
+               ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
-               BuildableName = "PixelEngineTests.xctest"
-               BlueprintName = "PixelEngineTests"
-               ReferencedContainer = "container:Pixel.xcodeproj">
+               BuildableName = "BrightroomEngineTests.xctest"
+               BlueprintName = "BrightroomEngineTests"
+               ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -50,6 +64,15 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "4B600AFC216B7A94001E1456"
+            BuildableName = "BrightroomEngine.framework"
+            BlueprintName = "BrightroomEngine"
+            ReferencedContainer = "container:Brightroom.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -60,10 +83,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
-            BuildableName = "PixelEngineTests.xctest"
-            BlueprintName = "PixelEngineTests"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            BlueprintIdentifier = "4B600AFC216B7A94001E1456"
+            BuildableName = "BrightroomEngine.framework"
+            BlueprintName = "BrightroomEngine"
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

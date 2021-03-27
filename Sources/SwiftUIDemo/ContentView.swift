@@ -168,7 +168,7 @@ struct ContentView: View {
 }
 
 import PixelEditor
-import PixelEngine
+import BrightroomEngine
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
   typealias UIViewControllerType = UINavigationController

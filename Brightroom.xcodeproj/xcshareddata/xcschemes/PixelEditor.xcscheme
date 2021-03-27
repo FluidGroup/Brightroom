@@ -17,7 +17,7 @@
                BlueprintIdentifier = "4B47D051216CC5350007B594"
                BuildableName = "BrightroomUI.framework"
                BlueprintName = "BrightroomUI"
-               ReferencedContainer = "container:Pixel.xcodeproj">
+               ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,7 +46,7 @@
             BlueprintIdentifier = "4B47D051216CC5350007B594"
             BuildableName = "BrightroomUI.framework"
             BlueprintName = "BrightroomUI"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </LaunchAction>
@@ -62,7 +62,7 @@
             BlueprintIdentifier = "4B47D051216CC5350007B594"
             BuildableName = "BrightroomUI.framework"
             BlueprintName = "BrightroomUI"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>

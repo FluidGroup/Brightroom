@@ -22,7 +22,7 @@
 import UIKit
 
 import CoreImage
-import PixelEngine
+import BrightroomEngine
 import PixelEditor
 
 final class HardwareImageViewController : UIViewController {

@@ -157,7 +157,8 @@ public struct EditingCrop: Equatable {
     imageSize.width.round(.down)
     imageSize.height.round(.down)
     
-    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: nil)
+    // TODO: Consider
+//    modified.cropExtent = Self.normalizeRect(rect: cropExtent, in: imageSize, respectingAspectRatio: nil)
     modified.imageSize = imageSize
            
     return modified

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -58,6 +58,14 @@
 		4B4C7C7A260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
 		4B4C7C7B260A69C50082240A /* LUT_64_X_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */; };
 		4B58DF662607100600D85F97 /* CanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58DF652607100600D85F97 /* CanvasView.swift */; };
+		4B58E82A260F0027004A834F /* IMG_5532.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* IMG_5532.HEIC */; };
+		4B58E82B260F0027004A834F /* IMG_5533.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE9260BB32600F77E9A /* IMG_5533.HEIC */; };
+		4B58E82C260F0027004A834F /* IMG_5534.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* IMG_5534.HEIC */; };
+		4B58E82D260F0027004A834F /* IMG_5528.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEA260BB32600F77E9A /* IMG_5528.HEIC */; };
+		4B58E82E260F0027004A834F /* IMG_5529.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEC260BB32600F77E9A /* IMG_5529.HEIC */; };
+		4B58E82F260F0027004A834F /* IMG_5530.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE8260BB32600F77E9A /* IMG_5530.HEIC */; };
+		4B58E830260F0027004A834F /* IMG_5535.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* IMG_5535.HEIC */; };
+		4B58E831260F0027004A834F /* IMG_5531.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* IMG_5531.HEIC */; };
 		4B600B02216B7A94001E1456 /* BrightroomEngine.h in Headers */ = {isa = PBXBuildFile; fileRef = 4B600B00216B7A94001E1456 /* BrightroomEngine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		4B600B19216B7BB9001E1456 /* ImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B18216B7BB9001E1456 /* ImageRenderer.swift */; };
 		4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B22216B7C9C001E1456 /* AppDelegate.swift */; };
@@ -403,7 +411,7 @@
 		4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_MMM.png; sourceTree = "<group>"; };
 		4BD27633260A4F000044B3D8 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		4BD2D94B260E1A6F000BB51E /* PhotosCropAspectRatioControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosCropAspectRatioControl.swift; sourceTree = "<group>"; };
-		4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixelEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BrightroomEngineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelEngineTests.swift; sourceTree = "<group>"; };
 		4BDEE09C25F8CF5800FA22CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4BE01795216F08D80026DFD6 /* HardwareImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HardwareImageViewController.swift; sourceTree = "<group>"; };
@@ -664,7 +672,7 @@
 				4B600B20216B7C9C001E1456 /* Demo.app */,
 				4B47D052216CC5350007B594 /* BrightroomUI.framework */,
 				4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */,
-				4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */,
+				4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -857,7 +865,7 @@
 			path = "Built-in UI";
 			sourceTree = "<group>";
 		};
-		4BDEE09925F8CF5800FA22CB /* PixelEngineTests */ = {
+		4BDEE09925F8CF5800FA22CB /* BrightroomEngineTests */ = {
 			isa = PBXGroup;
 			children = (
 				4BDEE09A25F8CF5800FA22CB /* PixelEngineTests.swift */,
@@ -865,13 +873,13 @@
 				4BE9B3D9260BA778000A3D09 /* Bundle.swift */,
 				4BDEE09C25F8CF5800FA22CB /* Info.plist */,
 			);
-			path = PixelEngineTests;
+			path = BrightroomEngineTests;
 			sourceTree = "<group>";
 		};
 		4BDEE0A625F8CF6800FA22CB /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				4BDEE09925F8CF5800FA22CB /* PixelEngineTests */,
+				4BDEE09925F8CF5800FA22CB /* BrightroomEngineTests */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -1053,9 +1061,9 @@
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
 			productType = "com.apple.product-type.application";
 		};
-		4BDEE09725F8CF5800FA22CB /* PixelEngineTests */ = {
+		4BDEE09725F8CF5800FA22CB /* BrightroomEngineTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "PixelEngineTests" */;
+			buildConfigurationList = 4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "BrightroomEngineTests" */;
 			buildPhases = (
 				4BDEE09425F8CF5800FA22CB /* Sources */,
 				4BDEE09525F8CF5800FA22CB /* Frameworks */,
@@ -1066,9 +1074,9 @@
 			dependencies = (
 				4BDEE24E25F8D19D00FA22CB /* PBXTargetDependency */,
 			);
-			name = PixelEngineTests;
+			name = BrightroomEngineTests;
 			productName = PixelEngineTests;
-			productReference = 4BDEE09825F8CF5800FA22CB /* PixelEngineTests.xctest */;
+			productReference = 4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -1101,8 +1109,8 @@
 					};
 				};
 			};
-			buildConfigurationList = 4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Pixel" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = 4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Brightroom" */;
+			compatibilityVersion = "Xcode 12.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -1120,7 +1128,7 @@
 			targets = (
 				4B600AFC216B7A94001E1456 /* BrightroomEngine */,
 				4B47D051216CC5350007B594 /* BrightroomUI */,
-				4BDEE09725F8CF5800FA22CB /* PixelEngineTests */,
+				4BDEE09725F8CF5800FA22CB /* BrightroomEngineTests */,
 				4B600B1F216B7C9C001E1456 /* Demo */,
 				4B98CCB825EFF31300E4F61F /* SwiftUIDemo */,
 			);
@@ -1191,6 +1199,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				4BE9B3D2260BA769000A3D09 /* gaku.jpeg in Resources */,
+				4B58E82E260F0027004A834F /* IMG_5529.HEIC in Resources */,
+				4B58E830260F0027004A834F /* IMG_5535.HEIC in Resources */,
+				4B58E82D260F0027004A834F /* IMG_5528.HEIC in Resources */,
+				4B58E831260F0027004A834F /* IMG_5531.HEIC in Resources */,
+				4B58E82C260F0027004A834F /* IMG_5534.HEIC in Resources */,
+				4B58E82B260F0027004A834F /* IMG_5533.HEIC in Resources */,
+				4B58E82F260F0027004A834F /* IMG_5530.HEIC in Resources */,
+				4B58E82A260F0027004A834F /* IMG_5532.HEIC in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1818,7 +1834,7 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				INFOPLIST_FILE = Tests/PixelEngineTests/Info.plist;
+				INFOPLIST_FILE = "Tests/$(TARGET_NAME)/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1837,7 +1853,7 @@
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				INFOPLIST_FILE = Tests/PixelEngineTests/Info.plist;
+				INFOPLIST_FILE = "Tests/$(TARGET_NAME)/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1862,7 +1878,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Pixel" */ = {
+		4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Brightroom" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4B600B03216B7A94001E1456 /* Debug */,
@@ -1898,7 +1914,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "PixelEngineTests" */ = {
+		4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "BrightroomEngineTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4BDEE09D25F8CF5800FA22CB /* Debug */,

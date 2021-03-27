@@ -9,15 +9,15 @@
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
-               BuildableName = "SwiftUIDemo.app"
-               BlueprintName = "SwiftUIDemo"
-               ReferencedContainer = "container:Pixel.xcodeproj">
+               BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
+               BuildableName = "BrightroomEngineTests.xctest"
+               BlueprintName = "BrightroomEngineTests"
+               ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -28,6 +28,16 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
+               BuildableName = "BrightroomEngineTests.xctest"
+               BlueprintName = "BrightroomEngineTests"
+               ReferencedContainer = "container:Brightroom.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
@@ -39,35 +49,23 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      enableGPUValidationMode = "1"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
-            BuildableName = "SwiftUIDemo.app"
-            BlueprintName = "SwiftUIDemo"
-            ReferencedContainer = "container:Pixel.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B98CCB825EFF31300E4F61F"
-            BuildableName = "SwiftUIDemo.app"
-            BlueprintName = "SwiftUIDemo"
-            ReferencedContainer = "container:Pixel.xcodeproj">
+            BlueprintIdentifier = "4BDEE09725F8CF5800FA22CB"
+            BuildableName = "BrightroomEngineTests.xctest"
+            BlueprintName = "BrightroomEngineTests"
+            ReferencedContainer = "container:Brightroom.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">
