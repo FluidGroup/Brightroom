@@ -21,13 +21,13 @@ platform :ios do
     xcbuild(
       scheme: "Demo",
       xcargs: "-arch x86_64 -sdk iphonesimulator -showBuildTimingSummary",
-      workspace: "Pixel.xcworkspace",
+      workspace: "Brightroom.xcworkspace",
     )
 
     xcbuild(
       scheme: "SwiftUIDemo",
       xcargs: "-arch x86_64 -sdk iphonesimulator -showBuildTimingSummary",
-      workspace: "Pixel.xcworkspace",
+      workspace: "Brightroom.xcworkspace",
     )
   end
 
