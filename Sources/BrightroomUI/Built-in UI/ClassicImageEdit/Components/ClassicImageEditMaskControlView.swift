@@ -33,13 +33,13 @@ open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
   private let navigationView = ClassicImageEditNavigationView()
   
   private let clearButton = UIButton(type: .system)
-  private let slider = StepSlider()
+  private let slider = ClassicImageEditStepSlider()
   private let sizeIndicator = UIView()
 
   open override func setup() {
     super.setup()
 
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     base: do {
       

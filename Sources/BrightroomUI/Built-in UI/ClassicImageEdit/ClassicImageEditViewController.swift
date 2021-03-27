@@ -186,7 +186,7 @@ public final class ClassicImageEditViewController: UIViewController {
       }
 
       root: do {
-        view.backgroundColor = Style.default.control.backgroundColor
+        view.backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
       }
 
       edit: do {

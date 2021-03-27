@@ -21,9 +21,9 @@
 
 import UIKit
 
-public struct Style {
+public struct ClassicImageEditStyle {
 
-  public static let `default` = Style()
+  public static let `default` = ClassicImageEditStyle()
 
   public struct Control {
 

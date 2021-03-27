@@ -18,7 +18,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import UIKit
 
 #if !COCOAPODS
@@ -26,30 +25,31 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditShadowsControlBase : ClassicImageEditFilterControlBase {
-
+open class ClassicImageEditHighlightsControlBase : ClassicImageEditFilterControlBase {
+  
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
+open class ClassicImageEditHighlightsControl : ClassicImageEditHighlightsControlBase {
   
   open override var title: String {
-    return L10n.editShadows
+    return L10n.editHighlights
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -71,28 +71,29 @@ open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
-      slider.set(value: value?.value ?? 0, in: FilterShadows.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights) { value in
+      slider.set(value: value?.value ?? 0, in: FilterHighlights.range)
     }
-        
+                
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterShadows.range)
+    let value = slider.transition(in: FilterHighlights.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: { $0.shadows = nil })
+      viewModel.editingStack.set(filters: {
+        $0.highlights = nil
+      })
       return
     }
-           
+      
     viewModel.editingStack.set(filters: {
-      var f = FilterShadows()
+      var f = FilterHighlights()
       f.value = value
-      $0.shadows = f
+      $0.highlights = f
     })
-    
   }
   
 }

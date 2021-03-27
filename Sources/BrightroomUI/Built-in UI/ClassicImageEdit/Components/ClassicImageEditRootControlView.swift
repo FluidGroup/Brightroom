@@ -59,7 +59,7 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
     super.init(viewModel: viewModel, colorCubeControl: colorCubeControl)
 
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
 
     layout: do {
 

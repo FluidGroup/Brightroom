@@ -26,33 +26,33 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditClarityControlBase : ClassicImageEditFilterControlBase {
-  
+open class ClassicImageEditGaussianBlurControlBase : ClassicImageEditFilterControlBase {
+
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
+open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurControlBase {
   
   open override var title: String {
-    return L10n.editClarity
+    return L10n.editBlur
   }
-  
+
   private let navigationView = ClassicImageEditNavigationView()
-  
-  public let slider = StepSlider(frame: .zero)
-  
+
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
+
   open override func setup() {
     super.setup()
-    
-    backgroundColor = Style.default.control.backgroundColor
-    
+
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
+
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-    
+
     slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    
+
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
@@ -69,33 +69,34 @@ open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
       self.pop(animated: true)
     }
   }
-  
+
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask) { value in
-      slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
+      slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
     }
     
   }
-  
+
   @objc
   private func valueChanged() {
-    
-    let value = slider.transition(in: FilterUnsharpMask.Params.intensity)
+
+    let value = slider.transition(in: FilterGaussianBlur.range)
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.unsharpMask = nil
+        $0.gaussianBlur = nil
       })
       return
     }
-    
+        
     viewModel.editingStack.set(filters: {
-      var f = FilterUnsharpMask()
-      f.intensity = value
-      f.radius = 0.12
-      $0.unsharpMask = f
+      var f = FilterGaussianBlur()
+      f.value = value
+      $0.gaussianBlur = f
     })
+
   }
-  
+
 }
+

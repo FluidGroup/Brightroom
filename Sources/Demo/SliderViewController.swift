@@ -25,7 +25,7 @@ import BrightroomUI
 
 final class SliderViewController : UIViewController {
 
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
 
   override func viewDidLoad() {
     super.viewDidLoad()

@@ -111,7 +111,7 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
   open override func setup() {
     super.setup()
 
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
 
     addSubview(collectionView)
     
@@ -339,7 +339,7 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
         
         nameLabel.textAlignment = .center
         nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        nameLabel.textColor = Style.default.black
+        nameLabel.textColor = ClassicImageEditStyle.default.black
         
       }
       

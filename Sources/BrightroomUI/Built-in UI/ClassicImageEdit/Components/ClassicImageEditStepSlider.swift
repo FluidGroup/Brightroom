@@ -26,7 +26,7 @@ import BrightroomEngine
 #endif
 import TransitionPatch
 
-public final class StepSlider : UIControl {
+public final class ClassicImageEditStepSlider : UIControl {
   
   public enum Mode {
     case plus
@@ -236,7 +236,7 @@ public final class StepSlider : UIControl {
   }
 }
 
-extension StepSlider {
+extension ClassicImageEditStepSlider {
 
   public func set<T>(value: Double, in range: ParameterRange<Double, T>) {
 
@@ -254,7 +254,7 @@ private final class _StepSlider: UISlider {
 
   private var _trackImageView: UIImageView?
 
-  var dotLocation: StepSlider.Mode = .plus {
+  var dotLocation: ClassicImageEditStepSlider.Mode = .plus {
     didSet {
       setNeedsDisplay()
     }
@@ -332,7 +332,7 @@ private final class _StepSlider: UISlider {
     minimumTrackTintColor = UIColor.clear
     maximumTrackTintColor = UIColor.clear
     setThumbImage(UIImage(named: "slider_thumb", in: bundle, compatibleWith: nil), for: [])
-    tintColor = Style.default.black
+    tintColor = ClassicImageEditStyle.default.black
 
     let label = stepLabel
     label.backgroundColor = UIColor.clear

@@ -26,27 +26,27 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditFadeControlBase : ClassicImageEditFilterControlBase {
+open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBase {
   
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
+open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
   
   open override var title: String {
-    return L10n.editFade
+    return L10n.editSharpen
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
@@ -70,32 +70,32 @@ open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade) { value in
-      slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
+      slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
     }
-        
+    
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterFade.Params.intensity)
+    let value = slider.transition(in: FilterSharpen.Params.sharpness)
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.fade = nil
+        $0.sharpen = nil
       })
       return
     }
-      
+       
     viewModel.editingStack.set(filters: {
-      var f = FilterFade()
-      f.intensity = value
-      $0.fade = f
+      var f = FilterSharpen()
+      f.sharpness = value
+      f.radius = 1.2
+      $0.sharpen = f
     })
-    
   }
   
 }

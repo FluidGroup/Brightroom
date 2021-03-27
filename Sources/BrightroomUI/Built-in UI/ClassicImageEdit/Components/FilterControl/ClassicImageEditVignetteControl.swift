@@ -26,30 +26,31 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditSaturationControlBase : ClassicImageEditFilterControlBase {
-
+open class ClassicImageEditVignetteControlBase : ClassicImageEditFilterControlBase {
+  
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControlBase {
+open class ClassicImageEditVignetteControl : ClassicImageEditVignetteControlBase {
   
   open override var title: String {
-    return L10n.editSaturation
+    return L10n.editVignette
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -69,31 +70,30 @@ open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControl
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation) { value in
-      slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.vignette) { value in
+      slider.set(value: value?.value ?? 0, in: FilterVignette.range)
     }
-        
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterSaturation.range  )
+    let value = slider.transition(in: FilterVignette.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: {
-        $0.saturation = nil
-      })
+      viewModel.editingStack.set(filters: { $0.vignette = nil })
       return
     }
-     
-    viewModel.editingStack.set(filters: {
-      var f = FilterSaturation()
-      f.value = value
-      $0.saturation = f
+       
+    viewModel.editingStack.set(
+      filters: {
+        var f = FilterVignette()
+        f.value = value
+        $0.vignette = f
     })
+
   }
   
 }

@@ -21,37 +21,55 @@
 
 import UIKit
 
-enum TempCode {
-  
-  static func layout(navigationView: ClassicImageEditNavigationView, slider: StepSlider, in view: UIView) {
-    
-    let containerGuide = UILayoutGuide()
-    
-    view.addLayoutGuide(containerGuide)
-    view.addSubview(slider)
-    view.addSubview(navigationView)
-    
-    slider.translatesAutoresizingMaskIntoConstraints = false
-    
+open class ClassicImageEditCropControlBase : ClassicImageEditControlBase {
+
+}
+
+public final class ClassicImageEditCropControl : ClassicImageEditCropControlBase {
+
+  private let navigationView = ClassicImageEditNavigationView()
+
+  public override func setup() {
+    super.setup()
+
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
+
+    addSubview(navigationView)
+
     navigationView.translatesAutoresizingMaskIntoConstraints = false
-    
+
     NSLayoutConstraint.activate([
-      
-      containerGuide.topAnchor.constraint(equalTo: slider.superview!.topAnchor),
-      containerGuide.rightAnchor.constraint(equalTo: slider.superview!.rightAnchor, constant: -44),
-      containerGuide.leftAnchor.constraint(equalTo: slider.superview!.leftAnchor, constant: 44),
-      
-      slider.topAnchor.constraint(greaterThanOrEqualTo: containerGuide.topAnchor),
-      slider.rightAnchor.constraint(equalTo: containerGuide.rightAnchor),
-      slider.leftAnchor.constraint(equalTo: containerGuide.leftAnchor),
-      slider.bottomAnchor.constraint(lessThanOrEqualTo: containerGuide.bottomAnchor),
-      slider.centerYAnchor.constraint(equalTo: containerGuide.centerYAnchor),
-      
-      navigationView.topAnchor.constraint(equalTo: containerGuide.bottomAnchor),
       navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
       navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
       navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
+      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
       ])
 
+    navigationView.didTapCancelButton = { [weak self] in
+      
+      guard let self = self else { return }
+      
+      self.viewModel.endCrop(save: false)
+      self.viewModel.setMode(.preview)
+      self.pop(animated: true)
+    }
+    
+    navigationView.didTapDoneButton = { [weak self] in
+      
+      guard let self = self else { return }
+      
+      self.viewModel.endCrop(save: true)
+      self.viewModel.setMode(.preview)
+      self.pop(animated: true)
+    }
   }
+  
+  public override func willMove(toSuperview newSuperview: UIView?) {
+    super.willMove(toSuperview: newSuperview)
+    if newSuperview != nil {
+      viewModel.setMode(.crop)
+    }
+  }
+
 }
+

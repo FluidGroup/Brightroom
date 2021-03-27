@@ -18,7 +18,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 import UIKit
 
 #if !COCOAPODS
@@ -26,32 +25,31 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBase {
-
+open class ClassicImageEditContrastControlBase : ClassicImageEditFilterControlBase {
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase {
+open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase {
   
   open override var title: String {
-    return L10n.editBrightness
+    return L10n.editContrast
   }
-
+  
   private let navigationView = ClassicImageEditNavigationView()
-
-  public let slider = StepSlider(frame: .zero)
-
+  
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
+  
   open override func setup() {
     super.setup()
-
-    backgroundColor = Style.default.control.backgroundColor
-
+    
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
+    
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
-
+    
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-
+    
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
@@ -67,32 +65,34 @@ open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase
       self.viewModel.editingStack.takeSnapshot()
       self.pop(animated: true)
     }
+      
   }
+  
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
 
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure) { value in
-      slider.set(value: value?.value ?? 0, in: FilterExposure.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast) { value in      
+      slider.set(value: value?.value ?? 0, in: FilterContrast.range)
     }
-    
+        
   }
-
+  
   @objc
   private func valueChanged() {
-
-    let value = slider.transition(in: FilterExposure.range)
+    
+    let value = slider.transition(in: FilterContrast.range)
+    
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.exposure = nil
+        $0.contrast = nil
       })
       return
-    }    
-        
-    viewModel.editingStack.set(filters: {
-      var f = FilterExposure()
-      f.value = value
-      $0.exposure = f
-    })
+    }
     
+    viewModel.editingStack.set(filters: {
+      var f = FilterContrast()
+      f.value = value
+      $0.contrast = f
+    })
   }
+  
 }

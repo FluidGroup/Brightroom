@@ -26,30 +26,31 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterControlBase {
+open class ClassicImageEditClarityControlBase : ClassicImageEditFilterControlBase {
   
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureControlBase {
+open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
   
   open override var title: String {
-    return L10n.editTemperature
+    return L10n.editClarity
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
+    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -71,27 +72,29 @@ open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureContr
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
-
-      slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask) { value in
+      slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
     }
-              
+    
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterTemperature.range)
+    let value = slider.transition(in: FilterUnsharpMask.Params.intensity)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: { $0.temperature = nil })
+      viewModel.editingStack.set(filters: {
+        $0.unsharpMask = nil
+      })
       return
     }
-       
+    
     viewModel.editingStack.set(filters: {
-      var f = FilterTemperature()
-      f.value = value
-      $0.temperature = f
+      var f = FilterUnsharpMask()
+      f.intensity = value
+      f.radius = 0.12
+      $0.unsharpMask = f
     })
   }
   

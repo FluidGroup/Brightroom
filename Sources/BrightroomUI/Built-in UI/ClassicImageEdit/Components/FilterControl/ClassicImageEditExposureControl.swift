@@ -26,31 +26,30 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditGaussianBlurControlBase : ClassicImageEditFilterControlBase {
+open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBase {
 
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurControlBase {
+open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase {
   
   open override var title: String {
-    return L10n.editBlur
+    return L10n.editBrightness
   }
 
   private let navigationView = ClassicImageEditNavigationView()
 
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
 
   open override func setup() {
     super.setup()
 
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
 
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
 
-    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
 
     navigationView.didTapCancelButton = { [weak self] in
@@ -72,8 +71,8 @@ open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurCon
 
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
-      slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure) { value in
+      slider.set(value: value?.value ?? 0, in: FilterExposure.range)
     }
     
   }
@@ -81,22 +80,19 @@ open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurCon
   @objc
   private func valueChanged() {
 
-    let value = slider.transition(in: FilterGaussianBlur.range)
-    
+    let value = slider.transition(in: FilterExposure.range)
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.gaussianBlur = nil
+        $0.exposure = nil
       })
       return
-    }
+    }    
         
     viewModel.editingStack.set(filters: {
-      var f = FilterGaussianBlur()
+      var f = FilterExposure()
       f.value = value
-      $0.gaussianBlur = f
+      $0.exposure = f
     })
-
+    
   }
-
 }
-

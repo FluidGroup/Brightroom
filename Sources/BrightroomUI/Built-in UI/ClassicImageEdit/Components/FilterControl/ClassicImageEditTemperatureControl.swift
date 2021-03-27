@@ -21,36 +21,42 @@
 
 import UIKit
 
-open class ClassicImageEditCropControlBase : ClassicImageEditControlBase {
+#if !COCOAPODS
+import BrightroomEngine
+#endif
+import Verge
 
+open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterControlBase {
+  
+  public required init(viewModel: ClassicImageEditViewModel) {
+    super.init(viewModel: viewModel)
+  }
 }
 
-public final class ClassicImageEditCropControl : ClassicImageEditCropControlBase {
-
+open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureControlBase {
+  
+  open override var title: String {
+    return L10n.editTemperature
+  }
+  
   private let navigationView = ClassicImageEditNavigationView()
-
-  public override func setup() {
+  
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
+  
+  open override func setup() {
     super.setup()
-
-    backgroundColor = Style.default.control.backgroundColor
-
-    addSubview(navigationView)
-
-    navigationView.translatesAutoresizingMaskIntoConstraints = false
-
-    NSLayoutConstraint.activate([
-      navigationView.rightAnchor.constraint(equalTo: navigationView.superview!.rightAnchor),
-      navigationView.leftAnchor.constraint(equalTo: navigationView.superview!.leftAnchor),
-      navigationView.bottomAnchor.constraint(equalTo: navigationView.superview!.bottomAnchor),
-      navigationView.topAnchor.constraint(greaterThanOrEqualTo: navigationView.superview!.topAnchor),
-      ])
-
+    
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
+    
+    TempCode.layout(navigationView: navigationView, slider: slider, in: self)
+    
+    slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
+    
     navigationView.didTapCancelButton = { [weak self] in
       
       guard let self = self else { return }
       
-      self.viewModel.endCrop(save: false)
-      self.viewModel.setMode(.preview)
+      self.viewModel.editingStack.revertEdit()
       self.pop(animated: true)
     }
     
@@ -58,18 +64,35 @@ public final class ClassicImageEditCropControl : ClassicImageEditCropControlBase
       
       guard let self = self else { return }
       
-      self.viewModel.endCrop(save: true)
-      self.viewModel.setMode(.preview)
+      self.viewModel.editingStack.takeSnapshot()
       self.pop(animated: true)
     }
   }
   
-  public override func willMove(toSuperview newSuperview: UIView?) {
-    super.willMove(toSuperview: newSuperview)
-    if newSuperview != nil {
-      viewModel.setMode(.crop)
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
+
+      slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
     }
+              
   }
-
+  
+  @objc
+  private func valueChanged() {
+    
+    let value = slider.transition(in: FilterTemperature.range)
+    
+    guard value != 0 else {
+      viewModel.editingStack.set(filters: { $0.temperature = nil })
+      return
+    }
+       
+    viewModel.editingStack.set(filters: {
+      var f = FilterTemperature()
+      f.value = value
+      $0.temperature = f
+    })
+  }
+  
 }
-

@@ -172,7 +172,7 @@ public enum ClassicImageEditEditMenu: CaseIterable {
     override open func setup() {
       super.setup()
       
-      backgroundColor = Style.default.control.backgroundColor
+      backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
       
       layout: do {
         scrollView.showsVerticalScrollIndicator = false
@@ -456,13 +456,13 @@ public enum ClassicImageEditEditMenu: CaseIterable {
         
         style: do {
           imageView.contentMode = .scaleAspectFill
-          imageView.tintColor = Style.default.black
+          imageView.tintColor = ClassicImageEditStyle.default.black
           nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-          nameLabel.textColor = Style.default.black
+          nameLabel.textColor = ClassicImageEditStyle.default.black
           nameLabel.textAlignment = .center
           
           changesMarkView.layer.cornerRadius = 2
-          changesMarkView.backgroundColor = Style.default.black
+          changesMarkView.backgroundColor = ClassicImageEditStyle.default.black
           changesMarkView.isHidden = true
         }
         

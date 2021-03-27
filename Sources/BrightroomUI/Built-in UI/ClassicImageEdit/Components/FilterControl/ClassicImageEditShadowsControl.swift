@@ -18,6 +18,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
 import UIKit
 
 #if !COCOAPODS
@@ -25,26 +26,27 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditContrastControlBase : ClassicImageEditFilterControlBase {
+open class ClassicImageEditShadowsControlBase : ClassicImageEditFilterControlBase {
+
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase {
+open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
   
   open override var title: String {
-    return L10n.editContrast
+    return L10n.editShadows
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
@@ -65,13 +67,12 @@ open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase
       self.viewModel.editingStack.takeSnapshot()
       self.pop(animated: true)
     }
-      
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
-
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast) { value in      
-      slider.set(value: value?.value ?? 0, in: FilterContrast.range)
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+    
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
+      slider.set(value: value?.value ?? 0, in: FilterShadows.range)
     }
         
   }
@@ -79,20 +80,19 @@ open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterContrast.range)
+    let value = slider.transition(in: FilterShadows.range)
     
     guard value != 0 else {
-      viewModel.editingStack.set(filters: {
-        $0.contrast = nil
-      })
+      viewModel.editingStack.set(filters: { $0.shadows = nil })
       return
     }
-    
+           
     viewModel.editingStack.set(filters: {
-      var f = FilterContrast()
+      var f = FilterShadows()
       f.value = value
-      $0.contrast = f
+      $0.shadows = f
     })
+    
   }
   
 }

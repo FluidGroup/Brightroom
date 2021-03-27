@@ -1,12 +1,12 @@
 Pod::Spec.new do |s|
   s.name = "Brightroom"
   s.version = "2.0.0-beta.1"
-  s.summary = "The image editor and engine using CoreImage"
+  s.summary = "A component-oriented image editor on top of CoreImage."
 
-  s.homepage = "https://github.com/muukii/Pixel"
+  s.homepage = "https://github.com/muukii/Brightroom"
   s.license = "MIT"
   s.author = "muukii"
-  s.source = { :git => "https://github.com/muukii/Pixel.git", :tag => s.version }
+  s.source = { :git => "https://github.com/muukii/Brightroom.git", :tag => s.version }
 
   s.swift_version = "5.3"
   s.module_name = s.name
@@ -19,9 +19,14 @@ Pod::Spec.new do |s|
     ss.source_files = "Sources/BrightroomEngine/**/*.swift"
   end
 
-  s.subspec "UI" do |ss|
-    ss.source_files = "Sources/BrightroomUI/**/*.swift"
+  s.subspec "UI-Classic" do |ss|
+    ss.source_files = "Sources/BrightroomUI/Shared/**/*.swift", "Sources/BrightroomUI/Built-in UI/ClassicImageEdit/**/*.swift"
     ss.dependency "Brightroom/Engine"
     ss.dependency "TransitionPatch"
+  end
+
+  s.subspec "UI-Crop" do |ss|
+    ss.source_files = "Sources/BrightroomUI/Shared/**/*.swift", "Sources/BrightroomUI/Built-in UI/PhotosCrop/**/*.swift"
+    ss.dependency "Brightroom/Engine"
   end
 end

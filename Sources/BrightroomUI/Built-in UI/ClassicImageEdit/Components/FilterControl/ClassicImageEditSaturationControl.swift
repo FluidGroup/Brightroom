@@ -26,31 +26,30 @@ import BrightroomEngine
 #endif
 import Verge
 
-open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBase {
-  
+open class ClassicImageEditSaturationControlBase : ClassicImageEditFilterControlBase {
+
   public required init(viewModel: ClassicImageEditViewModel) {
     super.init(viewModel: viewModel)
   }
 }
 
-open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
+open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControlBase {
   
   open override var title: String {
-    return L10n.editSharpen
+    return L10n.editSaturation
   }
   
   private let navigationView = ClassicImageEditNavigationView()
   
-  public let slider = StepSlider(frame: .zero)
+  public let slider = ClassicImageEditStepSlider(frame: .zero)
   
   open override func setup() {
     super.setup()
     
-    backgroundColor = Style.default.control.backgroundColor
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
     
     TempCode.layout(navigationView: navigationView, slider: slider, in: self)
     
-    slider.mode = .plus
     slider.addTarget(self, action: #selector(valueChanged), for: .valueChanged)
     
     navigationView.didTapCancelButton = { [weak self] in
@@ -70,31 +69,30 @@ open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
+  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
-      slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation) { value in
+      slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
     }
-    
+        
   }
   
   @objc
   private func valueChanged() {
     
-    let value = slider.transition(in: FilterSharpen.Params.sharpness)
+    let value = slider.transition(in: FilterSaturation.range  )
     
     guard value != 0 else {
       viewModel.editingStack.set(filters: {
-        $0.sharpen = nil
+        $0.saturation = nil
       })
       return
     }
-       
+     
     viewModel.editingStack.set(filters: {
-      var f = FilterSharpen()
-      f.sharpness = value
-      f.radius = 1.2
-      $0.sharpen = f
+      var f = FilterSaturation()
+      f.value = value
+      $0.saturation = f
     })
   }
   
