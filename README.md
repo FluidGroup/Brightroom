@@ -120,6 +120,24 @@ Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up t
 
 - WIP
 
+
+## Installation
+
+**CocoaPods**
+
+```ruby
+pod "Brightroom/Engine", tag: "2.0.0-beta.1"
+pod "Brightroom/UI", tag: "2.0.0-beta.1"
+```
+
+**Swift Package Manager**
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/muukii/Brightroom.git", from: "2.0.0-beta.1")
+]
+```
+
 ---
 
 # (v1) Pixel - Engine • Editor
