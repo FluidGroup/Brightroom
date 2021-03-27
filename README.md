@@ -60,6 +60,7 @@ SwiftUIPhotosCropView
 - **BlurryMaskingView** - A view that drawing mask shapes with blur.
 - **ImagePreviewView** - A view that previews the finalized image on `EditingStack`
 - **MetalImageView** - A view that displays the image powered by Metal.
+- **LoadingBlurryOverlayView** - A view that displays a loading-indicator and blurry backdrop view.
 
 ## Build your own cropping screen
 
