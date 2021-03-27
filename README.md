@@ -108,8 +108,8 @@ Regarding LUT, the format of LUT changed from v2.
 
 <img width=120px src="https://user-images.githubusercontent.com/1888355/112709344-0ca56200-8efc-11eb-9812-523de3c0fdf3.png"/>
 
-We can download the neutral LUT image from [lutCreator.js](https://sirserch.github.io/lut-creator-js/#).
-Make sure to use HALD 64 SIZE
+We can download the neutral LUT image from [lutCreator.js](https://sirserch.github.io/lut-creator-js/#).  
+Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up to 64.
 
 ### [Hald Images](https://3dlutcreator.com/3d-lut-creator---materials-and-luts.html)
 
