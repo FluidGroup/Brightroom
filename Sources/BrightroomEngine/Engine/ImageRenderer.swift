@@ -61,10 +61,12 @@ public final class ImageRenderer {
    
    - Attension: This operation can be run background-thread.
    */
-  public func render(resolution: Resolution = .full) -> UIImage {
+  public func render(resolution: Resolution = .full, workingFormat: CIFormat = .RGBA8) -> UIImage {
     
     /**
      TODO: Restores image-orientation
+     FIXME: support wide-color. Editing CIImage displayed with wide-color. but rendered image is not wide-color.
+     For example, when the image is brighter, the result contains clipping.
      */
     
     let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
@@ -93,7 +95,7 @@ public final class ImageRenderer {
       format.scale = 1
       format.opaque = true
       if #available(iOS 12.0, *) {
-        format.preferredRange = .extended
+        format.preferredRange = .standard
       } else {
         format.prefersExtendedRange = true
       }
@@ -115,11 +117,10 @@ public final class ImageRenderer {
             let ciContext = CIContext(
               cgContext: cgContext,
               options: [
-                .workingFormat: CIFormat.RGBAh,
+                .workingFormat: workingFormat,
                 .highQualityDownsample: true,
-//                .workingColorSpace: effectedCIImage.colorSpace,
                 .useSoftwareRenderer: true,
-                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedSRGB)!,
+//                .outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
               ]
             )
                                     

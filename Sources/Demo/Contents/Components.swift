@@ -4,28 +4,33 @@ import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
 
+func makeMetadataString(image: UIImage) -> String {
+  let formatter = ByteCountFormatter()
+  formatter.countStyle = .file
+  let jpegSize = formatter.string(fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count))
+
+  let meta = """
+  size: \(image.size.width * image.scale), \(image.size.height * image.scale)
+  jpegSize: \(jpegSize),
+  colorSpace: \(image.cgImage?.colorSpace as Any)
+  """
+  
+  return meta
+}
+
 enum Components {
   final class ResultImageCell: ASCellNode {
     var image: UIImage? {
       didSet {
         if let image = image {
           imageNode.image = image
-          
-          let formatter = ByteCountFormatter()
-          formatter.countStyle = .file
-          let jpegSize = formatter.string(fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count))
-          
-          let meta = """
-          size: \(image.size.width * image.scale), \(image.size.height * image.scale)
-          jpegSize: \(jpegSize)
-          """
-          
+
+          let meta = makeMetadataString(image: image)
           metadataTextNode.attributedText = NSAttributedString(string: meta)
         } else {
           imageNode.image = nil
           metadataTextNode.attributedText = nil
         }
-
       }
     }
 
@@ -33,19 +38,39 @@ enum Components {
     private let metadataTextNode = ASTextNode()
     private let shape = ShapeLayerNode.roundedCorner(radius: 0)
     private let imageNode = ASImageNode()
+    private let saveButton = GlossButtonNode()
 
     override init() {
       super.init()
       automaticallyManagesSubnodes = true
       imageNode.contentMode = .scaleAspectFit
-      
+
       tutorialTextNode.attributedText = NSAttributedString(
         string: "Rendered image preview",
         attributes: [
-          .font : UIFont.preferredFont(forTextStyle: .headline),
-          .foregroundColor : UIColor.systemGray
+          .font: UIFont.preferredFont(forTextStyle: .headline),
+          .foregroundColor: UIColor.systemGray,
         ]
       )
+
+      saveButton.setDescriptor(
+        .init(
+          title: NSAttributedString(string: "Save", attributes: [
+            .font: UIFont.preferredFont(forTextStyle: .headline),
+            .foregroundColor: UIColor.darkGray,
+          ]),
+          image: nil,
+          bodyStyle: .init(layout: .vertical()),
+          surfaceStyle: .bodyOnly
+        ),
+        for: .normal
+      )
+
+      saveButton.onTap = { [weak self] in
+
+        guard let image = self?.image else { return }
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+      }
     }
 
     override func didLoad() {
@@ -71,6 +96,7 @@ enum Components {
           }
           metadataTextNode
             .padding(8)
+          saveButton
         }
       }
     }
