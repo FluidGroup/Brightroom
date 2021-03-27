@@ -12,7 +12,7 @@
 
 ---
 
-# v2(WIP) Pixel - Composable image editor
+# v2(WIP) Brightroom(former: Pixel) - Composable image editor
 
 Pixel v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
