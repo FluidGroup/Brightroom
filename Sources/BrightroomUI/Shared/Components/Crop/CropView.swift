@@ -131,8 +131,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   ) {
     self.init(
       editingStack: .init(
-        imageProvider: .init(image: image),
-        previewMaxPixelSize: UIScreen.main.bounds.height * UIScreen.main.scale
+        imageProvider: .init(image: image)
       ),
       contentInset: contentInset
     )

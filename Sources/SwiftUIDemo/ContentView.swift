@@ -92,8 +92,7 @@ struct ContentView: View {
               let stack = EditingStack(
                 imageProvider: .init(
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
-                ),
-                previewMaxPixelSize: 1000
+                )
               )
 
               fullScreenView = .init {
@@ -108,8 +107,7 @@ struct ContentView: View {
               let stack = EditingStack(
                 imageProvider: .init(
                   editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
-                ),
-                previewMaxPixelSize: 1000
+                )
               )
 
               fullScreenView = .init {
@@ -125,7 +123,6 @@ struct ContentView: View {
             Button("PixelEditor Square") {
               let stack = EditingStack.init(
                 imageProvider: .init(image: Asset.l1000316.image),
-                previewMaxPixelSize: 400 * 2,
                 cropModifier: .init { _, crop, completion in
                   var new = crop
                   new.updateCropExtent(by: .square)
@@ -142,8 +139,7 @@ struct ContentView: View {
 
             Button("PixelEditor") {
               let stack = EditingStack.init(
-                imageProvider: .init(image: Asset.l1000316.image),
-                previewMaxPixelSize: 400 * 2
+                imageProvider: .init(image: Asset.l1000316.image)
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {

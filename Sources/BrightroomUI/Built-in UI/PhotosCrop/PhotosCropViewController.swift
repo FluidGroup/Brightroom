@@ -120,8 +120,7 @@ public final class PhotosCropViewController: UIViewController {
   ) {
     self.init(
       editingStack: .init(
-        imageProvider: imageProvider,
-        previewMaxPixelSize: UIScreen.main.bounds.height * UIScreen.main.scale
+        imageProvider: imageProvider
       ),
       options: options,
       localizedStrings: localizedStrings

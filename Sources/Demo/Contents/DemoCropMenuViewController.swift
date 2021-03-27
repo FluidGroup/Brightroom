@@ -40,7 +40,6 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
                 
         let stack = EditingStack.init(
           imageProvider: .init(image: Asset.horizontalRect.image),
-          previewMaxPixelSize: 600,
           cropModifier: .faceDetection(aspectRatio: .square)
         )
         
@@ -53,7 +52,6 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           
           let stack = EditingStack.init(
             imageProvider: .init(image: image),
-            previewMaxPixelSize: 600,
             cropModifier: .faceDetection(aspectRatio: .square)
           )
           _presentCropViewConroller(stack)
@@ -67,7 +65,6 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           
           let stack = EditingStack.init(
             imageProvider: .init(image: image),
-            previewMaxPixelSize: 600,
             cropModifier: .faceDetection(aspectRatio: .square)
           )
           _presentCropViewConroller(stack, fixedAspectRatio: .square)
@@ -100,8 +97,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         let stack = EditingStack(
           imageProvider: .init(
             editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
-          ),
-          previewMaxPixelSize: 1000
+          )
         )
         
         _presentCropViewConroller(stack)
@@ -113,8 +109,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           imageProvider: .init(
 //            previewRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&auto=format&fit=crop&w=125&q=80")!,
             editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
-          ),
-          previewMaxPixelSize: 1000
+          )
         )
         
         _presentCropViewConroller(stack)

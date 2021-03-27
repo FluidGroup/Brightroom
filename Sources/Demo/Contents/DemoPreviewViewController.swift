@@ -56,8 +56,7 @@ final class DemoPreviewViewController: StackScrollNodeViewController {
         let stack = EditingStack(
           imageProvider: .init(
             editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
-          ),
-          previewMaxPixelSize: 1000
+          )
         )
         
         _present(stack)
@@ -76,8 +75,7 @@ final class DemoPreviewViewController: StackScrollNodeViewController {
   private func _present(_ imageProvider: ImageProvider) {
     
     let stack = EditingStack.init(
-      imageProvider: imageProvider,
-      previewMaxPixelSize: 400 * 2
+      imageProvider: imageProvider
     )
     
     _present(stack)

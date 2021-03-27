@@ -111,21 +111,27 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
           UIView.performWithoutAnimation {
             if let state = state._beta_map(\.loadedState) {
-              state.ifChanged(\.editingCroppedPreviewImage) { image in
-                self.imageView.display(image: image)
-                EditorLog.debug("ImagePreviewView.image set", image.extent as Any)
+              
+              if state.hasChanges({ ($0.currentEdit) }, .init(==)) {
+                
+                self.requestPreviewImage(state: state.primitive)
               }
-
-              state.ifChanged(\.editingCroppedImage) { image in
-                self.originalImageView.display(image: image)
-                EditorLog.debug("ImagePreviewView.originalImage set", image.extent as Any)
-              }
+                          
             }
           }
         }
         .store(in: &subscriptions)
       }
     }
+  }
+  
+  private func requestPreviewImage(state: EditingStack.State.Loaded) {
+    
+    let pixelSize = max(self.bounds.width, self.bounds.height) * UIScreen.main.scale
+    
+    imageView.display(image: state.makeCroppedPreviewImage(previewMaxPixelSize: pixelSize, appliesFilter: true))
+    originalImageView.display(image: state.makeCroppedPreviewImage(previewMaxPixelSize: pixelSize, appliesFilter: false))
+    
   }
 
   private func updateLoadingOverlay(displays: Bool) {
@@ -153,6 +159,16 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
         }
       }
     }
+  }
+  
+  public override func layoutSubviews() {
+    
+    super.layoutSubviews()
+    
+    if let loaded = editingStack.store.state.loadedState {
+      requestPreviewImage(state: loaded)
+    }
+
   }
 
   override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

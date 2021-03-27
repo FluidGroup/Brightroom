@@ -79,7 +79,6 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
         
     let stack = EditingStack.init(
       imageProvider: imageProvider,
-      previewMaxPixelSize: 400 * 2,
       cropModifier: .init { _, crop, completion in
         var new = crop
         new.updateCropExtent(by: .square)
