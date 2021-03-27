@@ -30,4 +30,8 @@ platform :ios do
       workspace: "Pixel.xcworkspace",
     )
   end
+
+  lane :run_tests do
+    scan(scheme: "BrightroomEngineTests")
+  end
 end
