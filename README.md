@@ -1,21 +1,173 @@
-<img src=top.png width=960/>
+## ⚠️ v2 development is in progress. 
 
-# Pixel - Engine • Editor
+> 💥 Development for the next major version (v2) has started!
+> Find out more [here](https://github.com/muukii/Pixel/pull/53), and if you're excited please hit the reaction button! 
+>
+> This update will obviously include many breaking changes. Feel free to start a discussion. I often upload movies of features in development to the pull-request's comments.
+> 
+> **To use the stable version, please checkout the master branch.**
+> 
 
-> 💥 The next major version development has been started.  
-> https://github.com/muukii/Pixel/pull/53  
-> This obviously takes many breaking changes.  
-> Feel free to start a discussion about enhancement from the current released version.
+> 📌 Pixel has been renamed as **Brightroom**
+> 
+
+> ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
+
+---
+
+# v2(WIP) Brightroom(former: Pixel) - Composable image editor
+
+<img src=top.png width=100%/>
+
+Pixel v2 provides the following features:
+- Components are built separately and run standalone using an `EditingStack`.
+- Create your own image editor UI by composing components.
+- `EditingStack` manages the history of editing and renders images. It's like a headless browser.
+- Wide color editing support
+
+## Built-in UI - Fullstack image editor
+
 
 ![](preview.gif)
 
+- [ ] TODO
 
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEngine.svg) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fmuukii%2FPixel.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fmuukii%2FPixel?ref=badge_shield)
-Engine
+## Built-in UI - Crop editor
 
-![CocoaPods](https://img.shields.io/cocoapods/v/PixelEditor.svg) Editor
+| Crop | Face detection |
+| --- | --- | 
+| ![PhotosCropViewController](https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif) | ![Face-detection](https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif)
 
-[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/0)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/0)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/1)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/1)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/2)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/2)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/3)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/3)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/4)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/4)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/5)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/5)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/6)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/6)[![](https://sourcerer.io/fame/muukii/muukii/Pixel/images/7)](https://sourcerer.io/fame/muukii/muukii/Pixel/links/7)
+### A simple way to use it
+
+**UIKit**
+```swift
+let uiImage: UIImage = ...
+let controller = CropViewController(imageProvider: .init(image: uiImage))
+
+controller.modalPresentationStyle = .fullScreen
+
+controller.handlers.didCancel = { controller in
+  controller.dismiss(animated: true, completion: nil)
+}
+  
+controller.handlers.didFinish = { [weak self] controller in
+  controller.dismiss(animated: true, completion: nil)
+  controller.editingStack.makeRenderer()?.render { [weak self] image in
+    // ✅ handle the result image.
+  }
+}
+
+present(controller, animated: true, completion: nil)
+```
+
+**SwiftUI**
+```swift
+WIP
+SwiftUIPhotosCropView
+```
+
+### Face detection
+
+```swift
+WIP
+```
+
+## Components
+
+- **CropView** - A view that previews how it crops the image. It supports zooming, scrolling, adjusting the guide and more customizable appearances.
+- **BlurryMaskingView** - A view that drawing mask shapes with blur.
+- **ImagePreviewView** - A view that previews the finalized image on `EditingStack`
+- **MetalImageView** - A view that displays the image powered by Metal.
+- **LoadingBlurryOverlayView** - A view that displays a loading-indicator and blurry backdrop view.
+
+## Build your own cropping screen
+
+CropView is a component that only supports cropping.
+
+![CleanShot 2021-03-08 at 20 51 11](https://user-images.githubusercontent.com/1888355/110317866-113ecf00-8050-11eb-923d-6c2dc6da1a30.gif)
+
+**UIKit**
+
+```swift
+let image: UIImage
+let view = CropView(image: image)
+
+let resultImage = view.renderImage()
+```
+
+**SwiftUI**
+
+```swift
+struct DemoCropView: View {
+  let editingStack: EditingStack
+
+  var body: some View {
+    VStack {
+      // ✅ Display a cropping view
+      SwiftUICropView(
+        editingStack: editingStack
+      )
+      // ✅ Renders a result image from the current editing.
+      Button("Done") {
+        let image: UIImage = editingStack.makeRenderer().render()
+      }
+    }
+    .onAppear {
+      editingStack.start()
+    }
+  }
+}
+```
+
+## LUT (Hald image)
+
+[How to create cube data from LUT Image for  CIColorCube / CIColorCubeWithColorSpace](https://www.notion.so/muukii/CoreImage-How-to-create-cube-data-from-LUT-Image-for-CIColorCube-CIColorCubeWithColorSpace-9e554fd418e8463abb25d6232613ac1c)
+
+Regarding LUT, the format of LUT changed from v2.
+
+<img width=120px src="https://user-images.githubusercontent.com/1888355/112709344-0ca56200-8efc-11eb-9812-523de3c0fdf3.png"/>
+
+We can download the neutral LUT image from [lutCreator.js](https://sirserch.github.io/lut-creator-js/#).  
+Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up to 64.
+
+### [Hald Images](https://3dlutcreator.com/3d-lut-creator---materials-and-luts.html)
+
+> Hald is a graphical representation of 3D LUT in a form of a color table which contains all of the color gradations of 3D LUT. If Hald is loaded into editing software and a color correction is applied to it, you can use 3D LUT Creator to convert your Hald into 3D LUT and apply it to a photo or a video in your editor.
+> 
+
+## Setting up to use LUT in your application
+
+- WIP
+
+
+## Installation
+
+> ⚠️ Brightroom has not been published in CocoaPods since it's still early development.
+> If you try to use it, following pod commands install libraries to your application.
+
+**CocoaPods**
+
+```ruby
+pod "Brightroom/Engine", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
+pod "Brightroom/UI", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
+```
+
+**Swift Package Manager**
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/muukii/Brightroom.git", branch: "muukii/v2")
+]
+```
+
+---
+
+# (v1) Pixel - Engine • Editor
+
+<img src=top.png width=100%/>
+
+![](preview.gif)
 
 Image editor and engine using CoreImage
 
@@ -102,9 +254,7 @@ let controller = PixelEditViewController(image: image)
 
 * as Modal
 
-⚠️ Currently
-We need to wrap the controller with `UINavigationController`.
-Because, `PixelEditViewController` needs `UINavigationBar`.
+⚠️ Currently we need to wrap the controller with `UINavigationController`. This is because `PixelEditViewController` needs a `UINavigationBar`.
 
 ```swift
 let controller: PixelEditViewController
@@ -116,7 +266,7 @@ self.present(navigationController, animated: true, completion: nil)
 
 * as Push
 
-We can push the controller in UINavigationController.
+We can push the controller in `UINavigationController`.
 
 ```swift
 let controller: PixelEditViewController

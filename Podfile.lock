@@ -1,32 +1,83 @@
 PODS:
-  - MosaiqueAssetsPicker (1.0.0)
-  - Reveal-SDK (26)
-  - TransitionPatch (1.0.2)
+  - GlossButtonNode (2.1.0):
+    - Texture/Core (~> 3)
+    - TextureSwiftSupport
+  - MosaiqueAssetsPicker (1.2.0)
+  - PINCache (3.0.3):
+    - PINCache/Arc-exception-safe (= 3.0.3)
+    - PINCache/Core (= 3.0.3)
+  - PINCache/Arc-exception-safe (3.0.3):
+    - PINCache/Core
+  - PINCache/Core (3.0.3):
+    - PINOperation (~> 1.2.1)
+  - PINOperation (1.2.1)
+  - PINRemoteImage/Core (3.0.3):
+    - PINOperation
+  - PINRemoteImage/iOS (3.0.3):
+    - PINRemoteImage/Core
+  - PINRemoteImage/PINCache (3.0.3):
+    - PINCache (~> 3.0.3)
+    - PINRemoteImage/Core
+  - Reveal-SDK (28)
+  - SwiftGen (6.4.0)
+  - Texture (3.0.0):
+    - Texture/AssetsLibrary (= 3.0.0)
+    - Texture/Core (= 3.0.0)
+    - Texture/MapKit (= 3.0.0)
+    - Texture/Photos (= 3.0.0)
+    - Texture/PINRemoteImage (= 3.0.0)
+    - Texture/Video (= 3.0.0)
+  - Texture/AssetsLibrary (3.0.0):
+    - Texture/Core
+  - Texture/Core (3.0.0)
+  - Texture/MapKit (3.0.0):
+    - Texture/Core
+  - Texture/Photos (3.0.0):
+    - Texture/Core
+  - Texture/PINRemoteImage (3.0.0):
+    - PINRemoteImage/iOS (~> 3.0.0)
+    - PINRemoteImage/PINCache
+    - Texture/Core
+  - Texture/Video (3.0.0):
+    - Texture/Core
+  - TextureSwiftSupport (3.3.0):
+    - Texture/Core (~> 3)
+  - TinyConstraints (4.0.1)
 
 DEPENDENCIES:
-  - "MosaiqueAssetsPicker (from `git@github.com:eure/AssetsPicker.git`)"
+  - GlossButtonNode
+  - MosaiqueAssetsPicker
   - Reveal-SDK
-  - TransitionPatch
+  - SwiftGen
+  - Texture
+  - TextureSwiftSupport
+  - TinyConstraints
 
 SPEC REPOS:
   trunk:
+    - GlossButtonNode
+    - MosaiqueAssetsPicker
+    - PINCache
+    - PINOperation
+    - PINRemoteImage
     - Reveal-SDK
-    - TransitionPatch
-
-EXTERNAL SOURCES:
-  MosaiqueAssetsPicker:
-    :git: "git@github.com:eure/AssetsPicker.git"
-
-CHECKOUT OPTIONS:
-  MosaiqueAssetsPicker:
-    :commit: 6322f7d85e0a720d356c4fd4e55073bc853307f6
-    :git: "git@github.com:eure/AssetsPicker.git"
+    - SwiftGen
+    - Texture
+    - TextureSwiftSupport
+    - TinyConstraints
 
 SPEC CHECKSUMS:
-  MosaiqueAssetsPicker: 2cdd49293075c7fe5fe9fe3a85c30fd8b5238c19
-  Reveal-SDK: 5f94f14aff3d5f2a49f246edcd266fa4472679e9
-  TransitionPatch: c02b48b1429255b14ef82b7e411034e0958b9681
+  GlossButtonNode: 0b1471447cb4cebc8a959bbca574247ff6b0592b
+  MosaiqueAssetsPicker: e3d2be37a1a7d91d60f2904347f556fc1811e4d7
+  PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
+  PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
+  PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
+  Reveal-SDK: 1a2a678648fc4d277bad71c86d15530424324288
+  SwiftGen: 67860cc7c3cfc2ed25b9b74cfd55495fc89f9108
+  Texture: 2f109e937850d94d1d07232041c9c7313ccddb81
+  TextureSwiftSupport: f77fcb409983be5da7ef5b29566be0fcc0c440ed
+  TinyConstraints: 8dd91295e56797648c7bc335dd20e1d91ec4c192
 
-PODFILE CHECKSUM: 1ea184385e5d74284c3d7c3ca4567dfc0ebb3b6c
+PODFILE CHECKSUM: dfeb27513b124a959e041e57b19a3d0f77cc7845
 
-COCOAPODS: 1.9.3
+COCOAPODS: 1.10.1

@@ -83,4 +83,5 @@ iOSInjectionProject/
 
 .DS_Store
 
+.orig
 # End of https://www.gitignore.io/api/swift

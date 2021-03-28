@@ -1,14 +1,23 @@
 # Uncomment the next line to define a global platform for your project
-platform :ios, '10.0'
+platform :ios, "12.0"
 
-target 'PixelEditor' do
+abstract_target 'Demo_Apps' do
+
   use_frameworks!
-  pod 'TransitionPatch'
+  pod "Reveal-SDK"
+  pod "SwiftGen"
+
+  target "Demo" do
+    pod "MosaiqueAssetsPicker"
+    pod "Texture"
+    pod "TextureSwiftSupport"
+    pod "GlossButtonNode"
+    pod "TinyConstraints"
+  end  
+
+  target "SwiftUIDemo" do
+    use_frameworks!
+  end
+
 end
 
-target 'Demo' do
-  # Comment the next line if you're not using Swift and don't want to use dynamic frameworks
-  use_frameworks!
-  pod 'MosaiqueAssetsPicker', :git => 'git@github.com:eure/AssetsPicker.git'
-  pod 'Reveal-SDK'
-end

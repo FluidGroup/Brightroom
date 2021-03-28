@@ -21,61 +21,16 @@
 
 import UIKit
 
-import PixelEngine
-import PixelEditor
-
-extension Collection where Index == Int {
-  
-  fileprivate func concurrentMap<U>(_ transform: (Element) -> U) -> [U] {
-    var buffer = [U?].init(repeating: nil, count: count)
-    let lock = NSLock()
-    DispatchQueue.concurrentPerform(iterations: count) { i in
-      let e = self[i]
-      let r = transform(e)
-      lock.lock()
-      buffer[i] = r
-      lock.unlock()
-    }
-    return buffer.compactMap { $0 }
-  }
-}
-
-
+import BrightroomUI
+import BrightroomEngine
 
 extension ColorCubeStorage {
   static func loadToDefault() {
-    
     do {
-      
-      try autoreleasepool {
-        let bundle = Bundle.main
-        let rootPath = bundle.bundlePath as NSString
-        let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
-        
-        let filters = fileList
-          .filter { $0.hasSuffix(".png") || $0.hasSuffix(".PNG") }
-          .sorted()
-          .concurrentMap { path -> FilterColorCube in
-            let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
-            let data = try! Data(contentsOf: url)
-            let image = UIImage(data: data)!
-            let name = path
-              .replacingOccurrences(of: "LUT_", with: "")
-              .replacingOccurrences(of: ".png", with: "")
-              .replacingOccurrences(of: ".PNG", with: "")
-            return FilterColorCube.init(
-              name: name,
-              identifier: path,
-              lutImage: image,
-              dimension: 64
-            )
-        }
-        
-        self.default.filters = filters
-      }
-      
+      let loader = ColorCubeLoader(bundle: .main)
+      self.default.filters = try loader.load()
+
     } catch {
-      
       assertionFailure("\(error)")
     }
   }
@@ -83,12 +38,23 @@ extension ColorCubeStorage {
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
+  var window: UIWindow? {
+    didSet {
+      print("")
+    }
+  }
 
-  var window: UIWindow?
-
-
-  func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+  func application(
+    _ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+  ) -> Bool {
     // Override point for customization after application launch.
+
+    window = UIWindow(frame: UIScreen.main.bounds)
+    let navigationController = UINavigationController(rootViewController: TopMenuViewController())
+    navigationController.navigationBar.prefersLargeTitles = true
+    window?.rootViewController = navigationController
+    window?.makeKeyAndVisible()
 
     ColorCubeStorage.loadToDefault()
     return true
@@ -115,7 +81,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func applicationWillTerminate(_ application: UIApplication) {
     // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
   }
-
-
 }
-
