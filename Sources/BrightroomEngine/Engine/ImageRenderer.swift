@@ -25,6 +25,18 @@ import SwiftUI
 
 public final class ImageRenderer {
   
+  public struct Options {
+       
+    public var resolution: Resolution = .full
+    public var workingFormat: CIFormat = .ARGB8
+    
+    public init(resolution: ImageRenderer.Resolution = .full, workingFormat: CIFormat = .ARGB8) {
+      self.resolution = resolution
+      self.workingFormat = workingFormat
+    }
+  
+  }
+  
   /**
    A result of rendering.
    */
@@ -93,7 +105,10 @@ public final class ImageRenderer {
     edit = .init()
   }
 
-  public func render(resolution: Resolution = .full, completion: @escaping (Result<Rendered, Error>) -> Void) {
+  public func render(
+    options: Options = .init(),
+    completion: @escaping (Result<Rendered, Error>
+    ) -> Void) {
     type(of: self).queue.async {
       do {
         let rendered = try self.render()
@@ -113,18 +128,18 @@ public final class ImageRenderer {
 
    - Attension: This operation can be run background-thread.
    */
-  public func render(resolution: Resolution = .full) throws -> Rendered {
-    try renderRevison2(resolution: resolution)
+  public func render(options: Options = .init()) throws -> Rendered {
+    try renderRevison2(options: options)
   }
 
   private func renderRevison2(
-    resolution: Resolution = .full,
+    options: Options = .init(),
     debug: @escaping (CIImage) -> Void = { _ in }
   ) throws -> Rendered {
     
     let ciContext = CIContext(
       options: [
-        .workingFormat: CIFormat.RGBAh,
+        .workingFormat: options.workingFormat,
         .highQualityDownsample: true,
         //        .useSoftwareRenderer: true,
         .cacheIntermediates: false,
@@ -187,7 +202,7 @@ public final class ImageRenderer {
     let cropped_effected_CGImage = ciContext.createCGImage(
       cropped_effected_CIImage,
       from: cropped_effected_CIImage.extent,
-      format: .RGBAh,
+      format: options.workingFormat,
       colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
       deferred: true
     )!
@@ -236,7 +251,7 @@ public final class ImageRenderer {
     
     let resizedImage: CGImage
 
-    switch resolution {
+    switch options.resolution {
     case .full:
       
       EngineLog.debug(.renderer, "No resizing")

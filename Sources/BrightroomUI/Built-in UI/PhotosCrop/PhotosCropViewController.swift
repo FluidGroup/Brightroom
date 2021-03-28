@@ -139,9 +139,9 @@ public final class PhotosCropViewController: UIViewController {
    
    - Attension: This operation can be run background-thread.
    */
-  public func renderImage(resolution: ImageRenderer.Resolution, completion: @escaping (Result<ImageRenderer.Rendered, Error>) -> Void) {
+  public func renderImage(options: ImageRenderer.Options, completion: @escaping (Result<ImageRenderer.Rendered, Error>) -> Void) {
     do {
-      try editingStack.makeRenderer().render(resolution: resolution, completion: completion)
+      try editingStack.makeRenderer().render(options: options, completion: completion)
     } catch {
       completion(.failure(error))
     }

@@ -138,7 +138,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.render(resolution: .resize(maxPixelSize: 300)).cgImageDisplayP3
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImageDisplayP3
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
@@ -162,7 +162,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.render(resolution: .resize(maxPixelSize: 300)).cgImageDisplayP3
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImageDisplayP3
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
@@ -201,7 +201,7 @@ final class RendererTests: XCTestCase {
       drawer: [mask]
     )
 
-    let image = try renderer.render(resolution: .resize(maxPixelSize: 1000)).cgImageDisplayP3
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImageDisplayP3
 
     #if false
     // for debugging quickly

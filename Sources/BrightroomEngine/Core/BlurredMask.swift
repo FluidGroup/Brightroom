@@ -65,7 +65,7 @@ public struct BlurredMask: GraphicsDrawing {
       let cgImage = ciContext.createCGImage(
         ciBlurredImage,
         from: ciBlurredImage.extent,
-        format: CIFormat.RGBAh,
+        format: CIFormat.RGBA8,
         colorSpace: CGColorSpace.init(name: CGColorSpace.displayP3),
         deferred: true
       )!

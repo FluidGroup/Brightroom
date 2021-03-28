@@ -23,23 +23,7 @@ class PixelEngineTests: XCTestCase {
   override func tearDownWithError() throws {
     // Put teardown code here. This method is called after the invocation of each test method in the class.
   }
-  
-  func testScalingCrop() {
-    
-    let crop = EditingCrop(
-      imageSize: .init(width: 1280, height: 1280),
-      cropRect: .init(
-        origin: .init(x: 80, y: 80),
-        size: .init(width: 100, height: 100)
-      )
-    )
-    
-    let scaled = crop.scaled(maxPixelSize: 300)
-        
-    XCTAssertEqual(crop, scaled.restoreFromScaled())
-    
-  }
-  
+     
   func testScalingCGSize() {
     
     do {
