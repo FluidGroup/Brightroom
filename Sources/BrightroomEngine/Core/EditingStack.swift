@@ -28,6 +28,10 @@ import SwiftUI
 @available(iOS 13, *)
 extension EditingStack: ObservableObject {}
 
+public enum EditingStackError: Error {
+  case unableToCreateRendererInLoading
+}
+
 /**
  A stateful object that manages current editing status from original image.
  And supports rendering a result image.
@@ -403,11 +407,11 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
   
-  public func makeRenderer() -> ImageRenderer? {
+  public func makeRenderer() throws -> ImageRenderer {
     let stateSnapshot = state
     
     guard let loaded = stateSnapshot.loadedState else {
-      return nil
+      throw EditingStackError.unableToCreateRendererInLoading
     }
     
     let imageSource = loaded.editableImageProvider

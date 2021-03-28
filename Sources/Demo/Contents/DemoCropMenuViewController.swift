@@ -184,10 +184,17 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       controller.dismiss(animated: true, completion: nil)
       self?.resultCell.image = nil
 
-      controller.editingStack.makeRenderer()?.render { [weak self] image in
-        self?.resultCell.image = image
-      }
+      try! controller.editingStack.makeRenderer()
+        .render { (result) in
+          switch result {
+          case .success(let rendered):
+            self?.resultCell.image = rendered.uiImageDisplayP3
+          case .failure(let error):
+            print(error)
+          }
+        }
     }
+      
     present(crop, animated: true, completion: nil)
   }
 

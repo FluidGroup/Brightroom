@@ -67,8 +67,13 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       
       self.resultCell.image = nil
 
-      stack.makeRenderer()?.render { (image) in
-        self.resultCell.image = image
+      try! stack.makeRenderer().render { (result) in
+        switch result {
+        case .success(let rendered):
+          self.resultCell.image = rendered.uiImageDisplayP3
+        case .failure(let error):
+          print(error)
+        }
       }
     }
     

@@ -206,7 +206,7 @@ final class RendererTests: XCTestCase {
 
     #if false
     // for debugging quickly
-    try UIImage(cgImage: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
+    try UIImage(cgImageDisplayP3: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
     #endif
     
 //    XCTAssert(image.width == 300 || image.height == 300)

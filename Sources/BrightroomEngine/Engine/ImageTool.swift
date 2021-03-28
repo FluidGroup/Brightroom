@@ -219,4 +219,26 @@ enum ImageTool {
 
     return data as Data
   }
+  
+  static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
+    let data = NSMutableData()
+    
+    let destination = CGImageDestinationCreateWithData(
+      data,
+      kUTTypePNG,
+      1,
+      [:] as CFDictionary
+    )!
+    
+    CGImageDestinationAddImage(
+      destination,
+      image,
+      [
+        kCGImageDestinationOptimizeColorForSharing: true,
+      ] as CFDictionary)
+    
+    CGImageDestinationFinalize(destination)
+    
+    return data as Data
+  }
 }
