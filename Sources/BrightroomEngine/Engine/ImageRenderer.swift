@@ -236,7 +236,7 @@ public final class ImageRenderer {
           c.translateBy(x: -crop.cropExtent.origin.x, y: -crop.cropExtent.origin.y)
 
           self.edit.drawer.forEach { drawer in
-            drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))
+            drawer.draw(in: c)
           }
         }
         .makeImage()

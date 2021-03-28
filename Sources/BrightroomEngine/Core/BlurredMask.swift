@@ -29,7 +29,7 @@ public struct BlurredMask: GraphicsDrawing {
     self.paths = paths
   }
 
-  public func draw(in context: CGContext, canvasSize: CGSize) {
+  public func draw(in context: CGContext) {
     guard !paths.isEmpty else {
       return
     }
@@ -78,7 +78,7 @@ public struct BlurredMask: GraphicsDrawing {
           x: -mainContext.boundingBoxOfClipPath.minX,
           y: -mainContext.boundingBoxOfClipPath.minY
         )
-        path.draw(in: layerCGContext, canvasSize: canvasSize)
+        path.draw(in: layerCGContext)
 
         layerCGContext.restoreGState()
       }
