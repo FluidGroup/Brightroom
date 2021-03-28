@@ -36,10 +36,10 @@ open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editBrightness
+    return viewModel.localizedStrings.editBrightness
   }
 
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
 
   public let slider = ClassicImageEditStepSlider(frame: .zero)
 

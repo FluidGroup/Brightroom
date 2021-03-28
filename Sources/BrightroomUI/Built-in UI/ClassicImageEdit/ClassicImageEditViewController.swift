@@ -31,11 +31,28 @@ import BrightroomEngine
 public typealias PixelEditViewController = ClassicImageEditViewController
 
 public final class ClassicImageEditViewController: UIViewController {
+  
+  /**
+   - TODO: property names are not comprehensibility.
+   */
   public struct LocalizedStrings {
-    public static var shared: Self = .init()
+    
+    // Deprecates
+    
+    @available(*, deprecated, renamed: "control_colorcube_normal_name")
+    public var normal: String {
+      get {
+        control_colorcube_normal_name
+      }
+      set {
+        control_colorcube_normal_name = newValue
+      }
+    }
 
     public var done = "Done"
-    public var normal = "Normal"
+          
+    public var control_colorcube_normal_name = "Normal"
+    
     public var cancel = "Cancel"
     public var filter = "Filter"
     public var edit = "Edit"
@@ -91,7 +108,7 @@ public final class ClassicImageEditViewController: UIViewController {
   )
 
   private lazy var cancelButton = UIBarButtonItem(
-    title: ClassicImageEditViewController.LocalizedStrings.shared.cancel,
+    title: viewModel.localizedStrings.cancel,
     style: .plain,
     target: self,
     action: #selector(didTapCancelButton)

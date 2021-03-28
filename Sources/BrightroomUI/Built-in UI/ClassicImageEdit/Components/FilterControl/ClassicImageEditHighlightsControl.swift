@@ -35,10 +35,10 @@ open class ClassicImageEditHighlightsControlBase : ClassicImageEditFilterControl
 open class ClassicImageEditHighlightsControl : ClassicImageEditHighlightsControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editHighlights
+    return viewModel.localizedStrings.editHighlights
   }
   
-  private let navigationView = ClassicImageEditNavigationView()
+  private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   public let slider = ClassicImageEditStepSlider(frame: .zero)
   

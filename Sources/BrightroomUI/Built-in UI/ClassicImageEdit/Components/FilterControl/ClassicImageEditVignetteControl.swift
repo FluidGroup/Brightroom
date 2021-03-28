@@ -36,10 +36,10 @@ open class ClassicImageEditVignetteControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditVignetteControl : ClassicImageEditVignetteControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editVignette
+    return viewModel.localizedStrings.editVignette
   }
   
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   public let slider = ClassicImageEditStepSlider(frame: .zero)
   

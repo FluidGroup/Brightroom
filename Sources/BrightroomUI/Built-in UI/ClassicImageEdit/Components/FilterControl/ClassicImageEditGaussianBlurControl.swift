@@ -36,10 +36,10 @@ open class ClassicImageEditGaussianBlurControlBase : ClassicImageEditFilterContr
 open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editBlur
+    return viewModel.localizedStrings.editBlur
   }
 
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
 
   public let slider = ClassicImageEditStepSlider(frame: .zero)
 

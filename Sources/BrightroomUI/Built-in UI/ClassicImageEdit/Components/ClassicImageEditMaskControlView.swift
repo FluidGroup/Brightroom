@@ -30,7 +30,7 @@ open class ClassicImageEditMaskControlBase : ClassicImageEditControlBase {
 open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
 
   private let contentView = UIView()
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   private let clearButton = UIButton(type: .system)
   private let slider = ClassicImageEditStepSlider()
@@ -74,7 +74,7 @@ open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
         ])
       
       clearButton.addTarget(self, action: #selector(didTapRemoveAllButton), for: .touchUpInside)
-      clearButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.clear, for: .normal)
+      clearButton.setTitle(viewModel.localizedStrings.clear, for: .normal)
       clearButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
       
     }
@@ -91,10 +91,10 @@ open class ClassicImageEditMaskControl : ClassicImageEditMaskControlBase {
       largeLabel.translatesAutoresizingMaskIntoConstraints = false
       slider.translatesAutoresizingMaskIntoConstraints = false
 
-      smallLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.brushSizeSmall
+      smallLabel.text = viewModel.localizedStrings.brushSizeSmall
       smallLabel.textColor = .black
       largeLabel.textColor = .black
-      largeLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.brushSizeLarge
+      largeLabel.text = viewModel.localizedStrings.brushSizeLarge
 
       smallLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
       largeLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)

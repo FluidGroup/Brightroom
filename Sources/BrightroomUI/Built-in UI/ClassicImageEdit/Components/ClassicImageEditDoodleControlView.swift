@@ -26,7 +26,7 @@ open class ClassicImageEditDoodleControlBase : ClassicImageEditControlBase {
 
 public final class ClassicImageEditDoodleControl : ClassicImageEditDoodleControlBase {
 
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
 
   public override func setup() {
 

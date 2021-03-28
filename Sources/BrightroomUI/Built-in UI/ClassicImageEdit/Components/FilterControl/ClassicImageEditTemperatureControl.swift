@@ -36,10 +36,10 @@ open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterContro
 open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editTemperature
+    return viewModel.localizedStrings.editTemperature
   }
   
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   public let slider = ClassicImageEditStepSlider(frame: .zero)
   

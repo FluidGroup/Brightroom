@@ -227,7 +227,7 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
     switch Section.allCases[indexPath.section] {
     case .original:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NormalCell.identifier, for: indexPath) as! NormalCell
-      cell.set(originalImage: content.originalImage)
+      cell.set(originalImage: content.originalImage, name: viewModel.localizedStrings.control_colorcube_normal_name)
       updateSelected(cell: cell)
       return cell
     case .selections:
@@ -382,9 +382,9 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
     
     static let identifier = "me.muukii.PixelEditor.FilterCellNormal"
 
-    open func set(originalImage: CIImage) {
+    open func set(originalImage: CIImage, name: String) {
       
-      nameLabel.text = ClassicImageEditViewController.LocalizedStrings.shared.normal
+      nameLabel.text = name
       imageView.display(image: originalImage)
     }
     

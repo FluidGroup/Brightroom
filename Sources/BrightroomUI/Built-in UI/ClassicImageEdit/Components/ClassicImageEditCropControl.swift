@@ -27,7 +27,7 @@ open class ClassicImageEditCropControlBase : ClassicImageEditControlBase {
 
 public final class ClassicImageEditCropControl : ClassicImageEditCropControlBase {
 
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
 
   public override func setup() {
     super.setup()

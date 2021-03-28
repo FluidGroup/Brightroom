@@ -30,7 +30,7 @@ open class ClassicImageEditNavigationView : UIStackView {
   
   private let feedbacker = UIImpactFeedbackGenerator(style: .light)
 
-  public init() {
+  public init(saveText: String, cancelText: String) {
 
     super.init(frame: .zero)
 
@@ -42,8 +42,8 @@ open class ClassicImageEditNavigationView : UIStackView {
     addArrangedSubview(cancelButton)
     addArrangedSubview(saveButton)
 
-    cancelButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.cancel, for: .normal)
-    saveButton.setTitle(ClassicImageEditViewController.LocalizedStrings.shared.done, for: .normal)
+    cancelButton.setTitle(cancelText, for: .normal)
+    saveButton.setTitle(saveText, for: .normal)
 
     cancelButton.setTitleColor(ClassicImageEditStyle.default.black, for: .normal)
     saveButton.setTitleColor(ClassicImageEditStyle.default.black, for: .normal)

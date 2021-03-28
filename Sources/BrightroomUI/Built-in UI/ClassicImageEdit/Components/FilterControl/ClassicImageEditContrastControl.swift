@@ -34,10 +34,10 @@ open class ClassicImageEditContrastControlBase : ClassicImageEditFilterControlBa
 open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editContrast
+    return viewModel.localizedStrings.editContrast
   }
   
-  private let navigationView = ClassicImageEditNavigationView()
+    private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   public let slider = ClassicImageEditStepSlider(frame: .zero)
   

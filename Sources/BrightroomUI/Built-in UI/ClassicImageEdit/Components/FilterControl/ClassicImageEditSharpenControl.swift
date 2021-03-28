@@ -36,10 +36,10 @@ open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBas
 open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
   
   open override var title: String {
-    return ClassicImageEditViewController.LocalizedStrings.shared.editSharpen
+    return viewModel.localizedStrings.editSharpen
   }
   
-  private let navigationView = ClassicImageEditNavigationView()
+  private lazy var navigationView = ClassicImageEditNavigationView(saveText: viewModel.localizedStrings.done, cancelText: viewModel.localizedStrings.cancel)
   
   public let slider = ClassicImageEditStepSlider(frame: .zero)
   

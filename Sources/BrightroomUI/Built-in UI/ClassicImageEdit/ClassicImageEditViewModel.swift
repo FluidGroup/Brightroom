@@ -86,9 +86,9 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
       switch mode {
       case .crop:
-        $0.title = ClassicImageEditViewController.LocalizedStrings.shared.editAdjustment
+        $0.title = localizedStrings.editAdjustment
       case .masking:
-        $0.title = ClassicImageEditViewController.LocalizedStrings.shared.editMask
+        $0.title = localizedStrings.editMask
       case .editing:
         break
       case .preview:
