@@ -231,7 +231,6 @@ public struct EditingCrop: Equatable {
     
     validation: do {
       
-      // FIXME:
       assert(fixed.maxX <= imageSize.width)
       assert(fixed.maxY <= imageSize.height)
       
