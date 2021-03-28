@@ -356,7 +356,7 @@ public final class ImageRenderer {
             cropped_effected_CGImage,
             in: .init(origin: .zero, size: cropped_effected_CGImage.size)
           )
-          c.translateBy(x: crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
+          c.translateBy(x: -crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
 
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))

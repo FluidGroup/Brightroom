@@ -177,8 +177,9 @@ final class RendererTests: XCTestCase {
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
-    crop.rotation = .angle_90
-    crop.updateCropExtent(by: .square)
+//    crop.rotation = .angle_90
+    crop.updateCropExtentNormalizing(.init(x: 854.0, y: 1766.0, width: 2863.0, height: 2863.0), respectingAspectRatio: nil)
+//    crop.updateCropExtent(by: .square)
 
     let data = _pixelengine_bundle.path(forResource: "path-data", ofType: nil)
       .map {
