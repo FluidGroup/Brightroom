@@ -8,7 +8,10 @@
 > **To use the stable version, please checkout the master branch.**
 > 
 
-> 📌 Pixel needs a new name! Post your idea [here](https://github.com/muukii/Pixel/discussions/68). The leading name right now is **BrightRoom**?
+> 📌 Pixel has been renamed as **Brightroom**
+> 
+
+> ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
 
 ---
 
