@@ -77,7 +77,7 @@ extension EditingStack {
         do {
           try handler.perform([request])
         } catch {
-          EngineLog.debug(error)
+          EngineLog.error(.stack, "Face detection start failed : \(error)")
         }
       }
     }

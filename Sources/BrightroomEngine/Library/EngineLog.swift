@@ -47,10 +47,15 @@ enum EngineLog {
     os_log(.debug, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
   }
   
+  static func error(_ log: OSLog, _ object: Any...) {
+    os_log(.error, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
+  }
+  
 }
 
 extension OSLog {
   
-  static let renderer = OSLog.init(subsystem: "BrightroomEngine", category: "[🎨][Renderer]")
- 
+  static let renderer = OSLog.init(subsystem: "BrightroomEngine", category: "[🎨][Renderer]") 
+  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "[🎨][Renderer]")
+
 }

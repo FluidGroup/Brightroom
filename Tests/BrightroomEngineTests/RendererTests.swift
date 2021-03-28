@@ -127,7 +127,7 @@ final class RendererTests: XCTestCase {
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
   
-  func testV2_InputSRGB_effects_crop_resize() throws {
+  func testV2_InputSRGB_effects_crop_resizing() throws {
     
     let imageSource = ImageSource(image: Asset.unsplash2.image)
     
@@ -145,6 +145,31 @@ final class RendererTests: XCTestCase {
     renderer.edit = .init(
       croppingRect: crop,
       modifiers: [filter],
+      drawer: []
+    )
+    
+    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 300))
+    
+    XCTAssert(image.width == 300 || image.height == 300)
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_InputSRGB_rotation_resizing() throws {
+    
+    let imageSource = ImageSource(image: Asset.unsplash1.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+        
+    var crop = EditingCrop(imageSize: imageSource.readImageSize())
+    crop.rotation = .angle_90
+    crop.updateCropExtent(by: .square)
+    
+    renderer.edit = .init(
+      croppingRect: crop,
+      modifiers: [],
       drawer: []
     )
     

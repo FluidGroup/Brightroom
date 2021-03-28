@@ -419,9 +419,12 @@ open class EditingStack: Equatable, StoreComponentType {
     let edit = loaded.currentEdit
     
     renderer.edit.croppingRect = edit.crop
-    renderer.edit.drawer = [
-      BlurredMask(paths: edit.drawings.blurredMaskPaths),
-    ]
+    
+    if edit.drawings.blurredMaskPaths.isEmpty == false {
+      renderer.edit.drawer = [
+        BlurredMask(paths: edit.drawings.blurredMaskPaths),
+      ]
+    }      
     
     renderer.edit.modifiers = edit.makeFilters()
     

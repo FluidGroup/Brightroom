@@ -62,6 +62,9 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
+    
+    return try! UIImage(cgImage: renderRevison2(resolution: resolution));
+    
     /**
      FIXME: Super-Slow
 
@@ -320,7 +323,7 @@ public final class ImageRenderer {
 
     let cropped_effected_CGImage = ciContext.createCGImage(
       cropped_effected_CIImage,
-      from: sourceCIImage.extent,
+      from: cropped_effected_CIImage.extent,
       format: .RGBAh,
       colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
       deferred: true
@@ -335,23 +338,44 @@ public final class ImageRenderer {
      */
     guard edit.drawer.isEmpty == false else {
       EngineLog.debug(.renderer, "No drawings -> Finish rendering")
+            
+      let resizedImage: CGImage
       
       switch resolution {
       case .full:
         
-        return cropped_effected_CGImage
+        resizedImage = cropped_effected_CGImage
 
       case .resize(let maxPixelSize):
         
         let targetSize = Geometry.sizeThatAspectFit(size: cropped_effected_CGImage.size, maxPixelSize: maxPixelSize)
         
         let context = try CGContext.makeContext(for: cropped_effected_CGImage, size: targetSize)
-        context.perform { (c) in
-          c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
-        }
+          .perform { (c) in
+            c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
+          }
                 
-        return try context.makeImage().unwrap()
+        resizedImage = try context.makeImage().unwrap()
       }
+            
+      var rotatedSize: CGSize = CGSize(width: resizedImage.width, height: resizedImage.height)
+        .applying(crop.rotation.transform)
+      
+      rotatedSize.width = abs(rotatedSize.width)
+      rotatedSize.height = abs(rotatedSize.height)
+      
+      let rotatingContext = try CGContext.makeContext(for: cropped_effected_CGImage, size: rotatedSize)
+        .perform { (c) in
+          c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
+          c.rotate(by: -crop.rotation.angle)
+          c.translateBy(
+            x: -resizedImage.size.width / 2,
+            y: -resizedImage.size.height / 2
+          )
+          c.draw(resizedImage, in: .init(origin: .zero, size: resizedImage.size))
+        }
+      
+      return try rotatingContext.makeImage().unwrap()
           
     }
     
@@ -372,12 +396,14 @@ public final class ImageRenderer {
 
 extension CGContext {
   
-  func perform(_ drawing: (CGContext) -> Void) {
+  @discardableResult
+  func perform(_ drawing: (CGContext) -> Void) -> CGContext {
     UIGraphicsPushContext(self)
     defer {
       UIGraphicsPopContext()
     }
     drawing(self)
+    return self
   }
   
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
@@ -387,7 +413,7 @@ extension CGContext {
       width: size.map { Int($0.width) } ?? image.width,
       height: size.map { Int($0.height) } ?? image.height,
       bitsPerComponent: image.bitsPerComponent,
-      bytesPerRow: image.bytesPerRow,
+      bytesPerRow: 0,
       space: try image.colorSpace.unwrap(),
       bitmapInfo: image.bitmapInfo.rawValue
     )
