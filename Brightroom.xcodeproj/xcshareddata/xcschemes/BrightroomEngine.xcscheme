@@ -51,6 +51,11 @@
                BlueprintName = "BrightroomEngineTests"
                ReferencedContainer = "container:Brightroom.xcodeproj">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "RendererTests/testCropping()">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
    </TestAction>

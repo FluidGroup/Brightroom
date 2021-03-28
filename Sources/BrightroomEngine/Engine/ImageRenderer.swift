@@ -62,7 +62,6 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
-    
     /**
      FIXME: Super-Slow
 
@@ -246,7 +245,7 @@ public final class ImageRenderer {
           ._custom { c in
             c.cgContext.draw(rotatedImage, in: .init(origin: .zero, size: targetSize))
           }
-        
+
         return cgImage
       }
 
@@ -258,7 +257,84 @@ public final class ImageRenderer {
     return image
   }
   
- 
+  public func renderRevison2(resolution: Resolution = .full) throws -> CGImage {
+    
+    let ciContext = CIContext(
+      options: [
+        .workingFormat: CIFormat.RGBAh,
+        .highQualityDownsample: true,
+        //        .useSoftwareRenderer: true,
+        .cacheIntermediates: false,
+      ]
+    )
+    
+    EngineLog.debug(.renderer, "Start render in v2 CIContext => \(ciContext)")
+    
+    let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
+    
+    EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
+
+    assert(
+      {
+        guard let crop = edit.croppingRect else { return true }
+        return crop.imageSize == CGSize(image: sourceCIImage)
+      }())
+
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    
+    let effectedCIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
+      modifier.apply(to: image, sourceImage: sourceCIImage)
+    }
+
+    let effectedCGImage = ciContext.createCGImage(
+      effectedCIImage,
+      from: sourceCIImage.extent,
+      format: .RGBAh,
+      colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
+      deferred: true
+    )!
+    
+    EngineLog.debug(.renderer, "Created effected CGImage => \(effectedCGImage)")
+    
+    let context = try CGContext.makeContext(for: effectedCGImage)
+    context.perform { (c) in
+      c.draw(effectedCGImage, in: c.boundingBoxOfClipPath)
+    }
+    
+    let result = try context.makeImage().unwrap()
+    
+    EngineLog.debug(.renderer, "Finish rendering result CGImage => \(result)")
+    
+    return result
+  }
+}
+
+extension CGContext {
+  
+  func perform(_ drawing: (CGContext) -> Void) {
+    UIGraphicsPushContext(self)
+    defer {
+      UIGraphicsPopContext()
+    }
+    drawing(self)
+  }
+  
+  static func makeContext(for image: CGImage) throws -> CGContext {
+    
+    let context = CGContext.init(
+      data: nil,
+      width: image.width,
+      height: image.height,
+      bitsPerComponent: image.bitsPerComponent,
+      bytesPerRow: image.bytesPerRow,
+      space: try image.colorSpace.unwrap(),
+      bitmapInfo: image.bitmapInfo.rawValue
+    )
+    
+    return try context.unwrap()
+    
+  }
+  
 }
 
 extension UIGraphicsImageRenderer {
@@ -280,4 +356,39 @@ extension CGImage {
   fileprivate var size: CGSize {
     return .init(width: width, height: height)
   }
+}
+
+extension Optional {
+  
+  internal func unwrap(orThrow debugDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) throws -> Wrapped {
+    if let value = self {
+      return value
+    }
+    throw Optional.BrightroomUnwrappedNilError(
+      debugDescription,
+      file: file,
+      function: function,
+      line: line
+    )
+  }
+  
+  public struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
+    
+    let file: StaticString
+    let function: StaticString
+    let line: UInt
+    
+    // MARK: Public
+    public init(_ debugDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
+      
+      self.debugDescription = debugDescription ?? "Failed to unwrap on \(file):\(function):\(line)"
+      self.file = file
+      self.function = function
+      self.line = line
+    }
+    
+    // MARK: CustomDebugStringConvertible
+    public let debugDescription: String
+  }
+  
 }

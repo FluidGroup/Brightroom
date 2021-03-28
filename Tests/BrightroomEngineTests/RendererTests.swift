@@ -26,6 +26,11 @@ import Verge
 
 final class RendererTests: XCTestCase {
   
+  enum ColorSpaces {
+    static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
+    static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
+  }
+  
   func testCropping() {
     
     let imageSource = ImageSource(image: Asset.l1000069.image)
@@ -45,4 +50,51 @@ final class RendererTests: XCTestCase {
     print(image)
   }
   
+  func testV2_InputDisplayP3_no_effects() throws {
+    
+    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    
+    let image = try renderer.renderRevison2()
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_InputSRGB_no_effects() throws {
+    
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    
+    let image = try renderer.renderRevison2()
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_InputSRGB_effects() throws {
+    
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    
+    var filter = FilterBrightness()
+    filter.value = 0.1
+    
+    renderer.edit.modifiers = [filter]
+    
+    let image = try renderer.renderRevison2()
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+    
 }
