@@ -80,6 +80,27 @@ final class RendererTests: XCTestCase {
   
   func testV2_InputSRGB_effects() throws {
     
+    let imageSource = ImageSource(image: Asset.unsplash3.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    
+    var filter = FilterExposure()
+    filter.value = 0.72
+    
+    renderer.edit.modifiers = [filter]
+    
+    let image = try renderer.renderRevison2(debug: { image in
+      print(image)
+    })
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_InputSRGB_effects_crop() throws {
+    
     let imageSource = ImageSource(image: Asset.unsplash2.image)
     
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -87,13 +108,49 @@ final class RendererTests: XCTestCase {
     
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
     
-    var filter = FilterBrightness()
-    filter.value = 0.1
+    var filter = FilterExposure()
+    filter.value = 0.72
     
-    renderer.edit.modifiers = [filter]
+    var crop = EditingCrop(imageSize: imageSource.readImageSize())
+    crop.updateCropExtent(by: .square)
     
-    let image = try renderer.renderRevison2()
+    renderer.edit = .init(
+      croppingRect: crop,
+      modifiers: [filter],
+      drawer: []
+    )        
     
+    let image = try renderer.renderRevison2(debug: { image in
+      print(image)
+    })
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_InputSRGB_effects_crop_resize() throws {
+    
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    
+    var filter = FilterExposure()
+    filter.value = 0.72
+    
+    var crop = EditingCrop(imageSize: imageSource.readImageSize())
+    crop.updateCropExtent(by: .square)
+    
+    renderer.edit = .init(
+      croppingRect: crop,
+      modifiers: [filter],
+      drawer: []
+    )
+    
+    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 300))
+    
+    XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
     

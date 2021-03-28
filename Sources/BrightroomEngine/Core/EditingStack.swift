@@ -437,17 +437,3 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
 }
-
-extension CIImage {
-  func cropped(to _cropRect: EditingCrop) -> CIImage {
-    let targetImage = self
-    var cropRect = _cropRect.cropExtent
-    
-    cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
-    
-    let croppedImage = targetImage
-      .cropped(to: cropRect)
-    
-    return croppedImage
-  }
-}

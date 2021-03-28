@@ -257,7 +257,7 @@ public final class ImageRenderer {
     return image
   }
   
-  public func renderRevison2(resolution: Resolution = .full) throws -> CGImage {
+  public func renderRevison2(resolution: Resolution = .full, debug: @escaping (CIImage) -> Void = { _ in }) throws -> CGImage {
     
     let ciContext = CIContext(
       options: [
@@ -268,8 +268,15 @@ public final class ImageRenderer {
       ]
     )
     
-    EngineLog.debug(.renderer, "Start render in v2 CIContext => \(ciContext)")
+    EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
     
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
+
     let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
     
     EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
@@ -280,25 +287,79 @@ public final class ImageRenderer {
         return crop.imageSize == CGSize(image: sourceCIImage)
       }())
 
-    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
-    
-    let effectedCIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Applies Effect")
+
+    let effected_CIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
       modifier.apply(to: image, sourceImage: sourceCIImage)
     }
+    
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Applies Crop to effected image")
+       
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
 
-    let effectedCGImage = ciContext.createCGImage(
-      effectedCIImage,
+    let cropped_effected_CIImage = effected_CIImage.cropped(to: crop)
+    
+    debug(cropped_effected_CIImage)
+    
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Creates CGImage from crop applied CIImage.")
+
+    let cropped_effected_CGImage = ciContext.createCGImage(
+      cropped_effected_CIImage,
       from: sourceCIImage.extent,
       format: .RGBAh,
       colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
       deferred: true
     )!
     
-    EngineLog.debug(.renderer, "Created effected CGImage => \(effectedCGImage)")
+    // FIXME: Rotation
     
-    let context = try CGContext.makeContext(for: effectedCGImage)
+    /*
+     ===
+     ===
+     ===
+     */
+    guard edit.drawer.isEmpty == false else {
+      EngineLog.debug(.renderer, "No drawings -> Finish rendering")
+      
+      switch resolution {
+      case .full:
+        
+        return cropped_effected_CGImage
+
+      case .resize(let maxPixelSize):
+        
+        let targetSize = Geometry.sizeThatAspectFit(size: cropped_effected_CGImage.size, maxPixelSize: maxPixelSize)
+        
+        let context = try CGContext.makeContext(for: cropped_effected_CGImage, size: targetSize)
+        context.perform { (c) in
+          c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
+        }
+                
+        return try context.makeImage().unwrap()
+      }
+          
+    }
+    
+    EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
+    
+    let context = try CGContext.makeContext(for: cropped_effected_CGImage)
     context.perform { (c) in
-      c.draw(effectedCGImage, in: c.boundingBoxOfClipPath)
+      c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
     }
     
     let result = try context.makeImage().unwrap()
@@ -319,12 +380,12 @@ extension CGContext {
     drawing(self)
   }
   
-  static func makeContext(for image: CGImage) throws -> CGContext {
+  static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
     
     let context = CGContext.init(
       data: nil,
-      width: image.width,
-      height: image.height,
+      width: size.map { Int($0.width) } ?? image.width,
+      height: size.map { Int($0.height) } ?? image.height,
       bitsPerComponent: image.bitsPerComponent,
       bytesPerRow: image.bytesPerRow,
       space: try image.colorSpace.unwrap(),
