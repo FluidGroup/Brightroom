@@ -145,7 +145,8 @@ Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up t
 
 ```ruby
 pod "Brightroom/Engine", "2.0.0-alpha.1"
-pod "Brightroom/UI", "2.0.0-alpha.1"
+pod "Brightroom/UI-Classic", "2.0.0-alpha.1"
+pod "Brightroom/UI-Crop", "2.0.0-alpha.1"
 ```
 
 **Swift Package Manager**
