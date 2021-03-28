@@ -21,6 +21,7 @@
 
 import Verge
 import XCTest
+import MobileCoreServices
 
 @testable import BrightroomEngine
 
@@ -203,8 +204,34 @@ final class RendererTests: XCTestCase {
 
     let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 1000))
 
+    #if false
+    // for debugging quickly
     try UIImage(cgImage: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
+    #endif
+    
 //    XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+  }
+  
+  func testV2_DisplayP3_to_sRGB() throws {
+    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    
+    let inputCGImage = imageSource.loadOriginalCGImage()
+    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
+    
+    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+           
+    let image = try renderer.renderRevison2(debug: { image in
+      print(image)
+    })
+    
+    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    
+    let data = ImageTool.makeImageForJPEGOptimizedSharing(image: image)
+    
+    let result = UIImage(data: data as Data)!.cgImage
+    
+    XCTAssertEqual(result?.colorSpace, ColorSpaces.sRGB)
+    
   }
 }

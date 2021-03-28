@@ -1,6 +1,8 @@
 
 import AsyncDisplayKit
+@testable import BrightroomEngine
 import GlossButtonNode
+import MobileCoreServices
 import TextureSwiftSupport
 import UIKit
 
@@ -14,17 +16,18 @@ func makeMetadataString(image: UIImage) -> String {
   jpegSize: \(jpegSize),
   colorSpace: \(image.cgImage?.colorSpace as Any)
   """
-  
+
   return meta
 }
 
 enum Components {
-  final class ResultImageCell: ASCellNode {
+  final class ImageInspectorNode: ASDisplayNode {
+    
     var image: UIImage? {
       didSet {
         if let image = image {
           (imageNode.view as! UIImageView).image = image
-
+          
           let meta = makeMetadataString(image: image)
           metadataTextNode.attributedText = NSAttributedString(string: meta)
         } else {
@@ -33,17 +36,69 @@ enum Components {
         }
       }
     }
+    
+    private let nameNode = ASTextNode()
+    private let imageNode = ASDisplayNode.init(viewBlock: { UIImageView() })
+    private let shape = ShapeLayerNode.roundedCorner(radius: 0)
+    private let metadataTextNode = ASTextNode()
+    
+    init(name: String) {
+      super.init()
+      automaticallyManagesSubnodes = true
+      
+      nameNode.attributedText = NSAttributedString(string: name)
+    }
+    
+    override func didLoad() {
+      super.didLoad()
+      imageNode.contentMode = .scaleAspectFit
+      shape.shapeFillColor = .init(white: 0.9, alpha: 1)
+    }
+
+    override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec {
+      LayoutSpec {
+        VStackLayout(spacing: 8) {
+          nameNode
+          
+          imageNode
+            .aspectRatio(1)
+            .background(ZStackLayout {
+              shape
+            })
+          
+          metadataTextNode
+        }
+        .padding(8)
+        .flexGrow(1)
+      }
+    }
+  }
+
+  final class ResultImageCell: ASCellNode {
+    var image: UIImage? {
+      didSet {
+        if let image = image {
+          
+          renderedImageNode.image = image
+          optimizedForSharingImageNode.image = UIImage(data: ImageTool.makeImageForJPEGOptimizedSharing(image: image.cgImage!))
+          
+        } else {
+          renderedImageNode.image = nil
+          optimizedForSharingImageNode.image = nil
+        }
+      }
+    }
 
     private let tutorialTextNode = ASTextNode()
-    private let metadataTextNode = ASTextNode()
-    private let shape = ShapeLayerNode.roundedCorner(radius: 0)
-    private let imageNode = ASDisplayNode.init(viewBlock: { UIImageView() })
+    
+    private let renderedImageNode = ImageInspectorNode(name: "Rendered")
+    private let optimizedForSharingImageNode = ImageInspectorNode(name: "Optimized for sharing")
+    
     private let saveButton = GlossButtonNode()
 
     override init() {
       super.init()
       automaticallyManagesSubnodes = true
-      imageNode.contentMode = .scaleAspectFit
 
       tutorialTextNode.attributedText = NSAttributedString(
         string: "Rendered image preview",
@@ -76,26 +131,23 @@ enum Components {
     override func didLoad() {
       super.didLoad()
 
-      shape.shapeFillColor = .init(white: 0.9, alpha: 1)
+    
     }
 
     override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec {
       LayoutSpec {
         VStackLayout(spacing: 8) {
-          HStackLayout(justifyContent: .center) {
-            imageNode
-              .aspectRatio(1)
-              .width(300)
-              .background(ZStackLayout {
-                shape
-                CenterLayout {
-                  tutorialTextNode
-                }
-              })
-              .padding(8)
+          HStackLayout(justifyContent: .spaceAround, alignItems: .start) {
+            renderedImageNode
+              .flexBasis(fraction: 0.5)
+
+              .flexGrow(1)
+            
+            optimizedForSharingImageNode
+              .flexBasis(fraction: 0.5)
+
+              .flexGrow(1)
           }
-          metadataTextNode
-            .padding(8)
           saveButton
         }
       }
