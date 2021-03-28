@@ -58,14 +58,15 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
   private var subscriptions: Set<VergeAnyCancellable> = .init()
 
-  public let doneButtonTitle: String
+  public let localizedStrings: ClassicImageEditViewController.LocalizedStrings
 
   public init(
     editingStack: EditingStack,
-    doneButtonTitle: String = ClassicImageEditViewController.LocalizedStrings.shared.done,
-    options: ClassicImageEditOptions = .default
+    options: ClassicImageEditOptions,
+    localizedStrings: ClassicImageEditViewController.LocalizedStrings
   ) {
-    self.doneButtonTitle = doneButtonTitle
+    
+    self.localizedStrings = localizedStrings
     self.options = options
     self.editingStack = editingStack
     store = .init(initialState: .init(editingState: editingStack.state))

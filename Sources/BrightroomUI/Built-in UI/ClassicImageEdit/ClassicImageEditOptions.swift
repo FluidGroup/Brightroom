@@ -21,11 +21,17 @@
 
 import UIKit
 
+#if !COCOAPODS
+import BrightroomEngine
+#endif
+
 public struct ClassicImageEditOptions {
   
   public static let `default`: ClassicImageEditOptions = .init()
   
   public static var current: ClassicImageEditOptions = .init()
+  
+  public var croppingAspectRatio: PixelAspectRatio = .square
   
   public var classes: Classes = .init()
 }
