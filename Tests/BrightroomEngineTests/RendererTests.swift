@@ -19,9 +19,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import MobileCoreServices
 import Verge
 import XCTest
-import MobileCoreServices
 
 @testable import BrightroomEngine
 
@@ -31,7 +31,7 @@ final class RendererTests: XCTestCase {
     static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
   }
 
-  func testCropping() {
+  func testCropping() throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
@@ -45,8 +45,8 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = renderer.render()
-    print(image)
+    let rendered = try renderer.render()
+    print(rendered)
   }
 
   func testV2_InputDisplayP3_no_effects() throws {
@@ -57,7 +57,7 @@ final class RendererTests: XCTestCase {
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
-    let image = try renderer.renderRevison2()
+    let image = try renderer.render().cgImageDisplayP3
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -70,7 +70,7 @@ final class RendererTests: XCTestCase {
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
-    let image = try renderer.renderRevison2()
+    let image = try renderer.render().cgImageDisplayP3
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -88,9 +88,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit.modifiers = [filter]
 
-    let image = try renderer.renderRevison2(debug: { image in
-      print(image)
-    })
+    let image = try renderer.render().cgImageDisplayP3
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -115,9 +113,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.renderRevison2(debug: { image in
-      print(image)
-    })
+    let image = try renderer.render().cgImageDisplayP3
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -142,7 +138,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 300))
+    let image = try renderer.render(resolution: .resize(maxPixelSize: 300)).cgImageDisplayP3
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
@@ -166,7 +162,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 300))
+    let image = try renderer.render(resolution: .resize(maxPixelSize: 300)).cgImageDisplayP3
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
@@ -179,7 +175,10 @@ final class RendererTests: XCTestCase {
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
 //    crop.rotation = .angle_90
-    crop.updateCropExtentNormalizing(.init(x: 854.0, y: 1766.0, width: 2863.0, height: 2863.0), respectingAspectRatio: nil)
+    crop.updateCropExtentNormalizing(
+      .init(x: 854.0, y: 1766.0, width: 2863.0, height: 2863.0),
+      respectingAspectRatio: nil
+    )
 //    crop.updateCropExtent(by: .square)
 
     let data = _pixelengine_bundle.path(forResource: "path-data", ofType: nil)
@@ -202,36 +201,33 @@ final class RendererTests: XCTestCase {
       drawer: [mask]
     )
 
-    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 1000))
+    let image = try renderer.render(resolution: .resize(maxPixelSize: 1000)).cgImageDisplayP3
 
     #if false
     // for debugging quickly
     try UIImage(cgImageDisplayP3: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
     #endif
-    
+
 //    XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
-  
+
   func testV2_DisplayP3_to_sRGB() throws {
     let imageSource = ImageSource(image: Asset.instaLogo.image)
-    
+
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
-    
+
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
-           
-    let image = try renderer.renderRevison2(debug: { image in
-      print(image)
-    })
-    
+
+    let image = try renderer.render().cgImageDisplayP3
+
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
-    
+
     let data = ImageTool.makeImageForJPEGOptimizedSharing(image: image)
-    
+
     let result = UIImage(data: data as Data)!.cgImage
-    
+
     XCTAssertEqual(result?.colorSpace, ColorSpaces.sRGB)
-    
   }
 }
