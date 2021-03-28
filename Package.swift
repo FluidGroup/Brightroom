@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-  name: "Pixel",  
+  name: "Brightroom",  
   platforms: [
     .iOS(.v14)
   ],
