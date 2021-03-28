@@ -54,6 +54,17 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
         _present(try! .init(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")))
       }),
       
+      Components.makeSelectionCell(title: "Remote image", onTap: { [unowned self] in
+        
+        let stack = EditingStack(
+          imageProvider: .init(
+            editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
+          )
+        )
+        
+        _present(stack)
+      }),
+      
       
     ])
   }

@@ -181,7 +181,7 @@ enum Components {
     button.setDescriptor(
       .init(
         title: NSAttributedString(string: title, attributes: [
-          .font: UIFont.preferredFont(forTextStyle: .headline),
+          .font: UIFont.preferredFont(forTextStyle: .subheadline),
           .foregroundColor: UIColor.darkGray,
         ]),
         image: nil,
@@ -207,7 +207,7 @@ enum Components {
           .padding(.horizontal, 8)
           .padding(.vertical, 12)
           .background(shape)
-          .padding(8)
+          .padding(4)
         }
       }
       .onDidLoad { _ in
