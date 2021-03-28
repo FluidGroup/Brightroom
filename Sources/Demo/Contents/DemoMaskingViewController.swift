@@ -73,9 +73,14 @@ final class DemoMaskingViewController: StackScrollNodeViewController {
       self.navigationController?.popViewController(animated: true)
       self.resultCell.image = nil
 
-      editingStack.makeRenderer()?.render(completion: { (image) in
-        self.resultCell.image = image
-      })
+      try! editingStack.makeRenderer().render { (result) in
+        switch result {
+        case .success(let rendered):
+          self.resultCell.image = rendered.uiImageDisplayP3
+        case .failure(let error):
+          print(error)
+        }
+      }
     }
     
     self.navigationController?.pushViewController(controller, animated: true)

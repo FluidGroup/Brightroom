@@ -30,6 +30,8 @@ internal enum Asset {
   internal static let squareRect = ImageAsset(name: "square-rect")
   internal static let superSmall = ImageAsset(name: "super-small")
   internal static let unsplash1 = ImageAsset(name: "unsplash1")
+  internal static let unsplash2 = ImageAsset(name: "unsplash2")
+  internal static let unsplash3 = ImageAsset(name: "unsplash3")
   internal static let verticalRect = ImageAsset(name: "vertical-rect")
   internal static let vertical = ImageAsset(name: "vertical")
 }

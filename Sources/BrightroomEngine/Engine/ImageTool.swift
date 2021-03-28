@@ -21,6 +21,7 @@
 
 import AVFoundation
 import CoreImage
+import MobileCoreServices
 import UIKit
 
 enum ImageTool {
@@ -29,7 +30,7 @@ enum ImageTool {
     guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
       return nil
     }
-    
+
     EngineLog.debug("\(properties)")
 
     guard
@@ -42,9 +43,9 @@ enum ImageTool {
     let orientation: CGImagePropertyOrientation = (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
       CGImagePropertyOrientation(rawValue: $0)
     } ?? .up
-    
+
     let size = CGSize(width: width, height: height)
-    
+
     return .init(orientation: orientation, imageSize: size.applying(cgOrientation: orientation))
   }
 
@@ -194,5 +195,50 @@ enum ImageTool {
       .cgImage
 
     return cgImage
+  }
+
+  static func makeImageForJPEGOptimizedSharing(image: CGImage, quality: CGFloat = 1) -> Data {
+    let data = NSMutableData()
+
+    let destination = CGImageDestinationCreateWithData(
+      data,
+      kUTTypeJPEG,
+      1,
+      [:] as CFDictionary
+    )!
+
+    CGImageDestinationAddImage(
+      destination,
+      image,
+      [
+        kCGImageDestinationLossyCompressionQuality : quality,
+        kCGImageDestinationOptimizeColorForSharing: true,
+      ] as CFDictionary)
+
+    CGImageDestinationFinalize(destination)
+
+    return data as Data
+  }
+  
+  static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
+    let data = NSMutableData()
+    
+    let destination = CGImageDestinationCreateWithData(
+      data,
+      kUTTypePNG,
+      1,
+      [:] as CFDictionary
+    )!
+    
+    CGImageDestinationAddImage(
+      destination,
+      image,
+      [
+        kCGImageDestinationOptimizeColorForSharing: true,
+      ] as CFDictionary)
+    
+    CGImageDestinationFinalize(destination)
+    
+    return data as Data
   }
 }

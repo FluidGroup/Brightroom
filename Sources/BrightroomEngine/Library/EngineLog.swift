@@ -26,20 +26,30 @@ import os.log
 enum EngineLog {
   
   private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
-  private static let queue = DispatchQueue.init(label: "me.muukii.PixelEngine.Log")
   
   static func debug(_ object: Any...) {
-    
     #if DEBUG
-    
-    queue.async {
-      if #available(iOS 12.0, *) {
-        os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
-      } else {
-        os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
-      }
+    if #available(iOS 12.0, *) {
+      os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
+    } else {
+      os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
     }
-    
     #endif
   }
+    
+  static func debug(_ log: OSLog, _ object: Any...) {
+    os_log(.debug, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
+  }
+  
+  static func error(_ log: OSLog, _ object: Any...) {
+    os_log(.error, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
+  }
+  
+}
+
+extension OSLog {
+  
+  static let renderer = OSLog.init(subsystem: "BrightroomEngine", category: "🎨 Renderer")
+  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "🥞 Stack")
+
 }

@@ -72,7 +72,12 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     defer {
       context.restoreGState()
     }
-
+            
+    let boundingBox = context.boundingBoxOfClipPath
+    context.scaleBy(x: 1, y: -1)
+    context.translateBy(x: 0, y: -(boundingBox.maxY + boundingBox.minY))    
+    assert(context.boundingBoxOfClipPath == boundingBox)
+ 
     brush.color.setStroke()
     let bezierPath = brushedPath()
     bezierPath.stroke(with: .normal, alpha: brush.alpha)

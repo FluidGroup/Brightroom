@@ -28,6 +28,10 @@ import SwiftUI
 @available(iOS 13, *)
 extension EditingStack: ObservableObject {}
 
+public enum EditingStackError: Error {
+  case unableToCreateRendererInLoading
+}
+
 /**
  A stateful object that manages current editing status from original image.
  And supports rendering a result image.
@@ -403,11 +407,11 @@ open class EditingStack: Equatable, StoreComponentType {
     }
   }
   
-  public func makeRenderer() -> ImageRenderer? {
+  public func makeRenderer() throws -> ImageRenderer {
     let stateSnapshot = state
     
     guard let loaded = stateSnapshot.loadedState else {
-      return nil
+      throw EditingStackError.unableToCreateRendererInLoading
     }
     
     let imageSource = loaded.editableImageProvider
@@ -419,9 +423,12 @@ open class EditingStack: Equatable, StoreComponentType {
     let edit = loaded.currentEdit
     
     renderer.edit.croppingRect = edit.crop
-    renderer.edit.drawer = [
-      BlurredMask(paths: edit.drawings.blurredMaskPaths),
-    ]
+    
+    if edit.drawings.blurredMaskPaths.isEmpty == false {
+      renderer.edit.drawer = [
+        BlurredMask(paths: edit.drawings.blurredMaskPaths),
+      ]
+    }      
     
     renderer.edit.modifiers = edit.makeFilters()
     
@@ -435,19 +442,5 @@ open class EditingStack: Equatable, StoreComponentType {
       }
       $0.map(keyPath: \.loadedState!.currentEdit, perform: perform)
     }
-  }
-}
-
-extension CIImage {
-  func cropped(to _cropRect: EditingCrop) -> CIImage {
-    let targetImage = self
-    var cropRect = _cropRect.cropExtent
-    
-    cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
-    
-    let croppedImage = targetImage
-      .cropped(to: cropRect)
-    
-    return croppedImage
   }
 }
