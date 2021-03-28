@@ -17,6 +17,8 @@
 
 # v2(WIP) Brightroom(former: Pixel) - Composable image editor
 
+<img src=top.png width=100%/>
+
 Pixel v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
 - Create your own image editor UI by composing components.
@@ -24,6 +26,9 @@ Pixel v2 provides the following features:
 - Wide color editing support
 
 ## Built-in UI - Fullstack image editor
+
+
+![](preview.gif)
 
 - [ ] TODO
 
