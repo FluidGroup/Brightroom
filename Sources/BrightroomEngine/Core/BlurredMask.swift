@@ -35,10 +35,13 @@ public struct BlurredMask: GraphicsDrawing {
     }
 
     let mainContext = context
-    let size = canvasSize
 
     guard
-      let cglayer = CGLayer(mainContext, size: size, auxiliaryInfo: nil),
+      let cglayer = CGLayer(
+        mainContext,
+        size: mainContext.boundingBoxOfClipPath.size,
+        auxiliaryInfo: nil
+      ),
       let layerCGContext = cglayer.context
     else {
       assert(false, "Failed to create CGLayer")
@@ -46,14 +49,17 @@ public struct BlurredMask: GraphicsDrawing {
     }
 
     renderDrawings: do {
-            
       let ciContext = CIContext(cgContext: layerCGContext, options: [:])
       let ciBlurredImage = BlurredMask.blur(image: CIImage(cgImage: context.makeImage()!))!
-            
+
       UIGraphicsPushContext(layerCGContext)
 
       paths.forEach { path in
         layerCGContext.saveGState()
+        layerCGContext.translateBy(
+          x: -mainContext.boundingBoxOfClipPath.minX,
+          y: -mainContext.boundingBoxOfClipPath.minY
+        )
         path.draw(in: layerCGContext, canvasSize: canvasSize)
 
         layerCGContext.restoreGState()
@@ -73,7 +79,19 @@ public struct BlurredMask: GraphicsDrawing {
     renderLayer: do {
       UIGraphicsPushContext(mainContext)
 
-      mainContext.draw(cglayer, at: .zero)
+      mainContext.draw(
+        cglayer,
+        at: .init(
+          x: mainContext.boundingBoxOfClipPath.minX,
+          y: mainContext.boundingBoxOfClipPath.minY
+        )
+      )
+
+//      #if DEBUG
+//      paths.forEach { path in
+//        path.draw(in: mainContext, canvasSize: canvasSize)
+//      }
+//      #endif
 
       UIGraphicsPopContext()
     }
@@ -99,7 +117,7 @@ public struct BlurredMask: GraphicsDrawing {
           "inputRadius": _radius,
         ]
       )
-        .cropped(to: image.extent)
+      .cropped(to: image.extent)
 
     return outputImage
   }

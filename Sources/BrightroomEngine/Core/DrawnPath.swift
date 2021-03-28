@@ -72,7 +72,10 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     defer {
       context.restoreGState()
     }
-
+        
+    context.translateBy(x: 0, y: context.boundingBoxOfClipPath.height)
+    context.scaleBy(x: 1, y: -1)
+ 
     brush.color.setStroke()
     let bezierPath = brushedPath()
     bezierPath.stroke(with: .normal, alpha: brush.alpha)

@@ -329,8 +329,8 @@ public final class ImageRenderer {
       deferred: true
     )!
     
-    // FIXME: Rotation
-    
+    EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
+        
     /*
      ===
      ===
@@ -363,15 +363,24 @@ public final class ImageRenderer {
       return rotatedImage
     }
     
-    EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
+    EngineLog.debug(.renderer, "Continues rendering for drawings")
     
-    let context = try CGContext.makeContext(for: cropped_effected_CGImage)
-    context.perform { (c) in
-      c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
-    }
-    
-    let result = try context.makeImage().unwrap()
-    
+    /**
+     Render drawings
+     */
+    let result = try CGContext.makeContext(for: cropped_effected_CGImage)
+      .perform { (c) in
+        
+        c.draw(cropped_effected_CGImage, in: .init(origin: .zero, size: cropped_effected_CGImage.size))
+        c.translateBy(x: crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
+
+        self.edit.drawer.forEach { drawer in
+          drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))
+        }
+      }
+      .makeImage()
+      .unwrap()
+               
     EngineLog.debug(.renderer, "Finish rendering result CGImage => \(result)")
     
     return result
