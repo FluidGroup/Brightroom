@@ -52,7 +52,7 @@ public struct BlurredMask: GraphicsDrawing {
       let ciContext = CIContext(
         cgContext: layerCGContext,
         options: [
-          .workingFormat: CIFormat.RGBAh,
+          .workingFormat: CIFormat.RGBA8,
           .highQualityDownsample: true,
           .cacheIntermediates: false,
         ]
