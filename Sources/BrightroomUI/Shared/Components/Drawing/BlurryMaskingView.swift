@@ -103,13 +103,15 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
   
-  override public var isHidden: Bool {
-    didSet {
-      backdropImageView.isHidden = isHidden
-      blurryImageView.isHidden = isHidden
+  public var isblurryImageViewHidden: Bool {
+    get {
+      blurryImageView.isHidden
+    }
+    set {
+      blurryImageView.isHidden = newValue
     }
   }
-  
+      
   private let scrollView = CropView._CropScrollView()
   
   private let containerView = ContainerView()
