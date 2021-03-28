@@ -257,6 +257,34 @@ public final class ImageRenderer {
 
     return image
   }
+  
+  public func _render(resolution: Resolution = .full) -> UIImage {
+    
+    let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
+    
+    assert(
+      {
+        guard let crop = edit.croppingRect else { return true }
+        return crop.imageSize == CGSize(image: sourceCIImage)
+      }())
+    
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    
+    let ciContext = CIContext(
+      options: [
+        .workingFormat: CIFormat.RGBAh,
+        .highQualityDownsample: true,
+        .useSoftwareRenderer: true,
+        .cacheIntermediates: false,
+        .outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
+        //                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
+        //                .outputColorSpace: CGColorSpace(name: CGColorSpace.extendedSRGB)!
+      ]
+    )
+    
+    
+    
+  }
 }
 
 extension UIGraphicsImageRenderer {
