@@ -295,6 +295,10 @@ public final class ClassicImageEditViewController: UIViewController {
   }
 
   private func updateUI(state: Changes<ClassicImageEditViewModel.State>) {
+    
+    state.ifChanged(\.title) { title in
+      navigationItem.title = title
+    }
  
     state.ifChanged(\.maskingBrushSize) {
       maskingView.setBrushSize($0)
