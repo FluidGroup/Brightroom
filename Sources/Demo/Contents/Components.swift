@@ -10,11 +10,15 @@ func makeMetadataString(image: UIImage) -> String {
   let formatter = ByteCountFormatter()
   formatter.countStyle = .file
   let jpegSize = formatter.string(fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count))
+  
+  let cgImage = image.cgImage!
 
   let meta = """
   size: \(image.size.width * image.scale), \(image.size.height * image.scale)
-  jpegSize: \(jpegSize),
-  colorSpace: \(image.cgImage?.colorSpace as Any)
+  estimated-jpegSize: \(jpegSize)
+  colorSpace: \(cgImage.colorSpace.map { String(describing: $0) } ?? "null")
+  bit-depth: \(cgImage.bitsPerPixel / 4)
+  bytesPerRow: \(cgImage.bytesPerRow)
   """
 
   return meta
