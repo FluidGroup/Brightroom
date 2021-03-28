@@ -2,21 +2,21 @@
 import PackageDescription
 
 let package = Package(
-  name: "Pixel",  
+  name: "Brightroom",  
   platforms: [
     .iOS(.v14)
   ],
   products: [
-    .library(name: "PixelEngine", targets: ["PixelEngine"]),
-    .library(name: "PixelEditor", targets: ["PixelEditor"]),
+    .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
+    .library(name: "BrightroomUI", targets: ["BrightroomUI"]),
   ],
   dependencies: [
     .package(url: "https://github.com/VergeGroup/Verge.git", from: "8.8.0"),
     .package(url: "https://github.com/muukii/TransitionPatch.git", from: "1.0.3")
   ],
   targets: [
-    .target(name: "PixelEngine", dependencies: ["Verge"], exclude: ["Info.plist"]),
-    .target(name: "PixelEditor", dependencies: ["PixelEngine", "Verge", "TransitionPatch"], exclude: ["Info.plist"]),
+    .target(name: "BrightroomEngine", dependencies: ["Verge"], exclude: ["Info.plist"]),
+    .target(name: "BrightroomUI", dependencies: ["BrightroomEngine", "Verge", "TransitionPatch"], exclude: ["Info.plist"]),
   ],
   swiftLanguageVersions: [.v5]
 )
