@@ -177,7 +177,7 @@ final class RendererTests: XCTestCase {
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
-//    crop.rotation = .angle_90
+    crop.rotation = .angle_90
     crop.updateCropExtent(by: .square)
 
     let data = _pixelengine_bundle.path(forResource: "path-data", ofType: nil)
@@ -200,7 +200,7 @@ final class RendererTests: XCTestCase {
       drawer: [mask]
     )
 
-    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 300))
+    let image = try renderer.renderRevison2(resolution: .resize(maxPixelSize: 1000))
 
     try UIImage(cgImage: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
 //    XCTAssert(image.width == 300 || image.height == 300)

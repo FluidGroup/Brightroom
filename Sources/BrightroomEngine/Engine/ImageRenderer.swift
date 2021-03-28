@@ -62,9 +62,8 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(resolution: Resolution = .full) -> UIImage {
-    
-    return try! UIImage(cgImage: renderRevison2(resolution: resolution));
-    
+    return try! UIImage(cgImage: renderRevison2(resolution: resolution))
+
     /**
      FIXME: Super-Slow
 
@@ -259,9 +258,11 @@ public final class ImageRenderer {
 
     return image
   }
-  
-  public func renderRevison2(resolution: Resolution = .full, debug: @escaping (CIImage) -> Void = { _ in }) throws -> CGImage {
-    
+
+  public func renderRevison2(
+    resolution: Resolution = .full,
+    debug: @escaping (CIImage) -> Void = { _ in }
+  ) throws -> CGImage {
     let ciContext = CIContext(
       options: [
         .workingFormat: CIFormat.RGBAh,
@@ -270,9 +271,9 @@ public final class ImageRenderer {
         .cacheIntermediates: false,
       ]
     )
-    
+
     EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
-    
+
     /*
      ===
      ===
@@ -281,7 +282,7 @@ public final class ImageRenderer {
     EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
 
     let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
-    
+
     EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
 
     assert(
@@ -300,20 +301,20 @@ public final class ImageRenderer {
     let effected_CIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
       modifier.apply(to: image, sourceImage: sourceCIImage)
     }
-    
+
     /*
      ===
      ===
      ===
      */
     EngineLog.debug(.renderer, "Applies Crop to effected image")
-       
+
     let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
 
     let cropped_effected_CIImage = effected_CIImage.cropped(to: crop)
-    
+
     debug(cropped_effected_CIImage)
-    
+
     /*
      ===
      ===
@@ -328,67 +329,91 @@ public final class ImageRenderer {
       colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
       deferred: true
     )!
-    
+
     EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
-        
+
     /*
      ===
      ===
      ===
      */
-    guard edit.drawer.isEmpty == false else {
-      EngineLog.debug(.renderer, "No drawings -> Finish rendering")
-            
-      let resizedImage: CGImage
-      
-      switch resolution {
-      case .full:
-        
-        resizedImage = cropped_effected_CGImage
 
-      case .resize(let maxPixelSize):
-        
-        let targetSize = Geometry.sizeThatAspectFit(size: cropped_effected_CGImage.size, maxPixelSize: maxPixelSize)
-        
-        let context = try CGContext.makeContext(for: cropped_effected_CGImage, size: targetSize)
-          .perform { (c) in
-            c.draw(cropped_effected_CGImage, in: c.boundingBoxOfClipPath)
+    let drawings_CGImage: CGImage
+
+    if edit.drawer.isEmpty {
+      EngineLog.debug(.renderer, "No drawings")
+
+      drawings_CGImage = cropped_effected_CGImage
+    } else {
+      EngineLog.debug(.renderer, "Found drawings")
+      /**
+       Render drawings
+       */
+      drawings_CGImage = try CGContext.makeContext(for: cropped_effected_CGImage)
+        .perform { c in
+
+          c.draw(
+            cropped_effected_CGImage,
+            in: .init(origin: .zero, size: cropped_effected_CGImage.size)
+          )
+          c.translateBy(x: crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
+
+          self.edit.drawer.forEach { drawer in
+            drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))
           }
-                
-        resizedImage = try context.makeImage().unwrap()
-      }
-            
-      let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
-          
-      return rotatedImage
+        }
+        .makeImage()
+        .unwrap()
+    }
+
+    /*
+     ===
+     ===
+     ===
+     */
+    
+    let resizedImage: CGImage
+
+    switch resolution {
+    case .full:
+      
+      EngineLog.debug(.renderer, "No resizing")
+
+      resizedImage = drawings_CGImage
+
+    case let .resize(maxPixelSize):
+      
+      EngineLog.debug(.renderer, "Resizing with maxPixelSize: \(maxPixelSize)")
+
+      let targetSize = Geometry.sizeThatAspectFit(
+        size: drawings_CGImage.size,
+        maxPixelSize: maxPixelSize
+      )
+
+      let context = try CGContext.makeContext(for: drawings_CGImage, size: targetSize)
+        .perform { c in
+          c.draw(drawings_CGImage, in: c.boundingBoxOfClipPath)
+        }
+
+      resizedImage = try context.makeImage().unwrap()
     }
     
-    EngineLog.debug(.renderer, "Continues rendering for drawings")
-    
-    /**
-     Render drawings
+    /*
+     ===
+     ===
+     ===
      */
-    let result = try CGContext.makeContext(for: cropped_effected_CGImage)
-      .perform { (c) in
-        
-        c.draw(cropped_effected_CGImage, in: .init(origin: .zero, size: cropped_effected_CGImage.size))
-        c.translateBy(x: crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
-
-        self.edit.drawer.forEach { drawer in
-          drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))
-        }
-      }
-      .makeImage()
-      .unwrap()
-               
-    EngineLog.debug(.renderer, "Finish rendering result CGImage => \(result)")
     
-    return result
+    
+    EngineLog.debug(.renderer, "Rotates image if needed")
+
+    let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
+
+    return rotatedImage
   }
 }
 
 extension CGContext {
-  
   @discardableResult
   func perform(_ drawing: (CGContext) -> Void) -> CGContext {
     UIGraphicsPushContext(self)
@@ -398,9 +423,8 @@ extension CGContext {
     drawing(self)
     return self
   }
-  
+
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
-    
     let context = CGContext.init(
       data: nil,
       width: size.map { Int($0.width) } ?? image.width,
@@ -410,11 +434,9 @@ extension CGContext {
       space: try image.colorSpace.unwrap(),
       bitmapInfo: image.bitmapInfo.rawValue
     )
-    
+
     return try context.unwrap()
-    
   }
-  
 }
 
 extension UIGraphicsImageRenderer {
@@ -436,21 +458,20 @@ extension CGImage {
   fileprivate var size: CGSize {
     return .init(width: width, height: height)
   }
-  
+
   fileprivate func makeRotatedIfNeeded(rotation: EditingCrop.Rotation) throws -> CGImage {
-    
     guard rotation != .angle_0 else {
       return self
     }
-    
-    var rotatedSize: CGSize = self.size
+
+    var rotatedSize: CGSize = size
       .applying(rotation.transform)
-    
+
     rotatedSize.width = abs(rotatedSize.width)
     rotatedSize.height = abs(rotatedSize.height)
-    
+
     let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
-      .perform { (c) in
+      .perform { c in
         c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
         c.rotate(by: -rotation.angle)
         c.translateBy(
@@ -459,15 +480,18 @@ extension CGImage {
         )
         c.draw(self, in: .init(origin: .zero, size: self.size))
       }
-    
+
     return try rotatingContext.makeImage().unwrap()
-    
   }
 }
 
 extension Optional {
-  
-  internal func unwrap(orThrow debugDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) throws -> Wrapped {
+  internal func unwrap(
+    orThrow debugDescription: String? = nil,
+    file: StaticString = #file,
+    function: StaticString = #function,
+    line: UInt = #line
+  ) throws -> Wrapped {
     if let value = self {
       return value
     }
@@ -478,24 +502,28 @@ extension Optional {
       line: line
     )
   }
-  
+
   public struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
-    
     let file: StaticString
     let function: StaticString
     let line: UInt
-    
+
     // MARK: Public
-    public init(_ debugDescription: String? = nil, file: StaticString = #file, function: StaticString = #function, line: UInt = #line) {
-      
+
+    public init(
+      _ debugDescription: String? = nil,
+      file: StaticString = #file,
+      function: StaticString = #function,
+      line: UInt = #line
+    ) {
       self.debugDescription = debugDescription ?? "Failed to unwrap on \(file):\(function):\(line)"
       self.file = file
       self.function = function
       self.line = line
     }
-    
+
     // MARK: CustomDebugStringConvertible
+
     public let debugDescription: String
   }
-  
 }
