@@ -1,11 +1,6 @@
-## ⚠️ v2 development is in progress. 
+## 🎉 v2.0.0-alpha.1 now open!
 
-> 💥 Development for the next major version (v2) has started!
-> Find out more [here](https://github.com/muukii/Pixel/pull/53), and if you're excited please hit the reaction button! 
->
-> This update will obviously include many breaking changes. Feel free to start a discussion. I often upload movies of features in development to the pull-request's comments.
-> 
-> **To use the stable version, please checkout the master branch.**
+> 💥 v2.0.0 development is still early development. We have a lot of known issues.
 > 
 
 > 📌 Pixel has been renamed as **Brightroom**
@@ -149,15 +144,15 @@ Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up t
 **CocoaPods**
 
 ```ruby
-pod "Brightroom/Engine", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
-pod "Brightroom/UI", git: "git@github.com:muukii/Brightroom", branch: "muukii/v2"
+pod "Brightroom/Engine", "2.0.0-alpha.1"
+pod "Brightroom/UI", "2.0.0-alpha.1"
 ```
 
 **Swift Package Manager**
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muukii/Brightroom.git", branch: "muukii/v2")
+    .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.0.0-alpha.1")
 ]
 ```
 
