@@ -1,10 +1,10 @@
 ## 🎉 v2.0.0-alpha.1 now open!
 
 > 💥 v2.0.0 development is still early development. We have a lot of known issues.
-> 
+
+> ⚒ Issues are managed in [v2 project](https://github.com/muukii/Brightroom/projects/2)
 
 > 📌 Pixel has been renamed as **Brightroom**
-> 
 
 > ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
 
