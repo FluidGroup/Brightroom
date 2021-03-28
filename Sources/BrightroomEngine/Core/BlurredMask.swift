@@ -49,8 +49,26 @@ public struct BlurredMask: GraphicsDrawing {
     }
 
     renderDrawings: do {
-      let ciContext = CIContext(cgContext: layerCGContext, options: [:])
+      let ciContext = CIContext(
+        cgContext: layerCGContext,
+        options: [
+          .workingFormat: CIFormat.RGBAh,
+          .highQualityDownsample: true,
+          .cacheIntermediates: false,
+        ]
+      )
       let ciBlurredImage = BlurredMask.blur(image: CIImage(cgImage: context.makeImage()!))!
+
+      /**
+       To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
+       */
+      let cgImage = ciContext.createCGImage(
+        ciBlurredImage,
+        from: ciBlurredImage.extent,
+        format: CIFormat.RGBAh,
+        colorSpace: CGColorSpace.init(name: CGColorSpace.displayP3),
+        deferred: true
+      )!
 
       UIGraphicsPushContext(layerCGContext)
 
@@ -69,7 +87,7 @@ public struct BlurredMask: GraphicsDrawing {
 
       layerCGContext.setBlendMode(.sourceIn)
 
-      ciContext.draw(ciBlurredImage, in: ciBlurredImage.extent, from: ciBlurredImage.extent)
+      layerCGContext.draw(cgImage, in: ciBlurredImage.extent)
 
       layerCGContext.restoreGState()
 

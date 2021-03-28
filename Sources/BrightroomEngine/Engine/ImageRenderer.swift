@@ -263,6 +263,7 @@ public final class ImageRenderer {
     resolution: Resolution = .full,
     debug: @escaping (CIImage) -> Void = { _ in }
   ) throws -> CGImage {
+    
     let ciContext = CIContext(
       options: [
         .workingFormat: CIFormat.RGBAh,
@@ -321,7 +322,10 @@ public final class ImageRenderer {
      ===
      */
     EngineLog.debug(.renderer, "Creates CGImage from crop applied CIImage.")
-
+    
+    /**
+     To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
+     */
     let cropped_effected_CGImage = ciContext.createCGImage(
       cropped_effected_CIImage,
       from: cropped_effected_CIImage.extent,
@@ -356,7 +360,7 @@ public final class ImageRenderer {
             cropped_effected_CGImage,
             in: .init(origin: .zero, size: cropped_effected_CGImage.size)
           )
-          c.translateBy(x: -crop.cropExtent.origin.x, y: crop.cropExtent.origin.y)
+          c.translateBy(x: -crop.cropExtent.origin.x, y: -crop.cropExtent.origin.y)
 
           self.edit.drawer.forEach { drawer in
             drawer.draw(in: c, canvasSize: CGSize(width: c.width, height: c.height))
