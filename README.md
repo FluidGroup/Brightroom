@@ -21,6 +21,7 @@ Pixel v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
 - Create your own image editor UI by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
+- Wide color editing support
 
 ## Built-in UI - Fullstack image editor
 
