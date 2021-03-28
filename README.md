@@ -5,7 +5,7 @@
 >
 > This update will obviously include many breaking changes. Feel free to start a discussion. I often upload movies of features in development to the pull-request's comments.
 > 
-> To use the stable version, please checkout the master branch.
+> **To use the stable version, please checkout the master branch.**
 > 
 
 > 📌 Pixel needs a new name! Post your idea [here](https://github.com/muukii/Pixel/discussions/68). The leading name right now is **BrightRoom**?
@@ -133,6 +133,9 @@ Make sure to use HALD 64 SIZE. Currently, CIColorCube supports dimension is up t
 
 
 ## Installation
+
+> ⚠️ Brightroom has not been published in CocoaPods since it's still early development.
+> If you try to use it, following pod commands install libraries to your application.
 
 **CocoaPods**
 
