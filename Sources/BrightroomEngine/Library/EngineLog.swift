@@ -55,7 +55,7 @@ enum EngineLog {
 
 extension OSLog {
   
-  static let renderer = OSLog.init(subsystem: "BrightroomEngine", category: "[🎨][Renderer]") 
-  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "[🎨][Renderer]")
+  static let renderer = OSLog.init(subsystem: "BrightroomEngine", category: "🎨 Renderer")
+  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "🥞 Stack")
 
 }

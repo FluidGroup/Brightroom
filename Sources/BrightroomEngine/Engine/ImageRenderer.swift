@@ -358,25 +358,9 @@ public final class ImageRenderer {
         resizedImage = try context.makeImage().unwrap()
       }
             
-      var rotatedSize: CGSize = CGSize(width: resizedImage.width, height: resizedImage.height)
-        .applying(crop.rotation.transform)
-      
-      rotatedSize.width = abs(rotatedSize.width)
-      rotatedSize.height = abs(rotatedSize.height)
-      
-      let rotatingContext = try CGContext.makeContext(for: cropped_effected_CGImage, size: rotatedSize)
-        .perform { (c) in
-          c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-          c.rotate(by: -crop.rotation.angle)
-          c.translateBy(
-            x: -resizedImage.size.width / 2,
-            y: -resizedImage.size.height / 2
-          )
-          c.draw(resizedImage, in: .init(origin: .zero, size: resizedImage.size))
-        }
-      
-      return try rotatingContext.makeImage().unwrap()
+      let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
           
+      return rotatedImage
     }
     
     EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
@@ -442,6 +426,33 @@ extension CGContext {
 extension CGImage {
   fileprivate var size: CGSize {
     return .init(width: width, height: height)
+  }
+  
+  fileprivate func makeRotatedIfNeeded(rotation: EditingCrop.Rotation) throws -> CGImage {
+    
+    guard rotation != .angle_0 else {
+      return self
+    }
+    
+    var rotatedSize: CGSize = self.size
+      .applying(rotation.transform)
+    
+    rotatedSize.width = abs(rotatedSize.width)
+    rotatedSize.height = abs(rotatedSize.height)
+    
+    let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
+      .perform { (c) in
+        c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
+        c.rotate(by: -rotation.angle)
+        c.translateBy(
+          x: -size.width / 2,
+          y: -size.height / 2
+        )
+        c.draw(self, in: .init(origin: .zero, size: self.size))
+      }
+    
+    return try rotatingContext.makeImage().unwrap()
+    
   }
 }
 

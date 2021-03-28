@@ -26,11 +26,7 @@ public struct FilterExposure : Filtering, Equatable, Codable {
   
   public static let range: ParameterRange<Double, FilterExposure> = .init(min: -1.8, max: 1.8)
   
-  public var value: Double = 0 {
-    didSet {
-      print(value)
-    }
-  }
+  public var value: Double = 0
   
   public init() {
     
