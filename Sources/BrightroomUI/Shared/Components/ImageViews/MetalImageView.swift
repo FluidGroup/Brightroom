@@ -69,6 +69,8 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     enableSetNeedsDisplay = true
     autoResizeDrawable = true
     contentMode = .scaleAspectFill
+    clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
+    clearsContextBeforeDrawing = true
     
     #if targetEnvironment(simulator)
     #else
@@ -111,7 +113,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
 //      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
 //    }
     #endif
-
+    
     let commandBuffer = commandQueue.makeCommandBuffer()
         
     let bounds = CGRect(
@@ -119,10 +121,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       size: drawableSize
     )
     
-    let fixedImage = image.transformed(by: .init(
-      translationX: -image.extent.origin.x,
-      y: -image.extent.origin.y
-    ))
+    let fixedImage = image.removingExtentOffset()
     
     let resolvedImage = downsample(image: fixedImage, bounds: bounds, contentMode: contentMode)
 

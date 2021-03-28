@@ -65,11 +65,20 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
     options: ClassicImageEditOptions,
     localizedStrings: ClassicImageEditViewController.LocalizedStrings
   ) {
-    
     self.localizedStrings = localizedStrings
     self.options = options
     self.editingStack = editingStack
     store = .init(initialState: .init(editingState: editingStack.state))
+
+    if options.isFaceDetectionEnabled {
+      editingStack.cropModifier = .faceDetection(aspectRatio: options.croppingAspectRatio)
+    } else if let aspectRatio = options.croppingAspectRatio {
+      editingStack.cropModifier = .init { image, crop, completion in
+        var new = crop
+        new.updateCropExtentIfNeeded(by: aspectRatio)
+        completion(new)
+      }
+    }
 
     editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }

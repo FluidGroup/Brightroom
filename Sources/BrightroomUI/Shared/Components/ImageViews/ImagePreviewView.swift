@@ -31,7 +31,7 @@ import Verge
 public final class ImagePreviewView: PixelEditorCodeBasedView {
   // MARK: - Properties
 
-  #if false
+  #if true
   private let imageView = _ImageView(resizesOnDisplay: true)
   private let originalImageView = _ImageView(resizesOnDisplay: true)
   #else

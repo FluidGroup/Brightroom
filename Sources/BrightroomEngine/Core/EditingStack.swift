@@ -173,7 +173,7 @@ open class EditingStack: Equatable, StoreComponentType {
   private var subscriptions = Set<VergeAnyCancellable>()
   private var imageProviderSubscription: VergeAnyCancellable?
   
-  private let cropModifier: CropModifier
+  public var cropModifier: CropModifier
   
   private let editingImageMaxPixelSize: CGFloat = 2560
   

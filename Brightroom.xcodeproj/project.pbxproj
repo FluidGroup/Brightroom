@@ -182,6 +182,7 @@
 		4BF0256025F12FE30093A59B /* SwiftUICropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */; };
 		4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
+		4BF6872F2610D6D80037D5F4 /* CIImage+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF6872E2610D6D80037D5F4 /* CIImage+.swift */; };
 		885F407D62C3D3052641D397 /* Pods_Demo_Apps_SwiftUIDemo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BCAFAF965D675F1C5EA6B5D6 /* Pods_Demo_Apps_SwiftUIDemo.framework */; };
 		A6ABB4F6260AA8F0006B46ED /* Verge in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4F5260AA8F0006B46ED /* Verge */; };
 		A6ABB4FC260AA8FB006B46ED /* TransitionPatch in Frameworks */ = {isa = PBXBuildFile; productRef = A6ABB4FB260AA8FB006B46ED /* TransitionPatch */; };
@@ -416,6 +417,7 @@
 		4BEE65122174E99600F3578E /* EngineLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineLog.swift; sourceTree = "<group>"; };
 		4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUICropView.swift; sourceTree = "<group>"; };
 		4BF23C312603BCE0007019CB /* gaku.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = gaku.jpeg; sourceTree = "<group>"; };
+		4BF6872E2610D6D80037D5F4 /* CIImage+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CIImage+.swift"; sourceTree = "<group>"; };
 		7653AECA9BB64C155E1D3C76 /* Pods-Demo_Apps-Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.release.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.release.xcconfig"; sourceTree = "<group>"; };
 		BCAFAF965D675F1C5EA6B5D6 /* Pods_Demo_Apps_SwiftUIDemo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_SwiftUIDemo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1F422FCF28F6156C6FB30B0 /* Pods-Demo_Apps-Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Demo_Apps-Demo.debug.xcconfig"; path = "Target Support Files/Pods-Demo_Apps-Demo/Pods-Demo_Apps-Demo.debug.xcconfig"; sourceTree = "<group>"; };
@@ -597,6 +599,7 @@
 				4BEE65122174E99600F3578E /* EngineLog.swift */,
 				4B0433AA217B962C0039293E /* InternalUtils.swift */,
 				4B422DFC260B91260011500C /* Orientation.swift */,
+				4BF6872E2610D6D80037D5F4 /* CIImage+.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -1387,6 +1390,7 @@
 				4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */,
 				4BB4B0F8260F55AC007617D7 /* EditingStack.CropModifier.swift in Sources */,
 				4B422DFD260B91260011500C /* Orientation.swift in Sources */,
+				4BF6872F2610D6D80037D5F4 /* CIImage+.swift in Sources */,
 				4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */,
 				4B9D457A216E8013003A240A /* Geometry.swift in Sources */,
 				4B1E95222176CC0300E9DFB8 /* FilterTemperature.swift in Sources */,
