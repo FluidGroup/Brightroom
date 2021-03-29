@@ -306,7 +306,7 @@ open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionV
   open class CellBase : UICollectionViewCell {
     
     let nameLabel: UILabel = .init()
-    let imageView: MetalImageView = .init()
+    let imageView: _ImageView = .init()
     
     public override init(frame: CGRect) {
       super.init(frame: frame)
