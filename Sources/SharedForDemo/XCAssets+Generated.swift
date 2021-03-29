@@ -26,6 +26,7 @@ internal enum Asset {
   internal static let instaLogo = ImageAsset(name: "insta-logo")
   internal static let large = ImageAsset(name: "large")
   internal static let leica = ImageAsset(name: "leica")
+  internal static let profile = ImageAsset(name: "profile")
   internal static let small = ImageAsset(name: "small")
   internal static let squareRect = ImageAsset(name: "square-rect")
   internal static let superSmall = ImageAsset(name: "super-small")

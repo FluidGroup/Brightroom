@@ -37,7 +37,7 @@ final class ImitationTinderViewController: UIViewController {
 
     wrapper.edgesToSuperview(excluding: .bottom, usingSafeArea: true)
 
-    didSelectImage(Asset.unsplash1.image)
+    didSelectImage(Asset.profile.image)
   }
 
   private func didSelectImage(_ image: UIImage) {
@@ -63,7 +63,7 @@ private final class WrapperCropView: UIView {
     super.init(frame: .zero)
 
     /* Using TinyConstraints */
-    height(200)
+    height(300)
 
     backgroundColor = .white
     clipsToBounds = true
