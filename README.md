@@ -36,7 +36,7 @@ Brightroom v2 provides the following features:
 
 ## Requirements
 
-* Swift 5.3 (Xcode10+)
+* Swift 5.3 (Xcode12.4+)
 * iOS 12+
 
 ## Usage
