@@ -16,6 +16,11 @@
 
 <img src=top.png width=100%/>
 
+| Classic Image Editor | PhotosCrop | Face detection |
+| --- | --- | --- | 
+| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> |
+
+
 Pixel v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
 - Create your own image editor UI by composing components.
@@ -32,9 +37,9 @@ Pixel v2 provides the following features:
 * Swift 5.3 (Xcode10+)
 * iOS 12+
 
-## Built-in UI - Fullstack image editor
+## Built-in UI - Classic Image Editor
 
-![](preview.gif)
+<img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> 
 
 ### Cropping
 
@@ -132,7 +137,7 @@ let controller = PixelEditViewController(editingStack: editingStack)
 
 We can customize UI for control area.
 
-<img src="customize.png" width=375/>
+<img src="customize.png" width=300/>
 
 ### Customize Built-In Control-UI using override
 
