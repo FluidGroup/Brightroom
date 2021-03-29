@@ -6,6 +6,8 @@
 
 > 📌 Pixel has been renamed as **Brightroom**
 
+> 🎈 Please help us, we have issues that we don't know how to solve. (help wanted in Issues)
+
 > ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
 
 ---
