@@ -6,13 +6,13 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import UIKit
 import SwiftUI
+import UIKit
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/
 extension CropView {
   public final class CropOverlayHandlesView: PixelEditorCodeBasedView {
-    
+
     public let edgeShapeLayer = UIView()
 
     private let cornerTopLeftHorizontalShapeLayer = UIView()
@@ -56,12 +56,12 @@ extension CropView {
         $0.layer.borderWidth = 1
         $0.layer.borderColor = UIColor.white.cgColor
       }
-      
+
       do {
-        
+
         let lineWidth: CGFloat = 3
         let lineLength: CGFloat = 20
-        
+
         do {
           cornerTopLeftHorizontalShapeLayer.frame = .init(
             origin: .init(x: -lineWidth, y: -lineWidth),
@@ -72,7 +72,7 @@ extension CropView {
             size: .init(width: lineWidth, height: lineLength)
           )
         }
-        
+
         do {
           cornerTopRightHorizontalShapeLayer.frame = .init(
             origin: .init(x: bounds.maxX - lineLength + lineWidth, y: -lineWidth),
@@ -83,7 +83,7 @@ extension CropView {
             size: .init(width: lineWidth, height: lineLength)
           )
         }
-        
+
         do {
           cornerBottomRightHorizontalShapeLayer.frame = .init(
             origin: .init(x: bounds.maxX - lineLength + lineWidth, y: bounds.maxY),
@@ -94,7 +94,7 @@ extension CropView {
             size: .init(width: lineWidth, height: lineLength)
           )
         }
-        
+
         do {
           cornerBottomLeftHorizontalShapeLayer.frame = .init(
             origin: .init(x: -lineWidth, y: bounds.maxY),
@@ -105,70 +105,63 @@ extension CropView {
             size: .init(width: lineWidth, height: lineLength)
           )
         }
-        
+
       }
-      
+
     }
   }
-    
+
   open class CropInsideOverlayBase: PixelEditorCodeBasedView {
-    
+
     public init() {
       super.init(frame: .zero)
     }
-    
+
     open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
-      
+
     }
-    
+
     open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
-      
+
     }
-        
+
   }
 
   @available(iOS 14, *)
   open class SwiftUICropInsideOverlay<Content: View>: CropInsideOverlayBase {
-    
+
     private let controller: UIHostingController<Content>
-    
+
     public init(controller: UIHostingController<Content>) {
       self.controller = controller
       super.init()
       addSubview(controller.view)
       AutoLayoutTools.setEdge(controller.view, self)
     }
-        
+
   }
-  
-  public final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
-    
-    private let handlesView = CropOverlayHandlesView()
-    
+
+  public final class RuleOfThirdsView: PixelEditorCodeBasedView {
+
     private let verticalLine1 = UIView()
     private let verticalLine2 = UIView()
-    
+
     private let horizontalLine1 = UIView()
     private let horizontalLine2 = UIView()
-    
-    private var currentAnimator: UIViewPropertyAnimator?
-        
-    public override init() {
-      super.init()
-      
+
+    public init(lineColor: UIColor = UIColor(white: 1, alpha: 0.3)) {
+      super.init(frame: .zero)
+
       isUserInteractionEnabled = false
-      addSubview(handlesView)
-      AutoLayoutTools.setEdge(handlesView, self)
-      
+
       lines()
         .forEach {
           addSubview($0)
-          $0.backgroundColor = UIColor(white: 1, alpha: 0.3)
-          $0.alpha = 0
+          $0.backgroundColor = lineColor
         }
-      
+
     }
-    
+
     private func lines() -> [UIView] {
       [
         verticalLine1,
@@ -177,60 +170,77 @@ extension CropView {
         horizontalLine2,
       ]
     }
-    
+
     public override func layoutSubviews() {
-      
+
       super.layoutSubviews()
-      
+
       let width = (bounds.width / 3).rounded(.down)
       let height = (bounds.height / 3).rounded(.down)
-      
+
       do {
-        
+
         verticalLine1.frame = .init(
           origin: .init(x: width, y: 0),
           size: .init(width: 1, height: bounds.height)
         )
-        
+
         verticalLine2.frame = .init(
           origin: .init(x: width * 2, y: 0),
           size: .init(width: 1, height: bounds.height)
         )
       }
-      
+
       do {
         horizontalLine1.frame = .init(
           origin: .init(x: 0, y: height),
           size: .init(width: bounds.width, height: 1)
         )
-        
+
         horizontalLine2.frame = .init(
           origin: .init(x: 0, y: height * 2),
           size: .init(width: bounds.width, height: 1)
         )
-        
+
       }
     }
-    
+
+  }
+
+  public final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
+
+    private let handlesView = CropOverlayHandlesView()
+    private let guideView = RuleOfThirdsView()
+
+    private var currentAnimator: UIViewPropertyAnimator?
+
+    public override init() {
+      super.init()
+
+      isUserInteractionEnabled = false
+      addSubview(handlesView)
+      addSubview(guideView)
+      AutoLayoutTools.setEdge(handlesView, self)
+      AutoLayoutTools.setEdge(guideView, self)
+
+      guideView.alpha = 0
+    }
+
     public override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.lines().forEach {
-          $0.alpha = 1
-        }
+        self?.guideView.alpha = 1
       }&>.do {
         $0.startAnimation()
       }
     }
-    
+
     public override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.lines().forEach {
-          $0.alpha = 0
-        }
+        self?.guideView.alpha = 0
       }&>.do {
-        $0.startAnimation(afterDelay: 2)
+        $0.startAnimation()
       }
     }
   }

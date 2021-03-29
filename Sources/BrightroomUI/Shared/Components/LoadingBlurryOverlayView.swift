@@ -29,8 +29,8 @@ public final class LoadingBlurryOverlayView: PixelEditorCodeBasedView {
   ) {
     super.init(frame: .zero)
 
-    let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
-    let activityIndicatorView = UIActivityIndicatorView(style: .whiteLarge)
+    let effectView = UIVisualEffectView(effect: effect)
+    let activityIndicatorView = UIActivityIndicatorView(style: activityIndicatorStyle)
 
     backgroundColor = .clear
 

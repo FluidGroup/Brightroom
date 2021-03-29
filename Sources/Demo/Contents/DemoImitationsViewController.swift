@@ -1,0 +1,42 @@
+import AsyncDisplayKit
+import BrightroomEngine
+import BrightroomUI
+import GlossButtonNode
+import TextureSwiftSupport
+import TinyConstraints
+import UIKit
+
+final class DemoImitationsViewController: StackScrollNodeViewController {
+
+  override init() {
+    super.init()
+    title = "Imitations"
+  }
+
+  private let stack = EditingStack.init(
+    imageProvider: .init(image: Asset.leica.image),
+    cropModifier: .init { _, crop, completion in
+      var new = crop
+      new.updateCropExtent(by: .square)
+      completion(new)
+    }
+  )
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+
+    stackScrollNode.append(nodes: [
+
+      Components.makeSelectionCell(
+        title: "Tinder",
+        onTap: { [unowned self] in
+
+          let controller = ImitationTinderViewController()
+
+          navigationController?.pushViewController(controller, animated: true)
+        })
+
+    ])
+  }
+
+}

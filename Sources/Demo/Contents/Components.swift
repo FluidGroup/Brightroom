@@ -1,37 +1,39 @@
-
 import AsyncDisplayKit
-@testable import BrightroomEngine
 import GlossButtonNode
 import MobileCoreServices
 import TextureSwiftSupport
 import UIKit
 
+@testable import BrightroomEngine
+
 func makeMetadataString(image: UIImage) -> String {
   let formatter = ByteCountFormatter()
   formatter.countStyle = .file
-  let jpegSize = formatter.string(fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count))
-  
+  let jpegSize = formatter.string(
+    fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count)
+  )
+
   let cgImage = image.cgImage!
 
   let meta = """
-  size: \(image.size.width * image.scale), \(image.size.height * image.scale)
-  estimated-jpegSize: \(jpegSize)
-  colorSpace: \(cgImage.colorSpace.map { String(describing: $0) } ?? "null")
-  bit-depth: \(cgImage.bitsPerPixel / 4)
-  bytesPerRow: \(cgImage.bytesPerRow)
-  """
+    size: \(image.size.width * image.scale), \(image.size.height * image.scale)
+    estimated-jpegSize: \(jpegSize)
+    colorSpace: \(cgImage.colorSpace.map { String(describing: $0) } ?? "null")
+    bit-depth: \(cgImage.bitsPerPixel / 4)
+    bytesPerRow: \(cgImage.bytesPerRow)
+    """
 
   return meta
 }
 
 enum Components {
   final class ImageInspectorNode: ASDisplayNode {
-    
+
     var image: UIImage? {
       didSet {
         if let image = image {
           (imageNode.view as! UIImageView).image = image
-          
+
           let meta = makeMetadataString(image: image)
           metadataTextNode.attributedText = NSAttributedString(string: meta)
         } else {
@@ -40,19 +42,19 @@ enum Components {
         }
       }
     }
-    
+
     private let nameNode = ASTextNode()
     private let imageNode = ASDisplayNode.init(viewBlock: { UIImageView() })
     private let shape = ShapeLayerNode.roundedCorner(radius: 0)
     private let metadataTextNode = ASTextNode()
-    
+
     init(name: String) {
       super.init()
       automaticallyManagesSubnodes = true
-      
+
       nameNode.attributedText = NSAttributedString(string: name)
     }
-    
+
     override func didLoad() {
       super.didLoad()
       imageNode.contentMode = .scaleAspectFit
@@ -63,13 +65,15 @@ enum Components {
       LayoutSpec {
         VStackLayout(spacing: 8) {
           nameNode
-          
+
           imageNode
             .aspectRatio(1)
-            .background(ZStackLayout {
-              shape
-            })
-          
+            .background(
+              ZStackLayout {
+                shape
+              }
+            )
+
           metadataTextNode
         }
         .padding(8)
@@ -82,10 +86,12 @@ enum Components {
     var image: UIImage? {
       didSet {
         if let image = image {
-          
+
           renderedImageNode.image = image
-          optimizedForSharingImageNode.image = UIImage(data: ImageTool.makeImageForJPEGOptimizedSharing(image: image.cgImage!))
-          
+          optimizedForSharingImageNode.image = UIImage(
+            data: ImageTool.makeImageForJPEGOptimizedSharing(image: image.cgImage!)
+          )
+
         } else {
           renderedImageNode.image = nil
           optimizedForSharingImageNode.image = nil
@@ -94,10 +100,10 @@ enum Components {
     }
 
     private let tutorialTextNode = ASTextNode()
-    
+
     private let renderedImageNode = ImageInspectorNode(name: "Rendered")
     private let optimizedForSharingImageNode = ImageInspectorNode(name: "Optimized for sharing")
-    
+
     private let saveButton = GlossButtonNode()
 
     override init() {
@@ -114,10 +120,13 @@ enum Components {
 
       saveButton.setDescriptor(
         .init(
-          title: NSAttributedString(string: "Save", attributes: [
-            .font: UIFont.preferredFont(forTextStyle: .headline),
-            .foregroundColor: UIColor.darkGray,
-          ]),
+          title: NSAttributedString(
+            string: "Save",
+            attributes: [
+              .font: UIFont.preferredFont(forTextStyle: .headline),
+              .foregroundColor: UIColor.darkGray,
+            ]
+          ),
           image: nil,
           bodyStyle: .init(layout: .vertical()),
           surfaceStyle: .bodyOnly
@@ -135,7 +144,7 @@ enum Components {
     override func didLoad() {
       super.didLoad()
 
-    
+
     }
 
     override func layoutSpecThatFits(_ constrainedSize: ASSizeRange) -> ASLayoutSpec {
@@ -146,7 +155,7 @@ enum Components {
               .flexBasis(fraction: 0.5)
 
               .flexGrow(1)
-            
+
             optimizedForSharingImageNode
               .flexBasis(fraction: 0.5)
 
@@ -169,21 +178,25 @@ enum Components {
     button.onTap = onTap
 
     let descriptionLabel = ASTextNode()
-    descriptionLabel.attributedText = description.map { NSAttributedString(
-      string: $0,
-      attributes: [
-        .font: UIFont.preferredFont(forTextStyle: .caption1),
-        .foregroundColor: UIColor.lightGray,
-      ]
-    )
+    descriptionLabel.attributedText = description.map {
+      NSAttributedString(
+        string: $0,
+        attributes: [
+          .font: UIFont.preferredFont(forTextStyle: .caption1),
+          .foregroundColor: UIColor.lightGray,
+        ]
+      )
     }
 
     button.setDescriptor(
       .init(
-        title: NSAttributedString(string: title, attributes: [
-          .font: UIFont.preferredFont(forTextStyle: .subheadline),
-          .foregroundColor: UIColor.darkGray,
-        ]),
+        title: NSAttributedString(
+          string: title,
+          attributes: [
+            .font: UIFont.preferredFont(forTextStyle: .subheadline),
+            .foregroundColor: UIColor.darkGray,
+          ]
+        ),
         image: nil,
         bodyStyle: .init(layout: .vertical()),
         surfaceStyle: .bodyOnly
