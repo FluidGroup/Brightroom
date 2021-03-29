@@ -14,10 +14,7 @@
 
 ---
 
-# v2-alpha.1 Brightroom - Composable image editor
-
-
-<img src=top.png width=100%/>
+# \[v2-alpha.1\] Brightroom - Composable image editor - building your own UI
 
 | Classic Image Editor | PhotosCrop | Face detection |
 | --- | --- | --- | 
@@ -42,6 +39,13 @@ Brightroom v2 provides the following features:
 ## Usage
 
 <b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
+
+## Customization show cases
+
+| Tinder | 
+| --- |
+| <img width=200px src="https://user-images.githubusercontent.com/1888355/112861131-7cc80980-90ef-11eb-9d43-8c706abeb9d5.png" /> | 
+
 
 ## Installation
 
