@@ -22,8 +22,12 @@ Pixel v2 provides the following features:
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
 - Wide color editing support
 
-## Built-in UI - Fullstack image editor
+> 🤵🏻‍♂️ Support Muukii.  
+> Hi, I'm Muukii. I'm working on open-source software including this library.  
+> Please help me continue my work. I appreciate it.  
+> https://github.com/sponsors/muukii
 
+## Built-in UI - Fullstack image editor
 
 ![](preview.gif)
 
@@ -78,11 +82,19 @@ WIP
 - **MetalImageView** - A view that displays the image powered by Metal.
 - **LoadingBlurryOverlayView** - A view that displays a loading-indicator and blurry backdrop view.
 
-## Build your own cropping screen
+## Building your own image editing screen
 
-CropView is a component that only supports cropping.
+Brightroom provides the components which run as standalone on top of `EditingStack`.  
+We can create a unique UI for our own applications by composing those components.Brightroom provides the components which runs as standalone on top of `EditingStack`.  
 
-![CleanShot 2021-03-08 at 20 51 11](https://user-images.githubusercontent.com/1888355/110317866-113ecf00-8050-11eb-923d-6c2dc6da1a30.gif)
+### Cropping
+
+Following examples are built with using `CropView`.  
+The implementations are available in `Demo` application.
+
+|Tinder|
+|---|
+|<img width=300px src=https://user-images.githubusercontent.com/1888355/112861131-7cc80980-90ef-11eb-9d43-8c706abeb9d5.png /> |
 
 **UIKit**
 
@@ -160,6 +172,10 @@ dependencies: [
 ```
 
 ---
+
+> ⚠️  
+> ⚠️ From here down, outdated documentations.
+> ⚠️  
 
 # (v1) Pixel - Engine • Editor
 
