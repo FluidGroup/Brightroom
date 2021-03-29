@@ -14,7 +14,7 @@
 
 ---
 
-# v2(WIP) Brightroom(former: Pixel) - Composable image editor
+# v2-alpha.1 Brightroom - Composable image editor
 
 
 <img src=top.png width=100%/>
@@ -39,6 +39,10 @@ Brightroom v2 provides the following features:
 * Swift 5.3 (Xcode10+)
 * iOS 12+
 
+## Usage
+
+<b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
+
 ## Installation
 
 > ⚠️ Brightroom has not been published in CocoaPods since it's still early development.
@@ -59,6 +63,7 @@ dependencies: [
     .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.0.0-alpha.1")
 ]
 ```
+
 ## License
 
 Brightroom is available under the MIT license. See the LICENSE file for more info.
