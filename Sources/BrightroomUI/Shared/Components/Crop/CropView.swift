@@ -200,6 +200,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     
     if isBinding == false {
       isBinding = true
+
+      editingStack.start()
       
       binding: do {
         store.sinkState(queue: .mainIsolated()) { [weak self] state in

@@ -40,6 +40,8 @@
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
 		4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023C325ED82B700D3DE47 /* Debounce.swift */; };
+		4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */; };
+		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B422DFD260B91260011500C /* Orientation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422DFC260B91260011500C /* Orientation.swift */; };
 		4B422E05260B92E20011500C /* ImageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422E04260B92E20011500C /* ImageProvider.swift */; };
 		4B42A6A52178DF2600F18208 /* ClassicImageEditSaturationControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A42178DF2600F18208 /* ClassicImageEditSaturationControl.swift */; };
@@ -305,6 +307,8 @@
 		4B36195526107ADB00877B21 /* path-data */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = "path-data"; sourceTree = "<group>"; };
 		4B4023BF25ED823B00D3DE47 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
 		4B4023C325ED82B700D3DE47 /* Debounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debounce.swift; sourceTree = "<group>"; };
+		4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImitationTinderViewController.swift; sourceTree = "<group>"; };
+		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B422DFC260B91260011500C /* Orientation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Orientation.swift; sourceTree = "<group>"; };
 		4B422E04260B92E20011500C /* ImageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProvider.swift; sourceTree = "<group>"; };
 		4B42A6A42178DF2600F18208 /* ClassicImageEditSaturationControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditSaturationControl.swift; sourceTree = "<group>"; };
@@ -592,6 +596,14 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		4B4103562611EA8C0061A218 /* Imitations */ = {
+			isa = PBXGroup;
+			children = (
+				4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */,
+			);
+			path = Imitations;
+			sourceTree = "<group>";
+		};
 		4B422DFB260B91190011500C /* Library */ = {
 			isa = PBXGroup;
 			children = (
@@ -637,6 +649,7 @@
 		4B58DF5E2606047400D85F97 /* Contents */ = {
 			isa = PBXGroup;
 			children = (
+				4B4103562611EA8C0061A218 /* Imitations */,
 				4B8B910626079256009BF084 /* Components.swift */,
 				4B8B9113260792D9009BF084 /* StackScrollNodeViewController.swift */,
 				4B3075912605F27400A1E7CB /* TopMenuViewController.swift */,
@@ -645,6 +658,7 @@
 				4BD275DF260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift */,
 				4BA41C98260CF035005E6FA7 /* DemoMaskingViewController.swift */,
 				4B58E888260F0DEA004A834F /* DemoPreviewViewController.swift */,
+				4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */,
 				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
@@ -1407,9 +1421,11 @@
 				4B8B9114260792D9009BF084 /* StackScrollNodeViewController.swift in Sources */,
 				4BA41C99260CF035005E6FA7 /* DemoMaskingViewController.swift in Sources */,
 				4BA41C9E260CF04D005E6FA7 /* Utilities.swift in Sources */,
+				4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
 				4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */,
 				4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */,
+				4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */,
 				4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */,
 				4B8B94692607A9AF009BF084 /* UIViewController+Picker.swift in Sources */,
 				4BD2728E260A05440044B3D8 /* DemoCIKernelViewController.swift in Sources */,
