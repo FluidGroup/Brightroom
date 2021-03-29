@@ -68,7 +68,7 @@ extension EditingStack {
           
           let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(crop.imageSize.width), Int(crop.imageSize.height))
           
-          new.updateCropExtent(byBoundingBox: normalizedRect, respectingApectRatio: aspectRatio)
+          new.updateCropExtent(toFitBoundingBox: normalizedRect, respectingApectRatio: aspectRatio ?? .init(crop.imageSize))
           completion(new)
         }
         

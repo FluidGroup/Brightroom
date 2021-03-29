@@ -23,15 +23,15 @@ import CoreImage
 import UIKit
 
 public enum Geometry {
-  
+
   public static func sizeThatAspectFit(size: CGSize, maxPixelSize: CGFloat) -> CGSize {
-    
+
     guard size.width >= maxPixelSize || size.height >= maxPixelSize else {
       return size
     }
-    
+
     var s = size
-    
+
     if size.width > size.height {
       s.width = maxPixelSize
       s.height *= maxPixelSize / size.width
@@ -39,13 +39,13 @@ public enum Geometry {
       s.height = maxPixelSize
       s.width *= maxPixelSize / size.height
     }
-    
+
     s.width.round()
     s.height.round()
-    
+
     return s
   }
-  
+
   public static func sizeThatAspectFit(aspectRatio: CGSize, boundingSize: CGSize) -> CGSize {
     let widthRatio = boundingSize.width / aspectRatio.width
     let heightRatio = boundingSize.height / aspectRatio.height
@@ -114,7 +114,7 @@ extension CGSize {
   init(image: CIImage) {
     self = image.extent.size
   }
-  
+
   init(image: UIImage) {
     self.init(
       width: image.size.width * image.scale,
@@ -125,19 +125,19 @@ extension CGSize {
   var aspectRatio: PixelAspectRatio {
     .init(width: CGFloat(width), height: CGFloat(height))
   }
-  
+
   func scaled(maxPixelSize: CGFloat) -> CGSize {
-    
+
     Geometry.sizeThatAspectFit(size: self, maxPixelSize: maxPixelSize)
   }
 }
 
 public struct PixelAspectRatio: Hashable {
-  
+
   public static func == (lhs: Self, rhs: Self) -> Bool {
     (lhs.height / lhs.width) == (rhs.height / rhs.width)
   }
-  
+
   public var width: CGFloat
   public var height: CGFloat
 
@@ -169,48 +169,71 @@ public struct PixelAspectRatio: Hashable {
   public func asCGSize() -> CGSize {
     .init(width: width, height: height)
   }
-      
+
   /// Returns a new instance that swapped height and width
   public func swapped() -> PixelAspectRatio {
     .init(width: height, height: width)
   }
-  
-  public func sizeThatFill(in boundingSize: CGSize) -> CGSize {
+
+  public func sizeThatFillRounding(in boundingSize: CGSize) -> CGSize {
     let widthRatio = boundingSize.width / width
     let heightRatio = boundingSize.height / height
     var size = boundingSize
-    
+
     if widthRatio < heightRatio {
       size.height = boundingSize.width / width * height
     } else if heightRatio < widthRatio {
       size.width = boundingSize.height / height * width
     }
-    
+
     return CGSize(
-      width: ceil(size.width),
-      height: ceil(size.height)
+      width: size.width.rounded(.down),
+      height: size.height.rounded(.down)
     )
   }
-  
-  public func sizeThatFits(in boundingSize: CGSize) -> CGSize {
-    
+
+  public func sizeThatFitsWithRounding(in boundingSize: CGSize) -> CGSize {
+
     let widthRatio = boundingSize.width / width
     let heightRatio = boundingSize.height / height
     var size = boundingSize
-    
+
     if widthRatio < heightRatio {
       size.height = boundingSize.width / width * height
     } else if heightRatio < widthRatio {
       size.width = boundingSize.height / height * width
     }
-    
+
     return CGSize(
-      width: size.width.rounded(.up),
-      height: size.height.rounded(.up)
+      width: size.width.rounded(.down),
+      height: size.height.rounded(.down)
     )
-    
+
   }
-  
+
+  public func rectThatFitsWithRounding(in boundingRect: CGRect) -> CGRect {
+    let size = sizeThatFitsWithRounding(in: boundingRect.size)
+    var origin = boundingRect.origin
+    origin.x += (boundingRect.size.width - size.width) / 2.0
+    origin.y += (boundingRect.size.height - size.height) / 2.0
+
+    origin.x.round(.down)
+    origin.y.round(.down)
+
+    return CGRect(origin: origin, size: size)
+  }
+
+  public func rectThatFillWithRounding(in boundingRect: CGRect) -> CGRect {
+    let size = sizeThatFillRounding(in: boundingRect.size)
+    var origin = CGPoint.zero
+    origin.x = (boundingRect.size.width - size.width) / 2.0
+    origin.y = (boundingRect.size.height - size.height) / 2.0
+
+    origin.x.round(.down)
+    origin.y.round(.down)
+    return CGRect(origin: origin, size: size)
+  }
+
   public func _minimized() -> Self {
     func gcd(_ a: CGFloat, _ b: CGFloat) -> CGFloat {
       let r = a.truncatingRemainder(dividingBy: b)
@@ -220,18 +243,18 @@ public struct PixelAspectRatio: Hashable {
         return b
       }
     }
-    
+
     let v = gcd(width, height)
-    
+
     return .init(width: width / v, height: height / v)
   }
-  
+
   public var localizedText: String {
     "\(width):\(height)"
   }
-  
+
   public static var square: Self {
     .init(width: 1, height: 1)
   }
-  
+
 }

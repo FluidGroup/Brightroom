@@ -367,7 +367,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       if let proposedCrop = $0.proposedCrop {
         $0.proposedCrop = proposedCrop.makeInitial()
         if let ratio = $0.preferredAspectRatio {
-          $0.proposedCrop!.updateCropExtentIfNeeded(by: ratio)
+          $0.proposedCrop!.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
         }
         $0.layoutVersion += 1
       }
@@ -391,7 +391,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       $0.proposedCrop = crop
       if let ratio = $0.preferredAspectRatio {
-        $0.proposedCrop?.updateCropExtentIfNeeded(by: ratio)
+        $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
       }
       $0.layoutVersion += 1
     }
@@ -403,7 +403,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       $0.preferredAspectRatio = ratio
       if let ratio = ratio {
-        $0.proposedCrop?.updateCropExtentIfNeeded(by: ratio)
+        $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
       }
       $0.layoutVersion += 1
     }
@@ -500,16 +500,16 @@ extension CropView {
         let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
         switch crop.rotation {
         case .angle_0:
-          size = aspectRatio.sizeThatFits(in: bounds.size)
+          size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_90:
-          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         case .angle_180:
-          size = aspectRatio.sizeThatFits(in: bounds.size)
+          size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_270:
-          size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+          size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         }
 

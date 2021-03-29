@@ -75,7 +75,7 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
     } else if let aspectRatio = options.croppingAspectRatio {
       editingStack.cropModifier = .init { image, crop, completion in
         var new = crop
-        new.updateCropExtentIfNeeded(by: aspectRatio)
+        new.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
         completion(new)
       }
     }

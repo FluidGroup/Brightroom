@@ -51,13 +51,13 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       let aspectRatio = PixelAspectRatio(proposedCrop.cropExtent.size)
       switch proposedCrop.rotation {
       case .angle_0:
-        size = aspectRatio.sizeThatFits(in: bounds.size)
+        size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
       case .angle_90:
-        size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+        size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
       case .angle_180:
-        size = aspectRatio.sizeThatFits(in: bounds.size)
+        size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
       case .angle_270:
-        size = aspectRatio.swapped().sizeThatFits(in: bounds.size)
+        size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
       }
       
       return .init(
