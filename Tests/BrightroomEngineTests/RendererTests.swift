@@ -37,7 +37,7 @@ final class RendererTests: XCTestCase {
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
-    crop.updateCropExtent(by: .square)
+    crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,
@@ -105,7 +105,7 @@ final class RendererTests: XCTestCase {
     filter.value = 0.72
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
-    crop.updateCropExtent(by: .square)
+    crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,
@@ -130,7 +130,7 @@ final class RendererTests: XCTestCase {
     filter.value = 0.72
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
-    crop.updateCropExtent(by: .square)
+    crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,
@@ -154,7 +154,7 @@ final class RendererTests: XCTestCase {
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.rotation = .angle_90
-    crop.updateCropExtent(by: .square)
+    crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,

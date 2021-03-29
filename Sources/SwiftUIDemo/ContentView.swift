@@ -125,7 +125,7 @@ struct ContentView: View {
                 imageProvider: .init(image: Asset.l1000316.image),
                 cropModifier: .init { _, crop, completion in
                   var new = crop
-                  new.updateCropExtent(by: .square)
+                  new.updateCropExtent(toFitAspectRatio: .square)
                   completion(new)
                 }
               )

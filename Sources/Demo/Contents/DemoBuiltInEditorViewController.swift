@@ -17,7 +17,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
     imageProvider: .init(image: Asset.leica.image),
     cropModifier: .init { _, crop, completion in
       var new = crop
-      new.updateCropExtent(by: .square)
+      new.updateCropExtent(toFitAspectRatio: .square)
       completion(new)
     }
   )
