@@ -141,10 +141,12 @@ public final class ImageRenderer {
       options: [
         .workingFormat: options.workingFormat,
         .highQualityDownsample: true,
-        //        .useSoftwareRenderer: true,
+        .useSoftwareRenderer: false,
         .cacheIntermediates: false,
       ]
     )
+
+    let startTime = CACurrentMediaTime()
 
     EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
 
@@ -204,7 +206,7 @@ public final class ImageRenderer {
       from: cropped_effected_CIImage.extent,
       format: options.workingFormat,
       colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
-      deferred: true
+      deferred: false
     )!
 
     EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
@@ -284,6 +286,9 @@ public final class ImageRenderer {
     EngineLog.debug(.renderer, "Rotates image if needed")
 
     let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
+
+    let duration = CACurrentMediaTime() - startTime
+    EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
 
     return .init(cgImageDisplayP3: rotatedImage)
     

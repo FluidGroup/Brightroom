@@ -7,17 +7,17 @@ import UIKit
 @testable import BrightroomEngine
 
 func makeMetadataString(image: UIImage) -> String {
-  let formatter = ByteCountFormatter()
-  formatter.countStyle = .file
-  let jpegSize = formatter.string(
-    fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count)
-  )
-
+//  let formatter = ByteCountFormatter()
+//  formatter.countStyle = .file
+//
+//  let jpegSize = formatter.string(
+//    fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count)
+//  )
+//
   let cgImage = image.cgImage!
 
   let meta = """
     size: \(image.size.width * image.scale), \(image.size.height * image.scale)
-    estimated-jpegSize: \(jpegSize)
     colorSpace: \(cgImage.colorSpace.map { String(describing: $0) } ?? "null")
     bit-depth: \(cgImage.bitsPerPixel / 4)
     bytesPerRow: \(cgImage.bytesPerRow)
@@ -83,14 +83,28 @@ enum Components {
   }
 
   final class ResultImageCell: ASCellNode {
+
+    private var currentWorkingID = UUID()
+
     var image: UIImage? {
       didSet {
         if let image = image {
 
           renderedImageNode.image = image
-          optimizedForSharingImageNode.image = UIImage(
-            data: ImageTool.makeImageForJPEGOptimizedSharing(image: image.cgImage!)
-          )
+
+          currentWorkingID = UUID()
+          DispatchQueue.global(qos: .background).async { [currentWorkingID, weak self] in
+            guard let self = self else { return }
+
+            let image = UIImage(
+              data: ImageTool.makeImageForJPEGOptimizedSharing(image: image.cgImage!)
+            )
+            DispatchQueue.main.async {
+              guard self.currentWorkingID == currentWorkingID else { return }
+              self.optimizedForSharingImageNode.image = image
+            }
+
+          }
 
         } else {
           renderedImageNode.image = nil
