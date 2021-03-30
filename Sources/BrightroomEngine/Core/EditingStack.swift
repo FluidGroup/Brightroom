@@ -252,7 +252,6 @@ open class EditingStack: Equatable, StoreComponentType {
               cgImage: cgImage
             )
             .oriented(metadata.orientation)
-            .insertingIntermediate(cache: true)
             
             let editingSourceImage = _editingSourceImage
             
@@ -273,7 +272,7 @@ open class EditingStack: Equatable, StoreComponentType {
                     metadata: metadata,
                     initialEditing: initialEdit,
                     currentEdit: initialEdit,
-                    thumbnailImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 180)).oriented(metadata.orientation).insertingIntermediate(cache: true),
+                    thumbnailImage: CIImage(cgImage: image.loadThumbnailCGImage(maxPixelSize: 180)).oriented(metadata.orientation),
                     editingSourceImage: editingSourceImage,
                     editingPreviewImage: initialEdit.filters.apply(to: editingSourceImage)
                   )
