@@ -8,7 +8,7 @@
 
 > 📖 [Detailed documentations are available on here](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162)
 
-> 🎈 Please help us, we have issues that we don't know how to solve. (help wanted in Issues)
+> 🎈 Wanted CoreImage and Metal professional! Please help us, we have issues that we don't know how to solve. (help wanted in Issues)
 
 > ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
 
