@@ -47,7 +47,7 @@ final class ImitationTinderViewController: UIViewController {
 
   private func cropImage() {
 
-    let image = try! wrapper.currentCropView?.renderImage()?.uiImageDisplayP3
+    let image = try! wrapper.currentCropView?.renderImage()?.uiImage
 
     print(image as Any)
 

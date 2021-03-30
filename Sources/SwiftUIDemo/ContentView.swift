@@ -46,7 +46,7 @@ struct ContentView: View {
             Button("Crop: Horizontal") {
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stackForHorizontal, onCompleted: {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -55,7 +55,7 @@ struct ContentView: View {
             Button("Crop: Vertical") {
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stackForVertical, onCompleted: {
-                  self.image = try! stackForVertical.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForVertical.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -64,7 +64,7 @@ struct ContentView: View {
             Button("Crop: Square") {
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stackForSquare, onCompleted: {
-                  self.image = try! stackForSquare.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForSquare.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -73,7 +73,7 @@ struct ContentView: View {
             Button("Crop: Nasa") {
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stackForNasa, onCompleted: {
-                  self.image = try! stackForNasa.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForNasa.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -82,7 +82,7 @@ struct ContentView: View {
             Button("Crop: Super small") {
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stackForSmall, onCompleted: {
-                  self.image = try! stackForSmall.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForSmall.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -97,7 +97,7 @@ struct ContentView: View {
 
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
-                  self.image = try! stack.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stack.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -112,7 +112,7 @@ struct ContentView: View {
 
               fullScreenView = .init {
                 SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
-                  self.image = try! stack.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stack.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 })
               }
@@ -131,7 +131,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 }
               }
@@ -143,7 +143,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImageDisplayP3
+                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 }
               }

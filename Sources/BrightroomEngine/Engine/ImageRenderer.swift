@@ -48,21 +48,26 @@ public final class ImageRenderer {
       case png
     }
 
-    /// A rendered image that working on DisplayP3
-    public let cgImageDisplayP3: CGImage
+    /// An Options instance that used in redering.
+    public let options: Options
 
-    public var uiImageDisplayP3: UIImage {
-      .init(cgImage: cgImageDisplayP3)
+    /// A rendered image that working on specified color-space.
+    /// Orientation fixed.
+    public let cgImage: CGImage
+
+    public var uiImage: UIImage {
+      UIImage.init(cgImage: cgImage, scale: 1, orientation: .up)
     }
 
     @available(iOS 13.0, *)
-    public var swiftUIImageDisplayP3: SwiftUI.Image {
-      .init(decorative: cgImageDisplayP3, scale: 1, orientation: .up)
+    public var swiftUIImage: SwiftUI.Image {
+      .init(decorative: cgImage, scale: 1, orientation: .up)
     }
 
-    init(cgImageDisplayP3: CGImage) {
-      assert(cgImageDisplayP3.colorSpace == CGColorSpace.init(name: CGColorSpace.displayP3))
-      self.cgImageDisplayP3 = cgImageDisplayP3
+    init(cgImage: CGImage, options: Options) {
+      assert(cgImage.colorSpace == options.workingColorSpace)
+      self.cgImage = cgImage
+      self.options = options
     }
 
     /**
@@ -74,9 +79,9 @@ public final class ImageRenderer {
     public func makeOptimizedForSharingData(dataType: DataType) -> Data {
       switch dataType {
       case .jpeg(let quality):
-        return ImageTool.makeImageForJPEGOptimizedSharing(image: cgImageDisplayP3, quality: quality)
+        return ImageTool.makeImageForJPEGOptimizedSharing(image: cgImage, quality: quality)
       case .png:
-        return ImageTool.makeImageForPNGOptimizedSharing(image: cgImageDisplayP3)
+        return ImageTool.makeImageForPNGOptimizedSharing(image: cgImage)
       }
     }
 
@@ -202,7 +207,7 @@ public final class ImageRenderer {
 
     let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
 
-    return .init(cgImageDisplayP3: rotatedImage)
+    return .init(cgImage: rotatedImage, options: options)
   }
 
   /**
@@ -358,7 +363,7 @@ public final class ImageRenderer {
     let duration = CACurrentMediaTime() - startTime
     EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
 
-    return .init(cgImageDisplayP3: rotatedImage)
+    return .init(cgImage: rotatedImage, options: options)
 
   }
 }
@@ -421,18 +426,22 @@ extension CGImage {
     rotatedSize.width = abs(rotatedSize.width)
     rotatedSize.height = abs(rotatedSize.height)
 
-    let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
-      .perform { c in
-        c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-        c.rotate(by: -rotation.angle)
-        c.translateBy(
-          x: -size.width / 2,
-          y: -size.height / 2
-        )
-        c.draw(self, in: .init(origin: .zero, size: self.size))
-      }
+    let cgImage = try autoreleasepool { () -> CGImage? in
+      let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
+        .perform { c in
+          c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
+          c.rotate(by: -rotation.angle)
+          c.translateBy(
+            x: -size.width / 2,
+            y: -size.height / 2
+          )
+          c.draw(self, in: .init(origin: .zero, size: self.size))
+        }
 
-    return try rotatingContext.makeImage().unwrap()
+      return rotatingContext.makeImage()
+    }
+
+    return try cgImage.unwrap()
   }
 }
 

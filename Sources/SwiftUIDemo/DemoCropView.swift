@@ -35,7 +35,7 @@ struct DemoCropView: View {
         .clipped()
       }
       Button("Done") {
-        let image = try! editingStack.makeRenderer().render().swiftUIImageDisplayP3
+        let image = try! editingStack.makeRenderer().render().swiftUIImage
         print(image)
       }
     }
