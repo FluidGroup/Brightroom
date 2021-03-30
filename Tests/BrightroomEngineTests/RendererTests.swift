@@ -57,7 +57,7 @@ final class RendererTests: XCTestCase {
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
-    let image = try renderer.render().cgImage
+    let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -70,7 +70,7 @@ final class RendererTests: XCTestCase {
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
-    let image = try renderer.render().cgImage
+    let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -88,7 +88,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit.modifiers = [filter]
 
-    let image = try renderer.render().cgImage
+    let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -113,7 +113,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.render().cgImage
+    let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
@@ -162,7 +162,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImage
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
@@ -201,7 +201,7 @@ final class RendererTests: XCTestCase {
       drawer: [mask]
     )
 
-    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImage
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     #if false
     // for debugging quickly
@@ -220,7 +220,7 @@ final class RendererTests: XCTestCase {
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
-    let image = try renderer.render().cgImage
+    let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
 

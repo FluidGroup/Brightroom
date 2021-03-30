@@ -27,13 +27,18 @@ public final class ImageRenderer {
 
   public struct Options {
 
-    public var resolution: Resolution = .full
-    public var workingFormat: CIFormat = .ARGB8
-    public var workingColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+    public var resolution: Resolution
+    public var workingFormat: CIFormat
+    public var workingColorSpace: CGColorSpace
 
-    public init(resolution: ImageRenderer.Resolution = .full, workingFormat: CIFormat = .ARGB8) {
+    public init(
+      resolution: ImageRenderer.Resolution = .full,
+      workingFormat: CIFormat = .ARGB8,
+      workingColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+    ) {
       self.resolution = resolution
       self.workingFormat = workingFormat
+      self.workingColorSpace = workingColorSpace
     }
 
   }
@@ -165,10 +170,24 @@ public final class ImageRenderer {
      ===
      ===
      */
+    EngineLog.debug(
+      .renderer,
+      "Fixing colorspace \(sourceCGImage.colorSpace?.name as NSString? ?? "") -> \(options.workingColorSpace.name as NSString? ?? "")"
+    )
+
+    let fixedColorspace: CGImage = try sourceCGImage.copy(colorSpace: options.workingColorSpace)
+      .unwrap(orThrow: "Failed to copy with fixing colorspace.")
+
+    assert(fixedColorspace.colorSpace == options.workingColorSpace)
+    /*
+     ===
+     ===
+     ===
+     */
     EngineLog.debug(.renderer, "Fix orientation")
 
-    let orientedImage = try sourceCGImage.oriented(orientation)
-    
+    let orientedImage = try fixedColorspace.oriented(orientation)
+
     /*
      ===
      ===
