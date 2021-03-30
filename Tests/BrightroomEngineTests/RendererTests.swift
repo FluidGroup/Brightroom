@@ -138,7 +138,7 @@ final class RendererTests: XCTestCase {
       drawer: []
     )
 
-    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300))).cgImage
+    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)

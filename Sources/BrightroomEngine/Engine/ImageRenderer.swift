@@ -48,10 +48,18 @@ public final class ImageRenderer {
    */
   public struct Rendered {
 
+    public enum Engine {
+      case coreGraphics
+      case combined
+    }
+
     public enum DataType {
       case jpeg(quality: CGFloat)
       case png
     }
+
+    /// A type of engine how rendered by
+    public let engine: Engine
 
     /// An Options instance that used in redering.
     public let options: Options
@@ -69,10 +77,11 @@ public final class ImageRenderer {
       .init(decorative: cgImage, scale: 1, orientation: .up)
     }
 
-    init(cgImage: CGImage, options: Options) {
+    init(cgImage: CGImage, options: Options, engine: Engine) {
       assert(cgImage.colorSpace == options.workingColorSpace)
       self.cgImage = cgImage
       self.options = options
+      self.engine = engine
     }
 
     /**
@@ -193,12 +202,11 @@ public final class ImageRenderer {
      ===
      ===
      */
-    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    // TODO: Better management of orientation
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize().applying(cgOrientation: orientation))
     EngineLog.debug(.renderer, "Crop CGImage with extent \(crop)")
 
-    let croppedImage = try orientedImage.cropping(to: crop.cropExtent).unwrap(
-      orThrow: "Failed to crop"
-    )
+    let croppedImage = try orientedImage.croppedWithColorspace(to: crop.cropExtent)
 
     /*
      ===
@@ -224,9 +232,9 @@ public final class ImageRenderer {
      */
     EngineLog.debug(.renderer, "Rotation")
 
-    let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
+    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
 
-    return .init(cgImage: rotatedImage, options: options)
+    return .init(cgImage: rotatedImage, options: options, engine: .coreGraphics)
   }
 
   /**
@@ -286,7 +294,8 @@ public final class ImageRenderer {
      */
     EngineLog.debug(.renderer, "Applies Crop to effected image")
 
-    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    // TODO: Better management of orientation
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize().applying(cgOrientation: orientation))
 
     let cropped_effected_CIImage = effected_CIImage.cropped(to: crop)
 
@@ -377,212 +386,12 @@ public final class ImageRenderer {
 
     EngineLog.debug(.renderer, "Rotates image if needed")
 
-    let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
+    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
 
     let duration = CACurrentMediaTime() - startTime
     EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
 
-    return .init(cgImage: rotatedImage, options: options)
+    return .init(cgImage: rotatedImage, options: options, engine: .combined)
 
-  }
-}
-
-extension CGContext {
-  @discardableResult
-  func perform(_ drawing: (CGContext) -> Void) -> CGContext {
-    UIGraphicsPushContext(self)
-    defer {
-      UIGraphicsPopContext()
-    }
-    drawing(self)
-    return self
-  }
-
-  static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
-    let context = CGContext.init(
-      data: nil,
-      width: size.map { Int($0.width) } ?? image.width,
-      height: size.map { Int($0.height) } ?? image.height,
-      bitsPerComponent: image.bitsPerComponent,
-      bytesPerRow: 0,
-      space: try image.colorSpace.unwrap(),
-      bitmapInfo: image.bitmapInfo.rawValue
-    )
-
-    return try context.unwrap()
-  }
-}
-
-extension UIGraphicsImageRenderer {
-  func _custom(_ perform: (UIGraphicsImageRendererContext) -> Void) -> CGImage {
-    let d = pngData(actions: perform)
-    return UIImage(data: d)!.cgImage!
-  }
-}
-
-extension CGContext {
-  fileprivate func detached(_ perform: () -> Void) {
-    saveGState()
-    perform()
-    restoreGState()
-  }
-}
-
-extension CGImage {
-  fileprivate var size: CGSize {
-    return .init(width: width, height: height)
-  }
-
-  fileprivate func makeRotatedIfNeeded(rotation: EditingCrop.Rotation) throws -> CGImage {
-    guard rotation != .angle_0 else {
-      return self
-    }
-
-    var rotatedSize: CGSize =
-      size
-      .applying(rotation.transform)
-
-    rotatedSize.width = abs(rotatedSize.width)
-    rotatedSize.height = abs(rotatedSize.height)
-
-    let cgImage = try autoreleasepool { () -> CGImage? in
-      let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
-        .perform { c in
-          c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-          c.rotate(by: -rotation.angle)
-          c.translateBy(
-            x: -size.width / 2,
-            y: -size.height / 2
-          )
-          c.draw(self, in: .init(origin: .zero, size: self.size))
-        }
-
-      return rotatingContext.makeImage()
-    }
-
-    return try cgImage.unwrap()
-  }
-}
-
-extension Optional {
-  internal func unwrap(
-    orThrow debugDescription: String? = nil,
-    file: StaticString = #file,
-    function: StaticString = #function,
-    line: UInt = #line
-  ) throws -> Wrapped {
-    if let value = self {
-      return value
-    }
-    throw Optional.BrightroomUnwrappedNilError(
-      debugDescription,
-      file: file,
-      function: function,
-      line: line
-    )
-  }
-
-  public struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
-    let file: StaticString
-    let function: StaticString
-    let line: UInt
-
-    // MARK: Public
-
-    public init(
-      _ debugDescription: String? = nil,
-      file: StaticString = #file,
-      function: StaticString = #function,
-      line: UInt = #line
-    ) {
-      self.debugDescription = debugDescription ?? "Failed to unwrap on \(file):\(function):\(line)"
-      self.file = file
-      self.function = function
-      self.line = line
-    }
-
-    // MARK: CustomDebugStringConvertible
-
-    public let debugDescription: String
-  }
-}
-
-extension CGImage {
-
-  func resized(maxPixelSize: CGFloat) throws -> CGImage {
-
-    let cgImage = try autoreleasepool { () -> CGImage? in
-
-      let targetSize = Geometry.sizeThatAspectFit(
-        size: size,
-        maxPixelSize: maxPixelSize
-      )
-
-      let context = try CGContext.makeContext(for: self, size: targetSize)
-        .perform { c in
-          c.interpolationQuality = .high
-          c.draw(self, in: c.boundingBoxOfClipPath)
-        }
-      return context.makeImage()
-    }
-
-    return try cgImage.unwrap()
-  }
-
-  func oriented(_ orientation: CGImagePropertyOrientation) throws -> CGImage {
-
-    guard orientation != .up else {
-      return self
-    }
-
-    let size = self.size
-
-    var transform: CGAffineTransform = .identity
-
-    switch orientation {
-    case .down, .downMirrored:
-      transform = transform.translatedBy(x: size.width, y: size.height)
-      transform = transform.rotated(by: CGFloat.pi)
-    case .left, .leftMirrored:
-      transform = transform.translatedBy(x: size.width, y: 0)
-      transform = transform.rotated(by: CGFloat.pi / 2.0)
-    case .right, .rightMirrored:
-      transform = transform.translatedBy(x: 0, y: size.height)
-      transform = transform.rotated(by: CGFloat.pi / -2.0)
-    case .up, .upMirrored:
-      break
-    }
-
-    // Flip image one more time if needed to, this is to prevent flipped image
-    switch orientation {
-    case .upMirrored, .downMirrored:
-      transform = transform.translatedBy(x: size.width, y: 0)
-      transform = transform.scaledBy(x: -1, y: 1)
-    case .leftMirrored, .rightMirrored:
-      transform = transform.translatedBy(x: size.height, y: 0)
-      transform = transform.scaledBy(x: -1, y: 1)
-    case .up, .down, .left, .right:
-      break
-    }
-
-    let orientedCGImage = try autoreleasepool { () -> CGImage? in
-      try CGContext.makeContext(for: self)
-        .perform { (c) in
-          c.concatenate(transform)
-
-          var drawRect: CGRect = .zero
-          switch orientation {
-          case .left, .leftMirrored, .right, .rightMirrored:
-            drawRect.size = CGSize(width: size.height, height: size.width)
-          default:
-            drawRect.size = CGSize(width: size.width, height: size.height)
-          }
-
-          c.draw(self, in: drawRect)
-        }
-        .makeImage()
-    }
-
-    return try orientedCGImage.unwrap()
   }
 }
