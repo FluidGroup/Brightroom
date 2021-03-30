@@ -25,9 +25,14 @@ import MobileCoreServices
 import UIKit
 
 enum ImageTool {
-  static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State.ImageMetadata? {
+  static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State
+    .ImageMetadata?
+  {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
+        as? [CFString: Any]
+    else {
       return nil
     }
 
@@ -40,9 +45,10 @@ enum ImageTool {
       return nil
     }
 
-    let orientation: CGImagePropertyOrientation = (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
-      CGImagePropertyOrientation(rawValue: $0)
-    } ?? .up
+    let orientation: CGImagePropertyOrientation =
+      (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
+        CGImagePropertyOrientation(rawValue: $0)
+      } ?? .up
 
     let size = CGSize(width: width, height: height)
 
@@ -56,7 +62,10 @@ enum ImageTool {
    */
   static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
+        as? [CFString: Any]
+    else {
       return nil
     }
 
@@ -72,7 +81,10 @@ enum ImageTool {
   static func readOrientation(from imageSource: CGImageSource) -> CGImagePropertyOrientation? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
 
-    guard let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions) as? [CFString: Any] else {
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
+        as? [CFString: Any]
+    else {
       return nil
     }
 
@@ -85,25 +97,35 @@ enum ImageTool {
     return orientation
   }
 
-  static func loadOriginalCGImage(from imageSource: CGImageSource) -> CGImage? {
-    CGImageSourceCreateImageAtIndex(imageSource, 0, [:] as CFDictionary)
+  static func loadOriginalCGImage(from imageSource: CGImageSource, fixesOrientation: Bool) -> CGImage? {
+    CGImageSourceCreateImageAtIndex(
+      imageSource,
+      0,
+      [
+        kCGImageSourceCreateThumbnailWithTransform: fixesOrientation,
+      ] as CFDictionary
+    )
   }
 
-  static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat) -> CGImage? {
+  static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat, fixesOrientation: Bool)
+    -> CGImage?
+  {
     let scaledImage = CGImageSourceCreateThumbnailAtIndex(
-      imageSource, 0, [
+      imageSource,
+      0,
+      [
         kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         kCGImageSourceCreateThumbnailFromImageAlways: true,
         kCGImageSourceCreateThumbnailWithTransform: false,
       ] as CFDictionary
     )
 
-//    #if DEBUG
-//    let size = readImageSize(from: imageProvider)!
-//    let scaled = size.scaled(maxPixelSize: maxPixelSize)
-//    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
-//    #endif
-//
+    //    #if DEBUG
+    //    let size = readImageSize(from: imageProvider)!
+    //    let scaled = size.scaled(maxPixelSize: maxPixelSize)
+    //    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
+    //    #endif
+    //
     return scaledImage
   }
 
@@ -211,34 +233,36 @@ enum ImageTool {
       destination,
       image,
       [
-        kCGImageDestinationLossyCompressionQuality : quality,
+        kCGImageDestinationLossyCompressionQuality: quality,
         kCGImageDestinationOptimizeColorForSharing: true,
-      ] as CFDictionary)
+      ] as CFDictionary
+    )
 
     CGImageDestinationFinalize(destination)
 
     return data as Data
   }
-  
+
   static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
     let data = NSMutableData()
-    
+
     let destination = CGImageDestinationCreateWithData(
       data,
       kUTTypePNG,
       1,
       [:] as CFDictionary
     )!
-    
+
     CGImageDestinationAddImage(
       destination,
       image,
       [
-        kCGImageDestinationOptimizeColorForSharing: true,
-      ] as CFDictionary)
-    
+        kCGImageDestinationOptimizeColorForSharing: true
+      ] as CFDictionary
+    )
+
     CGImageDestinationFinalize(destination)
-    
+
     return data as Data
   }
 }

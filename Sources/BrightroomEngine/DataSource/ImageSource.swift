@@ -19,40 +19,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-
 import CoreImage
+import UIKit
 import Verge
 
 #if canImport(UIKit)
-import UIKit
+  import UIKit
 #endif
 
 #if canImport(Photos)
-import Photos
+  import Photos
 #endif
 
 
-/**
- An object that provides an image-data from multiple backing storage.
- */
+/// An object that provides an image-data from multiple backing storage.
 public final class ImageSource: Equatable {
-        
+
   private struct Closures {
     let readImageSize: () -> CGSize
     let loadOriginalCGImage: () -> CGImage
     let loadThumbnailCGImage: (CGFloat) -> CGImage
     let makeCIImage: () -> CIImage
   }
-  
+
   public static func == (lhs: ImageSource, rhs: ImageSource) -> Bool {
     lhs === rhs
   }
-  
+
   private let closures: Closures
-  
+
   public init(image: UIImage) {
-  
+
     self.closures = .init(
       readImageSize: {
         image.size.applying(.init(scaleX: image.scale, y: image.scale))
@@ -68,43 +65,61 @@ public final class ImageSource: Equatable {
       }
     )
   }
-  
+
   public init(cgImageSource: CGImageSource) {
     self.closures = .init(
       readImageSize: {
         ImageTool.readImageSize(from: cgImageSource)!
       },
       loadOriginalCGImage: {
-        ImageTool.loadOriginalCGImage(from: cgImageSource)!
+        ImageTool.loadOriginalCGImage(from: cgImageSource, fixesOrientation: false)!
       },
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
-        ImageTool.loadThumbnailCGImage(from: cgImageSource, maxPixelSize: maxPixelSize)!
+        ImageTool.loadThumbnailCGImage(
+          from: cgImageSource,
+          maxPixelSize: maxPixelSize,
+          fixesOrientation: false
+        )!
       },
       makeCIImage: {
         if #available(iOS 13.0, *) {
           return CIImage(cgImageSource: cgImageSource, index: 0, options: [:])
         } else {
-          return CIImage(cgImage: ImageTool.loadOriginalCGImage(from: cgImageSource)!)
+          return CIImage(cgImage: ImageTool.loadOriginalCGImage(from: cgImageSource, fixesOrientation: false)!)
         }
       }
     )
   }
-  
+
   public func readImageSize() -> CGSize {
     closures.readImageSize()
   }
-  
+
+  /**
+   Creates an instance of CGImage full-resolution.
+
+   - Attention: The image is not orientated.
+   */
   public func loadOriginalCGImage() -> CGImage {
     closures.loadOriginalCGImage()
   }
-  
+
+  /**
+   Creates an instance of CGImage resized to maximum pixel size.
+
+   - Attention: The image is not orientated.
+   */
   public func loadThumbnailCGImage(maxPixelSize: CGFloat) -> CGImage {
     closures.loadThumbnailCGImage(maxPixelSize)
   }
-  
-  public func makeCIImage() -> CIImage {
+
+  /**
+   Creates an instance of CIImage that backed full-resolution image.
+
+   - Attention: The image is not orientated.
+   */
+  public func makeOriginalCIImage() -> CIImage {
     closures.makeCIImage()
   }
-      
-}
 
+}
