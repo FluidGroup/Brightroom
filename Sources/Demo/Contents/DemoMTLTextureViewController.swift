@@ -56,7 +56,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
           let texture = try! loader.newTexture(cgImage: Asset.l1000316.image.cgImage!, options: [:])
           let sourceImage = CIImage(mtlTexture: texture, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: _ImageView())
+          let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: _PreviewImageView())
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -69,7 +69,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
 
           let image = CIImage(image: Asset.l1000316.image, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: image, displayView: _ImageView())
+          let controller = _MTLTextureViewController(sourceImage: image, displayView: _PreviewImageView())
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -196,7 +196,7 @@ private final class SampleMTLTextureDisplayView: MTKView, MTKViewDelegate, CIIma
     #if targetEnvironment(simulator)
     #else
       /// For supporting wide-color - extended sRGB
-      colorPixelFormat = .bgra10_xr
+//      colorPixelFormat = .bgra10_xr
     #endif
   }
 

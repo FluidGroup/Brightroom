@@ -25,6 +25,9 @@ import UIKit
 import BrightroomEngine
 #endif
 
+/**
+ https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
+ */
 open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   public var postProcessing: (CIImage) -> CIImage = { $0 } {
     didSet {
@@ -75,7 +78,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     #if targetEnvironment(simulator)
     #else
     /// For supporting wide-color - extended sRGB
-    colorPixelFormat = .bgra10_xr
+//    colorPixelFormat = .bgra10_xr
     #endif
   }
 
