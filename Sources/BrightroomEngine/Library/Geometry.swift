@@ -258,3 +258,4 @@ public struct PixelAspectRatio: Hashable {
   }
 
 }
+
