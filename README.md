@@ -12,6 +12,8 @@
 
 > ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
 
+> 🪐 Brightroom's state management powered by [Verge](https://github.com/VergeGroup/Verge).
+
 ---
 
 # Brightroom - Composable image editor - building your own UI
