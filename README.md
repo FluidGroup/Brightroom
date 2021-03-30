@@ -40,7 +40,7 @@ Brightroom v2 provides the following features:
 
 <b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
 
-## Customization show cases
+## Customization showcases
 
 | Tinder | 
 | --- |
