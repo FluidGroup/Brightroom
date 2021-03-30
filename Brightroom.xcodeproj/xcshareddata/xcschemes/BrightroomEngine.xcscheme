@@ -53,6 +53,9 @@
             </BuildableReference>
             <SkippedTests>
                <Test
+                  Identifier = "LoadingTests/testBasic()">
+               </Test>
+               <Test
                   Identifier = "RendererTests/testCropping()">
                </Test>
             </SkippedTests>
