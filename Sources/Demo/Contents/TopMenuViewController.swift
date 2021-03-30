@@ -47,6 +47,13 @@ final class TopMenuViewController: StackScrollNodeViewController {
           let menu = DemoImitationsViewController()
           self.navigationController?.pushViewController(menu, animated: true)
         }),
+
+      Components.makeSelectionCell(
+        title: "Metal",
+        onTap: { [unowned self] in
+          let menu = DemoMTLTextureViewController()
+          self.navigationController?.pushViewController(menu, animated: true)
+        }),
       /*
       Components.makeSelectionCell(
         title: "Components: MetalImageView",

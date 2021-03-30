@@ -183,7 +183,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   }
 }
 
-private final class _PreviewImageView: UIImageView, CIImageDisplaying {
+final class _PreviewImageView: UIImageView, CIImageDisplaying {
   var postProcessing: (CIImage) -> CIImage = { $0 } {
     didSet {
       update()
