@@ -1,4 +1,4 @@
-## 🎉 v2.0.0-alpha.1 now open!
+## 🎉 v2.0.0-alpha.2 now open!
 
 > 💥 v2.0.0 development is still early development. We have a lot of known issues.
 
@@ -14,7 +14,7 @@
 
 ---
 
-# \[v2-alpha.1\] Brightroom - Composable image editor - building your own UI
+# Brightroom - Composable image editor - building your own UI
 
 | Classic Image Editor | PhotosCrop | Face detection | Masking component |
 | --- | --- | --- | --- |
@@ -55,16 +55,16 @@ Brightroom v2 provides the following features:
 **CocoaPods**
 
 ```ruby
-pod "Brightroom/Engine", "2.0.0-alpha.1"
-pod "Brightroom/UI-Classic", "2.0.0-alpha.1"
-pod "Brightroom/UI-Crop", "2.0.0-alpha.1"
+pod "Brightroom/Engine", "2.0.0-alpha.2"
+pod "Brightroom/UI-Classic", "2.0.0-alpha.2"
+pod "Brightroom/UI-Crop", "2.0.0-alpha.2"
 ```
 
 **Swift Package Manager**
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.0.0-alpha.1")
+    .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.0.0-alpha.2")
 ]
 ```
 
