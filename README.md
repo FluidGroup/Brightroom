@@ -14,6 +14,8 @@
 
 > 🪐 Brightroom's state management powered by [Verge](https://github.com/VergeGroup/Verge).
 
+> 💵 [Please Support me to implement the next feature.](https://github.com/sponsors/muukii)
+
 ---
 
 # Brightroom - Composable image editor - building your own UI
@@ -27,11 +29,6 @@ Brightroom v2 provides the following features:
 - **Create your own image editor UI** by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
 - Wide color editing support
-
-> 🤵🏻‍♂️ Support Muukii.  
-> Hi, I'm Muukii. I'm working on open-source software including this library.  
-> Please help me continue my work. I appreciate it.  
-> https://github.com/sponsors/muukii
 
 ## Requirements
 
