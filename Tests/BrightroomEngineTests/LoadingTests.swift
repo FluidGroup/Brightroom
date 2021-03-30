@@ -53,21 +53,21 @@ final class LoadingTests: XCTestCase {
       return result!
     }
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.right.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.right.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5529", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.down.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.down.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5530", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.left.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.left.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5531", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.up.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.up.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5532", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.leftMirrored.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left_mirrored", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.leftMirrored.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5533", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.downMirrored.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down_mirrored", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.downMirrored.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5534", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.rightMirrored.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right_mirrored", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.rightMirrored.rawValue)
     
-    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "IMG_5535", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.upMirrored.rawValue)
+    XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.upMirrored.rawValue)
     
   }
   

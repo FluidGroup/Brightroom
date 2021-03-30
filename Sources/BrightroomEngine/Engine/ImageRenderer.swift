@@ -20,67 +20,87 @@
 // THE SOFTWARE.
 
 import CoreImage
-import UIKit
 import SwiftUI
+import UIKit
 
 public final class ImageRenderer {
-  
+
   public struct Options {
-       
-    public var resolution: Resolution = .full
-    public var workingFormat: CIFormat = .ARGB8
-    
-    public init(resolution: ImageRenderer.Resolution = .full, workingFormat: CIFormat = .ARGB8) {
+
+    public var resolution: Resolution
+    public var workingFormat: CIFormat
+    public var workingColorSpace: CGColorSpace
+
+    public init(
+      resolution: ImageRenderer.Resolution = .full,
+      workingFormat: CIFormat = .ARGB8,
+      workingColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+    ) {
       self.resolution = resolution
       self.workingFormat = workingFormat
+      self.workingColorSpace = workingColorSpace
     }
-  
+
   }
-  
+
   /**
    A result of rendering.
    */
   public struct Rendered {
-    
+
+    public enum Engine {
+      case coreGraphics
+      case combined
+    }
+
     public enum DataType {
       case jpeg(quality: CGFloat)
       case png
     }
-    
-    /// A rendered image that working on DisplayP3
-    public let cgImageDisplayP3: CGImage
-    
-    public var uiImageDisplayP3: UIImage {
-      .init(cgImage: cgImageDisplayP3)
+
+    /// A type of engine how rendered by
+    public let engine: Engine
+
+    /// An Options instance that used in redering.
+    public let options: Options
+
+    /// A rendered image that working on specified color-space.
+    /// Orientation fixed.
+    public let cgImage: CGImage
+
+    public var uiImage: UIImage {
+      UIImage.init(cgImage: cgImage, scale: 1, orientation: .up)
     }
-    
+
     @available(iOS 13.0, *)
-    public var swiftUIImageDisplayP3: SwiftUI.Image {
-      .init(decorative: cgImageDisplayP3, scale: 1, orientation: .up)
+    public var swiftUIImage: SwiftUI.Image {
+      .init(decorative: cgImage, scale: 1, orientation: .up)
     }
-    
-    init(cgImageDisplayP3: CGImage) {
-      assert(cgImageDisplayP3.colorSpace == CGColorSpace.init(name: CGColorSpace.displayP3))
-      self.cgImageDisplayP3 = cgImageDisplayP3
+
+    init(cgImage: CGImage, options: Options, engine: Engine) {
+      assert(cgImage.colorSpace == options.workingColorSpace)
+      self.cgImage = cgImage
+      self.options = options
+      self.engine = engine
     }
-    
+
     /**
      Makes a data of the image that optimized for sharing.
-     
+
      Since the rendered image is working on DisplayP3 profile, that data might display wrong color on other platform devices.
      To avoid those issues, use this method to create data to send instead of creating data from `cgImageDisplayP3`.
      */
     public func makeOptimizedForSharingData(dataType: DataType) -> Data {
       switch dataType {
       case .jpeg(let quality):
-        return ImageTool.makeImageForJPEGOptimizedSharing(image: cgImageDisplayP3, quality: quality)
+        return ImageTool.makeImageForJPEGOptimizedSharing(image: cgImage, quality: quality)
       case .png:
-        return ImageTool.makeImageForPNGOptimizedSharing(image: cgImageDisplayP3)
+        return ImageTool.makeImageForPNGOptimizedSharing(image: cgImage)
       }
     }
-    
+
   }
-  
+
   private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
 
   public enum Resolution {
@@ -107,8 +127,10 @@ public final class ImageRenderer {
 
   public func render(
     options: Options = .init(),
-    completion: @escaping (Result<Rendered, Error>
-    ) -> Void) {
+    completion: @escaping (
+      Result<Rendered, Error>
+    ) -> Void
+  ) {
     type(of: self).queue.async {
       do {
         let rendered = try self.render()
@@ -129,22 +151,110 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
-    try renderRevison2(options: options)
+    if edit.drawer.isEmpty, edit.modifiers.isEmpty {
+      return try renderOnlyCropping(options: options)
+    } else {
+      return try renderRevison2(options: options)
+    }
   }
 
+  /**
+   Render for only cropping using CoreGraphics
+   */
+  private func renderOnlyCropping(options: Options = .init()) throws -> Rendered {
+
+    EngineLog.debug(.renderer, "Start render in using CoreGraphics")
+
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Load full resolution CGImage from ImageSource.")
+
+    let sourceCGImage: CGImage = source.loadOriginalCGImage()
+
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(
+      .renderer,
+      "Fixing colorspace \(sourceCGImage.colorSpace?.name as NSString? ?? "") -> \(options.workingColorSpace.name as NSString? ?? "")"
+    )
+
+    let fixedColorspace: CGImage = try sourceCGImage.copy(colorSpace: options.workingColorSpace)
+      .unwrap(orThrow: "Failed to copy with fixing colorspace.")
+
+    assert(fixedColorspace.colorSpace == options.workingColorSpace)
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Fix orientation")
+
+    let orientedImage = try fixedColorspace.oriented(orientation)
+
+    /*
+     ===
+     ===
+     ===
+     */
+    // TODO: Better management of orientation
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize().applying(cgOrientation: orientation))
+    EngineLog.debug(.renderer, "Crop CGImage with extent \(crop)")
+
+    let croppedImage = try orientedImage.croppedWithColorspace(to: crop.cropExtent)
+
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Resize if needed")
+
+
+    let resizedImage: CGImage
+
+    switch options.resolution {
+    case .full:
+      resizedImage = croppedImage
+    case .resize(let maxPixelSize):
+      resizedImage = try croppedImage.resized(maxPixelSize: maxPixelSize)
+    }
+
+    /*
+     ===
+     ===
+     ===
+     */
+    EngineLog.debug(.renderer, "Rotation")
+
+    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
+
+    return .init(cgImage: rotatedImage, options: options, engine: .coreGraphics)
+  }
+
+  /**
+   Render for full features using CoreImage and CoreGraphics
+   */
   private func renderRevison2(
     options: Options = .init(),
     debug: @escaping (CIImage) -> Void = { _ in }
   ) throws -> Rendered {
-    
+
     let ciContext = CIContext(
       options: [
         .workingFormat: options.workingFormat,
         .highQualityDownsample: true,
-        //        .useSoftwareRenderer: true,
+        .useSoftwareRenderer: false,
         .cacheIntermediates: false,
       ]
     )
+
+    let startTime = CACurrentMediaTime()
 
     EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
 
@@ -155,7 +265,7 @@ public final class ImageRenderer {
      */
     EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
 
-    let sourceCIImage: CIImage = source.makeCIImage().oriented(orientation)
+    let sourceCIImage: CIImage = source.makeOriginalCIImage().oriented(orientation)
 
     EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
 
@@ -163,7 +273,8 @@ public final class ImageRenderer {
       {
         guard let crop = edit.croppingRect else { return true }
         return crop.imageSize == CGSize(image: sourceCIImage)
-      }())
+      }()
+    )
 
     /*
      ===
@@ -183,7 +294,8 @@ public final class ImageRenderer {
      */
     EngineLog.debug(.renderer, "Applies Crop to effected image")
 
-    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize())
+    // TODO: Better management of orientation
+    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize().applying(cgOrientation: orientation))
 
     let cropped_effected_CIImage = effected_CIImage.cropped(to: crop)
 
@@ -195,7 +307,7 @@ public final class ImageRenderer {
      ===
      */
     EngineLog.debug(.renderer, "Creates CGImage from crop applied CIImage.")
-    
+
     /**
      To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
      */
@@ -203,8 +315,8 @@ public final class ImageRenderer {
       cropped_effected_CIImage,
       from: cropped_effected_CIImage.extent,
       format: options.workingFormat,
-      colorSpace: CGColorSpace(name: CGColorSpace.displayP3)!,
-      deferred: true
+      colorSpace: options.workingColorSpace,
+      deferred: false
     )!
 
     EngineLog.debug(.renderer, "Created effected CGImage => \(cropped_effected_CGImage)")
@@ -248,159 +360,38 @@ public final class ImageRenderer {
      ===
      ===
      */
-    
+
     let resizedImage: CGImage
 
     switch options.resolution {
     case .full:
-      
+
       EngineLog.debug(.renderer, "No resizing")
 
       resizedImage = drawings_CGImage
 
     case let .resize(maxPixelSize):
-      
+
       EngineLog.debug(.renderer, "Resizing with maxPixelSize: \(maxPixelSize)")
 
-      let targetSize = Geometry.sizeThatAspectFit(
-        size: drawings_CGImage.size,
-        maxPixelSize: maxPixelSize
-      )
+      resizedImage = try drawings_CGImage.resized(maxPixelSize: maxPixelSize)
 
-      let context = try CGContext.makeContext(for: drawings_CGImage, size: targetSize)
-        .perform { c in
-          c.draw(drawings_CGImage, in: c.boundingBoxOfClipPath)
-        }
-
-      resizedImage = try context.makeImage().unwrap()
     }
-    
+
     /*
      ===
      ===
      ===
      */
-        
+
     EngineLog.debug(.renderer, "Rotates image if needed")
 
-    let rotatedImage = try resizedImage.makeRotatedIfNeeded(rotation: crop.rotation)
+    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
 
-    return .init(cgImageDisplayP3: rotatedImage)
-    
-  }
-}
+    let duration = CACurrentMediaTime() - startTime
+    EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
 
-extension CGContext {
-  @discardableResult
-  func perform(_ drawing: (CGContext) -> Void) -> CGContext {
-    UIGraphicsPushContext(self)
-    defer {
-      UIGraphicsPopContext()
-    }
-    drawing(self)
-    return self
-  }
+    return .init(cgImage: rotatedImage, options: options, engine: .combined)
 
-  static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
-    let context = CGContext.init(
-      data: nil,
-      width: size.map { Int($0.width) } ?? image.width,
-      height: size.map { Int($0.height) } ?? image.height,
-      bitsPerComponent: image.bitsPerComponent,
-      bytesPerRow: 0,
-      space: try image.colorSpace.unwrap(),
-      bitmapInfo: image.bitmapInfo.rawValue
-    )
-
-    return try context.unwrap()
-  }
-}
-
-extension UIGraphicsImageRenderer {
-  func _custom(_ perform: (UIGraphicsImageRendererContext) -> Void) -> CGImage {
-    let d = pngData(actions: perform)
-    return UIImage(data: d)!.cgImage!
-  }
-}
-
-extension CGContext {
-  fileprivate func detached(_ perform: () -> Void) {
-    saveGState()
-    perform()
-    restoreGState()
-  }
-}
-
-extension CGImage {
-  fileprivate var size: CGSize {
-    return .init(width: width, height: height)
-  }
-
-  fileprivate func makeRotatedIfNeeded(rotation: EditingCrop.Rotation) throws -> CGImage {
-    guard rotation != .angle_0 else {
-      return self
-    }
-
-    var rotatedSize: CGSize = size
-      .applying(rotation.transform)
-
-    rotatedSize.width = abs(rotatedSize.width)
-    rotatedSize.height = abs(rotatedSize.height)
-
-    let rotatingContext = try CGContext.makeContext(for: self, size: rotatedSize)
-      .perform { c in
-        c.translateBy(x: rotatedSize.width / 2, y: rotatedSize.height / 2)
-        c.rotate(by: -rotation.angle)
-        c.translateBy(
-          x: -size.width / 2,
-          y: -size.height / 2
-        )
-        c.draw(self, in: .init(origin: .zero, size: self.size))
-      }
-
-    return try rotatingContext.makeImage().unwrap()
-  }
-}
-
-extension Optional {
-  internal func unwrap(
-    orThrow debugDescription: String? = nil,
-    file: StaticString = #file,
-    function: StaticString = #function,
-    line: UInt = #line
-  ) throws -> Wrapped {
-    if let value = self {
-      return value
-    }
-    throw Optional.BrightroomUnwrappedNilError(
-      debugDescription,
-      file: file,
-      function: function,
-      line: line
-    )
-  }
-
-  public struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
-    let file: StaticString
-    let function: StaticString
-    let line: UInt
-
-    // MARK: Public
-
-    public init(
-      _ debugDescription: String? = nil,
-      file: StaticString = #file,
-      function: StaticString = #function,
-      line: UInt = #line
-    ) {
-      self.debugDescription = debugDescription ?? "Failed to unwrap on \(file):\(function):\(line)"
-      self.file = file
-      self.function = function
-      self.line = line
-    }
-
-    // MARK: CustomDebugStringConvertible
-
-    public let debugDescription: String
   }
 }

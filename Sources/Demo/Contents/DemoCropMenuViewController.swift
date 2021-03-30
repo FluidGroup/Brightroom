@@ -187,7 +187,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         .render { (result) in
           switch result {
           case .success(let rendered):
-            self?.resultCell.image = rendered.uiImageDisplayP3
+            self?.resultCell.image = rendered.uiImage
           case .failure(let error):
             print(error)
           }

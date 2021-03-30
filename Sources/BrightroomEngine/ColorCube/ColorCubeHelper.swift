@@ -26,7 +26,7 @@ public class ColorCubeHelper {
       throw ColorCubeHelperError.failedToCreateCGImageSource
     }
      
-    let cgImage = ImageTool.loadOriginalCGImage(from: imageSource)!
+    let cgImage = ImageTool.loadOriginalCGImage(from: imageSource, fixesOrientation: false)!
           
     let pixels = cgImage.width * cgImage.height
     let channels = 4
