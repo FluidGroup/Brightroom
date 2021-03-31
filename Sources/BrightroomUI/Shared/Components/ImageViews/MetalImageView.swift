@@ -111,6 +111,8 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       return
     }
 
+    EditorLog.debug(.imageView, "[MetalImageView] Render")
+
     #if DEBUG
 //    if image.cgImage != nil {
 //      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
@@ -129,9 +131,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     let resolvedImage = downsample(image: fixedImage, bounds: bounds, contentMode: contentMode)
 
     let processedImage = postProcessing(resolvedImage)
-    
-    EditorLog.debug("[MetalImageView] image color-space \(processedImage.colorSpace as Any)")
-    
+
     ciContext.render(
       processedImage,
       to: targetTexture,

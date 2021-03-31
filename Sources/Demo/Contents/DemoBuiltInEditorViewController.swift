@@ -13,7 +13,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
   }
 
   private let resultCell = Components.ResultImageCell()
-  private let stack = EditingStack.init(
+  private lazy var stack = EditingStack.init(
     imageProvider: .init(image: Asset.leica.image),
     cropModifier: .init { _, crop, completion in
       var new = crop

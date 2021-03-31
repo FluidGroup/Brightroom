@@ -148,49 +148,8 @@ enum ImageTool {
     return destination
   }
 
-  static func makeNewResizedCIImage(to pixelSize: CGSize, from sourceImage: CIImage) -> CIImage? {
-    var targetSize = pixelSize
-    targetSize.height.round(.down)
-    targetSize.width.round(.down)
-
-    return
-      autoreleasepool { () -> CIImage? in
-
-        let format: UIGraphicsImageRendererFormat
-        format = UIGraphicsImageRendererFormat.preferred()
-        format.scale = 1
-        format.opaque = true
-        if #available(iOS 12.0, *) {
-          format.preferredRange = .automatic
-        } else {
-          format.prefersExtendedRange = false
-        }
-
-        let uiImage = UIGraphicsImageRenderer.init(size: targetSize, format: format)
-          .image { c in
-
-            autoreleasepool {
-              EngineLog.debug("[Resizing] Use softwareRenderer => \(sourceImage.cgImage != nil)")
-
-              let rect = CGRect(origin: .zero, size: targetSize)
-              c.cgContext.translateBy(x: 0, y: targetSize.height)
-              c.cgContext.scaleBy(x: 1, y: -1)
-              let context = CIContext(
-                cgContext: c.cgContext,
-                options: [.useSoftwareRenderer: sourceImage.cgImage != nil]
-              )
-              context.draw(sourceImage, in: rect, from: sourceImage.extent)
-            }
-          }
-
-        let resizedImage = CIImage(image: uiImage)!
-          .insertingIntermediate(cache: true)
-
-        return resizedImage
-      }
-  }
-
   static func makeResizedCGImage(maxPixelSize: CGFloat, from sourceImage: CGImage) -> CGImage? {
+
     let imageSize = CGSize(
       width: sourceImage.width,
       height: sourceImage.height
@@ -198,25 +157,12 @@ enum ImageTool {
 
     let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
 
-    let format: UIGraphicsImageRendererFormat
-    format = UIGraphicsImageRendererFormat.preferred()
-    format.scale = 1
-    format.opaque = true
-    if #available(iOS 12.0, *) {
-      format.preferredRange = .automatic
-    } else {
-      format.prefersExtendedRange = false
-    }
-
-    let cgImage = UIGraphicsImageRenderer(size: targetSize, format: format)
-      .image { c in
-        c.cgContext.translateBy(x: 0, y: targetSize.height)
-        c.cgContext.scaleBy(x: 1, y: -1)
-        c.cgContext.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
+    return try? CGContext.makeContext(for: sourceImage, size: targetSize)
+      .perform { c in
+        c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
       }
-      .cgImage
+      .makeImage()
 
-    return cgImage
   }
 
   static func makeImageForJPEGOptimizedSharing(image: CGImage, quality: CGFloat = 1) -> Data {

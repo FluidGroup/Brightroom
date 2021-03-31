@@ -31,7 +31,7 @@ import Verge
 public final class ImagePreviewView: PixelEditorCodeBasedView {
   // MARK: - Properties
 
-  #if true
+  #if false
   private let imageView = _PreviewImageView()
   private let originalImageView = _PreviewImageView()
   #else
@@ -223,7 +223,7 @@ final class _PreviewImageView: UIImageView, CIImageDisplaying {
       return
     }
 
-    EditorLog.debug("[ImageImageView] Update")
+    EditorLog.debug(.imageView, "[ImageImageView] Update")
 
     let uiImage: UIImage
 
