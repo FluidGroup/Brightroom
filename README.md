@@ -34,15 +34,30 @@ Brightroom v2 provides the following features:
 - Drawing supported - masking blurry
 - Creating your own filter with LUT
 - Opening the image from URL
+- Supported UIKit and SwiftUI
 
 ## Requirements
 
 * Swift 5.3 (Xcode12.4+)
 * iOS 12+
 
-## Usage
+## Usage - Documentations
 
 <b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
+
+## SwiftUI supported (beta)
+
+> Not sophisticated API.  
+> Please help us 🤲
+
+```swift
+let editingStack: EditingStack
+
+SwiftUIPhotosCropView(editingStack: editingStack, onCompleted: {
+  let image = try! editingStack.makeRenderer().render().swiftUIImage
+  
+})
+```
 
 ## Customization showcases
 
