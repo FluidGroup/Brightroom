@@ -48,9 +48,6 @@ Brightroom v2 provides the following features:
 
 ## Installation
 
-> ⚠️ Brightroom has not been published in CocoaPods since it's still early development.
-> If you try to use it, following pod commands install libraries to your application.
-
 **CocoaPods**
 
 ```ruby
