@@ -23,7 +23,7 @@ final class CGContextTests: XCTestCase {
       XCTFail(error.localizedDescription)
     }
 
-    let result = ImageTool.makeResizedCGImage(maxPixelSize: 300, from: image.cgImage!)
+    let result = ImageTool.makeResizedCGImage(from: image.cgImage!, maxPixelSize: 300)
     XCTAssertNotEqual(result, nil)
   }
 
