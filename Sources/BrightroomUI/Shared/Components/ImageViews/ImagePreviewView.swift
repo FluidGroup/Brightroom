@@ -223,6 +223,8 @@ final class _PreviewImageView: UIImageView, CIImageDisplaying {
       return
     }
 
+    EditorLog.debug("[ImageImageView] Update")
+
     let uiImage: UIImage
 
     if let cgImage = postProcessing(_image).cgImage {
@@ -247,8 +249,6 @@ final class _PreviewImageView: UIImageView, CIImageDisplaying {
         .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
     
       let processed = postProcessing(resolvedImage.removingExtentOffset())
-
-      EditorLog.debug("[_ImageView] image color-space \(processed.colorSpace as Any)")
 
       uiImage = UIImage(
         ciImage: processed,

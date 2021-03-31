@@ -8,6 +8,9 @@ import UIKit
 
 final class DemoMTLTextureViewController: StackScrollNodeViewController {
 
+//  private let targetImage = Asset.l1000316.image
+  private let targetImage = Asset.instaLogo.image
+
   override init() {
     super.init()
     title = "MTLTexture"
@@ -24,7 +27,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
 
           let device = MTLCreateSystemDefaultDevice()!
           let loader = MTKTextureLoader(device: device)
-          let texture = try! loader.newTexture(cgImage: Asset.l1000316.image.cgImage!, options: [:])
+          let texture = try! loader.newTexture(cgImage: targetImage.cgImage!, options: [:])
           let sourceImage = CIImage(mtlTexture: texture, options: [:])!
 
           let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: SampleMTLTextureDisplayView())
@@ -38,7 +41,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
         title: "MTKView <- CIImage <- CGImage",
         onTap: { [unowned self] in
 
-          let image = CIImage(image: Asset.l1000316.image, options: [:])!
+          let image = CIImage(image: targetImage, options: [:])!
 
           let controller = _MTLTextureViewController(sourceImage: image, displayView: SampleMTLTextureDisplayView())
 
@@ -53,7 +56,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
 
           let device = MTLCreateSystemDefaultDevice()!
           let loader = MTKTextureLoader(device: device)
-          let texture = try! loader.newTexture(cgImage: Asset.l1000316.image.cgImage!, options: [:])
+          let texture = try! loader.newTexture(cgImage: targetImage.cgImage!, options: [:])
           let sourceImage = CIImage(mtlTexture: texture, options: [:])!
 
           let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: _PreviewImageView())
@@ -67,7 +70,7 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
         title: "UIImageView <- CIImage <- CGImage",
         onTap: { [unowned self] in
 
-          let image = CIImage(image: Asset.l1000316.image, options: [:])!
+          let image = CIImage(image: targetImage, options: [:])!
 
           let controller = _MTLTextureViewController(sourceImage: image, displayView: _PreviewImageView())
 
