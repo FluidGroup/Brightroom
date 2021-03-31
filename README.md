@@ -33,6 +33,7 @@ Brightroom v2 provides the following features:
 - Blazing fast previewing by Metal power.
 - Drawing supported - masking blurry
 - Creating your own filter with LUT
+- Opening the image from URL
 
 ## Requirements
 
