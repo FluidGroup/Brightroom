@@ -28,7 +28,11 @@ Brightroom v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
 - **Create your own image editor UI** by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
-- Wide color editing support
+- [Wide color editing supported](https://instagram-engineering.com/bringing-wide-color-to-instagram-5a5481802d7d)
+- [Super large photo (12000px)](https://visibleearth.nasa.gov/img/temp.png) supported (But exporting takes so long time for now.)
+- Blazing fast previewing by Metal power.
+- Drawing supported - masking blurry
+- Creating your own filter with LUT
 
 ## Requirements
 
