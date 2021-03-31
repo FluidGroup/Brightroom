@@ -135,7 +135,8 @@ enum ImageTool {
   )
     -> CGImage?
   {
-    let scaledImage = CGImageSourceCreateThumbnailAtIndex(
+
+    let scaledImage = try? CGImageSourceCreateThumbnailAtIndex(
       imageSource,
       0,
       [
@@ -144,6 +145,12 @@ enum ImageTool {
         kCGImageSourceCreateThumbnailWithTransform: false,
       ] as CFDictionary
     )
+    .flatMap { image in
+      try CGContext.makeContext(for: image).perform { (c) in
+        c.draw(image, in: c.boundingBoxOfClipPath)
+      }
+      .makeImage()
+    }
 
     return scaledImage
   }

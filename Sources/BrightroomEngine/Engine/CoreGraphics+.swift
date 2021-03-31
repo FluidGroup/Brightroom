@@ -33,43 +33,34 @@ extension CGContext {
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
 
     let context: CGContext
-    do {
-      context = try CGContext.init(
-        data: nil,
-        width: size.map { Int($0.width) } ?? image.width,
-        height: size.map { Int($0.height) } ?? image.height,
-        bitsPerComponent: image.bitsPerComponent,
-        bytesPerRow: 0,
-        space: try image.colorSpace.unwrap(),
-        bitmapInfo: image.bitmapInfo.rawValue
-      )
-      .unwrap()
 
-    } catch {
+    var bitmapInfo = image.bitmapInfo
 
-      /**
-       First time creation of CGContext would fail if the image was created from iOS screenshot.
-       That would be Display P3 and 16bit.
-       
-       https://stackoverflow.com/a/42684334/2753383
-       */
+    /**
+     Modifies alpha info in order to solve following issues:
 
-      var bitmapInfo = image.bitmapInfo
+     [For creating CGContext]
+     - A screenshot image taken on iPhone might be DisplayP3 16bpc. This is not supported in CoreGraphics.
+     https://stackoverflow.com/a/42684334/2753383
 
-      bitmapInfo.remove(.alphaInfoMask)
-      bitmapInfo.formUnion(.init(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue))
+     [For MTLTexture]
+     - An image loaded from ImageIO seems to contains something different bitmap-info compared with UIImage(named:)
+     That causes creating broken MTLTexture, technically texture contains alpha and wrong color format.
+     I don't know why it happens.
+     */
+    bitmapInfo.remove(.alphaInfoMask)
+    bitmapInfo.formUnion(.init(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue))
 
-      context = try CGContext.init(
-        data: nil,
-        width: size.map { Int($0.width) } ?? image.width,
-        height: size.map { Int($0.height) } ?? image.height,
-        bitsPerComponent: image.bitsPerComponent,
-        bytesPerRow: 0,
-        space: try image.colorSpace.unwrap(),
-        bitmapInfo: bitmapInfo.rawValue
-      )
-      .unwrap()
-    }
+    context = try CGContext.init(
+      data: nil,
+      width: size.map { Int($0.width) } ?? image.width,
+      height: size.map { Int($0.height) } ?? image.height,
+      bitsPerComponent: image.bitsPerComponent,
+      bytesPerRow: 0,
+      space: try image.colorSpace.unwrap(),
+      bitmapInfo: bitmapInfo.rawValue
+    )
+    .unwrap()
 
     return context
   }
