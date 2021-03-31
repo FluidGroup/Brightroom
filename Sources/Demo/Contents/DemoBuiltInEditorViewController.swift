@@ -76,7 +76,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       }),
 
       Components.makeSelectionCell(title: "Oriented image - Square", onTap: { [unowned self] in
-        _presentSquare(try! .init(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")))
+        _presentSquare(try! .init(fileURL: _url(forResource: "orientation_right", ofType: "HEIC")))
       }),
 
       Components.makeSelectionCell(title: "Remote image - Square", onTap: { [unowned self] in

@@ -97,36 +97,16 @@ enum ImageTool {
     return orientation
   }
 
-  static func loadOriginalCGImage(from imageSource: CGImageSource, fixesOrientation: Bool) -> CGImage? {
+  static func loadOriginalCGImage(from imageSource: CGImageSource, fixesOrientation: Bool)
+    -> CGImage?
+  {
     CGImageSourceCreateImageAtIndex(
       imageSource,
       0,
       [
-        kCGImageSourceCreateThumbnailWithTransform: fixesOrientation,
+        kCGImageSourceCreateThumbnailWithTransform: fixesOrientation
       ] as CFDictionary
     )
-  }
-
-  static func loadThumbnailCGImage(from imageSource: CGImageSource, maxPixelSize: CGFloat, fixesOrientation: Bool)
-    -> CGImage?
-  {
-    let scaledImage = CGImageSourceCreateThumbnailAtIndex(
-      imageSource,
-      0,
-      [
-        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-        kCGImageSourceCreateThumbnailFromImageAlways: true,
-        kCGImageSourceCreateThumbnailWithTransform: false,
-      ] as CFDictionary
-    )
-
-    //    #if DEBUG
-    //    let size = readImageSize(from: imageProvider)!
-    //    let scaled = size.scaled(maxPixelSize: maxPixelSize)
-    //    assert(CGSize(width: scaledImage!.width, height: scaledImage!.height) == scaled)
-    //    #endif
-    //
-    return scaledImage
   }
 
   static func writeImageToTmpDirectory(image: UIImage) -> URL? {
@@ -148,7 +128,30 @@ enum ImageTool {
     return destination
   }
 
-  static func makeResizedCGImage(maxPixelSize: CGFloat, from sourceImage: CGImage) -> CGImage? {
+  static func makeResizedCGImage(
+    from imageSource: CGImageSource,
+    maxPixelSize: CGFloat,
+    fixesOrientation: Bool
+  )
+    -> CGImage?
+  {
+    let scaledImage = CGImageSourceCreateThumbnailAtIndex(
+      imageSource,
+      0,
+      [
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: false,
+      ] as CFDictionary
+    )
+
+    return scaledImage
+  }
+
+  static func makeResizedCGImage(
+    from sourceImage: CGImage,
+    maxPixelSize: CGFloat
+  ) -> CGImage? {
 
     let imageSize = CGSize(
       width: sourceImage.width,
@@ -157,15 +160,19 @@ enum ImageTool {
 
     let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
 
-    return try? CGContext.makeContext(for: sourceImage, size: targetSize)
+    let image = try? CGContext.makeContext(for: sourceImage, size: targetSize)
       .perform { c in
         c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
       }
       .makeImage()
 
+    return image
   }
 
-  static func makeImageForJPEGOptimizedSharing(image: CGImage, quality: CGFloat = 1) -> Data {
+  static func makeImageForJPEGOptimizedSharing(
+    image: CGImage,
+    quality: CGFloat = 1
+  ) -> Data {
     let data = NSMutableData()
 
     let destination = CGImageDestinationCreateWithData(

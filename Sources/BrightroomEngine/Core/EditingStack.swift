@@ -277,13 +277,14 @@ open class EditingStack: Equatable, StoreComponentType {
                 let ciImage = try CIImage(
                   mtlTexture: editingSourceTexture,
                   options: [.colorSpace: colorSpace]
-                ).map {
-                  $0.oriented(metadata.orientation)
-                }
+                )
                 .map {
                   $0.transformed(by: .init(scaleX: 1, y: -1))
                 }.map {
                   $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
+                }
+                .map {
+                  $0.oriented(metadata.orientation)
                 }
                 .unwrap()
 
@@ -320,13 +321,14 @@ open class EditingStack: Equatable, StoreComponentType {
                 let ciImage = try CIImage(
                   mtlTexture: thumbnailTexture,
                   options: [.colorSpace: colorSpace]
-                ).map {
-                  $0.oriented(metadata.orientation)
-                }
+                )
                 .map {
                   $0.transformed(by: .init(scaleX: 1, y: -1))
                 }.map {
                   $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
+                }
+                .map {
+                  $0.oriented(metadata.orientation)
                 }
                 .unwrap()
 
