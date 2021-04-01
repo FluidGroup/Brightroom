@@ -72,7 +72,7 @@ public struct FilterColorCube : Filtering, Equatable {
     
     #else
                
-    let colorSpace = CGColorSpace(name: CGColorSpace.extendedSRGB)!
+    let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.extendedSRGB)!
     let f: CIFilter = ColorCubeHelper.makeColorCubeFilter(
       lutImage: lutImage,
       dimension: dimension,
