@@ -1,4 +1,4 @@
-## 🎉 v2.0.0-alpha.2 now open!
+## 🎉 v2.0.0-alpha now open!
 
 > 💥 v2.0.0 development is still early development. We have a lot of known issues.
 
@@ -58,6 +58,15 @@ SwiftUIPhotosCropView(editingStack: editingStack, onCompleted: {
   
 })
 ```
+
+## Demo applications
+
+This repository contains a demo application.  
+You can see many demonstrations of what Brightroom can perform and experiments in technology.
+
+|||
+|---|---|
+|<img width=200px src=https://user-images.githubusercontent.com/1888355/113339348-4bf10a00-9365-11eb-915b-dc9e54801fcd.PNG />|<img width=200px src=https://user-images.githubusercontent.com/1888355/113339357-4dbacd80-9365-11eb-80a5-53792b616360.PNG />|
 
 ## Customization showcases
 
