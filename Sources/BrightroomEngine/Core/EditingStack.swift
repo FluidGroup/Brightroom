@@ -73,7 +73,11 @@ open class EditingStack: Equatable, StoreComponentType {
       public let metadata: ImageProvider.State.ImageMetadata
       private let initialEditing: Edit
 
-      public fileprivate(set) var currentEdit: Edit {
+      /**
+
+       - TODO: Should be marked as `fileprivate(set)`, but compile fails in CocoaPods installed.
+       */
+      public var currentEdit: Edit {
         didSet {
           editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
         }
