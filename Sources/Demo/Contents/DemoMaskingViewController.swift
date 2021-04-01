@@ -48,7 +48,7 @@ final class DemoMaskingViewController: StackScrollNodeViewController {
       }),
       
       Components.makeSelectionCell(title: "Oriented image", onTap: { [unowned self] in
-        _present(try! .init(fileURL: _url(forResource: "IMG_5528", ofType: "HEIC")))
+        _present(try! .init(fileURL: _url(forResource: "orientation_right", ofType: "HEIC")))
       }),
       
       Components.makeSelectionCell(title: "Remote image", onTap: { [unowned self] in

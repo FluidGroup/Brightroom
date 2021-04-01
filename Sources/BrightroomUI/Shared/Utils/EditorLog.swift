@@ -49,4 +49,24 @@ enum EditorLog {
       }
     }
   }
+
+  static func debug(_ log: OSLog, _ object: Any...) {
+    os_log(.debug, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
+  }
+
+  static func error(_ log: OSLog, _ object: Any...) {
+    os_log(.error, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
+  }
+}
+
+extension OSLog {
+
+  static let imageView: OSLog = {
+    #if false
+    return OSLog.init(subsystem: "BrightroomUI", category: "ImageView")
+    #else
+    return .disabled
+    #endif
+  }()
+
 }

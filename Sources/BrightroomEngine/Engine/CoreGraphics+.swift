@@ -31,17 +31,38 @@ extension CGContext {
   }
 
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
-    let context = CGContext.init(
+
+    let context: CGContext
+
+    var bitmapInfo = image.bitmapInfo
+
+    /**
+     Modifies alpha info in order to solve following issues:
+
+     [For creating CGContext]
+     - A screenshot image taken on iPhone might be DisplayP3 16bpc. This is not supported in CoreGraphics.
+     https://stackoverflow.com/a/42684334/2753383
+
+     [For MTLTexture]
+     - An image loaded from ImageIO seems to contains something different bitmap-info compared with UIImage(named:)
+     That causes creating broken MTLTexture, technically texture contains alpha and wrong color format.
+     I don't know why it happens.
+     */
+    bitmapInfo.remove(.alphaInfoMask)
+    bitmapInfo.formUnion(.init(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue))
+
+    context = try CGContext.init(
       data: nil,
       width: size.map { Int($0.width) } ?? image.width,
       height: size.map { Int($0.height) } ?? image.height,
       bitsPerComponent: image.bitsPerComponent,
       bytesPerRow: 0,
       space: try image.colorSpace.unwrap(),
-      bitmapInfo: image.bitmapInfo.rawValue
+      bitmapInfo: bitmapInfo.rawValue
     )
+    .unwrap()
 
-    return try context.unwrap()
+    return context
   }
 
   fileprivate func detached(_ perform: () -> Void) {

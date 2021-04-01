@@ -31,7 +31,7 @@ platform :ios do
     )
   end
 
-  lane :run_tests do
+  lane :run_all_tests do
     scan(scheme: "BrightroomEngineTests")
   end
 end

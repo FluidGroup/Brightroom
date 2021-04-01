@@ -1,12 +1,16 @@
 import AsyncDisplayKit
-@testable import BrightroomEngine
-@testable import BrightroomUI
 import GlossButtonNode
 import MetalKit
 import TextureSwiftSupport
 import UIKit
 
+@testable import BrightroomEngine
+@testable import BrightroomUI
+
 final class DemoMTLTextureViewController: StackScrollNodeViewController {
+
+  //  private let targetImage = Asset.l1000316.image
+  private let targetImage = Asset.horizontalRect.image
 
   override init() {
     super.init()
@@ -19,15 +23,40 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
     stackScrollNode.append(nodes: [
 
       Components.makeSelectionCell(
+        title: "[Pick] MTKView <- CIImage <- MTLTexture <- CGImage",
+        onTap: { [unowned self] in
+
+          __pickPhoto { image in
+            print(image.cgImage!)
+            let device = MTLCreateSystemDefaultDevice()!
+            let loader = MTKTextureLoader(device: device)
+            let texture = try! loader.newTexture(cgImage: image.cgImage!, options: [:])
+            let sourceImage = CIImage(mtlTexture: texture, options: [:])!
+
+            let controller = _MTLTextureViewController(
+              sourceImage: sourceImage,
+              displayView: SampleMTLTextureDisplayView()
+            )
+
+            navigationController?.pushViewController(controller, animated: true)
+
+          }
+        }
+      ),
+
+      Components.makeSelectionCell(
         title: "MTKView <- CIImage <- MTLTexture <- CGImage",
         onTap: { [unowned self] in
 
           let device = MTLCreateSystemDefaultDevice()!
           let loader = MTKTextureLoader(device: device)
-          let texture = try! loader.newTexture(cgImage: Asset.l1000316.image.cgImage!, options: [:])
+          let texture = try! loader.newTexture(cgImage: targetImage.cgImage!, options: [:])
           let sourceImage = CIImage(mtlTexture: texture, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: SampleMTLTextureDisplayView())
+          let controller = _MTLTextureViewController(
+            sourceImage: sourceImage,
+            displayView: SampleMTLTextureDisplayView()
+          )
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -38,9 +67,12 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
         title: "MTKView <- CIImage <- CGImage",
         onTap: { [unowned self] in
 
-          let image = CIImage(image: Asset.l1000316.image, options: [:])!
+          let image = CIImage(image: targetImage, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: image, displayView: SampleMTLTextureDisplayView())
+          let controller = _MTLTextureViewController(
+            sourceImage: image,
+            displayView: SampleMTLTextureDisplayView()
+          )
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -53,10 +85,13 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
 
           let device = MTLCreateSystemDefaultDevice()!
           let loader = MTKTextureLoader(device: device)
-          let texture = try! loader.newTexture(cgImage: Asset.l1000316.image.cgImage!, options: [:])
+          let texture = try! loader.newTexture(cgImage: targetImage.cgImage!, options: [:])
           let sourceImage = CIImage(mtlTexture: texture, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: sourceImage, displayView: _PreviewImageView())
+          let controller = _MTLTextureViewController(
+            sourceImage: sourceImage,
+            displayView: _PreviewImageView()
+          )
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -67,9 +102,12 @@ final class DemoMTLTextureViewController: StackScrollNodeViewController {
         title: "UIImageView <- CIImage <- CGImage",
         onTap: { [unowned self] in
 
-          let image = CIImage(image: Asset.l1000316.image, options: [:])!
+          let image = CIImage(image: targetImage, options: [:])!
 
-          let controller = _MTLTextureViewController(sourceImage: image, displayView: _PreviewImageView())
+          let controller = _MTLTextureViewController(
+            sourceImage: image,
+            displayView: _PreviewImageView()
+          )
 
           navigationController?.pushViewController(controller, animated: true)
 
@@ -127,11 +165,11 @@ private final class _MTLTextureViewController: UIViewController {
 
     let value = slider.value
 
-//    let blurredImage =
-//      sourceImage
-//      .clampedToExtent()
-//      .applyingGaussianBlur(sigma: Double(value))
-//      .cropped(to: sourceImage.extent)
+    //    let blurredImage =
+    //      sourceImage
+    //      .clampedToExtent()
+    //      .applyingGaussianBlur(sigma: Double(value))
+    //      .cropped(to: sourceImage.extent)
 
     displayView.postProcessing = { sourceImage in
       sourceImage
@@ -140,7 +178,7 @@ private final class _MTLTextureViewController: UIViewController {
         .cropped(to: sourceImage.extent)
     }
 
-//    displayView.display(image: sourceImage)
+    //    displayView.display(image: sourceImage)
   }
 
 }
@@ -196,7 +234,7 @@ private final class SampleMTLTextureDisplayView: MTKView, MTKViewDelegate, CIIma
     #if targetEnvironment(simulator)
     #else
       /// For supporting wide-color - extended sRGB
-//      colorPixelFormat = .bgra10_xr
+      //      colorPixelFormat = .bgra10_xr
     #endif
   }
 

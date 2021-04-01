@@ -51,6 +51,8 @@ final class _ImageView: UIImageView, CIImageDisplaying {
       return
     }
 
+    EditorLog.debug(.imageView, "[_ImageView] Update")
+
     let uiImage: UIImage
     
     if let cgImage = postProcessing(_image).cgImage {

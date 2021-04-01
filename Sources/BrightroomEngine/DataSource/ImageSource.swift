@@ -58,7 +58,10 @@ public final class ImageSource: Equatable {
         image.cgImage!
       },
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
-        return ImageTool.makeResizedCGImage(maxPixelSize: maxPixelSize, from: image.cgImage!)!
+        return ImageTool.makeResizedCGImage(
+          from: image.cgImage!,
+          maxPixelSize: maxPixelSize
+        )!
       },
       makeCIImage: {
         CIImage(image: image)!
@@ -75,7 +78,7 @@ public final class ImageSource: Equatable {
         ImageTool.loadOriginalCGImage(from: cgImageSource, fixesOrientation: false)!
       },
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
-        ImageTool.loadThumbnailCGImage(
+        ImageTool.makeResizedCGImage(
           from: cgImageSource,
           maxPixelSize: maxPixelSize,
           fixesOrientation: false
@@ -85,7 +88,9 @@ public final class ImageSource: Equatable {
         if #available(iOS 13.0, *) {
           return CIImage(cgImageSource: cgImageSource, index: 0, options: [:])
         } else {
-          return CIImage(cgImage: ImageTool.loadOriginalCGImage(from: cgImageSource, fixesOrientation: false)!)
+          return CIImage(
+            cgImage: ImageTool.loadOriginalCGImage(from: cgImageSource, fixesOrientation: false)!
+          )
         }
       }
     )
