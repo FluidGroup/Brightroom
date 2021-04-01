@@ -1,18 +1,17 @@
-
-import Foundation
 import CoreGraphics
+import Foundation
+import ImageIO
 
 public enum ColorCubeLoaderError: Error {
   case failedToGetDimensionFromFilename(String)
   case failedToCreageCGDataProvider(String)
+  case failedToCraeteCGImageSource(String)
 }
 
-/**
- An object for loading color-cube image from bundle.
- It finds based on specified naming-rule.
- 
- `LUT_<Dimension>_<filterName>.<extension {jpg, png}>`
- */
+/// An object for loading color-cube image from bundle.
+/// It finds based on specified naming-rule.
+///
+/// `LUT_<Dimension>_<filterName>.<extension {jpg, png}>`
 public final class ColorCubeLoader {
   public let bundle: Bundle
 
@@ -48,19 +47,24 @@ public final class ColorCubeLoader {
       return Int(numberString)
     }
 
-    let filters = try fileList
+    let filters =
+      try fileList
       .filter { $0.hasPrefix("LUT_") }
       .sorted()
       .map { path -> FilterColorCube in
 
         let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
-              
+
         guard let dimension = takeDimension(from: path) else {
           throw ColorCubeLoaderError.failedToGetDimensionFromFilename(path)
         }
-                        
-        guard let dataProvider = CGDataProvider(url: url as CFURL)else {
+
+        guard let dataProvider = CGDataProvider(url: url as CFURL) else {
           throw ColorCubeLoaderError.failedToCreageCGDataProvider(path)
+        }
+
+        guard let imageSource = CGImageSourceCreateWithDataProvider(dataProvider, nil) else {
+          throw ColorCubeLoaderError.failedToCraeteCGImageSource(path)
         }
 
         let name = (path as NSString).deletingPathExtension
@@ -69,7 +73,7 @@ public final class ColorCubeLoader {
         return FilterColorCube(
           name: name,
           identifier: path,
-          lutImage: dataProvider,
+          lutImage: .init(cgImageSource: imageSource),
           dimension: dimension
         )
       }

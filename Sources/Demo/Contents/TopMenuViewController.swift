@@ -1,5 +1,4 @@
 import AsyncDisplayKit
-import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
 
@@ -52,6 +51,13 @@ final class TopMenuViewController: StackScrollNodeViewController {
         title: "Metal",
         onTap: { [unowned self] in
           let menu = DemoMTLTextureViewController()
+          self.navigationController?.pushViewController(menu, animated: true)
+        }),
+
+      Components.makeSelectionCell(
+        title: "LUT Preview",
+        onTap: { [unowned self] in
+          let menu = DemoLUTViewController()
           self.navigationController?.pushViewController(menu, animated: true)
         }),
       /*

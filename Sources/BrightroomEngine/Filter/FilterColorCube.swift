@@ -43,13 +43,13 @@ public struct FilterColorCube : Filtering, Equatable {
   public let name: String
   public let identifier: String
   public var amount: Double = 1
-  public let lutImage: CGDataProvider
+  public let lutImage: ImageSource
   public let dimension: Int
   
   public init(
     name: String,
     identifier: String,
-    lutImage: CGDataProvider,
+    lutImage: ImageSource,
     dimension: Int
     ) {
 
@@ -71,13 +71,11 @@ public struct FilterColorCube : Filtering, Equatable {
     return f.outputImage!
     
     #else
-               
-    let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.extendedSRGB)!
+
     let f: CIFilter = ColorCubeHelper.makeColorCubeFilter(
       lutImage: lutImage,
       dimension: dimension,
-      colorSpace: colorSpace,
-      cacheKey: "\(identifier),\(colorSpace)"
+      cacheKey: identifier
     )
           
     f.setValue(image, forKeyPath: kCIInputImageKey)
