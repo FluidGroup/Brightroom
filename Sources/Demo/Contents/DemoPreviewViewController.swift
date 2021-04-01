@@ -1,6 +1,5 @@
 
 import AsyncDisplayKit
-import GlossButtonNode
 import TextureSwiftSupport
 import UIKit
 

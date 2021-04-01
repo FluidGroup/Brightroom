@@ -1,6 +1,5 @@
 
 import AsyncDisplayKit
-import GlossButtonNode
 import MosaiqueAssetsPicker
 import TextureSwiftSupport
 import UIKit

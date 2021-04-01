@@ -1,7 +1,7 @@
 import AsyncDisplayKit
-import GlossButtonNode
 import MobileCoreServices
 import TextureSwiftSupport
+import GlossButtonNode
 import UIKit
 
 @testable import BrightroomEngine

@@ -10,8 +10,8 @@ abstract_target 'Demo_Apps' do
   target "Demo" do
     pod "MosaiqueAssetsPicker"
     pod "Texture"
-    pod "TextureSwiftSupport"
     pod "GlossButtonNode"
+    pod "TextureSwiftSupport"
     pod "TinyConstraints"
   end  
 

@@ -12,7 +12,6 @@ public enum ColorCubeHelperError: Error {
   case incorrectImageSize
   case unableToCreateDataProvider
   case unableToGetBitmpaDataBuffer
-  case failedToCreateCGImageSource
 }
 
 /**
@@ -20,14 +19,8 @@ public enum ColorCubeHelperError: Error {
  */
 public class ColorCubeHelper {
     
-  public static func createColorCubeData(inputImage inProvider: CGDataProvider, cubeDimension: Int) throws -> Data {
-    
-    guard let imageSource = CGImageSourceCreateWithDataProvider(inProvider, nil) else {
-      throw ColorCubeHelperError.failedToCreateCGImageSource
-    }
-     
-    let cgImage = ImageTool.loadOriginalCGImage(from: imageSource, fixesOrientation: false)!
-          
+  public static func createColorCubeData(inputImage cgImage: CGImage, cubeDimension: Int) throws -> Data {
+
     let pixels = cgImage.width * cgImage.height
     let channels = 4
     
@@ -66,35 +59,38 @@ public class ColorCubeHelper {
 extension ColorCubeHelper {
   
   public static func makeColorCubeFilter(
-    lutImage: CGDataProvider,
+    lutImage: ImageSource,
     dimension: Int,
-    colorSpace: CGColorSpace,
     cacheKey: String?
   ) -> CIFilter {
     
-    let data: Data
-    
+
     if let cacheKey = cacheKey, let cached = cache.object(forKey: cacheKey as NSString) {
-      data = cached as Data
+      return cached.copy() as! CIFilter
     } else {
-      data = try! ColorCubeHelper.createColorCubeData(inputImage: lutImage, cubeDimension: dimension)
+
+      let cgImage = lutImage.loadOriginalCGImage()
+      let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+
+      let data = try! ColorCubeHelper.createColorCubeData(inputImage: cgImage, cubeDimension: dimension)
+
+      let filter = CIFilter(
+        name: "CIColorCubeWithColorSpace",
+        parameters: [
+          "inputCubeDimension" : dimension,
+          "inputCubeData" : data,
+          "inputColorSpace" : colorSpace,
+        ]
+      )!
       
       if let cacheKey = cacheKey {
-        cache.setObject(data as NSData, forKey: cacheKey as NSString)
+        cache.setObject(filter, forKey: cacheKey as NSString)
       }
+
+      return filter
     }
         
-    let filter = CIFilter(
-      name: "CIColorCubeWithColorSpace",
-      parameters: [
-        "inputCubeDimension" : dimension,
-        "inputCubeData" : data,
-        "inputColorSpace" : colorSpace,
-      ]
-    )
-    
-    return filter!
   }
 }
 
-let cache = NSCache<NSString, NSData>()
+let cache = NSCache<NSString, CIFilter>()

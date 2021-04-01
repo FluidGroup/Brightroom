@@ -189,6 +189,7 @@
 		4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF23C312603BCE0007019CB /* gaku.jpeg */; };
 		4BF297B526164012003139AA /* LUT_64_Gold.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF297B426164012003139AA /* LUT_64_Gold.jpg */; };
+		4BF297D226164209003139AA /* DemoLUTViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF297D126164209003139AA /* DemoLUTViewController.swift */; };
 		4BF6872F2610D6D80037D5F4 /* CIImage+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF6872E2610D6D80037D5F4 /* CIImage+.swift */; };
 		4BF934162614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934172614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
@@ -437,6 +438,7 @@
 		4BF0255F25F12FE30093A59B /* SwiftUICropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUICropView.swift; sourceTree = "<group>"; };
 		4BF23C312603BCE0007019CB /* gaku.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = gaku.jpeg; sourceTree = "<group>"; };
 		4BF297B426164012003139AA /* LUT_64_Gold.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_Gold.jpg; sourceTree = "<group>"; };
+		4BF297D126164209003139AA /* DemoLUTViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLUTViewController.swift; sourceTree = "<group>"; };
 		4BF6872E2610D6D80037D5F4 /* CIImage+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CIImage+.swift"; sourceTree = "<group>"; };
 		4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-16bit-p3-alpha.png"; sourceTree = "<group>"; };
 		4BF9341F2614CAD600E0637A /* CGContextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGContextTests.swift; sourceTree = "<group>"; };
@@ -683,6 +685,7 @@
 				4B58E888260F0DEA004A834F /* DemoPreviewViewController.swift */,
 				4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */,
 				4BB01A1626139653002C831E /* DemoMTLTextureViewController.swift */,
+				4BF297D126164209003139AA /* DemoLUTViewController.swift */,
 			);
 			path = Contents;
 			sourceTree = "<group>";
@@ -1459,6 +1462,7 @@
 				4BA41C99260CF035005E6FA7 /* DemoMaskingViewController.swift in Sources */,
 				4BA41C9E260CF04D005E6FA7 /* Utilities.swift in Sources */,
 				4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */,
+				4BF297D226164209003139AA /* DemoLUTViewController.swift in Sources */,
 				4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */,
 				4BD275E0260A293C0044B3D8 /* DemoBuiltInEditorViewController.swift in Sources */,
 				4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */,

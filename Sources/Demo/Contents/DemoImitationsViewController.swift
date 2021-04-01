@@ -1,7 +1,6 @@
 import AsyncDisplayKit
 import BrightroomEngine
 import BrightroomUI
-import GlossButtonNode
 import TextureSwiftSupport
 import TinyConstraints
 import UIKit
