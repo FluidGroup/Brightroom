@@ -106,7 +106,10 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   func renderImage() {
     guard
       let image = image,
-      let targetTexture = currentDrawable?.texture
+      let targetTexture = currentDrawable?.texture,
+      let commandBuffer = commandQueue.makeCommandBuffer(),
+      let renderPassDescriptor = currentRenderPassDescriptor,
+      let drawable = currentDrawable
     else {
       return
     }
@@ -118,9 +121,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
 //      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
 //    }
     #endif
-    
-    let commandBuffer = commandQueue.makeCommandBuffer()
-        
+
     let bounds = CGRect(
       origin: .zero,
       size: drawableSize
@@ -132,6 +133,18 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
 
     let processedImage = postProcessing(resolvedImage)
 
+
+    clearContents: do {
+
+//      renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+      renderPassDescriptor.colorAttachments[0].clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
+      renderPassDescriptor.colorAttachments[0].loadAction = .clear
+      renderPassDescriptor.colorAttachments[0].storeAction = .store
+
+      let commandEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
+      commandEncoder.endEncoding()
+    }
+
     ciContext.render(
       processedImage,
       to: targetTexture,
@@ -140,7 +153,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       colorSpace: fixedImage.colorSpace ?? defaultColorSpace
     )
 
-    commandBuffer?.present(currentDrawable!)
-    commandBuffer?.commit()
+    commandBuffer.present(drawable)
+    commandBuffer.commit()
   }
 }
