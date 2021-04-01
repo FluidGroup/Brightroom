@@ -715,6 +715,8 @@ extension CropView {
     debounce.on { [weak self] in
       
       guard let self = self else { return }
+
+      guard self.scrollView.isTracking == false else { return }
       
       self.store.commit {
         $0.layoutVersion += 1
