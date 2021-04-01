@@ -70,25 +70,7 @@ final class LoadingTests: XCTestCase {
     XCTAssertEqual(fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue, CGImagePropertyOrientation.upMirrored.rawValue)
     
   }
-  
-  func testBasic() throws {
-    
-    let stack = EditingStack(imageProvider: try .init(fileURL: _url(forResource: "gaku", ofType: "jpeg")))
-    
-    let exp = expectation(description: "")
-    
-    let subs = stack.sinkState { (state) in
-      
-      if state.loadedState != nil {
-        exp.fulfill()
-      }
-    }
-    
-    stack.start()
-    
-    wait(for: [exp], timeout: 10)
-    withExtendedLifetime(subs) {}
-  }
+
 }
 
 func _url(forResource: String, ofType: String) -> URL {
