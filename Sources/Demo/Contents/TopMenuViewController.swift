@@ -6,7 +6,7 @@ final class TopMenuViewController: StackScrollNodeViewController {
 
   override init() {
     super.init()
-    title = "Brightroom"
+    title = "Brightroom Demo"
     navigationItem.largeTitleDisplayMode = .always
   }
 
