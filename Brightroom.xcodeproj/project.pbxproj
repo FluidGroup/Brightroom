@@ -568,6 +568,7 @@
 		4B30759B2605F2A800A1E7CB /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 				4B3075962605F27C00A1E7CB /* StackScrollNode.swift */,
 				4BA41C9D260CF04D005E6FA7 /* Utilities.swift */,
 			);
@@ -679,7 +680,6 @@
 				4B58E888260F0DEA004A834F /* DemoPreviewViewController.swift */,
 				4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */,
 				4BB01A1626139653002C831E /* DemoMTLTextureViewController.swift */,
-				4B8B94682607A9AF009BF084 /* UIViewController+Picker.swift */,
 			);
 			path = Contents;
 			sourceTree = "<group>";

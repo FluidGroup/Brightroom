@@ -186,10 +186,8 @@ enum Components {
     description: String? = nil,
     onTap: @escaping () -> Void
   ) -> ASCellNode {
-    let shape = ShapeLayerNode.roundedCorner(radius: 8)
 
-    let button = GlossButtonNode()
-    button.onTap = onTap
+    let shape = ShapeLayerNode.roundedCorner(radius: 8)
 
     let descriptionLabel = ASTextNode()
     descriptionLabel.attributedText = description.map {
@@ -202,43 +200,41 @@ enum Components {
       )
     }
 
-    button.setDescriptor(
-      .init(
-        title: NSAttributedString(
-          string: title,
-          attributes: [
-            .font: UIFont.preferredFont(forTextStyle: .subheadline),
-            .foregroundColor: UIColor.darkGray,
-          ]
-        ),
-        image: nil,
-        bodyStyle: .init(layout: .vertical()),
-        surfaceStyle: .bodyOnly
-      ),
-      for: .normal
+    let label = ASTextNode()
+    label.attributedText = NSAttributedString(
+      string: title,
+      attributes: [
+        .font: UIFont.preferredFont(forTextStyle: .subheadline),
+        .foregroundColor: UIColor.darkGray,
+      ]
     )
 
     return WrapperCellNode {
-      return AnyDisplayNode { _, _ in
+      return InteractiveNode(animation: .translucent) {
+        return AnyDisplayNode { _, _ in
 
-        LayoutSpec {
-          VStackLayout(spacing: 8) {
-            HStackLayout {
-              button
-                .flexGrow(1)
+          LayoutSpec {
+            VStackLayout(spacing: 8) {
+              HStackLayout {
+                label
+                  .flexGrow(1)
+              }
+              if description != nil {
+                descriptionLabel
+              }
             }
-            if description != nil {
-              descriptionLabel
-            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 12)
+            .background(shape)
+            .padding(4)
           }
-          .padding(.horizontal, 8)
-          .padding(.vertical, 12)
-          .background(shape)
-          .padding(4)
+        }
+        .onDidLoad { _ in
+          shape.shapeFillColor = .init(white: 0.95, alpha: 1)
         }
       }
-      .onDidLoad { _ in
-        shape.shapeFillColor = .init(white: 0.95, alpha: 1)
+      .onTap {
+        onTap()
       }
     }
   }

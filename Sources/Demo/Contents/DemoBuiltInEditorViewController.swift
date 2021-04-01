@@ -28,6 +28,14 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
     stackScrollNode.append(nodes: [
       resultCell,
 
+      Components.makeSelectionCell(title: "Capture", onTap: { [unowned self] in
+
+        __takePhoto { image in
+          self._presentNonSquare(.init(image: image))
+        }
+
+      }),
+
       Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in
 
         __pickPhoto { image in
