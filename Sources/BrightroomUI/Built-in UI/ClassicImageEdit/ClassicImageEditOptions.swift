@@ -43,10 +43,15 @@ extension ClassicImageEditOptions {
   public struct Classes {
     
     public struct Control {
-      
-      public var colorCubeControl: ClassicImageEditColorCubeControlBase.Type = ColorCubeControl.self
-      public var editMenuControl: ClassicImageEditEditMenuControlBase.Type = ClassicImageEditEditMenu.EditMenuControl.self
+
+      /**
+       You might use `ClassicImageEditNoPresetRootControl` if you do not need using Filter(Preset) panel.
+       */
       public var rootControl: ClassicImageEditRootControlBase.Type = ClassicImageEditRootControl.self
+
+      public var colorCubeControl: ClassicImageEditPresetListControlBase.Type = PresetListControl.self
+      public var editMenuControl: ClassicImageEditEditMenuControlBase.Type = ClassicImageEditEditMenu.EditMenuControl.self
+
       public var exposureControl: ClassicImageEditExposureControlBase.Type = ClassicImageEditExposureControl.self
       public var gaussianBlurControl: ClassicImageEditGaussianBlurControlBase.Type = ClassicImageEditGaussianBlurControl.self
       public var saturationControl: ClassicImageEditSaturationControlBase.Type = ClassicImageEditSaturationControl.self

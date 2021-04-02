@@ -24,21 +24,21 @@ import UIKit
 import Verge
 
 #if !COCOAPODS
-import BrightroomEngine
+  import BrightroomEngine
 #endif
 
 @available(*, deprecated, renamed: "ClassicImageEditViewController")
 public typealias PixelEditViewController = ClassicImageEditViewController
 
 public final class ClassicImageEditViewController: UIViewController {
-  
+
   /**
    - TODO: property names are not comprehensibility.
    */
   public struct LocalizedStrings {
-    
+
     // Deprecates
-    
+
     @available(*, deprecated, renamed: "control_colorcube_normal_name")
     public var normal: String {
       get {
@@ -50,9 +50,9 @@ public final class ClassicImageEditViewController: UIViewController {
     }
 
     public var done = "Done"
-          
+
     public var control_colorcube_normal_name = "Normal"
-    
+
     public var cancel = "Cancel"
     public var filter = "Filter"
     public var edit = "Edit"
@@ -174,9 +174,11 @@ public final class ClassicImageEditViewController: UIViewController {
 
     super.viewDidLoad()
 
-    cropView.setCropOutsideOverlay(.init()&>.do {
-      $0.backgroundColor = .white
-    })
+    cropView.setCropOutsideOverlay(
+      .init()&>.do {
+        $0.backgroundColor = .white
+      }
+    )
     cropView.setCropInsideOverlay(nil)
     cropView.isGuideInteractionEnabled = false
     cropView.isAutoApplyEditingStackEnabled = false
@@ -237,7 +239,9 @@ public final class ClassicImageEditViewController: UIViewController {
           controlContainerView.leftAnchor.constraint(equalTo: view.leftAnchor),
           {
             if #available(iOS 11.0, *) {
-              return controlContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+              return controlContainerView.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor
+              )
             } else {
               return controlContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             }
@@ -277,6 +281,9 @@ public final class ClassicImageEditViewController: UIViewController {
     stackView.push(
       viewModel.options.classes.control.rootControl.init(
         viewModel: viewModel,
+        editMenuControl: viewModel.options.classes.control.editMenuControl.init(
+          viewModel: viewModel
+        ),
         colorCubeControl: viewModel.options.classes.control.colorCubeControl.init(
           viewModel: viewModel
         )
@@ -344,10 +351,10 @@ public final class ClassicImageEditViewController: UIViewController {
 
         cropView.isHidden = false
         previewView.isHidden = true
-        
+
         maskingView.isHidden = true
         maskingView.isblurryImageViewHidden = true
-        
+
         maskingView.isUserInteractionEnabled = false
 
       case .masking:
@@ -411,8 +418,12 @@ public final class ClassicImageEditViewController: UIViewController {
           loadingView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
           loadingView.topAnchor.constraint(equalTo: previewView.topAnchor),
           loadingView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
-          touchGuardOverlayView.leadingAnchor.constraint(equalTo: controlContainerView.leadingAnchor),
-          touchGuardOverlayView.trailingAnchor.constraint(equalTo: controlContainerView.trailingAnchor),
+          touchGuardOverlayView.leadingAnchor.constraint(
+            equalTo: controlContainerView.leadingAnchor
+          ),
+          touchGuardOverlayView.trailingAnchor.constraint(
+            equalTo: controlContainerView.trailingAnchor
+          ),
           touchGuardOverlayView.topAnchor.constraint(equalTo: controlContainerView.topAnchor),
           touchGuardOverlayView.bottomAnchor.constraint(equalTo: controlContainerView.bottomAnchor),
         ])

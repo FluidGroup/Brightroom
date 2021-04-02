@@ -26,7 +26,7 @@ import BrightroomEngine
 
 import Verge
 
-open class ClassicImageEditColorCubeControlBase : ClassicImageEditControlBase {
+open class ClassicImageEditPresetListControlBase : ClassicImageEditControlBase {
   
   public required override init(
     viewModel: ClassicImageEditViewModel
@@ -35,7 +35,7 @@ open class ClassicImageEditColorCubeControlBase : ClassicImageEditControlBase {
   }
 }
 
-open class ColorCubeControl: ClassicImageEditColorCubeControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
   
   private enum Section : Int, CaseIterable {
     
