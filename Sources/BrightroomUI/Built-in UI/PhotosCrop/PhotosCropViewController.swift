@@ -334,7 +334,9 @@ public final class PhotosCropViewController: UIViewController {
     }
     
     /// refresh current state
-    update(with: store.state)
+    UIView.performWithoutAnimation {
+      update(with: store.state)
+    }
     
     cropView.store.sinkState { [weak self] (state) in
       
