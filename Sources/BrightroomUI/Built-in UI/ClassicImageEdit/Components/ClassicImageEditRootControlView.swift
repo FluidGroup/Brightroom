@@ -20,14 +20,18 @@
 // THE SOFTWARE.
 import UIKit
 
-open class ClassicImageEditRootControlBase : ClassicImageEditControlBase {
+open class ClassicImageEditRootControlBase: ClassicImageEditControlBase {
 
-  public required init(viewModel: ClassicImageEditViewModel, colorCubeControl: ClassicImageEditColorCubeControlBase) {
+  public required init(
+    viewModel: ClassicImageEditViewModel,
+    editMenuControl: ClassicImageEditEditMenuControlBase,
+    colorCubeControl: ClassicImageEditPresetListControlBase
+  ) {
     super.init(viewModel: viewModel)
   }
 }
 
-final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
+open class ClassicImageEditRootControl: ClassicImageEditRootControlBase {
 
   public enum DisplayType {
     case filter
@@ -47,17 +51,26 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
   private let containerView = UIView()
 
-  public let colorCubeControl: ClassicImageEditColorCubeControlBase
+  public let colorCubeControl: ClassicImageEditPresetListControlBase
 
-  public lazy var editView = viewModel.options.classes.control.editMenuControl.init(viewModel: viewModel)
+  public let editMenuControl: ClassicImageEditEditMenuControlBase
 
   // MARK: - Initializers
 
-  public required init(viewModel: ClassicImageEditViewModel, colorCubeControl: ClassicImageEditColorCubeControlBase) {
+  public required init(
+    viewModel: ClassicImageEditViewModel,
+    editMenuControl: ClassicImageEditEditMenuControlBase,
+    colorCubeControl: ClassicImageEditPresetListControlBase
+  ) {
 
     self.colorCubeControl = colorCubeControl
+    self.editMenuControl = editMenuControl
 
-    super.init(viewModel: viewModel, colorCubeControl: colorCubeControl)
+    super.init(
+      viewModel: viewModel,
+      editMenuControl: editMenuControl,
+      colorCubeControl: colorCubeControl
+    )
 
     backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
 
@@ -84,7 +97,7 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
         stackView.rightAnchor.constraint(equalTo: stackView.superview!.rightAnchor),
         stackView.bottomAnchor.constraint(equalTo: stackView.superview!.bottomAnchor),
         stackView.heightAnchor.constraint(equalToConstant: 50),
-        ])
+      ])
 
     }
 
@@ -113,7 +126,7 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
   // MARK: - Functions
 
-  override func didMoveToSuperview() {
+  open override func didMoveToSuperview() {
     super.didMoveToSuperview()
 
     if superview != nil {
@@ -142,22 +155,68 @@ final class ClassicImageEditRootControl : ClassicImageEditRootControlBase {
 
     switch displayType {
     case .filter:
-      
+
       colorCubeControl.frame = containerView.bounds
       colorCubeControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
       containerView.addSubview(colorCubeControl)
-      
+
       filtersButton.isSelected = true
 
     case .edit:
-      
-      editView.frame = containerView.bounds
-      editView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      
-      containerView.addSubview(editView)
-    
+
+      editMenuControl.frame = containerView.bounds
+      editMenuControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+      containerView.addSubview(editMenuControl)
+
       editButton.isSelected = true
     }
+  }
+
+}
+
+open class ClassicImageEditNoPresetRootControl: ClassicImageEditRootControlBase {
+
+  private let containerView = UIView()
+
+  public let editMenuControl: ClassicImageEditEditMenuControlBase
+
+  // MARK: - Initializers
+
+  public required init(
+    viewModel: ClassicImageEditViewModel,
+    editMenuControl: ClassicImageEditEditMenuControlBase,
+    colorCubeControl: ClassicImageEditPresetListControlBase
+  ) {
+
+    self.editMenuControl = editMenuControl
+
+    super.init(
+      viewModel: viewModel,
+      editMenuControl: editMenuControl,
+      colorCubeControl: colorCubeControl
+    )
+
+    backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
+
+    layout: do {
+
+      addSubview(containerView)
+
+      containerView.translatesAutoresizingMaskIntoConstraints = false
+
+      NSLayoutConstraint.activate([
+        containerView.topAnchor.constraint(equalTo: containerView.superview!.topAnchor),
+        containerView.leftAnchor.constraint(equalTo: containerView.superview!.leftAnchor),
+        containerView.rightAnchor.constraint(equalTo: containerView.superview!.rightAnchor),
+        containerView.bottomAnchor.constraint(equalTo: containerView.superview!.bottomAnchor),
+      ])
+
+      editMenuControl.frame = containerView.bounds
+      editMenuControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      containerView.addSubview(editMenuControl)
+    }
+
   }
 
 }
