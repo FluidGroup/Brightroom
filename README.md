@@ -56,7 +56,7 @@ Brightroom v2 provides the following features:
 let imageProvider: ImageProvider = .init(image: uiImage) // url, data supported.
 
 // Creating view controller
-let controller = CropViewController(imageProvider: imageProvider)
+let controller = PhotosCropViewController(imageProvider: imageProvider)
 
 // Setting up handling after editing finished.
 controller.handers
