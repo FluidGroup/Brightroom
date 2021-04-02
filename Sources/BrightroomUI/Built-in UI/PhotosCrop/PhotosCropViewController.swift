@@ -400,7 +400,12 @@ public final class PhotosCropViewController: UIViewController {
   }
   
   @objc private func handleResetButton() {
-    cropView.setCroppingAspectRatio(nil)
+    switch store.state.options.aspectRatioOptions {
+    case .fixed(let ratio):
+      cropView.setCroppingAspectRatio(ratio)
+    case .selectable:
+      cropView.setCroppingAspectRatio(nil)
+    }
     cropView.resetCrop()
   }
   
