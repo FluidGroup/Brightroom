@@ -36,15 +36,31 @@ Brightroom v2 provides the following features:
 - Creating your own filter with LUT
 - Opening the image from URL
 - Supported UIKit and SwiftUI
+- Downloading image supported
 
 ## Requirements
 
 * Swift 5.3 (Xcode12.4+)
 * iOS 12+
 
-## Usage - Documentations
+## Detail Documentations
 
 <b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
+
+## Usage
+
+**PhotosCropViewController**
+
+```swift
+// Creating image provider
+let imageProvider: ImageProvider = .init(image: uiImage) // url, data supported.
+
+// Creating view controller
+let controller = CropViewController(imageProvider: imageProvider)
+
+// Setting up handling after editing finished.
+controller.handers
+```
 
 ## SwiftUI supported (beta)
 
