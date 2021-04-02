@@ -39,6 +39,20 @@ public enum EditingStackError: Error {
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
 
 open class EditingStack: Equatable, StoreComponentType {
+
+  public struct Options {
+
+    public var usesMTLTextureForEditingImage: Bool {
+      #if targetEnvironment(simulator)
+        return false
+      #else
+        return true
+      #endif
+    }
+
+    public init() {}
+  }
+
   public static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
     lhs === rhs
   }
@@ -166,6 +180,8 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public let store: DefaultStore
 
+  public let options: Options
+
   public let imageProvider: ImageProvider
 
   private let colorCubeFilters: [FilterColorCube]
@@ -194,8 +210,11 @@ open class EditingStack: Equatable, StoreComponentType {
   public init(
     imageProvider: ImageProvider,
     colorCubeStorage: ColorCubeStorage = .default,
+    options: Options = .init(),
     cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
   ) {
+
+    self.options = options
     self.cropModifier = cropModifier
     store = .init(
       initialState: .init()
@@ -260,97 +279,22 @@ open class EditingStack: Equatable, StoreComponentType {
               maxPixelSize: self.editingImageMaxPixelSize
             )
 
-            let colorSpace = editingSourceCGImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-
             assert(editingSourceCGImage.colorSpace != nil)
 
             /// resized
-            let _editingSourceImage: CIImage = {
+            let _editingSourceImage: CIImage = _makeCIImage(
+              source: editingSourceCGImage,
+              orientation: metadata.orientation,
+              device: device,
+              usesMTLTexture: self.options.usesMTLTextureForEditingImage
+            )
 
-              // TODO: As possible, creates CIImage from MTLTexture
-              // 16bits image can't be MTLTexture with MTKTextureLoader.
-              // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-
-              do {
-
-                let editingSourceTexture = try makeMTLTexture(
-                  from: editingSourceCGImage,
-                  device: device
-                )
-
-                let ciImage = try CIImage(
-                  mtlTexture: editingSourceTexture,
-                  options: [.colorSpace: colorSpace]
-                )
-                .map {
-                  $0.transformed(by: .init(scaleX: 1, y: -1))
-                }.map {
-                  $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
-                }
-                .map {
-                  $0.oriented(metadata.orientation)
-                }
-                .unwrap()
-
-                EngineLog.debug(.stack, "Load MTLTexture for editing-source")
-
-                return ciImage
-
-              } catch {
-
-                EngineLog.debug(.stack, "Unable to create MTLTexutre, fallback to CIImage from CGImage.\n\(editingSourceCGImage)")
-
-                return CIImage(
-                  cgImage: editingSourceCGImage
-                )
-                .oriented(metadata.orientation)
-
-              }
-
-            }()
-
-            let _thumbnailImage: CIImage = {
-
-              // TODO: As possible, creates CIImage from MTLTexture
-              // 16bits image can't be MTLTexture with MTKTextureLoader.
-              // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-
-              do {
-
-                let thumbnailTexture = try makeMTLTexture(
-                  from: thumbnailCGImage,
-                  device: device
-                )
-
-                let ciImage = try CIImage(
-                  mtlTexture: thumbnailTexture,
-                  options: [.colorSpace: colorSpace]
-                )
-                .map {
-                  $0.transformed(by: .init(scaleX: 1, y: -1))
-                }.map {
-                  $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
-                }
-                .map {
-                  $0.oriented(metadata.orientation)
-                }
-                .unwrap()
-
-                EngineLog.debug(.stack, "Load MTLTexture for thumbnail")
-
-                return ciImage
-
-              } catch {
-
-                EngineLog.debug(.stack, "Unable to create MTLTexutre, fallback to CIImage from CGImage.\n\(thumbnailCGImage)")
-
-                return CIImage(
-                  cgImage: thumbnailCGImage
-                )
-                .oriented(metadata.orientation)
-
-              }
-            }()
+            let _thumbnailImage: CIImage = _makeCIImage(
+              source: thumbnailCGImage,
+              orientation: metadata.orientation,
+              device: device,
+              usesMTLTexture: self.options.usesMTLTextureForEditingImage
+            )
 
             self.adjustCropExtent(
               image: _editingSourceImage,
@@ -548,11 +492,9 @@ open class EditingStack: Equatable, StoreComponentType {
   }
 }
 
-/**
- TODO: As possible, creates CIImage from MTLTexture
- 16bits image can't be MTLTexture with MTKTextureLoader.
- https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
- */
+/// TODO: As possible, creates CIImage from MTLTexture
+/// 16bits image can't be MTLTexture with MTKTextureLoader.
+/// https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
 private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> MTLTexture {
 
   #if true
@@ -561,7 +503,7 @@ private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> 
     return texture
   #else
 
-  // Here does not work well.
+    // Here does not work well.
 
     let textureDescriptor = MTLTextureDescriptor()
 
@@ -594,5 +536,67 @@ private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> 
 
     return texture
   #endif
+
+}
+
+private func _makeCIImage(
+  source cgImage: CGImage,
+  orientation: CGImagePropertyOrientation,
+  device: MTLDevice,
+  usesMTLTexture: Bool
+) -> CIImage {
+
+  let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+
+  func createFromCGImage() -> CIImage {
+    return CIImage(
+      cgImage: cgImage
+    )
+    .oriented(orientation)
+  }
+
+  func createFromMTLTexture() throws -> CIImage {
+    let thumbnailTexture = try makeMTLTexture(
+      from: cgImage,
+      device: device
+    )
+
+    let ciImage = try CIImage(
+      mtlTexture: thumbnailTexture,
+      options: [.colorSpace: colorSpace]
+    )
+    .map {
+      $0.transformed(by: .init(scaleX: 1, y: -1))
+    }.map {
+      $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
+    }
+    .map {
+      $0.oriented(orientation)
+    }
+    .unwrap()
+
+    EngineLog.debug(.stack, "Load MTLTexture")
+
+    return ciImage
+  }
+
+  if usesMTLTexture {
+
+    do {
+      // TODO: As possible, creates CIImage from MTLTexture
+      // 16bits image can't be MTLTexture with MTKTextureLoader.
+      // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
+      return try createFromMTLTexture()
+    } catch {
+      EngineLog.debug(
+        .stack,
+        "Unable to create MTLTexutre, fallback to CIImage from CGImage.\n\(cgImage)"
+      )
+
+      return createFromCGImage()
+    }
+  } else {
+    return createFromCGImage()
+  }
 
 }
