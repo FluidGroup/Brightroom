@@ -271,7 +271,6 @@ open class EditingStack: Equatable, StoreComponentType {
           switch image {
           case let .editable(image, metadata):
 
-            let device = MTLCreateSystemDefaultDevice()!
 
             let thumbnailCGImage = image.loadThumbnailCGImage(maxPixelSize: 180)
 
@@ -280,6 +279,8 @@ open class EditingStack: Equatable, StoreComponentType {
             )
 
             assert(editingSourceCGImage.colorSpace != nil)
+
+            let device = MTLCreateSystemDefaultDevice()
 
             /// resized
             let _editingSourceImage: CIImage = _makeCIImage(
@@ -542,7 +543,7 @@ private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> 
 private func _makeCIImage(
   source cgImage: CGImage,
   orientation: CGImagePropertyOrientation,
-  device: MTLDevice,
+  device: MTLDevice?,
   usesMTLTexture: Bool
 ) -> CIImage {
 
@@ -555,7 +556,7 @@ private func _makeCIImage(
     .oriented(orientation)
   }
 
-  func createFromMTLTexture() throws -> CIImage {
+  func createFromMTLTexture(device: MTLDevice) throws -> CIImage {
     let thumbnailTexture = try makeMTLTexture(
       from: cgImage,
       device: device
@@ -580,13 +581,15 @@ private func _makeCIImage(
     return ciImage
   }
 
-  if usesMTLTexture {
+  assert(usesMTLTexture && device != nil)
+
+  if usesMTLTexture, let device = device {
 
     do {
       // TODO: As possible, creates CIImage from MTLTexture
       // 16bits image can't be MTLTexture with MTKTextureLoader.
       // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-      return try createFromMTLTexture()
+      return try createFromMTLTexture(device: device)
     } catch {
       EngineLog.debug(
         .stack,
@@ -596,6 +599,14 @@ private func _makeCIImage(
       return createFromCGImage()
     }
   } else {
+
+    if usesMTLTexture, device == nil {
+      EngineLog.error(
+        .stack,
+        "MTLDevice not found, fallback to using CGImage to create CIImage."
+      )
+    }
+
     return createFromCGImage()
   }
 
