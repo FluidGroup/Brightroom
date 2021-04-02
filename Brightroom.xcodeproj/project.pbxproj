@@ -31,7 +31,7 @@
 		4B1E95242176D06800E9DFB8 /* FilterHighlights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94FF217634AA00E9DFB8 /* FilterHighlights.swift */; };
 		4B1E95262176D56D00E9DFB8 /* FilterShadows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */; };
 		4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */; };
-		4B1E9535217714A800E9DFB8 /* ClassicImageEditColorCubeControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ClassicImageEditColorCubeControlView.swift */; };
+		4B1E9535217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift */; };
 		4B1E9537217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
 		4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075912605F27400A1E7CB /* TopMenuViewController.swift */; };
@@ -86,6 +86,7 @@
 		4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C96F2171D6F8008F2A54 /* EditingStack.swift */; };
 		4B66C9722171D764008F2A54 /* BrightroomEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9712171D764008F2A54 /* BrightroomEngine.swift */; };
 		4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B66C9732171D781008F2A54 /* ImageSource.swift */; };
+		4B69D17226178E0E002878EA /* FilterPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B69D17126178E0E002878EA /* FilterPreset.swift */; };
 		4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */; };
 		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
 		4B7B36C0260EFDD8004FE2F4 /* ColorCubeLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7B36BF260EFDD8004FE2F4 /* ColorCubeLoader.swift */; };
@@ -305,7 +306,7 @@
 		4B1E95252176D56D00E9DFB8 /* FilterShadows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterShadows.swift; sourceTree = "<group>"; };
 		4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterColorCube.swift; sourceTree = "<group>"; };
 		4B1E95322176F80600E9DFB8 /* ColorCubeStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorCubeStorage.swift; sourceTree = "<group>"; };
-		4B1E9534217714A800E9DFB8 /* ClassicImageEditColorCubeControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditColorCubeControlView.swift; sourceTree = "<group>"; };
+		4B1E9534217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditPresetListControl.swift; sourceTree = "<group>"; };
 		4B1E9536217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditEditMenuControlView.swift; sourceTree = "<group>"; };
 		4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_left_mirrored.HEIC; sourceTree = "<group>"; };
 		4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_right_mirrored.HEIC; sourceTree = "<group>"; };
@@ -357,6 +358,7 @@
 		4B66C96F2171D6F8008F2A54 /* EditingStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.swift; sourceTree = "<group>"; };
 		4B66C9712171D764008F2A54 /* BrightroomEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrightroomEngine.swift; sourceTree = "<group>"; };
 		4B66C9732171D781008F2A54 /* ImageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSource.swift; sourceTree = "<group>"; };
+		4B69D17126178E0E002878EA /* FilterPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPreset.swift; sourceTree = "<group>"; };
 		4B75113F25F13276002D804A /* DemoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView.swift; sourceTree = "<group>"; };
 		4B7B36BF260EFDD8004FE2F4 /* ColorCubeLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ColorCubeLoader.swift; sourceTree = "<group>"; };
 		4B7C97F22609B5BE00FC541E /* ColorLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorLookup.swift; sourceTree = "<group>"; };
@@ -522,6 +524,7 @@
 				4B1E94F8217634A900E9DFB8 /* FilterUnsharpMask.swift */,
 				4BA8E737217C69DE00940518 /* FilterFade.swift */,
 				4BE81C03217EC58B00F6FA5C /* FilterHighlightShadowTint.swift */,
+				4B69D17126178E0E002878EA /* FilterPreset.swift */,
 			);
 			path = Filter;
 			sourceTree = "<group>";
@@ -600,7 +603,7 @@
 				4B9D4564216DD1E0003A240A /* ClassicImageEditRootControlView.swift */,
 				4B1E9536217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift */,
 				4B9D457F216EE1BC003A240A /* ClassicImageEditControlViewBase.swift */,
-				4B1E9534217714A800E9DFB8 /* ClassicImageEditColorCubeControlView.swift */,
+				4B1E9534217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift */,
 				4B9D4568216DD59D003A240A /* ClassicImageEditCropControl.swift */,
 				4B0077BF21704E7F008330EA /* ClassicImageEditMaskControlView.swift */,
 				4B9D457D216EE1AF003A240A /* ClassicImageEditDoodleControlView.swift */,
@@ -1362,7 +1365,7 @@
 				4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */,
 				4B42A6B12178E15600F18208 /* ClassicImageEditShadowsControl.swift in Sources */,
 				4B96DD8025EBCE8A000AAB1C /* Wrap.swift in Sources */,
-				4B1E9535217714A800E9DFB8 /* ClassicImageEditColorCubeControlView.swift in Sources */,
+				4B1E9535217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift in Sources */,
 				4B8B94722607B126009BF084 /* UIButton+Closure.swift in Sources */,
 				4B9D456B216DE9CA003A240A /* ClassicImageEditExposureControl.swift in Sources */,
 				4B0BDCA1217D663D001098B9 /* ClassicImageEditClarityControl.swift in Sources */,
@@ -1435,6 +1438,7 @@
 				4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */,
 				4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */,
 				4B0433AB217B962C0039293E /* InternalUtils.swift in Sources */,
+				4B69D17226178E0E002878EA /* FilterPreset.swift in Sources */,
 				4B135F762613767E003B5152 /* CoreGraphics+.swift in Sources */,
 				4B66C9702171D6F8008F2A54 /* EditingStack.swift in Sources */,
 				4B04B3EE2177B0C70032356A /* FilterSaturation.swift in Sources */,

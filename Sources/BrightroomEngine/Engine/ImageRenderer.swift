@@ -110,7 +110,7 @@ public final class ImageRenderer {
 
   public struct Edit {
     public var croppingRect: EditingCrop?
-    public var modifiers: [Filtering] = []
+    public var modifiers: [AnyFilter] = []
     public var drawer: [GraphicsDrawing] = []
   }
 

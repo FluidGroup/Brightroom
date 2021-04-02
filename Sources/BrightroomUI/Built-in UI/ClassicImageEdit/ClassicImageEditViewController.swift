@@ -39,19 +39,19 @@ public final class ClassicImageEditViewController: UIViewController {
 
     // Deprecates
 
-    @available(*, deprecated, renamed: "control_colorcube_normal_name")
+    @available(*, deprecated, renamed: "control_preset_normal_name")
     public var normal: String {
       get {
-        control_colorcube_normal_name
+        control_preset_normal_name
       }
       set {
-        control_colorcube_normal_name = newValue
+        control_preset_normal_name = newValue
       }
     }
 
     public var done = "Done"
 
-    public var control_colorcube_normal_name = "Normal"
+    public var control_preset_normal_name = "Normal"
 
     public var cancel = "Cancel"
     public var filter = "Filter"
@@ -284,7 +284,7 @@ public final class ClassicImageEditViewController: UIViewController {
         editMenuControl: viewModel.options.classes.control.editMenuControl.init(
           viewModel: viewModel
         ),
-        colorCubeControl: viewModel.options.classes.control.colorCubeControl.init(
+        presetListControl: viewModel.options.classes.control.presetListControl.init(
           viewModel: viewModel
         )
       ),

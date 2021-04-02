@@ -25,7 +25,7 @@ open class ClassicImageEditRootControlBase: ClassicImageEditControlBase {
   public required init(
     viewModel: ClassicImageEditViewModel,
     editMenuControl: ClassicImageEditEditMenuControlBase,
-    colorCubeControl: ClassicImageEditPresetListControlBase
+    presetListControl: ClassicImageEditPresetListControlBase
   ) {
     super.init(viewModel: viewModel)
   }
@@ -51,7 +51,7 @@ open class ClassicImageEditRootControl: ClassicImageEditRootControlBase {
 
   private let containerView = UIView()
 
-  public let colorCubeControl: ClassicImageEditPresetListControlBase
+  public let presetListControl: ClassicImageEditPresetListControlBase
 
   public let editMenuControl: ClassicImageEditEditMenuControlBase
 
@@ -60,16 +60,16 @@ open class ClassicImageEditRootControl: ClassicImageEditRootControlBase {
   public required init(
     viewModel: ClassicImageEditViewModel,
     editMenuControl: ClassicImageEditEditMenuControlBase,
-    colorCubeControl: ClassicImageEditPresetListControlBase
+    presetListControl: ClassicImageEditPresetListControlBase
   ) {
 
-    self.colorCubeControl = colorCubeControl
+    self.presetListControl = presetListControl
     self.editMenuControl = editMenuControl
 
     super.init(
       viewModel: viewModel,
       editMenuControl: editMenuControl,
-      colorCubeControl: colorCubeControl
+      presetListControl: presetListControl
     )
 
     backgroundColor = ClassicImageEditStyle.default.control.backgroundColor
@@ -156,9 +156,9 @@ open class ClassicImageEditRootControl: ClassicImageEditRootControlBase {
     switch displayType {
     case .filter:
 
-      colorCubeControl.frame = containerView.bounds
-      colorCubeControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-      containerView.addSubview(colorCubeControl)
+      presetListControl.frame = containerView.bounds
+      presetListControl.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+      containerView.addSubview(presetListControl)
 
       filtersButton.isSelected = true
 
@@ -186,7 +186,7 @@ open class ClassicImageEditNoPresetRootControl: ClassicImageEditRootControlBase 
   public required init(
     viewModel: ClassicImageEditViewModel,
     editMenuControl: ClassicImageEditEditMenuControlBase,
-    colorCubeControl: ClassicImageEditPresetListControlBase
+    presetListControl: ClassicImageEditPresetListControlBase
   ) {
 
     self.editMenuControl = editMenuControl
@@ -194,7 +194,7 @@ open class ClassicImageEditNoPresetRootControl: ClassicImageEditRootControlBase 
     super.init(
       viewModel: viewModel,
       editMenuControl: editMenuControl,
-      colorCubeControl: colorCubeControl
+      presetListControl: presetListControl
     )
 
     backgroundColor = ClassicImageEditStyle.default.control.backgroundColor

@@ -19,22 +19,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-
 import CoreImage
+import UIKit
 
 enum RadiusCalculator {
 
   static func radius(value: Double, max: Double, imageExtent: CGRect) -> Double {
 
-    let base = Double(sqrt(pow(imageExtent.width,2) + pow(imageExtent.height,2)))
+    let base = Double(sqrt(pow(imageExtent.width, 2) + pow(imageExtent.height, 2)))
     let c = base / 20
     return c * value / max
   }
 }
 
 
-public protocol Filtering {
+public protocol Filtering: Hashable {
 
   func apply(to image: CIImage, sourceImage: CIImage) -> CIImage
+}
+
+extension Filtering {
+  public func asAny() -> AnyFilter {
+    .init(filter: self)
+  }
+}
+
+public struct AnyFilter: Filtering {
+  
+  public static func == (lhs: AnyFilter, rhs: AnyFilter) -> Bool {
+    lhs.base == rhs.base
+  }
+
+  public func hash(into hasher: inout Hasher) {
+    base.hash(into: &hasher)
+  }
+
+  private let applier: (CIImage, CIImage) -> CIImage
+  public let base: AnyHashable
+
+  public init<Filter: Filtering>(filter: Filter) {
+    self.base = filter
+    self.applier = filter.apply
+  }
+
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+    applier(image, sourceImage)
+  }
 }

@@ -70,7 +70,7 @@ open class EditingStack: Equatable, StoreComponentType {
         thumbnailImage: CIImage,
         editingSourceImage: CIImage,
         editingPreviewImage: CIImage,
-        previewColorCubeFilters: [PreviewFilterColorCube] = []
+        previewFilterPresets: [PreviewFilterPreset] = []
       ) {
         self.editableImageProvider = editableImageProvider
         self.metadata = metadata
@@ -80,7 +80,7 @@ open class EditingStack: Equatable, StoreComponentType {
         self.thumbnailImage = thumbnailImage
         self.editingSourceImage = editingSourceImage
         self.editingPreviewImage = editingPreviewImage
-        self.previewColorCubeFilters = previewColorCubeFilters
+        self.previewFilterPresets = previewFilterPresets
       }
 
       fileprivate let editableImageProvider: ImageSource
@@ -114,7 +114,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
       public fileprivate(set) var editingPreviewImage: CIImage
 
-      public fileprivate(set) var previewColorCubeFilters: [PreviewFilterColorCube] = []
+      public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
 
       public var canUndo: Bool {
         return history.count > 0
@@ -184,7 +184,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public let imageProvider: ImageProvider
 
-  private let colorCubeFilters: [FilterColorCube]
+  private let filterPresets: [FilterPreset]
 
   private let queue = DispatchQueue(
     label: "me.muukii.PixelEngine",
@@ -220,7 +220,10 @@ open class EditingStack: Equatable, StoreComponentType {
       initialState: .init()
     )
 
-    colorCubeFilters = colorCubeStorage.filters
+    filterPresets = colorCubeStorage.filters.map {
+      FilterPreset(name: $0.name, identifier: $0.identifier, filters: [$0.asAny()])
+    }
+
     self.imageProvider = imageProvider
 
     #if DEBUG
@@ -344,9 +347,8 @@ open class EditingStack: Equatable, StoreComponentType {
 
           loadedState.ifChanged(\.thumbnailImage) { image in
 
-            nextState.previewColorCubeFilters = self.colorCubeFilters.concurrentMap {
-              let r = PreviewFilterColorCube(sourceImage: image, filter: $0)
-              return r
+            nextState.previewFilterPresets = self.filterPresets.map {
+              PreviewFilterPreset(sourceImage: image, filter: $0)
             }
           }
 
