@@ -32,8 +32,6 @@ extension CGContext {
 
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
 
-    let context: CGContext
-
     var bitmapInfo = image.bitmapInfo
 
     /**
@@ -51,7 +49,13 @@ extension CGContext {
     bitmapInfo.remove(.alphaInfoMask)
     bitmapInfo.formUnion(.init(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue))
 
-    context = try CGContext.init(
+    /**
+     The image from PHImageManager uses `.byteOrder32Little`.
+     This is not compatible with MTLTexture.
+     */
+    bitmapInfo.remove(.byteOrder32Little)
+
+    let context = try CGContext.init(
       data: nil,
       width: size.map { Int($0.width) } ?? image.width,
       height: size.map { Int($0.height) } ?? image.height,

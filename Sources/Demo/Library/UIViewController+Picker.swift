@@ -8,6 +8,7 @@
 
 import Foundation
 import MosaiqueAssetsPicker
+import Photos
 
 extension UIViewController {
 
@@ -38,6 +39,15 @@ extension UIViewController {
 
     let pickerDelegateProxy = MosaiqueAssetsPickerDelegateProxy()
 
+    pickerDelegateProxy.onPicked = { controller, images in
+      controller.dismiss(animated: true, completion: nil)
+      withExtendedLifetime(pickerDelegateProxy, {})
+      completion(images.first!)
+    }
+    pickerDelegateProxy.onCancelled = { controller in
+      controller.dismiss(animated: true, completion: nil)
+    }
+
     var configuration = MosaiqueAssetPickerConfiguration()
 
     configuration.selectionMode = .single
@@ -48,16 +58,29 @@ extension UIViewController {
       configuration: configuration
     )
 
-    pickerDelegateProxy.onPicked = { controller, images in
+    present(photoPicker, animated: true, completion: nil)
+  }
+
+  func __pickPhotoWithPHAsset( _ completion: @escaping (PHAsset) -> Void) {
+
+    let pickerDelegateProxy = MosaiqueAssetsPickerDelegateProxy()
+
+    pickerDelegateProxy.onPickedAsset = { controller, assets in
       controller.dismiss(animated: true, completion: nil)
       withExtendedLifetime(pickerDelegateProxy, {})
-      completion(images.first!)
+
+      completion(assets.first!.asset)
     }
+
     pickerDelegateProxy.onCancelled = { controller in
       controller.dismiss(animated: true, completion: nil)
     }
 
-    present(photoPicker, animated: true, completion: nil)
+    let c = MosaiqueAssetPickerViewController()
+    c.setSelectionMode(.single)
+
+    c.pickerDelegate = pickerDelegateProxy
+    present(c, animated: true, completion: nil)
   }
 }
 
@@ -89,20 +112,22 @@ private final class _UIImagePickerControllerDelegate: NSObject, UINavigationCont
   }
 }
 
-private final class MosaiqueAssetsPickerDelegateProxy: MosaiqueAssetPickerDelegate {
+private final class MosaiqueAssetsPickerDelegateProxy: NSObject, MosaiqueAssetPickerDelegate,
+  UINavigationControllerDelegate
+{
 
   var onPicked: (UIViewController, [UIImage]) -> Void = { _, _ in }
+
+  var onPickedAsset: (UIViewController, [AssetFuture]) -> Void = { _, _ in }
+
   var onCancelled: (UIViewController) -> Void = { _ in }
-
-  init() {
-
-  }
 
   func photoPicker(_ controller: UIViewController, didPickImages images: [UIImage]) {
     onPicked(controller, images)
   }
 
   func photoPicker(_ controller: UIViewController, didPickAssets assets: [AssetFuture]) {
+    onPickedAsset(controller, assets)
   }
 
   func photoPickerDidCancel(_ controller: UIViewController) {
