@@ -36,10 +36,10 @@ public struct PreviewFilterColorCube : Equatable {
 
 /// A Filter using LUT Image (backed by CIColorCubeWithColorSpace)
 /// About LUT Image -> https://en.wikipedia.org/wiki/Lookup_table
-public struct FilterColorCube : Filtering, Equatable {
+public struct FilterColorCube : Filtering {
   
   public static let range: ParameterRange<Double, FilterColorCube> = .init(min: 0, max: 1)
-  
+
   public let name: String
   public let identifier: String
   public var amount: Double = 1
@@ -57,6 +57,11 @@ public struct FilterColorCube : Filtering, Equatable {
     self.lutImage = lutImage
     self.name = name
     self.identifier = identifier
+  }
+
+  public func hash(into hasher: inout Hasher) {
+    name.hash(into: &hasher)
+    identifier.hash(into: &hasher)
   }
 
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {

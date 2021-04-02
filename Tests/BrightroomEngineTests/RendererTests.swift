@@ -86,7 +86,7 @@ final class RendererTests: XCTestCase {
     var filter = FilterExposure()
     filter.value = 0.72
 
-    renderer.edit.modifiers = [filter]
+    renderer.edit.modifiers = [filter.asAny()]
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -109,7 +109,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [filter],
+      modifiers: [filter.asAny()],
       drawer: []
     )
 
@@ -134,7 +134,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [filter],
+      modifiers: [filter.asAny()],
       drawer: []
     )
 

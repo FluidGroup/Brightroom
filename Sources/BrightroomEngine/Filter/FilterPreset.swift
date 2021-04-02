@@ -18,21 +18,46 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+
+import CoreImage
 import UIKit
 
-@inline(__always)
-func _pixelengine_ensureMainThread() {
-  assert(Thread.isMainThread)
+public struct FilterPreset: Filtering {
+
+  public static let range: ParameterRange<Double, FilterPreset> = .init(min: 0, max: 1)
+
+  public let name: String
+  public let identifier: String
+  public let filters: [AnyFilter]
+
+  public init(
+    name: String,
+    identifier: String,
+    filters: [AnyFilter]
+  ) {
+
+    self.name = name
+    self.identifier = identifier
+    self.filters = filters
+  }
+
+  public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+
+    filters.reduce(image) { (image, filter) -> CIImage in
+      filter.apply(to: image, sourceImage: sourceImage)
+    }
+
+  }
 }
 
-let _pixelengine_bundle = Bundle.init(for: Dummy.self)
+public struct PreviewFilterPreset: Hashable {
 
-fileprivate final class Dummy {}
+  public let image: CIImage
+  public let filter: FilterPreset
 
-#if os(macOS)
-import AppKit
-public typealias PlatformImage = NSImage
-#elseif os(iOS)
-import UIKit
-public typealias PlatformImage = UIImage
-#endif
+  init(sourceImage: CIImage, filter: FilterPreset) {
+    self.filter = filter
+    self.image = filter.apply(to: sourceImage, sourceImage: sourceImage)
+  }
+
+}

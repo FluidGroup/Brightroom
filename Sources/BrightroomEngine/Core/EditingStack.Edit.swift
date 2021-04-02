@@ -24,7 +24,7 @@ import CoreImage
 extension EditingStack {
   // TODO: Consider more effective shape
   public struct Edit: Equatable {
-    func makeFilters() -> [Filtering] {
+    func makeFilters() -> [AnyFilter] {
       return filters.makeFilters()
     }
     
@@ -63,7 +63,7 @@ extension EditingStack {
     //    }
     
     public struct Filters: Equatable {
-      public var colorCube: FilterColorCube?
+      public var preset: FilterPreset?
       
       public var brightness: FilterBrightness?
       public var contrast: FilterContrast?
@@ -82,30 +82,30 @@ extension EditingStack {
       public var vignette: FilterVignette?
       public var fade: FilterFade?
       
-      func makeFilters() -> [Filtering] {
+      func makeFilters() -> [AnyFilter] {
         return ([
           
           /**
            Must be first filter since color-cube does not support wide range color.
            */
-          colorCube,
+          preset?.asAny(),
           
           // Before
-          exposure,
-          brightness,
-          temperature,
-          highlights,
-          shadows,
-          saturation,
-          contrast,
+          exposure?.asAny(),
+          brightness?.asAny(),
+          temperature?.asAny(),
+          highlights?.asAny(),
+          shadows?.asAny(),
+          saturation?.asAny(),
+          contrast?.asAny(),
                     
           // After
-          sharpen,
-          unsharpMask,
-          gaussianBlur,
-          fade,
-          vignette,
-        ] as [Filtering?])
+          sharpen?.asAny(),
+          unsharpMask?.asAny(),
+          gaussianBlur?.asAny(),
+          fade?.asAny(),
+          vignette?.asAny(),
+        ] as [AnyFilter?])
         .compactMap { $0 }
       }
       

@@ -35,7 +35,7 @@ open class ClassicImageEditPresetListControlBase : ClassicImageEditControlBase {
   }
 }
 
-open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
+open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
   
   private enum Section : Int, CaseIterable {
     
@@ -46,16 +46,16 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
   private struct State: Equatable {
     
     struct Content: Equatable {
-      var previews: [PreviewFilterColorCube]
+      var previews: [PreviewFilterPreset]
       var originalImage: CIImage
     }
    
     var content: Content?
+
+    var currentSelected: FilterPreset?
   }
 
   // MARK: - Properties
-  
-  public var current: FilterColorCube?
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
   
@@ -71,7 +71,7 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
     viewModel: ClassicImageEditViewModel
     ) {
     
-    self.store = .init(initialState: .init())
+    self.store = .init(initialState: .init(content: nil, currentSelected: nil))
         
     super.init(viewModel: viewModel)
     
@@ -83,7 +83,7 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
         
         if let state = state._beta_map(\.editingState.loadedState) {
         
-          state.ifChanged(\.thumbnailImage, \.previewColorCubeFilters) { image, filters in
+          state.ifChanged(\.thumbnailImage, \.previewFilterPresets) { image, filters in
                       
             viewState.content = .init(previews: filters, originalImage: image)
           }
@@ -101,6 +101,13 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
       
       if state.hasChanges(\.content) {
         self.collectionView.reloadData()
+      }
+
+      state.ifChanged(\.currentSelected) { value in
+        self.collectionView.visibleCells.forEach {
+          self.updateSelected(cell: $0, selectedItem: value)
+        }
+        self.scrollTo(selectedItem: value, animated: true)
       }
       
     }
@@ -168,12 +175,10 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.colorCube) { value in
-      current = value
-      collectionView.visibleCells.forEach {
-        updateSelected(cell: $0)
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.preset) { value in
+      store.commit {
+        $0.currentSelected = value
       }
-      scrollToSelectedItem(animated: true)
     }
     
   }
@@ -181,7 +186,7 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
   open override func layoutSubviews() {
     super.layoutSubviews()
     collectionView.collectionViewLayout.invalidateLayout()
-    scrollToSelectedItem(animated: false)
+    scrollTo(selectedItem: store.state.currentSelected, animated: false)
   }
 
   // MARK: - UICollectionViewDeleagte / DataSource
@@ -207,12 +212,12 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
     }
   }
   
-  private func updateSelected(cell: UICollectionViewCell) {
+  private func updateSelected(cell: UICollectionViewCell, selectedItem: FilterPreset?) {
     switch cell {
     case let cell as NormalCell:
-      cell._isSelected = current == nil
+      cell._isSelected = selectedItem == nil
     case let cell as SelectionCell:
-      cell._isSelected = current == cell.preview?.filter
+      cell._isSelected = selectedItem == cell.preview?.filter
     default:
       break
     }
@@ -223,18 +228,20 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
     guard let content = store.state.content else {
       preconditionFailure()
     }
+
+    let currentSelected = store.state.currentSelected
         
     switch Section.allCases[indexPath.section] {
     case .original:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NormalCell.identifier, for: indexPath) as! NormalCell
-      cell.set(originalImage: content.originalImage, name: viewModel.localizedStrings.control_colorcube_normal_name)
-      updateSelected(cell: cell)
+      cell.set(originalImage: content.originalImage, name: viewModel.localizedStrings.control_preset_normal_name)
+      updateSelected(cell: cell, selectedItem: currentSelected)
       return cell
     case .selections:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: SelectionCell.identifier, for: indexPath) as! SelectionCell
       let filter = content.previews[indexPath.item]
       cell.set(preview: filter)
-      updateSelected(cell: cell)
+      updateSelected(cell: cell, selectedItem: currentSelected)
       return cell
     }
 
@@ -250,7 +257,7 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
     case .original:
       
       viewModel.editingStack.set(filters: {
-        $0.colorCube = nil
+        $0.preset = nil
       })
       
       viewModel.editingStack.takeSnapshot()
@@ -259,7 +266,7 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
             
       viewModel.editingStack.set(filters: {
         let filter = content.previews[indexPath.item]
-        $0.colorCube = filter.filter
+        $0.preset = filter.filter
       })
       
       viewModel.editingStack.takeSnapshot()
@@ -279,14 +286,14 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
     }
   }
   
-  private func scrollToSelectedItem(animated: Bool) {
+  private func scrollTo(selectedItem: FilterPreset?, animated: Bool) {
     
     guard let content = store.state.content else {
       
       return
     }
 
-    if let current = current, let index = content.previews.firstIndex(where: { $0.filter == current }) {
+    if let current = selectedItem, let index = content.previews.firstIndex(where: { $0.filter == current }) {
       collectionView.scrollToItem(
         at: IndexPath.init(item: index, section: Section.selections.rawValue),
         at: .centeredHorizontally,
@@ -399,9 +406,9 @@ open class PresetListControl: ClassicImageEditPresetListControlBase, UICollectio
 
     static let identifier = "me.muukii.PixelEditor.FilterCell"
     
-    open var preview: PreviewFilterColorCube?
+    open var preview: PreviewFilterPreset?
 
-    open func set(preview: PreviewFilterColorCube) {
+    open func set(preview: PreviewFilterPreset) {
       
       self.preview = preview
 

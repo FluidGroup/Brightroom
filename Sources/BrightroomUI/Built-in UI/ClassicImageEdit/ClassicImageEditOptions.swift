@@ -49,7 +49,7 @@ extension ClassicImageEditOptions {
        */
       public var rootControl: ClassicImageEditRootControlBase.Type = ClassicImageEditRootControl.self
 
-      public var colorCubeControl: ClassicImageEditPresetListControlBase.Type = PresetListControl.self
+      public var presetListControl: ClassicImageEditPresetListControlBase.Type = ClassicImageEditPresetListControl.self
       public var editMenuControl: ClassicImageEditEditMenuControlBase.Type = ClassicImageEditEditMenu.EditMenuControl.self
 
       public var exposureControl: ClassicImageEditExposureControlBase.Type = ClassicImageEditExposureControl.self
