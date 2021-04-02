@@ -170,6 +170,16 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         }
 
       }),
+
+      Components.makeSelectionCell(title: "Pick from library with PHImageManager", onTap: { [unowned self] in
+
+        self.__pickPhotoWithPHAsset { asset in
+
+          let stack = EditingStack(imageProvider: .init(asset: asset))
+          _presentCropViewConroller(stack)
+        }
+
+      }),
     ])
   }
 
