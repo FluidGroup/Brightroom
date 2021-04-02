@@ -581,7 +581,9 @@ private func _makeCIImage(
     return ciImage
   }
 
-  assert(usesMTLTexture && device != nil)
+  if usesMTLTexture {
+    assert(device != nil)
+  }
 
   if usesMTLTexture, let device = device {
 
