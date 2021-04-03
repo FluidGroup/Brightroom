@@ -309,7 +309,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
           
           state.wrapped.resolve(with: .init(
             orientation: .init(image.imageOrientation),
-            imageSize: .init(width: asset.pixelWidth, height: asset.pixelWidth)
+            imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
           ))
           state.editableImage = .init(image: image)
           
