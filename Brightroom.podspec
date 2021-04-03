@@ -23,10 +23,12 @@ Pod::Spec.new do |s|
     ss.source_files = "Sources/BrightroomUI/Shared/**/*.swift", "Sources/BrightroomUI/Built-in UI/ClassicImageEdit/**/*.swift"
     ss.dependency "Brightroom/Engine"
     ss.dependency "TransitionPatch"
+    ss.resources = "Sources/BrightroomUI/Media.xcassets"
   end
 
   s.subspec "UI-Crop" do |ss|
     ss.source_files = "Sources/BrightroomUI/Shared/**/*.swift", "Sources/BrightroomUI/Built-in UI/PhotosCrop/**/*.swift"
     ss.dependency "Brightroom/Engine"
+    ss.resources = "Sources/BrightroomUI/Media.xcassets"
   end
 end
