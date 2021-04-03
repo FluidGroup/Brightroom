@@ -1,3 +1,9 @@
+# Brightroom - Composable image editor - building your own UI
+
+| Classic Image Editor | PhotosCrop | Face detection | Masking component |
+| --- | --- | --- | --- |
+| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
+
 ## 🎉 v2.0.0-alpha now open!
 
 > 💥 v2.0.0 development is still early development. We have a lot of known issues.
@@ -16,15 +22,8 @@
 
 > 💵 [Please Support me to implement the next feature.](https://github.com/sponsors/muukii)
 
----
 
-# Brightroom - Composable image editor - building your own UI
-
-| Classic Image Editor | PhotosCrop | Face detection | Masking component |
-| --- | --- | --- | --- |
-| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
-
-Brightroom v2 provides the following features:
+## Brightroom v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
 - **Create your own image editor UI** by composing components.
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
