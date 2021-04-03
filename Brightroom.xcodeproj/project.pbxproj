@@ -33,6 +33,14 @@
 		4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E95272176D85900E9DFB8 /* FilterColorCube.swift */; };
 		4B1E9535217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9534217714A800E9DFB8 /* ClassicImageEditPresetListControl.swift */; };
 		4B1E9537217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1E9536217714D500E9DFB8 /* ClassicImageEditEditMenuControlView.swift */; };
+		4B2B51292618717F00C1BD0A /* LUT_64_1.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51252618717F00C1BD0A /* LUT_64_1.jpg */; };
+		4B2B512A2618717F00C1BD0A /* LUT_64_1.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51252618717F00C1BD0A /* LUT_64_1.jpg */; };
+		4B2B512B2618717F00C1BD0A /* LUT_64_3.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51262618717F00C1BD0A /* LUT_64_3.jpg */; };
+		4B2B512C2618717F00C1BD0A /* LUT_64_3.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51262618717F00C1BD0A /* LUT_64_3.jpg */; };
+		4B2B512D2618717F00C1BD0A /* LUT_64_4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51272618717F00C1BD0A /* LUT_64_4.jpg */; };
+		4B2B512E2618717F00C1BD0A /* LUT_64_4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51272618717F00C1BD0A /* LUT_64_4.jpg */; };
+		4B2B512F2618717F00C1BD0A /* LUT_64_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51282618717F00C1BD0A /* LUT_64_2.jpg */; };
+		4B2B51302618717F00C1BD0A /* LUT_64_2.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B2B51282618717F00C1BD0A /* LUT_64_2.jpg */; };
 		4B2D73C425E8003400D5EE8C /* UIStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */; };
 		4B3075922605F27400A1E7CB /* TopMenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075912605F27400A1E7CB /* TopMenuViewController.swift */; };
 		4B3075972605F27C00A1E7CB /* StackScrollNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3075962605F27C00A1E7CB /* StackScrollNode.swift */; };
@@ -316,6 +324,10 @@
 		4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_up_mirrored.HEIC; sourceTree = "<group>"; };
 		4B254FEC260BB32600F77E9A /* orientation_down.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_down.HEIC; sourceTree = "<group>"; };
 		4B254FED260BB32600F77E9A /* orientation_up.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_up.HEIC; sourceTree = "<group>"; };
+		4B2B51252618717F00C1BD0A /* LUT_64_1.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_1.jpg; sourceTree = "<group>"; };
+		4B2B51262618717F00C1BD0A /* LUT_64_3.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_3.jpg; sourceTree = "<group>"; };
+		4B2B51272618717F00C1BD0A /* LUT_64_4.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_4.jpg; sourceTree = "<group>"; };
+		4B2B51282618717F00C1BD0A /* LUT_64_2.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = LUT_64_2.jpg; sourceTree = "<group>"; };
 		4B3075912605F27400A1E7CB /* TopMenuViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopMenuViewController.swift; sourceTree = "<group>"; };
 		4B3075962605F27C00A1E7CB /* StackScrollNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNode.swift; sourceTree = "<group>"; };
 		4B34578A217502F900716DA0 /* ClassicImageEditStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditStyle.swift; sourceTree = "<group>"; };
@@ -569,6 +581,10 @@
 				4B4C7C79260A69C50082240A /* LUT_64_X_2.jpg */,
 				4BD275FE260A48FF0044B3D8 /* LUT_64_MMM.png */,
 				4BF297B426164012003139AA /* LUT_64_Gold.jpg */,
+				4B2B51252618717F00C1BD0A /* LUT_64_1.jpg */,
+				4B2B51282618717F00C1BD0A /* LUT_64_2.jpg */,
+				4B2B51262618717F00C1BD0A /* LUT_64_3.jpg */,
+				4B2B51272618717F00C1BD0A /* LUT_64_4.jpg */,
 			);
 			path = LUTs;
 			sourceTree = "<group>";
@@ -1199,8 +1215,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B2B512D2618717F00C1BD0A /* LUT_64_4.jpg in Resources */,
 				4BB4B105260F8589007617D7 /* LUT_64_Neutral.png in Resources */,
 				4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */,
+				4B2B512B2618717F00C1BD0A /* LUT_64_3.jpg in Resources */,
 				4BA41C89260CE817005E6FA7 /* orientation_down_mirrored.HEIC in Resources */,
 				4BA41C86260CE817005E6FA7 /* orientation_down.HEIC in Resources */,
 				4BA41C85260CE817005E6FA7 /* orientation_left.HEIC in Resources */,
@@ -1210,12 +1228,14 @@
 				4BA41C82260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
 				4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */,
 				4BA41C83260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */,
+				4B2B51292618717F00C1BD0A /* LUT_64_1.jpg in Resources */,
 				4BF934172614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */,
 				4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */,
 				4BD275FF260A48FF0044B3D8 /* LUT_64_MMM.png in Resources */,
 				4BA41C88260CE817005E6FA7 /* orientation_up.HEIC in Resources */,
 				4B9369E825F940E600B18571 /* nasa.jpg in Resources */,
 				4BA41C87260CE817005E6FA7 /* orientation_right.HEIC in Resources */,
+				4B2B512F2618717F00C1BD0A /* LUT_64_2.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1225,6 +1245,8 @@
 			files = (
 				4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */,
 				4BA41C90260CE817005E6FA7 /* orientation_left.HEIC in Resources */,
+				4B2B51302618717F00C1BD0A /* LUT_64_2.jpg in Resources */,
+				4B2B512E2618717F00C1BD0A /* LUT_64_4.jpg in Resources */,
 				4BA41C8E260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */,
 				4B4C7C7B260A69C50082240A /* LUT_64_X_2.jpg in Resources */,
 				4BA41C92260CE817005E6FA7 /* orientation_right.HEIC in Resources */,
@@ -1232,9 +1254,11 @@
 				4BA41C94260CE817005E6FA7 /* orientation_down_mirrored.HEIC in Resources */,
 				4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
 				4BA41C8F260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */,
+				4B2B512A2618717F00C1BD0A /* LUT_64_1.jpg in Resources */,
 				4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */,
 				4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */,
 				4BA41C91260CE817005E6FA7 /* orientation_down.HEIC in Resources */,
+				4B2B512C2618717F00C1BD0A /* LUT_64_3.jpg in Resources */,
 				4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */,
 				4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */,
 				4B9369E925F940E600B18571 /* nasa.jpg in Resources */,
