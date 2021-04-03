@@ -141,11 +141,11 @@ public final class ImageRenderer {
     type(of: self).queue.async {
       do {
         let rendered = try self.render()
-        queue.async {
+        callbackQueue.async {
           completion(.success(rendered))
         }
       } catch {
-        queue.async {
+        callbackQueue.async {
           completion(.failure(error))
         }
       }
