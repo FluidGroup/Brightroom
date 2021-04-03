@@ -233,17 +233,19 @@ open class EditingStack: Equatable, StoreComponentType {
    */
   public func start(onPreparationCompleted: @escaping () -> Void = {}) {
 
-    let hasCompleted = commit { s -> Bool in
+    let previousHasCompleted = commit { s -> Bool in
       /**
        Mutual exclusion
        */
-      if s.hasStartedEditing == false {
+      if s.hasStartedEditing {
+        return true
+      } else {
         s.hasStartedEditing = true
+        return false
       }
-      return s.hasStartedEditing
     }
 
-    guard hasCompleted == false else {
+    guard previousHasCompleted == false else {
       onPreparationCompleted()
       return
     }
