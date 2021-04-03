@@ -246,7 +246,9 @@ open class EditingStack: Equatable, StoreComponentType {
     }
 
     guard previousHasCompleted == false else {
-      onPreparationCompleted()
+      DispatchQueue.main.async {
+        onPreparationCompleted()
+      }
       return
     }
 
@@ -348,9 +350,11 @@ open class EditingStack: Equatable, StoreComponentType {
                     imageForCrop: cgImageForCrop
                   )
 
-                  onPreparationCompleted()
-
                   self.imageProviderSubscription?.cancel()
+
+                  DispatchQueue.main.async {
+                    onPreparationCompleted()
+                  }
                 }
               }
             )
