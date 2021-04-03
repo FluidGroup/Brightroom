@@ -43,11 +43,7 @@ open class EditingStack: Equatable, StoreComponentType {
   public struct Options {
 
     public var usesMTLTextureForEditingImage: Bool {
-      #if targetEnvironment(simulator)
-        return false
-      #else
-        return true
-      #endif
+      return true
     }
 
     public init() {}
@@ -62,28 +58,32 @@ open class EditingStack: Equatable, StoreComponentType {
 
     public struct Loaded: Equatable {
       init(
-        editableImageProvider: ImageSource,
+        imageSource: ImageSource,
         metadata: ImageProvider.State.ImageMetadata,
         initialEditing: EditingStack.Edit,
         currentEdit: EditingStack.Edit,
         history: [EditingStack.Edit] = [],
-        thumbnailImage: CIImage,
-        editingSourceImage: CIImage,
-        editingPreviewImage: CIImage,
+        thumbnailCIImage: CIImage,
+        editingSourceCGImage: CGImage,
+        editingSourceCIImage: CIImage,
+        editingPreviewCIImage: CIImage,
+        imageForCrop: CGImage,
         previewFilterPresets: [PreviewFilterPreset] = []
       ) {
-        self.editableImageProvider = editableImageProvider
+        self.imageSource = imageSource
         self.metadata = metadata
         self.initialEditing = initialEditing
         self.currentEdit = currentEdit
         self.history = history
-        self.thumbnailImage = thumbnailImage
-        self.editingSourceImage = editingSourceImage
-        self.editingPreviewImage = editingPreviewImage
+        self.thumbnailImage = thumbnailCIImage
+        self.editingSourceCGImage = editingSourceCGImage
+        self.editingSourceImage = editingSourceCIImage
+        self.editingPreviewImage = editingPreviewCIImage
         self.previewFilterPresets = previewFilterPresets
+        self.imageForCrop = imageForCrop
       }
 
-      fileprivate let editableImageProvider: ImageSource
+      fileprivate let imageSource: ImageSource
       public let metadata: ImageProvider.State.ImageMetadata
       private let initialEditing: Edit
 
@@ -106,13 +106,16 @@ open class EditingStack: Equatable, StoreComponentType {
 
       public fileprivate(set) var thumbnailImage: CIImage
 
+      public let editingSourceCGImage: CGImage
       /**
        An original image
        Can be used in cropping
        */
-      public fileprivate(set) var editingSourceImage: CIImage
+      public let editingSourceImage: CIImage
 
       public fileprivate(set) var editingPreviewImage: CIImage
+
+      public fileprivate(set) var imageForCrop: CGImage
 
       public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
 
@@ -186,18 +189,14 @@ open class EditingStack: Equatable, StoreComponentType {
 
   private let filterPresets: [FilterPreset]
 
-  private let queue = DispatchQueue(
-    label: "me.muukii.PixelEngine",
-    qos: .default,
-    attributes: []
-  )
-
   private var subscriptions = Set<VergeAnyCancellable>()
   private var imageProviderSubscription: VergeAnyCancellable?
 
   public var cropModifier: CropModifier
 
   private let editingImageMaxPixelSize: CGFloat = 2560
+
+  private let debounceForCreatingCGImage = _BrightroomDebounce(interval: 0.1, queue: DispatchQueue.init(label: "Brightroom.cgImage"))
 
   // MARK: - Initializers
 
@@ -225,13 +224,6 @@ open class EditingStack: Equatable, StoreComponentType {
     }
 
     self.imageProvider = imageProvider
-
-    #if DEBUG
-      sinkState(queue: .asyncSerialBackground) { state in
-        //      print(state.primitive)
-      }
-      .store(in: &subscriptions)
-    #endif
   }
 
   /**
@@ -250,7 +242,7 @@ open class EditingStack: Equatable, StoreComponentType {
 
     store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
       guard let self = self else { return }
-      self.receive(newState: state)
+      self.receiveInBackground(newState: state)
     }
     .store(in: &subscriptions)
 
@@ -263,6 +255,10 @@ open class EditingStack: Equatable, StoreComponentType {
       .sinkState(queue: .asyncSerialBackground) {
         [weak self] (state: Changes<ImageProvider.State>) in
 
+        /*
+         In Background thread
+         */
+
         guard let self = self else { return }
 
         state.ifChanged(\.loadedImage) { image in
@@ -274,9 +270,11 @@ open class EditingStack: Equatable, StoreComponentType {
           switch image {
           case let .editable(image, metadata):
 
-
             let thumbnailCGImage = image.loadThumbnailCGImage(maxPixelSize: 180)
 
+            /**
+             An image resised from original image
+             */
             let editingSourceCGImage = image.loadThumbnailCGImage(
               maxPixelSize: self.editingImageMaxPixelSize
             )
@@ -286,7 +284,7 @@ open class EditingStack: Equatable, StoreComponentType {
             let device = MTLCreateSystemDefaultDevice()
 
             /// resized
-            let _editingSourceImage: CIImage = _makeCIImage(
+            let _editingSourceCIImage: CIImage = _makeCIImage(
               source: editingSourceCGImage,
               orientation: metadata.orientation,
               device: device,
@@ -300,8 +298,21 @@ open class EditingStack: Equatable, StoreComponentType {
               usesMTLTexture: self.options.usesMTLTextureForEditingImage
             )
 
+            let cgImageForCrop: CGImage = {
+              do {
+                return try Self.renderCGImageForCrop(
+                  filters: [],
+                  source: .init(cgImage: editingSourceCGImage),
+                  orientation: metadata.orientation
+                )
+              } catch {
+                assertionFailure()
+                return editingSourceCGImage
+              }
+            }()
+
             self.adjustCropExtent(
-              image: _editingSourceImage,
+              image: _editingSourceCIImage,
               imageSize: metadata.imageSize,
               completion: { [weak self] crop in
 
@@ -309,20 +320,22 @@ open class EditingStack: Equatable, StoreComponentType {
 
                 self.commit { (s: inout InoutRef<State>) in
                   assert(
-                    (_editingSourceImage.extent.width > _editingSourceImage.extent.height)
+                    (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
                       == (metadata.imageSize.width > metadata.imageSize.height)
                   )
 
                   let initialEdit = Edit(crop: crop)
 
                   s.loadedState = .init(
-                    editableImageProvider: image,
+                    imageSource: image,
                     metadata: metadata,
                     initialEditing: initialEdit,
                     currentEdit: initialEdit,
-                    thumbnailImage: _thumbnailImage,
-                    editingSourceImage: _editingSourceImage,
-                    editingPreviewImage: initialEdit.filters.apply(to: _editingSourceImage)
+                    thumbnailCIImage: _thumbnailImage,
+                    editingSourceCGImage: editingSourceCGImage,
+                    editingSourceCIImage: _editingSourceCIImage,
+                    editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
+                    imageForCrop: cgImageForCrop
                   )
 
                   self.imageProviderSubscription?.cancel()
@@ -339,7 +352,10 @@ open class EditingStack: Equatable, StoreComponentType {
     EngineLog.debug("[EditingStack] deinit")
   }
 
-  private func receive(newState state: Changes<State>) {
+  private func receiveInBackground(newState state: Changes<State>) {
+
+    assert(Thread.isMainThread == false)
+
     commit { (modifyingState: inout InoutRef<State>) in
 
       if let loadedState = state._beta_map(\.loadedState) {
@@ -352,38 +368,41 @@ open class EditingStack: Equatable, StoreComponentType {
             }
           }
 
+          loadedState.ifChanged(\.currentEdit.filters) { currentEdit in
+
+            self.debounceForCreatingCGImage.on { [weak self] in
+
+              guard let self = self else { return }
+
+              let cgImageForCrop: CGImage = {
+                do {
+                  return try Self.renderCGImageForCrop(
+                    filters: currentEdit.makeFilters(),
+                    source: .init(cgImage: loadedState.editingSourceCGImage),
+                    orientation: loadedState.metadata.orientation
+                  )
+                } catch {
+                  assertionFailure()
+                  return loadedState.editingSourceCGImage
+                }
+              }()
+
+              self.commit {
+                $0.loadedState?.imageForCrop = cgImageForCrop
+              }
+
+            }
+
+          }
+
         }
+
       }
+
     }
   }
 
   // MARK: - Functions
-
-  private func adjustCropExtent(
-    image: CIImage,
-    imageSize: CGSize,
-    completion: @escaping (EditingCrop) -> Void
-  ) {
-    let crop = EditingCrop(imageSize: imageSize)
-
-    let scaled = image.transformed(
-      by: .init(
-        scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
-        y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
-      )
-    )
-
-    let translated = scaled.transformed(
-      by: .init(
-        translationX: scaled.extent.origin.x,
-        y: scaled.extent.origin.y
-      )
-    )
-
-    let actualSizeFromDownsampledImage = translated
-
-    cropModifier.run(actualSizeFromDownsampledImage, editingCrop: crop, completion: completion)
-  }
 
   /**
    Adds a new snapshot as a history.
@@ -464,7 +483,7 @@ open class EditingStack: Equatable, StoreComponentType {
       throw EditingStackError.unableToCreateRendererInLoading
     }
 
-    let imageSource = loaded.editableImageProvider
+    let imageSource = loaded.imageSource
 
     let renderer = ImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
 
@@ -493,6 +512,47 @@ open class EditingStack: Equatable, StoreComponentType {
       $0.map(keyPath: \.loadedState!.currentEdit, perform: perform)
     }
   }
+
+  private func adjustCropExtent(
+    image: CIImage,
+    imageSize: CGSize,
+    completion: @escaping (EditingCrop) -> Void
+  ) {
+    let crop = EditingCrop(imageSize: imageSize)
+
+    let scaled = image.transformed(
+      by: .init(
+        scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
+        y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
+      )
+    )
+
+    let translated = scaled.transformed(
+      by: .init(
+        translationX: scaled.extent.origin.x,
+        y: scaled.extent.origin.y
+      )
+    )
+
+    let actualSizeFromDownsampledImage = translated
+
+    cropModifier.run(actualSizeFromDownsampledImage, editingCrop: crop, completion: completion)
+  }
+
+  private static func renderCGImageForCrop(
+    filters: [AnyFilter],
+    source: ImageSource,
+    orientation: CGImagePropertyOrientation
+  ) throws -> CGImage {
+
+    let renderer = ImageRenderer(source: source, orientation: orientation)
+    renderer.edit.modifiers = filters
+
+    let result = try renderer.render().cgImage
+
+    return result
+  }
+
 }
 
 /// TODO: As possible, creates CIImage from MTLTexture

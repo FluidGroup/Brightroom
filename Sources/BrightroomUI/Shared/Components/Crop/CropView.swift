@@ -87,7 +87,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    An image view that displayed in the scroll view.
    */
 
-  private let imageView = _ImageView() 
+  private let imageView = UIImageView()
   private let scrollView = _CropScrollView()
   private let scrollBackdropView = UIView()
   private var hasSetupScrollViewCompleted = false
@@ -106,7 +106,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /// A throttling timer to apply guide changed event.
   ///
   /// This's waiting for Combine availability in minimum iOS Version.
-  private let debounce = Debounce(interval: 0.8)
+  private let debounce = _BrightroomDebounce(interval: 0.8)
 
   private let contentInset: UIEdgeInsets
   
@@ -277,7 +277,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
                                              
           if let loaded = state._beta_map(\.loadedState) {
             
-            loaded.ifChanged(\.editingSourceImage) { image in
+            loaded.ifChanged(\.imageForCrop) { image in
               self.setImage(image)
             }
             
@@ -462,8 +462,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 // MARK: Internal
 
 extension CropView {
-  private func setImage(_ ciImage: CIImage) {
-    imageView.display(image: ciImage)
+  private func setImage(_ cgImage: CGImage) {
+    imageView.image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
   }
   
   override public func layoutSubviews() {

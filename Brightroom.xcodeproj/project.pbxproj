@@ -42,7 +42,6 @@
 		4B36195126105E3900877B21 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
 		4B4023C025ED823B00D3DE47 /* CropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023BF25ED823B00D3DE47 /* CropView.swift */; };
-		4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023C325ED82B700D3DE47 /* Debounce.swift */; };
 		4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */; };
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B422DFD260B91260011500C /* Orientation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422DFC260B91260011500C /* Orientation.swift */; };
@@ -192,6 +191,7 @@
 		4BF297B526164012003139AA /* LUT_64_Gold.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4BF297B426164012003139AA /* LUT_64_Gold.jpg */; };
 		4BF297D226164209003139AA /* DemoLUTViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF297D126164209003139AA /* DemoLUTViewController.swift */; };
 		4BF6872F2610D6D80037D5F4 /* CIImage+.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF6872E2610D6D80037D5F4 /* CIImage+.swift */; };
+		4BF7F97126184A4500C6A3B7 /* _BrightroomDebounce.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4023C325ED82B700D3DE47 /* _BrightroomDebounce.swift */; };
 		4BF934162614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934172614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
@@ -322,7 +322,7 @@
 		4B36194B26105BEB00877B21 /* RendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererTests.swift; sourceTree = "<group>"; };
 		4B36195526107ADB00877B21 /* path-data */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = "path-data"; sourceTree = "<group>"; };
 		4B4023BF25ED823B00D3DE47 /* CropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropView.swift; sourceTree = "<group>"; };
-		4B4023C325ED82B700D3DE47 /* Debounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debounce.swift; sourceTree = "<group>"; };
+		4B4023C325ED82B700D3DE47 /* _BrightroomDebounce.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _BrightroomDebounce.swift; sourceTree = "<group>"; };
 		4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImitationTinderViewController.swift; sourceTree = "<group>"; };
 		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B422DFC260B91260011500C /* Orientation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Orientation.swift; sourceTree = "<group>"; };
@@ -634,6 +634,7 @@
 		4B422DFB260B91190011500C /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				4B4023C325ED82B700D3DE47 /* _BrightroomDebounce.swift */,
 				4B9D4579216E8013003A240A /* Geometry.swift */,
 				4BEE65122174E99600F3578E /* EngineLog.swift */,
 				4B0433AA217B962C0039293E /* InternalUtils.swift */,
@@ -884,7 +885,6 @@
 				4B047E0B25E7FE24008D6B1A /* UIStateStore.swift */,
 				4BEE65102174DC3800F3578E /* EditorLog.swift */,
 				4B835DFE25E9654A00EC84D1 /* AutoLayout.swift */,
-				4B4023C325ED82B700D3DE47 /* Debounce.swift */,
 				4BA8513D25EE97A600BAB430 /* PixelEditorCodeBasedView.swift */,
 				4BEC14BD2603ADDB009CE218 /* EditingCrop+.swift */,
 				4B8B946D2607B122009BF084 /* UIButton+Closure.swift */,
@@ -1353,7 +1353,6 @@
 				4B9D4577216E0694003A240A /* ImagePreviewView.swift in Sources */,
 				4B98CA2C25EFB6BF00E4F61F /* CropView.CropOutsideOverlay.swift in Sources */,
 				4B1E95202176567300E9DFB8 /* ClassicImageEditFilterControlBase.swift in Sources */,
-				4B4023C425ED82B700D3DE47 /* Debounce.swift in Sources */,
 				4BA8513E25EE97A600BAB430 /* PixelEditorCodeBasedView.swift in Sources */,
 				4BA8E73D217C716700940518 /* ClassicImageEditOptions.swift in Sources */,
 				4B0BDCA3217D676D001098B9 /* ClassicImageEditSharpenControl.swift in Sources */,
@@ -1434,6 +1433,7 @@
 				4B01C55F217F6CD800C50EDE /* FilterExposure.swift in Sources */,
 				4BB917F225F5211F00C446B8 /* CoreImageInspector.swift in Sources */,
 				4B04B3ED2177B0470032356A /* FilterContrast.swift in Sources */,
+				4BF7F97126184A4500C6A3B7 /* _BrightroomDebounce.swift in Sources */,
 				4B66C9742171D781008F2A54 /* ImageSource.swift in Sources */,
 				4B1E95282176D85900E9DFB8 /* FilterColorCube.swift in Sources */,
 				4B1E951E21764E1800E9DFB8 /* FilterGaussianBlur.swift in Sources */,
