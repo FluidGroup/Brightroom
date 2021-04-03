@@ -228,16 +228,24 @@ open class EditingStack: Equatable, StoreComponentType {
 
   /**
    EditingStack awakes from cold state.
-   */
-  public func start() {
-    _pixelengine_ensureMainThread()
 
-    guard state.hasStartedEditing == false else {
-      return
+   - Calling from background-thread supported.
+   */
+  public func start(onPreparationCompleted: @escaping () -> Void = {}) {
+
+    let hasCompleted = commit { s -> Bool in
+      /**
+       Mutual exclusion
+       */
+      if s.hasStartedEditing == false {
+        s.hasStartedEditing = true
+      }
+      return s.hasStartedEditing
     }
 
-    commit {
-      $0.hasStartedEditing = true
+    guard hasCompleted == false else {
+      onPreparationCompleted()
+      return
     }
 
     store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
@@ -337,6 +345,8 @@ open class EditingStack: Equatable, StoreComponentType {
                     editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
                     imageForCrop: cgImageForCrop
                   )
+
+                  onPreparationCompleted()
 
                   self.imageProviderSubscription?.cancel()
                 }
