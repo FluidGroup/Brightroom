@@ -69,6 +69,10 @@ public final class ImageSource: Equatable {
     )
   }
 
+  public convenience init(cgImage: CGImage) {
+    self.init(image: UIImage(cgImage: cgImage))
+  }
+
   public init(cgImageSource: CGImageSource) {
     self.closures = .init(
       readImageSize: {

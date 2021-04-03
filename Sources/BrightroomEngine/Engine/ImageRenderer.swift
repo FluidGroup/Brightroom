@@ -249,7 +249,7 @@ public final class ImageRenderer {
       options: [
         .workingFormat: options.workingFormat,
         .highQualityDownsample: true,
-        .useSoftwareRenderer: false,
+        .useSoftwareRenderer: true,
         .cacheIntermediates: false,
       ]
     )

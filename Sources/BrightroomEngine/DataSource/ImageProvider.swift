@@ -64,7 +64,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
     }
     
     public enum Image: Equatable {
-//      case preview(imageSource: ImageSource, imageSize: CGSize?, orientation: CGImagePropertyOrientation)
       case editable(imageSource: ImageSource, metadata: ImageMetadata)
     }
         
@@ -79,15 +78,10 @@ public final class ImageProvider: Equatable, StoreComponentType {
       if let editable = editableImage, let imageSize = imageSize, let orientation = orientation {
         return .editable(imageSource: editable, metadata: .init(orientation: orientation, imageSize: imageSize))
       }
-      
-//      if let preview = previewImage, let orientation = orientation {
-//        return .preview(imageSource: preview, imageSize: imageSize, orientation: orientation)
-//      }
-      
+
       return nil
     }
-    
-//    fileprivate var previewImage: ImageSource?
+
     fileprivate var editableImage: ImageSource?
     
     public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
