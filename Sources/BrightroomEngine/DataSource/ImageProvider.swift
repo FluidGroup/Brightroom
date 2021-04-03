@@ -193,27 +193,21 @@ public final class ImageProvider: Equatable, StoreComponentType {
    Creates an instance
    */
   public convenience init(
-    editableRemoteURL: URL,
-    editableImageSize: CGSize? = nil,
-    editableOrientation: CGImagePropertyOrientation? = nil
+    editableRemoteURL: URL
   ) {
     self.init(
-      editableRemoteURLRequest: URLRequest(url: editableRemoteURL),
-      editableImageSize: editableImageSize,
-      editableOrientation: editableOrientation
+      editableRemoteURLRequest: URLRequest(url: editableRemoteURL)
     )
   }
   
   public init(
-    editableRemoteURLRequest: URLRequest,
-    editableImageSize: CGSize? = nil,
-    editableOrientation: CGImagePropertyOrientation? = nil
+    editableRemoteURLRequest: URLRequest
   ) {
     
     store = .init(
       initialState: .init(
-        imageSize: editableImageSize,
-        orientation: editableOrientation,
+        imageSize: nil,
+        orientation: nil,
         editableImage: nil
       )
     )
