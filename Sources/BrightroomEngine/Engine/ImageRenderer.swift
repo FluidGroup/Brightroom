@@ -125,8 +125,15 @@ public final class ImageRenderer {
     edit = .init()
   }
 
+  /// Renders the image according edits asynchronously
+  ///
+  /// - Parameters:
+  ///   - options:
+  ///   - callbackQueue: A queue that completion closure runs on.
+  ///   - completion: A closure that runs on rendering completed.
   public func render(
     options: Options = .init(),
+    callbackQueue: DispatchQueue = .main,
     completion: @escaping (
       Result<Rendered, Error>
     ) -> Void
@@ -134,11 +141,11 @@ public final class ImageRenderer {
     type(of: self).queue.async {
       do {
         let rendered = try self.render()
-        DispatchQueue.main.async {
+        queue.async {
           completion(.success(rendered))
         }
       } catch {
-        DispatchQueue.main.async {
+        queue.async {
           completion(.failure(error))
         }
       }
