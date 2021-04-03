@@ -175,6 +175,8 @@ open class ClassicImageEditRootControl: ClassicImageEditRootControlBase {
 
 }
 
+/// A view that disabled preset and edit selection button.
+/// It displays the edit panel directly.
 open class ClassicImageEditNoPresetRootControl: ClassicImageEditRootControlBase {
 
   private let containerView = UIView()
