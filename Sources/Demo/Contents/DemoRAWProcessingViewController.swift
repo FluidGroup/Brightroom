@@ -40,6 +40,23 @@ final class DemoRAWProcessingViewController: StackScrollNodeViewController {
         }
       ),
 
+      Components.makeSelectionCell(
+        title: "Write RAW",
+        onTap: { 
+
+          let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
+
+          let filter = CIFilter(imageURL: url, options: [:])!
+          let image = filter.outputImage!
+
+          let ciContext = CIContext()
+
+          let target = URL(fileURLWithPath: NSTemporaryDirectory() + "/raw_image.jpeg")
+          try! ciContext.writeJPEGRepresentation(of: image, to: target, colorSpace: image.colorSpace ?? CGColorSpaceCreateDeviceRGB(), options: [:])
+
+        }
+      ),
+
 
     ])
   }

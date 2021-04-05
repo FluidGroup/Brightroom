@@ -63,6 +63,9 @@
                   Identifier = "LoadingTests/testBasic()">
                </Test>
                <Test
+                  Identifier = "RAWImportTests/testImport()">
+               </Test>
+               <Test
                   Identifier = "RendererTests/testCropping()">
                </Test>
             </SkippedTests>
