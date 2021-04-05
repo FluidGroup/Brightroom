@@ -44,6 +44,10 @@ public enum ImageProviderError: Error {
   case failedToGetImageSize
   
   case failedToGetImageMetadata
+
+  case failedToCreateCIFilterToLoadRAW
+  case failedToGetRenderedImageFromRAW
+  case failedToCreateCGImageFromRAW
 }
 
 /**
@@ -101,7 +105,86 @@ public final class ImageProvider: Equatable, StoreComponentType {
   #if os(iOS)
   
   private var cancellable: VergeAnyCancellable?
-  
+
+  public init(rawData: Data) {
+
+    store = .init(
+      initialState: .init()
+    )
+
+    pendingAction = { `self` in
+
+      guard let filter = CIFilter(imageData: rawData, options: [:]) else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
+        }
+        return .init {}
+      }
+
+      guard let outputImage = filter.outputImage else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
+        }
+        return .init {}
+      }
+
+      let ciContext = CIContext()
+      guard let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
+        }
+        return .init {}
+      }
+
+      self.commit {
+        $0.editableImage = .init(cgImage: cgImage)
+        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+      }
+
+      return .init {}
+    }
+
+  }
+
+  public init(rawDataURL: URL) {
+
+    store = .init(
+      initialState: .init()
+    )
+
+    pendingAction = { `self` in
+
+      guard let filter = CIFilter(imageURL: rawDataURL, options: [:]) else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
+        }
+        return .init {}
+      }
+
+      guard let outputImage = filter.outputImage else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
+        }
+        return .init {}
+      }
+
+      let ciContext = CIContext()
+      guard let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
+        self.commit {
+          $0.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
+        }
+        return .init {}
+      }
+
+      self.commit {
+        $0.editableImage = .init(cgImage: cgImage)
+        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+      }
+
+      return .init {}
+    }
+  }
+
   /// Creates an instance from data
   public init(data: Data) throws {
     
