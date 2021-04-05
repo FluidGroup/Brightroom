@@ -21,13 +21,12 @@
 
 import MetalKit
 import UIKit
+
 #if !COCOAPODS
-import BrightroomEngine
+  import BrightroomEngine
 #endif
 
-/**
- https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
- */
+/// https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
 open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   public var postProcessing: (CIImage) -> CIImage = { $0 } {
     didSet {
@@ -59,8 +58,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   ) {
     super.init(
       frame: frameRect,
-      device: device ??
-        MTLCreateSystemDefaultDevice()
+      device: device ?? MTLCreateSystemDefaultDevice()
     )
     if super.device == nil {
       fatalError("Device doesn't support Metal")
@@ -74,15 +72,17 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     contentMode = .scaleAspectFill
     clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
     clearsContextBeforeDrawing = true
-    
+
     #if targetEnvironment(simulator)
     #else
-    /// For supporting wide-color - extended sRGB
-//    colorPixelFormat = .bgra10_xr
+      /// For supporting wide-color - extended sRGB
+//          colorPixelFormat = .bgra10_xr_srgb
     #endif
   }
 
-  public required init(coder: NSCoder) {
+  public required init(
+    coder: NSCoder
+  ) {
     fatalError("init(coder:) has not been implemented")
   }
 
@@ -117,26 +117,25 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     EditorLog.debug(.imageView, "[MetalImageView] Render")
 
     #if DEBUG
-//    if image.cgImage != nil {
-//      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
-//    }
+      //    if image.cgImage != nil {
+      //      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
+      //    }
     #endif
 
     let bounds = CGRect(
       origin: .zero,
       size: drawableSize
     )
-    
+
     let fixedImage = image.removingExtentOffset()
-    
+
     let resolvedImage = downsample(image: fixedImage, bounds: bounds, contentMode: contentMode)
 
     let processedImage = postProcessing(resolvedImage)
 
-
     clearContents: do {
 
-//      renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+      //      renderPassDescriptor.colorAttachments[0].texture = drawable.texture
       renderPassDescriptor.colorAttachments[0].clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
       renderPassDescriptor.colorAttachments[0].loadAction = .clear
       renderPassDescriptor.colorAttachments[0].storeAction = .store
@@ -150,10 +149,81 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: fixedImage.colorSpace ?? defaultColorSpace
+      colorSpace: defaultColorSpace
     )
 
     commandBuffer.present(drawable)
     commandBuffer.commit()
+  }
+
+  func downsample(image: CIImage, bounds: CGRect, contentMode: UIView.ContentMode) -> CIImage {
+
+    let targetRect: CGRect
+
+    switch contentMode {
+    case .scaleAspectFill:
+      targetRect = Geometry.rectThatAspectFill(
+        aspectRatio: image.extent.size,
+        minimumRect: bounds
+      )
+    case .scaleAspectFit:
+      targetRect = Geometry.rectThatAspectFit(
+        aspectRatio: image.extent.size,
+        boundingRect: bounds
+      )
+    default:
+      targetRect = Geometry.rectThatAspectFit(
+        aspectRatio: image.extent.size,
+        boundingRect: bounds
+      )
+      assertionFailure("ContentMode:\(contentMode) is not supported.")
+    }
+
+    let scaleX = targetRect.width / image.extent.width
+    let scaleY = targetRect.height / image.extent.height
+    let scale = min(scaleX, scaleY)
+
+    let resolvedImage: CIImage
+
+    #if targetEnvironment(simulator)
+      // Fixes geometry in Metal
+      resolvedImage =
+        image
+        .transformed(
+          by: CGAffineTransform(scaleX: 1, y: -1)
+            .concatenating(.init(translationX: 0, y: image.extent.height))
+            .concatenating(.init(scaleX: scale, y: scale))
+            .concatenating(.init(translationX: targetRect.origin.x, y: targetRect.origin.y))
+        )
+
+    #else
+      resolvedImage =
+        image
+        //        .resizedSmooth(targetSize: targetRect.size)
+        .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        .transformed(by: CGAffineTransform(translationX: targetRect.origin.x, y: targetRect.origin.y))
+
+    #endif
+
+    return resolvedImage
+  }
+
+}
+
+extension CIImage {
+
+  fileprivate func resizedSmooth(targetSize: CGSize) -> CIImage {
+
+    let resizeFilter = CIFilter(name: "CILanczosScaleTransform")!
+
+    let scale = targetSize.height / (extent.height)
+    let aspectRatio = targetSize.width / ((extent.width) * scale)
+
+    resizeFilter.setValue(self, forKey: kCIInputImageKey)
+    resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
+    resizeFilter.setValue(aspectRatio, forKey: kCIInputAspectRatioKey)
+    let outputImage = resizeFilter.outputImage
+
+    return outputImage!
   }
 }

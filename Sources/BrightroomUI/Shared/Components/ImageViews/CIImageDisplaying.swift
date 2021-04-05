@@ -22,64 +22,10 @@
 import UIKit
 
 #if !COCOAPODS
-import BrightroomEngine
+  import BrightroomEngine
 #endif
 
-public protocol CIImageDisplaying : class {
+public protocol CIImageDisplaying: class {
   func display(image: CIImage?)
   var postProcessing: (CIImage) -> CIImage { get set }
-}
-
-extension CIImageDisplaying {
-  
-  func downsample(image: CIImage, bounds: CGRect, contentMode: UIView.ContentMode) -> CIImage {
-    
-    let targetRect: CGRect
-    
-    switch contentMode {
-    case .scaleAspectFill:
-      targetRect = Geometry.rectThatAspectFill(
-        aspectRatio: image.extent.size,
-        minimumRect: bounds
-      )
-    case .scaleAspectFit:
-      targetRect = Geometry.rectThatAspectFit(
-        aspectRatio: image.extent.size,
-        boundingRect: bounds
-      )
-    default:
-      targetRect = Geometry.rectThatAspectFit(
-        aspectRatio: image.extent.size,
-        boundingRect: bounds
-      )
-      assertionFailure("ContentMode:\(contentMode) is not supported.")
-    }
-    
-    let scaleX = targetRect.width / image.extent.width
-    let scaleY = targetRect.height / image.extent.height
-    let scale = min(scaleX, scaleY)
-    
-    let resolvedImage: CIImage
-    
-    #if targetEnvironment(simulator)
-    // Fixes geometry in Metal
-    resolvedImage = image
-      .transformed(
-        by: CGAffineTransform(scaleX: 1, y: -1)
-          .concatenating(.init(translationX: 0, y: image.extent.height))
-          .concatenating(.init(scaleX: scale, y: scale))
-          .concatenating(.init(translationX: targetRect.origin.x, y: targetRect.origin.y))
-      )
-    
-    #else
-    resolvedImage = image
-      .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-      .transformed(by: CGAffineTransform(translationX: targetRect.origin.x, y: targetRect.origin.y))
-    
-    #endif
-    
-    return resolvedImage
-  }
-
-  
 }
