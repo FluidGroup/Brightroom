@@ -40,6 +40,8 @@ public enum EditingStackError: Error {
 
 open class EditingStack: Equatable, StoreComponentType {
 
+  private static let startingQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack", qos: .default, attributes: .concurrent)
+
   public struct Options {
 
     public var usesMTLTextureForEditingImage: Bool {
@@ -261,7 +263,11 @@ open class EditingStack: Equatable, StoreComponentType {
     /**
      Start downloading image
      */
-    imageProvider.start()
+
+    Self.startingQueue.async {
+      self.imageProvider.start()
+    }
+    
     imageProviderSubscription =
       imageProvider
       .sinkState(queue: .asyncSerialBackground) {

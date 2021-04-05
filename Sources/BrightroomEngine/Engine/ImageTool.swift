@@ -88,8 +88,13 @@ enum ImageTool {
       return nil
     }
 
+    let _orientation: CGImagePropertyOrientation? =
+      (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
+        CGImagePropertyOrientation(rawValue: $0)
+      }
+
     guard
-      let orientation = properties[kCGImagePropertyTIFFOrientation] as? CGImagePropertyOrientation
+      let orientation = _orientation
     else {
       return nil
     }
