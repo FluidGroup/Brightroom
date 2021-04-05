@@ -104,6 +104,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInTopLeft(gesture:))
           )
+          panGesture.delegate = self
           topLeftControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -112,6 +113,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInTopRight(gesture:))
           )
+          panGesture.delegate = self
           topRightControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -120,6 +122,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInBottomLeft(gesture:))
           )
+          panGesture.delegate = self
           bottomLeftControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -128,6 +131,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInBottomRight(gesture:))
           )
+          panGesture.delegate = self
           bottomRightControlPointView.addGestureRecognizer(panGesture)
         }
       }
@@ -138,6 +142,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInTop(gesture:))
           )
+          panGesture.delegate = self
           topControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -146,6 +151,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInRight(gesture:))
           )
+          panGesture.delegate = self
           rightControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -154,6 +160,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInLeft(gesture:))
           )
+          panGesture.delegate = self
           leftControlPointView.addGestureRecognizer(panGesture)
         }
 
@@ -162,6 +169,7 @@ extension CropView {
             target: self,
             action: #selector(handlePanGestureInBottom(gesture:))
           )
+          panGesture.delegate = self
           bottomControlPointView.addGestureRecognizer(panGesture)
         }
       }
@@ -345,7 +353,12 @@ extension CropView {
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
     }
 
+    private var isTracking = false
+
     private func onGestureTrackingStarted() {
+
+      isTracking = true
+
       translatesAutoresizingMaskIntoConstraints = false
 
       updateMaximumRect()
@@ -355,6 +368,9 @@ extension CropView {
     }
 
     private func onGestureTrackingEnded() {
+
+      isTracking = false
+
       deactivateAllConstraints()
       didChange()
       cropInsideOverlay?.didEndAdjustment(kind: .guide)
@@ -535,7 +551,6 @@ extension CropView {
         })
       }
     }
-
 
     private func deactivateAllConstraints() {
       translatesAutoresizingMaskIntoConstraints = true
@@ -890,7 +905,13 @@ extension CropView {
         break
       }
     }
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+      return isTracking == false
+    }
+
   }
+
 }
 
 private final class MaskView: PixelEditorCodeBasedView {
