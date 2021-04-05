@@ -60,6 +60,13 @@ final class TopMenuViewController: StackScrollNodeViewController {
           let menu = DemoLUTViewController()
           self.navigationController?.pushViewController(menu, animated: true)
         }),
+
+      Components.makeSelectionCell(
+        title: "RAW",
+        onTap: { [unowned self] in
+          let menu = DemoRAWProcessingViewController()
+          self.navigationController?.pushViewController(menu, animated: true)
+        }),
       /*
       Components.makeSelectionCell(
         title: "Components: MetalImageView",
