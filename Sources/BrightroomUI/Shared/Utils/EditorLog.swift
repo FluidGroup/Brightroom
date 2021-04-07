@@ -62,7 +62,7 @@ enum EditorLog {
 extension OSLog {
 
   static let imageView: OSLog = {
-    #if false
+    #if true
     return OSLog.init(subsystem: "BrightroomUI", category: "ImageView")
     #else
     return .disabled
