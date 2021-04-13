@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.requires_arc = true
   s.ios.deployment_target = "12.0"
   s.ios.frameworks = ["UIKit", "CoreImage"]
-  s.ios.dependency "Verge/Store", "~> 8.9.1"
+  s.ios.dependency "Verge/Store", ">= 8.9.1"
 
   s.subspec "Engine" do |ss|
     ss.source_files = "Sources/BrightroomEngine/**/*.swift"
