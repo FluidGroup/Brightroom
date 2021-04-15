@@ -172,13 +172,19 @@ enum ImageTool {
 
     let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
 
-    let image = try? CGContext.makeContext(for: sourceImage, size: targetSize)
-      .perform { c in
-        c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
-      }
-      .makeImage()
+    do {
+      let image = try CGContext.makeContext(for: sourceImage, size: targetSize)
+        .perform { c in
+          c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
+        }
+        .makeImage()
+      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateResizedCGImage)
+      return image
+    } catch {
+      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateCGContext(sourceImage: sourceImage))
+      return nil
+    }
 
-    return image
   }
 
   static func makeImageForJPEGOptimizedSharing(
