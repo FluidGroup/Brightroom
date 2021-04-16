@@ -86,7 +86,7 @@ You can see many demonstrations of what Brightroom can perform and experiments i
 
 ## Customization showcases
 
-| Tinder | 
+|  | 
 | --- |
 | <img width=200px src="https://user-images.githubusercontent.com/1888355/112861131-7cc80980-90ef-11eb-9d43-8c706abeb9d5.png" /> | 
 
