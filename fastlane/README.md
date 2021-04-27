@@ -21,9 +21,9 @@ or alternatively using `brew install fastlane`
 fastlane ios build_demo_apps
 ```
 Description of what the lane does
-### ios run_tests
+### ios run_all_tests
 ```
-fastlane ios run_tests
+fastlane ios run_all_tests
 ```
 
 

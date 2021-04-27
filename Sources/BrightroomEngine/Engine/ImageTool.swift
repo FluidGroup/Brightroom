@@ -178,7 +178,7 @@ enum ImageTool {
           c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
         }
         .makeImage()
-      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateResizedCGImage)
+      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize))
       return image
     } catch {
       EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateCGContext(sourceImage: sourceImage))
