@@ -24,10 +24,12 @@ import CoreImage
 import MobileCoreServices
 import UIKit
 
+/// A set of functions that handle image and manipulations.
 public enum ImageTool {
-  public static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State
-    .ImageMetadata?
-  {
+
+  public static func makeImageMetadata(
+    from imageSource: CGImageSource
+  ) -> ImageProvider.State.ImageMetadata? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
     guard
       let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
@@ -78,7 +80,9 @@ public enum ImageTool {
     return CGSize(width: width, height: height)
   }
 
-  public static func readOrientation(from imageSource: CGImageSource) -> CGImagePropertyOrientation? {
+  public static func readOrientation(
+    from imageSource: CGImageSource
+  ) -> CGImagePropertyOrientation? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
 
     guard
@@ -102,9 +106,10 @@ public enum ImageTool {
     return orientation
   }
 
-  public static func loadOriginalCGImage(from imageSource: CGImageSource, fixesOrientation: Bool)
-    -> CGImage?
-  {
+  public static func loadOriginalCGImage(
+    from imageSource: CGImageSource,
+    fixesOrientation: Bool
+  ) -> CGImage? {
     CGImageSourceCreateImageAtIndex(
       imageSource,
       0,
@@ -178,15 +183,21 @@ public enum ImageTool {
           c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
         }
         .makeImage()
-      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize))
+      EngineSanitizer.global.onDidFindRuntimeError(
+        .failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize)
+      )
       return image
     } catch {
-      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateCGContext(sourceImage: sourceImage))
+      EngineSanitizer.global.onDidFindRuntimeError(
+        .failedToCreateCGContext(sourceImage: sourceImage)
+      )
       return nil
     }
 
   }
 
+  /// Makes an image that optimized for sharing.
+  /// It contains fixing color space to sRGB
   public static func makeImageForJPEGOptimizedSharing(
     image: CGImage,
     quality: CGFloat = 1
@@ -214,6 +225,8 @@ public enum ImageTool {
     return data as Data
   }
 
+  /// Makes an image that optimized for sharing.
+  /// It contains fixing color space to sRGB
   public static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
     let data = NSMutableData()
 
