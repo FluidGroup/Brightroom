@@ -116,7 +116,6 @@
 		4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B9B02E7216BBA56001593B9 /* GraphicDrawing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */; };
 		4B9B02E9216BBA8A001593B9 /* Filtering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E8216BBA8A001593B9 /* Filtering.swift */; };
-		4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02EB216BBDA8001593B9 /* Layer.swift */; };
 		4B9D4563216DD143003A240A /* ClassicImageEditControlStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4562216DD143003A240A /* ClassicImageEditControlStackView.swift */; };
 		4B9D4565216DD1E0003A240A /* ClassicImageEditRootControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4564216DD1E0003A240A /* ClassicImageEditRootControlView.swift */; };
 		4B9D4567216DD40A003A240A /* BrightroomUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9D4566216DD40A003A240A /* BrightroomUI.swift */; };
@@ -431,7 +430,6 @@
 		4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CIImageDisplaying.swift; sourceTree = "<group>"; };
 		4B9B02E6216BBA56001593B9 /* GraphicDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphicDrawing.swift; sourceTree = "<group>"; };
 		4B9B02E8216BBA8A001593B9 /* Filtering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Filtering.swift; sourceTree = "<group>"; };
-		4B9B02EB216BBDA8001593B9 /* Layer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layer.swift; sourceTree = "<group>"; };
 		4B9B030B216C55D9001593B9 /* OvalBrush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OvalBrush.swift; sourceTree = "<group>"; };
 		4B9B030D216C58C6001593B9 /* DrawnPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawnPath.swift; sourceTree = "<group>"; };
 		4B9D4562216DD143003A240A /* ClassicImageEditControlStackView.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = ClassicImageEditControlStackView.swift; sourceTree = "<group>"; tabWidth = 2; };
@@ -940,7 +938,6 @@
 			children = (
 				4B600B18216B7BB9001E1456 /* ImageRenderer.swift */,
 				4B135F752613767E003B5152 /* CoreGraphics+.swift */,
-				4B9B02EB216BBDA8001593B9 /* Layer.swift */,
 				4B112F14216C9B5400EF8E25 /* ImageTool.swift */,
 			);
 			path = Engine;
@@ -1597,7 +1594,6 @@
 				4B135F7B2613769C003B5152 /* Optional+.swift in Sources */,
 				4B66C9722171D764008F2A54 /* BrightroomEngine.swift in Sources */,
 				4BEE650C217479C600F3578E /* OvalBrush.swift in Sources */,
-				4B9B02EC216BBDA8001593B9 /* Layer.swift in Sources */,
 				4B9E8E5E2180B6990071DE91 /* FilterBrightness.swift in Sources */,
 				4BE81C04217EC58B00F6FA5C /* FilterHighlightShadowTint.swift in Sources */,
 				4BEE65132174E99600F3578E /* EngineLog.swift in Sources */,

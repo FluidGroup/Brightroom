@@ -24,10 +24,12 @@ import CoreImage
 import MobileCoreServices
 import UIKit
 
-enum ImageTool {
-  static func makeImageMetadata(from imageSource: CGImageSource) -> ImageProvider.State
-    .ImageMetadata?
-  {
+/// A set of functions that handle image and manipulations.
+public enum ImageTool {
+
+  public static func makeImageMetadata(
+    from imageSource: CGImageSource
+  ) -> ImageProvider.State.ImageMetadata? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
     guard
       let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
@@ -60,7 +62,7 @@ enum ImageTool {
 
    https://oleb.net/blog/2011/09/accessing-image-properties-without-loading-the-image-into-memory/
    */
-  static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
+  public static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
     guard
       let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
@@ -78,7 +80,9 @@ enum ImageTool {
     return CGSize(width: width, height: height)
   }
 
-  static func readOrientation(from imageSource: CGImageSource) -> CGImagePropertyOrientation? {
+  public static func readOrientation(
+    from imageSource: CGImageSource
+  ) -> CGImagePropertyOrientation? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
 
     guard
@@ -102,9 +106,10 @@ enum ImageTool {
     return orientation
   }
 
-  static func loadOriginalCGImage(from imageSource: CGImageSource, fixesOrientation: Bool)
-    -> CGImage?
-  {
+  public static func loadOriginalCGImage(
+    from imageSource: CGImageSource,
+    fixesOrientation: Bool
+  ) -> CGImage? {
     CGImageSourceCreateImageAtIndex(
       imageSource,
       0,
@@ -114,7 +119,7 @@ enum ImageTool {
     )
   }
 
-  static func writeImageToTmpDirectory(image: UIImage) -> URL? {
+  public static func writeImageToTmpDirectory(image: UIImage) -> URL? {
     let directory = NSTemporaryDirectory()
     let fileName = UUID().uuidString
     let path = directory + "/" + fileName
@@ -133,7 +138,7 @@ enum ImageTool {
     return destination
   }
 
-  static func makeResizedCGImage(
+  public static func makeResizedCGImage(
     from imageSource: CGImageSource,
     maxPixelSize: CGFloat,
     fixesOrientation: Bool
@@ -160,7 +165,7 @@ enum ImageTool {
     return scaledImage
   }
 
-  static func makeResizedCGImage(
+  public static func makeResizedCGImage(
     from sourceImage: CGImage,
     maxPixelSize: CGFloat
   ) -> CGImage? {
@@ -178,16 +183,22 @@ enum ImageTool {
           c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
         }
         .makeImage()
-      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize))
+      EngineSanitizer.global.onDidFindRuntimeError(
+        .failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize)
+      )
       return image
     } catch {
-      EngineSanitizer.global.onDidFindRuntimeError(.failedToCreateCGContext(sourceImage: sourceImage))
+      EngineSanitizer.global.onDidFindRuntimeError(
+        .failedToCreateCGContext(sourceImage: sourceImage)
+      )
       return nil
     }
 
   }
 
-  static func makeImageForJPEGOptimizedSharing(
+  /// Makes an image that optimized for sharing.
+  /// It contains fixing color space to sRGB
+  public static func makeImageForJPEGOptimizedSharing(
     image: CGImage,
     quality: CGFloat = 1
   ) -> Data {
@@ -214,7 +225,9 @@ enum ImageTool {
     return data as Data
   }
 
-  static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
+  /// Makes an image that optimized for sharing.
+  /// It contains fixing color space to sRGB
+  public static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
     let data = NSMutableData()
 
     let destination = CGImageDestinationCreateWithData(
