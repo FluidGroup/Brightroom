@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "12.5"
+          xcode-version: "12.4"
       - uses: actions/checkout@v2
       - name: webfactory/ssh-agent
         uses: webfactory/ssh-agent@v0.4.1
