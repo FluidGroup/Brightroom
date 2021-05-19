@@ -59,12 +59,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
   }
   
   public struct State {
-    
+
     public struct ImageMetadata: Equatable {
       public var orientation: CGImagePropertyOrientation
       
       /// A size that applied orientation
       public var imageSize: CGSize
+
+      public init(orientation: CGImagePropertyOrientation, imageSize: CGSize) {
+        self.orientation = orientation
+        self.imageSize = imageSize
+      }
     }
     
     public enum Image: Equatable {
@@ -90,8 +95,18 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
     public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
-    
-    mutating func resolve(with metadata: ImageMetadata) {
+
+    public init(
+      imageSize: CGSize? = nil,
+      orientation: CGImagePropertyOrientation? = nil,
+      editableImage: ImageSource? = nil
+    ) {
+      self.imageSize = imageSize
+      self.orientation = orientation
+      self.editableImage = editableImage
+    }
+
+    public mutating func resolve(with metadata: ImageMetadata) {
       imageSize = metadata.imageSize
       orientation = metadata.orientation
     }
