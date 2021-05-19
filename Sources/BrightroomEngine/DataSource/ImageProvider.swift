@@ -106,6 +106,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
   
   private var cancellable: VergeAnyCancellable?
 
+  /// Creates an instance for your own external data provider.
+  public init(
+    initialState: State,
+    pendingAction: @escaping (ImageProvider) -> VergeAnyCancellable
+  ) {
+
+    self.store = .init(initialState: initialState)
+    self.pendingAction = pendingAction
+
+  }
+
   public init(rawData: Data) {
 
     store = .init(
