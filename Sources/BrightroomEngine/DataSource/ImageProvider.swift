@@ -57,14 +57,23 @@ public final class ImageProvider: Equatable, StoreComponentType {
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }
-  
+
+  /**
+   To access, `ImageProvider.store.state`
+   To modify, `ImageProvider.store.commit()`
+   */
   public struct State {
-    
+
     public struct ImageMetadata: Equatable {
       public var orientation: CGImagePropertyOrientation
       
       /// A size that applied orientation
       public var imageSize: CGSize
+
+      public init(orientation: CGImagePropertyOrientation, imageSize: CGSize) {
+        self.orientation = orientation
+        self.imageSize = imageSize
+      }
     }
     
     public enum Image: Equatable {
@@ -75,7 +84,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
      Editable image's size
      */
     public var imageSize: CGSize?
+
     public var orientation: CGImagePropertyOrientation?
+
+    public var editableImage: ImageSource?
+
+    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
+    
+    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
         
     public var loadedImage: Image? {
           
@@ -86,12 +102,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
       return nil
     }
 
-    fileprivate var editableImage: ImageSource?
-    
-    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
-    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
-    
-    mutating func resolve(with metadata: ImageMetadata) {
+    public init(
+      imageSize: CGSize? = nil,
+      orientation: CGImagePropertyOrientation? = nil,
+      editableImage: ImageSource? = nil
+    ) {
+      self.imageSize = imageSize
+      self.orientation = orientation
+      self.editableImage = editableImage
+    }
+
+    public mutating func resolve(with metadata: ImageMetadata) {
       imageSize = metadata.imageSize
       orientation = metadata.orientation
     }
@@ -105,6 +126,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
   #if os(iOS)
   
   private var cancellable: VergeAnyCancellable?
+
+  /// Creates an instance for your own external data provider.
+  public init(
+    initialState: State,
+    pendingAction: @escaping (ImageProvider) -> VergeAnyCancellable
+  ) {
+
+    self.store = .init(initialState: initialState)
+    self.pendingAction = pendingAction
+
+  }
 
   public init(rawData: Data) {
 
