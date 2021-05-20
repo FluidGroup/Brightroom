@@ -57,7 +57,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }
-  
+
+  /**
+   To access, `ImageProvider.store.state`
+   To modify, `ImageProvider.store.commit()`
+   */
   public struct State {
 
     public struct ImageMetadata: Equatable {
@@ -80,7 +84,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
      Editable image's size
      */
     public var imageSize: CGSize?
+
     public var orientation: CGImagePropertyOrientation?
+
+    public var editableImage: ImageSource?
+
+    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
+    
+    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
         
     public var loadedImage: Image? {
           
@@ -90,11 +101,6 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
       return nil
     }
-
-    fileprivate var editableImage: ImageSource?
-    
-    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
-    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
 
     public init(
       imageSize: CGSize? = nil,
