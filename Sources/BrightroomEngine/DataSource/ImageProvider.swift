@@ -89,9 +89,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
     public var editableImage: ImageSource?
 
-    public fileprivate(set) var loadingNonFatalErrors: [ImageProviderError] = []
+    public var loadingNonFatalErrors: [ImageProviderError] = []
     
-    public fileprivate(set) var loadingFatalErrors: [ImageProviderError] = []
+    public var loadingFatalErrors: [ImageProviderError] = []
         
     public var loadedImage: Image? {
           
