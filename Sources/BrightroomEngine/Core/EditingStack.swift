@@ -40,7 +40,9 @@ public enum EditingStackError: Error {
 
 open class EditingStack: Equatable, StoreComponentType {
 
-  private static let startingQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack", qos: .default, attributes: .concurrent)
+  private static let centralQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack.central", qos: .default, attributes: .concurrent)
+
+  private let backgroundQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack", qos: .default, target: centralQueue)
 
   public struct Options {
 
@@ -254,7 +256,7 @@ open class EditingStack: Equatable, StoreComponentType {
       return
     }
 
-    store.sinkState(queue: .asyncSerialBackground) { [weak self] (state: Changes<State>) in
+    store.sinkState(queue: .specific(backgroundQueue)) { [weak self] (state: Changes<State>) in
       guard let self = self else { return }
       self.receiveInBackground(newState: state)
     }
@@ -264,13 +266,13 @@ open class EditingStack: Equatable, StoreComponentType {
      Start downloading image
      */
 
-    Self.startingQueue.async {
+    backgroundQueue.async {
       self.imageProvider.start()
     }
     
     imageProviderSubscription =
       imageProvider
-      .sinkState(queue: .asyncSerialBackground) {
+      .sinkState(queue: .specific(backgroundQueue)) {
         [weak self] (state: Changes<ImageProvider.State>) in
 
         /*
