@@ -55,13 +55,26 @@ extension CGContext {
      */
     bitmapInfo.remove(.byteOrder32Little)
 
+    /**
+
+     Ref: https://github.com/guoyingtao/Mantis/issues/12
+     */
+    let outputColorSpace: CGColorSpace
+
+    if let colorSpace = image.colorSpace, colorSpace.supportsOutput {
+      outputColorSpace = colorSpace
+    } else {
+      EngineLog.error(.default, "CGImage's color-space does not support output. \(image.colorSpace as Any)")
+      outputColorSpace = CGColorSpaceCreateDeviceRGB()
+    }
+
     let context = try CGContext.init(
       data: nil,
       width: size.map { Int($0.width) } ?? image.width,
       height: size.map { Int($0.height) } ?? image.height,
       bitsPerComponent: image.bitsPerComponent,
       bytesPerRow: 0,
-      space: try image.colorSpace.unwrap(),
+      space: outputColorSpace,
       bitmapInfo: bitmapInfo.rawValue
     )
     .unwrap()
