@@ -21,7 +21,10 @@ final class CGContextCreationTests: XCTestCase {
       do {
         _ = try CGContext.makeContext(for: cgImage)
       } catch {
-        print("❌", imageName, error.localizedDescription)
+        print("❌===")
+        print(cgImage.colorSpace)
+        print(imageName, error.localizedDescription)
+        print("===")
         XCTFail(error.localizedDescription)
       }
     }
