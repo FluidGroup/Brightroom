@@ -48,8 +48,10 @@ public final class ImageSource: Equatable {
 
   private let closures: Closures
 
-  public init(image: UIImage) {
-
+  public init?(image: UIImage) {
+    guard image.cgImage?.hasCGContextSupportedPixelFormat == true else {
+      return nil
+    }
     self.closures = .init(
       readImageSize: {
         image.size.applying(.init(scaleX: image.scale, y: image.scale))
@@ -69,7 +71,7 @@ public final class ImageSource: Equatable {
     )
   }
 
-  public convenience init(cgImage: CGImage) {
+  public convenience init?(cgImage: CGImage) {
     self.init(image: UIImage(cgImage: cgImage))
   }
 

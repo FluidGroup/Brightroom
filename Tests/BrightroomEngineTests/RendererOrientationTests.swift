@@ -16,7 +16,7 @@ final class RendererOrientationTests: XCTestCase {
     -> ImageRenderer.Rendered
   {
 
-    let imageSource = ImageSource(image: image)
+    let imageSource = ImageSource(image: image)!
     let renderer = ImageRenderer(source: imageSource, orientation: orientation)
 
     let rendered = try renderer.render()
