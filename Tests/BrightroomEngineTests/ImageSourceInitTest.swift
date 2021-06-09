@@ -26,12 +26,12 @@ class ImageSourceInitTest: XCTestCase {
     for imagePath in imagePaths {
       guard
         let image = UIImage(contentsOfFile: imagePath),
-        let imageSource = ImageSource(image: image) else {
+        let imageSource = try? ImageSource(image: image) else {
         continue
       }
       _ = imageSource.readImageSize()
       _ = imageSource.loadOriginalCGImage()
-      _ = imageSource.loadThumbnailCGImage(maxPixelSize: 100)
+      _ = imageSource.loadThumbnailCGImage(maxPixelSize: 10)
       _ = imageSource.makeOriginalCIImage()
       // basically test that no crash happen...
     }

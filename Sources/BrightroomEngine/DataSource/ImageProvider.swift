@@ -40,6 +40,7 @@ public enum ImageProviderError: Error {
   
   case failedToCreateCGDataProvider
   case failedToCreateCGImageSource
+  case failedToCreateImageSource(underlyingError: Error)
   
   case failedToGetImageSize
   
@@ -169,8 +170,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
       }
 
       self.commit {
-        $0.editableImage = .init(cgImage: cgImage)
-        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        do {
+          $0.editableImage = try .init(cgImage: cgImage)
+          $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        } catch {
+          $0.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
+        }
       }
 
       return .init {}
@@ -207,12 +212,14 @@ public final class ImageProvider: Equatable, StoreComponentType {
         }
         return .init {}
       }
-
       self.commit {
-        $0.editableImage = .init(cgImage: cgImage)
-        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        do {
+          $0.editableImage = try .init(cgImage: cgImage)
+          $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        } catch {
+          $0.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
+        }
       }
-
       return .init {}
     }
   }
@@ -250,11 +257,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
   /// Creates an instance from UIImage
   ///
   /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
-  public init(image uiImage: UIImage) {
+  public init(image uiImage: UIImage) throws {
     
     store = .init(
       initialState: .init(
-        editableImage: .init(image: uiImage)
+        editableImage: try .init(image: uiImage)
       )
     )
     
@@ -414,8 +421,11 @@ public final class ImageProvider: Equatable, StoreComponentType {
             orientation: .init(image.imageOrientation),
             imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
           ))
-          state.editableImage = .init(image: image)
-          
+          do {
+            state.editableImage = try .init(image: image)
+          } catch {
+            state.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
+          }
         }
       }
       

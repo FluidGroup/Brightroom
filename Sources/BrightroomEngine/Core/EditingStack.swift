@@ -322,7 +322,7 @@ open class EditingStack: Equatable, StoreComponentType {
               do {
                 return try Self.renderCGImageForCrop(
                   filters: [],
-                  source: .init(cgImage: editingSourceCGImage).unwrap(),
+                  source: .init(cgImage: editingSourceCGImage),
                   orientation: metadata.orientation
                 )
               } catch {
@@ -402,7 +402,7 @@ open class EditingStack: Equatable, StoreComponentType {
                 do {
                   return try Self.renderCGImageForCrop(
                     filters: currentEdit.makeFilters(),
-                    source: .init(cgImage: loadedState.editingSourceCGImage).unwrap(),
+                    source: .init(cgImage: loadedState.editingSourceCGImage),
                     orientation: loadedState.metadata.orientation
                   )
                 } catch {

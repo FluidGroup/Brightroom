@@ -48,10 +48,8 @@ public final class ImageSource: Equatable {
 
   private let closures: Closures
 
-  public init?(image: UIImage) {
-    guard image.cgImage?.hasCGContextSupportedPixelFormat == true else {
-      return nil
-    }
+  public init(image: UIImage) throws {
+    try ImageTool.validatePixelFormat(image)
     self.closures = .init(
       readImageSize: {
         image.size.applying(.init(scaleX: image.scale, y: image.scale))
@@ -62,7 +60,7 @@ public final class ImageSource: Equatable {
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
         return ImageTool.makeResizedCGImage(
           from: image.cgImage!,
-          maxPixelSize: maxPixelSize
+          maxPixelSizeHint: maxPixelSize
         )!
       },
       makeCIImage: {
@@ -71,8 +69,8 @@ public final class ImageSource: Equatable {
     )
   }
 
-  public convenience init?(cgImage: CGImage) {
-    self.init(image: UIImage(cgImage: cgImage))
+  public convenience init(cgImage: CGImage) throws {
+    try self.init(image: UIImage(cgImage: cgImage))
   }
 
   public init(cgImageSource: CGImageSource) {
@@ -86,7 +84,7 @@ public final class ImageSource: Equatable {
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
         ImageTool.makeResizedCGImage(
           from: cgImageSource,
-          maxPixelSize: maxPixelSize,
+          maxPixelSizeHint: maxPixelSize,
           fixesOrientation: false
         )!
       },
