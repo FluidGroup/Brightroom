@@ -291,9 +291,7 @@ public enum ImageTool {
       height: sourceImage.height
     )
 
-    let targetSize: CGSize = {
-      imageSize.scaled(maxPixelSize: maxPixelSize)
-    }()
+    let targetSize: CGSize = imageSize.scaled(maxPixelSize: maxPixelSize)
     do {
       let image = try CGContext.makeContext(for: sourceImage, size: targetSize)
         .perform { c in
