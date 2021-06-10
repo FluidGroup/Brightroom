@@ -26,6 +26,77 @@ import UIKit
 
 /// A set of functions that handle image and manipulations.
 public enum ImageTool {
+  public enum Error: Swift.Error {
+    case imageHasNoColorspace
+    case imageIsNotCGImageBacked
+    case unsupporedPixelFormat(model: CGColorSpaceModel, bitPerComponent: Int, bitPerPixel: Int, alphaInfo: CGImageAlphaInfo, containsFloatComponents: Bool)
+  }
+
+  /// Checks that the pixel format is supported by core graphics.
+  /// Throws in case an error is found.
+  public static func validatePixelFormat(_ image: UIImage) throws {
+    guard let cgImage = image.cgImage else {
+      throw Error.imageIsNotCGImageBacked
+    }
+    guard let colorSpace = cgImage.colorSpace else {
+      throw Error.imageHasNoColorspace
+    }
+    let isPixelFromatSupported: Bool =
+      {
+        #if os(iOS) || os(watchOS) || os(tvOS)
+        let iOS = true
+        #else
+        let iOS = false
+        #endif
+        #if os(OSX)
+        let macOS = true
+        #else
+        let macOS = false
+        #endif
+        switch (colorSpace.model, cgImage.bitsPerPixel, cgImage.bitsPerComponent, cgImage.alphaInfo, cgImage.bitmapInfo.contains(.floatComponents)) {
+        case (.unknown, 8, 8, .alphaOnly, false):
+          return macOS || iOS
+        case (.monochrome, 8, 8, .none, false):
+          return macOS || iOS
+        case (.monochrome, 8, 8, .alphaOnly, false):
+          return macOS || iOS
+        case (.monochrome, 16, 16, .none, false):
+          return macOS
+        case (.monochrome, 32, 32, .none, true):
+          return macOS
+        case (.rgb, 16, 5, .noneSkipFirst, false):
+          return macOS || iOS
+        case (.rgb, 32, 8, .noneSkipFirst, false):
+          return macOS || iOS
+        case (.rgb, 32, 8, .noneSkipLast, false):
+          return macOS || iOS
+        case (.rgb, 32, 8, .premultipliedFirst, false):
+          return macOS || iOS
+        case (.rgb, 32, 8, .premultipliedLast, false):
+          return macOS || iOS
+        case (.rgb, 64, 16, .premultipliedLast, false):
+          return macOS
+        case (.rgb, 64, 16, .noneSkipLast, false):
+          return macOS
+        case (.rgb, 128, 32, .noneSkipLast, true):
+          return macOS
+        case (.rgb, 128, 32, .premultipliedLast, true):
+          return macOS
+        case (.cmyk, 32, 8, .none, false):
+          return macOS
+        case (.cmyk, 64, 16, .none, false):
+          return macOS
+        case (.cmyk, 128, 32, .none, true):
+          return macOS
+        default:
+          return false
+        }
+      }()
+    guard isPixelFromatSupported else {
+      throw Error.unsupporedPixelFormat(model: colorSpace.model, bitPerComponent: cgImage.bitsPerComponent, bitPerPixel: cgImage.bitsPerPixel, alphaInfo: cgImage.alphaInfo, containsFloatComponents: cgImage.bitmapInfo.contains(.floatComponents))
+    }
+    // Success ! 
+  }
 
   public static func makeImageMetadata(
     from imageSource: CGImageSource
@@ -140,6 +211,36 @@ public enum ImageTool {
 
   public static func makeResizedCGImage(
     from imageSource: CGImageSource,
+    maxPixelSizeHint: CGFloat,
+    fixesOrientation: Bool
+    ) -> CGImage? {
+    let imageSize: CGSize = {
+      guard
+        let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [AnyHashable: Any]
+      else {
+        return .zero
+      }
+      let pixelWidth = imageProperties[kCGImagePropertyPixelWidth as String] as! CFNumber
+      let pixelHeight = imageProperties[kCGImagePropertyPixelHeight as String] as! CFNumber
+      var width: CGFloat = 0
+      var height: CGFloat = 0
+      CFNumberGetValue(pixelWidth, .cgFloatType, &width)
+      CFNumberGetValue(pixelHeight, .cgFloatType, &height)
+      return CGSize(width: width, height: height)
+  }()
+    let maxPixelSize: CGFloat = {
+      let largestSide = max(imageSize.width, imageSize.height)
+      let smallestSide = min(imageSize.width, imageSize.height)
+      guard smallestSide >= maxPixelSizeHint else {
+        return largestSide
+      }
+      return largestSide * maxPixelSizeHint / smallestSide
+    }()
+    return makeResizedCGImage(from: imageSource, maxPixelSize: maxPixelSize, fixesOrientation: fixesOrientation)
+  }
+
+  public static func makeResizedCGImage(
+    from imageSource: CGImageSource,
     maxPixelSize: CGFloat,
     fixesOrientation: Bool
   )
@@ -167,6 +268,21 @@ public enum ImageTool {
 
   public static func makeResizedCGImage(
     from sourceImage: CGImage,
+    maxPixelSizeHint: CGFloat
+  ) -> CGImage? {
+    let maxPixelSize: CGFloat = {
+      let largestSide = max(sourceImage.size.width, sourceImage.size.height)
+      let smallestSide = min(sourceImage.size.width, sourceImage.size.height)
+      guard smallestSide >= maxPixelSizeHint else {
+        return largestSide
+      }
+      return largestSide * maxPixelSizeHint / smallestSide
+    }()
+    return makeResizedCGImage(from: sourceImage, maxPixelSize: maxPixelSize)
+  }
+  
+  public static func makeResizedCGImage(
+    from sourceImage: CGImage,
     maxPixelSize: CGFloat
   ) -> CGImage? {
 
@@ -175,8 +291,7 @@ public enum ImageTool {
       height: sourceImage.height
     )
 
-    let targetSize = imageSize.scaled(maxPixelSize: maxPixelSize)
-
+    let targetSize: CGSize = imageSize.scaled(maxPixelSize: maxPixelSize)
     do {
       let image = try CGContext.makeContext(for: sourceImage, size: targetSize)
         .perform { c in

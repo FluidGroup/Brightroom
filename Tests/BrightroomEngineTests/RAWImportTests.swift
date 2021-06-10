@@ -20,12 +20,10 @@ final class RAWImportTests: XCTestCase {
     let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
     let data = try! Data.init(contentsOf: url)
 
-    let image = CIImage(data: data)
 
     do {
       let filter = CIFilter(imageData: data, options: [:])!
       let image = filter.outputImage
-      print(image)
     }
   }
 

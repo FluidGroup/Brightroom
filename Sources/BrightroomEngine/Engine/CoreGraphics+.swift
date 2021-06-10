@@ -48,7 +48,6 @@ extension CGContext {
      */
     bitmapInfo.remove(.alphaInfoMask)
     bitmapInfo.formUnion(.init(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue))
-
     /**
      The image from PHImageManager uses `.byteOrder32Little`.
      This is not compatible with MTLTexture.
@@ -224,4 +223,5 @@ extension CGImage {
   {
     try rotated(angle: -rotation.angle, flipping: flipping)
   }
+
 }
