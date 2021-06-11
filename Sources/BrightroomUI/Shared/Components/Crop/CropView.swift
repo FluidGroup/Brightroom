@@ -128,10 +128,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public convenience init(
     image: UIImage,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
-  ) {
+  ) throws {
     self.init(
       editingStack: .init(
-        imageProvider: .init(image: image)
+        imageProvider: try .init(image: image)
       ),
       contentInset: contentInset
     )
