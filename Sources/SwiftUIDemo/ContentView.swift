@@ -122,7 +122,7 @@ struct ContentView: View {
           Section(content: {
             Button("PixelEditor Square") {
               let stack = EditingStack.init(
-                imageProvider: .init(image: Asset.l1000316.image),
+                imageProvider: try! .init(image: Asset.l1000316.image), // Make sure to handle the error unless you are sure the image is supported.
                 cropModifier: .init { _, crop, completion in
                   var new = crop
                   new.updateCropExtent(toFitAspectRatio: .square)
@@ -139,7 +139,7 @@ struct ContentView: View {
 
             Button("PixelEditor") {
               let stack = EditingStack.init(
-                imageProvider: .init(image: Asset.l1000316.image)
+                imageProvider: try! .init(image: Asset.l1000316.image) // Make sure to handle the error unless you are sure the image is supported.
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
