@@ -13,7 +13,7 @@ final class DemoImitationsViewController: StackScrollNodeViewController {
   }
 
   private let stack = EditingStack.init(
-    imageProvider: .init(image: Asset.leica.image),
+    imageProvider: try! .init(image: Asset.leica.image), // Handle errors if you can't be sure of the image pixel format.
     cropModifier: .init { _, crop, completion in
       var new = crop
       new.updateCropExtent(toFitAspectRatio: .square)

@@ -60,7 +60,7 @@ final class DemoLUTViewController: StackScrollNodeViewController {
             let filter = FilterColorCube(
               name: id,
               identifier: id,
-              lutImage: .init(image: image),
+              lutImage: try! .init(image: image), // Handle errors if you can't be sure of the image pixel format.
               dimension: 64
             )
 
@@ -77,7 +77,7 @@ final class DemoLUTViewController: StackScrollNodeViewController {
         onTap: { [unowned self] in
 
           __pickPhoto { (image) in
-            let stack = EditingStack(imageProvider: .init(image: image))
+            let stack = EditingStack(imageProvider: try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
             _present(stack, square: false, faceDetection: false)
           }
 
@@ -89,7 +89,7 @@ final class DemoLUTViewController: StackScrollNodeViewController {
         onTap: { [unowned self] in
 
           __takePhoto { (image) in
-            let stack = EditingStack(imageProvider: .init(image: image))
+            let stack = EditingStack(imageProvider: try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
             _present(stack, square: false, faceDetection: false)
           }
 

@@ -38,7 +38,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Face detection", onTap: { [unowned self] in
                 
         let stack = EditingStack.init(
-          imageProvider: .init(image: Asset.horizontalRect.image),
+          imageProvider: try! .init(image: Asset.horizontalRect.image), // Handle errors if you can't be sure of the image pixel format.
           cropModifier: .faceDetection(aspectRatio: .square)
         )
         
@@ -50,7 +50,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         self.__pickPhoto { image in
           
           let stack = EditingStack.init(
-            imageProvider: .init(image: image),
+            imageProvider: try! .init(image: image), // Handle errors if you can't be sure of the image pixel format.
             cropModifier: .faceDetection(aspectRatio: .square)
           )
           _presentCropViewConroller(stack)
@@ -63,7 +63,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         self.__pickPhoto { image in
           
           let stack = EditingStack.init(
-            imageProvider: .init(image: image),
+            imageProvider: try! .init(image: image), // Handle errors if you can't be sure of the image pixel format.
             cropModifier: .faceDetection(aspectRatio: .square)
           )
           _presentCropViewConroller(stack, fixedAspectRatio: .square)
@@ -137,8 +137,8 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         onTap: { [unowned self] in
           
           let editingStack = EditingStack(
-            imageProvider: .init(
-              image: Asset.l1002725.image),
+            imageProvider: try! .init(
+              image: Asset.l1002725.image), // Handle errors if you can't be sure of the image pixel format.
             cropModifier: .init { image, crop, completion in
               
               var new = crop
@@ -165,7 +165,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
 
         self.__pickPhoto { image in
 
-          let stack = EditingStack(imageProvider: .init(image: image))
+          let stack = EditingStack(imageProvider: try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
           _presentCropViewConroller(stack)
         }
 

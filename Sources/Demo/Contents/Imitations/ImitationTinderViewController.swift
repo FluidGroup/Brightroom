@@ -77,7 +77,7 @@ private final class WrapperCropView: UIView {
 
     currentCropView?.removeFromSuperview()
 
-    let cropView = CropView(image: image, contentInset: .init(top: 4, left: 4, bottom: 4, right: 4))
+    let cropView = try! CropView(image: image, contentInset: .init(top: 4, left: 4, bottom: 4, right: 4)) // Handle errors if you can't be sure of the image pixel format.
 
     let outsideOverlay = CropView.CropOutsideOverlayBase()
     outsideOverlay.backgroundColor = UIColor.init(white: 1, alpha: 0.7)
