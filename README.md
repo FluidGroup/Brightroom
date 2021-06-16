@@ -105,7 +105,7 @@ pod 'Brightroom/UI-Crop', '2.0.0-alpha.8'
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.0.0-alpha.2")
+    .package(url: "https://github.com/muukii/Brightroom.git", exact: "2.2.0")
 ]
 ```
 
