@@ -15,7 +15,7 @@ final class DemoPreviewViewController: StackScrollNodeViewController {
   
   private let resultCell = Components.ResultImageCell()
   private let stack = EditingStack.init(
-    imageProvider: try! .init(image: Asset.leica.image), // Handle errors if you can't be sure of the image pixel format.
+    imageProvider: .init(image: Asset.leica.image),
     cropModifier: .init { _, crop, completion in
       var new = crop
       new.updateCropExtent(toFitAspectRatio: .square)
@@ -33,13 +33,13 @@ final class DemoPreviewViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in
         
         __pickPhoto { (image) in
-          self._present(try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          self._present(.init(image: image))
         }
         
       }),
       
       Components.makeSelectionCell(title: "Example", onTap: { [unowned self] in
-        _present(try! .init(image: Asset.leica.image)) // Handle errors if you can't be sure of the image pixel format.
+        _present(.init(image: Asset.leica.image))
       }),
       
       Components.makeSelectionCell(title: "Example with keeping", onTap: { [unowned self] in

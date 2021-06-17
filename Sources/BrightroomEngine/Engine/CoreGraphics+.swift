@@ -67,18 +67,30 @@ extension CGContext {
       outputColorSpace = CGColorSpaceCreateDeviceRGB()
     }
 
-    let context = try CGContext.init(
+    let width = size.map { Int($0.width) } ?? image.width
+    let height = size.map { Int($0.height) } ?? image.height
+
+    if let context = CGContext(
       data: nil,
-      width: size.map { Int($0.width) } ?? image.width,
-      height: size.map { Int($0.height) } ?? image.height,
+      width: width,
+      height: height,
       bitsPerComponent: image.bitsPerComponent,
       bytesPerRow: 0,
       space: outputColorSpace,
       bitmapInfo: bitmapInfo.rawValue
-    )
-    .unwrap()
-
-    return context
+    ) {
+      return context
+    }
+    return
+      try CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: 8 * 4 * image.width,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+      ).unwrap()
   }
 
   fileprivate func detached(_ perform: () -> Void) {

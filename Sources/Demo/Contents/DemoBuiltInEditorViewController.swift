@@ -13,7 +13,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
 
   private let resultCell = Components.ResultImageCell()
   private lazy var stack = EditingStack.init(
-    imageProvider: try! .init(image: Asset.leica.image), // Handle errors if you can't be sure of the image pixel format.
+    imageProvider: .init(image: Asset.leica.image),
     cropModifier: .init { _, crop, completion in
       var new = crop
       new.updateCropExtent(toFitAspectRatio: .square)
@@ -30,7 +30,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Capture", onTap: { [unowned self] in
 
         __takePhoto { image in
-          self._presentNonSquare(try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          self._presentNonSquare( .init(image: image))
         }
 
       }),
@@ -38,7 +38,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Pick", onTap: { [unowned self] in
 
         __pickPhoto { image in
-          self._presentNonSquare(try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          self._presentNonSquare(.init(image: image))
         }
 
       }),
@@ -54,7 +54,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Pick - Square", onTap: { [unowned self] in
 
         __pickPhoto { image in
-          self._presentSquare(try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          self._presentSquare(.init(image: image))
         }
 
       }),
@@ -62,7 +62,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Pick - Face detection", onTap: { [unowned self] in
         
         __pickPhoto { image in
-          let stack = EditingStack(imageProvider: try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          let stack = EditingStack(imageProvider: .init(image: image))
           self._present(stack, square: false, faceDetection: true)
         }
         
@@ -71,7 +71,7 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
       Components.makeSelectionCell(title: "Pick - Face detection - square", onTap: { [unowned self] in
 
         __pickPhoto { image in
-          let stack = EditingStack(imageProvider: try! .init(image: image)) // Handle errors if you can't be sure of the image pixel format.
+          let stack = EditingStack(imageProvider: .init(image: image))
           self._present(stack, square: true, faceDetection: true)
         }
 
@@ -79,11 +79,11 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
     
 
       Components.makeSelectionCell(title: "Example - Square", onTap: { [unowned self] in
-        _presentSquare(try! .init(image: Asset.leica.image)) // Handle errors if you can't be sure of the image pixel format.
+        _presentSquare(.init(image: Asset.leica.image))
       }),
 
       Components.makeSelectionCell(title: "DisplayP3 - Square", onTap: { [unowned self] in
-        _presentSquare(try! .init(image: Asset.instaLogo.image)) // Handle errors if you can't be sure of the image pixel format.
+        _presentSquare(.init(image: Asset.instaLogo.image))
       }),
 
       Components.makeSelectionCell(title: "Example with keeping - Square", onTap: { [unowned self] in

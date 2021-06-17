@@ -25,7 +25,7 @@ import UIKit
   import BrightroomEngine
 #endif
 
-public protocol CIImageDisplaying: class {
+public protocol CIImageDisplaying: AnyObject {
   func display(image: CIImage?)
   var postProcessing: (CIImage) -> CIImage { get set }
 }
