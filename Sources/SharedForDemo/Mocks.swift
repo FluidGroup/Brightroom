@@ -30,7 +30,7 @@ enum Mocks {
   
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
-      imageProvider: try! .init(image: image) // Make sure to catch the error unless you can guarantee the image is supported.
+      imageProvider: .init(image: image)
     )
   }
     

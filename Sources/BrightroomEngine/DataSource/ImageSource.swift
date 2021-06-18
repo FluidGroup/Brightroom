@@ -48,8 +48,8 @@ public final class ImageSource: Equatable {
 
   private let closures: Closures
 
-  public init(image: UIImage) throws {
-    try ImageTool.validatePixelFormat(image)
+  public init(image: UIImage) {
+    precondition(image.cgImage != nil)
     self.closures = .init(
       readImageSize: {
         image.size.applying(.init(scaleX: image.scale, y: image.scale))
@@ -69,8 +69,8 @@ public final class ImageSource: Equatable {
     )
   }
 
-  public convenience init(cgImage: CGImage) throws {
-    try self.init(image: UIImage(cgImage: cgImage))
+  public convenience init(cgImage: CGImage) {
+    self.init(image: UIImage(cgImage: cgImage))
   }
 
   public init(cgImageSource: CGImageSource) {

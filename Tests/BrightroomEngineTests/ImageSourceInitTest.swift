@@ -26,9 +26,10 @@ class ImageSourceInitTest: XCTestCase {
     for imagePath in imagePaths {
       guard
         let image = UIImage(contentsOfFile: imagePath),
-        let imageSource = try? ImageSource(image: image) else {
+        image.cgImage != nil else {
         continue
       }
+      let imageSource = ImageSource(image: image)
       _ = imageSource.readImageSize()
       _ = imageSource.loadOriginalCGImage()
       _ = imageSource.loadThumbnailCGImage(maxPixelSize: 10)

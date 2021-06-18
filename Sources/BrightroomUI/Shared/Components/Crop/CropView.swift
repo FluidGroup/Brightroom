@@ -131,7 +131,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   ) throws {
     self.init(
       editingStack: .init(
-        imageProvider: try .init(image: image)
+        imageProvider: .init(image: image)
       ),
       contentInset: contentInset
     )

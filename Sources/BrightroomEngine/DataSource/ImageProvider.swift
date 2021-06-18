@@ -170,12 +170,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
       }
 
       self.commit {
-        do {
-          $0.editableImage = try .init(cgImage: cgImage)
-          $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
-        } catch {
-          $0.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
-        }
+        $0.editableImage = .init(cgImage: cgImage)
+        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
       }
 
       return .init {}
@@ -213,12 +209,8 @@ public final class ImageProvider: Equatable, StoreComponentType {
         return .init {}
       }
       self.commit {
-        do {
-          $0.editableImage = try .init(cgImage: cgImage)
-          $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
-        } catch {
-          $0.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
-        }
+        $0.editableImage =  .init(cgImage: cgImage)
+        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
       }
       return .init {}
     }
@@ -257,11 +249,12 @@ public final class ImageProvider: Equatable, StoreComponentType {
   /// Creates an instance from UIImage
   ///
   /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
-  public init(image uiImage: UIImage) throws {
+  public init(image uiImage: UIImage) {
+    precondition(uiImage.cgImage != nil)
     
     store = .init(
       initialState: .init(
-        editableImage: try .init(image: uiImage)
+        editableImage: .init(image: uiImage)
       )
     )
     
@@ -421,11 +414,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
             orientation: .init(image.imageOrientation),
             imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
           ))
-          do {
-            state.editableImage = try .init(image: image)
-          } catch {
-            state.loadingFatalErrors.append(.failedToCreateImageSource(underlyingError: error))
-          }
+          state.editableImage = .init(image: image)
         }
       }
       

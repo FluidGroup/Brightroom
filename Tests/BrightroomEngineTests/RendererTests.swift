@@ -32,7 +32,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testCropping() throws {
-    let imageSource = try ImageSource(image: Asset.l1000069.image)
+    let imageSource = ImageSource(image: Asset.l1000069.image)
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
@@ -50,7 +50,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputDisplayP3_no_effects() throws {
-    let imageSource = try ImageSource(image: Asset.instaLogo.image)
+    let imageSource = ImageSource(image: Asset.instaLogo.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
@@ -63,7 +63,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputSRGB_no_effects() throws {
-    let imageSource = try ImageSource(image: Asset.unsplash2.image)
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
@@ -76,7 +76,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputSRGB_effects() throws {
-    let imageSource = try ImageSource(image: Asset.unsplash3.image)
+    let imageSource = ImageSource(image: Asset.unsplash3.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
@@ -94,7 +94,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputSRGB_effects_crop() throws {
-    let imageSource = try ImageSource(image: Asset.unsplash2.image)
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
@@ -119,7 +119,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputSRGB_effects_crop_resizing() throws {
-    let imageSource = try ImageSource(image: Asset.unsplash2.image)
+    let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
@@ -145,7 +145,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_InputSRGB_rotation_resizing() throws {
-    let imageSource = try ImageSource(image: Asset.unsplash1.image)
+    let imageSource = ImageSource(image: Asset.unsplash1.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
@@ -169,7 +169,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_drawing() throws {
-    let imageSource = try ImageSource(image: Asset.leica.image)
+    let imageSource = ImageSource(image: Asset.leica.image)
 
     let renderer = ImageRenderer(source: imageSource, orientation: .up)
 
@@ -213,7 +213,7 @@ final class RendererTests: XCTestCase {
   }
 
   func testV2_DisplayP3_to_sRGB() throws {
-    let imageSource = try ImageSource(image: Asset.instaLogo.image)
+    let imageSource = ImageSource(image: Asset.instaLogo.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
