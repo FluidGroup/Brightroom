@@ -41,13 +41,13 @@ jobs:
       - name: Test
         run: fastlane run_all_tests
 
-  swiftpm:
-    runs-on: macos-latest
+#   swiftpm:
+#     runs-on: macos-latest
 
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1.1
-        with:
-          xcode-version: "12.4"
-      - uses: actions/checkout@v2
-      - name: Build
-        run: swift build -Xswiftc "-sdk" -Xswiftc "`xcrun --sdk iphoneos --show-sdk-path`" -Xswiftc "-target" -Xswiftc "arm64-apple-ios14.0"
+#     steps:
+#       - uses: maxim-lobanov/setup-xcode@v1.1
+#         with:
+#           xcode-version: "12.4"
+#       - uses: actions/checkout@v2
+#       - name: Build
+#         run: swift build -Xswiftc "-sdk" -Xswiftc "`xcrun --sdk iphoneos --show-sdk-path`" -Xswiftc "-target" -Xswiftc "arm64-apple-ios14.0"
