@@ -1,6 +1,6 @@
 name: Checks
 
-on: 
+on:
   pull_request:
     types: [assigned, opened, synchronize, reopened]
   push:
@@ -13,12 +13,6 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
           xcode-version: "12.4"
-      - name: webfactory/ssh-agent
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      - name: Preparation for SwiftPM
-        run: for ip in $(dig @8.8.8.8 github.com +short); do ssh-keyscan github.com,$ip; ssh-keyscan $ip; done 2>/dev/null >> ~/.ssh/known_hosts
       - uses: actions/checkout@v2
       - name: Pod install
         run: pod install
@@ -32,10 +26,6 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
           xcode-version: "12.4"
-      - name: webfactory/ssh-agent
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - uses: actions/checkout@v2
       - name: CocoaPods Lint
         run: pod lib lint --allow-warnings
@@ -47,25 +37,17 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
           xcode-version: "12.4"
-      - name: webfactory/ssh-agent
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - uses: actions/checkout@v2
       - name: Test
         run: fastlane run_all_tests
 
-  # swiftpm:
-  #   runs-on: macos-latest
+  swiftpm:
+    runs-on: macos-latest
 
-  #   steps:
-  #     - uses: maxim-lobanov/setup-xcode@v1.1
-  #       with:
-  #         xcode-version: "12.4"
-  #     - name: webfactory/ssh-agent
-  #       uses: webfactory/ssh-agent@v0.4.1
-  #       with:
-  #         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-  #     - uses: actions/checkout@v2
-  #     - name: Build
-  #       run: swift build
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1.1
+        with:
+          xcode-version: "12.4"
+      - uses: actions/checkout@v2
+      - name: Build
+        run: swift build -Xswiftc "-sdk" -Xswiftc "`xcrun --sdk iphoneos --show-sdk-path`" -Xswiftc "-target" -Xswiftc "arm64-apple-ios14.0"
