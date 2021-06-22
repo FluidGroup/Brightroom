@@ -326,6 +326,7 @@ open class EditingStack: Equatable, StoreComponentType {
                   orientation: metadata.orientation
                 )
               } catch {
+                EngineSanitizer.global.onDidFindRuntimeError(.failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage))
                 assertionFailure()
                 return editingSourceCGImage
               }

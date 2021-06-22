@@ -25,6 +25,7 @@ import CoreGraphics
 public enum EngineRuntimeError: Swift.Error {
   case failedToCreateResizedCGImage(sourceImage: CGImage, maxPixelSize: CGFloat)
   case failedToCreateCGContext(sourceImage: CGImage)
+  case failedToRenderCGImageForCrop(sourceImage: CGImage)
 }
 
 public final class EngineSanitizer {
