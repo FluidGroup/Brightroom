@@ -7,16 +7,12 @@ on:
 
 jobs:
   pod-trunk-push:
-    runs-on: macOS-latest
+    runs-on: macOS-11
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "12.4"
+          xcode-version: "12.5"
       - uses: actions/checkout@v2
-      - name: webfactory/ssh-agent
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Deploy
         env:
           COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
