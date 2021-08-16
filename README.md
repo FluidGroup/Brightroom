@@ -29,7 +29,7 @@
 - `EditingStack` manages the history of editing and renders images. It's like a headless browser.
 - Headless rendering with using `EditingStack`
 - [Wide color editing supported](https://instagram-engineering.com/bringing-wide-color-to-instagram-5a5481802d7d)
-- [Super large photo (12000px)](https://visibleearth.nasa.gov/img/temp.png) supported (But exporting takes so long time for now.)
+- [Super large photo (12000px)](https://eoimages.gsfc.nasa.gov/images/imagerecords/78000/78314/VIIRS_3Feb2012_lrg.jpg) supported (But exporting takes so long time for now.)
 - Blazing fast previewing by Metal power.
 - Drawing supported - masking blurry
 - Creating your own filter with LUT
