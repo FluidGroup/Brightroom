@@ -221,23 +221,22 @@ public enum ImageTool {
     )
 
     let targetSize: CGSize = imageSize.scaled(maxPixelSize: maxPixelSize)
-    do {
-      let image = try CGContext.makeContext(for: sourceImage, size: targetSize)
-        .perform { c in
-          c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
-        }
-        .makeImage()
-      EngineSanitizer.global.onDidFindRuntimeError(
-        .failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize)
-      )
-      return image
-    } catch {
+
+    guard let context = try? CGContext.makeContext(for: sourceImage, size: targetSize) else {
       EngineSanitizer.global.onDidFindRuntimeError(
         .failedToCreateCGContext(sourceImage: sourceImage)
       )
       return nil
     }
-
+    guard let image = context.perform({ c in
+      c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
+    }).makeImage() else {
+      EngineSanitizer.global.onDidFindRuntimeError(
+        .failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize)
+      )
+      return nil
+    }
+    return image
   }
 
   /// Makes an image that optimized for sharing.
