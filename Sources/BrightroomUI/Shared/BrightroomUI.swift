@@ -41,7 +41,7 @@ public typealias NonL10n = String
 
 #if COCOAPODS
 let bundle = Bundle.init(for: Dummy.self)
-  .path(forResource: "Brightroom", ofType: "bundle")
+  .path(forResource: "BrightroomUI", ofType: "bundle")
   .map {
     Bundle.init(path: $0)
 }!
