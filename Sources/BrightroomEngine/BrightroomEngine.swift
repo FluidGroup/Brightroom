@@ -25,9 +25,6 @@ func _pixelengine_ensureMainThread() {
   assert(Thread.isMainThread)
 }
 
-let _pixelengine_bundle = Bundle.init(for: Dummy.self)
-
-fileprivate final class Dummy {}
 
 #if os(macOS)
 import AppKit
