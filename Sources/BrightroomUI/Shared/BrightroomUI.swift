@@ -39,7 +39,15 @@ extension TODOL10n {
 
 public typealias NonL10n = String
 
+#if COCOAPODS
 let bundle = Bundle.init(for: Dummy.self)
+  .path(forResource: "BrightroomUI", ofType: "bundle")
+  .map {
+    Bundle.init(path: $0)
+}!
+#else
+let bundle = Bundle.init(for: Dummy.self)
+#endif
 
 fileprivate final class Dummy {}
 
