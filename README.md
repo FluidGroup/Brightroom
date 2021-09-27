@@ -96,9 +96,9 @@ You can see many demonstrations of what Brightroom can perform and experiments i
 **CocoaPods**
 
 ```ruby
-pod 'Brightroom/Engine', '2.0.0-alpha.8'
-pod 'Brightroom/UI-Classic', '2.0.0-alpha.8'
-pod 'Brightroom/UI-Crop', '2.0.0-alpha.8'
+pod 'Brightroom/Engine'
+pod 'Brightroom/UI-Classic'
+pod 'Brightroom/UI-Crop'
 ```
 
 **Swift Package Manager**
