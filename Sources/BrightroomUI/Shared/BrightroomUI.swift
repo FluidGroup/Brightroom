@@ -49,6 +49,8 @@ let bundle = Bundle.init(for: Dummy.self)
 let bundle = Bundle.init(for: Dummy.self)
 #endif
 
+public let BrightroomUIBundle = bundle
+
 fileprivate final class Dummy {}
 
 @inline(__always)
