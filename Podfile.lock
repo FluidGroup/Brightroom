@@ -2,7 +2,7 @@ PODS:
   - GlossButtonNode (3.1.2):
     - Texture/Core (~> 3)
     - TextureSwiftSupport (>= 3.10.0)
-  - MosaiqueAssetsPicker (1.3.1)
+  - MosaiqueAssetsPicker (1.3.3)
   - PINCache (3.0.3):
     - PINCache/Arc-exception-safe (= 3.0.3)
     - PINCache/Core (= 3.0.3)
@@ -18,42 +18,42 @@ PODS:
   - PINRemoteImage/PINCache (3.0.3):
     - PINCache (~> 3.0.3)
     - PINRemoteImage/Core
-  - Reveal-SDK (31)
-  - SwiftGen (6.4.0)
-  - Texture (3.0.0):
-    - Texture/AssetsLibrary (= 3.0.0)
-    - Texture/Core (= 3.0.0)
-    - Texture/MapKit (= 3.0.0)
-    - Texture/Photos (= 3.0.0)
-    - Texture/PINRemoteImage (= 3.0.0)
-    - Texture/Video (= 3.0.0)
-  - Texture/AssetsLibrary (3.0.0):
+  - Reveal-SDK (32)
+  - SwiftGen (6.5.1)
+  - Texture (3.1.0):
+    - Texture/AssetsLibrary (= 3.1.0)
+    - Texture/Core (= 3.1.0)
+    - Texture/MapKit (= 3.1.0)
+    - Texture/Photos (= 3.1.0)
+    - Texture/PINRemoteImage (= 3.1.0)
+    - Texture/Video (= 3.1.0)
+  - Texture/AssetsLibrary (3.1.0):
     - Texture/Core
-  - Texture/Core (3.0.0)
-  - Texture/MapKit (3.0.0):
+  - Texture/Core (3.1.0)
+  - Texture/MapKit (3.1.0):
     - Texture/Core
-  - Texture/Photos (3.0.0):
+  - Texture/Photos (3.1.0):
     - Texture/Core
-  - Texture/PINRemoteImage (3.0.0):
+  - Texture/PINRemoteImage (3.1.0):
     - PINRemoteImage/iOS (~> 3.0.0)
     - PINRemoteImage/PINCache
     - Texture/Core
-  - Texture/Video (3.0.0):
+  - Texture/Video (3.1.0):
     - Texture/Core
-  - TextureSwiftSupport (3.12.0):
+  - TextureSwiftSupport (3.13.0):
     - Texture/Core (>= 3)
-    - TextureSwiftSupport/Components (= 3.12.0)
-    - TextureSwiftSupport/Experiments (= 3.12.0)
-    - TextureSwiftSupport/Extensions (= 3.12.0)
-    - TextureSwiftSupport/LayoutSpecBuilders (= 3.12.0)
-  - TextureSwiftSupport/Components (3.12.0):
+    - TextureSwiftSupport/Components (= 3.13.0)
+    - TextureSwiftSupport/Experiments (= 3.13.0)
+    - TextureSwiftSupport/Extensions (= 3.13.0)
+    - TextureSwiftSupport/LayoutSpecBuilders (= 3.13.0)
+  - TextureSwiftSupport/Components (3.13.0):
     - Texture/Core (>= 3)
     - TextureSwiftSupport/LayoutSpecBuilders
-  - TextureSwiftSupport/Experiments (3.12.0):
+  - TextureSwiftSupport/Experiments (3.13.0):
     - Texture/Core (>= 3)
-  - TextureSwiftSupport/Extensions (3.12.0):
+  - TextureSwiftSupport/Extensions (3.13.0):
     - Texture/Core (>= 3)
-  - TextureSwiftSupport/LayoutSpecBuilders (3.12.0):
+  - TextureSwiftSupport/LayoutSpecBuilders (3.13.0):
     - Texture/Core (>= 3)
   - TinyConstraints (4.0.2)
 
@@ -85,19 +85,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   MosaiqueAssetsPicker:
-    :commit: 50d588cac0399df8adf77d53d6947afbcebd20a3
+    :commit: 13ed72c9aa2e2c1705ea0267d347531d93cc83ae
     :git: https://github.com/eure/AssetsPicker.git
 
 SPEC CHECKSUMS:
   GlossButtonNode: 4ea1197a744f2fb5fb875fe31caf17ded4762e8f
-  MosaiqueAssetsPicker: 552055c3ab92fdef2eef7d18241eb252c5f10cf9
+  MosaiqueAssetsPicker: da976cfbff2668ae1fe5ec826da99ba62caa7666
   PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
   PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
   PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
-  Reveal-SDK: 62ae124d57732c4fe7e88635274ca24054dd2d29
-  SwiftGen: 67860cc7c3cfc2ed25b9b74cfd55495fc89f9108
-  Texture: 2f109e937850d94d1d07232041c9c7313ccddb81
-  TextureSwiftSupport: bab3c5e811edf9dc32eb28db447723b9eee30b61
+  Reveal-SDK: 559f22118e742b3e7d03cd50350efe21a0d0b3ba
+  SwiftGen: a6d22010845f08fe18fbdf3a07a8e380fd22e0ea
+  Texture: 2e8ab2519452515f7f5a520f5a8f7e0a413abfa3
+  TextureSwiftSupport: c515c7927fab92d0d9485f49b885b8c5de34fbfb
   TinyConstraints: 7b7ccc0c485bb3bb47082138ff28bc33cd49897f
 
 PODFILE CHECKSUM: c21cfa904f484fa8a842e25692306622f81ea393
