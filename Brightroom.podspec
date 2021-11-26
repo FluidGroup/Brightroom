@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "Brightroom"
-  s.version = "2.3.3"
+  s.version = "2.4.0"
   s.summary = "A component-oriented image editor on top of CoreImage."
 
   s.homepage = "https://github.com/muukii/Brightroom"
