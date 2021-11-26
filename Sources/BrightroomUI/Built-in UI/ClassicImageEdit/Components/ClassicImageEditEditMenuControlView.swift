@@ -229,12 +229,12 @@ public enum ClassicImageEditEditMenu: CaseIterable {
       }
       
       item: do {
-        let ignoredEditMenu: [ClassicImageEditEditMenu] = viewModel.options.classes.control.ignoredEditMenu
-        let displayedMenu = ClassicImageEditEditMenu.allCases.filter { ignoredEditMenu.contains($0) == false }
+        let ignoredEditMenus: Set<ClassicImageEditEditMenu> = viewModel.options.classes.control.ignoredEditMenus
+        let displayedMenus = Set(ClassicImageEditEditMenu.allCases).subtracting(ignoredEditMenus)
         
         var buttons: [ButtonView] = []
         
-        for editMenu in displayedMenu {
+        for editMenu in displayedMenus {
           switch editMenu {
           case .adjustment:
             buttons.append(adjustmentButton)

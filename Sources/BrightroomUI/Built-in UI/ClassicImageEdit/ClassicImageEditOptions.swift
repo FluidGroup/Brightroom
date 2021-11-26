@@ -64,7 +64,7 @@ extension ClassicImageEditOptions {
       public var clarityControl: ClassicImageEditClarityControlBase.Type = ClassicImageEditClarityControl.self
       public var sharpenControl: ClassicImageEditSharpenControlBase.Type = ClassicImageEditSharpenControl.self
       
-      public var ignoredEditMenu: [ClassicImageEditEditMenu] = []
+      public var ignoredEditMenus: Set<ClassicImageEditEditMenu> = []
       
       public init() {
         
