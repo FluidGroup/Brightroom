@@ -38,7 +38,7 @@ public enum EditingStackError: Error {
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
 
-open class EditingStack: Equatable, StoreComponentType {
+open class EditingStack: Hashable, StoreComponentType {
 
   private static let centralQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack.central", qos: .default, attributes: .concurrent)
 
@@ -55,6 +55,12 @@ open class EditingStack: Equatable, StoreComponentType {
 
   public static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
     lhs === rhs
+  }
+
+  public func hash(into hasher: inout Hasher) {
+    withUnsafePointer(to: self) {
+      hasher.combine($0)
+    }
   }
 
   public struct State: Equatable {
@@ -158,6 +164,11 @@ open class EditingStack: Equatable, StoreComponentType {
       mutating func undoEditing() {
         currentEdit = history.popLast() ?? initialEditing
       }
+
+      mutating func revert(to index: Int) {
+
+      }
+
 
       public func makeCroppedImage() -> CIImage {
         editingSourceImage.cropped(
