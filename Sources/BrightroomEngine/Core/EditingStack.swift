@@ -58,9 +58,7 @@ open class EditingStack: Hashable, StoreComponentType {
   }
 
   public func hash(into hasher: inout Hasher) {
-    withUnsafePointer(to: self) {
-      hasher.combine($0)
-    }
+    ObjectIdentifier(self).hash(into: &hasher)
   }
 
   public struct State: Equatable {
@@ -161,14 +159,14 @@ open class EditingStack: Hashable, StoreComponentType {
         currentEdit = history.last ?? initialEditing
       }
 
+      mutating func revert(to revision: Revision) {
+        history.removeSubrange(revision..<history.count)
+        currentEdit = history.last ?? initialEditing
+      }
+
       mutating func undoEditing() {
         currentEdit = history.popLast() ?? initialEditing
       }
-
-      mutating func revert(to index: Int) {
-
-      }
-
 
       public func makeCroppedImage() -> CIImage {
         editingSourceImage.cropped(
@@ -280,7 +278,7 @@ open class EditingStack: Hashable, StoreComponentType {
     backgroundQueue.async {
       self.imageProvider.start()
     }
-    
+
     imageProviderSubscription =
       imageProvider
       .sinkState(queue: .specific(backgroundQueue)) {
@@ -446,6 +444,18 @@ open class EditingStack: Hashable, StoreComponentType {
   public func takeSnapshot() {
     commit {
       $0.loadedState?.makeVersion()
+    }
+  }
+
+  public typealias Revision = Int
+
+  public var currentRevision: Revision? {
+    self.primitiveState.loadedState?.history.count
+  }
+
+  public func revert(to revision: Revision) {
+    commit {
+      $0.loadedState?.revert(to: revision)
     }
   }
 
