@@ -45,6 +45,12 @@ let bundle = Bundle.init(for: Dummy.self)
   .map {
     Bundle.init(path: $0)
 }!
+#elseif SWIFT_PACKAGE_MANAGER
+let bundle = Bundle.init(for: Dummy.self)
+  .path(forResource: "Brightroom_BrightroomUI", ofType: "bundle")
+  .map {
+    Bundle.init(path: $0)
+  }!
 #else
 let bundle = Bundle.init(for: Dummy.self)
 #endif

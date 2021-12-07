@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-  name: "Brightroom",  
+  name: "Brightroom",
   platforms: [
-    .iOS(.v14)
+    .iOS(.v12)
   ],
   products: [
     .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
@@ -16,7 +16,12 @@ let package = Package(
   ],
   targets: [
     .target(name: "BrightroomEngine", dependencies: ["Verge"], exclude: ["Info.plist"]),
-    .target(name: "BrightroomUI", dependencies: ["BrightroomEngine", "Verge", "TransitionPatch"], exclude: ["Info.plist"]),
+    .target(
+        name: "BrightroomUI",
+        dependencies: ["BrightroomEngine", "Verge", "TransitionPatch"],
+        exclude: ["Info.plist"],
+        swiftSettings: [.unsafeFlags(["-DSWIFT_PACKAGE_MANAGER"])]
+        )
   ],
   swiftLanguageVersions: [.v5]
 )
