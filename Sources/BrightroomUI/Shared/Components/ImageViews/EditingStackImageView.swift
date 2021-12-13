@@ -1,0 +1,151 @@
+//
+// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+import MetalKit
+import UIKit
+import Verge
+
+#if !COCOAPODS
+import BrightroomEngine
+#endif
+
+/// This class is meant to display an uptodate preview of the current changes pending in an EditingStack
+open class EditingStackImageView: MetalImageView {
+  public var editingStack: EditingStack? {
+    didSet {
+      subscriptions = .init()
+      reloadFromStack()
+    }
+  }
+  private var loadingOverlayFactory: (() -> UIView)?
+  private weak var currentLoadingOverlay: UIView?
+  private var subscriptions = Set<VergeAnyCancellable>()
+  private var isBinding = false
+
+  public override init(frame frameRect: CGRect, device: MTLDevice?) {
+    super.init(frame: frameRect, device: device)
+    clipsToBounds = true
+    contentMode = .scaleAspectFit
+    isOpaque = false
+    frame = bounds
+    autoresizingMask = [.flexibleWidth, .flexibleHeight]
+  defaultAppearance: do {
+    setLoadingOverlay(factory: {
+      LoadingBlurryOverlayView(
+        effect: UIBlurEffect(style: .dark),
+        activityIndicatorStyle: .whiteLarge
+      )
+    })
+  }
+  }
+
+  // MARK: - Functions
+
+  override public func willMove(toWindow newWindow: UIWindow?) {
+    super.willMove(toWindow: newWindow)
+
+    guard newWindow != nil else {
+      return
+    }
+    reloadFromStack()
+  }
+
+  override public func layoutSubviews() {
+    super.layoutSubviews()
+
+    if let loaded = editingStack?.store.state.loadedState {
+      requestPreviewImage(state: loaded)
+    }
+  }
+
+  private func reloadFromStack() {
+    guard let editingStack = self.editingStack else {
+      display(image: nil)
+      return
+    }
+    editingStack.start()
+
+    if isBinding == false {
+      isBinding = true
+      editingStack.sinkState { [weak self] state in
+
+        guard let self = self else { return }
+
+        state.ifChanged(\.isLoading) { isLoading in
+          self.updateLoadingOverlay(displays: isLoading)
+        }
+
+        UIView.performWithoutAnimation {
+          if let state = state._beta_map(\.loadedState) {
+            if state.hasChanges({ ($0.currentEdit) }, .init(==)) {
+              self.requestPreviewImage(state: state.primitive)
+            }
+          }
+        }
+      }
+      .store(in: &subscriptions)
+    }
+  }
+
+  public func setLoadingOverlay(factory: (() -> UIView)?) {
+    _pixeleditor_ensureMainThread()
+    loadingOverlayFactory = factory
+  }
+
+  public required init(
+    coder: NSCoder
+  ) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  private func requestPreviewImage(state: EditingStack.State.Loaded) {
+    let croppedImage = state.makeCroppedImage()
+    display(image: croppedImage)
+    postProcessing = state.currentEdit.filters.apply
+  }
+
+  private func updateLoadingOverlay(displays: Bool) {
+    if displays, let factory = loadingOverlayFactory {
+      let loadingOverlay = factory()
+      currentLoadingOverlay = loadingOverlay
+      addSubview(loadingOverlay)
+      AutoLayoutTools.setEdge(loadingOverlay, self)
+
+      loadingOverlay.alpha = 0
+      UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        loadingOverlay.alpha = 1
+      }
+      .startAnimation()
+
+    } else {
+      if let view = currentLoadingOverlay {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+          view.alpha = 0
+        }&>.do {
+          $0.addCompletion { _ in
+            view.removeFromSuperview()
+          }
+          $0.startAnimation()
+        }
+      }
+    }
+  }
+}

@@ -605,6 +605,7 @@
 		FC1110122660FE0C00CC45EA /* m2-593d4b1a0b5d13b539c6c098dc5797ca.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F142660FE0A00CC45EA /* m2-593d4b1a0b5d13b539c6c098dc5797ca.png */; };
 		FC1110132660FE0C00CC45EA /* m3-593d4b1a0b5d13b539c6c098dc5797ca.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F152660FE0B00CC45EA /* m3-593d4b1a0b5d13b539c6c098dc5797ca.png */; };
 		FC1110142660FE0C00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F162660FE0B00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png */; };
+		FC5A693B27673D5700E303BC /* EditingStackImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC5A693A27673D5700E303BC /* EditingStackImageView.swift */; };
 		FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */; };
 		FCD4180E2664D0D40039B796 /* 1cbb1bb37d62c44f67374cd451643dc4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2F2660FD2300CC45EA /* 1cbb1bb37d62c44f67374cd451643dc4.jpg */; };
 /* End PBXBuildFile section */
@@ -1281,6 +1282,7 @@
 		FC110F162660FE0B00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "m1-cb265e4ae8967567fca5b0ecd58b90cb.png"; sourceTree = "<group>"; };
 		FC394020266E0FCA00A1698E /* UIImage+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+.swift"; sourceTree = "<group>"; };
 		FC4B7D81E5A0A734CEBB2036 /* Pods_Demo_Apps_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC5A693A27673D5700E303BC /* EditingStackImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStackImageView.swift; sourceTree = "<group>"; };
 		FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingBlurryOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -1457,6 +1459,7 @@
 				4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */,
 				4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */,
 				4B9D4576216E0694003A240A /* ImagePreviewView.swift */,
+				FC5A693A27673D5700E303BC /* EditingStackImageView.swift */,
 			);
 			path = ImageViews;
 			sourceTree = "<group>";
@@ -3124,6 +3127,7 @@
 				4B835DFF25E9654A00EC84D1 /* AutoLayout.swift in Sources */,
 				4B9D4565216DD1E0003A240A /* ClassicImageEditRootControlView.swift in Sources */,
 				4B9D4563216DD143003A240A /* ClassicImageEditControlStackView.swift in Sources */,
+				FC5A693B27673D5700E303BC /* EditingStackImageView.swift in Sources */,
 				4BEE65112174DC3800F3578E /* EditorLog.swift in Sources */,
 				4BE8D40E260E60F600A33450 /* SwiftUIPhotosCropView.swift in Sources */,
 				4B011380216FBAA200CF09F6 /* BlurryMaskingView.swift in Sources */,
