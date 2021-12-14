@@ -28,7 +28,7 @@ import BrightroomEngine
 #endif
 
 /// This class is meant to display an uptodate preview of the current changes pending in an EditingStack
-open class EditingStackImageView: MetalImageView {
+open class EditingStackImageView: PixelEditorCodeBasedView {
   public var editingStack: EditingStack? {
     didSet {
       subscriptions = .init()
@@ -48,17 +48,18 @@ open class EditingStackImageView: MetalImageView {
   private var subscriptions = Set<VergeAnyCancellable>()
   private let canvasView = CanvasView()
   private let blurryImageView = _ImageView()
+  private let backdropImageView = _ImageView()
 
-  public override init(frame frameRect: CGRect, device: MTLDevice?) {
-    super.init(frame: frameRect, device: device)
+  public override init(frame: CGRect) {
+    super.init(frame: frame)
     clipsToBounds = true
     contentMode = .scaleAspectFit
     isOpaque = false
-    frame = bounds
     autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-    [blurryImageView, canvasView].forEach {
+    [backdropImageView, blurryImageView, canvasView].forEach {
       addSubview($0)
+      $0.clipsToBounds = true
       $0.bounds = bounds
       $0.autoresizingMask = [.flexibleHeight, .flexibleWidth]
       $0.contentMode = .scaleAspectFit
@@ -97,11 +98,12 @@ open class EditingStackImageView: MetalImageView {
 
   private func reloadFromStack() {
     guard let editingStack = self.editingStack else {
-      display(image: nil)
+      [backdropImageView, blurryImageView].forEach {
+        $0.display(image: nil)
+      }
       return
     }
     editingStack.start()
-
     editingStack.sinkState { [weak self] state in
 
       guard let self = self else { return }
@@ -111,6 +113,10 @@ open class EditingStackImageView: MetalImageView {
       }
       state.ifChanged(\.loadedState?.currentEdit.drawings.blurredMaskPaths) { paths in
         self.canvasView.setResolvedDrawnPaths(paths ?? [])
+      }
+
+      state.ifChanged(\.loadedState?.currentEdit.crop) { crop in
+        //XXX preview crop
       }
 
       UIView.performWithoutAnimation {
@@ -129,17 +135,11 @@ open class EditingStackImageView: MetalImageView {
     loadingOverlayFactory = factory
   }
 
-  public required init(
-    coder: NSCoder
-  ) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
   private func requestPreviewImage(state: EditingStack.State.Loaded) {
     let croppedImage = state.makeCroppedImage()
-    display(image: croppedImage)
+    backdropImageView.display(image: croppedImage)
     blurryImageView.display(image: BlurredMask.blur(image: croppedImage))
-    postProcessing = state.currentEdit.filters.apply
+//    postProcessing = state.currentEdit.filters.apply ??
   }
 
   private func updateLoadingOverlay(displays: Bool) {
