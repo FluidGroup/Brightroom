@@ -18,7 +18,7 @@
 
 > 🪐 Brightroom's state management powered by [Verge](https://github.com/VergeGroup/Verge).
 
-> 💵 [Please Support me to implement the next feature.](https://github.com/sponsors/muukii)
+> 💵 [Support me by a one-time tier](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii)
 
 
 ## Brightroom v2 provides the following features:
