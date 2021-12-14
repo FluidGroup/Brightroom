@@ -38,7 +38,6 @@ open class EditingStackImageView: MetalImageView {
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
   private var subscriptions = Set<VergeAnyCancellable>()
-  private var isBinding = false
 
   public override init(frame frameRect: CGRect, device: MTLDevice?) {
     super.init(frame: frameRect, device: device)
@@ -83,26 +82,23 @@ open class EditingStackImageView: MetalImageView {
     }
     editingStack.start()
 
-    if isBinding == false {
-      isBinding = true
-      editingStack.sinkState { [weak self] state in
+    editingStack.sinkState { [weak self] state in
 
-        guard let self = self else { return }
+      guard let self = self else { return }
 
-        state.ifChanged(\.isLoading) { isLoading in
-          self.updateLoadingOverlay(displays: isLoading)
-        }
+      state.ifChanged(\.isLoading) { isLoading in
+        self.updateLoadingOverlay(displays: isLoading)
+      }
 
-        UIView.performWithoutAnimation {
-          if let state = state._beta_map(\.loadedState) {
-            if state.hasChanges({ ($0.currentEdit) }, .init(==)) {
-              self.requestPreviewImage(state: state.primitive)
-            }
+      UIView.performWithoutAnimation {
+        if let state = state._beta_map(\.loadedState) {
+          if state.hasChanges({ ($0.currentEdit) }, .init(==)) {
+            self.requestPreviewImage(state: state.primitive)
           }
         }
       }
-      .store(in: &subscriptions)
     }
+    .store(in: &subscriptions)
   }
 
   public func setLoadingOverlay(factory: (() -> UIView)?) {
