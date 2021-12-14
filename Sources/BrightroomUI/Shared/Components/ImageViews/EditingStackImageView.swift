@@ -32,12 +32,22 @@ open class EditingStackImageView: MetalImageView {
   public var editingStack: EditingStack? {
     didSet {
       subscriptions = .init()
+      canvasView.setResolvedDrawnPaths(.init())
       reloadFromStack()
     }
   }
+//  public override var contentMode: ContentMode {
+//    didSet {
+//      blurryImageView.contentMode = contentMode
+//      canvasView.contentMode = contentMode
+//    }
+//  }
+
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
   private var subscriptions = Set<VergeAnyCancellable>()
+  private let canvasView = CanvasView()
+  private let blurryImageView = _ImageView()
 
   public override init(frame frameRect: CGRect, device: MTLDevice?) {
     super.init(frame: frameRect, device: device)
@@ -46,6 +56,16 @@ open class EditingStackImageView: MetalImageView {
     isOpaque = false
     frame = bounds
     autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+    [blurryImageView, canvasView].forEach {
+      addSubview($0)
+      $0.bounds = bounds
+      $0.autoresizingMask = [.flexibleHeight, .flexibleWidth]
+      $0.contentMode = .scaleAspectFit
+    }
+
+    blurryImageView.mask = canvasView
+
   defaultAppearance: do {
     setLoadingOverlay(factory: {
       LoadingBlurryOverlayView(
@@ -89,6 +109,9 @@ open class EditingStackImageView: MetalImageView {
       state.ifChanged(\.isLoading) { isLoading in
         self.updateLoadingOverlay(displays: isLoading)
       }
+      state.ifChanged(\.drawings.blurredMaskPaths) { paths in
+        self.canvasView.setResolvedDrawnPaths(paths)
+      }
 
       UIView.performWithoutAnimation {
         if let state = state._beta_map(\.loadedState) {
@@ -115,6 +138,7 @@ open class EditingStackImageView: MetalImageView {
   private func requestPreviewImage(state: EditingStack.State.Loaded) {
     let croppedImage = state.makeCroppedImage()
     display(image: croppedImage)
+    blurryImageView.display(image: BlurredMask.blur(image: croppedImage))
     postProcessing = state.currentEdit.filters.apply
   }
 
