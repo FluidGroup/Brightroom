@@ -109,8 +109,8 @@ open class EditingStackImageView: MetalImageView {
       state.ifChanged(\.isLoading) { isLoading in
         self.updateLoadingOverlay(displays: isLoading)
       }
-      state.ifChanged(\.drawings.blurredMaskPaths) { paths in
-        self.canvasView.setResolvedDrawnPaths(paths)
+      state.ifChanged(\.loadedState?.currentEdit.drawings.blurredMaskPaths) { paths in
+        self.canvasView.setResolvedDrawnPaths(paths ?? [])
       }
 
       UIView.performWithoutAnimation {
