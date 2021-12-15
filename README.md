@@ -20,6 +20,11 @@
 
 > 💵 [Support me by one-time tier](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii)
 
+## Support the project
+<a href="https://www.buymeacoffee.com/muukii">
+<img width="545" alt="yellow-button" src="https://user-images.githubusercontent.com/1888355/146226808-eb2e9ee0-c6bd-44a2-a330-3bbc8a6244cf.png">
+</a>
+
 
 ## Brightroom v2 provides the following features:
 - Components are built separately and run standalone using an `EditingStack`.
