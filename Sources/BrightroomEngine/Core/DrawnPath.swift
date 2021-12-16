@@ -39,6 +39,14 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
     self.bezierPath = path
   }
 
+  func transformed(_ transform: CGAffineTransform) -> Self {
+    let scaleX = sqrt(transform.a * transform.a + transform.c * transform.c)
+    let scaleY = sqrt(transform.b * transform.b + transform.d * transform.d)
+    var transformVar = transform
+    let path = self.bezierPath.cgPath.copy(using: &transformVar)
+    return .init(brush: .init(color: self.brush.color, pixelSize: self.brush.pixelSize * (scaleX + scaleY) / 2), path: .init(cgPath: path ?? self.bezierPath.cgPath))
+  }
+
   // MARK: - Functions
 
   func brushedPath() -> UIBezierPath {
