@@ -61,8 +61,9 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
       addSubview($0)
       $0.clipsToBounds = true
       $0.bounds = bounds
+      $0.center = center
       $0.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-      $0.contentMode = .scaleAspectFit
+      $0.contentMode = .scaleAspectFill
     }
 
     blurryImageView.mask = canvasView
