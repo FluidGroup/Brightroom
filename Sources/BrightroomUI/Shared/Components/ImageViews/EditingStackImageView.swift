@@ -63,7 +63,7 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
       $0.bounds = bounds
       $0.center = center
       $0.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-      $0.contentMode = .scaleAspectFill
+      $0.contentMode = .scaleAspectFit
     }
 
     blurryImageView.mask = canvasView
@@ -91,7 +91,10 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
 
   override public func layoutSubviews() {
     super.layoutSubviews()
-
+    [backdropImageView, blurryImageView, canvasView].forEach {
+      $0.bounds = bounds
+      $0.center = center
+    }
     if let loaded = editingStack?.store.state.loadedState {
       requestPreviewImage(state: loaded)
     }
