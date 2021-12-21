@@ -36,12 +36,13 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
       reloadFromStack()
     }
   }
-//  public override var contentMode: ContentMode {
-//    didSet {
-//      blurryImageView.contentMode = contentMode
-//      canvasView.contentMode = contentMode
-//    }
-//  }
+  /// Only aspectFit and aspectFill are supported for paths drawings.
+  public override var contentMode: ContentMode {
+    didSet {
+      blurryImageView.contentMode = contentMode
+      canvasView.contentMode = contentMode
+    }
+  }
 
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
@@ -63,7 +64,7 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
       $0.bounds = bounds
       $0.center = center
       $0.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-      $0.contentMode = .scaleAspectFit
+      $0.contentMode = contentMode
     }
 
     blurryImageView.mask = canvasView
@@ -115,8 +116,32 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
       state.ifChanged(\.isLoading) { isLoading in
         self.updateLoadingOverlay(displays: isLoading)
       }
-      state.ifChanged(\.loadedState?.currentEdit.drawings.blurredMaskPaths) { paths in
-        self.canvasView.setResolvedDrawnPaths(paths ?? [])
+
+      state.ifChanged(\.loadedState?.currentEdit.drawings.blurredMaskPaths, \.loadedState?.imageSize) { paths, imageSize in
+        self.canvasView.setResolvedDrawnPaths(paths.map {
+          $0.map {
+            guard let imageSize = imageSize else {
+              return $0 /// invalid state, should not happen
+            }
+            let renderRect: CGRect = {
+              let nullOriginRect = CGRect(origin: .zero, size: self.frame.size)
+              switch self.contentMode {
+              case .scaleAspectFit:
+                return Geometry.rectThatAspectFit(aspectRatio: imageSize, boundingRect: nullOriginRect)
+              case .scaleAspectFill:
+                return Geometry.rectThatAspectFill(aspectRatio: imageSize, minimumRect: nullOriginRect)
+
+              default:
+                print("Unsupported contentMode: \(self.contentMode)")
+                return self.frame
+              }
+            }()
+            return $0.transformed(
+              .init(scaleX: renderRect.width / imageSize.width, y: renderRect.height / imageSize.height)
+                .concatenating(.init(translationX: renderRect.origin.x, y: renderRect.origin.y))
+            )
+          }
+        } ?? [])
       }
 
       state.ifChanged(\.loadedState?.currentEdit.crop) { crop in
@@ -143,7 +168,7 @@ open class EditingStackImageView: PixelEditorCodeBasedView {
     let croppedImage = state.makeCroppedImage()
     backdropImageView.display(image: croppedImage)
     blurryImageView.display(image: BlurredMask.blur(image: croppedImage))
-//    postProcessing = state.currentEdit.filters.apply ??
+    //    postProcessing = state.currentEdit.filters.apply ??
   }
 
   private func updateLoadingOverlay(displays: Bool) {
