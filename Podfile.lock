@@ -18,7 +18,7 @@ PODS:
   - PINRemoteImage/PINCache (3.0.3):
     - PINCache (~> 3.0.3)
     - PINRemoteImage/Core
-  - Reveal-SDK (32)
+  - Reveal-SDK (33)
   - SwiftGen (6.5.1)
   - Texture (3.1.0):
     - Texture/AssetsLibrary (= 3.1.0)
@@ -94,7 +94,7 @@ SPEC CHECKSUMS:
   PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
   PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
   PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
-  Reveal-SDK: 559f22118e742b3e7d03cd50350efe21a0d0b3ba
+  Reveal-SDK: effba1c940b8337195563c425a6b5862ec875caa
   SwiftGen: a6d22010845f08fe18fbdf3a07a8e380fd22e0ea
   Texture: 2e8ab2519452515f7f5a520f5a8f7e0a413abfa3
   TextureSwiftSupport: c515c7927fab92d0d9485f49b885b8c5de34fbfb

@@ -21,6 +21,9 @@
 
 import UIKit
 
+/**
+ It does not render anything, just giving the paths smoothified.
+ */
 public class SmoothPathDrawingView : PixelEditorCodeBasedView {
   
   public struct Handlers {
