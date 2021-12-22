@@ -35,7 +35,7 @@ public enum EditingStackError: Error {
 /// A stateful object that manages current editing status from original image.
 /// And supports rendering a result image.
 ///
-/// - Attension: Source text
+/// - Attention: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
 
 open class EditingStack: Hashable, StoreComponentType {

@@ -342,7 +342,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    Renders an image according to the editing.
 
-   - Attension: This operation can be run background-thread.
+   - Attention: This operation can be run background-thread.
    */
   public func renderImage() throws -> ImageRenderer.Rendered? {
     applyEditingStack()

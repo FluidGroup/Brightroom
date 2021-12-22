@@ -155,7 +155,7 @@ public final class ImageRenderer {
   /**
    Renders an image according to the editing.
 
-   - Attension: This operation can be run background-thread.
+   - Attention: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
     if edit.drawer.isEmpty, edit.modifiers.isEmpty {

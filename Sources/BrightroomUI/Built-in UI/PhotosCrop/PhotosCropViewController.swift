@@ -137,7 +137,7 @@ public final class PhotosCropViewController: UIViewController {
   /**
    Renders an image according to the editing.
    
-   - Attension: This operation can be run background-thread.
+   - Attention: This operation can be run background-thread.
    */
   public func renderImage(options: ImageRenderer.Options, completion: @escaping (Result<ImageRenderer.Rendered, Error>) -> Void) {
     do {
