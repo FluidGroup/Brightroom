@@ -172,6 +172,10 @@
 		4BB4B0F8260F55AC007617D7 /* EditingStack.CropModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */; };
 		4BB4B0FD260F55D6007617D7 /* EditingStack.Edit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */; };
 		4BB4B105260F8589007617D7 /* LUT_64_Neutral.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */; };
+		4BB7B9C9277A439C0014B62A /* LUT_64_Dark_HighContrast_v3.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */; };
+		4BB7B9CA277A439C0014B62A /* LUT_64_Dark_HighContrast_v3.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */; };
+		4BB7B9CC277A452A0014B62A /* LUT_64_Gloss.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */; };
+		4BB7B9CD277A452A0014B62A /* LUT_64_Gloss.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */; };
 		4BB917E525F518EF00C446B8 /* _ImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB917E425F518EF00C446B8 /* _ImageView.swift */; };
 		4BB917EA25F5193C00C446B8 /* CIImageDisplaying.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E4216BB7B5001593B9 /* CIImageDisplaying.swift */; };
 		4BB917EC25F5193C00C446B8 /* MetalImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9B02E2216BB6F8001593B9 /* MetalImageView.swift */; };
@@ -859,6 +863,8 @@
 		4BB4B0F7260F55AC007617D7 /* EditingStack.CropModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.CropModifier.swift; sourceTree = "<group>"; };
 		4BB4B0FC260F55D6007617D7 /* EditingStack.Edit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditingStack.Edit.swift; sourceTree = "<group>"; };
 		4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LUT_64_Neutral.png; path = Resources/LUT_64_Neutral.png; sourceTree = SOURCE_ROOT; };
+		4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Dark_HighContrast_v3.png; sourceTree = "<group>"; };
+		4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Gloss.png; sourceTree = "<group>"; };
 		4BB917E425F518EF00C446B8 /* _ImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = _ImageView.swift; sourceTree = "<group>"; };
 		4BB917F125F5211F00C446B8 /* CoreImageInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreImageInspector.swift; sourceTree = "<group>"; };
 		4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
@@ -1416,6 +1422,8 @@
 				4BED4A04261CA5B00011A98F /* LUT_64_1.jpg */,
 				4BED4A02261CA5B00011A98F /* LUT_64_2.jpg */,
 				4BED4A03261CA5B00011A98F /* LUT_64_3.jpg */,
+				4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */,
+				4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */,
 			);
 			path = LUTs;
 			sourceTree = "<group>";
@@ -2530,12 +2538,14 @@
 				4BA41C85260CE817005E6FA7 /* orientation_left.HEIC in Resources */,
 				4BA41C84260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */,
 				4BA41C82260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
+				4BB7B9CC277A452A0014B62A /* LUT_64_Gloss.png in Resources */,
 				4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */,
 				4BA41C83260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */,
 				4BF934172614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */,
 				4BF23C322603BCE0007019CB /* gaku.jpeg in Resources */,
 				4BED4A07261CA5B00011A98F /* LUT_64_3.jpg in Resources */,
 				4BA41C88260CE817005E6FA7 /* orientation_up.HEIC in Resources */,
+				4BB7B9C9277A439C0014B62A /* LUT_64_Dark_HighContrast_v3.png in Resources */,
 				4B9369E825F940E600B18571 /* nasa.jpg in Resources */,
 				4BED4A05261CA5B00011A98F /* LUT_64_2.jpg in Resources */,
 				4BBFC18F261B645400775C3A /* AppleRAW_1.DNG in Resources */,
@@ -2556,12 +2566,14 @@
 				4BA41C93260CE817005E6FA7 /* orientation_up.HEIC in Resources */,
 				4BA41C94260CE817005E6FA7 /* orientation_down_mirrored.HEIC in Resources */,
 				4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
+				4BB7B9CD277A452A0014B62A /* LUT_64_Gloss.png in Resources */,
 				4BA41C8F260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */,
 				4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */,
 				4BBFC194261B645500775C3A /* AppleRAW_1.DNG in Resources */,
 				4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */,
 				4BED4A08261CA5B00011A98F /* LUT_64_3.jpg in Resources */,
 				4BA41C91260CE817005E6FA7 /* orientation_down.HEIC in Resources */,
+				4BB7B9CA277A439C0014B62A /* LUT_64_Dark_HighContrast_v3.png in Resources */,
 				4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */,
 				4BED4A06261CA5B00011A98F /* LUT_64_2.jpg in Resources */,
 				4BF23C332603BCE0007019CB /* gaku.jpeg in Resources */,
