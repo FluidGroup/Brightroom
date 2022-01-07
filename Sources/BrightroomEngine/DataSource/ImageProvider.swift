@@ -303,6 +303,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
     
     pendingAction = { _ in return .init {} }
   }
+
+  #if canImport(Photos)
+  public convenience init?(
+    contentEditingInput: PHContentEditingInput
+  ) {
+    guard let url = contentEditingInput.fullSizeImageURL else {
+      return nil
+    }
+    self.init(editableRemoteURL: url)
+  }
+  #endif
   
   /**
    Creates an instance
