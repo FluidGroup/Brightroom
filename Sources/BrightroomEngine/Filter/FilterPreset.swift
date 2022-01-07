@@ -55,7 +55,12 @@ public struct FilterPreset: Filtering {
 
 public struct PreviewFilterPreset: Hashable {
 
+  /**
+   An CIImage applied preset.
+   Using ``MetalImageView`` may get better performance to display instead of ``UIImageView``.
+   */
   public let image: CIImage
+  
   public let filter: FilterPreset
 
   init(sourceImage: CIImage, filter: FilterPreset) {
