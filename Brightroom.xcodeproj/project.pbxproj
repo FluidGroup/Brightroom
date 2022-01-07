@@ -60,6 +60,7 @@
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B422DFD260B91260011500C /* Orientation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422DFC260B91260011500C /* Orientation.swift */; };
 		4B422E05260B92E20011500C /* ImageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B422E04260B92E20011500C /* ImageProvider.swift */; };
+		4B429B542788AA5100BDD57D /* PresetStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B429B532788AA5100BDD57D /* PresetStorage.swift */; };
 		4B42A6A52178DF2600F18208 /* ClassicImageEditSaturationControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A42178DF2600F18208 /* ClassicImageEditSaturationControl.swift */; };
 		4B42A6A72178DF7D00F18208 /* TempCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A62178DF7D00F18208 /* TempCode.swift */; };
 		4B42A6A92178E12500F18208 /* ClassicImageEditContrastControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B42A6A82178E12500F18208 /* ClassicImageEditContrastControl.swift */; };
@@ -775,6 +776,7 @@
 		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B422DFC260B91260011500C /* Orientation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Orientation.swift; sourceTree = "<group>"; };
 		4B422E04260B92E20011500C /* ImageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProvider.swift; sourceTree = "<group>"; };
+		4B429B532788AA5100BDD57D /* PresetStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetStorage.swift; sourceTree = "<group>"; };
 		4B42A6A42178DF2600F18208 /* ClassicImageEditSaturationControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditSaturationControl.swift; sourceTree = "<group>"; };
 		4B42A6A62178DF7D00F18208 /* TempCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempCode.swift; sourceTree = "<group>"; };
 		4B42A6A82178E12500F18208 /* ClassicImageEditContrastControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicImageEditContrastControl.swift; sourceTree = "<group>"; };
@@ -1531,6 +1533,14 @@
 			path = DataSource;
 			sourceTree = "<group>";
 		};
+		4B429B522788AA2F00BDD57D /* Preset */ = {
+			isa = PBXGroup;
+			children = (
+				4B429B532788AA5100BDD57D /* PresetStorage.swift */,
+			);
+			path = Preset;
+			sourceTree = "<group>";
+		};
 		4B47D053216CC5350007B594 /* BrightroomUI */ = {
 			isa = PBXGroup;
 			children = (
@@ -1604,6 +1614,7 @@
 		4B600AFF216B7A94001E1456 /* BrightroomEngine */ = {
 			isa = PBXGroup;
 			children = (
+				4B429B522788AA2F00BDD57D /* Preset */,
 				4B600B00216B7A94001E1456 /* BrightroomEngine.h */,
 				4B600B01216B7A94001E1456 /* Info.plist */,
 				4B66C9712171D764008F2A54 /* BrightroomEngine.swift */,
@@ -3156,6 +3167,7 @@
 			files = (
 				4B04B3F22177BC660032356A /* FilterSharpen.swift in Sources */,
 				4BA8E738217C69DE00940518 /* FilterFade.swift in Sources */,
+				4B429B542788AA5100BDD57D /* PresetStorage.swift in Sources */,
 				4BA0B1532180218C00CDA871 /* ColorCubeStorage.swift in Sources */,
 				4B6A5F592179BC86004D68DC /* FilterUnsharpMask.swift in Sources */,
 				4B7B36C0260EFDD8004FE2F4 /* ColorCubeLoader.swift in Sources */,

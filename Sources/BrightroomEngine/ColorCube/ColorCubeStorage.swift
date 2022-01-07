@@ -21,6 +21,7 @@
 
 import UIKit
 
+@available(*, deprecated, message: "Use PresetStorage instead")
 open class ColorCubeStorage {
     
   public static let `default` = ColorCubeStorage(filters: [])
