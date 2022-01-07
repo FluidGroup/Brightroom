@@ -37,7 +37,6 @@ public enum EditingStackError: Error {
 ///
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
-
 open class EditingStack: Hashable, StoreComponentType {
 
   private static let centralQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack.central", qos: .default, attributes: .concurrent)
@@ -46,9 +45,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
   public struct Options {
 
-    public var usesMTLTextureForEditingImage: Bool {
-      return true
-    }
+    public var usesMTLTextureForEditingImage: Bool = true
 
     public init() {}
   }
@@ -61,6 +58,9 @@ open class EditingStack: Hashable, StoreComponentType {
     ObjectIdentifier(self).hash(into: &hasher)
   }
 
+  /**
+   A representation of state in EditingStack
+   */
   public struct State: Equatable {
     public struct Loading: Equatable {}
 
@@ -110,6 +110,9 @@ open class EditingStack: Hashable, StoreComponentType {
         initialEditing.imageSize
       }
 
+      /**
+       A stack of editing history
+       */
       public fileprivate(set) var history: [Edit] = []
 
       public fileprivate(set) var thumbnailImage: CIImage
@@ -131,6 +134,9 @@ open class EditingStack: Hashable, StoreComponentType {
         return history.count > 0
       }
 
+      /**
+       A boolean value that indicates if EditingStack has updates against the original image.
+       */
       public var isDirty: Bool {
         return currentEdit != initialEditing
       }
@@ -168,6 +174,11 @@ open class EditingStack: Hashable, StoreComponentType {
         currentEdit = history.popLast() ?? initialEditing
       }
 
+      /**
+       Returns a CIImage applied cropping in current editing.
+
+       For previewing image
+       */
       public func makeCroppedImage() -> CIImage {
         editingSourceImage.cropped(
           to: currentEdit.crop.scaledWithPixelPerfect(
