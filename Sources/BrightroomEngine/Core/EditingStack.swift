@@ -222,6 +222,7 @@ open class EditingStack: Hashable, StoreComponentType {
   public init(
     imageProvider: ImageProvider,
     colorCubeStorage: ColorCubeStorage = .default,
+    presetStorage: PresetStorage = .default,
     options: Options = .init(),
     cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
   ) {
@@ -233,8 +234,13 @@ open class EditingStack: Hashable, StoreComponentType {
     )
 
     filterPresets = colorCubeStorage.filters.map {
-      FilterPreset(name: $0.name, identifier: $0.identifier, filters: [$0.asAny()])
-    }
+      FilterPreset(
+        name: $0.name,
+        identifier: $0.identifier,
+        filters: [$0.asAny()],
+        userInfo: [:]
+      )
+    } + presetStorage.presets
 
     self.imageProvider = imageProvider
   }

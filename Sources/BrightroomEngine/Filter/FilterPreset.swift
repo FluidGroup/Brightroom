@@ -29,16 +29,19 @@ public struct FilterPreset: Filtering {
   public let name: String
   public let identifier: String
   public let filters: [AnyFilter]
+  public let userInfo: [String : AnyHashable]
 
   public init(
     name: String,
     identifier: String,
-    filters: [AnyFilter]
+    filters: [AnyFilter],
+    userInfo: [String : AnyHashable]
   ) {
 
     self.name = name
     self.identifier = identifier
     self.filters = filters
+    self.userInfo = userInfo
   }
 
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
