@@ -10,7 +10,6 @@ abstract_target 'Demo_Apps' do
   pod "SwiftGen"
 
   target "Demo" do
-    pod "MosaiqueAssetsPicker", git: "https://github.com/eure/AssetsPicker.git", branch: "master"
     pod "Texture"
     pod "GlossButtonNode"
     pod "TextureSwiftSupport"
