@@ -2,7 +2,6 @@ PODS:
   - GlossButtonNode (3.1.2):
     - Texture/Core (~> 3)
     - TextureSwiftSupport (>= 3.10.0)
-  - MosaiqueAssetsPicker (1.3.3)
   - PINCache (3.0.3):
     - PINCache/Arc-exception-safe (= 3.0.3)
     - PINCache/Core (= 3.0.3)
@@ -59,7 +58,6 @@ PODS:
 
 DEPENDENCIES:
   - GlossButtonNode
-  - MosaiqueAssetsPicker (from `https://github.com/eure/AssetsPicker.git`, branch `master`)
   - Reveal-SDK
   - SwiftGen
   - Texture
@@ -78,19 +76,8 @@ SPEC REPOS:
     - TextureSwiftSupport
     - TinyConstraints
 
-EXTERNAL SOURCES:
-  MosaiqueAssetsPicker:
-    :branch: master
-    :git: https://github.com/eure/AssetsPicker.git
-
-CHECKOUT OPTIONS:
-  MosaiqueAssetsPicker:
-    :commit: 13ed72c9aa2e2c1705ea0267d347531d93cc83ae
-    :git: https://github.com/eure/AssetsPicker.git
-
 SPEC CHECKSUMS:
   GlossButtonNode: 4ea1197a744f2fb5fb875fe31caf17ded4762e8f
-  MosaiqueAssetsPicker: da976cfbff2668ae1fe5ec826da99ba62caa7666
   PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
   PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
   PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
@@ -100,6 +87,6 @@ SPEC CHECKSUMS:
   TextureSwiftSupport: c515c7927fab92d0d9485f49b885b8c5de34fbfb
   TinyConstraints: 7b7ccc0c485bb3bb47082138ff28bc33cd49897f
 
-PODFILE CHECKSUM: c21cfa904f484fa8a842e25692306622f81ea393
+PODFILE CHECKSUM: 07aa55f54421f6e6d3a920c11716a89fc9243d1b
 
 COCOAPODS: 1.11.2

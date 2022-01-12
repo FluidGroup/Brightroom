@@ -610,6 +610,7 @@
 		FC1110122660FE0C00CC45EA /* m2-593d4b1a0b5d13b539c6c098dc5797ca.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F142660FE0A00CC45EA /* m2-593d4b1a0b5d13b539c6c098dc5797ca.png */; };
 		FC1110132660FE0C00CC45EA /* m3-593d4b1a0b5d13b539c6c098dc5797ca.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F152660FE0B00CC45EA /* m3-593d4b1a0b5d13b539c6c098dc5797ca.png */; };
 		FC1110142660FE0C00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png in Resources */ = {isa = PBXBuildFile; fileRef = FC110F162660FE0B00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png */; };
+		FCA2BEA9278EA24C00050FA4 /* MosaiqueAssetsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = FCA2BEA8278EA24C00050FA4 /* MosaiqueAssetsPicker */; };
 		FCC7962623C58209009ACD8A /* LoadingBlurryOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */; };
 		FCD4180E2664D0D40039B796 /* 1cbb1bb37d62c44f67374cd451643dc4.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2F2660FD2300CC45EA /* 1cbb1bb37d62c44f67374cd451643dc4.jpg */; };
 /* End PBXBuildFile section */
@@ -1289,6 +1290,8 @@
 		FC110F162660FE0B00CC45EA /* m1-cb265e4ae8967567fca5b0ecd58b90cb.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "m1-cb265e4ae8967567fca5b0ecd58b90cb.png"; sourceTree = "<group>"; };
 		FC394020266E0FCA00A1698E /* UIImage+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIImage+.swift"; sourceTree = "<group>"; };
 		FC4B7D81E5A0A734CEBB2036 /* Pods_Demo_Apps_Demo.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Demo_Apps_Demo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		FCA2BEA2278E976000050FA4 /* AssetsPicker */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AssetsPicker; path = ../AssetsPicker; sourceTree = "<group>"; };
+		FCA2BEA3278E982F00050FA4 /* AssetsPicker */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AssetsPicker; path = ../AssetsPicker; sourceTree = "<group>"; };
 		FCC7962523C58209009ACD8A /* LoadingBlurryOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingBlurryOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -1306,6 +1309,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A6ABB4FC260AA8FB006B46ED /* TransitionPatch in Frameworks */,
+				FCA2BEA9278EA24C00050FA4 /* MosaiqueAssetsPicker in Frameworks */,
 				A6ABB4F6260AA8F0006B46ED /* Verge in Frameworks */,
 				4B600B3F216B7CE9001E1456 /* CoreGraphics.framework in Frameworks */,
 				4B600B3D216B7CE3001E1456 /* Foundation.framework in Frameworks */,
@@ -1585,6 +1589,7 @@
 		4B600AF3216B7A94001E1456 = {
 			isa = PBXGroup;
 			children = (
+				FCA2BEA1278E976000050FA4 /* Packages */,
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
 				4B4C7C8E260A6EF70082240A /* Archives */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
@@ -2296,6 +2301,15 @@
 			name = ImageSamples;
 			sourceTree = "<group>";
 		};
+		FCA2BEA1278E976000050FA4 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				FCA2BEA2278E976000050FA4 /* AssetsPicker */,
+				FCA2BEA3278E982F00050FA4 /* AssetsPicker */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -2353,6 +2367,7 @@
 			packageProductDependencies = (
 				A6ABB4F5260AA8F0006B46ED /* Verge */,
 				A6ABB4FB260AA8FB006B46ED /* TransitionPatch */,
+				FCA2BEA8278EA24C00050FA4 /* MosaiqueAssetsPicker */,
 			);
 			productName = PixelEngine;
 			productReference = 4B600AFD216B7A94001E1456 /* BrightroomEngine.framework */;
@@ -2505,6 +2520,7 @@
 			packageReferences = (
 				A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */,
 				A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */,
+				FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -3889,6 +3905,14 @@
 				minimumVersion = 1.0.3;
 			};
 		};
+		FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eure/AssetsPicker.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -3901,6 +3925,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */;
 			productName = TransitionPatch;
+		};
+		FCA2BEA8278EA24C00050FA4 /* MosaiqueAssetsPicker */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */;
+			productName = MosaiqueAssetsPicker;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
