@@ -2,6 +2,15 @@
   "object": {
     "pins": [
       {
+        "package": "MosaiqueAssetsPicker",
+        "repositoryURL": "https://github.com/eure/AssetsPicker.git",
+        "state": {
+          "branch": "master",
+          "revision": "fdc6c4654eaf85649414034aa0907144d0e330bb",
+          "version": null
+        }
+      },
+      {
         "package": "RxSwift",
         "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
         "state": {
