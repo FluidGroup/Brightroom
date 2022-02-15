@@ -65,34 +65,13 @@ open class EditingStack: Hashable, StoreComponentType {
     public struct Loading: Equatable {}
 
     public struct Loaded: Equatable {
-      init(
-        imageSource: ImageSource,
-        metadata: ImageProvider.State.ImageMetadata,
-        initialEditing: EditingStack.Edit,
-        currentEdit: EditingStack.Edit,
-        history: [EditingStack.Edit] = [],
-        thumbnailCIImage: CIImage,
-        editingSourceCGImage: CGImage,
-        editingSourceCIImage: CIImage,
-        editingPreviewCIImage: CIImage,
-        imageForCrop: CGImage,
-        previewFilterPresets: [PreviewFilterPreset] = []
-      ) {
-        self.imageSource = imageSource
-        self.metadata = metadata
-        self.initialEditing = initialEditing
-        self.currentEdit = currentEdit
-        self.history = history
-        self.thumbnailImage = thumbnailCIImage
-        self.editingSourceCGImage = editingSourceCGImage
-        self.editingSourceImage = editingSourceCIImage
-        self.editingPreviewImage = editingPreviewCIImage
-        self.previewFilterPresets = previewFilterPresets
-        self.imageForCrop = imageForCrop
-      }
-
+      
+      // MARK: - Properties
+      
       fileprivate let imageSource: ImageSource
+      
       public let metadata: ImageProvider.State.ImageMetadata
+      
       private let initialEditing: Edit
 
       /**
@@ -156,6 +135,36 @@ open class EditingStack: Hashable, StoreComponentType {
 
         return false
       }
+      
+      // MARK: - Initializers
+      
+      init(
+        imageSource: ImageSource,
+        metadata: ImageProvider.State.ImageMetadata,
+        initialEditing: EditingStack.Edit,
+        currentEdit: EditingStack.Edit,
+        history: [EditingStack.Edit] = [],
+        thumbnailCIImage: CIImage,
+        editingSourceCGImage: CGImage,
+        editingSourceCIImage: CIImage,
+        editingPreviewCIImage: CIImage,
+        imageForCrop: CGImage,
+        previewFilterPresets: [PreviewFilterPreset] = []
+      ) {
+        self.imageSource = imageSource
+        self.metadata = metadata
+        self.initialEditing = initialEditing
+        self.currentEdit = currentEdit
+        self.history = history
+        self.thumbnailImage = thumbnailCIImage
+        self.editingSourceCGImage = editingSourceCGImage
+        self.editingSourceImage = editingSourceCIImage
+        self.editingPreviewImage = editingPreviewCIImage
+        self.previewFilterPresets = previewFilterPresets
+        self.imageForCrop = imageForCrop
+      }
+
+      // MARK: - Functions
 
       mutating func makeVersion() {
         history.append(currentEdit)
