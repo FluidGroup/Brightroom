@@ -23,6 +23,9 @@ import UIKit
 
 extension CropView {
   
+  /**
+   Internal UIScrollView's subclass.
+   */
   final class _CropScrollView: UIScrollView {
     override init(frame: CGRect) {
       super.init(frame: frame)

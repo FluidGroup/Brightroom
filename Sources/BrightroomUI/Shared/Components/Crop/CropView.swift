@@ -86,10 +86,19 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    An image view that displayed in the scroll view.
    */
-
   private let imageView = UIImageView()
+  
+  /**
+   Internal scroll view
+   */
   private let scrollView = _CropScrollView()
+  
+  /**
+   A background view for scroll view.
+   It provides the frame to scroll view.
+   */
   private let scrollBackdropView = UIView()
+  
   private var hasSetupScrollViewCompleted = false
 
   /**
