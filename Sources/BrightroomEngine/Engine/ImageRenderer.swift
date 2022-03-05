@@ -69,7 +69,8 @@ public final class ImageRenderer {
     public let cgImage: CGImage
 
     public var uiImage: UIImage {
-      UIImage.init(cgImage: cgImage, scale: 1, orientation: .up)
+      UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+        .withRenderingMode(.alwaysOriginal)
     }
 
     @available(iOS 13.0, *)
