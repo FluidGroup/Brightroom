@@ -280,6 +280,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
         
         var appliedCrop = false
         
+        // To restore current crop from editing-stack
         editingStack.sinkState { [weak self] state in
           
           guard let self = self else { return }
