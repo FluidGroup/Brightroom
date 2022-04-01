@@ -189,13 +189,18 @@ public final class ImageRenderer {
      */
     EngineLog.debug(
       .renderer,
-      "Fixing colorspace \(sourceCGImage.colorSpace?.name as NSString? ?? "") -> \(options.workingColorSpace.name as NSString? ?? "")"
+      "Fixing colorspace \(sourceCGImage.colorSpace as Any) -> \(options.workingColorSpace)"
     )
 
-    let fixedColorspace: CGImage = try sourceCGImage.copy(colorSpace: options.workingColorSpace)
-      .unwrap(orThrow: "Failed to copy with fixing colorspace.")
+    let fixedColorspace: CGImage
+    do {
+      fixedColorspace = try sourceCGImage.copy(colorSpace: options.workingColorSpace)
+        .unwrap(orThrow: "Failed to copy with fixing colorspace. \(sourceCGImage.colorSpace as Any), \(options.workingColorSpace)")
+    } catch {
+      EngineLog.error(.renderer, "Failed to create fixed colorspace image, \(error)")
+      fixedColorspace = sourceCGImage
+    }
 
-    assert(fixedColorspace.colorSpace == options.workingColorSpace)
     /*
      ===
      ===
