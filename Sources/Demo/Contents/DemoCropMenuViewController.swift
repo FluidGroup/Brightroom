@@ -52,7 +52,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
             imageProvider: .init(image: image),
             cropModifier: .faceDetection(aspectRatio: .square)
           )
-          _presentCropViewConroller(stack)
+          self._presentCropViewConroller(stack)
         }
         
       }),
@@ -65,7 +65,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
             imageProvider: .init(image: image),
             cropModifier: .faceDetection(aspectRatio: .square)
           )
-          _presentCropViewConroller(stack, fixedAspectRatio: .square)
+          self._presentCropViewConroller(stack, fixedAspectRatio: .square)
         }
         
       }),
@@ -165,7 +165,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         self.__pickPhoto { image in
 
           let stack = EditingStack(imageProvider:.init(image: image))
-          _presentCropViewConroller(stack)
+          self._presentCropViewConroller(stack)
         }
 
       }),
@@ -175,7 +175,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
         self.__pickPhotoWithPHAsset { asset in
 
           let stack = EditingStack(imageProvider: .init(asset: asset))
-          _presentCropViewConroller(stack)
+          self._presentCropViewConroller(stack)
         }
 
       }),
