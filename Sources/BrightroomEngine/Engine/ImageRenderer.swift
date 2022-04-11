@@ -23,18 +23,28 @@ import CoreImage
 import SwiftUI
 import UIKit
 
+/// It renders an image with options
 public final class ImageRenderer {
 
   public struct Options {
 
     public var resolution: Resolution
     public var workingFormat: CIFormat
-    public var workingColorSpace: CGColorSpace
-
+        
+    /// An colorspace that uses on rendering.
+    /// Result image would use this colorspace.
+    /// Nil means letting the renderer use the intrinsic colorspace of the working image.
+    public var workingColorSpace: CGColorSpace?
+    
+    ///
+    /// - Parameters:
+    ///   - resolution:
+    ///   - workingFormat:
+    ///   - workingColorSpace:
     public init(
       resolution: ImageRenderer.Resolution = .full,
       workingFormat: CIFormat = .ARGB8,
-      workingColorSpace: CGColorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+      workingColorSpace: CGColorSpace? = nil
     ) {
       self.resolution = resolution
       self.workingFormat = workingFormat
@@ -79,7 +89,6 @@ public final class ImageRenderer {
     }
 
     init(cgImage: CGImage, options: Options, engine: Engine) {
-      assert(cgImage.colorSpace == options.workingColorSpace)
       self.cgImage = cgImage
       self.options = options
       self.engine = engine
@@ -141,7 +150,7 @@ public final class ImageRenderer {
   ) {
     type(of: self).queue.async {
       do {
-        let rendered = try self.render()
+        let rendered = try self.render(options: options)
         callbackQueue.async {
           completion(.success(rendered))
         }
@@ -159,7 +168,7 @@ public final class ImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
-    if edit.drawer.isEmpty, edit.modifiers.isEmpty {
+    if edit.drawer.isEmpty, edit.modifiers.isEmpty, options.workingColorSpace == nil {
       return try renderOnlyCropping(options: options)
     } else {
       return try renderRevison2(options: options)
@@ -170,6 +179,8 @@ public final class ImageRenderer {
    Render for only cropping using CoreGraphics
    */
   private func renderOnlyCropping(options: Options = .init()) throws -> Rendered {
+    
+    assert(options.workingColorSpace == nil, "This rendering operation no supports working with specifying colorspace.")
 
     EngineLog.debug(.renderer, "Start render in using CoreGraphics")
 
@@ -187,28 +198,9 @@ public final class ImageRenderer {
      ===
      ===
      */
-    EngineLog.debug(
-      .renderer,
-      "Fixing colorspace \(sourceCGImage.colorSpace as Any) -> \(options.workingColorSpace)"
-    )
-
-    let fixedColorspace: CGImage
-    do {
-      fixedColorspace = try sourceCGImage.copy(colorSpace: options.workingColorSpace)
-        .unwrap(orThrow: "Failed to copy with fixing colorspace. \(sourceCGImage.colorSpace as Any), \(options.workingColorSpace)")
-    } catch {
-      EngineLog.error(.renderer, "Failed to create fixed colorspace image, \(error)")
-      fixedColorspace = sourceCGImage
-    }
-
-    /*
-     ===
-     ===
-     ===
-     */
     EngineLog.debug(.renderer, "Fix orientation")
 
-    let orientedImage = try fixedColorspace.oriented(orientation)
+    let orientedImage = try sourceCGImage.oriented(orientation)
 
     /*
      ===
