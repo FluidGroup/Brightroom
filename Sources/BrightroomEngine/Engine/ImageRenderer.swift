@@ -255,7 +255,7 @@ public final class ImageRenderer {
         .workingFormat: options.workingFormat,
         .highQualityDownsample: true,
         .useSoftwareRenderer: true,
-        .cacheIntermediates: false,
+        .cacheIntermediates: false
       ]
     )
 
@@ -320,7 +320,7 @@ public final class ImageRenderer {
       cropped_effected_CIImage,
       from: cropped_effected_CIImage.extent,
       format: options.workingFormat,
-      colorSpace: options.workingColorSpace,
+      colorSpace: options.workingColorSpace ?? sourceCIImage.colorSpace,
       deferred: false
     )!
 
