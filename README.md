@@ -1,26 +1,22 @@
-# Brightroom - Composable image editor - building your own UI
+# Brightroom
+**A composable image editor with a customizable UI.**
 
-| Classic Image Editor | PhotosCrop | Face detection | Masking component |
+| Image Editor | Photo Cropping | Face Detection | Masking |
 | --- | --- | --- | --- |
 | <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
 
 > [🎄**An open-sourced app built with Brightroom**](https://github.com/muukii/Drip.app)
 
-## 🎉 v2 now open!
+## 🎉 v2 is Now Open!
+There are a few important housekeeping notes for those coming from v1.
 
-> ⚒ Issues are managed in [v2 project](https://github.com/muukii/Brightroom/projects/2)
-
-> 📌 Pixel has been renamed as **Brightroom**
-
-> 📖 [Detailed documentations are available on here](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162)
-
-> 🎈 Wanted CoreImage and Metal professional! Please help us, we have issues that we don't know how to solve. (help wanted in Issues)
-
-> ⭐️ If you interested in v2, hit the **Star button** to motivate us! 🤠
-
-> 🪐 Brightroom's state management powered by [Verge](https://github.com/VergeGroup/Verge).
-
-> 💵 [Support me by one-time tier](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii)
+ - ⚒ Issues are managed in the [v2 Project](https://github.com/muukii/Brightroom/projects/2)
+ - 📌 Pixel has been renamed **Brightroom**.
+ - 📖 Detailed documentation is available [on Notion](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162).
+ - 🎈 **Help Wanted**: CoreImage and Metal professionals!
+ - ⭐️ If you're interested in v2, **star the project** to motivate us! 🤠
+ - 🪐 Brightroom's state management is now powered by [Verge](https://github.com/VergeGroup/Verge).
+ - 💵 Support me on [GitHub](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii).
 
 ## Support the project
 <a href="https://www.buymeacoffee.com/muukii">
@@ -44,10 +40,10 @@
 
 ## Requirements
 
-* Swift 5.3 (Xcode12.4+)
+* Swift 5.3 (Xcode 12.4+)
 * iOS 12+
 
-## Detail Documentations
+## Detailed Documentation
 
 <b><a href="https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162">Documentations</a></b>
 
@@ -66,10 +62,8 @@ let controller = PhotosCropViewController(imageProvider: imageProvider)
 controller.handers
 ```
 
-## SwiftUI supported (beta)
-
-> Not sophisticated API.  
-> Please help us 🤲
+## SwiftUI Support (BETA)
+*The SwiftUI API is still in-progress and may not be production ready. We're looking for help! 🤲*
 
 ```swift
 let editingStack: EditingStack
@@ -80,10 +74,9 @@ SwiftUIPhotosCropView(editingStack: editingStack, onCompleted: {
 })
 ```
 
-## Demo applications
+## Demo Application
 
-This repository contains a demo application.  
-You can see many demonstrations of what Brightroom can perform and experiments in technology.
+This repository contains a demo application. You can see many demonstrations of what Brightroom can perform and experiments in technology.
 
 |||
 |---|---|
