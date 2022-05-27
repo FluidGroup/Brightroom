@@ -24,8 +24,7 @@ let package = Package(
       name: "BrightroomUI",
       dependencies: ["BrightroomEngine", "Verge", "TransitionPatch"],
       exclude: ["Info.plist"],
-      swiftSettings: [.unsafeFlags(["-DSWIFT_PACKAGE_MANAGER"])]
-    )
+      swiftSettings: [.define("SWIFT_PACKAGE_MANAGER"))
   ],
   swiftLanguageVersions: [.v5]
 )
