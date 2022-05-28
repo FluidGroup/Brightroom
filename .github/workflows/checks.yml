@@ -7,12 +7,12 @@ on:
 
 jobs:
   demo:
-    runs-on: macos-11
+    runs-on: macos-12
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "13.0"
+          xcode-version: "13.3"
       - uses: actions/checkout@v2
       - name: Pod install
         run: pod install
@@ -20,34 +20,34 @@ jobs:
         run: fastlane build_demo_apps
 
   pod-lint:
-    runs-on: macos-11
+    runs-on: macos-12
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "13.0"
+          xcode-version: "13.3"
       - uses: actions/checkout@v2
       - name: CocoaPods Lint
         run: pod lib lint --allow-warnings
 
   tests:
-    runs-on: macos-11
+    runs-on: macos-12
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "13.0"
+          xcode-version: "13.3"
       - uses: actions/checkout@v2
       - name: Test
         run: fastlane run_all_tests
 
-#   swiftpm:
-#     runs-on: macos-latest
+  swiftpm:
+    runs-on: macos-12
 
-#     steps:
-#       - uses: maxim-lobanov/setup-xcode@v1.1
-#         with:
-#           xcode-version: "12.4"
-#       - uses: actions/checkout@v2
-#       - name: Build
-#         run: swift build -Xswiftc "-sdk" -Xswiftc "`xcrun --sdk iphoneos --show-sdk-path`" -Xswiftc "-target" -Xswiftc "arm64-apple-ios14.0"
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1.1
+        with:
+          xcode-version: "13.3"
+      - uses: actions/checkout@v2
+      - name: Build
+        run: xcodebuild -scheme BrightroomUI -sdk iphoneos | xcpretty
