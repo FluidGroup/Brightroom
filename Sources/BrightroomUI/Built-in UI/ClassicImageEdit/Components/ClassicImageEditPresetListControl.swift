@@ -81,7 +81,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
         
       self.store.commit { viewState in
         
-        if let state = state._beta_map(\.editingState.loadedState) {
+        if let state = state.mapIfPresent(\.editingState.loadedState) {
         
           state.ifChanged(\.thumbnailImage, \.previewFilterPresets) { image, filters in
                       

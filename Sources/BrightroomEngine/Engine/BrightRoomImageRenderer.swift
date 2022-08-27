@@ -23,8 +23,11 @@ import CoreImage
 import SwiftUI
 import UIKit
 
+@available(*, deprecated, renamed: "BrightRoomImageRenderer", message: "Renamed in favor of SwiftUI.ImageRenderer")
+public typealias ImageRenderer = BrightRoomImageRenderer
+
 /// It renders an image with options
-public final class ImageRenderer {
+public final class BrightRoomImageRenderer {
 
   public struct Options {
 
@@ -42,7 +45,7 @@ public final class ImageRenderer {
     ///   - workingFormat:
     ///   - workingColorSpace:
     public init(
-      resolution: ImageRenderer.Resolution = .full,
+      resolution: BrightRoomImageRenderer.Resolution = .full,
       workingFormat: CIFormat = .ARGB8,
       workingColorSpace: CGColorSpace? = nil
     ) {

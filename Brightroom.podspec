@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "Brightroom"
-  s.version = "2.7.0"
+  s.version = "2.8.0"
   s.summary = "A component-oriented image editor on top of CoreImage."
 
   s.homepage = "https://github.com/muukii/Brightroom"
@@ -8,12 +8,12 @@ Pod::Spec.new do |s|
   s.author = "muukii"
   s.source = { :git => "https://github.com/muukii/Brightroom.git", :tag => s.version }
 
-  s.swift_version = "5.3"
+  s.swift_version = "5.6"
   s.module_name = s.name
   s.requires_arc = true
-  s.ios.deployment_target = "12.0"
+  s.ios.deployment_target = "13.0"
   s.ios.frameworks = ["UIKit", "CoreImage"]
-  s.ios.dependency "Verge/Store", ">= 8.9.1"
+  s.ios.dependency "Verge/Store", ">= 8.19.0"
 
   s.subspec "Engine" do |ss|
     ss.source_files = "Sources/BrightroomEngine/**/*.swift"

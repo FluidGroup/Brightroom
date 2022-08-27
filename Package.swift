@@ -4,14 +4,14 @@ import PackageDescription
 let package = Package(
   name: "Brightroom",
   platforms: [
-    .iOS(.v12)
+    .iOS(.v13)
   ],
   products: [
     .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
     .library(name: "BrightroomUI", targets: ["BrightroomUI"]),
   ],
   dependencies: [
-    .package(name: "Verge", url: "https://github.com/VergeGroup/Verge.git", from: "8.8.0"),
+    .package(name: "Verge", url: "https://github.com/VergeGroup/Verge.git", from: "8.19.0"),
     .package(url: "https://github.com/muukii/TransitionPatch.git", from: "1.0.3")
   ],
   targets: [
