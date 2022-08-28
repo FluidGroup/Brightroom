@@ -213,7 +213,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       
       guard let self = self else { return }
       
-      if let state = state._beta_map(\.loadedState) {
+      if let state = state.mapIfPresent(\.loadedState) {
         
         state.ifChanged(\.currentEdit.crop) { cropRect in
           
@@ -301,7 +301,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
             self.updateLoadingOverlay(displays: isLoading)
           }
           
-          if let state = state._beta_map(\.loadedState) {
+          if let state = state.mapIfPresent(\.loadedState) {
             
             state.ifChanged(\.editingPreviewImage) { image in
               self.backdropImageView.display(image: image)

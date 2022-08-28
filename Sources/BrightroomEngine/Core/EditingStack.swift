@@ -418,7 +418,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
     commit { (modifyingState: inout InoutRef<State>) in
 
-      if let loadedState = state._beta_map(\.loadedState) {
+      if let loadedState = state.mapIfPresent(\.loadedState) {
         modifyingState.map(keyPath: \.loadedState!) { (nextState) -> Void in
 
           loadedState.ifChanged(\.thumbnailImage) { image in
@@ -548,7 +548,7 @@ open class EditingStack: Hashable, StoreComponentType {
     }
   }
 
-  public func makeRenderer() throws -> ImageRenderer {
+  public func makeRenderer() throws -> BrightRoomImageRenderer {
     let stateSnapshot = state
 
     guard let loaded = stateSnapshot.loadedState else {
@@ -557,7 +557,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
     let imageSource = loaded.imageSource
 
-    let renderer = ImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
 
     // TODO: Clean up ImageRenderer.Edit
 
@@ -617,7 +617,7 @@ open class EditingStack: Hashable, StoreComponentType {
     orientation: CGImagePropertyOrientation
   ) throws -> CGImage {
 
-    let renderer = ImageRenderer(source: source, orientation: orientation)
+    let renderer = BrightRoomImageRenderer(source: source, orientation: orientation)
     renderer.edit.modifiers = filters
 
     let result = try renderer.render().cgImage

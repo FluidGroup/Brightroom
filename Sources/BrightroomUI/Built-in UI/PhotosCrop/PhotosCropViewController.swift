@@ -139,7 +139,7 @@ public final class PhotosCropViewController: UIViewController {
    
    - Attension: This operation can be run background-thread.
    */
-  public func renderImage(options: BrightroomEngine.ImageRenderer.Options, completion: @escaping (Result<BrightroomEngine.ImageRenderer.Rendered, Error>) -> Void) {
+  public func renderImage(options: BrightRoomImageRenderer.Options, completion: @escaping (Result<BrightRoomImageRenderer.Rendered, Error>) -> Void) {
     do {
       try editingStack.makeRenderer().render(options: options, completion: completion)
     } catch {
@@ -256,8 +256,8 @@ public final class PhotosCropViewController: UIViewController {
     editingStack.sinkState { [weak self] state in
       
       guard let self = self else { return }
-      
-      if let state = state._beta_map(\.loadedState) {
+                  
+      if let state = state.mapIfPresent(\.loadedState) {
         
         /// Loaded
         

@@ -285,7 +285,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
           
           guard let self = self else { return }
                                              
-          if let loaded = state._beta_map(\.loadedState) {
+          if let loaded = state.mapIfPresent(\.loadedState) {
             
             loaded.ifChanged(\.imageForCrop) { image in
               self.setImage(image)
@@ -354,7 +354,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
    - Attension: This operation can be run background-thread.
    */
-  public func renderImage() throws -> ImageRenderer.Rendered? {
+  public func renderImage() throws -> BrightRoomImageRenderer.Rendered? {
     applyEditingStack()
     return try editingStack.makeRenderer().render()
   }

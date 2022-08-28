@@ -1,43 +1,41 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "MosaiqueAssetsPicker",
-        "repositoryURL": "https://github.com/eure/AssetsPicker.git",
-        "state": {
-          "branch": "master",
-          "revision": "fdc6c4654eaf85649414034aa0907144d0e330bb",
-          "version": null
-        }
-      },
-      {
-        "package": "RxSwift",
-        "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
-        "state": {
-          "branch": null,
-          "revision": "7e01c05f25c025143073eaa3be3532f9375c614b",
-          "version": "6.1.0"
-        }
-      },
-      {
-        "package": "TransitionPatch",
-        "repositoryURL": "https://github.com/muukii/TransitionPatch.git",
-        "state": {
-          "branch": null,
-          "revision": "1f2e5930a68b11dae764ee7ffda14b2b7ffa8fce",
-          "version": "1.0.3"
-        }
-      },
-      {
-        "package": "Verge",
-        "repositoryURL": "https://github.com/VergeGroup/Verge.git",
-        "state": {
-          "branch": null,
-          "revision": "3f9dca1d48d9381f4d05a923dd4ca59d77d1b4a6",
-          "version": "8.13.0"
-        }
+  "pins" : [
+    {
+      "identity" : "assetspicker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eure/AssetsPicker.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "fdc6c4654eaf85649414034aa0907144d0e330bb"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "7e01c05f25c025143073eaa3be3532f9375c614b",
+        "version" : "6.1.0"
+      }
+    },
+    {
+      "identity" : "transitionpatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/TransitionPatch.git",
+      "state" : {
+        "revision" : "1f2e5930a68b11dae764ee7ffda14b2b7ffa8fce",
+        "version" : "1.0.3"
+      }
+    },
+    {
+      "identity" : "verge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/Verge.git",
+      "state" : {
+        "revision" : "e066eb7dbaa9b55d2285af27dad2000cd905938d",
+        "version" : "8.19.0"
+      }
+    }
+  ],
+  "version" : 2
 }

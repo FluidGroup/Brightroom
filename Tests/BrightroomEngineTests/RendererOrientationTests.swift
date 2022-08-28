@@ -13,11 +13,11 @@ import XCTest
 final class RendererOrientationTests: XCTestCase {
 
   private func run(image: UIImage, orientation: CGImagePropertyOrientation) throws
-    -> ImageRenderer.Rendered
+    -> BrightRoomImageRenderer.Rendered
   {
 
     let imageSource = ImageSource(image: image)
-    let renderer = ImageRenderer(source: imageSource, orientation: orientation)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: orientation)
 
     let rendered = try renderer.render()
     XCTAssert(rendered.engine == .coreGraphics)

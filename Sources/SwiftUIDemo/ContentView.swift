@@ -1,4 +1,4 @@
-
+import BrightroomEngine
 import BrightroomUI
 import SwiftUI
 
@@ -8,19 +8,27 @@ struct ContentView: View {
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(image: Asset.horizontalRect.image)
-  @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(image: Asset.verticalRect.image)
-  @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(image: Asset.squareRect.image)
+  @State private var stackForHorizontal: EditingStack = Mocks.makeEditingStack(
+    image: Asset.horizontalRect.image
+  )
+  @State private var stackForVertical: EditingStack = Mocks.makeEditingStack(
+    image: Asset.verticalRect.image
+  )
+  @State private var stackForSquare: EditingStack = Mocks.makeEditingStack(
+    image: Asset.squareRect.image
+  )
   @State private var stackForNasa: EditingStack = Mocks.makeEditingStack(
     fileURL:
-    Bundle.main.path(
-      forResource: "nasa",
-      ofType: "jpg"
-    ).map {
-      URL(fileURLWithPath: $0)
-    }!
+      Bundle.main.path(
+        forResource: "nasa",
+        ofType: "jpg"
+      ).map {
+        URL(fileURLWithPath: $0)
+      }!
   )
-  @State private var stackForSmall: EditingStack = Mocks.makeEditingStack(image: Asset.superSmall.image)
+  @State private var stackForSmall: EditingStack = Mocks.makeEditingStack(
+    image: Asset.superSmall.image
+  )
 
   var body: some View {
     NavigationView {
@@ -35,6 +43,7 @@ struct ContentView: View {
           }
         }
         .frame(width: 120, height: 120, alignment: .center)
+
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
@@ -45,76 +54,110 @@ struct ContentView: View {
           Section(content: {
             Button("Crop: Horizontal") {
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stackForHorizontal, onCompleted: {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stackForHorizontal,
+                  onDone: {
+                    self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Vertical") {
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stackForVertical, onCompleted: {
-                  self.image = try! stackForVertical.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stackForVertical,
+                  onDone: {
+                    self.image = try! stackForVertical.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Square") {
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stackForSquare, onCompleted: {
-                  self.image = try! stackForSquare.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stackForSquare,
+                  onDone: {
+                    self.image = try! stackForSquare.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Nasa") {
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stackForNasa, onCompleted: {
-                  self.image = try! stackForNasa.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stackForNasa,
+                  onDone: {
+                    self.image = try! stackForNasa.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Super small") {
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stackForSmall, onCompleted: {
-                  self.image = try! stackForSmall.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stackForSmall,
+                  onDone: {
+                    self.image = try! stackForSmall.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Remote") {
               let stack = EditingStack(
                 imageProvider: .init(
-                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1")!
+                  editableRemoteURL: URL(
+                    string:
+                      "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+                  )!
                 )
               )
 
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
-                  self.image = try! stack.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stack,
+                  onDone: {
+                    self.image = try! stack.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
 
             Button("Crop: Remote - preview") {
               let stack = EditingStack(
                 imageProvider: .init(
-                  editableRemoteURL: URL(string: "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D")!
+                  editableRemoteURL: URL(
+                    string:
+                      "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
+                  )!
                 )
               )
 
               fullScreenView = .init {
-                SwiftUIPhotosCropView(editingStack: stack, onCompleted: {
-                  self.image = try! stack.makeRenderer().render().swiftUIImage
-                  self.fullScreenView = nil
-                })
+                SwiftUIPhotosCropView(
+                  editingStack: stack,
+                  onDone: {
+                    self.image = try! stack.makeRenderer().render().swiftUIImage
+                    self.fullScreenView = nil
+                  },
+                  onCancel: {}
+                )
               }
             }
           })
@@ -154,7 +197,8 @@ struct ContentView: View {
       .navigationTitle("Pixel")
       .fullScreenCover(
         item: $fullScreenView,
-        onDismiss: {}, content: {
+        onDismiss: {},
+        content: {
           $0
         }
       )
@@ -164,9 +208,6 @@ struct ContentView: View {
     })
   }
 }
-
-import BrightroomUI
-import BrightroomEngine
 
 struct PixelEditWrapper: UIViewControllerRepresentable {
   typealias UIViewControllerType = UINavigationController

@@ -34,7 +34,7 @@ final class RendererTests: XCTestCase {
   func testCropping() throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
@@ -55,7 +55,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -68,7 +68,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -81,7 +81,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var filter = FilterExposure()
     filter.value = 0.72
@@ -99,7 +99,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var filter = FilterExposure()
     filter.value = 0.72
@@ -124,7 +124,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var filter = FilterExposure()
     filter.value = 0.72
@@ -150,7 +150,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.rotation = .angle_90
@@ -171,7 +171,7 @@ final class RendererTests: XCTestCase {
   func testV2_drawing() throws {
     let imageSource = ImageSource(image: Asset.leica.image)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
 //    crop.rotation = .angle_90
@@ -218,7 +218,7 @@ final class RendererTests: XCTestCase {
     let inputCGImage = imageSource.loadOriginalCGImage()
     XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
 
-    let renderer = ImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
