@@ -1,26 +1,22 @@
-
 import BrightroomEngine
-import SwiftUI
 import BrightroomUI
+import SwiftUI
 
 struct IsolatedEditinView: View {
   @StateObject var editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-//  @StateObject var editingStack = Mocks.makeEditingStack(fileURL:
-//    Bundle.main.path(
-//      forResource: "gaku",
-//      ofType: "jpeg"
-//    ).map {
-//      URL(fileURLWithPath: $0)
-//    }!)
   @State private var fullScreenView: FullscreenIdentifiableView?
 
   var body: some View {
-    Form {
+    Form.init {
       Button("Crop") {
-        fullScreenView = .init { SwiftUIPhotosCropView(
-          editingStack: editingStack,
-          onCompleted: {}
-        ) }
+        fullScreenView = .init {
+          SwiftUIPhotosCropView(
+            editingStack: editingStack,
+            onDone: {},
+            onCancel: {}
+          )
+
+        }
       }
 
       Button("Custom Crop") {
@@ -34,7 +30,8 @@ struct IsolatedEditinView: View {
     .navigationTitle("Isolated-Editing")
     .fullScreenCover(
       item: $fullScreenView,
-      onDismiss: {}, content: {
+      onDismiss: {},
+      content: {
         $0
       }
     )
