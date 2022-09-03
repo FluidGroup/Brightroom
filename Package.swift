@@ -12,7 +12,7 @@ let package = Package(
   ],
   dependencies: [
     .package(name: "Verge", url: "https://github.com/VergeGroup/Verge.git", from: "8.19.0"),
-    .package(url: "https://github.com/muukii/TransitionPatch.git", from: "1.0.3")
+    .package(url: "https://github.com/FluidGroup/TransitionPatch.git", from: "1.0.3")
   ],
   targets: [
     .target(

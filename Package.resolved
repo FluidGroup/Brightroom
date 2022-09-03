@@ -12,11 +12,11 @@
       },
       {
         "package": "TransitionPatch",
-        "repositoryURL": "https://github.com/muukii/TransitionPatch.git",
+        "repositoryURL": "https://github.com/FluidGroup/TransitionPatch.git",
         "state": {
           "branch": null,
-          "revision": "1f2e5930a68b11dae764ee7ffda14b2b7ffa8fce",
-          "version": "1.0.3"
+          "revision": "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
+          "version": "1.0.5"
         }
       },
       {
