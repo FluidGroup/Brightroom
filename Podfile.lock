@@ -1,4 +1,7 @@
 PODS:
+  - Descriptors (0.2.1):
+    - Descriptors/Core (= 0.2.1)
+  - Descriptors/Core (0.2.1)
   - GlossButtonNode (3.1.2):
     - Texture/Core (~> 3)
     - TextureSwiftSupport (>= 3.10.0)
@@ -17,8 +20,8 @@ PODS:
   - PINRemoteImage/PINCache (3.0.3):
     - PINCache (~> 3.0.3)
     - PINRemoteImage/Core
-  - Reveal-SDK (33)
-  - SwiftGen (6.5.1)
+  - Reveal-SDK (38)
+  - SwiftGen (6.6.2)
   - Texture (3.1.0):
     - Texture/AssetsLibrary (= 3.1.0)
     - Texture/Core (= 3.1.0)
@@ -39,20 +42,21 @@ PODS:
     - Texture/Core
   - Texture/Video (3.1.0):
     - Texture/Core
-  - TextureSwiftSupport (3.13.0):
+  - TextureSwiftSupport (3.17.0):
     - Texture/Core (>= 3)
-    - TextureSwiftSupport/Components (= 3.13.0)
-    - TextureSwiftSupport/Experiments (= 3.13.0)
-    - TextureSwiftSupport/Extensions (= 3.13.0)
-    - TextureSwiftSupport/LayoutSpecBuilders (= 3.13.0)
-  - TextureSwiftSupport/Components (3.13.0):
+    - TextureSwiftSupport/Components (= 3.17.0)
+    - TextureSwiftSupport/Experiments (= 3.17.0)
+    - TextureSwiftSupport/Extensions (= 3.17.0)
+    - TextureSwiftSupport/LayoutSpecBuilders (= 3.17.0)
+  - TextureSwiftSupport/Components (3.17.0):
+    - Descriptors (>= 0.2.1)
     - Texture/Core (>= 3)
     - TextureSwiftSupport/LayoutSpecBuilders
-  - TextureSwiftSupport/Experiments (3.13.0):
+  - TextureSwiftSupport/Experiments (3.17.0):
     - Texture/Core (>= 3)
-  - TextureSwiftSupport/Extensions (3.13.0):
+  - TextureSwiftSupport/Extensions (3.17.0):
     - Texture/Core (>= 3)
-  - TextureSwiftSupport/LayoutSpecBuilders (3.13.0):
+  - TextureSwiftSupport/LayoutSpecBuilders (3.17.0):
     - Texture/Core (>= 3)
   - TinyConstraints (4.0.2)
 
@@ -66,6 +70,7 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - Descriptors
     - GlossButtonNode
     - PINCache
     - PINOperation
@@ -77,16 +82,17 @@ SPEC REPOS:
     - TinyConstraints
 
 SPEC CHECKSUMS:
+  Descriptors: 44f9f316368c2815048b1062e0be49be59c1c696
   GlossButtonNode: 4ea1197a744f2fb5fb875fe31caf17ded4762e8f
   PINCache: 7a8fc1a691173d21dbddbf86cd515de6efa55086
   PINOperation: 00c935935f1e8cf0d1e2d6b542e75b88fc3e5e20
   PINRemoteImage: f1295b29f8c5e640e25335a1b2bd9d805171bd01
-  Reveal-SDK: effba1c940b8337195563c425a6b5862ec875caa
-  SwiftGen: a6d22010845f08fe18fbdf3a07a8e380fd22e0ea
+  Reveal-SDK: 685ccb1f3cdb0b1d2926ec0b29f0eeb43d2240a3
+  SwiftGen: 1366a7f71aeef49954ca5a63ba4bef6b0f24138c
   Texture: 2e8ab2519452515f7f5a520f5a8f7e0a413abfa3
-  TextureSwiftSupport: c515c7927fab92d0d9485f49b885b8c5de34fbfb
+  TextureSwiftSupport: 22741c367e22744e8e9a90347bde6550a0229888
   TinyConstraints: 7b7ccc0c485bb3bb47082138ff28bc33cd49897f
 
 PODFILE CHECKSUM: 07aa55f54421f6e6d3a920c11716a89fc9243d1b
 
-COCOAPODS: 1.11.2
+COCOAPODS: 1.11.3
