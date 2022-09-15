@@ -63,7 +63,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
    To access, `ImageProvider.store.state`
    To modify, `ImageProvider.store.commit()`
    */
-  public struct State {
+  public struct State: Equatable {
 
     public struct ImageMetadata: Equatable {
       public var orientation: CGImagePropertyOrientation
@@ -90,9 +90,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
     public var editableImage: ImageSource?
 
-    public var loadingNonFatalErrors: [ImageProviderError] = []
+    @Edge public var loadingNonFatalErrors: [ImageProviderError] = []
     
-    public var loadingFatalErrors: [ImageProviderError] = []
+    @Edge public var loadingFatalErrors: [ImageProviderError] = []
         
     public var loadedImage: Image? {
           

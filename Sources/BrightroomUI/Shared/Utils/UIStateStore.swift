@@ -1,7 +1,7 @@
 
 import Verge
 
-public final class UIStateStore<State, Activity>: Store<State, Activity> {
+public final class UIStateStore<State: Equatable, Activity>: Store<State, Activity> {
   
   public init(
     initialState: State,
