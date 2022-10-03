@@ -32,6 +32,25 @@ public enum EditingStackError: Error {
   case unableToCreateRendererInLoading
 }
 
+fileprivate enum MTLImageCreationError: Error {
+  case imageTooBig
+}
+
+fileprivate extension MTLDevice {
+  func supportsImage(size: CGSize) -> Bool {
+#if DEBUG
+    switch MTLGPUFamily.apple1 {
+    case .apple1, .apple2, .apple3, .apple4, .apple5, .apple6, .apple7, .apple8, .common1, .common2, .common3, .mac1, .mac2, .macCatalyst1, .macCatalyst2, .metal3:
+      break;
+    @unknown default: //If a warning is triggered here, please check https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf for a possibly new value in the Maximum 2D texture width and height table.
+      break
+    }
+#endif
+    let maxSideSize: CGFloat = self.supportsFamily(.apple3) ? 16384 : 8192
+    return size.width <= maxSideSize && size.height <= maxSideSize
+  }
+}
+
 /// A stateful object that manages current editing status from original image.
 /// And supports rendering a result image.
 ///
@@ -627,10 +646,14 @@ open class EditingStack: Hashable, StoreComponentType {
 
 }
 
+
 /// TODO: As possible, creates CIImage from MTLTexture
 /// 16bits image can't be MTLTexture with MTKTextureLoader.
 /// https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
 private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> MTLTexture {
+  guard device.supportsImage(size: cgImage.size) else {
+    throw MTLImageCreationError.imageTooBig
+  }
 
   #if true
     let loader = MTKTextureLoader(device: device)
