@@ -1,8 +1,6 @@
 name: Checks
 
 on:
-  pull_request:
-    types: [assigned, opened, synchronize, reopened]
   push:
 
 jobs:
