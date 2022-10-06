@@ -1784,6 +1784,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				4B487E6328EEC3E50026A8CF /* PBXTargetDependency */,
 			);
 			name = BrightroomEngineTests;
 			packageProductDependencies = (
@@ -2525,6 +2526,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		4B487E6328EEC3E50026A8CF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = 4B487E6228EEC3E50026A8CF /* BrightroomEngine */;
+		};
 		4BED49D2261C9BBD0011A98F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4BED49C7261C9BBD0011A98F /* Import LUT */;
@@ -2999,6 +3004,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */;
 			productName = MosaiqueAssetsPicker;
+		};
+		4B487E6228EEC3E50026A8CF /* BrightroomEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomEngine;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

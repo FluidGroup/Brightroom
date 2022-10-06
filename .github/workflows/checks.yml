@@ -30,7 +30,7 @@ jobs:
       - name: CocoaPods Lint
         run: pod lib lint --allow-warnings
 
-  tests:
+  test:
     runs-on: macos-12
 
     steps:
@@ -38,8 +38,16 @@ jobs:
         with:
           xcode-version: "14.0"
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Test
-        run: fastlane run_all_tests
+        run: xcodebuild -scheme BrightroomEngineTests -resultBundlePath results/BrightroomEngineTests.xcresult test -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.0' -derivedDataPath ./DerivedData | xcpretty
+
+      - uses: kishikawakatsumi/xcresulttool@v1
+        with:
+          path: |
+            results/BrightroomEngineTests.xcresult
+        if: success() || failure()
 
   swiftpm:
     runs-on: macos-12
