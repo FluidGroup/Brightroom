@@ -1,0 +1,131 @@
+{
+  "pins" : [
+    {
+      "identity" : "assetspicker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eure/AssetsPicker.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "7908a947243c9fb8014ab8ce85095f61edf2b113"
+      }
+    },
+    {
+      "identity" : "descriptors",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Descriptors",
+      "state" : {
+        "revision" : "f41ce2605a76c5d378fe8c5e8c5c98b544dfd108",
+        "version" : "0.2.3"
+      }
+    },
+    {
+      "identity" : "glossbuttonnode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/GlossButtonNode",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b509307ce86999f281d7c5cee17fec2e1179a5d5"
+      }
+    },
+    {
+      "identity" : "iglistkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/3a4oT/IGListKit",
+      "state" : {
+        "branch" : "spmNumber10",
+        "revision" : "979eca9b2da15e35af36f4613452dd6e07641969"
+      }
+    },
+    {
+      "identity" : "libwebp-xcode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/libwebp-Xcode",
+      "state" : {
+        "revision" : "0f3bdb28a1edc5e8e43876d3835d20c601ef331f",
+        "version" : "1.2.3"
+      }
+    },
+    {
+      "identity" : "mondrianlayout",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/MondrianLayout.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b26edaa5a469bc5fd58f9afe37d257ca1b3771e0"
+      }
+    },
+    {
+      "identity" : "pincache",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pinterest/PINCache.git",
+      "state" : {
+        "revision" : "875c654984fb52b47ca65ae70d24852b0003ccd9",
+        "version" : "3.0.3"
+      }
+    },
+    {
+      "identity" : "pinoperation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pinterest/PINOperation.git",
+      "state" : {
+        "revision" : "44d8ca154a4e75a028a5548c31ff3a53b90cef15",
+        "version" : "1.2.1"
+      }
+    },
+    {
+      "identity" : "pinremoteimage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pinterest/PINRemoteImage.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "18637e4414d77fbc95cd7d499179a9880e9a78d8"
+      }
+    },
+    {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "b4307ba0b6425c0ba4178e138799946c3da594f8",
+        "version" : "6.5.0"
+      }
+    },
+    {
+      "identity" : "texture",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Texture.git",
+      "state" : {
+        "branch" : "spm",
+        "revision" : "5d03875bcfb0d87f8057ebeb5f2f6e4527e18128"
+      }
+    },
+    {
+      "identity" : "textureswiftsupport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/TextureSwiftSupport.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "775e0336d096f3299caff9905a06c0ced40e687f"
+      }
+    },
+    {
+      "identity" : "transitionpatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/TransitionPatch.git",
+      "state" : {
+        "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
+        "version" : "1.0.5"
+      }
+    },
+    {
+      "identity" : "verge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/Verge.git",
+      "state" : {
+        "revision" : "e066eb7dbaa9b55d2285af27dad2000cd905938d",
+        "version" : "8.19.0"
+      }
+    }
+  ],
+  "version" : 2
+}

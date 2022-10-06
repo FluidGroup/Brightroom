@@ -81,7 +81,7 @@ final class DemoPreviewViewController: StackScrollNodeViewController {
   }
 }
 
-import TinyConstraints
+import MondrianLayout
 
 private final class PreviewViewWrapperViewController: UIViewController {
   
@@ -102,9 +102,13 @@ private final class PreviewViewWrapperViewController: UIViewController {
     super.viewDidLoad()
     
     view.backgroundColor = .white
-    
-    view.addSubview(previewView)
-    previewView.edges(to: view.safeAreaLayoutGuide, insets: .init(top: 20, left: 20, bottom: 20, right: 20))
+  
+    Mondrian.buildSubviews(on: self.view) {
+      ZStackBlock {
+        previewView.viewBlock.padding(20)
+      }
+      .container(respectingSafeAreaEdges: .all)
+    }
     
   }
  

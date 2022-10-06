@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 
 import BrightroomUI
-import TinyConstraints
+import MondrianLayout
 import UIKit
 
 final class ImitationTinderViewController: UIViewController {
@@ -34,8 +34,15 @@ final class ImitationTinderViewController: UIViewController {
     view.backgroundColor = .init(white: 0.96, alpha: 1)
 
     view.addSubview(wrapper)
-
-    wrapper.edgesToSuperview(excluding: .bottom, usingSafeArea: true)
+    
+    Mondrian.buildSubviews(on: self.view) {
+      VStackBlock {
+        wrapper.viewBlock.padding(20)
+        
+        StackingSpacer(minLength: 0)
+      }
+      .container(respectingSafeAreaEdges: .all)
+    }
 
     didSelectImage(Asset.profile.image)
   }
@@ -61,9 +68,8 @@ private final class WrapperCropView: UIView {
   init() {
 
     super.init(frame: .zero)
-
-    /* Using TinyConstraints */
-    height(300)
+    
+    self.mondrian.layout.height(300).activate()
 
     backgroundColor = .white
     clipsToBounds = true
@@ -96,10 +102,12 @@ private final class WrapperCropView: UIView {
     cropView.setCropInsideOverlay(InsideOverlay())
 
     cropView.setCroppingAspectRatio(.init(width: 5, height: 7))
-
-    addSubview(cropView)
-
-    cropView.edgesToSuperview()
+    
+    Mondrian.buildSubviews(on: self) {
+      ZStackBlock(alignment: .attach(.all)) {
+        cropView
+      }
+    }
 
   }
 
@@ -113,13 +121,16 @@ private final class InsideOverlay: CropView.CropInsideOverlayBase {
 
   override init() {
     super.init()
-
-    addSubview(gridView)
-    addSubview(borderView)
+    
     layer.addSublayer(shapeLayer)
-
-    gridView.edgesToSuperview(insets: .init(top: 4, left: 4, bottom: 4, right: 4))
-    borderView.edgesToSuperview(insets: .init(top: 4, left: 4, bottom: 4, right: 4))
+    
+    Mondrian.buildSubviews(on: self) {
+      ZStackBlock(alignment: .attach(.all)) {
+        gridView
+        borderView
+      }
+      .padding(4)
+    }
 
     gridView.layer.borderWidth = 1
     gridView.layer.borderColor = UIColor.white.cgColor
