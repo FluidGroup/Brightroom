@@ -95,7 +95,7 @@ final class DemoMaskingViewController: StackScrollNodeViewController {
   }
 }
 
-import TinyConstraints
+import MondrianLayout
 
 private final class MaskingViewWrapperViewController: UIViewController {
   
@@ -124,9 +124,12 @@ private final class MaskingViewWrapperViewController: UIViewController {
     
     view.backgroundColor = .white
     
-    view.addSubview(maskingView)
-    maskingView.edges(to: view.safeAreaLayoutGuide, insets: .init(top: 20, left: 20, bottom: 20, right: 20))
-    
+    Mondrian.buildSubviews(on: self.view) {
+      ZStackBlock {
+        maskingView.viewBlock.padding(20)
+      }
+      .container(respectingSafeAreaEdges: .all)
+    }
   }
   
   @objc private func onTapDoneButton() {

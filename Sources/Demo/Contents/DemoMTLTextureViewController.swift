@@ -2,6 +2,7 @@ import AsyncDisplayKit
 import MetalKit
 import TextureSwiftSupport
 import UIKit
+import MondrianLayout
 
 @testable import BrightroomEngine
 @testable import BrightroomUI
@@ -139,19 +140,22 @@ private final class _MTLTextureViewController: UIViewController {
     super.viewDidLoad()
 
     view.backgroundColor = .white
-
-    view.addSubview(displayView)
-    view.addSubview(slider)
-
-    displayView.edgesToSuperview(
-      excluding: .bottom,
-      insets: .init(top: 20, left: 20, bottom: 20, right: 20),
-      usingSafeArea: true
-    )
-    displayView.aspectRatio(1)
-
-    slider.topToBottom(of: displayView, offset: 20)
-    slider.horizontalToSuperview(insets: .init(top: 0, left: 20, bottom: 0, right: 20))
+    
+    Mondrian.buildSubviews(on: view) {
+      
+      VStackBlock {
+        displayView
+          .viewBlock
+          .aspectRatio(1)
+          .padding(20)
+        
+        slider
+          .viewBlock
+          .padding(.horizontal, 20)
+      }
+      .container(respectingSafeAreaEdges: .all)
+      
+    }
 
     slider.addTarget(self, action: #selector(handleValueChanged), for: .valueChanged)
     slider.minimumValue = 0
