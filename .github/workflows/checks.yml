@@ -6,7 +6,7 @@ on:
   push:
 
 jobs:
-  demo:
+  swiftuidemo:
     runs-on: macos-12
 
     steps:
