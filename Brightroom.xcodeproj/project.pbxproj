@@ -2878,7 +2878,7 @@
 			repositoryURL = "https://github.com/VergeGroup/Verge.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 8.9.0;
+				minimumVersion = 10.1.0;
 			};
 		};
 		A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
