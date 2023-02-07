@@ -7,11 +7,11 @@ on:
 
 jobs:
   pod-trunk-push:
-    runs-on: macOS-11
+    runs-on: macOS-12
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "13.0"
+          xcode-version: "14.2"
       - uses: actions/checkout@v2
       - name: Deploy
         env:
