@@ -399,6 +399,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
     
     store.commit {
+      guard $0.proposedCrop != crop else {
+        return
+      }
+
       $0.proposedCrop = crop
       if let ratio = $0.preferredAspectRatio {
         $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
@@ -411,6 +415,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
+
+      guard $0.preferredAspectRatio != ratio else {
+        return
+      }
+
       $0.preferredAspectRatio = ratio
       if let ratio = ratio {
         $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
