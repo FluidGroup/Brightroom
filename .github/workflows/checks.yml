@@ -12,10 +12,8 @@ jobs:
         with:
           xcode-version: "14.2"
       - uses: actions/checkout@v2
-      - name: Pod install
-        run: pod install
       - name: Build demo app
-        run: xcodebuild -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
+        run: xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' | xcpretty
 
   demo:
     runs-on: macos-12
@@ -25,21 +23,8 @@ jobs:
         with:
           xcode-version: "14.2"
       - uses: actions/checkout@v2
-      - name: Pod install
-        run: pod install
       - name: Build demo app
-        run: xcodebuild -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
-
-  pod-lint:
-    runs-on: macos-12
-
-    steps:
-      - uses: maxim-lobanov/setup-xcode@v1.1
-        with:
-          xcode-version: "14.2"
-      - uses: actions/checkout@v2
-      - name: CocoaPods Lint
-        run: pod lib lint --allow-warnings
+        run: xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' | xcpretty
 
   test:
     runs-on: macos-12
@@ -52,13 +37,7 @@ jobs:
         with:
           submodules: true
       - name: Test
-        run: xcodebuild -scheme BrightroomEngineTests -resultBundlePath results/BrightroomEngineTests.xcresult test -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
-
-      - uses: kishikawakatsumi/xcresulttool@v1
-        with:
-          path: |
-            results/BrightroomEngineTests.xcresult
-        if: success() || failure()
+        run: xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' | xcpretty
 
   swiftpm:
     runs-on: macos-12
@@ -69,4 +48,4 @@ jobs:
           xcode-version: "14.2"
       - uses: actions/checkout@v2
       - name: Build
-        run: xcodebuild -scheme BrightroomUI -sdk iphoneos | xcpretty
+        run: xcodebuild -scheme BrightroomUI -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' | xcpretty

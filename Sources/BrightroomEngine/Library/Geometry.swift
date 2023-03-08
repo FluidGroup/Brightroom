@@ -135,7 +135,7 @@ extension CGSize {
 public struct PixelAspectRatio: Hashable {
 
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    (lhs.height / lhs.width) == (rhs.height / rhs.width)
+    lhs._comparingValue == rhs._comparingValue
   }
 
   public var width: CGFloat
@@ -247,6 +247,10 @@ public struct PixelAspectRatio: Hashable {
     let v = gcd(width, height)
 
     return .init(width: width / v, height: height / v)
+  }
+
+  public var _comparingValue: CGFloat {
+    return (height / width)
   }
 
   public var localizedText: String {
