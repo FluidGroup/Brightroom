@@ -175,6 +175,31 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
       ),
 
       Components.makeSelectionCell(
+        title: "Silver Ratio",
+        description: """
+          CropViewController supports to disable the selecting aspect-ratio.
+          Instead specify which aspect ratio fixes the cropping guide.
+          """,
+        onTap: { [unowned self] in
+
+          self.__pickPhotoWithPHAsset { asset in
+
+            let stack = EditingStack(imageProvider: .init(asset: asset))
+            var options = PhotosCropViewController.Options()
+            options.aspectRatioOptions = .fixed(.init(width: 1, height: 1.414))
+
+            let controller = PhotosCropViewController(
+              editingStack: stack,
+              options: options
+            )
+            self._presentCropViewConroller(controller)
+          }
+
+
+        }
+      ),
+
+      Components.makeSelectionCell(
         title: "Specified extent",
         description: """
           EditingStack can specify the extent of cropping while creating.
