@@ -11,6 +11,15 @@
         }
       },
       {
+        "package": "swift-atomics",
+        "repositoryURL": "https://github.com/apple/swift-atomics.git",
+        "state": {
+          "branch": null,
+          "revision": "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
+          "version": "1.0.3"
+        }
+      },
+      {
         "package": "TransitionPatch",
         "repositoryURL": "https://github.com/FluidGroup/TransitionPatch.git",
         "state": {
@@ -24,8 +33,8 @@
         "repositoryURL": "https://github.com/VergeGroup/Verge.git",
         "state": {
           "branch": null,
-          "revision": "e066eb7dbaa9b55d2285af27dad2000cd905938d",
-          "version": "8.19.0"
+          "revision": "4e5938313601f8522c1146b5fbaaa0aada6820b6",
+          "version": "10.1.1"
         }
       }
     ]
