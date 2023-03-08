@@ -183,6 +183,14 @@ public struct EditingCrop: Equatable {
 
    */
   public mutating func updateCropExtentIfNeeded(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
+    // FIXME: it won't perform correctly. won't match values as using floating point value
+    /*
+     Depends on the size of image, it can not always express the exact value of given aspect-ratio.
+     - image-size: (7864.0, 5248.0)
+     - aspect ratio: 1.0:1.2 (0.8333333333)
+     - calculated fitting image size with ratio: (1745.0, 0.0, 4373.0, 5247.0)
+     - (4373.0 : 5247.0) -> 0.8334286259
+     */
     guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
       return
     }
@@ -334,8 +342,8 @@ public struct EditingCrop: Equatable {
     #if DEBUG
       EngineLog.debug(
         """
-        Normalizing CropExtent
-        => \(fixed)
+        [Normalizing CropExtent]
+        Output: \(fixed)
           - resultAspectRatio: \(PixelAspectRatio(fixed.size)._minimized().localizedText)
           - source: \(rect)
           - imageSize: \(imageSize)
