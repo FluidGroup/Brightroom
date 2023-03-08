@@ -15,7 +15,7 @@ jobs:
       - name: Pod install
         run: pod install
       - name: Build demo app
-        run: xcodebuild -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.0' -derivedDataPath ./DerivedData | xcpretty
+        run: xcodebuild -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
 
   demo:
     runs-on: macos-12
@@ -28,7 +28,7 @@ jobs:
       - name: Pod install
         run: pod install
       - name: Build demo app
-        run: xcodebuild -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.0' -derivedDataPath ./DerivedData | xcpretty
+        run: xcodebuild -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
 
   pod-lint:
     runs-on: macos-12
@@ -52,7 +52,7 @@ jobs:
         with:
           submodules: true
       - name: Test
-        run: xcodebuild -scheme BrightroomEngineTests -resultBundlePath results/BrightroomEngineTests.xcresult test -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.0' -derivedDataPath ./DerivedData | xcpretty
+        run: xcodebuild -scheme BrightroomEngineTests -resultBundlePath results/BrightroomEngineTests.xcresult test -destination 'platform=iOS Simulator,name=iPhone 8,OS=16.2' -derivedDataPath ./DerivedData | xcpretty
 
       - uses: kishikawakatsumi/xcresulttool@v1
         with:
