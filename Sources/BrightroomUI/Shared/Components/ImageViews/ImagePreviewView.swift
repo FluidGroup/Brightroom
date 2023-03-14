@@ -111,7 +111,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
           UIView.performWithoutAnimation {
             if let state = state.mapIfPresent(\.loadedState) {
-              if state.hasChanges({ ($0.currentEdit) }, .init(==)) {
+              if state.hasChanges({ ($0.currentEdit) }, .equality()) {
                 self.requestPreviewImage(state: state.primitive)
               }
             }

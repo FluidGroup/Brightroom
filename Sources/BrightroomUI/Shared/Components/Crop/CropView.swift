@@ -222,7 +222,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
               $0.frame,
               $0.layoutVersion
             )
-          }, .init(==)) { (frame, _) in
+          }, .any(==)) { (frame, _) in
        
             guard let crop = state.proposedCrop else {
               return
