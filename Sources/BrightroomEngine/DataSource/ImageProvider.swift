@@ -120,7 +120,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
      
   }
   
-  public let store: DefaultStore
+  public let store: Store<State, Never>
   
   private var pendingAction: (ImageProvider) -> VergeAnyCancellable
   

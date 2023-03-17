@@ -52,7 +52,7 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
   public let options: ClassicImageEditOptions
 
-  public let store: DefaultStore
+  public let store: Store<State, Never>
 
   public let editingStack: EditingStack
 

@@ -233,7 +233,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
   // MARK: - Stored Properties
 
-  public let store: DefaultStore
+  public let store: Store<State, Never>
 
   public let options: Options
 
