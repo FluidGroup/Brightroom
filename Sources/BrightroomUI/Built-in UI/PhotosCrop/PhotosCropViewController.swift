@@ -88,7 +88,7 @@ public final class PhotosCropViewController: UIViewController {
   
   private let aspectRatioControlLayoutGuide = UILayoutGuide()
     
-  private var subscriptions = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<AnyCancellable>()
   private var hasSetupLoadedUICompleted = false
   
   public var localizedStrings: LocalizedStrings

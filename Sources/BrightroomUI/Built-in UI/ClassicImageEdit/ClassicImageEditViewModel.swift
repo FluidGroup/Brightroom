@@ -56,7 +56,7 @@ public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
 
   public let editingStack: EditingStack
 
-  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   public let localizedStrings: ClassicImageEditViewController.LocalizedStrings
 

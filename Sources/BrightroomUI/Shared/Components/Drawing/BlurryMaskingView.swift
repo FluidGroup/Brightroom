@@ -124,7 +124,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   
   private let canvasView = CanvasView()
   
-  private var subscriptions = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<AnyCancellable>()
   
   private let editingStack: EditingStack
    

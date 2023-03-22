@@ -122,7 +122,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   private let aspectSquareButton = AspectRatioButton()
   
   private let store: UIStateStore<State, Never>
-  private var subscriptions = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<AnyCancellable>()
   
   private var isSupressingHandlers = false
   private let localizedStrings: PhotosCropViewController.LocalizedStrings

@@ -11,7 +11,7 @@ let package = Package(
     .library(name: "BrightroomUI", targets: ["BrightroomUI"]),
   ],
   dependencies: [
-    .package(name: "Verge", url: "https://github.com/VergeGroup/Verge.git", from: "11.0.0-beta.4"),
+    .package(name: "Verge", url: "https://github.com/VergeGroup/Verge.git", from: "11.0.0-beta.5"),
     .package(url: "https://github.com/FluidGroup/TransitionPatch.git", from: "1.0.3")
   ],
   targets: [

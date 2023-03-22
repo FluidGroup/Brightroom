@@ -110,7 +110,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     insetOfGuideFlexibility: contentInset
   )
 
-  private var subscriptions = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<AnyCancellable>()
 
   /// A throttling timer to apply guide changed event.
   ///

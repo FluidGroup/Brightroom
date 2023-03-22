@@ -34,7 +34,7 @@ open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildVie
 
   public let viewModel: ClassicImageEditViewModel
   
-  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   public init(viewModel: ClassicImageEditViewModel) {
     self.viewModel = viewModel

@@ -46,7 +46,7 @@ public final class CanvasView: PixelEditorCodeBasedView {
   }
     
   private let store = UIStateStore<State, Never>(initialState: .init())
-  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  private var subscriptions: Set<AnyCancellable> = .init()
   
   private var resolvedShapeLayers: [CAShapeLayer] = []
   private var previewShapeLayer: CAShapeLayer?

@@ -20,6 +20,15 @@
         }
       },
       {
+        "package": "swift-collections",
+        "repositoryURL": "https://github.com/apple/swift-collections",
+        "state": {
+          "branch": null,
+          "revision": "937e904258d22af6e447a0b72c0bc67583ef64a2",
+          "version": "1.0.4"
+        }
+      },
+      {
         "package": "TransitionPatch",
         "repositoryURL": "https://github.com/FluidGroup/TransitionPatch.git",
         "state": {
@@ -33,8 +42,8 @@
         "repositoryURL": "https://github.com/VergeGroup/Verge.git",
         "state": {
           "branch": null,
-          "revision": "2e26db99700c0a4268c0ab00b656209ae8ad8d6b",
-          "version": "11.0.0-beta.4"
+          "revision": "b380ac6505b6b58e4181b7ae5cf9b65948790bf8",
+          "version": "11.0.0-beta.5"
         }
       }
     ]
