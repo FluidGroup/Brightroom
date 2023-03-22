@@ -241,8 +241,8 @@ open class EditingStack: Hashable, StoreComponentType {
 
   private let filterPresets: [FilterPreset]
 
-  private var subscriptions = Set<VergeAnyCancellable>()
-  private var imageProviderSubscription: VergeAnyCancellable?
+  private var subscriptions = Set<AnyCancellable>()
+  private var imageProviderSubscription: StoreSubscription?
 
   public var cropModifier: CropModifier
 

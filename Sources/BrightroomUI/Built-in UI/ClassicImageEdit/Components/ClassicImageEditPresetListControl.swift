@@ -63,7 +63,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   
   private let store: Store<State, Never>
   
-  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  private var subscriptions: Set<AnyCancellable> = .init()
   
   // MARK: - Functions
 

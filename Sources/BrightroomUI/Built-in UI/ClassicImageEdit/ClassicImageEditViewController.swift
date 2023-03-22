@@ -114,7 +114,7 @@ public final class ClassicImageEditViewController: UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  private var subscriptions: Set<VergeAnyCancellable> = .init()
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   private lazy var loadingView = LoadingBlurryOverlayView(
     effect: UIBlurEffect(style: .dark),

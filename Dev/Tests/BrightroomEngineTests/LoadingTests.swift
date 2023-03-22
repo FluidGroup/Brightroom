@@ -26,7 +26,7 @@ import Verge
 
 final class LoadingTests: XCTestCase {
   
-  var subs = Set<VergeAnyCancellable>()
+  var subs = Set<AnyCancellable>()
   
   func testOrientation() throws {
     

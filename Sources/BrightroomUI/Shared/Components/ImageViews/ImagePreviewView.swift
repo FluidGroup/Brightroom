@@ -40,7 +40,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   #endif
 
   private let editingStack: EditingStack
-  private var subscriptions = Set<VergeAnyCancellable>()
+  private var subscriptions = Set<AnyCancellable>()
 
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
