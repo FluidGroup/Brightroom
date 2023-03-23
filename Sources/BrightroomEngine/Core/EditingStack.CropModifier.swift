@@ -40,22 +40,31 @@ extension EditingStack {
     
     public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
       return .init { image, crop, completion in
+
+        var fallbackCrop: EditingCrop {
+          guard let aspectRatio = aspectRatio else {
+            return crop
+          }
+          var new = crop
+          new.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
+          return new
+        }
         
         let request = VNDetectFaceRectanglesRequest { request, error in
           
           if let error = error {
             EngineLog.debug(error)
-            completion(crop)
+            completion(fallbackCrop)
             return
           }
           
           guard let results = request.results as? [VNFaceObservation] else {
-            completion(crop)
+            completion(fallbackCrop)
             return
           }
           
           guard let first = results.first else {
-            completion(crop)
+            completion(fallbackCrop)
             return
           }
           
