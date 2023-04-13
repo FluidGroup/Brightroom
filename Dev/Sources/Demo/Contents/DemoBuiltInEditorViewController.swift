@@ -43,14 +43,6 @@ final class DemoBuiltInEditorViewController: StackScrollNodeViewController {
 
       }),
 
-      Components.makeSelectionCell(title: "Pick with PHImageManager", onTap: { [unowned self] in
-
-        __pickPhotoWithPHAsset { asset in
-          self._presentNonSquare(.init(asset: asset))
-        }
-
-      }),
-
       Components.makeSelectionCell(title: "Pick - Square", onTap: { [unowned self] in
 
         __pickPhoto { image in

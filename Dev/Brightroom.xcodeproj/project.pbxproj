@@ -35,7 +35,6 @@
 		4B487E5B28EEC0590026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5A28EEC0590026A8CF /* BrightroomEngine */; };
 		4B487E5D28EEC0590026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5C28EEC0590026A8CF /* BrightroomUI */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
-		4B487E6128EEC0A40026A8CF /* MosaiqueAssetsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6028EEC0A40026A8CF /* MosaiqueAssetsPicker */; };
 		4B487E6C28EECC480026A8CF /* GlossButtonNode in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6B28EECC480026A8CF /* GlossButtonNode */; };
 		4B487E6F28EECC760026A8CF /* MondrianLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6E28EECC760026A8CF /* MondrianLayout */; };
 		4B487E7228EECCB10026A8CF /* TextureSwiftSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E7128EECCB10026A8CF /* TextureSwiftSupport */; };
@@ -1030,7 +1029,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B487E6128EEC0A40026A8CF /* MosaiqueAssetsPicker in Frameworks */,
 				4B487E6C28EECC480026A8CF /* GlossButtonNode in Frameworks */,
 				4B487E7228EECCB10026A8CF /* TextureSwiftSupport in Frameworks */,
 				4B487E5928EEC0520026A8CF /* BrightroomUI in Frameworks */,
@@ -1729,7 +1727,6 @@
 			packageProductDependencies = (
 				4B487E5628EEC0520026A8CF /* BrightroomEngine */,
 				4B487E5828EEC0520026A8CF /* BrightroomUI */,
-				4B487E6028EEC0A40026A8CF /* MosaiqueAssetsPicker */,
 				4B487E6B28EECC480026A8CF /* GlossButtonNode */,
 				4B487E6E28EECC760026A8CF /* MondrianLayout */,
 				4B487E7128EECCB10026A8CF /* TextureSwiftSupport */,
@@ -1855,7 +1852,6 @@
 			packageReferences = (
 				A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */,
 				A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */,
-				FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */,
 				4B487E6A28EECC480026A8CF /* XCRemoteSwiftPackageReference "GlossButtonNode" */,
 				4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */,
 				4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */,
@@ -2605,6 +2601,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2625,6 +2622,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2885,8 +2883,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/VergeGroup/Verge.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 10.1.0;
+				branch = main;
+				kind = branch;
 			};
 		};
 		A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
@@ -2895,14 +2893,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.3;
-			};
-		};
-		FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/eure/AssetsPicker.git";
-			requirement = {
-				branch = master;
-				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -2927,11 +2917,6 @@
 		4B487E5E28EEC0670026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
-		};
-		4B487E6028EEC0A40026A8CF /* MosaiqueAssetsPicker */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */;
-			productName = MosaiqueAssetsPicker;
 		};
 		4B487E6B28EECC480026A8CF /* GlossButtonNode */ = {
 			isa = XCSwiftPackageProductDependency;

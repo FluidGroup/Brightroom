@@ -2,15 +2,6 @@
   "object": {
     "pins": [
       {
-        "package": "MosaiqueAssetsPicker",
-        "repositoryURL": "https://github.com/eure/AssetsPicker.git",
-        "state": {
-          "branch": "master",
-          "revision": "7908a947243c9fb8014ab8ce85095f61edf2b113",
-          "version": null
-        }
-      },
-      {
         "package": "Descriptors",
         "repositoryURL": "https://github.com/FluidGroup/Descriptors",
         "state": {
@@ -101,6 +92,15 @@
         }
       },
       {
+        "package": "swift-collections",
+        "repositoryURL": "https://github.com/apple/swift-collections",
+        "state": {
+          "branch": "main",
+          "revision": "33504bdc159d076c4a84ecf08941c9e648f9a11c",
+          "version": null
+        }
+      },
+      {
         "package": "Texture",
         "repositoryURL": "https://github.com/FluidGroup/Texture.git",
         "state": {
@@ -131,9 +131,9 @@
         "package": "Verge",
         "repositoryURL": "https://github.com/VergeGroup/Verge.git",
         "state": {
-          "branch": null,
-          "revision": "4e5938313601f8522c1146b5fbaaa0aada6820b6",
-          "version": "10.1.1"
+          "branch": "main",
+          "revision": "f59621dd070070ad5a012b1c00392d802eca6d78",
+          "version": null
         }
       }
     ]

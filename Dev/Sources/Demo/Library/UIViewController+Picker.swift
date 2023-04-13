@@ -7,8 +7,8 @@
 //
 
 import UIKit
-import MosaiqueAssetsPicker
 import Photos
+import PhotosUI
 
 extension UIViewController {
 
@@ -36,51 +36,27 @@ extension UIViewController {
   }
 
   func __pickPhoto(_ completion: @escaping (UIImage) -> Void) {
-
-    let pickerDelegateProxy = MosaiqueAssetsPickerDelegateProxy()
-
-    pickerDelegateProxy.onPicked = { controller, images in
-      controller.dismiss(animated: true, completion: nil)
+    let pickerDelegateProxy = PickerDelegateProxy()
+    pickerDelegateProxy.onPick = { controller, tasks in
+      controller.dismiss(animated: true)
       withExtendedLifetime(pickerDelegateProxy, {})
-      completion(images.first!)
+      Task {
+        switch await tasks.first?.result {
+        case nil:
+          print("No result picking image")
+        case .success(let image):
+          completion(image)
+        case .failure(let error):
+          print("Error \(error) picking image")
+        }
+      }
     }
-    pickerDelegateProxy.onCancelled = { controller in
-      controller.dismiss(animated: true, completion: nil)
-    }
-
-    var configuration = MosaiqueAssetPickerConfiguration()
-
-    configuration.selectionMode = .single
-    configuration.numberOfItemsPerRow = 3
-
-    let photoPicker = MosaiqueAssetPickerPresenter.controller(
-      delegate: pickerDelegateProxy,
-      configuration: configuration
-    )
-
-    present(photoPicker, animated: true, completion: nil)
-  }
-
-  func __pickPhotoWithPHAsset( _ completion: @escaping (PHAsset) -> Void) {
-
-    let pickerDelegateProxy = MosaiqueAssetsPickerDelegateProxy()
-
-    pickerDelegateProxy.onPickedAsset = { controller, assets in
-      controller.dismiss(animated: true, completion: nil)
-      withExtendedLifetime(pickerDelegateProxy, {})
-
-      completion(assets.first!.asset)
-    }
-
-    pickerDelegateProxy.onCancelled = { controller in
-      controller.dismiss(animated: true, completion: nil)
-    }
-
-    let c = MosaiqueAssetPickerViewController()
-    c.setSelectionMode(.single)
-
-    c.pickerDelegate = pickerDelegateProxy
-    present(c, animated: true, completion: nil)
+    var configuration = PHPickerConfiguration()
+    configuration.selectionLimit = 1
+    configuration.filter = .images
+    let controller = PHPickerViewController(configuration: configuration)
+    controller.delegate = pickerDelegateProxy
+    present(controller, animated: true, completion: nil)
   }
 }
 
@@ -112,26 +88,36 @@ private final class _UIImagePickerControllerDelegate: NSObject, UINavigationCont
   }
 }
 
-private final class MosaiqueAssetsPickerDelegateProxy: NSObject, MosaiqueAssetPickerDelegate,
-  UINavigationControllerDelegate
-{
-
-  var onPicked: (UIViewController, [UIImage]) -> Void = { _, _ in }
-
-  var onPickedAsset: (UIViewController, [AssetFuture]) -> Void = { _, _ in }
-
-  var onCancelled: (UIViewController) -> Void = { _ in }
-
-  func photoPicker(_ controller: UIViewController, didPickImages images: [UIImage]) {
-    onPicked(controller, images)
+private final class PickerDelegateProxy: NSObject, PHPickerViewControllerDelegate {
+  private enum Error: Swift.Error {
+    case couldNotCoalesceImage
+  }
+  override init() {
+    super.init()
   }
 
-  func photoPicker(_ controller: UIViewController, didPickAssets assets: [AssetFuture]) {
-    onPickedAsset(controller, assets)
-  }
+  var onPick: (PHPickerViewController, [Task<UIImage, Swift.Error>]) -> Void = { _,_ in assertionFailure() }
 
-  func photoPickerDidCancel(_ controller: UIViewController) {
-    onCancelled(controller)
+  func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+    let type: NSItemProviderReading.Type = UIImage.self
+    let tasks = results
+      .map { $0.itemProvider }
+      .filter { $0.canLoadObject(ofClass: type) }
+      .map { provider -> Task<UIImage, Swift.Error> in
+          .init {
+            try await withCheckedThrowingContinuation { (continuation) in
+              provider.loadObject(ofClass: type) { image, error in
+                if let error = error {
+                  continuation.resume(with: .failure(error))
+                } else if let image = image as? UIImage {
+                  continuation.resume(with: .success(image))
+                } else {
+                  continuation.resume(with: .failure(Error.couldNotCoalesceImage))
+                }
+              }
+            }
+          }
+      }
+    onPick(picker, tasks)
   }
-
 }

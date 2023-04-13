@@ -1,7 +1,6 @@
 import AsyncDisplayKit
 import BrightroomEngine
 import BrightroomUI
-import MosaiqueAssetsPicker
 import TextureSwiftSupport
 import UIKit
 
@@ -182,9 +181,9 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           """,
         onTap: { [unowned self] in
 
-          self.__pickPhotoWithPHAsset { asset in
+          __pickPhoto { image in
 
-            let stack = EditingStack(imageProvider: .init(asset: asset))
+            let stack = EditingStack(imageProvider: .init(image: image))
             var options = PhotosCropViewController.Options()
             options.aspectRatioOptions = .fixed(.init(width: 1, height: 1.414))
 
@@ -240,19 +239,6 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
           self.__pickPhoto { image in
 
             let stack = EditingStack(imageProvider: .init(image: image))
-            self._presentCropViewConroller(stack)
-          }
-
-        }
-      ),
-
-      Components.makeSelectionCell(
-        title: "Pick from library with PHImageManager",
-        onTap: { [unowned self] in
-
-          self.__pickPhotoWithPHAsset { asset in
-
-            let stack = EditingStack(imageProvider: .init(asset: asset))
             self._presentCropViewConroller(stack)
           }
 
