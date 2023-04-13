@@ -32,29 +32,31 @@ import UIKit
 import Photos
 #endif
 
-public enum ImageProviderError: Error {
-  case failedToDownloadPreviewImage(underlyingError: Error)
-  case failedToDownloadEditableImage(underlyingError: Error)
-  
-  case urlIsNotFileURL(URL)
-  
-  case failedToCreateCGDataProvider
-  case failedToCreateCGImageSource
-  case failedToCreateImageSource(underlyingError: Error)
-  
-  case failedToGetImageSize
-  
-  case failedToGetImageMetadata
-
-  case failedToCreateCIFilterToLoadRAW
-  case failedToGetRenderedImageFromRAW
-  case failedToCreateCGImageFromRAW
-}
-
 /**
  A stateful object that provides multiple image for EditingStack.
  */
 public final class ImageProvider: Equatable, StoreComponentType {
+
+  public enum Error: Swift.Error {
+    case failedToDownloadPreviewImage(underlyingError: Swift.Error)
+    case failedToDownloadEditableImage(underlyingError: Swift.Error)
+
+    case urlIsNotFileURL(URL)
+
+    case failedToCreateCGDataProvider
+    case failedToCreateCGImageSource
+    case failedToCreateImageSource(underlyingError: Swift.Error)
+
+    case failedToGetImageSize
+
+    case failedToGetImageMetadata
+
+    case failedToCreateCIFilterToLoadRAW
+    case failedToGetRenderedImageFromRAW
+    case failedToCreateCGImageFromRAW
+
+  }
+
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }
@@ -90,9 +92,9 @@ public final class ImageProvider: Equatable, StoreComponentType {
 
     public var editableImage: ImageSource?
 
-    @Edge public var loadingNonFatalErrors: [ImageProviderError] = []
+    @Edge public var loadingNonFatalErrors: [Error] = []
     
-    @Edge public var loadingFatalErrors: [ImageProviderError] = []
+    @Edge public var loadingFatalErrors: [Error] = []
         
     public var loadedImage: Image? {
           
@@ -220,15 +222,15 @@ public final class ImageProvider: Equatable, StoreComponentType {
   public init(data: Data) throws {
     
     guard let provider = CGDataProvider(data: data as CFData) else {
-      throw ImageProviderError.failedToCreateCGDataProvider
+      throw Error.failedToCreateCGDataProvider
     }
     
     guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
-      throw ImageProviderError.failedToCreateCGImageSource
+      throw Error.failedToCreateCGImageSource
     }
     
     guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
-      throw ImageProviderError.failedToGetImageMetadata
+      throw Error.failedToGetImageMetadata
     }
     
     store = .init(
@@ -276,19 +278,19 @@ public final class ImageProvider: Equatable, StoreComponentType {
     fileURL: URL
   ) throws {
     guard fileURL.isFileURL else {
-      throw ImageProviderError.urlIsNotFileURL(fileURL)
+      throw Error.urlIsNotFileURL(fileURL)
     }
     
     guard let provider = CGDataProvider(url: fileURL as CFURL) else {
-      throw ImageProviderError.failedToCreateCGDataProvider
+      throw Error.failedToCreateCGDataProvider
     }
     
     guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
-      throw ImageProviderError.failedToCreateCGImageSource
+      throw Error.failedToCreateCGImageSource
     }
     
     guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
-      throw ImageProviderError.failedToGetImageSize
+      throw Error.failedToGetImageSize
     }
         
     store = .init(
@@ -354,17 +356,17 @@ public final class ImageProvider: Equatable, StoreComponentType {
           if let url = url {
             
             guard let provider = CGDataProvider(url: url as CFURL) else {
-              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+              state.loadingFatalErrors.append(Error.failedToCreateCGDataProvider)
               return
             }
             
             guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
-              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+              state.loadingFatalErrors.append(Error.failedToCreateCGImageSource)
               return
             }
             
             guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
-              state.loadingNonFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
+              state.loadingNonFatalErrors.append(Error.failedToGetImageMetadata)
               return
             }
         

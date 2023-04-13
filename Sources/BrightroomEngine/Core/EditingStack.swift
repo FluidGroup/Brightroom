@@ -28,10 +28,6 @@ import Verge
 @available(iOS 13, *)
 extension EditingStack: ObservableObject {}
 
-public enum EditingStackError: Error {
-  case unableToCreateRendererInLoading
-}
-
 fileprivate enum MTLImageCreationError: Error {
   case imageTooBig
 }
@@ -57,6 +53,9 @@ fileprivate extension MTLDevice {
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
 open class EditingStack: Hashable, StoreComponentType {
+  public enum Error: Swift.Error {
+    case unableToCreateRendererInLoading
+  }
 
   private static let centralQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack.central", qos: .default, attributes: .concurrent)
 
@@ -571,7 +570,7 @@ open class EditingStack: Hashable, StoreComponentType {
     let stateSnapshot = state
 
     guard let loaded = stateSnapshot.loadedState else {
-      throw EditingStackError.unableToCreateRendererInLoading
+      throw Error.unableToCreateRendererInLoading
     }
 
     let imageSource = loaded.imageSource
