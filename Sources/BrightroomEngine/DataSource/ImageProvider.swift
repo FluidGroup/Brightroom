@@ -38,7 +38,6 @@ import Photos
 public final class ImageProvider: Equatable, StoreComponentType {
 
   public enum Error: Swift.Error {
-    case failedToDownloadPreviewImage(underlyingError: Swift.Error)
     case failedToDownloadEditableImage(underlyingError: Swift.Error)
 
     case urlIsNotFileURL(URL)
@@ -316,7 +315,7 @@ public final class ImageProvider: Equatable, StoreComponentType {
     self.init(editableRemoteURL: url)
   }
   #endif
-  
+
   /**
    Creates an instance
    */
