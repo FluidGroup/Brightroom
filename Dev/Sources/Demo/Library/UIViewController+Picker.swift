@@ -41,12 +41,13 @@ extension UIViewController {
       controller.dismiss(animated: true)
       withExtendedLifetime(pickerDelegateProxy, {})
       Task {
-        switch await tasks.first?.result {
-        case nil:
-          print("No result picking image")
-        case .success(let image):
+        do {
+          guard let image = try await tasks.first?.getImage() else {
+            print("No result picking image. User cancelled")
+            return
+          }
           completion(image)
-        case .failure(let error):
+        } catch {
           print("Error \(error) picking image")
         }
       }
@@ -89,35 +90,61 @@ private final class _UIImagePickerControllerDelegate: NSObject, UINavigationCont
 }
 
 private final class PickerDelegateProxy: NSObject, PHPickerViewControllerDelegate {
-  private enum Error: Swift.Error {
-    case couldNotCoalesceImage
+
+  final class ImageResult {
+
+    private enum Error: Swift.Error {
+      case couldNotCoalesceImage
+    }
+
+    private let itemProvider: NSItemProvider
+    /// Must call getImage first
+    var progress: Progress!
+
+    func getImage() async throws -> UIImage {
+      try await withCheckedThrowingContinuation { (continuation) in
+        self.progress = itemProvider.loadObject(ofClass: UIImage.self) { image, error in
+          if let error = error {
+            continuation.resume(with: .failure(error))
+          } else if let image = image as? UIImage {
+            continuation.resume(with: .success(image))
+          } else {
+            continuation.resume(with: .failure(Error.couldNotCoalesceImage))
+          }
+        }
+      }
+    }
+
+    func getPreview() async throws -> UIImage {
+      try await withCheckedThrowingContinuation { (continuation) in
+        itemProvider.loadPreviewImage(completionHandler: { image, error in
+          if let error = error {
+            continuation.resume(with: .failure(error))
+          } else if let image = image as? UIImage {
+            continuation.resume(with: .success(image))
+          } else {
+            continuation.resume(with: .failure(Error.couldNotCoalesceImage))
+          }
+        })
+      }
+    }
+
+    init(_ itemProvider: NSItemProvider) {
+      self.itemProvider = itemProvider
+    }
   }
+
   override init() {
     super.init()
   }
 
-  var onPick: (PHPickerViewController, [Task<UIImage, Swift.Error>]) -> Void = { _,_ in assertionFailure() }
+  var onPick: (PHPickerViewController, [ImageResult]) -> Void = { _,_ in assertionFailure() }
 
   func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-    let type: NSItemProviderReading.Type = UIImage.self
-    let tasks = results
+    let imageResults = results
       .map { $0.itemProvider }
-      .filter { $0.canLoadObject(ofClass: type) }
-      .map { provider -> Task<UIImage, Swift.Error> in
-          .init {
-            try await withCheckedThrowingContinuation { (continuation) in
-              provider.loadObject(ofClass: type) { image, error in
-                if let error = error {
-                  continuation.resume(with: .failure(error))
-                } else if let image = image as? UIImage {
-                  continuation.resume(with: .success(image))
-                } else {
-                  continuation.resume(with: .failure(Error.couldNotCoalesceImage))
-                }
-              }
-            }
-          }
-      }
-    onPick(picker, tasks)
+      .filter { $0.canLoadObject(ofClass: UIImage.self) }
+      .map { ImageResult($0) }
+    onPick(picker, imageResults)
   }
 }
