@@ -1,52 +1,59 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "RxSwift",
-        "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
-        "state": {
-          "branch": null,
-          "revision": "7e01c05f25c025143073eaa3be3532f9375c614b",
-          "version": "6.1.0"
-        }
-      },
-      {
-        "package": "swift-atomics",
-        "repositoryURL": "https://github.com/apple/swift-atomics.git",
-        "state": {
-          "branch": null,
-          "revision": "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
-          "version": "1.0.3"
-        }
-      },
-      {
-        "package": "swift-collections",
-        "repositoryURL": "https://github.com/apple/swift-collections",
-        "state": {
-          "branch": null,
-          "revision": "937e904258d22af6e447a0b72c0bc67583ef64a2",
-          "version": "1.0.4"
-        }
-      },
-      {
-        "package": "TransitionPatch",
-        "repositoryURL": "https://github.com/FluidGroup/TransitionPatch.git",
-        "state": {
-          "branch": null,
-          "revision": "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
-          "version": "1.0.5"
-        }
-      },
-      {
-        "package": "Verge",
-        "repositoryURL": "https://github.com/VergeGroup/Verge.git",
-        "state": {
-          "branch": null,
-          "revision": "b380ac6505b6b58e4181b7ae5cf9b65948790bf8",
-          "version": "11.0.0-beta.5"
-        }
+  "pins" : [
+    {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "7e01c05f25c025143073eaa3be3532f9375c614b",
+        "version" : "6.1.0"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "swift-atomics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-atomics.git",
+      "state" : {
+        "revision" : "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
+        "version" : "1.0.3"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swift-collections",
+      "state" : {
+        "revision" : "939cfd25234472b4dc91c3caeab304d15bca9a73",
+        "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-concurrency-task-manager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/swift-concurrency-task-manager",
+      "state" : {
+        "revision" : "9f686139a7d08ecca12d64a7a9bdf81cb1a1c986",
+        "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "transitionpatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/TransitionPatch.git",
+      "state" : {
+        "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
+        "version" : "1.0.5"
+      }
+    },
+    {
+      "identity" : "verge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/Verge.git",
+      "state" : {
+        "revision" : "ee68d135a7af556a272d0c857907fa391728a9d5",
+        "version" : "11.5.3"
+      }
+    }
+  ],
+  "version" : 2
 }

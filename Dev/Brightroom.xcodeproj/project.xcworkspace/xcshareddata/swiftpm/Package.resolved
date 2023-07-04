@@ -1,142 +1,113 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "MosaiqueAssetsPicker",
-        "repositoryURL": "https://github.com/eure/AssetsPicker.git",
-        "state": {
-          "branch": "master",
-          "revision": "7908a947243c9fb8014ab8ce85095f61edf2b113",
-          "version": null
-        }
-      },
-      {
-        "package": "Descriptors",
-        "repositoryURL": "https://github.com/FluidGroup/Descriptors",
-        "state": {
-          "branch": null,
-          "revision": "f41ce2605a76c5d378fe8c5e8c5c98b544dfd108",
-          "version": "0.2.3"
-        }
-      },
-      {
-        "package": "GlossButtonNode",
-        "repositoryURL": "https://github.com/FluidGroup/GlossButtonNode",
-        "state": {
-          "branch": "main",
-          "revision": "b509307ce86999f281d7c5cee17fec2e1179a5d5",
-          "version": null
-        }
-      },
-      {
-        "package": "IGListKit",
-        "repositoryURL": "https://github.com/3a4oT/IGListKit",
-        "state": {
-          "branch": "spmNumber10",
-          "revision": "979eca9b2da15e35af36f4613452dd6e07641969",
-          "version": null
-        }
-      },
-      {
-        "package": "libwebp",
-        "repositoryURL": "https://github.com/SDWebImage/libwebp-Xcode",
-        "state": {
-          "branch": null,
-          "revision": "0f3bdb28a1edc5e8e43876d3835d20c601ef331f",
-          "version": "1.2.3"
-        }
-      },
-      {
-        "package": "MondrianLayout",
-        "repositoryURL": "https://github.com/muukii/MondrianLayout.git",
-        "state": {
-          "branch": "main",
-          "revision": "b26edaa5a469bc5fd58f9afe37d257ca1b3771e0",
-          "version": null
-        }
-      },
-      {
-        "package": "PINCache",
-        "repositoryURL": "https://github.com/pinterest/PINCache.git",
-        "state": {
-          "branch": null,
-          "revision": "875c654984fb52b47ca65ae70d24852b0003ccd9",
-          "version": "3.0.3"
-        }
-      },
-      {
-        "package": "PINOperation",
-        "repositoryURL": "https://github.com/pinterest/PINOperation.git",
-        "state": {
-          "branch": null,
-          "revision": "44d8ca154a4e75a028a5548c31ff3a53b90cef15",
-          "version": "1.2.1"
-        }
-      },
-      {
-        "package": "PINRemoteImage",
-        "repositoryURL": "https://github.com/pinterest/PINRemoteImage.git",
-        "state": {
-          "branch": "master",
-          "revision": "18637e4414d77fbc95cd7d499179a9880e9a78d8",
-          "version": null
-        }
-      },
-      {
-        "package": "RxSwift",
-        "repositoryURL": "https://github.com/ReactiveX/RxSwift.git",
-        "state": {
-          "branch": null,
-          "revision": "b4307ba0b6425c0ba4178e138799946c3da594f8",
-          "version": "6.5.0"
-        }
-      },
-      {
-        "package": "swift-atomics",
-        "repositoryURL": "https://github.com/apple/swift-atomics.git",
-        "state": {
-          "branch": null,
-          "revision": "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
-          "version": "1.0.3"
-        }
-      },
-      {
-        "package": "Texture",
-        "repositoryURL": "https://github.com/FluidGroup/Texture.git",
-        "state": {
-          "branch": "spm",
-          "revision": "5d03875bcfb0d87f8057ebeb5f2f6e4527e18128",
-          "version": null
-        }
-      },
-      {
-        "package": "TextureSwiftSupport",
-        "repositoryURL": "https://github.com/FluidGroup/TextureSwiftSupport",
-        "state": {
-          "branch": "main",
-          "revision": "775e0336d096f3299caff9905a06c0ced40e687f",
-          "version": null
-        }
-      },
-      {
-        "package": "TransitionPatch",
-        "repositoryURL": "https://github.com/muukii/TransitionPatch.git",
-        "state": {
-          "branch": null,
-          "revision": "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
-          "version": "1.0.5"
-        }
-      },
-      {
-        "package": "Verge",
-        "repositoryURL": "https://github.com/VergeGroup/Verge.git",
-        "state": {
-          "branch": null,
-          "revision": "4e5938313601f8522c1146b5fbaaa0aada6820b6",
-          "version": "10.1.1"
-        }
+  "pins" : [
+    {
+      "identity" : "assetspicker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eure/AssetsPicker.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "7908a947243c9fb8014ab8ce85095f61edf2b113"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "descriptors",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Descriptors",
+      "state" : {
+        "revision" : "f41ce2605a76c5d378fe8c5e8c5c98b544dfd108",
+        "version" : "0.2.3"
+      }
+    },
+    {
+      "identity" : "glossbuttonnode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/GlossButtonNode",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b509307ce86999f281d7c5cee17fec2e1179a5d5"
+      }
+    },
+    {
+      "identity" : "mondrianlayout",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/MondrianLayout.git",
+      "state" : {
+        "revision" : "5f00b13984fe08316fc5b5be06e2f41c14a3befa",
+        "version" : "0.10.0"
+      }
+    },
+    {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "9dcaa4b333db437b0fbfaf453fad29069044a8b4",
+        "version" : "6.6.0"
+      }
+    },
+    {
+      "identity" : "swift-atomics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-atomics.git",
+      "state" : {
+        "revision" : "6c89474e62719ddcc1e9614989fff2f68208fe10",
+        "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections",
+      "state" : {
+        "branch" : "main",
+        "revision" : "939cfd25234472b4dc91c3caeab304d15bca9a73"
+      }
+    },
+    {
+      "identity" : "swift-concurrency-task-manager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/swift-concurrency-task-manager",
+      "state" : {
+        "revision" : "9f686139a7d08ecca12d64a7a9bdf81cb1a1c986",
+        "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "texture",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Texture.git",
+      "state" : {
+        "branch" : "spm",
+        "revision" : "17e0b467fe7360cfb29f2612785acf60e86775e9"
+      }
+    },
+    {
+      "identity" : "textureswiftsupport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/TextureSwiftSupport",
+      "state" : {
+        "branch" : "main",
+        "revision" : "cc10f020f3f765a12b279fc0984f9b061ccd2485"
+      }
+    },
+    {
+      "identity" : "transitionpatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/TransitionPatch.git",
+      "state" : {
+        "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
+        "version" : "1.0.5"
+      }
+    },
+    {
+      "identity" : "verge",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/Verge.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "945f6348fa1a7f16850f475e1c6fcda5f950876a"
+      }
+    }
+  ],
+  "version" : 2
 }

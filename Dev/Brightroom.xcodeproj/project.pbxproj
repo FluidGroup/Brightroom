@@ -32,8 +32,6 @@
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B487E5728EEC0520026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5628EEC0520026A8CF /* BrightroomEngine */; };
 		4B487E5928EEC0520026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5828EEC0520026A8CF /* BrightroomUI */; };
-		4B487E5B28EEC0590026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5A28EEC0590026A8CF /* BrightroomEngine */; };
-		4B487E5D28EEC0590026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5C28EEC0590026A8CF /* BrightroomUI */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
 		4B487E6128EEC0A40026A8CF /* MosaiqueAssetsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6028EEC0A40026A8CF /* MosaiqueAssetsPicker */; };
 		4B487E6C28EECC480026A8CF /* GlossButtonNode in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6B28EECC480026A8CF /* GlossButtonNode */; };
@@ -130,6 +128,8 @@
 		4BF934202614CAD600E0637A /* CGContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF9341F2614CAD600E0637A /* CGContextTests.swift */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
+		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D2B2660F90200CC45EA /* ImageSourceInitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110D2A2660F90200CC45EA /* ImageSourceInitTest.swift */; };
 		FC110D8F2660FD5500CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */; };
 		FC110D902660FD5500CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2E2660FD2200CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg */; };
@@ -1043,8 +1043,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B487E5D28EEC0590026A8CF /* BrightroomUI in Frameworks */,
-				4B487E5B28EEC0590026A8CF /* BrightroomEngine in Frameworks */,
+				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
+				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1753,8 +1753,8 @@
 			);
 			name = SwiftUIDemo;
 			packageProductDependencies = (
-				4B487E5A28EEC0590026A8CF /* BrightroomEngine */,
-				4B487E5C28EEC0590026A8CF /* BrightroomUI */,
+				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
+				FC06C8802A53AF4500215B89 /* BrightroomUI */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -1771,7 +1771,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				4B487E6328EEC3E50026A8CF /* PBXTargetDependency */,
 			);
 			name = BrightroomEngineTests;
 			packageProductDependencies = (
@@ -1853,7 +1852,6 @@
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
 			packageReferences = (
-				A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */,
 				A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */,
 				FCA2BEA7278EA24C00050FA4 /* XCRemoteSwiftPackageReference "AssetsPicker" */,
 				4B487E6A28EECC480026A8CF /* XCRemoteSwiftPackageReference "GlossButtonNode" */,
@@ -2435,9 +2433,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		4B487E6328EEC3E50026A8CF /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-		};
 		4BED49D2261C9BBD0011A98F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 4BED49C7261C9BBD0011A98F /* Import LUT */;
@@ -2522,7 +2517,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -2582,7 +2577,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.brightroom.$(TARGET_NAME)";
@@ -2605,6 +2600,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2625,6 +2621,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Sources/Demo/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2643,7 +2640,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -2665,7 +2662,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -2687,6 +2684,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = GKNHX9R5U2;
 				INFOPLIST_FILE = "Tests/$(TARGET_NAME)/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2706,6 +2704,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = GKNHX9R5U2;
 				INFOPLIST_FILE = "Tests/$(TARGET_NAME)/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2724,6 +2723,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Bundle/LUTs/Import LUT/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2744,6 +2744,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = "$(SRCROOT)/Bundle/LUTs/Import LUT/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2764,6 +2765,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = Bundle/LUTs/ShareLUT/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2784,6 +2786,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				INFOPLIST_FILE = Bundle/LUTs/ShareLUT/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -2869,8 +2872,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/muukii/MondrianLayout.git";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
 			};
 		};
 		4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */ = {
@@ -2879,14 +2882,6 @@
 			requirement = {
 				branch = main;
 				kind = branch;
-			};
-		};
-		A6ABB4F4260AA8F0006B46ED /* XCRemoteSwiftPackageReference "Verge" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/VergeGroup/Verge.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 10.1.0;
 			};
 		};
 		A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
@@ -2916,14 +2911,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomUI;
 		};
-		4B487E5A28EEC0590026A8CF /* BrightroomEngine */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = BrightroomEngine;
-		};
-		4B487E5C28EEC0590026A8CF /* BrightroomUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = BrightroomUI;
-		};
 		4B487E5E28EEC0670026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
@@ -2947,6 +2934,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */;
 			productName = TextureSwiftSupport;
+		};
+		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomEngine;
+		};
+		FC06C8802A53AF4500215B89 /* BrightroomUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
