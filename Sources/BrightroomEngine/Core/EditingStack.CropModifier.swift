@@ -82,6 +82,9 @@ extension EditingStack {
         }
         
         request.revision = VNDetectFaceRectanglesRequestRevision2
+#if targetEnvironment(simulator)
+        request.usesCPUOnly = true
+#endif
         let handler = VNImageRequestHandler(ciImage: image, orientation: .up, options: [:])
         do {
           try handler.perform([request])
