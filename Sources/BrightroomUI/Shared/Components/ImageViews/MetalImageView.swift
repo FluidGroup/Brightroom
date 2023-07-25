@@ -152,7 +152,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: processedImage.colorSpace ?? defaultColorSpace
+      colorSpace: defaultColorSpace
     )
 
     commandBuffer.present(drawable)
