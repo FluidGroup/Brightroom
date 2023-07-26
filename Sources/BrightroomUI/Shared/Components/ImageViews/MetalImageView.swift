@@ -76,7 +76,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     #if targetEnvironment(simulator)
     #else
       /// For supporting wide-color - extended sRGB
-//    colorPixelFormat = .bgra10_xr
+    colorPixelFormat = .bgra10_xr
     #endif
 
   }
