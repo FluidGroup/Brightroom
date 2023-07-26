@@ -24,7 +24,7 @@
       "location" : "https://github.com/FluidGroup/GlossButtonNode",
       "state" : {
         "branch" : "main",
-        "revision" : "b509307ce86999f281d7c5cee17fec2e1179a5d5"
+        "revision" : "725ffe6041691e4533558253c77db01555eda0a9"
       }
     },
     {
@@ -57,10 +57,10 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
+      "location" : "https://github.com/FluidGroup/swift-collections",
       "state" : {
-        "branch" : "main",
-        "revision" : "939cfd25234472b4dc91c3caeab304d15bca9a73"
+        "revision" : "939cfd25234472b4dc91c3caeab304d15bca9a73",
+        "version" : "1.1.0"
       }
     },
     {
@@ -68,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/swift-concurrency-task-manager",
       "state" : {
-        "revision" : "9f686139a7d08ecca12d64a7a9bdf81cb1a1c986",
-        "version" : "1.2.0"
+        "revision" : "3fcfb05f115a3b5bc24f0dfe0d35137f3e398f0b",
+        "version" : "1.3.1"
       }
     },
     {
@@ -77,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/Texture.git",
       "state" : {
-        "branch" : "spm",
-        "revision" : "17e0b467fe7360cfb29f2612785acf60e86775e9"
+        "revision" : "68df47f0d26522da76b06f22e9a97e4d4ab58dad",
+        "version" : "3.0.2"
       }
     },
     {
@@ -87,7 +87,7 @@
       "location" : "https://github.com/FluidGroup/TextureSwiftSupport",
       "state" : {
         "branch" : "main",
-        "revision" : "cc10f020f3f765a12b279fc0984f9b061ccd2485"
+        "revision" : "5de10d4c9eae028a8c560ba1c964f76bc8b731c5"
       }
     },
     {
@@ -104,8 +104,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "945f6348fa1a7f16850f475e1c6fcda5f950876a"
+        "revision" : "23b6e92fbf88e72ce0546144fbc1dc455cb5d53d",
+        "version" : "11.5.4"
       }
     }
   ],
