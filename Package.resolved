@@ -37,6 +37,15 @@
       }
     },
     {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "ffa3cd6fc2aa62adbedd31d3efaf7c0d86a9f029",
+        "version" : "509.0.1"
+      }
+    },
+    {
       "identity" : "transitionpatch",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/TransitionPatch.git",
@@ -50,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "ee68d135a7af556a272d0c857907fa391728a9d5",
-        "version" : "11.5.3"
+        "revision" : "e1656a1e46ce044d0f05bfba69dba0273a8a71ee",
+        "version" : "12.0.0-beta.2"
       }
     }
   ],
