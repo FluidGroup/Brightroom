@@ -73,6 +73,15 @@
       }
     },
     {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "6ad4ea24b01559dde0773e3d091f1b9e36175036",
+        "version" : "509.0.2"
+      }
+    },
+    {
       "identity" : "texture",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/Texture.git",
@@ -104,8 +113,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "23b6e92fbf88e72ce0546144fbc1dc455cb5d53d",
-        "version" : "11.5.4"
+        "revision" : "a338c22b82c9a686a7131b54fa84ddad773f5c2a",
+        "version" : "12.0.0-beta.4"
       }
     }
   ],
