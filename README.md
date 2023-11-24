@@ -44,14 +44,6 @@ There are a few important housekeeping notes for those coming from v1.
 
 ## Installation
 
-**CocoaPods**
-
-```ruby
-pod 'Brightroom/Engine'
-pod 'Brightroom/UI-Classic'
-pod 'Brightroom/UI-Crop'
-```
-
 **Swift Package Manager**
 
 ```swift
