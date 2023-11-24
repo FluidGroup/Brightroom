@@ -189,15 +189,25 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     let resolvedImage: CIImage
 
     #if targetEnvironment(simulator)
+
+    if #available(iOS 17, *) {
       // Fixes geometry in Metal
-      resolvedImage =
-        image
+      resolvedImage = image
+        .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        .transformed(by: CGAffineTransform(translationX: targetRect.origin.x, y: targetRect.origin.y))
+
+    } else {
+      // Fixes geometry in Metal
+      resolvedImage = image
         .transformed(
           by: CGAffineTransform(scaleX: 1, y: -1)
             .concatenating(.init(translationX: 0, y: image.extent.height))
             .concatenating(.init(scaleX: scale, y: scale))
             .concatenating(.init(translationX: targetRect.origin.x, y: targetRect.origin.y))
         )
+
+    }
+
 
     #else
       resolvedImage =
