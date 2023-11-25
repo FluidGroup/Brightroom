@@ -495,7 +495,7 @@ open class EditingStack: Hashable, StoreComponentType {
   public typealias Revision = Int
 
   public var currentRevision: Revision? {
-    self.primitiveState.loadedState?.history.count
+    self.state.primitive.loadedState?.history.count
   }
 
   public func revert(to revision: Revision) {
