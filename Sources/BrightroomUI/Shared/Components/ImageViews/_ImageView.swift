@@ -21,6 +21,7 @@ final class _ImageView: UIImageView, CIImageDisplaying {
   init() {
     super.init(frame: .zero)
     layer.drawsAsynchronously = true
+    preferredImageDynamicRange = .high
   }
 
   required init?(coder: NSCoder) {
