@@ -76,7 +76,19 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     #if targetEnvironment(simulator)
     #else
       /// For supporting wide-color - extended sRGB
-    colorPixelFormat = .bgra10_xr
+
+    let metalLayer = layer as! CAMetalLayer
+
+    if #available(iOS 16, *) {
+      metalLayer.wantsExtendedDynamicRangeContent = true
+    }
+
+    let hasP3Display = traitCollection.displayGamut == .P3
+
+    if hasP3Display {
+      metalLayer.pixelFormat = .bgra10_xr
+    }
+
     #endif
 
   }
