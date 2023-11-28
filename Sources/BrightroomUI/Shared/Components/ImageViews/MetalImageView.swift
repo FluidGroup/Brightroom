@@ -73,6 +73,12 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
     clearsContextBeforeDrawing = true
 
+    if #available(iOS 17.0, *) {
+      layer.wantsExtendedDynamicRangeContent = true
+    } else {
+      // Fallback on earlier versions
+    }
+
     #if targetEnvironment(simulator)
     #else
       /// For supporting wide-color - extended sRGB

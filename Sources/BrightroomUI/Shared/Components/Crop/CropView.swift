@@ -167,6 +167,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     addSubview(scrollView)
     addSubview(guideView)
 
+    imageView.preferredImageDynamicRange = .high
     imageView.isUserInteractionEnabled = true
     scrollView.addSubview(imageView)
     scrollView.delegate = self
