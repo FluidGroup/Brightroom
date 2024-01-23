@@ -1,0 +1,111 @@
+name : Communicating with Cliq
+
+on:
+  branch_protection_rule:
+    #types : [created , edited , deleted]
+  check_run:
+    #types : [created , completed]
+  check_suite:
+    types : [completed]
+  create:
+    # No Types
+  delete:
+    # No Types
+  deployment:
+    # No Types
+  deployment_status:
+    # No Types
+  discussion:
+    # types : [created , edited , deleted , transferred , pinned , unpinned , labeled , unlabeled , locked , unlocked , category_changed , answered , unanswered]
+  discussion_comment:
+    # types : [created , edited , deleted]
+  fork:
+    # No Types
+  gollum:
+    # No Types
+  issues:
+    types : [opened , edited , deleted , transferred , pinned , unpinned , closed , reopened , assigned , unassigned , labeled , unlabeled , locked , unlocked , milestoned , demilestoned]
+  issue_comment:
+    # Use this for pull_request_comment also
+    types : [created , edited , deleted]
+  label:
+    types : [created , edited , deleted]
+  milestone:
+    types : [created , closed , opened , edited , deleted]
+  page_build:
+    # No Types
+  public:
+    # No Types
+  pull_request:
+    # It works only for opened , synchronize and reopened if not specified
+    # types: [ assigned , unassigned , labeled , unlabeled , opened , closed , edited , reopened , synchronize , converted_to_draft , ready_for_review , locked , unlocked , review_requested , review_request_removed , auto_merge_enabled , auto_merge_disabled ]
+  pull_request_target:
+    # It works only for opened , synchronize and reopened if not specified
+    # types: [ assigned , unassigned , labeled , unlabeled , opened , closed , edited , reopened , synchronize , converted_to_draft , ready_for_review , locked , unlocked , review_requested , review_request_removed , auto_merge_enabled , auto_merge_disabled ]
+  pull_request_review:
+    # types : [submitted , edited , dismissed]
+  pull_request_review_comment:
+    # types : [created , edited , deleted]
+  push:
+    # No Types
+  registry_package:
+    # types : [published]
+  release:
+    # types : [published , created , edited , deleted , prereleased , released]
+  repository_dispatch:
+    # User Defined Types
+    types: [on-demand-test]
+  schedule:
+    # 'Minute Hour Date Month Day'
+    # 'Starting_Minute/Step_Value Hour Date Month , Day'
+    - cron: '1 12 * * *'
+  status:
+    # No Types
+  watch:
+    # types : [started]
+  workflow_dispatch:
+    # No Types
+  
+jobs:
+  connecting_cliq:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Integrations-dev/GitHub-Informer@v1
+        with:
+          channel-endpoint: ${{ secrets.CLIQ_WEBHOOK_SECRET_KEY }}
+          #branch-protection-rule-message: 'Security Update :Security:\n (event) (rule) is (action) by (me) at (repo) under (ref)'
+          #check-run-message: 'Check Run Status :server:\n (event) (run) is (action) by (me) at (repo) under (ref)'
+          #check-suite-message: 'Check Suite Status :server:\n (event) is (action) by (me) at (repo) under (ref)'
+          create-message: 'Creation :task:\n A (branch) is (event) by (me)'
+          delete-message: 'Delete :milestone:\n (branch) has been (event) by (me)'
+          #deployment-message: 'Deployment :server:\n (event) (deployment) is created successfully'
+          #deployment-status-message: 'Deployment Status Updated :server:\n (event) of (deployment) is updated to (status) successfully'
+          # discussion-message: 'Discussions :idea:\n A (event) (discussion) has been (action)'
+          #discussion-comment-message: 'Discussion Comment :idea:\n A (event) has been (action) at (discussion)'
+          #fork-message: '(repo) has been forked by (me) under (ref)'
+          #gollum-message: 'Changes have been made in the Wiki Pages of (repo) by (me)'
+          issues-message: 'Oops :surprise:\n A (event) (issue) is (action) by (me) at (repo) under (ref)'
+          issue-comment-message: 'Hey :awe:\n (event) has been (action) by (me) at (issue)'
+          # label-message: 'Seems Like New Issues required New Labels :curious:\n A (event) (label) has been (action) by (me)'
+          milestone-message: 'Goals need to be Changed as the Project Progresses :milestone:\n A (event) (milestone) is (action)'
+          #page-build-message: 'A (event) is made by (me) for (repo)'
+          #public-message: 'An Idea is Beneficial Only when it gives back to the Community :peace:\n (repo) is now made Public by (me) :celebrate:'
+          pull-request-message: 'A (event) is (action) at (pull) at (repo)'
+          pull-request-comment-message: 'You have got a Comment for a Pull Request Dude :curious:\n A (event) is (action) at (pull) at (repo)'
+          #pull-request-target-message: 'A (event) is (action) at (repo) under (ref)'
+          #pull-request-review-message: 'You have got a Review Dude :curious:\n A (event) is (action) at (pull) at (repo)'
+          #pull-request-review-comment-message: 'You have got a Review Comment Dude :curious:\n A (event) is (action) at (repo) under (ref)'
+          push-message: 'A (event) is made into (repo).\n Good to see you make some Changes :new-year:'
+          #registry-package-message: ':gift-box: A Build of (package) is (action) at (repo)'
+          #release-message: ':target: (event) (release) has been (action) Successfully'
+          #repository-dispatch-message: ':report: A (event) of (action) has triggered this following workflow: (workflow)'
+          #schedule-message: 'Scheduled Event Trigger :calendar:\n (workflow) has been Scheduled to run at this time in (repo)'
+          #status-message: 'Status has been Updated to (status) at (repo)'
+          #watch-message: ':fireworks: (me) has starred your Repository (repo)'
+          #workflow-dispatch-message: ':office: (workflow) has been dispatched by (me) at (repo) under (ref)'
+          #default-message: '(event) has happened. Hope You are Aware of it :wink:'
+          #the message sent when the user doesn't want to enter all the 30 messages and just handle the same message to different events.
+          #this message is sent only when the custom message is not provided by the user.
+          #ie. if a push occurs the push-message will be sent. In case it is not provided. The default-message will be sent. 
+          #set-message-if-none: true
+          #false makes GitHub-Informer not send the default messages if custom message is not set
