@@ -47,8 +47,16 @@ struct ContentView: View {
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
-          Button("Component: Crop") {
-            fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
+          Section {
+            Button("Component: Crop - keepAlive") {
+              fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
+            }
+
+            Button("Component: Crop") {
+              fullScreenView = .init {
+                DemoCropView(editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal()))
+              }
+            }
           }
 
           Section(content: {
@@ -204,7 +212,7 @@ struct ContentView: View {
       )
     }
     .onAppear(perform: {
-      ColorCubeStorage.loadToDefault()
+      try? PresetStorage.default.loadLUTs()
     })
   }
 }
@@ -230,22 +238,4 @@ struct PixelEditWrapper: UIViewControllerRepresentable {
   }
 
   func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
-}
-
-var _loaded = false
-extension ColorCubeStorage {
-  static func loadToDefault() {
-    guard _loaded == false else {
-      return
-    }
-    _loaded = true
-
-    do {
-      let loader = ColorCubeLoader(bundle: .main)
-      self.default.filters = try loader.load()
-
-    } catch {
-      assertionFailure("\(error)")
-    }
-  }
 }

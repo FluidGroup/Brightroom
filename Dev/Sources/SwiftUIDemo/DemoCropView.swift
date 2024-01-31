@@ -33,6 +33,14 @@ struct DemoCropView: View {
             })
         )
         .clipped()
+
+        Button("rotate") {
+          if let state = editingStack.state.loadedState {
+            var c = state.currentEdit.crop
+            c.rotation = .angle_270
+            editingStack.crop(c)
+          }
+        }
       }
       Button("Done") {
         let image = try! editingStack.makeRenderer().render().swiftUIImage
