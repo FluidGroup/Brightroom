@@ -47,8 +47,6 @@ struct ContentView: View {
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
-          NavigationLink("Hoge", destination: BookRotateScrollView())
-
           Section {
             Button("Component: Crop - keepAlive") {
               fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
@@ -202,7 +200,12 @@ struct ContentView: View {
               }
             }
           })
+
+          Section("Lab") {
+            NavigationLink("Rotating", destination: BookRotateScrollView())
+          }
         }
+
       }
       .navigationTitle("Pixel")
       .fullScreenCover(
