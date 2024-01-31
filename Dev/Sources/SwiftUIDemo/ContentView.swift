@@ -47,6 +47,8 @@ struct ContentView: View {
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
+          NavigationLink("Hoge", destination: BookRotateScrollView())
+
           Section {
             Button("Component: Crop - keepAlive") {
               fullScreenView = .init { DemoCropView(editingStack: sharedStack) }

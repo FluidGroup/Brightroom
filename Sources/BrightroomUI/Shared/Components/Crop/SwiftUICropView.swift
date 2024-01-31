@@ -60,6 +60,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private let factory: () -> CropView
 
   private var _rotation: EditingCrop.Rotation?
+  private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
 
   public init(
     editingStack: EditingStack,
@@ -99,6 +100,10 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     if let _rotation {
       uiViewController.bodyView.setRotation(_rotation)
     }
+
+    if let _adjustmentAngle {
+      uiViewController.bodyView.setAdjustmentAngle(_adjustmentAngle)
+    }
   }
 
   public func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
@@ -106,6 +111,14 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     var modified = self
     modified._rotation = rotation
     return modified
+  }
+
+  public func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+
+    var modified = self
+    modified._adjustmentAngle = angle
+    return modified
+
   }
 
 }

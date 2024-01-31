@@ -21,6 +21,7 @@
 
 import UIKit
 import Vision
+import SwiftUI
 
 /// A representation of cropping extent in Image.
 public struct EditingCrop: Equatable {
@@ -64,6 +65,8 @@ public struct EditingCrop: Equatable {
     }
   }
 
+  public typealias AdjustmentAngle = SwiftUI.Angle
+
   /// The dimensions in pixel for the image.
   /// Applied image-orientation.
   public var imageSize: CGSize
@@ -73,6 +76,9 @@ public struct EditingCrop: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
+
+  /// An angle to rotate in addition to the specified rotation.
+  public var adjustmentAngle: AdjustmentAngle = .zero
 
   public private(set) var scaleToRestore: CGFloat
 

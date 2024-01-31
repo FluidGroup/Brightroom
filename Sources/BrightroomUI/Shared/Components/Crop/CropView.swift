@@ -395,6 +395,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
+  public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
+
+    store.commit {
+      $0.proposedCrop?.adjustmentAngle = angle
+      $0.layoutVersion += 1
+    }
+  }
+
   public func setCrop(_ crop: EditingCrop) {
     _pixeleditor_ensureMainThread()
     
@@ -522,33 +530,52 @@ extension CropView {
           size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_90:
-          size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
+          size = aspectRatio
+            .swapped()
+            .sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         case .angle_180:
           size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio)
         case .angle_270:
-          size = aspectRatio.swapped().sizeThatFitsWithRounding(in: bounds.size)
+          size = aspectRatio
+            .swapped()
+            .sizeThatFitsWithRounding(in: bounds.size)
           guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         }
 
-        scrollView.transform = crop.rotation.transform
-        
-        scrollView.frame = .init(
+        let scrollViewFrame = CGRect(
           origin: .init(
             x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
             y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
           ),
           size: size
         )
-        
-        scrollBackdropView.frame = scrollView.frame
+
+        // step 1 - rotate in right angle
+        do {
+
+          scrollView.transform = crop.rotation.transform
+          scrollView.frame = scrollViewFrame
+
+          scrollBackdropView.frame = scrollViewFrame
+          guideView.frame = scrollViewFrame
+
+        }
+
+        // step 2 - rotate in adjustment angle
+        do {
+          let frame = scrollView.frame
+          let rotatedFrame = frame.applying(.init(rotationAngle: crop.adjustmentAngle.radians))
+          scrollView.frame = rotatedFrame
+          scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
+        }
+
+        // step 3 - lay the scroll view out on thne center.
+        scrollView.center = .init(x: bounds.midX, y: bounds.midY)
+
       }
 
-      applyLayoutDescendants: do {
-        guideView.frame = scrollView.frame
-      }
-                
       zoom: do {
         
         let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)

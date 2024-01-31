@@ -16,6 +16,7 @@ struct DemoCropView: View {
   let editingStack: EditingStack
 
   @State var rotation: EditingCrop.Rotation?
+  @State var adjustmentAngle: EditingCrop.AdjustmentAngle = .zero
 
   var body: some View {
     VStack {
@@ -37,17 +38,27 @@ struct DemoCropView: View {
               })
           )
           .rotation(rotation)
+          .adjustmentAngle(adjustmentAngle)
           .clipped()
 
           HStack {
-            Button("rotate") {
+            Button("0") {
+              self.rotation = .angle_0
+            }
+            Button("90") {
+              self.rotation = .angle_90
+            }
+            Button("180") {
               self.rotation = .angle_180
+            }
+            Button("270") {
+              self.rotation = .angle_270
             }
             Button("- 10") {
-              self.rotation = .angle_180
+              self.adjustmentAngle -= .degrees(10)
             }
             Button("+ 10") {
-              self.rotation = .angle_180
+              self.adjustmentAngle += .degrees(10)
             }
           }
         }
@@ -66,3 +77,19 @@ struct DemoCropView: View {
 #Preview {
   DemoCropView(editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal()))
 }
+
+#Preview {
+  Text("")
+    .onAppear {
+
+      let uiView = UIView(frame: .init(origin: .zero, size: .init(width: 100, height: 200)))
+      print(uiView.frame)
+
+      uiView.transform = .init(rotationAngle: Angle(degrees: 10).radians)
+      print(uiView.transform)
+
+      print(uiView.frame, uiView.bounds)
+    }
+}
+
+
