@@ -222,8 +222,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
               $0.frame,
               $0.layoutVersion
             )
-          }, .any(==)) { (frame, _) in
-       
+          }).do { (frame, _) in
+
             guard let crop = state.proposedCrop else {
               return
             }
@@ -264,7 +264,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
           }
           
           if self.isAutoApplyEditingStackEnabled {
-            state.ifChanged(\.proposedCrop) { crop in
+            state.ifChanged(\.proposedCrop).do { crop in
               guard let crop = crop else {
                 return
               }
@@ -272,7 +272,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
             }
           }
           
-          state.ifChanged(\.isGuideInteractionEnabled) { value in
+          state.ifChanged(\.isGuideInteractionEnabled).do { value in
             self.guideView.isUserInteractionEnabled = value
           }
         }
@@ -287,7 +287,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
                                              
           if let loaded = state.mapIfPresent(\.loadedState) {
             
-            loaded.ifChanged(\.imageForCrop) { image in
+            loaded.ifChanged(\.imageForCrop).do { image in
               self.setImage(image)
             }
             
@@ -298,7 +298,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
                         
           }
           
-          state.ifChanged(\.isLoading) { isLoading in
+          state.ifChanged(\.isLoading).do { isLoading in
             self.updateLoadingState(displays: isLoading)
           }
                               

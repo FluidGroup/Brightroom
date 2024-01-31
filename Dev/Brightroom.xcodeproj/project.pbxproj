@@ -1857,7 +1857,6 @@
 				4B487E6A28EECC480026A8CF /* XCRemoteSwiftPackageReference "GlossButtonNode" */,
 				4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */,
 				4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */,
-				4B0A60AD2B6A2873005B7D1F /* XCRemoteSwiftPackageReference "swiftui-ring-slider" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -2861,14 +2860,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4B0A60AD2B6A2873005B7D1F /* XCRemoteSwiftPackageReference "swiftui-ring-slider" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FluidGroup/swiftui-ring-slider.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.0;
-			};
-		};
 		4B487E6A28EECC480026A8CF /* XCRemoteSwiftPackageReference "GlossButtonNode" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/FluidGroup/GlossButtonNode";

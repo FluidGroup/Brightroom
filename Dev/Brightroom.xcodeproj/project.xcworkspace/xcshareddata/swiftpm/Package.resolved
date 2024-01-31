@@ -82,24 +82,6 @@
       }
     },
     {
-      "identity" : "swiftui-introspect",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/siteline/swiftui-introspect",
-      "state" : {
-        "revision" : "18e965f867e37a558ad13c12d330dbe047099180",
-        "version" : "1.1.2"
-      }
-    },
-    {
-      "identity" : "swiftui-ring-slider",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FluidGroup/swiftui-ring-slider.git",
-      "state" : {
-        "revision" : "0777924597574505234f55c45f98659837adac25",
-        "version" : "0.1.0"
-      }
-    },
-    {
       "identity" : "texture",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/Texture.git",

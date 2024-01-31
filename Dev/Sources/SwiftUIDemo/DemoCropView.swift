@@ -12,33 +12,43 @@ import SwiftUI
 import UIKit
 
 struct DemoCropView: View {
+
   let editingStack: EditingStack
+
+  @State var rotation: EditingCrop.Rotation?
 
   var body: some View {
     VStack {
       ZStack {
         Color.black
           .ignoresSafeArea()
-        
-        SwiftUICropView(
-          editingStack: editingStack,
-          cropInsideOverlay: .init(
-            /**
-             Here is how to create a customized overlay view.
-             */
-            VStack {
-              Circle()
-                .foregroundColor(.white)
-                .frame(width: 50, height: 50, alignment: .center)
-            })
-        )
-        .clipped()
 
-        Button("rotate") {
-          if let state = editingStack.state.loadedState {
-            var c = state.currentEdit.crop
-            c.rotation = .angle_270
-            editingStack.crop(c)
+        VStack {
+          SwiftUICropView(
+            editingStack: editingStack,
+            cropInsideOverlay: .init(
+              /**
+               Here is how to create a customized overlay view.
+               */
+              VStack {
+                Circle()
+                  .foregroundColor(.white)
+                  .frame(width: 50, height: 50, alignment: .center)
+              })
+          )
+          .rotation(rotation)
+          .clipped()
+
+          HStack {
+            Button("rotate") {
+              self.rotation = .angle_180
+            }
+            Button("- 10") {
+              self.rotation = .angle_180
+            }
+            Button("+ 10") {
+              self.rotation = .angle_180
+            }
           }
         }
       }
@@ -51,4 +61,8 @@ struct DemoCropView: View {
       editingStack.start()
     }
   }
+}
+
+#Preview {
+  DemoCropView(editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal()))
 }
