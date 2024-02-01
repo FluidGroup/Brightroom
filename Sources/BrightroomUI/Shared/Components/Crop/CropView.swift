@@ -582,7 +582,7 @@ extension CropView {
           func _zoom() {
 
             scrollView.customZoom(
-              to: crop.cropExtent,
+              to: crop.zoomExtent(visibleSize: guideView.bounds.size),
               animated: false
             )
 
@@ -712,11 +712,12 @@ extension CropView {
     store.commit { state in
 
       let rect = guideView.convert(guideView.bounds, to: imageView)
+      let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
 
-      ////      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
       let preferredAspectRatio = state.preferredAspectRatio
       state.proposedCrop?.updateCropExtentNormalizing(
-        rect,
+        resolvedRect,
         respectingAspectRatio: preferredAspectRatio
       )
 
@@ -738,7 +739,6 @@ extension CropView {
     store.commit { state in
 
       let rect = guideView.convert(guideView.bounds, to: imageView)
-
       let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
 
      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
@@ -869,16 +869,21 @@ extension UIScrollView {
     targetContentOffset.x -= contentInset.left
     targetContentOffset.y -= contentInset.top
 
-    let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
+    if animated {
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
 
-    animator.addAnimations { [self] in
+      animator.addAnimations { [self] in
 
+        setZoomScale(targetScale, animated: false)
+        setContentOffset(targetContentOffset, animated: false)
+
+      }
+
+      animator.startAnimation()
+    } else {
       setZoomScale(targetScale, animated: false)
       setContentOffset(targetContentOffset, animated: false)
-
     }
-
-    animator.startAnimation()
 
     print("[Zoom] targetScale: \(targetScale), targetContentOffset: \(targetContentOffset)")
   }
