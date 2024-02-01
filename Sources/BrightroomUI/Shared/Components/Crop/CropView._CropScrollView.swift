@@ -40,10 +40,11 @@ extension CropView {
     
     private func initialize() {
       if #available(iOS 11.0, *) {
-        contentInsetAdjustmentBehavior = .never
+        contentInsetAdjustmentBehavior = .never        
       } else {
         // Fallback on earlier versions
       }
+      insetsLayoutMarginsFromSafeArea = false
       showsVerticalScrollIndicator = false
       showsHorizontalScrollIndicator = false
       bouncesZoom = true
@@ -54,5 +55,20 @@ extension CropView {
       scrollsToTop = false
     }
   }
-  
+
+  final class _ImageView: UIImageView {
+    
+    override var bounds: CGRect {
+      didSet {
+        print("bounds", bounds, self)
+      }
+    }
+
+    override var center: CGPoint {
+      didSet {
+        print("center", center, self)
+      }
+    }
+  }
+
 }

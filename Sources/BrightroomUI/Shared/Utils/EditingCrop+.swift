@@ -15,13 +15,15 @@ import BrightroomEngine
 
 extension EditingCrop {
   func scrollViewContentSize() -> CGSize {
-    imageSize
+    PixelAspectRatio(imageSize).size(byWidth: 1000)
   }
   
   func calculateZoomScale(scrollViewSize: CGSize) -> (min: CGFloat, max: CGFloat) {
-    let minXScale = scrollViewSize.width / imageSize.width
-    let minYScale = scrollViewSize.height / imageSize.height
     
+    let size = scrollViewContentSize()
+    let minXScale = scrollViewSize.width / size.width
+    let minYScale = scrollViewSize.height / size.height
+
     /**
      max meaning scale aspect fill
      */

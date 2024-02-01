@@ -86,11 +86,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
   /**
    An image view that displayed in the scroll view.
    */
-  private let imageView = UIImageView()
+  private let imageView = _ImageView()
   
   /**
    Internal scroll view
-   */
+   */  
   private let scrollView = _CropScrollView()
   
   /**
@@ -520,6 +520,7 @@ extension CropView {
     animatesRotation: Bool
   ) {
     func perform() {
+
       frame: do {
         let bounds = self.bounds.inset(by: contentInset)
 
@@ -544,7 +545,7 @@ extension CropView {
           guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
         }
 
-        let scrollViewFrame = CGRect(
+        let contentRect = CGRect(
           origin: .init(
             x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
             y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
@@ -552,47 +553,39 @@ extension CropView {
           size: size
         )
 
-        // step 1 - rotate in right angle
-        do {
+        let length = Swift.max(bounds.width, bounds.height) * 2
+        let frame = CGRect(origin: .zero, size: .init(width: length, height: length))
 
-          scrollView.transform = crop.rotation.transform
-          scrollView.frame = scrollViewFrame
-
-          scrollBackdropView.frame = scrollViewFrame
-          guideView.frame = scrollViewFrame
-
-        }
-
-        let guideFrame = guideView.convert(guideView.bounds, to: scrollView)
-
-        // step 2 - rotate in adjustment angle
-        do {
-          let frame = scrollView.frame
-          let rotatedFrame = frame.applying(.init(rotationAngle: crop.adjustmentAngle.radians))
-          scrollView.frame = rotatedFrame
-          scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
-        }
-
-        // step 3 - lay the scroll view out on thne center.
+        scrollView.bounds.size = frame.size
         scrollView.center = .init(x: bounds.midX, y: bounds.midY)
 
-        scrollView.contentInset = .zero
+        scrollBackdropView.bounds.size = frame.size
+        scrollBackdropView.center = .init(x: bounds.midX, y: bounds.midY)
+
+        guideView.frame = contentRect
+
+        updateScrollViewInset(crop: crop)
+
+        scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
 
         // zoom
         do {
 
-          let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
+          let (min, max) = crop.calculateZoomScale(scrollViewSize: guideView.bounds.size)
 
           scrollView.minimumZoomScale = min
           scrollView.maximumZoomScale = max
+//          scrollView.zoomScale = min
+
+          imageView.frame.origin = .zero
 
           func _zoom() {
-            scrollView.zoom(
-              to: crop.cropExtent
-//                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
-              ,
-              animated: false
-            )
+//            scrollView.zoom(
+//              to: crop.cropExtent
+////                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
+//              ,
+//              animated: false
+//            )
           }
 
           _zoom()
@@ -653,10 +646,12 @@ extension CropView {
     debounce.on { /* for debounce */ }
   }
 
-  @inline(__always)
-  private func didChangeGuideViewWithDelay() {
-            
-    func applyCropRotation(rotation: EditingCrop.Rotation, insets: UIEdgeInsets) -> UIEdgeInsets {
+  private func updateScrollViewInset(crop: EditingCrop) {
+
+    func applyCropRotation(
+      rotation: EditingCrop.Rotation,
+      insets: UIEdgeInsets
+    ) -> UIEdgeInsets {
       switch rotation {
       case .angle_0:
         return insets
@@ -683,47 +678,61 @@ extension CropView {
         )
       }
     }
-    
-    guard let currentProposedCrop = store.state.proposedCrop else {
-      return
-    }
-             
-    updateContentInset: do {
-      let rect = guideView.convert(guideView.bounds, to: scrollBackdropView)
+
+    // update content inset
+    do {
+
+      let rect = guideView
+        .convert(
+          guideView.bounds.rotated(crop.adjustmentAngle.radians),
+          to: scrollBackdropView
+        )
 
       let bounds = scrollBackdropView.bounds
+
       let insets = UIEdgeInsets.init(
         top: rect.minY,
         left: rect.minX,
         bottom: bounds.maxY - rect.maxY,
         right: bounds.maxX - rect.maxX
       )
-            
-      let resolvedInsets = applyCropRotation(rotation: currentProposedCrop.rotation, insets: insets)
-                  
+
+      let resolvedInsets = applyCropRotation(rotation: crop.rotation, insets: insets)
+
       scrollView.contentInset = resolvedInsets
     }
-    
-//    EditorLog.debug("[CropView] visbleRect : \(visibleRect), guideViewFrame: \(guideView.frame)")
-                          
-    store.commit { state in
+  }
 
-      let currentTransform = scrollView.transform
-      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
-      defer {
-        scrollView.transform = currentTransform
-      }
+  @inline(__always)
+  private func didChangeGuideViewWithDelay() {
 
-      let visibleRect = guideView.convert(guideView.bounds, to: imageView)
-      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = state.preferredAspectRatio
-      state.proposedCrop?.updateCropExtentNormalizing(
-        visibleRect,
-        respectingAspectRatio: preferredAspectRatio
-      )
+    guard let currentProposedCrop = store.state.proposedCrop else {
+      return
     }
-        
-    /// Triggers layout update later
+
+    updateScrollViewInset(crop: currentProposedCrop)
+
+//
+////    EditorLog.debug("[CropView] visbleRect : \(visibleRect), guideViewFrame: \(guideView.frame)")
+//                          
+//    store.commit { state in
+//
+//      let currentTransform = scrollView.transform
+//      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
+//      defer {
+//        scrollView.transform = currentTransform
+//      }
+//
+//      let visibleRect = guideView.convert(guideView.bounds, to: imageView)
+//      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+//      let preferredAspectRatio = state.preferredAspectRatio
+//      state.proposedCrop?.updateCropExtentNormalizing(
+//        visibleRect,
+//        respectingAspectRatio: preferredAspectRatio
+//      )
+//    }
+//        
+//    /// Triggers layout update later
     debounce.on { [weak self] in
 
       guard let self = self else { return }
@@ -736,21 +745,21 @@ extension CropView {
 
   @inline(__always)
   private func didChangeScrollView() {
-    store.commit { state in
-      let currentTransform = scrollView.transform
-      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
-      defer {
-        scrollView.transform = currentTransform
-      }
-      let rect = guideView.convert(guideView.bounds, to: imageView)
-
-//      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = state.preferredAspectRatio
-      state.proposedCrop?.updateCropExtentNormalizing(
-        rect,
-        respectingAspectRatio: preferredAspectRatio
-      )
-    }
+//    store.commit { state in
+//      let currentTransform = scrollView.transform
+//      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
+//      defer {
+//        scrollView.transform = currentTransform
+//      }
+//      let rect = guideView.convert(guideView.bounds, to: imageView)
+//
+////      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+//      let preferredAspectRatio = state.preferredAspectRatio
+//      state.proposedCrop?.updateCropExtentNormalizing(
+//        rect,
+//        respectingAspectRatio: preferredAspectRatio
+//      )
+//    }
   }
 
   // MARK: UIScrollViewDelegate
@@ -761,35 +770,37 @@ extension CropView {
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
 
+    print(scrollView.contentOffset)
+
     // adjustFrameToCenterOnZooming
-    do {
-      var frameToCenter = imageView.frame
+//    do {
+//      var frameToCenter = imageView.frame
+//
+//      // center horizontally
+//      if frameToCenter.size.width < scrollView.bounds.width {
+//        frameToCenter.origin.x = (scrollView.bounds.width - frameToCenter.size.width) / 2
+//      } else {
+//        frameToCenter.origin.x = 0
+//      }
+//
+//      // center vertically
+//      if frameToCenter.size.height < scrollView.bounds.height {
+//        frameToCenter.origin.y = (scrollView.bounds.height - frameToCenter.size.height) / 2
+//      } else {
+//        frameToCenter.origin.y = 0
+//      }
+//
+//      imageView.frame = frameToCenter
+//    }
 
-      // center horizontally
-      if frameToCenter.size.width < scrollView.bounds.width {
-        frameToCenter.origin.x = (scrollView.bounds.width - frameToCenter.size.width) / 2
-      } else {
-        frameToCenter.origin.x = 0
-      }
-
-      // center vertically
-      if frameToCenter.size.height < scrollView.bounds.height {
-        frameToCenter.origin.y = (scrollView.bounds.height - frameToCenter.size.height) / 2
-      } else {
-        frameToCenter.origin.y = 0
-      }
-
-      imageView.frame = frameToCenter
-    }
-
-    debounce.on { [weak self] in
-      
-      guard let self = self else { return }
-      
-      self.store.commit {
-        $0.layoutVersion += 1
-      }
-    }
+//    debounce.on { [weak self] in
+//      
+//      guard let self = self else { return }
+//      
+//      self.store.commit {
+//        $0.layoutVersion += 1
+//      }
+//    }
   }
   
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -800,9 +811,9 @@ extension CropView {
 
       guard self.scrollView.isTracking == false else { return }
       
-      self.store.commit {
-        $0.layoutVersion += 1
-      }
+//      self.store.commit {
+//        $0.layoutVersion += 1
+//      }
     }
   }
 
@@ -834,4 +845,20 @@ extension CropView {
     didChangeScrollView()
     guideView.didEndScrollViewAdjustment()
   }
+}
+
+extension CGRect {
+
+  fileprivate func rotated(_ radians: Double) -> CGRect {
+
+    let rotated = self.applying(.init(rotationAngle: radians))
+
+    return .init(
+      x: self.minX - (rotated.width - self.width) / 2,
+      y: self.minY - (rotated.height - self.height) / 2,
+      width: rotated.width,
+      height: rotated.height
+    )
+  }
+
 }

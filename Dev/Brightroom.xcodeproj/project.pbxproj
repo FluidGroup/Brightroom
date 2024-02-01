@@ -46,6 +46,7 @@
 		4B58E830260F0027004A834F /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4B58E831260F0027004A834F /* orientation_up.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* orientation_up.HEIC */; };
 		4B58E889260F0DEA004A834F /* DemoPreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B58E888260F0DEA004A834F /* DemoPreviewViewController.swift */; };
+		4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */; };
 		4B600B23216B7C9C001E1456 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B600B22216B7C9C001E1456 /* AppDelegate.swift */; };
 		4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */; };
@@ -590,6 +591,7 @@
 		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B524FE229B8F6A600C1A416 /* Brightroom */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Brightroom; path = ..; sourceTree = "<group>"; };
 		4B58E888260F0DEA004A834F /* DemoPreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoPreviewViewController.swift; sourceTree = "<group>"; };
+		4B5E72BA2B6B760D00DE7A2A /* Reveal-SDK */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "Reveal-SDK"; path = "../submodules/muukii/Reveal-SDK"; sourceTree = "<group>"; };
 		4B600B20216B7C9C001E1456 /* Demo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Demo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B600B22216B7C9C001E1456 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4B600B29216B7C9E001E1456 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -1046,6 +1048,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
+				4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1159,6 +1162,7 @@
 		4B600AF3216B7A94001E1456 = {
 			isa = PBXGroup;
 			children = (
+				4B5E72BA2B6B760D00DE7A2A /* Reveal-SDK */,
 				4B524FE129B8F6A600C1A416 /* Packages */,
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
 				4B6A5F5B2179D43A004D68DC /* Sources */,
@@ -1758,6 +1762,7 @@
 			packageProductDependencies = (
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
+				4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -2938,6 +2943,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */;
 			productName = TextureSwiftSupport;
+		};
+		4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "Reveal-SDK";
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
