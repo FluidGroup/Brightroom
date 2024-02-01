@@ -571,7 +571,9 @@ extension CropView {
         do {
 
           let (min, max) = crop.calculateZoomScale(
-            visibleSize: guideView.bounds.rotated(crop.adjustmentAngle.radians).size
+            visibleSize: guideView.bounds
+              .applying(crop.rotation.transform)
+              .rotated(crop.adjustmentAngle.radians).size
           )
 
           scrollView.minimumZoomScale = min
