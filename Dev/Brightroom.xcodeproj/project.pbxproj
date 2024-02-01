@@ -51,6 +51,8 @@
 		4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B600B2D216B7C9E001E1456 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B2B216B7C9E001E1456 /* LaunchScreen.storyboard */; };
 		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
+		4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */; };
+		4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513CA2B6BEE2100A4743E /* SwiftUISupport */; };
 		4B7EE66C25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B8B910726079256009BF084 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8B910626079256009BF084 /* Components.swift */; };
@@ -1047,7 +1049,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
+				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
 				4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
@@ -1763,6 +1767,8 @@
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
 				4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */,
+				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
+				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -1865,6 +1871,8 @@
 				4B487E6A28EECC480026A8CF /* XCRemoteSwiftPackageReference "GlossButtonNode" */,
 				4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */,
 				4B487E7028EECCB10026A8CF /* XCRemoteSwiftPackageReference "TextureSwiftSupport" */,
+				4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */,
+				4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -2893,6 +2901,22 @@
 				kind = branch;
 			};
 		};
+		4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidGroup/swiftui-hosting.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+		4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidGroup/swiftui-support.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.5.0;
+			};
+		};
 		A6ABB4FA260AA8FB006B46ED /* XCRemoteSwiftPackageReference "TransitionPatch" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/muukii/TransitionPatch.git";
@@ -2947,6 +2971,16 @@
 		4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = "Reveal-SDK";
+		};
+		4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */;
+			productName = SwiftUIHosting;
+		};
+		4B7513CA2B6BEE2100A4743E /* SwiftUISupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */;
+			productName = SwiftUISupport;
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;

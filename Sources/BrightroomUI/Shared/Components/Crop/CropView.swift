@@ -238,19 +238,19 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
                 self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
 
-//                let scrollView = self.scrollView
+                let scrollView = self.scrollView
 
-//                // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
-//                UIView.performWithoutAnimation {
-//                  let currentZoomScale = scrollView.zoomScale
-//                  let contentSize = crop.scrollViewContentSize()
-//                  if scrollView.contentSize != contentSize {
-//                    scrollView.contentInset = .zero
-//                    scrollView.zoomScale = 1
-//                    scrollView.contentSize = contentSize
-//                    scrollView.zoomScale = currentZoomScale
-//                  }
-//                }
+                // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+                UIView.performWithoutAnimation {
+                  let currentZoomScale = scrollView.zoomScale
+                  let contentSize = crop.scrollViewContentSize()
+                  if scrollView.contentSize != contentSize {
+                    scrollView.contentInset = .zero
+                    scrollView.zoomScale = 1
+                    scrollView.contentSize = contentSize
+                    scrollView.zoomScale = currentZoomScale
+                  }
+                }
               }
             }            
                                   
@@ -553,7 +553,7 @@ extension CropView {
           size: size
         )
 
-        let length = Swift.max(bounds.width, bounds.height) * 2
+        let length: CGFloat = 1600
         let frame = CGRect(origin: .zero, size: .init(width: length, height: length))
 
         scrollView.bounds.size = frame.size
@@ -591,20 +591,40 @@ extension CropView {
 //            )
 
             let inset = scrollView.contentInset
+            let scale: CGFloat = 5
 
             print(crop.cropExtent)
 
-            scrollView.zoom(
-              to: .init(
-                x: -inset.left + crop.cropExtent.minX,
-                y: -inset.top + crop.cropExtent.minY,
-                width: crop.cropExtent.width,
-                height: crop.cropExtent.height
-              )
-              //                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
-              ,
+//            scrollView.customZoom(
+//              to: .init(
+//                x: -inset.left,
+//                y: -inset.top,
+//                width: 353 * scale,
+//                height: 202 * scale
+//              )
+//              ,
+//              animated: false
+//            )
+
+            scrollView.customZoom(
+              to: crop.cropExtent,
               animated: false
             )
+
+
+//            scrollView.zoom(
+//              to: .init(
+//                x: -inset.left + crop.cropExtent.minX,
+//                y: -inset.top + crop.cropExtent.minY,
+//                width: crop.cropExtent.width * 4,
+//                height: crop.cropExtent.height * 4
+////                width: 2000,
+////                height: 1000
+//              )
+//              //                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
+//              ,
+//              animated: false
+//            )
 
           }
 
@@ -762,14 +782,12 @@ extension CropView {
 
       let rect = guideView.convert(guideView.bounds, to: imageView)
 
-      print(rect)
-
-      state.proposedCrop?.makeCropExtent(visibleSize: guideView.bounds.size, rect: rect)
+      let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
 
 ////      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
       let preferredAspectRatio = state.preferredAspectRatio
       state.proposedCrop?.updateCropExtentNormalizing(
-        rect,
+        resolvedRect,
         respectingAspectRatio: preferredAspectRatio
       )
     }
@@ -815,9 +833,6 @@ extension CropView {
   }
   
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-
-//    print(guideView.convert(guideView.bounds, to: imageView))
-//    print(guideView.convert(guideView.bounds, to: scrollView))
 
     debounce.on { [weak self] in
       
@@ -875,4 +890,28 @@ extension CGRect {
     )
   }
 
+}
+
+extension UIScrollView {
+
+  fileprivate func customZoom(to rect: CGRect, animated: Bool) {
+
+    var rect = rect
+
+    rect.origin.x += contentInset.left
+    rect.origin.y += contentInset.top
+    rect.size.width += contentInset.left + contentInset.right
+    rect.size.height += contentInset.top + contentInset.bottom
+
+    print(rect)
+
+    rect = bounds
+//    rect.origin.x -= contentInset.left
+//    rect.origin.y -= contentInset.top
+    rect.size.width = 26000
+    rect.size.height = 1
+
+    self.zoom(to: rect, animated: animated)
+
+  }
 }
