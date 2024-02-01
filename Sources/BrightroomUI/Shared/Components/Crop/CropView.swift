@@ -563,6 +563,8 @@ extension CropView {
 
         }
 
+        let guideFrame = guideView.convert(guideView.bounds, to: scrollView)
+
         // step 2 - rotate in adjustment angle
         do {
           let frame = scrollView.frame
@@ -574,23 +576,36 @@ extension CropView {
         // step 3 - lay the scroll view out on thne center.
         scrollView.center = .init(x: bounds.midX, y: bounds.midY)
 
+        scrollView.contentInset = .zero
+
+        // zoom
+        do {
+
+          let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
+
+          scrollView.minimumZoomScale = min
+          scrollView.maximumZoomScale = max
+
+          func _zoom() {
+            scrollView.zoom(
+              to: crop.cropExtent
+//                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
+              ,
+              animated: false
+            )
+          }
+
+          _zoom()
+          // WORKAROUND:
+          // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
+          _zoom()
+
+        }
       }
 
-      zoom: do {
-        
-        let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
-        
-        scrollView.minimumZoomScale = min
-        scrollView.maximumZoomScale = max
-        
-        scrollView.contentInset = .zero
-        scrollView.zoom(to: crop.cropExtent, animated: false)
-        // WORKAROUND:
-        // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
-        scrollView.zoom(to: crop.cropExtent, animated: false)
-      }
+
     }
-        
+
     if animated {
       layoutIfNeeded()
 
@@ -634,6 +649,7 @@ extension CropView {
 
   @inline(__always)
   private func willChangeGuideView() {
+    // flush scheduled debouncing
     debounce.on { /* for debounce */ }
   }
 
@@ -671,11 +687,9 @@ extension CropView {
     guard let currentProposedCrop = store.state.proposedCrop else {
       return
     }
-    
-    let visibleRect = guideView.convert(guideView.bounds, to: imageView)
              
     updateContentInset: do {
-      let rect = self.guideView.convert(self.guideView.bounds, to: scrollBackdropView)
+      let rect = guideView.convert(guideView.bounds, to: scrollBackdropView)
 
       let bounds = scrollBackdropView.bounds
       let insets = UIEdgeInsets.init(
@@ -690,12 +704,20 @@ extension CropView {
       scrollView.contentInset = resolvedInsets
     }
     
-    EditorLog.debug("[CropView] visbleRect : \(visibleRect), guideViewFrame: \(guideView.frame)")
+//    EditorLog.debug("[CropView] visbleRect : \(visibleRect), guideViewFrame: \(guideView.frame)")
                           
-    store.commit {      
+    store.commit { state in
+
+      let currentTransform = scrollView.transform
+      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
+      defer {
+        scrollView.transform = currentTransform
+      }
+
+      let visibleRect = guideView.convert(guideView.bounds, to: imageView)
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = $0.preferredAspectRatio
-      $0.proposedCrop?.updateCropExtentNormalizing(
+      let preferredAspectRatio = state.preferredAspectRatio
+      state.proposedCrop?.updateCropExtentNormalizing(
         visibleRect,
         respectingAspectRatio: preferredAspectRatio
       )
@@ -714,11 +736,17 @@ extension CropView {
 
   @inline(__always)
   private func didChangeScrollView() {
-    store.commit {
+    store.commit { state in
+      let currentTransform = scrollView.transform
+      scrollView.transform = state.proposedCrop?.rotation.transform ?? .identity
+      defer {
+        scrollView.transform = currentTransform
+      }
       let rect = guideView.convert(guideView.bounds, to: imageView)
-      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = $0.preferredAspectRatio
-      $0.proposedCrop?.updateCropExtentNormalizing(
+
+//      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+      let preferredAspectRatio = state.preferredAspectRatio
+      state.proposedCrop?.updateCropExtentNormalizing(
         rect,
         respectingAspectRatio: preferredAspectRatio
       )
@@ -732,7 +760,9 @@ extension CropView {
   }
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
-    func adjustFrameToCenterOnZooming() {
+
+    // adjustFrameToCenterOnZooming
+    do {
       var frameToCenter = imageView.frame
 
       // center horizontally
@@ -752,8 +782,6 @@ extension CropView {
       imageView.frame = frameToCenter
     }
 
-    adjustFrameToCenterOnZooming()
-    
     debounce.on { [weak self] in
       
       guard let self = self else { return }
