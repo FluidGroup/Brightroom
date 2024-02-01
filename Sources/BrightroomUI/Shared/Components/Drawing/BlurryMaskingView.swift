@@ -75,7 +75,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
         return nil
       }
       
-      let (min, _) = proposedCrop.calculateZoomScale(scrollViewSize: size)
+      let (min, _) = proposedCrop.calculateZoomScale(visibleSize: size)
       
       switch brushSize {
       case let .point(points):
@@ -386,7 +386,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
       
       zoom: do {
-        let (min, max) = crop.calculateZoomScale(scrollViewSize: scrollView.bounds.size)
+        let (min, max) = crop.calculateZoomScale(visibleSize: scrollView.bounds.size)
         
         scrollView.minimumZoomScale = min
         scrollView.maximumZoomScale = max
