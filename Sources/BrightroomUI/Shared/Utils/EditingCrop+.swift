@@ -15,8 +15,8 @@ import BrightroomEngine
 
 extension EditingCrop {
   func scrollViewContentSize() -> CGSize {
-//    imageSize
-    PixelAspectRatio(imageSize).size(byWidth: 1000)
+    imageSize
+//    PixelAspectRatio(imageSize).size(byWidth: 1000)
   }
   
   func calculateZoomScale(visibleSize: CGSize) -> (min: CGFloat, max: CGFloat) {

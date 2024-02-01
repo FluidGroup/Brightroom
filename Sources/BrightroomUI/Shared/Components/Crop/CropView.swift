@@ -581,56 +581,13 @@ extension CropView {
 
           func _zoom() {
 
-//            print("zoom🏎️", crop.zoomExtent(visibleSize: guideView.bounds.size))
-
-//            scrollView.zoom(
-//              to: crop.zoomExtent(visibleSize: guideView.bounds.size)
-////                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
-//              ,
-//              animated: false
-//            )
-
-            let inset = scrollView.contentInset
-            let scale: CGFloat = 5
-
-            print(crop.cropExtent)
-
-//            scrollView.customZoom(
-//              to: .init(
-//                x: -inset.left,
-//                y: -inset.top,
-//                width: 353 * scale,
-//                height: 202 * scale
-//              )
-//              ,
-//              animated: false
-//            )
-
             scrollView.customZoom(
               to: crop.cropExtent,
               animated: false
             )
 
-
-//            scrollView.zoom(
-//              to: .init(
-//                x: -inset.left + crop.cropExtent.minX,
-//                y: -inset.top + crop.cropExtent.minY,
-//                width: crop.cropExtent.width * 4,
-//                height: crop.cropExtent.height * 4
-////                width: 2000,
-////                height: 1000
-//              )
-//              //                .applying(.init(rotationAngle: crop.adjustmentAngle.radians))
-//              ,
-//              animated: false
-//            )
-
           }
 
-          _zoom()
-          // WORKAROUND:
-          // Fixes `zoom to rect` does not apply the correct state when restoring the state from first-time displaying view.
           _zoom()
 
         }
@@ -784,7 +741,7 @@ extension CropView {
 
       let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
 
-////      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+     // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
       let preferredAspectRatio = state.preferredAspectRatio
       state.proposedCrop?.updateCropExtentNormalizing(
         resolvedRect,
@@ -896,22 +853,34 @@ extension UIScrollView {
 
   fileprivate func customZoom(to rect: CGRect, animated: Bool) {
 
-    var rect = rect
+    let contentSize = rect.size
 
-    rect.origin.x += contentInset.left
-    rect.origin.y += contentInset.top
-    rect.size.width += contentInset.left + contentInset.right
-    rect.size.height += contentInset.top + contentInset.bottom
+    let boundSize = CGSize(
+      width: self.bounds.width - (contentInset.left + contentInset.right),
+      height: self.bounds.height - (contentInset.top + contentInset.bottom)
+    )
 
-    print(rect)
+    let minXScale = boundSize.width / contentSize.width
+    let minYScale = boundSize.height / contentSize.height
 
-    rect = bounds
-//    rect.origin.x -= contentInset.left
-//    rect.origin.y -= contentInset.top
-    rect.size.width = 26000
-    rect.size.height = 1
+    let targetScale = min(minXScale, minYScale)
 
-    self.zoom(to: rect, animated: animated)
+    var targetContentOffset = rect.applying(.init(scaleX: targetScale, y: targetScale)).origin
+    targetContentOffset.x -= contentInset.left
+    targetContentOffset.y -= contentInset.top
 
+    let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
+
+    animator.addAnimations { [self] in
+
+      setZoomScale(targetScale, animated: false)
+      setContentOffset(targetContentOffset, animated: false)
+
+    }
+
+    animator.startAnimation()
+
+    print("[Zoom] targetScale: \(targetScale), targetContentOffset: \(targetContentOffset)")
   }
+
 }
