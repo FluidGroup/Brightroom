@@ -110,6 +110,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     insetOfGuideFlexibility: contentInset
   )
 
+  private let guideBackdropView = UIView()
+
   private var subscriptions = Set<AnyCancellable>()
 
   /// A throttling timer to apply guide changed event.
@@ -158,13 +160,15 @@ public final class CropView: UIView, UIScrollViewDelegate {
     self.store = .init(initialState: .init(), logger: nil)
 
     super.init(frame: .zero)
-
+    
+    guideBackdropView.isUserInteractionEnabled = false
     scrollBackdropView.accessibilityIdentifier = "scrollBackdropView"
 
     clipsToBounds = false
 
     addSubview(scrollBackdropView)
     addSubview(scrollView)
+    addSubview(guideBackdropView)
     addSubview(guideView)
 
     imageView.isUserInteractionEnabled = true
@@ -564,6 +568,9 @@ extension CropView {
         scrollBackdropView.bounds.size = frame.size
         scrollBackdropView.center = .init(x: bounds.midX, y: bounds.midY)
 
+        guideBackdropView.transform = .identity
+        guideBackdropView.frame = contentRect
+
         guideView.frame = contentRect
 
         scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
@@ -737,21 +744,39 @@ extension CropView {
 
       // remove rotation while converting rect
       let current = scrollView.transform
-      scrollView.transform = scrollView.transform.rotated(by: -crop.adjustmentAngle.radians)
+
+      // rotating support
+      let croppingRect = guideView.convert(guideView.bounds, to: guideBackdropView)
+
+      // offsets guide view rect in maximum size
+      // for case of adjusted guide view by interaction
+      let offsetX = croppingRect.midX - guideBackdropView.bounds.midX
+      let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
+
+      // move focusing area to center
+      scrollView.transform = CGAffineTransform(rotationAngle: crop.adjustmentAngle.radians)
+        .concatenating(.init(translationX: -offsetX, y: -offsetY))
+        .concatenating(.init(rotationAngle: -crop.adjustmentAngle.radians))
+
+      // TODO: Find calculation way withoug using convert rect
+      // To work correctly, ignoring transform temporarily.
+
+      // move the guide view to center for convert-rect.
+      let currentGuideViewCenter = guideView.center
+      guideView.center = guideBackdropView.center
 
       let guideRectInImageView = guideView.convert(guideView.bounds, to: imageView)
+
+      // restore guide view center same as displaying
+      guideView.center = currentGuideViewCenter
 
       // restore rotation
       scrollView.transform = current
 
-      let resolvedRect =  crop.makeCropExtent(
+      // make crop extent for image
+      // converts rectangle for display into image's geometry.
+      let resolvedRect = crop.makeCropExtent(
         rect: guideRectInImageView
-      )
-
-      print(
-        crop.makeCropExtent(
-          rect: guideRectInImageView
-        )
       )
 
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
