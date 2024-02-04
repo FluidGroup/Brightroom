@@ -263,7 +263,7 @@ public final class PhotosCropViewController: UIViewController {
         
         self.setUpLoadedUI(state: state.primitive)
                       
-        state.ifChanged(\.hasUncommitedChanges) { hasChanges in
+        state.ifChanged(\.hasUncommitedChanges).do { hasChanges in
           self.resetButton.isHidden = !hasChanges
         }
         
@@ -341,13 +341,8 @@ public final class PhotosCropViewController: UIViewController {
     cropView.store.sinkState { [weak self] (state) in
       
       guard let self = self else { return }
-      
-      state.ifChanged(\.proposedCrop?.rotation) { rotation in
-        guard let rotation = rotation else { return }        
-        self.aspectRatioControl?.setRotation(rotation)
-      }
-      
-      state.ifChanged(\.preferredAspectRatio) { ratio in
+
+      state.ifChanged(\.preferredAspectRatio).do { ratio in
         self.aspectRatioControl?.setSelected(ratio)
       }
       
@@ -360,7 +355,7 @@ public final class PhotosCropViewController: UIViewController {
     
     let options = state.map(\.options)
     
-    options.ifChanged(\.aspectRatioOptions) { value in
+    options.ifChanged(\.aspectRatioOptions).do { value in
       switch value {
       case .fixed(let aspectRatio):
         aspectRatioButton.alpha = 0
@@ -371,7 +366,7 @@ public final class PhotosCropViewController: UIViewController {
       }
     }
     
-    state.ifChanged(\.isSelectingAspectRatio) { value in
+    state.ifChanged(\.isSelectingAspectRatio).do { value in
       UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) { [self] in
         if value {
           aspectRatioControl?.alpha = 1
@@ -390,9 +385,16 @@ public final class PhotosCropViewController: UIViewController {
     guard let proposedCrop = cropView.store.state.proposedCrop else {
       return
     }
-    
+
     let rotation = proposedCrop.rotation.next()
     cropView.setRotation(rotation)
+
+    if let ratio = cropView.store.state.preferredAspectRatio {
+      cropView.setCroppingAspectRatio(ratio.swapped())
+    } else {
+      // CropView update automatically
+    }
+
   }
   
   @objc private func handleAspectRatioButton() {

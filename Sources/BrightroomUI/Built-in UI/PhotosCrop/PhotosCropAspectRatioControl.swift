@@ -59,6 +59,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
     
     /**
+     A rectangle whose width is longer than its height
      +---------------+
      |               |
      |               |
@@ -76,8 +77,16 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     let originalAspectRatio: PixelAspectRatio
     let originalDirection: Direction
     
-    var selectedAspectRatio: PixelAspectRatio?
-    
+    var selectedAspectRatio: PixelAspectRatio? {
+      didSet {
+        guard oldValue != selectedAspectRatio else { return }
+
+        if let selectedAspectRatio {
+          direction = selectedAspectRatio.height > selectedAspectRatio.width ? .vertical : .horizontal
+        }
+      }
+    }
+
     var direction: Direction {
       didSet {
         if let selectedAspectRatio = selectedAspectRatio {
@@ -87,8 +96,6 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
         }
       }
     }
-    
-    var rotation: EditingCrop.Rotation = .angle_0
     
     var canSelectDirection: Bool {
       guard let selectedAspectRatio = selectedAspectRatio else {
@@ -197,23 +204,13 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     
     horizontalButton.onTap { [unowned self] in
       store.commit {
-        switch $0.rotation {
-        case .angle_0, .angle_180:
-          $0.direction = .horizontal
-        case .angle_90, .angle_270:
-          $0.direction = .vertical
-        }
+        $0.direction = .horizontal
       }
     }
     
     verticalButton.onTap { [unowned self] in
       store.commit {
-        switch $0.rotation {
-        case .angle_0, .angle_180:
-          $0.direction = .vertical
-        case .angle_90, .angle_270:
-          $0.direction = .horizontal
-        }
+        $0.direction = .vertical
       }
     }
     
@@ -286,8 +283,8 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.selectedAspectRatio) { selected in
-        
+      state.ifChanged(\.selectedAspectRatio).do { selected in
+
         guard let selected = selected else {
           // Freeform
           
@@ -316,25 +313,16 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
         
       }
       
-      state.ifChanged(\.canSelectDirection) { canSelectDirection in
-        
+      state.ifChanged(\.canSelectDirection).do { canSelectDirection in
+
         self.horizontalButton.isEnabled = canSelectDirection
         self.verticalButton.isEnabled = canSelectDirection
       }
             
-      state.ifChanged(\.direction, \.rotation) { direction, rotation in
-        
-        var d = direction
-                        
-        switch rotation {
-        case .angle_0, .angle_180:
-          break
-        case .angle_90, .angle_270:
-          d.swap()
-        }
-        
+      state.ifChanged(\.direction).do { direction in
+
         /// Changes display according to image's rectangle direction.
-        switch d {
+        switch direction {
         case .horizontal:
           
           self.horizontalButton.isSelected = true
@@ -353,9 +341,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
             buttons[ratioValue(from: ratio)]?.setTitle("\(Int(ratio.height)):\(Int(ratio.width))", for: .normal)
           }
         }
-        
-        
-      
+
       }
     }
     .store(in: &subscriptions)
@@ -379,18 +365,6 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
   }
   
-  func setRotation(_ rotation: EditingCrop.Rotation) {
-    
-    isSupressingHandlers = true
-    defer {
-      isSupressingHandlers = false
-    }
-    
-    store.commit {
-      $0.rotation = rotation
-    }
-    
-  }
 }
 
 private final class AspectRatioButton: UIButton {

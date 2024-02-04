@@ -262,7 +262,7 @@ extension CGImage {
   func rotated(rotation: EditingCrop.Rotation, flipping: Flipping? = nil)
     throws -> CGImage
   {
-    try rotated(angle: -rotation.angle, flipping: flipping)
+    try rotated(angle: -rotation.angle.radians, flipping: flipping)
   }
 
 }
