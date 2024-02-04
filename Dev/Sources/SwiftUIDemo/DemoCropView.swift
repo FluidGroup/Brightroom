@@ -79,37 +79,67 @@ struct DemoCropView: View {
         }
       }
       Button("Done") {
-        let image = try! editingStack.makeRenderer().render().swiftUIImage
-        self.resultImage = .init(image: image)
+        let image = try! editingStack.makeRenderer().render().cgImage
+        self.resultImage = .init(cgImage: image)
       }
     }
     .onAppear {
       editingStack.start()
     }
     .sheet(item: $resultImage) {
-      RenderedResultView(image: $0.image)
+      RenderedResultView(result: $0)
     }
   }
 }
 
 struct ResultImage: Identifiable {
   let id: String
+  let cgImage: CGImage
   let image: Image
 
-  init(image: Image) {
+  init(cgImage: CGImage) {
     self.id = UUID().uuidString
-    self.image = image
+    self.cgImage = cgImage
+    self.image = .init(decorative: cgImage, scale: 1, orientation: .up)
   }
 }
 
 struct RenderedResultView: View {
 
-  let image: Image
+  let result: ResultImage
 
   var body: some View {
-    image
-      .resizable()
-      .aspectRatio(contentMode: .fit)
+    VStack {
+      result.image
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .padding()
+
+      Text(Self.makeMetadataString(image: result.cgImage))
+        .foregroundStyle(.secondary)
+        .font(.caption)
+    }
+  }
+
+  static func makeMetadataString(image: CGImage) -> String {
+
+    //  let formatter = ByteCountFormatter()
+    //  formatter.countStyle = .file
+    //
+    //  let jpegSize = formatter.string(
+    //    fromByteCount: Int64(image.jpegData(compressionQuality: 1)!.count)
+    //  )
+    //
+    let cgImage = image
+
+    let meta = """
+    size: \(image.width), \(cgImage.height)
+    colorSpace: \(cgImage.colorSpace.map { String(describing: $0) } ?? "null")
+    bit-depth: \(cgImage.bitsPerPixel / 4)
+    bytesPerRow: \(cgImage.bytesPerRow)
+    """
+
+    return meta
   }
 
 }
