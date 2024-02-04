@@ -3,7 +3,7 @@ import BrightroomUI
 import SwiftUI
 
 struct ContentView: View {
-  @State private var image: SwiftUI.Image?
+  @State private var renderedImage: SwiftUI.Image?
 
   @State private var sharedStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State private var fullScreenView: FullscreenIdentifiableView?
@@ -34,7 +34,7 @@ struct ContentView: View {
     NavigationView {
       VStack {
         Group {
-          if let image = image {
+          if let image = renderedImage {
             image
               .resizable()
               .aspectRatio(contentMode: .fit)
@@ -49,12 +49,18 @@ struct ContentView: View {
 
           Section {
             Button("Component: Crop - keepAlive") {
-              fullScreenView = .init { DemoCropView(editingStack: sharedStack) }
+              fullScreenView = .init {
+                DemoCropView(
+                  editingStack: sharedStack
+                )
+              }
             }
 
             Button("Component: Crop") {
               fullScreenView = .init {
-                DemoCropView(editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal()))
+                DemoCropView(
+                  editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+                )
               }
             }
           }
@@ -65,7 +71,8 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stackForHorizontal,
                   onDone: {
-                    self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stackForHorizontal.makeRenderer().render()
+                      .swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -78,7 +85,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stackForVertical,
                   onDone: {
-                    self.image = try! stackForVertical.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stackForVertical.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -91,7 +98,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stackForSquare,
                   onDone: {
-                    self.image = try! stackForSquare.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stackForSquare.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -104,7 +111,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stackForNasa,
                   onDone: {
-                    self.image = try! stackForNasa.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stackForNasa.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -117,7 +124,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stackForSmall,
                   onDone: {
-                    self.image = try! stackForSmall.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stackForSmall.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -139,7 +146,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stack,
                   onDone: {
-                    self.image = try! stack.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stack.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -161,7 +168,7 @@ struct ContentView: View {
                 SwiftUIPhotosCropView(
                   editingStack: stack,
                   onDone: {
-                    self.image = try! stack.makeRenderer().render().swiftUIImage
+                    self.renderedImage = try! stack.makeRenderer().render().swiftUIImage
                     self.fullScreenView = nil
                   },
                   onCancel: {}
@@ -182,7 +189,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
+                  self.renderedImage = try! stackForHorizontal.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 }
               }
@@ -194,7 +201,7 @@ struct ContentView: View {
               )
               fullScreenView = .init {
                 PixelEditWrapper(editingStack: stack) {
-                  self.image = try! stackForHorizontal.makeRenderer().render().swiftUIImage
+                  self.renderedImage = try! stackForHorizontal.makeRenderer().render().swiftUIImage
                   self.fullScreenView = nil
                 }
               }

@@ -130,7 +130,7 @@ public struct EditingCrop: Equatable {
     return new
   }
 
-  private func scaled(_ scale: CGFloat) -> Self {
+  private consuming func scaled(_ scale: CGFloat) -> Self {
 
     var modified = self
 

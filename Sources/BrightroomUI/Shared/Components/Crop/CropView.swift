@@ -110,6 +110,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     insetOfGuideFlexibility: contentInset
   )
 
+  private let guideBackdropView = UIView()
+
   private var subscriptions = Set<AnyCancellable>()
 
   /// A throttling timer to apply guide changed event.
@@ -159,12 +161,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     super.init(frame: .zero)
     
+    guideBackdropView.isUserInteractionEnabled = false
     scrollBackdropView.accessibilityIdentifier = "scrollBackdropView"
 
     clipsToBounds = false
 
     addSubview(scrollBackdropView)
     addSubview(scrollView)
+    addSubview(guideBackdropView)
     addSubview(guideView)
 
     imageView.isUserInteractionEnabled = true
@@ -393,6 +397,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.proposedCrop?.rotation = rotation        
       $0.layoutVersion += 1
     }
+
   }
 
   public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
@@ -401,6 +406,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.proposedCrop?.adjustmentAngle = angle
       $0.layoutVersion += 1
     }
+
   }
 
   public func setCrop(_ crop: EditingCrop) {
@@ -562,7 +568,12 @@ extension CropView {
         scrollBackdropView.bounds.size = frame.size
         scrollBackdropView.center = .init(x: bounds.midX, y: bounds.midY)
 
+        guideBackdropView.transform = .identity
+        guideBackdropView.frame = contentRect
+        guideBackdropView.transform =  crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
+
         guideView.frame = contentRect
+
         scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
 
         updateScrollViewInset(crop: crop)
@@ -573,7 +584,8 @@ extension CropView {
           let (min, max) = crop.calculateZoomScale(
             visibleSize: guideView.bounds
               .applying(crop.rotation.transform)
-              .rotated(crop.adjustmentAngle.radians).size
+              .rotated(crop.adjustmentAngle.radians)
+              .size
           )
 
           scrollView.minimumZoomScale = min
@@ -585,6 +597,8 @@ extension CropView {
 
             scrollView.customZoom(
               to: crop.zoomExtent(visibleSize: guideView.bounds.size),
+              guideSize: guideView.bounds.size,
+//              adjustmentRotation: crop.adjustmentAngle.radians,
               animated: false
             )
 
@@ -711,19 +725,7 @@ extension CropView {
 
     updateScrollViewInset(crop: currentProposedCrop)
 
-    store.commit { state in
-
-      let rect = guideView.convert(guideView.bounds, to: imageView)
-      let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
-
-      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = state.preferredAspectRatio
-      state.proposedCrop?.updateCropExtentNormalizing(
-        resolvedRect,
-        respectingAspectRatio: preferredAspectRatio
-      )
-
-    }
+    record()
 
     /// Triggers layout update later
     debounce.on { [weak self] in
@@ -736,20 +738,44 @@ extension CropView {
     }
   }
 
-  @inline(__always)
-  private func didChangeScrollView() {
+  private func record() {
     store.commit { state in
 
-      let rect = guideView.convert(guideView.bounds, to: imageView)
-      let resolvedRect = state.proposedCrop?.makeCropExtent(rect: rect) ?? .zero
+      let crop = state.proposedCrop!
 
-     // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
+      let rect = guideView.convert(
+        guideView.bounds,
+        to: imageView
+      )
+
+      let notRotatedRect = guideBackdropView.convert(guideBackdropView.frame, to: imageView)
+
+      let resolvedRect = crop.makeCropExtent(rect: scrollView.croppingExtent(guideSize: guideView.bounds.size))
+
+      print(
+        """
+        \(PixelAspectRatio(crop.cropExtent.size)),
+        \(PixelAspectRatio(notRotatedRect.size)),
+        \(PixelAspectRatio(rect.size)),
+        \(PixelAspectRatio(guideView.convert(guideView.bounds, to: scrollView).size))
+        \(PixelAspectRatio(guideBackdropView.convert(guideBackdropView.bounds, to: scrollView).size))
+        \(PixelAspectRatio(scrollView.croppingExtent(guideSize: guideView.bounds.size).size))
+
+        """
+      )
+
+      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
       let preferredAspectRatio = state.preferredAspectRatio
       state.proposedCrop?.updateCropExtentNormalizing(
         resolvedRect,
         respectingAspectRatio: preferredAspectRatio
       )
     }
+  }
+
+  @inline(__always)
+  private func didChangeScrollView() {
+    record()
   }
 
   // MARK: UIScrollViewDelegate
@@ -853,14 +879,33 @@ extension CGRect {
 
 extension UIScrollView {
 
-  fileprivate func customZoom(to rect: CGRect, animated: Bool) {
+  fileprivate func croppingExtent(guideSize: CGSize) -> CGRect {
+
+    // loss of precision
+    let r = CGRect(
+      origin: .init(
+        x: (contentOffset.x + contentInset.left) / self.zoomScale,
+        y: (contentOffset.y + contentInset.top) / self.zoomScale
+      ),
+      size: .init(
+        width: guideSize.width / self.zoomScale,
+        height: guideSize.height / self.zoomScale
+      )
+    )
+
+    return r
+  }
+
+  fileprivate func customZoom(
+    to rect: CGRect,
+    guideSize: CGSize,
+//    adjustmentRotation: CGFloat,
+    animated: Bool
+  ) {
 
     let contentSize = rect.size
 
-    let boundSize = CGSize(
-      width: self.bounds.width - (contentInset.left + contentInset.right),
-      height: self.bounds.height - (contentInset.top + contentInset.bottom)
-    )
+    let boundSize = guideSize
 
     let minXScale = boundSize.width / contentSize.width
     let minYScale = boundSize.height / contentSize.height
@@ -887,7 +932,18 @@ extension UIScrollView {
       setContentOffset(targetContentOffset, animated: false)
     }
 
-    print("[Zoom] targetScale: \(targetScale), targetContentOffset: \(targetContentOffset)")
+    #if DEBUG
+    croppingExtent(guideSize: guideSize)
+
+    print("""
+[Zoom] 
+input: \(rect),
+bound: \(boundSize),
+targetScale: \(targetScale),
+targetContentOffset: \(targetContentOffset)
+""")
+
+    #endif
   }
 
 }

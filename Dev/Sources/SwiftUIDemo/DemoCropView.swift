@@ -6,8 +6,8 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import BrightroomUI
 import BrightroomEngine
+import BrightroomUI
 import SwiftUI
 import UIKit
 
@@ -16,7 +16,15 @@ struct DemoCropView: View {
   let editingStack: EditingStack
 
   @State var rotation: EditingCrop.Rotation?
-  @State var adjustmentAngle: EditingCrop.AdjustmentAngle = .zero
+  @State var adjustmentAngle: EditingCrop.AdjustmentAngle?
+
+  @State var resultImage: ResultImage?
+
+  init(
+    editingStack: EditingStack
+  ) {
+    self.editingStack = editingStack
+  }
 
   var body: some View {
     VStack {
@@ -35,7 +43,8 @@ struct DemoCropView: View {
                 Circle()
                   .foregroundColor(.white)
                   .frame(width: 50, height: 50, alignment: .center)
-              })
+              }
+            )
           )
           .rotation(rotation)
           .adjustmentAngle(adjustmentAngle)
@@ -55,27 +64,60 @@ struct DemoCropView: View {
               self.rotation = .angle_270
             }
             Button("- 10") {
-              self.adjustmentAngle -= .degrees(10)
+              if self.adjustmentAngle == nil {
+                self.adjustmentAngle = .zero
+              }
+              self.adjustmentAngle! -= .degrees(10)
             }
             Button("+ 10") {
-              self.adjustmentAngle += .degrees(10)
+              if self.adjustmentAngle == nil {
+                self.adjustmentAngle = .zero
+              }
+              self.adjustmentAngle! += .degrees(10)
             }
           }
         }
       }
       Button("Done") {
         let image = try! editingStack.makeRenderer().render().swiftUIImage
-        print(image)
+        self.resultImage = .init(image: image)
       }
     }
     .onAppear {
       editingStack.start()
     }
+    .sheet(item: $resultImage) {
+      RenderedResultView(image: $0.image)
+    }
   }
 }
 
+struct ResultImage: Identifiable {
+  let id: String
+  let image: Image
+
+  init(image: Image) {
+    self.id = UUID().uuidString
+    self.image = image
+  }
+}
+
+struct RenderedResultView: View {
+
+  let image: Image
+
+  var body: some View {
+    image
+      .resizable()
+      .aspectRatio(contentMode: .fit)
+  }
+
+}
+
 #Preview {
-  DemoCropView(editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal()))
+  DemoCropView(
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  )
 }
 
 #Preview {
@@ -91,5 +133,3 @@ struct DemoCropView: View {
       print(uiView.frame, uiView.bounds)
     }
 }
-
-
