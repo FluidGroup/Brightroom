@@ -110,8 +110,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     insetOfGuideFlexibility: contentInset
   )
 
-  private let guideBackdropView = UIView()
-
   private var subscriptions = Set<AnyCancellable>()
 
   /// A throttling timer to apply guide changed event.
@@ -160,15 +158,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
     self.store = .init(initialState: .init(), logger: nil)
 
     super.init(frame: .zero)
-    
-    guideBackdropView.isUserInteractionEnabled = false
+
     scrollBackdropView.accessibilityIdentifier = "scrollBackdropView"
 
     clipsToBounds = false
 
     addSubview(scrollBackdropView)
     addSubview(scrollView)
-    addSubview(guideBackdropView)
     addSubview(guideView)
 
     imageView.isUserInteractionEnabled = true
@@ -568,10 +564,6 @@ extension CropView {
         scrollBackdropView.bounds.size = frame.size
         scrollBackdropView.center = .init(x: bounds.midX, y: bounds.midY)
 
-        guideBackdropView.transform = .identity
-        guideBackdropView.frame = contentRect
-        guideBackdropView.transform =  crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
-
         guideView.frame = contentRect
 
         scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
@@ -898,7 +890,7 @@ extension UIScrollView {
       .rotated(adjustmentRotation)
       .applying(.init(scaleX: targetScale, y: targetScale))
       .origin
-    
+
     targetContentOffset.x -= contentInset.left
     targetContentOffset.y -= contentInset.top
 
