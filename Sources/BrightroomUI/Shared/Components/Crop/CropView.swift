@@ -598,7 +598,7 @@ extension CropView {
             scrollView.customZoom(
               to: crop.zoomExtent(visibleSize: guideView.bounds.size),
               guideSize: guideView.bounds.size,
-//              adjustmentRotation: crop.adjustmentAngle.radians,
+              adjustmentRotation: crop.adjustmentAngle.radians,
               animated: false
             )
 
@@ -743,25 +743,23 @@ extension CropView {
 
       let crop = state.proposedCrop!
 
-      let rect = guideView.convert(
-        guideView.bounds,
-        to: imageView
+      // remove rotation while converting rect
+      let current = scrollView.transform
+      scrollView.transform = scrollView.transform.rotated(by: -crop.adjustmentAngle.radians)
+
+      let guideRectInImageView = guideView.convert(guideView.bounds, to: imageView)
+
+      // restore rotation
+      scrollView.transform = current
+
+      let resolvedRect =  crop.makeCropExtent(
+        rect: guideRectInImageView
       )
 
-      let notRotatedRect = guideBackdropView.convert(guideBackdropView.frame, to: imageView)
-
-      let resolvedRect = crop.makeCropExtent(rect: scrollView.croppingExtent(guideSize: guideView.bounds.size))
-
       print(
-        """
-        \(PixelAspectRatio(crop.cropExtent.size)),
-        \(PixelAspectRatio(notRotatedRect.size)),
-        \(PixelAspectRatio(rect.size)),
-        \(PixelAspectRatio(guideView.convert(guideView.bounds, to: scrollView).size))
-        \(PixelAspectRatio(guideBackdropView.convert(guideBackdropView.bounds, to: scrollView).size))
-        \(PixelAspectRatio(scrollView.croppingExtent(guideSize: guideView.bounds.size).size))
-
-        """
+        crop.makeCropExtent(
+          rect: guideRectInImageView
+        )
       )
 
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
@@ -863,6 +861,7 @@ extension CropView {
 
 extension CGRect {
 
+  /// Return a rect rotated around center
   fileprivate func rotated(_ radians: Double) -> CGRect {
 
     let rotated = self.applying(.init(rotationAngle: radians))
@@ -879,27 +878,10 @@ extension CGRect {
 
 extension UIScrollView {
 
-  fileprivate func croppingExtent(guideSize: CGSize) -> CGRect {
-
-    // loss of precision
-    let r = CGRect(
-      origin: .init(
-        x: (contentOffset.x + contentInset.left) / self.zoomScale,
-        y: (contentOffset.y + contentInset.top) / self.zoomScale
-      ),
-      size: .init(
-        width: guideSize.width / self.zoomScale,
-        height: guideSize.height / self.zoomScale
-      )
-    )
-
-    return r
-  }
-
   fileprivate func customZoom(
     to rect: CGRect,
     guideSize: CGSize,
-//    adjustmentRotation: CGFloat,
+    adjustmentRotation: CGFloat,
     animated: Bool
   ) {
 
@@ -912,7 +894,11 @@ extension UIScrollView {
 
     let targetScale = min(minXScale, minYScale)
 
-    var targetContentOffset = rect.applying(.init(scaleX: targetScale, y: targetScale)).origin
+    var targetContentOffset = rect
+      .rotated(adjustmentRotation)
+      .applying(.init(scaleX: targetScale, y: targetScale))
+      .origin
+    
     targetContentOffset.x -= contentInset.left
     targetContentOffset.y -= contentInset.top
 
@@ -933,7 +919,6 @@ extension UIScrollView {
     }
 
     #if DEBUG
-    croppingExtent(guideSize: guideSize)
 
     print("""
 [Zoom] 

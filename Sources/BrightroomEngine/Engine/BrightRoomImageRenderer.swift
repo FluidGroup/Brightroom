@@ -188,33 +188,39 @@ public final class BrightRoomImageRenderer {
     EngineLog.debug(.renderer, "Start render in using CoreGraphics")
 
     /*
-     ===
-     ===
-     ===
+     - load original image
+     - the image might not be suitable for rendering by orientation wise.
      */
     EngineLog.debug(.renderer, "Load full resolution CGImage from ImageSource.")
 
     let sourceCGImage: CGImage = source.loadOriginalCGImage()
 
     /*
-     ===
-     ===
-     ===
+     - Fix the image orientation
      */
     EngineLog.debug(.renderer, "Fix orientation")
 
     let orientedImage = try sourceCGImage.oriented(orientation)
 
     /*
-     ===
-     ===
-     ===
+     - Crops image
+     - Uses specified data
+     - Uses full size crop info if there's no request.
      */
-    // TODO: Better management of orientation
-    let crop = edit.croppingRect ?? .init(imageSize: source.readImageSize().applying(cgOrientation: orientation))
+
+    let crop: EditingCrop = edit.croppingRect ?? EditingCrop(
+      imageSize: source
+        .readImageSize()
+        .applying(cgOrientation: orientation) // TODO: Better management of orientation
+    )
+
     EngineLog.debug(.renderer, "Crop CGImage with extent \(crop)")
 
-    let croppedImage = try orientedImage.croppedWithColorspace(to: crop.cropExtent)
+    /// Render image as full size
+    let croppedImage = try orientedImage.croppedWithColorspace(
+      to: crop.cropExtent,
+      adjustmentAngleRadians: crop.adjustmentAngle.radians
+    )
 
     /*
      ===
@@ -240,6 +246,7 @@ public final class BrightRoomImageRenderer {
      */
     EngineLog.debug(.renderer, "Rotation")
 
+    // TODO: should be better that combines crop and rotation into single operation.
     let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
 
     return .init(cgImage: rotatedImage, options: options, engine: .coreGraphics)
