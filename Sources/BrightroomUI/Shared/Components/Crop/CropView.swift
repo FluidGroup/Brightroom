@@ -880,45 +880,64 @@ extension UIScrollView {
     adjustmentRotation: CGFloat,
     animated: Bool
   ) {
-    let contentSize = rect.size
-    let boundSize = guideSize
 
-    let minXScale = boundSize.width / contentSize.width
-    let minYScale = boundSize.height / contentSize.height
-    let targetScale = min(minXScale, minYScale)
+    func run() {
 
-    var targetContentOffset = rect
-      .rotated(adjustmentRotation)
-      .applying(.init(scaleX: targetScale, y: targetScale))
-      .origin
+      let targetContentSize = rect.size
+      let boundSize = guideSize
 
-    targetContentOffset.x -= contentInset.left
-    targetContentOffset.y -= contentInset.top
+      let minXScale = boundSize.width / targetContentSize.width
+      let minYScale = boundSize.height / targetContentSize.height
+      let targetScale = min(minXScale, minYScale)
 
-//    targetContentOffset.x = min(max(targetContentOffset.x, -contentInset.left), contentSize.width - contentInset.right)
-//    targetContentOffset.y = min(max(targetContentOffset.y, -contentInset.top), contentSize.height - contentInset.bottom)
-
-    if animated {
-      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
-      animator.addAnimations { [self] in
-        setZoomScale(targetScale, animated: false)
-        setContentOffset(targetContentOffset, animated: false)
-      }
-      animator.startAnimation()
-    } else {
       setZoomScale(targetScale, animated: false)
+
+      var targetContentOffset = rect
+        .rotated(adjustmentRotation)
+        .applying(.init(scaleX: targetScale, y: targetScale))
+        .origin
+
+      targetContentOffset.x -= contentInset.left
+      targetContentOffset.y -= contentInset.top
+
+      let maxContentOffset = CGPoint(
+        x: contentSize.width - boundSize.width + contentInset.left,
+        y: contentSize.height - boundSize.height + contentInset.top
+      )
+
+      let minContentOffset = CGPoint(
+        x: -contentInset.left,
+        y: -contentInset.top
+      )
+
+      targetContentOffset.x = min(max(targetContentOffset.x, minContentOffset.x), maxContentOffset.x)
+      targetContentOffset.y = min(max(targetContentOffset.y, minContentOffset.y), maxContentOffset.y)
+
       setContentOffset(targetContentOffset, animated: false)
-    }
 
 #if DEBUG
-    print("""
+      print("""
 [Zoom]
 input: \(rect),
 bound: \(boundSize),
 targetScale: \(targetScale),
-targetContentOffset: \(targetContentOffset)
+targetContentOffset: \(targetContentOffset),
+minContentOffset: \(minContentOffset)
+maxContentOffset: \(maxContentOffset)
 """)
 #endif
+    }
+
+    if animated {
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
+      animator.addAnimations { [self] in
+        run()
+      }
+      animator.startAnimation()
+    } else {
+      run()
+    }
+
   }
 
 }
