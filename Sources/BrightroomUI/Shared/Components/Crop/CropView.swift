@@ -23,6 +23,7 @@ import CoreImage
 
 import UIKit
 import Verge
+import SwiftUI
 
 #if !COCOAPODS
 import BrightroomEngine
@@ -196,7 +197,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
       setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
       setLoadingOverlay(factory: {
-        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
+        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .large)
       })
     }
   }
@@ -394,7 +395,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
-      $0.proposedCrop?.rotation = rotation        
+
+      if let crop = $0.proposedCrop {
+
+        $0.proposedCrop?.updateCropExtent(
+          crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians),
+          respectingAspectRatio: nil
+        )
+
+        $0.proposedCrop?.rotation = rotation
+      }
+
       $0.layoutVersion += 1
     }
 
@@ -453,6 +464,22 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     guideView.setCropInsideOverlay(view)
+  }
+
+  public func swapCropRectangleDirection() {
+
+    store.commit {
+
+      guard let crop = $0.proposedCrop else {
+        return
+      }
+
+      $0.proposedCrop?.updateCropExtentIfNeeded(
+        toFitAspectRatio: PixelAspectRatio(crop.cropExtent.size).swapped()
+      )
+      $0.layoutVersion += 1
+
+    }
   }
 
   /**
@@ -532,24 +559,8 @@ extension CropView {
 
         let size: CGSize
         let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
-        switch crop.rotation {
-        case .angle_0:
-          size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
-          guideView.setLockedAspectRatio(preferredAspectRatio)
-        case .angle_90:
-          size = aspectRatio
-            .swapped()
-            .sizeThatFitsWithRounding(in: bounds.size)
-          guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
-        case .angle_180:
-          size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
-          guideView.setLockedAspectRatio(preferredAspectRatio)
-        case .angle_270:
-          size = aspectRatio
-            .swapped()
-            .sizeThatFitsWithRounding(in: bounds.size)
-          guideView.setLockedAspectRatio(preferredAspectRatio?.swapped())
-        }
+
+        size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
 
         let contentRect = CGRect(
           origin: .init(
@@ -573,7 +584,7 @@ extension CropView {
 
         guideView.frame = contentRect
 
-        scrollView.transform = crop.rotation.transform.rotated(by: crop.adjustmentAngle.radians)
+        scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
 
         updateScrollViewInset(crop: crop)
 
@@ -582,8 +593,7 @@ extension CropView {
 
           let (min, max) = crop.calculateZoomScale(
             visibleSize: guideView.bounds
-              .applying(crop.rotation.transform)
-              .rotated(crop.adjustmentAngle.radians)
+              .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
               .size
           )
 
@@ -597,7 +607,7 @@ extension CropView {
             scrollView.customZoom(
               to: crop.zoomExtent(visibleSize: guideView.bounds.size),
               guideSize: guideView.bounds.size,
-              adjustmentRotation: crop.adjustmentAngle.radians,
+              adjustmentRotation: crop.aggregatedRotation.radians,
               animated: false
             )
 
@@ -660,43 +670,12 @@ extension CropView {
 
   private func updateScrollViewInset(crop: EditingCrop) {
 
-    func applyCropRotation(
-      rotation: EditingCrop.Rotation,
-      insets: UIEdgeInsets
-    ) -> UIEdgeInsets {
-      switch rotation {
-      case .angle_0:
-        return insets
-      case .angle_90:
-        return .init(
-          top: insets.left,
-          left: insets.bottom,
-          bottom: insets.right,
-          right: insets.top
-        )
-      case .angle_180:
-        return .init(
-          top: insets.bottom,
-          left: insets.right,
-          bottom: insets.top,
-          right: insets.left
-        )
-      case .angle_270:
-        return .init(
-          top: insets.right,
-          left: insets.top,
-          bottom: insets.left,
-          right: insets.bottom
-        )
-      }
-    }
-
     // update content inset
     do {
 
       let rect = guideView
         .convert(
-          guideView.bounds.rotated(crop.adjustmentAngle.radians),
+          guideView.bounds.rotated(crop.aggregatedRotation.radians),
           to: scrollBackdropView
         )
 
@@ -709,7 +688,7 @@ extension CropView {
         right: bounds.maxX - rect.maxX
       )
 
-      let resolvedInsets = applyCropRotation(rotation: crop.rotation, insets: insets)
+      let resolvedInsets = insets
 
       scrollView.contentInset = resolvedInsets
     }
@@ -754,9 +733,9 @@ extension CropView {
       let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
 
       // move focusing area to center
-      scrollView.transform = CGAffineTransform(rotationAngle: crop.adjustmentAngle.radians)
+      scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
         .concatenating(.init(translationX: -offsetX, y: -offsetY))
-        .concatenating(.init(rotationAngle: -crop.adjustmentAngle.radians))
+        .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
 
       // TODO: Find calculation way withoug using convert rect
       // To work correctly, ignoring transform temporarily.
@@ -781,7 +760,7 @@ extension CropView {
 
       // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
       let preferredAspectRatio = state.preferredAspectRatio
-      state.proposedCrop?.updateCropExtentNormalizing(
+      state.proposedCrop?.updateCropExtent(
         resolvedRect,
         respectingAspectRatio: preferredAspectRatio
       )
@@ -902,50 +881,63 @@ extension UIScrollView {
     animated: Bool
   ) {
 
-    let contentSize = rect.size
+    func run() {
 
-    let boundSize = guideSize
+      let targetContentSize = rect.size
+      let boundSize = guideSize
 
-    let minXScale = boundSize.width / contentSize.width
-    let minYScale = boundSize.height / contentSize.height
+      let minXScale = boundSize.width / targetContentSize.width
+      let minYScale = boundSize.height / targetContentSize.height
+      let targetScale = min(minXScale, minYScale)
 
-    let targetScale = min(minXScale, minYScale)
-
-    var targetContentOffset = rect
-      .rotated(adjustmentRotation)
-      .applying(.init(scaleX: targetScale, y: targetScale))
-      .origin
-
-    targetContentOffset.x -= contentInset.left
-    targetContentOffset.y -= contentInset.top
-
-    if animated {
-      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
-
-      animator.addAnimations { [self] in
-
-        setZoomScale(targetScale, animated: false)
-        setContentOffset(targetContentOffset, animated: false)
-
-      }
-
-      animator.startAnimation()
-    } else {
       setZoomScale(targetScale, animated: false)
+
+      var targetContentOffset = rect
+        .rotated(adjustmentRotation)
+        .applying(.init(scaleX: targetScale, y: targetScale))
+        .origin
+
+      targetContentOffset.x -= contentInset.left
+      targetContentOffset.y -= contentInset.top
+
+      let maxContentOffset = CGPoint(
+        x: contentSize.width - boundSize.width + contentInset.left,
+        y: contentSize.height - boundSize.height + contentInset.top
+      )
+
+      let minContentOffset = CGPoint(
+        x: -contentInset.left,
+        y: -contentInset.top
+      )
+
+      targetContentOffset.x = min(max(targetContentOffset.x, minContentOffset.x), maxContentOffset.x)
+      targetContentOffset.y = min(max(targetContentOffset.y, minContentOffset.y), maxContentOffset.y)
+
       setContentOffset(targetContentOffset, animated: false)
-    }
 
-    #if DEBUG
-
-    print("""
-[Zoom] 
+#if DEBUG
+      print("""
+[Zoom]
 input: \(rect),
 bound: \(boundSize),
 targetScale: \(targetScale),
-targetContentOffset: \(targetContentOffset)
+targetContentOffset: \(targetContentOffset),
+minContentOffset: \(minContentOffset)
+maxContentOffset: \(maxContentOffset)
 """)
+#endif
+    }
 
-    #endif
+    if animated {
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
+      animator.addAnimations {
+        run()
+      }
+      animator.startAnimation()
+    } else {
+      run()
+    }
+
   }
 
 }

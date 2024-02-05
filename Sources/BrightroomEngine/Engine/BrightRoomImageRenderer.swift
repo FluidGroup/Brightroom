@@ -219,7 +219,7 @@ public final class BrightRoomImageRenderer {
     /// Render image as full size
     let croppedImage = try orientedImage.croppedWithColorspace(
       to: crop.cropExtent,
-      adjustmentAngleRadians: crop.adjustmentAngle.radians
+      adjustmentAngleRadians: crop.aggregatedRotation.radians
     )
 
     /*
@@ -246,10 +246,10 @@ public final class BrightRoomImageRenderer {
      */
     EngineLog.debug(.renderer, "Rotation")
 
-    // TODO: should be better that combines crop and rotation into single operation.
-    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
+//    // TODO: should be better that combines crop and rotation into single operation.
+//    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
 
-    return .init(cgImage: rotatedImage, options: options, engine: .coreGraphics)
+    return .init(cgImage: resizedImage, options: options, engine: .coreGraphics)
   }
 
   /**
