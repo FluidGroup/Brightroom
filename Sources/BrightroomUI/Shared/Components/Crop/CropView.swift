@@ -895,11 +895,8 @@ extension UIScrollView {
     targetContentOffset.x -= contentInset.left
     targetContentOffset.y -= contentInset.top
 
-//    let maxContentOffsetX = max((contentSize.width * targetScale) + contentInset.left + contentInset.right - boundSize.width, 0)
-//    let maxContentOffsetY = max((contentSize.height * targetScale) + contentInset.top + contentInset.bottom - boundSize.height, 0)
-//
-//    targetContentOffset.x = min(max(targetContentOffset.x, 0), maxContentOffsetX)
-//    targetContentOffset.y = min(max(targetContentOffset.y, 0), maxContentOffsetY)
+//    targetContentOffset.x = min(max(targetContentOffset.x, -contentInset.left), contentSize.width - contentInset.right)
+//    targetContentOffset.y = min(max(targetContentOffset.y, -contentInset.top), contentSize.height - contentInset.bottom)
 
     if animated {
       let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
