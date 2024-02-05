@@ -301,7 +301,7 @@ public final class ClassicImageEditViewController: UIViewController {
 
     cropView.store.sinkState { [viewModel] state in
 
-      state.ifChanged(\.proposedCrop) { value in
+      state.ifChanged(\.proposedCrop).do { value in
         guard let value = value else { return }
         viewModel.setProposedCrop(value)
       }
@@ -329,20 +329,20 @@ public final class ClassicImageEditViewController: UIViewController {
   }
 
   private func updateUI(state: Changes<ClassicImageEditViewModel.State>) {
-    state.ifChanged(\.title) { title in
+    state.ifChanged(\.title).do { title in
       navigationItem.title = title
     }
 
-    state.ifChanged(\.maskingBrushSize) {
+    state.ifChanged(\.maskingBrushSize).do {
       maskingView.setBrushSize($0)
     }
 
-    state.ifChanged(\.proposedCrop) { value in
+    state.ifChanged(\.proposedCrop).do { value in
       guard let value = value else { return }
       cropView.setCrop(value)
     }
 
-    state.ifChanged(\.mode) { mode in
+    state.ifChanged(\.mode).do { mode in
       switch mode {
       case .crop:
 
@@ -398,7 +398,7 @@ public final class ClassicImageEditViewController: UIViewController {
 
     let editingState = state.map(\.editingState)
 
-    editingState.ifChanged(\.isLoading) { isLoading in
+    editingState.ifChanged(\.isLoading).do { isLoading in
 
       switch isLoading {
       case true:

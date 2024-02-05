@@ -69,99 +69,102 @@ struct ContentView: View {
             }
           }
 
-          Section("PhotosCrop", content: {
-            Button("Horizontal") {
-              fullScreenView = .init {
-                DemoPhotosCropView(stack: {
-                  Mocks.makeEditingStack(
-                    image: Asset.horizontalRect.image
-                  )
-                })
-              }
-            }
-
-            Button("Vertical") {
-              fullScreenView = .init {
-                DemoPhotosCropView(stack: {
-                  Mocks.makeEditingStack(
-                    image: Asset.verticalRect.image
-                  )
-                })
-              }
-            }
-
-            Button("Square") {
-              fullScreenView = .init {
-                DemoPhotosCropView(stack: {
-                  Mocks.makeEditingStack(
-                    image: Asset.squareRect.image
-                  )
-                })
-              }
-            }
-
-            Button("Nasa") {
-              fullScreenView = .init {
-                DemoPhotosCropView(stack: {
-                  Mocks.makeEditingStack(
-                    fileURL:
-                      Bundle.main.path(
-                        forResource: "nasa",
-                        ofType: "jpg"
-                      ).map {
-                        URL(fileURLWithPath: $0)
-                      }!
-                  )
-                })
-              }
-            }
-
-            Button("Super small") {
-              fullScreenView = .init {
-                DemoPhotosCropView(stack: {
-                  Mocks.makeEditingStack(
-                    image: Asset.superSmall.image
-                  )
-                })
-              }
-            }
-
-            Button("Remote") {
-
-              fullScreenView = .init {
-
-                DemoPhotosCropView(stack: {
-                  EditingStack(
-                    imageProvider: .init(
-                      editableRemoteURL: URL(
-                        string:
-                          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-                      )!
+          Section(
+            "PhotosCrop",
+            content: {
+              Button("Horizontal") {
+                fullScreenView = .init {
+                  DemoPhotosCropView(stack: {
+                    Mocks.makeEditingStack(
+                      image: Asset.horizontalRect.image
                     )
-                  )
-                })
-
+                  })
+                }
               }
-            }
 
-            Button("Remote - preview") {
-
-              fullScreenView = .init {
-
-                DemoPhotosCropView(stack: {
-                  EditingStack(
-                    imageProvider: .init(
-                      editableRemoteURL: URL(
-                        string:
-                          "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
-                      )!
+              Button("Vertical") {
+                fullScreenView = .init {
+                  DemoPhotosCropView(stack: {
+                    Mocks.makeEditingStack(
+                      image: Asset.verticalRect.image
                     )
-                  )
-                })
+                  })
+                }
+              }
 
+              Button("Square") {
+                fullScreenView = .init {
+                  DemoPhotosCropView(stack: {
+                    Mocks.makeEditingStack(
+                      image: Asset.squareRect.image
+                    )
+                  })
+                }
+              }
+
+              Button("Nasa") {
+                fullScreenView = .init {
+                  DemoPhotosCropView(stack: {
+                    Mocks.makeEditingStack(
+                      fileURL:
+                        Bundle.main.path(
+                          forResource: "nasa",
+                          ofType: "jpg"
+                        ).map {
+                          URL(fileURLWithPath: $0)
+                        }!
+                    )
+                  })
+                }
+              }
+
+              Button("Super small") {
+                fullScreenView = .init {
+                  DemoPhotosCropView(stack: {
+                    Mocks.makeEditingStack(
+                      image: Asset.superSmall.image
+                    )
+                  })
+                }
+              }
+
+              Button("Remote") {
+
+                fullScreenView = .init {
+
+                  DemoPhotosCropView(stack: {
+                    EditingStack(
+                      imageProvider: .init(
+                        editableRemoteURL: URL(
+                          string:
+                            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+                        )!
+                      )
+                    )
+                  })
+
+                }
+              }
+
+              Button("Remote - preview") {
+
+                fullScreenView = .init {
+
+                  DemoPhotosCropView(stack: {
+                    EditingStack(
+                      imageProvider: .init(
+                        editableRemoteURL: URL(
+                          string:
+                            "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
+                        )!
+                      )
+                    )
+                  })
+
+                }
               }
             }
-          })
+          )
 
           Section(content: {
             Button("PixelEditor Square") {
@@ -181,11 +184,14 @@ struct ContentView: View {
 
             Button("PixelEditor") {
               fullScreenView = .init {
-                DemoPixelEditor(editingStack: {
-                  EditingStack.init(
-                    imageProvider: .init(image: Asset.l1000316.image)
-                  )
-                })
+                DemoPixelEditor(
+                  editingStack: {
+                    EditingStack.init(
+                      imageProvider: .init(image: Asset.l1000316.image)
+                    )
+                  },
+                  options: .init(croppingAspectRatio: nil)
+                )
               }
             }
 
@@ -245,13 +251,20 @@ struct DemoPixelEditor: View {
   @ObjectEdge var editingStack: EditingStack
   @State var resultImage: ResultImage?
 
-  init(editingStack: @escaping () -> EditingStack) {
+  let options: ClassicImageEditOptions
+
+  init(
+    editingStack: @escaping () -> EditingStack,
+    options: ClassicImageEditOptions = .init()
+  ) {
     self._editingStack = .init(wrappedValue: editingStack())
+    self.options = options
   }
 
   var body: some View {
     DemoPixelEditWrapper(
       editingStack: editingStack,
+      options: options,
       onCompleted: {
         let image = try! editingStack.makeRenderer().render().cgImage
         self.resultImage = .init(cgImage: image)
@@ -270,17 +283,24 @@ struct DemoPixelEditWrapper: UIViewControllerRepresentable {
   private let onCompleted: () -> Void
 
   let editingStack: EditingStack
+  let options: ClassicImageEditOptions
 
-  @State var resultImage: ResultImage?
-
-  init(editingStack: EditingStack, onCompleted: @escaping () -> Void) {
+  init(
+    editingStack: EditingStack,
+    options: ClassicImageEditOptions,
+    onCompleted: @escaping () -> Void
+  ) {
     self.editingStack = editingStack
     self.onCompleted = onCompleted
+    self.options = options
   }
 
   func makeUIViewController(context: Context) -> UINavigationController {
     editingStack.start()
-    let cropViewController = ClassicImageEditViewController(editingStack: editingStack)
+    let cropViewController = ClassicImageEditViewController(
+      editingStack: editingStack,
+      options: options
+    )
     cropViewController.handlers.didEndEditing = { _, _ in
       onCompleted()
     }

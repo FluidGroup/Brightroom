@@ -257,9 +257,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
           state.ifChanged({
             (
               $0.frame,
+              $0.proposedCrop,
               $0.layoutVersion
             )
-          }).do { (frame, _) in
+          }).do { (frame, crop, _) in
 
             guard let crop = state.proposedCrop else {
               return
@@ -449,6 +450,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.proposedCrop?.adjustmentAngle = angle
       $0.layoutVersion += 1
     }
+
+    record()
 
   }
 
@@ -658,6 +661,7 @@ extension CropView {
           _zoom()
 
         }
+
       }
 
 

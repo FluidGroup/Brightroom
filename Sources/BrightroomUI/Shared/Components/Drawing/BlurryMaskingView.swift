@@ -114,6 +114,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       editingStack: editingStack,
       contentInset: .zero
     )
+    self.backingView.accessibilityIdentifier = "BlurryMasking"
 
     store = .init(
       initialState: .init(),
