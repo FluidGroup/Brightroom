@@ -75,8 +75,11 @@ public struct DrawnPath : GraphicsDrawing, Equatable {
             
     let boundingBox = context.boundingBoxOfClipPath
     context.scaleBy(x: 1, y: -1)
-    context.translateBy(x: 0, y: -(boundingBox.maxY + boundingBox.minY))    
-    assert(context.boundingBoxOfClipPath == boundingBox)
+    context.translateBy(x: 0, y: -(boundingBox.maxY + boundingBox.minY))
+
+    if context.boundingBoxOfClipPath == boundingBox {
+      EngineLog.error(.renderer, "Not exactly same bounding box. this may affects in artifacts.")
+    }
  
     brush.color.setStroke()
     let bezierPath = brushedPath()

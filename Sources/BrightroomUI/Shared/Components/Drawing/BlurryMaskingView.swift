@@ -95,7 +95,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   private var subscriptions = Set<AnyCancellable>()
   
   private let editingStack: EditingStack
-     
+
   private let store: UIStateStore<State, Never>
   
   private var currentBrush: OvalBrush?
@@ -154,7 +154,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
         }
         
         currentBrush = .init(color: .black, pixelSize: pixelSize)
-        
+
         let drawnPath = DrawnPath(brush: currentBrush!, path: path)
         canvasView.previewDrawnPath = drawnPath
       }

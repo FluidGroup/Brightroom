@@ -360,6 +360,8 @@ public final class BrightRoomImageRenderer {
             cropped_effected_CGImage,
             in: .init(origin: .zero, size: cropped_effected_CGImage.size)
           )
+
+          // translate to match crop extent
           c.translateBy(x: -crop.cropExtent.origin.x, y: -crop.cropExtent.origin.y)
 
           self.edit.drawer.forEach { drawer in
