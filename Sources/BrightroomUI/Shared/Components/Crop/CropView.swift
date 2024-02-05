@@ -40,6 +40,7 @@ import BrightroomEngine
    - Implicit animations occurs in first time load with remote image.
  */
 public final class CropView: UIView, UIScrollViewDelegate {
+
   public struct State: Equatable {
     public enum AdjustmentKind: Equatable {
       case scrollView
@@ -81,19 +82,45 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
     }
   }
-  
+
+  public var isImageViewHidden: Bool {
+    get {
+      imagePlatterView.imageView.isHidden
+    }
+    set {
+      imagePlatterView.imageView.isHidden = newValue
+    }
+  }
+
+  public var isZoomEnabled: Bool = true {
+    didSet {
+      store.commit {
+        $0.layoutVersion += 1
+      }
+    }
+  }
+
+  public var isScrollEnabled: Bool {
+    get {
+      scrollView.isScrollEnabled
+    }
+    set {
+      scrollView.isScrollEnabled = newValue
+    }
+  }
+
   public let editingStack: EditingStack
 
   /**
    An image view that displayed in the scroll view.
    */
-  private let imageView = _ImageView()
-  
+  private let imagePlatterView = ImagePlatterView()
+
   /**
    Internal scroll view
    */  
   private let scrollView = _CropScrollView()
-  
+
   /**
    A background view for scroll view.
    It provides the frame to scroll view.
@@ -107,7 +134,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   private lazy var guideView = _InteractiveCropGuideView(
     containerView: self,
-    imageView: self.imageView,
+    imageView: self.imagePlatterView,
     insetOfGuideFlexibility: contentInset
   )
 
@@ -172,8 +199,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     addSubview(guideBackdropView)
     addSubview(guideView)
 
-    imageView.isUserInteractionEnabled = true
-    scrollView.addSubview(imageView)
+    imagePlatterView.isUserInteractionEnabled = true
+    scrollView.addSubview(imagePlatterView)
     scrollView.delegate = self
 
     guideView.didChange = { [weak self] in
@@ -193,7 +220,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     .store(in: &subscriptions)
     #endif
   
-    defaultAppearance: do {
+    // apply defaultAppearance
+    do {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
       setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
       setLoadingOverlay(factory: {
@@ -208,7 +236,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   // MARK: - Functions
-  
+
+  public func setOverlayInImageView(_ overlay: UIView) {
+    imagePlatterView.overlay = overlay
+  }
+
   public override func willMove(toSuperview newSuperview: UIView?) {
     super.willMove(toSuperview: newSuperview)
     
@@ -241,7 +273,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
               if self.hasSetupScrollViewCompleted == false {
                 self.hasSetupScrollViewCompleted = true
 
-                self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
+                self.imagePlatterView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
 
                 let scrollView = self.scrollView
 
@@ -523,7 +555,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
 extension CropView {
   private func setImage(_ cgImage: CGImage) {
-    imageView.image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    imagePlatterView.image = UIImage(
+      cgImage: cgImage,
+      scale: 1,
+      orientation: .up
+    )
   }
   
   override public func layoutSubviews() {
@@ -600,7 +636,7 @@ extension CropView {
           scrollView.minimumZoomScale = min
           scrollView.maximumZoomScale = max
 
-          imageView.frame.origin = .zero
+          imagePlatterView.frame.origin = .zero
 
           func _zoom() {
 
@@ -610,6 +646,12 @@ extension CropView {
               adjustmentRotation: crop.aggregatedRotation.radians,
               animated: false
             )
+
+            if isZoomEnabled == false {
+              let scale = scrollView.zoomScale
+              scrollView.minimumZoomScale = scale
+              scrollView.maximumZoomScale = scale
+            }
 
           }
 
@@ -744,7 +786,7 @@ extension CropView {
       let currentGuideViewCenter = guideView.center
       guideView.center = guideBackdropView.center
 
-      let guideRectInImageView = guideView.convert(guideView.bounds, to: imageView)
+      let guideRectInImageView = guideView.convert(guideView.bounds, to: imagePlatterView)
 
       // restore guide view center same as displaying
       guideView.center = currentGuideViewCenter
@@ -775,7 +817,7 @@ extension CropView {
   // MARK: UIScrollViewDelegate
 
   public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-    return imageView
+    return imagePlatterView
   }
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {

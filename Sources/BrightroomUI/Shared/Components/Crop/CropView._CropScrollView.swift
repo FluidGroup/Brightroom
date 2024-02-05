@@ -56,19 +56,45 @@ extension CropView {
     }
   }
 
-  final class _ImageView: UIImageView {
-    
-    override var bounds: CGRect {
-      didSet {
-        print("bounds", bounds, self)
+  final class ImagePlatterView: UIView {
+
+    var image: UIImage? {
+      get {
+        imageView.image
+      }
+      set {
+        imageView.image = newValue
       }
     }
 
-    override var center: CGPoint {
+    let imageView: UIImageView
+
+    var overlay: UIView? {
       didSet {
-        print("center", center, self)
+        oldValue?.removeFromSuperview()
+        if let overlay {
+          addSubview(overlay)
+        }
       }
     }
+
+    override init(frame: CGRect) {
+      self.imageView = _ImageView()
+      super.init(frame: frame)
+
+      addSubview(imageView)
+    }
+    
+    required init?(coder: NSCoder) {
+      fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+      super.layoutSubviews()
+      imageView.frame = bounds
+      overlay?.frame = bounds
+    }
+
   }
 
 }

@@ -6,6 +6,8 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
+  @State var stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+
   var body: some View {
     NavigationView {
       VStack {
@@ -13,19 +15,62 @@ struct ContentView: View {
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
-          Section {
+          Section("Restoration") {
+            Button("Crop") {
+              fullScreenView = .init {
+                DemoCropView(editingStack: { stack })
+              }
+            }
 
-            Button("Component: Crop") {
+            Button("Masking") {
+              fullScreenView = .init {
+                DemoMaskingView {
+                  stack
+                }
+              }
+            }
+          }
+
+          Section("Crop") {
+
+            Button("Local") {
               fullScreenView = .init {
                 DemoCropView(
-                  editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+                  editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
                 )
               }
             }
           }
 
-          Section(content: {
-            Button("Crop: Horizontal") {
+          Section("Blur Masking") {
+            Button("Local") {
+              fullScreenView = .init {
+                DemoMaskingView {
+                  Mocks.makeEditingStack(
+                    image: Asset.horizontalRect.image
+                  )
+                }
+              }
+            }
+
+            Button("Remote") {
+              fullScreenView = .init {
+                DemoMaskingView {
+                  EditingStack(
+                    imageProvider: .init(
+                      editableRemoteURL: URL(
+                        string:
+                          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+                      )!
+                    )
+                  )
+                }
+              }
+            }
+          }
+
+          Section("PhotosCrop", content: {
+            Button("Horizontal") {
               fullScreenView = .init {
                 DemoPhotosCropView(stack: {
                   Mocks.makeEditingStack(
@@ -35,7 +80,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Vertical") {
+            Button("Vertical") {
               fullScreenView = .init {
                 DemoPhotosCropView(stack: {
                   Mocks.makeEditingStack(
@@ -45,7 +90,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Square") {
+            Button("Square") {
               fullScreenView = .init {
                 DemoPhotosCropView(stack: {
                   Mocks.makeEditingStack(
@@ -55,7 +100,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Nasa") {
+            Button("Nasa") {
               fullScreenView = .init {
                 DemoPhotosCropView(stack: {
                   Mocks.makeEditingStack(
@@ -71,7 +116,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Super small") {
+            Button("Super small") {
               fullScreenView = .init {
                 DemoPhotosCropView(stack: {
                   Mocks.makeEditingStack(
@@ -81,7 +126,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Remote") {
+            Button("Remote") {
 
               fullScreenView = .init {
 
@@ -99,7 +144,7 @@ struct ContentView: View {
               }
             }
 
-            Button("Crop: Remote - preview") {
+            Button("Remote - preview") {
 
               fullScreenView = .init {
 
@@ -212,6 +257,9 @@ struct DemoPixelEditor: View {
         self.resultImage = .init(cgImage: image)
       }
     )
+    .sheet(item: $resultImage) {
+      RenderedResultView(result: $0)
+    }
   }
 }
 

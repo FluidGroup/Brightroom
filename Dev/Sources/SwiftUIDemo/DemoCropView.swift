@@ -13,7 +13,7 @@ import UIKit
 
 struct DemoCropView: View {
 
-  let editingStack: EditingStack
+ @ObjectEdge var editingStack: EditingStack
 
   @State var rotation: EditingCrop.Rotation?
   @State var adjustmentAngle: EditingCrop.AdjustmentAngle?
@@ -21,9 +21,9 @@ struct DemoCropView: View {
   @State var resultImage: ResultImage?
 
   init(
-    editingStack: EditingStack
+    editingStack: @escaping () -> EditingStack
   ) {
-    self.editingStack = editingStack
+    self._editingStack = .init(wrappedValue: editingStack())
   }
 
   var body: some View {
@@ -94,7 +94,7 @@ struct DemoCropView: View {
 
 #Preview {
   DemoCropView(
-    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
   )
 }
 
