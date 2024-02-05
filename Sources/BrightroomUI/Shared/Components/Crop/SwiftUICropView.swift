@@ -56,8 +56,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
   private let cropInsideOverlay: AnyView?
-
-  private let factory: () -> CropView
+  private let editingStack: EditingStack
 
   private var _rotation: EditingCrop.Rotation?
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
@@ -67,14 +66,13 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     cropInsideOverlay: AnyView? = nil
   ) {
     self.cropInsideOverlay = cropInsideOverlay
-    
-    self.factory = {
-      CropView(editingStack: editingStack)
-    }
+    self.editingStack = editingStack
   }
   
   public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
-    let view = factory()
+
+    let view = CropView(editingStack: editingStack)
+
     view.isAutoApplyEditingStackEnabled = true
     
     let controller = _PixelEditor_WrapperViewController.init(bodyView: view)

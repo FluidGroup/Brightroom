@@ -215,7 +215,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       
       if let state = state.mapIfPresent(\.loadedState) {
         
-        state.ifChanged(\.currentEdit.crop) { cropRect in
+        state.ifChanged(\.currentEdit.crop).do { cropRect in
           
           /**
            To avoid running pending layout operations from User Initiated actions.
@@ -233,7 +233,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     defaultAppearance: do {
       setLoadingOverlay(factory: {
-        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
+        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .large)
       })
     }
   }
@@ -253,8 +253,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           
           guard let self = self else { return }
           
-          state.ifChanged(\.frame, \.proposedCrop) { frame, crop in
-            
+          state.ifChanged(\.frame, \.proposedCrop).do { frame, crop in
+
             guard let crop = crop else { return }
             
             guard frame != .zero else { return }
@@ -297,18 +297,18 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
           
           guard let self = self else { return }
           
-          state.ifChanged(\.isLoading) { isLoading in
+          state.ifChanged(\.isLoading).do { isLoading in
             self.updateLoadingOverlay(displays: isLoading)
           }
           
           if let state = state.mapIfPresent(\.loadedState) {
             
-            state.ifChanged(\.editingPreviewImage) { image in
+            state.ifChanged(\.editingPreviewImage).do { image in
               self.backdropImageView.display(image: image)
               self.blurryImageView.display(image: BlurredMask.blur(image: image))
             }
             
-            state.ifChanged(\.currentEdit.drawings.blurredMaskPaths) { paths in
+            state.ifChanged(\.currentEdit.drawings.blurredMaskPaths).do { paths in
               self.canvasView.setResolvedDrawnPaths(paths)
             }
             
@@ -466,4 +466,33 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     adjustFrameToCenterOnZooming()
   }
+}
+
+import SwiftUI
+
+public struct SwiftUIBlurryMaskingView: UIViewControllerRepresentable {
+
+  public typealias UIViewControllerType = _PixelEditor_WrapperViewController<BlurryMaskingView>
+
+  private let editingStack: EditingStack
+
+  public init(
+    editingStack: EditingStack
+  ) {
+    self.editingStack = editingStack
+  }
+  
+  public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<BlurryMaskingView> {
+
+    let view = BlurryMaskingView(editingStack: editingStack)
+
+    let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
+
+    return controller
+  }
+
+  public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<BlurryMaskingView>, context: Context) {
+
+  }
+
 }

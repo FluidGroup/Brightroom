@@ -197,7 +197,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
       setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
       setLoadingOverlay(factory: {
-        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .whiteLarge)
+        LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .large)
       })
     }
   }
@@ -930,7 +930,7 @@ maxContentOffset: \(maxContentOffset)
 
     if animated {
       let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1)
-      animator.addAnimations { [self] in
+      animator.addAnimations {
         run()
       }
       animator.startAnimation()
