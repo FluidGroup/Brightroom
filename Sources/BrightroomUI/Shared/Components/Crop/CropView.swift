@@ -40,6 +40,7 @@ import BrightroomEngine
    - Implicit animations occurs in first time load with remote image.
  */
 public final class CropView: UIView, UIScrollViewDelegate {
+
   public struct State: Equatable {
     public enum AdjustmentKind: Equatable {
       case scrollView
@@ -49,8 +50,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     public fileprivate(set) var proposedCrop: EditingCrop?
 
     public fileprivate(set) var frame: CGRect = .zero
-    
-    fileprivate var isGuideInteractionEnabled: Bool = true
+
     fileprivate var layoutVersion: UInt64 = 0
     
     /**
@@ -73,27 +73,63 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public var isGuideInteractionEnabled: Bool {
     get {
-      store.state.isGuideInteractionEnabled
+      guideView.isUserInteractionEnabled
     }
     set {
+      self.guideView.isUserInteractionEnabled = newValue
+    }
+  }
+
+  /**
+   Clips ScrollView to guide view.
+   */
+  public var clipsToGuide: Bool = false {
+    didSet {
       store.commit {
-        $0.isGuideInteractionEnabled = newValue
+        $0.layoutVersion += 1
       }
     }
   }
-  
+
+  public var isImageViewHidden: Bool {
+    get {
+      imagePlatterView.imageView.isHidden
+    }
+    set {
+      imagePlatterView.imageView.isHidden = newValue
+    }
+  }
+
+  public var isZoomEnabled: Bool = true {
+    didSet {
+      store.commit {
+        $0.layoutVersion += 1
+      }
+    }
+  }
+
+  public var isScrollEnabled: Bool {
+    get {
+      scrollView.isScrollEnabled
+    }
+    set {
+      scrollView.isScrollEnabled = newValue
+    }
+  }
+
   public let editingStack: EditingStack
 
   /**
    An image view that displayed in the scroll view.
    */
-  private let imageView = _ImageView()
-  
+  private let imagePlatterView = ImagePlatterView()
+
+  private let scrollPlatterView = UIView()
   /**
    Internal scroll view
    */  
   private let scrollView = _CropScrollView()
-  
+
   /**
    A background view for scroll view.
    It provides the frame to scroll view.
@@ -107,11 +143,25 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   private lazy var guideView = _InteractiveCropGuideView(
     containerView: self,
-    imageView: self.imageView,
+    imageView: self.imagePlatterView,
     insetOfGuideFlexibility: contentInset
   )
 
-  private let guideBackdropView = UIView()
+  private let guideMaximumView: UIView = {
+    let view = UIView()
+    view.backgroundColor = .clear
+    view.isUserInteractionEnabled = false
+    view.accessibilityIdentifier = "maximumView"
+    return view
+  }()
+
+  private let guideBackdropView: UIView = {
+    let view = UIView()
+    view.backgroundColor = .clear
+    view.isUserInteractionEnabled = false
+    view.accessibilityIdentifier = "guideBackdropView"
+    return view
+  }()
 
   private var subscriptions = Set<AnyCancellable>()
 
@@ -161,19 +211,20 @@ public final class CropView: UIView, UIScrollViewDelegate {
     self.store = .init(initialState: .init(), logger: nil)
 
     super.init(frame: .zero)
-    
-    guideBackdropView.isUserInteractionEnabled = false
+
     scrollBackdropView.accessibilityIdentifier = "scrollBackdropView"
 
     clipsToBounds = false
 
-    addSubview(scrollBackdropView)
-    addSubview(scrollView)
+    addSubview(scrollPlatterView)
+    scrollPlatterView.addSubview(scrollBackdropView)
+    scrollPlatterView.addSubview(scrollView)
+    addSubview(guideMaximumView)
     addSubview(guideBackdropView)
     addSubview(guideView)
 
-    imageView.isUserInteractionEnabled = true
-    scrollView.addSubview(imageView)
+    imagePlatterView.isUserInteractionEnabled = true
+    scrollView.addSubview(imagePlatterView)
     scrollView.delegate = self
 
     guideView.didChange = { [weak self] in
@@ -193,7 +244,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     .store(in: &subscriptions)
     #endif
   
-    defaultAppearance: do {
+    // apply defaultAppearance
+    do {
       setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
       setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
       setLoadingOverlay(factory: {
@@ -208,7 +260,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   // MARK: - Functions
-  
+
+  public func setOverlayInImageView(_ overlay: UIView) {
+    imagePlatterView.overlay = overlay
+  }
+
   public override func willMove(toSuperview newSuperview: UIView?) {
     super.willMove(toSuperview: newSuperview)
     
@@ -241,7 +297,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
               if self.hasSetupScrollViewCompleted == false {
                 self.hasSetupScrollViewCompleted = true
 
-                self.imageView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
+                self.imagePlatterView.bounds = .init(origin: .zero, size: crop.scrollViewContentSize())
 
                 let scrollView = self.scrollView
 
@@ -276,10 +332,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
               self.editingStack.crop(crop)
             }
           }
-          
-          state.ifChanged(\.isGuideInteractionEnabled).do { value in
-            self.guideView.isUserInteractionEnabled = value
-          }
+
         }
         .store(in: &subscriptions)
         
@@ -418,6 +471,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.layoutVersion += 1
     }
 
+    record()
+
   }
 
   public func setCrop(_ crop: EditingCrop) {
@@ -523,7 +578,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
 extension CropView {
   private func setImage(_ cgImage: CGImage) {
-    imageView.image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    imagePlatterView.image = UIImage(
+      cgImage: cgImage,
+      scale: 1,
+      orientation: .up
+    )
   }
   
   override public func layoutSubviews() {
@@ -531,7 +590,10 @@ extension CropView {
     
     if let outOfBoundsOverlay = cropOutsideOverlay {
       // TODO: Get an optimized size
-      outOfBoundsOverlay.frame.size = .init(width: UIScreen.main.bounds.width * 1.5, height: UIScreen.main.bounds.height * 1.5)
+      outOfBoundsOverlay.frame.size = .init(
+        width: UIScreen.main.bounds.width * 1.5,
+        height: UIScreen.main.bounds.height * 1.5
+      )
       outOfBoundsOverlay.center = center
     }
     
@@ -573,13 +635,25 @@ extension CropView {
         let length: CGFloat = 1600
         let frame = CGRect(origin: .zero, size: .init(width: length, height: length))
 
+        if clipsToGuide {
+          scrollPlatterView.bounds.size = contentRect.size
+          scrollPlatterView.clipsToBounds = true
+        } else {
+          scrollPlatterView.bounds.size = frame.size
+          scrollPlatterView.clipsToBounds = false
+        }
+
+        scrollPlatterView.center = .init(x: bounds.midX, y: bounds.midY)
+
         scrollView.bounds.size = frame.size
-        scrollView.center = .init(x: bounds.midX, y: bounds.midY)
+        scrollView.center = CGPoint(x: scrollPlatterView.bounds.midX, y: scrollPlatterView.bounds.midY)
 
         scrollBackdropView.bounds.size = frame.size
-        scrollBackdropView.center = .init(x: bounds.midX, y: bounds.midY)
+        scrollBackdropView.center = CGPoint(x: scrollPlatterView.bounds.midX, y: scrollPlatterView.bounds.midY)
 
-        guideBackdropView.transform = .identity
+
+
+        guideMaximumView.frame = contentRect
         guideBackdropView.frame = contentRect
 
         guideView.frame = contentRect
@@ -600,7 +674,7 @@ extension CropView {
           scrollView.minimumZoomScale = min
           scrollView.maximumZoomScale = max
 
-          imageView.frame.origin = .zero
+          imagePlatterView.frame.origin = .zero
 
           func _zoom() {
 
@@ -611,11 +685,18 @@ extension CropView {
               animated: false
             )
 
+            if isZoomEnabled == false {
+              let scale = scrollView.zoomScale
+              scrollView.minimumZoomScale = scale
+              scrollView.maximumZoomScale = scale
+            }
+
           }
 
           _zoom()
 
         }
+
       }
 
 
@@ -675,15 +756,23 @@ extension CropView {
 
       let rect = guideView
         .convert(
-          guideView.bounds.rotated(crop.aggregatedRotation.radians),
+          guideView.bounds,
           to: scrollBackdropView
         )
+        .rotated(crop.aggregatedRotation.radians)
 
       let bounds = scrollBackdropView.bounds
 
+//      let offset = CGPoint(
+//        x: guideView.center.x - scrollBackdropView.center.x,
+//        y: guideView.center.y - scrollBackdropView.center.y
+//      )
+
+      let offset: CGPoint = .zero
+
       let insets = UIEdgeInsets.init(
-        top: rect.minY,
-        left: rect.minX,
+        top: rect.minY - offset.y,
+        left: rect.minX - offset.x,
         bottom: bounds.maxY - rect.maxY,
         right: bounds.maxX - rect.maxX
       )
@@ -701,9 +790,9 @@ extension CropView {
       return
     }
 
-    updateScrollViewInset(crop: currentProposedCrop)
-
     record()
+
+    updateScrollViewInset(crop: currentProposedCrop)
 
     /// Triggers layout update later
     debounce.on { [weak self] in
@@ -723,34 +812,39 @@ extension CropView {
 
       // remove rotation while converting rect
       let current = scrollView.transform
-
-      // rotating support
-      let croppingRect = guideView.convert(guideView.bounds, to: guideBackdropView)
-
-      // offsets guide view rect in maximum size
-      // for case of adjusted guide view by interaction
-      let offsetX = croppingRect.midX - guideBackdropView.bounds.midX
-      let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
-
-      // move focusing area to center
-      scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
-        .concatenating(.init(translationX: -offsetX, y: -offsetY))
-        .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
-
-      // TODO: Find calculation way withoug using convert rect
-      // To work correctly, ignoring transform temporarily.
-
-      // move the guide view to center for convert-rect.
       let currentGuideViewCenter = guideView.center
-      guideView.center = guideBackdropView.center
 
-      let guideRectInImageView = guideView.convert(guideView.bounds, to: imageView)
+      do {
+        // rotating support
+        let croppingRect = guideView.convert(guideView.bounds, to: guideBackdropView)
 
-      // restore guide view center same as displaying
-      guideView.center = currentGuideViewCenter
+        // offsets guide view rect in maximum size
+        // for case of adjusted guide view by interaction
+        let offsetX = croppingRect.midX - guideBackdropView.bounds.midX
+        let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
 
-      // restore rotation
-      scrollView.transform = current
+        // move focusing area to center
+        scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
+          .concatenating(.init(translationX: -offsetX, y: -offsetY))
+          .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
+
+        // TODO: Find calculation way withoug using convert rect
+        // To work correctly, ignoring transform temporarily.
+
+        // move the guide view to center for convert-rect.
+        guideView.center = guideBackdropView.center
+      }
+
+      // calculate
+      let guideRectInImageView = guideView.convert(guideView.bounds, to: imagePlatterView)
+
+      do {
+        // restore guide view center same as displaying
+        guideView.center = currentGuideViewCenter
+
+        // restore rotation
+        scrollView.transform = current
+      }
 
       // make crop extent for image
       // converts rectangle for display into image's geometry.
@@ -775,7 +869,7 @@ extension CropView {
   // MARK: UIScrollViewDelegate
 
   public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-    return imageView
+    return imagePlatterView
   }
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -815,10 +909,14 @@ extension CropView {
 
     debounce.on { [weak self] in
       
-      guard let self = self else { return }
+      guard let self = self else {
+        return
+      }
 
-      guard self.scrollView.isTracking == false else { return }
-      
+      guard self.scrollView.isTracking == false else {
+        return
+      }
+
       self.store.commit {
         $0.layoutVersion += 1
       }
@@ -901,8 +999,8 @@ extension UIScrollView {
       targetContentOffset.y -= contentInset.top
 
       let maxContentOffset = CGPoint(
-        x: contentSize.width - boundSize.width + contentInset.left,
-        y: contentSize.height - boundSize.height + contentInset.top
+        x: contentSize.width - bounds.width + contentInset.left,
+        y: contentSize.height - bounds.height + contentInset.top
       )
 
       let minContentOffset = CGPoint(

@@ -31,12 +31,20 @@ public struct ClassicImageEditOptions {
   
   public static var current: ClassicImageEditOptions = .init()
   
-  public var croppingAspectRatio: PixelAspectRatio? = .square
-  public var isFaceDetectionEnabled: Bool = false
+  public var croppingAspectRatio: PixelAspectRatio?
+  public var isFaceDetectionEnabled: Bool
   
-  public var classes: Classes = .init()
+  public var classes: Classes
   
-  public init() {}
+  public init(
+    croppingAspectRatio: PixelAspectRatio? = .square,
+    isFaceDetectionEnabled: Bool = false,
+    classes: Classes = .init()
+  ) {
+    self.croppingAspectRatio = croppingAspectRatio
+    self.isFaceDetectionEnabled = isFaceDetectionEnabled
+    self.classes = classes
+  }
 }
 
 extension ClassicImageEditOptions {
