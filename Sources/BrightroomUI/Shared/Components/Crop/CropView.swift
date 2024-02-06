@@ -1013,6 +1013,10 @@ extension CropView {
     didChangeScrollView()
     guideView.didEndScrollViewAdjustment()
   }
+
+  var remainingScroll: UIEdgeInsets {
+    scrollView.remainingScroll
+  }
 }
 
 extension CGRect {
@@ -1033,6 +1037,33 @@ extension CGRect {
 }
 
 extension UIScrollView {
+
+  fileprivate var remainingScroll: UIEdgeInsets {
+
+    let minContentOffset = self.minContentOffset
+    let maxContentOffset = self.maxContentOffset
+
+    return .init(
+      top: max(contentOffset.y - minContentOffset.y, 0),
+      left: max(contentOffset.x - minContentOffset.x, 0),
+      bottom: max(maxContentOffset.y - contentOffset.y, 0),
+      right: max(maxContentOffset.x - contentOffset.x, 0)
+    )
+  }
+
+  fileprivate var maxContentOffset: CGPoint {
+    CGPoint(
+      x: contentSize.width - bounds.width + contentInset.right,
+      y: contentSize.height - bounds.height + contentInset.bottom
+    )
+  }
+
+  fileprivate var minContentOffset: CGPoint {
+    CGPoint(
+      x: -contentInset.left,
+      y: -contentInset.top
+    )
+  }
 
   fileprivate func customZoom(
     to rect: CGRect,
@@ -1060,15 +1091,9 @@ extension UIScrollView {
       targetContentOffset.x -= contentInset.left
       targetContentOffset.y -= contentInset.top
 
-      let maxContentOffset = CGPoint(
-        x: contentSize.width - bounds.width + contentInset.right,
-        y: contentSize.height - bounds.height + contentInset.bottom
-      )
+      let maxContentOffset = self.maxContentOffset
 
-      let minContentOffset = CGPoint(
-        x: -contentInset.left,
-        y: -contentInset.top
-      )
+      let minContentOffset = self.minContentOffset
 
       targetContentOffset.x = min(max(targetContentOffset.x, minContentOffset.x), maxContentOffset.x)
       targetContentOffset.y = min(max(targetContentOffset.y, minContentOffset.y), maxContentOffset.y)
