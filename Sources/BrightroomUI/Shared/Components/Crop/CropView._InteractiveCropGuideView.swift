@@ -348,10 +348,19 @@ extension CropView {
     @inline(__always)
     private func updateMaximumRect() {
 
-      let rect = imageView.convert(imageView.bounds, to: containerView)
+      let insets = containerView.remainingScroll
+
+      let reversedInsets = UIEdgeInsets(
+        top: -insets.top,
+        left: -insets.left,
+        bottom: -insets.bottom,
+        right: -insets.right
+      )
+
+      let r = self.frame.inset(by: reversedInsets)
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
 
-      maximumRect = rect
+      maximumRect = r
     }
 
     private var isTracking = false
