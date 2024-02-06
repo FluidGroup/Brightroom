@@ -32,6 +32,7 @@ extension CropView {
 
       isUserInteractionEnabled = false
 
+      edgeShapeLayer.accessibilityIdentifier = "Edge"
       addSubview(edgeShapeLayer)
       [
         cornerTopLeftHorizontalShapeLayer,
