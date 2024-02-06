@@ -338,11 +338,6 @@ public final class ClassicImageEditViewController: UIViewController {
       maskingView.setBrushSize($0)
     }
 
-    state.ifChanged(\.proposedCrop).do { value in
-      guard let value = value else { return }
-      cropView.setCrop(value)
-    }
-
     state.ifChanged(\.mode).do { mode in
       switch mode {
       case .crop:
