@@ -163,6 +163,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
     return view
   }()
 
+  private let guideOutsideContainerView: UIView = {
+    let view = UIView()
+    view.backgroundColor = .clear
+    view.isUserInteractionEnabled = false
+    view.accessibilityIdentifier = "guideOutsideContainerView"
+    return view
+  }()
+
   private var subscriptions = Set<AnyCancellable>()
 
   /// A throttling timer to apply guide changed event.
@@ -219,6 +227,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     addSubview(scrollPlatterView)
     scrollPlatterView.addSubview(scrollBackdropView)
     scrollPlatterView.addSubview(scrollView)
+
+    addSubview(guideOutsideContainerView)
     addSubview(guideMaximumView)
     addSubview(guideBackdropView)
     addSubview(guideView)
@@ -555,8 +565,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     cropOutsideOverlay = view
     view.isUserInteractionEnabled = false
 
-    // TODO: Unstable operation.
-    insertSubview(view, aboveSubview: scrollView)
+    guideOutsideContainerView.addSubview(view)
 
     guideView.setCropOutsideOverlay(view)
 
@@ -584,14 +593,16 @@ extension CropView {
   
   override public func layoutSubviews() {
     super.layoutSubviews()
-    
-    if let outOfBoundsOverlay = cropOutsideOverlay {
-      // TODO: Get an optimized size
-      outOfBoundsOverlay.frame.size = .init(
-        width: UIScreen.main.bounds.width * 1.5,
-        height: UIScreen.main.bounds.height * 1.5
-      )
-      outOfBoundsOverlay.center = center
+
+    // TODO: Get an optimized size
+    guideOutsideContainerView.frame.size = .init(
+      width: UIScreen.main.bounds.width * 1.5,
+      height: UIScreen.main.bounds.height * 1.5
+    )
+    guideOutsideContainerView.center = center
+
+    if let cropOutsideOverlay {
+      cropOutsideOverlay.frame = guideOutsideContainerView.bounds
     }
     
     /// to update masking with cropOutsideOverlay

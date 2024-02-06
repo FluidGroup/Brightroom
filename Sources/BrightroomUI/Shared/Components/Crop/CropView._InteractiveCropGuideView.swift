@@ -293,7 +293,6 @@ extension CropView {
       }
       
       assert(view.superview != nil)
-      assert(view.superview is CropView)
 
       cropOutsideOverlay = view
    
@@ -318,8 +317,7 @@ extension CropView {
           outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
         }
       }
-      
-//      EditorLog.debug("[CropGuide] \(frame)")
+    
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
