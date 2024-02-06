@@ -118,8 +118,9 @@ public final class ClassicImageEditViewController: UIViewController {
 
   private lazy var loadingView = LoadingBlurryOverlayView(
     effect: UIBlurEffect(style: .dark),
-    activityIndicatorStyle: .whiteLarge
+    activityIndicatorStyle: .large
   )
+  
   private lazy var touchGuardOverlayView = UIView()
 
   private let viewModel: ClassicImageEditViewModel

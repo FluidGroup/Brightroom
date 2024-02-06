@@ -128,7 +128,8 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       
       addSubview(backingView)
       backingView.isGuideInteractionEnabled = false
-//      backingView.setCropOutsideOverlay(nil)
+      backingView.clipsToGuide = true
+      backingView.setCropOutsideOverlay(nil)
       backingView.setCropInsideOverlay(nil)
       backingView.setOverlayInImageView(containerView)
       backingView.isScrollEnabled = false

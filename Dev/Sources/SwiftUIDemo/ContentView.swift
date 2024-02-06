@@ -265,6 +265,7 @@ struct DemoPixelEditor: View {
     DemoPixelEditWrapper(
       editingStack: editingStack,
       options: options,
+      
       onCompleted: {
         let image = try! editingStack.makeRenderer().render().cgImage
         self.resultImage = .init(cgImage: image)
