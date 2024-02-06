@@ -29,7 +29,6 @@ import Verge
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
 
   private struct State: Equatable {
-    fileprivate(set) var frame: CGRect = .zero
     fileprivate(set) var bounds: CGRect = .zero
 
     fileprivate(set) var proposedCrop: EditingCrop?
@@ -182,9 +181,17 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       guard let self = self else { return }
       
       if let state = state.mapIfPresent(\.loadedState) {
-        
+
         state.ifChanged(\.currentEdit.crop).do { cropRect in
-          
+
+          // scaling for drawing paths
+          [self.canvasView, self.drawingView].forEach { view in
+            view.bounds = .init(origin: .zero, size: cropRect.imageSize)
+            let scale = Geometry.diagonalRatio(to: cropRect.scrollViewContentSize(), from: cropRect.imageSize)
+            view.transform = .init(scaleX: scale, y: scale)
+            view.frame.origin = .zero
+          }
+
           /**
            To avoid running pending layout operations from User Initiated actions.
            */
@@ -257,9 +264,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     backingView.frame = bounds
 
     store.commit {
-      if $0.frame != frame {
-        $0.frame = frame
-      }
       if $0.bounds != bounds {
         $0.bounds = bounds
       }
