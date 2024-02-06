@@ -155,6 +155,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
     return view
   }()
 
+  // for now, for debugging
+  private let guideShadowingView: UIView = {
+    let view = UIView()
+//    #if DEBUG
+//    view.backgroundColor = .systemYellow.withAlphaComponent(0.5)
+//    #endif
+    view.isUserInteractionEnabled = false
+    view.accessibilityIdentifier = "guideShadowingView"
+    return view
+  }()
+
   private let guideBackdropView: UIView = {
     let view = UIView()
     view.backgroundColor = .clear
@@ -230,6 +241,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     addSubview(guideOutsideContainerView)
     addSubview(guideMaximumView)
+    addSubview(guideShadowingView)
     addSubview(guideBackdropView)
     addSubview(guideView)
 
@@ -625,44 +637,63 @@ extension CropView {
     func perform() {
 
       frame: do {
-        let bounds = self.bounds.inset(by: contentInset)
 
-        let size: CGSize
-        let aspectRatio = PixelAspectRatio(crop.cropExtent.size)
+        let contentRect: CGRect = {
 
-        size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
+          let bounds = self.bounds.inset(by: contentInset)
 
-        let contentRect = CGRect(
-          origin: .init(
-            x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
-            y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
-          ),
-          size: size
-        )
+          let size = PixelAspectRatio(crop.cropExtent.size)
+            .sizeThatFitsWithRounding(in: bounds.size)
+
+          return .init(
+            origin: .init(
+              x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,
+              y: contentInset.top + ((bounds.height - size.height) / 2) /* centering offset */
+            ),
+            size: size
+          )
+        }()
 
         let length: CGFloat = 1600
-        let frame = CGRect(origin: .zero, size: .init(width: length, height: length))
+        let scrollViewFrame = CGRect(
+          origin: .zero,
+          size: .init(width: length, height: length)
+        )
 
         if clipsToGuide {
           scrollPlatterView.bounds.size = contentRect.size
           scrollPlatterView.clipsToBounds = true
         } else {
-          scrollPlatterView.bounds.size = frame.size
+          scrollPlatterView.bounds.size = scrollViewFrame.size
           scrollPlatterView.clipsToBounds = false
         }
 
-        scrollPlatterView.center = .init(x: bounds.midX, y: bounds.midY)
+        scrollPlatterView.center = .init(x: self.bounds.midX, y: self.bounds.midY)
 
-        scrollView.bounds.size = frame.size
+        scrollView.bounds.size = scrollViewFrame.size
         scrollView.center = CGPoint(x: scrollPlatterView.bounds.midX, y: scrollPlatterView.bounds.midY)
 
-        scrollBackdropView.bounds.size = frame.size
+        scrollBackdropView.bounds.size = scrollViewFrame.size
         scrollBackdropView.center = CGPoint(x: scrollPlatterView.bounds.midX, y: scrollPlatterView.bounds.midY)
-
-
 
         guideMaximumView.frame = contentRect
         guideBackdropView.frame = contentRect
+
+        guideShadowingView.frame = {
+
+          let bounds = self.bounds.inset(by: contentInset)
+
+          let size = PixelAspectRatio(crop.cropExtent.size)
+            .sizeThatFitsWithRounding(in: bounds.size)
+
+          return .init(
+            origin: .init(
+              x: ((contentInset.left + contentInset.right) / 2) + ((bounds.width - size.width) / 2) /* centering offset */,
+              y: ((contentInset.top + contentInset.bottom) / 2) + ((bounds.height - size.height) / 2) /* centering offset */
+            ),
+            size: size
+          )
+        }()
 
         guideView.frame = contentRect
 
@@ -759,35 +790,58 @@ extension CropView {
 
   private func updateScrollViewInset(crop: EditingCrop) {
 
+    /**
+     FIXME: Now not supported update content inset following moved guide view.
+     Needs to calculate inset using current rotation.
+     */
+
     // update content inset
     do {
 
-      let rect = guideView
+      let baseRect = guideBackdropView
         .convert(
-          guideView.bounds,
+          guideBackdropView.bounds.rotated(crop.aggregatedRotation.radians),
           to: scrollBackdropView
         )
-        .rotated(crop.aggregatedRotation.radians)
+
+      let actualRect = guideView
+        .convert(
+          guideView.bounds.rotated(crop.aggregatedRotation.radians),
+          to: scrollBackdropView
+        )
+
+      let insetsFromBase = UIEdgeInsets(
+        top: actualRect.minY - baseRect.minY,
+        left: actualRect.minX - baseRect.minX,
+        bottom: baseRect.maxY - actualRect.maxY,
+        right: baseRect.maxX - actualRect.maxX
+      )
 
       let bounds = scrollBackdropView.bounds
 
-//      let offset = CGPoint(
-//        x: guideView.center.x - scrollBackdropView.center.x,
-//        y: guideView.center.y - scrollBackdropView.center.y
+//      let insetsForActual = UIEdgeInsets.init(
+//        top: actualRect.minY,
+//        left: actualRect.minX,
+//        bottom: bounds.maxY - actualRect.maxY,
+//        right: bounds.maxX - actualRect.maxX
 //      )
 
-      let offset: CGPoint = .zero
-
-      let insets = UIEdgeInsets.init(
-        top: rect.minY - offset.y,
-        left: rect.minX - offset.x,
-        bottom: bounds.maxY - rect.maxY,
-        right: bounds.maxX - rect.maxX
+      let insetsForBase = UIEdgeInsets.init(
+        top: baseRect.minY,
+        left: baseRect.minX,
+        bottom: bounds.maxY - baseRect.maxY,
+        right: bounds.maxX - baseRect.maxX
       )
 
-      let resolvedInsets = insets
+//      let composed = UIEdgeInsets.init(
+//        top: baseRect.minY + insetsFromBase.top,
+//        left: baseRect.minX + insetsFromBase.left,
+//        bottom: bounds.maxY - baseRect.maxY + insetsFromBase.bottom,
+//        right: bounds.maxX - baseRect.maxX + insetsFromBase.right
+//      )
 
-      scrollView.contentInset = resolvedInsets
+      scrollView.contentInset = insetsForBase
+
     }
   }
 
@@ -1007,8 +1061,8 @@ extension UIScrollView {
       targetContentOffset.y -= contentInset.top
 
       let maxContentOffset = CGPoint(
-        x: contentSize.width - bounds.width + contentInset.left,
-        y: contentSize.height - bounds.height + contentInset.top
+        x: contentSize.width - bounds.width + contentInset.right,
+        y: contentSize.height - bounds.height + contentInset.bottom
       )
 
       let minContentOffset = CGPoint(
