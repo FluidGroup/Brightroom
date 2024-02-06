@@ -81,7 +81,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
 
-  private let backingView: CropView
+  let backingView: CropView
 
   private let containerView = ContainerView()
 
@@ -133,6 +133,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       backingView.setOverlayInImageView(containerView)
       backingView.isScrollEnabled = false
       backingView.isZoomEnabled = false
+      backingView.isAutoApplyEditingStackEnabled = false
 
       containerView.addContent(blurryImageView)
       containerView.addContent(canvasView)

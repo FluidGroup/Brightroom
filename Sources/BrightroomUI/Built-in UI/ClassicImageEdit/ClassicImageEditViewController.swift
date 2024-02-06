@@ -340,7 +340,8 @@ public final class ClassicImageEditViewController: UIViewController {
 
     state.ifChanged(\.proposedCrop).do { value in
       guard let value = value else { return }
-      cropView.setCrop(value)
+//      cropView.setCrop(value)
+//      maskingView.backingView.setCrop(value)
     }
 
     state.ifChanged(\.mode).do { mode in

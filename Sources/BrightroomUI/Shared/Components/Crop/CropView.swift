@@ -336,8 +336,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
         }
         .store(in: &subscriptions)
         
-        var appliedCrop = false
-        
         // To restore current crop from editing-stack
         editingStack.sinkState { [weak self] state in
           
@@ -348,12 +346,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
             loaded.ifChanged(\.imageForCrop).do { image in
               self.setImage(image)
             }
-            
-            if appliedCrop == false {
-              appliedCrop = true
+
+            loaded.ifChanged(\.currentEdit.crop).do { crop in
               self.setCrop(loaded.currentEdit.crop)
             }
-                        
+
           }
           
           state.ifChanged(\.isLoading).do { isLoading in
