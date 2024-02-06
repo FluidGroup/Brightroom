@@ -947,8 +947,8 @@ extension UIScrollView {
       targetContentOffset.y -= contentInset.top
 
       let maxContentOffset = CGPoint(
-        x: contentSize.width - boundSize.width + contentInset.left,
-        y: contentSize.height - boundSize.height + contentInset.top
+        x: contentSize.width - bounds.width + contentInset.left,
+        y: contentSize.height - bounds.height + contentInset.top
       )
 
       let minContentOffset = CGPoint(
