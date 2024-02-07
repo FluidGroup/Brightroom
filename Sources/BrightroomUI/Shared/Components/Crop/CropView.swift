@@ -792,57 +792,55 @@ extension CropView {
 
   private func updateScrollViewInset(crop: EditingCrop) {
 
-    /**
-     FIXME: Now not supported update content inset following moved guide view.
-     Needs to calculate inset using current rotation.
-     */
-
     // update content inset
     do {
 
-      let baseRect = guideBackdropView
-        .convert(
-          guideBackdropView.bounds.rotated(crop.aggregatedRotation.radians),
-          to: scrollBackdropView
+      let o: CGPoint = {
+
+        let base = guideBackdropView
+          .convert(
+            guideBackdropView.bounds,
+            to: scrollBackdropView
+          )
+
+        let actualRect = guideView
+          .convert(
+            guideView.bounds,
+            to: scrollBackdropView
+          )
+
+        return CGPoint(
+          x: base.midX - actualRect.midX,
+          y: base.midY - actualRect.midY
         )
+
+      }()
+
+      let anchorOffset = CGPoint(
+        x: (guideView.bounds.width) / 2 + o.x,
+        y: (guideView.bounds.height) / 2 + o.y
+      )
 
       let actualRect = guideView
         .convert(
-          guideView.bounds.rotated(crop.aggregatedRotation.radians),
+          guideView.bounds.applying(
+            CGAffineTransform(translationX: -anchorOffset.x, y: -anchorOffset.y)
+              .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
+              .concatenating(.init(translationX: anchorOffset.x, y: anchorOffset.y))
+          ),
           to: scrollBackdropView
         )
 
-      let insetsFromBase = UIEdgeInsets(
-        top: actualRect.minY - baseRect.minY,
-        left: actualRect.minX - baseRect.minX,
-        bottom: baseRect.maxY - actualRect.maxY,
-        right: baseRect.maxX - actualRect.maxX
-      )
-
       let bounds = scrollBackdropView.bounds
 
-//      let insetsForActual = UIEdgeInsets.init(
-//        top: actualRect.minY,
-//        left: actualRect.minX,
-//        bottom: bounds.maxY - actualRect.maxY,
-//        right: bounds.maxX - actualRect.maxX
-//      )
-
-      let insetsForBase = UIEdgeInsets.init(
-        top: baseRect.minY,
-        left: baseRect.minX,
-        bottom: bounds.maxY - baseRect.maxY,
-        right: bounds.maxX - baseRect.maxX
+      let insetsForActual = UIEdgeInsets.init(
+        top: actualRect.minY,
+        left: actualRect.minX,
+        bottom: bounds.maxY - actualRect.maxY,
+        right: bounds.maxX - actualRect.maxX
       )
 
-//      let composed = UIEdgeInsets.init(
-//        top: baseRect.minY + insetsFromBase.top,
-//        left: baseRect.minX + insetsFromBase.left,
-//        bottom: bounds.maxY - baseRect.maxY + insetsFromBase.bottom,
-//        right: bounds.maxX - baseRect.maxX + insetsFromBase.right
-//      )
-
-      scrollView.contentInset = insetsForBase
+      scrollView.contentInset = insetsForActual
 
     }
   }
@@ -1045,12 +1043,14 @@ extension UIScrollView {
     let minContentOffset = self.minContentOffset
     let maxContentOffset = self.maxContentOffset
 
-    return .init(
+    let inset = UIEdgeInsets.init(
       top: max(contentOffset.y - minContentOffset.y, 0),
       left: max(contentOffset.x - minContentOffset.x, 0),
       bottom: max(maxContentOffset.y - contentOffset.y, 0),
       right: max(maxContentOffset.x - contentOffset.x, 0)
     )
+
+    return inset
   }
 
   fileprivate var maxContentOffset: CGPoint {
