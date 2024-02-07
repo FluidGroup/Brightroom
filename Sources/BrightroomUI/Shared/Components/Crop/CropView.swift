@@ -525,6 +525,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       }
       $0.layoutVersion += 1
     }
+
+    guideView.setLockedAspectRatio(ratio)
   }
 
   /**
