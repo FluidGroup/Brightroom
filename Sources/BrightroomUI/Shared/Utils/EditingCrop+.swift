@@ -19,7 +19,13 @@ extension EditingCrop {
 //    imageSize
     PixelAspectRatio(imageSize).size(byWidth: 1000)
   }
-  
+
+  func scaleForDrawing() -> CGFloat {
+    let scaleFromOriginal = Geometry.diagonalRatio(to: scrollViewContentSize(), from: imageSize)
+
+    return scaleFromOriginal
+  }
+
   func calculateZoomScale(visibleSize: CGSize) -> (min: CGFloat, max: CGFloat) {
     
     let contentSize = scrollViewContentSize()
