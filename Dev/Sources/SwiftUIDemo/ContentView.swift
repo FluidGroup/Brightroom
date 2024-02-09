@@ -1,5 +1,6 @@
 import BrightroomEngine
 import BrightroomUI
+import PhotosUI
 import SwiftUI
 
 struct ContentView: View {
@@ -14,6 +15,12 @@ struct ContentView: View {
 
         Form {
           NavigationLink("Isolated", destination: IsolatedEditinView())
+
+          if #available(iOS 16, *) {
+            NavigationLink("Pick image") {
+              WorkingOnPicked()
+            }
+          }
 
           Section("Restoration") {
             Button("Crop") {
@@ -203,7 +210,7 @@ struct ContentView: View {
         }
 
       }
-      .navigationTitle("Pixel")
+      .navigationTitle("Brightroom")
       .fullScreenCover(
         item: $fullScreenView,
         onDismiss: {},
@@ -216,6 +223,92 @@ struct ContentView: View {
       try? PresetStorage.default.loadLUTs()
     })
   }
+}
+
+@available(iOS 16, *)
+struct WorkingOnPicked: View {
+
+  @State private var item: PhotosPickerItem?
+  @State private var editingStack: EditingStack?
+  @State private var fullScreenView: FullscreenIdentifiableView?
+
+  var body: some View {
+
+    Form {
+      PhotosPicker("Select", selection: $item)
+
+      if let stack = editingStack {
+        Section("Components") {
+
+          Button("Crop") {
+            fullScreenView = .init {
+              DemoCropView(editingStack: { stack })
+            }
+          }
+
+          Button("Masking") {
+            fullScreenView = .init {
+              DemoMaskingView {
+                stack
+              }
+            }
+          }
+        }
+
+        Section("BuiltIn") {
+          Button("PhotosCrop") {
+            fullScreenView = .init {
+              DemoPhotosCropView(stack: {
+                Mocks.makeEditingStack(
+                  image: Asset.horizontalRect.image
+                )
+              })
+            }
+          }
+
+          Button("ClassicEditor") {
+            fullScreenView = .init {
+              DemoPixelEditor(editingStack: {
+                stack
+              })
+            }
+          }
+        }
+
+      }
+
+    }
+    .fullScreenCover(
+      item: $fullScreenView,
+      onDismiss: {},
+      content: {
+        $0
+      }
+    )
+    .onChange(of: item, perform: { value in
+      guard let value else { return }
+
+      Task {
+
+        do {
+          guard let transferable = try await value.loadTransferable(type: Data.self) else {
+            print("Error: no transferable found.")
+            return
+          }
+
+          let stack = EditingStack(imageProvider: try .init(data: transferable))
+
+          self.editingStack = stack
+
+        } catch {
+          print("Error: \(error)")
+        }
+
+      }
+    })
+
+  }
+
 }
 
 struct DemoPhotosCropView: View {
@@ -265,7 +358,7 @@ struct DemoPixelEditor: View {
     DemoPixelEditWrapper(
       editingStack: editingStack,
       options: options,
-      
+
       onCompleted: {
         let image = try! editingStack.makeRenderer().render().cgImage
         self.resultImage = .init(cgImage: image)
