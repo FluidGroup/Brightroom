@@ -122,6 +122,17 @@ public final class CropView: UIView, UIScrollViewDelegate {
   private let imagePlatterView = ImagePlatterView()
 
   private let scrollPlatterView = UIView()
+
+  #if DEBUG
+  private let _debug_shapeLayer: CAShapeLayer = {
+    let layer = CAShapeLayer()
+    layer.strokeColor = UIColor.red.cgColor
+    layer.fillColor = UIColor.clear.cgColor
+    layer.lineWidth = 2
+    return layer
+  }()
+  #endif
+
   /**
    Internal scroll view
    */
@@ -636,6 +647,10 @@ extension CropView {
       }
     }
 
+    #if DEBUG
+    scrollPlatterView.layer.addSublayer(_debug_shapeLayer)
+    #endif
+
   }
 
   private func updateScrollContainerView(
@@ -1036,30 +1051,67 @@ extension CropView {
 
     guard let crop = store.state.proposedCrop else { return .zero }
 
-    let insets = makeScrollViewInset(aggregatedRotaion: crop.aggregatedRotation.radians)
+    let rect = guideView.convert(guideView.bounds, to: imagePlatterView)
 
-    var maxContentOffset: CGPoint {
-      CGPoint(
-        x: scrollView.contentSize.width -  scrollView.bounds.width + insets.right,
-        y: scrollView.contentSize.height -  scrollView.bounds.height + insets.bottom
-      )
-    }
-
-    var minContentOffset: CGPoint {
-      CGPoint(
-        x: -insets.left,
-        y: -insets.top
-      )
-    }
-
-    let inset = UIEdgeInsets.init(
-      top: max(scrollView.contentOffset.y - minContentOffset.y, 0),
-      left: max(scrollView.contentOffset.x - minContentOffset.x, 0),
-      bottom: max(maxContentOffset.y - scrollView.contentOffset.y, 0),
-      right: max(maxContentOffset.x - scrollView.contentOffset.x, 0)
+    let outbound = imagePlatterView.bounds
+    let i = UIEdgeInsets(
+      top: rect.minY - outbound.minY,
+      left: rect.minX - outbound.minX,
+      bottom: outbound.maxY - rect.maxY,
+      right: outbound.maxX - rect.maxX
     )
 
-    return inset
+    let path = UIBezierPath(rect: rect)
+
+    var patternAngleDegree = crop.aggregatedRotation.degrees.truncatingRemainder(dividingBy: 360)
+    if patternAngleDegree > 0 {
+      patternAngleDegree -= 360
+    }
+
+    print(patternAngleDegree)
+
+    switch patternAngleDegree {
+
+    case -90..<0:
+
+      return .init(
+        top: min(i.top, i.right),
+        left: min(i.top, i.left),
+        bottom: min(i.bottom, i.left),
+        right: min(i.bottom, i.right)
+      )
+
+    case -180..<(-90):
+
+      return .init(
+        top: min(i.bottom, i.right),
+        left: min(i.top, i.right),
+        bottom: min(i.top, i.left),
+        right: min(i.bottom, i.left)
+      )
+
+    case -270..<(-180):
+
+      return .init(
+        top: min(i.bottom, i.left),
+        left: min(i.bottom, i.right),
+        bottom: min(i.top, i.right),
+        right: min(i.top, i.left)
+      )
+
+    case -360..<(-270):
+
+      return .init(
+        top: min(i.top, i.left),
+        left: min(i.bottom, i.left),
+        bottom: min(i.bottom, i.right),
+        right: min(i.top, i.right)
+      )
+
+    default:
+      return i
+    }
+
   }
 }
 
@@ -1081,21 +1133,6 @@ extension CGRect {
 }
 
 extension UIScrollView {
-
-  fileprivate var remainingScroll: UIEdgeInsets {
-
-    let minContentOffset = self.minContentOffset
-    let maxContentOffset = self.maxContentOffset
-
-    let inset = UIEdgeInsets.init(
-      top: max(contentOffset.y - minContentOffset.y, 0),
-      left: max(contentOffset.x - minContentOffset.x, 0),
-      bottom: max(maxContentOffset.y - contentOffset.y, 0),
-      right: max(maxContentOffset.x - contentOffset.x, 0)
-    )
-
-    return inset
-  }
 
   fileprivate var maxContentOffset: CGPoint {
     CGPoint(

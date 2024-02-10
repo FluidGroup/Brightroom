@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4B135F6E26136B5D003B5152 /* RendererOrientationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */; };
+		4B2324E42B763D4A00662EB8 /* GeometryPlayground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */; };
 		4B2A1107266B7B3000B0C885 /* test-image-10 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A10FA266B7B3000B0C885 /* test-image-10 */; };
 		4B2A1108266B7B3000B0C885 /* test-image-2 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A10FB266B7B3000B0C885 /* test-image-2 */; };
 		4B2A1109266B7B3000B0C885 /* test-image-4 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A10FC266B7B3000B0C885 /* test-image-4 */; };
@@ -30,6 +31,7 @@
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
 		4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */; };
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
+		4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 4B46E71A2B762E20003179C2 /* MondrianLayout */; };
 		4B487E5728EEC0520026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5628EEC0520026A8CF /* BrightroomEngine */; };
 		4B487E5928EEC0520026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5828EEC0520026A8CF /* BrightroomUI */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
@@ -566,6 +568,7 @@
 
 /* Begin PBXFileReference section */
 		4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererOrientationTests.swift; sourceTree = "<group>"; };
+		4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPlayground.swift; sourceTree = "<group>"; };
 		4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_left_mirrored.HEIC; sourceTree = "<group>"; };
 		4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_right_mirrored.HEIC; sourceTree = "<group>"; };
 		4B254FE8260BB32600F77E9A /* orientation_left.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_left.HEIC; sourceTree = "<group>"; };
@@ -1055,6 +1058,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */,
 				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
@@ -1255,6 +1259,7 @@
 				4BA9896E2B70BF2000EB7983 /* RenderedResultView.swift */,
 				4BA989702B70F10300EB7983 /* ObjectEdge.swift */,
 				4BA989722B7122C800EB7983 /* DemoMaskingView.swift */,
+				4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */,
 			);
 			path = SwiftUIDemo;
 			sourceTree = "<group>";
@@ -1778,6 +1783,7 @@
 				4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */,
 				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
 				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
+				4B46E71A2B762E20003179C2 /* MondrianLayout */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -2412,6 +2418,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */,
+				4B2324E42B763D4A00662EB8 /* GeometryPlayground.swift in Sources */,
 				4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */,
 				4BA989732B7122C800EB7983 /* DemoMaskingView.swift in Sources */,
 				4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */,
@@ -2948,6 +2955,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		4B46E71A2B762E20003179C2 /* MondrianLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */;
+			productName = MondrianLayout;
+		};
 		4B487E5628EEC0520026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
