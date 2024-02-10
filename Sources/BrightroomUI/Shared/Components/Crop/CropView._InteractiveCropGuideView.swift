@@ -368,6 +368,7 @@ extension CropView {
       rightMaxConstraint?.constant = maximumRect!.maxX - superview!.bounds.maxX
       topMaxConstraint?.constant = r.minY
       bottomMaxConstraint?.constant = maximumRect!.maxY - superview!.bounds.maxY
+
     }
 
     private var isTracking = false

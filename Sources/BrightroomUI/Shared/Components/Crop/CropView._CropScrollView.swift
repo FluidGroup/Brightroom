@@ -58,6 +58,16 @@ extension CropView {
 
   final class ImagePlatterView: UIView {
 
+    #if DEBUG
+    private let debugShapeLayer: CAShapeLayer = {
+      let layer = CAShapeLayer()
+      layer.strokeColor = UIColor.systemBlue.cgColor
+      layer.lineWidth = 2
+      layer.fillColor = nil
+      return layer
+    }()
+    #endif
+
     var image: UIImage? {
       get {
         imageView.image
@@ -93,6 +103,16 @@ extension CropView {
       super.layoutSubviews()
       imageView.frame = bounds
       overlay?.frame = bounds
+      #if DEBUG
+      layer.addSublayer(debugShapeLayer)
+      debugShapeLayer.frame = bounds
+      #endif
+    }
+
+    func _debug_setPath(path: UIBezierPath) {
+      #if DEBUG
+      debugShapeLayer.path = path.cgPath
+      #endif
     }
 
   }
