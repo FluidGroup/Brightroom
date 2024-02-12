@@ -14,10 +14,24 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "4B47D051216CC5350007B594"
-               BuildableName = "BrightroomUI.framework"
+               BlueprintIdentifier = "BrightroomEngine"
+               BuildableName = "BrightroomEngine"
+               BlueprintName = "BrightroomEngine"
+               ReferencedContainer = "container:..">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "BrightroomUI"
+               BuildableName = "BrightroomUI"
                BlueprintName = "BrightroomUI"
-               ReferencedContainer = "container:Brightroom.xcodeproj">
+               ReferencedContainer = "container:..">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -40,15 +54,6 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B47D051216CC5350007B594"
-            BuildableName = "BrightroomUI.framework"
-            BlueprintName = "BrightroomUI"
-            ReferencedContainer = "container:Brightroom.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -59,10 +64,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "4B47D051216CC5350007B594"
-            BuildableName = "BrightroomUI.framework"
+            BlueprintIdentifier = "BrightroomUI"
+            BuildableName = "BrightroomUI"
             BlueprintName = "BrightroomUI"
-            ReferencedContainer = "container:Brightroom.xcodeproj">
+            ReferencedContainer = "container:..">
          </BuildableReference>
       </MacroExpansion>
    </ProfileAction>
