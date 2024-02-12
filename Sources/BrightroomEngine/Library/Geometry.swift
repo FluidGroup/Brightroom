@@ -132,7 +132,11 @@ extension CGSize {
   }
 }
 
-public struct PixelAspectRatio: Hashable, CustomReflectable {
+public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable {
+
+  public var id: String {
+    return "\(width.bitPattern), \(height.bitPattern)"
+  }
 
   public static func == (lhs: Self, rhs: Self) -> Bool {
     lhs._comparingValue == rhs._comparingValue
