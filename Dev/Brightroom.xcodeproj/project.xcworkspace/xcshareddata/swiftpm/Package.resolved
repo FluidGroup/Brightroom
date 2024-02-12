@@ -82,6 +82,24 @@
       }
     },
     {
+      "identity" : "swiftui-hosting",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swiftui-hosting.git",
+      "state" : {
+        "revision" : "7e8eaca72eae910d6d3b6272c263c6c3a10b755c",
+        "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "swiftui-support",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swiftui-support.git",
+      "state" : {
+        "revision" : "c610c1e46c14c4660beb4ef7fe0241941dbecdc6",
+        "version" : "0.5.0"
+      }
+    },
+    {
       "identity" : "texture",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/Texture.git",
@@ -96,7 +114,7 @@
       "location" : "https://github.com/FluidGroup/TextureSwiftSupport",
       "state" : {
         "branch" : "main",
-        "revision" : "5de10d4c9eae028a8c560ba1c964f76bc8b731c5"
+        "revision" : "5bae50cab3798dccb8b98c3ffbc70320ae66b45a"
       }
     },
     {

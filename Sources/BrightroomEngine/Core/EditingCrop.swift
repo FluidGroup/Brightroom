@@ -21,6 +21,7 @@
 
 import UIKit
 import Vision
+import SwiftUI
 
 /// A representation of cropping extent in Image.
 public struct EditingCrop: Equatable {
@@ -37,21 +38,21 @@ public struct EditingCrop: Equatable {
     /// 270 degree
     case angle_270
 
-    public var angle: CGFloat {
+    public var angle: AdjustmentAngle {
       switch self {
       case .angle_0:
-        return 0
+        return .degrees(0)
       case .angle_90:
-        return -CGFloat.pi / 2
+        return .degrees(-90)
       case .angle_180:
-        return -CGFloat.pi
+        return .degrees(-180)
       case .angle_270:
-        return CGFloat.pi / 2
+        return .degrees(-270)
       }
     }
 
     public var transform: CGAffineTransform {
-      .init(rotationAngle: angle)
+      .init(rotationAngle: angle.radians)
     }
 
     public func next() -> Self {
@@ -64,6 +65,8 @@ public struct EditingCrop: Equatable {
     }
   }
 
+  public typealias AdjustmentAngle = SwiftUI.Angle
+
   /// The dimensions in pixel for the image.
   /// Applied image-orientation.
   public var imageSize: CGSize
@@ -73,6 +76,13 @@ public struct EditingCrop: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
+
+  /// An angle to rotate in addition to the specified rotation.
+  public var adjustmentAngle: AdjustmentAngle = .zero
+
+  public var aggregatedRotation: AdjustmentAngle {
+    rotation.angle + adjustmentAngle
+  }
 
   public private(set) var scaleToRestore: CGFloat
 
@@ -124,7 +134,7 @@ public struct EditingCrop: Equatable {
     return new
   }
 
-  private func scaled(_ scale: CGFloat) -> Self {
+  private consuming func scaled(_ scale: CGFloat) -> Self {
 
     var modified = self
 
@@ -230,15 +240,16 @@ public struct EditingCrop: Equatable {
   /// - Parameters:
   ///   - cropExtent:
   ///   - respectingAspectRatio:
-  public mutating func updateCropExtentNormalizing(
+  public mutating func updateCropExtent(
     _ cropExtent: CGRect,
     respectingAspectRatio: PixelAspectRatio?
   ) {
-    self.cropExtent = Self.fittingRect(
-      rect: cropExtent,
-      in: imageSize,
-      respectingAspectRatio: respectingAspectRatio
-    )
+//    self.cropExtent = Self.fittingRect(
+//      rect: cropExtent,
+//      in: imageSize,
+//      respectingAspectRatio: respectingAspectRatio
+//    )
+    self.cropExtent = cropExtent
   }
 
   private static func fittingRect(

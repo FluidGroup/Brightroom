@@ -27,7 +27,7 @@ import BrightroomEngine
 
 public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
   
-  private let bodyView: BodyView
+  let bodyView: BodyView
   
   init(bodyView: BodyView) {
     self.bodyView = bodyView
@@ -56,22 +56,24 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
   private let cropInsideOverlay: AnyView?
-  
-  private let factory: () -> CropView
-  
+  private let editingStack: EditingStack
+
+  private var _rotation: EditingCrop.Rotation?
+  private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
+  private var _croppingAspectRatio: PixelAspectRatio?
+
   public init(
     editingStack: EditingStack,
     cropInsideOverlay: AnyView? = nil
   ) {
     self.cropInsideOverlay = cropInsideOverlay
-    
-    self.factory = {
-      CropView(editingStack: editingStack)
-    }
+    self.editingStack = editingStack
   }
   
   public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
-    let view = factory()
+
+    let view = CropView(editingStack: editingStack)
+
     view.isAutoApplyEditingStackEnabled = true
     
     let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
@@ -94,6 +96,38 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   
   public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
 
+    if let _rotation {
+      uiViewController.bodyView.setRotation(_rotation)
+    }
+
+    if let _adjustmentAngle {
+      uiViewController.bodyView.setAdjustmentAngle(_adjustmentAngle)
+    }
+
+    uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
   }
-        
+
+  public func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
+
+    var modified = self
+    modified._rotation = rotation
+    return modified
+  }
+
+  public func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+
+    var modified = self
+    modified._adjustmentAngle = angle
+    return modified
+
+  }
+
+  public func croppingAspectRatio(_ rect: PixelAspectRatio?) -> Self {
+
+    var modified = self
+    modified._croppingAspectRatio = rect
+    return modified
+
+  }
+
 }

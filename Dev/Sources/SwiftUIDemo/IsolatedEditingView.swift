@@ -20,7 +20,7 @@ struct IsolatedEditinView: View {
       }
 
       Button("Custom Crop") {
-        fullScreenView = .init { DemoCropView(editingStack: editingStack) }
+        fullScreenView = .init { DemoCropView(editingStack: {editingStack}) }
       }
 
       Button("Blur Mask") {

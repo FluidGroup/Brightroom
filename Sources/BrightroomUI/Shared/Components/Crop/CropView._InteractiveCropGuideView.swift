@@ -43,7 +43,9 @@ extension CropView {
   }
   
   final class _InteractiveCropGuideView: PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
+
     var willChange: () -> Void = {}
+    var updating: () -> Void = {}
     var didChange: () -> Void = {}
 
     private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
@@ -293,7 +295,6 @@ extension CropView {
       }
       
       assert(view.superview != nil)
-      assert(view.superview is CropView)
 
       cropOutsideOverlay = view
    
@@ -318,8 +319,7 @@ extension CropView {
           outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
         }
       }
-      
-//      EditorLog.debug("[CropGuide] \(frame)")
+    
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -349,8 +349,27 @@ extension CropView {
 
     @inline(__always)
     private func updateMaximumRect() {
-      maximumRect = imageView.convert(imageView.bounds, to: containerView)
+
+      let insets = containerView.remainingScroll
+
+      let reversedInsets = UIEdgeInsets(
+        top: -insets.top,
+        left: -insets.left,
+        bottom: -insets.bottom,
+        right: -insets.right
+      )
+
+      let r = self.frame
+        .inset(by: reversedInsets)
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
+
+      maximumRect = r
+
+      leftMaxConstraint?.constant = r.minX
+      rightMaxConstraint?.constant = maximumRect!.maxX - superview!.bounds.maxX
+      topMaxConstraint?.constant = r.minY
+      bottomMaxConstraint?.constant = maximumRect!.maxY - superview!.bounds.maxY
+
     }
 
     private var isTracking = false
@@ -367,6 +386,11 @@ extension CropView {
       cropOutsideOverlay?.didBeginAdjustment(kind: .guide)
     }
 
+    private func onGestureTrackingChanged() {
+      updating()
+      updateMaximumRect()
+    }
+
     private func onGestureTrackingEnded() {
 
       isTracking = false
@@ -379,6 +403,11 @@ extension CropView {
 
     private var widthConstraint: NSLayoutConstraint!
     private var heightConstraint: NSLayoutConstraint!
+
+    private var leftMaxConstraint: NSLayoutConstraint?
+    private var rightMaxConstraint: NSLayoutConstraint?
+    private var topMaxConstraint: NSLayoutConstraint?
+    private var bottomMaxConstraint: NSLayoutConstraint?
 
     private var activeConstraints: [NSLayoutConstraint] = []
 
@@ -398,52 +427,61 @@ extension CropView {
     private func activateLeftMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
+      leftMaxConstraint = leftAnchor.constraint(
+        greaterThanOrEqualTo: superview!.leftAnchor,
+        constant: maximumRect!.minX
+      )&>.do {
+        $0.isActive = true
+      }
+
       activeConstraints.append(
-        leftAnchor.constraint(
-          greaterThanOrEqualTo: superview!.leftAnchor,
-          constant: maximumRect!.minX
-        )&>.do {
-          $0.isActive = true
-        }
+        leftMaxConstraint!
       )
     }
 
     private func activateRightMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
+      rightMaxConstraint = rightAnchor.constraint(
+        lessThanOrEqualTo: superview!.rightAnchor,
+        constant: maximumRect!.maxX - superview!.bounds.maxX
+      )&>.do {
+        $0.isActive = true
+      }
+
       activeConstraints.append(
-        rightAnchor.constraint(
-          lessThanOrEqualTo: superview!.rightAnchor,
-          constant: maximumRect!.maxX - superview!.bounds.maxX
-        )&>.do {
-          $0.isActive = true
-        }
+        rightMaxConstraint!
       )
     }
 
     private func activateTopMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
+      topMaxConstraint = topAnchor.constraint(
+        greaterThanOrEqualTo: superview!.topAnchor,
+        constant: maximumRect!.minY
+      )&>.do {
+        $0.isActive = true
+      }
+
       activeConstraints.append(
-        topAnchor.constraint(
-          greaterThanOrEqualTo: superview!.topAnchor,
-          constant: maximumRect!.minY
-        )&>.do {
-          $0.isActive = true
-        }
+        topMaxConstraint!
       )
     }
 
     private func activateBottomMaxConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
+      bottomMaxConstraint = bottomAnchor.constraint(
+        lessThanOrEqualTo: superview!.bottomAnchor,
+        constant: maximumRect!.maxY - superview!.bounds.maxY
+      )&>.do {
+        $0.isActive = true
+      }
+
       activeConstraints.append(
-        bottomAnchor.constraint(
-          lessThanOrEqualTo: superview!.bottomAnchor,
-          constant: maximumRect!.maxY - superview!.bounds.maxY
-        )&>.do {
-          $0.isActive = true
-        })
+        bottomMaxConstraint!
+      )
     }
 
     private func activateLeftConstraint() {
@@ -595,6 +633,8 @@ extension CropView {
         widthConstraint.constant -= translation.x
         heightConstraint.constant -= translation.y
 
+        onGestureTrackingChanged()
+
       case .cancelled,
            .ended,
            .failed:
@@ -611,6 +651,7 @@ extension CropView {
 
       switch gesture.state {
       case .began:
+
         onGestureTrackingStarted()
 
         activateConstraints: do {
@@ -636,6 +677,7 @@ extension CropView {
         widthConstraint.constant += translation.x
         heightConstraint.constant -= translation.y
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:
@@ -678,6 +720,7 @@ extension CropView {
         widthConstraint.constant -= translation.x
         heightConstraint.constant += translation.y
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:
@@ -718,6 +761,8 @@ extension CropView {
 
         widthConstraint.constant += translation.x
         heightConstraint.constant += translation.y
+
+        onGestureTrackingChanged()
 
       case .cancelled,
            .ended,
@@ -764,6 +809,7 @@ extension CropView {
 
         heightConstraint.constant -= translation.y
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:
@@ -808,6 +854,7 @@ extension CropView {
 
         widthConstraint.constant += translation.x
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:
@@ -853,6 +900,7 @@ extension CropView {
 
         widthConstraint.constant -= translation.x
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:
@@ -897,6 +945,7 @@ extension CropView {
 
         heightConstraint.constant += translation.y
 
+        onGestureTrackingChanged()
       case .cancelled,
            .ended,
            .failed:

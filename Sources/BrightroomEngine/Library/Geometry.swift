@@ -132,7 +132,7 @@ extension CGSize {
   }
 }
 
-public struct PixelAspectRatio: Hashable {
+public struct PixelAspectRatio: Hashable, CustomReflectable {
 
   public static func == (lhs: Self, rhs: Self) -> Bool {
     lhs._comparingValue == rhs._comparingValue
@@ -259,6 +259,19 @@ public struct PixelAspectRatio: Hashable {
 
   public static var square: Self {
     .init(width: 1, height: 1)
+  }
+
+  public var customMirror: Mirror {
+
+    return Mirror(
+      self,
+      children: [
+        "width": width,
+        "height": height,
+        "ratio": _comparingValue
+      ],
+      displayStyle:.struct
+    )
   }
 
 }

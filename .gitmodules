@@ -1,0 +1,3 @@
+[submodule "submodules/muukii/Reveal-SDK"]
+	path = submodules/muukii/Reveal-SDK
+	url = https://github.com/muukii/Reveal-SDK.git

@@ -25,7 +25,7 @@ import ImageIO
 extension CGContext {
 
   @discardableResult
-  func perform(_ drawing: (CGContext) -> Void) -> CGContext {
+  consuming func perform(_ drawing: (borrowing CGContext) -> Void) -> CGContext {
     drawing(self)
     return self
   }
@@ -100,20 +100,49 @@ extension CGContext {
   }
 }
 
+extension CGContext {
+
+  /**
+   around center: use center of boundingBoxOfClipPath
+   */
+  func rotate(radians: CGFloat, anchor: CGPoint) {
+
+    print(anchor)
+
+    translateBy(x: anchor.x, y: anchor.y)
+    rotate(by: radians)
+    translateBy(x: -anchor.x, y: -anchor.y)
+
+  }
+}
+
 extension CGImage {
 
   var size: CGSize {
     return .init(width: width, height: height)
   }
 
-  func croppedWithColorspace(to cropRect: CGRect) throws -> CGImage {
+  func croppedWithColorspace(
+    to cropRect: CGRect,
+    adjustmentAngleRadians: CGFloat
+  ) throws -> CGImage {
 
     let cgImage = try autoreleasepool { () -> CGImage? in
 
       let context = try CGContext.makeContext(for: self, size: cropRect.size)
-        .perform { c in
+        .perform { context in
 
-          c.draw(
+          let flippedRect = CGRect(x: cropRect.minX, y: size.height - cropRect.maxY, width: cropRect.width, height: cropRect.height)
+          print(flippedRect)
+
+          context.rotate(
+            radians: -adjustmentAngleRadians,
+//            radians: EditingCrop.AdjustmentAngle(degrees: -20).radians,
+            anchor: .init(x: context.boundingBoxOfClipPath.midX, y: context.boundingBoxOfClipPath.midY)
+//            anchor: .init(x: flippedRect.midX, y: flippedRect.midY)
+          )
+
+          context.draw(
             self,
             in: CGRect(
               origin: .init(
@@ -233,7 +262,7 @@ extension CGImage {
   func rotated(rotation: EditingCrop.Rotation, flipping: Flipping? = nil)
     throws -> CGImage
   {
-    try rotated(angle: -rotation.angle, flipping: flipping)
+    try rotated(angle: -rotation.angle.radians, flipping: flipping)
   }
 
 }

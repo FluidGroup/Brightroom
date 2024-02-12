@@ -40,10 +40,11 @@ extension CropView {
     
     private func initialize() {
       if #available(iOS 11.0, *) {
-        contentInsetAdjustmentBehavior = .never
+        contentInsetAdjustmentBehavior = .never        
       } else {
         // Fallback on earlier versions
       }
+      insetsLayoutMarginsFromSafeArea = false
       showsVerticalScrollIndicator = false
       showsHorizontalScrollIndicator = false
       bouncesZoom = true
@@ -54,5 +55,66 @@ extension CropView {
       scrollsToTop = false
     }
   }
-  
+
+  final class ImagePlatterView: UIView {
+
+    #if DEBUG
+    private let debugShapeLayer: CAShapeLayer = {
+      let layer = CAShapeLayer()
+      layer.strokeColor = UIColor.systemBlue.cgColor
+      layer.lineWidth = 2
+      layer.fillColor = nil
+      return layer
+    }()
+    #endif
+
+    var image: UIImage? {
+      get {
+        imageView.image
+      }
+      set {
+        imageView.image = newValue
+      }
+    }
+
+    let imageView: UIImageView
+
+    var overlay: UIView? {
+      didSet {
+        oldValue?.removeFromSuperview()
+        if let overlay {
+          addSubview(overlay)
+        }
+      }
+    }
+
+    override init(frame: CGRect) {
+      self.imageView = _ImageView()
+      super.init(frame: frame)
+
+      addSubview(imageView)
+    }
+    
+    required init?(coder: NSCoder) {
+      fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+      super.layoutSubviews()
+      imageView.frame = bounds
+      overlay?.frame = bounds
+      #if DEBUG
+      layer.addSublayer(debugShapeLayer)
+      debugShapeLayer.frame = bounds
+      #endif
+    }
+
+    func _debug_setPath(path: UIBezierPath) {
+      #if DEBUG
+      debugShapeLayer.path = path.cgPath
+      #endif
+    }
+
+  }
+
 }
