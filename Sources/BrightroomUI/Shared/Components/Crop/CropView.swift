@@ -970,6 +970,7 @@ extension CropView {
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
 
+    // TODO: consider if we need this.
     // adjustFrameToCenterOnZooming
     //    do {
     //      var frameToCenter = imageView.frame
