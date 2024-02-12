@@ -874,7 +874,9 @@ extension CropView {
   }
 
   private func updateScrollViewInset(crop: EditingCrop) {
-    scrollView.contentInset = makeScrollViewInset(aggregatedRotaion: crop.aggregatedRotation.radians)
+    scrollView.contentInset = makeScrollViewInset(
+      aggregatedRotaion: crop.aggregatedRotation.radians
+    )
   }
 
   @inline(__always)
@@ -1049,19 +1051,45 @@ extension CropView {
 
   var remainingScroll: UIEdgeInsets {
 
-    guard let crop = store.state.proposedCrop else { return .zero }
+    guard let crop = store.state.proposedCrop else { 
+      return .zero
+    }
 
-    let rect = guideView.convert(guideView.bounds, to: imagePlatterView)
+    let sourceInsets: UIEdgeInsets = {
 
-    let outbound = imagePlatterView.bounds
-    let i = UIEdgeInsets(
-      top: rect.minY - outbound.minY,
-      left: rect.minX - outbound.minX,
-      bottom: outbound.maxY - rect.maxY,
-      right: outbound.maxX - rect.maxX
-    )
+      let guideViewRectInPlatter = guideView.convert(guideView.bounds, to: imagePlatterView)
 
-    let path = UIBezierPath(rect: rect)
+      let scale = Geometry.diagonalRatio(to: guideView.bounds.size, from: guideViewRectInPlatter.size)
+
+      print(scale)
+
+      let outbound = imagePlatterView.bounds
+
+      let value = UIEdgeInsets(
+        top: guideViewRectInPlatter.minY - outbound.minY,
+        left: guideViewRectInPlatter.minX - outbound.minX,
+        bottom: outbound.maxY - guideViewRectInPlatter.maxY,
+        right: outbound.maxX - guideViewRectInPlatter.maxX
+      )
+
+#if false
+
+      let maxRectInPlatter = imagePlatterView.convert(
+        guideViewRectInPlatter.inset(by: value.inversed()),
+        to: imagePlatterView
+      )
+
+      let path = UIBezierPath()
+      path.append(.init(rect: guideViewRectInPlatter))
+      path.append(.init(rect: maxRectInPlatter))
+
+      imagePlatterView._debug_setPath(path: path)
+
+#endif
+
+      return value.multiplied(scale)
+
+    }()
 
     var patternAngleDegree = crop.aggregatedRotation.degrees.truncatingRemainder(dividingBy: 360)
     if patternAngleDegree > 0 {
@@ -1070,48 +1098,111 @@ extension CropView {
 
     print(patternAngleDegree)
 
-    switch patternAngleDegree {
+    var resolvedInsets: UIEdgeInsets {
+      switch patternAngleDegree {
 
-    case -90..<0:
+      case 0:
+        return sourceInsets
+      case -90:
 
-      return .init(
-        top: min(i.top, i.right),
-        left: min(i.top, i.left),
-        bottom: min(i.bottom, i.left),
-        right: min(i.bottom, i.right)
-      )
+        return .init(
+          top: sourceInsets.right,
+          left: sourceInsets.top,
+          bottom: sourceInsets.left,
+          right: sourceInsets.bottom
+        )
 
-    case -180..<(-90):
+      case -180:
 
-      return .init(
-        top: min(i.bottom, i.right),
-        left: min(i.top, i.right),
-        bottom: min(i.top, i.left),
-        right: min(i.bottom, i.left)
-      )
+        return .init(
+          top: sourceInsets.bottom,
+          left: sourceInsets.right,
+          bottom: sourceInsets.top,
+          right: sourceInsets.left
+        )
 
-    case -270..<(-180):
+      case -270:
 
-      return .init(
-        top: min(i.bottom, i.left),
-        left: min(i.bottom, i.right),
-        bottom: min(i.top, i.right),
-        right: min(i.top, i.left)
-      )
+        return .init(
+          top: sourceInsets.left,
+          left: sourceInsets.bottom,
+          bottom: sourceInsets.right,
+          right: sourceInsets.top
+        )
 
-    case -360..<(-270):
+      case -90..<0:
 
-      return .init(
-        top: min(i.top, i.left),
-        left: min(i.bottom, i.left),
-        bottom: min(i.bottom, i.right),
-        right: min(i.top, i.right)
-      )
+        return .init(
+          top: min(sourceInsets.top, sourceInsets.right),
+          left: min(sourceInsets.top, sourceInsets.left),
+          bottom: min(sourceInsets.bottom, sourceInsets.left),
+          right: min(sourceInsets.bottom, sourceInsets.right)
+        )
 
-    default:
-      return i
+      case -180..<(-90):
+
+        return .init(
+          top: min(sourceInsets.bottom, sourceInsets.right),
+          left: min(sourceInsets.top, sourceInsets.right),
+          bottom: min(sourceInsets.top, sourceInsets.left),
+          right: min(sourceInsets.bottom, sourceInsets.left)
+        )
+
+      case -270..<(-180):
+
+        return .init(
+          top: min(sourceInsets.bottom, sourceInsets.left),
+          left: min(sourceInsets.bottom, sourceInsets.right),
+          bottom: min(sourceInsets.top, sourceInsets.right),
+          right: min(sourceInsets.top, sourceInsets.left)
+        )
+
+      case -360..<(-270):
+
+        return .init(
+          top: min(sourceInsets.top, sourceInsets.left),
+          left: min(sourceInsets.bottom, sourceInsets.left),
+          bottom: min(sourceInsets.bottom, sourceInsets.right),
+          right: min(sourceInsets.top, sourceInsets.right)
+        )
+
+      default:
+        return sourceInsets
+      }
+
     }
 
+    return resolvedInsets
+
+  }
+}
+
+extension UIEdgeInsets {
+  fileprivate func inversed() -> Self {
+    .init(
+      top: -top,
+      left: -left,
+      bottom: -bottom,
+      right: -right
+    )
+  }
+
+  fileprivate func multiplied(_ value: CGFloat) -> Self {
+    .init(
+      top: top * value,
+      left: left * value,
+      bottom: bottom * value,
+      right: right * value
+    )
+  }
+
+  fileprivate func minZero() -> Self {
+    .init(
+      top: max(0, top),
+      left: max(0, left),
+      bottom: max(0, bottom),
+      right: max(0, right)
+    )
   }
 }
 

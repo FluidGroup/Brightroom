@@ -60,6 +60,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
   private var _rotation: EditingCrop.Rotation?
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
+  private var _croppingAspectRatio: PixelAspectRatio?
 
   public init(
     editingStack: EditingStack,
@@ -102,6 +103,8 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     if let _adjustmentAngle {
       uiViewController.bodyView.setAdjustmentAngle(_adjustmentAngle)
     }
+
+    uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
   }
 
   public func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
@@ -115,6 +118,14 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
     var modified = self
     modified._adjustmentAngle = angle
+    return modified
+
+  }
+
+  public func croppingAspectRatio(_ rect: PixelAspectRatio?) -> Self {
+
+    var modified = self
+    modified._croppingAspectRatio = rect
     return modified
 
   }

@@ -359,7 +359,8 @@ extension CropView {
         right: -insets.right
       )
 
-      let r = self.frame.inset(by: reversedInsets)
+      let r = self.frame
+        .inset(by: reversedInsets)
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
 
       maximumRect = r
@@ -650,6 +651,7 @@ extension CropView {
 
       switch gesture.state {
       case .began:
+
         onGestureTrackingStarted()
 
         activateConstraints: do {
