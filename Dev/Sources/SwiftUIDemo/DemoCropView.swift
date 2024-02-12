@@ -13,13 +13,16 @@ import UIKit
 
 struct DemoCropView: View {
 
- @ObjectEdge var editingStack: EditingStack
+  @StateObject var editingStack: EditingStack
 
   @State var rotation: EditingCrop.Rotation?
   @State var adjustmentAngle: EditingCrop.AdjustmentAngle?
   @State var croppingAspectRatio: PixelAspectRatio?
 
   @State var resultImage: ResultImage?
+
+  @State var canReset: Bool = false
+  @State var isFocusingAspectRatio: Bool = false
 
   init(
     editingStack: @escaping () -> EditingStack
@@ -36,23 +39,67 @@ struct DemoCropView: View {
         VStack {
 
           HStack {
-            Button(action: {
+            Button(
+              action: {
 
-              if self.rotation == nil {
-                self.rotation = .angle_0
-                self.rotation = self.rotation!.next()
-              } else {
-                self.rotation = self.rotation!.next()
+                if self.rotation == nil {
+                  self.rotation = .angle_0
+                  self.rotation = self.rotation!.next()
+                } else {
+                  self.rotation = self.rotation!.next()
+                }
+
+              },
+              label: {
+                Image(systemName: "rotate.left")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(width: 22)
+                  .foregroundStyle(.secondary)
               }
+            )
 
-            }, label: {
-              Image(systemName: "rotate.left")
-            })
+            Spacer()
 
-            Button(action: {}, label: {
-              Image(systemName: "aspectratio")
-            })
+            if editingStack.state.loadedState?.hasUncommitedChanges ?? false {
+              Button {
+                rotation = nil
+                adjustmentAngle = nil
+                croppingAspectRatio = nil
+
+                //                switch croppingAspectRatio {
+                //                case .fixed(let ratio):
+                //                  cropView.setCroppingAspectRatio(ratio)
+                //                case .selectable:
+                //                  cropView.setCroppingAspectRatio(nil)
+                //                }
+                //                cropView.resetCrop()
+
+              } label: {
+                Text("RESET")
+                  .font(.subheadline)
+              }
+              .tint(.yellow)
+            }
+
+            Spacer()
+
+            Button(
+              action: {
+                isFocusingAspectRatio.toggle()
+              },
+              label: {
+                Image(systemName: isFocusingAspectRatio ? "aspectratio.fill" : "aspectratio")
+                  .resizable()
+                  .aspectRatio(contentMode: .fit)
+                  .frame(width: 22)
+                  .foregroundStyle(isFocusingAspectRatio ? .primary : .secondary)
+              }
+            )
           }
+          .tint(.white)
+          .padding()
+          .zIndex(1)
 
           SwiftUICropView(
             editingStack: editingStack
@@ -60,54 +107,13 @@ struct DemoCropView: View {
           .rotation(rotation)
           .adjustmentAngle(adjustmentAngle)
           .croppingAspectRatio(croppingAspectRatio)
-          .clipped()
+          .zIndex(0)
+
+          if isFocusingAspectRatio {
+            aspectRatioView
+          }
 
           VStack {
-
-            HStack(spacing: 18) {
-
-              Button {
-
-              } label: {
-                ZStack {
-                  RoundedRectangle(cornerRadius: 2)
-                    .stroke(style: .init(lineWidth: 5))
-                    .fill(Color(white: 0.5, opacity: 1))
-
-                  RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(white: 0.3, opacity: 1))
-
-                  Image(systemName: "checkmark")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 12)
-                    .foregroundStyle(Color.black)
-                }
-                .tint(.white)
-                .frame(width: 18, height: 28)
-              }
-
-              Button {
-
-              } label: {
-                ZStack {
-                  RoundedRectangle(cornerRadius: 2)
-                    .stroke(style: .init(lineWidth: 5))
-                    .fill(Color(white: 0.5, opacity: 1))
-
-                  RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(white: 0.3, opacity: 1))
-
-                  Image(systemName: "checkmark")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 12)
-                    .foregroundStyle(Color.black)
-                }
-                .tint(.white)
-                .frame(width: 28, height: 18)
-              }
-            }
 
             HStack {
               Button("16:9") {
@@ -145,6 +151,7 @@ struct DemoCropView: View {
               }
             }
           }
+          .zIndex(1)
         }
       }
       Button("Done") {
@@ -159,6 +166,230 @@ struct DemoCropView: View {
       RenderedResultView(result: $0)
     }
   }
+
+  private var aspectRatioView: some View {
+    VStack {
+      HStack(spacing: 18) {
+
+        // vertical
+        Button {
+
+        } label: {
+          ZStack {
+            RoundedRectangle(cornerRadius: 2)
+              .stroke(style: .init(lineWidth: 5))
+              .fill(Color(white: 0.5, opacity: 1))
+
+            RoundedRectangle(cornerRadius: 2)
+              .fill(Color(white: 0.3, opacity: 1))
+
+            Image(systemName: "checkmark")
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+              .frame(width: 12)
+              .foregroundStyle(Color.black)
+          }
+          .tint(.white)
+          .frame(width: 18, height: 28)
+        }
+
+        // horizontal
+        Button {
+
+        } label: {
+          ZStack {
+            RoundedRectangle(cornerRadius: 2)
+              .stroke(style: .init(lineWidth: 5))
+              .fill(Color(white: 0.5, opacity: 1))
+
+            RoundedRectangle(cornerRadius: 2)
+              .fill(Color(white: 0.3, opacity: 1))
+
+            Image(systemName: "checkmark")
+              .resizable()
+              .aspectRatio(contentMode: .fit)
+              .frame(width: 12)
+              .foregroundStyle(Color.black)
+          }
+          .tint(.white)
+          .frame(width: 28, height: 18)
+        }
+      }
+
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack {
+
+          Group {
+
+            AspectRationButton(
+              title: Text("ORIGINAL"),
+              isSelected: true
+            ) {
+
+            }
+
+            AspectRationButton(
+              title: Text("FREEFORM"),
+              isSelected: true
+            ) {
+
+            }
+
+            AspectRationButton(
+              title: Text("SQUARE"),
+              isSelected: true
+            ) {
+
+            }
+
+            ForEach(Self.horizontalRectangleApectRatios) { ratio in
+              AspectRationButton(
+                title: Text("\(Int(ratio.width)):\(Int(ratio.height))"),
+                isSelected: false
+              ) {
+
+              }
+            }
+          }
+          .tint(.white)
+
+        }
+
+      }
+    }
+  }
+
+  private static let horizontalRectangleApectRatios: [PixelAspectRatio] = [
+    .init(width: 16, height: 9),
+    .init(width: 10, height: 8),
+    .init(width: 7, height: 5),
+    .init(width: 4, height: 3),
+    .init(width: 5, height: 3),
+    .init(width: 3, height: 2),
+  ]
+}
+
+struct AspectRationButton: View {
+
+  let title: Text
+  let isSelected: Bool
+  let onTap: @MainActor () -> Void
+
+  var body: some View {
+    Button(
+      action: {
+        onTap()
+      },
+      label: {
+        title
+          .font(.caption)
+          .foregroundStyle(.primary)
+          .padding(.horizontal, 10)
+          .padding(.vertical, 6)
+          .background(
+            Capsule()
+              .foregroundStyle(.tertiary)
+              .opacity(isSelected ? 1 : 0)
+          )
+          .foregroundStyle(.tint)
+      }
+    )
+  }
+}
+
+struct AspectRationButtonStyle: PrimitiveButtonStyle {
+
+  let isSeleted: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration
+      .label
+      .foregroundStyle(.primary)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background(
+        Capsule()
+          .foregroundStyle(.tertiary)
+          .opacity(isSeleted ? 1 : 0)
+      )
+      .foregroundStyle(.tint)
+
+  }
+
+}
+
+struct Slider: View {
+
+  enum SliderPreferenceKey: PreferenceKey {
+
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+      //      nextValue()
+    }
+
+    typealias Value = CGRect
+
+  }
+
+  @State var value: Int = 0
+
+  var body: some View {
+
+    VStack {
+      Circle()
+        .frame(width: 2, height: 2)
+      GeometryReader(content: { geometry in
+        ScrollViewReader { proxy in
+          ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+              ForEach(0..<25) { index in
+                RoundedRectangle(cornerRadius: 2)
+                  .fill(Color(white: 0.5, opacity: 1))
+                  .frame(width: 2, height: 20)
+              }
+              RoundedRectangle(cornerRadius: 2)
+                .frame(width: 2, height: 20)
+                .id(0)
+              ForEach(0..<25) { index in
+                RoundedRectangle(cornerRadius: 2)
+                  .fill(Color(white: 0.5, opacity: 1))
+                  .frame(width: 2, height: 20)
+              }
+            }
+            .background(
+              GeometryReader { geometry in
+                Color.clear.preference(
+                  key: SliderPreferenceKey.self,
+                  value: geometry.frame(in: .named("ScrollView"))
+                )
+              }
+            )
+            .padding(.horizontal, geometry.size.width / 2)
+            .onPreferenceChange(
+              SliderPreferenceKey.self,
+              perform: { value in
+                print(value)
+              }
+            )
+
+          }
+          .coordinateSpace(name: "ScrollView")
+          .onAppear(perform: {
+            proxy.scrollTo(0, anchor: .center)
+          })
+
+        }
+        //      .background(Color.red)
+      })
+    }
+
+  }
+
+}
+
+#Preview("Slider") {
+  Slider()
 }
 
 #Preview {
