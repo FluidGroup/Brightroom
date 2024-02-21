@@ -37,6 +37,15 @@
       }
     },
     {
+      "identity" : "precisionlevelslider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
+      "state" : {
+        "revision" : "cd02d02e8add9886586d12450caba952fcdde910",
+        "version" : "2.0.0"
+      }
+    },
+    {
       "identity" : "rxswift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ReactiveX/RxSwift.git",

@@ -1,10 +1,10 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.9
 import PackageDescription
 
 let package = Package(
   name: "Brightroom",
   platforms: [
-    .iOS(.v13)
+    .iOS(.v15)
   ],
   products: [
     .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
@@ -13,7 +13,8 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/VergeGroup/Verge.git", from: "12.0.0-beta.2"),
-    .package(url: "https://github.com/FluidGroup/TransitionPatch.git", from: "1.0.3")
+    .package(url: "https://github.com/FluidGroup/TransitionPatch.git", from: "1.0.3"),
+    .package(url: "https://github.com/FluidGroup/PrecisionLevelSlider", from: "2.0.0"),
   ],
   targets: [
     .target(
@@ -26,8 +27,7 @@ let package = Package(
     ),
     .target(
       name: "BrightroomUIPhotosCrop",
-      dependencies: ["BrightroomUI"]
+      dependencies: ["BrightroomUI", "PrecisionLevelSlider"]
     )
-  ],
-  swiftLanguageVersions: [.v5]
+  ]
 )

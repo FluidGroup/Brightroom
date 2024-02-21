@@ -904,7 +904,9 @@ extension CropView {
   private func record() {
     store.commit { state in
 
-      let crop = state.proposedCrop!
+      guard let crop = state.proposedCrop else {
+        return
+      }
 
       // remove rotation while converting rect
       let current = scrollView.transform
