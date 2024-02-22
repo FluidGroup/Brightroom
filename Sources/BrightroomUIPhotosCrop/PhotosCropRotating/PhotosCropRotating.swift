@@ -62,6 +62,8 @@ public struct PhotosCropRotating: View {
 
   @State private var cropViewState: Changes<CropView.State>?
 
+  @State var reset: SwiftUICropView.ResetAction = .init()
+
   public init(
     editingStack: @escaping () -> EditingStack
   ) {
@@ -110,18 +112,7 @@ public struct PhotosCropRotating: View {
 
             if editingStack.state.loadedState?.hasUncommitedChanges ?? false {
               Button {
-                rotation = .angle_0
-                adjustmentAngle = nil
-                croppingAspectRatio = nil
-
-                //                switch croppingAspectRatio {
-                //                case .fixed(let ratio):
-                //                  cropView.setCroppingAspectRatio(ratio)
-                //                case .selectable:
-                //                  cropView.setCroppingAspectRatio(nil)
-                //                }
-                //                cropView.resetCrop()
-
+                reset()
               } label: {
                 Text("RESET")
                   .font(.subheadline)
@@ -180,6 +171,7 @@ public struct PhotosCropRotating: View {
           .rotation(rotation)
           .adjustmentAngle(adjustmentAngle)
           .croppingAspectRatio(croppingAspectRatio)
+          .registerResetAction(reset)
           .zIndex(0)
 
           Group {
@@ -278,6 +270,7 @@ public struct PhotosCropRotating: View {
       }
     )
     .tint(.white)
+    .accentColor(.white)
     .frame(height: 50)
     .disabled(isLoading)
   }

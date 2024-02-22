@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
       "state" : {
-        "revision" : "cd02d02e8add9886586d12450caba952fcdde910",
-        "version" : "2.0.0"
+        "revision" : "ba982248e1b89a021e9ab08aa0f3c660d8da1f73",
+        "version" : "2.0.1"
       }
     },
     {

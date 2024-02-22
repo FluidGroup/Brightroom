@@ -492,9 +492,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       if let proposedCrop = $0.proposedCrop {
         $0.proposedCrop = proposedCrop.makeInitial()
-        if let ratio = $0.preferredAspectRatio {
-          $0.proposedCrop!.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
-        }
+        $0.preferredAspectRatio = nil
         $0.layoutVersion += 1
       }
     }

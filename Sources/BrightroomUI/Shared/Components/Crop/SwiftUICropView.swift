@@ -54,6 +54,19 @@ public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewC
 @available(iOS 14, *)
 public struct SwiftUICropView: UIViewControllerRepresentable {
 
+  public final class ResetAction {
+
+    var onCall: () -> Void = {}
+
+    public init() {
+
+    }
+
+    public func callAsFunction() {
+      onCall()
+    }
+  }
+
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
   private let cropInsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
@@ -62,6 +75,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private var _rotation: EditingCrop.Rotation?
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
   private var _croppingAspectRatio: PixelAspectRatio?
+  private var _resetAction: ResetAction?
 
   private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
 
@@ -111,6 +125,10 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
     uiViewController.bodyView.setStateHandler(stateHandler)
     uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
+
+    _resetAction?.onCall = {
+      uiViewController.bodyView.resetCrop()
+    }
   }
 
   public func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
@@ -132,6 +150,14 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
     var modified = self
     modified._croppingAspectRatio = rect
+    return modified
+
+  }
+
+  public func registerResetAction(_ action: ResetAction) -> Self {
+
+    var modified = self
+    modified._resetAction = action
     return modified
 
   }

@@ -24,13 +24,42 @@ struct DemoCropView: View {
   }
 
   var body: some View {
-    VStack {
-      PhotosCropRotating(editingStack: { editingStack })
-      Button("Done") {
-        let image = try! editingStack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image)
+    ZStack {
+
+      VStack {
+        PhotosCropRotating(editingStack: { editingStack })
+//        Button("Done") {
+//          let image = try! editingStack.makeRenderer().render().cgImage
+//          self.resultImage = .init(cgImage: image)
+//        }
       }
+
+      VStack {
+        HStack {
+          Spacer()
+          Button("Done") {
+            let image = try! editingStack.makeRenderer().render().cgImage
+            self.resultImage = .init(cgImage: image)
+          }
+          .buttonStyle(.borderedProminent)
+          .buttonBorderShape(.capsule)
+          .tint(.yellow)
+          .foregroundColor(.black)
+        }
+        Spacer()
+      }
+      .padding(.horizontal, 30)
+      .padding(.vertical, 15)
+      .ignoresSafeArea()
+
     }
+//    .safeAreaInset(edge: .top, content: {
+//      Button("Done") {
+//        let image = try! editingStack.makeRenderer().render().cgImage
+//        self.resultImage = .init(cgImage: image)
+//      }
+//    })
+
     .onAppear {
       editingStack.start()
     }
