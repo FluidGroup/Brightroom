@@ -7,7 +7,8 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State var stack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  @State var horizontalStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
 
   var body: some View {
     NavigationView {
@@ -22,17 +23,33 @@ struct ContentView: View {
             }
           }
 
-          Section("Restoration") {
+          Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {
-                DemoCropView(editingStack: { stack })
+                DemoCropView(editingStack: { horizontalStack })
               }
             }
 
             Button("Masking") {
               fullScreenView = .init {
                 DemoMaskingView {
-                  stack
+                  horizontalStack
+                }
+              }
+            }
+          }
+
+          Section("Restoration Vertical") {
+            Button("Crop") {
+              fullScreenView = .init {
+                DemoCropView(editingStack: { verticalStack })
+              }
+            }
+
+            Button("Masking") {
+              fullScreenView = .init {
+                DemoMaskingView {
+                  verticalStack
                 }
               }
             }
