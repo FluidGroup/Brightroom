@@ -52,24 +52,31 @@ public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewC
  */
 @available(iOS 14, *)
 public struct SwiftUICropView: UIViewControllerRepresentable {
-  
+
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
-  private let cropInsideOverlay: AnyView?
+  private let cropInsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
   private let editingStack: EditingStack
 
   private var _rotation: EditingCrop.Rotation?
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
   private var _croppingAspectRatio: PixelAspectRatio?
 
-  public init(
+  public init<InsideOverlay: View>(
     editingStack: EditingStack,
-    cropInsideOverlay: AnyView? = nil
+    @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay
   ) {
-    self.cropInsideOverlay = cropInsideOverlay
+    self.editingStack = editingStack
+    self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
+  }
+
+  public init(
+    editingStack: EditingStack
+  ) {
+    self.cropInsideOverlay = nil
     self.editingStack = editingStack
   }
-  
+
   public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
 
     let view = CropView(editingStack: editingStack)
@@ -77,20 +84,11 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     view.isAutoApplyEditingStackEnabled = true
     
     let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
-    
+
     if let cropInsideOverlay = cropInsideOverlay {
-      
-      let hosting = UIHostingController.init(rootView: cropInsideOverlay)
-      
-      hosting.view.backgroundColor = .clear
-      hosting.view.preservesSuperviewLayoutMargins = false
-      
-      view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(controller: hosting))
-      
-      controller.addChild(hosting)
-      hosting.didMove(toParent: controller)
+      view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
     }
-        
+
     return controller
   }
   
