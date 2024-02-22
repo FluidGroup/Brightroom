@@ -2,9 +2,9 @@
 <p align=center><i>A full-featured composable image editor with a customizable UI -- all backed by the power of Metal.</i></p>
 <br/>
 
-| Image Editor | PhotosCropRotating | Photo Cropping | Face Detection | Masking |
-| --- | --- | --- | --- | --- |
-| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
+| Image Editor | PhotosCropRotating | Face Detection | Masking |
+| --- | --- | --- | --- |
+| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
 
 ## Features
 
