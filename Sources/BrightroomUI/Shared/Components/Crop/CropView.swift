@@ -39,9 +39,18 @@ import BrightroomEngine
 public final class CropView: UIView, UIScrollViewDelegate {
 
   public struct State: Equatable {
-    public enum AdjustmentKind: Equatable {
-      case scrollView
-      case guide
+
+    public struct AdjustmentKind: OptionSet {
+
+      public var rawValue: Int = 0
+
+      public init(rawValue: Int) {
+        self.rawValue = rawValue
+      }
+
+      public static let scrollView = AdjustmentKind(rawValue: 1 << 0)
+      public static let guide = AdjustmentKind(rawValue: 1 << 1)
+
     }
 
     public fileprivate(set) var proposedCrop: EditingCrop?
