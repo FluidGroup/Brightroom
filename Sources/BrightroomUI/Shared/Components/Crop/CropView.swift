@@ -63,7 +63,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
      Returns aspect ratio.
      Would not be affected by rotation.
      */
-    var preferredAspectRatio: PixelAspectRatio?
+    public fileprivate(set) var preferredAspectRatio: PixelAspectRatio?
   }
 
   /**
@@ -507,6 +507,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     store.commit {
 
+      guard $0.proposedCrop?.rotation != rotation else {
+        return
+      }
+
       if let crop = $0.proposedCrop {
 
         $0.proposedCrop?.updateCropExtent(
@@ -524,12 +528,21 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
 
-    store.commit {
+    let records = store.commit {
+
+      guard $0.proposedCrop?.adjustmentAngle != angle else {
+        return false
+      }
+
       $0.proposedCrop?.adjustmentAngle = angle
       $0.layoutVersion += 1
+
+      return true
     }
 
-    record()
+    if records {
+      record()
+    }
 
   }
 

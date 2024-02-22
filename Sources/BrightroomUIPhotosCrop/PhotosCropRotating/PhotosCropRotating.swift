@@ -43,17 +43,11 @@ public struct PhotosCropRotating: View {
     }
   }
 
-  private enum AspectRatio: Equatable {
-    case original(PixelAspectRatio)
-    case freeform
-    case specific(PixelAspectRatio)
-  }
-
   @StateObject var editingStack: EditingStack
 
   @State private var rotation: EditingCrop.Rotation?
   @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
-  @State private var croppingAspectRatio: AspectRatio = .freeform
+  @State private var croppingAspectRatio: PixelAspectRatio?
 
   // TODO: use init value from original aspect ratio.
   @State private var croppingAspectRationDirection: Direction = .horizontal
@@ -92,13 +86,15 @@ public struct PhotosCropRotating: View {
                   self.rotation = self.rotation!.next()
                 }
 
+                croppingAspectRatio = cropViewState?.preferredAspectRatio?.swapped()
+
               },
               label: {
                 Image(systemName: "rotate.left")
                   .resizable()
                   .aspectRatio(contentMode: .fit)
                   .frame(width: 22)
-                  .foregroundStyle(.secondary)
+                  .foregroundStyle(rotation == .angle_0 ? .secondary : .primary)
               }
             )
             .disabled(isLoading)
@@ -109,7 +105,7 @@ public struct PhotosCropRotating: View {
               Button {
                 rotation = nil
                 adjustmentAngle = nil
-                croppingAspectRatio = .freeform
+                croppingAspectRatio = nil
 
                 //                switch croppingAspectRatio {
                 //                case .fixed(let ratio):
@@ -150,21 +146,32 @@ public struct PhotosCropRotating: View {
           SwiftUICropView(
             editingStack: editingStack,
             stateHandler: { state in
-              cropViewState = state
+
+              Task { @MainActor in
+
+                cropViewState = state
+
+                if let proposedCrop = state.proposedCrop {
+                  if rotation != proposedCrop.rotation {
+                    rotation = proposedCrop.rotation
+                  }
+
+                  if adjustmentAngle != proposedCrop.adjustmentAngle {
+                    adjustmentAngle = proposedCrop.adjustmentAngle
+                  }
+
+                }
+
+                if croppingAspectRatio != state.preferredAspectRatio {
+                  croppingAspectRatio = state.preferredAspectRatio
+                }
+
+              }
             }
           )
           .rotation(rotation)
           .adjustmentAngle(adjustmentAngle)
-          .croppingAspectRatio({
-            switch croppingAspectRatio {
-            case .freeform:
-              return nil
-            case .original(let ratio):
-              return ratio
-            case .specific(let ratio):
-              return ratio
-            }
-          }())
+          .croppingAspectRatio(croppingAspectRatio)
           .zIndex(0)
 
           Group {
@@ -270,17 +277,25 @@ public struct PhotosCropRotating: View {
   private var aspectRatioView: some View {
 
     let isDirectionButtonDisabled: Bool = {
-      switch croppingAspectRatio {
-      case .original(_):
+
+      guard let loaded = editingStack.state.loadedState else {
         return true
-      case .freeform:
-        return true
-      case .specific(let ratio):
-        guard ratio != .square else {
-          return true
-        }
-        return false
       }
+
+      guard let croppingAspectRatio else {
+        return true
+      }
+
+      if croppingAspectRatio == .init(loaded.imageSize) {
+        return true
+      }
+
+      if croppingAspectRatio == .square {
+        return true
+      }
+
+      return false
+
     }()
 
     return VStack(spacing: 20) {
@@ -289,20 +304,13 @@ public struct PhotosCropRotating: View {
         // vertical
         Button {
           if croppingAspectRationDirection != .vertical {
-            switch croppingAspectRatio {
-            case .freeform:
-              assertionFailure()
-            case .original:
-              assertionFailure()
-            case .specific(let ratio):
-              croppingAspectRatio = .specific(ratio.swapped())
-              croppingAspectRationDirection = .vertical
-            }
+            croppingAspectRatio = croppingAspectRatio?.swapped()
+            croppingAspectRationDirection = .vertical
           }
         } label: {
           ZStack {
             RoundedRectangle(cornerRadius: 2)
-              .stroke(style: .init(lineWidth: 5))
+              .stroke(style: .init(lineWidth: 2))
               .fill(Color(white: 0.7, opacity: 1))
 
             RoundedRectangle(cornerRadius: 2)
@@ -327,20 +335,13 @@ public struct PhotosCropRotating: View {
         // horizontal
         Button {
           if croppingAspectRationDirection != .horizontal {
-            switch croppingAspectRatio {
-            case .freeform:
-              assertionFailure()
-            case .original:
-              assertionFailure()
-            case .specific(let ratio):
-              croppingAspectRatio = .specific(ratio.swapped())
-              croppingAspectRationDirection = .horizontal
-            }
+            croppingAspectRatio = croppingAspectRatio?.swapped()
+            croppingAspectRationDirection = .horizontal
           }
         } label: {
           ZStack {
             RoundedRectangle(cornerRadius: 2)
-              .stroke(style: .init(lineWidth: 5))
+              .stroke(style: .init(lineWidth: 2))
               .fill(Color(white: 0.7, opacity: 1))
 
             RoundedRectangle(cornerRadius: 2)
@@ -371,35 +372,26 @@ public struct PhotosCropRotating: View {
 
             AspectRationButton(
               title: Text("ORIGINAL"),
-              isSelected: {
-                switch croppingAspectRatio {
-                case .original(let pixelAspectRatio):
-                  return pixelAspectRatio.asCGSize() ==  editingStack.state.loadedState?.imageSize
-                case .freeform:
-                  return false
-                case .specific:
-                  return false
-                }
-              }()
+              isSelected: croppingAspectRatio == editingStack.state.loadedState.map { .init($0.imageSize) }
             ) {
               guard let imageSize = editingStack.state.loadedState?.imageSize else {
                 return
               }
-              croppingAspectRatio = .original(.init(imageSize))
+              croppingAspectRatio = .init(imageSize)
             }
 
             AspectRationButton(
               title: Text("FREEFORM"),
-              isSelected: croppingAspectRatio == .freeform
+              isSelected: croppingAspectRatio == nil
             ) {
-              croppingAspectRatio = .freeform
+              croppingAspectRatio = nil
             }
 
             AspectRationButton(
               title: Text("SQUARE"),
-              isSelected: croppingAspectRatio == .specific(.square)
+              isSelected: croppingAspectRatio == .square
             ) {
-              croppingAspectRatio = .specific(.square)
+              croppingAspectRatio = .square
             }
 
             ForEach(Self.horizontalRectangleApectRatios) { ratio in
@@ -407,16 +399,16 @@ public struct PhotosCropRotating: View {
               case .vertical:
                 AspectRationButton(
                   title: Text("\(Int(ratio.height)):\(Int(ratio.width))"),
-                  isSelected: croppingAspectRatio == .specific(ratio.swapped())
+                  isSelected: croppingAspectRatio == ratio.swapped()
                 ) {
-                  croppingAspectRatio = .specific(ratio.swapped())
+                  croppingAspectRatio = ratio.swapped()
                 }
               case .horizontal:
                 AspectRationButton(
                   title: Text("\(Int(ratio.width)):\(Int(ratio.height))"),
-                  isSelected: croppingAspectRatio == .specific(ratio)
+                  isSelected: croppingAspectRatio == ratio
                 ) {
-                  croppingAspectRatio = .specific(ratio)
+                  croppingAspectRatio = ratio
                 }
               }
             }
