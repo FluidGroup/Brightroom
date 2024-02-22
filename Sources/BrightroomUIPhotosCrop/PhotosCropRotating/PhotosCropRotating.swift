@@ -99,9 +99,9 @@ public struct PhotosCropRotating: View {
 
             if editingStack.state.loadedState?.hasUncommitedChanges ?? false {
               Button {
-//                rotation = nil
-//                adjustmentAngle = nil
-//                croppingAspectRatio = nil
+                rotation = nil
+                adjustmentAngle = nil
+                croppingAspectRatio = .freeform
 
                 //                switch croppingAspectRatio {
                 //                case .fixed(let ratio):
@@ -294,7 +294,7 @@ public struct PhotosCropRotating: View {
             RoundedRectangle(cornerRadius: 2)
               .fill(Color(white: 0.4, opacity: 1))
 
-            if croppingAspectRationDirection == .vertical {
+            if isDirectionButtonDisabled == false, croppingAspectRationDirection == .vertical {
               Image(systemName: "checkmark")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -304,6 +304,8 @@ public struct PhotosCropRotating: View {
           }
           .tint(.white)
           .frame(width: 18, height: 28)
+          .compositingGroup()
+          .opacity(isDirectionButtonDisabled ? 0.5 : 1)
 
         }
         .disabled(isDirectionButtonDisabled)
@@ -330,7 +332,7 @@ public struct PhotosCropRotating: View {
             RoundedRectangle(cornerRadius: 2)
               .fill(Color(white: 0.4, opacity: 1))
 
-            if croppingAspectRationDirection == .horizontal {
+            if isDirectionButtonDisabled == false, croppingAspectRationDirection == .horizontal {
               Image(systemName: "checkmark")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -340,6 +342,9 @@ public struct PhotosCropRotating: View {
           }
           .tint(.white)
           .frame(width: 28, height: 18)
+          .compositingGroup()
+          .opacity(isDirectionButtonDisabled ? 0.5 : 1)
+
         }
         .disabled(isDirectionButtonDisabled)
 

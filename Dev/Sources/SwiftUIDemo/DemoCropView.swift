@@ -17,7 +17,6 @@ struct DemoCropView: View {
   @StateObject var editingStack: EditingStack
   @State var resultImage: ResultImage?
 
-
   init(
     editingStack: @escaping () -> EditingStack
   ) {
@@ -42,9 +41,24 @@ struct DemoCropView: View {
 
 }
 
-#Preview {
+#Preview("local") {
   DemoCropView(
     editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+  )
+}
+
+#Preview("remote") {
+  DemoCropView(
+    editingStack: {
+      EditingStack(
+        imageProvider: .init(
+          editableRemoteURL: URL(
+            string:
+              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+          )!
+        )
+      )
+    }
   )
 }
 
