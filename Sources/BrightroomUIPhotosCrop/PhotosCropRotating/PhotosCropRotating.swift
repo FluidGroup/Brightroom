@@ -11,6 +11,7 @@ import BrightroomUI
 import PrecisionLevelSlider
 import SwiftUI
 import UIKit
+import Verge
 
 public struct PhotosCropRotating: View {
 
@@ -60,10 +61,16 @@ public struct PhotosCropRotating: View {
   @State private var canReset: Bool = false
   @State private var isFocusingAspectRatio: Bool = false
 
+  @State private var cropViewState: Changes<CropView.State>?
+
   public init(
     editingStack: @escaping () -> EditingStack
   ) {
     self._editingStack = .init(wrappedValue: editingStack())
+  }
+
+  private var isLoading: Bool {
+    editingStack.state.isLoading
   }
 
   public var body: some View {
@@ -94,6 +101,7 @@ public struct PhotosCropRotating: View {
                   .foregroundStyle(.secondary)
               }
             )
+            .disabled(isLoading)
 
             Spacer()
 
@@ -116,6 +124,7 @@ public struct PhotosCropRotating: View {
                   .font(.subheadline)
               }
               .tint(.yellow)
+              .disabled(isLoading)
             }
 
             Spacer()
@@ -132,13 +141,17 @@ public struct PhotosCropRotating: View {
                   .foregroundStyle(isFocusingAspectRatio ? .primary : .secondary)
               }
             )
+            .disabled(isLoading)
           }
           .tint(.white)
           .padding()
           .zIndex(1)
 
           SwiftUICropView(
-            editingStack: editingStack
+            editingStack: editingStack,
+            stateHandler: { state in
+              cropViewState = state
+            }
           )
           .rotation(rotation)
           .adjustmentAngle(adjustmentAngle)
@@ -251,6 +264,7 @@ public struct PhotosCropRotating: View {
     )
     .tint(.white)
     .frame(height: 50)
+    .disabled(isLoading)
   }
 
   private var aspectRatioView: some View {

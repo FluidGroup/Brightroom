@@ -213,6 +213,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private var isBinding = false
 
+  private var stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+
   var isAutoApplyEditingStackEnabled = false
 
   // MARK: - Initializers
@@ -299,6 +301,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
         LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .large)
       })
     }
+
+    store.sinkState { [weak self] state in
+      self?.stateHandler(state)
+    }
+    .storeWhileSourceActive()
   }
 
   @available(*, unavailable)
@@ -307,6 +314,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   // MARK: - Functions
+
+  func setStateHandler(_ handler: @escaping @MainActor (Verge.Changes<State>) -> Void) {
+    self.stateHandler = handler
+  }
 
   public func setOverlayInImageView(_ overlay: UIView) {
     imagePlatterView.overlay = overlay

@@ -21,6 +21,7 @@
 
 import UIKit
 import SwiftUI
+import Verge
 #if !COCOAPODS
 import BrightroomEngine
 #endif
@@ -62,19 +63,25 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
   private var _croppingAspectRatio: PixelAspectRatio?
 
+  private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
+
   public init<InsideOverlay: View>(
     editingStack: EditingStack,
-    @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay
+    @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay,
+    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
     self.editingStack = editingStack
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
+    self.stateHandler = stateHandler
   }
 
   public init(
-    editingStack: EditingStack
+    editingStack: EditingStack,
+    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
     self.editingStack = editingStack
+    self.stateHandler = stateHandler
   }
 
   public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
@@ -82,7 +89,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     let view = CropView(editingStack: editingStack)
 
     view.isAutoApplyEditingStackEnabled = true
-    
+
     let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
 
     if let cropInsideOverlay = cropInsideOverlay {
@@ -102,6 +109,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
       uiViewController.bodyView.setAdjustmentAngle(_adjustmentAngle)
     }
 
+    uiViewController.bodyView.setStateHandler(stateHandler)
     uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
   }
 
