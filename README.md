@@ -23,7 +23,7 @@
 
 | iOS Target | Xcode Version | Swift Version |
 |:---:|:---:|:---:|
-| iOS 13.0+ | Xcode 15.1+ | Swift 5.9+ |
+| iOS 15.0+ | Xcode 15.2+ | Swift 5.9+ |
 
 ## Support the Project
 Buy me a coffee or support me on [GitHub](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii).
