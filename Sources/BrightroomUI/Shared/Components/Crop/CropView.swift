@@ -63,7 +63,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
      Returns aspect ratio.
      Would not be affected by rotation.
      */
-    var preferredAspectRatio: PixelAspectRatio?
+    public fileprivate(set) var preferredAspectRatio: PixelAspectRatio?
   }
 
   /**
@@ -213,6 +213,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private var isBinding = false
 
+  private var stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+
   var isAutoApplyEditingStackEnabled = false
 
   // MARK: - Initializers
@@ -299,6 +301,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
         LoadingBlurryOverlayView(effect: UIBlurEffect(style: .dark), activityIndicatorStyle: .large)
       })
     }
+
+    store.sinkState { [weak self] state in
+      self?.stateHandler(state)
+    }
+    .storeWhileSourceActive()
   }
 
   @available(*, unavailable)
@@ -307,6 +314,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   // MARK: - Functions
+
+  func setStateHandler(_ handler: @escaping @MainActor (Verge.Changes<State>) -> Void) {
+    self.stateHandler = handler
+  }
 
   public func setOverlayInImageView(_ overlay: UIView) {
     imagePlatterView.overlay = overlay
@@ -481,9 +492,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     store.commit {
       if let proposedCrop = $0.proposedCrop {
         $0.proposedCrop = proposedCrop.makeInitial()
-        if let ratio = $0.preferredAspectRatio {
-          $0.proposedCrop!.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
-        }
+        $0.preferredAspectRatio = nil
         $0.layoutVersion += 1
       }
     }
@@ -495,6 +504,10 @@ public final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     store.commit {
+
+      guard $0.proposedCrop?.rotation != rotation else {
+        return
+      }
 
       if let crop = $0.proposedCrop {
 
@@ -513,12 +526,21 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
 
-    store.commit {
+    let records = store.commit {
+
+      guard $0.proposedCrop?.adjustmentAngle != angle else {
+        return false
+      }
+
       $0.proposedCrop?.adjustmentAngle = angle
       $0.layoutVersion += 1
+
+      return true
     }
 
-    record()
+    if records {
+      record()
+    }
 
   }
 
@@ -913,7 +935,9 @@ extension CropView {
   private func record() {
     store.commit { state in
 
-      let crop = state.proposedCrop!
+      guard let crop = state.proposedCrop else {
+        return
+      }
 
       // remove rotation while converting rect
       let current = scrollView.transform

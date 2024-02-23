@@ -37,6 +37,15 @@
       }
     },
     {
+      "identity" : "precisionlevelslider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
+      "state" : {
+        "revision" : "6a6d1cbe962225d097012f47038f536c72e26c91",
+        "version" : "2.0.2"
+      }
+    },
+    {
       "identity" : "rxswift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ReactiveX/RxSwift.git",
@@ -131,8 +140,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "a338c22b82c9a686a7131b54fa84ddad773f5c2a",
-        "version" : "12.0.0-beta.4"
+        "revision" : "790f1ef9af22f62fc7944f924ef4466dde071c2a",
+        "version" : "12.1.0"
       }
     }
   ],

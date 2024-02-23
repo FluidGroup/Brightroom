@@ -58,3 +58,7 @@ public struct SwiftUIPhotosCropView: UIViewControllerRepresentable {
   
   public func updateUIViewController(_ uiViewController: PhotosCropViewController, context: Context) {}
 }
+
+#Preview {
+  Text("h")
+}

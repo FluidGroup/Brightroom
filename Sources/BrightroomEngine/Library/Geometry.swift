@@ -173,7 +173,7 @@ public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable {
   public func asCGSize() -> CGSize {
     .init(width: width, height: height)
   }
-
+  
   /// Returns a new instance that swapped height and width
   public func swapped() -> PixelAspectRatio {
     .init(width: height, height: width)
