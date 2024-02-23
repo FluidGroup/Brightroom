@@ -56,29 +56,44 @@ dependencies: [
 
 View the [full documentation](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162) on Notion.
 
-## Usage
+## Built-In UI
 
-**PhotosCropViewController**
+**BrightroomUIPhotosCrop.PhotosCropRotation**
 
-```swift
-// Create an image provider
-let imageProvider = ImageProvider(image: uiImage) // URL, Data are also supported.
-
-// Create a Photo Crop View Controller
-let controller = PhotosCropViewController(imageProvider: imageProvider)
-
-// Set up handlers when editing finishes
-controller.handers
-```
-
-## SwiftUI Support (BETA)
-*The SwiftUI API is still in-progress and may not be production ready. We're looking for help! 🤲*
+<img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd />
 
 ```swift
-let editingStack: EditingStack
+import SwiftUI
+import BtightroomUIPhotosCrop
 
-SwiftUIPhotosCropView(editingStack: editingStack) {
-  let image = try! editingStack.makeRenderer().render().swiftUIImage
+struct DemoCropView: View {
+
+  @StateObject var editingStack: EditingStack
+  @State var resultImage: ResultImage?
+
+  init(
+    editingStack: @escaping () -> EditingStack
+  ) {
+    self._editingStack = .init(wrappedValue: editingStack())
+  }
+
+  var body: some View {
+    ZStack {
+
+      VStack {
+        PhotosCropRotating(editingStack: { editingStack })
+
+        Button("Done") {
+          let image = try! editingStack.makeRenderer().render().cgImage
+          self.resultImage = .init(cgImage: image)
+        }
+      }
+    }
+    .onAppear {
+      editingStack.start()
+    }
+  }
+
 }
 ```
 
