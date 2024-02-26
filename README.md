@@ -97,6 +97,12 @@ struct DemoCropView: View {
 }
 ```
 
+**ClassicEditor**
+
+```
+PixelEditViewController
+```
+
 # Demo & Full App
 There is an entire open-source and production-ready app available on the App Store that uses Brightroom. It's called [Drip](https://github.com/muukii/Drip.app).
 
