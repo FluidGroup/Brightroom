@@ -7,11 +7,12 @@
 //
 
 import UIKit
+import SwiftUI
 
 extension CropView {
 
   open class CropOutsideOverlayBase: PixelEditorCodeBasedView {
-    
+
     open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
       
     }
@@ -74,4 +75,59 @@ extension CropView {
     }
   }
   
+  @available(iOS 14, *)
+  open class SwiftUICropOutsideOverlay<Content: View>: CropOutsideOverlayBase {
+
+    private let controller: UIHostingController<Container>
+    private let proxy: Proxy
+
+    public init(@ViewBuilder content: @escaping (CropView.State.AdjustmentKind?) -> Content) {
+
+      self.proxy = .init()
+      self.controller = .init(rootView: Container(proxy: proxy, content: content))
+
+      controller.view.backgroundColor = .clear
+      controller.view.preservesSuperviewLayoutMargins = false
+
+      super.init(frame: .zero)
+      
+      addSubview(controller.view)
+      AutoLayoutTools.setEdge(controller.view, self)
+    }
+
+    open override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+      proxy.activeKind = kind
+    }
+
+    open override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+      proxy.activeKind = nil
+    }
+
+    private final class Proxy: ObservableObject {
+
+      @Published var activeKind: CropView.State.AdjustmentKind?
+
+    }
+
+    private struct Container: View {
+
+      @ObservedObject var proxy: Proxy
+
+      private let content: (CropView.State.AdjustmentKind?) -> Content
+
+      public init(
+        proxy: Proxy,
+        content: @escaping (CropView.State.AdjustmentKind?) -> Content
+      ) {
+        self.content = content
+        self.proxy = proxy
+      }
+
+      var body: some View {
+        content(proxy.activeKind)
+      }
+    }
+
+  }
+
 }

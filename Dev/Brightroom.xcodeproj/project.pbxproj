@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0451857F2B8F4A9E00A74713 /* DemoCropView2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */; };
 		4B135F6E26136B5D003B5152 /* RendererOrientationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */; };
 		4B2324E42B763D4A00662EB8 /* GeometryPlayground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */; };
 		4B2A1107266B7B3000B0C885 /* test-image-10 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A10FA266B7B3000B0C885 /* test-image-10 */; };
@@ -568,6 +569,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView2.swift; sourceTree = "<group>"; };
 		4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererOrientationTests.swift; sourceTree = "<group>"; };
 		4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPlayground.swift; sourceTree = "<group>"; };
 		4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_left_mirrored.HEIC; sourceTree = "<group>"; };
@@ -1254,6 +1256,7 @@
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
 				4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */,
 				4B75113F25F13276002D804A /* DemoCropView.swift */,
+				0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */,
 				4B98CCC425EFF31400E4F61F /* Info.plist */,
 				4B98CCC125EFF31400E4F61F /* Preview Content */,
 				4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */,
@@ -2430,6 +2433,7 @@
 				4BA9896F2B70BF2000EB7983 /* RenderedResultView.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
+				0451857F2B8F4A9E00A74713 /* DemoCropView2.swift in Sources */,
 				4B9325832B6A923400DDABAC /* RotateScrollView.swift in Sources */,
 				4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */,
 				4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */,

@@ -212,7 +212,7 @@ public struct PhotosCropRotating: View {
           source.rounded(.toNearestOrEven)
         }
       ),
-      centerLevel: { value in
+      centerLevel: { value, _ in
         HStack {
           Spacer()
           VStack {
@@ -225,7 +225,7 @@ public struct PhotosCropRotating: View {
         }
         .foregroundStyle(.tint)
       },
-      track: { value in
+      track: { value, _ in
         VStack {
           HStack {
             Spacer()
