@@ -1,6 +1,42 @@
 {
   "pins" : [
     {
+      "identity" : "assetspicker",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eure/AssetsPicker.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "7908a947243c9fb8014ab8ce85095f61edf2b113"
+      }
+    },
+    {
+      "identity" : "descriptors",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Descriptors",
+      "state" : {
+        "revision" : "f41ce2605a76c5d378fe8c5e8c5c98b544dfd108",
+        "version" : "0.2.3"
+      }
+    },
+    {
+      "identity" : "glossbuttonnode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/GlossButtonNode",
+      "state" : {
+        "branch" : "main",
+        "revision" : "725ffe6041691e4533558253c77db01555eda0a9"
+      }
+    },
+    {
+      "identity" : "mondrianlayout",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/muukii/MondrianLayout.git",
+      "state" : {
+        "revision" : "5f00b13984fe08316fc5b5be06e2f41c14a3befa",
+        "version" : "0.10.0"
+      }
+    },
+    {
       "identity" : "precisionlevelslider",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
@@ -64,9 +100,36 @@
       }
     },
     {
+      "identity" : "swiftui-support",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swiftui-support.git",
+      "state" : {
+        "revision" : "c610c1e46c14c4660beb4ef7fe0241941dbecdc6",
+        "version" : "0.5.0"
+      }
+    },
+    {
+      "identity" : "texture",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/Texture.git",
+      "state" : {
+        "revision" : "68df47f0d26522da76b06f22e9a97e4d4ab58dad",
+        "version" : "3.0.2"
+      }
+    },
+    {
+      "identity" : "textureswiftsupport",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/TextureSwiftSupport",
+      "state" : {
+        "branch" : "main",
+        "revision" : "5bae50cab3798dccb8b98c3ffbc70320ae66b45a"
+      }
+    },
+    {
       "identity" : "transitionpatch",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FluidGroup/TransitionPatch.git",
+      "location" : "https://github.com/muukii/TransitionPatch.git",
       "state" : {
         "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
         "version" : "1.0.5"
