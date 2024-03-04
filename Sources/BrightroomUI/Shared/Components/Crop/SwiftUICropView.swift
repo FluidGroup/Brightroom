@@ -70,6 +70,8 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
   private let cropInsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
+  private let cropOutsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
+
   private let editingStack: EditingStack
 
   private var _rotation: EditingCrop.Rotation?
@@ -78,37 +80,60 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private var _resetAction: ResetAction?
 
   private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
+  private let isGuideInteractionEnabled: Bool
+  private let contentInset: UIEdgeInsets?
 
-  public init<InsideOverlay: View>(
+  public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
+    isGuideInteractionEnabled: Bool = true,
+    contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay,
+    @ViewBuilder cropOutsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
     self.editingStack = editingStack
+    self.isGuideInteractionEnabled = isGuideInteractionEnabled
+    self.contentInset = contentInset
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
+    self.cropOutsideOverlay = { AnyView(cropOutsideOverlay($0)) }
     self.stateHandler = stateHandler
   }
 
   public init(
     editingStack: EditingStack,
+    isGuideInteractionEnabled: Bool = true,
+    contentInset: UIEdgeInsets? = nil,
     stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
+    self.cropOutsideOverlay = nil
     self.editingStack = editingStack
+    self.isGuideInteractionEnabled = isGuideInteractionEnabled
+    self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
 
   public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
 
-    let view = CropView(editingStack: editingStack)
+    let view: CropView
+    if let contentInset {
+      view = .init(editingStack: editingStack, contentInset: contentInset)
+    } else {
+      view = .init(editingStack: editingStack)
+    }
 
     view.isAutoApplyEditingStackEnabled = true
+    view.isGuideInteractionEnabled = isGuideInteractionEnabled
 
-    let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
-
-    if let cropInsideOverlay = cropInsideOverlay {
+    if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
     }
+
+    if let cropOutsideOverlay {
+      view.setCropOutsideOverlay(CropView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
+    }
+
+    let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
 
     return controller
   }
