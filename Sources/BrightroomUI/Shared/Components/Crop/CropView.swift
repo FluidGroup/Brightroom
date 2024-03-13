@@ -699,7 +699,7 @@ extension CropView {
           let bounds = self.bounds.inset(by: contentInset)
 
           let size = PixelAspectRatio(crop.cropExtent.size)
-            .sizeThatFitsWithRounding(in: bounds.size)
+            .sizeThatFits(in: bounds.size)
 
           return .init(
             origin: .init(
@@ -746,7 +746,7 @@ extension CropView {
           let bounds = self.bounds.inset(by: contentInset)
 
           let size = PixelAspectRatio(crop.cropExtent.size)
-            .sizeThatFitsWithRounding(in: bounds.size)
+            .sizeThatFits(in: bounds.size)
 
           return .init(
             origin: .init(
