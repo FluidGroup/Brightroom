@@ -169,7 +169,7 @@ public struct EditingCrop: Equatable {
    */
   public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
 
-    let maxSize = newAspectRatio.sizeThatFitsWithRounding(in: imageSize)
+    let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
 
     let proposed = CGRect(
       origin: .init(
@@ -329,7 +329,7 @@ public struct EditingCrop: Equatable {
           )
         )
 
-        let newRect = aspectRatio.rectThatFitsWithRounding(in: maxRect)
+        let newRect = aspectRatio.rectThatFits(in: maxRect)
 
         fixed = newRect
 
