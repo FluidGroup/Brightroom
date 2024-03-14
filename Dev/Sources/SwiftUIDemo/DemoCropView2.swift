@@ -17,6 +17,7 @@ struct DemoCropView2: View {
 
   @StateObject var editingStack: EditingStack
   @State var resultImage: ResultImage?
+  @State var angle: EditingCrop.AdjustmentAngle = .zero
 
   init(
     editingStack: @escaping () -> EditingStack
@@ -52,10 +53,14 @@ struct DemoCropView2: View {
               .fill(kind == nil ? Color.white : Color.white.opacity(0.6))
           }
         )
+        .adjustmentAngle(angle)
         .frame(height: 500)
         .clipped()
+        .background(Color.gray)
 
         Spacer()
+
+        Slider(value: $angle.degrees, in: -45.0...45.0, step: 1)
 
       }
 

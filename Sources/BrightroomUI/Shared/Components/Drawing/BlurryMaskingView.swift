@@ -42,7 +42,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
 
       let aspectRatio = PixelAspectRatio(proposedCrop.cropExtent.size)
-      let size = aspectRatio.sizeThatFitsWithRounding(in: bounds.size)
+      let size = aspectRatio.sizeThatFits(in: bounds.size)
       
       let (min, _) = proposedCrop.calculateZoomScale(visibleSize: size)
 

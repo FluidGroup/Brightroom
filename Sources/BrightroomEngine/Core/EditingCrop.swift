@@ -148,8 +148,6 @@ public struct EditingCrop: Equatable {
 
     imageSize.width *= scale
     imageSize.height *= scale
-    imageSize.width.round(.down)
-    imageSize.height.round(.down)
 
     modified.cropExtent = Self.fittingRect(
       rect: cropExtent,
@@ -169,7 +167,7 @@ public struct EditingCrop: Equatable {
    */
   public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
 
-    let maxSize = newAspectRatio.sizeThatFitsWithRounding(in: imageSize)
+    let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
 
     let proposed = CGRect(
       origin: .init(
@@ -260,30 +258,9 @@ public struct EditingCrop: Equatable {
 
     var fixed = rect
 
-    func containsFractionInCGFloat(_ value: CGFloat) -> Bool {
-      Int(exactly: value) == nil
-    }
-
-    func rectIsPixelPerfect(_ rect: CGRect) -> Bool {
-      guard containsFractionInCGFloat(rect.origin.x) == false else { return false }
-      guard containsFractionInCGFloat(rect.origin.y) == false else { return false }
-      guard containsFractionInCGFloat(rect.size.width) == false else { return false }
-      guard containsFractionInCGFloat(rect.size.height) == false else { return false }
-      return true
-    }
-
     func clamp<T: Comparable>(value: T, lower: T, upper: T) -> T {
       return min(max(value, lower), upper)
     }
-
-    /*
-     Drops decimal fraction
-     */
-
-    fixed.origin.x.round(.down)
-    fixed.origin.y.round(.down)
-    fixed.size.width.round(.down)
-    fixed.size.height.round(.down)
 
     /*
      Cuts the area off that out of maximum bounds
@@ -329,7 +306,7 @@ public struct EditingCrop: Equatable {
           )
         )
 
-        let newRect = aspectRatio.rectThatFitsWithRounding(in: maxRect)
+        let newRect = aspectRatio.rectThatFits(in: maxRect)
 
         fixed = newRect
 
@@ -347,7 +324,6 @@ public struct EditingCrop: Equatable {
       assert(fixed.width <= imageSize.width)
       assert(fixed.height <= imageSize.height)
 
-      assert(rectIsPixelPerfect(fixed))
     }
 
     #if DEBUG

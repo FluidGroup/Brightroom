@@ -216,8 +216,8 @@ extension CropView {
 
       super.layoutSubviews()
 
-      let width = (bounds.width / 3).rounded(.down)
-      let height = (bounds.height / 3).rounded(.down)
+      let width = (bounds.width / 3)
+      let height = (bounds.height / 3)
 
       do {
 
