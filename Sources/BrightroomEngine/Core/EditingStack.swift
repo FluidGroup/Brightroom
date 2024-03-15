@@ -413,11 +413,16 @@ open class EditingStack: Hashable, StoreComponentType {
 
     do {
       let crop = loadedState.currentEdit.crop
+      let image = loadedState.editingSourceCGImage
+      let imageSize = image.size
 
-      return try loadedState
-        .editingSourceCGImage
+      let scaledCrop = crop.scaledWithPixelPerfect(
+        maxPixelSize: max(imageSize.width, imageSize.height)
+      )
+
+      return try image
         .croppedWithColorspace(
-          to: crop.cropExtent, adjustmentAngleRadians: crop.aggregatedRotation.radians)
+          to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians)
         ._makeCIImage(
           orientation: loadedState.metadata.orientation,
           device: mtlDevice,

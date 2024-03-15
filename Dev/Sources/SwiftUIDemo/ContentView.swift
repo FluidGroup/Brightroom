@@ -15,6 +15,13 @@ struct ContentView: View {
       VStack {
 
         Form {
+
+          NavigationLink("ImagePreviewView") {
+            DemoCropView2(editingStack: {
+              horizontalStack
+            })
+          }
+
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
           if #available(iOS 16, *) {
