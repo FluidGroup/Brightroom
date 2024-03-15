@@ -105,7 +105,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
           guard let self = self else { return }
 
-          state.ifChanged(\.isLoading) { isLoading in
+          state.ifChanged(\.isLoading).do { isLoading in
             self.updateLoadingOverlay(displays: isLoading)
           }
 
@@ -123,7 +123,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   }
 
   private func requestPreviewImage(state: EditingStack.State.Loaded) {
-    let croppedImage = state.makeCroppedImage()
+    let croppedImage = editingStack.makeCroppedCIImage(loadedState: state)
     imageView.display(image: croppedImage)
     imageView.postProcessing = state.currentEdit.filters.apply
     originalImageView.display(image: croppedImage)
