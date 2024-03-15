@@ -54,9 +54,16 @@ struct DemoCropView2: View {
           }
         )
         .adjustmentAngle(angle)
-        .frame(height: 500)
+        .croppingAspectRatio(.init(width: 1, height: 1.4))
+        .frame(height: 300)
         .clipped()
         .background(Color.gray)
+        
+        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+          .background(Color.black)
+          .cornerRadius(24, style: .continuous)
+          .padding(.init(top: 20, leading: 20, bottom: 20, trailing: 20))
+          .frame(width: 300/1.4, height: 300)
 
         Spacer()
 
