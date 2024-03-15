@@ -361,8 +361,11 @@ extension CIImage {
 
     cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
 
-    let croppedImage =
-      targetImage
+    let croppedImage = targetImage
+//      .transformed(by:
+//                    CGAffineTransform(translationX: <#T##CGFloat#>, y: <#T##CGFloat#>)
+//          .init(rotationAngle: _cropRect.aggregatedRotation.radians)
+//      )
       .cropped(to: cropRect)
 
     return croppedImage

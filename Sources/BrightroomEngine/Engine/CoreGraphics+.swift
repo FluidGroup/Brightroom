@@ -107,8 +107,6 @@ extension CGContext {
    */
   func rotate(radians: CGFloat, anchor: CGPoint) {
 
-    print(anchor)
-
     translateBy(x: anchor.x, y: anchor.y)
     rotate(by: radians)
     translateBy(x: -anchor.x, y: -anchor.y)
@@ -133,13 +131,10 @@ extension CGImage {
         .perform { context in
 
           let flippedRect = CGRect(x: cropRect.minX, y: size.height - cropRect.maxY, width: cropRect.width, height: cropRect.height)
-          print(flippedRect)
 
           context.rotate(
             radians: -adjustmentAngleRadians,
-//            radians: EditingCrop.AdjustmentAngle(degrees: -20).radians,
             anchor: .init(x: context.boundingBoxOfClipPath.midX, y: context.boundingBoxOfClipPath.midY)
-//            anchor: .init(x: flippedRect.midX, y: flippedRect.midY)
           )
 
           context.draw(
