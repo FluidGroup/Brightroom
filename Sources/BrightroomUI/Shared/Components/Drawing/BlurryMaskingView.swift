@@ -283,6 +283,8 @@ public struct SwiftUIBlurryMaskingView: UIViewControllerRepresentable {
 
   private let editingStack: EditingStack
 
+  private var _brushSize: CanvasView.BrushSize?
+
   public init(
     editingStack: EditingStack
   ) {
@@ -300,6 +302,17 @@ public struct SwiftUIBlurryMaskingView: UIViewControllerRepresentable {
 
   public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<BlurryMaskingView>, context: Context) {
 
+    if let _brushSize {
+      uiViewController.bodyView.setBrushSize(_brushSize)
+    }
   }
+
+  public func blushSize(_ brushSize: CanvasView.BrushSize?) -> Self {
+
+    var modified = self
+    modified._brushSize = brushSize
+    return modified
+  }
+
 
 }
