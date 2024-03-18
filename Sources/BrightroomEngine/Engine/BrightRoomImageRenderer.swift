@@ -238,16 +238,6 @@ public final class BrightRoomImageRenderer {
       resizedImage = try croppedImage.resized(maxPixelSize: maxPixelSize)
     }
 
-    /*
-     ===
-     ===
-     ===
-     */
-    EngineLog.debug(.renderer, "Rotation")
-
-//    // TODO: should be better that combines crop and rotation into single operation.
-//    let rotatedImage = try resizedImage.rotated(rotation: crop.rotation)
-
     return .init(cgImage: resizedImage, options: options, engine: .coreGraphics)
   }
 
