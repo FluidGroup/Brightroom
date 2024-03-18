@@ -1,4 +1,5 @@
 import BrightroomEngine
+import SwiftUISupport
 import BrightroomUI
 import SwiftUI
 
@@ -14,8 +15,12 @@ struct DemoMaskingView: View {
 
   var body: some View {
     VStack {
-      SwiftUIBlurryMaskingView(editingStack: editingStack)
-        .blushSize(brushSize)
+      ZStack {
+        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+        SwiftUIBlurryMaskingView(editingStack: editingStack)
+          .blushSize(brushSize)
+          .hideBackdropImageView(true)
+      }
 
       HStack {
         Button(action: {
@@ -34,6 +39,7 @@ struct DemoMaskingView: View {
           Text("50")
         })
       }
+
     }
   }
 

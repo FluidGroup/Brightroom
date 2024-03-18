@@ -74,7 +74,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
   
-  public var isblurryImageViewHidden: Bool {
+  public var isBlurryImageViewHidden: Bool {
     get {
       blurryImageView.isHidden
     }
@@ -285,6 +285,9 @@ public struct SwiftUIBlurryMaskingView: UIViewControllerRepresentable {
 
   private var _brushSize: CanvasView.BrushSize?
 
+  private var _isBackdropImageViewHidden: Bool?
+  private var _isBlurryImageViewHidden: Bool?
+
   public init(
     editingStack: EditingStack
   ) {
@@ -305,14 +308,33 @@ public struct SwiftUIBlurryMaskingView: UIViewControllerRepresentable {
     if let _brushSize {
       uiViewController.bodyView.setBrushSize(_brushSize)
     }
+    if let _isBackdropImageViewHidden {
+      uiViewController.bodyView.isBackdropImageViewHidden = _isBackdropImageViewHidden
+    }
+    if let _isBlurryImageViewHidden {
+      uiViewController.bodyView.isBlurryImageViewHidden = _isBlurryImageViewHidden
+    }
   }
 
-  public func blushSize(_ brushSize: CanvasView.BrushSize?) -> Self {
+  public func blushSize(_ brushSize: CanvasView.BrushSize) -> Self {
 
     var modified = self
     modified._brushSize = brushSize
     return modified
   }
 
+  public func hideBackdropImageView(_ isBackdropImageViewHidden: Bool) -> Self {
+
+    var modified = self
+    modified._isBackdropImageViewHidden = isBackdropImageViewHidden
+    return modified
+  }
+
+  public func hideBlurryImageView(_ isBlurryImageViewHidden: Bool) -> Self {
+
+    var modified = self
+    modified._isBlurryImageViewHidden = isBlurryImageViewHidden
+    return modified
+  }
 
 }
