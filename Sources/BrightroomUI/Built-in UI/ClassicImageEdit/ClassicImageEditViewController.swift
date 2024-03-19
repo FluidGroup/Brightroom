@@ -349,7 +349,7 @@ public final class ClassicImageEditViewController: UIViewController {
         previewView.isHidden = true
 
         maskingView.isHidden = true
-        maskingView.isblurryImageViewHidden = true
+        maskingView.isBlurryImageViewHidden = true
 
         maskingView.isUserInteractionEnabled = false
 
@@ -361,7 +361,7 @@ public final class ClassicImageEditViewController: UIViewController {
         cropView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = false
-        maskingView.isblurryImageViewHidden = false
+        maskingView.isBlurryImageViewHidden = false
 
         maskingView.isUserInteractionEnabled = true
 
@@ -373,7 +373,7 @@ public final class ClassicImageEditViewController: UIViewController {
         cropView.isHidden = true
         previewView.isHidden = false
         maskingView.isHidden = true
-        maskingView.isblurryImageViewHidden = true
+        maskingView.isBlurryImageViewHidden = true
 
         maskingView.isUserInteractionEnabled = false
 
@@ -386,7 +386,7 @@ public final class ClassicImageEditViewController: UIViewController {
         previewView.isHidden = false
         cropView.isHidden = true
         maskingView.isHidden = false
-        maskingView.isblurryImageViewHidden = false
+        maskingView.isBlurryImageViewHidden = false
 
         maskingView.isUserInteractionEnabled = false
       }
