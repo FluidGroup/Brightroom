@@ -12,6 +12,8 @@ jobs:
         with:
           xcode-version: "15.2"
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Build demo app
         run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme SwiftUIDemo  -destination 'generic/platform=iOS Simulator' | xcbeautify
 
@@ -23,6 +25,8 @@ jobs:
         with:
           xcode-version: "15.2"
       - uses: actions/checkout@v2
+        with:
+          submodules: true      
       - name: Build demo app
         run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme Demo -destination 'generic/platform=iOS Simulator' | xcbeautify
 
