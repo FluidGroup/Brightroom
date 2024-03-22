@@ -14,7 +14,7 @@ let package = Package(
   dependencies: [
     .package(url: "https://github.com/VergeGroup/Verge.git", from: "12.0.0-beta.2"),
     .package(url: "https://github.com/FluidGroup/TransitionPatch.git", from: "1.0.3"),
-    .package(url: "https://github.com/FluidGroup/PrecisionLevelSlider", from: "2.0.0"),
+    .package(url: "https://github.com/FluidGroup/PrecisionLevelSlider", from: "2.1.0"),
   ],
   targets: [
     .target(

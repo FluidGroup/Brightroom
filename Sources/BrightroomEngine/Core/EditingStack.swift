@@ -217,7 +217,7 @@ open class EditingStack: Hashable, StoreComponentType {
   private let filterPresets: [FilterPreset]
 
   private var subscriptions = Set<AnyCancellable>()
-  private var imageProviderSubscription: StoreSubscription?
+  private var imageProviderSubscription: (any Cancellable)?
 
   public var cropModifier: CropModifier
 
