@@ -15,7 +15,7 @@ jobs:
         with:
           submodules: true
       - name: Build demo app
-        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme SwiftUIDemo  -destination 'generic/platform=iOS Simulator' | xcbeautify
+        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme SwiftUIDemo  -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation  | xcbeautify
 
   demo:
     runs-on: macos-14
@@ -28,7 +28,7 @@ jobs:
         with:
           submodules: true      
       - name: Build demo app
-        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme Demo -destination 'generic/platform=iOS Simulator' | xcbeautify
+        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme Demo -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation | xcbeautify
 
   test:
     runs-on: macos-14
@@ -41,7 +41,7 @@ jobs:
         with:
           submodules: true
       - name: Test
-        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17' | xcpretty
+        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
 
   swiftpm:
     runs-on: macos-14
@@ -52,4 +52,4 @@ jobs:
           xcode-version: "15.2"
       - uses: actions/checkout@v2
       - name: Build
-        run: xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator' | xcpretty
+        run: xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
