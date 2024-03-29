@@ -416,6 +416,8 @@ open class EditingStack: Hashable, StoreComponentType {
       let image = loadedState.editingSourceCGImage
       let imageSize = image.size
 
+      
+
       let scaledCrop = crop.scaledWithPixelPerfect(
         maxPixelSize: max(imageSize.width, imageSize.height)
       )

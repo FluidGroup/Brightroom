@@ -226,6 +226,19 @@ struct ContentView: View {
               }
             }
 
+            Button("PixelEditor left") {
+              fullScreenView = .init {
+                DemoPixelEditor(
+                  editingStack: {
+                    EditingStack.init(
+                      imageProvider: .init(image: Mocks.imageOrientationLeft())
+                    )
+                  },
+                  options: .init(croppingAspectRatio: nil)
+                )
+              }
+            }
+
           })
 
           Section("Lab") {
