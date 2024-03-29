@@ -427,6 +427,7 @@ open class EditingStack: Hashable, StoreComponentType {
       )
 
       return try image
+      // TODO: better to combine these operations - oriented and cropping
         .oriented(orientation)
         .croppedWithColorspace(
           to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians
