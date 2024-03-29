@@ -97,6 +97,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
+  public var areAnimationsEnabled: Bool = true
+
   public var isImageViewHidden: Bool {
     get {
       imagePlatterView.imageView.isHidden
@@ -332,7 +334,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       editingStack.start()
 
       binding: do {
-        store.sinkState(queue: .mainIsolated()) { [weak self] state in
+        store.sinkState(queue: .mainIsolated()) { [weak self, areAnimationsEnabled] state in
 
           guard let self = self else { return }
 
@@ -379,7 +381,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
             self.updateScrollContainerView(
               by: crop,
               preferredAspectRatio: state.preferredAspectRatio,
-              animated: state.previous?.proposedCrop != nil /* whether first time load */,
+              animated: areAnimationsEnabled && state.previous?.proposedCrop != nil /* whether first time load */,
               animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
             )
 

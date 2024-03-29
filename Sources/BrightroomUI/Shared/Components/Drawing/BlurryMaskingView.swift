@@ -83,7 +83,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     }
   }
 
-  let backingView: CropView
+  private let backingView: CropView
 
   private let containerView = ContainerView()
 
@@ -115,6 +115,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       editingStack: editingStack,
       contentInset: .zero
     )
+    self.backingView.areAnimationsEnabled = false
     self.backingView.accessibilityIdentifier = "BlurryMasking"
 
     store = .init(

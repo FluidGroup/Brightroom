@@ -75,12 +75,17 @@ public final class CanvasView: PixelEditorCodeBasedView {
         self.resolvedShapeLayers.forEach {
           $0.removeFromSuperlayer()
         }
-              
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+
         layers.forEach {
           self.layer.addSublayer($0)
         }
         self.resolvedShapeLayers = layers
-                     
+
+        CATransaction.commit()
+
       }
       
     }
