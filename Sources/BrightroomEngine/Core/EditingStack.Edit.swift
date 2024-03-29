@@ -32,6 +32,7 @@ extension EditingStack {
       crop.imageSize
     }
     
+    /// In orientation.up
     public var crop: EditingCrop
     public var filters: Filters = .init()
     public var drawings: Drawings = .init()

@@ -412,19 +412,28 @@ open class EditingStack: Hashable, StoreComponentType {
   public func makeCroppedCIImage(loadedState: State.Loaded) -> CIImage {
 
     do {
+      let orientation = loadedState.metadata.orientation
       let crop = loadedState.currentEdit.crop
+
+      // orientation is not respected
       let image = loadedState.editingSourceCGImage
+
+      // orientation-respected
       let imageSize = image.size
+        .applying(cgOrientation: orientation)
 
       let scaledCrop = crop.scaledWithPixelPerfect(
         maxPixelSize: max(imageSize.width, imageSize.height)
       )
 
       return try image
+      // TODO: better to combine these operations - oriented and cropping
+        .oriented(orientation)
         .croppedWithColorspace(
-          to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians)
+          to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians
+        )
         ._makeCIImage(
-          orientation: loadedState.metadata.orientation,
+          orientation: .up,
           device: mtlDevice,
           usesMTLTexture: options.usesMTLTextureForEditingImage
         )

@@ -27,7 +27,11 @@ enum Mocks {
   static func imageSuperSmall() -> UIImage {
     UIImage(named: "super-small")!
   }
-  
+
+  static func imageOrientationLeft() -> UIImage {
+    UIImage(named: "orientation_left.HEIC")!
+  }
+
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
       imageProvider: .init(image: image)
