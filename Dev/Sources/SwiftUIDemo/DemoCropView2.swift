@@ -56,10 +56,10 @@ struct DemoCropView2: View {
           },
           stateHandler: { state in
             state.ifChanged(\.adjustmentKind).do { kind in
-              if kind != nil {
-                isDragging = true
-              } else {
+              if kind.isEmpty {
                 isDragging = false
+              } else {
+                isDragging = true
               }
             }
           }

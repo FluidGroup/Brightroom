@@ -57,7 +57,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     public fileprivate(set) var frame: CGRect = .zero
 
-    public fileprivate(set) var adjustmentKind: AdjustmentKind? = nil
+    public fileprivate(set) var adjustmentKind: AdjustmentKind = []
 
     fileprivate var layoutVersion: UInt64 = 0
 
