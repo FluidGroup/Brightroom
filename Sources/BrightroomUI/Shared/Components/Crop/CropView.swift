@@ -57,6 +57,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     public fileprivate(set) var frame: CGRect = .zero
 
+    public fileprivate(set) var adjustmentKind: AdjustmentKind? = nil
+
     fileprivate var layoutVersion: UInt64 = 0
 
     /**
@@ -270,9 +272,12 @@ public final class CropView: UIView, UIScrollViewDelegate {
     scrollView.addSubview(imagePlatterView)
     scrollView.delegate = self
 
-    guideView.didChange = { [weak self] in
+    guideView.willChange = { [weak self] in
       guard let self = self else { return }
-      self.didChangeGuideViewWithDelay()
+      self.willChangeGuideView()
+      store.commit {
+        $0.adjustmentKind = .guide
+      }
     }
 
     guideView.updating = { [weak self] in
@@ -283,9 +288,16 @@ public final class CropView: UIView, UIScrollViewDelegate {
       //      updateScrollViewInset(crop: currentProposedCrop)
     }
 
-    guideView.willChange = { [weak self] in
+    guideView.didChange = { [weak self] in
       guard let self = self else { return }
-      self.willChangeGuideView()
+      self.didChangeGuideViewWithDelay()
+    }
+
+    guideView.didUpdateAdjustmentKind = { [weak self] kind in
+      guard let self else { return }
+      self.store.commit {
+        $0.adjustmentKind = kind
+      }
     }
 
     #if false
