@@ -48,6 +48,8 @@ extension CropView {
     var updating: () -> Void = {}
     var didChange: () -> Void = {}
 
+    var didUpdateAdjustmentKind: (CropView.State.AdjustmentKind) -> Void = { _ in }
+
     private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
     private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
     private let bottomLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
@@ -340,11 +342,13 @@ extension CropView {
     func willBeginScrollViewAdjustment() {
       cropInsideOverlay?.didBeginAdjustment(kind: .scrollView)
       cropOutsideOverlay?.didBeginAdjustment(kind: .scrollView)
+      didUpdateAdjustmentKind(.scrollView)
     }
 
     func didEndScrollViewAdjustment() {
       cropInsideOverlay?.didEndAdjustment(kind: .scrollView)
       cropOutsideOverlay?.didEndAdjustment(kind: .scrollView)
+      didUpdateAdjustmentKind([])
     }
 
     @inline(__always)
@@ -384,6 +388,7 @@ extension CropView {
       willChange()
       cropInsideOverlay?.didBeginAdjustment(kind: .guide)
       cropOutsideOverlay?.didBeginAdjustment(kind: .guide)
+      didUpdateAdjustmentKind(.guide)
     }
 
     private func onGestureTrackingChanged() {
@@ -399,6 +404,7 @@ extension CropView {
       didChange()
       cropInsideOverlay?.didEndAdjustment(kind: .guide)
       cropOutsideOverlay?.didEndAdjustment(kind: .guide)
+      didUpdateAdjustmentKind([])
     }
 
     private var widthConstraint: NSLayoutConstraint!

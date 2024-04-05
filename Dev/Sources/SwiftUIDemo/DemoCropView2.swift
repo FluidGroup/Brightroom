@@ -18,6 +18,8 @@ struct DemoCropView2: View {
   @StateObject var editingStack: EditingStack
   @State var resultImage: ResultImage?
   @State var angle: EditingCrop.AdjustmentAngle = .zero
+  @State var baselineAngle: EditingCrop.AdjustmentAngle = .zero
+  @State var isDragging: Bool = false
 
   init(
     editingStack: @escaping () -> EditingStack
@@ -51,9 +53,18 @@ struct DemoCropView2: View {
           cropOutsideOverlay: { kind in
             Rectangle()
               .fill(kind == nil ? Color.white : Color.white.opacity(0.6))
+          },
+          stateHandler: { state in
+            state.ifChanged(\.adjustmentKind).do { kind in
+              if kind.isEmpty {
+                isDragging = false
+              } else {
+                isDragging = true
+              }
+            }
           }
         )
-        .adjustmentAngle(angle)
+        .adjustmentAngle(angle + baselineAngle)
         .croppingAspectRatio(.init(width: 1, height: 1.4))
         .frame(height: 300)
         .clipped()
@@ -67,7 +78,18 @@ struct DemoCropView2: View {
 
         Spacer()
 
-        Slider(value: $angle.degrees, in: -45.0...45.0, step: 1)
+        HStack {
+          Slider(value: $angle.degrees, in: -45.0...45.0, step: 1)
+            .disabled(isDragging)
+          Button(action: {
+            baselineAngle -= .degrees(90)
+          }, label: {
+            Text("Rotate")
+          })
+          .disabled(isDragging)
+        }
+        .disabled(isDragging)
+        .padding(24)
 
       }
 
