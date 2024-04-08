@@ -275,17 +275,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     guideView.willChange = { [weak self] in
       guard let self = self else { return }
       self.willChangeGuideView()
-      store.commit {
-        $0.adjustmentKind = .guide
-      }
-    }
-
-    guideView.updating = { [weak self] in
-      guard let self else { return }
-      guard let currentProposedCrop = store.state.proposedCrop else {
-        return
-      }
-      //      updateScrollViewInset(crop: currentProposedCrop)
     }
 
     guideView.didChange = { [weak self] in

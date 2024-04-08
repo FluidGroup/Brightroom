@@ -81,11 +81,13 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
   private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
   private let isGuideInteractionEnabled: Bool
+  private let isAutoApplyEditingStackEnabled: Bool
   private let contentInset: UIEdgeInsets?
 
   public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
+    isAutoApplyEditingStackEnabled: Bool = false,
     contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> OutsideOverlay,
@@ -93,6 +95,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   ) {
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
+    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.contentInset = contentInset
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
     self.cropOutsideOverlay = { AnyView(cropOutsideOverlay($0)) }
@@ -102,6 +105,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   public init(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
+    isAutoApplyEditingStackEnabled: Bool = false,
     contentInset: UIEdgeInsets? = nil,
     stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
@@ -109,6 +113,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     self.cropOutsideOverlay = nil
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
+    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
@@ -122,7 +127,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
       view = .init(editingStack: editingStack)
     }
 
-    view.isAutoApplyEditingStackEnabled = true
+    view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
 
     if let cropInsideOverlay {
