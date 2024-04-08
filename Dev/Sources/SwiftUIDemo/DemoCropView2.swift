@@ -86,7 +86,7 @@ struct DemoCropView2: View {
             Text("Rotate")
           })
         }
-//        .disabled(isDragging)
+        .disabled(isDragging)
         .padding(24)
 
       }
