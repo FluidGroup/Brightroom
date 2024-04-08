@@ -935,8 +935,7 @@ extension CropView {
     }
   }
 
-  private func record(_ line: String = #function) {
-    print("### record:", line)
+  private func record() {
     store.commit { state in
 
       guard let crop = state.proposedCrop else {
