@@ -46,6 +46,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   private weak var currentLoadingOverlay: UIView?
 
   private var isBinding = false
+  private var cachedCroppedImage: (EditingStack.State.Loaded, CIImage)? = nil
 
   // MARK: - Initializers
 
@@ -123,10 +124,23 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   }
 
   private func requestPreviewImage(state: EditingStack.State.Loaded) {
-    let croppedImage = editingStack.makeCroppedCIImage(loadedState: state)
+
+    let croppedImage: CIImage
+    if
+      let cachedCroppedImage,
+      state.editingSourceCGImage == cachedCroppedImage.0.editingSourceCGImage,
+      state.metadata == cachedCroppedImage.0.metadata,
+      state.currentEdit.crop == cachedCroppedImage.0.currentEdit.crop
+    {
+      croppedImage = cachedCroppedImage.1
+    } else {
+      croppedImage = editingStack.makeCroppedCIImage(loadedState: state)
+      cachedCroppedImage = (state, croppedImage)
+    }
     imageView.display(image: croppedImage)
     imageView.postProcessing = state.currentEdit.filters.apply
     originalImageView.display(image: croppedImage)
+
   }
 
   private func updateLoadingOverlay(displays: Bool) {
