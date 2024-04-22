@@ -1291,8 +1291,9 @@ extension UIScrollView {
       let minXScale = boundSize.width / targetContentSize.width
       let minYScale = boundSize.height / targetContentSize.height
       let targetScale = min(minXScale, minYScale)
-
-      setZoomScale(targetScale, animated: false)
+      if !targetScale.isNaN {
+        setZoomScale(targetScale, animated: false)
+      }
 
       var targetContentOffset =
         rect
