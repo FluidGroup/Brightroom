@@ -89,7 +89,7 @@ private final class PreviewViewWrapperViewController: UIViewController {
   
   init(editingStack: EditingStack) {
     
-    self.previewView = ImagePreviewView(editingStack: editingStack)
+    self.previewView = ImagePreviewView(editingStack: editingStack, contentMode: .scaleAspectFill)
     super.init(nibName: nil, bundle: nil)
         
   }

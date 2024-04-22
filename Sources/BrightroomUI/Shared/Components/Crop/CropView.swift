@@ -785,7 +785,7 @@ extension CropView {
           func _zoom() {
 
             scrollView.customZoom(
-              to: crop.zoomExtent(visibleSize: guideView.bounds.size),
+              to: crop.zoomExtent(),
               guideSize: guideView.bounds.size,
               adjustmentRotation: crop.aggregatedRotation.radians,
               animated: false

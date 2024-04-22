@@ -40,7 +40,7 @@ extension EditingCrop {
     return (min: minScale, max: .greatestFiniteMagnitude)
   }
 
-  func zoomExtent(visibleSize: CGSize) -> CGRect {
+  func zoomExtent() -> CGRect {
 
     let contentSize = scrollViewContentSize()
     let cropExtent = cropExtent

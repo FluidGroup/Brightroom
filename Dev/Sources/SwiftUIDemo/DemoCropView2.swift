@@ -70,7 +70,7 @@ struct DemoCropView2: View {
         .clipped()
         .background(Color.gray)
         
-        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack, contentMode: .scaleAspectFill))
           .background(Color.black)
           .cornerRadius(24, style: .continuous)
           .padding(.init(top: 20, leading: 20, bottom: 20, trailing: 20))
