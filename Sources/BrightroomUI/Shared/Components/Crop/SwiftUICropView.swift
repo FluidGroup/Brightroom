@@ -156,8 +156,8 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     uiViewController.bodyView.setStateHandler(stateHandler)
     uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
 
-    _resetAction?.onCall = {
-      uiViewController.bodyView.resetCrop()
+    _resetAction?.onCall = { [weak uiViewController] in
+      uiViewController?.bodyView.resetCrop()
     }
   }
 
