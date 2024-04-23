@@ -50,7 +50,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
   // MARK: - Initializers
 
-  public init(editingStack: EditingStack, contentMode: UIView.ContentMode) {
+  public init(editingStack: EditingStack) {
     // FIXME: Loading State
 
     self.editingStack = editingStack
@@ -69,7 +69,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
     ].forEach { imageView in
       addSubview(imageView)
       imageView.clipsToBounds = true
-      imageView.contentMode = contentMode
+      imageView.contentMode = .scaleAspectFit
       imageView.isOpaque = false
       imageView.frame = bounds
       imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]

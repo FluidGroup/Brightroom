@@ -158,7 +158,7 @@ public final class ClassicImageEditViewController: UIViewController {
   public init(viewModel: ClassicImageEditViewModel) {
     self.viewModel = viewModel
     cropView = .init(editingStack: viewModel.editingStack, contentInset: .zero)
-    previewView = .init(editingStack: viewModel.editingStack, contentMode: .scaleAspectFit)
+    previewView = .init(editingStack: viewModel.editingStack)
     maskingView = .init(editingStack: viewModel.editingStack)
     super.init(nibName: nil, bundle: nil)
   }

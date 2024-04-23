@@ -16,7 +16,7 @@ struct DemoMaskingView: View {
   var body: some View {
     VStack {
       ZStack {
-        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack, contentMode: .scaleAspectFill))
+        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
         SwiftUIBlurryMaskingView(editingStack: editingStack)
           .blushSize(brushSize)
           .hideBackdropImageView(true)
