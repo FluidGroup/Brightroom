@@ -1291,9 +1291,8 @@ extension UIScrollView {
       let minXScale = boundSize.width / targetContentSize.width
       let minYScale = boundSize.height / targetContentSize.height
       let targetScale = min(minXScale, minYScale)
-      print("###", targetScale, minimumZoomScale, maximumZoomScale, layer.transform, layer.position, layer.frame)
-      if !layer.position.x.isNaN, !layer.position.y.isNaN,
-          targetScale < maximumZoomScale, targetScale > minimumZoomScale {
+      print("###", targetScale, minimumZoomScale, maximumZoomScale, layer.position, layer.frame)
+      if targetScale <= maximumZoomScale, targetScale >= minimumZoomScale {
         setZoomScale(targetScale, animated: false)
       }
 
