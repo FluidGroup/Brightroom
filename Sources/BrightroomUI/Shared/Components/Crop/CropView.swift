@@ -1283,24 +1283,15 @@ extension UIScrollView {
     animated: Bool
   ) {
 
-    guard rect.isEmpty == false else {
-      return
-    }
-
     func run() {
 
       let targetContentSize = rect.size
       let boundSize = guideSize
 
-      // targetContentSize.widthが0っぽい
-
       let minXScale = boundSize.width / targetContentSize.width
       let minYScale = boundSize.height / targetContentSize.height
       let targetScale = min(minXScale, minYScale)
-      print("###", rect, guideSize, minXScale, minYScale, minimumZoomScale, maximumZoomScale, layer.position, layer.frame)
-//      if targetScale <= maximumZoomScale, targetScale >= minimumZoomScale {
-        setZoomScale(targetScale, animated: false)
-//      }
+      setZoomScale(targetScale, animated: false)
 
       var targetContentOffset =
         rect
