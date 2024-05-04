@@ -37,6 +37,7 @@ struct DemoCropView2: View {
         SwiftUICropView(
           editingStack: editingStack,
           isGuideInteractionEnabled: false,
+          areAnimationsEnabled: false,
           contentInset: .init(top: 20, left: 20, bottom: 20, right: 20),
           cropInsideOverlay: { kind in
             ViewHost(instantiated: CropView.RuleOfThirdsView(lineColor: .white))
