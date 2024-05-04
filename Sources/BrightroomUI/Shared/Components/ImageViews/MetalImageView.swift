@@ -86,7 +86,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     let hasP3Display = traitCollection.displayGamut == .P3
 
     if hasP3Display {
-      metalLayer.pixelFormat = .bgra10_xr
+      metalLayer.pixelFormat = .bgr10a2Unorm
     }
 
     #endif
