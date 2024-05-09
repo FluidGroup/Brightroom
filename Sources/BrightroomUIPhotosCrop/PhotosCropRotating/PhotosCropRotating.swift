@@ -144,6 +144,7 @@ public struct PhotosCropRotating: View {
 
           SwiftUICropView(
             editingStack: editingStack,
+            isAutoApplyEditingStackEnabled: true,
             stateHandler: { state in
 
               Task { @MainActor in
