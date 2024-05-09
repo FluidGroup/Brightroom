@@ -77,6 +77,8 @@ public struct EditingCrop: Equatable {
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
 
+  public private(set) var _usedAspectRatio: PixelAspectRatio?
+
   /// An angle to rotate in addition to the specified rotation.
   public var adjustmentAngle: AdjustmentAngle = .zero
 
@@ -177,6 +179,8 @@ public struct EditingCrop: Equatable {
       size: maxSize
     )
 
+    self._usedAspectRatio = newAspectRatio
+
     self.cropExtent = Self.fittingRect(
       rect: proposed,
       in: imageSize,
@@ -199,10 +203,14 @@ public struct EditingCrop: Equatable {
      - calculated fitting image size with ratio: (1745.0, 0.0, 4373.0, 5247.0)
      - (4373.0 : 5247.0) -> 0.8334286259
      */
-    guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
+    guard _usedAspectRatio != newAspectRatio else {
       return
     }
     updateCropExtent(toFitAspectRatio: newAspectRatio)
+  }
+
+  public mutating func purgeAspectRatio() {
+    _usedAspectRatio = nil
   }
 
   /**

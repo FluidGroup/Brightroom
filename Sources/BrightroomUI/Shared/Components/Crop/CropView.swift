@@ -575,6 +575,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
       $0.preferredAspectRatio = ratio
       if let ratio = ratio {
         $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      } else {
+        $0.proposedCrop?.purgeAspectRatio()
       }
       $0.layoutVersion += 1
     }
