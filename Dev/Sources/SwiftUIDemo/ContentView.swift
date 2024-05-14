@@ -73,6 +73,41 @@ struct ContentView: View {
             }
           }
 
+          Section(
+            "Crop FaceDetection",
+            content: {
+              Button("Horizontal 1") {
+                fullScreenView = .init {
+                  SwiftUICropView(
+                    editingStack: {
+                      let stack = Mocks.makeEditingStack(
+                        image: Asset.horizontalRect.image
+                      )
+                      stack.cropModifier = .faceDetection(aspectRatio: .square)
+                      return stack
+                    }()
+                  )
+                }
+              }
+
+              Button("Horizontal 2") {
+                fullScreenView = .init {
+                  SwiftUICropView(
+                    editingStack: {
+                      let stack = Mocks.makeEditingStack(
+                        image: Asset.horizontalRect.image
+                      )
+                      stack.cropModifier = .faceDetection(aspectRatio: .square)
+                      return stack
+                    }()
+                  )
+                  .croppingAspectRatio(.square)
+                }
+              }
+
+            }
+          )
+
           Section("Blur Masking") {
             Button("Local") {
               fullScreenView = .init {

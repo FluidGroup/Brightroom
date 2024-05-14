@@ -232,6 +232,8 @@ public struct EditingCrop: Equatable {
       .applying(scale)
       .applying(transform)
 
+    self._usedAspectRatio = respectingApectRatio
+
     self.cropExtent = Self.fittingRect(
       rect: proposed,
       in: imageSize,
@@ -255,6 +257,7 @@ public struct EditingCrop: Equatable {
 //      in: imageSize,
 //      respectingAspectRatio: respectingAspectRatio
 //    )
+
     self.cropExtent = cropExtent
   }
 
