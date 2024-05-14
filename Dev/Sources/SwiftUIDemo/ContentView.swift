@@ -3,12 +3,15 @@ import BrightroomUI
 import PhotosUI
 import SwiftUI
 
+@available(iOS 16.0, *)
 struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
   @State var horizontalStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
+
+  @State var image: PhotosPickerItem? = nil
 
   var body: some View {
     NavigationView {
@@ -76,7 +79,8 @@ struct ContentView: View {
           Section(
             "Crop FaceDetection",
             content: {
-              Button("Horizontal 1") {
+              
+              Button("Horizontal") {
                 fullScreenView = .init {
                   SwiftUICropView(
                     editingStack: {
@@ -90,20 +94,25 @@ struct ContentView: View {
                 }
               }
 
-              Button("Horizontal 2") {
-                fullScreenView = .init {
-                  SwiftUICropView(
-                    editingStack: {
-                      let stack = Mocks.makeEditingStack(
-                        image: Asset.horizontalRect.image
-                      )
-                      stack.cropModifier = .faceDetection(aspectRatio: .square)
-                      return stack
-                    }()
-                  )
-                  .croppingAspectRatio(.square)
+              PhotosPicker("Horizontal Picker", selection: $image)
+                .onChange(of: image) { selectedPhoto in
+                  Task {
+                    if let data = try? await selectedPhoto?.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                      fullScreenView = .init {
+                        SwiftUICropView(
+                          editingStack: {
+                            let stack = Mocks.makeEditingStack(
+                              image: image
+                            )
+                            stack.cropModifier = .faceDetection(aspectRatio: .square)
+                            return stack
+                          }()
+                        )
+                        .croppingAspectRatio(.square)
+                      }
+                    }
+                  }
                 }
-              }
 
             }
           )
@@ -477,5 +486,9 @@ struct DemoPixelEditWrapper: UIViewControllerRepresentable {
 }
 
 #Preview {
-  ContentView()
+  if #available(iOS 16.0, *) {
+    ContentView()
+  } else {
+    EmptyView()
+  }
 }

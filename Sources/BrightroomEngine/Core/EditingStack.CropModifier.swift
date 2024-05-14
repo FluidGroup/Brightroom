@@ -38,7 +38,7 @@ extension EditingStack {
       }
     }
     
-    public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
+    public static func faceDetection(paddingBias: CGFloat = 2, offsetYBias: CGFloat = 1, aspectRatio: PixelAspectRatio? = nil) -> Self {
       return .init { image, crop, completion in
 
         var fallbackCrop: EditingCrop {
@@ -51,7 +51,7 @@ extension EditingStack {
         }
         
         let request = VNDetectFaceRectanglesRequest { request, error in
-          
+
           if let error = error {
             EngineLog.debug(error)
             completion(fallbackCrop)
@@ -72,9 +72,17 @@ extension EditingStack {
           let box = first.boundingBox
           
           let denormalizedRect = VNImageRectForNormalizedRect(box, Int(crop.imageSize.width), Int(crop.imageSize.height))
-          
-          let paddingRect = denormalizedRect.insetBy(dx: -denormalizedRect.width * paddingBias, dy: -denormalizedRect.height * paddingBias)
-          
+
+          let paddingRect = denormalizedRect
+            .insetBy(
+              dx: -denormalizedRect.width * paddingBias,
+              dy: -denormalizedRect.height * paddingBias
+            )
+            .offsetBy(
+              dx: 0,
+              dy: -denormalizedRect.height * offsetYBias
+            )
+
           let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(crop.imageSize.width), Int(crop.imageSize.height))
           
           new.updateCropExtent(toFitBoundingBox: normalizedRect, respectingApectRatio: aspectRatio ?? .init(crop.imageSize))
