@@ -22,18 +22,18 @@ struct ContentView: View {
             })
           }
 
-          NavigationLink("Custom Filter") {
-            DemoFilterView(editingStack: {
-              horizontalStack
-            })
-          }
-
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
           if #available(iOS 16, *) {
             NavigationLink("Pick image") {
               WorkingOnPicked()
             }
+          }
+
+          NavigationLink("Custom Filter") {
+            DemoFilterView(editingStack: {
+              horizontalStack
+            })
           }
 
           Section("Restoration Horizontal") {

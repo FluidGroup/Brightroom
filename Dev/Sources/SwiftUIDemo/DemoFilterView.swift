@@ -5,21 +5,14 @@ import SwiftUI
 import SwiftUISupport
 import UIKit
 
-struct CustomFilter: Filtering, Equatable, Codable {
-
-  init() {
-
-  }
-
-  func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
-    image
-      .applyingFilter("CIColorInvert")
-  }
-
-}
-
-
 struct DemoFilterView: View {
+
+  struct InvertFilter: Filtering, Equatable, Codable {
+    func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+      image
+        .applyingFilter("CIColorInvert")
+    }
+  }
 
   @StateObject var editingStack: EditingStack
   @State var toggle: Bool = false
@@ -39,9 +32,9 @@ struct DemoFilterView: View {
         .onChange(of: toggle) { newValue in
           editingStack.set(filters: {
             if newValue {
-              $0.custom["custom"] = CustomFilter().asAny()
+              $0.additionalFilters["invert"] = InvertFilter().asAny()
             } else {
-              $0.custom["custom"] = nil
+              $0.additionalFilters["invert"] = nil
             }
           })
         }
