@@ -22,6 +22,12 @@ struct ContentView: View {
             })
           }
 
+          NavigationLink("Custom Filter") {
+            DemoFilterView(editingStack: {
+              horizontalStack
+            })
+          }
+
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
           if #available(iOS 16, *) {
