@@ -95,7 +95,7 @@ extension EditingStack {
             vignette?.asAny(),
 
           ] as [AnyFilter?])
-          + (additionalFilters.values.map { $0 })
+          + Array(additionalFilters.values)
         )
         .compactMap { $0 }
       }
