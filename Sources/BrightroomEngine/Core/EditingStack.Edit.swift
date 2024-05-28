@@ -67,7 +67,7 @@ extension EditingStack {
       public var vignette: FilterVignette?
       public var fade: FilterFade?
 
-      public var additionalFilters: [String : AnyFilter] = [:]
+      public var additionalFilters: [FilterKey : AnyFilter] = [:]
 
       func makeFilters() -> [AnyFilter] {
         return (

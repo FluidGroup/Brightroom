@@ -32,6 +32,15 @@ enum RadiusCalculator {
   }
 }
 
+public struct FilterKey: Hashable {
+
+  public let rawValue: String
+
+  public init(rawValue: String) {
+    self.rawValue = rawValue
+  }
+  
+}
 
 public protocol Filtering: Hashable {
 

@@ -7,12 +7,17 @@ import UIKit
 
 struct DemoFilterView: View {
 
-  struct InvertFilter: Filtering, Equatable, Codable {
+  struct InvertFilter: Filtering {
+
+    let key: FilterKey = .init(rawValue: "invert")
+
     func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
       image
         .applyingFilter("CIColorInvert")
     }
   }
+
+  let invertFilter: InvertFilter = .init()
 
   @StateObject var editingStack: EditingStack
   @State var toggle: Bool = false
@@ -32,9 +37,9 @@ struct DemoFilterView: View {
         .onChange(of: toggle) { newValue in
           editingStack.set(filters: {
             if newValue {
-              $0.additionalFilters["invert"] = InvertFilter().asAny()
+              $0.additionalFilters[invertFilter.key] = invertFilter.asAny()
             } else {
-              $0.additionalFilters["invert"] = nil
+              $0.additionalFilters[invertFilter.key] = nil
             }
           })
         }
