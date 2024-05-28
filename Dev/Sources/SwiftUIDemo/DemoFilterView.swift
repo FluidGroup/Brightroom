@@ -9,7 +9,7 @@ struct DemoFilterView: View {
 
   struct InvertFilter: Filtering {
 
-    let key: FilterKey = .init(rawValue: "invert")
+    let key: FilterKey = .init(rawValue: String(describing: InvertFilter.self))
 
     func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
       image
