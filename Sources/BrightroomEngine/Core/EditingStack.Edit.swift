@@ -67,7 +67,7 @@ extension EditingStack {
       public var vignette: FilterVignette?
       public var fade: FilterFade?
 
-      public var additionalFilters: [FilterKey : AnyFilter] = [:]
+      public var additionalFilters: [AnyFilter] = []
 
       func makeFilters() -> [AnyFilter] {
         return (
@@ -95,7 +95,7 @@ extension EditingStack {
             vignette?.asAny(),
 
           ] as [AnyFilter?])
-          + Array(additionalFilters.values)
+          + additionalFilters
         )
         .compactMap { $0 }
       }
