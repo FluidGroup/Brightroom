@@ -45,25 +45,9 @@ extension EditingStack {
       // TODO: Remove Rect from DrawnPath
       public var blurredMaskPaths: [DrawnPath] = []
     }
-    
-    //
-    //    public struct Light {
-    //
-    //    }
-    //
-    //    public struct Color {
-    //
-    //    }
-    //
-    //    public struct Effects {
-    //
-    //    }
-    //
-    //    public struct Detail {
-    //
-    //    }
-    
+
     public struct Filters: Equatable {
+
       public var preset: FilterPreset?
       
       public var brightness: FilterBrightness?
@@ -82,31 +66,37 @@ extension EditingStack {
       
       public var vignette: FilterVignette?
       public var fade: FilterFade?
-      
+
+      public var additionalFilters: [AnyFilter] = []
+
       func makeFilters() -> [AnyFilter] {
-        return ([
-          
-          /**
-           Must be first filter since color-cube does not support wide range color.
-           */
-          preset?.asAny(),
-          
-          // Before
-          exposure?.asAny(),
-          brightness?.asAny(),
-          temperature?.asAny(),
-          highlights?.asAny(),
-          shadows?.asAny(),
-          saturation?.asAny(),
-          contrast?.asAny(),
-                    
-          // After
-          sharpen?.asAny(),
-          unsharpMask?.asAny(),
-          gaussianBlur?.asAny(),
-          fade?.asAny(),
-          vignette?.asAny(),
-        ] as [AnyFilter?])
+        return (
+          ([
+
+            /**
+             Must be first filter since color-cube does not support wide range color.
+             */
+            preset?.asAny(),
+
+            // Before
+            exposure?.asAny(),
+            brightness?.asAny(),
+            temperature?.asAny(),
+            highlights?.asAny(),
+            shadows?.asAny(),
+            saturation?.asAny(),
+            contrast?.asAny(),
+
+            // After
+            sharpen?.asAny(),
+            unsharpMask?.asAny(),
+            gaussianBlur?.asAny(),
+            fade?.asAny(),
+            vignette?.asAny(),
+
+          ] as [AnyFilter?])
+          + additionalFilters
+        )
         .compactMap { $0 }
       }
       

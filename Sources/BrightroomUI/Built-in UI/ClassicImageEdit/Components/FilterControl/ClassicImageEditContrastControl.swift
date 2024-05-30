@@ -70,7 +70,7 @@ open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
 
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast) { value in      
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast).do { value in
       slider.set(value: value?.value ?? 0, in: FilterContrast.range)
     }
         

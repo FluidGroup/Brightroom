@@ -30,6 +30,12 @@ struct ContentView: View {
             }
           }
 
+          NavigationLink("Custom Filter") {
+            DemoFilterView(editingStack: {
+              horizontalStack
+            })
+          }
+
           Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {

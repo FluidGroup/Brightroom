@@ -32,7 +32,6 @@ enum RadiusCalculator {
   }
 }
 
-
 public protocol Filtering: Hashable {
 
   func apply(to image: CIImage, sourceImage: CIImage) -> CIImage
