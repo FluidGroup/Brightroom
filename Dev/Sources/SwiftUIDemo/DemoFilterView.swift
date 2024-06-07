@@ -14,10 +14,32 @@ struct DemoFilterView: View {
     }
   }
 
+  struct GrayscaleFilter: Filtering {
+    func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+      let kernel = CIKernel(source: """
+                    kernel vec4 customGrayscale(__sample pixel) {
+                        float grayscale = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
+                        return vec4(grayscale, grayscale, grayscale, pixel.a);
+                    }
+                    """)!
+      let output = kernel.apply(
+        extent: image.extent,
+        roiCallback: { _, rect in
+          rect
+        },
+        arguments: [image]
+      )
+
+      return output!
+    }
+  }
+
   let invertFilter: InvertFilter = .init()
+  let grayscaleFilter: GrayscaleFilter = .init()
 
   @StateObject var editingStack: EditingStack
-  @State var toggle: Bool = false
+  @State var invertToggle: Bool = false
+  @State var grascaleToggle: Bool = false
 
   init(
     editingStack: @escaping () -> EditingStack
@@ -30,17 +52,29 @@ struct DemoFilterView: View {
 
       ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
 
-      Toggle("Invert", isOn: $toggle)
-        .onChange(of: toggle) { newValue in
-          editingStack.set(filters: {
-            if newValue {
-              $0.additionalFilters = [invertFilter.asAny()]
-            } else {
-              $0.additionalFilters = []
-            }
-          })
-        }
-        .padding()
+      VStack {
+        Toggle("Invert", isOn: $invertToggle)
+          .onChange(of: invertToggle) { newValue in
+            editingStack.set(filters: {
+              $0.additionalFilters = [
+                grascaleToggle ? grayscaleFilter.asAny() : nil,
+                invertToggle ? invertFilter.asAny() : nil,
+              ].compactMap({ $0 })
+            })
+          }
+
+        Toggle("Grayscale", isOn: $grascaleToggle)
+          .onChange(of: grascaleToggle) { newValue in
+            editingStack.set(filters: {
+              $0.additionalFilters = [
+                grascaleToggle ? grayscaleFilter.asAny() : nil,
+                invertToggle ? invertFilter.asAny() : nil,
+              ].compactMap({ $0 })
+            })
+          }
+      }
+      .padding()
+
     }
     .onAppear {
       editingStack.start()
