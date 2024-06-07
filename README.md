@@ -2,9 +2,9 @@
 <p align=center><i>A full-featured composable image editor with a customizable UI -- all backed by the power of Metal.</i></p>
 <br/>
 
-| Image Editor | Photo Cropping | Face Detection | Masking |
+| Image Editor | PhotosCropRotating | Face Detection | Masking |
 | --- | --- | --- | --- |
-| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720381-4ea4c700-8f41-11eb-8ec3-2446518ded1b.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
+| <img width=200px src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif /> | <img width=200px src=https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif /> |
 
 ## Features
 
@@ -23,7 +23,7 @@
 
 | iOS Target | Xcode Version | Swift Version |
 |:---:|:---:|:---:|
-| iOS 12.0+ | Xcode 12.4+ | Swift 5.3+ |
+| iOS 15.0+ | Xcode 15.2+ | Swift 5.9+ |
 
 ## Support the Project
 Buy me a coffee or support me on [GitHub](https://github.com/sponsors/muukii?frequency=one-time&sponsor=muukii).
@@ -56,30 +56,51 @@ dependencies: [
 
 View the [full documentation](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162) on Notion.
 
-## Usage
+## Built-In UI
 
-**PhotosCropViewController**
+**BrightroomUIPhotosCrop.PhotosCropRotation**
+
+<img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd />
 
 ```swift
-// Create an image provider
-let imageProvider = ImageProvider(image: uiImage) // URL, Data are also supported.
+import SwiftUI
+import BtightroomUIPhotosCrop
 
-// Create a Photo Crop View Controller
-let controller = PhotosCropViewController(imageProvider: imageProvider)
+struct DemoCropView: View {
 
-// Set up handlers when editing finishes
-controller.handers
+  @StateObject var editingStack: EditingStack
+  @State var resultImage: ResultImage?
+
+  init(
+    editingStack: @escaping () -> EditingStack
+  ) {
+    self._editingStack = .init(wrappedValue: editingStack())
+  }
+
+  var body: some View {
+    ZStack {
+
+      VStack {
+        PhotosCropRotating(editingStack: { editingStack })
+
+        Button("Done") {
+          let image = try! editingStack.makeRenderer().render().cgImage
+          self.resultImage = .init(cgImage: image)
+        }
+      }
+    }
+    .onAppear {
+      editingStack.start()
+    }
+  }
+
+}
 ```
 
-## SwiftUI Support (BETA)
-*The SwiftUI API is still in-progress and may not be production ready. We're looking for help! 🤲*
+**ClassicEditor**
 
-```swift
-let editingStack: EditingStack
-
-SwiftUIPhotosCropView(editingStack: editingStack) {
-  let image = try! editingStack.makeRenderer().render().swiftUIImage
-}
+```
+PixelEditViewController
 ```
 
 # Demo & Full App

@@ -9,8 +9,9 @@
 import SwiftUI
 
 struct FullscreenIdentifiableView: View, Identifiable {
-  @Environment(\.presentationMode) var presentationMode
   
+  @Environment(\.dismiss) var dismiss
+
   let id = UUID()
   private let content: AnyView
   
@@ -22,7 +23,7 @@ struct FullscreenIdentifiableView: View, Identifiable {
     VStack {
       content
       Button("Dismiss") {
-        presentationMode.wrappedValue.dismiss()
+        dismiss()
       }
       .padding(16)
     }

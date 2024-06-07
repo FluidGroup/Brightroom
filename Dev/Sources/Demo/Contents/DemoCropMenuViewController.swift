@@ -213,7 +213,7 @@ final class DemoCropMenuViewController: StackScrollNodeViewController {
             cropModifier: .init { image, crop, completion in
 
               var new = crop
-              new.updateCropExtentNormalizing(
+              new.updateCropExtent(
                 CGRect(
                   origin: .zero,
                   size: .init(width: 100, height: 300)

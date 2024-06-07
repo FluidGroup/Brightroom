@@ -132,7 +132,11 @@ extension CGSize {
   }
 }
 
-public struct PixelAspectRatio: Hashable {
+public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable {
+
+  public var id: String {
+    return "\(width.bitPattern), \(height.bitPattern)"
+  }
 
   public static func == (lhs: Self, rhs: Self) -> Bool {
     lhs._comparingValue == rhs._comparingValue
@@ -169,13 +173,13 @@ public struct PixelAspectRatio: Hashable {
   public func asCGSize() -> CGSize {
     .init(width: width, height: height)
   }
-
+  
   /// Returns a new instance that swapped height and width
   public func swapped() -> PixelAspectRatio {
     .init(width: height, height: width)
   }
 
-  public func sizeThatFillRounding(in boundingSize: CGSize) -> CGSize {
+  public func sizeThatFill(in boundingSize: CGSize) -> CGSize {
     let widthRatio = boundingSize.width / width
     let heightRatio = boundingSize.height / height
     var size = boundingSize
@@ -187,12 +191,12 @@ public struct PixelAspectRatio: Hashable {
     }
 
     return CGSize(
-      width: size.width.rounded(.down),
-      height: size.height.rounded(.down)
+      width: size.width,
+      height: size.height
     )
   }
 
-  public func sizeThatFitsWithRounding(in boundingSize: CGSize) -> CGSize {
+  public func sizeThatFits(in boundingSize: CGSize) -> CGSize {
 
     let widthRatio = boundingSize.width / width
     let heightRatio = boundingSize.height / height
@@ -205,32 +209,27 @@ public struct PixelAspectRatio: Hashable {
     }
 
     return CGSize(
-      width: size.width.rounded(.down),
-      height: size.height.rounded(.down)
+      width: size.width,
+      height: size.height
     )
 
   }
 
-  public func rectThatFitsWithRounding(in boundingRect: CGRect) -> CGRect {
-    let size = sizeThatFitsWithRounding(in: boundingRect.size)
+  public func rectThatFits(in boundingRect: CGRect) -> CGRect {
+    let size = sizeThatFits(in: boundingRect.size)
     var origin = boundingRect.origin
     origin.x += (boundingRect.size.width - size.width) / 2.0
     origin.y += (boundingRect.size.height - size.height) / 2.0
 
-    origin.x.round(.down)
-    origin.y.round(.down)
-
     return CGRect(origin: origin, size: size)
   }
 
-  public func rectThatFillWithRounding(in boundingRect: CGRect) -> CGRect {
-    let size = sizeThatFillRounding(in: boundingRect.size)
+  public func rectThatFill(in boundingRect: CGRect) -> CGRect {
+    let size = sizeThatFill(in: boundingRect.size)
     var origin = CGPoint.zero
     origin.x = (boundingRect.size.width - size.width) / 2.0
     origin.y = (boundingRect.size.height - size.height) / 2.0
 
-    origin.x.round(.down)
-    origin.y.round(.down)
     return CGRect(origin: origin, size: size)
   }
 
@@ -259,6 +258,19 @@ public struct PixelAspectRatio: Hashable {
 
   public static var square: Self {
     .init(width: 1, height: 1)
+  }
+
+  public var customMirror: Mirror {
+
+    return Mirror(
+      self,
+      children: [
+        "width": width,
+        "height": height,
+        "ratio": _comparingValue
+      ],
+      displayStyle:.struct
+    )
   }
 
 }

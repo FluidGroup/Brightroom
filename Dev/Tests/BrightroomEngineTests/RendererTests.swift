@@ -175,7 +175,7 @@ final class RendererTests: XCTestCase {
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
 //    crop.rotation = .angle_90
-    crop.updateCropExtentNormalizing(
+    crop.updateCropExtent(
       .init(x: 854.0, y: 1766.0, width: 2863.0, height: 2863.0),
       respectingAspectRatio: nil
     )

@@ -21,6 +21,7 @@
 
 import UIKit
 import Vision
+import SwiftUI
 
 /// A representation of cropping extent in Image.
 public struct EditingCrop: Equatable {
@@ -37,21 +38,21 @@ public struct EditingCrop: Equatable {
     /// 270 degree
     case angle_270
 
-    public var angle: CGFloat {
+    public var angle: AdjustmentAngle {
       switch self {
       case .angle_0:
-        return 0
+        return .degrees(0)
       case .angle_90:
-        return -CGFloat.pi / 2
+        return .degrees(-90)
       case .angle_180:
-        return -CGFloat.pi
+        return .degrees(-180)
       case .angle_270:
-        return CGFloat.pi / 2
+        return .degrees(-270)
       }
     }
 
     public var transform: CGAffineTransform {
-      .init(rotationAngle: angle)
+      .init(rotationAngle: angle.radians)
     }
 
     public func next() -> Self {
@@ -64,6 +65,8 @@ public struct EditingCrop: Equatable {
     }
   }
 
+  public typealias AdjustmentAngle = SwiftUI.Angle
+
   /// The dimensions in pixel for the image.
   /// Applied image-orientation.
   public var imageSize: CGSize
@@ -73,6 +76,15 @@ public struct EditingCrop: Equatable {
 
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
+
+  public private(set) var _usedAspectRatio: PixelAspectRatio?
+
+  /// An angle to rotate in addition to the specified rotation.
+  public var adjustmentAngle: AdjustmentAngle = .zero
+
+  public var aggregatedRotation: AdjustmentAngle {
+    rotation.angle + adjustmentAngle
+  }
 
   public private(set) var scaleToRestore: CGFloat
 
@@ -124,7 +136,7 @@ public struct EditingCrop: Equatable {
     return new
   }
 
-  private func scaled(_ scale: CGFloat) -> Self {
+  private consuming func scaled(_ scale: CGFloat) -> Self {
 
     var modified = self
 
@@ -138,8 +150,6 @@ public struct EditingCrop: Equatable {
 
     imageSize.width *= scale
     imageSize.height *= scale
-    imageSize.width.round(.down)
-    imageSize.height.round(.down)
 
     modified.cropExtent = Self.fittingRect(
       rect: cropExtent,
@@ -159,7 +169,7 @@ public struct EditingCrop: Equatable {
    */
   public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
 
-    let maxSize = newAspectRatio.sizeThatFitsWithRounding(in: imageSize)
+    let maxSize = newAspectRatio.sizeThatFits(in: imageSize)
 
     let proposed = CGRect(
       origin: .init(
@@ -168,6 +178,8 @@ public struct EditingCrop: Equatable {
       ),
       size: maxSize
     )
+
+    self._usedAspectRatio = newAspectRatio
 
     self.cropExtent = Self.fittingRect(
       rect: proposed,
@@ -191,10 +203,14 @@ public struct EditingCrop: Equatable {
      - calculated fitting image size with ratio: (1745.0, 0.0, 4373.0, 5247.0)
      - (4373.0 : 5247.0) -> 0.8334286259
      */
-    guard PixelAspectRatio(cropExtent.size) != newAspectRatio else {
+    guard _usedAspectRatio != newAspectRatio else {
       return
     }
     updateCropExtent(toFitAspectRatio: newAspectRatio)
+  }
+
+  public mutating func purgeAspectRatio() {
+    _usedAspectRatio = nil
   }
 
   /**
@@ -216,6 +232,8 @@ public struct EditingCrop: Equatable {
       .applying(scale)
       .applying(transform)
 
+    self._usedAspectRatio = respectingApectRatio
+
     self.cropExtent = Self.fittingRect(
       rect: proposed,
       in: imageSize,
@@ -230,15 +248,17 @@ public struct EditingCrop: Equatable {
   /// - Parameters:
   ///   - cropExtent:
   ///   - respectingAspectRatio:
-  public mutating func updateCropExtentNormalizing(
+  public mutating func updateCropExtent(
     _ cropExtent: CGRect,
     respectingAspectRatio: PixelAspectRatio?
   ) {
-    self.cropExtent = Self.fittingRect(
-      rect: cropExtent,
-      in: imageSize,
-      respectingAspectRatio: respectingAspectRatio
-    )
+//    self.cropExtent = Self.fittingRect(
+//      rect: cropExtent,
+//      in: imageSize,
+//      respectingAspectRatio: respectingAspectRatio
+//    )
+
+    self.cropExtent = cropExtent
   }
 
   private static func fittingRect(
@@ -249,30 +269,9 @@ public struct EditingCrop: Equatable {
 
     var fixed = rect
 
-    func containsFractionInCGFloat(_ value: CGFloat) -> Bool {
-      Int(exactly: value) == nil
-    }
-
-    func rectIsPixelPerfect(_ rect: CGRect) -> Bool {
-      guard containsFractionInCGFloat(rect.origin.x) == false else { return false }
-      guard containsFractionInCGFloat(rect.origin.y) == false else { return false }
-      guard containsFractionInCGFloat(rect.size.width) == false else { return false }
-      guard containsFractionInCGFloat(rect.size.height) == false else { return false }
-      return true
-    }
-
     func clamp<T: Comparable>(value: T, lower: T, upper: T) -> T {
       return min(max(value, lower), upper)
     }
-
-    /*
-     Drops decimal fraction
-     */
-
-    fixed.origin.x.round(.down)
-    fixed.origin.y.round(.down)
-    fixed.size.width.round(.down)
-    fixed.size.height.round(.down)
 
     /*
      Cuts the area off that out of maximum bounds
@@ -318,7 +317,7 @@ public struct EditingCrop: Equatable {
           )
         )
 
-        let newRect = aspectRatio.rectThatFitsWithRounding(in: maxRect)
+        let newRect = aspectRatio.rectThatFits(in: maxRect)
 
         fixed = newRect
 
@@ -336,7 +335,6 @@ public struct EditingCrop: Equatable {
       assert(fixed.width <= imageSize.width)
       assert(fixed.height <= imageSize.height)
 
-      assert(rectIsPixelPerfect(fixed))
     }
 
     #if DEBUG
@@ -364,20 +362,4 @@ public struct EditingCrop: Equatable {
     return path
   }
    */
-}
-
-extension CIImage {
-  func cropped(to _cropRect: EditingCrop) -> CIImage {
-
-    let targetImage = self
-    var cropRect = _cropRect.cropExtent
-
-    cropRect.origin.y = targetImage.extent.height - cropRect.minY - cropRect.height
-
-    let croppedImage =
-      targetImage
-      .cropped(to: cropRect)
-
-    return croppedImage
-  }
 }

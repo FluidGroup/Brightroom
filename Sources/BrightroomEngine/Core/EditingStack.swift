@@ -25,30 +25,8 @@ import SwiftUI
 import UIKit
 import Verge
 
-@available(iOS 13, *)
-extension EditingStack: ObservableObject {}
-
 public enum EditingStackError: Error {
   case unableToCreateRendererInLoading
-}
-
-fileprivate enum MTLImageCreationError: Error {
-  case imageTooBig
-}
-
-fileprivate extension MTLDevice {
-  func supportsImage(size: CGSize) -> Bool {
-#if DEBUG
-    switch MTLGPUFamily.apple1 {
-    case .apple1, .apple2, .apple3, .apple4, .apple5, .apple6, .apple7, .apple8, .common1, .common2, .common3, .mac1, .mac2, .macCatalyst1, .macCatalyst2, .metal3:
-      break;
-    @unknown default: //If a warning is triggered here, please check https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf for a possibly new value in the Maximum 2D texture width and height table.
-      break
-    }
-#endif
-    let maxSideSize: CGFloat = self.supportsFamily(.apple3) ? 16384 : 8192
-    return size.width <= maxSideSize && size.height <= maxSideSize
-  }
 }
 
 /// A stateful object that manages current editing status from original image.
@@ -58,9 +36,17 @@ fileprivate extension MTLDevice {
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
 open class EditingStack: Hashable, StoreComponentType {
 
-  private static let centralQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack.central", qos: .default, attributes: .concurrent)
+  private static let centralQueue = DispatchQueue.init(
+    label: "app.muukii.Brightroom.EditingStack.central",
+    qos: .default,
+    attributes: .concurrent
+  )
 
-  private let backgroundQueue = DispatchQueue.init(label: "app.muukii.Brightroom.EditingStack", qos: .default, target: centralQueue)
+  private let backgroundQueue = DispatchQueue.init(
+    label: "app.muukii.Brightroom.EditingStack",
+    qos: .default,
+    target: centralQueue
+  )
 
   public struct Options {
 
@@ -84,13 +70,13 @@ open class EditingStack: Hashable, StoreComponentType {
     public struct Loading: Equatable {}
 
     public struct Loaded: Equatable {
-      
+
       // MARK: - Properties
-      
+
       fileprivate let imageSource: ImageSource
-      
+
       public let metadata: ImageProvider.State.ImageMetadata
-      
+
       private let initialEditing: Edit
 
       /**
@@ -154,9 +140,9 @@ open class EditingStack: Hashable, StoreComponentType {
 
         return false
       }
-      
+
       // MARK: - Initializers
-      
+
       init(
         imageSource: ImageSource,
         metadata: ImageProvider.State.ImageMetadata,
@@ -202,19 +188,6 @@ open class EditingStack: Hashable, StoreComponentType {
         currentEdit = history.popLast() ?? initialEditing
       }
 
-      /**
-       Returns a CIImage applied cropping in current editing.
-
-       For previewing image
-       */
-      public func makeCroppedImage() -> CIImage {
-        editingSourceImage.cropped(
-          to: currentEdit.crop.scaledWithPixelPerfect(
-            maxPixelSize: max(editingSourceImage.extent.width, editingSourceImage.extent.height)
-          )
-        )
-      }
-
     }
 
     public fileprivate(set) var hasStartedEditing = false
@@ -237,18 +210,23 @@ open class EditingStack: Hashable, StoreComponentType {
 
   public let options: Options
 
+  private let mtlDevice = MTLCreateSystemDefaultDevice()
+
   public let imageProvider: ImageProvider
 
   private let filterPresets: [FilterPreset]
 
   private var subscriptions = Set<AnyCancellable>()
-  private var imageProviderSubscription: StoreSubscription?
+  private var imageProviderSubscription: (any Cancellable)?
 
   public var cropModifier: CropModifier
 
   private let editingImageMaxPixelSize: CGFloat = 2560
 
-  private let debounceForCreatingCGImage = _BrightroomDebounce(interval: 0.1, queue: DispatchQueue.init(label: "Brightroom.cgImage"))
+  private let debounceForCreatingCGImage = _BrightroomDebounce(
+    interval: 0.1,
+    queue: DispatchQueue.init(label: "Brightroom.cgImage")
+  )
 
   // MARK: - Initializers
 
@@ -272,14 +250,15 @@ open class EditingStack: Hashable, StoreComponentType {
       initialState: .init()
     )
 
-    filterPresets = colorCubeStorage.filters.map {
-      FilterPreset(
-        name: $0.name,
-        identifier: $0.identifier,
-        filters: [$0.asAny()],
-        userInfo: [:]
-      )
-    } + presetStorage.presets
+    filterPresets =
+      colorCubeStorage.filters.map {
+        FilterPreset(
+          name: $0.name,
+          identifier: $0.identifier,
+          filters: [$0.asAny()],
+          userInfo: [:]
+        )
+      } + presetStorage.presets
 
     self.imageProvider = imageProvider
   }
@@ -289,7 +268,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
    - Calling from background-thread supported.
    */
-  public func start(onPreparationCompleted: @escaping () -> Void = {}) {
+  public func start(onPreparationCompleted: @escaping @MainActor () -> Void = {}) {
 
     let previousHasCompleted = commit { s -> Bool in
       /**
@@ -335,7 +314,7 @@ open class EditingStack: Hashable, StoreComponentType {
 
         guard let self = self else { return }
 
-        state.ifChanged(\.loadedImage) { image in
+        state.ifChanged(\.loadedImage).do { image in
 
           guard let image = image else {
             return
@@ -355,20 +334,16 @@ open class EditingStack: Hashable, StoreComponentType {
 
             assert(editingSourceCGImage.colorSpace != nil)
 
-            let device = MTLCreateSystemDefaultDevice()
-
             /// resized
-            let _editingSourceCIImage: CIImage = _makeCIImage(
-              source: editingSourceCGImage,
+            let _editingSourceCIImage: CIImage = editingSourceCGImage._makeCIImage(
               orientation: metadata.orientation,
-              device: device,
+              device: self.mtlDevice,
               usesMTLTexture: self.options.usesMTLTextureForEditingImage
             )
 
-            let _thumbnailImage: CIImage = _makeCIImage(
-              source: thumbnailCGImage,
+            let _thumbnailImage: CIImage = thumbnailCGImage._makeCIImage(
               orientation: metadata.orientation,
-              device: device,
+              device: self.mtlDevice,
               usesMTLTexture: self.options.usesMTLTextureForEditingImage
             )
 
@@ -380,7 +355,9 @@ open class EditingStack: Hashable, StoreComponentType {
                   orientation: metadata.orientation
                 )
               } catch {
-                EngineSanitizer.global.onDidFindRuntimeError(.failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage))
+                EngineSanitizer.global.onDidFindRuntimeError(
+                  .failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage)
+                )
                 assertionFailure()
                 return editingSourceCGImage
               }
@@ -427,6 +404,43 @@ open class EditingStack: Hashable, StoreComponentType {
       }
   }
 
+  /**
+   Returns a CIImage applied cropping in current editing.
+
+   For previewing image
+   */
+  public func makeCroppedCIImage(
+    sourceImage: CGImage,
+    crop: EditingCrop,
+    orientation: CGImagePropertyOrientation
+  ) -> CIImage {
+
+    do {
+
+      // orientation-respected
+      let imageSize = sourceImage.size
+        .applying(cgOrientation: orientation)
+
+      let scaledCrop = crop.scaledWithPixelPerfect(
+        maxPixelSize: max(imageSize.width, imageSize.height)
+      )
+
+      return try sourceImage
+      // TODO: better to combine these operations - oriented and cropping
+        .oriented(orientation)
+        .croppedWithColorspace(
+          to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians
+        )
+        ._makeCIImage(
+          orientation: .up,
+          device: mtlDevice,
+          usesMTLTexture: options.usesMTLTextureForEditingImage
+        )
+    } catch {
+      return .init(color: .gray)
+    }
+  }
+
   deinit {
     EngineLog.debug("[EditingStack] deinit")
   }
@@ -440,14 +454,14 @@ open class EditingStack: Hashable, StoreComponentType {
       if let loadedState = state.mapIfPresent(\.loadedState) {
         modifyingState.map(keyPath: \.loadedState!) { (nextState) -> Void in
 
-          loadedState.ifChanged(\.thumbnailImage) { image in
+          loadedState.ifChanged(\.thumbnailImage).do { image in
 
             nextState.previewFilterPresets = self.filterPresets.map {
               PreviewFilterPreset(sourceImage: image, filter: $0)
             }
           }
 
-          loadedState.ifChanged(\.currentEdit.filters) { currentEdit in
+          loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
 
             self.debounceForCreatingCGImage.on { [weak self] in
 
@@ -495,7 +509,7 @@ open class EditingStack: Hashable, StoreComponentType {
   public typealias Revision = Int
 
   public var currentRevision: Revision? {
-    self.primitiveState.loadedState?.history.count
+    self.state.primitive.loadedState?.history.count
   }
 
   public func revert(to revision: Revision) {
@@ -576,7 +590,10 @@ open class EditingStack: Hashable, StoreComponentType {
 
     let imageSource = loaded.imageSource
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: loaded.metadata.orientation)
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: loaded.metadata.orientation
+    )
 
     // TODO: Clean up ImageRenderer.Edit
 
@@ -646,127 +663,3 @@ open class EditingStack: Hashable, StoreComponentType {
 
 }
 
-
-/// TODO: As possible, creates CIImage from MTLTexture
-/// 16bits image can't be MTLTexture with MTKTextureLoader.
-/// https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> MTLTexture {
-  guard device.supportsImage(size: cgImage.size) else {
-    throw MTLImageCreationError.imageTooBig
-  }
-
-  #if true
-    let loader = MTKTextureLoader(device: device)
-    let texture = try loader.newTexture(cgImage: cgImage, options: [:])
-    return texture
-  #else
-
-    // Here does not work well.
-
-    let textureDescriptor = MTLTextureDescriptor()
-
-    textureDescriptor.pixelFormat = .rgba16Uint
-    textureDescriptor.width = cgImage.width
-    textureDescriptor.height = cgImage.height
-
-    let texture = try device.makeTexture(descriptor: textureDescriptor).unwrap(
-      orThrow: "Failed to create MTLTexture"
-    )
-
-    let context = try CGContext.makeContext(for: cgImage)
-      .perform { context in
-        let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(cgImage.height))
-        context.concatenate(flip)
-        context.draw(
-          cgImage,
-          in: CGRect(x: 0, y: 0, width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
-        )
-      }
-
-    let data = try context.data.unwrap()
-
-    texture.replace(
-      region: MTLRegionMake2D(0, 0, cgImage.width, cgImage.height),
-      mipmapLevel: 0,
-      withBytes: data,
-      bytesPerRow: 8 * cgImage.width
-    )
-
-    return texture
-  #endif
-
-}
-
-private func _makeCIImage(
-  source cgImage: CGImage,
-  orientation: CGImagePropertyOrientation,
-  device: MTLDevice?,
-  usesMTLTexture: Bool
-) -> CIImage {
-
-  let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-
-  func createFromCGImage() -> CIImage {
-    return CIImage(
-      cgImage: cgImage
-    )
-    .oriented(orientation)
-  }
-
-  func createFromMTLTexture(device: MTLDevice) throws -> CIImage {
-    let thumbnailTexture = try makeMTLTexture(
-      from: cgImage,
-      device: device
-    )
-
-    let ciImage = try CIImage(
-      mtlTexture: thumbnailTexture,
-      options: [.colorSpace: colorSpace]
-    )
-    .map {
-      $0.transformed(by: .init(scaleX: 1, y: -1))
-    }.map {
-      $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
-    }
-    .map {
-      $0.oriented(orientation)
-    }
-    .unwrap()
-
-    EngineLog.debug(.stack, "Load MTLTexture")
-
-    return ciImage
-  }
-
-  if usesMTLTexture {
-    assert(device != nil)
-  }
-
-  if usesMTLTexture, let device = device {
-
-    do {
-      // TODO: As possible, creates CIImage from MTLTexture
-      // 16bits image can't be MTLTexture with MTKTextureLoader.
-      // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-      return try createFromMTLTexture(device: device)
-    } catch {
-      EngineLog.debug(
-        .stack,
-        "Unable to create MTLTexutre, fallback to CIImage from CGImage.\n\(cgImage)"
-      )
-
-      return createFromCGImage()
-    }
-  } else {
-
-    if usesMTLTexture, device == nil {
-      EngineLog.error(
-        .stack,
-        "MTLDevice not found, fallback to using CGImage to create CIImage."
-      )
-    }
-
-    return createFromCGImage()
-  }
-
-}

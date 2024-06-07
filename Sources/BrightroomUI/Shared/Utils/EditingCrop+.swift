@@ -15,13 +15,23 @@ import BrightroomEngine
 
 extension EditingCrop {
   func scrollViewContentSize() -> CGSize {
-    imageSize
+    // Use imageSize for masking view
+//    imageSize
+    PixelAspectRatio(imageSize).size(byWidth: 1000)
   }
-  
-  func calculateZoomScale(scrollViewSize: CGSize) -> (min: CGFloat, max: CGFloat) {
-    let minXScale = scrollViewSize.width / imageSize.width
-    let minYScale = scrollViewSize.height / imageSize.height
+
+  func scaleForDrawing() -> CGFloat {
+    let scaleFromOriginal = Geometry.diagonalRatio(to: scrollViewContentSize(), from: imageSize)
+
+    return scaleFromOriginal
+  }
+
+  func calculateZoomScale(visibleSize: CGSize) -> (min: CGFloat, max: CGFloat) {
     
+    let contentSize = scrollViewContentSize()
+    let minXScale = visibleSize.width / contentSize.width
+    let minYScale = visibleSize.height / contentSize.height
+
     /**
      max meaning scale aspect fill
      */
@@ -29,4 +39,27 @@ extension EditingCrop {
         
     return (min: minScale, max: .greatestFiniteMagnitude)
   }
+
+  func zoomExtent() -> CGRect {
+
+    let contentSize = scrollViewContentSize()
+    let cropExtent = cropExtent
+
+    let scaleFromOriginal = Geometry.diagonalRatio(to: contentSize, from: imageSize)
+
+    let _cropExtent = cropExtent.applying(.init(scaleX: scaleFromOriginal, y: scaleFromOriginal))
+
+    return _cropExtent
+  }
+
+  func makeCropExtent(rect: CGRect) -> CGRect {
+
+    let contentSize = scrollViewContentSize()
+    let cropExtent = rect
+
+    let scaleFromOriginal = Geometry.diagonalRatio(to: imageSize, from: contentSize)
+
+    return cropExtent.applying(.init(scaleX: scaleFromOriginal, y: scaleFromOriginal))
+  }
+
 }

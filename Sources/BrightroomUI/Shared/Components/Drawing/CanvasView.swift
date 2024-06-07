@@ -63,7 +63,7 @@ public final class CanvasView: PixelEditorCodeBasedView {
       
       guard let self = self else { return }
       
-      state.ifChanged(\.resolvedDrawnPaths) { paths in
+      state.ifChanged(\.resolvedDrawnPaths).do { paths in
         
         let layers = paths.map { path -> CAShapeLayer in
           let layer = Self.makeShapeLayer(for: path.brush)

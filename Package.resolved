@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "precisionlevelslider",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
+      "state" : {
+        "revision" : "3e460c1cea5ec916f7185948bc0a4e093e20f7a5",
+        "version" : "2.1.0"
+      }
+    },
+    {
       "identity" : "rxswift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ReactiveX/RxSwift.git",
@@ -46,6 +55,15 @@
       }
     },
     {
+      "identity" : "swiftui-hosting",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swiftui-Hosting",
+      "state" : {
+        "revision" : "7e8eaca72eae910d6d3b6272c263c6c3a10b755c",
+        "version" : "1.2.0"
+      }
+    },
+    {
       "identity" : "transitionpatch",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/TransitionPatch.git",
@@ -59,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "e1656a1e46ce044d0f05bfba69dba0273a8a71ee",
-        "version" : "12.0.0-beta.2"
+        "revision" : "6e41f28d0e4ca2e8309a61ae186f465d04761e23",
+        "version" : "12.0.0"
       }
     }
   ],
