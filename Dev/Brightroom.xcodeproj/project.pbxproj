@@ -30,6 +30,7 @@
 		4B36195026105E3900877B21 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B36195126105E3900877B21 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
+		4B3957C92C16D9ED000BD249 /* DemoFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */; };
 		4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */; };
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 4B46E71A2B762E20003179C2 /* MondrianLayout */; };
@@ -598,6 +599,7 @@
 		4B3075962605F27C00A1E7CB /* StackScrollNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StackScrollNode.swift; sourceTree = "<group>"; };
 		4B36194B26105BEB00877B21 /* RendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererTests.swift; sourceTree = "<group>"; };
 		4B36195526107ADB00877B21 /* path-data */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = "path-data"; sourceTree = "<group>"; };
+		4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DemoFilterView.swift; sourceTree = "<group>"; };
 		4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImitationTinderViewController.swift; sourceTree = "<group>"; };
 		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B524FE229B8F6A600C1A416 /* Brightroom */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Brightroom; path = ..; sourceTree = "<group>"; };
@@ -1251,6 +1253,7 @@
 			isa = PBXGroup;
 			children = (
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
+				4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
 				4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */,
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
@@ -2426,6 +2429,7 @@
 				4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */,
 				4B2324E42B763D4A00662EB8 /* GeometryPlayground.swift in Sources */,
 				4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */,
+				4B3957C92C16D9ED000BD249 /* DemoFilterView.swift in Sources */,
 				4BA989732B7122C800EB7983 /* DemoMaskingView.swift in Sources */,
 				4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */,
 				4BA989712B70F10300EB7983 /* ObjectEdge.swift in Sources */,
