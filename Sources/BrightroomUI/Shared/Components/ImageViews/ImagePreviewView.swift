@@ -241,7 +241,7 @@ final class _PreviewImageView: UIImageView, CIImageDisplaying {
       return
     }
 
-    EditorLog.debug("[ImageImageView] Update")
+    EditorLog.debug(.imageView, "Update")
 
     let uiImage: UIImage
 

@@ -51,7 +51,7 @@ final class _ImageView: UIImageView, CIImageDisplaying {
       return
     }
 
-    EditorLog.debug("[_ImageView] Update")
+    EditorLog.debug(.imageView, "Update")
 
     let uiImage: UIImage
     
