@@ -34,34 +34,7 @@ struct DemoFilterView: View {
     }
   }
 
-
-  class MotionBlurFilter: CIFilter {
-      var inputImage: CIImage?
-      var inputDirection: CIVector = CIVector(x: 1, y: 0)
-
-      let kernel = CIKernel(source:
-          """
-          kernel vec4 motionBlur(sampler image, vec2 direction) {
-              vec2 dc = destCoord();
-              vec4 color = vec4(0.0);
-              int samples = 20;
-              for (int i = -samples; i <= samples; i++) {
-                  vec2 offset = direction * (10 * float(i) / float(samples));
-                  color += sample(image, samplerCoord(dc + offset));
-              }
-              return color / float(samples * 2 + 1);
-          }
-          """
-      )
-
-      override var outputImage: CIImage? {
-          guard let inputImage = inputImage, let kernel = kernel else { return nil }
-          let arguments = [inputImage, inputDirection] as [Any]
-          return kernel.apply(extent: inputImage.extent, roiCallback: { _, rect in rect }, arguments: arguments)
-      }
-  }
-
-  struct ChromaticAberrationFilter: Filtering {
+  struct MotionBlurFilter: Filtering {
 
     let kernel = CIKernel(source: 
 """
@@ -109,12 +82,12 @@ struct DemoFilterView: View {
 
   let invertFilter: InvertFilter = .init()
   let grayscaleFilter: GrayscaleFilter = .init()
-  let chromaticFilter: ChromaticAberrationFilter = .init()
+  let motionBlurFilter: MotionBlurFilter = .init()
 
   @StateObject var editingStack: EditingStack
   @State var invertToggle: Bool = false
   @State var grayscaleToggle: Bool = false
-  @State var chromaticToggle: Bool = false
+  @State var motionBlurToggle: Bool = false
 
   @State var resultImage: ResultImage?
 
@@ -135,14 +108,14 @@ struct DemoFilterView: View {
       VStack {
         Toggle("Invert", isOn: $invertToggle)
         Toggle("Grayscale", isOn: $grayscaleToggle)
-        Toggle("Chromatic", isOn: $chromaticToggle)
+        Toggle("MotionBlur", isOn: $motionBlurToggle)
       }
-      .onChange(of: [invertToggle, grayscaleToggle, chromaticToggle], perform: { _ in
+      .onChange(of: [invertToggle, grayscaleToggle, motionBlurToggle], perform: { _ in
         editingStack.set(filters: {
           $0.additionalFilters = [
             grayscaleToggle ? grayscaleFilter.asAny() : nil,
             invertToggle ? invertFilter.asAny() : nil,
-            chromaticToggle ? chromaticFilter.asAny() : nil,
+            motionBlurToggle ? motionBlurFilter.asAny() : nil,
           ].compactMap({ $0 })
         })
       })
