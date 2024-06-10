@@ -483,7 +483,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public func applyEditingStack() {
     guard let crop = store.state.proposedCrop else {
-      EditorLog.warn("EditingStack has not completed loading.")
+      EditorLog.error(.cropView, "EditingStack has not completed loading.")
       return
     }
     editingStack.crop(crop)
@@ -515,8 +515,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       if let crop = $0.proposedCrop {
 
         $0.proposedCrop?.updateCropExtent(
-          crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians),
-          respectingAspectRatio: nil
+          crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians)
         )
 
         $0.proposedCrop?.rotation = rotation
@@ -986,11 +985,8 @@ extension CropView {
         rect: guideRectInImageView
       )
 
-      // TODO: Might cause wrong cropping if set the invalid size or origin. For example, setting width:0, height: 0 by too zoomed in.
-      let preferredAspectRatio = state.preferredAspectRatio
       state.proposedCrop?.updateCropExtent(
-        resolvedRect,
-        respectingAspectRatio: preferredAspectRatio
+        resolvedRect
       )
     }
   }
@@ -1100,8 +1096,6 @@ extension CropView {
 
       let scale = Geometry.diagonalRatio(to: guideView.bounds.size, from: guideViewRectInPlatter.size)
 
-      print(scale)
-
       let outbound = imagePlatterView.bounds
 
       let value = UIEdgeInsets(
@@ -1134,8 +1128,6 @@ extension CropView {
     if patternAngleDegree > 0 {
       patternAngleDegree -= 360
     }
-
-    print(patternAngleDegree)
 
     var resolvedInsets: UIEdgeInsets {
       switch patternAngleDegree {
@@ -1319,9 +1311,7 @@ extension UIScrollView {
 
       setContentOffset(targetContentOffset, animated: false)
 
-      #if DEBUG
-      print(
-        """
+      EditorLog.debug(.cropView, """
         [Zoom]
         input: \(rect),
         bound: \(boundSize),
@@ -1329,9 +1319,7 @@ extension UIScrollView {
         targetContentOffset: \(targetContentOffset),
         minContentOffset: \(minContentOffset)
         maxContentOffset: \(maxContentOffset)
-        """
-      )
-      #endif
+        """)
     }
 
     if animated {

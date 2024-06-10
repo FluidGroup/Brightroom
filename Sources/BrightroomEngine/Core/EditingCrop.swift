@@ -241,23 +241,9 @@ public struct EditingCrop: Equatable {
     )
   }
 
-  /// Updates cropExtent with new specified rect and normalizing value using aspectRatio(optional).
-  /// cropExtent would be rounded in order to drop floating point value for fitting pixel.
-  /// With specifing `respectingAspectRatio`, it fixes cropExtent's size.
-  ///
-  /// - Parameters:
-  ///   - cropExtent:
-  ///   - respectingAspectRatio:
   public mutating func updateCropExtent(
-    _ cropExtent: CGRect,
-    respectingAspectRatio: PixelAspectRatio?
+    _ cropExtent: CGRect
   ) {
-//    self.cropExtent = Self.fittingRect(
-//      rect: cropExtent,
-//      in: imageSize,
-//      respectingAspectRatio: respectingAspectRatio
-//    )
-
     self.cropExtent = cropExtent
   }
 
