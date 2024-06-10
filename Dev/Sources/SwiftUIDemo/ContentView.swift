@@ -36,6 +36,16 @@ struct ContentView: View {
             })
           }
 
+          Section("HDR") {
+            Button("Local") {
+              fullScreenView = .init {
+                DemoCropView(
+                  editingStack: { Mocks.makeEditingStack(image: Mocks.hdrImage()) }
+                )
+              }
+            }
+          }
+
           Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {

@@ -268,10 +268,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
     addSubview(guideBackdropView)
     addSubview(guideView)
 
-    imageView.preferredImageDynamicRange = .high
-    imageView.isUserInteractionEnabled = true
-    scrollView.addSubview(imageView)
-
+    imagePlatterView.isUserInteractionEnabled = true
+    scrollView.addSubview(imagePlatterView)
     scrollView.delegate = self
 
     guideView.willChange = { [weak self] in
