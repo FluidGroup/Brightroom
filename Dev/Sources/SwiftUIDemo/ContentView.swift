@@ -37,10 +37,17 @@ struct ContentView: View {
           }
 
           Section("HDR") {
-            Button("Local") {
+            Button("AVIF") {
               fullScreenView = .init {
                 DemoCropView(
-                  editingStack: { Mocks.makeEditingStack(image: Mocks.hdrImage()) }
+                  editingStack: { Mocks.makeEditingStack(image: UIImage(named: "sun-hdr-p3-avif.avif")!) }
+                )
+              }
+            }
+            Button("HEIC") {
+              fullScreenView = .init {
+                DemoCropView(
+                  editingStack: { Mocks.makeEditingStack(image: UIImage(named: "sun-hdr-p3-heic.heic")!) }
                 )
               }
             }

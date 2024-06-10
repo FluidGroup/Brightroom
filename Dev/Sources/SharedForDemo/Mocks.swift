@@ -33,7 +33,7 @@ enum Mocks {
   }
 
   static func hdrImage() -> UIImage {
-    UIImage(named: "sun-hdr-p3")!
+    UIImage(named: "sun-hdr-p3-avif.avif")!
   }
 
   static func makeEditingStack(image: UIImage) -> EditingStack {
