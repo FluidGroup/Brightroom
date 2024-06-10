@@ -25,31 +25,6 @@ import os.log
 
 enum EditorLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEditor", category: "Editor")
-  private static let queue = DispatchQueue.init(label: "me.muukii.PixelEditor.Log")
-
-  static func debug(_ object: Any...) {
-
-    queue.async {
-      if #available(iOS 12.0, *) {
-        os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
-      } else {
-        os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
-      }
-    }
-  }
-  
-  static func warn(_ object: Any...) {
-    
-    queue.async {
-      if #available(iOS 12.0, *) {
-        os_log(.error, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
-      } else {
-        os_log("%@", log: osLog, type: .error, object.map { "\($0)" }.joined(separator: " "))
-      }
-    }
-  }
-
   static func debug(_ log: OSLog, _ object: Any...) {
     os_log(.debug, log: log, "%@", object.map { "\($0)" }.joined(separator: " "))
   }
@@ -64,6 +39,14 @@ extension OSLog {
   static let imageView: OSLog = {
     #if false
     return OSLog.init(subsystem: "BrightroomUI", category: "ImageView")
+    #else
+    return .disabled
+    #endif
+  }()
+
+  static let cropView: OSLog = {
+    #if false
+    return OSLog.init(subsystem: "BrightroomUI", category: "CropView")
     #else
     return .disabled
     #endif
