@@ -38,12 +38,12 @@ struct DemoFilterView: View {
 
     let kernel = CIKernel(source:
 """
-    kernel vec4 motionBlur(sampler image, vec2 size, float sampleCount, float start, float blur) {
+    kernel vec4 motionBlur(sampler image, vec2 size, float sampleCount, float blur) {
             int sampleCountInt = int(floor(sampleCount));
             vec4 accumulator = vec4(0.0);
             vec2 dc = destCoord();
             float normalisedValue = length(((dc / size) - 0.5) * 2.0);
-            float strength = clamp((normalisedValue - start) * (1.0 / (1.0 - start)), 0.0, 1.0);
+            float strength = clamp((normalisedValue), 0.0, 1.0);
             vec2 vector = normalize((dc - (size / 2.0)) / size);
             vec2 velocity = vector * strength * blur;
             vec2 redOffset = -vector * strength * (blur * 1.0);
@@ -63,19 +63,21 @@ struct DemoFilterView: View {
 
     func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
-      let base = Double(sqrt(pow(image.extent.width, 2) + pow(image.extent.height, 2)))
-      let c = base / 20
-      let radius = c * 10 / 10
+      let width = image.extent.width + image.extent.minX*2
+      let height = image.extent.height + image.extent.minY*2
 
-      let args = [image,
-                  CIVector(
-                    x: image.extent.width,
-                    y: image.extent.height
-                  ),
-                  20,
-                  0.2,
-                  radius,
-                ] as [Any]
+      let base = Double(sqrt(pow(width, 2) + pow(height, 2)))
+      let radius = base / 40
+
+      let args = [
+        image,
+        CIVector(
+          x: width,
+          y: height
+        ),
+        20,
+        radius,
+      ] as [Any]
 
       return kernel.apply(
         extent: image.extent,
