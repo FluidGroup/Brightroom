@@ -705,7 +705,7 @@ extension CropView {
 
           let size = PixelAspectRatio(crop.cropExtent.size)
             .sizeThatFits(in: bounds.size)
-
+          
           return .init(
             origin: .init(
               x: contentInset.left + ((bounds.width - size.width) / 2) /* centering offset */,

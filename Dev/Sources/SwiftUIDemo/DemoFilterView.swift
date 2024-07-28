@@ -36,7 +36,7 @@ struct DemoFilterView: View {
 
   struct MotionBlurFilter: Filtering {
 
-    let kernel = CIKernel(source: 
+    let kernel = CIKernel(source:
 """
     kernel vec4 motionBlur(sampler image, vec2 size, float sampleCount, float start, float blur) {
             int sampleCountInt = int(floor(sampleCount));
@@ -63,11 +63,18 @@ struct DemoFilterView: View {
 
     func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
+      let base = Double(sqrt(pow(image.extent.width, 2) + pow(image.extent.height, 2)))
+      let c = base / 20
+      let radius = c * 10 / 10
+
       let args = [image,
-                  CIVector(x: image.extent.width, y: image.extent.height),
+                  CIVector(
+                    x: image.extent.width,
+                    y: image.extent.height
+                  ),
                   20,
                   0.2,
-                  20,
+                  radius,
                 ] as [Any]
 
       return kernel.apply(
@@ -102,7 +109,7 @@ struct DemoFilterView: View {
 
       ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
 
-      SwiftUICropView(editingStack: editingStack)
+      SwiftUICropView(editingStack: editingStack, contentInset: .zero)
         .clipped()
 
       VStack {
