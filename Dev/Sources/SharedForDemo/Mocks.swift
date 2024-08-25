@@ -32,6 +32,10 @@ enum Mocks {
     UIImage(named: "orientation_left.HEIC")!
   }
 
+  static func hdrImage() -> UIImage {
+    UIImage(named: "sun-hdr-p3-avif.avif")!
+  }
+
   static func makeEditingStack(image: UIImage) -> EditingStack {
     .init(
       imageProvider: .init(image: image)

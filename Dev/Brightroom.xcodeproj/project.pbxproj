@@ -31,6 +31,15 @@
 		4B36195126105E3900877B21 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
 		4B3957C92C16D9ED000BD249 /* DemoFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */; };
+		4B3957D12C16DAC3000BD249 /* sun-hdr-rec2020-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CB2C16DABA000BD249 /* sun-hdr-rec2020-avif.avif */; };
+		4B3957D22C16DAC3000BD249 /* sun-hdr-p3-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CA2C16DABA000BD249 /* sun-hdr-p3-avif.avif */; };
+		4B3957D32C16DAC3000BD249 /* sun-hdr-srgb-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CC2C16DABA000BD249 /* sun-hdr-srgb-avif.avif */; };
+		4B3957D42C16DAC4000BD249 /* sun-hdr-rec2020-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CB2C16DABA000BD249 /* sun-hdr-rec2020-avif.avif */; };
+		4B3957D52C16DAC4000BD249 /* sun-hdr-p3-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CA2C16DABA000BD249 /* sun-hdr-p3-avif.avif */; };
+		4B3957D62C16DAC4000BD249 /* sun-hdr-srgb-avif.avif in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957CC2C16DABA000BD249 /* sun-hdr-srgb-avif.avif */; };
+		4B3957DA2C16DD42000BD249 /* sun-hdr-rec2020-heic.heic in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957D72C16DD42000BD249 /* sun-hdr-rec2020-heic.heic */; };
+		4B3957DB2C16DD42000BD249 /* sun-hdr-srgb-heic.heic in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957D82C16DD42000BD249 /* sun-hdr-srgb-heic.heic */; };
+		4B3957DC2C16DD42000BD249 /* sun-hdr-p3-heic.heic in Resources */ = {isa = PBXBuildFile; fileRef = 4B3957D92C16DD42000BD249 /* sun-hdr-p3-heic.heic */; };
 		4B4103582611EAA80061A218 /* ImitationTinderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */; };
 		4B4103602611EAB20061A218 /* DemoImitationsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */; };
 		4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 4B46E71A2B762E20003179C2 /* MondrianLayout */; };
@@ -600,6 +609,12 @@
 		4B36194B26105BEB00877B21 /* RendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererTests.swift; sourceTree = "<group>"; };
 		4B36195526107ADB00877B21 /* path-data */ = {isa = PBXFileReference; lastKnownFileType = file.bplist; path = "path-data"; sourceTree = "<group>"; };
 		4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DemoFilterView.swift; sourceTree = "<group>"; };
+		4B3957CA2C16DABA000BD249 /* sun-hdr-p3-avif.avif */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-p3-avif.avif"; sourceTree = "<group>"; };
+		4B3957CB2C16DABA000BD249 /* sun-hdr-rec2020-avif.avif */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-rec2020-avif.avif"; sourceTree = "<group>"; };
+		4B3957CC2C16DABA000BD249 /* sun-hdr-srgb-avif.avif */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-srgb-avif.avif"; sourceTree = "<group>"; };
+		4B3957D72C16DD42000BD249 /* sun-hdr-rec2020-heic.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-rec2020-heic.heic"; sourceTree = "<group>"; };
+		4B3957D82C16DD42000BD249 /* sun-hdr-srgb-heic.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-srgb-heic.heic"; sourceTree = "<group>"; };
+		4B3957D92C16DD42000BD249 /* sun-hdr-p3-heic.heic */ = {isa = PBXFileReference; lastKnownFileType = file; path = "sun-hdr-p3-heic.heic"; sourceTree = "<group>"; };
 		4B4103572611EAA80061A218 /* ImitationTinderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImitationTinderViewController.swift; sourceTree = "<group>"; };
 		4B41035F2611EAB20061A218 /* DemoImitationsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoImitationsViewController.swift; sourceTree = "<group>"; };
 		4B524FE229B8F6A600C1A416 /* Brightroom */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Brightroom; path = ..; sourceTree = "<group>"; };
@@ -1143,6 +1158,19 @@
 			path = Library;
 			sourceTree = "<group>";
 		};
+		4B3957CD2C16DABA000BD249 /* hdr-images */ = {
+			isa = PBXGroup;
+			children = (
+				4B3957D92C16DD42000BD249 /* sun-hdr-p3-heic.heic */,
+				4B3957D72C16DD42000BD249 /* sun-hdr-rec2020-heic.heic */,
+				4B3957D82C16DD42000BD249 /* sun-hdr-srgb-heic.heic */,
+				4B3957CA2C16DABA000BD249 /* sun-hdr-p3-avif.avif */,
+				4B3957CB2C16DABA000BD249 /* sun-hdr-rec2020-avif.avif */,
+				4B3957CC2C16DABA000BD249 /* sun-hdr-srgb-avif.avif */,
+			);
+			path = "hdr-images";
+			sourceTree = "<group>";
+		};
 		4B4103562611EA8C0061A218 /* Imitations */ = {
 			isa = PBXGroup;
 			children = (
@@ -1332,6 +1360,7 @@
 		4BE9B3D1260BA72D000A3D09 /* Bundle */ = {
 			isa = PBXGroup;
 			children = (
+				4B3957CD2C16DABA000BD249 /* hdr-images */,
 				4B2A10F9266B7AF800B0C885 /* image-test-suite */,
 				4BE9B3D0260BA720000A3D09 /* Images */,
 				4B1E95292176F52100E9DFB8 /* LUTs */,
@@ -1923,6 +1952,9 @@
 				4BA41C86260CE817005E6FA7 /* orientation_down.HEIC in Resources */,
 				4BA41C85260CE817005E6FA7 /* orientation_left.HEIC in Resources */,
 				4BA41C84260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */,
+				4B3957D42C16DAC4000BD249 /* sun-hdr-rec2020-avif.avif in Resources */,
+				4B3957D52C16DAC4000BD249 /* sun-hdr-p3-avif.avif in Resources */,
+				4B3957D62C16DAC4000BD249 /* sun-hdr-srgb-avif.avif in Resources */,
 				4BA41C82260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
 				4BB7B9CC277A452A0014B62A /* LUT_64_Gloss.png in Resources */,
 				4B600B2A216B7C9E001E1456 /* Assets.xcassets in Resources */,
@@ -1948,9 +1980,15 @@
 				4BA41C90260CE817005E6FA7 /* orientation_left.HEIC in Resources */,
 				4BED4A0A261CA5B00011A98F /* LUT_64_1.jpg in Resources */,
 				4BA41C8E260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */,
+				4B3957DC2C16DD42000BD249 /* sun-hdr-p3-heic.heic in Resources */,
 				4BA41C92260CE817005E6FA7 /* orientation_right.HEIC in Resources */,
 				4BA41C93260CE817005E6FA7 /* orientation_up.HEIC in Resources */,
+				4B3957DB2C16DD42000BD249 /* sun-hdr-srgb-heic.heic in Resources */,
+				4B3957DA2C16DD42000BD249 /* sun-hdr-rec2020-heic.heic in Resources */,
 				4BA41C94260CE817005E6FA7 /* orientation_down_mirrored.HEIC in Resources */,
+				4B3957D12C16DAC3000BD249 /* sun-hdr-rec2020-avif.avif in Resources */,
+				4B3957D22C16DAC3000BD249 /* sun-hdr-p3-avif.avif in Resources */,
+				4B3957D32C16DAC3000BD249 /* sun-hdr-srgb-avif.avif in Resources */,
 				4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */,
 				4BB7B9CD277A452A0014B62A /* LUT_64_Gloss.png in Resources */,
 				4BA41C8F260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */,
