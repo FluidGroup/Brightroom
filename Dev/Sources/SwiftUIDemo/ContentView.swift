@@ -36,6 +36,23 @@ struct ContentView: View {
             })
           }
 
+          Section("HDR") {
+            Button("AVIF") {
+              fullScreenView = .init {
+                DemoCropView(
+                  editingStack: { Mocks.makeEditingStack(image: UIImage(named: "sun-hdr-p3-avif.avif")!) }
+                )
+              }
+            }
+            Button("HEIC") {
+              fullScreenView = .init {
+                DemoCropView(
+                  editingStack: { Mocks.makeEditingStack(image: UIImage(named: "sun-hdr-p3-heic.heic")!) }
+                )
+              }
+            }
+          }
+
           Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {

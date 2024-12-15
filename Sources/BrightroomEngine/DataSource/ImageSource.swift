@@ -64,7 +64,11 @@ public final class ImageSource: Equatable {
         )!
       },
       makeCIImage: {
-        CIImage(image: image)!
+        if #available(iOS 17.0, *) {
+          CIImage(image: image, options: [.expandToHDR : true])!
+        } else {
+          CIImage(image: image, options: [:])!
+        }
       }
     )
   }
