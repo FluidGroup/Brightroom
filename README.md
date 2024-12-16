@@ -64,7 +64,7 @@ View the [full documentation](https://www.notion.so/muukii/Brightroom-d4c59b3761
 
 ```swift
 import SwiftUI
-import BtightroomUIPhotosCrop
+import BrightroomUIPhotosCrop
 
 struct DemoCropView: View {
 
