@@ -32,7 +32,7 @@ enum RadiusCalculator {
   }
 }
 
-public protocol Filtering: Hashable {
+public protocol Filtering: Hashable, Sendable {
 
   func apply(to image: CIImage, sourceImage: CIImage) -> CIImage
 }
@@ -43,7 +43,7 @@ extension Filtering {
   }
 }
 
-public struct AnyFilter: Filtering {
+public struct AnyFilter: Filtering, Sendable {
   
   public static func == (lhs: AnyFilter, rhs: AnyFilter) -> Bool {
     lhs.base == rhs.base
@@ -53,8 +53,8 @@ public struct AnyFilter: Filtering {
     base.hash(into: &hasher)
   }
 
-  private let applier: (CIImage, CIImage) -> CIImage
-  public let base: AnyHashable
+  private let applier: @Sendable (CIImage, CIImage) -> CIImage
+  public nonisolated(unsafe) let base: AnyHashable
 
   public init<Filter: Filtering>(filter: Filter) {
     self.base = filter

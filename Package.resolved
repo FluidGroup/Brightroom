@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-atomics.git",
       "state" : {
-        "revision" : "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
-        "version" : "1.0.3"
+        "revision" : "cd142fd2f64be2100422d658e7411e39489da985",
+        "version" : "1.2.0"
       }
     },
     {
@@ -77,8 +77,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "ea8f1e54ceec3078215762ca6ea73c7b93fc266c",
-        "version" : "12.5.0"
+        "revision" : "9980b550f17ad6bc6d557a220561061a436fb231",
+        "version" : "13.0.0-beta.1"
       }
     }
   ],

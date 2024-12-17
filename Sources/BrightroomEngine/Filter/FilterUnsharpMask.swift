@@ -21,7 +21,7 @@
 
 import CoreImage
 
-public struct FilterUnsharpMask: Filtering, Equatable, Codable {
+public struct FilterUnsharpMask: Filtering, Equatable, Codable, Sendable {
   
   public enum Params {
     public static let intensity: ParameterRange<Double, FilterShadows> = .init(min: 0, max: 0.3)

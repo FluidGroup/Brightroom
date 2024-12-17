@@ -22,10 +22,10 @@
 import CoreImage
 import UIKit
 
-public struct FilterHighlightShadowTint : Filtering, Equatable {
+public struct FilterHighlightShadowTint : Filtering, Equatable, Sendable {
   
-  public var highlightColor: CIColor = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
-  public var shadowColor: CIColor = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
+  public nonisolated(unsafe) var highlightColor: CIColor = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
+  public nonisolated(unsafe) var shadowColor: CIColor = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
   
   public init() {
     

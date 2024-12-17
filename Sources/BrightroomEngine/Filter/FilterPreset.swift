@@ -22,14 +22,14 @@
 import CoreImage
 import UIKit
 
-public struct FilterPreset: Filtering {
+public struct FilterPreset: Filtering, Sendable {
 
   public static let range: ParameterRange<Double, FilterPreset> = .init(min: 0, max: 1)
 
   public let name: String
   public let identifier: String
   public let filters: [AnyFilter]
-  public let userInfo: [String : AnyHashable]
+  public nonisolated(unsafe) let userInfo: [String : AnyHashable]
 
   public init(
     name: String,

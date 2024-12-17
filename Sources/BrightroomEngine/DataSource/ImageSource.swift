@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import CoreImage
+@preconcurrency import CoreImage
 import UIKit
 import Verge
 
@@ -33,13 +33,13 @@ import Verge
 
 
 /// An object that provides an image-data from multiple backing storage.
-public final class ImageSource: Equatable {
+public final class ImageSource: Equatable, Sendable {
 
-  private struct Closures {
-    let readImageSize: () -> CGSize
-    let loadOriginalCGImage: () -> CGImage
-    let loadThumbnailCGImage: (CGFloat) -> CGImage
-    let makeCIImage: () -> CIImage
+  private struct Closures: Sendable {
+    let readImageSize: @Sendable () -> CGSize
+    let loadOriginalCGImage: @Sendable () -> CGImage
+    let loadThumbnailCGImage: @Sendable (CGFloat) -> CGImage
+    let makeCIImage: @Sendable () -> CIImage
   }
 
   public static func == (lhs: ImageSource, rhs: ImageSource) -> Bool {

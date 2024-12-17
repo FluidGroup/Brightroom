@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import CoreImage
+@preconcurrency import CoreImage
 import MetalKit
 import SwiftUI
 import UIKit
@@ -34,7 +34,7 @@ public enum EditingStackError: Error {
 ///
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
-open class EditingStack: Hashable, StoreComponentType {
+open class EditingStack: Hashable, StoreDriverType {
 
   private static let centralQueue = DispatchQueue.init(
     label: "app.muukii.Brightroom.EditingStack.central",
@@ -238,7 +238,6 @@ open class EditingStack: Hashable, StoreComponentType {
   ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
   public init(
     imageProvider: ImageProvider,
-    colorCubeStorage: ColorCubeStorage = .default,
     presetStorage: PresetStorage = .default,
     options: Options = .init(),
     cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
@@ -250,15 +249,7 @@ open class EditingStack: Hashable, StoreComponentType {
       initialState: .init()
     )
 
-    filterPresets =
-      colorCubeStorage.filters.map {
-        FilterPreset(
-          name: $0.name,
-          identifier: $0.identifier,
-          filters: [$0.asAny()],
-          userInfo: [:]
-        )
-      } + presetStorage.presets
+    filterPresets = presetStorage.presets
 
     self.imageProvider = imageProvider
   }
@@ -299,8 +290,8 @@ open class EditingStack: Hashable, StoreComponentType {
      Start downloading image
      */
 
-    backgroundQueue.async {
-      self.imageProvider.start()
+    backgroundQueue.async { [imageProvider] in
+      imageProvider.start()
     }
 
     imageProviderSubscription =

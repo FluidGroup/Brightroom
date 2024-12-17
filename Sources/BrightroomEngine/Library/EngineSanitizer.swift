@@ -21,6 +21,7 @@
 
 import Foundation
 import CoreGraphics
+import os.lock
 
 public enum EngineRuntimeError: Swift.Error {
   case failedToCreateResizedCGImage(sourceImage: CGImage, maxPixelSize: CGFloat)
@@ -28,11 +29,20 @@ public enum EngineRuntimeError: Swift.Error {
   case failedToRenderCGImageForCrop(sourceImage: CGImage)
 }
 
-public final class EngineSanitizer {
+public struct EngineSanitizer: Sendable {
 
-  public static let global = EngineSanitizer()
+  public static var global: EngineSanitizer {
+    get {
+      return _global.withLock { $0 }
+    }
+    set {
+      _global.withLock { $0 = newValue }
+    }
+  }
+  
+  private static let _global = OSAllocatedUnfairLock.init(initialState: EngineSanitizer())
 
-  public var onDidFindRuntimeError: (EngineRuntimeError) -> Void = { _ in }
+  public var onDidFindRuntimeError: @Sendable (EngineRuntimeError) -> Void = { _ in }
 
   public init() {
 

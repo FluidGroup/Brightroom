@@ -1,10 +1,20 @@
 import Foundation
+import os.lock
 
-open class PresetStorage {
+public final class PresetStorage: Sendable {
 
   public static let `default` = PresetStorage(presets: [])
-
-  public var presets: [FilterPreset] = []
+  
+  public var presets: [FilterPreset] {
+    get {
+      _presets.withLock { $0 }
+    }
+    set {
+      _presets.withLock { $0 = newValue }
+    }
+  }
+  
+  private let _presets: OSAllocatedUnfairLock<[FilterPreset]> = .init(initialState: [])
 
   public init(
     presets: [FilterPreset]

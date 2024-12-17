@@ -22,9 +22,9 @@
 import UIKit
 import CoreImage
 
-public struct FilterBrightness: Filtering, Equatable, Codable {
+public struct FilterBrightness: Filtering, Equatable, Codable, Sendable {
   
-  public static let range: ParameterRange<Double, FilterContrast> = .init(min: -0.2, max: 0.2)
+  public static let range: ParameterRange<Double, FilterBrightness> = .init(min: -0.2, max: 0.2)
   
   public var value: Double = 0 
   
