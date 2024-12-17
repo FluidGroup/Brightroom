@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "15.2"
+          xcode-version: "16.1"
       - uses: actions/checkout@v2
         with:
           submodules: true
@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "15.2"
+          xcode-version: "16.1"
       - uses: actions/checkout@v2
       - name: Build
         run: xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
