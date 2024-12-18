@@ -66,9 +66,9 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FluidGroup/swift-collections",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "939cfd25234472b4dc91c3caeab304d15bca9a73",
+        "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
         "version" : "1.1.0"
       }
     },
@@ -86,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-syntax.git",
       "state" : {
-        "revision" : "6ad4ea24b01559dde0773e3d091f1b9e36175036",
-        "version" : "509.0.2"
+        "revision" : "0687f71944021d616d34d922343dcef086855920",
+        "version" : "600.0.1"
       }
     },
     {
@@ -140,8 +140,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "a338c22b82c9a686a7131b54fa84ddad773f5c2a",
-        "version" : "12.0.0-beta.4"
+        "revision" : "ea8f1e54ceec3078215762ca6ea73c7b93fc266c",
+        "version" : "12.5.0"
       }
     }
   ],

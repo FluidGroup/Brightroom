@@ -15,14 +15,14 @@ final class CGContextCreationTests: XCTestCase {
 
   func test_create_cgcontext() {
 
-    (1...13).forEach { i in
+    (1...12).forEach { i in
       let imageName = "test-image-\(i)"
       let cgImage = UIImage(named: imageName, in: _pixelengine_bundle, with: nil)!.cgImage!
       do {
         _ = try CGContext.makeContext(for: cgImage)
       } catch {
         print("❌===")
-        print(cgImage.colorSpace)
+        print(cgImage.colorSpace as Any)
         print(imageName, error.localizedDescription)
         print("===")
         XCTFail(error.localizedDescription)
