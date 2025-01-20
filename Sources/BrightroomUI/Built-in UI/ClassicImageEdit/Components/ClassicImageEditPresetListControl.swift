@@ -83,7 +83,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
         
         if let state = state.mapIfPresent(\.editingState.loadedState) {
         
-          state.ifChanged(\.thumbnailImage, \.previewFilterPresets) { image, filters in
+          state.ifChanged(\.thumbnailImage, \.previewFilterPresets).do { image, filters in
                       
             viewState.content = .init(previews: filters, originalImage: image)
           }
@@ -103,7 +103,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
         self.collectionView.reloadData()
       }
 
-      state.ifChanged(\.currentSelected) { value in
+      state.ifChanged(\.currentSelected).do { value in
         self.collectionView.visibleCells.forEach {
           self.updateSelected(cell: $0, selectedItem: value)
         }
@@ -175,7 +175,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.preset) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.preset).do { value in
       store.commit {
         $0.currentSelected = value
       }

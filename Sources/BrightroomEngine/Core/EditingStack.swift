@@ -34,7 +34,7 @@ public enum EditingStackError: Error {
 ///
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
-open class EditingStack: Hashable, StoreComponentType {
+open class EditingStack: Hashable, StoreDriverType {
 
   private static let centralQueue = DispatchQueue.init(
     label: "app.muukii.Brightroom.EditingStack.central",

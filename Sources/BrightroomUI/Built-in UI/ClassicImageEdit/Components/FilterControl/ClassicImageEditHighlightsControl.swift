@@ -71,7 +71,7 @@ open class ClassicImageEditHighlightsControl : ClassicImageEditHighlightsControl
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.highlights).do { value in
       slider.set(value: value?.value ?? 0, in: FilterHighlights.range)
     }
                 

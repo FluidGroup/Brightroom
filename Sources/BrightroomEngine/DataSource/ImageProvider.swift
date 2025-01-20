@@ -54,7 +54,7 @@ public enum ImageProviderError: Error {
 /**
  A stateful object that provides multiple image for EditingStack.
  */
-public final class ImageProvider: Equatable, StoreComponentType {
+public final class ImageProvider: Equatable, StoreDriverType {
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }

@@ -72,7 +72,7 @@ open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade).do { value in
       slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
     }
         

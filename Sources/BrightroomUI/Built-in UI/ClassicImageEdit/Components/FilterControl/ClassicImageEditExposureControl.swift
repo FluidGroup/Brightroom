@@ -71,7 +71,7 @@ open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase
 
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure).do { value in
       slider.set(value: value?.value ?? 0, in: FilterExposure.range)
     }
     

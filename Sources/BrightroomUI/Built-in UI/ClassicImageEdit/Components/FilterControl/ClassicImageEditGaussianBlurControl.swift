@@ -72,7 +72,7 @@ open class ClassicImageEditGaussianBlurControl : ClassicImageEditGaussianBlurCon
 
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.gaussianBlur).do { value in
       slider.set(value: value?.value ?? 0, in: FilterGaussianBlur.range)
     }
     

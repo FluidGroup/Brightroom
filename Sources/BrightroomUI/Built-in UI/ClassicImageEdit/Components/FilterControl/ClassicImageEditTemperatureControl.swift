@@ -71,7 +71,7 @@ open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureContr
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature).do { value in
 
       slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
     }
