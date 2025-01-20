@@ -25,7 +25,7 @@ import Verge
 import BrightroomEngine
 #endif
 
-public final class ClassicImageEditViewModel: Equatable, StoreComponentType {
+public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
   public static func == (lhs: ClassicImageEditViewModel, rhs: ClassicImageEditViewModel) -> Bool {
     lhs === rhs
   }

@@ -72,7 +72,7 @@ open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen).do { value in
       slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
     }
     

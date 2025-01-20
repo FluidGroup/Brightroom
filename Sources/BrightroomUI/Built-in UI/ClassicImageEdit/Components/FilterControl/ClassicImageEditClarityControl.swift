@@ -72,7 +72,7 @@ open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask).do { value in
       slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
     }
     

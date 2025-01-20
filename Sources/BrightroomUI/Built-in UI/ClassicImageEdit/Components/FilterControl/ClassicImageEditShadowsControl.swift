@@ -71,7 +71,7 @@ open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
   
   open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
     
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows) { value in
+    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows).do { value in
       slider.set(value: value?.value ?? 0, in: FilterShadows.range)
     }
         
