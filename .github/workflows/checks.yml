@@ -5,12 +5,12 @@ on:
 
 jobs:
   test:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "16.1"
+          xcode-version: "16.2"
       - uses: actions/checkout@v2
         with:
           submodules: true
@@ -18,12 +18,12 @@ jobs:
         run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0.1'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
 
   swiftpm:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.1
         with:
-          xcode-version: "16.1"
+          xcode-version: "16.2"
       - uses: actions/checkout@v2
       - name: Build
         run: xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
