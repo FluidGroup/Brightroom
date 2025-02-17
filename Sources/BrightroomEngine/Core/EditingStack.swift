@@ -303,10 +303,8 @@ open class EditingStack: Hashable, StoreDriverType {
       self.imageProvider.start()
     }
 
-    imageProviderSubscription =
-      imageProvider
-      .sinkState(queue: .specific(backgroundQueue)) {
-        [weak self] (state: Changes<ImageProvider.State>) in
+    imageProviderSubscription = imageProvider
+      .sinkState(queue: .specific(backgroundQueue)) { [weak self] (state: Changes<ImageProvider.State>) in
 
         /*
          In Background thread
@@ -370,7 +368,7 @@ open class EditingStack: Hashable, StoreDriverType {
 
                 guard let self = self else { return }
 
-                self.commit { (s: inout InoutRef<State>) in
+                self.commit { (s: inout State) in
                   assert(
                     (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
                       == (metadata.imageSize.width > metadata.imageSize.height)
@@ -449,45 +447,42 @@ open class EditingStack: Hashable, StoreDriverType {
 
     assert(Thread.isMainThread == false)
 
-    commit { (modifyingState: inout InoutRef<State>) in
+    commit { (modifyingState: inout State) in
 
       if let loadedState = state.mapIfPresent(\.loadedState) {
-        modifyingState.map(keyPath: \.loadedState!) { (nextState) -> Void in
-
-          loadedState.ifChanged(\.thumbnailImage).do { image in
-
-            nextState.previewFilterPresets = self.filterPresets.map {
-              PreviewFilterPreset(sourceImage: image, filter: $0)
-            }
+        
+        loadedState.ifChanged(\.thumbnailImage).do { image in
+          
+          modifyingState.loadedState!.previewFilterPresets = self.filterPresets.map {
+            PreviewFilterPreset(sourceImage: image, filter: $0)
           }
-
-          loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
-
-            self.debounceForCreatingCGImage.on { [weak self] in
-
-              guard let self = self else { return }
-
-              let cgImageForCrop: CGImage = {
-                do {
-                  return try Self.renderCGImageForCrop(
-                    filters: currentEdit.makeFilters(),
-                    source: .init(cgImage: loadedState.editingSourceCGImage),
-                    orientation: loadedState.metadata.orientation
-                  )
-                } catch {
-                  assertionFailure()
-                  return loadedState.editingSourceCGImage
-                }
-              }()
-
-              self.commit {
-                $0.loadedState?.imageForCrop = cgImageForCrop
+        }
+        
+        loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
+          
+          self.debounceForCreatingCGImage.on { [weak self] in
+            
+            guard let self = self else { return }
+            
+            let cgImageForCrop: CGImage = {
+              do {
+                return try Self.renderCGImageForCrop(
+                  filters: currentEdit.makeFilters(),
+                  source: .init(cgImage: loadedState.editingSourceCGImage),
+                  orientation: loadedState.metadata.orientation
+                )
+              } catch {
+                assertionFailure()
+                return loadedState.editingSourceCGImage
               }
-
+            }()
+            
+            self.commit {
+              $0.loadedState?.imageForCrop = cgImageForCrop
             }
-
+            
           }
-
+                    
         }
 
       }
@@ -612,12 +607,12 @@ open class EditingStack: Hashable, StoreDriverType {
     return renderer
   }
 
-  private func applyIfChanged(_ perform: (inout InoutRef<Edit>) -> Void) {
+  private func applyIfChanged(_ perform: (inout Edit) -> Void) {
     commit {
       guard $0.loadedState != nil else {
         return
       }
-      $0.map(keyPath: \.loadedState!.currentEdit, perform: perform)
+      perform(&$0.loadedState!.currentEdit)
     }
   }
 
