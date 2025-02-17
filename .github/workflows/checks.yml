@@ -15,7 +15,7 @@ jobs:
         with:
           submodules: true
       - name: Test
-        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0.1'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
+        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=18.0'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
 
   swiftpm:
     runs-on: macos-15
