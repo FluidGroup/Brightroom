@@ -171,7 +171,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
 
       self.commit {
         $0.editableImage = .init(cgImage: cgImage)
-        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        $0.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
       }
 
       return .init {}
@@ -210,7 +210,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
       }
       self.commit {
         $0.editableImage =  .init(cgImage: cgImage)
-        $0.wrapped.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+        $0.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
       }
       return .init {}
     }
@@ -238,7 +238,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
     )
     
     store.commit {
-      $0.wrapped.resolve(with: metadata)
+      $0.resolve(with: metadata)
     }
     
     pendingAction = { _ in
@@ -259,7 +259,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
     )
     
     store.commit {
-      $0.wrapped.resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
+      $0.resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
     }
     
     pendingAction = { _ in  return .init {} }
@@ -298,7 +298,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
     )
     
     store.commit {
-      $0.wrapped.resolve(with: metadata)
+      $0.resolve(with: metadata)
     }
     
     pendingAction = { _ in return .init {} }
@@ -368,7 +368,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
               return
             }
         
-            state.wrapped.resolve(with: metadata)
+            state.resolve(with: metadata)
             state.editableImage = .init(cgImageSource: imageSource)
           }
         }
@@ -421,7 +421,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
           
           guard let image = image else { return }
           
-          state.wrapped.resolve(with: .init(
+          state.resolve(with: .init(
             orientation: .init(image.imageOrientation),
             imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
           ))
