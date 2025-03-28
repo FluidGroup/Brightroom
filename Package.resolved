@@ -59,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/swift-macro-state-struct",
       "state" : {
-        "revision" : "35a3afab5906e70686392016edfebee821667642",
-        "version" : "2.1.0"
+        "revision" : "e13aa7350af0407d74552198a438cd1cb4b74c7d",
+        "version" : "2.2.0"
       }
     },
     {
@@ -113,8 +113,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Verge.git",
       "state" : {
-        "revision" : "9a226dc0bab7838b0cdbb205f9fb6c160c6c3772",
-        "version" : "14.0.0-beta.5"
+        "revision" : "331d2ae4493c7aae0e5333c0d93d6173cced9325",
+        "version" : "14.0.0-beta.7"
       }
     }
   ],

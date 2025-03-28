@@ -12,7 +12,7 @@ let package = Package(
     .library(name: "BrightroomUIPhotosCrop", targets: ["BrightroomUIPhotosCrop"])
   ],
   dependencies: [
-    .package(url: "https://github.com/VergeGroup/Verge", from: "14.0.0-beta.5"),
+    .package(url: "https://github.com/VergeGroup/Verge", from: "14.0.0-beta.7"),
     .package(url: "https://github.com/FluidGroup/TransitionPatch", from: "1.0.3"),
     .package(url: "https://github.com/FluidGroup/PrecisionLevelSlider", from: "2.1.0"),
   ],
