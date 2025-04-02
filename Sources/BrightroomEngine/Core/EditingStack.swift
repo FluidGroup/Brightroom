@@ -447,42 +447,40 @@ open class EditingStack: Hashable, StoreDriverType {
 
     assert(Thread.isMainThread == false)
 
-    commit { (modifyingState: inout State) in
+    if let loadedState = state.mapIfPresent(\.loadedState) {
 
-      if let loadedState = state.mapIfPresent(\.loadedState) {
-        
-        loadedState.ifChanged(\.thumbnailImage).do { image in
-          
-          modifyingState.loadedState!.previewFilterPresets = self.filterPresets.map {
+      loadedState.ifChanged(\.thumbnailImage).do { image in
+
+        commit {
+          $0.loadedState!.previewFilterPresets = self.filterPresets.map {
             PreviewFilterPreset(sourceImage: image, filter: $0)
           }
         }
-        
-        loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
-          
-          self.debounceForCreatingCGImage.on { [weak self] in
-            
-            guard let self = self else { return }
-            
-            let cgImageForCrop: CGImage = {
-              do {
-                return try Self.renderCGImageForCrop(
-                  filters: currentEdit.makeFilters(),
-                  source: .init(cgImage: loadedState.editingSourceCGImage),
-                  orientation: loadedState.metadata.orientation
-                )
-              } catch {
-                assertionFailure()
-                return loadedState.editingSourceCGImage
-              }
-            }()
-            
-            self.commit {
-              $0.loadedState?.imageForCrop = cgImageForCrop
+      }
+
+      loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
+
+        self.debounceForCreatingCGImage.on { [weak self] in
+
+          guard let self = self else { return }
+
+          let cgImageForCrop: CGImage = {
+            do {
+              return try Self.renderCGImageForCrop(
+                filters: currentEdit.makeFilters(),
+                source: .init(cgImage: loadedState.editingSourceCGImage),
+                orientation: loadedState.metadata.orientation
+              )
+            } catch {
+              assertionFailure()
+              return loadedState.editingSourceCGImage
             }
-            
+          }()
+
+          self.commit {
+            $0.loadedState?.imageForCrop = cgImageForCrop
           }
-                    
+
         }
 
       }

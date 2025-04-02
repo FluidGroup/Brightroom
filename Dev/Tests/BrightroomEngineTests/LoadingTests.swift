@@ -39,7 +39,7 @@ final class LoadingTests: XCTestCase {
       
       image.sinkState { (state) in
         
-        state.ifChanged(\.orientation) { orientation in
+        state.ifChanged(\.orientation).do { orientation in
           result = orientation
           exp.fulfill()
         }
