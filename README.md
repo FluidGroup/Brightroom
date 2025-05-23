@@ -58,13 +58,13 @@ View the [full documentation](https://www.notion.so/muukii/Brightroom-d4c59b3761
 
 ## Built-In UI
 
-**BrightroomUIPhotosCrop.PhotosCropRotation**
+**BrightroomUIPhotosCrop.PhotosCropRotating**
 
 <img width=200px src=https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd />
 
 ```swift
 import SwiftUI
-import BtightroomUIPhotosCrop
+import BrightroomUIPhotosCrop
 
 struct DemoCropView: View {
 
