@@ -21,9 +21,11 @@
 
 import CoreImage
 
+// import StateGraph // Removing StateGraph import
+
 extension EditingStack {
   // TODO: Consider more effective shape
-  public struct Edit: Equatable {
+  public struct Edit: Equatable { // Remove Trackable
     func makeFilters() -> [AnyFilter] {
       return filters.makeFilters()
     }
@@ -41,12 +43,12 @@ extension EditingStack {
       self.crop = crop
     }
     
-    public struct Drawings: Equatable {
+    public struct Drawings: Equatable { // Remove Trackable
       // TODO: Remove Rect from DrawnPath
       public var blurredMaskPaths: [DrawnPath] = []
     }
 
-    public struct Filters: Equatable {
+    public struct Filters: Equatable { // Remove Trackable
 
       public var preset: FilterPreset?
       
