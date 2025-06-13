@@ -17,15 +17,6 @@ open Dev/Brightroom.xcodeproj
 fastlane ios build_demo_apps
 ```
 
-### Running Tests
-```bash
-# Run all tests via Fastlane
-fastlane ios run_all_tests
-
-# Or via Swift Package Manager
-swift test
-```
-
 ### Building the Package
 ```bash
 # Build the Swift package
