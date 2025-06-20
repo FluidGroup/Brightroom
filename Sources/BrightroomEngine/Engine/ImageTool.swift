@@ -25,7 +25,7 @@ import MobileCoreServices
 import UIKit
 
 /// A set of functions that handle image and manipulations.
-public enum ImageTool {
+public enum ImageTool: Sendable {
 
   public static func makeImageMetadata(
     from imageSource: CGImageSource

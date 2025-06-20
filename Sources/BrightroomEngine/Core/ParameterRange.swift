@@ -21,7 +21,7 @@
 
 import UIKit
 
-public struct ParameterRange<T : Comparable, Target> {
+public struct ParameterRange<T : Comparable, Target>: Sendable where T: Sendable {
 
   public let min: T
   public let max: T

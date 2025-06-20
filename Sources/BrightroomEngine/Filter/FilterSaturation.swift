@@ -22,7 +22,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterSaturation: Filtering, Equatable, Codable {
+public struct FilterSaturation: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterSaturation> = .init(min: -1, max: 1)
     

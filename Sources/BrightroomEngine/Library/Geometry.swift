@@ -22,7 +22,7 @@
 import CoreImage
 import UIKit
 
-public enum Geometry {
+public enum Geometry: Sendable {
 
   public static func sizeThatAspectFit(size: CGSize, maxPixelSize: CGFloat) -> CGSize {
 
@@ -132,7 +132,7 @@ extension CGSize {
   }
 }
 
-public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable {
+public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable, Sendable {
 
   public var id: String {
     return "\(width.bitPattern), \(height.bitPattern)"

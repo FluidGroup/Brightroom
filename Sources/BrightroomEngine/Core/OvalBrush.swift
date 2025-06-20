@@ -21,7 +21,7 @@
 
 import UIKit
 
-public struct OvalBrush : Equatable {
+public struct OvalBrush : Equatable, Sendable {
 
   // MARK: - Properties
 

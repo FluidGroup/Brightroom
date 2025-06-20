@@ -21,7 +21,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterHighlights: Filtering, Equatable, Codable {
+public struct FilterHighlights: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterHighlights> = .init(min: 0, max: 1)
 

@@ -21,7 +21,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterVignette: Filtering, Equatable, Codable {
+public struct FilterVignette: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterVignette> = .init(min: 0, max: 2)
 

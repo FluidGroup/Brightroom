@@ -21,11 +21,11 @@
 
 import UIKit
 
-public struct ClassicImageEditStyle {
+public struct ClassicImageEditStyle: Sendable {
 
   public static let `default` = ClassicImageEditStyle()
 
-  public struct Control {
+  public struct Control: Sendable {
 
     public var backgroundColor = UIColor(white: 0.98, alpha: 1)
 
