@@ -22,7 +22,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterShadows: Filtering, Equatable, Codable {
+public struct FilterShadows: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterShadows> = .init(min: -1, max: 1)
 

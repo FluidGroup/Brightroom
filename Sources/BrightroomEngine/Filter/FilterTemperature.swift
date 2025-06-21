@@ -22,7 +22,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterTemperature: Filtering, Equatable, Codable {
+public struct FilterTemperature: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterTemperature> = .init(min: -3000, max: 3000)
 

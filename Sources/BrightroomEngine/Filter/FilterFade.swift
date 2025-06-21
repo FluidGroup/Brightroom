@@ -22,7 +22,7 @@
 import CoreImage
 import UIKit
 
-public struct FilterFade : Filtering, Equatable, Codable {
+public struct FilterFade : Filtering, Equatable, Codable, Sendable {
   
   public enum Params {
     public static let intensity: ParameterRange<Double, FilterShadows> = .init(min: 0, max: 0.5)

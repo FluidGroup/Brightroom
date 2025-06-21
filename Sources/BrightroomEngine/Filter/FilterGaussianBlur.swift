@@ -21,7 +21,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterGaussianBlur : Filtering, Equatable, Codable {
+public struct FilterGaussianBlur : Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterGaussianBlur> = .init(min: 0, max: 100)
 

@@ -21,7 +21,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterContrast: Filtering, Equatable, Codable {
+public struct FilterContrast: Filtering, Equatable, Codable, Sendable {
 
   public static let range: ParameterRange<Double, FilterContrast> = .init(min: -0.18, max: 0.18)
   

@@ -22,7 +22,7 @@
 import Foundation
 import CoreGraphics
 
-public enum EngineRuntimeError: Swift.Error {
+public enum EngineRuntimeError: Swift.Error, Sendable {
   case failedToCreateResizedCGImage(sourceImage: CGImage, maxPixelSize: CGFloat)
   case failedToCreateCGContext(sourceImage: CGImage)
   case failedToRenderCGImageForCrop(sourceImage: CGImage)

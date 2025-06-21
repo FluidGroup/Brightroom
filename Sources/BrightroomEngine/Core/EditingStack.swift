@@ -25,7 +25,7 @@ import SwiftUI
 import UIKit
 import Verge
 
-public enum EditingStackError: Error {
+public enum EditingStackError: Error, Sendable {
   case unableToCreateRendererInLoading
 }
 

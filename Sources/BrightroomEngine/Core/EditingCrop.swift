@@ -24,8 +24,8 @@ import Vision
 import SwiftUI
 
 /// A representation of cropping extent in Image.
-public struct EditingCrop: Equatable {
-  public enum Rotation: Equatable, CaseIterable {
+public struct EditingCrop: Equatable, Sendable {
+  public enum Rotation: Equatable, CaseIterable, Sendable {
     /// 0 degree - default
     case angle_0
 

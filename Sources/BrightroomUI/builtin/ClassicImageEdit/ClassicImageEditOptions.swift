@@ -25,7 +25,7 @@ import UIKit
 import BrightroomEngine
 #endif
 
-public struct ClassicImageEditOptions {
+public struct ClassicImageEditOptions: Sendable {
   
   public static let `default`: ClassicImageEditOptions = .init()
   
@@ -48,9 +48,9 @@ public struct ClassicImageEditOptions {
 }
 
 extension ClassicImageEditOptions {
-  public struct Classes {
+  public struct Classes: Sendable {
     
-    public struct Control {
+    public struct Control: Sendable {
 
       /**
        You might use `ClassicImageEditNoPresetRootControl` if you do not need using Filter(Preset) panel.

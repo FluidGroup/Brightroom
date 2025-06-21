@@ -22,7 +22,7 @@
 import UIKit
 import CoreImage
 
-public struct FilterSharpen: Filtering, Equatable, Codable {
+public struct FilterSharpen: Filtering, Equatable, Codable, Sendable {
   
   public enum Params {
     public static let radius: ParameterRange<Double, FilterSharpen> = .init(min: 0, max: 20)
