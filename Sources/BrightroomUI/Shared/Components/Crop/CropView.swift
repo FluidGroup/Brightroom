@@ -75,6 +75,13 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public let store: UIStateStore<State, Never>
 
+    public var isPreviewMode: Bool = false {
+        didSet {
+            guideView.isHidden = isPreviewMode
+            scrollView.isUserInteractionEnabled = !isPreviewMode
+        }
+    }
+    
   /**
    A Boolean value that indicates whether the guide is interactive.
    If false, cropping adjustment is available only way from scrolling image-view.
@@ -1086,7 +1093,7 @@ extension CropView {
 
   var remainingScroll: UIEdgeInsets {
 
-    guard let crop = store.state.proposedCrop else { 
+    guard let crop = store.state.proposedCrop else {
       return .zero
     }
 

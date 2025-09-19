@@ -28,7 +28,7 @@ import Verge
 import BrightroomEngine
 #endif
 
-final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
+public final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   struct State: Equatable {
     enum Direction {
       /**
@@ -110,14 +110,14 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
     }
   }
   
-  struct Handlers {
+  public struct Handlers {
     
-    var didSelectAspectRatio: (PixelAspectRatio) -> Void = { _ in }
-    var didSelectFreeform: () -> Void = {}
+    public var didSelectAspectRatio: (PixelAspectRatio) -> Void = { _ in }
+    public var didSelectFreeform: () -> Void = {}
     
   }
   
-  var handlers: Handlers = .init()
+  public var handlers: Handlers = .init()
   
   private let horizontalButton = AspectRatioDirectionButton(direction: .horizontal)
   private let verticalButton = AspectRatioDirectionButton(direction: .vertical)
@@ -134,7 +134,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   private var isSupressingHandlers = false
   private let localizedStrings: PhotosCropViewController.LocalizedStrings
   
-  init(
+  public init(
     originalAspectRatio: PixelAspectRatio,
     localizedStrings: PhotosCropViewController.LocalizedStrings
   ) {
