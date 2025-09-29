@@ -67,7 +67,7 @@ public struct PhotosCropRotating: View {
   public init(
     editingStack: @escaping () -> EditingStack
   ) {
-    self._editingStack = editingStack()
+    self.editingStack = editingStack()
   }
 
   private var isLoading: Bool {
