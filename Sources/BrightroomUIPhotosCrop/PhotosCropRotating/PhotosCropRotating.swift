@@ -51,7 +51,7 @@ public struct PhotosCropRotating: View {
     }
   }
 
-  @StateObject var editingStack: EditingStack
+  var editingStack: EditingStack
 
   @State private var rotation: EditingCrop.Rotation?
   @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
@@ -67,7 +67,7 @@ public struct PhotosCropRotating: View {
   public init(
     editingStack: @escaping () -> EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self._editingStack = editingStack()
   }
 
   private var isLoading: Bool {
