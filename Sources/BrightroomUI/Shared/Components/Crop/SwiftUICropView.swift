@@ -84,9 +84,12 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
   private let contentInset: UIEdgeInsets?
+    
+    @Binding var isPreviewMode: Bool
 
   public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
+    isPreviewMode: Binding<Bool> = .constant(false),
     isGuideInteractionEnabled: Bool = true,
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
@@ -96,6 +99,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
   ) {
     self.editingStack = editingStack
+    self._isPreviewMode = isPreviewMode
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
@@ -107,6 +111,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
   public init(
     editingStack: EditingStack,
+    isPreviewMode: Binding<Bool> = .constant(false),
     isGuideInteractionEnabled: Bool = true,
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
@@ -116,6 +121,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.editingStack = editingStack
+    self._isPreviewMode = isPreviewMode
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
@@ -135,6 +141,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
+    view.isPreviewMode = isPreviewMode
 
     if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
@@ -151,6 +158,8 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   
   public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
 
+    uiViewController.bodyView.isPreviewMode = isPreviewMode
+      
     if let _rotation {
       uiViewController.bodyView.setRotation(_rotation)
     }
