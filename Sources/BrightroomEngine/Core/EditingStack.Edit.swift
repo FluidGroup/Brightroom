@@ -22,89 +22,88 @@
 import CoreImage
 
 extension EditingStack {
-  // TODO: Consider more effective shape
-  public struct Edit: Equatable {
-    func makeFilters() -> [AnyFilter] {
-      return filters.makeFilters()
-    }
-    
-    public var imageSize: CGSize {
-      crop.imageSize
-    }
-    
-    /// In orientation.up
-    public var crop: EditingCrop
-    public var filters: Filters = .init()
-    public var drawings: Drawings = .init()
-    
-    init(crop: EditingCrop) {
-      self.crop = crop
-    }
-    
-    public struct Drawings: Equatable {
-      // TODO: Remove Rect from DrawnPath
-      public var blurredMaskPaths: [DrawnPath] = []
-    }
-
-    public struct Filters: Equatable {
-
-      public var preset: FilterPreset?
-      
-      public var brightness: FilterBrightness?
-      public var contrast: FilterContrast?
-      public var saturation: FilterSaturation?
-      public var exposure: FilterExposure?
-      
-      public var highlights: FilterHighlights?
-      public var shadows: FilterShadows?
-      
-      public var temperature: FilterTemperature?
-      
-      public var sharpen: FilterSharpen?
-      public var gaussianBlur: FilterGaussianBlur?
-      public var unsharpMask: FilterUnsharpMask?
-      
-      public var vignette: FilterVignette?
-      public var fade: FilterFade?
-
-      public var additionalFilters: [AnyFilter] = []
-
-      func makeFilters() -> [AnyFilter] {
-        return (
-          ([
-
-            /**
-             Must be first filter since color-cube does not support wide range color.
-             */
-            preset?.asAny(),
-
-            // Before
-            exposure?.asAny(),
-            brightness?.asAny(),
-            temperature?.asAny(),
-            highlights?.asAny(),
-            shadows?.asAny(),
-            saturation?.asAny(),
-            contrast?.asAny(),
-
-            // After
-            sharpen?.asAny(),
-            unsharpMask?.asAny(),
-            gaussianBlur?.asAny(),
-            fade?.asAny(),
-            vignette?.asAny(),
-
-          ] as [AnyFilter?])
-          + additionalFilters
-        )
-        .compactMap { $0 }
-      }
-      
-      public func apply(to ciImage: CIImage) -> CIImage {
-        makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
-          filter.apply(to: image, sourceImage: image)
+    // TODO: Consider more effective shape
+    public struct Edit: Equatable {
+        public func makeFilters() -> [AnyFilter] {
+            return filters.makeFilters()
         }
-      }
+
+        public var imageSize: CGSize {
+            crop.imageSize
+        }
+
+        /// In orientation.up
+        public var crop: EditingCrop
+        public var filters: Filters = .init()
+        public var drawings: Drawings = .init()
+
+        init(crop: EditingCrop) {
+            self.crop = crop
+        }
+
+        public struct Drawings: Equatable {
+            // TODO: Remove Rect from DrawnPath
+            public var blurredMaskPaths: [DrawnPath] = []
+        }
+
+        public struct Filters: Equatable {
+
+            public var preset: FilterPreset?
+
+            public var brightness: FilterBrightness?
+            public var contrast: FilterContrast?
+            public var saturation: FilterSaturation?
+            public var exposure: FilterExposure?
+
+            public var highlights: FilterHighlights?
+            public var shadows: FilterShadows?
+
+            public var temperature: FilterTemperature?
+
+            public var sharpen: FilterSharpen?
+            public var gaussianBlur: FilterGaussianBlur?
+            public var unsharpMask: FilterUnsharpMask?
+
+            public var vignette: FilterVignette?
+            public var fade: FilterFade?
+
+            public var additionalFilters: [AnyFilter] = []
+
+            func makeFilters() -> [AnyFilter] {
+                return
+                    (([
+
+                        /**
+                         Must be first filter since color-cube does not support wide range color.
+                         */
+                        preset?.asAny(),
+
+                        // Before
+                        exposure?.asAny(),
+                        brightness?.asAny(),
+                        temperature?.asAny(),
+                        highlights?.asAny(),
+                        shadows?.asAny(),
+                        saturation?.asAny(),
+                        contrast?.asAny(),
+
+                        // After
+                        sharpen?.asAny(),
+                        unsharpMask?.asAny(),
+                        gaussianBlur?.asAny(),
+                        fade?.asAny(),
+                        vignette?.asAny(),
+
+                    ] as [AnyFilter?])
+                    + additionalFilters)
+                    .compactMap { $0 }
+            }
+
+            public func apply(to ciImage: CIImage) -> CIImage {
+                makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
+                    filter.apply(to: image, sourceImage: image)
+                }
+            }
+        }
     }
-  }
 }
