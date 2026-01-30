@@ -20,12 +20,12 @@
 // THE SOFTWARE.
 
 import UIKit
-import Verge
+import StateGraph
 #if !COCOAPODS
 import BrightroomEngine
 #endif
 
-public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
+public final class ClassicImageEditViewModel: Equatable {
   public static func == (lhs: ClassicImageEditViewModel, rhs: ClassicImageEditViewModel) -> Bool {
     lhs === rhs
   }
@@ -37,28 +37,17 @@ public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
     case preview
   }
 
-  public struct State: Equatable {
-    public var editingState: Changes<EditingStack.State>
-
-    public fileprivate(set) var title: String = ""
-    public fileprivate(set) var mode: Mode = .preview
-
-    public fileprivate(set) var maskingBrushSize: CanvasView.BrushSize = .point(30)
-
-    // TODO: Rename
-    fileprivate var drawnPaths: [DrawnPath] = []
-    fileprivate(set) var proposedCrop: EditingCrop?
-  }
-
   public let options: ClassicImageEditOptions
-
-  public let store: Store<State, Never>
 
   public let editingStack: EditingStack
 
-  private var subscriptions: Set<AnyCancellable> = .init()
-
   public let localizedStrings: ClassicImageEditViewController.LocalizedStrings
+
+  @GraphStored public var title: String = ""
+  @GraphStored public var mode: Mode = .preview
+  @GraphStored public var maskingBrushSize: CanvasView.BrushSize = .point(30)
+  @GraphStored var drawnPaths: [DrawnPath] = []
+  @GraphStored public var proposedCrop: EditingCrop? = nil
 
   public init(
     editingStack: EditingStack,
@@ -68,7 +57,6 @@ public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
     self.localizedStrings = localizedStrings
     self.options = options
     self.editingStack = editingStack
-    store = .init(initialState: .init(editingState: editingStack.state))
 
     if options.isFaceDetectionEnabled {
       editingStack.cropModifier = .faceDetection(aspectRatio: options.croppingAspectRatio)
@@ -79,30 +67,24 @@ public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
         completion(new)
       }
     }
-
-    editingStack.assign(to: assignee(\.editingState)).store(in: &subscriptions)
   }
 
   func setTitle(_ title: String) {
-    commit {
-      $0.title = title
-    }
+    self.title = title
   }
 
   func setMode(_ mode: Mode) {
-    commit {
-      $0.mode = mode
+    self.mode = mode
 
-      switch mode {
-      case .crop:
-        $0.title = localizedStrings.editAdjustment
-      case .masking:
-        $0.title = localizedStrings.editMask
-      case .editing:
-        break
-      case .preview:
-        $0.title = ""
-      }
+    switch mode {
+    case .crop:
+      title = localizedStrings.editAdjustment
+    case .masking:
+      title = localizedStrings.editMask
+    case .editing:
+      break
+    case .preview:
+      title = ""
     }
   }
 
@@ -115,38 +97,30 @@ public final class ClassicImageEditViewModel: Equatable, StoreDriverType {
   }
 
   func setBrushSize(_ brushSize: CGFloat) {
-    commit {
-      $0.maskingBrushSize = .point(brushSize)
-    }
+    maskingBrushSize = .point(brushSize)
   }
 
   func setDrawinPaths(_ drawnPaths: [DrawnPath]) {
-    commit {
-      $0.drawnPaths = drawnPaths
-    }
+    self.drawnPaths = drawnPaths
   }
 
   func endCrop(save: Bool) {
     if save {
-      if let proposed = state.proposedCrop {
+      if let proposed = proposedCrop {
         editingStack.crop(proposed)
         editingStack.takeSnapshot()
       }
 
     } else {
-      commit {
-        guard let loadedState = $0.editingState.loadedState else {
-          assertionFailure()
-          return
-        }
-        $0.proposedCrop = loadedState.currentEdit.crop
+      guard let loadedState = editingStack.loadedState else {
+        assertionFailure()
+        return
       }
+      proposedCrop = loadedState.currentEdit.crop
     }
   }
 
   func setProposedCrop(_ proposedCrop: EditingCrop) {
-    commit {
-      $0.proposedCrop = proposedCrop
-    }
+    self.proposedCrop = proposedCrop
   }
 }

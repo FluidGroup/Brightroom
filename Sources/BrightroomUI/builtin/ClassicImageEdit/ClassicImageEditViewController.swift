@@ -21,7 +21,7 @@
 
 import Photos
 import UIKit
-import Verge
+import StateGraph
 
 #if !COCOAPODS
   import BrightroomEngine
@@ -114,7 +114,14 @@ public final class ClassicImageEditViewController: UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  private var subscriptions: Set<AnyCancellable> = .init()
+  private var subscriptions: [Any] = []
+
+  // Change tracking
+  private var _previousTitle: String?
+  private var _previousMaskingBrushSize: CanvasView.BrushSize?
+  private var _previousMode: ClassicImageEditViewModel.Mode?
+  private var _previousIsLoading: Bool?
+  private var _previousProposedCrop: EditingCrop?
 
   private lazy var loadingView = LoadingBlurryOverlayView(
     effect: UIBlurEffect(style: .dark),
@@ -292,22 +299,24 @@ public final class ClassicImageEditViewController: UIViewController {
       animated: false
     )
 
-    viewModel.sinkState(queue: .mainIsolated()) { [weak self] state in
-
-      guard let self = self else { return }
-
-      self.updateUI(state: state)
-    }
-    .store(in: &subscriptions)
-
-    cropView.store.sinkState { [viewModel] state in
-
-      state.ifChanged(\.proposedCrop).do { value in
-        guard let value = value else { return }
-        viewModel.setProposedCrop(value)
+    let subscription = withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+        self.updateUI()
       }
     }
-    .store(in: &subscriptions)
+    subscriptions.append(subscription)
+
+    let cropViewSubscription = withGraphTracking { [viewModel, weak cropView] in
+      withGraphTrackingGroup {
+        guard let cropView = cropView else { return }
+        let proposedCrop = cropView.state.proposedCrop
+        if let value = proposedCrop {
+          viewModel.setProposedCrop(value)
+        }
+      }
+    }
+    subscriptions.append(cropViewSubscription)
 
     viewModel.editingStack.start()
   }
@@ -329,16 +338,22 @@ public final class ClassicImageEditViewController: UIViewController {
     handlers.didCancelEditing(self)
   }
 
-  private func updateUI(state: Changes<ClassicImageEditViewModel.State>) {
-    state.ifChanged(\.title).do { title in
+  private func updateUI() {
+    let title = viewModel.title
+    if _previousTitle != title {
+      _previousTitle = title
       navigationItem.title = title
     }
 
-    state.ifChanged(\.maskingBrushSize).do {
-      maskingView.setBrushSize($0)
+    let brushSize = viewModel.maskingBrushSize
+    if _previousMaskingBrushSize != brushSize {
+      _previousMaskingBrushSize = brushSize
+      maskingView.setBrushSize(brushSize)
     }
 
-    state.ifChanged(\.mode).do { mode in
+    let mode = viewModel.mode
+    if _previousMode != mode {
+      _previousMode = mode
       switch mode {
       case .crop:
 
@@ -392,9 +407,9 @@ public final class ClassicImageEditViewController: UIViewController {
       }
     }
 
-    let editingState = state.map(\.editingState)
-
-    editingState.ifChanged(\.isLoading).do { isLoading in
+    let isLoading = viewModel.editingStack.isLoading
+    if _previousIsLoading != isLoading {
+      _previousIsLoading = isLoading
 
       switch isLoading {
       case true:

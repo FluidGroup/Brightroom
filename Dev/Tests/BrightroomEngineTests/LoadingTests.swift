@@ -20,36 +20,41 @@
 // THE SOFTWARE.
 
 import XCTest
-import Verge
+import StateGraph
 
 @testable import BrightroomEngine
 
 final class LoadingTests: XCTestCase {
-  
-  var subs = Set<AnyCancellable>()
-  
+
+  var subscriptions: [Any] = []
+
   func testOrientation() throws {
-    
+
     func fetch(image: ImageProvider) -> CGImagePropertyOrientation {
-               
+
       image.start()
-      
+
       let exp = expectation(description: "")
       var result: CGImagePropertyOrientation?
-      
-      image.sinkState { (state) in
-        
-        state.ifChanged(\.orientation).do { orientation in
-          result = orientation
-          exp.fulfill()
+      var previousOrientation: CGImagePropertyOrientation?
+
+      let subscription = withGraphTracking {
+        withGraphTrackingGroup {
+          let orientation = image.orientation
+          if orientation != previousOrientation {
+            previousOrientation = orientation
+            if let orientation = orientation {
+              result = orientation
+              exp.fulfill()
+            }
+          }
         }
-        
       }
-      .store(in: &subs)
-      
+      subscriptions.append(subscription)
+
       wait(for: [exp], timeout: 10)
-      withExtendedLifetime(subs) {}
-      
+      withExtendedLifetime(subscriptions) {}
+
       return result!
     }
     

@@ -23,7 +23,7 @@ import CoreImage
 import MetalKit
 import SwiftUI
 import UIKit
-import Verge
+import StateGraph
 
 public enum EditingStackError: Error, Sendable {
   case unableToCreateRendererInLoading
@@ -34,7 +34,7 @@ public enum EditingStackError: Error, Sendable {
 ///
 /// - Attension: Source text
 /// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
-open class EditingStack: Hashable, StoreDriverType {
+open class EditingStack: Hashable {
 
   private static let centralQueue = DispatchQueue.init(
     label: "app.muukii.Brightroom.EditingStack.central",
@@ -63,150 +63,143 @@ open class EditingStack: Hashable, StoreDriverType {
     ObjectIdentifier(self).hash(into: &hasher)
   }
 
-  /**
-   A representation of state in EditingStack
-   */
-  public struct State: Equatable {
-    public struct Loading: Equatable {}
+  // MARK: - Nested Types
 
-    public struct Loaded: Equatable {
+  public struct Loaded: Equatable {
 
-      // MARK: - Properties
+    // MARK: - Properties
 
-      fileprivate let imageSource: ImageSource
+    fileprivate let imageSource: ImageSource
 
-      public let metadata: ImageProvider.State.ImageMetadata
+    public let metadata: ImageProvider.ImageMetadata
 
-      private let initialEditing: Edit
+    private let initialEditing: Edit
 
-      /**
+    /**
 
-       - TODO: Should be marked as `fileprivate(set)`, but compile fails in CocoaPods installed.
-       */
-      public var currentEdit: Edit {
-        didSet {
-          editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
-        }
+     - TODO: Should be marked as `fileprivate(set)`, but compile fails in CocoaPods installed.
+     */
+    public var currentEdit: Edit {
+      didSet {
+        editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
+      }
+    }
+
+    /// Won't change from initial state
+    public var imageSize: CGSize {
+      initialEditing.imageSize
+    }
+
+    /**
+     A stack of editing history
+     */
+    public fileprivate(set) var history: [Edit] = []
+
+    public fileprivate(set) var thumbnailImage: CIImage
+
+    public let editingSourceCGImage: CGImage
+    /**
+     An original image
+     Can be used in cropping
+     */
+    public let editingSourceImage: CIImage
+
+    public fileprivate(set) var editingPreviewImage: CIImage
+
+    public fileprivate(set) var imageForCrop: CGImage
+
+    public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
+
+    public var canUndo: Bool {
+      return history.count > 0
+    }
+
+    /**
+     A boolean value that indicates if EditingStack has updates against the original image.
+     */
+    public var isDirty: Bool {
+      return currentEdit != initialEditing
+    }
+
+    public var hasUncommitedChanges: Bool {
+      guard currentEdit == initialEditing else {
+        return true
       }
 
-      /// Won't change from initial state
-      public var imageSize: CGSize {
-        initialEditing.imageSize
-      }
-
-      /**
-       A stack of editing history
-       */
-      public fileprivate(set) var history: [Edit] = []
-
-      public fileprivate(set) var thumbnailImage: CIImage
-
-      public let editingSourceCGImage: CGImage
-      /**
-       An original image
-       Can be used in cropping
-       */
-      public let editingSourceImage: CIImage
-
-      public fileprivate(set) var editingPreviewImage: CIImage
-
-      public fileprivate(set) var imageForCrop: CGImage
-
-      public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
-
-      public var canUndo: Bool {
-        return history.count > 0
-      }
-
-      /**
-       A boolean value that indicates if EditingStack has updates against the original image.
-       */
-      public var isDirty: Bool {
-        return currentEdit != initialEditing
-      }
-
-      public var hasUncommitedChanges: Bool {
-        guard currentEdit == initialEditing else {
-          return true
-        }
-
-        guard let latestHistory = history.last else {
-          return false
-        }
-
-        guard latestHistory == currentEdit else {
-          return true
-        }
-
+      guard let latestHistory = history.last else {
         return false
       }
 
-      // MARK: - Initializers
-
-      init(
-        imageSource: ImageSource,
-        metadata: ImageProvider.State.ImageMetadata,
-        initialEditing: EditingStack.Edit,
-        currentEdit: EditingStack.Edit,
-        history: [EditingStack.Edit] = [],
-        thumbnailCIImage: CIImage,
-        editingSourceCGImage: CGImage,
-        editingSourceCIImage: CIImage,
-        editingPreviewCIImage: CIImage,
-        imageForCrop: CGImage,
-        previewFilterPresets: [PreviewFilterPreset] = []
-      ) {
-        self.imageSource = imageSource
-        self.metadata = metadata
-        self.initialEditing = initialEditing
-        self.currentEdit = currentEdit
-        self.history = history
-        self.thumbnailImage = thumbnailCIImage
-        self.editingSourceCGImage = editingSourceCGImage
-        self.editingSourceImage = editingSourceCIImage
-        self.editingPreviewImage = editingPreviewCIImage
-        self.previewFilterPresets = previewFilterPresets
-        self.imageForCrop = imageForCrop
+      guard latestHistory == currentEdit else {
+        return true
       }
 
-      // MARK: - Functions
-
-      mutating func makeVersion() {
-        history.append(currentEdit)
-      }
-
-      mutating func revertCurrentEditing() {
-        currentEdit = history.last ?? initialEditing
-      }
-
-      mutating func revert(to revision: Revision) {
-        history.removeSubrange(revision..<history.count)
-        currentEdit = history.last ?? initialEditing
-      }
-
-      mutating func undoEditing() {
-        currentEdit = history.popLast() ?? initialEditing
-      }
-
+      return false
     }
 
-    public fileprivate(set) var hasStartedEditing = false
-    /**
-     A Boolean value that indicates whether the image is currently loading for editing.
-     */
-    public var isLoading: Bool {
-      loadedState == nil
+    // MARK: - Initializers
+
+    init(
+      imageSource: ImageSource,
+      metadata: ImageProvider.ImageMetadata,
+      initialEditing: EditingStack.Edit,
+      currentEdit: EditingStack.Edit,
+      history: [EditingStack.Edit] = [],
+      thumbnailCIImage: CIImage,
+      editingSourceCGImage: CGImage,
+      editingSourceCIImage: CIImage,
+      editingPreviewCIImage: CIImage,
+      imageForCrop: CGImage,
+      previewFilterPresets: [PreviewFilterPreset] = []
+    ) {
+      self.imageSource = imageSource
+      self.metadata = metadata
+      self.initialEditing = initialEditing
+      self.currentEdit = currentEdit
+      self.history = history
+      self.thumbnailImage = thumbnailCIImage
+      self.editingSourceCGImage = editingSourceCGImage
+      self.editingSourceImage = editingSourceCIImage
+      self.editingPreviewImage = editingPreviewCIImage
+      self.previewFilterPresets = previewFilterPresets
+      self.imageForCrop = imageForCrop
     }
 
-    public fileprivate(set) var loadingState: Loading = .init()
-    public fileprivate(set) var loadedState: Loaded?
+    // MARK: - Functions
 
-    init() {}
+    mutating func makeVersion() {
+      history.append(currentEdit)
+    }
+
+    mutating func revertCurrentEditing() {
+      currentEdit = history.last ?? initialEditing
+    }
+
+    mutating func revert(to revision: Revision) {
+      history.removeSubrange(revision..<history.count)
+      currentEdit = history.last ?? initialEditing
+    }
+
+    mutating func undoEditing() {
+      currentEdit = history.popLast() ?? initialEditing
+    }
+
   }
 
-  // MARK: - Stored Properties
+  // MARK: - State Properties
 
-  public let store: Store<State, Never>
+  @GraphStored public var hasStartedEditing: Bool = false
+
+  /**
+   A Boolean value that indicates whether the image is currently loading for editing.
+   */
+  public var isLoading: Bool {
+    loadedState == nil
+  }
+
+  @GraphStored public var loadedState: Loaded? = nil
+
+  // MARK: - Stored Properties
 
   public let options: Options
 
@@ -216,8 +209,8 @@ open class EditingStack: Hashable, StoreDriverType {
 
   private let filterPresets: [FilterPreset]
 
-  private var subscriptions = Set<AnyCancellable>()
-  private var imageProviderSubscription: (any Cancellable)?
+  private var subscriptions: [Any] = []
+  private var imageProviderSubscription: Any?
 
   public var cropModifier: CropModifier
 
@@ -227,6 +220,11 @@ open class EditingStack: Hashable, StoreDriverType {
     interval: 0.1,
     queue: DispatchQueue.init(label: "Brightroom.cgImage")
   )
+
+  // MARK: - Change Tracking
+
+  private var _previousThumbnailImage: CIImage?
+  private var _previousFilters: Edit.Filters?
 
   // MARK: - Initializers
 
@@ -246,9 +244,6 @@ open class EditingStack: Hashable, StoreDriverType {
 
     self.options = options
     self.cropModifier = cropModifier
-    store = .init(
-      initialState: .init()
-    )
 
     filterPresets =
       colorCubeStorage.filters.map {
@@ -270,30 +265,27 @@ open class EditingStack: Hashable, StoreDriverType {
    */
   public func start(onPreparationCompleted: @escaping @MainActor () -> Void = {}) {
 
-    let previousHasCompleted = commit { s -> Bool in
-      /**
-       Mutual exclusion
-       */
-      if s.hasStartedEditing {
-        return true
-      } else {
-        s.hasStartedEditing = true
-        return false
-      }
-    }
-
-    guard previousHasCompleted == false else {
+    /**
+     Mutual exclusion
+     */
+    if hasStartedEditing {
       DispatchQueue.main.async {
         onPreparationCompleted()
       }
       return
     }
+    hasStartedEditing = true
 
-    store.sinkState(queue: .specific(backgroundQueue)) { [weak self] (state: Changes<State>) in
-      guard let self = self else { return }
-      self.receiveInBackground(newState: state)
+    // Set up state observation on background queue
+    let subscription = withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+        self.backgroundQueue.async {
+          self.receiveInBackground()
+        }
+      }
     }
-    .store(in: &subscriptions)
+    subscriptions.append(subscription)
 
     /**
      Start downloading image
@@ -303,103 +295,101 @@ open class EditingStack: Hashable, StoreDriverType {
       self.imageProvider.start()
     }
 
-    imageProviderSubscription = imageProvider
-      .sinkState(queue: .specific(backgroundQueue)) { [weak self] (state: Changes<ImageProvider.State>) in
-
-        /*
-         In Background thread
-         */
-
-        guard let self = self else { return }
-
-        state.ifChanged(\.loadedImage).do { image in
-
-          guard let image = image else {
-            return
-          }
-
-          switch image {
-          case let .editable(image, metadata):
-
-            let thumbnailCGImage = image.loadThumbnailCGImage(maxPixelSize: 180)
-
-            /**
-             An image resised from original image
-             */
-            let editingSourceCGImage = image.loadThumbnailCGImage(
-              maxPixelSize: self.editingImageMaxPixelSize
-            )
-
-            assert(editingSourceCGImage.colorSpace != nil)
-
-            /// resized
-            let _editingSourceCIImage: CIImage = editingSourceCGImage._makeCIImage(
-              orientation: metadata.orientation,
-              device: self.mtlDevice,
-              usesMTLTexture: self.options.usesMTLTextureForEditingImage
-            )
-
-            let _thumbnailImage: CIImage = thumbnailCGImage._makeCIImage(
-              orientation: metadata.orientation,
-              device: self.mtlDevice,
-              usesMTLTexture: self.options.usesMTLTextureForEditingImage
-            )
-
-            let cgImageForCrop: CGImage = {
-              do {
-                return try Self.renderCGImageForCrop(
-                  filters: [],
-                  source: .init(cgImage: editingSourceCGImage),
-                  orientation: metadata.orientation
-                )
-              } catch {
-                EngineSanitizer.global.onDidFindRuntimeError(
-                  .failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage)
-                )
-                assertionFailure()
-                return editingSourceCGImage
-              }
-            }()
-
-            self.adjustCropExtent(
-              image: _editingSourceCIImage,
-              imageSize: metadata.imageSize,
-              completion: { [weak self] crop in
-
-                guard let self = self else { return }
-
-                self.commit { (s: inout State) in
-                  assert(
-                    (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
-                      == (metadata.imageSize.width > metadata.imageSize.height)
-                  )
-
-                  let initialEdit = Edit(crop: crop)
-
-                  s.loadedState = .init(
-                    imageSource: image,
-                    metadata: metadata,
-                    initialEditing: initialEdit,
-                    currentEdit: initialEdit,
-                    thumbnailCIImage: _thumbnailImage,
-                    editingSourceCGImage: editingSourceCGImage,
-                    editingSourceCIImage: _editingSourceCIImage,
-                    editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
-                    imageForCrop: cgImageForCrop
-                  )
-
-                  self.imageProviderSubscription?.cancel()
-
-                  DispatchQueue.main.async {
-                    onPreparationCompleted()
-                  }
-                }
-              }
-            )
-
-          }
+    // Observe image provider's loaded image
+    let imageProviderSub = withGraphTracking { [weak self] in
+      withGraphTrackingMap {
+        self?.imageProvider.loadedImage
+      } onChange: { [weak self] image in
+        guard let self = self, let image = image else { return }
+        self.backgroundQueue.async {
+          self.handleImageLoaded(image: image, onPreparationCompleted: onPreparationCompleted)
         }
       }
+    }
+    imageProviderSubscription = imageProviderSub
+  }
+
+  private func handleImageLoaded(
+    image: ImageProvider.LoadedImage,
+    onPreparationCompleted: @escaping @MainActor () -> Void
+  ) {
+    switch image {
+    case let .editable(imageSource, metadata):
+
+      let thumbnailCGImage = imageSource.loadThumbnailCGImage(maxPixelSize: 180)
+
+      /**
+       An image resised from original image
+       */
+      let editingSourceCGImage = imageSource.loadThumbnailCGImage(
+        maxPixelSize: self.editingImageMaxPixelSize
+      )
+
+      assert(editingSourceCGImage.colorSpace != nil)
+
+      /// resized
+      let _editingSourceCIImage: CIImage = editingSourceCGImage._makeCIImage(
+        orientation: metadata.orientation,
+        device: self.mtlDevice,
+        usesMTLTexture: self.options.usesMTLTextureForEditingImage
+      )
+
+      let _thumbnailImage: CIImage = thumbnailCGImage._makeCIImage(
+        orientation: metadata.orientation,
+        device: self.mtlDevice,
+        usesMTLTexture: self.options.usesMTLTextureForEditingImage
+      )
+
+      let cgImageForCrop: CGImage = {
+        do {
+          return try Self.renderCGImageForCrop(
+            filters: [],
+            source: .init(cgImage: editingSourceCGImage),
+            orientation: metadata.orientation
+          )
+        } catch {
+          EngineSanitizer.global.onDidFindRuntimeError(
+            .failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage)
+          )
+          assertionFailure()
+          return editingSourceCGImage
+        }
+      }()
+
+      self.adjustCropExtent(
+        image: _editingSourceCIImage,
+        imageSize: metadata.imageSize,
+        completion: { [weak self] crop in
+
+          guard let self = self else { return }
+
+          assert(
+            (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
+              == (metadata.imageSize.width > metadata.imageSize.height)
+          )
+
+          let initialEdit = Edit(crop: crop)
+
+          self.loadedState = .init(
+            imageSource: imageSource,
+            metadata: metadata,
+            initialEditing: initialEdit,
+            currentEdit: initialEdit,
+            thumbnailCIImage: _thumbnailImage,
+            editingSourceCGImage: editingSourceCGImage,
+            editingSourceCIImage: _editingSourceCIImage,
+            editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
+            imageForCrop: cgImageForCrop
+          )
+
+          self.imageProviderSubscription = nil
+
+          DispatchQueue.main.async {
+            onPreparationCompleted()
+          }
+        }
+      )
+    }
   }
 
   /**
@@ -443,48 +433,48 @@ open class EditingStack: Hashable, StoreDriverType {
     EngineLog.debug("[EditingStack] deinit")
   }
 
-  private func receiveInBackground(newState state: Changes<State>) {
+  private func receiveInBackground() {
 
     assert(Thread.isMainThread == false)
 
-    if let loadedState = state.mapIfPresent(\.loadedState) {
+    guard let loadedState = self.loadedState else { return }
 
-      loadedState.ifChanged(\.thumbnailImage).do { image in
+    // Check if thumbnailImage changed
+    if _previousThumbnailImage != loadedState.thumbnailImage {
+      _previousThumbnailImage = loadedState.thumbnailImage
 
-        commit {
-          $0.loadedState!.previewFilterPresets = self.filterPresets.map {
-            PreviewFilterPreset(sourceImage: image, filter: $0)
-          }
-        }
+      let image = loadedState.thumbnailImage
+      let presets = self.filterPresets.map {
+        PreviewFilterPreset(sourceImage: image, filter: $0)
       }
+      self.loadedState?.previewFilterPresets = presets
+    }
 
-      loadedState.ifChanged(\.currentEdit.filters).do { currentEdit in
+    // Check if filters changed
+    if _previousFilters != loadedState.currentEdit.filters {
+      _previousFilters = loadedState.currentEdit.filters
 
-        self.debounceForCreatingCGImage.on { [weak self] in
+      let currentFilters = loadedState.currentEdit.filters
 
-          guard let self = self else { return }
+      self.debounceForCreatingCGImage.on { [weak self] in
 
-          let cgImageForCrop: CGImage = {
-            do {
-              return try Self.renderCGImageForCrop(
-                filters: currentEdit.makeFilters(),
-                source: .init(cgImage: loadedState.editingSourceCGImage),
-                orientation: loadedState.metadata.orientation
-              )
-            } catch {
-              assertionFailure()
-              return loadedState.editingSourceCGImage
-            }
-          }()
+        guard let self = self, let loadedState = self.loadedState else { return }
 
-          self.commit {
-            $0.loadedState?.imageForCrop = cgImageForCrop
+        let cgImageForCrop: CGImage = {
+          do {
+            return try Self.renderCGImageForCrop(
+              filters: currentFilters.makeFilters(),
+              source: .init(cgImage: loadedState.editingSourceCGImage),
+              orientation: loadedState.metadata.orientation
+            )
+          } catch {
+            assertionFailure()
+            return loadedState.editingSourceCGImage
           }
+        }()
 
-        }
-
+        self.loadedState?.imageForCrop = cgImageForCrop
       }
-
     }
   }
 
@@ -494,21 +484,17 @@ open class EditingStack: Hashable, StoreDriverType {
    Adds a new snapshot as a history.
    */
   public func takeSnapshot() {
-    commit {
-      $0.loadedState?.makeVersion()
-    }
+    loadedState?.makeVersion()
   }
 
   public typealias Revision = Int
 
   public var currentRevision: Revision? {
-    self.state.primitive.loadedState?.history.count
+    loadedState?.history.count
   }
 
   public func revert(to revision: Revision) {
-    commit {
-      $0.loadedState?.revert(to: revision)
-    }
+    loadedState?.revert(to: revision)
   }
 
   /**
@@ -516,10 +502,7 @@ open class EditingStack: Hashable, StoreDriverType {
    */
   public func revertEdit() {
     _pixelengine_ensureMainThread()
-
-    commit {
-      $0.loadedState?.revertCurrentEditing()
-    }
+    loadedState?.revertCurrentEditing()
   }
 
   /**
@@ -527,10 +510,7 @@ open class EditingStack: Hashable, StoreDriverType {
    */
   public func undoEdit() {
     _pixelengine_ensureMainThread()
-
-    commit {
-      $0.loadedState?.undoEditing()
-    }
+    loadedState?.undoEditing()
   }
 
   /**
@@ -538,15 +518,11 @@ open class EditingStack: Hashable, StoreDriverType {
    */
   public func removeAllEditsHistory() {
     _pixelengine_ensureMainThread()
-
-    commit {
-      $0.loadedState?.history = []
-    }
+    loadedState?.history = []
   }
 
   public func set(filters: (inout Edit.Filters) -> Void) {
     _pixelengine_ensureMainThread()
-
     applyIfChanged {
       filters(&$0.filters)
     }
@@ -560,7 +536,6 @@ open class EditingStack: Hashable, StoreDriverType {
 
   public func set(blurringMaskPaths: [DrawnPath]) {
     _pixelengine_ensureMainThread()
-
     applyIfChanged {
       $0.drawings.blurredMaskPaths = blurringMaskPaths
     }
@@ -568,16 +543,14 @@ open class EditingStack: Hashable, StoreDriverType {
 
   public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPath {
     _pixelengine_ensureMainThread()
-
     applyIfChanged {
       $0.drawings.blurredMaskPaths += blurringMaskPaths
     }
   }
 
   public func makeRenderer() throws -> BrightRoomImageRenderer {
-    let stateSnapshot = state
 
-    guard let loaded = stateSnapshot.loadedState else {
+    guard let loaded = loadedState else {
       throw EditingStackError.unableToCreateRendererInLoading
     }
 
@@ -606,12 +579,10 @@ open class EditingStack: Hashable, StoreDriverType {
   }
 
   private func applyIfChanged(_ perform: (inout Edit) -> Void) {
-    commit {
-      guard $0.loadedState != nil else {
-        return
-      }
-      perform(&$0.loadedState!.currentEdit)
+    guard loadedState != nil else {
+      return
     }
+    perform(&loadedState!.currentEdit)
   }
 
   private func adjustCropExtent(
@@ -655,4 +626,3 @@ open class EditingStack: Hashable, StoreDriverType {
   }
 
 }
-

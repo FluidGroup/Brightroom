@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditShadowsControlBase : ClassicImageEditFilterControlBase {
 
@@ -69,12 +69,14 @@ open class ClassicImageEditShadowsControl : ClassicImageEditShadowsControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.shadows).do { value in
+  private var _previousShadows: FilterShadows?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.shadows
+    if _previousShadows != value {
+      _previousShadows = value
       slider.set(value: value?.value ?? 0, in: FilterShadows.range)
     }
-        
   }
   
   @objc

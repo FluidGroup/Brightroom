@@ -93,7 +93,7 @@ struct DemoFilterView: View {
   let grayscaleFilter: GrayscaleFilter = .init()
   let motionBlurFilter: MotionBlurFilter = .init()
 
-  @StateObject var editingStack: EditingStack
+  let editingStack: EditingStack
   @State var invertToggle: Bool = false
   @State var grayscaleToggle: Bool = false
   @State var motionBlurToggle: Bool = false
@@ -101,9 +101,9 @@ struct DemoFilterView: View {
   @State var resultImage: ResultImage?
 
   init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self.editingStack = editingStack
   }
 
   var body: some View {
@@ -155,21 +155,19 @@ struct DemoFilterView: View {
 
 #Preview("local") {
   DemoFilterView(
-    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   )
 }
 
 #Preview("remote") {
   DemoFilterView(
-    editingStack: {
-      EditingStack(
-        imageProvider: .init(
-          editableRemoteURL: URL(
-            string:
-              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-          )!
-        )
+    editingStack: EditingStack(
+      imageProvider: .init(
+        editableRemoteURL: URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
       )
-    }
+    )
   )
 }

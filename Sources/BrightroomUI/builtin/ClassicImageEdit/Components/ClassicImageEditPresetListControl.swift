@@ -24,7 +24,7 @@ import UIKit
 import BrightroomEngine
 #endif
 
-import Verge
+import StateGraph
 
 open class ClassicImageEditPresetListControlBase : ClassicImageEditControlBase {
   
@@ -36,83 +36,83 @@ open class ClassicImageEditPresetListControlBase : ClassicImageEditControlBase {
 }
 
 open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlBase, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource {
-  
+
   private enum Section : Int, CaseIterable {
-    
+
     case original
     case selections
   }
-  
-  private struct State: Equatable {
-    
-    struct Content: Equatable {
-      var previews: [PreviewFilterPreset]
-      var originalImage: CIImage
-    }
-   
-    var content: Content?
 
-    var currentSelected: FilterPreset?
+  private struct Content: Equatable {
+    var previews: [PreviewFilterPreset]
+    var originalImage: CIImage
   }
 
   // MARK: - Properties
 
   public lazy var collectionView: UICollectionView = self.makeCollectionView()
-  
+
   private let feedbackGenerator = UISelectionFeedbackGenerator()
-  
-  private let store: Store<State, Never>
-  
-  private var subscriptions: Set<AnyCancellable> = .init()
+
+  @GraphStored private var content: Content? = nil
+  @GraphStored private var currentSelected: FilterPreset? = nil
+
+  private var subscriptions: [Any] = []
+
+  // Change tracking
+  private var _previousContent: Content?
+  private var _previousCurrentSelected: FilterPreset?
+  private var _previousThumbnailImage: CIImage?
+  private var _previousPreviewFilterPresets: [PreviewFilterPreset]?
+  private var _previousPreset: FilterPreset?
   
   // MARK: - Functions
 
   public required init(
     viewModel: ClassicImageEditViewModel
     ) {
-    
-    self.store = .init(initialState: .init(content: nil, currentSelected: nil))
-        
-    super.init(viewModel: viewModel)
-    
-    viewModel.sinkState { [weak self] state in
-      
-      guard let self = self else { return }
-        
-      self.store.commit { viewState in
-        
-        if let state = state.mapIfPresent(\.editingState.loadedState) {
-        
-          state.ifChanged(\.thumbnailImage, \.previewFilterPresets).do { image, filters in
-                      
-            viewState.content = .init(previews: filters, originalImage: image)
-          }
-          
-        }
-        
-      }
-          
-    }
-    .store(in: &subscriptions)
-    
-    store.sinkState { [weak self] (state) in
-      
-      guard let self = self else { return }
-      
-      if state.hasChanges(\.content) {
-        self.collectionView.reloadData()
-      }
 
-      state.ifChanged(\.currentSelected).do { value in
-        self.collectionView.visibleCells.forEach {
-          self.updateSelected(cell: $0, selectedItem: value)
+    super.init(viewModel: viewModel)
+
+    let viewModelSubscription = withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+
+        if let loadedState = self.viewModel.editingStack.loadedState {
+          let thumbnailImage = loadedState.thumbnailImage
+          let previewFilterPresets = loadedState.previewFilterPresets
+          if self._previousThumbnailImage !== thumbnailImage ||
+             self._previousPreviewFilterPresets != previewFilterPresets {
+            self._previousThumbnailImage = thumbnailImage
+            self._previousPreviewFilterPresets = previewFilterPresets
+            self.content = Content(previews: previewFilterPresets, originalImage: thumbnailImage)
+          }
         }
-        self.scrollTo(selectedItem: value, animated: true)
       }
-      
     }
-    .store(in: &subscriptions)
-    
+    subscriptions.append(viewModelSubscription)
+
+    let storeSubscription = withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+
+        if self._previousContent != self.content {
+          self._previousContent = self.content
+          self.collectionView.reloadData()
+        }
+
+        if self._previousCurrentSelected != self.currentSelected {
+          self._previousCurrentSelected = self.currentSelected
+          let value = self.currentSelected
+          self.collectionView.visibleCells.forEach {
+            self.updateSelected(cell: $0, selectedItem: value)
+          }
+          self.scrollTo(selectedItem: value, animated: true)
+        }
+      }
+    }
+    subscriptions.append(storeSubscription)
+
   }
 
   open override func setup() {
@@ -173,37 +173,37 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
     return layout
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.preset).do { value in
-      store.commit {
-        $0.currentSelected = value
-      }
+  open override func didReceiveCurrentEdit() {
+
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.preset
+    if _previousPreset != value {
+      _previousPreset = value
+      currentSelected = value
     }
-    
+
   }
   
   open override func layoutSubviews() {
     super.layoutSubviews()
     collectionView.collectionViewLayout.invalidateLayout()
-    scrollTo(selectedItem: store.state.currentSelected, animated: false)
+    scrollTo(selectedItem: currentSelected, animated: false)
   }
 
   // MARK: - UICollectionViewDeleagte / DataSource
 
   open func numberOfSections(in collectionView: UICollectionView) -> Int {
-    guard store.state.content != nil else {
+    guard content != nil else {
       return 0
     }
     return Section.allCases.count
   }
 
   open func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    
-    guard let content = store.state.content else {
+
+    guard let content = content else {
       return 0
     }
-    
+
     switch Section.allCases[section] {
     case .original:
       return 1
@@ -224,13 +224,13 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   }
 
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-    
-    guard let content = store.state.content else {
+
+    guard let content = content else {
       preconditionFailure()
     }
 
-    let currentSelected = store.state.currentSelected
-        
+    let currentSelected = currentSelected
+
     switch Section.allCases[indexPath.section] {
     case .original:
       let cell = collectionView.dequeueReusableCell(withReuseIdentifier: NormalCell.identifier, for: indexPath) as! NormalCell
@@ -248,30 +248,30 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   }
 
   open func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-    
-    guard let content = store.state.content else {
+
+    guard let content = content else {
       preconditionFailure()
     }
-    
+
     switch Section.allCases[indexPath.section] {
     case .original:
-      
+
       viewModel.editingStack.set(filters: {
         $0.preset = nil
       })
-      
+
       viewModel.editingStack.takeSnapshot()
-      
+
     case .selections:
-            
+
       viewModel.editingStack.set(filters: {
         let filter = content.previews[indexPath.item]
         $0.preset = filter.filter
       })
-      
+
       viewModel.editingStack.takeSnapshot()
     }
-    
+
     feedbackGenerator.selectionChanged()
 
   }
@@ -287,9 +287,9 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   }
   
   private func scrollTo(selectedItem: FilterPreset?, animated: Bool) {
-    
-    guard let content = store.state.content else {
-      
+
+    guard let content = content else {
+
       return
     }
 

@@ -14,20 +14,20 @@ import UIKit
 
 struct DemoCropView: View {
 
-  @StateObject var editingStack: EditingStack
+  let editingStack: EditingStack
   @State var resultImage: ResultImage?
 
   init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self.editingStack = editingStack
   }
 
   var body: some View {
     ZStack {
 
       VStack {
-        PhotosCropRotating(editingStack: { editingStack })
+        PhotosCropRotating(editingStack: editingStack)
 //        Button("Done") {
 //          let image = try! editingStack.makeRenderer().render().cgImage
 //          self.resultImage = .init(cgImage: image)
@@ -72,22 +72,20 @@ struct DemoCropView: View {
 
 #Preview("local") {
   DemoCropView(
-    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   )
 }
 
 #Preview("remote") {
   DemoCropView(
-    editingStack: {
-      EditingStack(
-        imageProvider: .init(
-          editableRemoteURL: URL(
-            string:
-              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-          )!
-        )
+    editingStack: EditingStack(
+      imageProvider: .init(
+        editableRemoteURL: URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
       )
-    }
+    )
   )
 }
 

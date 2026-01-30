@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditFadeControlBase : ClassicImageEditFilterControlBase {
   
@@ -70,12 +70,14 @@ open class ClassicImageEditFadeControl : ClassicImageEditFadeControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.fade).do { value in
+  private var _previousFade: FilterFade?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.fade
+    if _previousFade != value {
+      _previousFade = value
       slider.set(value: value?.intensity ?? 0, in: FilterFade.Params.intensity)
     }
-        
   }
   
   @objc

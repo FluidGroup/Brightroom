@@ -21,7 +21,7 @@
 
 import UIKit
 import SwiftUI
-import Verge
+import StateGraph
 #if !COCOAPODS
 import BrightroomEngine
 #endif
@@ -79,7 +79,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private var _croppingAspectRatio: PixelAspectRatio?
   private var _resetAction: ResetAction?
 
-  private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
+  private let stateHandler: @MainActor (CropView.State, CropView.State?) -> Void
   private let isGuideInteractionEnabled: Bool
   private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
@@ -93,7 +93,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> OutsideOverlay,
-    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+    stateHandler: @escaping @MainActor (CropView.State, CropView.State?) -> Void = { _, _ in }
   ) {
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
@@ -111,7 +111,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+    stateHandler: @escaping @MainActor (CropView.State, CropView.State?) -> Void = { _, _ in }
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil

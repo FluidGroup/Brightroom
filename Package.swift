@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
   name: "Brightroom",
   platforms: [
-    .iOS(.v16)
+    .iOS(.v17)
   ],
   products: [
     .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
@@ -12,18 +12,24 @@ let package = Package(
     .library(name: "BrightroomUIPhotosCrop", targets: ["BrightroomUIPhotosCrop"])
   ],
   dependencies: [
-    .package(url: "https://github.com/VergeGroup/Verge", from: "14.0.0-beta.7"),
+    .package(url: "https://github.com/VergeGroup/swift-state-graph", exact: "0.17.0"),
     .package(url: "https://github.com/FluidGroup/TransitionPatch", from: "1.0.3"),
     .package(url: "https://github.com/FluidGroup/PrecisionLevelSlider", from: "2.1.0"),
   ],
   targets: [
     .target(
       name: "BrightroomEngine",
-      dependencies: ["Verge"]
+      dependencies: [
+        .product(name: "StateGraph", package: "swift-state-graph"),
+      ]
     ),
     .target(
       name: "BrightroomUI",
-      dependencies: ["BrightroomEngine", "Verge", "TransitionPatch"]
+      dependencies: [
+        "BrightroomEngine",
+        .product(name: "StateGraph", package: "swift-state-graph"),
+        "TransitionPatch",
+      ]
     ),
     .target(
       name: "BrightroomUIPhotosCrop",

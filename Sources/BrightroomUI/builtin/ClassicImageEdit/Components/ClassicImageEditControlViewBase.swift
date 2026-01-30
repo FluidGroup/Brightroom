@@ -24,27 +24,29 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildViewType {
-  
-  open func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
+
+  open func didReceiveCurrentEdit() {
+
   }
 
   public let viewModel: ClassicImageEditViewModel
-  
-  private var subscriptions: Set<AnyCancellable> = .init()
+
+  private var subscriptions: [Any] = []
 
   public init(viewModel: ClassicImageEditViewModel) {
     self.viewModel = viewModel
     super.init(frame: .zero)
     setup()
-    
-    viewModel.sinkState { [weak self] (state) in
-      self?.didReceiveCurrentEdit(state: state)
+
+    let subscription = withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        self?.didReceiveCurrentEdit()
+      }
     }
-    .store(in: &subscriptions)
+    subscriptions.append(subscription)
   }
 
   @available(*, unavailable)

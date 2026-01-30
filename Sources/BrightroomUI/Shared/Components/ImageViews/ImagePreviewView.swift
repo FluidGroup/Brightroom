@@ -23,7 +23,7 @@
 import BrightroomEngine
 #endif
 import UIKit
-import Verge
+import StateGraph
 
 /**
  A view that displays the edited image, plus displays original image for comparison with touch-down interaction.
@@ -40,13 +40,17 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   #endif
 
   private let editingStack: EditingStack
-  private var subscriptions = Set<AnyCancellable>()
+  private var subscriptions: [Any] = []
 
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
 
   private var isBinding = false
-  private var cachedCroppedImage: (state: EditingStack.State.Loaded, image: CIImage)? = nil
+  private var cachedCroppedImage: (state: EditingStack.Loaded, image: CIImage)? = nil
+
+  // Change tracking
+  private var _previousIsLoading: Bool?
+  private var _previousCurrentEdit: EditingStack.Edit?
 
   // MARK: - Initializers
 
@@ -102,28 +106,33 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
       if isBinding == false {
         isBinding = true
-        editingStack.sinkState { [weak self] state in
+        let subscription = withGraphTracking { [weak self] in
+          withGraphTrackingGroup {
+            guard let self = self else { return }
 
-          guard let self = self else { return }
+            let isLoading = self.editingStack.isLoading
+            if self._previousIsLoading != isLoading {
+              self._previousIsLoading = isLoading
+              self.updateLoadingOverlay(displays: isLoading)
+            }
 
-          state.ifChanged(\.isLoading).do { isLoading in
-            self.updateLoadingOverlay(displays: isLoading)
-          }
-
-          UIView.performWithoutAnimation {
-            if let state = state.mapIfPresent(\.loadedState) {
-              if state.hasChanges({ ($0.currentEdit) }, .equality()) {
-                self.requestPreviewImage(state: state.primitive)
+            UIView.performWithoutAnimation {
+              if let loadedState = self.editingStack.loadedState {
+                let currentEdit = loadedState.currentEdit
+                if self._previousCurrentEdit != currentEdit {
+                  self._previousCurrentEdit = currentEdit
+                  self.requestPreviewImage(state: loadedState)
+                }
               }
             }
           }
         }
-        .store(in: &subscriptions)
+        subscriptions.append(subscription)
       }
     }
   }
 
-  private func requestPreviewImage(state: EditingStack.State.Loaded) {
+  private func requestPreviewImage(state: EditingStack.Loaded) {
 
     let croppedImage: CIImage
     if
@@ -177,7 +186,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    if let loaded = editingStack.store.state.loadedState {
+    if let loaded = editingStack.loadedState {
       requestPreviewImage(state: loaded)
     }
   }

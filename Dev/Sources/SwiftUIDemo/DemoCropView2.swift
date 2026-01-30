@@ -15,16 +15,16 @@ import SwiftUISupport
 
 struct DemoCropView2: View {
 
-  @StateObject var editingStack: EditingStack
+  let editingStack: EditingStack
   @State var resultImage: ResultImage?
   @State var angle: EditingCrop.AdjustmentAngle = .zero
   @State var baselineAngle: EditingCrop.AdjustmentAngle = .zero
   @State var isDragging: Bool = false
 
   init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self.editingStack = editingStack
   }
 
   var body: some View {
@@ -55,9 +55,9 @@ struct DemoCropView2: View {
             Rectangle()
               .fill(kind == nil ? Color.white : Color.white.opacity(0.6))
           },
-          stateHandler: { state in
-            state.ifChanged(\.adjustmentKind).do { kind in
-              if kind.isEmpty {
+          stateHandler: { state, previous in
+            if state.adjustmentKind != previous?.adjustmentKind {
+              if state.adjustmentKind.isEmpty {
                 isDragging = false
               } else {
                 isDragging = true
@@ -123,21 +123,19 @@ struct DemoCropView2: View {
 
 #Preview("local") {
   DemoCropView2(
-    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   )
 }
 
 #Preview("remote") {
   DemoCropView2(
-    editingStack: {
-      EditingStack(
-        imageProvider: .init(
-          editableRemoteURL: URL(
-            string:
-              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-          )!
-        )
+    editingStack: EditingStack(
+      imageProvider: .init(
+        editableRemoteURL: URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
       )
-    }
+    )
   )
 }
