@@ -8,7 +8,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-      - uses: maxim-lobanov/setup-xcode@v1.6
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: "26.2"
       - uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-      - uses: maxim-lobanov/setup-xcode@v1.6
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: "26.2"
       - uses: actions/checkout@v2
