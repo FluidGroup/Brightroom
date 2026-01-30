@@ -67,8 +67,8 @@ extension CGContext {
       outputColorSpace = CGColorSpaceCreateDeviceRGB()
     }
 
-    let width = size.map { Int($0.width) } ?? image.width
-    let height = size.map { Int($0.height) } ?? image.height
+    let width = size.map { Int($0.width.rounded()) } ?? image.width
+    let height = size.map { Int($0.height.rounded()) } ?? image.height
 
     if let context = CGContext(
       data: nil,
