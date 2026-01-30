@@ -84,4 +84,5 @@ iOSInjectionProject/
 .DS_Store
 
 .orig
+.claude/settings.local.json
 # End of https://www.gitignore.io/api/swift
