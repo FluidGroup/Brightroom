@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/Normalization",
       "state" : {
-        "revision" : "6e7cb1ddeda4d0f1d2fbf8ca6d25ecd8ed6ba917",
-        "version" : "1.1.0"
+        "revision" : "360cc940e9c9f5c14db229ea9757c1b18a541fff",
+        "version" : "2.0.1"
       }
     },
     {
@@ -14,8 +14,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
       "state" : {
-        "revision" : "3e460c1cea5ec916f7185948bc0a4e093e20f7a5",
-        "version" : "2.1.0"
+        "revision" : "d16becc518758b6f984ff07f8e8c6a0fa9245492",
+        "version" : "2.2.0"
       }
     },
     {
@@ -23,8 +23,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ReactiveX/RxSwift.git",
       "state" : {
-        "revision" : "7e01c05f25c025143073eaa3be3532f9375c614b",
-        "version" : "6.1.0"
+        "revision" : "5734ad2b6d7d4c0656df3d09ca4ce54fa3c09913",
+        "version" : "6.10.1"
       }
     },
     {
@@ -32,8 +32,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-atomics.git",
       "state" : {
-        "revision" : "cd142fd2f64be2100422d658e7411e39489da985",
-        "version" : "1.2.0"
+        "revision" : "b601256eab081c0f92f059e12818ac1d4f178ff7",
+        "version" : "1.3.0"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
-        "version" : "1.1.0"
+        "revision" : "7b847a3b7008b2dc2f47ca3110d8c782fb2e5c7e",
+        "version" : "1.3.0"
       }
     },
     {
@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/swift-concurrency-task-manager",
       "state" : {
-        "revision" : "9f686139a7d08ecca12d64a7a9bdf81cb1a1c986",
-        "version" : "1.2.0"
+        "revision" : "87605b623fa1a02c657534251ae238a56bc0d15c",
+        "version" : "3.0.0"
       }
     },
     {
@@ -59,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/swift-macro-state-struct",
       "state" : {
-        "revision" : "e13aa7350af0407d74552198a438cd1cb4b74c7d",
-        "version" : "2.2.0"
+        "revision" : "f19ad3018ad718f9af725cbbc66a9d87f78d4780",
+        "version" : "3.0.1"
       }
     },
     {
@@ -68,8 +68,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "0687f71944021d616d34d922343dcef086855920",
-        "version" : "600.0.1"
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
+      }
+    },
+    {
+      "identity" : "swift-typed-identifier",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/VergeGroup/swift-typed-identifier.git",
+      "state" : {
+        "revision" : "ea7afa2ce943c6bf3ef87d385c8a6e9f67fea4f3",
+        "version" : "2.0.4"
       }
     },
     {
@@ -77,8 +86,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/swiftui-Hosting",
       "state" : {
-        "revision" : "7e8eaca72eae910d6d3b6272c263c6c3a10b755c",
-        "version" : "1.2.0"
+        "revision" : "f0f309cbb9a7e055bc57e931a3506ebb26bf0134",
+        "version" : "2.6.0"
       }
     },
     {
@@ -100,21 +109,12 @@
       }
     },
     {
-      "identity" : "typedidentifier",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/TypedIdentifier",
-      "state" : {
-        "revision" : "284340409ba47858a1b3c353dcef9c21303953db",
-        "version" : "2.0.3"
-      }
-    },
-    {
       "identity" : "verge",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/Verge.git",
+      "location" : "https://github.com/VergeGroup/Verge",
       "state" : {
-        "revision" : "331d2ae4493c7aae0e5333c0d93d6173cced9325",
-        "version" : "14.0.0-beta.7"
+        "revision" : "084a448dc2dac9bbaa79a70e100a1364d8afbd95",
+        "version" : "14.1.2"
       }
     }
   ],

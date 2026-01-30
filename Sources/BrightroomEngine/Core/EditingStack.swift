@@ -66,6 +66,7 @@ open class EditingStack: Hashable, StoreDriverType {
   /**
    A representation of state in EditingStack
    */
+  @Tracking
   public struct State: Equatable {
     public struct Loading: Equatable {}
 
@@ -190,7 +191,7 @@ open class EditingStack: Hashable, StoreDriverType {
 
     }
 
-    public fileprivate(set) var hasStartedEditing = false
+    public fileprivate(set) var hasStartedEditing: Bool = false
     /**
      A Boolean value that indicates whether the image is currently loading for editing.
      */

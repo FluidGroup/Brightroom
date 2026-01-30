@@ -4,6 +4,7 @@ import BrightroomUI
 import SwiftUI
 import SwiftUISupport
 import UIKit
+import Verge
 
 struct DemoFilterView: View {
 
@@ -93,7 +94,7 @@ struct DemoFilterView: View {
   let grayscaleFilter: GrayscaleFilter = .init()
   let motionBlurFilter: MotionBlurFilter = .init()
 
-  @StateObject var editingStack: EditingStack
+  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
   @State var invertToggle: Bool = false
   @State var grayscaleToggle: Bool = false
   @State var motionBlurToggle: Bool = false
@@ -103,15 +104,15 @@ struct DemoFilterView: View {
   init(
     editingStack: @escaping () -> EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self._editingStackState = .init(editingStack)
   }
 
   var body: some View {
     VStack {
 
-      ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+      ViewHost(instantiated: ImagePreviewView(editingStack: $editingStackState.driver))
 
-      SwiftUICropView(editingStack: editingStack, contentInset: .zero)
+      SwiftUICropView(editingStack: $editingStackState.driver, contentInset: .zero)
         .clipped()
 
       VStack {
@@ -120,7 +121,7 @@ struct DemoFilterView: View {
         Toggle("MotionBlur", isOn: $motionBlurToggle)
       }
       .onChange(of: [invertToggle, grayscaleToggle, motionBlurToggle], perform: { _ in
-        editingStack.set(filters: {
+        $editingStackState.driver.set(filters: {
           $0.additionalFilters = [
             grayscaleToggle ? grayscaleFilter.asAny() : nil,
             invertToggle ? invertFilter.asAny() : nil,
@@ -131,7 +132,7 @@ struct DemoFilterView: View {
       .padding()
 
       Button("Done") {
-        try! editingStack.makeRenderer().render { result in
+        try! $editingStackState.driver.makeRenderer().render { result in
           switch result {
           case let .success(rendered):
             self.resultImage = .init(cgImage: rendered.cgImage)
@@ -143,7 +144,7 @@ struct DemoFilterView: View {
 
     }
     .onAppear {
-      editingStack.start()
+      $editingStackState.driver.start()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
