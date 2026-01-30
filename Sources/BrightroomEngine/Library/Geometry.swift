@@ -191,8 +191,8 @@ public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable, Senda
     }
 
     return CGSize(
-      width: size.width.rounded(),
-      height: size.height.rounded()
+      width: size.width,
+      height: size.height
     )
   }
 
@@ -209,8 +209,8 @@ public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable, Senda
     }
 
     return CGSize(
-      width: size.width.rounded(),
-      height: size.height.rounded()
+      width: size.width,
+      height: size.height
     )
 
   }
