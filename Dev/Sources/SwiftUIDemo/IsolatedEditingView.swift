@@ -1,17 +1,22 @@
 import BrightroomEngine
 import BrightroomUI
 import SwiftUI
+import Verge
 
 struct IsolatedEditinView: View {
-  @StateObject var editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
   @State private var fullScreenView: FullscreenIdentifiableView?
+
+  init() {
+    self._editingStackState = .init { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+  }
 
   var body: some View {
     Form.init {
       Button("Crop") {
         fullScreenView = .init {
           SwiftUIPhotosCropView(
-            editingStack: editingStack,
+            editingStack: $editingStackState.driver,
             onDone: {},
             onCancel: {}
           )
@@ -20,11 +25,11 @@ struct IsolatedEditinView: View {
       }
 
       Button("Custom Crop") {
-        fullScreenView = .init { DemoCropView(editingStack: {editingStack}) }
+        fullScreenView = .init { DemoCropView(editingStack: { $editingStackState.driver }) }
       }
 
       Button("Blur Mask") {
-        fullScreenView = .init { MaskingViewWrapper(editingStack: editingStack) }
+        fullScreenView = .init { MaskingViewWrapper(editingStack: $editingStackState.driver) }
       }
     }
     .navigationTitle("Isolated-Editing")

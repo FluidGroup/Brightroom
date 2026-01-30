@@ -11,25 +11,26 @@ import BrightroomUI
 import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
+import Verge
 
 struct DemoCropView: View {
 
-  @StateObject var editingStack: EditingStack
+  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
   @State var resultImage: ResultImage?
 
   init(
     editingStack: @escaping () -> EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self._editingStackState = .init(editingStack)
   }
 
   var body: some View {
     ZStack {
 
       VStack {
-        PhotosCropRotating(editingStack: { editingStack })
+        PhotosCropRotating(editingStack: { $editingStackState.driver })
 //        Button("Done") {
-//          let image = try! editingStack.makeRenderer().render().cgImage
+//          let image = try! $editingStackState.driver.makeRenderer().render().cgImage
 //          self.resultImage = .init(cgImage: image)
 //        }
       }
@@ -38,7 +39,7 @@ struct DemoCropView: View {
         HStack {
           Spacer()
           Button("Done") {
-            let image = try! editingStack.makeRenderer().render().cgImage
+            let image = try! $editingStackState.driver.makeRenderer().render().cgImage
             self.resultImage = .init(cgImage: image)
           }
           .buttonStyle(.borderedProminent)
@@ -55,13 +56,13 @@ struct DemoCropView: View {
     }
 //    .safeAreaInset(edge: .top, content: {
 //      Button("Done") {
-//        let image = try! editingStack.makeRenderer().render().cgImage
+//        let image = try! $editingStackState.driver.makeRenderer().render().cgImage
 //        self.resultImage = .init(cgImage: image)
 //      }
 //    })
 
     .onAppear {
-      editingStack.start()
+      $editingStackState.driver.start()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)

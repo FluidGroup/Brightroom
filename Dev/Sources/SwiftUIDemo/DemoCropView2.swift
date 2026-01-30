@@ -12,10 +12,11 @@ import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
 import SwiftUISupport
+import Verge
 
 struct DemoCropView2: View {
 
-  @StateObject var editingStack: EditingStack
+  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
   @State var resultImage: ResultImage?
   @State var angle: EditingCrop.AdjustmentAngle = .zero
   @State var baselineAngle: EditingCrop.AdjustmentAngle = .zero
@@ -24,7 +25,7 @@ struct DemoCropView2: View {
   init(
     editingStack: @escaping () -> EditingStack
   ) {
-    self._editingStack = .init(wrappedValue: editingStack())
+    self._editingStackState = .init(editingStack)
   }
 
   var body: some View {
@@ -35,7 +36,7 @@ struct DemoCropView2: View {
         Spacer()
 
         SwiftUICropView(
-          editingStack: editingStack,
+          editingStack: $editingStackState.driver,
           isGuideInteractionEnabled: false,
           areAnimationsEnabled: false,
           contentInset: .init(top: 20, left: 20, bottom: 20, right: 20),
@@ -70,8 +71,8 @@ struct DemoCropView2: View {
         .frame(height: 300)
         .clipped()
         .background(Color.gray)
-        
-        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+
+        ViewHost(instantiated: ImagePreviewView(editingStack: $editingStackState.driver))
           .background(Color.black)
           .cornerRadius(24, style: .continuous)
           .padding(.init(top: 20, leading: 20, bottom: 20, trailing: 20))
@@ -96,7 +97,7 @@ struct DemoCropView2: View {
         HStack {
           Spacer()
           Button("Done") {
-            let image = try! editingStack.makeRenderer().render().cgImage
+            let image = try! $editingStackState.driver.makeRenderer().render().cgImage
             self.resultImage = .init(cgImage: image)
           }
           .buttonStyle(.borderedProminent)
@@ -112,7 +113,7 @@ struct DemoCropView2: View {
 
     }
     .onAppear {
-      editingStack.start()
+      $editingStackState.driver.start()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
