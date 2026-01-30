@@ -11,6 +11,7 @@ import BrightroomUI
 import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
+import StateGraph
 
 struct DemoCropView: View {
 
@@ -29,7 +30,7 @@ struct DemoCropView: View {
       VStack {
         PhotosCropRotating(editingStack: editingStack)
 //        Button("Done") {
-//          let image = try! editingStack.makeRenderer().render().cgImage
+//          let image = try! $editingStackState.driver.makeRenderer().render().cgImage
 //          self.resultImage = .init(cgImage: image)
 //        }
       }
@@ -55,7 +56,7 @@ struct DemoCropView: View {
     }
 //    .safeAreaInset(edge: .top, content: {
 //      Button("Done") {
-//        let image = try! editingStack.makeRenderer().render().cgImage
+//        let image = try! $editingStackState.driver.makeRenderer().render().cgImage
 //        self.resultImage = .init(cgImage: image)
 //      }
 //    })

@@ -5,25 +5,39 @@ on:
 
 jobs:
   test:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
-      - uses: maxim-lobanov/setup-xcode@v1.1
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
-          xcode-version: "16.2"
+          xcode-version: "26.2"
       - uses: actions/checkout@v2
         with:
           submodules: true
       - name: Test
-        run: set -o pipefail && xcodebuild -project ./Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=18.0'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
+        run: |
+          set -o pipefail && xcodebuild \
+            -project ./Dev/Brightroom.xcodeproj \
+            -scheme BrightroomEngineTests \
+            test \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify
 
   swiftpm:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
-      - uses: maxim-lobanov/setup-xcode@v1.1
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
-          xcode-version: "16.2"
+          xcode-version: "26.2"
       - uses: actions/checkout@v2
       - name: Build
-        run: xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator'  -skipMacroValidation -skipPackagePluginValidation | xcpretty
+        run: |
+          set -o pipefail && xcodebuild \
+            -scheme BrightroomUI \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify

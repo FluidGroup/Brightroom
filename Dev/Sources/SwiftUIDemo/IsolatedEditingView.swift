@@ -1,6 +1,7 @@
 import BrightroomEngine
 import BrightroomUI
 import SwiftUI
+import StateGraph
 
 struct IsolatedEditinView: View {
   let editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())

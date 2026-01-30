@@ -12,6 +12,7 @@ import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
 import SwiftUISupport
+import StateGraph
 
 struct DemoCropView2: View {
 
@@ -70,7 +71,7 @@ struct DemoCropView2: View {
         .frame(height: 300)
         .clipped()
         .background(Color.gray)
-        
+
         ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
           .background(Color.black)
           .cornerRadius(24, style: .continuous)

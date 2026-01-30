@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
       "state" : {
-        "revision" : "3e460c1cea5ec916f7185948bc0a4e093e20f7a5",
-        "version" : "2.1.0"
+        "revision" : "d16becc518758b6f984ff07f8e8c6a0fa9245492",
+        "version" : "2.2.0"
       }
     },
     {
@@ -41,8 +41,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/swiftui-Hosting",
       "state" : {
-        "revision" : "7e8eaca72eae910d6d3b6272c263c6c3a10b755c",
-        "version" : "1.2.0"
+        "revision" : "f0f309cbb9a7e055bc57e931a3506ebb26bf0134",
+        "version" : "2.6.0"
       }
     },
     {
