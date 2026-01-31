@@ -23,6 +23,7 @@ import CoreImage
 import MetalKit
 import SwiftUI
 import UIKit
+import Combine
 import StateGraph
 
 public enum EditingStackError: Error, Sendable {
@@ -209,7 +210,7 @@ open class EditingStack: Hashable {
 
   private let filterPresets: [FilterPreset]
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
   private var imageProviderSubscription: Any?
 
   public var cropModifier: CropModifier
@@ -277,7 +278,7 @@ open class EditingStack: Hashable {
     hasStartedEditing = true
 
     // Set up state observation on background queue
-    let subscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
         self.backgroundQueue.async {
@@ -285,7 +286,7 @@ open class EditingStack: Hashable {
         }
       }
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
 
     /**
      Start downloading image
@@ -296,15 +297,13 @@ open class EditingStack: Hashable {
     }
 
     // Observe image provider's loaded image
-    let imageProviderSub = withGraphTracking { [weak self] in
-      withGraphTrackingMap {
-        self?.imageProvider.loadedImage
-      } onChange: { [weak self] image in
-        guard let self = self, let image = image else { return }
+    let imageProviderSub = withGraphTracking {
+      withGraphTrackingMap(from: self, map: { $0.imageProvider.loadedImage }, onChange: { [weak self] image in
+        guard let self, let image else { return }
         self.backgroundQueue.async {
           self.handleImageLoaded(image: image, onPreparationCompleted: onPreparationCompleted)
         }
-      }
+      })
     }
     imageProviderSubscription = imageProviderSub
   }

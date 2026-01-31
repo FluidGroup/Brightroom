@@ -24,6 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
+import Combine
 import StateGraph
 
 open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildViewType {
@@ -34,19 +35,19 @@ open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildVie
 
   public let viewModel: ClassicImageEditViewModel
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   public init(viewModel: ClassicImageEditViewModel) {
     self.viewModel = viewModel
     super.init(frame: .zero)
     setup()
 
-    let subscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         self?.didReceiveCurrentEdit()
       }
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
   }
 
   @available(*, unavailable)

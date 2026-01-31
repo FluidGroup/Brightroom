@@ -8,19 +8,24 @@ Brightroom is a composable image editor library for iOS, powered by Metal for hi
 
 ## Build Commands
 
+### Building via Xcode Project (Recommended)
+```bash
+# Build BrightroomUI (includes BrightroomEngine)
+cd Dev && xcodebuild -scheme BrightroomUI -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
+
+# Build Demo app
+cd Dev && xcodebuild -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
+
+# Build SwiftUI Demo
+cd Dev && xcodebuild -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
+```
+
+Note: `swift build` does not work due to macOS version constraints. Always use `xcodebuild` with the Dev/Brightroom.xcodeproj.
+
 ### Running Demo Apps
 ```bash
 # Open the development workspace
 open Dev/Brightroom.xcodeproj
-
-# Build using Fastlane
-fastlane ios build_demo_apps
-```
-
-### Building the Package
-```bash
-# Build the Swift package
-swift build
 ```
 
 ## Architecture

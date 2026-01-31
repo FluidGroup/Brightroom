@@ -21,6 +21,7 @@ struct DemoCropView2: View {
   @State var angle: EditingCrop.AdjustmentAngle = .zero
   @State var baselineAngle: EditingCrop.AdjustmentAngle = .zero
   @State var isDragging: Bool = false
+  @State var previousAdjustmentKind: CropView.StateModel.AdjustmentKind?
 
   init(
     editingStack: EditingStack
@@ -56,13 +57,14 @@ struct DemoCropView2: View {
             Rectangle()
               .fill(kind == nil ? Color.white : Color.white.opacity(0.6))
           },
-          stateHandler: { state, previous in
-            if state.adjustmentKind != previous?.adjustmentKind {
+          stateHandler: { state in
+            if state.adjustmentKind != previousAdjustmentKind {
               if state.adjustmentKind.isEmpty {
                 isDragging = false
               } else {
                 isDragging = true
               }
+              previousAdjustmentKind = state.adjustmentKind
             }
           }
         )

@@ -22,6 +22,7 @@
 import UIKit
 import SwiftUI
 
+import Combine
 import StateGraph
 
 #if !COCOAPODS
@@ -84,7 +85,7 @@ public final class PhotosCropViewController: UIViewController {
   
   private let aspectRatioControlLayoutGuide = UILayoutGuide()
     
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
   private var hasSetupLoadedUICompleted = false
 
   // Change tracking
@@ -255,7 +256,7 @@ public final class PhotosCropViewController: UIViewController {
       view.layoutIfNeeded()
     }
          
-    let editingStackSubscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
 
@@ -283,15 +284,15 @@ public final class PhotosCropViewController: UIViewController {
         }
       }
     }
-    subscriptions.append(editingStackSubscription)
+    .store(in: &subscriptions)
 
-    let storeSubscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
         self.update()
       }
     }
-    subscriptions.append(storeSubscription)
+    .store(in: &subscriptions)
 
     editingStack.start()
   }
@@ -344,7 +345,7 @@ public final class PhotosCropViewController: UIViewController {
       update()
     }
 
-    let cropViewSubscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
 
@@ -355,7 +356,7 @@ public final class PhotosCropViewController: UIViewController {
         }
       }
     }
-    subscriptions.append(cropViewSubscription)
+    .store(in: &subscriptions)
 
   }
   

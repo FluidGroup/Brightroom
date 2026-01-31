@@ -24,6 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
+import Combine
 import StateGraph
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
@@ -88,7 +89,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
 
   private let canvasView = CanvasView()
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   private let editingStack: EditingStack
 
@@ -99,11 +100,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
 
   private var isBinding = false
 
-  // Change tracking
-  private var _previousCrop: EditingCrop?
-  private var _previousEditingPreviewImage: CIImage?
-  private var _previousBlurredMaskPaths: [DrawnPath]?
-  
   // MARK: - Initializers
   
   public init(editingStack: EditingStack) {
@@ -173,34 +169,27 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
     }
 
-    let subscription = withGraphTracking { [weak self] in
-      withGraphTrackingGroup {
-        guard let self = self else { return }
+    withGraphTracking {
+      withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.crop }, onChange: { [weak self] cropRect in
+        guard let self, let cropRect else { return }
 
-        if let loadedState = self.editingStack.loadedState {
-          let cropRect = loadedState.currentEdit.crop
-          if self._previousCrop != cropRect {
-            self._previousCrop = cropRect
-
-            // scaling for drawing paths
-            [self.canvasView, self.drawingView].forEach { view in
-              view.bounds = .init(origin: .zero, size: cropRect.imageSize)
-              let scale = Geometry.diagonalRatio(to: cropRect.scrollViewContentSize(), from: cropRect.imageSize)
-              view.transform = .init(scaleX: scale, y: scale)
-              view.frame.origin = .zero
-            }
-
-            /**
-             To avoid running pending layout operations from User Initiated actions.
-             */
-            if cropRect != self.proposedCrop {
-              self.proposedCrop = cropRect
-            }
-          }
+        // scaling for drawing paths
+        [self.canvasView, self.drawingView].forEach { view in
+          view.bounds = .init(origin: .zero, size: cropRect.imageSize)
+          let scale = Geometry.diagonalRatio(to: cropRect.scrollViewContentSize(), from: cropRect.imageSize)
+          view.transform = .init(scaleX: scale, y: scale)
+          view.frame.origin = .zero
         }
-      }
+
+        /**
+         To avoid running pending layout operations from User Initiated actions.
+         */
+        if cropRect != self.proposedCrop {
+          self.proposedCrop = cropRect
+        }
+      })
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
     
     defaultAppearance: do {
       setLoadingOverlay(factory: {
@@ -220,26 +209,17 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       editingStack.start()
       
       binding: do {
-        let bindingSubscription = withGraphTracking { [weak self] in
-          withGraphTrackingGroup {
-            guard let self = self else { return }
-
-            if let loadedState = self.editingStack.loadedState {
-              let previewImage = loadedState.editingPreviewImage
-              if self._previousEditingPreviewImage !== previewImage {
-                self._previousEditingPreviewImage = previewImage
-                self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
-              }
-
-              let paths = loadedState.currentEdit.drawings.blurredMaskPaths
-              if self._previousBlurredMaskPaths != paths {
-                self._previousBlurredMaskPaths = paths
-                self.canvasView.setResolvedDrawnPaths(paths)
-              }
-            }
-          }
+        withGraphTracking {
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.editingPreviewImage }, onChange: { [weak self] previewImage in
+            guard let self, let previewImage else { return }
+            self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.drawings.blurredMaskPaths }, onChange: { [weak self] paths in
+            guard let self, let paths else { return }
+            self.canvasView.setResolvedDrawnPaths(paths)
+          })
         }
-        subscriptions.append(bindingSubscription)
+        .store(in: &subscriptions)
       }
     }
   }

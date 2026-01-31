@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 
 import UIKit
-
+import Combine
 import CoreImage
 import StateGraph
 
@@ -360,20 +360,3 @@ public final class ImageProvider: Equatable {
   }
 }
 
-// MARK: - AnyCancellable
-
-public final class AnyCancellable {
-  private let onCancel: () -> Void
-
-  public init(_ onCancel: @escaping () -> Void) {
-    self.onCancel = onCancel
-  }
-
-  public func cancel() {
-    onCancel()
-  }
-
-  deinit {
-    onCancel()
-  }
-}

@@ -13,11 +13,11 @@ extension CropView {
 
   open class CropOutsideOverlayBase: PixelEditorCodeBasedView {
 
-    open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    open func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       
     }
     
-    open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    open func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       
     }
     
@@ -49,7 +49,7 @@ extension CropView {
       AutoLayoutTools.setEdge(effectView, self)
     }
     
-    public override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    public override func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       
       if kind == .guide {
         
@@ -62,7 +62,7 @@ extension CropView {
       }
     }
     
-    public override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    public override func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       
       if kind == .guide {
         currentAnimator?.stopAnimation(true)
@@ -81,7 +81,7 @@ extension CropView {
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    public init(@ViewBuilder content: @escaping (CropView.State.AdjustmentKind?) -> Content) {
+    public init(@ViewBuilder content: @escaping (CropView.StateModel.AdjustmentKind?) -> Content) {
 
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -95,17 +95,17 @@ extension CropView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    open override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    open override func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       proxy.activeKind = kind
     }
 
-    open override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    open override func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       proxy.activeKind = nil
     }
 
     private final class Proxy: ObservableObject {
 
-      @Published var activeKind: CropView.State.AdjustmentKind?
+      @Published var activeKind: CropView.StateModel.AdjustmentKind?
 
     }
 
@@ -113,11 +113,11 @@ extension CropView {
 
       @ObservedObject var proxy: Proxy
 
-      private let content: (CropView.State.AdjustmentKind?) -> Content
+      private let content: (CropView.StateModel.AdjustmentKind?) -> Content
 
       public init(
         proxy: Proxy,
-        content: @escaping (CropView.State.AdjustmentKind?) -> Content
+        content: @escaping (CropView.StateModel.AdjustmentKind?) -> Content
       ) {
         self.content = content
         self.proxy = proxy

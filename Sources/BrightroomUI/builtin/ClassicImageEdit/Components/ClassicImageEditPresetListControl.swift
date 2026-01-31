@@ -24,6 +24,7 @@ import UIKit
 import BrightroomEngine
 #endif
 
+import Combine
 import StateGraph
 
 open class ClassicImageEditPresetListControlBase : ClassicImageEditControlBase {
@@ -57,7 +58,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   @GraphStored private var content: Content? = nil
   @GraphStored private var currentSelected: FilterPreset? = nil
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   // Change tracking
   private var _previousContent: Content?
@@ -74,7 +75,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
 
     super.init(viewModel: viewModel)
 
-    let viewModelSubscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
 
@@ -90,9 +91,9 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
         }
       }
     }
-    subscriptions.append(viewModelSubscription)
+    .store(in: &subscriptions)
 
-    let storeSubscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
 
@@ -111,7 +112,7 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
         }
       }
     }
-    subscriptions.append(storeSubscription)
+    .store(in: &subscriptions)
 
   }
 

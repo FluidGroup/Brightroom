@@ -22,6 +22,7 @@
 import UIKit
 import SwiftUI
 
+import Combine
 import StateGraph
 
 #if !COCOAPODS
@@ -127,7 +128,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
   private let freeformButton = AspectRatioButton()
   private let aspectSquareButton = AspectRatioButton()
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   // Change tracking
   private var _previousSelectedAspectRatio: PixelAspectRatio??
@@ -264,7 +265,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
       $0.showsHorizontalScrollIndicator = false
     }
 
-    let subscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
 
@@ -334,7 +335,7 @@ final class PhotosCropAspectRatioControl: PixelEditorCodeBasedView {
         }
       }
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
   }
 
   func setSelected(_ aspectRatio: PixelAspectRatio?) {

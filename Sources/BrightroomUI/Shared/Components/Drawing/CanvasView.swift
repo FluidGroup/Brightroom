@@ -24,6 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
+import Combine
 import StateGraph
 
 public final class CanvasView: PixelEditorCodeBasedView {
@@ -42,8 +43,7 @@ public final class CanvasView: PixelEditorCodeBasedView {
   }
 
   @GraphStored private var resolvedDrawnPaths: [DrawnPath] = []
-  private var _previousResolvedDrawnPaths: [DrawnPath] = []
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   private var resolvedShapeLayers: [CAShapeLayer] = []
   private var previewShapeLayer: CAShapeLayer?
@@ -56,33 +56,28 @@ public final class CanvasView: PixelEditorCodeBasedView {
       tiledLayer.tileSize = .init(width: 512, height: 512)
     }
 
-    let subscription = withGraphTracking { [weak self] in
-      withGraphTrackingGroup {
-        guard let self = self else { return }
+    withGraphTracking {
+      withGraphTrackingMap(from: self, map: { $0.resolvedDrawnPaths }, onChange: { [weak self] paths in
+        guard let self else { return }
 
-        if self._previousResolvedDrawnPaths != self.resolvedDrawnPaths {
-          self._previousResolvedDrawnPaths = self.resolvedDrawnPaths
-
-          let paths = self.resolvedDrawnPaths
-          let layers = paths.map { path -> CAShapeLayer in
-            let layer = Self.makeShapeLayer(for: path.brush)
-            layer.path = path.bezierPath.cgPath
-            return layer
-          }
-
-          // TODO: Get better way for perfromance
-          self.resolvedShapeLayers.forEach {
-            $0.removeFromSuperlayer()
-          }
-
-          layers.forEach {
-            self.layer.addSublayer($0)
-          }
-          self.resolvedShapeLayers = layers
+        let layers = paths.map { path -> CAShapeLayer in
+          let layer = Self.makeShapeLayer(for: path.brush)
+          layer.path = path.bezierPath.cgPath
+          return layer
         }
-      }
+
+        // TODO: Get better way for perfromance
+        self.resolvedShapeLayers.forEach {
+          $0.removeFromSuperlayer()
+        }
+
+        layers.forEach {
+          self.layer.addSublayer($0)
+        }
+        self.resolvedShapeLayers = layers
+      })
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
 
   }
   

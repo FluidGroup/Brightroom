@@ -23,6 +23,7 @@
 import BrightroomEngine
 #endif
 import UIKit
+import Combine
 import StateGraph
 
 /**
@@ -40,17 +41,13 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   #endif
 
   private let editingStack: EditingStack
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
 
   private var isBinding = false
   private var cachedCroppedImage: (state: EditingStack.Loaded, image: CIImage)? = nil
-
-  // Change tracking
-  private var _previousIsLoading: Bool?
-  private var _previousCurrentEdit: EditingStack.Edit?
 
   // MARK: - Initializers
 
@@ -106,28 +103,18 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
       if isBinding == false {
         isBinding = true
-        let subscription = withGraphTracking { [weak self] in
-          withGraphTrackingGroup {
-            guard let self = self else { return }
-
-            let isLoading = self.editingStack.isLoading
-            if self._previousIsLoading != isLoading {
-              self._previousIsLoading = isLoading
-              self.updateLoadingOverlay(displays: isLoading)
-            }
-
+        withGraphTracking {
+          withGraphTrackingMap(from: self, map: { $0.editingStack.isLoading }, onChange: { [weak self] isLoading in
+            self?.updateLoadingOverlay(displays: isLoading)
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit }, onChange: { [weak self] currentEdit in
+            guard let self, let loadedState = self.editingStack.loadedState else { return }
             UIView.performWithoutAnimation {
-              if let loadedState = self.editingStack.loadedState {
-                let currentEdit = loadedState.currentEdit
-                if self._previousCurrentEdit != currentEdit {
-                  self._previousCurrentEdit = currentEdit
-                  self.requestPreviewImage(state: loadedState)
-                }
-              }
+              self.requestPreviewImage(state: loadedState)
             }
-          }
+          })
         }
-        subscriptions.append(subscription)
+        .store(in: &subscriptions)
       }
     }
   }

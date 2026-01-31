@@ -21,6 +21,7 @@
 
 import Photos
 import UIKit
+import Combine
 import StateGraph
 
 #if !COCOAPODS
@@ -114,7 +115,7 @@ public final class ClassicImageEditViewController: UIViewController {
     action: #selector(didTapCancelButton)
   )
 
-  private var subscriptions: [Any] = []
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   // Change tracking
   private var _previousTitle: String?
@@ -299,15 +300,15 @@ public final class ClassicImageEditViewController: UIViewController {
       animated: false
     )
 
-    let subscription = withGraphTracking { [weak self] in
+    withGraphTracking { [weak self] in
       withGraphTrackingGroup {
         guard let self = self else { return }
         self.updateUI()
       }
     }
-    subscriptions.append(subscription)
+    .store(in: &subscriptions)
 
-    let cropViewSubscription = withGraphTracking { [viewModel, weak cropView] in
+    withGraphTracking { [viewModel, weak cropView] in
       withGraphTrackingGroup {
         guard let cropView = cropView else { return }
         let proposedCrop = cropView.state.proposedCrop
@@ -316,7 +317,7 @@ public final class ClassicImageEditViewController: UIViewController {
         }
       }
     }
-    subscriptions.append(cropViewSubscription)
+    .store(in: &subscriptions)
 
     viewModel.editingStack.start()
   }

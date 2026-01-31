@@ -60,7 +60,7 @@ public struct PhotosCropRotating: View {
   @State private var canReset: Bool = false
   @State private var isFocusingAspectRatio: Bool = false
 
-  @State private var cropViewState: CropView.State?
+  @State private var cropViewState: CropView.StateModel?
 
   @State var reset: SwiftUICropView.ResetAction = .init()
 
@@ -145,7 +145,7 @@ public struct PhotosCropRotating: View {
           SwiftUICropView(
             editingStack: editingStack,
             isAutoApplyEditingStackEnabled: true,
-            stateHandler: { state, _ in
+            stateHandler: { state in
 
               Task { @MainActor in
 
