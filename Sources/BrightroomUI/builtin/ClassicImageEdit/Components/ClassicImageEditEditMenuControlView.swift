@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditEditMenuControlBase: ClassicImageEditControlBase {
   override public required init(viewModel: ClassicImageEditViewModel) {
@@ -284,10 +284,10 @@ public enum ClassicImageEditEditMenu: CaseIterable {
       }
     }
     
-    override open func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-      if let edit = state.editingState.loadedState?.currentEdit {
+    override open func didReceiveCurrentEdit() {
+      if let edit = viewModel.editingStack.loadedState?.currentEdit {
         maskButton.hasChanges = !edit.drawings.blurredMaskPaths.isEmpty
-        
+
         contrastButton.hasChanges = edit.filters.contrast != nil
         exposureButton.hasChanges = edit.filters.exposure != nil
         temperatureButton.hasChanges = edit.filters.temperature != nil

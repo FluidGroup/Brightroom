@@ -29,7 +29,7 @@ public enum ImageTool: Sendable {
 
   public static func makeImageMetadata(
     from imageSource: CGImageSource
-  ) -> ImageProvider.State.ImageMetadata? {
+  ) -> ImageProvider.ImageMetadata? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
     guard
       let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)

@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditSaturationControlBase : ClassicImageEditFilterControlBase {
 
@@ -69,12 +69,14 @@ open class ClassicImageEditSaturationControl : ClassicImageEditSaturationControl
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.saturation).do { value in
+  private var _previousSaturation: FilterSaturation?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.saturation
+    if _previousSaturation != value {
+      _previousSaturation = value
       slider.set(value: value?.value ?? 0, in: FilterSaturation.range)
     }
-        
   }
   
   @objc

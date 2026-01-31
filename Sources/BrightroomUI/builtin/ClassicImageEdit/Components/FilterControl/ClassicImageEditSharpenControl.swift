@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditSharpenControlBase : ClassicImageEditFilterControlBase {
   
@@ -70,12 +70,14 @@ open class ClassicImageEditSharpenControl : ClassicImageEditSharpenControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.sharpen).do { value in
+  private var _previousSharpen: FilterSharpen?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.sharpen
+    if _previousSharpen != value {
+      _previousSharpen = value
       slider.set(value: value?.sharpness ?? 0, in: FilterSharpen.Params.sharpness)
     }
-    
   }
   
   @objc

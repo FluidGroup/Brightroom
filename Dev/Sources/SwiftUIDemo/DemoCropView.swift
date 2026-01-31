@@ -11,24 +11,24 @@ import BrightroomUI
 import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
-import Verge
+import StateGraph
 
 struct DemoCropView: View {
 
-  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
+  let editingStack: EditingStack
   @State var resultImage: ResultImage?
 
   init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStackState = .init(editingStack)
+    self.editingStack = editingStack
   }
 
   var body: some View {
     ZStack {
 
       VStack {
-        PhotosCropRotating(editingStack: { $editingStackState.driver })
+        PhotosCropRotating(editingStack: editingStack)
 //        Button("Done") {
 //          let image = try! $editingStackState.driver.makeRenderer().render().cgImage
 //          self.resultImage = .init(cgImage: image)
@@ -39,7 +39,7 @@ struct DemoCropView: View {
         HStack {
           Spacer()
           Button("Done") {
-            let image = try! $editingStackState.driver.makeRenderer().render().cgImage
+            let image = try! editingStack.makeRenderer().render().cgImage
             self.resultImage = .init(cgImage: image)
           }
           .buttonStyle(.borderedProminent)
@@ -62,7 +62,7 @@ struct DemoCropView: View {
 //    })
 
     .onAppear {
-      $editingStackState.driver.start()
+      editingStack.start()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
@@ -73,22 +73,20 @@ struct DemoCropView: View {
 
 #Preview("local") {
   DemoCropView(
-    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   )
 }
 
 #Preview("remote") {
   DemoCropView(
-    editingStack: {
-      EditingStack(
-        imageProvider: .init(
-          editableRemoteURL: URL(
-            string:
-              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-          )!
-        )
+    editingStack: EditingStack(
+      imageProvider: .init(
+        editableRemoteURL: URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
       )
-    }
+    )
   )
 }
 

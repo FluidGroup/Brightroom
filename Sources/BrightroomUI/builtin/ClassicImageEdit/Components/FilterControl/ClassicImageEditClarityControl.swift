@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditClarityControlBase : ClassicImageEditFilterControlBase {
   
@@ -70,12 +70,14 @@ open class ClassicImageEditClarityControl : ClassicImageEditClarityControlBase {
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.unsharpMask).do { value in
+  private var _previousUnsharpMask: FilterUnsharpMask?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.unsharpMask
+    if _previousUnsharpMask != value {
+      _previousUnsharpMask = value
       slider.set(value: value?.intensity ?? 0, in: FilterUnsharpMask.Params.intensity)
     }
-    
   }
   
   @objc

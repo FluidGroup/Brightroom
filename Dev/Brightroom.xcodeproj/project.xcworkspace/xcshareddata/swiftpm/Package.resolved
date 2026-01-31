@@ -10,15 +10,6 @@
       }
     },
     {
-      "identity" : "normalization",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/Normalization",
-      "state" : {
-        "revision" : "360cc940e9c9f5c14db229ea9757c1b18a541fff",
-        "version" : "2.0.1"
-      }
-    },
-    {
       "identity" : "precisionlevelslider",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
@@ -28,48 +19,12 @@
       }
     },
     {
-      "identity" : "rxswift",
+      "identity" : "swift-state-graph",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "location" : "https://github.com/VergeGroup/swift-state-graph",
       "state" : {
-        "revision" : "9dcaa4b333db437b0fbfaf453fad29069044a8b4",
-        "version" : "6.6.0"
-      }
-    },
-    {
-      "identity" : "swift-atomics",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-atomics.git",
-      "state" : {
-        "revision" : "6c89474e62719ddcc1e9614989fff2f68208fe10",
-        "version" : "1.1.0"
-      }
-    },
-    {
-      "identity" : "swift-collections",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
-      "state" : {
-        "revision" : "94cf62b3ba8d4bed62680a282d4c25f9c63c2efb",
-        "version" : "1.1.0"
-      }
-    },
-    {
-      "identity" : "swift-concurrency-task-manager",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/swift-concurrency-task-manager",
-      "state" : {
-        "revision" : "87605b623fa1a02c657534251ae238a56bc0d15c",
-        "version" : "3.0.0"
-      }
-    },
-    {
-      "identity" : "swift-macro-state-struct",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/swift-macro-state-struct",
-      "state" : {
-        "revision" : "f19ad3018ad718f9af725cbbc66a9d87f78d4780",
-        "version" : "3.0.1"
+        "revision" : "47e4f536c2e1ae75f00cb547934e43f3728e3bfc",
+        "version" : "0.17.0"
       }
     },
     {
@@ -115,24 +70,6 @@
       "state" : {
         "revision" : "88aac5305fe568ef62f73a3cf19f0b8392ffb52c",
         "version" : "1.0.5"
-      }
-    },
-    {
-      "identity" : "typedcomparator",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/TypedComparator",
-      "state" : {
-        "revision" : "337ce0e573e7637ddd29392cb88c3b852f042c8e",
-        "version" : "1.0.0"
-      }
-    },
-    {
-      "identity" : "verge",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/VergeGroup/Verge.git",
-      "state" : {
-        "revision" : "084a448dc2dac9bbaa79a70e100a1364d8afbd95",
-        "version" : "14.1.2"
       }
     }
   ],

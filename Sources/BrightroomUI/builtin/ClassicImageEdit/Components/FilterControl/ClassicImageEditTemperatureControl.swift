@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditTemperatureControlBase : ClassicImageEditFilterControlBase {
   
@@ -69,13 +69,14 @@ open class ClassicImageEditTemperatureControl : ClassicImageEditTemperatureContr
     }
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.temperature).do { value in
+  private var _previousTemperature: FilterTemperature?
 
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.temperature
+    if _previousTemperature != value {
+      _previousTemperature = value
       slider.set(value: value?.value ?? 0, in: FilterTemperature.range)
     }
-              
   }
   
   @objc

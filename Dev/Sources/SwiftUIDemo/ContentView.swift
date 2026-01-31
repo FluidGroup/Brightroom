@@ -17,9 +17,7 @@ struct ContentView: View {
         Form {
 
           NavigationLink("ImagePreviewView") {
-            DemoCropView2(editingStack: {
-              horizontalStack
-            })
+            DemoCropView2(editingStack: horizontalStack)
           }
 
           NavigationLink("Isolated", destination: IsolatedEditinView())
@@ -31,15 +29,13 @@ struct ContentView: View {
           }
 
           NavigationLink("Custom Filter") {
-            DemoFilterView(editingStack: {
-              horizontalStack
-            })
+            DemoFilterView(editingStack: horizontalStack)
           }
 
           Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {
-                DemoCropView(editingStack: { horizontalStack })
+                DemoCropView(editingStack: horizontalStack)
               }
             }
 
@@ -55,7 +51,7 @@ struct ContentView: View {
           Section("Restoration Vertical") {
             Button("Crop") {
               fullScreenView = .init {
-                DemoCropView(editingStack: { verticalStack })
+                DemoCropView(editingStack: verticalStack)
               }
             }
 
@@ -73,7 +69,7 @@ struct ContentView: View {
             Button("Local") {
               fullScreenView = .init {
                 DemoCropView(
-                  editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+                  editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
                 )
               }
             }
@@ -84,30 +80,22 @@ struct ContentView: View {
             content: {
               Button("Horizontal 1") {
                 fullScreenView = .init {
-                  SwiftUICropView(
-                    editingStack: {
-                      let stack = Mocks.makeEditingStack(
-                        image: Asset.horizontalRect.image
-                      )
-                      stack.cropModifier = .faceDetection(aspectRatio: .square)
-                      return stack
-                    }()
+                  let stack = Mocks.makeEditingStack(
+                    image: Asset.horizontalRect.image
                   )
+                  stack.cropModifier = .faceDetection(aspectRatio: .square)
+                  return SwiftUICropView(editingStack: stack)
                 }
               }
 
               Button("Horizontal 2") {
                 fullScreenView = .init {
-                  SwiftUICropView(
-                    editingStack: {
-                      let stack = Mocks.makeEditingStack(
-                        image: Asset.horizontalRect.image
-                      )
-                      stack.cropModifier = .faceDetection(aspectRatio: .square)
-                      return stack
-                    }()
+                  let stack = Mocks.makeEditingStack(
+                    image: Asset.horizontalRect.image
                   )
-                  .croppingAspectRatio(.square)
+                  stack.cropModifier = .faceDetection(aspectRatio: .square)
+                  return SwiftUICropView(editingStack: stack)
+                    .croppingAspectRatio(.square)
                 }
               }
 
@@ -320,7 +308,7 @@ struct WorkingOnPicked: View {
 
           Button("Crop") {
             fullScreenView = .init {
-              DemoCropView(editingStack: { stack })
+              DemoCropView(editingStack: stack)
             }
           }
 

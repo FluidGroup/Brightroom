@@ -11,7 +11,7 @@ import BrightroomUI
 import PrecisionLevelSlider
 import SwiftUI
 import UIKit
-import Verge
+import StateGraph
 
 public struct PhotosCropRotating: View {
 
@@ -51,7 +51,7 @@ public struct PhotosCropRotating: View {
     }
   }
 
-  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
+  let editingStack: EditingStack
 
   @State private var rotation: EditingCrop.Rotation?
   @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
@@ -60,18 +60,18 @@ public struct PhotosCropRotating: View {
   @State private var canReset: Bool = false
   @State private var isFocusingAspectRatio: Bool = false
 
-  @State private var cropViewState: Changes<CropView.State>?
+  @State private var cropViewState: CropView.StateModel?
 
   @State var reset: SwiftUICropView.ResetAction = .init()
 
   public init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStackState = .init(editingStack)
+    self.editingStack = editingStack
   }
 
   private var isLoading: Bool {
-    editingStackState.isLoading
+    editingStack.isLoading
   }
 
   public var body: some View {
@@ -110,7 +110,7 @@ public struct PhotosCropRotating: View {
 
             Spacer()
 
-            if editingStackState.loadedState?.hasUncommitedChanges ?? false {
+            if editingStack.loadedState?.hasUncommitedChanges ?? false {
               Button {
                 reset()
               } label: {
@@ -143,7 +143,7 @@ public struct PhotosCropRotating: View {
           .zIndex(1)
 
           SwiftUICropView(
-            editingStack: $editingStackState.driver,
+            editingStack: editingStack,
             isAutoApplyEditingStackEnabled: true,
             stateHandler: { state in
 
@@ -187,7 +187,7 @@ public struct PhotosCropRotating: View {
       }
     }
     .onAppear {
-      $editingStackState.driver.start()
+      editingStack.start()
     }
 
   }
@@ -280,7 +280,7 @@ public struct PhotosCropRotating: View {
 
     let isDirectionButtonDisabled: Bool = {
 
-      guard let _ = editingStackState.loadedState else {
+      guard let _ = editingStack.loadedState else {
         return true
       }
 
@@ -366,7 +366,7 @@ public struct PhotosCropRotating: View {
 
           Group {
 
-            let sourceDirection = editingStackState.loadedState.map({ Direction(.init($0.imageSize)) })
+            let sourceDirection = editingStack.loadedState.map({ Direction(.init($0.imageSize)) })
             let direction = croppingAspectRatio.map({ Direction($0) }) ?? sourceDirection
 
             switch sourceDirection {
@@ -379,9 +379,9 @@ public struct PhotosCropRotating: View {
               case .vertical:
                 AspectRationButton(
                   title: Text("ORIGINAL"),
-                  isSelected: croppingAspectRatio == editingStackState.loadedState.map { .init($0.imageSize) }
+                  isSelected: croppingAspectRatio == editingStack.loadedState.map { .init($0.imageSize) }
                 ) {
-                  guard let imageSize = editingStackState.loadedState?.imageSize else {
+                  guard let imageSize = editingStack.loadedState?.imageSize else {
                     return
                   }
                   croppingAspectRatio = PixelAspectRatio.init(imageSize)
@@ -389,9 +389,9 @@ public struct PhotosCropRotating: View {
               case .horizontal:
                 AspectRationButton(
                   title: Text("ORIGINAL"),
-                  isSelected: croppingAspectRatio == editingStackState.loadedState.map { .init($0.imageSize).swapped() }
+                  isSelected: croppingAspectRatio == editingStack.loadedState.map { .init($0.imageSize).swapped() }
                 ) {
-                  guard let imageSize = editingStackState.loadedState?.imageSize else {
+                  guard let imageSize = editingStack.loadedState?.imageSize else {
                     return
                   }
                   croppingAspectRatio = PixelAspectRatio.init(imageSize).swapped()
@@ -404,9 +404,9 @@ public struct PhotosCropRotating: View {
               case .vertical:
                 AspectRationButton(
                   title: Text("ORIGINAL"),
-                  isSelected: croppingAspectRatio == editingStackState.loadedState.map { .init($0.imageSize).swapped() }
+                  isSelected: croppingAspectRatio == editingStack.loadedState.map { .init($0.imageSize).swapped() }
                 ) {
-                  guard let imageSize = editingStackState.loadedState?.imageSize else {
+                  guard let imageSize = editingStack.loadedState?.imageSize else {
                     return
                   }
                   croppingAspectRatio = PixelAspectRatio.init(imageSize).swapped()
@@ -414,9 +414,9 @@ public struct PhotosCropRotating: View {
               case .horizontal:
                 AspectRationButton(
                   title: Text("ORIGINAL"),
-                  isSelected: croppingAspectRatio == editingStackState.loadedState.map { .init($0.imageSize) }
+                  isSelected: croppingAspectRatio == editingStack.loadedState.map { .init($0.imageSize) }
                 ) {
-                  guard let imageSize = editingStackState.loadedState?.imageSize else {
+                  guard let imageSize = editingStack.loadedState?.imageSize else {
                     return
                   }
                   croppingAspectRatio = PixelAspectRatio.init(imageSize)
