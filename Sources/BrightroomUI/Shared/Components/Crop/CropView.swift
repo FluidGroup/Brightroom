@@ -299,16 +299,19 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
 
     // Set up state observation for external handler
-    withGraphTracking { [weak self] in
-      guard let self else { return }
-      self.stateHandler(self.state)
+    withGraphTracking {
+      withGraphTrackingGroup { [weak self] in
+        guard let self else { return }
+        self.stateHandler(self.state)
+      }
     }
     .store(in: &subscriptions)
 
     // Set up layout version observation for internal layout updates
-    withGraphTracking { [weak self] in
-      guard let self else { return }
-      self.handleLocalStateChange()
+    withGraphTracking {
+      withGraphTrackingGroup { [weak self] in
+        self?.handleLocalStateChange()
+      }
     }
     .store(in: &subscriptions)
   }
@@ -540,6 +543,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     if let ratio = state.preferredAspectRatio {
       state.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
     }
+    layoutVersion += 1
   }
 
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio?) {
