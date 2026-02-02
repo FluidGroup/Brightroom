@@ -38,7 +38,6 @@
 		4B58E82F260F0027004A834F /* orientation_left.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE8260BB32600F77E9A /* orientation_left.HEIC */; };
 		4B58E830260F0027004A834F /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4B58E831260F0027004A834F /* orientation_up.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* orientation_up.HEIC */; };
-		4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */; };
 		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
 		4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */; };
 		4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513CA2B6BEE2100A4743E /* SwiftUISupport */; };
@@ -91,6 +90,7 @@
 		4BF934202614CAD600E0637A /* CGContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF9341F2614CAD600E0637A /* CGContextTests.swift */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D2B2660F90200CC45EA /* ImageSourceInitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110D2A2660F90200CC45EA /* ImageSourceInitTest.swift */; };
@@ -945,8 +945,8 @@
 				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
+				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
 				4BA2B1B42B86282D00E6DE64 /* BrightroomUIPhotosCrop in Frameworks */,
-				4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1584,11 +1584,11 @@
 			packageProductDependencies = (
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
-				4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */,
 				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
 				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
 				4B46E71A2B762E20003179C2 /* MondrianLayout */,
 				4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */,
+				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -2275,7 +2275,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -2335,7 +2335,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.brightroom.$(TARGET_NAME)";
@@ -2596,10 +2596,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
 		};
-		4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = "Reveal-SDK";
-		};
 		4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */;
@@ -2613,6 +2609,10 @@
 		4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomUIPhotosCrop;
+		};
+		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = "Reveal-SDK";
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -22,7 +22,8 @@
 import CoreImage
 import SwiftUI
 import UIKit
-import Verge
+import Combine
+import StateGraph
 
 #if !COCOAPODS
 import BrightroomEngine
@@ -38,9 +39,9 @@ import BrightroomEngine
 ///   - Implicit animations occurs in first time load with remote image.
 public final class CropView: UIView, UIScrollViewDelegate {
 
-  public struct State: Equatable {
+  public final class StateModel {
 
-    public struct AdjustmentKind: OptionSet {
+    public struct AdjustmentKind: OptionSet, Equatable {
 
       public var rawValue: Int = 0
 
@@ -53,19 +54,19 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     }
 
-    public fileprivate(set) var proposedCrop: EditingCrop?
+    @GraphStored public var proposedCrop: EditingCrop? = nil
 
-    public fileprivate(set) var frame: CGRect = .zero
+    @GraphStored public var frame: CGRect = .zero
 
-    public fileprivate(set) var adjustmentKind: AdjustmentKind = []
-
-    fileprivate var layoutVersion: UInt64 = 0
+    @GraphStored public var adjustmentKind: AdjustmentKind = []
 
     /**
      Returns aspect ratio.
      Would not be affected by rotation.
      */
-    public fileprivate(set) var preferredAspectRatio: PixelAspectRatio?
+    @GraphStored public var preferredAspectRatio: PixelAspectRatio? = nil
+
+    public init() {}
   }
 
   /**
@@ -73,7 +74,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public private(set) weak var cropOutsideOverlay: UIView?
 
-  public let store: UIStateStore<State, Never>
+  public let state: StateModel = .init()
+
+  @GraphStored private var layoutVersion: UInt64 = 0
 
   /**
    A Boolean value that indicates whether the guide is interactive.
@@ -93,9 +96,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public var clipsToGuide: Bool = false {
     didSet {
-      store.commit {
-        $0.layoutVersion += 1
-      }
+      layoutVersion += 1
     }
   }
 
@@ -112,9 +113,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public var isZoomEnabled: Bool = true {
     didSet {
-      store.commit {
-        $0.layoutVersion += 1
-      }
+      layoutVersion += 1
     }
   }
 
@@ -203,7 +202,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     return view
   }()
 
-  private var subscriptions = Set<AnyCancellable>()
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   /// A throttling timer to apply guide changed event.
   ///
@@ -217,9 +216,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private var isBinding = false
 
-  private var stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+  private var stateHandler: @MainActor (StateModel) -> Void = { _ in }
 
   var isAutoApplyEditingStackEnabled = false
+
+  // Change tracking for state
+  private var _previousFrame: CGRect?
+  private var _previousProposedCrop: EditingCrop?
+  private var _previousLayoutVersion: UInt64 = 0
 
   // MARK: - Initializers
 
@@ -249,8 +253,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     self.editingStack = editingStack
     self.contentInset = contentInset
-
-    self.store = .init(initialState: .init(), logger: nil)
 
     super.init(frame: .zero)
 
@@ -284,17 +286,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     guideView.didUpdateAdjustmentKind = { [weak self] kind in
       guard let self else { return }
-      self.store.commit {
-        $0.adjustmentKind = kind
-      }
+      self.state.adjustmentKind = kind
     }
-
-    #if false
-    store.sinkState { state in
-      EditorLog.debug(state.primitive)
-    }
-    .store(in: &subscriptions)
-    #endif
 
     // apply defaultAppearance
     do {
@@ -305,10 +298,22 @@ public final class CropView: UIView, UIScrollViewDelegate {
       })
     }
 
-    store.sinkState { [weak self] state in
-      self?.stateHandler(state)
+    // Set up state observation for external handler
+    withGraphTracking {
+      withGraphTrackingGroup { [weak self] in
+        guard let self else { return }
+        self.stateHandler(self.state)
+      }
     }
-    .storeWhileSourceActive()
+    .store(in: &subscriptions)
+
+    // Set up layout version observation for internal layout updates
+    withGraphTracking {
+      withGraphTrackingGroup { [weak self] in
+        self?.handleLocalStateChange()
+      }
+    }
+    .store(in: &subscriptions)
   }
 
   @available(*, unavailable)
@@ -318,7 +323,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   // MARK: - Functions
 
-  func setStateHandler(_ handler: @escaping @MainActor (Verge.Changes<State>) -> Void) {
+  func setStateHandler(_ handler: @escaping @MainActor (StateModel) -> Void) {
     self.stateHandler = handler
   }
 
@@ -335,98 +340,100 @@ public final class CropView: UIView, UIScrollViewDelegate {
       editingStack.start()
 
       binding: do {
-        store.sinkState(queue: .mainIsolated()) { [weak self, areAnimationsEnabled] state in
 
-          guard let self = self else { return }
-
-          state.ifChanged({
-            (
-              $0.frame,
-              $0.layoutVersion
-            )
-          }).do { (frame, _) in
-
-            guard let crop = state.proposedCrop else {
-              return
+        withGraphTracking {
+          // To restore current crop from editing-stack
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.imageForCrop }, onChange: { [weak self] image in
+            if let image {
+              self?.setImage(image)
             }
-
-            guard frame != .zero else {
-              return
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.crop }, onChange: { [weak self] crop in
+            if let crop {
+              self?.setCrop(crop)
             }
-
-            setupScrollViewOnce: do {
-              if self.hasSetupScrollViewCompleted == false {
-                self.hasSetupScrollViewCompleted = true
-
-                self.imagePlatterView.bounds = .init(
-                  origin: .zero,
-                  size: crop.scrollViewContentSize()
-                )
-
-                let scrollView = self.scrollView
-
-                // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
-                UIView.performWithoutAnimation {
-                  let currentZoomScale = scrollView.zoomScale
-                  let contentSize = crop.scrollViewContentSize()
-                  if scrollView.contentSize != contentSize {
-                    scrollView.contentInset = .zero
-                    scrollView.zoomScale = 1
-                    scrollView.contentSize = contentSize
-                    scrollView.zoomScale = currentZoomScale
-                  }
-                }
-              }
-            }
-
-            self.updateScrollContainerView(
-              by: crop,
-              preferredAspectRatio: state.preferredAspectRatio,
-              animated: areAnimationsEnabled && state.previous?.proposedCrop != nil /* whether first time load */,
-              animatesRotation: state.hasChanges(\.proposedCrop?.rotation)
-            )
-
-          }
-
-          if self.isAutoApplyEditingStackEnabled {
-            state.ifChanged(\.proposedCrop).do { crop in
-              guard let crop = crop else {
-                return
-              }
-              self.editingStack.crop(crop)
-            }
-          }
-
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.isLoading }, onChange: { [weak self] isLoading in
+            self?.updateLoadingState(displays: isLoading)
+          })
         }
         .store(in: &subscriptions)
 
-        // To restore current crop from editing-stack
-        editingStack.sinkState { [weak self] state in
-
-          guard let self = self else { return }
-
-          if let loaded = state.mapIfPresent(\.loadedState) {
-
-            loaded.ifChanged(\.imageForCrop).do { image in
-              self.setImage(image)
-            }
-
-            loaded.ifChanged(\.currentEdit.crop).do { crop in
-              self.setCrop(loaded.currentEdit.crop)
-            }
-
-          }
-
-          state.ifChanged(\.isLoading).do { isLoading in
-            self.updateLoadingState(displays: isLoading)
-          }
-
-        }
-        .store(in: &subscriptions)
       }
 
     }
 
+  }
+
+  private func handleLocalStateChange() {
+    // Access @GraphStored properties first to ensure tracking is set up
+    let currentFrame = state.frame
+    let currentLayoutVersion = layoutVersion
+    let currentProposedCrop = state.proposedCrop
+
+    let previousFrame = _previousFrame
+    let previousLayoutVersion = _previousLayoutVersion
+    let previousProposedCrop = _previousProposedCrop
+    defer {
+      _previousFrame = currentFrame
+      _previousLayoutVersion = currentLayoutVersion
+      _previousProposedCrop = currentProposedCrop
+    }
+
+    // Check if frame, layoutVersion, or proposedCrop changed
+    let frameChanged = previousFrame != currentFrame
+    let layoutVersionChanged = previousLayoutVersion != currentLayoutVersion
+    let proposedCropChanged = previousProposedCrop != currentProposedCrop
+
+    if frameChanged || layoutVersionChanged || proposedCropChanged {
+      guard let crop = currentProposedCrop else {
+        return
+      }
+
+      guard currentFrame != .zero else {
+        return
+      }
+
+      setupScrollViewOnce: do {
+        if self.hasSetupScrollViewCompleted == false {
+          self.hasSetupScrollViewCompleted = true
+
+          self.imagePlatterView.bounds = .init(
+            origin: .zero,
+            size: crop.scrollViewContentSize()
+          )
+
+          let scrollView = self.scrollView
+
+          // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+          UIView.performWithoutAnimation {
+            let currentZoomScale = scrollView.zoomScale
+            let contentSize = crop.scrollViewContentSize()
+            if scrollView.contentSize != contentSize {
+              scrollView.contentInset = .zero
+              scrollView.zoomScale = 1
+              scrollView.contentSize = contentSize
+              scrollView.zoomScale = currentZoomScale
+            }
+          }
+        }
+      }
+
+      self.updateScrollContainerView(
+        by: crop,
+        preferredAspectRatio: state.preferredAspectRatio,
+        animated: areAnimationsEnabled && previousProposedCrop != nil /* whether first time load */,
+        animatesRotation: previousProposedCrop?.rotation != currentProposedCrop?.rotation
+      )
+    }
+
+    if self.isAutoApplyEditingStackEnabled {
+      if proposedCropChanged {
+        if let crop = currentProposedCrop {
+          self.editingStack.crop(crop)
+        }
+      }
+    }
   }
 
   private func updateLoadingState(displays: Bool) {
@@ -482,7 +489,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    Applies the current state to the EditingStack.
    */
   public func applyEditingStack() {
-    guard let crop = store.state.proposedCrop else {
+    guard let crop = state.proposedCrop else {
       EditorLog.error(.cropView, "EditingStack has not completed loading.")
       return
     }
@@ -492,12 +499,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func resetCrop() {
     _pixeleditor_ensureMainThread()
 
-    store.commit {
-      if let proposedCrop = $0.proposedCrop {
-        $0.proposedCrop = proposedCrop.makeInitial()
-        $0.preferredAspectRatio = nil
-        $0.layoutVersion += 1
-      }
+    if let proposedCrop = state.proposedCrop {
+      state.proposedCrop = proposedCrop.makeInitial()
+      state.preferredAspectRatio = nil
     }
 
     guideView.setLockedAspectRatio(nil)
@@ -506,78 +510,54 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func setRotation(_ rotation: EditingCrop.Rotation) {
     _pixeleditor_ensureMainThread()
 
-    store.commit {
-
-      guard $0.proposedCrop?.rotation != rotation else {
-        return
-      }
-
-      if let crop = $0.proposedCrop {
-
-        $0.proposedCrop?.updateCropExtent(
-          crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians)
-        )
-
-        $0.proposedCrop?.rotation = rotation
-      }
-
-      $0.layoutVersion += 1
+    guard var crop = state.proposedCrop, crop.rotation != rotation else {
+      return
     }
 
+    crop.updateCropExtent(
+      crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians)
+    )
+    crop.rotation = rotation
+    state.proposedCrop = crop
   }
 
   public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
-
-    let records = store.commit {
-
-      guard $0.proposedCrop?.adjustmentAngle != angle else {
-        return false
-      }
-
-      $0.proposedCrop?.adjustmentAngle = angle
-      $0.layoutVersion += 1
-
-      return true
+    guard var crop = state.proposedCrop, crop.adjustmentAngle != angle else {
+      return
     }
 
-    if records {
-      record()
-    }
+    crop.adjustmentAngle = angle
+    state.proposedCrop = crop
 
+    record()
   }
 
   public func setCrop(_ crop: EditingCrop) {
     _pixeleditor_ensureMainThread()
 
-    store.commit {
-      guard $0.proposedCrop != crop else {
-        return
-      }
-
-      $0.proposedCrop = crop
-      if let ratio = $0.preferredAspectRatio {
-        $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
-      }
-      $0.layoutVersion += 1
+    guard state.proposedCrop != crop else {
+      return
     }
+
+    state.proposedCrop = crop
+    if let ratio = state.preferredAspectRatio {
+      state.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+    }
+    layoutVersion += 1
   }
 
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio?) {
     _pixeleditor_ensureMainThread()
 
-    store.commit {
+    guard state.preferredAspectRatio != ratio else {
+      return
+    }
 
-      guard $0.preferredAspectRatio != ratio else {
-        return
-      }
-
-      $0.preferredAspectRatio = ratio
-      if let ratio = ratio {
-        $0.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
-      } else {
-        $0.proposedCrop?.purgeAspectRatio()
-      }
-      $0.layoutVersion += 1
+    state.preferredAspectRatio = ratio
+    if let ratio = ratio {
+      state.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+    } else {
+      state.proposedCrop?.purgeAspectRatio()
     }
 
     guideView.setLockedAspectRatio(ratio)
@@ -597,19 +577,14 @@ public final class CropView: UIView, UIScrollViewDelegate {
   }
 
   public func swapCropRectangleDirection() {
-
-    store.commit {
-
-      guard let crop = $0.proposedCrop else {
-        return
-      }
-
-      $0.proposedCrop?.updateCropExtentIfNeeded(
-        toFitAspectRatio: PixelAspectRatio(crop.cropExtent.size).swapped()
-      )
-      $0.layoutVersion += 1
-
+    guard var crop = state.proposedCrop else {
+      return
     }
+
+    crop.updateCropExtentIfNeeded(
+      toFitAspectRatio: PixelAspectRatio(crop.cropExtent.size).swapped()
+    )
+    state.proposedCrop = crop
   }
 
   /**
@@ -651,12 +626,16 @@ public final class CropView: UIView, UIScrollViewDelegate {
 // MARK: Internal
 
 extension CropView {
-  private func setImage(_ cgImage: CGImage) {
-    imagePlatterView.image = UIImage(
+  private func setImage(_ cgImage: CGImage) {  
+    setImage(uiImage: UIImage(
       cgImage: cgImage,
       scale: 1,
       orientation: .up
-    )
+    ))
+  }
+  
+  private func setImage(uiImage: UIImage) {
+    imagePlatterView.image = uiImage
   }
 
   override public func layoutSubviews() {
@@ -676,10 +655,8 @@ extension CropView {
     /// to update masking with cropOutsideOverlay
     guideView.setNeedsLayout()
 
-    store.commit {
-      if $0.frame != frame {
-        $0.frame = frame
-      }
+    if state.frame != frame {
+      state.frame = frame
     }
 
     #if DEBUG
@@ -916,79 +893,66 @@ extension CropView {
 
   @inline(__always)
   private func didChangeGuideViewWithDelay() {
-
-    guard let currentProposedCrop = store.state.proposedCrop else {
+    guard let crop = state.proposedCrop else {
       return
     }
 
     record()
 
-    updateScrollViewInset(crop: currentProposedCrop)
-
-    /// Triggers layout update later
-    debounce.on { [weak self] in
-
-      guard let self = self else { return }
-
-      self.store.commit {
-        $0.layoutVersion += 1
-      }
-    }
+    updateScrollViewInset(crop: crop)
   }
 
   private func record() {
-    store.commit { state in
 
-      guard let crop = state.proposedCrop else {
-        return
-      }
-
-      // remove rotation while converting rect
-      let current = scrollView.transform
-      let currentGuideViewCenter = guideView.center
-
-      do {
-        // rotating support
-        let croppingRect = guideView.convert(guideView.bounds, to: guideBackdropView)
-
-        // offsets guide view rect in maximum size
-        // for case of adjusted guide view by interaction
-        let offsetX = croppingRect.midX - guideBackdropView.bounds.midX
-        let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
-
-        // move focusing area to center
-        scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
-          .concatenating(.init(translationX: -offsetX, y: -offsetY))
-          .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
-
-        // TODO: Find calculation way withoug using convert rect
-        // To work correctly, ignoring transform temporarily.
-
-        // move the guide view to center for convert-rect.
-        guideView.center = guideBackdropView.center
-      }
-
-      // calculate
-      let guideRectInImageView = guideView.convert(guideView.bounds, to: imagePlatterView)
-
-      do {
-        // restore guide view center same as displaying
-        guideView.center = currentGuideViewCenter
-
-        // restore rotation
-        scrollView.transform = current
-      }
-
-      // make crop extent for image
-      // converts rectangle for display into image's geometry.
-      let resolvedRect = crop.makeCropExtent(
-        rect: guideRectInImageView
-      )
-
-      state.proposedCrop?.updateCropExtent(
-        resolvedRect
-      )
+    guard let crop = state.proposedCrop else {
+      return
     }
+
+    // remove rotation while converting rect
+    let current = scrollView.transform
+    let currentGuideViewCenter = guideView.center
+
+    do {
+      // rotating support
+      let croppingRect = guideView.convert(guideView.bounds, to: guideBackdropView)
+
+      // offsets guide view rect in maximum size
+      // for case of adjusted guide view by interaction
+      let offsetX = croppingRect.midX - guideBackdropView.bounds.midX
+      let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
+
+      // move focusing area to center
+      scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
+        .concatenating(.init(translationX: -offsetX, y: -offsetY))
+        .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
+
+      // TODO: Find calculation way withoug using convert rect
+      // To work correctly, ignoring transform temporarily.
+
+      // move the guide view to center for convert-rect.
+      guideView.center = guideBackdropView.center
+    }
+
+    // calculate
+    let guideRectInImageView = guideView.convert(guideView.bounds, to: imagePlatterView)
+
+    do {
+      // restore guide view center same as displaying
+      guideView.center = currentGuideViewCenter
+
+      // restore rotation
+      scrollView.transform = current
+    }
+
+    // make crop extent for image
+    // converts rectangle for display into image's geometry.
+    let resolvedRect = crop.makeCropExtent(
+      rect: guideRectInImageView
+    )
+
+    state.proposedCrop?.updateCropExtent(
+      resolvedRect
+    )
   }
 
   @inline(__always)
@@ -1030,9 +994,7 @@ extension CropView {
 
       guard let self = self else { return }
 
-      self.store.commit {
-        $0.layoutVersion += 1
-      }
+      self.layoutVersion += 1
     }
   }
 
@@ -1048,9 +1010,7 @@ extension CropView {
         return
       }
 
-      self.store.commit {
-        $0.layoutVersion += 1
-      }
+      self.layoutVersion += 1
     }
   }
 
@@ -1086,7 +1046,7 @@ extension CropView {
 
   var remainingScroll: UIEdgeInsets {
 
-    guard let crop = store.state.proposedCrop else { 
+    guard let crop = state.proposedCrop else {
       return .zero
     }
 

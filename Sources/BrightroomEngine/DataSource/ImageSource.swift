@@ -21,7 +21,6 @@
 
 import CoreImage
 import UIKit
-import Verge
 
 #if canImport(UIKit)
   import UIKit

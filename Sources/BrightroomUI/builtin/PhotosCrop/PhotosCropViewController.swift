@@ -22,7 +22,8 @@
 import UIKit
 import SwiftUI
 
-import Verge
+import Combine
+import StateGraph
 
 #if !COCOAPODS
 import BrightroomEngine
@@ -65,14 +66,10 @@ public final class PhotosCropViewController: UIViewController {
     public var didCancel: (PhotosCropViewController) -> Void = { _ in }
   }
   
-  private struct State: Equatable {
-    var isSelectingAspectRatio = false
-    var options: Options
-  }
-  
   // MARK: - Properties
-  
-  private let store: UIStateStore<State, Never>
+
+  private var isSelectingAspectRatio = false
+  private var options: Options
   
   private let cropView: CropView
   private var aspectRatioControl: PhotosCropAspectRatioControl?
@@ -88,8 +85,14 @@ public final class PhotosCropViewController: UIViewController {
   
   private let aspectRatioControlLayoutGuide = UILayoutGuide()
     
-  private var subscriptions = Set<AnyCancellable>()
+  private var subscriptions: Set<AnyCancellable> = .init()
   private var hasSetupLoadedUICompleted = false
+
+  // Change tracking
+  private var _previousIsSelectingAspectRatio: Bool?
+  private var _previousOptions: Options?
+  private var _previousHasUncommitedChanges: Bool?
+  private var _previousPreferredAspectRatio: PixelAspectRatio?
   
   public var localizedStrings: LocalizedStrings
   
@@ -101,7 +104,7 @@ public final class PhotosCropViewController: UIViewController {
     localizedStrings: LocalizedStrings = .init()
   ) {
     self.localizedStrings = localizedStrings
-    self.store = .init(initialState: .init(options: options))
+    self.options = options
     self.editingStack = editingStack
     cropView = .init(editingStack: editingStack)
     super.init(nibName: nil, bundle: nil)
@@ -253,44 +256,48 @@ public final class PhotosCropViewController: UIViewController {
       view.layoutIfNeeded()
     }
          
-    editingStack.sinkState { [weak self] state in
-      
-      guard let self = self else { return }
-                  
-      if let state = state.mapIfPresent(\.loadedState) {
-        
-        /// Loaded
-        
-        self.setUpLoadedUI(state: state.primitive)
-                      
-        state.ifChanged(\.hasUncommitedChanges).do { hasChanges in
-          self.resetButton.isHidden = !hasChanges
+    withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+
+        if let loadedState = self.editingStack.loadedState {
+
+          /// Loaded
+
+          self.setUpLoadedUI(state: loadedState)
+
+          let hasChanges = loadedState.hasUncommitedChanges
+          if self._previousHasUncommitedChanges != hasChanges {
+            self._previousHasUncommitedChanges = hasChanges
+            self.resetButton.isHidden = !hasChanges
+          }
+
+        } else {
+
+          /// Loading
+
+          self.aspectRatioButton.isEnabled = false
+          self.resetButton.isEnabled = false
+          self.rotateButton.isEnabled = false
+          self.doneButton.isEnabled = false
+
         }
-        
-      } else {
-        
-        /// Loading
-        
-        self.aspectRatioButton.isEnabled = false
-        self.resetButton.isEnabled = false
-        self.rotateButton.isEnabled = false
-        self.doneButton.isEnabled = false
-             
       }
-                
     }
     .store(in: &subscriptions)
-           
-    store.sinkState { [weak self] state in
-      guard let self = self else { return }
-      self.update(with: state)
+
+    withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+        self.update()
+      }
     }
     .store(in: &subscriptions)
-    
+
     editingStack.start()
   }
     
-  private func setUpLoadedUI(state: EditingStack.State.Loaded) {
+  private func setUpLoadedUI(state: EditingStack.Loaded) {
     
     guard hasSetupLoadedUICompleted == false else {
       return
@@ -335,28 +342,30 @@ public final class PhotosCropViewController: UIViewController {
     
     /// refresh current state
     UIView.performWithoutAnimation {
-      update(with: store.state)
+      update()
     }
-    
-    cropView.store.sinkState { [weak self] (state) in
-      
-      guard let self = self else { return }
 
-      state.ifChanged(\.preferredAspectRatio).do { ratio in
-        self.aspectRatioControl?.setSelected(ratio)
+    withGraphTracking { [weak self] in
+      withGraphTrackingGroup {
+        guard let self = self else { return }
+
+        let ratio = self.cropView.state.preferredAspectRatio
+        if self._previousPreferredAspectRatio != ratio {
+          self._previousPreferredAspectRatio = ratio
+          self.aspectRatioControl?.setSelected(ratio)
+        }
       }
-      
     }
     .store(in: &subscriptions)
-        
+
   }
   
-  private func update(with state: Changes<State>) {
-    
-    let options = state.map(\.options)
-    
-    options.ifChanged(\.aspectRatioOptions).do { value in
-      switch value {
+  private func update() {
+
+    let currentOptions = options
+    if _previousOptions != currentOptions {
+      _previousOptions = currentOptions
+      switch currentOptions.aspectRatioOptions {
       case .fixed(let aspectRatio):
         aspectRatioButton.alpha = 0
         cropView.setCroppingAspectRatio(aspectRatio)
@@ -365,10 +374,12 @@ public final class PhotosCropViewController: UIViewController {
         cropView.setCroppingAspectRatio(nil)
       }
     }
-    
-    state.ifChanged(\.isSelectingAspectRatio).do { value in
+
+    let selecting = isSelectingAspectRatio
+    if _previousIsSelectingAspectRatio != selecting {
+      _previousIsSelectingAspectRatio = selecting
       UIViewPropertyAnimator.init(duration: 0.4, dampingRatio: 1) { [self] in
-        if value {
+        if selecting {
           aspectRatioControl?.alpha = 1
           aspectRatioButton.tintColor = .systemYellow
         } else {
@@ -378,33 +389,31 @@ public final class PhotosCropViewController: UIViewController {
       }
       .startAnimation()
     }
-    
+
   }
   
   @objc private func handleRotateButton() {
-    guard let proposedCrop = cropView.store.state.proposedCrop else {
+    guard let proposedCrop = cropView.state.proposedCrop else {
       return
     }
 
     let rotation = proposedCrop.rotation.next()
     cropView.setRotation(rotation)
 
-    if let ratio = cropView.store.state.preferredAspectRatio {
+    if let ratio = cropView.state.preferredAspectRatio {
       cropView.setCroppingAspectRatio(ratio.swapped())
     } else {
       // CropView update automatically
     }
 
   }
-  
+
   @objc private func handleAspectRatioButton() {
-    store.commit {
-      $0.isSelectingAspectRatio.toggle()
-    }
+    isSelectingAspectRatio.toggle()
   }
-  
+
   @objc private func handleResetButton() {
-    switch store.state.options.aspectRatioOptions {
+    switch options.aspectRatioOptions {
     case .fixed(let ratio):
       cropView.setCroppingAspectRatio(ratio)
     case .selectable:

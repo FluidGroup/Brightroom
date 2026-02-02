@@ -20,9 +20,10 @@
 // THE SOFTWARE.
 
 import UIKit
+import StateGraph
 
 open class ClassicImageEditFilterControlBase : ClassicImageEditControlBase {
-  
+
   open var title: String {
     fatalError("Must be overrided")
   }

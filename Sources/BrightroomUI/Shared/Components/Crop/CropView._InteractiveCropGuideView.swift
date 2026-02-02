@@ -48,7 +48,7 @@ extension CropView {
     var updating: () -> Void = {}
     var didChange: () -> Void = {}
 
-    var didUpdateAdjustmentKind: (CropView.State.AdjustmentKind) -> Void = { _ in }
+    var didUpdateAdjustmentKind: (CropView.StateModel.AdjustmentKind) -> Void = { _ in }
 
     private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
     private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)

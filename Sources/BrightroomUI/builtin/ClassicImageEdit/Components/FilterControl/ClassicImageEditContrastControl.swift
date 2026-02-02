@@ -23,7 +23,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditContrastControlBase : ClassicImageEditFilterControlBase {
   public required init(viewModel: ClassicImageEditViewModel) {
@@ -68,12 +68,14 @@ open class ClassicImageEditContrastControl : ClassicImageEditContrastControlBase
       
   }
   
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>)     {
+  private var _previousContrast: FilterContrast?
 
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.contrast).do { value in
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.contrast
+    if _previousContrast != value {
+      _previousContrast = value
       slider.set(value: value?.value ?? 0, in: FilterContrast.range)
     }
-        
   }
   
   @objc

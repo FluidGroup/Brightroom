@@ -24,7 +24,7 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import StateGraph
 
 open class ClassicImageEditExposureControlBase : ClassicImageEditFilterControlBase {
 
@@ -69,12 +69,14 @@ open class ClassicImageEditExposureControl : ClassicImageEditExposureControlBase
     }
   }
 
-  open override func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
-    state.ifChanged(\.editingState.loadedState?.currentEdit.filters.exposure).do { value in
+  private var _previousExposure: FilterExposure?
+
+  open override func didReceiveCurrentEdit() {
+    let value = viewModel.editingStack.loadedState?.currentEdit.filters.exposure
+    if _previousExposure != value {
+      _previousExposure = value
       slider.set(value: value?.value ?? 0, in: FilterExposure.range)
     }
-    
   }
 
   @objc

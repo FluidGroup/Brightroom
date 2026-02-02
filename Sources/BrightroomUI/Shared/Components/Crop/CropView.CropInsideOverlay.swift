@@ -118,11 +118,11 @@ extension CropView {
       super.init(frame: .zero)
     }
 
-    open func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    open func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
 
     }
 
-    open func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    open func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
 
     }
 
@@ -134,7 +134,7 @@ extension CropView {
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    public init(@ViewBuilder content: @escaping (CropView.State.AdjustmentKind?) -> Content) {
+    public init(@ViewBuilder content: @escaping (CropView.StateModel.AdjustmentKind?) -> Content) {
       
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -147,17 +147,17 @@ extension CropView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    open override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    open override func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       proxy.activeKind = kind
     }
 
-    open override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    open override func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       proxy.activeKind = nil
     }
 
     private final class Proxy: ObservableObject {
 
-      @Published var activeKind: CropView.State.AdjustmentKind?
+      @Published var activeKind: CropView.StateModel.AdjustmentKind?
 
     }
 
@@ -165,11 +165,11 @@ extension CropView {
 
       @ObservedObject var proxy: Proxy
 
-      private let content: (CropView.State.AdjustmentKind?) -> Content
+      private let content: (CropView.StateModel.AdjustmentKind?) -> Content
 
       public init(
         proxy: Proxy,
-        content: @escaping (CropView.State.AdjustmentKind?) -> Content
+        content: @escaping (CropView.StateModel.AdjustmentKind?) -> Content
       ) {
         self.content = content
         self.proxy = proxy
@@ -267,7 +267,7 @@ extension CropView {
       guideView.alpha = 0
     }
 
-    public override func didBeginAdjustment(kind: CropView.State.AdjustmentKind) {
+    public override func didBeginAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 1
@@ -276,7 +276,7 @@ extension CropView {
       }
     }
 
-    public override func didEndAdjustment(kind: CropView.State.AdjustmentKind) {
+    public override func didEndAdjustment(kind: CropView.StateModel.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 0

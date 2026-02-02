@@ -12,20 +12,21 @@ import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
 import SwiftUISupport
-import Verge
+import StateGraph
 
 struct DemoCropView2: View {
 
-  @ReadingObject<EditingStack> var editingStackState: EditingStack.State
+  let editingStack: EditingStack
   @State var resultImage: ResultImage?
   @State var angle: EditingCrop.AdjustmentAngle = .zero
   @State var baselineAngle: EditingCrop.AdjustmentAngle = .zero
   @State var isDragging: Bool = false
+  @State var previousAdjustmentKind: CropView.StateModel.AdjustmentKind?
 
   init(
-    editingStack: @escaping () -> EditingStack
+    editingStack: EditingStack
   ) {
-    self._editingStackState = .init(editingStack)
+    self.editingStack = editingStack
   }
 
   var body: some View {
@@ -36,7 +37,7 @@ struct DemoCropView2: View {
         Spacer()
 
         SwiftUICropView(
-          editingStack: $editingStackState.driver,
+          editingStack: editingStack,
           isGuideInteractionEnabled: false,
           areAnimationsEnabled: false,
           contentInset: .init(top: 20, left: 20, bottom: 20, right: 20),
@@ -57,12 +58,13 @@ struct DemoCropView2: View {
               .fill(kind == nil ? Color.white : Color.white.opacity(0.6))
           },
           stateHandler: { state in
-            state.ifChanged(\.adjustmentKind).do { kind in
-              if kind.isEmpty {
+            if state.adjustmentKind != previousAdjustmentKind {
+              if state.adjustmentKind.isEmpty {
                 isDragging = false
               } else {
                 isDragging = true
               }
+              previousAdjustmentKind = state.adjustmentKind
             }
           }
         )
@@ -72,7 +74,7 @@ struct DemoCropView2: View {
         .clipped()
         .background(Color.gray)
 
-        ViewHost(instantiated: ImagePreviewView(editingStack: $editingStackState.driver))
+        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
           .background(Color.black)
           .cornerRadius(24, style: .continuous)
           .padding(.init(top: 20, leading: 20, bottom: 20, trailing: 20))
@@ -97,7 +99,7 @@ struct DemoCropView2: View {
         HStack {
           Spacer()
           Button("Done") {
-            let image = try! $editingStackState.driver.makeRenderer().render().cgImage
+            let image = try! editingStack.makeRenderer().render().cgImage
             self.resultImage = .init(cgImage: image)
           }
           .buttonStyle(.borderedProminent)
@@ -113,7 +115,7 @@ struct DemoCropView2: View {
 
     }
     .onAppear {
-      $editingStackState.driver.start()
+      editingStack.start()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
@@ -124,21 +126,19 @@ struct DemoCropView2: View {
 
 #Preview("local") {
   DemoCropView2(
-    editingStack: { Mocks.makeEditingStack(image: Mocks.imageHorizontal()) }
+    editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   )
 }
 
 #Preview("remote") {
   DemoCropView2(
-    editingStack: {
-      EditingStack(
-        imageProvider: .init(
-          editableRemoteURL: URL(
-            string:
-              "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-          )!
-        )
+    editingStack: EditingStack(
+      imageProvider: .init(
+        editableRemoteURL: URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
       )
-    }
+    )
   )
 }

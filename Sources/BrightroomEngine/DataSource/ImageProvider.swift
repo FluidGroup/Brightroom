@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 
 import UIKit
-
+import Combine
 import CoreImage
-import Verge
+import StateGraph
 
 #if canImport(UIKit)
 import UIKit
@@ -35,15 +35,15 @@ import Photos
 public enum ImageProviderError: Error {
   case failedToDownloadPreviewImage(underlyingError: Error)
   case failedToDownloadEditableImage(underlyingError: Error)
-  
+
   case urlIsNotFileURL(URL)
-  
+
   case failedToCreateCGDataProvider
   case failedToCreateCGImageSource
   case failedToCreateImageSource(underlyingError: Error)
-  
+
   case failedToGetImageSize
-  
+
   case failedToGetImageMetadata
 
   case failedToCreateCIFilterToLoadRAW
@@ -54,220 +54,155 @@ public enum ImageProviderError: Error {
 /**
  A stateful object that provides multiple image for EditingStack.
  */
-public final class ImageProvider: Equatable, StoreDriverType {
+public final class ImageProvider: Equatable {
   public static func == (lhs: ImageProvider, rhs: ImageProvider) -> Bool {
     lhs === rhs
   }
 
-  /**
-   To access, `ImageProvider.store.state`
-   To modify, `ImageProvider.store.commit()`
-   */
-  public struct State: Equatable {
+  // MARK: - Nested Types
 
-    public struct ImageMetadata: Equatable {
-      public var orientation: CGImagePropertyOrientation
-      
-      /// A size that applied orientation
-      public var imageSize: CGSize
+  public struct ImageMetadata: Equatable {
+    public var orientation: CGImagePropertyOrientation
 
-      public init(orientation: CGImagePropertyOrientation, imageSize: CGSize) {
-        self.orientation = orientation
-        self.imageSize = imageSize
-      }
-    }
-    
-    public enum Image: Equatable {
-      case editable(imageSource: ImageSource, metadata: ImageMetadata)
-    }
-        
-    /**
-     Editable image's size
-     */
-    public var imageSize: CGSize?
+    /// A size that applied orientation
+    public var imageSize: CGSize
 
-    public var orientation: CGImagePropertyOrientation?
-
-    public var editableImage: ImageSource?
-
-    @Edge public var loadingNonFatalErrors: [ImageProviderError] = []
-    
-    @Edge public var loadingFatalErrors: [ImageProviderError] = []
-        
-    public var loadedImage: Image? {
-          
-      if let editable = editableImage, let imageSize = imageSize, let orientation = orientation {
-        return .editable(imageSource: editable, metadata: .init(orientation: orientation, imageSize: imageSize))
-      }
-
-      return nil
-    }
-
-    public init(
-      imageSize: CGSize? = nil,
-      orientation: CGImagePropertyOrientation? = nil,
-      editableImage: ImageSource? = nil
-    ) {
-      self.imageSize = imageSize
+    public init(orientation: CGImagePropertyOrientation, imageSize: CGSize) {
       self.orientation = orientation
-      self.editableImage = editableImage
+      self.imageSize = imageSize
     }
-
-    public mutating func resolve(with metadata: ImageMetadata) {
-      imageSize = metadata.imageSize
-      orientation = metadata.orientation
-    }
-     
   }
-  
-  public let store: Store<State, Never>
-  
-  private var pendingAction: (ImageProvider) -> VergeAnyCancellable
-  
+
+  public enum LoadedImage: Equatable {
+    case editable(imageSource: ImageSource, metadata: ImageMetadata)
+  }
+
+  // MARK: - State Properties
+
+  @GraphStored public var imageSize: CGSize? = nil
+  @GraphStored public var orientation: CGImagePropertyOrientation? = nil
+  @GraphStored public var editableImage: ImageSource? = nil
+  @GraphStored public var loadingNonFatalErrors: [ImageProviderError] = []
+  @GraphStored public var loadingFatalErrors: [ImageProviderError] = []
+
+  // MARK: - Computed Properties
+
+  public var loadedImage: LoadedImage? {
+    if let editable = editableImage, let imageSize = imageSize, let orientation = orientation {
+      return .editable(imageSource: editable, metadata: .init(orientation: orientation, imageSize: imageSize))
+    }
+    return nil
+  }
+
+  // MARK: - Private Properties
+
+  private var pendingAction: (ImageProvider) -> AnyCancellable
+  private var cancellable: AnyCancellable?
+
+  // MARK: - Initializers
+
   #if os(iOS)
-  
-  private var cancellable: VergeAnyCancellable?
 
   /// Creates an instance for your own external data provider.
   public init(
-    initialState: State,
-    pendingAction: @escaping (ImageProvider) -> VergeAnyCancellable
+    imageSize: CGSize? = nil,
+    orientation: CGImagePropertyOrientation? = nil,
+    editableImage: ImageSource? = nil,
+    pendingAction: @escaping (ImageProvider) -> AnyCancellable
   ) {
-
-    self.store = .init(initialState: initialState)
+    self.imageSize = imageSize
+    self.orientation = orientation
+    self.editableImage = editableImage
     self.pendingAction = pendingAction
-
   }
 
   public init(rawData: Data) {
-
-    store = .init(
-      initialState: .init()
-    )
-
-    pendingAction = { `self` in
+    self.pendingAction = { `self` in
 
       guard let filter = CIFilter(imageData: rawData, options: [:]) else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
+        return AnyCancellable {}
       }
 
       guard let outputImage = filter.outputImage else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
+        return AnyCancellable {}
       }
 
       let ciContext = CIContext()
       guard let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
+        return AnyCancellable {}
       }
 
-      self.commit {
-        $0.editableImage = .init(cgImage: cgImage)
-        $0.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
-      }
+      self.editableImage = .init(cgImage: cgImage)
+      self.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
 
-      return .init {}
+      return AnyCancellable {}
     }
-
   }
 
   public init(rawDataURL: URL) {
-
-    store = .init(
-      initialState: .init()
-    )
-
-    pendingAction = { `self` in
+    self.pendingAction = { `self` in
 
       guard let filter = CIFilter(imageURL: rawDataURL, options: [:]) else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToCreateCIFilterToLoadRAW)
+        return AnyCancellable {}
       }
 
       guard let outputImage = filter.outputImage else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToGetRenderedImageFromRAW)
+        return AnyCancellable {}
       }
 
       let ciContext = CIContext()
       guard let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
-        self.commit {
-          $0.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
-        }
-        return .init {}
+        self.loadingFatalErrors.append(.failedToCreateCGImageFromRAW)
+        return AnyCancellable {}
       }
-      self.commit {
-        $0.editableImage =  .init(cgImage: cgImage)
-        $0.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
-      }
-      return .init {}
+
+      self.editableImage = .init(cgImage: cgImage)
+      self.resolve(with: .init(orientation: .up, imageSize: outputImage.extent.size))
+
+      return AnyCancellable {}
     }
   }
 
   /// Creates an instance from data
   public init(data: Data) throws {
-    
+
     guard let provider = CGDataProvider(data: data as CFData) else {
       throw ImageProviderError.failedToCreateCGDataProvider
     }
-    
+
     guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
       throw ImageProviderError.failedToCreateCGImageSource
     }
-    
+
     guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
       throw ImageProviderError.failedToGetImageMetadata
     }
-    
-    store = .init(
-      initialState: .init(
-        editableImage: .init(cgImageSource: imageSource)
-      )
-    )
-    
-    store.commit {
-      $0.resolve(with: metadata)
-    }
-    
-    pendingAction = { _ in
-      return .init {}
-    }
+
+    self.editableImage = .init(cgImageSource: imageSource)
+    self.pendingAction = { _ in AnyCancellable {} }
+
+    resolve(with: metadata)
   }
-  
+
   /// Creates an instance from UIImage
   ///
   /// - Attention: To reduce memory footprint, as possible creating an instance from url instead.
   public init(image uiImage: UIImage) {
     precondition(uiImage.cgImage != nil)
-    
-    store = .init(
-      initialState: .init(
-        editableImage: .init(image: uiImage)
-      )
-    )
-    
-    store.commit {
-      $0.resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
-    }
-    
-    pendingAction = { _ in  return .init {} }
-    
+
+    self.editableImage = .init(image: uiImage)
+    self.pendingAction = { _ in AnyCancellable {} }
+
+    resolve(with: .init(orientation: .init(uiImage.imageOrientation), imageSize: .init(image: uiImage)))
   }
-  
+
   #endif
-  
+
   /**
    Creates an instance from fileURL.
    This is most efficient way to edit image without large memory footprint.
@@ -278,30 +213,23 @@ public final class ImageProvider: Equatable, StoreDriverType {
     guard fileURL.isFileURL else {
       throw ImageProviderError.urlIsNotFileURL(fileURL)
     }
-    
+
     guard let provider = CGDataProvider(url: fileURL as CFURL) else {
       throw ImageProviderError.failedToCreateCGDataProvider
     }
-    
+
     guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
       throw ImageProviderError.failedToCreateCGImageSource
     }
-    
+
     guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
       throw ImageProviderError.failedToGetImageSize
     }
-        
-    store = .init(
-      initialState: .init(
-        editableImage: .init(cgImageSource: imageSource)
-      )
-    )
-    
-    store.commit {
-      $0.resolve(with: metadata)
-    }
-    
-    pendingAction = { _ in return .init {} }
+
+    self.editableImage = .init(cgImageSource: imageSource)
+    self.pendingAction = { _ in AnyCancellable {} }
+
+    resolve(with: metadata)
   }
 
   #if canImport(Photos)
@@ -314,7 +242,7 @@ public final class ImageProvider: Equatable, StoreDriverType {
     self.init(editableRemoteURL: url)
   }
   #endif
-  
+
   /**
    Creates an instance
    */
@@ -325,76 +253,57 @@ public final class ImageProvider: Equatable, StoreDriverType {
       editableRemoteURLRequest: URLRequest(url: editableRemoteURL)
     )
   }
-  
+
   public init(
     editableRemoteURLRequest: URLRequest
   ) {
-    
-    store = .init(
-      initialState: .init(
-        imageSize: nil,
-        orientation: nil,
-        editableImage: nil
-      )
-    )
-    
-    pendingAction = { `self` in
-      
+    self.pendingAction = { `self` in
+
       let editableTask = URLSession.shared.downloadTask(with: editableRemoteURLRequest) { [weak self] url, response, error in
-        
+
         guard let self = self else { return }
-        
+
         if let error = error {
-          self.store.commit {
-            $0.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
-          }
+          self.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
         }
-        
-        self.commit { state in
-          if let url = url {
-            
-            guard let provider = CGDataProvider(url: url as CFURL) else {
-              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
-              return
-            }
-            
-            guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
-              state.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
-              return
-            }
-            
-            guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
-              state.loadingNonFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
-              return
-            }
-        
-            state.resolve(with: metadata)
-            state.editableImage = .init(cgImageSource: imageSource)
+
+        if let url = url {
+
+          guard let provider = CGDataProvider(url: url as CFURL) else {
+            self.loadingFatalErrors.append(ImageProviderError.failedToCreateCGDataProvider)
+            return
           }
+
+          guard let imageSource = CGImageSourceCreateWithDataProvider(provider, nil) else {
+            self.loadingFatalErrors.append(ImageProviderError.failedToCreateCGImageSource)
+            return
+          }
+
+          guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
+            self.loadingNonFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
+            return
+          }
+
+          self.resolve(with: metadata)
+          self.editableImage = .init(cgImageSource: imageSource)
         }
       }
-      
+
       editableTask.resume()
-      
-      return .init {
+
+      return AnyCancellable {
         editableTask.cancel()
       }
     }
   }
-  
+
   #if canImport(Photos)
-  
+
   public init(asset: PHAsset) {
     // TODO: cancellation, Error handeling
-    
-    store = .init(
-      initialState: .init(
-        editableImage: nil
-      )
-    )
-    
-    pendingAction = { `self` in
-      
+
+    self.pendingAction = { `self` in
+
       let finalImageRequestOptions = PHImageRequestOptions()
       finalImageRequestOptions.deliveryMode = .highQualityFormat
       finalImageRequestOptions.isNetworkAccessAllowed = true
@@ -407,42 +316,47 @@ public final class ImageProvider: Equatable, StoreDriverType {
         contentMode: .aspectFit,
         options: finalImageRequestOptions
       ) { [weak self] image, info in
-        
+
         // FIXME: Avoid loading image, get a url instead.
-        
+
         guard let self = self else { return }
-        
-        self.commit { state in
-          
-          if let error = info?[PHImageErrorKey] as? Error {
-            state.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
-            return
-          }
-          
-          guard let image = image else { return }
-          
-          state.resolve(with: .init(
-            orientation: .init(image.imageOrientation),
-            imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
-          ))
-          state.editableImage = .init(image: image)
+
+        if let error = info?[PHImageErrorKey] as? Error {
+          self.loadingFatalErrors.append(.failedToDownloadEditableImage(underlyingError: error))
+          return
         }
+
+        guard let image = image else { return }
+
+        self.resolve(with: .init(
+          orientation: .init(image.imageOrientation),
+          imageSize: .init(width: asset.pixelWidth, height: asset.pixelHeight)
+        ))
+        self.editableImage = .init(image: image)
       }
-      
-      return .init {
+
+      return AnyCancellable {
         PHImageManager.default().cancelImageRequest(request)
       }
     }
   }
-  
+
   #endif
-  
+
+  // MARK: - Methods
+
   func start() {
     guard cancellable == nil else { return }
     cancellable = pendingAction(self)
   }
-  
+
+  public func resolve(with metadata: ImageMetadata) {
+    imageSize = metadata.imageSize
+    orientation = metadata.orientation
+  }
+
   deinit {
     EngineLog.debug("[ImageProvider] deinit")
   }
 }
+

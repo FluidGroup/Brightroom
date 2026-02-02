@@ -24,36 +24,32 @@ import UIKit
 #if !COCOAPODS
 import BrightroomEngine
 #endif
-import Verge
+import Combine
+import StateGraph
 
 public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDelegate {
 
-  private struct State: Equatable {
-    fileprivate(set) var bounds: CGRect = .zero
+  @GraphStored private var stateBounds: CGRect = .zero
+  @GraphStored private var proposedCrop: EditingCrop? = nil
+  @GraphStored private var brushSize: CanvasView.BrushSize = .point(30)
 
-    fileprivate(set) var proposedCrop: EditingCrop?
-    
-    fileprivate(set) var brushSize: CanvasView.BrushSize = .point(30)
+  private func brushPixelSize() -> CGFloat? {
+    guard let proposedCrop = proposedCrop else {
+      return nil
+    }
 
-    func brushPixelSize() -> CGFloat? {
+    let aspectRatio = PixelAspectRatio(proposedCrop.cropExtent.size)
+    let size = aspectRatio.sizeThatFits(in: stateBounds.size)
 
-      guard let proposedCrop = proposedCrop else {
-        return nil
-      }
+    let (min, _) = proposedCrop.calculateZoomScale(visibleSize: size)
 
-      let aspectRatio = PixelAspectRatio(proposedCrop.cropExtent.size)
-      let size = aspectRatio.sizeThatFits(in: bounds.size)
-      
-      let (min, _) = proposedCrop.calculateZoomScale(visibleSize: size)
+    let scale = proposedCrop.scaleForDrawing()
 
-      let scale = proposedCrop.scaleForDrawing()
-
-      switch brushSize {
-      case let .point(points):
-        return points / scale / min
-      case let .pixel(pixels):
-        return pixels
-      }
+    switch brushSize {
+    case let .point(points):
+      return points / scale / min
+    case let .pixel(pixels):
+      return pixels
     }
   }
   
@@ -88,28 +84,26 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   private let containerView = ContainerView()
 
   private let blurryImageView = _ImageView()
-  
+
   private let drawingView = SmoothPathDrawingView()
-  
+
   private let canvasView = CanvasView()
-  
-  private var subscriptions = Set<AnyCancellable>()
-  
+
+  private var subscriptions: Set<AnyCancellable> = .init()
+
   private let editingStack: EditingStack
 
-  private let store: UIStateStore<State, Never>
-  
   private var currentBrush: OvalBrush?
-  
+
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
-  
+
   private var isBinding = false
-  
+
   // MARK: - Initializers
   
   public init(editingStack: EditingStack) {
-    
+
     self.editingStack = editingStack
     self.backingView = .init(
       editingStack: editingStack,
@@ -118,11 +112,6 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     self.backingView.areAnimationsEnabled = false
     self.backingView.accessibilityIdentifier = "BlurryMasking"
 
-    store = .init(
-      initialState: .init(),
-      logger: nil
-    )
-            
     super.init(frame: .zero)
     
     setUp: do {
@@ -152,12 +141,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
     
     drawingView.handlers = drawingView.handlers&>.modify {
       $0.willBeginPan = { [unowned self] path in
-        
-        guard let pixelSize = store.state.primitive.brushPixelSize() else {
+
+        guard let pixelSize = brushPixelSize() else {
           assertionFailure("It seems currently loading state.")
           return
         }
-        
+
         currentBrush = .init(color: .black, pixelSize: pixelSize)
 
         let drawnPath = DrawnPath(brush: currentBrush!, path: path)
@@ -168,45 +157,37 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       }
       $0.didFinishPan = { [unowned self] path in
         canvasView.updatePreviewDrawing()
-        
+
         let _path = (path.copy() as! UIBezierPath)
-        
+
         let drawnPath = DrawnPath(brush: currentBrush!, path: _path)
-        
+
         canvasView.previewDrawnPath = nil
         editingStack.append(blurringMaskPaths: CollectionOfOne(drawnPath))
-        
+
         currentBrush = nil
       }
     }
-    
-    editingStack.sinkState { [weak self] (state: Changes<EditingStack.State>) in
-      
-      guard let self = self else { return }
-      
-      if let state = state.mapIfPresent(\.loadedState) {
 
-        state.ifChanged(\.currentEdit.crop).do { cropRect in
+    withGraphTracking {
+      withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.crop }, onChange: { [weak self] cropRect in
+        guard let self, let cropRect else { return }
 
-          // scaling for drawing paths
-          [self.canvasView, self.drawingView].forEach { view in
-            view.bounds = .init(origin: .zero, size: cropRect.imageSize)
-            let scale = Geometry.diagonalRatio(to: cropRect.scrollViewContentSize(), from: cropRect.imageSize)
-            view.transform = .init(scaleX: scale, y: scale)
-            view.frame.origin = .zero
-          }
-
-          /**
-           To avoid running pending layout operations from User Initiated actions.
-           */
-          if cropRect != self.store.state.proposedCrop {
-            self.store.commit {
-              $0.proposedCrop = cropRect
-            }
-          }
+        // scaling for drawing paths
+        [self.canvasView, self.drawingView].forEach { view in
+          view.bounds = .init(origin: .zero, size: cropRect.imageSize)
+          let scale = Geometry.diagonalRatio(to: cropRect.scrollViewContentSize(), from: cropRect.imageSize)
+          view.transform = .init(scaleX: scale, y: scale)
+          view.frame.origin = .zero
         }
-      }
-      
+
+        /**
+         To avoid running pending layout operations from User Initiated actions.
+         */
+        if cropRect != self.proposedCrop {
+          self.proposedCrop = cropRect
+        }
+      })
     }
     .store(in: &subscriptions)
     
@@ -228,23 +209,15 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
       editingStack.start()
       
       binding: do {
-
-        editingStack.sinkState { [weak self] (state: Changes<EditingStack.State>) in
-          
-          guard let self = self else { return }        
-          
-          if let state = state.mapIfPresent(\.loadedState) {
-            
-            state.ifChanged(\.editingPreviewImage).do { image in
-              self.blurryImageView.display(image: BlurredMask.blur(image: image))
-            }
-            
-            state.ifChanged(\.currentEdit.drawings.blurredMaskPaths).do { paths in
-              self.canvasView.setResolvedDrawnPaths(paths)
-            }
-            
-          }
-       
+        withGraphTracking {
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.editingPreviewImage }, onChange: { [weak self] previewImage in
+            guard let self, let previewImage else { return }
+            self.blurryImageView.display(image: BlurredMask.blur(image: previewImage))
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.drawings.blurredMaskPaths }, onChange: { [weak self] paths in
+            guard let self, let paths else { return }
+            self.canvasView.setResolvedDrawnPaths(paths)
+          })
         }
         .store(in: &subscriptions)
       }
@@ -257,9 +230,7 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
   }
     
   public func setBrushSize(_ size: CanvasView.BrushSize) {
-    store.commit {
-      $0.brushSize = size
-    }
+    brushSize = size
   }
 
   override public func layoutSubviews() {
@@ -267,12 +238,10 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
 
     backingView.frame = bounds
 
-    store.commit {
-      if $0.bounds != bounds {
-        $0.bounds = bounds
-      }
+    if stateBounds != bounds {
+      stateBounds = bounds
     }
-    
+
   }
 }
 
