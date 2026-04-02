@@ -367,12 +367,18 @@ extension CropView {
         .inset(by: reversedInsets)
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
 
+      // When the two rects don't overlap, intersection() returns CGRect.null
+      // whose coordinates are infinite — setting those as constraint constants
+      // triggers NSInternalInconsistencyException.
+      // Keep the previous maximumRect (if any) so activate* methods remain safe.
+      guard !r.isNull, let superview = superview else { return }
+
       maximumRect = r
 
       leftMaxConstraint?.constant = r.minX
-      rightMaxConstraint?.constant = maximumRect!.maxX - superview!.bounds.maxX
+      rightMaxConstraint?.constant = r.maxX - superview.bounds.maxX
       topMaxConstraint?.constant = r.minY
-      bottomMaxConstraint?.constant = maximumRect!.maxY - superview!.bounds.maxY
+      bottomMaxConstraint?.constant = r.maxY - superview.bounds.maxY
 
     }
 
@@ -431,11 +437,12 @@ extension CropView {
     }
 
     private func activateLeftMaxConstraint() {
+      guard let maximumRect, let superview else { return }
       translatesAutoresizingMaskIntoConstraints = false
 
       leftMaxConstraint = leftAnchor.constraint(
-        greaterThanOrEqualTo: superview!.leftAnchor,
-        constant: maximumRect!.minX
+        greaterThanOrEqualTo: superview.leftAnchor,
+        constant: maximumRect.minX
       )&>.do {
         $0.isActive = true
       }
@@ -446,11 +453,12 @@ extension CropView {
     }
 
     private func activateRightMaxConstraint() {
+      guard let maximumRect, let superview else { return }
       translatesAutoresizingMaskIntoConstraints = false
 
       rightMaxConstraint = rightAnchor.constraint(
-        lessThanOrEqualTo: superview!.rightAnchor,
-        constant: maximumRect!.maxX - superview!.bounds.maxX
+        lessThanOrEqualTo: superview.rightAnchor,
+        constant: maximumRect.maxX - superview.bounds.maxX
       )&>.do {
         $0.isActive = true
       }
@@ -461,11 +469,12 @@ extension CropView {
     }
 
     private func activateTopMaxConstraint() {
+      guard let maximumRect, let superview else { return }
       translatesAutoresizingMaskIntoConstraints = false
 
       topMaxConstraint = topAnchor.constraint(
-        greaterThanOrEqualTo: superview!.topAnchor,
-        constant: maximumRect!.minY
+        greaterThanOrEqualTo: superview.topAnchor,
+        constant: maximumRect.minY
       )&>.do {
         $0.isActive = true
       }
@@ -476,11 +485,12 @@ extension CropView {
     }
 
     private func activateBottomMaxConstraint() {
+      guard let maximumRect, let superview else { return }
       translatesAutoresizingMaskIntoConstraints = false
 
       bottomMaxConstraint = bottomAnchor.constraint(
-        lessThanOrEqualTo: superview!.bottomAnchor,
-        constant: maximumRect!.maxY - superview!.bounds.maxY
+        lessThanOrEqualTo: superview.bottomAnchor,
+        constant: maximumRect.maxY - superview.bounds.maxY
       )&>.do {
         $0.isActive = true
       }
