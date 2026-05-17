@@ -76,8 +76,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public let state: StateModel = .init()
 
-  @GraphStored private var layoutVersion: UInt64 = 0
-
   /**
    A Boolean value that indicates whether the guide is interactive.
    If false, cropping adjustment is available only way from scrolling image-view.
@@ -96,7 +94,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
    */
   public var clipsToGuide: Bool = false {
     didSet {
-      layoutVersion += 1
+      updateCropLayout()
     }
   }
 
@@ -113,7 +111,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   public var isZoomEnabled: Bool = true {
     didSet {
-      layoutVersion += 1
+      updateCropLayout()
     }
   }
 
@@ -220,10 +218,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   var isAutoApplyEditingStackEnabled = false
 
-  // Change tracking for state
-  private var _previousFrame: CGRect?
-  private var _previousProposedCrop: EditingCrop?
-  private var _previousLayoutVersion: UInt64 = 0
+  private var lastLaidOutCrop: EditingCrop?
 
   // MARK: - Initializers
 
@@ -307,13 +302,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
     .store(in: &subscriptions)
 
-    // Set up layout version observation for internal layout updates
-    withGraphTracking {
-      withGraphTrackingGroup { [weak self] in
-        self?.handleLocalStateChange()
-      }
-    }
-    .store(in: &subscriptions)
   }
 
   @available(*, unavailable)
@@ -363,77 +351,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
     }
 
-  }
-
-  private func handleLocalStateChange() {
-    // Access @GraphStored properties first to ensure tracking is set up
-    let currentFrame = state.frame
-    let currentLayoutVersion = layoutVersion
-    let currentProposedCrop = state.proposedCrop
-
-    let previousFrame = _previousFrame
-    let previousLayoutVersion = _previousLayoutVersion
-    let previousProposedCrop = _previousProposedCrop
-    defer {
-      _previousFrame = currentFrame
-      _previousLayoutVersion = currentLayoutVersion
-      _previousProposedCrop = currentProposedCrop
-    }
-
-    // Check if frame, layoutVersion, or proposedCrop changed
-    let frameChanged = previousFrame != currentFrame
-    let layoutVersionChanged = previousLayoutVersion != currentLayoutVersion
-    let proposedCropChanged = previousProposedCrop != currentProposedCrop
-
-    if frameChanged || layoutVersionChanged || proposedCropChanged {
-      guard let crop = currentProposedCrop else {
-        return
-      }
-
-      guard currentFrame != .zero else {
-        return
-      }
-
-      setupScrollViewOnce: do {
-        if self.hasSetupScrollViewCompleted == false {
-          self.hasSetupScrollViewCompleted = true
-
-          self.imagePlatterView.bounds = .init(
-            origin: .zero,
-            size: crop.scrollViewContentSize()
-          )
-
-          let scrollView = self.scrollView
-
-          // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
-          UIView.performWithoutAnimation {
-            let currentZoomScale = scrollView.zoomScale
-            let contentSize = crop.scrollViewContentSize()
-            if scrollView.contentSize != contentSize {
-              scrollView.contentInset = .zero
-              scrollView.zoomScale = 1
-              scrollView.contentSize = contentSize
-              scrollView.zoomScale = currentZoomScale
-            }
-          }
-        }
-      }
-
-      self.updateScrollContainerView(
-        by: crop,
-        preferredAspectRatio: state.preferredAspectRatio,
-        animated: areAnimationsEnabled && previousProposedCrop != nil /* whether first time load */,
-        animatesRotation: previousProposedCrop?.rotation != currentProposedCrop?.rotation
-      )
-    }
-
-    if self.isAutoApplyEditingStackEnabled {
-      if proposedCropChanged {
-        if let crop = currentProposedCrop {
-          self.editingStack.crop(crop)
-        }
-      }
-    }
   }
 
   private func updateLoadingState(displays: Bool) {
@@ -499,9 +416,9 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func resetCrop() {
     _pixeleditor_ensureMainThread()
 
-    if let proposedCrop = state.proposedCrop {
-      state.proposedCrop = proposedCrop.makeInitial()
+    if let crop = state.proposedCrop {
       state.preferredAspectRatio = nil
+      setProposedCrop(crop.makeInitial(), previousCrop: crop, forcesLayout: true)
     }
 
     guideView.setLockedAspectRatio(nil)
@@ -518,7 +435,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
       crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians)
     )
     crop.rotation = rotation
-    state.proposedCrop = crop
+    setProposedCrop(crop)
   }
 
   public func setAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
@@ -527,7 +444,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
 
     crop.adjustmentAngle = angle
-    state.proposedCrop = crop
+    setProposedCrop(crop)
 
     record()
   }
@@ -535,15 +452,11 @@ public final class CropView: UIView, UIScrollViewDelegate {
   public func setCrop(_ crop: EditingCrop) {
     _pixeleditor_ensureMainThread()
 
-    guard state.proposedCrop != crop else {
-      return
-    }
-
-    state.proposedCrop = crop
+    var crop = crop
     if let ratio = state.preferredAspectRatio {
-      state.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
     }
-    layoutVersion += 1
+    setProposedCrop(crop)
   }
 
   public func setCroppingAspectRatio(_ ratio: PixelAspectRatio?) {
@@ -554,10 +467,16 @@ public final class CropView: UIView, UIScrollViewDelegate {
     }
 
     state.preferredAspectRatio = ratio
+    var crop = state.proposedCrop
     if let ratio = ratio {
-      state.proposedCrop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      crop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
     } else {
-      state.proposedCrop?.purgeAspectRatio()
+      crop?.purgeAspectRatio()
+    }
+    if let crop {
+      setProposedCrop(crop, forcesLayout: true)
+    } else {
+      updateCropLayout()
     }
 
     guideView.setLockedAspectRatio(ratio)
@@ -584,7 +503,7 @@ public final class CropView: UIView, UIScrollViewDelegate {
     crop.updateCropExtentIfNeeded(
       toFitAspectRatio: PixelAspectRatio(crop.cropExtent.size).swapped()
     )
-    state.proposedCrop = crop
+    setProposedCrop(crop, forcesLayout: true)
   }
 
   /**
@@ -626,16 +545,91 @@ public final class CropView: UIView, UIScrollViewDelegate {
 // MARK: Internal
 
 extension CropView {
-  private func setImage(_ cgImage: CGImage) {  
+  private func setImage(_ cgImage: CGImage) {
     setImage(uiImage: UIImage(
       cgImage: cgImage,
       scale: 1,
       orientation: .up
     ))
   }
-  
+
   private func setImage(uiImage: UIImage) {
     imagePlatterView.image = uiImage
+  }
+
+  private func setProposedCrop(
+    _ crop: EditingCrop,
+    previousCrop: EditingCrop? = nil,
+    forcesLayout: Bool = false
+  ) {
+    let previousCrop = previousCrop ?? state.proposedCrop
+    let hasChanges = updateProposedCrop(crop)
+
+    guard hasChanges || forcesLayout else {
+      return
+    }
+
+    updateCropLayout(previousCrop: previousCrop)
+  }
+
+  @discardableResult
+  private func updateProposedCrop(_ crop: EditingCrop) -> Bool {
+    guard state.proposedCrop != crop else {
+      return false
+    }
+
+    state.proposedCrop = crop
+
+    if isAutoApplyEditingStackEnabled {
+      editingStack.crop(crop)
+    }
+
+    return true
+  }
+
+  private func updateCropLayout(previousCrop: EditingCrop? = nil) {
+    guard let crop = state.proposedCrop else {
+      return
+    }
+
+    guard state.frame != .zero else {
+      return
+    }
+
+    setupScrollViewOnce: do {
+      if hasSetupScrollViewCompleted == false {
+        hasSetupScrollViewCompleted = true
+
+        imagePlatterView.bounds = .init(
+          origin: .zero,
+          size: crop.scrollViewContentSize()
+        )
+
+        let scrollView = self.scrollView
+
+        // Do we need this? it seems ImageView's bounds changes contentSize automatically. not sure.
+        UIView.performWithoutAnimation {
+          let currentZoomScale = scrollView.zoomScale
+          let contentSize = crop.scrollViewContentSize()
+          if scrollView.contentSize != contentSize {
+            scrollView.contentInset = .zero
+            scrollView.zoomScale = 1
+            scrollView.contentSize = contentSize
+            scrollView.zoomScale = currentZoomScale
+          }
+        }
+      }
+    }
+
+    let animationSourceCrop = previousCrop ?? lastLaidOutCrop
+    updateScrollContainerView(
+      by: crop,
+      preferredAspectRatio: state.preferredAspectRatio,
+      animated: areAnimationsEnabled && animationSourceCrop != nil /* whether first time load */,
+      animatesRotation: animationSourceCrop?.rotation != crop.rotation
+    )
+
+    lastLaidOutCrop = crop
   }
 
   override public func layoutSubviews() {
@@ -655,8 +649,10 @@ extension CropView {
     /// to update masking with cropOutsideOverlay
     guideView.setNeedsLayout()
 
-    if state.frame != frame {
+    let previousFrame = state.frame
+    if previousFrame != frame {
       state.frame = frame
+      updateCropLayout()
     }
 
     #if DEBUG
@@ -897,15 +893,22 @@ extension CropView {
       return
     }
 
-    record()
+    let recordedCrop = record() ?? crop
 
-    updateScrollViewInset(crop: crop)
+    updateScrollViewInset(crop: recordedCrop)
+
+    /// Triggers layout update later
+    debounce.on { [weak self] in
+      guard let self else { return }
+      self.updateCropLayout()
+    }
   }
 
-  private func record() {
+  @discardableResult
+  private func record() -> EditingCrop? {
 
-    guard let crop = state.proposedCrop else {
-      return
+    guard var crop = state.proposedCrop else {
+      return nil
     }
 
     // remove rotation while converting rect
@@ -950,9 +953,11 @@ extension CropView {
       rect: guideRectInImageView
     )
 
-    state.proposedCrop?.updateCropExtent(
+    crop.updateCropExtent(
       resolvedRect
     )
+    updateProposedCrop(crop)
+    return crop
   }
 
   @inline(__always)
@@ -994,7 +999,7 @@ extension CropView {
 
       guard let self = self else { return }
 
-      self.layoutVersion += 1
+      self.updateCropLayout()
     }
   }
 
@@ -1010,7 +1015,7 @@ extension CropView {
         return
       }
 
-      self.layoutVersion += 1
+      self.updateCropLayout()
     }
   }
 
