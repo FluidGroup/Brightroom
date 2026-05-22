@@ -16,6 +16,7 @@ tags:
 - assertVisible: "Done"
 - assertVisible: "Rotate"
 - assertVisible: "Aspect Ratio"
+- assertVisible: "Rotation"
 - tapOn: "Aspect Ratio"
 - assertVisible: "ORIGINAL"
 - assertVisible: "FREEFORM"

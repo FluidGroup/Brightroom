@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import PrecisionLevelSlider
 import SwiftUI
 import UIKit
 
@@ -34,6 +35,7 @@ struct PhotosCropContentView: View {
 
   @State private var cropState: CropView.StateSnapshot?
   @State private var rotation: EditingCrop.Rotation?
+  @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
   @State private var croppingAspectRatio: PixelAspectRatio?
   @State private var isSelectingAspectRatio = false
   @State private var resetAction = SwiftUICropView.ResetAction()
@@ -65,7 +67,7 @@ struct PhotosCropContentView: View {
     let originalAspectRatio = loadedState.map { PixelAspectRatio($0.imageSize) }
     let isLoaded = loadedState != nil
     let topBarHeight: CGFloat = 44
-    let aspectRatioPickerHeight: CGFloat = 112
+    let bottomControlHeight: CGFloat = 112
     let bottomBarHeight: CGFloat = 50
 
     ZStack {
@@ -79,13 +81,14 @@ struct PhotosCropContentView: View {
           stateHandler: handleCropState
         )
         .rotation(rotation)
+        .adjustmentAngle(adjustmentAngle)
         .croppingAspectRatio(croppingAspectRatio)
         .registerResetAction(resetAction)
         .registerApplyAction(applyAction)
         .layoutPriority(1)
 
         Color.clear
-          .frame(height: aspectRatioPickerHeight + bottomBarHeight)
+          .frame(height: bottomControlHeight + bottomBarHeight)
       }
 
       VStack(spacing: 0) {
@@ -104,15 +107,25 @@ struct PhotosCropContentView: View {
 
         Spacer(minLength: 0)
 
-        PhotosCropAspectRatioPicker(
-          originalAspectRatio: originalAspectRatio,
-          selectedAspectRatio: croppingAspectRatio,
-          localizedStrings: localizedStrings,
-          onSelect: selectAspectRatio
-        )
-        .frame(height: aspectRatioPickerHeight)
-        .opacity(isSelectingAspectRatio && originalAspectRatio != nil ? 1 : 0)
-        .allowsHitTesting(isSelectingAspectRatio && originalAspectRatio != nil)
+        Group {
+          if isSelectingAspectRatio && originalAspectRatio != nil {
+            PhotosCropAspectRatioPicker(
+              originalAspectRatio: originalAspectRatio,
+              selectedAspectRatio: croppingAspectRatio,
+              localizedStrings: localizedStrings,
+              onSelect: selectAspectRatio
+            )
+            .transition(.opacity)
+          } else {
+            PhotosCropRotationSlider(
+              value: adjustmentAngle?.degrees ?? 0,
+              isEnabled: isLoaded,
+              onChange: setAdjustmentAngle
+            )
+            .transition(.opacity)
+          }
+        }
+        .frame(height: bottomControlHeight)
         .animation(.spring(response: 0.35, dampingFraction: 1), value: isSelectingAspectRatio)
 
         PhotosCropBottomBar(
@@ -159,6 +172,10 @@ struct PhotosCropContentView: View {
       rotation = proposedCrop.rotation
     }
 
+    if let proposedCrop = state.proposedCrop, adjustmentAngle != proposedCrop.adjustmentAngle {
+      adjustmentAngle = proposedCrop.adjustmentAngle
+    }
+
     if croppingAspectRatio != state.preferredAspectRatio {
       croppingAspectRatio = state.preferredAspectRatio
     }
@@ -184,6 +201,7 @@ struct PhotosCropContentView: View {
       croppingAspectRatio = nil
     }
 
+    adjustmentAngle = .zero
     resetAction()
   }
 
@@ -197,6 +215,16 @@ struct PhotosCropContentView: View {
 
   private func selectAspectRatio(_ aspectRatio: PixelAspectRatio?) {
     croppingAspectRatio = aspectRatio
+  }
+
+  private func setAdjustmentAngle(_ degrees: Double) {
+    let angle = EditingCrop.AdjustmentAngle(degrees: degrees)
+
+    guard adjustmentAngle != angle else {
+      return
+    }
+
+    adjustmentAngle = angle
   }
 
   private func finish() {
@@ -291,6 +319,177 @@ private struct PhotosCropBottomBar: View {
       .disabled(!isDoneEnabled)
       .accessibilityIdentifier("photos.crop.done")
     }
+  }
+}
+
+private struct PhotosCropRotationSlider: View {
+
+  let value: Double
+  let isEnabled: Bool
+  let onChange: (Double) -> Void
+
+  var body: some View {
+    PhotosCropPrecisionLevelSlider(
+      value: valueBinding,
+      haptics: .init(trigger: { value in
+        if value.truncatingRemainder(dividingBy: 5) == 0 {
+          return .impact(style: .light, intensity: 0.4)
+        } else {
+          return nil
+        }
+      }),
+      range: .init(
+        range: -45...45,
+        transform: { source in
+          source.rounded(.toNearestOrEven)
+        }
+      ),
+      centerLevel: { _, _ in
+        HStack {
+          Spacer()
+          VStack {
+            Spacer(minLength: 12)
+            Rectangle()
+              .frame(width: 1)
+            Spacer(minLength: 12)
+          }
+          Spacer()
+        }
+        .foregroundStyle(.tint)
+      },
+      track: { value, _ in
+        PhotosCropRotationTickTrack(value: value)
+      }
+    )
+    .tint(.white)
+    .accentColor(.white)
+    .frame(height: 50)
+    .padding(.horizontal, 24)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .opacity(isEnabled ? 1 : 0.5)
+    .disabled(!isEnabled)
+    .accessibilityLabel("Rotation")
+  }
+
+  private var valueBinding: Binding<Double> {
+    Binding(
+      get: { value },
+      set: { newValue in
+        guard newValue != value else {
+          return
+        }
+
+        onChange(newValue)
+      }
+    )
+  }
+}
+
+private struct PhotosCropPrecisionLevelSlider<CenterLevel: View, Track: View>: UIViewRepresentable {
+
+  @Binding var value: Double
+
+  let haptics: PrecisionLevelSlider.Haptics?
+  let range: PrecisionLevelSlider.ValueRange
+  let centerLevel: (Double, Bool) -> CenterLevel
+  let track: (Double, Bool) -> Track
+
+  init(
+    value: Binding<Double>,
+    haptics: PrecisionLevelSlider.Haptics?,
+    range: PrecisionLevelSlider.ValueRange,
+    @ViewBuilder centerLevel: @escaping (Double, Bool) -> CenterLevel,
+    @ViewBuilder track: @escaping (Double, Bool) -> Track
+  ) {
+    self._value = value
+    self.haptics = haptics
+    self.range = range
+    self.centerLevel = centerLevel
+    self.track = track
+  }
+
+  func makeUIView(context: Context) -> PrecisionLevelSlider {
+    let view = PrecisionLevelSlider(
+      range: range,
+      haptics: haptics,
+      centerLevel: centerLevel,
+      track: track
+    )
+
+    view.onChangeValue = { value in
+      Task { @MainActor in
+        self.value = value
+      }
+    }
+
+    return view
+  }
+
+  func updateUIView(_ uiView: PrecisionLevelSlider, context: Context) {
+    uiView.range = range
+
+    guard uiView.value != value else {
+      return
+    }
+
+    uiView.value = value
+  }
+}
+
+private struct PhotosCropRotationTickTrack: View {
+
+  let value: Double
+
+  var body: some View {
+    VStack {
+      HStack {
+        Spacer()
+        Circle()
+          .frame(width: 6, height: 6)
+          .opacity(value == 0 ? 0 : 1)
+          .animation(.spring, value: value == 0)
+        Spacer()
+      }
+
+      HStack(spacing: 0) {
+        ForEach(0..<4) { _ in
+          PhotosCropRotationShortBar()
+            .foregroundStyle(.primary)
+          Group {
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+            PhotosCropRotationShortBar()
+            Spacer(minLength: 0)
+          }
+          .foregroundStyle(.secondary)
+        }
+        PhotosCropRotationShortBar()
+          .foregroundStyle(.primary)
+      }
+    }
+    .foregroundStyle(.tint)
+  }
+}
+
+private struct PhotosCropRotationShortBar: View {
+  var body: some View {
+    RoundedRectangle(cornerRadius: 8)
+      .frame(width: 1, height: 10)
   }
 }
 
