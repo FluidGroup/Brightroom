@@ -13,10 +13,7 @@ Brightroom is a composable image editor library for iOS, powered by Metal for hi
 # Build BrightroomUI (includes BrightroomEngine)
 cd Dev && xcodebuild -scheme BrightroomUI -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
 
-# Build Demo app
-cd Dev && xcodebuild -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
-
-# Build SwiftUI Demo
+# Build SwiftUI Demo app
 cd Dev && xcodebuild -scheme SwiftUIDemo -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
 ```
 
@@ -79,10 +76,8 @@ The project uses Verge (swift-state-graph) for state management. When modifying 
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 
-### Demo Apps
-- **UIKit Demo**: `Dev/Sources/Demo/` - Traditional UIKit implementation
-- **SwiftUI Demo**: `Dev/Sources/SwiftUIDemo/` - Modern SwiftUI examples
-- Both demos showcase all major features and serve as implementation references
+### Demo App
+- **SwiftUI Demo**: `Dev/Sources/SwiftUIDemo/` - SwiftUI examples and UIKit-based checks wrapped with representables
 
 ## Common Tasks
 

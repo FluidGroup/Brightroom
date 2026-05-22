@@ -1,0 +1,29 @@
+appId: app.muukii.brightroom.SwiftUIDemo
+name: PhotosCrop
+tags:
+  - photos-crop
+---
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn: "Horizontal"
+- assertVisible:
+    id: "photos.crop"
+- assertVisible: "Cancel"
+- assertVisible: "Done"
+- assertVisible: "Rotate"
+- assertVisible: "Aspect Ratio"
+- tapOn: "Aspect Ratio"
+- assertVisible: "ORIGINAL"
+- assertVisible: "FREEFORM"
+- assertVisible: "SQUARE"
+- tapOn: "SQUARE"
+- tapOn:
+    text: "Rotate"
+- tapOn: "Reset"
+- tapOn: "7:5"
+- tapOn: "Done"
+- assertVisible: ".*size:.*"
