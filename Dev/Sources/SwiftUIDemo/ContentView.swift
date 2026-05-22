@@ -2,6 +2,7 @@ import BrightroomEngine
 import BrightroomUI
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
 
@@ -325,27 +326,32 @@ struct ContentView: View {
 struct WorkingOnPicked: View {
 
   @State private var item: PhotosPickerItem?
-  @State private var editingStack: EditingStack?
+  @State private var selectedImage: PickedDemoImage?
+  @State private var loadingMessage: String?
   @State private var fullScreenView: FullscreenIdentifiableView?
 
   var body: some View {
 
     Form {
-      PhotosPicker("Select", selection: $item)
+      PhotosPicker("Select", selection: $item, matching: .images)
 
-      if let stack = editingStack {
+      if let selectedImage {
+        Section("Selected Photo") {
+          PickedImageSummary(image: selectedImage)
+        }
+
         Section("Components") {
 
           Button("Crop") {
             fullScreenView = .init {
-              DemoCropView(editingStack: stack)
+              DemoCropView(editingStack: selectedImage.makeEditingStack())
             }
           }
 
           Button("Masking") {
             fullScreenView = .init {
               DemoMaskingView {
-                stack
+                selectedImage.makeEditingStack()
               }
             }
           }
@@ -355,9 +361,7 @@ struct WorkingOnPicked: View {
           Button("PhotosCrop") {
             fullScreenView = .init {
               DemoPhotosCropView(stack: {
-                Mocks.makeEditingStack(
-                  image: Asset.horizontalRect.image
-                )
+                selectedImage.makeEditingStack()
               })
             }
           }
@@ -365,12 +369,35 @@ struct WorkingOnPicked: View {
           Button("ClassicEditor") {
             fullScreenView = .init {
               DemoPixelEditor(editingStack: {
-                stack
-              })
+                selectedImage.makeEditingStack()
+              }, options: .init(croppingAspectRatio: nil))
+            }
+          }
+
+          Button("ClassicEditor Square") {
+            fullScreenView = .init {
+              DemoPixelEditor(editingStack: {
+                selectedImage.makeEditingStack()
+              }, options: .init(croppingAspectRatio: .square))
+            }
+          }
+
+          Button("ClassicEditor 4:5") {
+            fullScreenView = .init {
+              DemoPixelEditor(editingStack: {
+                selectedImage.makeEditingStack()
+              }, options: .init(croppingAspectRatio: .init(width: 4, height: 5)))
             }
           }
         }
 
+      }
+
+      if let loadingMessage {
+        Section {
+          Text(loadingMessage)
+            .foregroundStyle(.secondary)
+        }
       }
 
     }
@@ -382,22 +409,43 @@ struct WorkingOnPicked: View {
       }
     )
     .onChange(of: item, perform: { value in
-      guard let value else { return }
+      selectedImage = nil
+      loadingMessage = "Loading selected image..."
+
+      guard let value else {
+        loadingMessage = nil
+        return
+      }
 
       Task {
 
         do {
           guard let transferable = try await value.loadTransferable(type: Data.self) else {
-            print("Error: no transferable found.")
+            await MainActor.run {
+              loadingMessage = "No image data was found."
+            }
             return
           }
 
-          let stack = EditingStack(imageProvider: try .init(data: transferable))
+          guard let previewImage = UIImage(data: transferable) else {
+            await MainActor.run {
+              loadingMessage = "The selected image could not be previewed."
+            }
+            return
+          }
 
-          self.editingStack = stack
-
+          let selectedImage = PickedDemoImage(
+            data: transferable,
+            previewImage: previewImage
+          )
+          await MainActor.run {
+            self.selectedImage = selectedImage
+            loadingMessage = nil
+          }
         } catch {
-          print("Error: \(error)")
+          await MainActor.run {
+            loadingMessage = "Failed to load selected image."
+          }
         }
 
       }
@@ -405,6 +453,46 @@ struct WorkingOnPicked: View {
 
   }
 
+}
+
+@available(iOS 16, *)
+private struct PickedDemoImage: Identifiable {
+  let id = UUID()
+  let data: Data
+  let previewImage: UIImage
+
+  var pixelSize: CGSize {
+    previewImage.size.applying(.init(scaleX: previewImage.scale, y: previewImage.scale))
+  }
+
+  func makeEditingStack() -> EditingStack {
+    EditingStack(imageProvider: try! .init(data: data))
+  }
+}
+
+@available(iOS 16, *)
+private struct PickedImageSummary: View {
+  let image: PickedDemoImage
+
+  var body: some View {
+    HStack(spacing: 12) {
+      Image(uiImage: image.previewImage)
+        .resizable()
+        .scaledToFill()
+        .frame(width: 72, height: 72)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Selected image")
+          .font(.headline)
+        Text("\(Int(image.pixelSize.width)) x \(Int(image.pixelSize.height)) px")
+        Text(ByteCountFormatter.string(fromByteCount: Int64(image.data.count), countStyle: .file))
+      }
+      .font(.footnote)
+      .foregroundStyle(.secondary)
+    }
+    .accessibilityElement(children: .combine)
+  }
 }
 
 struct DemoPhotosCropView: View {
