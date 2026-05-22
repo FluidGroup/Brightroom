@@ -233,7 +233,10 @@ private struct PixelEditorCanvas: View {
 
   var body: some View {
     ZStack {
-      PixelEditorImagePreviewRepresentable(editingStack: viewModel.editingStack)
+      PixelEditorImagePreviewRepresentable(
+        editingStack: viewModel.editingStack,
+        displayBackground: .color(.systemBackground)
+      )
         .opacity(viewModel.mode.isCrop ? 0 : 1)
         .allowsHitTesting(false)
 
@@ -1046,12 +1049,17 @@ private struct PixelEditorControlNavigation: View {
 private struct PixelEditorImagePreviewRepresentable: UIViewRepresentable {
 
   let editingStack: EditingStack
+  let displayBackground: MetalImageView.DisplayBackground
 
   func makeUIView(context: Context) -> ImagePreviewView {
-    ImagePreviewView(editingStack: editingStack)
+    let view = ImagePreviewView(editingStack: editingStack)
+    view.displayBackground = displayBackground
+    return view
   }
 
-  func updateUIView(_ uiView: ImagePreviewView, context: Context) {}
+  func updateUIView(_ uiView: ImagePreviewView, context: Context) {
+    uiView.displayBackground = displayBackground
+  }
 }
 
 private struct PixelEditorMetalImageView: UIViewRepresentable {
@@ -1063,11 +1071,13 @@ private struct PixelEditorMetalImageView: UIViewRepresentable {
     let view = MetalImageView()
     view.clipsToBounds = true
     view.contentMode = contentMode
+    view.displayBackground = .color(.systemBackground)
     return view
   }
 
   func updateUIView(_ uiView: MetalImageView, context: Context) {
     uiView.contentMode = contentMode
+    uiView.displayBackground = .color(.systemBackground)
     uiView.display(image: image)
   }
 }

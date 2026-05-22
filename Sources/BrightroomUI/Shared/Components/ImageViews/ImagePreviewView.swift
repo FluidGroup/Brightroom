@@ -47,6 +47,13 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   private var isBinding = false
   private var cachedCroppedImage: (state: EditingStack.Loaded, image: CIImage)? = nil
 
+  public var displayBackground: MetalImageView.DisplayBackground = .transparent {
+    didSet {
+      imageView.displayBackground = displayBackground
+      originalImageView.displayBackground = displayBackground
+    }
+  }
+
   // MARK: - Initializers
 
   public init(editingStack: EditingStack) {
@@ -70,6 +77,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
       imageView.clipsToBounds = true
       imageView.contentMode = .scaleAspectFit
       imageView.isOpaque = false
+      imageView.displayBackground = displayBackground
       imageView.frame = bounds
       imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
