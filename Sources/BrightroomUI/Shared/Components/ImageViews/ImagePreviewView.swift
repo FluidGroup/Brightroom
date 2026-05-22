@@ -19,9 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 import UIKit
 import Combine
 import StateGraph

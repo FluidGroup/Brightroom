@@ -52,7 +52,6 @@
 		4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B98CCC225EFF31400E4F61F /* Preview Assets.xcassets */; };
 		4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
 		4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
-		4BA2B1B42B86282D00E6DE64 /* BrightroomUIPhotosCrop in Frameworks */ = {isa = PBXBuildFile; productRef = 4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */; };
 		4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4BA41C8E260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */; };
 		4BA41C8F260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */; };
@@ -64,6 +63,7 @@
 		4BA9896F2B70BF2000EB7983 /* RenderedResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA9896E2B70BF2000EB7983 /* RenderedResultView.swift */; };
 		4BA989712B70F10300EB7983 /* ObjectEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA989702B70F10300EB7983 /* ObjectEdge.swift */; };
 		4BA989732B7122C800EB7983 /* DemoMaskingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA989722B7122C800EB7983 /* DemoMaskingView.swift */; };
+		CD1A00022F33A00000000002 /* RenderingDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1A00012F33A00000000001 /* RenderingDemoView.swift */; };
 		4BB7B9CA277A439C0014B62A /* LUT_64_Dark_HighContrast_v3.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */; };
 		4BB7B9CD277A452A0014B62A /* LUT_64_Gloss.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */; };
 		4BB9180C25F5460000C446B8 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */; };
@@ -532,6 +532,7 @@
 		4BA9896E2B70BF2000EB7983 /* RenderedResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderedResultView.swift; sourceTree = "<group>"; };
 		4BA989702B70F10300EB7983 /* ObjectEdge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectEdge.swift; sourceTree = "<group>"; };
 		4BA989722B7122C800EB7983 /* DemoMaskingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoMaskingView.swift; sourceTree = "<group>"; };
+		CD1A00012F33A00000000001 /* RenderingDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingDemoView.swift; sourceTree = "<group>"; };
 		4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LUT_64_Neutral.png; path = Resources/LUT_64_Neutral.png; sourceTree = SOURCE_ROOT; };
 		4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Dark_HighContrast_v3.png; sourceTree = "<group>"; };
 		4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Gloss.png; sourceTree = "<group>"; };
@@ -946,7 +947,6 @@
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
 				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
-				4BA2B1B42B86282D00E6DE64 /* BrightroomUIPhotosCrop in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1080,6 +1080,7 @@
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
 				4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
+				CD1A00012F33A00000000001 /* RenderingDemoView.swift */,
 				4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */,
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
 				4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */,
@@ -1587,7 +1588,6 @@
 				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
 				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
 				4B46E71A2B762E20003179C2 /* MondrianLayout */,
-				4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */,
 				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
@@ -2168,6 +2168,7 @@
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4BA9896F2B70BF2000EB7983 /* RenderedResultView.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
+				CD1A00022F33A00000000002 /* RenderingDemoView.swift in Sources */,
 				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
 				0451857F2B8F4A9E00A74713 /* DemoCropView2.swift in Sources */,
 				4B9325832B6A923400DDABAC /* RotateScrollView.swift in Sources */,
@@ -2605,10 +2606,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */;
 			productName = SwiftUISupport;
-		};
-		4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = BrightroomUIPhotosCrop;
 		};
 		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;

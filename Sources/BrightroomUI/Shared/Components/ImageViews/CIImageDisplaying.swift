@@ -20,10 +20,7 @@
 // THE SOFTWARE.
 
 import UIKit
-
-#if !COCOAPODS
-  import BrightroomEngine
-#endif
+import BrightroomEngine
 
 public protocol CIImageDisplaying: AnyObject {
   func display(image: CIImage?)

@@ -66,6 +66,16 @@ open class EditingStack: Hashable {
 
   // MARK: - Nested Types
 
+  private struct PreviewFilterPresetRequest: Equatable {
+    var thumbnailImage: CIImage
+  }
+
+  private struct CropImageRenderRequest: Equatable {
+    var filters: Edit.Filters
+    var editingSourceCGImage: CGImage
+    var orientation: CGImagePropertyOrientation
+  }
+
   public struct Loaded: Equatable {
 
     // MARK: - Properties
@@ -211,7 +221,9 @@ open class EditingStack: Hashable {
   private let filterPresets: [FilterPreset]
 
   private var subscriptions: Set<AnyCancellable> = .init()
-  private var imageProviderSubscription: Any?
+  private var imageProviderSubscription: AnyCancellable?
+
+  private let startLock = NSLock()
 
   public var cropModifier: CropModifier
 
@@ -221,11 +233,6 @@ open class EditingStack: Hashable {
     interval: 0.1,
     queue: DispatchQueue.init(label: "Brightroom.cgImage")
   )
-
-  // MARK: - Change Tracking
-
-  private var _previousThumbnailImage: CIImage?
-  private var _previousFilters: Edit.Filters?
 
   // MARK: - Initializers
 
@@ -237,7 +244,6 @@ open class EditingStack: Hashable {
   ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
   public init(
     imageProvider: ImageProvider,
-    colorCubeStorage: ColorCubeStorage = .default,
     presetStorage: PresetStorage = .default,
     options: Options = .init(),
     cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
@@ -246,15 +252,7 @@ open class EditingStack: Hashable {
     self.options = options
     self.cropModifier = cropModifier
 
-    filterPresets =
-      colorCubeStorage.filters.map {
-        FilterPreset(
-          name: $0.name,
-          identifier: $0.identifier,
-          filters: [$0.asAny()],
-          userInfo: [:]
-        )
-      } + presetStorage.presets
+    filterPresets = presetStorage.presets
 
     self.imageProvider = imageProvider
   }
@@ -269,24 +267,14 @@ open class EditingStack: Hashable {
     /**
      Mutual exclusion
      */
-    if hasStartedEditing {
+    guard markStartedIfNeeded() else {
       DispatchQueue.main.async {
         onPreparationCompleted()
       }
       return
     }
-    hasStartedEditing = true
 
-    // Set up state observation on background queue
-    withGraphTracking { [weak self] in
-      withGraphTrackingGroup {
-        guard let self = self else { return }
-        self.backgroundQueue.async {
-          self.receiveInBackground()
-        }
-      }
-    }
-    .store(in: &subscriptions)
+    bindLoadedStateProcessing()
 
     /**
      Start downloading image
@@ -306,6 +294,64 @@ open class EditingStack: Hashable {
       })
     }
     imageProviderSubscription = imageProviderSub
+  }
+
+  private func markStartedIfNeeded() -> Bool {
+    startLock.lock()
+    defer {
+      startLock.unlock()
+    }
+
+    guard hasStartedEditing == false else {
+      return false
+    }
+
+    hasStartedEditing = true
+    return true
+  }
+
+  private func bindLoadedStateProcessing() {
+    withGraphTracking { [weak self] in
+      guard let self else { return }
+
+      withGraphTrackingMap(
+        from: self,
+        map: { stack -> PreviewFilterPresetRequest? in
+          stack.loadedState.map {
+            PreviewFilterPresetRequest(thumbnailImage: $0.thumbnailImage)
+          }
+        },
+        onChange: { [weak self] request in
+          guard let self, let request else { return }
+
+          self.backgroundQueue.async {
+            let presets = self.filterPresets.map {
+              PreviewFilterPreset(sourceImage: request.thumbnailImage, filter: $0)
+            }
+            self.loadedState?.previewFilterPresets = presets
+          }
+        }
+      )
+
+      withGraphTrackingMap(
+        from: self,
+        map: { stack -> CropImageRenderRequest? in
+          stack.loadedState.map {
+            CropImageRenderRequest(
+              filters: $0.currentEdit.filters,
+              editingSourceCGImage: $0.editingSourceCGImage,
+              orientation: $0.metadata.orientation
+            )
+          }
+        },
+        onChange: { [weak self] request in
+          guard let self, let request else { return }
+
+          self.scheduleCropImageRender(request)
+        }
+      )
+    }
+    .store(in: &subscriptions)
   }
 
   private func handleImageLoaded(
@@ -432,48 +478,24 @@ open class EditingStack: Hashable {
     EngineLog.debug("[EditingStack] deinit")
   }
 
-  private func receiveInBackground() {
+  private func scheduleCropImageRender(_ request: CropImageRenderRequest) {
+    debounceForCreatingCGImage.on { [weak self] in
+      guard let self else { return }
 
-    assert(Thread.isMainThread == false)
+      let cgImageForCrop: CGImage = {
+        do {
+          return try Self.renderCGImageForCrop(
+            filters: request.filters.makeFilters(),
+            source: .init(cgImage: request.editingSourceCGImage),
+            orientation: request.orientation
+          )
+        } catch {
+          assertionFailure()
+          return request.editingSourceCGImage
+        }
+      }()
 
-    guard let loadedState = self.loadedState else { return }
-
-    // Check if thumbnailImage changed
-    if _previousThumbnailImage != loadedState.thumbnailImage {
-      _previousThumbnailImage = loadedState.thumbnailImage
-
-      let image = loadedState.thumbnailImage
-      let presets = self.filterPresets.map {
-        PreviewFilterPreset(sourceImage: image, filter: $0)
-      }
-      self.loadedState?.previewFilterPresets = presets
-    }
-
-    // Check if filters changed
-    if _previousFilters != loadedState.currentEdit.filters {
-      _previousFilters = loadedState.currentEdit.filters
-
-      let currentFilters = loadedState.currentEdit.filters
-
-      self.debounceForCreatingCGImage.on { [weak self] in
-
-        guard let self = self, let loadedState = self.loadedState else { return }
-
-        let cgImageForCrop: CGImage = {
-          do {
-            return try Self.renderCGImageForCrop(
-              filters: currentFilters.makeFilters(),
-              source: .init(cgImage: loadedState.editingSourceCGImage),
-              orientation: loadedState.metadata.orientation
-            )
-          } catch {
-            assertionFailure()
-            return loadedState.editingSourceCGImage
-          }
-        }()
-
-        self.loadedState?.imageForCrop = cgImageForCrop
-      }
+      self.loadedState?.imageForCrop = cgImageForCrop
     }
   }
 

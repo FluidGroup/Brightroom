@@ -8,7 +8,6 @@
 
 import BrightroomEngine
 import BrightroomUI
-import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
 import SwiftUISupport

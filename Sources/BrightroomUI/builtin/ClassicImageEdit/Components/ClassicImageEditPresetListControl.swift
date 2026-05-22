@@ -20,9 +20,7 @@
 // THE SOFTWARE.
 import UIKit
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 import Combine
 import StateGraph
@@ -290,23 +288,28 @@ open class ClassicImageEditPresetListControl: ClassicImageEditPresetListControlB
   private func scrollTo(selectedItem: FilterPreset?, animated: Bool) {
 
     guard let content = content else {
-
       return
     }
 
+    let targetIndexPath: IndexPath
+
     if let current = selectedItem, let index = content.previews.firstIndex(where: { $0.filter == current }) {
-      collectionView.scrollToItem(
-        at: IndexPath.init(item: index, section: Section.selections.rawValue),
-        at: .centeredHorizontally,
-        animated: animated
-      )
+      targetIndexPath = IndexPath(item: index, section: Section.selections.rawValue)
     } else {
-      collectionView.scrollToItem(
-        at: IndexPath.init(item: 0, section: Section.original.rawValue),
-        at: .centeredHorizontally,
-        animated: animated
-      )
+      targetIndexPath = IndexPath(item: 0, section: Section.original.rawValue)
     }
+
+    guard collectionView.numberOfSections > targetIndexPath.section,
+          collectionView.numberOfItems(inSection: targetIndexPath.section) > targetIndexPath.item
+    else {
+      return
+    }
+
+    collectionView.scrollToItem(
+      at: targetIndexPath,
+      at: .centeredHorizontally,
+      animated: animated
+    )
   }
 
   // MARK: - Nested Types

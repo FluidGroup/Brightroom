@@ -22,9 +22,7 @@
 import UIKit
 import SwiftUI
 import StateGraph
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
   
@@ -67,6 +65,19 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     }
   }
 
+  public final class ApplyAction {
+
+    var onCall: () -> Void = {}
+
+    public init() {
+
+    }
+
+    public func callAsFunction() {
+      onCall()
+    }
+  }
+
   public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
       
   private let cropInsideOverlay: ((CropView.StateModel.AdjustmentKind?) -> AnyView)?
@@ -78,8 +89,9 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
   private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
   private var _croppingAspectRatio: PixelAspectRatio?
   private var _resetAction: ResetAction?
+  private var _applyAction: ApplyAction?
 
-  private let stateHandler: @MainActor (CropView.StateModel) -> Void
+  private let stateHandler: @MainActor (CropView.StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
   private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
@@ -93,7 +105,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropView.StateModel.AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (CropView.StateModel.AdjustmentKind?) -> OutsideOverlay,
-    stateHandler: @escaping @MainActor (CropView.StateModel) -> Void = { _ in }
+    stateHandler: @escaping @MainActor (CropView.StateSnapshot) -> Void = { _ in }
   ) {
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
@@ -111,7 +123,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    stateHandler: @escaping @MainActor (CropView.StateModel) -> Void = { _ in }
+    stateHandler: @escaping @MainActor (CropView.StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
@@ -145,12 +157,32 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
       view.setCropOutsideOverlay(CropView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
     }
 
+    _resetAction?.onCall = { [weak view] in
+      view?.resetCrop()
+    }
+
+    _applyAction?.onCall = { [weak view] in
+      view?.applyEditingStack()
+    }
+
     let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
 
     return controller
   }
   
   public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
+
+    if uiViewController.bodyView.isGuideInteractionEnabled != isGuideInteractionEnabled {
+      uiViewController.bodyView.isGuideInteractionEnabled = isGuideInteractionEnabled
+    }
+
+    if uiViewController.bodyView.isAutoApplyEditingStackEnabled != isAutoApplyEditingStackEnabled {
+      uiViewController.bodyView.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
+    }
+
+    if uiViewController.bodyView.areAnimationsEnabled != areAnimationsEnabled {
+      uiViewController.bodyView.areAnimationsEnabled = areAnimationsEnabled
+    }
 
     if let _rotation {
       uiViewController.bodyView.setRotation(_rotation)
@@ -164,6 +196,10 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
     _resetAction?.onCall = { [weak uiViewController] in
       uiViewController?.bodyView.resetCrop()
+    }
+
+    _applyAction?.onCall = { [weak uiViewController] in
+      uiViewController?.bodyView.applyEditingStack()
     }
   }
 
@@ -194,6 +230,14 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
 
     var modified = self
     modified._resetAction = action
+    return modified
+
+  }
+
+  public func registerApplyAction(_ action: ApplyAction) -> Self {
+
+    var modified = self
+    modified._applyAction = action
     return modified
 
   }

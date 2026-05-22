@@ -21,10 +21,7 @@
 
 import MetalKit
 import UIKit
-
-#if !COCOAPODS
-  import BrightroomEngine
-#endif
+import BrightroomEngine
 
 /// https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
 open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {

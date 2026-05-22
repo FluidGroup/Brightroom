@@ -25,9 +25,7 @@ import UIKit
 import Combine
 import StateGraph
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 /// A view that previews how crops the image.
 ///
@@ -38,6 +36,13 @@ import BrightroomEngine
 /// - TODO:
 ///   - Implicit animations occurs in first time load with remote image.
 public final class CropView: UIView, UIScrollViewDelegate {
+
+  public struct StateSnapshot: Equatable {
+    public var proposedCrop: EditingCrop?
+    public var frame: CGRect
+    public var adjustmentKind: StateModel.AdjustmentKind
+    public var preferredAspectRatio: PixelAspectRatio?
+  }
 
   public final class StateModel {
 
@@ -65,6 +70,15 @@ public final class CropView: UIView, UIScrollViewDelegate {
      Would not be affected by rotation.
      */
     @GraphStored public var preferredAspectRatio: PixelAspectRatio? = nil
+
+    public var snapshot: StateSnapshot {
+      .init(
+        proposedCrop: proposedCrop,
+        frame: frame,
+        adjustmentKind: adjustmentKind,
+        preferredAspectRatio: preferredAspectRatio
+      )
+    }
 
     public init() {}
   }
@@ -214,7 +228,8 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   private var isBinding = false
 
-  private var stateHandler: @MainActor (StateModel) -> Void = { _ in }
+  private var stateHandler: @MainActor (StateSnapshot) -> Void = { _ in }
+  private var stateHandlerSubscription: AnyCancellable?
 
   var isAutoApplyEditingStackEnabled = false
 
@@ -293,15 +308,6 @@ public final class CropView: UIView, UIScrollViewDelegate {
       })
     }
 
-    // Set up state observation for external handler
-    withGraphTracking {
-      withGraphTrackingGroup { [weak self] in
-        guard let self else { return }
-        self.stateHandler(self.state)
-      }
-    }
-    .store(in: &subscriptions)
-
   }
 
   @available(*, unavailable)
@@ -311,8 +317,23 @@ public final class CropView: UIView, UIScrollViewDelegate {
 
   // MARK: - Functions
 
-  func setStateHandler(_ handler: @escaping @MainActor (StateModel) -> Void) {
+  func setStateHandler(_ handler: @escaping @MainActor (StateSnapshot) -> Void) {
     self.stateHandler = handler
+    bindStateHandler()
+  }
+
+  private func bindStateHandler() {
+    stateHandlerSubscription = withGraphTracking {
+      withGraphTrackingMap(
+        from: self,
+        map: { $0.state.snapshot },
+        onChange: { [weak self] snapshot in
+          Task { @MainActor in
+            self?.stateHandler(snapshot)
+          }
+        }
+      )
+    }
   }
 
   public func setOverlayInImageView(_ overlay: UIView) {

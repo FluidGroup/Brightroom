@@ -21,9 +21,7 @@
 
 import UIKit
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 protocol ClassicImageEditControlChildViewType {
 }

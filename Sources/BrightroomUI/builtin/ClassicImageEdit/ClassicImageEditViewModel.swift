@@ -21,9 +21,7 @@
 
 import UIKit
 import StateGraph
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 public final class ClassicImageEditViewModel: Equatable {
   public static func == (lhs: ClassicImageEditViewModel, rhs: ClassicImageEditViewModel) -> Bool {

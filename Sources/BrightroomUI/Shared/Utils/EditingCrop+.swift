@@ -9,9 +9,7 @@
 import Foundation
 import CoreGraphics
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 extension EditingCrop {
   func scrollViewContentSize() -> CGSize {

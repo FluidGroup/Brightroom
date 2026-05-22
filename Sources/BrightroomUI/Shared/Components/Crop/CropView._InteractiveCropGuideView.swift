@@ -20,9 +20,7 @@
 // THE SOFTWARE.
 
 import UIKit
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 extension CropView {
   

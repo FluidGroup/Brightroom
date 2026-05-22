@@ -8,7 +8,6 @@
 
 import BrightroomEngine
 import BrightroomUI
-import BrightroomUIPhotosCrop
 import SwiftUI
 import UIKit
 import StateGraph
@@ -27,13 +26,11 @@ struct DemoCropView: View {
   var body: some View {
     ZStack {
 
-      VStack {
-        PhotosCropRotating(editingStack: editingStack)
-//        Button("Done") {
-//          let image = try! $editingStackState.driver.makeRenderer().render().cgImage
-//          self.resultImage = .init(cgImage: image)
-//        }
-      }
+      SwiftUICropView(
+        editingStack: editingStack,
+        isAutoApplyEditingStackEnabled: true
+      )
+      .background(Color.black)
 
       VStack {
         HStack {
@@ -54,13 +51,6 @@ struct DemoCropView: View {
       .ignoresSafeArea()
 
     }
-//    .safeAreaInset(edge: .top, content: {
-//      Button("Done") {
-//        let image = try! $editingStackState.driver.makeRenderer().render().cgImage
-//        self.resultImage = .init(cgImage: image)
-//      }
-//    })
-
     .onAppear {
       editingStack.start()
     }

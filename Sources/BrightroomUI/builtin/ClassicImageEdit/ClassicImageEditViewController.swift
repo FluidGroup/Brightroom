@@ -23,10 +23,7 @@ import Photos
 import UIKit
 import Combine
 import StateGraph
-
-#if !COCOAPODS
-  import BrightroomEngine
-#endif
+import BrightroomEngine
 
 @available(*, deprecated, renamed: "ClassicImageEditViewController")
 public typealias PixelEditViewController = ClassicImageEditViewController

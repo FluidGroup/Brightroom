@@ -21,9 +21,7 @@
 
 import UIKit
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 import TransitionPatch
 
 public final class ClassicImageEditStepSlider : UIControl {

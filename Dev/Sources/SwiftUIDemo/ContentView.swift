@@ -32,6 +32,10 @@ struct ContentView: View {
             DemoFilterView(editingStack: horizontalStack)
           }
 
+          NavigationLink("Rendering") {
+            RenderingDemoView()
+          }
+
           Section("Restoration Horizontal") {
             Button("Crop") {
               fullScreenView = .init {
@@ -255,6 +259,32 @@ struct ContentView: View {
               }
             }
 
+            Button("PixelEditor 4:5") {
+              fullScreenView = .init {
+                DemoPixelEditor(
+                  editingStack: {
+                    EditingStack.init(
+                      imageProvider: .init(image: Asset.l1000316.image)
+                    )
+                  },
+                  options: .init(croppingAspectRatio: .init(width: 4, height: 5))
+                )
+              }
+            }
+
+            Button("PixelEditor 5:4") {
+              fullScreenView = .init {
+                DemoPixelEditor(
+                  editingStack: {
+                    EditingStack.init(
+                      imageProvider: .init(image: Asset.l1000316.image)
+                    )
+                  },
+                  options: .init(croppingAspectRatio: .init(width: 5, height: 4))
+                )
+              }
+            }
+
             Button("PixelEditor left") {
               fullScreenView = .init {
                 DemoPixelEditor(
@@ -407,6 +437,8 @@ struct DemoPhotosCropView: View {
 
 struct DemoPixelEditor: View {
 
+  @Environment(\.dismiss) private var dismiss
+
   @ObjectEdge var editingStack: EditingStack
   @State var resultImage: ResultImage?
 
@@ -421,53 +453,21 @@ struct DemoPixelEditor: View {
   }
 
   var body: some View {
-    DemoPixelEditWrapper(
+    SwiftUIPixelEditorView(
       editingStack: editingStack,
       options: options,
-
-      onCompleted: {
+      onEndEditing: { editingStack in
         let image = try! editingStack.makeRenderer().render().cgImage
         self.resultImage = .init(cgImage: image)
+      },
+      onCancelEditing: {
+        dismiss()
       }
     )
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
     }
   }
-}
-
-struct DemoPixelEditWrapper: UIViewControllerRepresentable {
-
-  typealias UIViewControllerType = UINavigationController
-
-  private let onCompleted: () -> Void
-
-  let editingStack: EditingStack
-  let options: ClassicImageEditOptions
-
-  init(
-    editingStack: EditingStack,
-    options: ClassicImageEditOptions,
-    onCompleted: @escaping () -> Void
-  ) {
-    self.editingStack = editingStack
-    self.onCompleted = onCompleted
-    self.options = options
-  }
-
-  func makeUIViewController(context: Context) -> UINavigationController {
-    editingStack.start()
-    let cropViewController = ClassicImageEditViewController(
-      editingStack: editingStack,
-      options: options
-    )
-    cropViewController.handlers.didEndEditing = { _, _ in
-      onCompleted()
-    }
-    return UINavigationController(rootViewController: cropViewController)
-  }
-
-  func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
 }
 
 #Preview {

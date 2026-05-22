@@ -9,7 +9,6 @@ let package = Package(
   products: [
     .library(name: "BrightroomEngine", targets: ["BrightroomUI"]),
     .library(name: "BrightroomUI", targets: ["BrightroomUI"]),
-    .library(name: "BrightroomUIPhotosCrop", targets: ["BrightroomUIPhotosCrop"])
   ],
   dependencies: [
     .package(url: "https://github.com/VergeGroup/swift-state-graph", exact: "0.17.0"),
@@ -28,12 +27,9 @@ let package = Package(
       dependencies: [
         "BrightroomEngine",
         .product(name: "StateGraph", package: "swift-state-graph"),
+        "PrecisionLevelSlider",
         "TransitionPatch",
       ]
     ),
-    .target(
-      name: "BrightroomUIPhotosCrop",
-      dependencies: ["BrightroomUI", "PrecisionLevelSlider"]
-    )
   ]
 )
