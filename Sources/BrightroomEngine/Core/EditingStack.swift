@@ -129,11 +129,11 @@ open class EditingStack: Hashable {
      A boolean value that indicates if EditingStack has updates against the original image.
      */
     public var isDirty: Bool {
-      return currentEdit != initialEditing
+      return currentEdit.isRenderingEquivalent(to: initialEditing) == false
     }
 
     public var hasUncommitedChanges: Bool {
-      guard currentEdit == initialEditing else {
+      guard currentEdit.isRenderingEquivalent(to: initialEditing) else {
         return true
       }
 
@@ -141,7 +141,7 @@ open class EditingStack: Hashable {
         return false
       }
 
-      guard latestHistory == currentEdit else {
+      guard latestHistory.isRenderingEquivalent(to: currentEdit) else {
         return true
       }
 
@@ -458,12 +458,13 @@ open class EditingStack: Hashable {
         maxPixelSize: max(imageSize.width, imageSize.height)
       )
 
-      return try sourceImage
-      // TODO: better to combine these operations - oriented and cropping
+      let orientedImage = try sourceImage
+        // TODO: better to combine these operations - oriented and cropping
         .oriented(orientation)
-        .croppedWithColorspace(
-          to: scaledCrop.cropExtent, adjustmentAngleRadians: scaledCrop.aggregatedRotation.radians
-        )
+      let renderCrop = RenderCrop(scaledCrop, imageSize: orientedImage.size)
+
+      return try orientedImage
+        .croppedWithColorspace(to: renderCrop)
         ._makeCIImage(
           orientation: .up,
           device: mtlDevice,

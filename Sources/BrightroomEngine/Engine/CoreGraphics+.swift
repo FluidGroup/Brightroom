@@ -31,6 +31,12 @@ extension CGContext {
   }
 
   static func makeContext(for image: CGImage, size: CGSize? = nil) throws -> CGContext {
+    let pixelDimensions = size.map { PixelDimensions($0) } ?? .init(width: image.width, height: image.height)
+
+    return try makeContext(for: image, pixelDimensions: pixelDimensions)
+  }
+
+  static func makeContext(for image: CGImage, pixelDimensions: PixelDimensions) throws -> CGContext {
 
     var bitmapInfo = image.bitmapInfo
 
@@ -67,8 +73,8 @@ extension CGContext {
       outputColorSpace = CGColorSpaceCreateDeviceRGB()
     }
 
-    let width = size.map { Int($0.width) } ?? image.width
-    let height = size.map { Int($0.height) } ?? image.height
+    let width = pixelDimensions.width
+    let height = pixelDimensions.height
 
     if let context = CGContext(
       data: nil,
@@ -121,13 +127,24 @@ extension CGImage {
   }
 
   func croppedWithColorspace(
-    to cropRect: CGRect,
+    to crop: RenderCrop
+  ) throws -> CGImage {
+    try croppedWithColorspace(
+      to: crop.cropRect,
+      adjustmentAngleRadians: crop.aggregatedRotation.radians
+    )
+  }
+
+  func croppedWithColorspace(
+    to cropRect: PixelCropRect,
     adjustmentAngleRadians: CGFloat
   ) throws -> CGImage {
 
+    let cropExtent = cropRect.cgRect
+
     let cgImage = try autoreleasepool { () -> CGImage? in
 
-      let context = try CGContext.makeContext(for: self, size: cropRect.size)
+      let context = try CGContext.makeContext(for: self, pixelDimensions: cropRect.size)
         .perform { context in
 
           context.rotate(
@@ -139,8 +156,8 @@ extension CGImage {
             self,
             in: CGRect(
               origin: .init(
-                x: -cropRect.origin.x,
-                y: -(size.height - cropRect.maxY)
+                x: -cropExtent.origin.x,
+                y: -(size.height - cropExtent.maxY)
               ),
               size: size
             )
