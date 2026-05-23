@@ -72,7 +72,7 @@ final class CropView: UIView, UIScrollViewDelegate {
   /**
    A view that covers the area out of cropping extent.
    */
-  public private(set) weak var cropOutsideOverlay: UIView?
+  private(set) weak var cropOutsideOverlay: UIView?
 
   private var state = State()
 
@@ -80,7 +80,7 @@ final class CropView: UIView, UIScrollViewDelegate {
    A Boolean value that indicates whether the guide is interactive.
    If false, cropping adjustment is available only way from scrolling image-view.
    */
-  public var isGuideInteractionEnabled: Bool {
+  var isGuideInteractionEnabled: Bool {
     get {
       guideView.isUserInteractionEnabled
     }
@@ -92,15 +92,15 @@ final class CropView: UIView, UIScrollViewDelegate {
   /**
    Clips ScrollView to guide view.
    */
-  public var clipsToGuide: Bool = false {
+  var clipsToGuide: Bool = false {
     didSet {
       updateCropLayout()
     }
   }
 
-  public var areAnimationsEnabled: Bool = true
+  var areAnimationsEnabled: Bool = true
 
-  public var isImageViewHidden: Bool {
+  var isImageViewHidden: Bool {
     get {
       imagePlatterView.imageView.isHidden
     }
@@ -109,13 +109,13 @@ final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
-  public var isZoomEnabled: Bool = true {
+  var isZoomEnabled: Bool = true {
     didSet {
       updateCropLayout()
     }
   }
 
-  public var isScrollEnabled: Bool {
+  var isScrollEnabled: Bool {
     get {
       scrollView.isScrollEnabled
     }
@@ -124,7 +124,7 @@ final class CropView: UIView, UIScrollViewDelegate {
     }
   }
 
-  public let editingStack: EditingStack
+  let editingStack: EditingStack
 
   /**
    An image view that displayed in the scroll view.
@@ -315,6 +315,11 @@ final class CropView: UIView, UIScrollViewDelegate {
 
     setImage(image)
     setProposedCrop(crop, forcesLayout: true)
+  }
+
+  func loadCurrentEditingStackState() {
+    let loadedState = editingStack.requireLoadedStateForLoadedUIView()
+    load(image: loadedState.imageForCrop, crop: loadedState.currentEdit.crop)
   }
 
   func setOverlayInImageView(_ overlay: UIView) {
@@ -685,7 +690,7 @@ extension CropView {
     lastLaidOutCrop = crop
   }
 
-  override public func layoutSubviews() {
+  override func layoutSubviews() {
     super.layoutSubviews()
 
     // TODO: Get an optimized size
@@ -1155,11 +1160,11 @@ extension CropView {
 
   // MARK: UIScrollViewDelegate
 
-  public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+  func viewForZooming(in scrollView: UIScrollView) -> UIView? {
     return imagePlatterView
   }
 
-  public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+  func scrollViewDidZoom(_ scrollView: UIScrollView) {
 
     debugLogScrollViewAdjustment("did-zoom")
 
@@ -1193,7 +1198,7 @@ extension CropView {
     }
   }
 
-  public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+  func scrollViewDidScroll(_ scrollView: UIScrollView) {
 
     debugLogScrollViewAdjustment("did-scroll")
 
@@ -1211,17 +1216,17 @@ extension CropView {
     }
   }
 
-  public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+  func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
     debugLogScrollViewAdjustment("drag-begin")
     beginScrollViewAdjustment(.drag)
   }
 
-  public func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+  func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
     debugLogScrollViewAdjustment("zoom-begin")
     beginScrollViewAdjustment(.zoom)
   }
 
-  public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool)
+  func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool)
   {
     debugLogScrollViewAdjustment("drag-end decelerate:\(decelerate)")
 
@@ -1230,7 +1235,7 @@ extension CropView {
     }
   }
 
-  public func scrollViewDidEndZooming(
+  func scrollViewDidEndZooming(
     _ scrollView: UIScrollView,
     with view: UIView?,
     atScale scale: CGFloat
@@ -1239,7 +1244,7 @@ extension CropView {
     endScrollViewAdjustment(.zoom)
   }
 
-  public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+  func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
     debugLogScrollViewAdjustment("deceleration-end")
     endScrollViewAdjustment(.drag)
   }

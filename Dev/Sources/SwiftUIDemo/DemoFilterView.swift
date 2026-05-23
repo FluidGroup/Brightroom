@@ -2,9 +2,7 @@
 import BrightroomEngine
 import BrightroomUI
 import SwiftUI
-import SwiftUISupport
 import UIKit
-import StateGraph
 
 struct DemoFilterView: View {
 
@@ -110,7 +108,7 @@ struct DemoFilterView: View {
   var body: some View {
     VStack {
 
-      ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+      SwiftUIImagePreviewView(editingStack: editingStack)
 
       VStack {
         Toggle("Invert", isOn: $invertToggle)

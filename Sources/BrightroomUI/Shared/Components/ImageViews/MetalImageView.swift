@@ -20,23 +20,91 @@
 // THE SOFTWARE.
 
 import MetalKit
+import SwiftUI
 import UIKit
 import BrightroomEngine
 
+public enum ImageDisplayBackground {
+  case transparent
+  case color(UIColor)
+
+  var metalDisplayBackground: _MetalImageView.DisplayBackground {
+    switch self {
+    case .transparent:
+      return .transparent
+    case .color(let color):
+      return .color(color)
+    }
+  }
+}
+
+public struct SwiftUIMetalImageView: View {
+
+  private let image: CIImage?
+  private let contentMode: UIView.ContentMode
+  private let displayBackground: ImageDisplayBackground
+  private let postProcessing: (CIImage) -> CIImage
+
+  public init(
+    image: CIImage?,
+    contentMode: UIView.ContentMode = .scaleAspectFill,
+    displayBackground: ImageDisplayBackground = .transparent,
+    postProcessing: @escaping (CIImage) -> CIImage = { $0 }
+  ) {
+    self.image = image
+    self.contentMode = contentMode
+    self.displayBackground = displayBackground
+    self.postProcessing = postProcessing
+  }
+
+  public var body: some View {
+    MetalImageRepresentable(
+      image: image,
+      contentMode: contentMode,
+      displayBackground: displayBackground,
+      postProcessing: postProcessing
+    )
+  }
+}
+
+private struct MetalImageRepresentable: UIViewRepresentable {
+
+  let image: CIImage?
+  let contentMode: UIView.ContentMode
+  let displayBackground: ImageDisplayBackground
+  let postProcessing: (CIImage) -> CIImage
+
+  func makeUIView(context: Context) -> _MetalImageView {
+    let view = _MetalImageView()
+    view.clipsToBounds = true
+    view.contentMode = contentMode
+    view.displayBackground = displayBackground.metalDisplayBackground
+    view.postProcessing = postProcessing
+    return view
+  }
+
+  func updateUIView(_ uiView: _MetalImageView, context: Context) {
+    uiView.contentMode = contentMode
+    uiView.displayBackground = displayBackground.metalDisplayBackground
+    uiView.postProcessing = postProcessing
+    uiView.display(image: image)
+  }
+}
+
 /// https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
-open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
-  public enum DisplayBackground {
+final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
+  enum DisplayBackground {
     case transparent
     case color(UIColor)
   }
 
-  public var postProcessing: (CIImage) -> CIImage = { $0 } {
+  var postProcessing: (CIImage) -> CIImage = { $0 } {
     didSet {
       setNeedsDisplay()
     }
   }
 
-  public var displayBackground: DisplayBackground = .transparent {
+  var displayBackground: DisplayBackground = .transparent {
     didSet {
       setNeedsDisplay()
     }
@@ -54,13 +122,13 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     CIContext(mtlDevice: self.device!)
   }()
 
-  override open var contentMode: UIView.ContentMode {
+  override var contentMode: UIView.ContentMode {
     didSet {
       setNeedsDisplay()
     }
   }
 
-  override public init(
+  override init(
     frame frameRect: CGRect,
     device: MTLDevice?
   ) {
@@ -82,7 +150,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     clearsContextBeforeDrawing = true
 
     if #available(iOS 17, *) {
-      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: MetalImageView, _) in
+      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: _MetalImageView, _) in
         view.setNeedsDisplay()
       }
     }
@@ -107,26 +175,26 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
 
   }
 
-  public required init(
+  required init(
     coder: NSCoder
   ) {
     fatalError("init(coder:) has not been implemented")
   }
 
-  public func display(image: CIImage?) {
+  func display(image: CIImage?) {
     self.image = image
     setNeedsDisplay()
   }
 
-  override open var frame: CGRect {
+  override var frame: CGRect {
     didSet {
       setNeedsDisplay()
     }
   }
 
-  public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
+  func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
-  public func draw(in view: MTKView) {
+  func draw(in view: MTKView) {
     renderImage()
   }
 
@@ -141,11 +209,11 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       return
     }
 
-    EditorLog.debug(.imageView, "[MetalImageView] Render")
+    EditorLog.debug(.imageView, "[_MetalImageView] Render")
 
     #if DEBUG
       //    if image.cgImage != nil {
-      //      EditorLog.debug("[MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
+      //      EditorLog.debug("[_MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
       //    }
     #endif
 
@@ -276,7 +344,7 @@ open class MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
 
 }
 
-private extension MetalImageView.DisplayBackground {
+private extension _MetalImageView.DisplayBackground {
 
   func resolvedColor(traitCollection: UITraitCollection) -> UIColor? {
     switch self {
@@ -338,7 +406,7 @@ private extension CGRect {
 private extension CIImage {
 
   func compositedOverDisplayBackground(
-    _ displayBackground: MetalImageView.DisplayBackground,
+    _ displayBackground: _MetalImageView.DisplayBackground,
     bounds: CGRect,
     traitCollection: UITraitCollection
   ) -> CIImage {

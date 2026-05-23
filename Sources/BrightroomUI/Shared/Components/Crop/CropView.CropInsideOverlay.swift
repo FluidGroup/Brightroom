@@ -11,9 +11,9 @@ import UIKit
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/
 extension CropView {
-  public final class CropOverlayHandlesView: PixelEditorCodeBasedView {
+  final class CropOverlayHandlesView: _PixelEditorCodeBasedView {
 
-    public let edgeShapeLayer = UIView()
+    let edgeShapeLayer = UIView()
 
     private let cornerTopLeftHorizontalShapeLayer = UIView()
     private let cornerTopLeftVerticalShapeLayer = UIView()
@@ -27,7 +27,7 @@ extension CropView {
     private let cornerBottomRightHorizontalShapeLayer = UIView()
     private let cornerBottomRightVerticalShapeLayer = UIView()
 
-    public init() {
+    init() {
       super.init(frame: .zero)
 
       isUserInteractionEnabled = false
@@ -49,7 +49,7 @@ extension CropView {
       }
     }
 
-    override public func layoutSubviews() {
+    override func layoutSubviews() {
       super.layoutSubviews()
 
       edgeShapeLayer&>.do {
@@ -112,29 +112,29 @@ extension CropView {
     }
   }
 
-  open class CropInsideOverlayBase: PixelEditorCodeBasedView {
+  class CropInsideOverlayBase: _PixelEditorCodeBasedView {
 
-    public init() {
+    init() {
       super.init(frame: .zero)
     }
 
-    open func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    func didBeginAdjustment(kind: CropView.AdjustmentKind) {
 
     }
 
-    open func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    func didEndAdjustment(kind: CropView.AdjustmentKind) {
 
     }
 
   }
 
   @available(iOS 14, *)
-  open class SwiftUICropInsideOverlay<Content: View>: CropInsideOverlayBase {
+  class SwiftUICropInsideOverlay<Content: View>: CropInsideOverlayBase {
 
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    public init(@ViewBuilder content: @escaping (CropView.AdjustmentKind?) -> Content) {
+    init(@ViewBuilder content: @escaping (CropView.AdjustmentKind?) -> Content) {
       
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -147,11 +147,11 @@ extension CropView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    open override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
       proxy.activeKind = kind
     }
 
-    open override func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
       proxy.activeKind = nil
     }
 
@@ -167,7 +167,7 @@ extension CropView {
 
       private let content: (CropView.AdjustmentKind?) -> Content
 
-      public init(
+      init(
         proxy: Proxy,
         content: @escaping (CropView.AdjustmentKind?) -> Content
       ) {
@@ -182,7 +182,7 @@ extension CropView {
 
   }
 
-  public final class RuleOfThirdsView: PixelEditorCodeBasedView {
+  final class RuleOfThirdsView: _PixelEditorCodeBasedView {
 
     private let verticalLine1 = UIView()
     private let verticalLine2 = UIView()
@@ -190,7 +190,7 @@ extension CropView {
     private let horizontalLine1 = UIView()
     private let horizontalLine2 = UIView()
 
-    public init(lineColor: UIColor = UIColor(white: 1, alpha: 0.3)) {
+    init(lineColor: UIColor = UIColor(white: 1, alpha: 0.3)) {
       super.init(frame: .zero)
 
       isUserInteractionEnabled = false
@@ -212,7 +212,7 @@ extension CropView {
       ]
     }
 
-    public override func layoutSubviews() {
+    override func layoutSubviews() {
 
       super.layoutSubviews()
 
@@ -248,14 +248,14 @@ extension CropView {
 
   }
 
-  public final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
+  final class CropInsideOverlayRuleOfThirdsView: CropInsideOverlayBase {
 
     private let handlesView = CropOverlayHandlesView()
     private let guideView = RuleOfThirdsView()
 
     private var currentAnimator: UIViewPropertyAnimator?
 
-    public override init() {
+    override init() {
       super.init()
 
       isUserInteractionEnabled = false
@@ -267,7 +267,7 @@ extension CropView {
       guideView.alpha = 0
     }
 
-    public override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 1
@@ -276,7 +276,7 @@ extension CropView {
       }
     }
 
-    public override func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 0
