@@ -6,12 +6,14 @@ public enum ColorCubeLoaderError: Error {
   case failedToGetDimensionFromFilename(String)
   case failedToCreageCGDataProvider(String)
   case failedToCraeteCGImageSource(String)
+  case unsupportedFileExtension(String)
 }
 
-/// An object for loading color-cube image from bundle.
-/// It finds based on specified naming-rule.
+/// An object for loading color-cube LUTs from bundle.
+/// It finds image LUTs based on specified naming-rule and also loads `.cube` files.
 ///
 /// `LUT_<Dimension>_<filterName>.<extension {jpg, png}>`
+/// `<filterName>.cube`
 public final class ColorCubeLoader {
   public let bundle: Bundle
 
@@ -47,13 +49,38 @@ public final class ColorCubeLoader {
       return Int(numberString)
     }
 
+    func name(from path: String, dimension: Int) -> String {
+      (path as NSString).deletingPathExtension
+        .replacingOccurrences(of: "LUT_\(dimension)_", with: "")
+    }
+
+    let parser = ColorCubeTextParser()
+
     let filters =
       try fileList
-      .filter { $0.hasPrefix("LUT_") }
+      .filter {
+        let pathExtension = ($0 as NSString).pathExtension.lowercased()
+        return $0.hasPrefix("LUT_") || pathExtension == "cube"
+      }
       .sorted()
       .map { path -> FilterColorCube in
 
         let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
+        let pathExtension = (path as NSString).pathExtension.lowercased()
+
+        if pathExtension == "cube" {
+          let parsedCube = try parser.parse(contentsOf: url)
+          return FilterColorCube(
+            name: parsedCube.title ?? name(from: path, dimension: parsedCube.dimension),
+            identifier: path,
+            cubeData: parsedCube.cubeData,
+            dimension: parsedCube.dimension
+          )
+        }
+
+        guard ["jpg", "jpeg", "png"].contains(pathExtension) else {
+          throw ColorCubeLoaderError.unsupportedFileExtension(path)
+        }
 
         guard let dimension = takeDimension(from: path) else {
           throw ColorCubeLoaderError.failedToGetDimensionFromFilename(path)
@@ -67,11 +94,8 @@ public final class ColorCubeLoader {
           throw ColorCubeLoaderError.failedToCraeteCGImageSource(path)
         }
 
-        let name = (path as NSString).deletingPathExtension
-          .replacingOccurrences(of: "LUT_\(dimension)_", with: "")
-
         return FilterColorCube(
-          name: name,
+          name: name(from: path, dimension: dimension),
           identifier: path,
           lutImage: .init(cgImageSource: imageSource),
           dimension: dimension
