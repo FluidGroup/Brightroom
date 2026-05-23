@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
+// Copyright (c) 2026 Muukii <muukii.app@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,27 +19,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
+import BrightroomEngine
 
-public struct ClassicImageEditStyle: Sendable {
+public struct PixelEditorOptions: Sendable {
 
-  public static let `default` = ClassicImageEditStyle()
+  public static let `default`: PixelEditorOptions = .init()
 
-  public struct Control: Sendable {
+  public var croppingAspectRatio: PixelAspectRatio?
+  public var isFaceDetectionEnabled: Bool
+  public var ignoredEditMenus: Set<PixelEditorEditMenu>
+  public var editMenus: [PixelEditorEditMenu]
 
-    public var backgroundColor = UIColor(white: 0.98, alpha: 1)
-
-    public init() {
-
-    }
+  public init(
+    croppingAspectRatio: PixelAspectRatio? = .square,
+    isFaceDetectionEnabled: Bool = false,
+    ignoredEditMenus: Set<PixelEditorEditMenu> = [],
+    editMenus: [PixelEditorEditMenu] = PixelEditorEditMenu.allCases
+  ) {
+    self.croppingAspectRatio = croppingAspectRatio
+    self.isFaceDetectionEnabled = isFaceDetectionEnabled
+    self.ignoredEditMenus = ignoredEditMenus
+    self.editMenus = editMenus
   }
+}
 
-  public var control = Control()
-  
-  public var black = UIColor(white: 0.05, alpha: 1)
-
-  public init() {
-
-  }
-
+public enum PixelEditorEditMenu: CaseIterable, Hashable, Sendable {
+  case adjustment
+  case mask
+  case exposure
+  case contrast
+  case clarity
+  case temperature
+  case saturation
+  case fade
+  case highlights
+  case shadows
+  case vignette
+  case sharpen
+  case gaussianBlur
 }

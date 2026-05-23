@@ -458,7 +458,7 @@ private struct LUTImportDemoView: View {
       Section {
         PhotosPicker("Import LUT", selection: $selectedItem)
 
-        Button("Open Classic Editor") {
+        Button("Open PixelEditor") {
           fullScreenView = .init {
             DemoPixelEditor(
               editingStack: {

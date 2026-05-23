@@ -28,7 +28,7 @@ import BrightroomEngine
 
 public struct SwiftUIPixelEditorView: View {
 
-  @State private var viewModel: ClassicImageEditViewModel
+  @State private var viewModel: PixelEditorViewModel
   @State private var controlRoute: PixelEditorControlRoute = .root
   @State private var displayedRootPanel: PixelEditorRootPanel = .filter
 
@@ -37,13 +37,13 @@ public struct SwiftUIPixelEditorView: View {
 
   public init(
     editingStack: EditingStack,
-    options: ClassicImageEditOptions = .default,
-    localizedStrings: ClassicImageEditViewController.LocalizedStrings = .init(),
+    options: PixelEditorOptions = .default,
+    localizedStrings: PixelEditorLocalizedStrings = .init(),
     onEndEditing: @escaping (EditingStack) -> Void = { _ in },
     onCancelEditing: @escaping () -> Void = {}
   ) {
     self._viewModel = State(
-      initialValue: ClassicImageEditViewModel(
+      initialValue: PixelEditorViewModel(
         editingStack: editingStack,
         options: options,
         localizedStrings: localizedStrings
@@ -132,7 +132,7 @@ private enum PixelEditorColor {
 
 private struct PixelEditorTopBar: View {
 
-  let mode: ClassicImageEditViewModel.Mode
+  let mode: PixelEditorViewModel.Mode
   let title: String
   let cancelText: String
   let doneText: String
@@ -229,7 +229,7 @@ private struct PixelEditorPreviewButton: View {
 
 private struct PixelEditorCanvas: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
 
   var body: some View {
     ZStack {
@@ -359,7 +359,7 @@ private struct PixelEditorCropGuideHandles: Shape {
 
 private struct PixelEditorControlPanel: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   @Binding var route: PixelEditorControlRoute
   @Binding var displayedRootPanel: PixelEditorRootPanel
 
@@ -431,7 +431,7 @@ private struct PixelEditorControlPanel: View {
 
 private struct PixelEditorRootControl: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   @Binding var displayedPanel: PixelEditorRootPanel
   let onSelectRoute: (PixelEditorControlRoute) -> Void
 
@@ -443,7 +443,7 @@ private struct PixelEditorRootControl: View {
           PixelEditorPresetList(viewModel: viewModel)
 
         case .edit:
-          PixelEditorEditMenu(
+          PixelEditorEditMenuView(
             viewModel: viewModel,
             onSelectRoute: onSelectRoute
           )
@@ -482,7 +482,7 @@ private struct PixelEditorRootControl: View {
 
 private struct PixelEditorPresetList: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
 
   var body: some View {
     ScrollViewReader { proxy in
@@ -568,9 +568,9 @@ private struct PixelEditorPresetCell: View {
   }
 }
 
-private struct PixelEditorEditMenu: View {
+private struct PixelEditorEditMenuView: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   let onSelectRoute: (PixelEditorControlRoute) -> Void
 
   var body: some View {
@@ -594,9 +594,8 @@ private struct PixelEditorEditMenu: View {
     }
   }
 
-  private var displayedMenus: [ClassicImageEditEditMenu] {
-    let control = viewModel.options.classes.control
-    return control.editMenus.filter { !control.ignoredEditMenus.contains($0) }
+  private var displayedMenus: [PixelEditorEditMenu] {
+    viewModel.options.editMenus.filter { !viewModel.options.ignoredEditMenus.contains($0) }
   }
 }
 
@@ -637,7 +636,7 @@ private struct PixelEditorEditMenuCell: View {
 
 private struct PixelEditorCropControl: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   let onCancel: () -> Void
   let onDone: () -> Void
 
@@ -659,7 +658,7 @@ private struct PixelEditorCropControl: View {
 
 private struct PixelEditorMaskControl: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   let onCancel: () -> Void
   let onDone: () -> Void
 
@@ -730,7 +729,7 @@ private struct PixelEditorMaskControl: View {
 
 private struct PixelEditorFilterControl: View {
 
-  let viewModel: ClassicImageEditViewModel
+  let viewModel: PixelEditorViewModel
   let kind: PixelEditorFilterKind
   let onCancel: () -> Void
   let onDone: () -> Void
@@ -1082,7 +1081,7 @@ private struct PixelEditorMetalImageView: UIViewRepresentable {
   }
 }
 
-private extension ClassicImageEditViewModel.Mode {
+private extension PixelEditorViewModel.Mode {
 
   var isCrop: Bool {
     switch self {
@@ -1121,7 +1120,7 @@ private extension ClassicImageEditViewModel.Mode {
   }
 }
 
-private extension ClassicImageEditEditMenu {
+private extension PixelEditorEditMenu {
 
   var route: PixelEditorControlRoute {
     switch self {
@@ -1185,7 +1184,7 @@ private extension ClassicImageEditEditMenu {
     }
   }
 
-  func title(localizedStrings: ClassicImageEditViewController.LocalizedStrings) -> String {
+  func title(localizedStrings: PixelEditorLocalizedStrings) -> String {
     switch self {
     case .adjustment:
       return localizedStrings.editAdjustment
@@ -1290,7 +1289,7 @@ private extension PixelEditorFilterKind {
     }
   }
 
-  func title(localizedStrings: ClassicImageEditViewController.LocalizedStrings) -> String {
+  func title(localizedStrings: PixelEditorLocalizedStrings) -> String {
     switch self {
     case .exposure:
       return localizedStrings.editBrightness

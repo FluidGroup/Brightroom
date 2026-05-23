@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
+// Copyright (c) 2026 Muukii <muukii.app@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,41 +19,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
+public struct PixelEditorLocalizedStrings: Sendable {
 
-import BrightroomEngine
-import Combine
-import StateGraph
-
-open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildViewType {
-
-  open func didReceiveCurrentEdit() {
-
-  }
-
-  public let viewModel: ClassicImageEditViewModel
-
-  private var subscriptions: Set<AnyCancellable> = .init()
-
-  public init(viewModel: ClassicImageEditViewModel) {
-    self.viewModel = viewModel
-    super.init(frame: .zero)
-    setup()
-
-    withGraphTracking { [weak self] in
-      withGraphTrackingGroup {
-        self?.didReceiveCurrentEdit()
-      }
+  @available(*, deprecated, renamed: "control_preset_normal_name")
+  public var normal: String {
+    get {
+      control_preset_normal_name
     }
-    .store(in: &subscriptions)
+    set {
+      control_preset_normal_name = newValue
+    }
   }
 
-  @available(*, unavailable)
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  public var done = "Done"
 
-  open func setup() {
+  public var control_preset_normal_name = "Normal"
 
-  }
+  public var cancel = "Cancel"
+  public var filter = "Filter"
+  public var edit = "Edit"
+
+  public var editAdjustment = "Adjust"
+  public var editMask = "Mask"
+  public var editHighlights = "Highlights"
+  public var editShadows = "Shadows"
+  public var editSaturation = "Saturation"
+  public var editContrast = "Contrast"
+  public var editBlur = "Blur"
+  public var editTemperature = "Temperature"
+  public var editBrightness = "Brightness"
+  public var editVignette = "Vignette"
+  public var editFade = "Fade"
+  public var editClarity = "Clarity"
+  public var editSharpen = "Sharpen"
+  public var brushSizeSmall = "◦"
+  public var brushSizeLarge = "◯"
+  public var clear = "Clear"
+
+  public init() {}
 }

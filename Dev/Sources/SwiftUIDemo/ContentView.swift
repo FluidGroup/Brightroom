@@ -316,7 +316,7 @@ struct WorkingOnPicked: View {
             }
           }
 
-          Button("ClassicEditor") {
+          Button("PixelEditor") {
             fullScreenView = .init {
               DemoPixelEditor(editingStack: {
                 selectedImage.makeEditingStack()
@@ -324,7 +324,7 @@ struct WorkingOnPicked: View {
             }
           }
 
-          Button("ClassicEditor Square") {
+          Button("PixelEditor Square") {
             fullScreenView = .init {
               DemoPixelEditor(editingStack: {
                 selectedImage.makeEditingStack()
@@ -332,7 +332,7 @@ struct WorkingOnPicked: View {
             }
           }
 
-          Button("ClassicEditor 4:5") {
+          Button("PixelEditor 4:5") {
             fullScreenView = .init {
               DemoPixelEditor(editingStack: {
                 selectedImage.makeEditingStack()
@@ -514,11 +514,11 @@ struct DemoPixelEditor: View {
   @ObjectEdge var editingStack: EditingStack
   @State var resultImage: ResultImage?
 
-  let options: ClassicImageEditOptions
+  let options: PixelEditorOptions
 
   init(
     editingStack: @escaping () -> EditingStack,
-    options: ClassicImageEditOptions = .init()
+    options: PixelEditorOptions = .init()
   ) {
     self._editingStack = .init(wrappedValue: editingStack())
     self.options = options

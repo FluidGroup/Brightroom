@@ -19,14 +19,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-import StateGraph
+import CoreGraphics
+import Observation
+
 import BrightroomEngine
 
-public final class ClassicImageEditViewModel: Equatable {
-  public static func == (lhs: ClassicImageEditViewModel, rhs: ClassicImageEditViewModel) -> Bool {
-    lhs === rhs
-  }
+@MainActor
+@Observable
+public final class PixelEditorViewModel {
 
   public enum Mode {
     case crop
@@ -35,22 +35,22 @@ public final class ClassicImageEditViewModel: Equatable {
     case preview
   }
 
-  public let options: ClassicImageEditOptions
+  public let options: PixelEditorOptions
 
   public let editingStack: EditingStack
 
-  public let localizedStrings: ClassicImageEditViewController.LocalizedStrings
+  public let localizedStrings: PixelEditorLocalizedStrings
 
-  @GraphStored public var title: String = ""
-  @GraphStored public var mode: Mode = .preview
-  @GraphStored public var maskingBrushSize: CanvasView.BrushSize = .point(30)
-  @GraphStored var drawnPaths: [DrawnPath] = []
-  @GraphStored public var proposedCrop: EditingCrop? = nil
+  public var title: String = ""
+  public var mode: Mode = .preview
+  public var maskingBrushSize: CanvasView.BrushSize = .point(30)
+  var drawnPaths: [DrawnPath] = []
+  public var proposedCrop: EditingCrop? = nil
 
   public init(
     editingStack: EditingStack,
-    options: ClassicImageEditOptions,
-    localizedStrings: ClassicImageEditViewController.LocalizedStrings
+    options: PixelEditorOptions,
+    localizedStrings: PixelEditorLocalizedStrings
   ) {
     self.localizedStrings = localizedStrings
     self.options = options
