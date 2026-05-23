@@ -10,18 +10,9 @@ struct IsolatedEditinView: View {
   var body: some View {
     Form.init {
       Button("Crop") {
-        fullScreenView = .init {
-          SwiftUIPhotosCropView(
-            editingStack: editingStack,
-            onDone: {},
-            onCancel: {}
-          )
-
+        fullScreenView = .init(showsDismissButton: false) {
+          DemoPhotosCropView(stack: editingStack)
         }
-      }
-
-      Button("Custom Crop") {
-        fullScreenView = .init { DemoCropView(editingStack: editingStack) }
       }
 
       Button("Blur Mask") {

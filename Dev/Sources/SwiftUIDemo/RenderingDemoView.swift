@@ -358,6 +358,11 @@ private struct RawRenderingDemoView: View {
 
   @State private var resultImage: ResultImage?
   @State private var fullScreenView: FullscreenIdentifiableView?
+  @State private var photosCropStack = EditingStack(
+    imageProvider: .init(
+      rawDataURL: DemoResource.url(forResource: "AppleRAW_1", ofType: "DNG")
+    )
+  )
   @State private var status = "AppleRAW_1.DNG"
 
   var body: some View {
@@ -368,14 +373,8 @@ private struct RawRenderingDemoView: View {
         }
 
         Button("Open PhotosCrop") {
-          fullScreenView = .init {
-            DemoPhotosCropView {
-              EditingStack(
-                imageProvider: .init(
-                  rawDataURL: DemoResource.url(forResource: "AppleRAW_1", ofType: "DNG")
-                )
-              )
-            }
+          fullScreenView = .init(showsDismissButton: false) {
+            DemoPhotosCropView(stack: photosCropStack)
           }
         }
 

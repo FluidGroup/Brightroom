@@ -10,16 +10,45 @@ struct ContentView: View {
 
   @State var horizontalStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
+  @State private var photosCropHorizontalStack = Mocks.makeEditingStack(
+    image: Asset.horizontalRect.image
+  )
+  @State private var photosCropVerticalStack = Mocks.makeEditingStack(
+    image: Asset.verticalRect.image
+  )
+  @State private var photosCropSquareStack = Mocks.makeEditingStack(
+    image: Asset.squareRect.image
+  )
+  @State private var photosCropNasaStack = Mocks.makeEditingStack(
+    fileURL: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
+      URL(fileURLWithPath: $0)
+    }!
+  )
+  @State private var photosCropSuperSmallStack = Mocks.makeEditingStack(
+    image: Asset.superSmall.image
+  )
+  @State private var photosCropRemoteStack = EditingStack(
+    imageProvider: .init(
+      editableRemoteURL: URL(
+        string:
+          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+      )!
+    )
+  )
+  @State private var photosCropRemotePreviewStack = EditingStack(
+    imageProvider: .init(
+      editableRemoteURL: URL(
+        string:
+          "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
+      )!
+    )
+  )
 
   var body: some View {
     NavigationView {
       VStack {
 
         Form {
-
-          NavigationLink("ImagePreviewView") {
-            DemoCropView2(editingStack: horizontalStack)
-          }
 
           NavigationLink("Isolated", destination: IsolatedEditinView())
 
@@ -38,12 +67,6 @@ struct ContentView: View {
           }
 
           Section("Restoration Horizontal") {
-            Button("Crop") {
-              fullScreenView = .init {
-                DemoCropView(editingStack: horizontalStack)
-              }
-            }
-
             Button("Masking") {
               fullScreenView = .init {
                 DemoMaskingView {
@@ -54,12 +77,6 @@ struct ContentView: View {
           }
 
           Section("Restoration Vertical") {
-            Button("Crop") {
-              fullScreenView = .init {
-                DemoCropView(editingStack: verticalStack)
-              }
-            }
-
             Button("Masking") {
               fullScreenView = .init {
                 DemoMaskingView {
@@ -69,38 +86,29 @@ struct ContentView: View {
             }
           }
 
-          Section("Crop") {
-
-            Button("Local") {
-              fullScreenView = .init {
-                DemoCropView(
-                  editingStack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
-                )
-              }
-            }
-          }
-
           Section(
-            "Crop FaceDetection",
+            "PhotosCrop FaceDetection",
             content: {
               Button("Horizontal 1") {
-                fullScreenView = .init {
+                fullScreenView = .init(showsDismissButton: false) {
                   let stack = Mocks.makeEditingStack(
                     image: Asset.horizontalRect.image
                   )
                   stack.cropModifier = .faceDetection(aspectRatio: .square)
-                  return SwiftUICropView(editingStack: stack)
+                  return DemoPhotosCropView(stack: stack)
                 }
               }
 
               Button("Horizontal 2") {
-                fullScreenView = .init {
+                fullScreenView = .init(showsDismissButton: false) {
                   let stack = Mocks.makeEditingStack(
                     image: Asset.horizontalRect.image
                   )
                   stack.cropModifier = .faceDetection(aspectRatio: .square)
-                  return SwiftUICropView(editingStack: stack)
-                    .croppingAspectRatio(.square)
+                  return DemoPhotosCropView(
+                    stack: stack,
+                    options: .fixedAspectRatio(.square)
+                  )
                 }
               }
 
@@ -138,94 +146,46 @@ struct ContentView: View {
             "PhotosCrop",
             content: {
               Button("Horizontal") {
-                fullScreenView = .init {
-                  DemoPhotosCropView(stack: {
-                    Mocks.makeEditingStack(
-                      image: Asset.horizontalRect.image
-                    )
-                  })
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropHorizontalStack)
                 }
               }
 
               Button("Vertical") {
-                fullScreenView = .init {
-                  DemoPhotosCropView(stack: {
-                    Mocks.makeEditingStack(
-                      image: Asset.verticalRect.image
-                    )
-                  })
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropVerticalStack)
                 }
               }
 
               Button("Square") {
-                fullScreenView = .init {
-                  DemoPhotosCropView(stack: {
-                    Mocks.makeEditingStack(
-                      image: Asset.squareRect.image
-                    )
-                  })
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropSquareStack)
                 }
               }
 
               Button("Nasa") {
-                fullScreenView = .init {
-                  DemoPhotosCropView(stack: {
-                    Mocks.makeEditingStack(
-                      fileURL:
-                        Bundle.main.path(
-                          forResource: "nasa",
-                          ofType: "jpg"
-                        ).map {
-                          URL(fileURLWithPath: $0)
-                        }!
-                    )
-                  })
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropNasaStack)
                 }
               }
 
               Button("Super small") {
-                fullScreenView = .init {
-                  DemoPhotosCropView(stack: {
-                    Mocks.makeEditingStack(
-                      image: Asset.superSmall.image
-                    )
-                  })
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropSuperSmallStack)
                 }
               }
 
               Button("Remote") {
 
-                fullScreenView = .init {
-
-                  DemoPhotosCropView(stack: {
-                    EditingStack(
-                      imageProvider: .init(
-                        editableRemoteURL: URL(
-                          string:
-                            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-                        )!
-                      )
-                    )
-                  })
-
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropRemoteStack)
                 }
               }
 
               Button("Remote - preview") {
 
-                fullScreenView = .init {
-
-                  DemoPhotosCropView(stack: {
-                    EditingStack(
-                      imageProvider: .init(
-                        editableRemoteURL: URL(
-                          string:
-                            "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
-                        )!
-                      )
-                    )
-                  })
-
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropRemotePreviewStack)
                 }
               }
             }
@@ -301,9 +261,6 @@ struct ContentView: View {
 
           })
 
-          Section("Lab") {
-            NavigationLink("Rotating", destination: BookRotateScrollView())
-          }
         }
 
       }
@@ -327,6 +284,7 @@ struct WorkingOnPicked: View {
 
   @State private var item: PhotosPickerItem?
   @State private var selectedImage: PickedDemoImage?
+  @State private var selectedPhotosCropStack: EditingStack?
   @State private var loadingMessage: String?
   @State private var fullScreenView: FullscreenIdentifiableView?
 
@@ -341,13 +299,6 @@ struct WorkingOnPicked: View {
         }
 
         Section("Components") {
-
-          Button("Crop") {
-            fullScreenView = .init {
-              DemoCropView(editingStack: selectedImage.makeEditingStack())
-            }
-          }
-
           Button("Masking") {
             fullScreenView = .init {
               DemoMaskingView {
@@ -359,10 +310,9 @@ struct WorkingOnPicked: View {
 
         Section("BuiltIn") {
           Button("PhotosCrop") {
-            fullScreenView = .init {
-              DemoPhotosCropView(stack: {
-                selectedImage.makeEditingStack()
-              })
+            let stack = photosCropStack(for: selectedImage)
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoPhotosCropView(stack: stack)
             }
           }
 
@@ -410,6 +360,7 @@ struct WorkingOnPicked: View {
     )
     .onChange(of: item, perform: { value in
       selectedImage = nil
+      selectedPhotosCropStack = nil
       loadingMessage = "Loading selected image..."
 
       guard let value else {
@@ -451,6 +402,16 @@ struct WorkingOnPicked: View {
       }
     })
 
+  }
+
+  private func photosCropStack(for image: PickedDemoImage) -> EditingStack {
+    if let selectedPhotosCropStack {
+      return selectedPhotosCropStack
+    }
+
+    let stack = image.makeEditingStack()
+    selectedPhotosCropStack = stack
+    return stack
   }
 
 }
@@ -498,29 +459,52 @@ private struct PickedImageSummary: View {
 struct DemoPhotosCropView: View {
 
   @ObjectEdge var stack: EditingStack
+  @Environment(\.dismiss) private var dismiss
 
   @State var resultImage: ResultImage?
+  private let options: SwiftUIPhotosCropView.Options
 
-  init(stack: @escaping () -> EditingStack) {
+  init(
+    stack: EditingStack,
+    options: SwiftUIPhotosCropView.Options = .init()
+  ) {
+    self._stack = .init(wrappedValue: stack)
+    self.options = options
+  }
+
+  init(
+    stack: @escaping () -> EditingStack,
+    options: SwiftUIPhotosCropView.Options = .init()
+  ) {
     self._stack = .init(wrappedValue: stack())
+    self.options = options
   }
 
   var body: some View {
 
     SwiftUIPhotosCropView(
       editingStack: stack,
+      options: options,
       onDone: {
         let image = try! stack.makeRenderer().render().cgImage
         self.resultImage = .init(cgImage: image)
       },
-      onCancel: {}
+      onCancel: {
+        dismiss()
+      }
     )
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
     }
-
   }
+}
 
+private extension SwiftUIPhotosCropView.Options {
+  static func fixedAspectRatio(_ aspectRatio: PixelAspectRatio?) -> Self {
+    var options = Self()
+    options.aspectRatioOptions = .fixed(aspectRatio)
+    return options
+  }
 }
 
 struct DemoPixelEditor: View {

@@ -112,9 +112,6 @@ struct DemoFilterView: View {
 
       ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
 
-      SwiftUICropView(editingStack: editingStack, contentInset: .zero)
-        .clipped()
-
       VStack {
         Toggle("Invert", isOn: $invertToggle)
         Toggle("Grayscale", isOn: $grayscaleToggle)

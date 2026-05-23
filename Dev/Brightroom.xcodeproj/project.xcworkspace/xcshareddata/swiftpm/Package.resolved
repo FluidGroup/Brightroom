@@ -1,15 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "mondrianlayout",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/muukii/MondrianLayout.git",
-      "state" : {
-        "revision" : "5f00b13984fe08316fc5b5be06e2f41c14a3befa",
-        "version" : "0.10.0"
-      }
-    },
-    {
       "identity" : "precisionlevelslider",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
