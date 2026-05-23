@@ -21,10 +21,9 @@
 
 import UIKit
 import SwiftUI
-import StateGraph
 import BrightroomEngine
 
-public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
+final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
   
   let bodyView: BodyView
   
@@ -38,7 +37,7 @@ public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewC
     fatalError("init(coder:) has not been implemented")
   }
   
-  public override func viewDidLoad() {
+  override func viewDidLoad() {
     super.viewDidLoad()
     
     view.addSubview(bodyView)
@@ -177,10 +176,9 @@ public struct SwiftUICropView: View {
 
   public var body: some View {
     ZStack {
-      if let loadedState = editingStack.loadedState {
+      if editingStack.loadedState != nil {
         LoadedCropViewRepresentable(
           editingStack: editingStack,
-          loadedState: loadedState,
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
@@ -273,7 +271,6 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
 
   let editingStack: EditingStack
-  let loadedState: EditingStack.Loaded
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let rotationInput: Binding<EditingCrop.Rotation?>
@@ -288,6 +285,10 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let areAnimationsEnabled: Bool
   let contentInset: UIEdgeInsets?
 
+  func makeCoordinator() -> Coordinator {
+    Coordinator()
+  }
+
   func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
     let view: CropView
     if let contentInset {
@@ -299,10 +300,7 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
-    view.setStateHandler { snapshot in
-      syncInputs(with: snapshot)
-      stateHandler(snapshot)
-    }
+    bindStateHandler(to: view, coordinator: context.coordinator)
 
     if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
@@ -313,17 +311,16 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     }
 
     configureActions(on: view)
-    view.load(image: loadedState.imageForCrop, crop: loadedState.currentEdit.crop)
+    context.coordinator.applySwiftUIInputs {
+      view.loadCurrentEditingStackState()
+    }
 
     return .init(bodyView: view)
   }
 
   func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
     let cropView = uiViewController.bodyView
-    cropView.setStateHandler { snapshot in
-      syncInputs(with: snapshot)
-      stateHandler(snapshot)
-    }
+    bindStateHandler(to: cropView, coordinator: context.coordinator)
 
     if cropView.isGuideInteractionEnabled != isGuideInteractionEnabled {
       cropView.isGuideInteractionEnabled = isGuideInteractionEnabled
@@ -337,17 +334,30 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       cropView.areAnimationsEnabled = areAnimationsEnabled
     }
 
-    if let rotation = rotationInput.wrappedValue {
-      cropView.setRotation(rotation)
-    }
+    context.coordinator.applySwiftUIInputs {
+      if let rotation = rotationInput.wrappedValue {
+        cropView.setRotation(rotation)
+      }
 
-    if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
-      cropView.setAdjustmentAngle(adjustmentAngle)
-    }
+      if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
+        cropView.setAdjustmentAngle(adjustmentAngle)
+      }
 
-    cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+      cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+    }
 
     configureActions(on: cropView)
+  }
+
+  @MainActor
+  private func bindStateHandler(to cropView: CropView, coordinator: Coordinator) {
+    coordinator.bindStateHandler(
+      to: cropView,
+      syncInputs: { snapshot in
+        syncInputs(with: snapshot)
+      },
+      stateHandler: stateHandler
+    )
   }
 
   @MainActor
@@ -376,6 +386,73 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       adjustmentAngleInput.setIfChanged(crop.adjustmentAngle)
     }
     croppingAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
+  }
+
+  @MainActor
+  final class Coordinator {
+
+    private var isApplyingSwiftUIInputs = false
+    private var pendingInputSyncSnapshot: SwiftUICropView.StateSnapshot?
+
+    func bindStateHandler(
+      to cropView: CropView,
+      syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void,
+      stateHandler: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void
+    ) {
+      cropView.setStateHandler { [weak self] snapshot in
+        guard let self else { return }
+
+        self.handleStateSnapshot(
+          snapshot,
+          syncInputs: syncInputs,
+          stateHandler: stateHandler
+        )
+      }
+    }
+
+    func applySwiftUIInputs(_ body: () -> Void) {
+      isApplyingSwiftUIInputs = true
+      defer {
+        isApplyingSwiftUIInputs = false
+      }
+
+      body()
+    }
+
+    private func handleStateSnapshot(
+      _ snapshot: SwiftUICropView.StateSnapshot,
+      syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void,
+      stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
+    ) {
+      if isApplyingSwiftUIInputs {
+        pendingInputSyncSnapshot = snapshot
+        schedulePendingInputSync(syncInputs)
+      } else {
+        syncInputs(snapshot)
+      }
+
+      stateHandler(snapshot)
+    }
+
+    private func schedulePendingInputSync(
+      _ syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void
+    ) {
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+
+        if self.isApplyingSwiftUIInputs {
+          self.schedulePendingInputSync(syncInputs)
+          return
+        }
+
+        guard let snapshot = self.pendingInputSyncSnapshot else {
+          return
+        }
+
+        self.pendingInputSyncSnapshot = nil
+        syncInputs(snapshot)
+      }
+    }
   }
 
 }

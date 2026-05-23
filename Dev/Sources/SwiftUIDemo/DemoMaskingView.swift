@@ -1,5 +1,4 @@
 import BrightroomEngine
-import SwiftUISupport
 import BrightroomUI
 import SwiftUI
 
@@ -7,7 +6,7 @@ struct DemoMaskingView: View {
 
   @ObjectEdge var editingStack: EditingStack
 
-  @State var brushSize: CanvasView.BrushSize = .point(30)
+  @State var brushSize: MaskingBrushSize = .point(30)
 
   init(editingStack: @escaping () -> EditingStack) {
     self._editingStack = .init(wrappedValue: editingStack())
@@ -16,9 +15,9 @@ struct DemoMaskingView: View {
   var body: some View {
     VStack {
       ZStack {
-        ViewHost(instantiated: ImagePreviewView(editingStack: editingStack))
+        SwiftUIImagePreviewView(editingStack: editingStack)
         SwiftUIBlurryMaskingView(editingStack: editingStack)
-          .blushSize(brushSize)
+          .brushSize(brushSize)
           .hideBackdropImageView(true)
       }
 

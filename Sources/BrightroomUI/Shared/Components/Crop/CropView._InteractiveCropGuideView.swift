@@ -24,7 +24,7 @@ import BrightroomEngine
 
 extension CropView {
   
-  private final class TapExpandedView: PixelEditorCodeBasedView {
+  private final class TapExpandedView: _PixelEditorCodeBasedView {
     
     let horizontal: CGFloat
     let vertical: CGFloat
@@ -40,7 +40,7 @@ extension CropView {
     }
   }
   
-  final class _InteractiveCropGuideView: PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
+  final class _InteractiveCropGuideView: _PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
 
     var willChange: () -> Void = {}
     var updating: () -> Void = {}
@@ -967,7 +967,7 @@ extension CropView {
 
 }
 
-private final class MaskView: PixelEditorCodeBasedView {
+private final class MaskView: _PixelEditorCodeBasedView {
   private let topView = UIView()
   private let rightView = UIView()
   private let leftView = UIView()

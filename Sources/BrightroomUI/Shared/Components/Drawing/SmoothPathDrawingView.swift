@@ -24,15 +24,15 @@ import UIKit
 /**
  It does not render anything, just giving the paths smoothified.
  */
-public class SmoothPathDrawingView : PixelEditorCodeBasedView {
+final class _SmoothPathDrawingView : _PixelEditorCodeBasedView {
   
-  public struct Handlers {
-    public var willBeginPan: (UIBezierPath) -> Void = { _ in }
-    public var panning: (UIBezierPath) -> Void = { _ in }
-    public var didFinishPan: (UIBezierPath) -> Void = { _ in }
+  struct Handlers {
+    var willBeginPan: (UIBezierPath) -> Void = { _ in }
+    var panning: (UIBezierPath) -> Void = { _ in }
+    var didFinishPan: (UIBezierPath) -> Void = { _ in }
   }
   
-  public var handlers = Handlers()
+  var handlers = Handlers()
 
   private var currentBezierPath: UIBezierPath?
   private var controlPoint: Int = 0
@@ -40,25 +40,25 @@ public class SmoothPathDrawingView : PixelEditorCodeBasedView {
 
   // MARK: - Initializers
 
-  public init() {
+  init() {
     super.init(frame: .zero)
     backgroundColor = .clear
   }
 
-  public func willBeginPan(path: UIBezierPath) {
+  func willBeginPan(path: UIBezierPath) {
     handlers.willBeginPan(path)
   }
 
-  public func panning(path: UIBezierPath) {
+  func panning(path: UIBezierPath) {
     handlers.panning(path)
   }
 
-  public func didFinishPan(path: UIBezierPath) {
+  func didFinishPan(path: UIBezierPath) {
     handlers.didFinishPan(path)
   }
 
   // MARK: - Touch
-  public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
 
     guard let touch = touches.first else { return }
 
@@ -71,7 +71,7 @@ public class SmoothPathDrawingView : PixelEditorCodeBasedView {
     points[0] = touchPoint
   }
 
-  public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+  override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
 
     guard let touch = touches.first else { return }
     let touchPoint = touch.location(in: self)
@@ -105,7 +105,7 @@ public class SmoothPathDrawingView : PixelEditorCodeBasedView {
     panning(path: currentBezierPath!)
   }
 
-  public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+  override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
 
     if controlPoint == 0 {
       let touchPoint = points[0]

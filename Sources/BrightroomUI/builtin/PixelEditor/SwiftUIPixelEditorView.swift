@@ -241,7 +241,7 @@ private struct PixelEditorCanvas: View {
         .allowsHitTesting(false)
 
       SwiftUIBlurryMaskingView(editingStack: viewModel.editingStack)
-        .blushSize(viewModel.maskingBrushSize)
+        .brushSize(viewModel.maskingBrushSize)
         .hideBackdropImageView(true)
         .hideBlurryImageView(viewModel.mode.isEditing || viewModel.mode.isCrop)
         .opacity(viewModel.mode.displaysMaskingView ? 1 : 0)
@@ -553,7 +553,11 @@ private struct PixelEditorPresetCell: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      PixelEditorMetalImageView(image: image, contentMode: .scaleAspectFill)
+      SwiftUIMetalImageView(
+        image: image,
+        contentMode: .scaleAspectFill,
+        displayBackground: .color(.systemBackground)
+      )
         .frame(width: 64, height: 64)
         .clipped()
 
@@ -1045,39 +1049,14 @@ private struct PixelEditorControlNavigation: View {
   }
 }
 
-private struct PixelEditorImagePreviewRepresentable: UIViewRepresentable {
+private struct PixelEditorImagePreviewRepresentable: View {
 
   let editingStack: EditingStack
-  let displayBackground: MetalImageView.DisplayBackground
+  let displayBackground: ImageDisplayBackground
 
-  func makeUIView(context: Context) -> ImagePreviewView {
-    let view = ImagePreviewView(editingStack: editingStack)
-    view.displayBackground = displayBackground
-    return view
-  }
-
-  func updateUIView(_ uiView: ImagePreviewView, context: Context) {
-    uiView.displayBackground = displayBackground
-  }
-}
-
-private struct PixelEditorMetalImageView: UIViewRepresentable {
-
-  let image: CIImage?
-  let contentMode: UIView.ContentMode
-
-  func makeUIView(context: Context) -> MetalImageView {
-    let view = MetalImageView()
-    view.clipsToBounds = true
-    view.contentMode = contentMode
-    view.displayBackground = .color(.systemBackground)
-    return view
-  }
-
-  func updateUIView(_ uiView: MetalImageView, context: Context) {
-    uiView.contentMode = contentMode
-    uiView.displayBackground = .color(.systemBackground)
-    uiView.display(image: image)
+  var body: some View {
+    SwiftUIImagePreviewView(editingStack: editingStack)
+      .displayBackground(displayBackground)
   }
 }
 

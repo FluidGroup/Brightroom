@@ -16,7 +16,7 @@ struct IsolatedEditinView: View {
       }
 
       Button("Blur Mask") {
-        fullScreenView = .init { MaskingViewWrapper(editingStack: editingStack) }
+        fullScreenView = .init { SwiftUIBlurryMaskingView(editingStack: editingStack) }
       }
     }
     .navigationTitle("Isolated-Editing")

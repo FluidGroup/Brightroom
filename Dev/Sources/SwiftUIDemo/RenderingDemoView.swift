@@ -10,7 +10,7 @@ struct RenderingDemoView: View {
   var body: some View {
     Form {
       Section("Preview") {
-        NavigationLink("ImagePreviewView") {
+        NavigationLink("SwiftUIImagePreviewView") {
           ImagePreviewDemoView()
         }
       }
@@ -100,11 +100,11 @@ private struct ImagePreviewDemoView: View {
       }
       .frame(maxHeight: 340)
 
-      ImagePreviewRepresentable(editingStack: previewStack)
+      SwiftUIImagePreviewView(editingStack: previewStack)
         .id(ObjectIdentifier(previewStack))
         .background(Color.black)
     }
-    .navigationTitle("ImagePreviewView")
+    .navigationTitle("SwiftUIImagePreviewView")
     .onChange(of: selectedItem, perform: loadPickedImage)
   }
 
@@ -132,17 +132,6 @@ private struct ImagePreviewDemoView: View {
       }
     }
   }
-}
-
-private struct ImagePreviewRepresentable: UIViewRepresentable {
-
-  let editingStack: EditingStack
-
-  func makeUIView(context: Context) -> ImagePreviewView {
-    ImagePreviewView(editingStack: editingStack)
-  }
-
-  func updateUIView(_ uiView: ImagePreviewView, context: Context) {}
 }
 
 private struct MetalRenderingDemoView: View {
@@ -185,9 +174,10 @@ private struct MetalRenderingDemoView: View {
         if let sourceImage = makeSourceImage() {
           switch displayKind {
           case .metal:
-            MetalImageDisplayRepresentable(
+            SwiftUIMetalImageView(
               image: sourceImage,
-              blurRadius: blurRadius
+              contentMode: .scaleAspectFit,
+              postProcessing: blurredImage
             )
           case .uiImageView:
             UIImageCIImageDisplayRepresentable(
@@ -227,6 +217,13 @@ private struct MetalRenderingDemoView: View {
       }
       return CIImage(mtlTexture: texture, options: [:])
     }
+  }
+
+  private func blurredImage(_ image: CIImage) -> CIImage {
+    image
+      .clampedToExtent()
+      .applyingGaussianBlur(sigma: blurRadius)
+      .cropped(to: image.extent)
   }
 
   private func loadPickedImage(_ item: PhotosPickerItem?) {
@@ -290,28 +287,6 @@ private enum MetalRenderingDisplayKind: CaseIterable, Identifiable {
     case .uiImageView:
       "UIImageView"
     }
-  }
-}
-
-private struct MetalImageDisplayRepresentable: UIViewRepresentable {
-
-  let image: CIImage
-  let blurRadius: Double
-
-  func makeUIView(context: Context) -> MetalImageView {
-    let view = MetalImageView(frame: .zero, device: MTLCreateSystemDefaultDevice())
-    view.contentMode = .scaleAspectFit
-    return view
-  }
-
-  func updateUIView(_ uiView: MetalImageView, context: Context) {
-    uiView.postProcessing = { image in
-      image
-        .clampedToExtent()
-        .applyingGaussianBlur(sigma: blurRadius)
-        .cropped(to: image.extent)
-    }
-    uiView.display(image: image)
   }
 }
 

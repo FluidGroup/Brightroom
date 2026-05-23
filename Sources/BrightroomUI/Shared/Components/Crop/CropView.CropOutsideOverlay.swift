@@ -11,26 +11,26 @@ import SwiftUI
 
 extension CropView {
 
-  open class CropOutsideOverlayBase: PixelEditorCodeBasedView {
+  class CropOutsideOverlayBase: _PixelEditorCodeBasedView {
 
-    open func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    func didBeginAdjustment(kind: CropView.AdjustmentKind) {
       
     }
     
-    open func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    func didEndAdjustment(kind: CropView.AdjustmentKind) {
       
     }
     
   }
   
-  public final class CropOutsideOverlayBlurredView: CropOutsideOverlayBase {
+  final class CropOutsideOverlayBlurredView: CropOutsideOverlayBase {
     
     private let effectView: UIVisualEffectView
     private let dimmingView: UIView
         
     private var currentAnimator: UIViewPropertyAnimator?
     
-    public init(
+    init(
       blurEffect: UIBlurEffect = UIBlurEffect(style: .dark),
       dimmingColor: UIColor = .init(white: 0, alpha: 0.6)
     ) {
@@ -49,7 +49,7 @@ extension CropView {
       AutoLayoutTools.setEdge(effectView, self)
     }
     
-    public override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
       
       if kind == .guide {
         
@@ -62,7 +62,7 @@ extension CropView {
       }
     }
     
-    public override func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
       
       if kind == .guide {
         currentAnimator?.stopAnimation(true)
@@ -76,12 +76,12 @@ extension CropView {
   }
   
   @available(iOS 14, *)
-  open class SwiftUICropOutsideOverlay<Content: View>: CropOutsideOverlayBase {
+  class SwiftUICropOutsideOverlay<Content: View>: CropOutsideOverlayBase {
 
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    public init(@ViewBuilder content: @escaping (CropView.AdjustmentKind?) -> Content) {
+    init(@ViewBuilder content: @escaping (CropView.AdjustmentKind?) -> Content) {
 
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -95,11 +95,11 @@ extension CropView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    open override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
       proxy.activeKind = kind
     }
 
-    open override func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
       proxy.activeKind = nil
     }
 
@@ -115,7 +115,7 @@ extension CropView {
 
       private let content: (CropView.AdjustmentKind?) -> Content
 
-      public init(
+      init(
         proxy: Proxy,
         content: @escaping (CropView.AdjustmentKind?) -> Content
       ) {

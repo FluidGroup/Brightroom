@@ -43,7 +43,7 @@ public final class PixelEditorViewModel {
 
   public var title: String = ""
   public var mode: Mode = .preview
-  public var maskingBrushSize: CanvasView.BrushSize = .point(30)
+  public var maskingBrushSize: MaskingBrushSize = .point(30)
   var drawnPaths: [DrawnPath] = []
   public var proposedCrop: EditingCrop? = nil
 

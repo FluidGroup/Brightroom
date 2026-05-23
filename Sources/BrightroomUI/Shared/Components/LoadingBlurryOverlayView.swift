@@ -21,9 +21,9 @@
 
 import UIKit
 
-public final class LoadingBlurryOverlayView: PixelEditorCodeBasedView {
+final class _LoadingBlurryOverlayView: _PixelEditorCodeBasedView {
   
-  public init(
+  init(
     effect: UIVisualEffect,
     activityIndicatorStyle: UIActivityIndicatorView.Style
   ) {
