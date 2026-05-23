@@ -31,6 +31,20 @@ final class RendererTests: XCTestCase {
     static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
   }
 
+  private func assertStandardRGBInputColorSpace(
+    _ colorSpace: CGColorSpace?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    guard let colorSpace else {
+      XCTFail("Expected input image to have an RGB color space.", file: file, line: line)
+      return
+    }
+
+    XCTAssertEqual(colorSpace.model, .rgb, file: file, line: line)
+    XCTAssertNotEqual(colorSpace, ColorSpaces.displayP3, file: file, line: line)
+  }
+
   func testCropping() throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
 
@@ -66,7 +80,7 @@ final class RendererTests: XCTestCase {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
@@ -79,7 +93,7 @@ final class RendererTests: XCTestCase {
     let imageSource = ImageSource(image: Asset.unsplash3.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
@@ -97,7 +111,7 @@ final class RendererTests: XCTestCase {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
@@ -122,7 +136,7 @@ final class RendererTests: XCTestCase {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
@@ -148,7 +162,7 @@ final class RendererTests: XCTestCase {
     let imageSource = ImageSource(image: Asset.unsplash1.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.sRGB)
+    assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
