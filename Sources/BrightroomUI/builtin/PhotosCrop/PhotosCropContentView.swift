@@ -663,7 +663,7 @@ private struct PhotosCropAspectRatioDirectionButton: View {
     } label: {
       ZStack {
         RoundedRectangle(cornerRadius: 4)
-          .fill(isSelected ? Color(white: 0.6) : Color.black.opacity(0.6))
+          .fill(isSelected && isEnabled ? Color(white: 0.6) : Color.black.opacity(0.6))
 
         RoundedRectangle(cornerRadius: 4)
           .stroke(Color(white: 0.6).opacity(isEnabled ? 1 : 0.3), lineWidth: 1)
