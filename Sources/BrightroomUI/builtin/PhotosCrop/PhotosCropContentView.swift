@@ -33,12 +33,12 @@ struct PhotosCropContentView: View {
   let onDone: @MainActor () -> Void
   let onCancel: @MainActor () -> Void
 
-  @State private var cropState: CropView.StateSnapshot?
   @State private var rotation: EditingCrop.Rotation?
   @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
-  @State private var croppingAspectRatio: PixelAspectRatio?
+  @State private var aspectRatioSelection: PhotosCropAspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var resetAction = SwiftUICropView.ResetAction()
+  @State private var rotateAction = SwiftUICropView.RotateAction()
   @State private var applyAction = SwiftUICropView.ApplyAction()
 
   init(
@@ -56,9 +56,9 @@ struct PhotosCropContentView: View {
 
     switch options.aspectRatioOptions {
     case .fixed(let aspectRatio):
-      self._croppingAspectRatio = State(initialValue: aspectRatio)
+      self._aspectRatioSelection = State(initialValue: .init(aspectRatio: aspectRatio))
     case .selectable:
-      self._croppingAspectRatio = State(initialValue: nil)
+      self._aspectRatioSelection = State(initialValue: .freeform)
     }
   }
 
@@ -71,31 +71,34 @@ struct PhotosCropContentView: View {
     let bottomBarHeight: CGFloat = 50
 
     ZStack {
+      Color.black
+        .ignoresSafeArea()
+
       VStack(spacing: 0) {
-        Color.clear
-          .frame(height: topBarHeight)
+        Spacer(minLength: topBarHeight)
+          .fixedSize()
 
         SwiftUICropView(
           editingStack: editingStack,
-          isAutoApplyEditingStackEnabled: true,
-          stateHandler: handleCropState
+          isAutoApplyEditingStackEnabled: true
         )
-        .rotation(rotation)
-        .adjustmentAngle(adjustmentAngle)
-        .croppingAspectRatio(croppingAspectRatio)
+        .rotation($rotation)
+        .adjustmentAngle($adjustmentAngle)
+        .croppingAspectRatio(croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio))
         .registerResetAction(resetAction)
+        .registerRotateAction(rotateAction)
         .registerApplyAction(applyAction)
         .layoutPriority(1)
 
-        Color.clear
-          .frame(height: bottomControlHeight + bottomBarHeight)
+        Spacer(minLength: bottomControlHeight + bottomBarHeight)
+          .fixedSize()
       }
 
       VStack(spacing: 0) {
         PhotosCropTopBar(
           resetTitle: localizedStrings.button_reset_title,
           isEnabled: isLoaded,
-          hasUncommitedChanges: loadedState?.hasUncommitedChanges ?? false,
+          hasChanges: loadedState?.isDirty ?? false,
           isAspectRatioControlAvailable: isAspectRatioControlAvailable,
           isSelectingAspectRatio: isSelectingAspectRatio,
           onRotate: rotate,
@@ -111,7 +114,7 @@ struct PhotosCropContentView: View {
           if isSelectingAspectRatio && originalAspectRatio != nil {
             PhotosCropAspectRatioPicker(
               originalAspectRatio: originalAspectRatio,
-              selectedAspectRatio: croppingAspectRatio,
+              selection: aspectRatioSelection,
               localizedStrings: localizedStrings,
               onSelect: selectAspectRatio
             )
@@ -139,10 +142,6 @@ struct PhotosCropContentView: View {
         .padding(.horizontal, 16)
       }
     }
-    .background {
-      Color.black
-        .ignoresSafeArea()
-    }
     .foregroundStyle(.white)
     .task {
       editingStack.start()
@@ -164,44 +163,11 @@ struct PhotosCropContentView: View {
     }
   }
 
-  @MainActor
-  private func handleCropState(_ state: CropView.StateSnapshot) {
-    cropState = state
-
-    if let proposedCrop = state.proposedCrop, rotation != proposedCrop.rotation {
-      rotation = proposedCrop.rotation
-    }
-
-    if let proposedCrop = state.proposedCrop, adjustmentAngle != proposedCrop.adjustmentAngle {
-      adjustmentAngle = proposedCrop.adjustmentAngle
-    }
-
-    if croppingAspectRatio != state.preferredAspectRatio {
-      croppingAspectRatio = state.preferredAspectRatio
-    }
-  }
-
   private func rotate() {
-    guard let proposedCrop = cropState?.proposedCrop else {
-      return
-    }
-
-    rotation = proposedCrop.rotation.next()
-
-    if let aspectRatio = cropState?.preferredAspectRatio {
-      croppingAspectRatio = aspectRatio.swapped()
-    }
+    rotateAction()
   }
 
   private func reset() {
-    switch options.aspectRatioOptions {
-    case .fixed(let aspectRatio):
-      croppingAspectRatio = aspectRatio
-    case .selectable:
-      croppingAspectRatio = nil
-    }
-
-    adjustmentAngle = .zero
     resetAction()
   }
 
@@ -213,8 +179,8 @@ struct PhotosCropContentView: View {
     isSelectingAspectRatio.toggle()
   }
 
-  private func selectAspectRatio(_ aspectRatio: PixelAspectRatio?) {
-    croppingAspectRatio = aspectRatio
+  private func selectAspectRatio(_ selection: PhotosCropAspectRatioSelection) {
+    aspectRatioSelection = selection
   }
 
   private func setAdjustmentAngle(_ degrees: Double) {
@@ -231,13 +197,24 @@ struct PhotosCropContentView: View {
     applyAction()
     onDone()
   }
+
+  private func croppingAspectRatioBinding(originalAspectRatio: PixelAspectRatio?) -> Binding<PixelAspectRatio?> {
+    Binding {
+      aspectRatioSelection.aspectRatio(originalAspectRatio: originalAspectRatio)
+    } set: { aspectRatio in
+      aspectRatioSelection.sync(
+        aspectRatio: aspectRatio,
+        originalAspectRatio: originalAspectRatio
+      )
+    }
+  }
 }
 
 private struct PhotosCropTopBar: View {
 
   let resetTitle: String
   let isEnabled: Bool
-  let hasUncommitedChanges: Bool
+  let hasChanges: Bool
   let isAspectRatioControlAvailable: Bool
   let isSelectingAspectRatio: Bool
   let onRotate: () -> Void
@@ -261,15 +238,22 @@ private struct PhotosCropTopBar: View {
 
       Spacer()
 
-      Button(action: onReset) {
-        Text(resetTitle)
-          .font(.system(size: 14))
-          .foregroundStyle(Color(uiColor: .systemYellow))
+      Group {
+        if hasChanges {
+          Button(action: onReset) {
+            Text(resetTitle)
+              .font(.system(size: 14))
+              .foregroundStyle(Color(uiColor: .systemYellow))
+          }
+          .buttonStyle(.plain)
+          .disabled(!isEnabled)
+          .accessibilityIdentifier("photos.crop.reset")
+        } else {
+          Color.clear
+            .frame(width: 44, height: 44)
+            .accessibilityHidden(true)
+        }
       }
-      .buttonStyle(.plain)
-      .opacity(hasUncommitedChanges ? 1 : 0)
-      .disabled(!isEnabled || !hasUncommitedChanges)
-      .accessibilityIdentifier("photos.crop.reset")
 
       Spacer()
 
@@ -493,12 +477,108 @@ private struct PhotosCropRotationShortBar: View {
   }
 }
 
+private enum PhotosCropAspectRatioSelection: Equatable {
+
+  case freeform
+  case original(PhotosCropAspectRatioDirection)
+  case ratio(PixelAspectRatio)
+
+  init(aspectRatio: PixelAspectRatio?) {
+    if let aspectRatio {
+      self = .ratio(aspectRatio)
+    } else {
+      self = .freeform
+    }
+  }
+
+  var isFreeform: Bool {
+    self == .freeform
+  }
+
+  var isOriginal: Bool {
+    if case .original = self {
+      return true
+    } else {
+      return false
+    }
+  }
+
+  func isRatio(_ ratio: PixelAspectRatio) -> Bool {
+    if case .ratio(let selectedRatio) = self {
+      return selectedRatio == ratio
+    } else {
+      return false
+    }
+  }
+
+  func aspectRatio(originalAspectRatio: PixelAspectRatio?) -> PixelAspectRatio? {
+    switch self {
+    case .freeform:
+      return nil
+    case .original(let direction):
+      return originalAspectRatio.map { direction.orient($0) }
+    case .ratio(let aspectRatio):
+      return aspectRatio
+    }
+  }
+
+  func direction(originalAspectRatio: PixelAspectRatio?) -> PhotosCropAspectRatioDirection? {
+    switch self {
+    case .freeform:
+      return nil
+    case .original(let direction):
+      return direction
+    case .ratio(let aspectRatio):
+      return PhotosCropAspectRatioDirection(aspectRatio)
+    }
+  }
+
+  func withDirection(
+    _ direction: PhotosCropAspectRatioDirection,
+    originalAspectRatio: PixelAspectRatio?
+  ) -> Self {
+    switch self {
+    case .freeform:
+      return .freeform
+    case .original:
+      return .original(direction)
+    case .ratio(let aspectRatio):
+      if PhotosCropAspectRatioDirection(aspectRatio) == direction {
+        return self
+      } else {
+        return .ratio(aspectRatio.swapped())
+      }
+    }
+  }
+
+  mutating func sync(aspectRatio: PixelAspectRatio?, originalAspectRatio: PixelAspectRatio?) {
+    guard self.aspectRatio(originalAspectRatio: originalAspectRatio) != aspectRatio else {
+      return
+    }
+
+    if case .original = self, let aspectRatio, let originalAspectRatio {
+      if aspectRatio == originalAspectRatio {
+        self = .original(PhotosCropAspectRatioDirection(originalAspectRatio))
+        return
+      }
+
+      let swappedOriginalAspectRatio = originalAspectRatio.swapped()
+      if aspectRatio == swappedOriginalAspectRatio {
+        self = .original(PhotosCropAspectRatioDirection(swappedOriginalAspectRatio))
+        return
+      }
+    }
+
+    self = .init(aspectRatio: aspectRatio)
+  }
+}
+
 private struct PhotosCropAspectRatioPicker: View {
 
   let originalAspectRatio: PixelAspectRatio?
-  let selectedAspectRatio: PixelAspectRatio?
+  let selection: PhotosCropAspectRatioSelection
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let onSelect: (PixelAspectRatio?) -> Void
+  let onSelect: (PhotosCropAspectRatioSelection) -> Void
 
   var body: some View {
     VStack(spacing: 24) {
@@ -524,39 +604,40 @@ private struct PhotosCropAspectRatioPicker: View {
           if originalAspectRatio != nil {
             PhotosCropAspectRatioButton(
               title: localizedStrings.button_aspectratio_original,
-              isSelected: selectedAspectRatio == originalAspectRatioForCurrentDirection
+              isSelected: selection.isOriginal
             ) {
-              onSelect(originalAspectRatioForCurrentDirection)
+              onSelect(.original(selectedDirection))
             }
             .accessibilityIdentifier("photos.crop.aspect.original")
           }
 
           PhotosCropAspectRatioButton(
             title: localizedStrings.button_aspectratio_freeform,
-            isSelected: selectedAspectRatio == nil
+            isSelected: selection.isFreeform
           ) {
-            onSelect(nil)
+            onSelect(.freeform)
           }
           .accessibilityIdentifier("photos.crop.aspect.freeform")
 
           PhotosCropAspectRatioButton(
             title: localizedStrings.button_aspectratio_square,
-            isSelected: selectedAspectRatio == .square
+            isSelected: selection.isRatio(.square)
           ) {
-            onSelect(.square)
+            onSelect(.ratio(.square))
           }
           .accessibilityIdentifier("photos.crop.aspect.square")
 
           ForEach(Self.horizontalRectangleAspectRatios) { ratio in
             let displayedRatio = displayedRatio(for: ratio)
+            let minimizedDisplayedRatio = displayedRatio._minimized()
 
             PhotosCropAspectRatioButton(
-              title: "\(Int(displayedRatio.width)):\(Int(displayedRatio.height))",
-              isSelected: selectedAspectRatio == displayedRatio
+              title: "\(Int(minimizedDisplayedRatio.width)):\(Int(minimizedDisplayedRatio.height))",
+              isSelected: selection.isRatio(minimizedDisplayedRatio)
             ) {
-              onSelect(displayedRatio)
+              onSelect(.ratio(minimizedDisplayedRatio))
             }
-            .accessibilityIdentifier("photos.crop.aspect.\(Int(displayedRatio.width))x\(Int(displayedRatio.height))")
+            .accessibilityIdentifier("photos.crop.aspect.\(Int(minimizedDisplayedRatio.width))x\(Int(minimizedDisplayedRatio.height))")
           }
         }
         .padding(.horizontal, 24)
@@ -565,7 +646,7 @@ private struct PhotosCropAspectRatioPicker: View {
   }
 
   private var selectedDirection: PhotosCropAspectRatioDirection {
-    selectedAspectRatio.map(PhotosCropAspectRatioDirection.init) ?? originalDirection
+    selection.direction(originalAspectRatio: originalAspectRatio) ?? originalDirection
   }
 
   private var originalDirection: PhotosCropAspectRatioDirection {
@@ -573,27 +654,11 @@ private struct PhotosCropAspectRatioPicker: View {
   }
 
   private var canSelectDirection: Bool {
-    guard let selectedAspectRatio else {
-      return false
-    }
-
-    guard selectedAspectRatio != .square else {
+    guard let selectedAspectRatio = selection.aspectRatio(originalAspectRatio: originalAspectRatio), selectedAspectRatio != .square else {
       return false
     }
 
     return true
-  }
-
-  private var originalAspectRatioForCurrentDirection: PixelAspectRatio? {
-    guard let originalAspectRatio else {
-      return nil
-    }
-
-    if PhotosCropAspectRatioDirection(originalAspectRatio) == selectedDirection {
-      return originalAspectRatio
-    } else {
-      return originalAspectRatio.swapped()
-    }
   }
 
   private func displayedRatio(for horizontalRatio: PixelAspectRatio) -> PixelAspectRatio {
@@ -606,15 +671,11 @@ private struct PhotosCropAspectRatioPicker: View {
   }
 
   private func selectDirection(_ direction: PhotosCropAspectRatioDirection) {
-    guard let selectedAspectRatio else {
+    guard canSelectDirection, selectedDirection != direction else {
       return
     }
 
-    guard PhotosCropAspectRatioDirection(selectedAspectRatio) != direction else {
-      return
-    }
-
-    onSelect(selectedAspectRatio.swapped())
+    onSelect(selection.withDirection(direction, originalAspectRatio: originalAspectRatio))
   }
 
   private static let horizontalRectangleAspectRatios: [PixelAspectRatio] = [
@@ -647,6 +708,7 @@ private struct PhotosCropAspectRatioButton: View {
         }
     }
     .buttonStyle(.plain)
+    .accessibilityValue(isSelected ? "selected" : "not selected")
   }
 }
 
@@ -679,6 +741,10 @@ private struct PhotosCropAspectRatioDirectionButton: View {
     }
     .buttonStyle(.plain)
     .disabled(!isEnabled)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(direction.accessibilityLabel)
+    .accessibilityValue(isSelected ? "selected" : "not selected")
+    .accessibilityIdentifier(direction.accessibilityIdentifier)
   }
 
   private var isSelected: Bool {
@@ -704,6 +770,32 @@ private enum PhotosCropAspectRatioDirection {
       self = .vertical
     } else {
       self = .horizontal
+    }
+  }
+
+  func orient(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
+    if PhotosCropAspectRatioDirection(aspectRatio) == self {
+      return aspectRatio
+    } else {
+      return aspectRatio.swapped()
+    }
+  }
+
+  var accessibilityLabel: String {
+    switch self {
+    case .vertical:
+      return "Vertical"
+    case .horizontal:
+      return "Horizontal"
+    }
+  }
+
+  var accessibilityIdentifier: String {
+    switch self {
+    case .vertical:
+      return "photos.crop.aspect.direction.vertical"
+    case .horizontal:
+      return "photos.crop.aspect.direction.horizontal"
     }
   }
 }

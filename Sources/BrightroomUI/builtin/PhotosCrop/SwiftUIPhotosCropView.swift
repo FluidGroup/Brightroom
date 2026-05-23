@@ -26,7 +26,7 @@ import BrightroomEngine
 /**
  Apple's Photos app like crop view.
  
- You might use `CropView` to create a fully customized user interface.
+ You might use `SwiftUICropView` to create a fully customized user interface.
  */
 @available(iOS 14, *)
 public struct SwiftUIPhotosCropView: View {

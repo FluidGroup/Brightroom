@@ -169,7 +169,12 @@ public final class BlurryMaskingView: PixelEditorCodeBasedView, UIScrollViewDele
 
     withGraphTracking {
       withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit.crop }, onChange: { [weak self] cropRect in
-        guard let self, let cropRect else { return }
+        guard let self, let cropRect, let loadedState = editingStack.loadedState else { return }
+
+        self.backingView.load(
+          image: loadedState.imageForCrop,
+          crop: cropRect
+        )
 
         // scaling for drawing paths
         [self.canvasView, self.drawingView].forEach { view in
