@@ -64,6 +64,11 @@ final class CropView: UIView, UIScrollViewDelegate {
     case zoom
   }
 
+  private struct ScrollViewAdjustmentSession {
+    let kind: ScrollViewAdjustmentKind
+    let baselineCrop: EditingCrop
+  }
+
   /**
    A view that covers the area out of cropping extent.
    */
@@ -204,8 +209,11 @@ final class CropView: UIView, UIScrollViewDelegate {
 
   private let contentInset: UIEdgeInsets
 
-  private var scrollViewAdjustmentBaselineCrop: EditingCrop?
-  private var scrollViewAdjustmentKind: ScrollViewAdjustmentKind?
+  private var scrollViewAdjustmentSession: ScrollViewAdjustmentSession?
+
+  private var scrollViewAdjustmentKind: ScrollViewAdjustmentKind? {
+    scrollViewAdjustmentSession?.kind
+  }
 
   private var stateHandler: @MainActor (StateSnapshot) -> Void = { _ in }
 
@@ -339,8 +347,7 @@ final class CropView: UIView, UIScrollViewDelegate {
 
     debounce.cancel()
     scrollViewSettleDebounce.cancel()
-    scrollViewAdjustmentBaselineCrop = nil
-    scrollViewAdjustmentKind = nil
+    scrollViewAdjustmentSession = nil
     state.adjustmentKind = []
     state.preferredAspectRatio = nil
     guideView.setLockedAspectRatio(nil)
@@ -538,6 +545,87 @@ extension CropView {
 
     return true
   }
+
+  #if DEBUG
+  private func debugLogRecordedCropExtent(
+    source: ScrollViewAdjustmentKind?,
+    normalizedRect: CGRect,
+    resolvedRect: CGRect
+  ) {
+    guard state.preferredAspectRatio != nil || source != nil else {
+      return
+    }
+
+    EditorLog.debug(.cropView, """
+      [CropRecord]
+      source: \(String(describing: source))
+      preferredAspectRatio: \(String(describing: state.preferredAspectRatio))
+      normalizedAspect: \(debugAspectRatio(normalizedRect.size))
+      resolvedAspect: \(debugAspectRatio(resolvedRect.size))
+      """)
+  }
+
+  private func debugLogScrollViewAdjustment(_ event: String) {
+    guard state.preferredAspectRatio != nil || scrollViewAdjustmentSession != nil else {
+      return
+    }
+
+    EditorLog.debug(.cropView, """
+      [CropScroll] \(event)
+      scrollKind: \(String(describing: scrollViewAdjustmentKind))
+      scroll: \(debugScrollViewState())
+      """)
+  }
+
+  private func debugScrollViewState() -> String {
+    """
+    zoomScale:\(debugNumber(scrollView.zoomScale)) \
+    minZoom:\(debugNumber(scrollView.minimumZoomScale)) \
+    maxZoom:\(debugNumber(scrollView.maximumZoomScale)) \
+    contentSize:\(debugDescription(scrollView.contentSize)) \
+    contentOffset:\(debugDescription(scrollView.contentOffset)) \
+    contentInset:\(debugDescription(scrollView.contentInset)) \
+    isZooming:\(scrollView.isZooming) \
+    isZoomBouncing:\(scrollView.isZoomBouncing) \
+    isDragging:\(scrollView.isDragging) \
+    isTracking:\(scrollView.isTracking) \
+    isDecelerating:\(scrollView.isDecelerating) \
+    isResting:\(scrollView.isContentOffsetResting)
+    """
+  }
+
+  private func debugDescription(_ size: CGSize) -> String {
+    "(w:\(debugNumber(size.width)), h:\(debugNumber(size.height)))"
+  }
+
+  private func debugDescription(_ point: CGPoint) -> String {
+    "(x:\(debugNumber(point.x)), y:\(debugNumber(point.y)))"
+  }
+
+  private func debugDescription(_ inset: UIEdgeInsets) -> String {
+    "(top:\(debugNumber(inset.top)), left:\(debugNumber(inset.left)), bottom:\(debugNumber(inset.bottom)), right:\(debugNumber(inset.right)))"
+  }
+
+  private func debugAspectRatio(_ size: CGSize) -> String {
+    guard size.height != 0 else {
+      return "invalid"
+    }
+
+    return debugNumber(size.width / size.height)
+  }
+
+  private func debugNumber(_ value: CGFloat) -> String {
+    String(format: "%.4f", Double(value))
+  }
+  #else
+  private func debugLogRecordedCropExtent(
+    source: ScrollViewAdjustmentKind?,
+    normalizedRect: CGRect,
+    resolvedRect: CGRect
+  ) {}
+
+  private func debugLogScrollViewAdjustment(_ event: String) {}
+  #endif
 
   private func applyCropToEditingStackIfRenderingChanged(_ crop: EditingCrop) {
     guard let currentCrop = editingStack.loadedState?.currentEdit.crop else {
@@ -914,11 +1002,22 @@ extension CropView {
 
     // make crop extent for image
     // converts rectangle for display into image's geometry.
-    let resolvedRect = normalizedCropExtentForScrollViewRecording(
-      crop.makeCropExtent(
-        rect: guideRectInImageView
-      ),
+    let convertedCropExtent = crop.makeCropExtent(
+      rect: guideRectInImageView
+    )
+    let normalizedCropExtent = normalizedCropExtentForScrollViewRecording(
+      convertedCropExtent,
       currentCrop: crop
+    )
+    let resolvedRect = cropExtentRespectingPreferredAspectRatio(
+      normalizedCropExtent,
+      currentCrop: crop
+    )
+
+    debugLogRecordedCropExtent(
+      source: scrollViewAdjustmentKind,
+      normalizedRect: normalizedCropExtent,
+      resolvedRect: resolvedRect
     )
 
     crop.updateCropExtent(
@@ -928,29 +1027,48 @@ extension CropView {
     return crop
   }
 
+  private func cropExtentRespectingPreferredAspectRatio(
+    _ cropExtent: CGRect,
+    currentCrop: EditingCrop
+  ) -> CGRect {
+    guard let preferredAspectRatio = state.preferredAspectRatio else {
+      return cropExtent
+    }
+
+    let imageBounds = CGRect(origin: .zero, size: currentCrop.imageSize)
+    let boundedCropExtent = imageBounds.intersection(cropExtent)
+
+    guard boundedCropExtent.isNull == false, boundedCropExtent.isEmpty == false else {
+      return cropExtent
+    }
+
+    return preferredAspectRatio.rectThatFits(in: boundedCropExtent)
+  }
+
   private func normalizedCropExtentForScrollViewRecording(
     _ cropExtent: CGRect,
     currentCrop: EditingCrop
   ) -> CGRect {
-    guard scrollViewAdjustmentKind == .drag else {
-      return cropExtent
-    }
-
-    guard let baselineCrop = scrollViewAdjustmentBaselineCrop else {
+    guard
+      let adjustmentSession = scrollViewAdjustmentSession,
+      adjustmentSession.kind == .drag
+    else {
       return cropExtent
     }
 
     var cropExtent = cropExtent
     let epsilon: CGFloat = 1e-8
 
-    if baselineCrop.cropExtent.width >= baselineCrop.imageSize.width - epsilon
+    if adjustmentSession.baselineCrop.cropExtent.width
+      >= adjustmentSession.baselineCrop.imageSize.width - epsilon
       && currentCrop.cropExtent.width >= currentCrop.imageSize.width - epsilon
     {
       cropExtent.origin.x = 0
       cropExtent.size.width = currentCrop.imageSize.width
     }
 
-    if baselineCrop.cropExtent.height >= baselineCrop.imageSize.height - epsilon
+    if adjustmentSession.baselineCrop.cropExtent.height
+      >= adjustmentSession.baselineCrop.imageSize.height - epsilon
       && currentCrop.cropExtent.height >= currentCrop.imageSize.height - epsilon
     {
       cropExtent.origin.y = 0
@@ -961,35 +1079,70 @@ extension CropView {
   }
 
   private func beginScrollViewAdjustment(_ kind: ScrollViewAdjustmentKind) {
-    scrollViewAdjustmentKind = kind
-    scrollViewAdjustmentBaselineCrop = state.proposedCrop
+    if kind == .drag, isZoomInteractionActive {
+      debugLogScrollViewAdjustment("drag-begin ignored active-zoom")
+      return
+    }
+
+    guard let baselineCrop = state.proposedCrop else {
+      return
+    }
+
+    scrollViewAdjustmentSession = .init(kind: kind, baselineCrop: baselineCrop)
     guideView.willBeginScrollViewAdjustment()
   }
 
-  private func endScrollViewAdjustment() {
+  private func endScrollViewAdjustment(_ kind: ScrollViewAdjustmentKind) {
+    guard scrollViewAdjustmentSession?.kind == kind else {
+      debugLogScrollViewAdjustment("\(kind)-end ignored")
+      return
+    }
+
     didChangeScrollView()
     guideView.didEndScrollViewAdjustment()
   }
 
+  private var isZoomInteractionActive: Bool {
+    if scrollViewAdjustmentKind == .zoom || scrollView.isZooming {
+      return true
+    }
+
+    switch scrollView.pinchGestureRecognizer?.state {
+    case .began, .changed:
+      return true
+    case .cancelled, .ended, .failed, .possible, .none:
+      return false
+    @unknown default:
+      return false
+    }
+  }
+
   private func didSettleScrollViewAdjustment() {
+    debugLogScrollViewAdjustment("settle-begin")
+
     let recordedCrop = record()
 
     if
-      let baselineCrop = scrollViewAdjustmentBaselineCrop,
+      let baselineCrop = scrollViewAdjustmentSession?.baselineCrop,
       let recordedCrop,
       baselineCrop.isRenderingEquivalent(to: recordedCrop)
     {
       setProposedCrop(baselineCrop)
     }
 
-    scrollViewAdjustmentBaselineCrop = nil
-    scrollViewAdjustmentKind = nil
+    debugLogScrollViewAdjustment("settle-end")
+
+    scrollViewAdjustmentSession = nil
   }
 
   @inline(__always)
   private func didChangeScrollView() {
+    debugLogScrollViewAdjustment("settle-scheduled")
+
     scrollViewSettleDebounce.on { [weak self] in
       guard let self else { return }
+
+      self.debugLogScrollViewAdjustment("settle-check")
 
       guard self.scrollView.isContentOffsetResting else {
         self.didChangeScrollView()
@@ -1007,6 +1160,8 @@ extension CropView {
   }
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+
+    debugLogScrollViewAdjustment("did-zoom")
 
     // TODO: consider if we need this.
     // adjustFrameToCenterOnZooming
@@ -1040,6 +1195,8 @@ extension CropView {
 
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
 
+    debugLogScrollViewAdjustment("did-scroll")
+
     debounce.on { [weak self] in
 
       guard let self = self else {
@@ -1055,17 +1212,21 @@ extension CropView {
   }
 
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+    debugLogScrollViewAdjustment("drag-begin")
     beginScrollViewAdjustment(.drag)
   }
 
   public func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+    debugLogScrollViewAdjustment("zoom-begin")
     beginScrollViewAdjustment(.zoom)
   }
 
   public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool)
   {
+    debugLogScrollViewAdjustment("drag-end decelerate:\(decelerate)")
+
     if !decelerate {
-      endScrollViewAdjustment()
+      endScrollViewAdjustment(.drag)
     }
   }
 
@@ -1074,11 +1235,13 @@ extension CropView {
     with view: UIView?,
     atScale scale: CGFloat
   ) {
-    endScrollViewAdjustment()
+    debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
+    endScrollViewAdjustment(.zoom)
   }
 
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-    endScrollViewAdjustment()
+    debugLogScrollViewAdjustment("deceleration-end")
+    endScrollViewAdjustment(.drag)
   }
 
   var remainingScroll: UIEdgeInsets {
