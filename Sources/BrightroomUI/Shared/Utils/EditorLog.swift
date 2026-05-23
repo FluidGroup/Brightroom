@@ -45,7 +45,7 @@ extension OSLog {
   }()
 
   static let cropView: OSLog = {
-    #if false
+    #if DEBUG
     return OSLog.init(subsystem: "BrightroomUI", category: "CropView")
     #else
     return .disabled
