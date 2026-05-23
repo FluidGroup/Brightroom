@@ -1,0 +1,142 @@
+appId: app.muukii.brightroom.SwiftUIDemo
+name: PixelEditor
+tags:
+  - pixel-editor
+---
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- assertVisible: "Done"
+- assertVisible: "Normal"
+- tapOn: "Edit"
+- assertVisible: "Adjust"
+- assertVisible: "Mask"
+- assertVisible: "Brightness"
+- assertVisible: "Contrast"
+
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- tapOn: "Edit"
+- tapOn: "Adjust"
+- assertVisible: "Adjust"
+- assertVisible: "Cancel"
+- assertVisible: "Done"
+- swipe:
+    start: 99%, 49%
+    end: 70%, 36%
+    duration: 500
+- tapOn: "Done"
+- assertVisible: "Edit"
+- tapOn: "Done"
+- assertVisible: ".*size:.*"
+- assertNotVisible: "size: 5952, 3968"
+
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- tapOn: "Edit"
+- tapOn: "Mask"
+- assertVisible: "Mask"
+- assertVisible: "Clear"
+- swipe:
+    start: 50%, 76%
+    end: 15%, 76%
+    duration: 500
+- assertVisible: "Cancel"
+- assertVisible: "Done"
+
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- tapOn: "Edit"
+- tapOn: "Brightness"
+- assertVisible: "Brightness"
+- swipe:
+    start: 50%, 76%
+    end: 15%, 76%
+    duration: 500
+- tapOn: "Done"
+- assertVisible: "Adjust"
+- assertVisible: "Done"
+
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- tapOn: "Done"
+- assertVisible: ".*size:.*"
+
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn:
+    point: 50%, 72%
+- tapOn: "Cancel"
+- assertVisible: "PixelEditor"
+
+- tapOn: "PixelEditor Square"
+- assertVisible: "Cancel"
+- tapOn: "Cancel"
+- assertVisible: "PixelEditor Square"
+- tapOn: "PixelEditor 4:5"
+- assertVisible: "Cancel"
+- tapOn: "Cancel"
+- assertVisible: "PixelEditor 4:5"
+- tapOn: "PixelEditor 5:4"
+- assertVisible: "Cancel"
+- tapOn: "Cancel"
+- assertVisible: "PixelEditor 5:4"
+- tapOn: "PixelEditor left"
+- assertVisible: "Cancel"

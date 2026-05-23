@@ -21,10 +21,8 @@
 
 import UIKit
 import SwiftUI
-import Verge
-#if !COCOAPODS
+import StateGraph
 import BrightroomEngine
-#endif
 
 public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
   
@@ -48,11 +46,39 @@ public final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewC
   }
 }
 
-/**
- Still in development
- */
 @available(iOS 14, *)
-public struct SwiftUICropView: UIViewControllerRepresentable {
+public struct SwiftUICropView: View {
+
+  public struct AdjustmentKind: OptionSet, Equatable, Sendable {
+
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+      self.rawValue = rawValue
+    }
+
+    public static let scrollView = AdjustmentKind(rawValue: 1 << 0)
+    public static let guide = AdjustmentKind(rawValue: 1 << 1)
+  }
+
+  public struct StateSnapshot: Equatable {
+    public var proposedCrop: EditingCrop?
+    public var frame: CGRect
+    public var adjustmentKind: AdjustmentKind
+    public var preferredAspectRatio: PixelAspectRatio?
+
+    public init(
+      proposedCrop: EditingCrop?,
+      frame: CGRect,
+      adjustmentKind: AdjustmentKind,
+      preferredAspectRatio: PixelAspectRatio?
+    ) {
+      self.proposedCrop = proposedCrop
+      self.frame = frame
+      self.adjustmentKind = adjustmentKind
+      self.preferredAspectRatio = preferredAspectRatio
+    }
+  }
 
   public final class ResetAction {
 
@@ -67,19 +93,45 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     }
   }
 
-  public typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
-      
-  private let cropInsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
-  private let cropOutsideOverlay: ((CropView.State.AdjustmentKind?) -> AnyView)?
+  public final class RotateAction {
+
+    var onCall: () -> Void = {}
+
+    public init() {
+
+    }
+
+    public func callAsFunction() {
+      onCall()
+    }
+  }
+
+  public final class ApplyAction {
+
+    var onCall: () -> Void = {}
+
+    public init() {
+
+    }
+
+    public func callAsFunction() {
+      onCall()
+    }
+  }
+
+  private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
+  private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
   private let editingStack: EditingStack
 
-  private var _rotation: EditingCrop.Rotation?
-  private var _adjustmentAngle: EditingCrop.AdjustmentAngle?
-  private var _croppingAspectRatio: PixelAspectRatio?
+  private var rotationInput: Binding<EditingCrop.Rotation?> = .constant(nil)
+  private var adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?> = .constant(nil)
+  private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
+  private var _rotateAction: RotateAction?
+  private var _applyAction: ApplyAction?
 
-  private let stateHandler: @MainActor (Verge.Changes<CropView.State>) -> Void
+  private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
   private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
@@ -91,9 +143,9 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    @ViewBuilder cropInsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> InsideOverlay,
-    @ViewBuilder cropOutsideOverlay: @escaping (CropView.State.AdjustmentKind?) -> OutsideOverlay,
-    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+    @ViewBuilder cropInsideOverlay: @escaping (AdjustmentKind?) -> InsideOverlay,
+    @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
+    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
@@ -111,7 +163,7 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    stateHandler: @escaping @MainActor (Verge.Changes<CropView.State>) -> Void = { _ in }
+    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
@@ -123,8 +175,120 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     self.stateHandler = stateHandler
   }
 
-  public func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
+  public var body: some View {
+    ZStack {
+      if let loadedState = editingStack.loadedState {
+        LoadedCropViewRepresentable(
+          editingStack: editingStack,
+          loadedState: loadedState,
+          cropInsideOverlay: cropInsideOverlay,
+          cropOutsideOverlay: cropOutsideOverlay,
+          rotationInput: rotationInput,
+          adjustmentAngleInput: adjustmentAngleInput,
+          croppingAspectRatioInput: croppingAspectRatioInput,
+          resetAction: _resetAction,
+          rotateAction: _rotateAction,
+          applyAction: _applyAction,
+          stateHandler: stateHandler,
+          isGuideInteractionEnabled: isGuideInteractionEnabled,
+          isAutoApplyEditingStackEnabled: isAutoApplyEditingStackEnabled,
+          areAnimationsEnabled: areAnimationsEnabled,
+          contentInset: contentInset
+        )
+        .transition(.opacity.animation(.smooth))
+      } else {
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .transition(.opacity.animation(.smooth))
+      }
+    }
+    .onAppear {
+      editingStack.start()
+    }
+  }
 
+  public consuming func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
+    self.rotationInput = .constant(rotation)
+    return self
+  }
+
+  public consuming func rotation(_ rotation: Binding<EditingCrop.Rotation?>) -> Self {
+
+    self.rotationInput = rotation
+    return self
+  }
+
+  public consuming func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+
+    self.adjustmentAngleInput = .constant(angle)
+    return self
+  }
+
+  public consuming func adjustmentAngle(_ angle: Binding<EditingCrop.AdjustmentAngle?>) -> Self {
+
+    self.adjustmentAngleInput = angle
+    return self
+  }
+
+  public consuming func croppingAspectRatio(_ rect: PixelAspectRatio?) -> Self {
+
+    self.croppingAspectRatioInput = .constant(rect)
+    return self
+
+  }
+
+  public consuming func croppingAspectRatio(_ rect: Binding<PixelAspectRatio?>) -> Self {
+
+    self.croppingAspectRatioInput = rect
+    return self
+
+  }
+
+  public consuming func registerResetAction(_ action: ResetAction) -> Self {
+
+    self._resetAction = action
+    return self
+
+  }
+
+  public consuming func registerRotateAction(_ action: RotateAction) -> Self {
+
+    self._rotateAction = action
+    return self
+
+  }
+
+  public consuming func registerApplyAction(_ action: ApplyAction) -> Self {
+
+    self._applyAction = action
+    return self
+
+  }
+
+}
+
+@available(iOS 14, *)
+private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
+
+  typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
+
+  let editingStack: EditingStack
+  let loadedState: EditingStack.Loaded
+  let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
+  let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
+  let rotationInput: Binding<EditingCrop.Rotation?>
+  let adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?>
+  let croppingAspectRatioInput: Binding<PixelAspectRatio?>
+  let resetAction: SwiftUICropView.ResetAction?
+  let rotateAction: SwiftUICropView.RotateAction?
+  let applyAction: SwiftUICropView.ApplyAction?
+  let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
+  let isGuideInteractionEnabled: Bool
+  let isAutoApplyEditingStackEnabled: Bool
+  let areAnimationsEnabled: Bool
+  let contentInset: UIEdgeInsets?
+
+  func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
     let view: CropView
     if let contentInset {
       view = .init(editingStack: editingStack, contentInset: contentInset)
@@ -135,6 +299,10 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
     view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
+    view.setStateHandler { snapshot in
+      syncInputs(with: snapshot)
+      stateHandler(snapshot)
+    }
 
     if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
@@ -144,58 +312,80 @@ public struct SwiftUICropView: UIViewControllerRepresentable {
       view.setCropOutsideOverlay(CropView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
     }
 
-    let controller = _PixelEditor_WrapperViewController.init(bodyView: view)
+    configureActions(on: view)
+    view.load(image: loadedState.imageForCrop, crop: loadedState.currentEdit.crop)
 
-    return controller
+    return .init(bodyView: view)
   }
-  
-  public func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
 
-    if let _rotation {
-      uiViewController.bodyView.setRotation(_rotation)
+  func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
+    let cropView = uiViewController.bodyView
+    cropView.setStateHandler { snapshot in
+      syncInputs(with: snapshot)
+      stateHandler(snapshot)
     }
 
-    if let _adjustmentAngle {
-      uiViewController.bodyView.setAdjustmentAngle(_adjustmentAngle)
+    if cropView.isGuideInteractionEnabled != isGuideInteractionEnabled {
+      cropView.isGuideInteractionEnabled = isGuideInteractionEnabled
     }
 
-    uiViewController.bodyView.setStateHandler(stateHandler)
-    uiViewController.bodyView.setCroppingAspectRatio(_croppingAspectRatio)
+    if cropView.isAutoApplyEditingStackEnabled != isAutoApplyEditingStackEnabled {
+      cropView.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
+    }
 
-    _resetAction?.onCall = { [weak uiViewController] in
-      uiViewController?.bodyView.resetCrop()
+    if cropView.areAnimationsEnabled != areAnimationsEnabled {
+      cropView.areAnimationsEnabled = areAnimationsEnabled
+    }
+
+    if let rotation = rotationInput.wrappedValue {
+      cropView.setRotation(rotation)
+    }
+
+    if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
+      cropView.setAdjustmentAngle(adjustmentAngle)
+    }
+
+    cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+
+    configureActions(on: cropView)
+  }
+
+  @MainActor
+  private func configureActions(on cropView: CropView) {
+    resetAction?.onCall = { [weak cropView] in
+      guard let cropView else { return }
+
+      cropView.resetCrop()
+    }
+
+    rotateAction?.onCall = { [weak cropView] in
+      guard let cropView else { return }
+
+      cropView.rotateClockwise()
+    }
+
+    applyAction?.onCall = { [weak cropView] in
+      cropView?.applyEditingStack()
     }
   }
 
-  public func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
-
-    var modified = self
-    modified._rotation = rotation
-    return modified
+  @MainActor
+  private func syncInputs(with snapshot: SwiftUICropView.StateSnapshot) {
+    if let crop = snapshot.proposedCrop {
+      rotationInput.setIfChanged(crop.rotation)
+      adjustmentAngleInput.setIfChanged(crop.adjustmentAngle)
+    }
+    croppingAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
   }
 
-  public func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+}
 
-    var modified = self
-    modified._adjustmentAngle = angle
-    return modified
+private extension Binding where Value: Equatable {
 
+  @MainActor
+  func setIfChanged(_ value: Value) {
+    if wrappedValue != value {
+      wrappedValue = value
+    }
   }
-
-  public func croppingAspectRatio(_ rect: PixelAspectRatio?) -> Self {
-
-    var modified = self
-    modified._croppingAspectRatio = rect
-    return modified
-
-  }
-
-  public func registerResetAction(_ action: ResetAction) -> Self {
-
-    var modified = self
-    modified._resetAction = action
-    return modified
-
-  }
-
 }

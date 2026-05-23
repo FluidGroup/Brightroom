@@ -1,0 +1,72 @@
+appId: app.muukii.brightroom.SwiftUIDemo
+name: PhotosCrop
+tags:
+  - photos-crop
+---
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn: "Vertical"
+- assertVisible:
+    id: "photos.crop"
+- assertVisible: "Cancel"
+- assertVisible: "Done"
+- assertVisible: "Rotate"
+- assertVisible: "Aspect Ratio"
+- assertVisible: "Rotation"
+- assertNotVisible: "Reset"
+- tapOn: "Aspect Ratio"
+- tapOn: "SQUARE"
+- assertVisible: "Reset"
+- tapOn: "Cancel"
+- tapOn: "Vertical"
+- assertVisible:
+    id: "photos.crop"
+- assertVisible: "Reset"
+- tapOn: "Reset"
+- assertNotVisible: "Reset"
+- swipe:
+    start: 50%, 45%
+    end: 45%, 45%
+    duration: 300
+- assertNotVisible: "Reset"
+- tapOn: "Aspect Ratio"
+- assertVisible: "ORIGINAL"
+- assertVisible: "FREEFORM"
+- assertVisible: "SQUARE"
+- tapOn: "4:5"
+- tapOn: "Horizontal"
+- assertVisible:
+    id: "photos.crop.aspect.original"
+    text: "not selected"
+- assertVisible:
+    id: "photos.crop.aspect.5x4"
+    text: "selected"
+- tapOn:
+    text: "Rotate"
+- assertVisible:
+    id: "photos.crop.aspect.4x5"
+    text: "selected"
+- tapOn: "Horizontal"
+- assertVisible:
+    id: "photos.crop.aspect.5x4"
+    text: "selected"
+- tapOn: "ORIGINAL"
+- assertVisible:
+    id: "photos.crop.aspect.original"
+    text: "selected"
+- assertVisible:
+    id: "photos.crop.aspect.5x4"
+    text: "not selected"
+- tapOn: "SQUARE"
+- assertVisible: "Reset"
+- tapOn:
+    text: "Rotate"
+- tapOn: "Reset"
+- assertNotVisible: "Reset"
+- tapOn: "9:16"
+- tapOn: "Done"
+- assertVisible: ".*size:.*"

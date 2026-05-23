@@ -19,11 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 import UIKit
-import Verge
+import Combine
+import StateGraph
 
 /**
  A view that displays the edited image, plus displays original image for comparison with touch-down interaction.
@@ -40,13 +39,20 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   #endif
 
   private let editingStack: EditingStack
-  private var subscriptions = Set<AnyCancellable>()
+  private var subscriptions: Set<AnyCancellable> = .init()
 
   private var loadingOverlayFactory: (() -> UIView)?
   private weak var currentLoadingOverlay: UIView?
 
   private var isBinding = false
-  private var cachedCroppedImage: (state: EditingStack.State.Loaded, image: CIImage)? = nil
+  private var cachedCroppedImage: (state: EditingStack.Loaded, image: CIImage)? = nil
+
+  public var displayBackground: MetalImageView.DisplayBackground = .transparent {
+    didSet {
+      imageView.displayBackground = displayBackground
+      originalImageView.displayBackground = displayBackground
+    }
+  }
 
   // MARK: - Initializers
 
@@ -71,6 +77,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
       imageView.clipsToBounds = true
       imageView.contentMode = .scaleAspectFit
       imageView.isOpaque = false
+      imageView.displayBackground = displayBackground
       imageView.frame = bounds
       imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     }
@@ -102,28 +109,23 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
 
       if isBinding == false {
         isBinding = true
-        editingStack.sinkState { [weak self] state in
-
-          guard let self = self else { return }
-
-          state.ifChanged(\.isLoading).do { isLoading in
-            self.updateLoadingOverlay(displays: isLoading)
-          }
-
-          UIView.performWithoutAnimation {
-            if let state = state.mapIfPresent(\.loadedState) {
-              if state.hasChanges({ ($0.currentEdit) }, .equality()) {
-                self.requestPreviewImage(state: state.primitive)
-              }
+        withGraphTracking {
+          withGraphTrackingMap(from: self, map: { $0.editingStack.isLoading }, onChange: { [weak self] isLoading in
+            self?.updateLoadingOverlay(displays: isLoading)
+          })
+          withGraphTrackingMap(from: self, map: { $0.editingStack.loadedState?.currentEdit }, onChange: { [weak self] currentEdit in
+            guard let self, let loadedState = self.editingStack.loadedState else { return }
+            UIView.performWithoutAnimation {
+              self.requestPreviewImage(state: loadedState)
             }
-          }
+          })
         }
         .store(in: &subscriptions)
       }
     }
   }
 
-  private func requestPreviewImage(state: EditingStack.State.Loaded) {
+  private func requestPreviewImage(state: EditingStack.Loaded) {
 
     let croppedImage: CIImage
     if
@@ -177,7 +179,7 @@ public final class ImagePreviewView: PixelEditorCodeBasedView {
   override public func layoutSubviews() {
     super.layoutSubviews()
 
-    if let loaded = editingStack.store.state.loadedState {
+    if let loaded = editingStack.loadedState {
       requestPreviewImage(state: loaded)
     }
   }

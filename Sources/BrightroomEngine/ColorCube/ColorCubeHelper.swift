@@ -146,4 +146,4 @@ extension ColorCubeHelper {
   }
 }
 
-let cache = NSCache<NSString, CIFilter>()
+nonisolated(unsafe) let cache = NSCache<NSString, CIFilter>()

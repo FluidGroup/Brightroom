@@ -214,12 +214,13 @@ public final class BrightRoomImageRenderer {
         .applying(cgOrientation: orientation) // TODO: Better management of orientation
     )
 
-    EngineLog.debug(.renderer, "Crop CGImage with extent \(crop)")
+    let renderCrop = RenderCrop(crop, imageSize: orientedImage.size)
+
+    EngineLog.debug(.renderer, "Crop CGImage with extent \(renderCrop)")
 
     /// Render image as full size
     let croppedImage = try orientedImage.croppedWithColorspace(
-      to: crop.cropExtent,
-      adjustmentAngleRadians: crop.aggregatedRotation.radians
+      to: renderCrop
     )
 
     /*
@@ -335,10 +336,11 @@ public final class BrightRoomImageRenderer {
         .readImageSize()
         .applying(cgOrientation: orientation) // TODO: Better management of orientation
     )
+    let renderCrop = RenderCrop(crop, imageSize: drawings_CGImage.size)
+
     /// Render image as full size
     let croppedImage = try drawings_CGImage.croppedWithColorspace(
-      to: crop.cropExtent,
-      adjustmentAngleRadians: crop.aggregatedRotation.radians
+      to: renderCrop
     )
 
     /*

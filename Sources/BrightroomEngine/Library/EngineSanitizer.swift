@@ -28,11 +28,11 @@ public enum EngineRuntimeError: Swift.Error, Sendable {
   case failedToRenderCGImageForCrop(sourceImage: CGImage)
 }
 
-public final class EngineSanitizer {
+public struct EngineSanitizer: Sendable {
 
   public static let global = EngineSanitizer()
 
-  public var onDidFindRuntimeError: (EngineRuntimeError) -> Void = { _ in }
+  public var onDidFindRuntimeError: @Sendable (EngineRuntimeError) -> Void = { _ in }
 
   public init() {
 

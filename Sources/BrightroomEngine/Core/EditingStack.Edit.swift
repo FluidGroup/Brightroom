@@ -40,6 +40,12 @@ extension EditingStack {
     init(crop: EditingCrop) {
       self.crop = crop
     }
+
+    func isRenderingEquivalent(to other: Self) -> Bool {
+      filters == other.filters
+        && drawings == other.drawings
+        && crop.isRenderingEquivalent(to: other.crop)
+    }
     
     public struct Drawings: Equatable {
       // TODO: Remove Rect from DrawnPath

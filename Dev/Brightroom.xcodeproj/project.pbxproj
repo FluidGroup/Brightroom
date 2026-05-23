@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0451857F2B8F4A9E00A74713 /* DemoCropView2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */; };
 		4B135F6E26136B5D003B5152 /* RendererOrientationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */; };
 		4B2324E42B763D4A00662EB8 /* GeometryPlayground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */; };
 		4B2A1107266B7B3000B0C885 /* test-image-10 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A10FA266B7B3000B0C885 /* test-image-10 */; };
@@ -28,7 +27,6 @@
 		4B36195126105E3900877B21 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
 		4B36195626107ADB00877B21 /* path-data in Resources */ = {isa = PBXBuildFile; fileRef = 4B36195526107ADB00877B21 /* path-data */; };
 		4B3957C92C16D9ED000BD249 /* DemoFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */; };
-		4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 4B46E71A2B762E20003179C2 /* MondrianLayout */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
 		4B58E82A260F0027004A834F /* orientation_left_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */; };
 		4B58E82B260F0027004A834F /* orientation_down_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE9260BB32600F77E9A /* orientation_down_mirrored.HEIC */; };
@@ -38,22 +36,18 @@
 		4B58E82F260F0027004A834F /* orientation_left.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE8260BB32600F77E9A /* orientation_left.HEIC */; };
 		4B58E830260F0027004A834F /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4B58E831260F0027004A834F /* orientation_up.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* orientation_up.HEIC */; };
-		4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */; };
-		4B75114025F13276002D804A /* DemoCropView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B75113F25F13276002D804A /* DemoCropView.swift */; };
 		4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */; };
 		4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513CA2B6BEE2100A4743E /* SwiftUISupport */; };
 		4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */; };
 		4B8CAF6925FFCD720075032A /* IsolatedEditingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */; };
 		4B8CAF6E25FFCE720075032A /* FullscreenIdentifiableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */; };
 		4B8CAF7325FFD13D0075032A /* BlurryMaskingViewWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */; };
-		4B9325832B6A923400DDABAC /* RotateScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B9325822B6A923400DDABAC /* RotateScrollView.swift */; };
 		4B9369E925F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */; };
 		4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCBD25EFF31300E4F61F /* ContentView.swift */; };
 		4B98CCC325EFF31400E4F61F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B98CCC225EFF31400E4F61F /* Preview Assets.xcassets */; };
 		4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B98CCE625EFF4EF00E4F61F /* Mocks.swift */; };
 		4B98CF5325F0122000E4F61F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4B600B29216B7C9E001E1456 /* Assets.xcassets */; };
-		4BA2B1B42B86282D00E6DE64 /* BrightroomUIPhotosCrop in Frameworks */ = {isa = PBXBuildFile; productRef = 4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */; };
 		4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4BA41C8E260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */; };
 		4BA41C8F260CE817005E6FA7 /* orientation_left_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */; };
@@ -91,6 +85,8 @@
 		4BF934202614CAD600E0637A /* CGContextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF9341F2614CAD600E0637A /* CGContextTests.swift */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
+		CD1A00022F33A00000000002 /* RenderingDemoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1A00012F33A00000000001 /* RenderingDemoView.swift */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D2B2660F90200CC45EA /* ImageSourceInitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC110D2A2660F90200CC45EA /* ImageSourceInitTest.swift */; };
@@ -482,7 +478,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView2.swift; sourceTree = "<group>"; };
 		4B135F6D26136B5D003B5152 /* RendererOrientationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendererOrientationTests.swift; sourceTree = "<group>"; };
 		4B2324E32B763D4A00662EB8 /* GeometryPlayground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryPlayground.swift; sourceTree = "<group>"; };
 		4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */ = {isa = PBXFileReference; lastKnownFileType = file; path = orientation_left_mirrored.HEIC; sourceTree = "<group>"; };
@@ -516,12 +511,10 @@
 		4B600B3A216B7CDD001E1456 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		4B600B3C216B7CE3001E1456 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
-		4B75113F25F13276002D804A /* DemoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCropView.swift; sourceTree = "<group>"; };
 		4B7EE66B25F515B400E17AF1 /* XCAssets+Generated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "XCAssets+Generated.swift"; sourceTree = "<group>"; };
 		4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IsolatedEditingView.swift; sourceTree = "<group>"; };
 		4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenIdentifiableView.swift; sourceTree = "<group>"; };
 		4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurryMaskingViewWrapper.swift; sourceTree = "<group>"; };
-		4B9325822B6A923400DDABAC /* RotateScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RotateScrollView.swift; sourceTree = "<group>"; };
 		4B9369E725F940E600B18571 /* nasa.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = nasa.jpg; sourceTree = "<group>"; };
 		4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftUIDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftUIDemoApp.swift; sourceTree = "<group>"; };
@@ -561,6 +554,7 @@
 		4BF9341F2614CAD600E0637A /* CGContextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CGContextTests.swift; sourceTree = "<group>"; };
 		4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-8bit-lcd.png"; sourceTree = "<group>"; };
 		4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-8bit-p3-alpha.png"; sourceTree = "<group>"; };
+		CD1A00012F33A00000000001 /* RenderingDemoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderingDemoView.swift; sourceTree = "<group>"; };
 		FC110D2A2660F90200CC45EA /* ImageSourceInitTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSourceInitTest.swift; sourceTree = "<group>"; };
 		FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = 5633ed9d0eb700d0093bf85d86a95ebf.jpg; sourceTree = "<group>"; };
 		FC110D2E2660FD2200CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = acce3629083f0e348e94fb58f952d3de.jpg; sourceTree = "<group>"; };
@@ -941,12 +935,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B46E71B2B762E20003179C2 /* MondrianLayout in Frameworks */,
 				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
-				4BA2B1B42B86282D00E6DE64 /* BrightroomUIPhotosCrop in Frameworks */,
-				4B5E72BC2B6B761800DE7A2A /* Reveal-SDK in Frameworks */,
+				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1080,15 +1072,13 @@
 				4B98CCBB25EFF31300E4F61F /* SwiftUIDemoApp.swift */,
 				4B3957C82C16D9ED000BD249 /* DemoFilterView.swift */,
 				4B98CCBD25EFF31300E4F61F /* ContentView.swift */,
+				CD1A00012F33A00000000001 /* RenderingDemoView.swift */,
 				4B8CAF6D25FFCE720075032A /* FullscreenIdentifiableView.swift */,
 				4B8CAF6825FFCD720075032A /* IsolatedEditingView.swift */,
 				4B8CAF7225FFD13D0075032A /* BlurryMaskingViewWrapper.swift */,
-				4B75113F25F13276002D804A /* DemoCropView.swift */,
-				0451857E2B8F4A9E00A74713 /* DemoCropView2.swift */,
 				4B98CCC425EFF31400E4F61F /* Info.plist */,
 				4B98CCC125EFF31400E4F61F /* Preview Content */,
 				4BB9180B25F5460000C446B8 /* Launch Screen.storyboard */,
-				4B9325822B6A923400DDABAC /* RotateScrollView.swift */,
 				4BA9896E2B70BF2000EB7983 /* RenderedResultView.swift */,
 				4BA989702B70F10300EB7983 /* ObjectEdge.swift */,
 				4BA989722B7122C800EB7983 /* DemoMaskingView.swift */,
@@ -1584,11 +1574,9 @@
 			packageProductDependencies = (
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
-				4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */,
 				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
 				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
-				4B46E71A2B762E20003179C2 /* MondrianLayout */,
-				4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */,
+				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -1682,7 +1670,6 @@
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
 			packageReferences = (
-				4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */,
 				4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */,
 				4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */,
 			);
@@ -2168,9 +2155,7 @@
 				4B7EE66D25F515B400E17AF1 /* XCAssets+Generated.swift in Sources */,
 				4BA9896F2B70BF2000EB7983 /* RenderedResultView.swift in Sources */,
 				4B98CCBE25EFF31300E4F61F /* ContentView.swift in Sources */,
-				4B75114025F13276002D804A /* DemoCropView.swift in Sources */,
-				0451857F2B8F4A9E00A74713 /* DemoCropView2.swift in Sources */,
-				4B9325832B6A923400DDABAC /* RotateScrollView.swift in Sources */,
+				CD1A00022F33A00000000002 /* RenderingDemoView.swift in Sources */,
 				4B98CCBC25EFF31300E4F61F /* SwiftUIDemoApp.swift in Sources */,
 				4B98CCE725EFF4EF00E4F61F /* Mocks.swift in Sources */,
 			);
@@ -2275,7 +2260,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -2335,7 +2320,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.muukii.brightroom.$(TARGET_NAME)";
@@ -2560,14 +2545,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/muukii/MondrianLayout.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
-			};
-		};
 		4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/FluidGroup/swiftui-hosting.git";
@@ -2587,18 +2564,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4B46E71A2B762E20003179C2 /* MondrianLayout */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4B487E6D28EECC760026A8CF /* XCRemoteSwiftPackageReference "MondrianLayout" */;
-			productName = MondrianLayout;
-		};
 		4B487E5E28EEC0670026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
-		};
-		4B5E72BB2B6B761800DE7A2A /* Reveal-SDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = "Reveal-SDK";
 		};
 		4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -2610,9 +2578,9 @@
 			package = 4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */;
 			productName = SwiftUISupport;
 		};
-		4BA2B1B32B86282D00E6DE64 /* BrightroomUIPhotosCrop */ = {
+		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = BrightroomUIPhotosCrop;
+			productName = "Reveal-SDK";
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;

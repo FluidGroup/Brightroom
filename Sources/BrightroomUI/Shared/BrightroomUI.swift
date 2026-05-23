@@ -39,21 +39,12 @@ extension TODOL10n {
 
 public typealias NonL10n = String
 
-#if COCOAPODS
-let bundle = Bundle.init(for: Dummy.self)
-  .path(forResource: "BrightroomUI", ofType: "bundle")
-  .map {
-    Bundle.init(path: $0)
-}!
-#else
 let bundle = Bundle.module
-#endif
 
 public let BrightroomUIBundle = bundle
 
-fileprivate final class Dummy {}
-
 @inline(__always)
+@MainActor
 func _pixeleditor_ensureMainThread() {
   assert(Thread.isMainThread)
 }

@@ -21,42 +21,70 @@
 
 import SwiftUI
 
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 /**
- Apple's Photos app like crop view controller.
+ Apple's Photos app like crop view.
  
- You might use `CropView` to create a fully customized user interface.
+ You might use `SwiftUICropView` to create a fully customized user interface.
  */
-@available(iOS 13, *)
-public struct SwiftUIPhotosCropView: UIViewControllerRepresentable {
-  public typealias UIViewControllerType = PhotosCropViewController
-  
-  private let editingStack: EditingStack
-  private let onDone: () -> Void
-  private let onCancel: () -> Void
+@available(iOS 14, *)
+public struct SwiftUIPhotosCropView: View {
 
-  public init(editingStack: EditingStack, onDone: @escaping () -> Void, onCancel: @escaping () -> Void) {
+  public struct LocalizedStrings {
+    public var button_done_title: String = "Done"
+    public var button_cancel_title: String = "Cancel"
+    public var button_reset_title: String = "Reset"
+    public var button_aspectratio_original: String = "ORIGINAL"
+    public var button_aspectratio_freeform: String = "FREEFORM"
+    public var button_aspectratio_square: String = "SQUARE"
+
+    public init() {}
+  }
+
+  public struct Options: Equatable {
+
+    public enum AspectRatioOptions: Equatable {
+      case selectable
+      case fixed(PixelAspectRatio?)
+    }
+
+    public var aspectRatioOptions: AspectRatioOptions = .selectable
+
+    public init() {
+
+    }
+  }
+
+  private let editingStack: EditingStack
+  private let options: Options
+  private let localizedStrings: LocalizedStrings
+  private let onDone: @MainActor () -> Void
+  private let onCancel: @MainActor () -> Void
+
+  public init(
+    editingStack: EditingStack,
+    options: Options = .init(),
+    localizedStrings: LocalizedStrings = .init(),
+    onDone: @escaping @MainActor () -> Void,
+    onCancel: @escaping @MainActor () -> Void
+  ) {
     self.editingStack = editingStack
+    self.options = options
+    self.localizedStrings = localizedStrings
     self.onDone = onDone
     self.onCancel = onCancel
-    editingStack.start()
   }
-  
-  public func makeUIViewController(context: Context) -> PhotosCropViewController {
-    let cropViewController = PhotosCropViewController(editingStack: editingStack)
-    cropViewController.handlers.didFinish = { _ in
-      onDone()
-    }
-    cropViewController.handlers.didCancel = { _ in
-      onCancel()
-    }
-    return cropViewController
+
+  public var body: some View {
+    PhotosCropContentView(
+      editingStack: editingStack,
+      options: options,
+      localizedStrings: localizedStrings,
+      onDone: onDone,
+      onCancel: onCancel
+    )
   }
-  
-  public func updateUIViewController(_ uiViewController: PhotosCropViewController, context: Context) {}
 }
 
 #Preview {

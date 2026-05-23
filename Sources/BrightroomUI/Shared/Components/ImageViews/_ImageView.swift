@@ -7,9 +7,7 @@
 //
 
 import UIKit
-#if !COCOAPODS
 import BrightroomEngine
-#endif
 
 final class _ImageView: UIImageView, CIImageDisplaying {
   var postProcessing: (CIImage) -> CIImage = { $0 } {

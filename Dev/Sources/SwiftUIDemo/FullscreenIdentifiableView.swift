@@ -14,20 +14,26 @@ struct FullscreenIdentifiableView: View, Identifiable {
 
   let id = UUID()
   private let content: AnyView
+  private let showsDismissButton: Bool
   
-  init<Content: View>(content: () -> Content) {
+  init<Content: View>(
+    showsDismissButton: Bool = true,
+    content: () -> Content
+  ) {
+    self.showsDismissButton = showsDismissButton
     self.content = .init(content())
   }
   
   var body: some View {
     VStack {
       content
-      Button("Dismiss") {
-        dismiss()
+      if showsDismissButton {
+        Button("Dismiss") {
+          dismiss()
+        }
+        .padding(16)
       }
-      .padding(16)
     }
-    .clipped()
   }
 }
 

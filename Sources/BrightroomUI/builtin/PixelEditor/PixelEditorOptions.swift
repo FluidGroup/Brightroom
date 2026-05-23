@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018 Muukii <muukii.app@gmail.com>
+// Copyright (c) 2026 Muukii <muukii.app@gmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,40 +19,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import UIKit
-
-#if !COCOAPODS
 import BrightroomEngine
-#endif
-import Verge
 
-open class ClassicImageEditControlBase : UIView, ClassicImageEditControlChildViewType {
-  
-  open func didReceiveCurrentEdit(state: Changes<ClassicImageEditViewModel.State>) {
-    
+public struct PixelEditorOptions: Sendable {
+
+  public static let `default`: PixelEditorOptions = .init()
+
+  public var croppingAspectRatio: PixelAspectRatio?
+  public var isFaceDetectionEnabled: Bool
+  public var ignoredEditMenus: Set<PixelEditorEditMenu>
+  public var editMenus: [PixelEditorEditMenu]
+
+  public init(
+    croppingAspectRatio: PixelAspectRatio? = .square,
+    isFaceDetectionEnabled: Bool = false,
+    ignoredEditMenus: Set<PixelEditorEditMenu> = [],
+    editMenus: [PixelEditorEditMenu] = PixelEditorEditMenu.allCases
+  ) {
+    self.croppingAspectRatio = croppingAspectRatio
+    self.isFaceDetectionEnabled = isFaceDetectionEnabled
+    self.ignoredEditMenus = ignoredEditMenus
+    self.editMenus = editMenus
   }
+}
 
-  public let viewModel: ClassicImageEditViewModel
-  
-  private var subscriptions: Set<AnyCancellable> = .init()
-
-  public init(viewModel: ClassicImageEditViewModel) {
-    self.viewModel = viewModel
-    super.init(frame: .zero)
-    setup()
-    
-    viewModel.sinkState { [weak self] (state) in
-      self?.didReceiveCurrentEdit(state: state)
-    }
-    .store(in: &subscriptions)
-  }
-
-  @available(*, unavailable)
-  public required init?(coder aDecoder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  open func setup() {
-
-  }
+public enum PixelEditorEditMenu: CaseIterable, Hashable, Sendable {
+  case adjustment
+  case mask
+  case exposure
+  case contrast
+  case clarity
+  case temperature
+  case saturation
+  case fade
+  case highlights
+  case shadows
+  case vignette
+  case sharpen
+  case gaussianBlur
 }
