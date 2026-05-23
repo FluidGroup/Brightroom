@@ -57,13 +57,33 @@ public class ColorCubeHelper {
 }
 
 extension ColorCubeHelper {
+
+  public static func makeColorCubeFilter(
+    lookupTable: ColorCubeLookupTable,
+    cacheKey: String?
+  ) -> CIFilter {
+
+    switch lookupTable {
+    case .image(let lutImage, let dimension):
+      return makeColorCubeFilter(
+        lutImage: lutImage,
+        dimension: dimension,
+        cacheKey: cacheKey
+      )
+    case .cubeData(let cubeData, let dimension):
+      return makeColorCubeFilter(
+        cubeData: cubeData,
+        dimension: dimension,
+        cacheKey: cacheKey
+      )
+    }
+  }
   
   public static func makeColorCubeFilter(
     lutImage: ImageSource,
     dimension: Int,
     cacheKey: String?
   ) -> CIFilter {
-    
 
     if let cacheKey = cacheKey, let cached = cache.object(forKey: cacheKey as NSString) {
       return cached.copy() as! CIFilter
@@ -90,6 +110,39 @@ extension ColorCubeHelper {
       return filter
     }
         
+  }
+
+  public static func makeColorCubeFilter(
+    cubeData: Data,
+    dimension: Int,
+    cacheKey: String?
+  ) -> CIFilter {
+
+    if let cacheKey = cacheKey, let cached = cache.object(forKey: cacheKey as NSString) {
+      return cached.copy() as! CIFilter
+    } else {
+
+      let expectedByteCount = dimension * dimension * dimension * 4 * MemoryLayout<Float>.size
+      precondition(
+        cubeData.count == expectedByteCount,
+        "Cube data byte count must be \(expectedByteCount), but got \(cubeData.count)."
+      )
+
+      let filter = CIFilter(
+        name: "CIColorCubeWithColorSpace",
+        parameters: [
+          "inputCubeDimension" : dimension,
+          "inputCubeData" : cubeData,
+          "inputColorSpace" : CGColorSpaceCreateDeviceRGB(),
+        ]
+      )!
+
+      if let cacheKey = cacheKey {
+        cache.setObject(filter, forKey: cacheKey as NSString)
+      }
+
+      return filter
+    }
   }
 }
 
