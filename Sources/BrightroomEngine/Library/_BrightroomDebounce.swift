@@ -33,6 +33,7 @@ public final class _BrightroomDebounce {
   }
 
   public func cancel() {
+    timerReference?.cancel()
     timerReference = nil
   }
 }
