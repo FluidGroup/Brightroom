@@ -1,15 +1,6 @@
 {
   "pins" : [
     {
-      "identity" : "precisionlevelslider",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
-      "state" : {
-        "revision" : "d16becc518758b6f984ff07f8e8c6a0fa9245492",
-        "version" : "2.2.0"
-      }
-    },
-    {
       "identity" : "swift-state-graph",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VergeGroup/swift-state-graph",

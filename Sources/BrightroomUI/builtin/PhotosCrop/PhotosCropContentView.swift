@@ -19,7 +19,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import PrecisionLevelSlider
 import SwiftUI
 import UIKit
 
@@ -313,36 +312,34 @@ private struct PhotosCropRotationSlider: View {
   let onChange: (Double) -> Void
 
   var body: some View {
-    PhotosCropPrecisionLevelSlider(
+    BrightroomSteppedSlider(
       value: valueBinding,
-      haptics: .init(trigger: { value in
-        if value.truncatingRemainder(dividingBy: 5) == 0 {
-          return .impact(style: .light, intensity: 0.4)
-        } else {
-          return nil
-        }
-      }),
-      range: .init(
-        range: -45...45,
-        transform: { source in
-          source.rounded(.toNearestOrEven)
-        }
-      ),
-      centerLevel: { _, _ in
-        HStack {
-          Spacer()
-          VStack {
-            Spacer(minLength: 12)
-            Rectangle()
-              .frame(width: 1)
-            Spacer(minLength: 12)
-          }
-          Spacer()
-        }
-        .foregroundStyle(.tint)
+      range: -45...45,
+      stepCount: 90,
+      style: .photosCropRotationSlider,
+      transform: { source in
+        source.rounded(.toNearestOrEven)
       },
-      track: { value, _ in
-        PhotosCropRotationTickTrack(value: value)
+      hapticIdentity: { value in
+        let degree = Int(value.rounded(.toNearestOrEven))
+        return degree.isMultiple(of: 5) ? AnyHashable(degree) : nil
+      },
+      onHaptic: {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.4)
+      },
+      topMarker: { context in
+        Circle()
+          .frame(width: 6, height: 6)
+          .opacity(context.isZero && value != 0 ? 1 : 0)
+          .animation(.spring, value: value == 0)
+      },
+      tick: { context in
+        RoundedRectangle(cornerRadius: 8)
+          .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
+      },
+      activeTick: { _ in
+        RoundedRectangle(cornerRadius: 8)
+          .foregroundStyle(.tint)
       }
     )
     .tint(.white)
@@ -369,111 +366,19 @@ private struct PhotosCropRotationSlider: View {
   }
 }
 
-private struct PhotosCropPrecisionLevelSlider<CenterLevel: View, Track: View>: UIViewRepresentable {
-
-  @Binding var value: Double
-
-  let haptics: PrecisionLevelSlider.Haptics?
-  let range: PrecisionLevelSlider.ValueRange
-  let centerLevel: (Double, Bool) -> CenterLevel
-  let track: (Double, Bool) -> Track
-
-  init(
-    value: Binding<Double>,
-    haptics: PrecisionLevelSlider.Haptics?,
-    range: PrecisionLevelSlider.ValueRange,
-    @ViewBuilder centerLevel: @escaping (Double, Bool) -> CenterLevel,
-    @ViewBuilder track: @escaping (Double, Bool) -> Track
-  ) {
-    self._value = value
-    self.haptics = haptics
-    self.range = range
-    self.centerLevel = centerLevel
-    self.track = track
-  }
-
-  func makeUIView(context: Context) -> PrecisionLevelSlider {
-    let view = PrecisionLevelSlider(
-      range: range,
-      haptics: haptics,
-      centerLevel: centerLevel,
-      track: track
-    )
-
-    view.onChangeValue = { value in
-      Task { @MainActor in
-        self.value = value
-      }
-    }
-
-    return view
-  }
-
-  func updateUIView(_ uiView: PrecisionLevelSlider, context: Context) {
-    uiView.range = range
-
-    guard uiView.value != value else {
-      return
-    }
-
-    uiView.value = value
-  }
+private extension BrightroomSteppedSliderStyle {
+  static let photosCropRotationSlider = BrightroomSteppedSliderStyle(
+    tickWidth: 1,
+    tickSpacing: 4,
+    tickHeight: 10,
+    activeTickHeight: 18,
+    majorTickInterval: 5
+  )
 }
 
-private struct PhotosCropRotationTickTrack: View {
-
-  let value: Double
-
-  var body: some View {
-    VStack {
-      HStack {
-        Spacer()
-        Circle()
-          .frame(width: 6, height: 6)
-          .opacity(value == 0 ? 0 : 1)
-          .animation(.spring, value: value == 0)
-        Spacer()
-      }
-
-      HStack(spacing: 0) {
-        ForEach(0..<4) { _ in
-          PhotosCropRotationShortBar()
-            .foregroundStyle(.primary)
-          Group {
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-            PhotosCropRotationShortBar()
-            Spacer(minLength: 0)
-          }
-          .foregroundStyle(.secondary)
-        }
-        PhotosCropRotationShortBar()
-          .foregroundStyle(.primary)
-      }
-    }
-    .foregroundStyle(.tint)
-  }
-}
-
-private struct PhotosCropRotationShortBar: View {
-  var body: some View {
-    RoundedRectangle(cornerRadius: 8)
-      .frame(width: 1, height: 10)
+private extension BrightroomSteppedSliderTickContext {
+  var isZero: Bool {
+    abs(value) < 0.000_001
   }
 }
 

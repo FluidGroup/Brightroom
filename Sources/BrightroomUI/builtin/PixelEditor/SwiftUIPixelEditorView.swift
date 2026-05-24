@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import CoreImage
-import PrecisionLevelSlider
 import SwiftUI
 import UIKit
 
@@ -780,32 +779,36 @@ private struct PixelEditorStepSlider: View {
   let onChange: (Double) -> Void
 
   var body: some View {
-    PixelEditorPrecisionLevelSlider(
+    let currentPosition = sliderPosition(forEditingValue: value)
+    let showsOriginMarker = abs(currentPosition - mode.originPosition) > 0.000_001
+
+    BrightroomSteppedSlider(
       value: positionBinding,
-      haptics: .init(trigger: { position in
-        step(forPosition: position) == 0 ? .selection : nil
-      }),
-      range: .init(
-        range: mode.positionRange,
-        transform: { position in
-          sliderPosition(forEditingValue: editingValue(forPosition: position))
-        }
-      ),
-      centerLevel: { _, _ in
-        HStack {
-          Spacer()
-          VStack {
-            Spacer(minLength: 12)
-            Rectangle()
-              .frame(width: 1)
-            Spacer(minLength: 12)
-          }
-          Spacer()
-        }
-        .foregroundStyle(.tint)
+      range: mode.positionRange,
+      stepCount: mode.tickCount,
+      style: .pixelEditorStepSlider,
+      transform: { position in
+        sliderPosition(forEditingValue: editingValue(forPosition: position))
       },
-      track: { position, _ in
-        PixelEditorStepSliderTickTrack(value: position)
+      hapticIdentity: { position in
+        step(forPosition: position) == 0 ? AnyHashable(0) : nil
+      },
+      onHaptic: {
+        UISelectionFeedbackGenerator().selectionChanged()
+      },
+      topMarker: { context in
+        Circle()
+          .frame(width: 6, height: 6)
+          .opacity(context.isOrigin(in: mode) && showsOriginMarker ? 1 : 0)
+          .animation(.smooth, value: showsOriginMarker)
+      },
+      tick: { context in
+        Capsule()
+          .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
+      },
+      activeTick: { _ in
+        Capsule()
+          .foregroundStyle(.red)
       }
     )
     .tint(PixelEditorColor.primary)
@@ -878,115 +881,23 @@ private struct PixelEditorStepSlider: View {
   }
 }
 
-private struct PixelEditorPrecisionLevelSlider<CenterLevel: View, Track: View>: UIViewRepresentable {
-
-  @Binding var value: Double
-
-  let haptics: PrecisionLevelSlider.Haptics?
-  let range: PrecisionLevelSlider.ValueRange
-  let centerLevel: (Double, Bool) -> CenterLevel
-  let track: (Double, Bool) -> Track
-
-  init(
-    value: Binding<Double>,
-    haptics: PrecisionLevelSlider.Haptics?,
-    range: PrecisionLevelSlider.ValueRange,
-    @ViewBuilder centerLevel: @escaping (Double, Bool) -> CenterLevel,
-    @ViewBuilder track: @escaping (Double, Bool) -> Track
-  ) {
-    self._value = value
-    self.haptics = haptics
-    self.range = range
-    self.centerLevel = centerLevel
-    self.track = track
-  }
-
-  func makeUIView(context: Context) -> PrecisionLevelSlider {
-    let view = PrecisionLevelSlider(
-      range: range,
-      haptics: haptics,
-      centerLevel: centerLevel,
-      track: track
-    )
-
-    view.onChangeValue = { value in
-      Task { @MainActor in
-        self.value = value
-      }
-    }
-
-    return view
-  }
-
-  func updateUIView(_ uiView: PrecisionLevelSlider, context: Context) {
-    uiView.range = range
-
-    guard uiView.value != value else {
-      return
-    }
-
-    uiView.value = value
-  }
-}
-
 private enum PixelEditorStepSliderMetrics {
   static let deadZone: Double = 0.05
 }
 
-private struct PixelEditorStepSliderTickTrack: View {
-
-  let value: Double
-
-  var body: some View {
-    VStack {
-      HStack {
-        Spacer()
-        Circle()
-          .frame(width: 6, height: 6)
-          .opacity(value == 0 ? 0 : 1)
-          .animation(.spring, value: value == 0)
-        Spacer()
-      }
-
-      HStack(spacing: 0) {
-        ForEach(0..<4) { _ in
-          PixelEditorStepSliderShortBar()
-            .foregroundStyle(.primary)
-          Group {
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-            PixelEditorStepSliderShortBar()
-            Spacer(minLength: 0)
-          }
-          .foregroundStyle(.secondary)
-        }
-        PixelEditorStepSliderShortBar()
-          .foregroundStyle(.primary)
-      }
-    }
-    .foregroundStyle(.tint)
-  }
+private extension BrightroomSteppedSliderStyle {
+  static let pixelEditorStepSlider = BrightroomSteppedSliderStyle(
+    tickWidth: 2,
+    tickSpacing: 4,
+    tickHeight: 10,
+    activeTickHeight: 18,
+    majorTickInterval: 10
+  )
 }
 
-private struct PixelEditorStepSliderShortBar: View {
-  var body: some View {
-    RoundedRectangle(cornerRadius: 8)
-      .frame(width: 1, height: 10)
+private extension BrightroomSteppedSliderTickContext {
+  func isOrigin(in mode: PixelEditorStepSlider.Mode) -> Bool {
+    abs(value - mode.originPosition) < 0.000_001
   }
 }
 
@@ -1000,6 +911,13 @@ private extension PixelEditorStepSlider.Mode {
       return -1...1
     case .minus:
       return -1...0
+    }
+  }
+
+  var originPosition: Double {
+    switch self {
+    case .plus, .plusAndMinus, .minus:
+      return 0
     }
   }
 
@@ -1020,7 +938,83 @@ private extension PixelEditorStepSlider.Mode {
       return 0
     }
   }
+
+  var tickCount: Int {
+    abs(minStep) + abs(maxStep)
+  }
 }
+
+#if DEBUG
+#Preview("PixelEditor Step Slider") {
+  PixelEditorStepSliderPreview()
+}
+
+private struct PixelEditorStepSliderPreview: View {
+
+  @State private var plusValue: Double = 0
+  @State private var plusAndMinusValue: Double = 0.24
+  @State private var minusValue: Double = -0.24
+
+  var body: some View {
+    VStack(spacing: 24) {
+      previewItem(
+        title: "Plus",
+        value: $plusValue,
+        range: 0...1,
+        mode: .plus
+      )
+
+      previewItem(
+        title: "Plus and Minus",
+        value: $plusAndMinusValue,
+        range: -1...1,
+        mode: .plusAndMinus
+      )
+
+      previewItem(
+        title: "Minus",
+        value: $minusValue,
+        range: -1...0,
+        mode: .minus
+      )
+    }
+    .padding(24)
+    .frame(width: 520)
+    .background(Color(uiColor: .systemBackground))
+  }
+
+  private func previewItem(
+    title: String,
+    value: Binding<Double>,
+    range: ClosedRange<Double>,
+    mode: PixelEditorStepSlider.Mode
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack {
+        Text(title)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        Spacer()
+
+        Text(value.wrappedValue, format: .number.precision(.fractionLength(2)))
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.secondary)
+      }
+
+      PixelEditorStepSlider(
+        value: value.wrappedValue,
+        range: range,
+        mode: mode,
+        onChange: { newValue in
+          value.wrappedValue = newValue
+        }
+      )
+      .frame(height: 44)
+    }
+  }
+}
+#endif
 
 private struct PixelEditorControlNavigation: View {
 
