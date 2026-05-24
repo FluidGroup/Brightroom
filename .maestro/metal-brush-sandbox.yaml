@@ -15,59 +15,55 @@ tags:
 - tapOn:
     id: "BackButton"
     optional: true
+- tapOn:
+    id: "metal-brush-back"
+    optional: true
 - tapOn: "Metal Brush Sandbox"
 - assertVisible: "Metal Brush Sandbox"
-- assertVisible:
-    id: "metal-brush-dirty-toggle"
-- assertVisible:
-    id: "metal-brush-viewport-toggle"
 - assertVisible:
     id: "metal-brush-reset"
 - assertVisible:
     id: "metal-brush-metrics"
 - assertVisible:
+    id: "metal-brush-interaction-mode"
+- assertVisible:
     id: "metal-brush-smoothing"
 - assertVisible:
+    id: "metal-brush-exposure"
+- assertVisible:
     id: "metal-brush-smoothing-strength"
+- assertVisible:
+    id: "metal-brush-blur-radius"
 - tapOn:
     id: "metal-brush-reset"
 - assertVisible: "Stamps 0"
-- assertVisible: "Tile 256"
-- assertVisible: "View .*%"
 - assertVisible: "Bezier"
+- assertVisible: "Draw"
+- assertVisible: "View"
 - assertVisible: "Strength"
-- tapOn: "Raw"
-- tapOn: "Catmull"
-- tapOn: "Avg"
-- tapOn: "Bezier"
-- assertVisible: "Size"
-- assertVisible: "Hardness"
-- assertVisible: "56.00"
-- assertVisible: "0.72"
+- assertVisible: "Blur"
+- tapOn: "View"
+- doubleTapOn:
+    point: 50%, 32%
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "Zoom 1.00x"
 - swipe:
-    start: 42%, 78%
-    end: 63%, 78%
+    start: 62%, 34%
+    end: 40%, 34%
     duration: 400
-- assertNotVisible: "56.00"
+- tapOn: "Draw"
 - swipe:
-    start: 57%, 83%
-    end: 37%, 83%
-    duration: 400
-- assertNotVisible: "0.72"
+    direction: RIGHT
+    from:
+      id: "metal-brush-exposure"
+    duration: 800
+- assertNotVisible: "0.00"
 - swipe:
     start: 48%, 32%
     end: 52%, 47%
     duration: 500
-- assertVisible: "Stamps [1-9].*"
-- swipe:
-    start: 62%, 35%
-    end: 48%, 51%
-    duration: 500
-- assertVisible: "Tiles [1-9].*"
+- assertVisible: "Strokes [1-9].*"
 - tapOn:
     id: "metal-brush-reset"
 - assertVisible: "Stamps 0"
-- tapOn:
-    id: "metal-brush-dirty-toggle"
-- tapOn:
-    id: "metal-brush-dirty-toggle"

@@ -92,7 +92,7 @@ open class EditingStack: Hashable {
      */
     public var currentEdit: Edit {
       didSet {
-        editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
+        editingPreviewImage = currentEdit.makePreviewImage(from: editingSourceImage)
       }
     }
 
@@ -177,6 +177,13 @@ open class EditingStack: Hashable {
     }
 
     // MARK: - Functions
+
+    public func makeOriginalCIImage() -> CIImage {
+      imageSource
+        .makeOriginalCIImage()
+        .oriented(metadata.orientation)
+        .removingExtentOffset()
+    }
 
     mutating func makeVersion() {
       history.append(currentEdit)
@@ -423,7 +430,7 @@ open class EditingStack: Hashable {
             thumbnailCIImage: _thumbnailImage,
             editingSourceCGImage: editingSourceCGImage,
             editingSourceCIImage: _editingSourceCIImage,
-            editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
+            editingPreviewCIImage: initialEdit.makePreviewImage(from: _editingSourceCIImage),
             imageForCrop: cgImageForCrop
           )
 
@@ -570,6 +577,20 @@ open class EditingStack: Hashable {
     }
   }
 
+  public func set(localAdjustments: [Edit.LocalAdjustmentLayer]) {
+    _pixelengine_ensureMainThread()
+    applyIfChanged {
+      $0.localAdjustments = localAdjustments
+    }
+  }
+
+  public func append(localAdjustment: Edit.LocalAdjustmentLayer) {
+    _pixelengine_ensureMainThread()
+    applyIfChanged {
+      $0.localAdjustments.append(localAdjustment)
+    }
+  }
+
   public func makeRenderer() throws -> BrightRoomImageRenderer {
 
     guard let loaded = loadedState else {
@@ -588,6 +609,7 @@ open class EditingStack: Hashable {
     let edit = loaded.currentEdit
 
     renderer.edit.croppingRect = edit.crop
+    renderer.edit.localAdjustments = edit.localAdjustments
 
     if edit.drawings.blurredMaskPaths.isEmpty == false {
       renderer.edit.drawer = [
