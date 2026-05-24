@@ -54,6 +54,11 @@ public struct SwiftUIPixelEditorView: View {
 
   public var body: some View {
     GeometryReader { proxy in
+      let canvasLength = min(
+        proxy.size.width,
+        max(0, proxy.size.height - PixelEditorLayout.topBarHeight - PixelEditorLayout.controlPanelHeight)
+      )
+
       VStack(spacing: 0) {
         PixelEditorTopBar(
           mode: viewModel.mode,
@@ -67,13 +72,15 @@ public struct SwiftUIPixelEditorView: View {
         )
 
         PixelEditorCanvas(viewModel: viewModel)
-          .frame(width: proxy.size.width, height: proxy.size.width)
+          .frame(width: canvasLength, height: canvasLength)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         PixelEditorControlPanel(
           viewModel: viewModel,
           route: $controlRoute,
           displayedRootPanel: $displayedRootPanel
         )
+        .frame(height: PixelEditorLayout.controlPanelHeight)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
     }
@@ -115,6 +122,7 @@ private enum PixelEditorFilterKind: CaseIterable {
 private enum PixelEditorLayout {
   static let topBarContentHeight: CGFloat = 56
   static let topBarHeight: CGFloat = 72
+  static let controlPanelHeight: CGFloat = 168
   static let previewButtonHeight: CGFloat = 32
   static let horizontalMargin: CGFloat = 20
   static let controlHorizontalMargin: CGFloat = 44
@@ -167,6 +175,7 @@ private struct PixelEditorTopBar: View {
       }
     }
     .padding(.horizontal, PixelEditorLayout.horizontalMargin)
+    .pixelEditorContainerCornerOffset(.horizontal, sizeToFit: true)
     .frame(height: PixelEditorLayout.topBarContentHeight)
     .frame(height: PixelEditorLayout.topBarHeight, alignment: .top)
   }
@@ -223,6 +232,22 @@ private struct PixelEditorPreviewButton: View {
     case .done:
       return PixelEditorColor.accent
     }
+  }
+}
+
+private extension View {
+
+  @ViewBuilder
+  func pixelEditorContainerCornerOffset(_ edges: Edge.Set, sizeToFit: Bool = false) -> some View {
+#if compiler(>=6.2)
+    if #available(iOS 26.0, *) {
+      self.containerCornerOffset(edges, sizeToFit: sizeToFit)
+    } else {
+      self
+    }
+#else
+    self
+#endif
   }
 }
 
@@ -418,7 +443,7 @@ private struct PixelEditorControlPanel: View {
       }
     }
     .animation(.spring(response: 0.32, dampingFraction: 1), value: route)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
   }
 
   private func showRoute(_ route: PixelEditorControlRoute) {

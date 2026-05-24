@@ -45,7 +45,7 @@ struct ContentView: View {
   )
 
   var body: some View {
-    NavigationView {
+    NavigationSplitView {
       VStack {
 
         Form {
@@ -272,6 +272,10 @@ struct ContentView: View {
           $0
         }
       )
+    } detail: {
+      Text("Brightroom")
+        .font(.largeTitle.bold())
+        .foregroundStyle(.secondary)
     }
     .onAppear(perform: {
       try? PresetStorage.default.loadLUTs()
