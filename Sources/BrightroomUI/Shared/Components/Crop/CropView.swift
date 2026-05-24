@@ -268,6 +268,14 @@ final class CropView: UIView, UIScrollViewDelegate {
 
     imagePlatterView.isUserInteractionEnabled = true
     scrollView.addSubview(imagePlatterView)
+
+    if #available(iOS 26.0, *) {
+      scrollView.topEdgeEffect.isHidden = true
+      scrollView.bottomEdgeEffect.isHidden = true
+      scrollView.leftEdgeEffect.isHidden = true
+      scrollView.rightEdgeEffect.isHidden = true
+    }
+
     scrollView.delegate = self
 
     guideView.willChange = { [weak self] in
