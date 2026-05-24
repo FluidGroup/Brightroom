@@ -43,8 +43,18 @@ public struct FilterColorCube : Filtering {
   public let name: String
   public let identifier: String
   public var amount: Double = 1
-  public let lutImage: ImageSource
-  public let dimension: Int
+  public let lookupTable: ColorCubeLookupTable
+
+  public var lutImage: ImageSource {
+    guard let lutImage = lookupTable.lutImage else {
+      preconditionFailure("This FilterColorCube is backed by cube data, not a LUT image.")
+    }
+    return lutImage
+  }
+
+  public var dimension: Int {
+    lookupTable.dimension
+  }
   
   public init(
     name: String,
@@ -53,15 +63,28 @@ public struct FilterColorCube : Filtering {
     dimension: Int
     ) {
 
-    self.dimension = dimension
-    self.lutImage = lutImage
     self.name = name
     self.identifier = identifier
+    self.lookupTable = .image(lutImage, dimension: dimension)
+  }
+
+  public init(
+    name: String,
+    identifier: String,
+    cubeData: Data,
+    dimension: Int
+  ) {
+
+    self.name = name
+    self.identifier = identifier
+    self.lookupTable = .cubeData(cubeData, dimension: dimension)
   }
 
   public func hash(into hasher: inout Hasher) {
     name.hash(into: &hasher)
     identifier.hash(into: &hasher)
+    amount.hash(into: &hasher)
+    dimension.hash(into: &hasher)
   }
 
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
@@ -78,8 +101,7 @@ public struct FilterColorCube : Filtering {
     #else
 
     let f: CIFilter = ColorCubeHelper.makeColorCubeFilter(
-      lutImage: lutImage,
-      dimension: dimension,
+      lookupTable: lookupTable,
       cacheKey: identifier
     )
           
@@ -105,5 +127,35 @@ public struct FilterColorCube : Filtering {
     return composition.outputImage!
     
     #endif
+  }
+}
+
+public enum ColorCubeLookupTable: Equatable {
+  case image(ImageSource, dimension: Int)
+  case cubeData(Data, dimension: Int)
+
+  public var lutImage: ImageSource? {
+    switch self {
+    case .image(let imageSource, _):
+      return imageSource
+    case .cubeData:
+      return nil
+    }
+  }
+
+  public var cubeData: Data? {
+    switch self {
+    case .image:
+      return nil
+    case .cubeData(let data, _):
+      return data
+    }
+  }
+
+  public var dimension: Int {
+    switch self {
+    case .image(_, let dimension), .cubeData(_, let dimension):
+      return dimension
+    }
   }
 }
