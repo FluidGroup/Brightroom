@@ -66,6 +66,14 @@ struct ContentView: View {
             RenderingDemoView()
           }
 
+          NavigationLink("Metal Brush Sandbox") {
+            MetalBrushSandboxView()
+          }
+
+          NavigationLink("PencilKit Reference") {
+            PencilKitReferenceSandboxView()
+          }
+
           Section("Restoration Horizontal") {
             Button("Masking") {
               fullScreenView = .init {
