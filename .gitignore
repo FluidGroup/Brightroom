@@ -85,4 +85,5 @@ iOSInjectionProject/
 
 .orig
 .claude/settings.local.json
+implementation-notes.html
 # End of https://www.gitignore.io/api/swift
