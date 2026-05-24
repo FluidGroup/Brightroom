@@ -124,7 +124,9 @@ public struct SwiftUICropView: View {
   private let editingStack: EditingStack
 
   private var rotationInput: Binding<EditingCrop.Rotation?> = .constant(nil)
+  private var flipInput: Binding<EditingCrop.Flip?> = .constant(nil)
   private var adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?> = .constant(nil)
+  private var perspectiveCorrectionInput: Binding<EditingCrop.PerspectiveCorrection?> = .constant(nil)
   private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
@@ -182,7 +184,9 @@ public struct SwiftUICropView: View {
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
+          flipInput: flipInput,
           adjustmentAngleInput: adjustmentAngleInput,
+          perspectiveCorrectionInput: perspectiveCorrectionInput,
           croppingAspectRatioInput: croppingAspectRatioInput,
           resetAction: _resetAction,
           rotateAction: _rotateAction,
@@ -216,6 +220,16 @@ public struct SwiftUICropView: View {
     return self
   }
 
+  public consuming func flip(_ flip: EditingCrop.Flip?) -> Self {
+    self.flipInput = .constant(flip)
+    return self
+  }
+
+  public consuming func flip(_ flip: Binding<EditingCrop.Flip?>) -> Self {
+    self.flipInput = flip
+    return self
+  }
+
   public consuming func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
 
     self.adjustmentAngleInput = .constant(angle)
@@ -225,6 +239,16 @@ public struct SwiftUICropView: View {
   public consuming func adjustmentAngle(_ angle: Binding<EditingCrop.AdjustmentAngle?>) -> Self {
 
     self.adjustmentAngleInput = angle
+    return self
+  }
+
+  public consuming func perspectiveCorrection(_ correction: EditingCrop.PerspectiveCorrection?) -> Self {
+    self.perspectiveCorrectionInput = .constant(correction)
+    return self
+  }
+
+  public consuming func perspectiveCorrection(_ correction: Binding<EditingCrop.PerspectiveCorrection?>) -> Self {
+    self.perspectiveCorrectionInput = correction
     return self
   }
 
@@ -274,7 +298,9 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let rotationInput: Binding<EditingCrop.Rotation?>
+  let flipInput: Binding<EditingCrop.Flip?>
   let adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?>
+  let perspectiveCorrectionInput: Binding<EditingCrop.PerspectiveCorrection?>
   let croppingAspectRatioInput: Binding<PixelAspectRatio?>
   let resetAction: SwiftUICropView.ResetAction?
   let rotateAction: SwiftUICropView.RotateAction?
@@ -339,8 +365,16 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
         cropView.setRotation(rotation)
       }
 
+      if let flip = flipInput.wrappedValue {
+        cropView.setFlip(flip)
+      }
+
       if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
         cropView.setAdjustmentAngle(adjustmentAngle)
+      }
+
+      if let perspectiveCorrection = perspectiveCorrectionInput.wrappedValue {
+        cropView.setPerspectiveCorrection(perspectiveCorrection)
       }
 
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
@@ -383,7 +417,9 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   private func syncInputs(with snapshot: SwiftUICropView.StateSnapshot) {
     if let crop = snapshot.proposedCrop {
       rotationInput.setIfChanged(crop.rotation)
+      flipInput.setIfChanged(crop.flip)
       adjustmentAngleInput.setIfChanged(crop.adjustmentAngle)
+      perspectiveCorrectionInput.setIfChanged(crop.perspectiveCorrection)
     }
     croppingAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
   }

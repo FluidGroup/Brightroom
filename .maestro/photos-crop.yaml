@@ -15,9 +15,20 @@ tags:
 - assertVisible: "Cancel"
 - assertVisible: "Done"
 - assertVisible: "Rotate"
+- assertVisible: "Flip Horizontal"
+- assertVisible: "Flip Vertical"
 - assertVisible: "Aspect Ratio"
+- assertVisible: "Straighten"
+- assertVisible: "Vertical"
+- assertVisible: "Horizontal"
 - assertVisible: "Rotation"
 - assertNotVisible: "Reset"
+- tapOn: "Flip Horizontal"
+- assertVisible: "Reset"
+- tapOn: "Flip Horizontal"
+- tapOn: "Vertical"
+- assertVisible: "Vertical Perspective"
+- tapOn: "Straighten"
 - tapOn: "Aspect Ratio"
 - tapOn: "SQUARE"
 - assertVisible: "Reset"
@@ -26,11 +37,12 @@ tags:
 - assertVisible:
     id: "photos.crop"
 - assertVisible: "Reset"
-- tapOn: "Reset"
+- tapOn:
+    point: "50%,10%"
 - assertNotVisible: "Reset"
 - swipe:
     start: 50%, 45%
-    end: 45%, 45%
+    end: 50%, 42%
     duration: 300
 - assertNotVisible: "Reset"
 - tapOn: "Aspect Ratio"
@@ -65,7 +77,10 @@ tags:
 - assertVisible: "Reset"
 - tapOn:
     text: "Rotate"
-- tapOn: "Reset"
+- tapOn:
+    point: "50%,10%"
+- tapOn:
+    point: "50%,10%"
 - assertNotVisible: "Reset"
 - tapOn: "9:16"
 - tapOn: "Done"

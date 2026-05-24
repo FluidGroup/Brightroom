@@ -353,12 +353,16 @@ final class RenderCropTests: XCTestCase {
       cropRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6)
     )
     editingCrop.rotation = .angle_90
+    editingCrop.flip = [.horizontal]
     editingCrop.adjustmentAngle = .degrees(0.25)
+    editingCrop.perspectiveCorrection = .init(horizontal: 0.2, vertical: -0.35)
 
     let crop = RenderCrop(editingCrop)
 
     XCTAssertEqual(crop.rotation, .angle_90)
+    XCTAssertEqual(crop.flip, [.horizontal])
     XCTAssertEqual(crop.adjustmentAngle, .degrees(0.25))
+    XCTAssertEqual(crop.perspectiveCorrection, .init(horizontal: 0.2, vertical: -0.35))
   }
 
   func testEditingCropRenderingEquivalenceUsesPixelCropContract() {
@@ -472,6 +476,102 @@ final class RenderCropRendererTests: XCTestCase {
     try Self.assertEdgesAreDark(renderedImage)
   }
 
+  func testHorizontalFlipMirrorsRenderCrop() throws {
+    let sourceImage = try Self.makeHorizontalColorImage()
+    let imageSource = ImageSource(cgImage: sourceImage)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+
+    var crop = EditingCrop(imageSize: sourceImage.size)
+    crop.flip = [.horizontal]
+
+    renderer.edit = .init(
+      croppingRect: crop,
+      modifiers: [],
+      drawer: []
+    )
+
+    let renderedImage = try renderer.render().cgImage
+    let leftPixel = try Self.rgbaPixel(at: .init(x: 0, y: 0), in: renderedImage)
+    let rightPixel = try Self.rgbaPixel(at: .init(x: 1, y: 0), in: renderedImage)
+
+    XCTAssertGreaterThan(leftPixel.blue, leftPixel.red)
+    XCTAssertGreaterThan(rightPixel.red, rightPixel.blue)
+  }
+
+  func testPerspectiveCorrectionPreservesRenderCropSize() throws {
+    let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
+    let imageSource = ImageSource(cgImage: sourceImage)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+
+    var crop = Self.fractionalCrop(for: sourceImage)
+    crop.perspectiveCorrection = .init(horizontal: 0.3, vertical: -0.2)
+
+    renderer.edit = .init(
+      croppingRect: crop,
+      modifiers: [],
+      drawer: []
+    )
+
+    let renderedImage = try renderer.render().cgImage
+
+    XCTAssertEqual(renderedImage.width, 14)
+    XCTAssertEqual(renderedImage.height, 14)
+  }
+
+  func testPerspectiveTransformCreatesTrapezoidCanvas() throws {
+    let sourceImage = try Self.makeSolidColorImage(
+      size: .init(width: 20, height: 20),
+      red: 1,
+      green: 0,
+      blue: 0
+    )
+
+    let transformedImage = try sourceImage.perspectiveTransformed(.init(vertical: 1))
+
+    XCTAssertEqual(transformedImage.width, 20)
+    XCTAssertEqual(transformedImage.height, 20)
+
+    let centerPixel = try Self.rgbaPixel(at: .init(x: 10, y: 10), in: transformedImage)
+    let corners = try [
+      CGPoint(x: 0, y: 0),
+      CGPoint(x: 19, y: 0),
+      CGPoint(x: 0, y: 19),
+      CGPoint(x: 19, y: 19),
+    ].map { try Self.rgbaPixel(at: $0, in: transformedImage) }
+
+    XCTAssertGreaterThan(centerPixel.red, 200)
+    XCTAssertTrue(corners.contains { $0.alpha < 16 })
+  }
+
+  func testPerspectiveCoverageRectUsesOnlyAlwaysCoveredArea() {
+    let rect = CGRect(x: 0, y: 0, width: 100, height: 80)
+
+    Self.assertRectEqual(
+      EditingCrop.PerspectiveCorrection(vertical: 1).axisAlignedCoverageRect(in: rect),
+      CGRect(x: 36, y: 0, width: 28, height: 80)
+    )
+    Self.assertRectEqual(
+      EditingCrop.PerspectiveCorrection(horizontal: 1).axisAlignedCoverageRect(in: rect),
+      CGRect(x: 0, y: 28.8, width: 100, height: 22.4)
+    )
+    Self.assertRectEqual(
+      EditingCrop.PerspectiveCorrection(horizontal: 1, vertical: 1).axisAlignedCoverageRect(in: rect),
+      CGRect(x: 36, y: 28.8, width: 28, height: 22.4)
+    )
+  }
+
+  private static func assertRectEqual(
+    _ actual: CGRect,
+    _ expected: CGRect,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    XCTAssertEqual(actual.origin.x, expected.origin.x, accuracy: 1e-6, file: file, line: line)
+    XCTAssertEqual(actual.origin.y, expected.origin.y, accuracy: 1e-6, file: file, line: line)
+    XCTAssertEqual(actual.size.width, expected.size.width, accuracy: 1e-6, file: file, line: line)
+    XCTAssertEqual(actual.size.height, expected.size.height, accuracy: 1e-6, file: file, line: line)
+  }
+
   private static func fractionalCrop(for image: CGImage) -> EditingCrop {
     EditingCrop(
       imageSize: image.size,
@@ -508,6 +608,55 @@ final class RenderCropRendererTests: XCTestCase {
     context.fill(.init(x: 0, y: maxCoordinate, width: extent, height: 1))
     context.fill(.init(x: 0, y: 0, width: 1, height: extent))
     context.fill(.init(x: maxCoordinate, y: 0, width: 1, height: extent))
+
+    return try XCTUnwrap(context.makeImage())
+  }
+
+  private static func makeHorizontalColorImage() throws -> CGImage {
+    let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
+      | CGImageAlphaInfo.premultipliedLast.rawValue
+    let context = try XCTUnwrap(
+      CGContext(
+        data: nil,
+        width: 2,
+        height: 1,
+        bitsPerComponent: 8,
+        bytesPerRow: 2 * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: bitmapInfo
+      )
+    )
+
+    context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+    context.fill(.init(x: 0, y: 0, width: 1, height: 1))
+    context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
+    context.fill(.init(x: 1, y: 0, width: 1, height: 1))
+
+    return try XCTUnwrap(context.makeImage())
+  }
+
+  private static func makeSolidColorImage(
+    size: PixelDimensions,
+    red: CGFloat,
+    green: CGFloat,
+    blue: CGFloat
+  ) throws -> CGImage {
+    let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
+      | CGImageAlphaInfo.premultipliedLast.rawValue
+    let context = try XCTUnwrap(
+      CGContext(
+        data: nil,
+        width: size.width,
+        height: size.height,
+        bitsPerComponent: 8,
+        bytesPerRow: size.width * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: bitmapInfo
+      )
+    )
+
+    context.setFillColor(red: red, green: green, blue: blue, alpha: 1)
+    context.fill(.init(origin: .zero, size: size.cgSize))
 
     return try XCTUnwrap(context.makeImage())
   }

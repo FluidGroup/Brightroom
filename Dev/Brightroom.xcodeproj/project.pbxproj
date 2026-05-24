@@ -59,7 +59,6 @@
 		4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
-		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D8F2660FD5500CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */; };
@@ -471,7 +470,6 @@
 		4B2A1105266B7B3000B0C885 /* test-image-11 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "test-image-11"; sourceTree = "<group>"; };
 		4B2A1106266B7B3000B0C885 /* test-image-3 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "test-image-3"; sourceTree = "<group>"; };
 		4B524FE229B8F6A600C1A416 /* Brightroom */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Brightroom; path = ..; sourceTree = "<group>"; };
-		4B5E72BA2B6B760D00DE7A2A /* Reveal-SDK */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = "Reveal-SDK"; path = "../submodules/muukii/Reveal-SDK"; sourceTree = "<group>"; };
 		4B600B38216B7CD6001E1456 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
 		4B600B3A216B7CDD001E1456 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		4B600B3C216B7CE3001E1456 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -912,7 +910,6 @@
 				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
-				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -987,7 +984,6 @@
 		4B600AF3216B7A94001E1456 = {
 			isa = PBXGroup;
 			children = (
-				4B5E72BA2B6B760D00DE7A2A /* Reveal-SDK */,
 				4B524FE129B8F6A600C1A416 /* Packages */,
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
 				B036D2DC2FC2A64400C834BA /* Sources */,
@@ -1479,7 +1475,6 @@
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
 				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
 				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
-				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -2457,10 +2452,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */;
 			productName = SwiftUISupport;
-		};
-		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = "Reveal-SDK";
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
