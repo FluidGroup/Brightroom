@@ -128,7 +128,6 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
   func configure(
     interactionMode: MetalBrushSandboxInteractionMode,
     localEffect: EditingStack.Edit.LocalAdjustmentEffect,
-    compositeRenderer: MetalBrushSandboxCompositeRenderer,
     brush: MetalBrushSandboxBrush,
     smoothing: MetalBrushStrokeSmoothingConfiguration
   ) {
@@ -139,7 +138,6 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     if self.currentLocalEffect != localEffect {
       setEditingStackIfPossible(localEffect: localEffect)
     }
-    canvasView?.setCompositeRenderer(compositeRenderer)
     canvasView?.configure(brush: brush, smoothing: smoothing)
     updateVisibleContentRect()
   }

@@ -19,12 +19,6 @@ struct MetalBrushLiveOverlayUniforms {
   var drawableSize: SIMD2<Float>
 }
 
-struct MetalBrushLocalAdjustmentCompositeUniforms {
-  var effectKind: UInt32
-  var exposureValue: Float
-  var _padding: SIMD2<Float> = .zero
-}
-
 struct MetalBrushVisibleImageTextureKey: Equatable {
   var visibleContentRect: CGRect
   var pixelWidth: Int
@@ -75,14 +69,7 @@ private struct MetalBrushViewportCoreImageLocalLayerCache {
 private struct MetalBrushViewportRenderTextures {
   let pixelWidth: Int
   let pixelHeight: Int
-  let baseTexture: MTLTexture
-  let adjustedTexture: MTLTexture
   let maskTexture: MTLTexture
-}
-
-private enum MetalBrushLocalAdjustmentCompositeEffectKind: UInt32 {
-  case texture = 0
-  case exposure = 1
 }
 
 struct MetalBrushSandboxRenderImages {
@@ -124,7 +111,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private let commandQueue: MTLCommandQueue
   private let brushPipeline: MTLRenderPipelineState
   private let liveOverlayPipeline: MTLRenderPipelineState
-  private let localAdjustmentCompositePipeline: MTLRenderPipelineState
   private var liveStrokeTexture: MTLTexture?
   private var renderImages: MetalBrushSandboxRenderImages?
   private var committedStrokes: [MetalBrushSandboxStrokeRecord] = []
@@ -136,7 +122,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private var viewportRenderTextures: MetalBrushViewportRenderTextures?
   private var usesViewportImageRendering = false
   private var usesViewportCachedSourceRendering = false
-  private var compositeRenderer: MetalBrushSandboxCompositeRenderer = .coreImage
   private var brush = MetalBrushSandboxBrush(
     size: 56,
     hardness: 0.72,
@@ -197,7 +182,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       let library = try Self.makeShaderLibrary(device: device)
       self.brushPipeline = try Self.makeBrushPipeline(device: device, library: library)
       self.liveOverlayPipeline = try Self.makeLiveOverlayPipeline(device: device, library: library)
-      self.localAdjustmentCompositePipeline = try Self.makeLocalAdjustmentCompositePipeline(device: device, library: library)
     } catch {
       fatalError("Failed to create Metal Brush Sandbox pipeline: \(error)")
     }
@@ -256,17 +240,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
 
     if isHidden == false {
-      setNeedsDisplay()
-    }
-  }
-
-  func setCompositeRenderer(_ renderer: MetalBrushSandboxCompositeRenderer) {
-    guard compositeRenderer != renderer else {
-      return
-    }
-
-    compositeRenderer = renderer
-    if usesViewportImageRendering {
       setNeedsDisplay()
     }
   }
@@ -1039,7 +1012,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    renderViewportComposite(
+    renderViewportCoreImageComposite(
       renderImages,
       drawable: drawable,
       descriptor: descriptor,
@@ -1145,40 +1118,15 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    switch compositeRenderer {
-    case .metal:
-      let adjustedImage: CIImage?
-      if renderImages.localEffect.usesShaderCompositeExposure {
-        adjustedImage = nil
-      } else {
-        adjustedImage = renderImages.localEffect
-          .apply(
-            to: baseImage,
-            previewScale: viewportPreviewScale(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-          )
-          .cropped(to: sourceImage.extent)
-      }
-
-      renderViewportCachedComposite(
-        baseImage: baseImage,
-        adjustedImage: adjustedImage,
-        localEffect: renderImages.localEffect,
-        drawable: drawable,
-        descriptor: descriptor,
-        commandBuffer: commandBuffer
-      )
-
-    case .coreImage:
-      renderViewportCachedCoreImageComposite(
-        baseImage: baseImage,
-        sourceExtent: renderImages.source.extent,
-        filters: renderImages.filters,
-        localEffect: renderImages.localEffect,
-        drawable: drawable,
-        descriptor: descriptor,
-        commandBuffer: commandBuffer
-      )
-    }
+    renderViewportCachedCoreImageComposite(
+      baseImage: baseImage,
+      sourceExtent: renderImages.source.extent,
+      filters: renderImages.filters,
+      localEffect: renderImages.localEffect,
+      drawable: drawable,
+      descriptor: descriptor,
+      commandBuffer: commandBuffer
+    )
   }
 
   private func viewportPreviewScale(
@@ -1285,61 +1233,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       bounds: renderBounds,
       colorSpace: MetalBrushSandboxImageProcessing.colorSpace
     )
-    commandBuffer.present(drawable)
-    commandBuffer.commit()
-  }
-
-  private func renderViewportCachedComposite(
-    baseImage: CIImage,
-    adjustedImage: CIImage?,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
-    drawable: CAMetalDrawable,
-    descriptor: MTLRenderPassDescriptor,
-    commandBuffer: MTLCommandBuffer
-  ) {
-    let pixelWidth = drawable.texture.width
-    let pixelHeight = drawable.texture.height
-    guard pixelWidth > 0, pixelHeight > 0 else {
-      clearCurrentDrawable()
-      return
-    }
-
-    let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-    guard let textures else {
-      clearCurrentDrawable()
-      return
-    }
-
-    encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
-    encodeClearTexture(textures.baseTexture, commandBuffer: commandBuffer)
-    renderCachedViewportImage(baseImage, into: textures.baseTexture, commandBuffer: commandBuffer)
-    if let adjustedImage {
-      encodeClearTexture(textures.adjustedTexture, commandBuffer: commandBuffer)
-      renderCachedViewportImage(adjustedImage, into: textures.adjustedTexture, commandBuffer: commandBuffer)
-    }
-    encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
-
-    descriptor.colorAttachments[0].loadAction = .clear
-    descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-    descriptor.colorAttachments[0].storeAction = .store
-
-    guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
-      return
-    }
-
-    var uniforms = localEffect.compositeUniforms
-    encoder.setRenderPipelineState(localAdjustmentCompositePipeline)
-    encoder.setFragmentBytes(
-      &uniforms,
-      length: MemoryLayout<MetalBrushLocalAdjustmentCompositeUniforms>.stride,
-      index: 0
-    )
-    encoder.setFragmentTexture(textures.maskTexture, index: 0)
-    encoder.setFragmentTexture(textures.baseTexture, index: 1)
-    encoder.setFragmentTexture(textures.adjustedTexture, index: 2)
-    encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-    encoder.endEncoding()
-
     commandBuffer.present(drawable)
     commandBuffer.commit()
   }
@@ -1540,7 +1433,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     )
   }
 
-  private func renderViewportComposite(
+  private func renderViewportCoreImageComposite(
     _ renderImages: MetalBrushSandboxRenderImages,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
@@ -1553,42 +1446,65 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-    guard let textures else {
+    guard
+      let baseTexture = makeRenderTexture(
+        pixelFormat: .bgra8Unorm,
+        width: pixelWidth,
+        height: pixelHeight
+      ),
+      let adjustedTexture = makeRenderTexture(
+        pixelFormat: .bgra8Unorm,
+        width: pixelWidth,
+        height: pixelHeight
+      ),
+      let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+    else {
       clearCurrentDrawable()
       return
     }
 
     encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
-    encodeClearTexture(textures.baseTexture, commandBuffer: commandBuffer)
-    encodeClearTexture(textures.adjustedTexture, commandBuffer: commandBuffer)
-    renderViewportImage(renderImages.base, into: textures.baseTexture, commandBuffer: commandBuffer)
-    renderViewportImage(renderImages.adjusted, into: textures.adjustedTexture, commandBuffer: commandBuffer)
+    encodeClearTexture(baseTexture, commandBuffer: commandBuffer)
+    encodeClearTexture(adjustedTexture, commandBuffer: commandBuffer)
+    renderViewportImage(renderImages.base, into: baseTexture, commandBuffer: commandBuffer)
+    renderViewportImage(renderImages.adjusted, into: adjustedTexture, commandBuffer: commandBuffer)
     encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
 
-    descriptor.colorAttachments[0].loadAction = .clear
-    descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-    descriptor.colorAttachments[0].storeAction = .store
-
-    guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
+    let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
+    guard
+      let baseImage = CIImage(
+        mtlTexture: baseTexture,
+        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      )?.cropped(to: renderBounds),
+      let adjustedImage = CIImage(
+        mtlTexture: adjustedTexture,
+        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      )?.cropped(to: renderBounds),
+      let maskImage = CIImage(
+        mtlTexture: textures.maskTexture,
+        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      )?.cropped(to: renderBounds)
+    else {
+      clearCurrentDrawable()
       return
     }
 
-    var uniforms = renderImages.localEffect.compositeUniforms
-    encoder.setRenderPipelineState(localAdjustmentCompositePipeline)
-    encoder.setFragmentBytes(
-      &uniforms,
-      length: MemoryLayout<MetalBrushLocalAdjustmentCompositeUniforms>.stride,
-      index: 0
-    )
-    encoder.setFragmentTexture(textures.maskTexture, index: 0)
-    encoder.setFragmentTexture(textures.baseTexture, index: 1)
-    encoder.setFragmentTexture(textures.adjustedTexture, index: 2)
-    encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-    encoder.endEncoding()
+    let compositedImage = adjustedImage
+      .applyingFilter(
+        "CIBlendWithAlphaMask",
+        parameters: [
+          kCIInputBackgroundImageKey: baseImage,
+          kCIInputMaskImageKey: maskImage,
+        ]
+      )
+      .cropped(to: renderBounds)
 
-    commandBuffer.present(drawable)
-    commandBuffer.commit()
+    renderDrawableImage(
+      compositedImage,
+      drawable: drawable,
+      descriptor: descriptor,
+      commandBuffer: commandBuffer
+    )
   }
 
   private func renderViewportImage(
@@ -1654,16 +1570,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
 
     guard
-      let baseTexture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
-        width: pixelWidth,
-        height: pixelHeight
-      ),
-      let adjustedTexture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
-        width: pixelWidth,
-        height: pixelHeight
-      ),
       let maskTexture = makeRenderTexture(
         pixelFormat: .rgba8Unorm,
         width: pixelWidth,
@@ -1676,8 +1582,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     let textures = MetalBrushViewportRenderTextures(
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
-      baseTexture: baseTexture,
-      adjustedTexture: adjustedTexture,
       maskTexture: maskTexture
     )
     viewportRenderTextures = textures
@@ -1857,45 +1761,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 
-  private static func makeLocalAdjustmentCompositePipeline(
-    device: MTLDevice,
-    library: MTLLibrary
-  ) throws -> MTLRenderPipelineState {
-    let descriptor = MTLRenderPipelineDescriptor()
-    descriptor.vertexFunction = library.makeFunction(name: "displayVertex")
-    descriptor.fragmentFunction = library.makeFunction(name: "localAdjustmentCompositeFragment")
-    descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-    return try device.makeRenderPipelineState(descriptor: descriptor)
-  }
-
   private static func makeShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
     try device.makeDefaultLibrary(bundle: .main)
-  }
-}
-
-private extension EditingStack.Edit.LocalAdjustmentEffect {
-
-  var usesShaderCompositeExposure: Bool {
-    switch self {
-    case .gaussianBlur:
-      return false
-    case .exposure:
-      return true
-    }
-  }
-
-  var compositeUniforms: MetalBrushLocalAdjustmentCompositeUniforms {
-    switch self {
-    case .gaussianBlur:
-      return .init(
-        effectKind: MetalBrushLocalAdjustmentCompositeEffectKind.texture.rawValue,
-        exposureValue: 0
-      )
-    case let .exposure(value):
-      return .init(
-        effectKind: MetalBrushLocalAdjustmentCompositeEffectKind.exposure.rawValue,
-        exposureValue: Float(value)
-      )
-    }
   }
 }

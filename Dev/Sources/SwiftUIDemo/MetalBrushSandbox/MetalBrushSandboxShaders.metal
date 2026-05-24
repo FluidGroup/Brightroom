@@ -16,12 +16,6 @@ struct LiveOverlayUniforms {
   float2 drawableSize;
 };
 
-struct LocalAdjustmentCompositeUniforms {
-  uint effectKind;
-  float exposureValue;
-  float2 padding;
-};
-
 struct BrushVertexOut {
   float4 position [[position]];
   float2 local;
@@ -113,26 +107,4 @@ fragment float4 liveOverlayFragment(
   float3 adjustedColor = adjustedImageTexture.sample(textureSampler, viewportPosition).rgb;
 
   return float4(adjustedColor * liveAlpha, liveAlpha);
-}
-
-fragment float4 localAdjustmentCompositeFragment(
-  DisplayVertexOut in [[stage_in]],
-  constant LocalAdjustmentCompositeUniforms& composite [[buffer(0)]],
-  texture2d<float> maskTexture [[texture(0)]],
-  texture2d<float> baseImageTexture [[texture(1)]],
-  texture2d<float> adjustedImageTexture [[texture(2)]]
-) {
-  constexpr sampler textureSampler(address::clamp_to_edge, filter::linear);
-
-  float maskAlpha = clamp(maskTexture.sample(textureSampler, in.uv).a, 0.0, 1.0);
-  float3 baseColor = baseImageTexture.sample(textureSampler, in.uv).rgb;
-  float3 adjustedColor;
-  if (composite.effectKind == 1) {
-    adjustedColor = baseColor * exp2(composite.exposureValue);
-  } else {
-    adjustedColor = adjustedImageTexture.sample(textureSampler, in.uv).rgb;
-  }
-  float3 color = mix(baseColor, adjustedColor, maskAlpha);
-
-  return float4(color, 1.0);
 }
