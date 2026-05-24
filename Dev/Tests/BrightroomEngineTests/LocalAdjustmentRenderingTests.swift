@@ -62,6 +62,66 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     )
   }
 
+  func testLoadedEditingPreviewSkipsAutomaticLocalAdjustmentRasterization() throws {
+    let sourceImage = Self.makeSplitImage(
+      width: 40,
+      height: 20,
+      leftWhite: 0.25,
+      rightWhite: 0.25
+    )
+    let sourceCIImage = CIImage(cgImage: sourceImage)
+    let imageSource = ImageSource(cgImage: sourceImage)
+    let initialEdit = EditingStack.Edit(
+      crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
+    )
+    var loadedState = EditingStack.Loaded(
+      imageSource: imageSource,
+      metadata: .init(
+        orientation: .up,
+        imageSize: CGSize(width: 40, height: 20)
+      ),
+      initialEditing: initialEdit,
+      currentEdit: initialEdit,
+      thumbnailCIImage: sourceCIImage,
+      editingSourceCGImage: sourceImage,
+      editingSourceCIImage: sourceCIImage,
+      editingPreviewCIImage: initialEdit.makePreviewImage(
+        from: sourceCIImage,
+        purpose: .editingBase
+      ),
+      cropInteractionPreviewCIImage: initialEdit.makePreviewImage(
+        from: sourceCIImage,
+        purpose: .cropInteraction
+      ),
+      imageForCrop: sourceImage
+    )
+    var editWithLocalAdjustment = initialEdit
+    editWithLocalAdjustment.localAdjustments = [
+      Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10)),
+    ]
+
+    loadedState.currentEdit = editWithLocalAdjustment
+
+    let loadedPreviewImage = try XCTUnwrap(
+      Self.context.createCGImage(loadedState.editingPreviewImage, from: sourceCIImage.extent)
+    )
+    let fullEditingPreviewImage = try XCTUnwrap(
+      Self.context.createCGImage(
+        editWithLocalAdjustment.makePreviewImage(from: sourceCIImage, purpose: .editing),
+        from: sourceCIImage.extent
+      )
+    )
+
+    XCTAssertEqual(
+      Self.rgba(in: sourceImage, x: 20, y: 10),
+      Self.rgba(in: loadedPreviewImage, x: 20, y: 10)
+    )
+    XCTAssertGreaterThan(
+      Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10).red,
+      Self.rgba(in: sourceImage, x: 20, y: 10).red
+    )
+  }
+
   func testExposureLocalAdjustmentAppliesOnlyInsideMask() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,

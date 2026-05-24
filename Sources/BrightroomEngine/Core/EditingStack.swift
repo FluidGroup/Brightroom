@@ -91,14 +91,19 @@ open class EditingStack: Hashable {
      */
     public var currentEdit: Edit {
       didSet {
-        editingPreviewImage = currentEdit.makePreviewImage(
-          from: editingSourceImage,
-          purpose: .editing
-        )
-        cropInteractionPreviewImage = currentEdit.makePreviewImage(
-          from: editingSourceImage,
-          purpose: .cropInteraction
-        )
+        if currentEdit.filters != oldValue.filters {
+          editingPreviewImage = currentEdit.makePreviewImage(
+            from: editingSourceImage,
+            purpose: .editingBase
+          )
+        }
+
+        if currentEdit.crop != oldValue.crop {
+          cropInteractionPreviewImage = currentEdit.makePreviewImage(
+            from: editingSourceImage,
+            purpose: .cropInteraction
+          )
+        }
       }
     }
 
@@ -121,6 +126,12 @@ open class EditingStack: Hashable {
      */
     public let editingSourceImage: CIImage
 
+    /**
+     A lightweight editing preview used by legacy interactive views.
+     Local adjustments are intentionally excluded from automatic refresh because
+     their mask rasterization can be expensive and should be owned by the render
+     path that knows its target resolution.
+     */
     public fileprivate(set) var editingPreviewImage: CIImage
 
     public fileprivate(set) var cropInteractionPreviewImage: CIImage
@@ -445,7 +456,7 @@ open class EditingStack: Hashable {
             editingSourceCIImage: _editingSourceCIImage,
             editingPreviewCIImage: initialEdit.makePreviewImage(
               from: _editingSourceCIImage,
-              purpose: .editing
+              purpose: .editingBase
             ),
             cropInteractionPreviewCIImage: initialEdit.makePreviewImage(
               from: _editingSourceCIImage,

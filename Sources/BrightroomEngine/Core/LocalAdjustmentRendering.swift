@@ -25,6 +25,7 @@ import UIKit
 extension EditingStack.Edit {
 
   public enum PreviewPurpose: Sendable {
+    case editingBase
     case editing
     case cropInteraction
   }
@@ -34,6 +35,8 @@ extension EditingStack.Edit {
     purpose: PreviewPurpose = .editing
   ) -> CIImage {
     switch purpose {
+    case .editingBase:
+      filters.apply(to: sourceImage)
     case .editing:
       applyLocalAdjustments(to: filters.apply(to: sourceImage))
     case .cropInteraction:
