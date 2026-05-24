@@ -16,6 +16,12 @@ struct LiveOverlayUniforms {
   float2 drawableSize;
 };
 
+struct LocalAdjustmentCompositeUniforms {
+  uint effectKind;
+  float exposureValue;
+  float2 padding;
+};
+
 struct BrushVertexOut {
   float4 position [[position]];
   float2 local;
@@ -93,7 +99,7 @@ fragment float4 liveOverlayFragment(
   DisplayVertexOut in [[stage_in]],
   constant LiveOverlayUniforms& overlay [[buffer(0)]],
   texture2d<float> liveStrokeTexture [[texture(0)]],
-  texture2d<float> blurredImageTexture [[texture(1)]]
+  texture2d<float> adjustedImageTexture [[texture(1)]]
 ) {
   constexpr sampler textureSampler(address::clamp_to_edge, filter::linear);
 
@@ -104,23 +110,29 @@ fragment float4 liveOverlayFragment(
   if (any(viewportPosition < float2(0.0)) || any(viewportPosition > float2(1.0))) {
     return float4(0.0);
   }
-  float3 blurredColor = blurredImageTexture.sample(textureSampler, viewportPosition).rgb;
+  float3 adjustedColor = adjustedImageTexture.sample(textureSampler, viewportPosition).rgb;
 
-  return float4(blurredColor * liveAlpha, liveAlpha);
+  return float4(adjustedColor * liveAlpha, liveAlpha);
 }
 
-fragment float4 tileCompositeFragment(
+fragment float4 localAdjustmentCompositeFragment(
   DisplayVertexOut in [[stage_in]],
+  constant LocalAdjustmentCompositeUniforms& composite [[buffer(0)]],
   texture2d<float> maskTexture [[texture(0)]],
   texture2d<float> baseImageTexture [[texture(1)]],
-  texture2d<float> blurredImageTexture [[texture(2)]]
+  texture2d<float> adjustedImageTexture [[texture(2)]]
 ) {
   constexpr sampler textureSampler(address::clamp_to_edge, filter::linear);
 
   float maskAlpha = clamp(maskTexture.sample(textureSampler, in.uv).a, 0.0, 1.0);
   float3 baseColor = baseImageTexture.sample(textureSampler, in.uv).rgb;
-  float3 blurredColor = blurredImageTexture.sample(textureSampler, in.uv).rgb;
-  float3 color = mix(baseColor, blurredColor, maskAlpha);
+  float3 adjustedColor;
+  if (composite.effectKind == 1) {
+    adjustedColor = baseColor * exp2(composite.exposureValue);
+  } else {
+    adjustedColor = adjustedImageTexture.sample(textureSampler, in.uv).rgb;
+  }
+  float3 color = mix(baseColor, adjustedColor, maskAlpha);
 
   return float4(color, 1.0);
 }

@@ -44,6 +44,10 @@ struct ContentView: View {
     )
   )
 
+  private var nasaImageURL: URL {
+    Bundle.main.url(forResource: "nasa", withExtension: "jpg")!
+  }
+
   var body: some View {
     NavigationSplitView {
       VStack {
@@ -68,6 +72,10 @@ struct ContentView: View {
 
           NavigationLink("Metal Brush Sandbox") {
             MetalBrushSandboxView()
+          }
+
+          NavigationLink("Metal Brush Sandbox NASA") {
+            MetalBrushSandboxView(fileURL: nasaImageURL)
           }
 
           NavigationLink("PencilKit Reference") {

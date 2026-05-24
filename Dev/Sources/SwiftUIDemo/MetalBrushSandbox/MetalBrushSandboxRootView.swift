@@ -10,8 +10,8 @@ final class MetalBrushSandboxRootView: UIView {
   private var hostView: MetalBrushSandboxHostView?
   private var values = MetalBrushSandboxControlValues()
 
-  init(image: UIImage) {
-    self.editingStack = EditingStack(imageProvider: .init(image: image))
+  init(source: MetalBrushSandboxSource) {
+    self.editingStack = EditingStack(imageProvider: source.makeImageProvider())
     super.init(frame: .zero)
 
     backgroundColor = .black
@@ -83,7 +83,7 @@ final class MetalBrushSandboxRootView: UIView {
 
     applyExposure(values.exposure)
     applyHostConfiguration()
-    hostView.setEditingStack(editingStack, blurRadius: values.blurRadius)
+    hostView.setEditingStack(editingStack, localEffect: values.localAdjustmentEffect)
   }
 
   private func handleControlValues(
@@ -93,22 +93,22 @@ final class MetalBrushSandboxRootView: UIView {
     self.values = values
 
     switch change {
-    case .interactionMode, .renderMode, .brush, .smoothing:
+    case .interactionMode, .localEffect, .brush, .smoothing:
       applyHostConfiguration()
 
     case .exposure:
       applyExposure(values.exposure)
-      hostView?.reloadEditingStackTiles()
+      hostView?.reloadEditingStackPreview()
 
-    case .blurRadius:
-      hostView?.setEditingStack(editingStack, blurRadius: values.blurRadius)
+    case .localEffectValue:
+      hostView?.setEditingStack(editingStack, localEffect: values.localAdjustmentEffect)
     }
   }
 
   private func applyHostConfiguration() {
     hostView?.configure(
       interactionMode: values.interactionMode,
-      renderMode: values.renderMode,
+      localEffect: values.localAdjustmentEffect,
       brush: values.brush,
       smoothing: values.smoothing
     )
@@ -129,15 +129,16 @@ final class MetalBrushSandboxRootView: UIView {
 
 struct MetalBrushSandboxControlValues: Equatable {
   var exposure: Double = 0
+  var localEffectKind: MetalBrushSandboxLocalEffectKind = .blur
   var brushSize: Double = 56
   var blurRadius: Double = 18
+  var localExposure: Double = 0.8
   var hardness: Double = 0.72
   var opacity: Double = 0.9
   var spacing: Double = 0.18
   var smoothingAlgorithm: MetalBrushStrokeSmoothingAlgorithm = .bezier
   var smoothingStrength: Double = 0.85
   var interactionMode: MetalBrushSandboxInteractionMode = .draw
-  var renderMode: MetalBrushSandboxRenderMode = .full
 
   var brush: MetalBrushSandboxBrush {
     .init(
@@ -154,13 +155,38 @@ struct MetalBrushSandboxControlValues: Equatable {
       strength: smoothingStrength
     )
   }
+
+  var localAdjustmentEffect: EditingStack.Edit.LocalAdjustmentEffect {
+    switch localEffectKind {
+    case .blur:
+      return .gaussianBlur(radius: CGFloat(blurRadius))
+    case .exposure:
+      return .exposure(value: localExposure)
+    }
+  }
+}
+
+enum MetalBrushSandboxLocalEffectKind: String, CaseIterable, Identifiable {
+  case blur
+  case exposure
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .blur:
+      return "Blur"
+    case .exposure:
+      return "Exposure"
+    }
+  }
 }
 
 enum MetalBrushSandboxControlChange {
   case interactionMode
-  case renderMode
+  case localEffect
   case exposure
-  case blurRadius
+  case localEffectValue
   case brush
   case smoothing
 }
@@ -178,8 +204,9 @@ final class MetalBrushSandboxControlsView: UIView {
   private let zoomMetricsLabel = UILabel()
   private let strokesMetricsLabel = UILabel()
   private let stampsMetricsLabel = UILabel()
+  private let fpsMetricsLabel = UILabel()
   private let modeControl = UISegmentedControl(items: MetalBrushSandboxInteractionMode.allCases.map(\.title))
-  private let renderModeControl = UISegmentedControl(items: MetalBrushSandboxRenderMode.allCases.map(\.title))
+  private let localEffectControl = UISegmentedControl(items: MetalBrushSandboxLocalEffectKind.allCases.map(\.title))
   private let smoothingControl = UISegmentedControl(items: MetalBrushStrokeSmoothingAlgorithm.allCases.map(\.title))
   private let exposureRow = MetalBrushSandboxSliderRow(
     title: "Exposure",
@@ -195,6 +222,11 @@ final class MetalBrushSandboxControlsView: UIView {
     title: "Blur",
     range: 0...40,
     accessibilityIdentifier: "metal-brush-blur-radius"
+  )
+  private let localExposureRow = MetalBrushSandboxSliderRow(
+    title: "Local EV",
+    range: -1.5...1.5,
+    accessibilityIdentifier: "metal-brush-local-exposure"
   )
   private let brushSizeRow = MetalBrushSandboxSliderRow(
     title: "Size",
@@ -253,21 +285,24 @@ final class MetalBrushSandboxControlsView: UIView {
   func configure(_ values: MetalBrushSandboxControlValues) {
     self.values = values
     modeControl.selectedSegmentIndex = MetalBrushSandboxInteractionMode.allCases.firstIndex(of: values.interactionMode) ?? 0
-    renderModeControl.selectedSegmentIndex = MetalBrushSandboxRenderMode.allCases.firstIndex(of: values.renderMode) ?? 0
+    localEffectControl.selectedSegmentIndex = MetalBrushSandboxLocalEffectKind.allCases.firstIndex(of: values.localEffectKind) ?? 0
     smoothingControl.selectedSegmentIndex = MetalBrushStrokeSmoothingAlgorithm.allCases.firstIndex(of: values.smoothingAlgorithm) ?? 0
     exposureRow.value = values.exposure
     smoothingStrengthRow.value = values.smoothingStrength
     blurRadiusRow.value = values.blurRadius
+    localExposureRow.value = values.localExposure
     brushSizeRow.value = values.brushSize
     hardnessRow.value = values.hardness
     opacityRow.value = values.opacity
     spacingRow.value = values.spacing
+    updateLocalEffectRows()
   }
 
   func updateMetrics(_ metrics: MetalBrushSandboxMetrics) {
     zoomMetricsLabel.text = String(format: "Zoom %.2fx", metrics.zoomScale)
     strokesMetricsLabel.text = "Strokes \(metrics.strokeCount)"
     stampsMetricsLabel.text = "Stamps \(metrics.stampCount)"
+    fpsMetricsLabel.text = String(format: "FPS %.0f", metrics.framesPerSecond)
   }
 
   private func setupView() {
@@ -290,7 +325,7 @@ final class MetalBrushSandboxControlsView: UIView {
     metricsStackView.alignment = .center
     metricsStackView.distribution = .fill
 
-    for label in [zoomMetricsLabel, strokesMetricsLabel, stampsMetricsLabel] {
+    for label in [zoomMetricsLabel, strokesMetricsLabel, stampsMetricsLabel, fpsMetricsLabel] {
       label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
       label.textColor = .secondaryLabel
     }
@@ -298,10 +333,11 @@ final class MetalBrushSandboxControlsView: UIView {
     metricsStackView.addArrangedSubview(zoomMetricsLabel)
     metricsStackView.addArrangedSubview(strokesMetricsLabel)
     metricsStackView.addArrangedSubview(stampsMetricsLabel)
+    metricsStackView.addArrangedSubview(fpsMetricsLabel)
     metricsStackView.addArrangedSubview(UIView())
 
     modeControl.accessibilityIdentifier = "metal-brush-interaction-mode"
-    renderModeControl.accessibilityIdentifier = "metal-brush-render-mode"
+    localEffectControl.accessibilityIdentifier = "metal-brush-local-effect"
     smoothingControl.accessibilityIdentifier = "metal-brush-smoothing"
 
     let resetRow = UIStackView(arrangedSubviews: [UIView(), resetButton])
@@ -310,11 +346,12 @@ final class MetalBrushSandboxControlsView: UIView {
     stackView.addArrangedSubview(resetRow)
     stackView.addArrangedSubview(metricsStackView)
     stackView.addArrangedSubview(modeControl)
-    stackView.addArrangedSubview(renderModeControl)
+    stackView.addArrangedSubview(localEffectControl)
     stackView.addArrangedSubview(smoothingControl)
     stackView.addArrangedSubview(exposureRow)
     stackView.addArrangedSubview(smoothingStrengthRow)
     stackView.addArrangedSubview(blurRadiusRow)
+    stackView.addArrangedSubview(localExposureRow)
     stackView.addArrangedSubview(brushSizeRow)
     stackView.addArrangedSubview(hardnessRow)
     stackView.addArrangedSubview(opacityRow)
@@ -336,7 +373,7 @@ final class MetalBrushSandboxControlsView: UIView {
   private func setupActions() {
     resetButton.addTarget(self, action: #selector(resetButtonDidTap), for: .touchUpInside)
     modeControl.addTarget(self, action: #selector(modeControlDidChange), for: .valueChanged)
-    renderModeControl.addTarget(self, action: #selector(renderModeControlDidChange), for: .valueChanged)
+    localEffectControl.addTarget(self, action: #selector(localEffectControlDidChange), for: .valueChanged)
     smoothingControl.addTarget(self, action: #selector(smoothingControlDidChange), for: .valueChanged)
 
     exposureRow.onValueChange = { [weak self] value in
@@ -349,7 +386,11 @@ final class MetalBrushSandboxControlsView: UIView {
     }
     blurRadiusRow.onValueChange = { [weak self] value in
       self?.values.blurRadius = value
-      self?.publish(.blurRadius)
+      self?.publish(.localEffectValue)
+    }
+    localExposureRow.onValueChange = { [weak self] value in
+      self?.values.localExposure = value
+      self?.publish(.localEffectValue)
     }
     brushSizeRow.onValueChange = { [weak self] value in
       self?.values.brushSize = value
@@ -381,9 +422,10 @@ final class MetalBrushSandboxControlsView: UIView {
   }
 
   @objc
-  private func renderModeControlDidChange() {
-    values.renderMode = MetalBrushSandboxRenderMode.allCases[safe: renderModeControl.selectedSegmentIndex] ?? .full
-    publish(.renderMode)
+  private func localEffectControlDidChange() {
+    values.localEffectKind = MetalBrushSandboxLocalEffectKind.allCases[safe: localEffectControl.selectedSegmentIndex] ?? .blur
+    updateLocalEffectRows()
+    publish(.localEffect)
   }
 
   @objc
@@ -394,6 +436,12 @@ final class MetalBrushSandboxControlsView: UIView {
 
   private func publish(_ change: MetalBrushSandboxControlChange) {
     onValuesChange?(values, change)
+  }
+
+  private func updateLocalEffectRows() {
+    blurRadiusRow.isHidden = values.localEffectKind != .blur
+    localExposureRow.isHidden = values.localEffectKind != .exposure
+    invalidateIntrinsicContentSize()
   }
 }
 

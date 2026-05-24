@@ -1,10 +1,7 @@
 import CoreImage
 import BrightroomEngine
-import IOSurface
 import MetalKit
-import os
 import simd
-import SwiftUI
 import UIKit
 
 struct MetalBrushUniforms {
@@ -20,6 +17,12 @@ struct MetalBrushLiveOverlayUniforms {
   var viewportOrigin: SIMD2<Float>
   var viewportSize: SIMD2<Float>
   var drawableSize: SIMD2<Float>
+}
+
+struct MetalBrushLocalAdjustmentCompositeUniforms {
+  var effectKind: UInt32
+  var exposureValue: Float
+  var _padding: SIMD2<Float> = .zero
 }
 
 struct MetalBrushVisibleImageTextureKey: Equatable {
@@ -46,8 +49,25 @@ private struct MetalBrushViewportRenderTextures {
   let pixelWidth: Int
   let pixelHeight: Int
   let baseTexture: MTLTexture
-  let blurredTexture: MTLTexture
+  let adjustedTexture: MTLTexture
   let maskTexture: MTLTexture
+}
+
+private enum MetalBrushLocalAdjustmentCompositeEffectKind: UInt32 {
+  case texture = 0
+  case exposure = 1
+}
+
+struct MetalBrushSandboxRenderImages {
+  let source: CIImage
+  let filters: EditingStack.Edit.Filters
+  let base: CIImage
+  let adjusted: CIImage
+  let localEffect: EditingStack.Edit.LocalAdjustmentEffect
+
+  var hasLocalEffect: Bool {
+    localEffect.isActive
+  }
 }
 
 final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
@@ -77,12 +97,12 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private let commandQueue: MTLCommandQueue
   private let brushPipeline: MTLRenderPipelineState
   private let liveOverlayPipeline: MTLRenderPipelineState
-  private let tileCompositePipeline: MTLRenderPipelineState
+  private let localAdjustmentCompositePipeline: MTLRenderPipelineState
   private var liveStrokeTexture: MTLTexture?
   private var renderImages: MetalBrushSandboxRenderImages?
   private var committedStrokes: [MetalBrushSandboxStrokeRecord] = []
-  private var visibleBlurredImageTexture: MTLTexture?
-  private var visibleBlurredImageTextureKey: MetalBrushVisibleImageTextureKey?
+  private var visibleAdjustedImageTexture: MTLTexture?
+  private var visibleAdjustedImageTextureKey: MetalBrushVisibleImageTextureKey?
   private var viewportSourceTexture: MetalBrushViewportSourceTexture?
   private var viewportRenderTextures: MetalBrushViewportRenderTextures?
   private var usesViewportImageRendering = false
@@ -107,15 +127,27 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private var liveOverlayGeneration = 0
   private var lastLiveMetricsPublishTime: CFTimeInterval = 0
   private let liveMetricsPublishInterval: CFTimeInterval = 1.0 / 12.0
-  var stampCount: Int {
+  private var drawSampleStartTime: CFTimeInterval = CACurrentMediaTime()
+  private var drawSampleCount = 0
+  private var measuredFramesPerSecond: Double = 0
+  private let drawSampleIdleResetInterval: CFTimeInterval = 1.0
+  var activeStampCount: Int {
     activeStrokeStamps.count
+  }
+  var committedStampCount: Int {
+    committedStrokes.reduce(0) { $0 + $1.stamps.count }
+  }
+  var strokeCount: Int {
+    committedStrokes.count
+  }
+  var framesPerSecond: Double {
+    measuredFramesPerSecond
   }
   var onMetricsChange: (() -> Void)?
   var onStrokeCommit: ((MetalBrushSandboxStrokeRecord, @escaping () -> Void) -> Void)?
 
   var sharedDevice: MTLDevice? { device }
   var sharedBrushPipeline: MTLRenderPipelineState { brushPipeline }
-  var sharedTileCompositePipeline: MTLRenderPipelineState { tileCompositePipeline }
   var hasRenderImages: Bool { renderImages != nil }
 
   private lazy var ciContext: CIContext = {
@@ -132,7 +164,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       let library = try Self.makeShaderLibrary(device: device)
       self.brushPipeline = try Self.makeBrushPipeline(device: device, library: library)
       self.liveOverlayPipeline = try Self.makeLiveOverlayPipeline(device: device, library: library)
-      self.tileCompositePipeline = try Self.makeTileCompositePipeline(device: device, library: library)
+      self.localAdjustmentCompositePipeline = try Self.makeLocalAdjustmentCompositePipeline(device: device, library: library)
     } catch {
       fatalError("Failed to create Metal Brush Sandbox pipeline: \(error)")
     }
@@ -197,14 +229,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
   func setRenderImages(_ images: MetalBrushSandboxRenderImages) {
     renderImages = images
-    visibleBlurredImageTextureKey = nil
+    visibleAdjustedImageTextureKey = nil
     viewportRenderTextures = nil
     if usesViewportImageRendering {
-      visibleBlurredImageTexture = nil
+      visibleAdjustedImageTexture = nil
       setNeedsDisplay()
       return
     }
-    updateVisibleBlurredImageTextureIfNeeded()
+    updateVisibleAdjustedImageTextureIfNeeded()
     if isHidden == false {
       setNeedsDisplay()
     }
@@ -237,8 +269,8 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
 
     usesViewportImageRendering = isEnabled
-    visibleBlurredImageTexture = nil
-    visibleBlurredImageTextureKey = nil
+    visibleAdjustedImageTexture = nil
+    visibleAdjustedImageTextureKey = nil
     viewportSourceTexture = nil
     viewportRenderTextures = nil
 
@@ -270,14 +302,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       if usesViewportImageRendering {
         setNeedsDisplay()
       } else {
-        updateVisibleBlurredImageTextureIfNeeded()
+        updateVisibleAdjustedImageTextureIfNeeded()
       }
       return
     }
 
     visibleContentRect = nextRect
     visibleCanvasFrame = nextFrame
-    visibleBlurredImageTextureKey = nil
+    visibleAdjustedImageTextureKey = nil
     viewportSourceTexture = nil
     viewportRenderTextures = nil
     if usesViewportImageRendering {
@@ -285,7 +317,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       onMetricsChange?()
       return
     }
-    updateVisibleBlurredImageTextureIfNeeded()
+    updateVisibleAdjustedImageTextureIfNeeded()
     if isHidden == false {
       setNeedsDisplay()
     }
@@ -302,16 +334,20 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       cancelActiveStroke()
     }
     liveStrokeTexture = makeStrokeTexture(size: size)
-    visibleBlurredImageTextureKey = nil
+    visibleAdjustedImageTextureKey = nil
     viewportRenderTextures = nil
     if usesViewportImageRendering {
       setNeedsDisplay()
     } else {
-      updateVisibleBlurredImageTextureIfNeeded()
+      updateVisibleAdjustedImageTextureIfNeeded()
     }
   }
 
   func draw(in view: MTKView) {
+    defer {
+      recordDrawSample()
+    }
+
     if usesViewportImageRendering {
       renderViewportImage()
     } else {
@@ -320,14 +356,15 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   }
 
   func beginStroke(at rawPoint: CGPoint) {
-    guard usesViewportImageRendering == false else {
-      return
-    }
-    ensureLiveStrokeTextureMatchesDrawable()
     liveOverlayGeneration += 1
     isHidden = false
     activeStrokeStamps.removeAll(keepingCapacity: true)
-    clearLiveStrokeTexture(hidesOverlay: false)
+    if usesViewportImageRendering {
+      pendingLiveStamps.removeAll(keepingCapacity: true)
+    } else {
+      ensureLiveStrokeTextureMatchesDrawable()
+      clearLiveStrokeTexture(hidesOverlay: false)
+    }
     let point = clampedContentPoint(rawPoint)
     strokeSmoother.begin(at: point)
     lastStampPoint = point
@@ -411,7 +448,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     return makeStrokeTexture(size: target)
   }
 
-  private func updateVisibleBlurredImageTextureIfNeeded() {
+  private func updateVisibleAdjustedImageTextureIfNeeded() {
     guard
       let renderImages,
       renderImages.hasLocalEffect,
@@ -423,11 +460,11 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       bounds.width > 0,
       bounds.height > 0
     else {
-      visibleBlurredImageTexture = nil
-      visibleBlurredImageTextureKey = nil
+      visibleAdjustedImageTexture = nil
+      visibleAdjustedImageTextureKey = nil
       return
     }
-    let blurredImage = renderImages.blurred
+    let adjustedImage = renderImages.adjusted
 
     let drawableScaleX = drawableSize.width / bounds.width
     let drawableScaleY = drawableSize.height / bounds.height
@@ -440,8 +477,8 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       alignedPixelSize(visibleCanvasFrame.height * drawableScaleY)
     )
     guard pixelWidth > 0, pixelHeight > 0 else {
-      visibleBlurredImageTexture = nil
-      visibleBlurredImageTextureKey = nil
+      visibleAdjustedImageTexture = nil
+      visibleAdjustedImageTextureKey = nil
       return
     }
 
@@ -450,12 +487,12 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight
     )
-    guard visibleBlurredImageTextureKey != key else {
+    guard visibleAdjustedImageTextureKey != key else {
       return
     }
 
     let texture: MTLTexture
-    if let existingTexture = visibleBlurredImageTexture,
+    if let existingTexture = visibleAdjustedImageTexture,
        existingTexture.width == pixelWidth,
        existingTexture.height == pixelHeight
     {
@@ -482,7 +519,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
 
     render(
-      blurredImage,
+      adjustedImage,
       canvasRect: visibleContentRect,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
@@ -491,8 +528,8 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     )
     commandBuffer.commit()
 
-    visibleBlurredImageTexture = texture
-    visibleBlurredImageTextureKey = key
+    visibleAdjustedImageTexture = texture
+    visibleAdjustedImageTextureKey = key
   }
 
   private func render(
@@ -538,6 +575,23 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private func alignedPixelSize(_ value: CGFloat) -> Int {
     let raw = max(Int(value.rounded()), 4)
     return (raw + 3) & ~3
+  }
+
+  private func recordDrawSample(now: CFTimeInterval = CACurrentMediaTime()) {
+    if drawSampleCount == 0, now - drawSampleStartTime > drawSampleIdleResetInterval {
+      drawSampleStartTime = now
+    }
+
+    drawSampleCount += 1
+    let elapsed = now - drawSampleStartTime
+    guard elapsed >= 0.5 else {
+      return
+    }
+
+    measuredFramesPerSecond = Double(drawSampleCount) / elapsed
+    drawSampleCount = 0
+    drawSampleStartTime = now
+    onMetricsChange?()
   }
 
   private func ensureLiveStrokeTextureMatchesDrawable() {
@@ -642,6 +696,18 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     activeStrokeStamps += stamps
     pendingLiveStamps += stamps
     isHidden = false
+    if usesViewportImageRendering {
+      startLiveDisplayLinkIfNeeded()
+      if flushImmediately {
+        pendingLiveStamps.removeAll(keepingCapacity: true)
+        setNeedsDisplay()
+        publishLiveMetricsIfNeeded(force: true)
+      } else {
+        publishLiveMetricsIfNeeded()
+      }
+      return
+    }
+
     startLiveDisplayLinkIfNeeded()
 
     if flushImmediately {
@@ -742,6 +808,15 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   }
 
   @objc private func liveDisplayLinkDidTick(_ displayLink: CADisplayLink) {
+    if usesViewportImageRendering {
+      if pendingLiveStamps.isEmpty == false {
+        pendingLiveStamps.removeAll(keepingCapacity: true)
+        setNeedsDisplay()
+      }
+      publishLiveMetricsIfNeeded(now: displayLink.timestamp)
+      return
+    }
+
     flushPendingLiveStamps()
     publishLiveMetricsIfNeeded(now: displayLink.timestamp)
   }
@@ -832,7 +907,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private func renderLiveOverlay() {
     guard
       let liveStrokeTexture,
-      let visibleBlurredImageTexture,
+      let visibleAdjustedImageTexture,
       let drawable = currentDrawable,
       let descriptor = currentRenderPassDescriptor,
       let commandBuffer = commandQueue.makeCommandBuffer()
@@ -850,7 +925,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     encoder.setRenderPipelineState(liveOverlayPipeline)
     encoder.setFragmentTexture(liveStrokeTexture, index: 0)
-    encoder.setFragmentTexture(visibleBlurredImageTexture, index: 1)
+    encoder.setFragmentTexture(visibleAdjustedImageTexture, index: 1)
     let drawableScaleX = drawableSize.width / max(bounds.width, 1)
     let drawableScaleY = drawableSize.height / max(bounds.height, 1)
     var overlayUniforms = MetalBrushLiveOverlayUniforms(
@@ -904,7 +979,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
 
     guard renderImages.hasLocalEffect,
-          hasRenderableCommittedStroke(in: visibleContentRect)
+          hasRenderableStroke(in: visibleContentRect)
     else {
       renderViewportBaseImage(
         renderImages.base,
@@ -1010,7 +1085,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       .cropped(to: sourceImage.extent)
 
     guard renderImages.hasLocalEffect,
-          hasRenderableCommittedStroke(in: visibleContentRect)
+          hasRenderableStroke(in: visibleContentRect)
     else {
       renderDrawableImage(
         baseImage,
@@ -1021,36 +1096,33 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    let blurredImage = baseImage
-      .clamped(to: sourceImage.extent)
-      .applyingFilter(
-        "CIGaussianBlur",
-        parameters: [
-          kCIInputRadiusKey: scaledViewportBlurRadius(
-            renderImages.blurRadius,
-            pixelWidth: pixelWidth,
-            pixelHeight: pixelHeight
-          )
-        ]
-      )
-      .cropped(to: sourceImage.extent)
+    let adjustedImage: CIImage?
+    if renderImages.localEffect.usesShaderCompositeExposure {
+      adjustedImage = nil
+    } else {
+      adjustedImage = renderImages.localEffect
+        .apply(
+          to: baseImage,
+          previewScale: viewportPreviewScale(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+        )
+        .cropped(to: sourceImage.extent)
+    }
 
     renderViewportCachedComposite(
       baseImage: baseImage,
-      blurredImage: blurredImage,
+      adjustedImage: adjustedImage,
+      localEffect: renderImages.localEffect,
       drawable: drawable,
       descriptor: descriptor,
       commandBuffer: commandBuffer
     )
   }
 
-  private func scaledViewportBlurRadius(
-    _ canvasRadius: Double,
+  private func viewportPreviewScale(
     pixelWidth: Int,
     pixelHeight: Int
-  ) -> Double {
+  ) -> CGFloat {
     guard
-      canvasRadius > 0,
       bounds.width > 0,
       bounds.height > 0,
       visibleContentRect.width > 0,
@@ -1058,15 +1130,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       visibleCanvasFrame.width > 0,
       visibleCanvasFrame.height > 0
     else {
-      return canvasRadius
+      return 1
     }
 
     let drawableScaleX = CGFloat(pixelWidth) / bounds.width
     let drawableScaleY = CGFloat(pixelHeight) / bounds.height
     let pixelScaleX = visibleCanvasFrame.width * drawableScaleX / visibleContentRect.width
     let pixelScaleY = visibleCanvasFrame.height * drawableScaleY / visibleContentRect.height
-    let pixelScale = max((pixelScaleX + pixelScaleY) * 0.5, 0.0001)
-    return canvasRadius * Double(pixelScale)
+    return max((pixelScaleX + pixelScaleY) * 0.5, 0.0001)
   }
 
   private func viewportSourceImage(
@@ -1152,7 +1223,8 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
   private func renderViewportCachedComposite(
     baseImage: CIImage,
-    blurredImage: CIImage,
+    adjustedImage: CIImage?,
+    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1172,10 +1244,12 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
     encodeClearTexture(textures.baseTexture, commandBuffer: commandBuffer)
-    encodeClearTexture(textures.blurredTexture, commandBuffer: commandBuffer)
     renderCachedViewportImage(baseImage, into: textures.baseTexture, commandBuffer: commandBuffer)
-    renderCachedViewportImage(blurredImage, into: textures.blurredTexture, commandBuffer: commandBuffer)
-    encodeCommittedStrokesForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
+    if let adjustedImage {
+      encodeClearTexture(textures.adjustedTexture, commandBuffer: commandBuffer)
+      renderCachedViewportImage(adjustedImage, into: textures.adjustedTexture, commandBuffer: commandBuffer)
+    }
+    encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
 
     descriptor.colorAttachments[0].loadAction = .clear
     descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
@@ -1185,10 +1259,16 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    encoder.setRenderPipelineState(tileCompositePipeline)
+    var uniforms = localEffect.compositeUniforms
+    encoder.setRenderPipelineState(localAdjustmentCompositePipeline)
+    encoder.setFragmentBytes(
+      &uniforms,
+      length: MemoryLayout<MetalBrushLocalAdjustmentCompositeUniforms>.stride,
+      index: 0
+    )
     encoder.setFragmentTexture(textures.maskTexture, index: 0)
     encoder.setFragmentTexture(textures.baseTexture, index: 1)
-    encoder.setFragmentTexture(textures.blurredTexture, index: 2)
+    encoder.setFragmentTexture(textures.adjustedTexture, index: 2)
     encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     encoder.endEncoding()
 
@@ -1238,10 +1318,10 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
     encodeClearTexture(textures.baseTexture, commandBuffer: commandBuffer)
-    encodeClearTexture(textures.blurredTexture, commandBuffer: commandBuffer)
+    encodeClearTexture(textures.adjustedTexture, commandBuffer: commandBuffer)
     renderViewportImage(renderImages.base, into: textures.baseTexture, commandBuffer: commandBuffer)
-    renderViewportImage(renderImages.blurred, into: textures.blurredTexture, commandBuffer: commandBuffer)
-    encodeCommittedStrokesForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
+    renderViewportImage(renderImages.adjusted, into: textures.adjustedTexture, commandBuffer: commandBuffer)
+    encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
 
     descriptor.colorAttachments[0].loadAction = .clear
     descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
@@ -1251,10 +1331,16 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    encoder.setRenderPipelineState(tileCompositePipeline)
+    var uniforms = renderImages.localEffect.compositeUniforms
+    encoder.setRenderPipelineState(localAdjustmentCompositePipeline)
+    encoder.setFragmentBytes(
+      &uniforms,
+      length: MemoryLayout<MetalBrushLocalAdjustmentCompositeUniforms>.stride,
+      index: 0
+    )
     encoder.setFragmentTexture(textures.maskTexture, index: 0)
     encoder.setFragmentTexture(textures.baseTexture, index: 1)
-    encoder.setFragmentTexture(textures.blurredTexture, index: 2)
+    encoder.setFragmentTexture(textures.adjustedTexture, index: 2)
     encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     encoder.endEncoding()
 
@@ -1330,7 +1416,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
         width: pixelWidth,
         height: pixelHeight
       ),
-      let blurredTexture = makeRenderTexture(
+      let adjustedTexture = makeRenderTexture(
         pixelFormat: .bgra8Unorm,
         width: pixelWidth,
         height: pixelHeight
@@ -1348,7 +1434,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
       baseTexture: baseTexture,
-      blurredTexture: blurredTexture,
+      adjustedTexture: adjustedTexture,
       maskTexture: maskTexture
     )
     viewportRenderTextures = textures
@@ -1375,14 +1461,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     return device.makeTexture(descriptor: descriptor)
   }
 
-  private func encodeCommittedStrokesForViewport(
+  private func encodeStrokeMaskForViewport(
     into texture: MTLTexture,
     commandBuffer: MTLCommandBuffer
   ) {
     let visible = visibleContentRect
     let viewportFrame = visibleCanvasFrame
     guard
-      committedStrokes.isEmpty == false,
+      hasRenderableStroke(in: visible),
       visible.width > 0, visible.height > 0,
       viewportFrame.width > 0, viewportFrame.height > 0,
       bounds.width > 0, bounds.height > 0
@@ -1409,23 +1495,13 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     encoder.setRenderPipelineState(brushPipeline)
 
-    for stroke in committedStrokes where stroke.bounds.intersects(visible) {
-      let radius = CGFloat(stroke.brush.size / 2)
+    func encode(stamps: [CGPoint], brush: MetalBrushSandboxBrush) {
+      let radius = CGFloat(brush.size / 2)
       let pixelRadius = Float(Double(radius) * Double((pixelScaleX + pixelScaleY) * 0.5))
-      let hardness = Float(stroke.brush.hardness)
-      let opacity = Float(stroke.brush.opacity)
+      let hardness = Float(brush.hardness)
+      let opacity = Float(brush.opacity)
 
-      for stamp in stroke.stamps {
-        let stampMinX = stamp.x - radius
-        let stampMinY = stamp.y - radius
-        let stampMaxX = stamp.x + radius
-        let stampMaxY = stamp.y + radius
-        if stampMaxX < visible.minX || stampMinX > visible.maxX
-          || stampMaxY < visible.minY || stampMinY > visible.maxY
-        {
-          continue
-        }
-
+      for stamp in stamps where stampIntersectsVisibleRect(stamp, radius: radius, visible: visible) {
         var uniforms = BrushUniforms(
           canvasSize: targetSize,
           center: SIMD2(
@@ -1442,13 +1518,46 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       }
     }
 
+    for stroke in committedStrokes where stroke.bounds.intersects(visible) {
+      encode(stamps: stroke.stamps, brush: stroke.brush)
+    }
+
+    if activeStrokeStamps.isEmpty == false {
+      encode(stamps: activeStrokeStamps, brush: brush)
+    }
+
     encoder.endEncoding()
   }
 
-  private func hasRenderableCommittedStroke(in canvasRect: CGRect) -> Bool {
-    committedStrokes.contains { stroke in
+  private func hasRenderableStroke(in canvasRect: CGRect) -> Bool {
+    if activeStrokeStamps.contains(where: {
+      stampIntersectsVisibleRect(
+        $0,
+        radius: CGFloat(brush.size / 2),
+        visible: canvasRect
+      )
+    }) {
+      return true
+    }
+
+    return committedStrokes.contains { stroke in
       stroke.bounds.intersects(canvasRect) && stroke.stamps.isEmpty == false
     }
+  }
+
+  private func stampIntersectsVisibleRect(
+    _ stamp: CGPoint,
+    radius: CGFloat,
+    visible: CGRect
+  ) -> Bool {
+    let stampMinX = stamp.x - radius
+    let stampMinY = stamp.y - radius
+    let stampMaxX = stamp.x + radius
+    let stampMaxY = stamp.y + radius
+    return stampMaxX >= visible.minX
+      && stampMinX <= visible.maxX
+      && stampMaxY >= visible.minY
+      && stampMinY <= visible.maxY
   }
 
   private func clearCurrentDrawable() {
@@ -1505,18 +1614,45 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 
-  fileprivate static func makeTileCompositePipeline(
+  private static func makeLocalAdjustmentCompositePipeline(
     device: MTLDevice,
     library: MTLLibrary
   ) throws -> MTLRenderPipelineState {
     let descriptor = MTLRenderPipelineDescriptor()
     descriptor.vertexFunction = library.makeFunction(name: "displayVertex")
-    descriptor.fragmentFunction = library.makeFunction(name: "tileCompositeFragment")
+    descriptor.fragmentFunction = library.makeFunction(name: "localAdjustmentCompositeFragment")
     descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
     return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 
   private static func makeShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
     try device.makeDefaultLibrary(bundle: .main)
+  }
+}
+
+private extension EditingStack.Edit.LocalAdjustmentEffect {
+
+  var usesShaderCompositeExposure: Bool {
+    switch self {
+    case .gaussianBlur:
+      return false
+    case .exposure:
+      return true
+    }
+  }
+
+  var compositeUniforms: MetalBrushLocalAdjustmentCompositeUniforms {
+    switch self {
+    case .gaussianBlur:
+      return .init(
+        effectKind: MetalBrushLocalAdjustmentCompositeEffectKind.texture.rawValue,
+        exposureValue: 0
+      )
+    case let .exposure(value):
+      return .init(
+        effectKind: MetalBrushLocalAdjustmentCompositeEffectKind.exposure.rawValue,
+        exposureValue: Float(value)
+      )
+    }
   }
 }

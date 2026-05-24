@@ -72,6 +72,7 @@ extension EditingStack {
 
     public enum LocalAdjustmentEffect: Equatable {
       case gaussianBlur(radius: CGFloat)
+      case exposure(value: Double)
     }
 
     public struct LocalAdjustmentMask: Equatable {

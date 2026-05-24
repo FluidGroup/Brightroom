@@ -18,6 +18,74 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     XCTAssertEqual(Self.rgba(in: sourceImage, x: 35, y: 10), Self.rgba(in: renderedImage, x: 35, y: 10))
   }
 
+  func testCropInteractionPreviewSkipsEditingEffects() throws {
+    let sourceImage = Self.makeSplitImage(
+      width: 40,
+      height: 20,
+      leftWhite: 0.25,
+      rightWhite: 0.75
+    )
+    let sourceCIImage = CIImage(cgImage: sourceImage)
+    var edit = EditingStack.Edit(
+      crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
+    )
+    var brightness = FilterBrightness()
+    brightness.value = 0.2
+    edit.filters.brightness = brightness
+    edit.localAdjustments = [
+      Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
+    ]
+
+    let editingPreview = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
+    let cropInteractionPreview = edit.makePreviewImage(
+      from: sourceCIImage,
+      purpose: .cropInteraction
+    )
+    let editingImage = try XCTUnwrap(
+      Self.context.createCGImage(editingPreview, from: sourceCIImage.extent)
+    )
+    let cropInteractionImage = try XCTUnwrap(
+      Self.context.createCGImage(cropInteractionPreview, from: sourceCIImage.extent)
+    )
+
+    XCTAssertGreaterThan(
+      Self.rgba(in: editingImage, x: 5, y: 10).red,
+      Self.rgba(in: sourceImage, x: 5, y: 10).red
+    )
+    XCTAssertEqual(
+      Self.rgba(in: sourceImage, x: 5, y: 10),
+      Self.rgba(in: cropInteractionImage, x: 5, y: 10)
+    )
+    XCTAssertEqual(
+      Self.rgba(in: sourceImage, x: 20, y: 10),
+      Self.rgba(in: cropInteractionImage, x: 20, y: 10)
+    )
+  }
+
+  func testExposureLocalAdjustmentAppliesOnlyInsideMask() throws {
+    let sourceImage = Self.makeSplitImage(
+      width: 40,
+      height: 20,
+      leftWhite: 0.25,
+      rightWhite: 0.25
+    )
+    let sourceCIImage = CIImage(cgImage: sourceImage)
+    let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10))
+
+    let renderedImage = try XCTUnwrap(
+      Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
+    )
+
+    XCTAssertEqual(
+      Self.rgba(in: sourceImage, x: 5, y: 10),
+      Self.rgba(in: renderedImage, x: 5, y: 10)
+    )
+    XCTAssertGreaterThan(
+      Self.rgba(in: renderedImage, x: 20, y: 10).red,
+      Self.rgba(in: sourceImage, x: 20, y: 10).red
+    )
+  }
+
   func testRendererAppliesLocalAdjustmentBeforeCrop() throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let imageSource = ImageSource(cgImage: sourceImage)
@@ -89,6 +157,23 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
   ) -> EditingStack.Edit.LocalAdjustmentLayer {
     .init(
       effect: .gaussianBlur(radius: radius),
+      mask: .init(
+        strokes: [
+          .init(
+            stamps: [center],
+            brush: .init(size: 18, hardness: 1, opacity: 1)
+          ),
+        ]
+      )
+    )
+  }
+
+  private static func makeExposureLayer(
+    value: Double,
+    center: CGPoint
+  ) -> EditingStack.Edit.LocalAdjustmentLayer {
+    .init(
+      effect: .exposure(value: value),
       mask: .init(
         strokes: [
           .init(

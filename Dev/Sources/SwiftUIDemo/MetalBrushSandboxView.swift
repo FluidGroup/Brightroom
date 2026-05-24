@@ -1,9 +1,4 @@
-import CoreImage
 import BrightroomEngine
-import IOSurface
-import MetalKit
-import os
-import simd
 import SwiftUI
 import UIKit
 
@@ -43,90 +38,22 @@ extension MetalBrushSandboxInteractionMode {
   }
 }
 
-enum MetalBrushSandboxRenderMode: String, CaseIterable, Identifiable {
-  case full
-  case filteredOnly
-  case viewportFilteredOnly
-  case viewportFull
-  case viewportCachedSource
-
-  var id: Self { self }
-
-  var title: String {
-    switch self {
-    case .full:
-      return "Full"
-    case .filteredOnly:
-      return "Filtered"
-    case .viewportFilteredOnly:
-      return "Viewport"
-    case .viewportFull:
-      return "VP Full"
-    case .viewportCachedSource:
-      return "VP Cached"
-    }
-  }
-}
-
-extension MetalBrushSandboxRenderMode {
-  var usesCommittedTiles: Bool {
-    switch self {
-    case .full, .filteredOnly:
-      return true
-    case .viewportFilteredOnly, .viewportFull, .viewportCachedSource:
-      return false
-    }
-  }
-
-  var usesViewportRenderer: Bool {
-    switch self {
-    case .full, .filteredOnly:
-      return false
-    case .viewportFilteredOnly, .viewportFull, .viewportCachedSource:
-      return true
-    }
-  }
-
-  var allowsDrawing: Bool {
-    switch self {
-    case .full, .filteredOnly:
-      return true
-    case .viewportFilteredOnly, .viewportFull, .viewportCachedSource:
-      return false
-    }
-  }
-
-  var usesLocalEffectRenderImages: Bool {
-    switch self {
-    case .full, .viewportFull, .viewportCachedSource:
-      return true
-    case .filteredOnly, .viewportFilteredOnly:
-      return false
-    }
-  }
-
-  var usesViewportCachedSource: Bool {
-    switch self {
-    case .viewportCachedSource:
-      return true
-    case .full, .filteredOnly, .viewportFilteredOnly, .viewportFull:
-      return false
-    }
-  }
-}
-
 struct MetalBrushSandboxView: View {
 
   @Environment(\.dismiss) private var dismiss
 
-  private let image: UIImage
+  private let source: MetalBrushSandboxSource
 
   init(image: UIImage = Asset.l1000316.image) {
-    self.image = image
+    self.source = .image(image)
+  }
+
+  init(fileURL: URL) {
+    self.source = .fileURL(fileURL)
   }
 
   var body: some View {
-    MetalBrushSandboxRepresentable(image: image)
+    MetalBrushSandboxRepresentable(source: source)
       .accessibilityIdentifier("metal-brush-sandbox-canvas")
     .navigationTitle("Metal Brush Sandbox")
     .navigationBarTitleDisplayMode(.inline)
@@ -148,15 +75,30 @@ struct MetalBrushSandboxMetrics: Equatable {
   var zoomScale: Double = 1
   var stampCount: Int = 0
   var strokeCount: Int = 0
+  var framesPerSecond: Double = 0
 }
 
 private struct MetalBrushSandboxRepresentable: UIViewRepresentable {
 
-  let image: UIImage
+  let source: MetalBrushSandboxSource
 
   func makeUIView(context: Context) -> MetalBrushSandboxRootView {
-    MetalBrushSandboxRootView(image: image)
+    MetalBrushSandboxRootView(source: source)
   }
 
   func updateUIView(_ uiView: MetalBrushSandboxRootView, context: Context) {}
+}
+
+enum MetalBrushSandboxSource {
+  case image(UIImage)
+  case fileURL(URL)
+
+  func makeImageProvider() -> ImageProvider {
+    switch self {
+    case let .image(image):
+      return .init(image: image)
+    case let .fileURL(fileURL):
+      return try! .init(fileURL: fileURL)
+    }
+  }
 }

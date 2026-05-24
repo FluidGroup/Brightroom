@@ -24,8 +24,21 @@ import UIKit
 
 extension EditingStack.Edit {
 
-  func makePreviewImage(from sourceImage: CIImage) -> CIImage {
-    applyLocalAdjustments(to: filters.apply(to: sourceImage))
+  public enum PreviewPurpose: Sendable {
+    case editing
+    case cropInteraction
+  }
+
+  public func makePreviewImage(
+    from sourceImage: CIImage,
+    purpose: PreviewPurpose = .editing
+  ) -> CIImage {
+    switch purpose {
+    case .editing:
+      applyLocalAdjustments(to: filters.apply(to: sourceImage))
+    case .cropInteraction:
+      sourceImage
+    }
   }
 
   func applyLocalAdjustments(to image: CIImage) -> CIImage {
@@ -45,7 +58,7 @@ extension EditingStack.Edit.LocalAdjustmentLayer {
     let extent = image.extent
     let imageInZeroOrigin = image.removingExtentOffset()
     let adjustedImage = effect
-      .apply(to: imageInZeroOrigin)
+      .apply(to: imageInZeroOrigin, previewScale: 1)
       .cropped(to: CGRect(origin: .zero, size: extent.size))
 
     guard let maskImage = mask.makeCIImage(size: extent.size) else {
@@ -72,10 +85,23 @@ extension EditingStack.Edit.LocalAdjustmentLayer {
 
 extension EditingStack.Edit.LocalAdjustmentEffect {
 
-  func apply(to image: CIImage) -> CIImage {
+  public var isActive: Bool {
     switch self {
     case let .gaussianBlur(radius):
-      guard radius > 0.01 else {
+      return radius > 0.01
+    case let .exposure(value):
+      return abs(value) > 0.001
+    }
+  }
+
+  public func apply(
+    to image: CIImage,
+    previewScale: CGFloat = 1
+  ) -> CIImage {
+    switch self {
+    case let .gaussianBlur(radius):
+      let scaledRadius = radius * max(previewScale, 0.0001)
+      guard scaledRadius > 0.01 else {
         return image
       }
 
@@ -83,9 +109,19 @@ extension EditingStack.Edit.LocalAdjustmentEffect {
         .clamped(to: image.extent)
         .applyingFilter(
           "CIGaussianBlur",
-          parameters: [kCIInputRadiusKey: radius]
+          parameters: [kCIInputRadiusKey: scaledRadius]
         )
         .cropped(to: image.extent)
+
+    case let .exposure(value):
+      guard abs(value) > 0.001 else {
+        return image
+      }
+
+      return image.applyingFilter(
+        "CIExposureAdjust",
+        parameters: [kCIInputEVKey: value]
+      )
     }
   }
 }
