@@ -323,6 +323,53 @@ rectangular tile regions.
 Reusing `CIFilter` instances can reduce object churn, but it is a secondary
 optimization and must not leak mutable filter state across concurrent renders.
 
+### Core Image Composite Experiment
+
+The Sandbox now has two local-adjustment composite renderers:
+
+- `Metal`: render base and adjusted images into viewport textures, rasterize the
+  mask texture, then run a Metal fragment shader for the final mask blend;
+- `CI`: rasterize only the mask texture with Metal, wrap that texture as a
+  `CIImage`, build the base/effect/mask blend as one Core Image graph using
+  `CIBlendWithAlphaMask`, then render that graph directly to the drawable.
+
+The CI path intentionally gives Core Image a larger graph so it can apply its
+own ROI, pruning, filter concatenation, and intermediate scheduling. This is a
+diagnostic experiment, not yet a product decision. It should answer whether the
+manual base/adjusted texture materialization in the Metal path is preventing
+Core Image from optimizing local adjustment composition.
+
+Validation should use `CI_PRINT_TREE`:
+
+- graph type `2` to inspect Core Image's optimized graph;
+- graph type `4` to inspect GPU program concatenation and intermediate buffers;
+- compare Exposure and Blur separately, because per-pixel effects can
+  concatenate more aggressively than radius-based effects;
+- verify whether mask bounds and visible viewport bounds reduce the ROI before
+  expensive filters run.
+
+Initial observation: launching `SwiftUIDemo` with `CI_PRINT_TREE=4` and drawing
+an Exposure stroke in the NASA sandbox prints a `MetalBrushSandboxCanvas`
+program graph whose final render contains `_blendWithAlphaMask` and the exposure
+color-matrix work in the Core Image program path. That is evidence that the CI
+diagnostic mode is exercising the intended graph. It is not yet proof that this
+is always faster than the Metal baseline, because the remaining ROI and
+intermediate behavior still needs to be compared across Exposure and Blur.
+
+The CI path also owns the first explicit per-layer viewport caches:
+
+- base layer cache: viewport source plus global filters rendered into a
+  viewport-sized Metal texture;
+- local layer cache: the selected local adjustment effect rendered from the
+  cached base layer into another viewport-sized Metal texture.
+
+These caches are invalidated by source/filter changes, local effect changes,
+viewport changes, and drawable size changes. Brush, mask, and committed-stroke
+changes do not invalidate them, so local mask editing can reuse the base and
+adjusted layers while only re-rasterizing the mask and running the final
+`CIBlendWithAlphaMask` composite. The Metal composite mode intentionally does
+not use these caches; it remains a diagnostic baseline.
+
 The v1 contract is:
 
 - The render graph owns any reusable filter instances.
@@ -481,10 +528,14 @@ Expected behavior:
 - filter and blur slider changes reuse the same viewport-sized source texture;
 - global filters run against the small `CIImage(mtlTexture:)` source rather
   than the original large image graph;
-- local adjustment effects and mask composite stay in viewport-sized textures;
+- local adjustment effects and mask composite stay in viewport-sized work;
 - radius-based effects scale their radius into viewport pixel space.
-- per-pixel local Exposure is computed in the Metal composite shader instead of
-  rendering a separate Core Image adjusted texture on every viewport draw.
+- in `Metal` composite mode, per-pixel local Exposure is computed in the Metal
+  composite shader instead of rendering a separate Core Image adjusted texture
+  on every viewport draw;
+- in `CI` composite mode, Exposure is kept inside the Core Image graph so
+  `CI_PRINT_TREE` can show whether Core Image concatenates the exposure and mask
+  blend into fewer passes.
 
 Drawing behavior:
 
@@ -627,6 +678,8 @@ prove the viewport cached preview. Meaningful automation should cover:
   happened at the expected pixel sizes.
 - the NASA Sandbox entry maintains stable draw-call FPS while panning, zooming,
   and adjusting Exposure with no committed local mask.
+- `Metal` and `CI` composite modes produce matching mask placement and similar
+  color for Blur and Exposure at fit and after zooming.
 
 ## Acceptance Criteria
 
@@ -654,5 +707,8 @@ prove the viewport cached preview. Meaningful automation should cover:
   `RadiusCalculator`-style scaling policy with global filters.
 - Whether global filters should move to reusable `CIFilter` instances inside a
   canvas render graph after profiling confirms object churn is meaningful.
+- Whether the `CI` composite path should replace the current Metal final-blend
+  shader, or whether the Metal path should remain for effects that cannot be
+  expressed efficiently as a Core Image graph.
 - How to share this canvas with PixelEditor and PhotosCrop without coupling those
   products to Sandbox-only debug controls.

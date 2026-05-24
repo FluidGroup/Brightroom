@@ -93,7 +93,7 @@ final class MetalBrushSandboxRootView: UIView {
     self.values = values
 
     switch change {
-    case .interactionMode, .localEffect, .brush, .smoothing:
+    case .interactionMode, .localEffect, .brush, .smoothing, .compositeRenderer:
       applyHostConfiguration()
 
     case .exposure:
@@ -109,6 +109,7 @@ final class MetalBrushSandboxRootView: UIView {
     hostView?.configure(
       interactionMode: values.interactionMode,
       localEffect: values.localAdjustmentEffect,
+      compositeRenderer: values.compositeRenderer,
       brush: values.brush,
       smoothing: values.smoothing
     )
@@ -139,6 +140,7 @@ struct MetalBrushSandboxControlValues: Equatable {
   var smoothingAlgorithm: MetalBrushStrokeSmoothingAlgorithm = .bezier
   var smoothingStrength: Double = 0.85
   var interactionMode: MetalBrushSandboxInteractionMode = .draw
+  var compositeRenderer: MetalBrushSandboxCompositeRenderer = .coreImage
 
   var brush: MetalBrushSandboxBrush {
     .init(
@@ -182,9 +184,26 @@ enum MetalBrushSandboxLocalEffectKind: String, CaseIterable, Identifiable {
   }
 }
 
+enum MetalBrushSandboxCompositeRenderer: String, CaseIterable, Identifiable {
+  case metal
+  case coreImage
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .metal:
+      return "Metal"
+    case .coreImage:
+      return "CI"
+    }
+  }
+}
+
 enum MetalBrushSandboxControlChange {
   case interactionMode
   case localEffect
+  case compositeRenderer
   case exposure
   case localEffectValue
   case brush
@@ -207,6 +226,7 @@ final class MetalBrushSandboxControlsView: UIView {
   private let fpsMetricsLabel = UILabel()
   private let modeControl = UISegmentedControl(items: MetalBrushSandboxInteractionMode.allCases.map(\.title))
   private let localEffectControl = UISegmentedControl(items: MetalBrushSandboxLocalEffectKind.allCases.map(\.title))
+  private let compositeRendererControl = UISegmentedControl(items: MetalBrushSandboxCompositeRenderer.allCases.map(\.title))
   private let smoothingControl = UISegmentedControl(items: MetalBrushStrokeSmoothingAlgorithm.allCases.map(\.title))
   private let exposureRow = MetalBrushSandboxSliderRow(
     title: "Exposure",
@@ -286,6 +306,7 @@ final class MetalBrushSandboxControlsView: UIView {
     self.values = values
     modeControl.selectedSegmentIndex = MetalBrushSandboxInteractionMode.allCases.firstIndex(of: values.interactionMode) ?? 0
     localEffectControl.selectedSegmentIndex = MetalBrushSandboxLocalEffectKind.allCases.firstIndex(of: values.localEffectKind) ?? 0
+    compositeRendererControl.selectedSegmentIndex = MetalBrushSandboxCompositeRenderer.allCases.firstIndex(of: values.compositeRenderer) ?? 0
     smoothingControl.selectedSegmentIndex = MetalBrushStrokeSmoothingAlgorithm.allCases.firstIndex(of: values.smoothingAlgorithm) ?? 0
     exposureRow.value = values.exposure
     smoothingStrengthRow.value = values.smoothingStrength
@@ -338,6 +359,7 @@ final class MetalBrushSandboxControlsView: UIView {
 
     modeControl.accessibilityIdentifier = "metal-brush-interaction-mode"
     localEffectControl.accessibilityIdentifier = "metal-brush-local-effect"
+    compositeRendererControl.accessibilityIdentifier = "metal-brush-composite-renderer"
     smoothingControl.accessibilityIdentifier = "metal-brush-smoothing"
 
     let resetRow = UIStackView(arrangedSubviews: [UIView(), resetButton])
@@ -347,6 +369,7 @@ final class MetalBrushSandboxControlsView: UIView {
     stackView.addArrangedSubview(metricsStackView)
     stackView.addArrangedSubview(modeControl)
     stackView.addArrangedSubview(localEffectControl)
+    stackView.addArrangedSubview(compositeRendererControl)
     stackView.addArrangedSubview(smoothingControl)
     stackView.addArrangedSubview(exposureRow)
     stackView.addArrangedSubview(smoothingStrengthRow)
@@ -374,6 +397,7 @@ final class MetalBrushSandboxControlsView: UIView {
     resetButton.addTarget(self, action: #selector(resetButtonDidTap), for: .touchUpInside)
     modeControl.addTarget(self, action: #selector(modeControlDidChange), for: .valueChanged)
     localEffectControl.addTarget(self, action: #selector(localEffectControlDidChange), for: .valueChanged)
+    compositeRendererControl.addTarget(self, action: #selector(compositeRendererControlDidChange), for: .valueChanged)
     smoothingControl.addTarget(self, action: #selector(smoothingControlDidChange), for: .valueChanged)
 
     exposureRow.onValueChange = { [weak self] value in
@@ -426,6 +450,12 @@ final class MetalBrushSandboxControlsView: UIView {
     values.localEffectKind = MetalBrushSandboxLocalEffectKind.allCases[safe: localEffectControl.selectedSegmentIndex] ?? .blur
     updateLocalEffectRows()
     publish(.localEffect)
+  }
+
+  @objc
+  private func compositeRendererControlDidChange() {
+    values.compositeRenderer = MetalBrushSandboxCompositeRenderer.allCases[safe: compositeRendererControl.selectedSegmentIndex] ?? .coreImage
+    publish(.compositeRenderer)
   }
 
   @objc
