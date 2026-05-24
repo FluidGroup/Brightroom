@@ -40,6 +40,35 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View, ActiveTick: View>: V
   @State private var lastEmittedValue: Double?
   @State private var coordinateSpaceName = "BrightroomSteppedSlider.\(UUID().uuidString)"
 
+  init(
+    value: Binding<Double>,
+    range: ClosedRange<Double>,
+    stepCount: Int,
+    style: BrightroomSteppedSliderStyle,
+    transform: @escaping (Double) -> Double,
+    hapticIdentity: @escaping (Double) -> AnyHashable?,
+    onHaptic: @escaping () -> Void,
+    @ViewBuilder topMarker: @escaping (BrightroomSteppedSliderTickContext) -> TopMarker,
+    @ViewBuilder tick: @escaping (BrightroomSteppedSliderTickContext) -> Tick,
+    @ViewBuilder activeTick: @escaping (BrightroomSteppedSliderTickContext) -> ActiveTick
+  ) {
+    self._value = value
+    self.range = range
+    self.stepCount = stepCount
+    self.style = style
+    self.transform = transform
+    self.hapticIdentity = hapticIdentity
+    self.onHaptic = onHaptic
+    self.topMarker = topMarker
+    self.tick = tick
+    self.activeTick = activeTick
+    self._scrollIndex = State(initialValue: Self.index(
+      for: value.wrappedValue,
+      range: range,
+      stepCount: stepCount
+    ))
+  }
+
   var body: some View {
     GeometryReader { proxy in
       ZStack {
@@ -69,9 +98,6 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View, ActiveTick: View>: V
         .mask(BrightroomSteppedSliderMask())
         .coordinateSpace(name: coordinateSpaceName)
       }
-    }
-    .onAppear {
-      scrollIndex = index(for: value)
     }
     .onChange(of: value) { _, newValue in
       if let lastEmittedValue, Self.isEquivalent(newValue, to: lastEmittedValue) {
@@ -118,6 +144,10 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View, ActiveTick: View>: V
   }
 
   private func rawValue(for index: Int) -> Double {
+    guard stepCount > 0 else {
+      return range.lowerBound
+    }
+
     let ratio = Double(index) / Double(stepCount)
     return range.lowerBound + (range.upperBound - range.lowerBound) * ratio
   }
@@ -127,13 +157,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View, ActiveTick: View>: V
   }
 
   private func index(for value: Double) -> Int {
-    guard range.lowerBound != range.upperBound else {
-      return 0
-    }
-
-    let ratio = ((value - range.lowerBound) / (range.upperBound - range.lowerBound))
-      .clamped(to: 0...1)
-    return Int((ratio * Double(stepCount)).rounded())
+    Self.index(for: value, range: range, stepCount: stepCount)
   }
 
   private func triggerHapticIfNeeded(for value: Double) {
@@ -152,6 +176,20 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View, ActiveTick: View>: V
 
   nonisolated private static func isEquivalent(_ lhs: Double, to rhs: Double) -> Bool {
     abs(lhs - rhs) < 0.000_001
+  }
+
+  nonisolated private static func index(
+    for value: Double,
+    range: ClosedRange<Double>,
+    stepCount: Int
+  ) -> Int {
+    guard stepCount > 0, range.lowerBound != range.upperBound else {
+      return 0
+    }
+
+    let ratio = ((value - range.lowerBound) / (range.upperBound - range.lowerBound))
+      .clamped(to: 0...1)
+    return Int((ratio * Double(stepCount)).rounded())
   }
 }
 
