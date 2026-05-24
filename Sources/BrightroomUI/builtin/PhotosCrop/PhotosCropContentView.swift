@@ -65,92 +65,73 @@ struct PhotosCropContentView: View {
     let loadedState = editingStack.loadedState
     let originalAspectRatio = loadedState.map { PixelAspectRatio($0.imageSize) }
     let isLoaded = loadedState != nil
-    let topBarHeight: CGFloat = 44
     let bottomControlHeight: CGFloat = 112
-    let bottomBarHeight: CGFloat = 50
+    let bottomControlMaxWidth: CGFloat = 560
 
-    ZStack {
-      Color.black
-        .ignoresSafeArea()
+    NavigationStack {
+      ZStack {
+        Color.black
+          .ignoresSafeArea()
 
-      VStack(spacing: 0) {
-        Spacer(minLength: topBarHeight)
-          .fixedSize()
+        VStack(spacing: 0) {
+          SwiftUICropView(
+            editingStack: editingStack,
+            isAutoApplyEditingStackEnabled: true
+          )
+          .rotation($rotation)
+          .adjustmentAngle($adjustmentAngle)
+          .croppingAspectRatio(croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio))
+          .registerResetAction(resetAction)
+          .registerRotateAction(rotateAction)
+          .registerApplyAction(applyAction)
+          .layoutPriority(1)
 
-        SwiftUICropView(
-          editingStack: editingStack,
-          isAutoApplyEditingStackEnabled: true
-        )
-        .rotation($rotation)
-        .adjustmentAngle($adjustmentAngle)
-        .croppingAspectRatio(croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio))
-        .registerResetAction(resetAction)
-        .registerRotateAction(rotateAction)
-        .registerApplyAction(applyAction)
-        .layoutPriority(1)
-
-        Spacer(minLength: bottomControlHeight + bottomBarHeight)
-          .fixedSize()
+          PhotosCropAdjustmentControl(
+            originalAspectRatio: originalAspectRatio,
+            aspectRatioSelection: aspectRatioSelection,
+            localizedStrings: localizedStrings,
+            adjustmentAngle: adjustmentAngle,
+            isSelectingAspectRatio: isSelectingAspectRatio,
+            isLoaded: isLoaded,
+            onSelectAspectRatio: selectAspectRatio,
+            onSetAdjustmentAngle: setAdjustmentAngle
+          )
+          .frame(maxWidth: bottomControlMaxWidth)
+          .frame(maxWidth: .infinity)
+          .frame(height: bottomControlHeight)
+        }
       }
-
-      VStack(spacing: 0) {
-        PhotosCropTopBar(
+      .navigationTitle("")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
+      .toolbar {
+        PhotosCropToolbar(
           resetTitle: localizedStrings.button_reset_title,
-          isEnabled: isLoaded,
+          cancelTitle: localizedStrings.button_cancel_title,
+          doneTitle: localizedStrings.button_done_title,
+          isLoaded: isLoaded,
           hasChanges: loadedState?.isDirty ?? false,
+          isDoneEnabled: isLoaded,
           isAspectRatioControlAvailable: isAspectRatioControlAvailable,
           isSelectingAspectRatio: isSelectingAspectRatio,
           onRotate: rotate,
           onReset: reset,
-          onToggleAspectRatio: toggleAspectRatioControl
-        )
-        .frame(height: topBarHeight)
-        .padding(.horizontal, 16)
-
-        Spacer(minLength: 0)
-
-        Group {
-          if isSelectingAspectRatio && originalAspectRatio != nil {
-            PhotosCropAspectRatioPicker(
-              originalAspectRatio: originalAspectRatio,
-              selection: aspectRatioSelection,
-              localizedStrings: localizedStrings,
-              onSelect: selectAspectRatio
-            )
-            .transition(.opacity)
-          } else {
-            PhotosCropRotationSlider(
-              value: adjustmentAngle?.degrees ?? 0,
-              isEnabled: isLoaded,
-              onChange: setAdjustmentAngle
-            )
-            .transition(.opacity)
-          }
-        }
-        .frame(height: bottomControlHeight)
-        .animation(.spring(response: 0.35, dampingFraction: 1), value: isSelectingAspectRatio)
-
-        PhotosCropBottomBar(
-          cancelTitle: localizedStrings.button_cancel_title,
-          doneTitle: localizedStrings.button_done_title,
-          isDoneEnabled: isLoaded,
+          onToggleAspectRatio: toggleAspectRatioControl,
           onCancel: onCancel,
           onDone: finish
         )
-        .frame(height: bottomBarHeight)
-        .padding(.horizontal, 16)
       }
-    }
-    .foregroundStyle(.white)
-    .task {
-      editingStack.start()
-    }
-    .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
-      if isAvailable == false {
-        isSelectingAspectRatio = false
+      .foregroundStyle(.white)
+      .task {
+        editingStack.start()
       }
+      .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
+        if isAvailable == false {
+          isSelectingAspectRatio = false
+        }
+      }
+      .accessibilityIdentifier("photos.crop")
     }
-    .accessibilityIdentifier("photos.crop")
   }
 
   private var isAspectRatioControlAvailable: Bool {
@@ -209,99 +190,193 @@ struct PhotosCropContentView: View {
   }
 }
 
-private struct PhotosCropTopBar: View {
+private struct PhotosCropToolbar: ToolbarContent {
 
   let resetTitle: String
-  let isEnabled: Bool
+  let cancelTitle: String
+  let doneTitle: String
+  let isLoaded: Bool
   let hasChanges: Bool
+  let isDoneEnabled: Bool
   let isAspectRatioControlAvailable: Bool
   let isSelectingAspectRatio: Bool
   let onRotate: () -> Void
   let onReset: () -> Void
   let onToggleAspectRatio: () -> Void
+  let onCancel: () -> Void
+  let onDone: () -> Void
 
-  var body: some View {
-    HStack {
-      Button(action: onRotate) {
-        Image(systemName: "rotate.left")
-          .font(.system(size: 22, weight: .regular))
-          .symbolRenderingMode(.monochrome)
-          .foregroundStyle(Color(white: 0.6))
+  var body: some ToolbarContent {
+    ToolbarItem(placement: .topBarLeading) {
+      PhotosCropToolbarIconButton(
+        systemName: "rotate.left",
+        accessibilityLabel: "Rotate",
+        accessibilityIdentifier: "photos.crop.rotate",
+        isEnabled: isLoaded,
+        isHighlighted: false,
+        action: onRotate
+      )
+    }
+
+    ToolbarItem(placement: .principal) {
+      if hasChanges {
+        PhotosCropToolbarTextButton(
+          title: resetTitle,
+          accessibilityIdentifier: "photos.crop.reset",
+          isEnabled: isLoaded,
+          role: .highlighted,
+          minWidth: nil,
+          action: onReset
+        )
+      } else {
+        Color.clear
           .frame(width: 44, height: 44)
+          .accessibilityHidden(true)
       }
-      .buttonStyle(.plain)
-      .disabled(!isEnabled)
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel("Rotate")
-      .accessibilityIdentifier("photos.crop.rotate")
+    }
 
-      Spacer()
-
-      Group {
-        if hasChanges {
-          Button(action: onReset) {
-            Text(resetTitle)
-              .font(.system(size: 14))
-              .foregroundStyle(Color(uiColor: .systemYellow))
-          }
-          .buttonStyle(.plain)
-          .disabled(!isEnabled)
-          .accessibilityIdentifier("photos.crop.reset")
-        } else {
-          Color.clear
-            .frame(width: 44, height: 44)
-            .accessibilityHidden(true)
-        }
-      }
-
-      Spacer()
-
-      Button(action: onToggleAspectRatio) {
-        Image(systemName: "aspectratio")
-          .font(.system(size: 22, weight: .regular))
-          .symbolRenderingMode(.monochrome)
-          .foregroundStyle(isSelectingAspectRatio ? Color(uiColor: .systemYellow) : Color(white: 0.6))
-          .frame(width: 44, height: 44)
-      }
-      .buttonStyle(.plain)
+    ToolbarItem(placement: .topBarTrailing) {
+      PhotosCropToolbarIconButton(
+        systemName: "aspectratio",
+        accessibilityLabel: "Aspect Ratio",
+        accessibilityIdentifier: "photos.crop.aspect",
+        isEnabled: isLoaded && isAspectRatioControlAvailable,
+        isHighlighted: isSelectingAspectRatio,
+        action: onToggleAspectRatio
+      )
       .opacity(isAspectRatioControlAvailable ? 1 : 0)
-      .disabled(!isEnabled || !isAspectRatioControlAvailable)
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel("Aspect Ratio")
-      .accessibilityIdentifier("photos.crop.aspect")
+    }
+
+    ToolbarItemGroup(placement: .bottomBar) {
+      PhotosCropToolbarTextButton(
+        title: cancelTitle,
+        accessibilityIdentifier: "photos.crop.cancel",
+        isEnabled: true,
+        role: .normal,
+        minWidth: 72,
+        action: onCancel
+      )
+
+      Spacer()
+
+      PhotosCropToolbarTextButton(
+        title: doneTitle,
+        accessibilityIdentifier: "photos.crop.done",
+        isEnabled: isDoneEnabled,
+        role: .highlighted,
+        minWidth: 72,
+        action: onDone
+      )
     }
   }
 }
 
-private struct PhotosCropBottomBar: View {
+private struct PhotosCropToolbarIconButton: View {
 
-  let cancelTitle: String
-  let doneTitle: String
-  let isDoneEnabled: Bool
-  let onCancel: () -> Void
-  let onDone: () -> Void
+  let systemName: String
+  let accessibilityLabel: String
+  let accessibilityIdentifier: String
+  let isEnabled: Bool
+  let isHighlighted: Bool
+  let action: () -> Void
 
   var body: some View {
-    HStack {
-      Button(action: onCancel) {
-        Text(cancelTitle)
-          .font(.system(size: 17))
-          .foregroundStyle(.white)
-      }
-      .buttonStyle(.plain)
-      .accessibilityIdentifier("photos.crop.cancel")
-
-      Spacer()
-
-      Button(action: onDone) {
-        Text(doneTitle)
-          .font(.system(size: 17))
-          .foregroundStyle(isDoneEnabled ? Color(uiColor: .systemYellow) : Color(uiColor: .darkGray))
-      }
-      .buttonStyle(.plain)
-      .disabled(!isDoneEnabled)
-      .accessibilityIdentifier("photos.crop.done")
+    Button(action: action) {
+      Image(systemName: systemName)
+        .font(.system(size: 17, weight: .regular))
+        .imageScale(.medium)
+        .symbolRenderingMode(.monochrome)
+        .foregroundStyle(isHighlighted ? Color(uiColor: .systemYellow) : Color(white: 0.6))
     }
+    .buttonStyle(.plain)
+    .controlSize(.small)
+    .disabled(!isEnabled)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(accessibilityLabel)
+    .accessibilityIdentifier(accessibilityIdentifier)
+  }
+}
+
+private struct PhotosCropToolbarTextButton: View {
+
+  enum Role {
+    case normal
+    case highlighted
+  }
+
+  let title: String
+  let accessibilityIdentifier: String
+  let isEnabled: Bool
+  let role: Role
+  let minWidth: CGFloat?
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(.system(size: fontSize))
+        .foregroundStyle(foregroundStyle)
+        .frame(minWidth: minWidth, minHeight: 44)
+    }
+    .buttonStyle(.plain)
+    .disabled(!isEnabled)
+    .accessibilityIdentifier(accessibilityIdentifier)
+  }
+
+  private var fontSize: CGFloat {
+    switch role {
+    case .normal:
+      return 17
+    case .highlighted:
+      return 16
+    }
+  }
+
+  private var foregroundStyle: Color {
+    guard isEnabled else {
+      return Color(uiColor: .darkGray)
+    }
+
+    switch role {
+    case .normal:
+      return .white
+    case .highlighted:
+      return Color(uiColor: .systemYellow)
+    }
+  }
+}
+
+private struct PhotosCropAdjustmentControl: View {
+
+  let originalAspectRatio: PixelAspectRatio?
+  let aspectRatioSelection: PhotosCropAspectRatioSelection
+  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let adjustmentAngle: EditingCrop.AdjustmentAngle?
+  let isSelectingAspectRatio: Bool
+  let isLoaded: Bool
+  let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
+  let onSetAdjustmentAngle: (Double) -> Void
+
+  var body: some View {
+    Group {
+      if isSelectingAspectRatio, let originalAspectRatio {
+        PhotosCropAspectRatioPicker(
+          originalAspectRatio: originalAspectRatio,
+          selection: aspectRatioSelection,
+          localizedStrings: localizedStrings,
+          onSelect: onSelectAspectRatio
+        )
+        .transition(.opacity)
+      } else {
+        PhotosCropRotationSlider(
+          value: adjustmentAngle?.degrees ?? 0,
+          isEnabled: isLoaded,
+          onChange: onSetAdjustmentAngle
+        )
+        .transition(.opacity)
+      }
+    }
+    .animation(.spring(response: 0.35, dampingFraction: 1), value: isSelectingAspectRatio)
   }
 }
 
