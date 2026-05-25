@@ -127,7 +127,7 @@ struct BrightroomSteppedSliderConfiguration<TopMarker: View, Tick: View> {
   }
 
   var contentHeight: CGFloat {
-    style.activeTickHeight + 9
+    style.contentHeight
   }
 
   func tickContext(for index: Int) -> BrightroomSteppedSliderTickContext {

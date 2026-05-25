@@ -517,7 +517,15 @@ private struct PixelEditorControlPanel: View {
     case .root:
       setDetailControlVisible(false, animated: animated)
 
-    case .crop, .masking, .filter(_):
+    case .crop:
+      if route != presentedDetailRoute || !isDetailControlVisible {
+        detailEntryRevision = nil
+        detailSessionID += 1
+      }
+      presentedDetailRoute = route
+      setDetailControlVisible(true, animated: animated)
+
+    case .masking, .filter(_):
       if route != presentedDetailRoute || !isDetailControlVisible {
         detailEntryRevision = viewModel.editingStack.currentRevision
         detailSessionID += 1
@@ -601,9 +609,6 @@ private struct PixelEditorRootControl: View {
         .accessibilityIdentifier("swiftui.pixel.edit")
       }
       .frame(height: 50)
-    }
-    .onAppear {
-      viewModel.setMode(.preview)
     }
   }
 }
@@ -794,7 +799,6 @@ private struct PixelEditorMaskControl: View {
   var body: some View {
     VStack(spacing: 0) {
       VStack(spacing: 16) {
-
         Circle()
           .fill(PixelEditorColor.primary)
           .stroke(PixelEditorColor.primary, lineWidth: 1)
@@ -802,18 +806,14 @@ private struct PixelEditorMaskControl: View {
           .frame(width: brushSize, height: brushSize)
           .frame(width: 50, height: 50)
 
-        HStack(spacing: 10) {
-
-          PixelEditorBrushSizeSlider(
-            value: brushSize,
-            onChange: { size in
-              viewModel.setBrushSize(size)
-            }
-          )
-          .frame(maxWidth: .infinity)
-          .frame(height: 44)
-
-        }
+        PixelEditorBrushSizeSlider(
+          value: brushSize,
+          onChange: { size in
+            viewModel.setBrushSize(size)
+          }
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
         .padding(.horizontal, 36)
 
         Button(viewModel.localizedStrings.clear) {
@@ -822,7 +822,6 @@ private struct PixelEditorMaskControl: View {
         }
         .font(.system(size: 17, weight: .bold))
         .foregroundStyle(PixelEditorColor.primary)
-
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -1641,13 +1640,6 @@ private extension Int {
 
   func clamped(to range: ClosedRange<Int>) -> Int {
     Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
-  }
-}
-
-private extension ClosedRange where Bound == Double {
-
-  var length: Double {
-    upperBound - lowerBound
   }
 }
 

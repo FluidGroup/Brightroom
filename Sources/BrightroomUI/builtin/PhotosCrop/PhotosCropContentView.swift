@@ -419,7 +419,6 @@ private struct PhotosCropRotationSlider: View {
       }
     )
     .tint(.white)
-    .accentColor(.white)
     .frame(height: 50)
     .padding(.horizontal, 24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
