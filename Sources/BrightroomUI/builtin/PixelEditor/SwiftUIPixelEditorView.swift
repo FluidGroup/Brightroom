@@ -128,6 +128,12 @@ private enum PixelEditorLayout {
   static let controlHorizontalMargin: CGFloat = 44
 }
 
+private enum PixelEditorControlAnimation {
+  static let panelChange = Animation.spring(response: 0.28, dampingFraction: 0.92)
+  static let blurRadius: CGFloat = 5
+  static let slideDistance: CGFloat = 12
+}
+
 private enum PixelEditorColor {
   static let background = Color(uiColor: .systemBackground)
   static let primary = Color(uiColor: .label)
@@ -248,6 +254,17 @@ private extension View {
 #else
     self
 #endif
+  }
+
+  func pixelEditorControlPresentation(
+    isVisible: Bool,
+    hiddenOffsetY: CGFloat = PixelEditorControlAnimation.slideDistance
+  ) -> some View {
+    self
+      .opacity(isVisible ? 1 : 0)
+      .blur(radius: isVisible ? 0 : PixelEditorControlAnimation.blurRadius)
+      .offset(y: isVisible ? 0 : hiddenOffsetY)
+      .animation(PixelEditorControlAnimation.panelChange, value: isVisible)
   }
 }
 
@@ -387,68 +404,153 @@ private struct PixelEditorControlPanel: View {
   @Binding var route: PixelEditorControlRoute
   @Binding var displayedRootPanel: PixelEditorRootPanel
 
+  @State private var presentedDetailRoute: PixelEditorControlRoute?
+  @State private var isDetailControlVisible = false
+  @State private var detailEntryRevision: EditingStack.Revision?
+  @State private var detailSessionID = 0
+
   var body: some View {
-    ZStack {
-      switch route {
-      case .root:
-        PixelEditorRootControl(
-          viewModel: viewModel,
-          displayedPanel: $displayedRootPanel,
-          onSelectRoute: showRoute
-        )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+    ZStack(alignment: .bottom) {
+      PixelEditorRootControl(
+        viewModel: viewModel,
+        displayedPanel: $displayedRootPanel,
+        onSelectRoute: showRoute
+      )
+      .pixelEditorControlPresentation(isVisible: !isDetailControlVisible)
+      .allowsHitTesting(route == .root)
+      .accessibilityHidden(route != .root)
 
-      case .crop:
-        PixelEditorCropControl(
-          viewModel: viewModel,
-          onCancel: {
-            viewModel.endCrop(save: false)
-            showRoute(.root)
-          },
-          onDone: {
-            viewModel.endCrop(save: true)
-            showRoute(.root)
-          }
-        )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-
-      case .masking:
-        PixelEditorMaskControl(
-          viewModel: viewModel,
-          onCancel: {
-            viewModel.endMasking(save: false)
-            showRoute(.root)
-          },
-          onDone: {
-            viewModel.endMasking(save: true)
-            showRoute(.root)
-          }
-        )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-
-      case let .filter(kind):
-        PixelEditorFilterControl(
-          viewModel: viewModel,
-          kind: kind,
-          onCancel: {
-            viewModel.editingStack.revertEdit()
-            showRoute(.root)
-          },
-          onDone: {
-            viewModel.editingStack.takeSnapshot()
-            showRoute(.root)
-          }
-        )
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+      if let presentedDetailRoute {
+        detailControl(for: presentedDetailRoute)
+          .id(detailSessionID)
+          .pixelEditorControlPresentation(isVisible: isDetailControlVisible)
+          .allowsHitTesting(route != .root)
+          .accessibilityHidden(route == .root)
       }
     }
-    .animation(.spring(response: 0.32, dampingFraction: 1), value: route)
+    .onAppear {
+      configureMode(for: route)
+      updatePresentedControl(for: route, animated: false)
+    }
+    .onChange(of: route) { _, newRoute in
+      configureMode(for: newRoute)
+      updatePresentedControl(for: newRoute, animated: true)
+    }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
   }
 
+  @ViewBuilder
+  private func detailControl(for route: PixelEditorControlRoute) -> some View {
+    switch route {
+    case .root:
+      EmptyView()
+
+    case .crop:
+      PixelEditorCropControl(
+        viewModel: viewModel,
+        onCancel: {
+          viewModel.endCrop(save: false)
+          finishDetailEditing()
+          showRoute(.root)
+        },
+        onDone: {
+          viewModel.endCrop(save: true)
+          finishDetailEditing()
+          showRoute(.root)
+        }
+      )
+
+    case .masking:
+      PixelEditorMaskControl(
+        viewModel: viewModel,
+        onCancel: {
+          restoreDetailEntryRevision()
+          showRoute(.root)
+        },
+        onDone: {
+          viewModel.endMasking(save: true)
+          finishDetailEditing()
+          showRoute(.root)
+        }
+      )
+
+    case let .filter(kind):
+      PixelEditorFilterControl(
+        viewModel: viewModel,
+        kind: kind,
+        onCancel: {
+          restoreDetailEntryRevision()
+          showRoute(.root)
+        },
+        onDone: {
+          viewModel.editingStack.takeSnapshot()
+          finishDetailEditing()
+          showRoute(.root)
+        }
+      )
+    }
+  }
+
   private func showRoute(_ route: PixelEditorControlRoute) {
-    withAnimation(.spring(response: 0.32, dampingFraction: 1)) {
-      self.route = route
+    self.route = route
+  }
+
+  private func configureMode(for route: PixelEditorControlRoute) {
+    switch route {
+    case .root:
+      viewModel.setMode(.preview)
+
+    case .crop:
+      viewModel.setMode(.crop)
+
+    case .masking:
+      viewModel.setMode(.masking)
+
+    case let .filter(kind):
+      viewModel.setMode(.editing)
+      viewModel.setTitle(kind.title(localizedStrings: viewModel.localizedStrings))
+    }
+  }
+
+  private func updatePresentedControl(for route: PixelEditorControlRoute, animated: Bool) {
+    switch route {
+    case .root:
+      setDetailControlVisible(false, animated: animated)
+
+    case .crop, .masking, .filter(_):
+      if route != presentedDetailRoute || !isDetailControlVisible {
+        detailEntryRevision = viewModel.editingStack.currentRevision
+        detailSessionID += 1
+      }
+      presentedDetailRoute = route
+      setDetailControlVisible(true, animated: animated)
+    }
+  }
+
+  private func restoreDetailEntryRevision() {
+    if let detailEntryRevision {
+      viewModel.editingStack.revert(to: detailEntryRevision)
+    } else {
+      viewModel.editingStack.revertEdit()
+    }
+    finishDetailEditing()
+  }
+
+  private func finishDetailEditing() {
+    detailEntryRevision = nil
+  }
+
+  private func setDetailControlVisible(_ isVisible: Bool, animated: Bool) {
+    if animated {
+      withAnimation(PixelEditorControlAnimation.panelChange) {
+        isDetailControlVisible = isVisible
+      }
+    } else {
+      var transaction = Transaction()
+      transaction.disablesAnimations = true
+      withTransaction(transaction) {
+        isDetailControlVisible = isVisible
+      }
     }
   }
 }
@@ -461,17 +563,19 @@ private struct PixelEditorRootControl: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      Group {
-        switch displayedPanel {
-        case .filter:
-          PixelEditorPresetList(viewModel: viewModel)
+      ZStack {
+        PixelEditorPresetList(viewModel: viewModel)
+          .pixelEditorControlPresentation(isVisible: displayedPanel == .filter, hiddenOffsetY: 6)
+          .allowsHitTesting(displayedPanel == .filter)
+          .accessibilityHidden(displayedPanel != .filter)
 
-        case .edit:
-          PixelEditorEditMenuView(
-            viewModel: viewModel,
-            onSelectRoute: onSelectRoute
-          )
-        }
+        PixelEditorEditMenuView(
+          viewModel: viewModel,
+          onSelectRoute: onSelectRoute
+        )
+        .pixelEditorControlPresentation(isVisible: displayedPanel == .edit, hiddenOffsetY: 6)
+        .allowsHitTesting(displayedPanel == .edit)
+        .accessibilityHidden(displayedPanel != .edit)
       }
       .frame(height: 118)
 
@@ -678,9 +782,6 @@ private struct PixelEditorCropControl: View {
         onDone: onDone
       )
     }
-    .onAppear {
-      viewModel.setMode(.crop)
-    }
   }
 }
 
@@ -693,6 +794,28 @@ private struct PixelEditorMaskControl: View {
   var body: some View {
     VStack(spacing: 0) {
       VStack(spacing: 16) {
+
+        Circle()
+          .fill(PixelEditorColor.primary)
+          .stroke(PixelEditorColor.primary, lineWidth: 1)
+          .background(Circle().fill(PixelEditorColor.background))
+          .frame(width: brushSize, height: brushSize)
+          .frame(width: 50, height: 50)
+
+        HStack(spacing: 10) {
+
+          PixelEditorBrushSizeSlider(
+            value: brushSize,
+            onChange: { size in
+              viewModel.setBrushSize(size)
+            }
+          )
+          .frame(maxWidth: .infinity)
+          .frame(height: 44)
+
+        }
+        .padding(.horizontal, 36)
+
         Button(viewModel.localizedStrings.clear) {
           viewModel.editingStack.set(blurringMaskPaths: [])
           viewModel.editingStack.takeSnapshot()
@@ -700,34 +823,6 @@ private struct PixelEditorMaskControl: View {
         .font(.system(size: 17, weight: .bold))
         .foregroundStyle(PixelEditorColor.primary)
 
-        HStack(spacing: 10) {
-          Text(viewModel.localizedStrings.brushSizeSmall)
-            .font(.system(size: 18, weight: .medium))
-            .foregroundStyle(PixelEditorColor.primary)
-
-          PixelEditorStepSlider(
-            value: brushSliderValue,
-            range: -0.5...0.5,
-            mode: .plusAndMinus,
-            onChange: { value in
-              let position = CGFloat(value + 0.5)
-              let size = (5 + position * (50 - 5)).rounded()
-              viewModel.setBrushSize(size)
-            }
-          )
-          .frame(height: 44)
-
-          Text(viewModel.localizedStrings.brushSizeLarge)
-            .font(.system(size: 18, weight: .medium))
-            .foregroundStyle(PixelEditorColor.primary)
-        }
-        .padding(.horizontal, 36)
-
-        Circle()
-          .stroke(PixelEditorColor.primary, lineWidth: 1)
-          .background(Circle().fill(PixelEditorColor.background))
-          .frame(width: brushSize, height: brushSize)
-          .frame(width: 50, height: 50)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -738,9 +833,6 @@ private struct PixelEditorMaskControl: View {
         onDone: onDone
       )
     }
-    .onAppear {
-      viewModel.setMode(.masking)
-    }
   }
 
   private var brushSize: CGFloat {
@@ -750,9 +842,56 @@ private struct PixelEditorMaskControl: View {
     }
   }
 
-  private var brushSliderValue: Double {
-    Double((brushSize - 5) / (50 - 5)) - 0.5
+}
+
+private struct PixelEditorBrushSizeSlider: View {
+
+  let value: CGFloat
+  let onChange: (CGFloat) -> Void
+
+  var body: some View {
+    BrightroomSteppedSlider(
+      value: valueBinding,
+      range: PixelEditorBrushSizeMetrics.sizeRange,
+      stepCount: PixelEditorBrushSizeMetrics.stepCount,
+      style: .pixelEditorStepSlider,
+      transform: { value in
+        value.rounded()
+      },
+      hapticIdentity: { _ in nil },
+      onHaptic: {},
+      topMarker: { _ in
+        Color.clear
+          .frame(width: 6, height: 6)
+      },
+      tick: { context in
+        Capsule()
+          .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
+      }
+    )
+    .tint(PixelEditorColor.primary)
   }
+
+  private var valueBinding: Binding<Double> {
+    Binding(
+      get: {
+        Double(value)
+          .clamped(to: PixelEditorBrushSizeMetrics.sizeRange)
+      },
+      set: { newValue in
+        let newSize = CGFloat(newValue.rounded())
+        guard newSize != value else { return }
+        onChange(newSize)
+      }
+    )
+  }
+}
+
+private enum PixelEditorBrushSizeMetrics {
+  static let minimumSize: Double = 5
+  static let maximumSize: Double = 50
+  static let sizeRange = minimumSize...maximumSize
+  static let stepCount = Int(maximumSize - minimumSize)
 }
 
 private struct PixelEditorFilterControl: View {
@@ -763,16 +902,25 @@ private struct PixelEditorFilterControl: View {
   let onDone: () -> Void
 
   var body: some View {
+    let displayValue = kind.displayValue(in: viewModel.editingStack.loadedState?.currentEdit.filters)
+
     VStack(spacing: 0) {
-      PixelEditorStepSlider(
-        value: kind.value(in: viewModel.editingStack.loadedState?.currentEdit.filters),
-        range: kind.range,
-        mode: kind.sliderMode,
-        onChange: {
-          kind.setValue($0, editingStack: viewModel.editingStack)
-        }
-      )
-      .frame(height: 44)
+      VStack(spacing: 8) {
+        Text(displayText(for: displayValue))
+          .font(.system(size: 13, weight: .semibold, design: .monospaced))
+          .foregroundStyle(PixelEditorColor.primary)
+          .frame(minWidth: 42)
+
+        PixelEditorStepSlider(
+          value: displayValue,
+          range: PixelEditorAdjustmentSliderMetrics.displayRange,
+          mode: kind.sliderMode,
+          onChange: {
+            kind.setDisplayValue($0, editingStack: viewModel.editingStack)
+          }
+        )
+        .frame(height: 44)
+      }
       .padding(.horizontal, PixelEditorLayout.controlHorizontalMargin)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -783,9 +931,14 @@ private struct PixelEditorFilterControl: View {
         onDone: onDone
       )
     }
-    .onAppear {
-      viewModel.setMode(.editing)
-      viewModel.setTitle(kind.title(localizedStrings: viewModel.localizedStrings))
+  }
+
+  private func displayText(for value: Double) -> String {
+    let roundedValue = Int(value.rounded())
+    if roundedValue > 0 {
+      return "+\(roundedValue)"
+    } else {
+      return "\(roundedValue)"
     }
   }
 }
@@ -805,22 +958,20 @@ private struct PixelEditorStepSlider: View {
 
   var body: some View {
     let currentPosition = sliderPosition(forEditingValue: value)
-    let showsOriginMarker = abs(currentPosition - mode.originPosition) > 0.000_001
+    let currentStep = step(forPosition: currentPosition)
+    let showsOriginMarker = currentStep != 0
 
     BrightroomSteppedSlider(
       value: positionBinding,
       range: mode.positionRange,
       stepCount: mode.tickCount,
       style: .pixelEditorStepSlider,
+      resetValue: mode.originPosition,
       transform: { position in
         sliderPosition(forEditingValue: editingValue(forPosition: position))
       },
-      hapticIdentity: { position in
-        step(forPosition: position) == 0 ? AnyHashable(0) : nil
-      },
-      onHaptic: {
-        UISelectionFeedbackGenerator().selectionChanged()
-      },
+      hapticIdentity: { _ in nil },
+      onHaptic: {},
       topMarker: { context in
         Circle()
           .frame(width: 6, height: 6)
@@ -830,13 +981,12 @@ private struct PixelEditorStepSlider: View {
       tick: { context in
         Capsule()
           .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
-      },
-      activeTick: { _ in
-        Capsule()
-          .foregroundStyle(.red)
       }
     )
     .tint(PixelEditorColor.primary)
+    .sensoryFeedback(.selection, trigger: currentStep) { _, newStep in
+      newStep == 0
+    }
     .id(mode)
   }
 
@@ -854,34 +1004,21 @@ private struct PixelEditorStepSlider: View {
   }
 
   private func sliderPosition(forEditingValue value: Double) -> Double {
-    guard value != 0 else { return 0 }
-
-    if value > 0 {
-      guard range.upperBound != 0 else { return 0 }
-      let ratio = (value / range.upperBound).clamped(to: 0...1)
-      return PixelEditorStepSliderMetrics.deadZone + ratio * (mode.positionRange.upperBound - PixelEditorStepSliderMetrics.deadZone)
-    } else {
-      guard range.lowerBound != 0 else { return 0 }
-      let ratio = (value / range.lowerBound).clamped(to: 0...1)
-      return -PixelEditorStepSliderMetrics.deadZone + ratio * (mode.positionRange.lowerBound + PixelEditorStepSliderMetrics.deadZone)
-    }
+    sliderPosition(forStep: step(for: value))
   }
 
   private func editingValue(forPosition position: Double) -> Double {
-    if (-PixelEditorStepSliderMetrics.deadZone...PixelEditorStepSliderMetrics.deadZone).contains(position) {
+    let step = step(forSliderPosition: position)
+    guard step != 0 else {
       return 0
     }
 
-    if position > 0 {
-      let ratio = ((position - PixelEditorStepSliderMetrics.deadZone) / (mode.positionRange.upperBound - PixelEditorStepSliderMetrics.deadZone))
-        .clamped(to: 0...1)
-      let step = (ratio * Double(mode.maxStep)).rounded()
-      return range.upperBound * step / Double(mode.maxStep)
+    if step > 0 {
+      guard mode.maxStep > 0 else { return 0 }
+      return range.upperBound * Double(step) / Double(mode.maxStep)
     } else {
-      let ratio = ((position + PixelEditorStepSliderMetrics.deadZone) / (mode.positionRange.lowerBound + PixelEditorStepSliderMetrics.deadZone))
-        .clamped(to: 0...1)
-      let step = (ratio * Double(abs(mode.minStep))).rounded()
-      return range.lowerBound * step / Double(abs(mode.minStep))
+      guard mode.minStep < 0 else { return 0 }
+      return range.lowerBound * Double(abs(step)) / Double(abs(mode.minStep))
     }
   }
 
@@ -902,12 +1039,67 @@ private struct PixelEditorStepSlider: View {
   }
 
   private func step(forPosition position: Double) -> Int {
-    step(for: editingValue(forPosition: position))
+    step(forSliderPosition: position)
+  }
+
+  private func step(forSliderPosition position: Double) -> Int {
+    if (mode.originPosition - originSnapRadius...mode.originPosition + originSnapRadius).contains(position) {
+      return 0
+    }
+
+    if position > mode.originPosition {
+      guard mode.maxStep > 0 else { return 0 }
+      let distance = mode.positionRange.upperBound - mode.originPosition
+      guard distance > 0 else { return 0 }
+      let ratio = ((position - mode.originPosition) / distance).clamped(to: 0...1)
+      return Int((ratio * Double(mode.maxStep)).rounded())
+        .clamped(to: 0...mode.maxStep)
+    } else {
+      guard mode.minStep < 0 else { return 0 }
+      let distance = mode.originPosition - mode.positionRange.lowerBound
+      guard distance > 0 else { return 0 }
+      let ratio = ((mode.originPosition - position) / distance).clamped(to: 0...1)
+      let step = Int((ratio * Double(abs(mode.minStep))).rounded())
+        .clamped(to: 0...abs(mode.minStep))
+      return -step
+    }
+  }
+
+  private func sliderPosition(forStep step: Int) -> Double {
+    if step > 0 {
+      guard mode.maxStep > 0 else { return mode.originPosition }
+      let distance = mode.positionRange.upperBound - mode.originPosition
+      return mode.originPosition + distance * Double(step) / Double(mode.maxStep)
+    } else if step < 0 {
+      guard mode.minStep < 0 else { return mode.originPosition }
+      let distance = mode.originPosition - mode.positionRange.lowerBound
+      return mode.originPosition - distance * Double(abs(step)) / Double(abs(mode.minStep))
+    } else {
+      return mode.originPosition
+    }
+  }
+
+  private var originSnapRadius: Double {
+    let unitDistances = [
+      mode.maxStep > 0 ? (mode.positionRange.upperBound - mode.originPosition) / Double(mode.maxStep) : nil,
+      mode.minStep < 0 ? (mode.originPosition - mode.positionRange.lowerBound) / Double(abs(mode.minStep)) : nil,
+    ].compactMap { $0 }
+
+    guard let unitDistance = unitDistances.min() else {
+      return PixelEditorStepSliderMetrics.originSnapEpsilon
+    }
+
+    return unitDistance * PixelEditorStepSliderMetrics.originSnapStepRatio + PixelEditorStepSliderMetrics.originSnapEpsilon
   }
 }
 
 private enum PixelEditorStepSliderMetrics {
-  static let deadZone: Double = 0.05
+  static let originSnapStepRatio: Double = 0.5
+  static let originSnapEpsilon: Double = 0.000_1
+}
+
+private enum PixelEditorAdjustmentSliderMetrics {
+  static let displayRange: ClosedRange<Double> = -100...100
 }
 
 private extension BrightroomSteppedSliderStyle {
@@ -915,6 +1107,7 @@ private extension BrightroomSteppedSliderStyle {
     tickWidth: 2,
     tickSpacing: 4,
     tickHeight: 10,
+    activeTickWidth: 3,
     activeTickHeight: 18,
     majorTickInterval: 10
   )
@@ -1345,6 +1538,14 @@ private extension PixelEditorFilterKind {
     }
   }
 
+  func displayValue(in filters: EditingStack.Edit.Filters?) -> Double {
+    displayValue(forNativeValue: value(in: filters))
+  }
+
+  func setDisplayValue(_ value: Double, editingStack: EditingStack) {
+    setValue(nativeValue(forDisplayValue: value), editingStack: editingStack)
+  }
+
   func setValue(_ value: Double, editingStack: EditingStack) {
     editingStack.set(filters: { filters in
       switch self {
@@ -1383,6 +1584,43 @@ private extension PixelEditorFilterKind {
       }
     })
   }
+
+  private func displayValue(forNativeValue value: Double) -> Double {
+    guard value != 0 else {
+      return 0
+    }
+
+    let nativeRange = range
+
+    if value > 0 {
+      guard nativeRange.upperBound != 0 else {
+        return 0
+      }
+      return (value / nativeRange.upperBound * 100)
+        .clamped(to: PixelEditorAdjustmentSliderMetrics.displayRange)
+    } else {
+      guard nativeRange.lowerBound != 0 else {
+        return 0
+      }
+      return (value / abs(nativeRange.lowerBound) * 100)
+        .clamped(to: PixelEditorAdjustmentSliderMetrics.displayRange)
+    }
+  }
+
+  private func nativeValue(forDisplayValue value: Double) -> Double {
+    let displayValue = value.clamped(to: PixelEditorAdjustmentSliderMetrics.displayRange)
+    guard displayValue != 0 else {
+      return 0
+    }
+
+    let nativeRange = range
+
+    if displayValue > 0 {
+      return nativeRange.upperBound * displayValue / 100
+    } else {
+      return abs(nativeRange.lowerBound) * displayValue / 100
+    }
+  }
 }
 
 private extension Double {
@@ -1396,6 +1634,13 @@ private extension Double {
       return nil
     }
     return makeFilter(self)
+  }
+}
+
+private extension Int {
+
+  func clamped(to range: ClosedRange<Int>) -> Int {
+    Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
   }
 }
 

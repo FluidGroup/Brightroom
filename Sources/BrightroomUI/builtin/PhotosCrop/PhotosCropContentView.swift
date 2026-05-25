@@ -392,8 +392,13 @@ private struct PhotosCropRotationSlider: View {
       range: -45...45,
       stepCount: 90,
       style: .photosCropRotationSlider,
+      resetValue: 0,
       transform: { source in
-        source.rounded(.toNearestOrEven)
+        if (-PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees).contains(source) {
+          return 0
+        }
+
+        return source.rounded(.toNearestOrEven)
       },
       hapticIdentity: { value in
         let degree = Int(value.rounded(.toNearestOrEven))
@@ -411,10 +416,6 @@ private struct PhotosCropRotationSlider: View {
       tick: { context in
         RoundedRectangle(cornerRadius: 8)
           .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
-      },
-      activeTick: { _ in
-        RoundedRectangle(cornerRadius: 8)
-          .foregroundStyle(.tint)
       }
     )
     .tint(.white)
@@ -425,6 +426,7 @@ private struct PhotosCropRotationSlider: View {
     .opacity(isEnabled ? 1 : 0.5)
     .disabled(!isEnabled)
     .accessibilityLabel("Rotation")
+    .environment(\.colorScheme, .dark)
   }
 
   private var valueBinding: Binding<Double> {
@@ -441,11 +443,16 @@ private struct PhotosCropRotationSlider: View {
   }
 }
 
+private enum PhotosCropRotationSliderMetrics {
+  static let neutralDeadZoneDegrees: Double = 2.5
+}
+
 private extension BrightroomSteppedSliderStyle {
   static let photosCropRotationSlider = BrightroomSteppedSliderStyle(
-    tickWidth: 1,
+    tickWidth: 2,
     tickSpacing: 4,
     tickHeight: 10,
+    activeTickWidth: 3,
     activeTickHeight: 18,
     majorTickInterval: 5
   )
