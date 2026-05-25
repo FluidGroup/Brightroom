@@ -87,7 +87,7 @@ public struct SwiftUIPixelEditorView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(PixelEditorColor.background)
     .task {
-      viewModel.editingStack.start()
+      viewModel.startEditingStack()
     }
     .accessibilityIdentifier("swiftui.pixel.editor")
   }
@@ -273,6 +273,8 @@ private struct PixelEditorCanvas: View {
   let viewModel: PixelEditorViewModel
 
   var body: some View {
+    let _ = viewModel.editingStackObservationVersion
+
     GeometryReader { proxy in
       ZStack {
         SwiftUIEditingCanvasView(
@@ -280,6 +282,7 @@ private struct PixelEditorCanvas: View {
           mode: canvasMode
         )
         .interactionMode(canvasInteractionMode)
+        .displayedImageRect(canvasDisplayedImageRect)
         .brush(canvasBrush(in: proxy.size))
         .smoothing(.init())
         .opacity(viewModel.mode.isCrop ? 0 : 1)
@@ -305,6 +308,8 @@ private struct PixelEditorCanvas: View {
           }
         )
         .croppingAspectRatio(viewModel.options.croppingAspectRatio)
+        .displayMode(.renderedEditPreview)
+        .registerApplyAction(viewModel.cropApplyAction)
         .opacity(viewModel.mode.isCrop ? 1 : 0)
         .allowsHitTesting(viewModel.mode.isCrop)
 
@@ -343,6 +348,10 @@ private struct PixelEditorCanvas: View {
     case .crop, .editing, .preview:
       return .view
     }
+  }
+
+  private var canvasDisplayedImageRect: CGRect? {
+    viewModel.displayCrop?.cropExtent
   }
 
   private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {

@@ -388,10 +388,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       ensureLiveStrokeTextureMatchesDrawable()
       clearLiveStrokeTexture(hidesOverlay: false)
     }
-    let point = clampedContentPoint(rawPoint)
-    strokeSmoother.begin(at: point)
-    lastStampPoint = point
-    renderLiveStamps([point], flushImmediately: true)
+    strokeSmoother.begin(at: rawPoint)
+    lastStampPoint = rawPoint
+    renderLiveStamps([rawPoint], flushImmediately: true)
   }
 
   func appendStroke(points rawPoints: [CGPoint]) {
@@ -400,9 +399,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     let sampleDistance = max(CGFloat(brush.size * brush.spacing) * 0.5, 2)
-    let inputPoints = rawPoints.map { clampedContentPoint($0) }
     let smoothedPoints = strokeSmoother.append(
-      inputPoints,
+      rawPoints,
       sampleDistance: sampleDistance
     )
     let stamps = smoothedPoints.flatMap { point -> [CGPoint] in
@@ -414,9 +412,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func endStroke(at rawPoint: CGPoint) {
     let sampleDistance = max(CGFloat(brush.size * brush.spacing) * 0.5, 2)
-    let point = clampedContentPoint(rawPoint)
     let smoothedPoints = strokeSmoother.finish(
-      at: point,
+      at: rawPoint,
       sampleDistance: sampleDistance
     )
     let stamps = smoothedPoints.flatMap { point -> [CGPoint] in
@@ -1038,14 +1035,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       width: drawable.texture.width,
       height: drawable.texture.height
     )
-    let drawableScaleX = CGFloat(drawable.texture.width) / bounds.width
-    let drawableScaleY = CGFloat(drawable.texture.height) / bounds.height
-    let destinationFrame = CGRect(
-      x: visibleCanvasFrame.minX * drawableScaleX,
-      y: visibleCanvasFrame.minY * drawableScaleY,
-      width: visibleCanvasFrame.width * drawableScaleX,
-      height: visibleCanvasFrame.height * drawableScaleY
-    )
+    guard let destinationFrame = viewportTextureContentFrame(
+      pixelWidth: drawable.texture.width,
+      pixelHeight: drawable.texture.height
+    ) else {
+      clearCurrentDrawable()
+      return
+    }
     let scaleX = destinationFrame.width / visibleContentRect.width
     let scaleY = destinationFrame.height / visibleContentRect.height
     let visibleImage = image
@@ -1103,9 +1099,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return
     }
 
-    let baseImage = renderImages.filters
-      .apply(to: sourceImage)
-      .cropped(to: sourceImage.extent)
+    let baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+      renderImages.filters
+        .apply(to: sourceImage)
+        .cropped(to: sourceImage.extent),
+      source: sourceImage
+    )
 
     guard renderImages.hasLocalEffect,
           hasRenderableStroke(in: visibleContentRect)
@@ -1195,11 +1194,21 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     ) else {
       return nil
     }
+    let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
+    guard
+      let sourceContentFrame = viewportTextureContentFrame(
+        pixelWidth: pixelWidth,
+        pixelHeight: pixelHeight
+      )?.intersection(renderBounds),
+      sourceContentFrame.isEmpty == false
+    else {
+      return nil
+    }
 
     let cachedSource = EditingCanvasViewportSourceTexture(
       key: key,
       texture: sourceTexture,
-      image: sourceImage.cropped(to: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+      image: sourceImage.cropped(to: sourceContentFrame)
     )
     viewportSourceTexture = cachedSource
     return cachedSource.image
@@ -1374,9 +1383,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return cache.image
     }
 
-    let adjustedImage = localEffect
-      .apply(to: baseImage, previewScale: previewScale)
-      .cropped(to: baseImage.extent)
+    let adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+      localEffect
+        .apply(to: baseImage, previewScale: previewScale)
+        .cropped(to: baseImage.extent),
+      source: baseImage
+    )
     guard
       let texture = makeRenderTexture(
         pixelFormat: .bgra8Unorm,
@@ -1410,7 +1422,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     return CIImage(
       mtlTexture: texture,
       options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-    )?.cropped(to: CGRect(x: 0, y: 0, width: texture.width, height: texture.height))
+    )?.cropped(to: cachedViewportLayerExtent(for: image, texture: texture))
   }
 
   private func renderCachedViewportImage(
@@ -1473,18 +1485,28 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
     guard
+      let imageBounds = viewportTextureContentFrame(
+        pixelWidth: pixelWidth,
+        pixelHeight: pixelHeight
+      )?.intersection(renderBounds),
+      imageBounds.isEmpty == false
+    else {
+      clearCurrentDrawable()
+      return
+    }
+    guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: renderBounds),
+      )?.cropped(to: imageBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: renderBounds),
+      )?.cropped(to: imageBounds),
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: renderBounds)
+      )?.cropped(to: imageBounds)
     else {
       clearCurrentDrawable()
       return
@@ -1498,7 +1520,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
           kCIInputMaskImageKey: maskImage,
         ]
       )
-      .cropped(to: renderBounds)
+      .cropped(to: imageBounds)
 
     renderDrawableImage(
       compositedImage,
@@ -1519,14 +1541,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       width: texture.width,
       height: texture.height
     )
-    let drawableScaleX = CGFloat(texture.width) / bounds.width
-    let drawableScaleY = CGFloat(texture.height) / bounds.height
-    let destinationFrame = CGRect(
-      x: visibleCanvasFrame.minX * drawableScaleX,
-      y: visibleCanvasFrame.minY * drawableScaleY,
-      width: visibleCanvasFrame.width * drawableScaleX,
-      height: visibleCanvasFrame.height * drawableScaleY
-    )
+    guard let destinationFrame = viewportTextureContentFrame(
+      pixelWidth: texture.width,
+      pixelHeight: texture.height
+    ) else {
+      return
+    }
     let scaleX = destinationFrame.width / visibleContentRect.width
     let scaleY = destinationFrame.height / visibleContentRect.height
     let visibleImage = image
@@ -1557,6 +1577,38 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       bounds: renderBounds,
       colorSpace: EditingCanvasImageProcessing.colorSpace
     )
+  }
+
+  private func cachedViewportLayerExtent(for image: CIImage, texture: MTLTexture) -> CGRect {
+    let renderBounds = CGRect(x: 0, y: 0, width: texture.width, height: texture.height)
+    let imageBounds = image.extent.intersection(renderBounds)
+    if imageBounds.isNull == false, imageBounds.isEmpty == false {
+      return imageBounds
+    } else {
+      return renderBounds
+    }
+  }
+
+  private func viewportTextureContentFrame(pixelWidth: Int, pixelHeight: Int) -> CGRect? {
+    guard bounds.width > 0, bounds.height > 0 else {
+      return nil
+    }
+
+    let drawableScaleX = CGFloat(pixelWidth) / bounds.width
+    let drawableScaleY = CGFloat(pixelHeight) / bounds.height
+    let frame = CGRect(
+      x: visibleCanvasFrame.minX * drawableScaleX,
+      y: visibleCanvasFrame.minY * drawableScaleY,
+      width: visibleCanvasFrame.width * drawableScaleX,
+      height: visibleCanvasFrame.height * drawableScaleY
+    )
+      .standardized
+
+    guard frame.isNull == false, frame.isEmpty == false else {
+      return nil
+    }
+
+    return frame
   }
 
   private func viewportTextures(
@@ -1724,13 +1776,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     commandBuffer.makeRenderCommandEncoder(descriptor: descriptor)?.endEncoding()
     commandBuffer.present(drawable)
     commandBuffer.commit()
-  }
-
-  private func clampedContentPoint(_ point: CGPoint) -> CGPoint {
-    CGPoint(
-      x: min(max(point.x, 0), canvasSize.width),
-      y: min(max(point.y, 0), canvasSize.height)
-    )
   }
 
   private static func makeBrushPipeline(

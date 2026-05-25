@@ -33,6 +33,39 @@ extension CGRect {
 
 enum EditingCanvasImageProcessing {
   static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+
+  static func clippedToSourceAlpha(_ image: CIImage, source: CIImage) -> CIImage {
+    let extent = image.extent
+    guard extent.isEmpty == false, extent.isNull == false else {
+      return image
+    }
+
+    let sourceAlphaMask = source
+      .cropped(to: extent)
+      .applyingFilter(
+        "CIColorMatrix",
+        parameters: [
+          "inputRVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+          "inputGVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+          "inputBVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+          "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
+        ]
+      )
+      .cropped(to: extent)
+
+    let clearBackground = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+      .cropped(to: extent)
+
+    return image
+      .applyingFilter(
+        "CIBlendWithAlphaMask",
+        parameters: [
+          kCIInputBackgroundImageKey: clearBackground,
+          kCIInputMaskImageKey: sourceAlphaMask,
+        ]
+      )
+      .cropped(to: extent)
+  }
 }
 
 extension CGPoint {

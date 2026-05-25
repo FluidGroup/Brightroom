@@ -78,6 +78,10 @@ struct ContentView: View {
             MetalBrushSandboxView(fileURL: nasaImageURL)
           }
 
+          NavigationLink("Editing Canvas Crop Probe") {
+            EditingCanvasCropProbeView()
+          }
+
           NavigationLink("PencilKit Reference") {
             PencilKitReferenceSandboxView()
           }
