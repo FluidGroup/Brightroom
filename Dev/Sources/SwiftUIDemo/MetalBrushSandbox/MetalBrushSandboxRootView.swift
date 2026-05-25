@@ -1,117 +1,39 @@
 import BrightroomEngine
+import BrightroomUI
+import Observation
 import SwiftUI
 import UIKit
 
-final class MetalBrushSandboxRootView: UIView {
+@MainActor
+@Observable
+final class MetalBrushSandboxModel {
 
-  private let editingStack: EditingStack
-  private let progressView = UIActivityIndicatorView(style: .large)
-  private let controlsView = MetalBrushSandboxControlsView()
-  private var hostView: MetalBrushSandboxHostView?
-  private var values = MetalBrushSandboxControlValues()
+  let editingStack: EditingStack
+  var values = MetalBrushSandboxControlValues()
+  var metrics = EditingCanvasMetrics()
 
   init(source: MetalBrushSandboxSource) {
-    self.editingStack = EditingStack(imageProvider: source.makeImageProvider())
-    super.init(frame: .zero)
-
-    backgroundColor = .black
-    accessibilityIdentifier = "metal-brush-sandbox-root"
-    setupProgressView()
-    setupControls()
-
-    editingStack.start { [weak self] in
-      self?.installCanvasIfNeeded()
-    }
+    editingStack = EditingStack(imageProvider: source.makeImageProvider())
   }
 
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
+  func reset() {
+    editingStack.set(localAdjustments: [])
+    metrics = .init()
   }
 
-  private func setupProgressView() {
-    progressView.translatesAutoresizingMaskIntoConstraints = false
-    progressView.color = .white
-    progressView.startAnimating()
-    addSubview(progressView)
-
-    NSLayoutConstraint.activate([
-      progressView.centerXAnchor.constraint(equalTo: centerXAnchor),
-      progressView.centerYAnchor.constraint(equalTo: centerYAnchor),
-    ])
-  }
-
-  private func setupControls() {
-    controlsView.configure(values)
-    controlsView.onReset = { [weak self] in
-      self?.hostView?.reset()
-    }
-    controlsView.onValuesChange = { [weak self] values, change in
-      self?.handleControlValues(values, change: change)
-    }
-  }
-
-  private func installCanvasIfNeeded() {
-    guard hostView == nil, let loadedState = editingStack.loadedState else {
-      return
-    }
-
-    progressView.stopAnimating()
-    progressView.removeFromSuperview()
-
-    let hostView = MetalBrushSandboxHostView(canvasSize: loadedState.metadata.imageSize)
-    hostView.translatesAutoresizingMaskIntoConstraints = false
-    hostView.onMetricsChange = { [weak self] metrics in
-      self?.controlsView.updateMetrics(metrics)
-    }
-    addSubview(hostView)
-    self.hostView = hostView
-
-    controlsView.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(controlsView)
-
-    NSLayoutConstraint.activate([
-      hostView.topAnchor.constraint(equalTo: topAnchor),
-      hostView.leadingAnchor.constraint(equalTo: leadingAnchor),
-      hostView.trailingAnchor.constraint(equalTo: trailingAnchor),
-      hostView.bottomAnchor.constraint(equalTo: controlsView.topAnchor),
-
-      controlsView.leadingAnchor.constraint(equalTo: leadingAnchor),
-      controlsView.trailingAnchor.constraint(equalTo: trailingAnchor),
-      controlsView.bottomAnchor.constraint(equalTo: bottomAnchor),
-    ])
-
-    applyExposure(values.exposure)
-    applyHostConfiguration()
-    hostView.setEditingStack(editingStack, localEffect: values.localAdjustmentEffect)
-  }
-
-  private func handleControlValues(
+  func updateValues(
     _ values: MetalBrushSandboxControlValues,
     change: MetalBrushSandboxControlChange
   ) {
     self.values = values
 
     switch change {
-    case .interactionMode, .localEffect, .brush, .smoothing:
-      applyHostConfiguration()
+    case .interactionMode, .localEffect, .localEffectValue, .brush, .smoothing:
+      break
 
     case .exposure:
       applyExposure(values.exposure)
-      hostView?.reloadEditingStackPreview()
-
-    case .localEffectValue:
-      hostView?.setEditingStack(editingStack, localEffect: values.localAdjustmentEffect)
     }
-  }
-
-  private func applyHostConfiguration() {
-    hostView?.configure(
-      interactionMode: values.interactionMode,
-      localEffect: values.localAdjustmentEffect,
-      brush: values.brush,
-      smoothing: values.smoothing
-    )
   }
 
   private func applyExposure(_ exposure: Double) {
@@ -127,6 +49,70 @@ final class MetalBrushSandboxRootView: UIView {
   }
 }
 
+struct MetalBrushSandboxRootView: View {
+
+  @State private var model: MetalBrushSandboxModel
+
+  init(source: MetalBrushSandboxSource) {
+    _model = State(initialValue: MetalBrushSandboxModel(source: source))
+  }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      SwiftUIEditingCanvasView(
+        editingStack: model.editingStack,
+        mode: .localAdjustment(effect: model.values.localAdjustmentEffect)
+      )
+      .interactionMode(model.values.interactionMode)
+      .brush(model.values.brush)
+      .smoothing(model.values.smoothing)
+      .onMetricsChange { metrics in
+        model.metrics = metrics
+      }
+      .background(Color.black)
+
+      MetalBrushSandboxControlsRepresentable(
+        values: model.values,
+        metrics: model.metrics,
+        onReset: {
+          model.reset()
+        },
+        onValuesChange: { values, change in
+          model.updateValues(values, change: change)
+        }
+      )
+      .fixedSize(horizontal: false, vertical: true)
+    }
+    .background(Color.black)
+    .accessibilityIdentifier("metal-brush-sandbox-root")
+  }
+}
+
+private struct MetalBrushSandboxControlsRepresentable: UIViewRepresentable {
+
+  let values: MetalBrushSandboxControlValues
+  let metrics: EditingCanvasMetrics
+  let onReset: () -> Void
+  let onValuesChange: (MetalBrushSandboxControlValues, MetalBrushSandboxControlChange) -> Void
+
+  func makeUIView(context: Context) -> MetalBrushSandboxControlsView {
+    let view = MetalBrushSandboxControlsView()
+    configure(view)
+    return view
+  }
+
+  func updateUIView(_ uiView: MetalBrushSandboxControlsView, context: Context) {
+    configure(uiView)
+  }
+
+  private func configure(_ view: MetalBrushSandboxControlsView) {
+    view.configure(values)
+    view.updateMetrics(metrics)
+    view.onReset = onReset
+    view.onValuesChange = onValuesChange
+  }
+}
+
 struct MetalBrushSandboxControlValues: Equatable {
   var exposure: Double = 0
   var localEffectKind: MetalBrushSandboxLocalEffectKind = .blur
@@ -136,11 +122,11 @@ struct MetalBrushSandboxControlValues: Equatable {
   var hardness: Double = 0.72
   var opacity: Double = 0.9
   var spacing: Double = 0.18
-  var smoothingAlgorithm: MetalBrushStrokeSmoothingAlgorithm = .bezier
+  var smoothingAlgorithm: EditingCanvasStrokeSmoothingAlgorithm = .bezier
   var smoothingStrength: Double = 0.85
-  var interactionMode: MetalBrushSandboxInteractionMode = .draw
+  var interactionMode: EditingCanvasInteractionMode = .draw
 
-  var brush: MetalBrushSandboxBrush {
+  var brush: EditingCanvasBrush {
     .init(
       size: brushSize,
       hardness: hardness,
@@ -149,7 +135,7 @@ struct MetalBrushSandboxControlValues: Equatable {
     )
   }
 
-  var smoothing: MetalBrushStrokeSmoothingConfiguration {
+  var smoothing: EditingCanvasStrokeSmoothingConfiguration {
     .init(
       algorithm: smoothingAlgorithm,
       strength: smoothingStrength
@@ -205,9 +191,9 @@ final class MetalBrushSandboxControlsView: UIView {
   private let strokesMetricsLabel = UILabel()
   private let stampsMetricsLabel = UILabel()
   private let fpsMetricsLabel = UILabel()
-  private let modeControl = UISegmentedControl(items: MetalBrushSandboxInteractionMode.allCases.map(\.title))
+  private let modeControl = UISegmentedControl(items: EditingCanvasInteractionMode.allCases.map(\.title))
   private let localEffectControl = UISegmentedControl(items: MetalBrushSandboxLocalEffectKind.allCases.map(\.title))
-  private let smoothingControl = UISegmentedControl(items: MetalBrushStrokeSmoothingAlgorithm.allCases.map(\.title))
+  private let smoothingControl = UISegmentedControl(items: EditingCanvasStrokeSmoothingAlgorithm.allCases.map(\.title))
   private let exposureRow = MetalBrushSandboxSliderRow(
     title: "Exposure",
     range: -1.5...1.5,
@@ -284,9 +270,9 @@ final class MetalBrushSandboxControlsView: UIView {
 
   func configure(_ values: MetalBrushSandboxControlValues) {
     self.values = values
-    modeControl.selectedSegmentIndex = MetalBrushSandboxInteractionMode.allCases.firstIndex(of: values.interactionMode) ?? 0
+    modeControl.selectedSegmentIndex = EditingCanvasInteractionMode.allCases.firstIndex(of: values.interactionMode) ?? 0
     localEffectControl.selectedSegmentIndex = MetalBrushSandboxLocalEffectKind.allCases.firstIndex(of: values.localEffectKind) ?? 0
-    smoothingControl.selectedSegmentIndex = MetalBrushStrokeSmoothingAlgorithm.allCases.firstIndex(of: values.smoothingAlgorithm) ?? 0
+    smoothingControl.selectedSegmentIndex = EditingCanvasStrokeSmoothingAlgorithm.allCases.firstIndex(of: values.smoothingAlgorithm) ?? 0
     exposureRow.value = values.exposure
     smoothingStrengthRow.value = values.smoothingStrength
     blurRadiusRow.value = values.blurRadius
@@ -298,7 +284,7 @@ final class MetalBrushSandboxControlsView: UIView {
     updateLocalEffectRows()
   }
 
-  func updateMetrics(_ metrics: MetalBrushSandboxMetrics) {
+  func updateMetrics(_ metrics: EditingCanvasMetrics) {
     zoomMetricsLabel.text = String(format: "Zoom %.2fx", metrics.zoomScale)
     strokesMetricsLabel.text = "Strokes \(metrics.strokeCount)"
     stampsMetricsLabel.text = "Stamps \(metrics.stampCount)"
@@ -417,7 +403,7 @@ final class MetalBrushSandboxControlsView: UIView {
 
   @objc
   private func modeControlDidChange() {
-    values.interactionMode = MetalBrushSandboxInteractionMode.allCases[safe: modeControl.selectedSegmentIndex] ?? .draw
+    values.interactionMode = EditingCanvasInteractionMode.allCases[safe: modeControl.selectedSegmentIndex] ?? .draw
     publish(.interactionMode)
   }
 
@@ -430,7 +416,7 @@ final class MetalBrushSandboxControlsView: UIView {
 
   @objc
   private func smoothingControlDidChange() {
-    values.smoothingAlgorithm = MetalBrushStrokeSmoothingAlgorithm.allCases[safe: smoothingControl.selectedSegmentIndex] ?? .bezier
+    values.smoothingAlgorithm = EditingCanvasStrokeSmoothingAlgorithm.allCases[safe: smoothingControl.selectedSegmentIndex] ?? .bezier
     publish(.smoothing)
   }
 

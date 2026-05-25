@@ -1,14 +1,14 @@
 import UIKit
 
-final class MetalBrushSandboxScrollView: UIScrollView {}
+final class _EditingCanvasScrollView: UIScrollView {}
 
-final class MetalBrushSandboxAttachmentContentView: UIView {
+final class _EditingCanvasAttachmentContentView: UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
 
     backgroundColor = .clear
     isOpaque = false
-    accessibilityIdentifier = "metal-brush-attachment-content-view"
+    accessibilityIdentifier = "editing-canvas-attachment-content-view"
   }
 
   @available(*, unavailable)
@@ -17,13 +17,13 @@ final class MetalBrushSandboxAttachmentContentView: UIView {
   }
 }
 
-final class MetalBrushSandboxViewportCanvasView: UIView {
+final class _EditingCanvasViewportCanvasView: UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
 
     backgroundColor = .clear
     isOpaque = false
-    accessibilityIdentifier = "metal-brush-viewport-canvas-view"
+    accessibilityIdentifier = "editing-canvas-viewport-canvas-view"
   }
 
   @available(*, unavailable)
@@ -32,13 +32,13 @@ final class MetalBrushSandboxViewportCanvasView: UIView {
   }
 }
 
-final class MetalBrushSandboxViewportGestureView: UIView {
+final class _EditingCanvasViewportGestureView: UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
 
     backgroundColor = .clear
     isOpaque = false
-    accessibilityIdentifier = "metal-brush-viewport-gesture-view"
+    accessibilityIdentifier = "editing-canvas-viewport-gesture-view"
   }
 
   @available(*, unavailable)

@@ -31,7 +31,7 @@ extension CGRect {
   }
 }
 
-enum MetalBrushSandboxImageProcessing {
+enum EditingCanvasImageProcessing {
   static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
 }
 

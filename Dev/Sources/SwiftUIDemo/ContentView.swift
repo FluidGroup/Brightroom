@@ -549,8 +549,11 @@ struct DemoPixelEditor: View {
       editingStack: editingStack,
       options: options,
       onEndEditing: { editingStack in
+        let metadata = PixelEditorResultMetadata.makeLines(
+          edit: editingStack.loadedState?.currentEdit
+        )
         let image = try! editingStack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image)
+        self.resultImage = .init(cgImage: image, metadata: metadata)
       },
       onCancelEditing: {
         dismiss()
@@ -564,4 +567,49 @@ struct DemoPixelEditor: View {
 
 #Preview {
   ContentView()
+}
+
+private enum PixelEditorResultMetadata {
+
+  static func makeLines(edit: EditingStack.Edit?) -> [String] {
+    guard let edit else {
+      return []
+    }
+
+    let enabledLocalAdjustments = edit.localAdjustments.filter(\.isEnabled)
+    let localStrokeCount = enabledLocalAdjustments.reduce(0) { partialResult, layer in
+      partialResult + layer.mask.strokes.count
+    }
+    let localStampCount = enabledLocalAdjustments.reduce(0) { partialResult, layer in
+      partialResult + layer.mask.strokes.reduce(0) { $0 + $1.stamps.count }
+    }
+
+    return [
+      "pixel-edit-preset: \(edit.filters.preset?.name ?? "none")",
+      "pixel-edit-filters: \(makeFilterNames(edit.filters))",
+      "pixel-edit-crop: \(edit.crop.isRenderingEquivalent(to: edit.crop.makeInitial()) ? "initial" : "changed")",
+      "pixel-edit-local-layers: \(enabledLocalAdjustments.count)",
+      "pixel-edit-local-strokes: \(localStrokeCount)",
+      "pixel-edit-local-stamps: \(localStampCount)",
+    ]
+  }
+
+  private static func makeFilterNames(_ filters: EditingStack.Edit.Filters) -> String {
+    var names: [String] = []
+    if filters.preset != nil { names.append("preset") }
+    if filters.brightness != nil { names.append("brightness") }
+    if filters.contrast != nil { names.append("contrast") }
+    if filters.saturation != nil { names.append("saturation") }
+    if filters.exposure != nil { names.append("exposure") }
+    if filters.highlights != nil { names.append("highlights") }
+    if filters.shadows != nil { names.append("shadows") }
+    if filters.temperature != nil { names.append("temperature") }
+    if filters.sharpen != nil { names.append("sharpen") }
+    if filters.gaussianBlur != nil { names.append("gaussian-blur") }
+    if filters.unsharpMask != nil { names.append("clarity") }
+    if filters.vignette != nil { names.append("vignette") }
+    if filters.fade != nil { names.append("fade") }
+    if !filters.additionalFilters.isEmpty { names.append("additional") }
+    return names.isEmpty ? "none" : names.joined(separator: ",")
+  }
 }

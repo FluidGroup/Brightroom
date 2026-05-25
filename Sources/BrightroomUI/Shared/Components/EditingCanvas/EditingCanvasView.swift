@@ -3,40 +3,53 @@ import BrightroomEngine
 import MetalKit
 import UIKit
 
-final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+private struct EditingCanvasRenderInputKey: Equatable {
+  var sourceExtent: CGRect
+  var filters: EditingStack.Edit.Filters
+  var mode: EditingCanvasMode
+  var renderedPreviewLocalAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]?
+}
+
+@_spi(Development)
+public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
 
   private let canvasSize: CGSize
-  private let scrollView = MetalBrushSandboxScrollView()
-  private let attachmentContentView = MetalBrushSandboxAttachmentContentView()
-  private let viewportCanvasView = MetalBrushSandboxViewportCanvasView()
-  private let viewportGestureView = MetalBrushSandboxViewportGestureView()
-  private let drawingGestureRecognizer = MetalBrushDrawingGestureRecognizer(
+  private let scrollView = _EditingCanvasScrollView()
+  private let attachmentContentView = _EditingCanvasAttachmentContentView()
+  private let viewportCanvasView = _EditingCanvasViewportCanvasView()
+  private let viewportGestureView = _EditingCanvasViewportGestureView()
+  private let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(
     target: nil,
     action: nil
   )
   private let doubleTapZoomGestureRecognizer = UITapGestureRecognizer()
-  private let canvasView: MetalBrushSandboxCanvasView?
+  private let canvasView: _EditingCanvasMTKView?
   private let fallbackLabel = UILabel()
   private var didSetInitialZoom = false
-  private var interactionMode: MetalBrushSandboxInteractionMode = .draw
+  private var interactionMode: EditingCanvasInteractionMode = .draw
+  private var displayedContentRect: CGRect?
+  private var lastAppliedDisplayedContentRect: CGRect?
   private var previousLayoutBoundsSize: CGSize = .zero
   private weak var protectedNavigationController: UINavigationController?
   private var previousInteractivePopGestureEnabled: Bool?
   private weak var currentEditingStack: EditingStack?
+  private var currentMode: EditingCanvasMode = .viewportBase
   private var currentLocalEffect: EditingStack.Edit.LocalAdjustmentEffect?
-  private var sandboxLocalAdjustmentLayerID: UUID?
-  var onMetricsChange: ((MetalBrushSandboxMetrics) -> Void)?
+  private var currentRenderInputKey: EditingCanvasRenderInputKey?
+  private var editingCanvasLocalAdjustmentLayerID: UUID?
+  public var onMetricsChange: ((EditingCanvasMetrics) -> Void)?
 
-  init(canvasSize: CGSize) {
+  public init(canvasSize: CGSize) {
     self.canvasSize = canvasSize
     self.canvasView = MTLCreateSystemDefaultDevice().map {
-      MetalBrushSandboxCanvasView(canvasSize: canvasSize, device: $0)
+      _EditingCanvasMTKView(canvasSize: canvasSize, device: $0)
     }
 
     super.init(frame: .zero)
 
-    backgroundColor = .black
-    accessibilityIdentifier = "metal-brush-sandbox-host"
+    backgroundColor = .clear
+    isOpaque = false
+    accessibilityIdentifier = "editing-canvas-view"
 
     scrollView.delegate = self
     scrollView.backgroundColor = .clear
@@ -104,7 +117,7 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) {
+  public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
@@ -112,7 +125,7 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     restoreNavigationBackGesture()
   }
 
-  override func didMoveToWindow() {
+  public override func didMoveToWindow() {
     super.didMoveToWindow()
 
     if window == nil {
@@ -125,21 +138,61 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     }
   }
 
-  func configure(
-    interactionMode: MetalBrushSandboxInteractionMode,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
-    brush: MetalBrushSandboxBrush,
-    smoothing: MetalBrushStrokeSmoothingConfiguration
+  public func configure(
+    mode: EditingCanvasMode,
+    interactionMode: EditingCanvasInteractionMode,
+    brush: EditingCanvasBrush,
+    smoothing: EditingCanvasStrokeSmoothingConfiguration
   ) {
     if self.interactionMode != interactionMode {
       self.interactionMode = interactionMode
       applyInteractionMode()
     }
-    if self.currentLocalEffect != localEffect {
-      setEditingStackIfPossible(localEffect: localEffect)
+    if currentMode != mode {
+      setEditingStackIfPossible(mode: mode)
     }
     canvasView?.configure(brush: brush, smoothing: smoothing)
     updateVisibleContentRect()
+  }
+
+  public func configure(
+    interactionMode: EditingCanvasInteractionMode,
+    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
+    brush: EditingCanvasBrush,
+    smoothing: EditingCanvasStrokeSmoothingConfiguration
+  ) {
+    configure(
+      interactionMode: interactionMode,
+      localEffect: Optional(localEffect),
+      brush: brush,
+      smoothing: smoothing
+    )
+  }
+
+  private func configure(
+    interactionMode: EditingCanvasInteractionMode,
+    localEffect: EditingStack.Edit.LocalAdjustmentEffect?,
+    brush: EditingCanvasBrush,
+    smoothing: EditingCanvasStrokeSmoothingConfiguration
+  ) {
+    configure(
+      mode: localEffect.map { .localAdjustment(effect: $0) } ?? .viewportBase,
+      interactionMode: interactionMode,
+      brush: brush,
+      smoothing: smoothing
+    )
+  }
+
+  public func setDisplayedContentRect(_ rect: CGRect?) {
+    let sanitizedRect = sanitizedDisplayedContentRect(rect)
+    guard displayedContentRect != sanitizedRect else {
+      return
+    }
+
+    displayedContentRect = sanitizedRect
+    lastAppliedDisplayedContentRect = nil
+    setNeedsLayout()
+    applyDisplayedContentRectIfNeeded()
   }
 
   private func applyInteractionMode() {
@@ -190,66 +243,100 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     scrollView.zoom(to: zoomRect, animated: true)
   }
 
-  func setEditingStack(
+  public func setEditingStack(
     _ editingStack: EditingStack,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect
+    mode: EditingCanvasMode
   ) {
     guard let loadedState = editingStack.loadedState else {
       return
     }
 
+    let localEffect = mode.activeLocalEffect
     let didChangeStack = currentEditingStack !== editingStack
+    let didChangeMode = currentMode != mode
     let didChangeLocalEffect = currentLocalEffect != localEffect
+    let renderInputKey = makeRenderInputKey(loadedState: loadedState, mode: mode)
+    let didChangeRenderInput = currentRenderInputKey != renderInputKey
     currentEditingStack = editingStack
+    currentMode = mode
     currentLocalEffect = localEffect
 
     if didChangeLocalEffect {
-      updateSandboxLocalAdjustmentEffect(localEffect)
+      if localEffect == nil {
+        editingCanvasLocalAdjustmentLayerID = nil
+      }
+      updateEditingCanvasLocalAdjustmentEffect(localEffect)
     }
 
-    guard didChangeStack || didChangeLocalEffect || canvasView?.hasRenderImages == false else {
+    guard didChangeStack
+      || didChangeMode
+      || didChangeLocalEffect
+      || didChangeRenderInput
+      || canvasView?.hasRenderImages == false
+    else {
       syncCommittedStrokesFromEditingStack()
       return
     }
 
-    updateRenderImages(loadedState: loadedState, localEffect: localEffect)
+    updateRenderImages(loadedState: loadedState, mode: mode, key: renderInputKey)
     syncCommittedStrokesFromEditingStack()
   }
 
-  func reloadEditingStackPreview() {
+  public func setEditingStack(
+    _ editingStack: EditingStack,
+    localEffect: EditingStack.Edit.LocalAdjustmentEffect
+  ) {
+    setEditingStack(editingStack, localEffect: Optional(localEffect))
+  }
+
+  private func setEditingStack(
+    _ editingStack: EditingStack,
+    localEffect: EditingStack.Edit.LocalAdjustmentEffect?
+  ) {
+    setEditingStack(
+      editingStack,
+      mode: localEffect.map { .localAdjustment(effect: $0) } ?? .viewportBase
+    )
+  }
+
+  public func reloadEditingStackPreview() {
     guard
       let editingStack = currentEditingStack,
-      let loadedState = editingStack.loadedState,
-      let localEffect = currentLocalEffect
+      let loadedState = editingStack.loadedState
     else {
       return
     }
 
-    updateRenderImages(loadedState: loadedState, localEffect: localEffect)
+    updateRenderImages(
+      loadedState: loadedState,
+      mode: currentMode,
+      key: makeRenderInputKey(loadedState: loadedState, mode: currentMode)
+    )
     syncCommittedStrokesFromEditingStack()
   }
 
-  private func setEditingStackIfPossible(localEffect: EditingStack.Edit.LocalAdjustmentEffect) {
+  private func setEditingStackIfPossible(mode: EditingCanvasMode) {
     guard let currentEditingStack else {
-      currentLocalEffect = localEffect
+      currentMode = mode
+      currentLocalEffect = mode.activeLocalEffect
       return
     }
 
-    setEditingStack(currentEditingStack, localEffect: localEffect)
+    setEditingStack(currentEditingStack, mode: mode)
   }
 
-  func reset() {
+  public func reset() {
     canvasView?.reset()
     canvasView?.setCommittedStrokes([])
     if let currentEditingStack {
       currentEditingStack.set(localAdjustments: [])
     }
-    sandboxLocalAdjustmentLayerID = nil
+    editingCanvasLocalAdjustmentLayerID = nil
     updateVisibleContentRect()
     publishMetrics()
   }
 
-  private func commit(record: MetalBrushSandboxStrokeRecord, completion: @escaping () -> Void) {
+  private func commit(record: EditingCanvasStrokeRecord, completion: @escaping () -> Void) {
     appendRecordToEditingStack(record)
     syncCommittedStrokesFromEditingStack()
     completion()
@@ -258,19 +345,34 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
 
   private func updateRenderImages(
     loadedState: EditingStack.Loaded,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect
+    mode: EditingCanvasMode,
+    key: EditingCanvasRenderInputKey
   ) {
-    guard let images = makeCanvasRenderImages(loadedState: loadedState, localEffect: localEffect) else {
+    guard let images = makeCanvasRenderImages(loadedState: loadedState, mode: mode) else {
       return
     }
 
     canvasView?.setRenderImages(images)
+    currentRenderInputKey = key
+  }
+
+  private func makeRenderInputKey(
+    loadedState: EditingStack.Loaded,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderInputKey {
+    let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+    return .init(
+      sourceExtent: previewSourceImage.extent,
+      filters: loadedState.currentEdit.filters,
+      mode: mode,
+      renderedPreviewLocalAdjustments: mode.rendersFullEditPreview ? loadedState.currentEdit.localAdjustments : nil
+    )
   }
 
   private func makeCanvasRenderImages(
     loadedState: EditingStack.Loaded,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect
-  ) -> MetalBrushSandboxRenderImages? {
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
     let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
     let sourceExtent = previewSourceImage.extent
@@ -299,14 +401,40 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
       scaledSourceImage = sourceImage.cropped(to: canvasRect)
     }
 
-    let baseImage = loadedState.currentEdit.filters
-      .apply(to: scaledSourceImage)
-      .cropped(to: canvasRect)
+    let baseImage: CIImage
     let adjustedImage: CIImage
-    if localEffect.usesSandboxShaderCompositeExposure {
+    let renderEffect: EditingStack.Edit.LocalAdjustmentEffect
+    let usesPreparedBaseImage: Bool
+    switch mode {
+    case .viewportBase:
+      baseImage = loadedState.currentEdit.filters
+        .apply(to: scaledSourceImage)
+        .cropped(to: canvasRect)
       adjustedImage = baseImage
-    } else {
-      adjustedImage = localEffect.apply(to: baseImage, previewScale: 1)
+      renderEffect = .gaussianBlur(radius: 0)
+      usesPreparedBaseImage = false
+
+    case let .localAdjustment(localEffect):
+      baseImage = loadedState.currentEdit.filters
+        .apply(to: scaledSourceImage)
+        .cropped(to: canvasRect)
+      if localEffect.usesEditingCanvasShaderCompositeExposure {
+        adjustedImage = baseImage
+      } else {
+        adjustedImage = localEffect.apply(to: baseImage, previewScale: 1)
+      }
+      renderEffect = localEffect
+
+      usesPreparedBaseImage = false
+
+    case .renderedEditPreview, .preview:
+      let previewImage = loadedState.currentEdit
+        .makePreviewImage(from: scaledSourceImage, purpose: .editing)
+        .cropped(to: canvasRect)
+      baseImage = previewImage
+      adjustedImage = previewImage
+      renderEffect = .gaussianBlur(radius: 0)
+      usesPreparedBaseImage = true
     }
 
     return .init(
@@ -314,26 +442,27 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
       filters: loadedState.currentEdit.filters,
       base: baseImage,
       adjusted: adjustedImage,
-      localEffect: localEffect
+      localEffect: renderEffect,
+      usesPreparedBaseImage: usesPreparedBaseImage
     )
   }
 
-  private func appendRecordToEditingStack(_ record: MetalBrushSandboxStrokeRecord) {
-    guard let currentEditingStack else {
+  private func appendRecordToEditingStack(_ record: EditingCanvasStrokeRecord) {
+    guard let currentEditingStack, let currentLocalEffect else {
       return
     }
 
     var localAdjustments = currentEditingStack.loadedState?.currentEdit.localAdjustments ?? []
     let layerIndex: Int
-    if let existingIndex = sandboxLayerIndex(in: localAdjustments) {
+    if let existingIndex = editingCanvasLayerIndex(in: localAdjustments) {
       layerIndex = existingIndex
     } else {
       let id = UUID()
-      sandboxLocalAdjustmentLayerID = id
+      editingCanvasLocalAdjustmentLayerID = id
       localAdjustments.append(
         .init(
           id: id,
-          effect: currentLocalEffect ?? .gaussianBlur(radius: 0),
+          effect: currentLocalEffect,
           mask: .init()
         )
       )
@@ -341,20 +470,20 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     }
 
     localAdjustments[layerIndex].isEnabled = true
-    localAdjustments[layerIndex].effect = currentLocalEffect ?? .gaussianBlur(radius: 0)
+    localAdjustments[layerIndex].effect = currentLocalEffect
     localAdjustments[layerIndex].mask.strokes.append(record.localAdjustmentStroke)
     currentEditingStack.set(localAdjustments: localAdjustments)
   }
 
-  private func updateSandboxLocalAdjustmentEffect(
-    _ localEffect: EditingStack.Edit.LocalAdjustmentEffect
+  private func updateEditingCanvasLocalAdjustmentEffect(
+    _ localEffect: EditingStack.Edit.LocalAdjustmentEffect?
   ) {
-    guard let currentEditingStack else {
+    guard let currentEditingStack, let localEffect else {
       return
     }
 
     var localAdjustments = currentEditingStack.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = sandboxLayerIndex(in: localAdjustments) else {
+    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
       return
     }
 
@@ -368,45 +497,49 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
 
   private func syncCommittedStrokesFromEditingStack() {
     let localAdjustments = currentEditingStack?.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = sandboxLayerIndex(in: localAdjustments) else {
+    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
       canvasView?.setCommittedStrokes([])
       publishMetrics()
       return
     }
 
     let records = localAdjustments[layerIndex].mask.strokes.map {
-      MetalBrushSandboxStrokeRecord(localAdjustmentStroke: $0)
+      EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
     }
     canvasView?.setCommittedStrokes(records)
     publishMetrics()
   }
 
-  private func sandboxLayerIndex(
+  private func editingCanvasLayerIndex(
     in localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
   ) -> Int? {
+    guard let currentLocalEffect else {
+      return nil
+    }
+
     if
-      let sandboxLocalAdjustmentLayerID,
-      let index = localAdjustments.firstIndex(where: { $0.id == sandboxLocalAdjustmentLayerID })
+      let editingCanvasLocalAdjustmentLayerID,
+      let index = localAdjustments.firstIndex(where: { $0.id == editingCanvasLocalAdjustmentLayerID })
     {
       return index
     }
 
     guard let index = localAdjustments.firstIndex(where: { layer in
-      layer.effect.sandboxEffectIdentity == currentLocalEffect?.sandboxEffectIdentity
+      layer.effect.editingCanvasEffectIdentity == currentLocalEffect.editingCanvasEffectIdentity
     }) else {
       return nil
     }
 
-    sandboxLocalAdjustmentLayerID = localAdjustments[index].id
+    editingCanvasLocalAdjustmentLayerID = localAdjustments[index].id
     return index
   }
 
-  func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+  public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
     updateVisibleContentRect()
     publishMetrics()
   }
 
-  override func layoutSubviews() {
+  public override func layoutSubviews() {
     super.layoutSubviews()
 
     protectNavigationBackGesture()
@@ -416,37 +549,44 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     let visibleCenter = boundsSizeChanged ? visibleContentCenter() : nil
     let shouldRefitToMinimumZoom = isAtMinimumZoomScale
 
+    if boundsSizeChanged {
+      lastAppliedDisplayedContentRect = nil
+    }
+
     previousLayoutBoundsSize = bounds.size
     scrollView.frame = bounds
     attachmentContentView.bounds = CGRect(origin: .zero, size: canvasSize)
     updateViewportLayerFrames()
 
     updateZoomScaleIfNeeded(refitsToMinimum: shouldRefitToMinimumZoom)
-    centerContentIfNeeded()
-    restoreVisibleContentCenterIfNeeded(visibleCenter)
+    let didApplyDisplayedContentRect = applyDisplayedContentRectIfNeeded()
+    if didApplyDisplayedContentRect == false {
+      centerContentIfNeeded()
+      restoreVisibleContentCenterIfNeeded(visibleCenter)
+    }
     updateViewportLayerFrames()
     updateVisibleContentRect()
     publishMetrics()
   }
 
-  func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+  public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
     attachmentContentView
   }
 
-  func scrollViewDidZoom(_ scrollView: UIScrollView) {
+  public func scrollViewDidZoom(_ scrollView: UIScrollView) {
     centerContentIfNeeded()
     updateViewportLayerFrames()
     updateVisibleContentRect()
     publishMetrics()
   }
 
-  func scrollViewDidScroll(_ scrollView: UIScrollView) {
+  public func scrollViewDidScroll(_ scrollView: UIScrollView) {
     updateViewportLayerFrames()
     updateVisibleContentRect()
     publishMetrics()
   }
 
-  func gestureRecognizer(
+  public func gestureRecognizer(
     _ gestureRecognizer: UIGestureRecognizer,
     shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
@@ -560,6 +700,70 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     }
   }
 
+  @discardableResult
+  private func applyDisplayedContentRectIfNeeded() -> Bool {
+    guard
+      let displayedContentRect,
+      bounds.width > 0,
+      bounds.height > 0,
+      displayedContentRect.width > 0,
+      displayedContentRect.height > 0,
+      lastAppliedDisplayedContentRect != displayedContentRect
+    else {
+      return false
+    }
+
+    let zoomScale = min(
+      max(
+        min(
+          bounds.width / displayedContentRect.width,
+          bounds.height / displayedContentRect.height
+        ),
+        scrollView.minimumZoomScale
+      ),
+      scrollView.maximumZoomScale
+    )
+
+    scrollView.setZoomScale(zoomScale, animated: false)
+    centerContentIfNeeded()
+
+    let proposedOffset = CGPoint(
+      x: displayedContentRect.midX * zoomScale - scrollView.bounds.width / 2,
+      y: displayedContentRect.midY * zoomScale - scrollView.bounds.height / 2
+    )
+
+    scrollView.setContentOffset(
+      clampedContentOffset(proposedOffset),
+      animated: false
+    )
+    lastAppliedDisplayedContentRect = displayedContentRect
+    return true
+  }
+
+  private func sanitizedDisplayedContentRect(_ rect: CGRect?) -> CGRect? {
+    guard let rect else {
+      return nil
+    }
+
+    let canvasRect = CGRect(origin: .zero, size: canvasSize)
+    let finiteRect = rect.standardized
+    guard
+      finiteRect.isNull == false,
+      finiteRect.isInfinite == false,
+      finiteRect.width > 0,
+      finiteRect.height > 0
+    else {
+      return nil
+    }
+
+    let intersection = canvasRect.intersection(finiteRect)
+    guard intersection.isNull == false, intersection.isEmpty == false else {
+      return nil
+    }
+
+    return intersection
+  }
+
   private func centerContentIfNeeded() {
     let horizontalInset = max((scrollView.bounds.width - scrollView.contentSize.width) / 2, 0)
     let verticalInset = max((scrollView.bounds.height - scrollView.contentSize.height) / 2, 0)
@@ -651,7 +855,7 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
     let activeStamps = canvasView?.activeStampCount ?? 0
     let committedStamps = canvasView?.committedStampCount ?? 0
     onMetricsChange?(
-      MetalBrushSandboxMetrics(
+      EditingCanvasMetrics(
         zoomScale: Double(scrollView.zoomScale),
         stampCount: activeStamps + committedStamps,
         strokeCount: canvasView?.strokeCount ?? 0,
@@ -662,12 +866,12 @@ final class MetalBrushSandboxHostView: UIView, UIScrollViewDelegate, UIGestureRe
 }
 
 private extension EditingStack.Edit.LocalAdjustmentEffect {
-  enum SandboxEffectIdentity: Equatable {
+  enum EditingCanvasEffectIdentity: Equatable {
     case blur
     case exposure
   }
 
-  var usesSandboxShaderCompositeExposure: Bool {
+  var usesEditingCanvasShaderCompositeExposure: Bool {
     switch self {
     case .gaussianBlur:
       return false
@@ -676,7 +880,7 @@ private extension EditingStack.Edit.LocalAdjustmentEffect {
     }
   }
 
-  var sandboxEffectIdentity: SandboxEffectIdentity {
+  var editingCanvasEffectIdentity: EditingCanvasEffectIdentity {
     switch self {
     case .gaussianBlur:
       return .blur

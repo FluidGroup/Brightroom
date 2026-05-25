@@ -7,19 +7,12 @@ import simd
 import SwiftUI
 import UIKit
 
-struct MetalBrushSandboxBrush: Equatable {
-  var size: Double
-  var hardness: Double
-  var opacity: Double
-  var spacing: Double
-}
-
-struct MetalBrushSandboxStrokeRecord {
+struct EditingCanvasStrokeRecord {
   let stamps: [CGPoint]
-  let brush: MetalBrushSandboxBrush
+  let brush: EditingCanvasBrush
   let bounds: CGRect
 
-  init(stamps: [CGPoint], brush: MetalBrushSandboxBrush) {
+  init(stamps: [CGPoint], brush: EditingCanvasBrush) {
     self.stamps = stamps
     self.brush = brush
 
@@ -70,38 +63,9 @@ struct MetalBrushSandboxStrokeRecord {
   }
 }
 
-struct MetalBrushStrokeSmoothingConfiguration: Equatable {
-  var algorithm: MetalBrushStrokeSmoothingAlgorithm
-  var strength: Double
-}
+struct EditingCanvasStrokeSmoother {
 
-enum MetalBrushStrokeSmoothingAlgorithm: String, CaseIterable, Identifiable {
-  case raw
-  case bezier
-  case catmullRom
-  case movingAverage
-
-  var id: Self {
-    return self
-  }
-
-  var title: String {
-    switch self {
-    case .raw:
-      return "Raw"
-    case .bezier:
-      return "Bezier"
-    case .catmullRom:
-      return "Catmull"
-    case .movingAverage:
-      return "Avg"
-    }
-  }
-}
-
-struct MetalBrushStrokeSmoother {
-
-  private var configuration = MetalBrushStrokeSmoothingConfiguration(
+  private var configuration = EditingCanvasStrokeSmoothingConfiguration(
     algorithm: .bezier,
     strength: 0.85
   )
@@ -110,7 +74,7 @@ struct MetalBrushStrokeSmoother {
   private var catmullRom = CatmullRomStrokeSmoother()
   private var movingAverage = MovingAverageStrokeSmoother()
 
-  mutating func configure(_ configuration: MetalBrushStrokeSmoothingConfiguration) {
+  mutating func configure(_ configuration: EditingCanvasStrokeSmoothingConfiguration) {
     guard self.configuration != configuration else {
       return
     }

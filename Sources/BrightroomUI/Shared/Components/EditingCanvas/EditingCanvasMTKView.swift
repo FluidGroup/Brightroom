@@ -4,7 +4,7 @@ import MetalKit
 import simd
 import UIKit
 
-struct MetalBrushUniforms {
+struct EditingCanvasBrushUniforms {
   var canvasSize: SIMD2<Float>
   var center: SIMD2<Float>
   var radius: Float
@@ -13,19 +13,19 @@ struct MetalBrushUniforms {
   var _padding: Float = 0
 }
 
-struct MetalBrushLiveOverlayUniforms {
+struct EditingCanvasLiveOverlayUniforms {
   var viewportOrigin: SIMD2<Float>
   var viewportSize: SIMD2<Float>
   var drawableSize: SIMD2<Float>
 }
 
-struct MetalBrushVisibleImageTextureKey: Equatable {
+struct EditingCanvasVisibleImageTextureKey: Equatable {
   var visibleContentRect: CGRect
   var pixelWidth: Int
   var pixelHeight: Int
 }
 
-private struct MetalBrushViewportSourceTextureKey: Equatable {
+private struct EditingCanvasViewportSourceTextureKey: Equatable {
   var sourceExtent: CGRect
   var visibleContentRect: CGRect
   var visibleCanvasFrame: CGRect
@@ -33,13 +33,13 @@ private struct MetalBrushViewportSourceTextureKey: Equatable {
   var pixelHeight: Int
 }
 
-private struct MetalBrushViewportSourceTexture {
-  let key: MetalBrushViewportSourceTextureKey
+private struct EditingCanvasViewportSourceTexture {
+  let key: EditingCanvasViewportSourceTextureKey
   let texture: MTLTexture
   let image: CIImage
 }
 
-private struct MetalBrushViewportCoreImageBaseLayerCacheKey: Equatable {
+private struct EditingCanvasViewportCoreImageBaseLayerCacheKey: Equatable {
   var sourceExtent: CGRect
   var visibleContentRect: CGRect
   var visibleCanvasFrame: CGRect
@@ -48,45 +48,46 @@ private struct MetalBrushViewportCoreImageBaseLayerCacheKey: Equatable {
   var filters: EditingStack.Edit.Filters
 }
 
-private struct MetalBrushViewportCoreImageLocalLayerCacheKey: Equatable {
-  var baseKey: MetalBrushViewportCoreImageBaseLayerCacheKey
+private struct EditingCanvasViewportCoreImageLocalLayerCacheKey: Equatable {
+  var baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey
   var localEffect: EditingStack.Edit.LocalAdjustmentEffect
   var previewScale: CGFloat
 }
 
-private struct MetalBrushViewportCoreImageBaseLayerCache {
-  let key: MetalBrushViewportCoreImageBaseLayerCacheKey
+private struct EditingCanvasViewportCoreImageBaseLayerCache {
+  let key: EditingCanvasViewportCoreImageBaseLayerCacheKey
   let texture: MTLTexture
   let image: CIImage
 }
 
-private struct MetalBrushViewportCoreImageLocalLayerCache {
-  let key: MetalBrushViewportCoreImageLocalLayerCacheKey
+private struct EditingCanvasViewportCoreImageLocalLayerCache {
+  let key: EditingCanvasViewportCoreImageLocalLayerCacheKey
   let texture: MTLTexture
   let image: CIImage
 }
 
-private struct MetalBrushViewportRenderTextures {
+private struct EditingCanvasViewportRenderTextures {
   let pixelWidth: Int
   let pixelHeight: Int
   let maskTexture: MTLTexture
 }
 
-struct MetalBrushSandboxRenderImages {
+struct EditingCanvasRenderImages {
   let source: CIImage
   let filters: EditingStack.Edit.Filters
   let base: CIImage
   let adjusted: CIImage
   let localEffect: EditingStack.Edit.LocalAdjustmentEffect
+  let usesPreparedBaseImage: Bool
 
   var hasLocalEffect: Bool {
     localEffect.isActive
   }
 }
 
-final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
+final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
-  private typealias BrushUniforms = MetalBrushUniforms
+  private typealias BrushUniforms = EditingCanvasBrushUniforms
   private static let maximumLiveTextureDimension = 8192
   private enum LiveFrameRate {
     static let minimum = 60
@@ -112,29 +113,29 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   private let brushPipeline: MTLRenderPipelineState
   private let liveOverlayPipeline: MTLRenderPipelineState
   private var liveStrokeTexture: MTLTexture?
-  private var renderImages: MetalBrushSandboxRenderImages?
-  private var committedStrokes: [MetalBrushSandboxStrokeRecord] = []
+  private var renderImages: EditingCanvasRenderImages?
+  private var committedStrokes: [EditingCanvasStrokeRecord] = []
   private var visibleAdjustedImageTexture: MTLTexture?
-  private var visibleAdjustedImageTextureKey: MetalBrushVisibleImageTextureKey?
-  private var viewportSourceTexture: MetalBrushViewportSourceTexture?
-  private var viewportCoreImageBaseLayerCache: MetalBrushViewportCoreImageBaseLayerCache?
-  private var viewportCoreImageLocalLayerCache: MetalBrushViewportCoreImageLocalLayerCache?
-  private var viewportRenderTextures: MetalBrushViewportRenderTextures?
+  private var visibleAdjustedImageTextureKey: EditingCanvasVisibleImageTextureKey?
+  private var viewportSourceTexture: EditingCanvasViewportSourceTexture?
+  private var viewportCoreImageBaseLayerCache: EditingCanvasViewportCoreImageBaseLayerCache?
+  private var viewportCoreImageLocalLayerCache: EditingCanvasViewportCoreImageLocalLayerCache?
+  private var viewportRenderTextures: EditingCanvasViewportRenderTextures?
   private var usesViewportImageRendering = false
   private var usesViewportCachedSourceRendering = false
-  private var brush = MetalBrushSandboxBrush(
+  private var brush = EditingCanvasBrush(
     size: 56,
     hardness: 0.72,
     opacity: 0.9,
     spacing: 0.18
   )
-  private var smoothing = MetalBrushStrokeSmoothingConfiguration(
+  private var smoothing = EditingCanvasStrokeSmoothingConfiguration(
     algorithm: .bezier,
     strength: 0.85
   )
   private var visibleContentRect: CGRect
   private var visibleCanvasFrame: CGRect = .zero
-  private var strokeSmoother = MetalBrushStrokeSmoother()
+  private var strokeSmoother = EditingCanvasStrokeSmoother()
   private var lastStampPoint: CGPoint?
   private var activeStrokeStamps: [CGPoint] = []
   private var pendingLiveStamps: [CGPoint] = []
@@ -159,7 +160,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     measuredFramesPerSecond
   }
   var onMetricsChange: (() -> Void)?
-  var onStrokeCommit: ((MetalBrushSandboxStrokeRecord, @escaping () -> Void) -> Void)?
+  var onStrokeCommit: ((EditingCanvasStrokeRecord, @escaping () -> Void) -> Void)?
 
   var sharedDevice: MTLDevice? { device }
   var sharedBrushPipeline: MTLRenderPipelineState { brushPipeline }
@@ -169,7 +170,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     [unowned self] in
     CIContext(
       mtlCommandQueue: self.commandQueue,
-      options: [.name: "MetalBrushSandboxCanvas"]
+      options: [.name: "EditingCanvas"]
     )
   }()
 
@@ -183,7 +184,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       self.brushPipeline = try Self.makeBrushPipeline(device: device, library: library)
       self.liveOverlayPipeline = try Self.makeLiveOverlayPipeline(device: device, library: library)
     } catch {
-      fatalError("Failed to create Metal Brush Sandbox pipeline: \(error)")
+      fatalError("Failed to create Editing Canvas pipeline: \(error)")
     }
 
     super.init(frame: .zero, device: device)
@@ -200,7 +201,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     autoResizeDrawable = true
     isMultipleTouchEnabled = true
     delegate = self
-    accessibilityIdentifier = "metal-brush-sandbox-metal-view"
+    accessibilityIdentifier = "editing-canvas-metal-view"
     isAccessibilityElement = true
     accessibilityLabel = "Metal Brush Canvas"
     isHidden = true
@@ -227,8 +228,8 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   }
 
   func configure(
-    brush: MetalBrushSandboxBrush,
-    smoothing: MetalBrushStrokeSmoothingConfiguration
+    brush: EditingCanvasBrush,
+    smoothing: EditingCanvasStrokeSmoothingConfiguration
   ) {
     self.brush = brush
 
@@ -244,7 +245,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
   }
 
-  func setRenderImages(_ images: MetalBrushSandboxRenderImages) {
+  func setRenderImages(_ images: EditingCanvasRenderImages) {
     renderImages = images
     visibleAdjustedImageTextureKey = nil
     viewportRenderTextures = nil
@@ -274,7 +275,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     }
   }
 
-  func setCommittedStrokes(_ records: [MetalBrushSandboxStrokeRecord]) {
+  func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
     committedStrokes = records
     viewportRenderTextures = nil
     if usesViewportImageRendering {
@@ -504,7 +505,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    let key = MetalBrushVisibleImageTextureKey(
+    let key = EditingCanvasVisibleImageTextureKey(
       visibleContentRect: visibleContentRect,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight
@@ -590,7 +591,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: MetalBrushSandboxImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.colorSpace
     )
   }
 
@@ -753,7 +754,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     activeStrokeStamps.removeAll(keepingCapacity: true)
     let generation = liveOverlayGeneration
 
-    let record = MetalBrushSandboxStrokeRecord(stamps: stamps, brush: brush)
+    let record = EditingCanvasStrokeRecord(stamps: stamps, brush: brush)
     let clearLiveOverlay = { [weak self] in
       guard let self else { return }
       self.finishCommittedStrokeOverlay(for: generation)
@@ -950,7 +951,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     encoder.setFragmentTexture(visibleAdjustedImageTexture, index: 1)
     let drawableScaleX = drawableSize.width / max(bounds.width, 1)
     let drawableScaleY = drawableSize.height / max(bounds.height, 1)
-    var overlayUniforms = MetalBrushLiveOverlayUniforms(
+    var overlayUniforms = EditingCanvasLiveOverlayUniforms(
       viewportOrigin: CGPoint(
         x: visibleCanvasFrame.minX * drawableScaleX,
         y: visibleCanvasFrame.minY * drawableScaleY
@@ -963,7 +964,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     )
     encoder.setFragmentBytes(
       &overlayUniforms,
-      length: MemoryLayout<MetalBrushLiveOverlayUniforms>.stride,
+      length: MemoryLayout<EditingCanvasLiveOverlayUniforms>.stride,
       index: 0
     )
     encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
@@ -990,7 +991,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return
     }
 
-    guard usesViewportCachedSourceRendering == false else {
+    guard usesViewportCachedSourceRendering == false || renderImages.usesPreparedBaseImage else {
       renderViewportCachedSource(
         renderImages,
         drawable: drawable,
@@ -1075,14 +1076,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: MetalBrushSandboxImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.colorSpace
     )
     commandBuffer.present(drawable)
     commandBuffer.commit()
   }
 
   private func renderViewportCachedSource(
-    _ renderImages: MetalBrushSandboxRenderImages,
+    _ renderImages: EditingCanvasRenderImages,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1161,7 +1162,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     pixelWidth: Int,
     pixelHeight: Int
   ) -> CIImage? {
-    let key = MetalBrushViewportSourceTextureKey(
+    let key = EditingCanvasViewportSourceTextureKey(
       sourceExtent: source.extent,
       visibleContentRect: visibleContentRect,
       visibleCanvasFrame: visibleCanvasFrame,
@@ -1190,12 +1191,12 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     guard let sourceImage = CIImage(
       mtlTexture: sourceTexture,
-      options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
     ) else {
       return nil
     }
 
-    let cachedSource = MetalBrushViewportSourceTexture(
+    let cachedSource = EditingCanvasViewportSourceTexture(
       key: key,
       texture: sourceTexture,
       image: sourceImage.cropped(to: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
@@ -1231,7 +1232,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: MetalBrushSandboxImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.colorSpace
     )
     commandBuffer.present(drawable)
     commandBuffer.commit()
@@ -1263,7 +1264,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
 
     let previewScale = viewportPreviewScale(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-    let baseLayerKey = MetalBrushViewportCoreImageBaseLayerCacheKey(
+    let baseLayerKey = EditingCanvasViewportCoreImageBaseLayerCacheKey(
       sourceExtent: sourceExtent,
       visibleContentRect: visibleContentRect,
       visibleCanvasFrame: visibleCanvasFrame,
@@ -1296,7 +1297,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     guard let maskImage = CIImage(
       mtlTexture: textures.maskTexture,
-      options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
     )?.cropped(to: baseLayerImage.extent) else {
       clearCurrentDrawable()
       return
@@ -1322,7 +1323,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
   private func viewportCoreImageBaseLayerImage(
     _ image: CIImage,
-    key: MetalBrushViewportCoreImageBaseLayerCacheKey,
+    key: EditingCanvasViewportCoreImageBaseLayerCacheKey,
     pixelWidth: Int,
     pixelHeight: Int,
     commandBuffer: MTLCommandBuffer
@@ -1346,7 +1347,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return nil
     }
 
-    viewportCoreImageBaseLayerCache = MetalBrushViewportCoreImageBaseLayerCache(
+    viewportCoreImageBaseLayerCache = EditingCanvasViewportCoreImageBaseLayerCache(
       key: key,
       texture: texture,
       image: cachedImage
@@ -1357,14 +1358,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
   private func viewportCoreImageLocalLayerImage(
     _ baseImage: CIImage,
-    baseKey: MetalBrushViewportCoreImageBaseLayerCacheKey,
+    baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey,
     localEffect: EditingStack.Edit.LocalAdjustmentEffect,
     previewScale: CGFloat,
     pixelWidth: Int,
     pixelHeight: Int,
     commandBuffer: MTLCommandBuffer
   ) -> CIImage? {
-    let key = MetalBrushViewportCoreImageLocalLayerCacheKey(
+    let key = EditingCanvasViewportCoreImageLocalLayerCacheKey(
       baseKey: baseKey,
       localEffect: localEffect,
       previewScale: previewScale
@@ -1391,7 +1392,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return nil
     }
 
-    viewportCoreImageLocalLayerCache = MetalBrushViewportCoreImageLocalLayerCache(
+    viewportCoreImageLocalLayerCache = EditingCanvasViewportCoreImageLocalLayerCache(
       key: key,
       texture: texture,
       image: cachedImage
@@ -1408,7 +1409,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     renderCachedViewportImage(image, into: texture, commandBuffer: commandBuffer)
     return CIImage(
       mtlTexture: texture,
-      options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
     )?.cropped(to: CGRect(x: 0, y: 0, width: texture.width, height: texture.height))
   }
 
@@ -1429,12 +1430,12 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: MetalBrushSandboxImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.colorSpace
     )
   }
 
   private func renderViewportCoreImageComposite(
-    _ renderImages: MetalBrushSandboxRenderImages,
+    _ renderImages: EditingCanvasRenderImages,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1474,15 +1475,15 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
     guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
-        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
       )?.cropped(to: renderBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
-        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
       )?.cropped(to: renderBounds),
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
-        options: [.colorSpace: MetalBrushSandboxImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
       )?.cropped(to: renderBounds)
     else {
       clearCurrentDrawable()
@@ -1554,14 +1555,14 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: MetalBrushSandboxImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.colorSpace
     )
   }
 
   private func viewportTextures(
     pixelWidth: Int,
     pixelHeight: Int
-  ) -> MetalBrushViewportRenderTextures? {
+  ) -> EditingCanvasViewportRenderTextures? {
     if let textures = viewportRenderTextures,
        textures.pixelWidth == pixelWidth,
        textures.pixelHeight == pixelHeight
@@ -1579,7 +1580,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
       return nil
     }
 
-    let textures = MetalBrushViewportRenderTextures(
+    let textures = EditingCanvasViewportRenderTextures(
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
       maskTexture: maskTexture
@@ -1642,7 +1643,7 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
 
     encoder.setRenderPipelineState(brushPipeline)
 
-    func encode(stamps: [CGPoint], brush: MetalBrushSandboxBrush) {
+    func encode(stamps: [CGPoint], brush: EditingCanvasBrush) {
       let radius = CGFloat(brush.size / 2)
       let pixelRadius = Float(Double(radius) * Double((pixelScaleX + pixelScaleY) * 0.5))
       let hardness = Float(brush.hardness)
@@ -1762,6 +1763,6 @@ final class MetalBrushSandboxCanvasView: MTKView, MTKViewDelegate {
   }
 
   private static func makeShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    try device.makeDefaultLibrary(bundle: .main)
+    try device.makeLibrary(source: EditingCanvasShaderSource.source, options: nil)
   }
 }

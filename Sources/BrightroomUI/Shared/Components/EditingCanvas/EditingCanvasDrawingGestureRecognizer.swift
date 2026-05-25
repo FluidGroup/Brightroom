@@ -7,7 +7,7 @@ import simd
 import SwiftUI
 import UIKit
 
-final class MetalBrushDrawingGestureRecognizer: UIGestureRecognizer {
+final class _EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
 
   var onBegin: ((CGPoint) -> Void)?
   var onMove: (([CGPoint]) -> Void)?

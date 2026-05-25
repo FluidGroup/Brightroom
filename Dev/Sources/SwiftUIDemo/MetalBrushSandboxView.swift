@@ -1,42 +1,7 @@
 import BrightroomEngine
+import BrightroomUI
 import SwiftUI
 import UIKit
-
-enum MetalBrushSandboxInteractionMode: String, CaseIterable, Identifiable {
-  case draw
-  case view
-
-  var id: Self { self }
-
-  var title: String {
-    switch self {
-    case .draw:
-      return "Draw"
-    case .view:
-      return "View"
-    }
-  }
-}
-
-extension MetalBrushSandboxInteractionMode {
-  var isDrawingEnabled: Bool {
-    switch self {
-    case .draw:
-      return true
-    case .view:
-      return false
-    }
-  }
-
-  var panMinimumNumberOfTouches: Int {
-    switch self {
-    case .draw:
-      return 2
-    case .view:
-      return 1
-    }
-  }
-}
 
 struct MetalBrushSandboxView: View {
 
@@ -53,7 +18,7 @@ struct MetalBrushSandboxView: View {
   }
 
   var body: some View {
-    MetalBrushSandboxRepresentable(source: source)
+    MetalBrushSandboxRootView(source: source)
       .accessibilityIdentifier("metal-brush-sandbox-canvas")
     .navigationTitle("Metal Brush Sandbox")
     .navigationBarTitleDisplayMode(.inline)
@@ -69,24 +34,6 @@ struct MetalBrushSandboxView: View {
       }
     }
   }
-}
-
-struct MetalBrushSandboxMetrics: Equatable {
-  var zoomScale: Double = 1
-  var stampCount: Int = 0
-  var strokeCount: Int = 0
-  var framesPerSecond: Double = 0
-}
-
-private struct MetalBrushSandboxRepresentable: UIViewRepresentable {
-
-  let source: MetalBrushSandboxSource
-
-  func makeUIView(context: Context) -> MetalBrushSandboxRootView {
-    MetalBrushSandboxRootView(source: source)
-  }
-
-  func updateUIView(_ uiView: MetalBrushSandboxRootView, context: Context) {}
 }
 
 enum MetalBrushSandboxSource {
