@@ -52,8 +52,6 @@ public struct PixelEditorLocalizedStrings: Sendable {
   public var editFade = "Fade"
   public var editClarity = "Clarity"
   public var editSharpen = "Sharpen"
-  public var brushSizeSmall = "◦"
-  public var brushSizeLarge = "◯"
   public var clear = "Clear"
 
   public init() {}

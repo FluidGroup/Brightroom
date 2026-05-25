@@ -589,10 +589,6 @@ private struct PhotosCropAdjustmentSlider: View {
       tick: { context in
         RoundedRectangle(cornerRadius: 8)
           .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
-      },
-      activeTick: { _ in
-        RoundedRectangle(cornerRadius: 8)
-          .foregroundStyle(.tint)
       }
     )
     .tint(.white)
@@ -624,6 +620,7 @@ private extension BrightroomSteppedSliderStyle {
     tickWidth: 1,
     tickSpacing: 4,
     tickHeight: 10,
+    activeTickWidth: nil,
     activeTickHeight: 18,
     majorTickInterval: 5
   )

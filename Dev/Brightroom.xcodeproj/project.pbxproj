@@ -28,8 +28,6 @@
 		4B58E82F260F0027004A834F /* orientation_left.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE8260BB32600F77E9A /* orientation_left.HEIC */; };
 		4B58E830260F0027004A834F /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4B58E831260F0027004A834F /* orientation_up.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FED260BB32600F77E9A /* orientation_up.HEIC */; };
-		4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */; };
-		4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4B7513CA2B6BEE2100A4743E /* SwiftUISupport */; };
 		4B9369E925F940E600B18571 /* nasa.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 4B9369E725F940E600B18571 /* nasa.jpg */; };
 		4BA41C8D260CE817005E6FA7 /* orientation_up_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FEB260BB32600F77E9A /* orientation_up_mirrored.HEIC */; };
 		4BA41C8E260CE817005E6FA7 /* orientation_right_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */; };
@@ -59,6 +57,8 @@
 		4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* Reveal-SDK */; };
+		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D8F2660FD5500CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */; };
@@ -907,9 +907,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4B7513CB2B6BEE2100A4743E /* SwiftUISupport in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
-				4B7513C82B6BEDFD00A4743E /* SwiftUIHosting in Frameworks */,
+				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
+				B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1473,8 +1473,8 @@
 			packageProductDependencies = (
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
-				4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */,
-				4B7513CA2B6BEE2100A4743E /* SwiftUISupport */,
+				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
+				B027724B2FC2B70A006D7796 /* Reveal-SDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -1571,8 +1571,7 @@
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
 			packageReferences = (
-				4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */,
-				4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */,
+				B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -2420,20 +2419,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */ = {
+		B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FluidGroup/swiftui-hosting.git";
+			repositoryURL = "https://github.com/muukii/Reveal-SDK";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
-		};
-		4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FluidGroup/swiftui-support.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.5.0;
+				minimumVersion = 57.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -2443,15 +2434,14 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
 		};
-		4B7513C72B6BEDFD00A4743E /* SwiftUIHosting */ = {
+		B027724B2FC2B70A006D7796 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4B7513C62B6BEDFC00A4743E /* XCRemoteSwiftPackageReference "swiftui-hosting" */;
-			productName = SwiftUIHosting;
+			package = B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */;
+			productName = "Reveal-SDK";
 		};
-		4B7513CA2B6BEE2100A4743E /* SwiftUISupport */ = {
+		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4B7513C92B6BEE2100A4743E /* XCRemoteSwiftPackageReference "swiftui-support" */;
-			productName = SwiftUISupport;
+			productName = "Reveal-SDK";
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
