@@ -202,17 +202,10 @@ class _ScrollViewportMetalView: UIView {
 
     #if DEBUG
     displayLinkTickCount = 0
-    debugLogLifecycle("start")
     #endif
   }
 
   private func stopDisplayLink(invalidatesRenderKey: Bool = true) {
-    #if DEBUG
-    if displayLink != nil {
-      debugLogLifecycle("stop")
-    }
-    #endif
-
     displayLink?.invalidate()
     displayLink = nil
     if invalidatesRenderKey {
@@ -385,14 +378,6 @@ class _ScrollViewportMetalView: UIView {
   }
 
   #if DEBUG
-  private func debugLogLifecycle(_ event: String) {
-    debugEmit("""
-      [\(debugLogName)] \(event)
-      scroll: \(debugScrollState())
-      viewport: \(debugViewportState())
-      """)
-  }
-
   private func debugLogTick(
     _ displayLink: CADisplayLink,
     didRequestRender: Bool
