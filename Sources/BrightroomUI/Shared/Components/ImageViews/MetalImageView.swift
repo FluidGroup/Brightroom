@@ -110,8 +110,15 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     }
   }
 
-  private let defaultColorSpace = CGColorSpaceCreateDeviceRGB()
   private var image: CIImage?
+
+  private var displayColorConfiguration: MetalDisplayColorConfiguration {
+    MetalDisplayColorManagement.configuration(
+      for: traitCollection,
+      prefersWideColorPixelFormat: true,
+      allowsExtendedDynamicRangeContent: true
+    )
+  }
 
   private lazy var commandQueue: MTLCommandQueue = { [unowned self] in
     self.device!.makeCommandQueue()!
@@ -148,30 +155,17 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     contentMode = .scaleAspectFill
     clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
     clearsContextBeforeDrawing = true
+    applyDisplayColorConfiguration()
 
     if #available(iOS 17, *) {
-      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: _MetalImageView, _) in
+      registerForTraitChanges([
+        UITraitDisplayGamut.self,
+        UITraitUserInterfaceStyle.self
+      ]) { (view: _MetalImageView, _) in
+        view.applyDisplayColorConfiguration()
         view.setNeedsDisplay()
       }
     }
-
-    #if targetEnvironment(simulator)
-    #else
-      /// For supporting wide-color - extended sRGB
-
-    let metalLayer = layer as! CAMetalLayer
-
-    if #available(iOS 16, *) {
-      metalLayer.wantsExtendedDynamicRangeContent = true
-    }
-
-    let hasP3Display = traitCollection.displayGamut == .P3
-
-    if hasP3Display {
-      metalLayer.pixelFormat = .bgr10a2Unorm
-    }
-
-    #endif
 
   }
 
@@ -190,6 +184,13 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     didSet {
       setNeedsDisplay()
     }
+  }
+
+  private func applyDisplayColorConfiguration() {
+    MetalDisplayColorManagement.apply(
+      displayColorConfiguration,
+      to: self
+    )
   }
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -253,7 +254,7 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
       to: targetTexture,
       commandBuffer: commandBuffer,
       bounds: bounds,
-      colorSpace: defaultColorSpace
+      colorSpace: displayColorConfiguration.outputColorSpace
     )
 
     commandBuffer.present(drawable)

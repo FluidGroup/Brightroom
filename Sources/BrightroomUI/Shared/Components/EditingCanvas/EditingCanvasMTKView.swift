@@ -147,6 +147,20 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private var drawSampleCount = 0
   private var measuredFramesPerSecond: Double = 0
   private let drawSampleIdleResetInterval: CFTimeInterval = 1.0
+  private var displayColorConfiguration: MetalDisplayColorConfiguration {
+    MetalDisplayColorManagement.configuration(
+      for: traitCollection,
+      prefersWideColorPixelFormat: false,
+      allowsExtendedDynamicRangeContent: false
+    )
+  }
+  private var previewOutputColorSpace: CGColorSpace {
+    displayColorConfiguration.outputColorSpace
+  }
+  private var maskColorSpace: CGColorSpace {
+    MetalDisplayColorManagement.sRGB
+  }
+
   var activeStampCount: Int {
     activeStrokeStamps.count
   }
@@ -205,6 +219,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     isAccessibilityElement = true
     accessibilityLabel = "Metal Brush Canvas"
     isHidden = true
+    applyDisplayColorConfiguration(invalidatesCaches: false)
+    if #available(iOS 17, *) {
+      registerForTraitChanges([UITraitDisplayGamut.self]) { (view: _EditingCanvasMTKView, _) in
+        view.applyDisplayColorConfiguration(invalidatesCaches: true)
+      }
+    }
     if let metalLayer = layer as? CAMetalLayer {
       metalLayer.maximumDrawableCount = 3
     }
@@ -216,6 +236,23 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   @available(*, unavailable)
   required init(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  private func applyDisplayColorConfiguration(invalidatesCaches: Bool) {
+    MetalDisplayColorManagement.apply(
+      displayColorConfiguration,
+      to: self
+    )
+
+    guard invalidatesCaches else {
+      return
+    }
+
+    visibleAdjustedImageTextureKey = nil
+    viewportSourceTexture = nil
+    viewportRenderTextures = nil
+    invalidateViewportCoreImageLayerCaches()
+    setNeedsDisplay()
   }
 
   deinit {
@@ -320,9 +357,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let didChangeViewport = visibleContentRect.equalTo(nextRect) == false
       || visibleCanvasFrame.equalTo(nextFrame) == false
     guard didChangeViewport else {
-      if usesViewportImageRendering {
-        setNeedsDisplay()
-      } else {
+      if usesViewportImageRendering == false {
         updateVisibleAdjustedImageTextureIfNeeded()
       }
       return
@@ -588,7 +623,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: previewOutputColorSpace
     )
   }
 
@@ -1072,7 +1107,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: previewOutputColorSpace
     )
     commandBuffer.present(drawable)
     commandBuffer.commit()
@@ -1190,7 +1225,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     guard let sourceImage = CIImage(
       mtlTexture: sourceTexture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+      options: [.colorSpace: previewOutputColorSpace]
     ) else {
       return nil
     }
@@ -1241,7 +1276,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: previewOutputColorSpace
     )
     commandBuffer.present(drawable)
     commandBuffer.commit()
@@ -1306,7 +1341,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     guard let maskImage = CIImage(
       mtlTexture: textures.maskTexture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+      options: [.colorSpace: maskColorSpace]
     )?.cropped(to: baseLayerImage.extent) else {
       clearCurrentDrawable()
       return
@@ -1421,7 +1456,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     renderCachedViewportImage(image, into: texture, commandBuffer: commandBuffer)
     return CIImage(
       mtlTexture: texture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+      options: [.colorSpace: previewOutputColorSpace]
     )?.cropped(to: cachedViewportLayerExtent(for: image, texture: texture))
   }
 
@@ -1442,7 +1477,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: previewOutputColorSpace
     )
   }
 
@@ -1497,15 +1532,15 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: previewOutputColorSpace]
       )?.cropped(to: imageBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: previewOutputColorSpace]
       )?.cropped(to: imageBounds),
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: maskColorSpace]
       )?.cropped(to: imageBounds)
     else {
       clearCurrentDrawable()
@@ -1575,7 +1610,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: previewOutputColorSpace
     )
   }
 

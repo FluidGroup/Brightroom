@@ -302,13 +302,17 @@ private struct PixelEditorCanvas: View {
             PixelEditorColor.background
           },
           stateHandler: { state in
+            guard viewModel.mode.isCrop else {
+              return
+            }
+
             if let proposedCrop = state.proposedCrop {
               viewModel.setProposedCrop(proposedCrop)
             }
           }
         )
         .croppingAspectRatio(viewModel.options.croppingAspectRatio)
-        .displayMode(.renderedEditPreview)
+        .displayMode(cropDisplayMode)
         .registerApplyAction(viewModel.cropApplyAction)
         .opacity(viewModel.mode.isCrop ? 1 : 0)
         .allowsHitTesting(viewModel.mode.isCrop)
@@ -352,6 +356,10 @@ private struct PixelEditorCanvas: View {
 
   private var canvasDisplayedImageRect: CGRect? {
     viewModel.displayCrop?.cropExtent
+  }
+
+  private var cropDisplayMode: CropViewDisplayMode {
+    viewModel.mode.isCrop ? .renderedEditPreview : .cropInteractionImage
   }
 
   private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {

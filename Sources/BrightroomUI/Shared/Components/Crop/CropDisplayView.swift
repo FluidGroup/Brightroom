@@ -1,13 +1,11 @@
 import CoreGraphics
 import CoreImage
-import MetalKit
 import UIKit
 
 import BrightroomEngine
 
 protocol CropDisplayRenderable: AnyObject {
   func display(_ content: CropDisplayContent)
-  func updateViewport(_ viewport: CropDisplayViewport?)
 }
 
 typealias CropDisplayView = UIView & CropDisplayRenderable
@@ -23,14 +21,6 @@ struct CropRenderedEditPreviewContent {
   var crop: EditingCrop
 }
 
-struct CropDisplayViewport {
-  var viewportFrameInScrollView: CGRect
-  var visibleContentRect: CGRect
-  var visibleCanvasFrame: CGRect
-  var zoomScale: CGFloat
-  var contentScaleFactor: CGFloat
-}
-
 extension CropView.ImagePlatterView: CropDisplayRenderable {
   func display(_ content: CropDisplayContent) {
     switch content {
@@ -43,38 +33,22 @@ extension CropView.ImagePlatterView: CropDisplayRenderable {
       imageView.isHidden = true
     }
   }
-
-  func updateViewport(_ viewport: CropDisplayViewport?) {}
 }
 
-final class CropViewportDisplayView: UIView, CropDisplayRenderable {
-
-  let canvasSize: CGSize
-
-  private let canvasView: _EditingCanvasMTKView
+final class CropViewportDisplayView: _ScrollViewportMetalView, CropDisplayRenderable {
   private var currentInputKey: InputKey?
 
-  init?(canvasSize: CGSize) {
-    guard canvasSize.width > 0, canvasSize.height > 0 else {
-      return nil
-    }
-
-    guard let device = MTLCreateSystemDefaultDevice() else {
-      return nil
-    }
-
-    self.canvasSize = canvasSize
-    self.canvasView = _EditingCanvasMTKView(canvasSize: canvasSize, device: device)
-
-    super.init(frame: .zero)
+  override init(canvasSize: CGSize) {
+    super.init(canvasSize: canvasSize)
 
     isUserInteractionEnabled = false
     isHidden = true
+    debugLogName = "CropViewportDisplayLink"
+    debugLog = .cropView
+    setViewportRenderingEnabled(false)
 
-    canvasView.isUserInteractionEnabled = false
-    canvasView.setViewportImageRenderingEnabled(true)
-    canvasView.setViewportCachedSourceEnabled(true)
-    addSubview(canvasView)
+    canvasView?.setViewportImageRenderingEnabled(true)
+    canvasView?.setViewportCachedSourceEnabled(true)
   }
 
   @available(*, unavailable)
@@ -82,37 +56,16 @@ final class CropViewportDisplayView: UIView, CropDisplayRenderable {
     fatalError("init(coder:) has not been implemented")
   }
 
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    canvasView.frame = bounds
-  }
-
   func display(_ content: CropDisplayContent) {
     switch content {
     case .empty, .cropInteractionImage:
-      isHidden = true
+      setViewportRenderingEnabled(false)
 
     case let .renderedEditPreview(content):
+      setViewportRenderingEnabled(true)
       isHidden = false
       updateRenderedEditPreview(content)
     }
-  }
-
-  func updateViewport(_ viewport: CropDisplayViewport?) {
-    guard let viewport else {
-      isHidden = true
-      return
-    }
-
-    frame = viewport.viewportFrameInScrollView
-    contentScaleFactor = viewport.contentScaleFactor
-    canvasView.contentScaleFactor = viewport.contentScaleFactor
-    canvasView.frame = bounds
-    canvasView.setViewport(
-      visibleContentRect: viewport.visibleContentRect,
-      visibleCanvasFrame: viewport.visibleCanvasFrame,
-      zoomScale: viewport.zoomScale
-    )
   }
 
   private func updateRenderedEditPreview(_ content: CropRenderedEditPreviewContent) {
@@ -121,7 +74,7 @@ final class CropViewportDisplayView: UIView, CropDisplayRenderable {
     }
 
     let key = InputKey(content: content)
-    guard currentInputKey != key || canvasView.hasRenderImages == false else {
+    guard currentInputKey != key || canvasView?.hasRenderImages == false else {
       return
     }
 
@@ -136,8 +89,8 @@ final class CropViewportDisplayView: UIView, CropDisplayRenderable {
       return
     }
 
-    canvasView.setRenderImages(images)
-    canvasView.setCommittedStrokes(renderPlan.committedStrokes)
+    canvasView?.setRenderImages(images)
+    canvasView?.setCommittedStrokes(renderPlan.committedStrokes)
     currentInputKey = key
   }
 

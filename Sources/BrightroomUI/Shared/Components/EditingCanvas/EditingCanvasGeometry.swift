@@ -32,8 +32,6 @@ extension CGRect {
 }
 
 enum EditingCanvasImageProcessing {
-  static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-
   static func clippedToSourceAlpha(_ image: CIImage, source: CIImage) -> CIImage {
     let extent = image.extent
     guard extent.isEmpty == false, extent.isNull == false else {

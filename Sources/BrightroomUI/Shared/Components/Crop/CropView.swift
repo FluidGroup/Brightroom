@@ -222,9 +222,6 @@ final class CropView: UIView, UIScrollViewDelegate {
 
   private let scrollViewSettleDebounce = _BrightroomDebounce(interval: 0.2)
 
-  private var viewportRenderingDisplayLink: CADisplayLink?
-  private var viewportRenderingStopWorkItem: DispatchWorkItem?
-
   private let contentInset: UIEdgeInsets
 
   private var scrollViewAdjustmentSession: ScrollViewAdjustmentSession?
@@ -323,10 +320,6 @@ final class CropView: UIView, UIScrollViewDelegate {
   @available(*, unavailable)
   public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
-  }
-
-  deinit {
-    stopViewportInteractionRendering()
   }
 
   // MARK: - Functions
@@ -552,6 +545,7 @@ extension CropView {
     if state.proposedCrop?.imageSize != crop.imageSize {
       hasSetupScrollViewCompleted = false
       lastLaidOutCrop = nil
+      viewportDisplayView?.detach()
       viewportDisplayView?.removeFromSuperview()
       viewportDisplayView = nil
     }
@@ -587,102 +581,45 @@ extension CropView {
   }
 
   private func ensureViewportDisplayView(canvasSize: CGSize) -> CropViewportDisplayView? {
-    if let viewportDisplayView, viewportDisplayView.canvasSize == canvasSize {
-      return viewportDisplayView
-    }
-
-    viewportDisplayView?.removeFromSuperview()
-
-    guard let view = CropViewportDisplayView(canvasSize: canvasSize) else {
+    guard canvasSize.width > 0, canvasSize.height > 0 else {
       viewportDisplayView = nil
       return nil
     }
 
-    scrollView.insertSubview(view, belowSubview: imagePlatterView)
+    if let viewportDisplayView, viewportDisplayView.canvasSize == canvasSize {
+      return viewportDisplayView
+    }
+
+    viewportDisplayView?.detach()
+    viewportDisplayView?.removeFromSuperview()
+
+    let view = CropViewportDisplayView(canvasSize: canvasSize)
     viewportDisplayView = view
     return view
   }
 
-  private func updateCropDisplayViewport() {
+  @discardableResult
+  private func updateCropDisplayViewport() -> Bool {
     guard displayMode == .renderedEditPreview else {
-      viewportDisplayView?.updateViewport(nil)
-      stopViewportInteractionRendering()
-      return
+      viewportDisplayView?.setViewportRenderingEnabled(false)
+      return false
     }
 
-    viewportDisplayView?.updateViewport(makeCropDisplayViewport())
-  }
-
-  private func makeCropDisplayViewport() -> CropDisplayViewport? {
-    guard let crop = state.proposedCrop else {
-      return nil
+    guard let crop = state.proposedCrop, let viewportDisplayView else {
+      return false
     }
 
-    let viewportFrame = convert(bounds, to: scrollView).standardized
-    guard viewportFrame.width > 0, viewportFrame.height > 0 else {
-      return nil
+    viewportDisplayView.attach(
+      to: scrollView,
+      viewportView: self,
+      contentView: imagePlatterView,
+      contentBounds: CGRect(origin: .zero, size: crop.imageSize)
+    )
+    if let overlay = imagePlatterView.overlay {
+      imagePlatterView.bringSubviewToFront(overlay)
     }
 
-    let platterBounds = CGRect(origin: .zero, size: imagePlatterView.bounds.size)
-    let visiblePlatterRect = scrollView
-      .convert(viewportFrame, to: imagePlatterView)
-      .intersection(platterBounds)
-
-    guard visiblePlatterRect.isNull == false, visiblePlatterRect.isEmpty == false else {
-      return nil
-    }
-
-    let imageBounds = CGRect(origin: .zero, size: crop.imageSize)
-    let visibleImageRect = platterRectToImageRect(visiblePlatterRect, crop: crop)
-      .intersection(imageBounds)
-
-    guard visibleImageRect.isNull == false, visibleImageRect.isEmpty == false else {
-      return nil
-    }
-
-    let resolvedVisiblePlatterRect = imageRectToPlatterRect(visibleImageRect, crop: crop)
-    let resolvedVisibleScrollRect = imagePlatterView.convert(
-      resolvedVisiblePlatterRect,
-      to: scrollView
-    )
-    let visibleCanvasFrame = resolvedVisibleScrollRect.offsetBy(
-      dx: -viewportFrame.minX,
-      dy: -viewportFrame.minY
-    )
-
-    return .init(
-      viewportFrameInScrollView: viewportFrame,
-      visibleContentRect: visibleImageRect,
-      visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: scrollView.zoomScale,
-      contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
-    )
-  }
-
-  private func platterRectToImageRect(
-    _ rect: CGRect,
-    crop: EditingCrop
-  ) -> CGRect {
-    let contentSize = crop.scrollViewContentSize()
-    return rect.applying(
-      CGAffineTransform(
-        scaleX: crop.imageSize.width / max(contentSize.width, 0.0001),
-        y: crop.imageSize.height / max(contentSize.height, 0.0001)
-      )
-    )
-  }
-
-  private func imageRectToPlatterRect(
-    _ rect: CGRect,
-    crop: EditingCrop
-  ) -> CGRect {
-    let contentSize = crop.scrollViewContentSize()
-    return rect.applying(
-      CGAffineTransform(
-        scaleX: contentSize.width / max(crop.imageSize.width, 0.0001),
-        y: contentSize.height / max(crop.imageSize.height, 0.0001)
-      )
-    )
+    return viewportDisplayView.updateViewportIfNeeded()
   }
 
   private func setProposedCrop(
@@ -769,6 +706,10 @@ extension CropView {
     """
   }
 
+  private func debugDescription(_ rect: CGRect) -> String {
+    "(x:\(debugNumber(rect.origin.x)), y:\(debugNumber(rect.origin.y)), w:\(debugNumber(rect.size.width)), h:\(debugNumber(rect.size.height)))"
+  }
+
   private func debugDescription(_ size: CGSize) -> String {
     "(w:\(debugNumber(size.width)), h:\(debugNumber(size.height)))"
   }
@@ -791,6 +732,10 @@ extension CropView {
 
   private func debugNumber(_ value: CGFloat) -> String {
     String(format: "%.4f", Double(value))
+  }
+
+  private func debugNumber(_ value: CFTimeInterval) -> String {
+    String(format: "%.4f", value)
   }
   #else
   private func debugLogRecordedCropExtent(
@@ -1331,64 +1276,6 @@ extension CropView {
     }
   }
 
-  private func beginViewportInteractionRendering() {
-    guard displayMode == .renderedEditPreview,
-          viewportDisplayView != nil,
-          viewportRenderingDisplayLink == nil
-    else {
-      return
-    }
-
-    let displayLink = CADisplayLink(
-      target: self,
-      selector: #selector(viewportRenderingDisplayLinkDidTick(_:))
-    )
-    displayLink.preferredFramesPerSecond = window?.screen.maximumFramesPerSecond
-      ?? UIScreen.main.maximumFramesPerSecond
-    displayLink.add(to: .main, forMode: .common)
-    viewportRenderingDisplayLink = displayLink
-  }
-
-  private func keepViewportInteractionRenderingAlive() {
-    beginViewportInteractionRendering()
-    scheduleStopViewportInteractionRendering()
-  }
-
-  private func scheduleStopViewportInteractionRendering() {
-    viewportRenderingStopWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      if self.isZoomInteractionActive {
-        self.scheduleStopViewportInteractionRendering()
-      } else {
-        self.stopViewportInteractionRendering()
-      }
-    }
-
-    viewportRenderingStopWorkItem = workItem
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-  }
-
-  private func stopViewportInteractionRendering() {
-    viewportRenderingStopWorkItem?.cancel()
-    viewportRenderingStopWorkItem = nil
-    viewportRenderingDisplayLink?.invalidate()
-    viewportRenderingDisplayLink = nil
-    if displayMode == .renderedEditPreview {
-      viewportDisplayView?.updateViewport(makeCropDisplayViewport())
-    }
-  }
-
-  @objc private func viewportRenderingDisplayLinkDidTick(_ displayLink: CADisplayLink) {
-    guard window != nil else {
-      stopViewportInteractionRendering()
-      return
-    }
-
-    updateCropDisplayViewport()
-  }
-
   // MARK: UIScrollViewDelegate
 
   func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -1398,7 +1285,6 @@ extension CropView {
   func scrollViewDidZoom(_ scrollView: UIScrollView) {
 
     debugLogScrollViewAdjustment("did-zoom")
-    keepViewportInteractionRenderingAlive()
     updateCropDisplayViewport()
 
     // TODO: consider if we need this.
@@ -1434,9 +1320,6 @@ extension CropView {
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
 
     debugLogScrollViewAdjustment("did-scroll")
-    if isZoomInteractionActive {
-      keepViewportInteractionRenderingAlive()
-    }
     updateCropDisplayViewport()
 
     debounce.on { [weak self] in
@@ -1460,7 +1343,6 @@ extension CropView {
 
   func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
     debugLogScrollViewAdjustment("zoom-begin")
-    beginViewportInteractionRendering()
     beginScrollViewAdjustment(.zoom)
   }
 
@@ -1480,7 +1362,6 @@ extension CropView {
   ) {
     debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
     endScrollViewAdjustment(.zoom)
-    scheduleStopViewportInteractionRendering()
   }
 
   func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {

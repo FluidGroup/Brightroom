@@ -138,8 +138,13 @@ public final class PixelEditorViewModel {
   }
 
   func setProposedCrop(_ proposedCrop: EditingCrop) {
+    guard self.proposedCrop != proposedCrop else {
+      refreshDisplayStateFromEditingStack(incrementsObservationVersion: false)
+      return
+    }
+
     self.proposedCrop = proposedCrop
-    refreshDisplayStateFromEditingStack()
+    refreshDisplayStateFromEditingStack(incrementsObservationVersion: false)
   }
 
   func startEditingStack() {
@@ -164,9 +169,19 @@ public final class PixelEditorViewModel {
     }
   }
 
-  private func refreshDisplayStateFromEditingStack() {
-    displayCrop = resolvedCropForDisplay()
-    editingStackObservationVersion += 1
+  private func refreshDisplayStateFromEditingStack(
+    incrementsObservationVersion: Bool = true
+  ) {
+    let nextDisplayCrop = resolvedCropForDisplay()
+    let didChangeDisplayCrop = displayCrop != nextDisplayCrop
+
+    if didChangeDisplayCrop {
+      displayCrop = nextDisplayCrop
+    }
+
+    if incrementsObservationVersion || didChangeDisplayCrop {
+      editingStackObservationVersion += 1
+    }
   }
 
   private func resolvedCropForDisplay() -> EditingCrop? {

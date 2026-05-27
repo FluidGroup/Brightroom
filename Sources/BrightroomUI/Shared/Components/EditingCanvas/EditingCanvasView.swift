@@ -16,24 +16,23 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
   private let canvasSize: CGSize
   private let scrollView = _EditingCanvasScrollView()
-  private let attachmentContentView = _EditingCanvasAttachmentContentView()
-  private let viewportCanvasView = _EditingCanvasViewportCanvasView()
+  private let zoomContentView = _EditingCanvasZoomContentView()
+  private let viewportMetalView: _ScrollViewportMetalView
   private let viewportGestureView = _EditingCanvasViewportGestureView()
   private let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(
     target: nil,
     action: nil
   )
   private let doubleTapZoomGestureRecognizer = UITapGestureRecognizer()
-  private let canvasView: _EditingCanvasMTKView?
-  private let fallbackLabel = UILabel()
+  private var canvasView: _EditingCanvasMTKView? {
+    viewportMetalView.canvasView
+  }
   private var didSetInitialZoom = false
   private var interactionMode: EditingCanvasInteractionMode = .draw
   private var displayedContentRect: CGRect?
   private var lastAppliedDisplayedContentRect: CGRect?
   private var lastAppliedScrollContentBounds: CGRect?
   private var previousLayoutBoundsSize: CGSize = .zero
-  private var viewportRenderingDisplayLink: CADisplayLink?
-  private var viewportRenderingStopWorkItem: DispatchWorkItem?
   private weak var protectedNavigationController: UINavigationController?
   private var previousInteractivePopGestureEnabled: Bool?
   private weak var currentEditingStack: EditingStack?
@@ -45,9 +44,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
   public init(canvasSize: CGSize) {
     self.canvasSize = canvasSize
-    self.canvasView = MTLCreateSystemDefaultDevice().map {
-      _EditingCanvasMTKView(canvasSize: canvasSize, device: $0)
-    }
+    self.viewportMetalView = _ScrollViewportMetalView(canvasSize: canvasSize)
 
     super.init(frame: .zero)
 
@@ -68,16 +65,13 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     scrollView.panGestureRecognizer.minimumNumberOfTouches = interactionMode.panMinimumNumberOfTouches
     addSubview(scrollView)
 
-    attachmentContentView.frame = CGRect(origin: .zero, size: canvasSize)
-    attachmentContentView.bounds = CGRect(origin: .zero, size: canvasSize)
-    scrollView.addSubview(attachmentContentView)
-    scrollView.addSubview(viewportCanvasView)
+    zoomContentView.frame = CGRect(origin: .zero, size: canvasSize)
+    zoomContentView.bounds = CGRect(origin: .zero, size: canvasSize)
+    scrollView.addSubview(zoomContentView)
     scrollView.addSubview(viewportGestureView)
     scrollView.contentSize = canvasSize
 
     if let canvasView {
-      canvasView.frame = viewportCanvasView.bounds
-      canvasView.isUserInteractionEnabled = false
       canvasView.onMetricsChange = { [weak self] in
         self?.publishMetrics()
       }
@@ -86,13 +80,14 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       }
       canvasView.setViewportImageRenderingEnabled(true)
       canvasView.setViewportCachedSourceEnabled(true)
-      viewportCanvasView.addSubview(canvasView)
-    } else {
-      fallbackLabel.text = "Metal is unavailable"
-      fallbackLabel.textColor = .white
-      fallbackLabel.textAlignment = .center
-      viewportCanvasView.addSubview(fallbackLabel)
     }
+    viewportMetalView.debugLogName = "EditingCanvasDisplayLink"
+    viewportMetalView.attach(
+      to: scrollView,
+      viewportView: scrollView,
+      contentView: zoomContentView,
+      contentBounds: displayBoundsRect
+    )
 
     drawingGestureRecognizer.delegate = self
     drawingGestureRecognizer.onBegin = { [weak self] point in
@@ -127,7 +122,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   }
 
   deinit {
-    stopViewportInteractionRendering()
+    viewportMetalView.detach()
     restoreNavigationBackGesture()
   }
 
@@ -158,7 +153,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       setEditingStackIfPossible(mode: mode)
     }
     canvasView?.configure(brush: brush, smoothing: smoothing)
-    updateVisibleContentRect()
+    updateViewportAttachment()
   }
 
   public func configure(
@@ -338,7 +333,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       currentEditingStack.set(localAdjustments: [])
     }
     editingCanvasLocalAdjustmentLayerID = nil
-    updateVisibleContentRect()
+    viewportMetalView.invalidateViewport()
     publishMetrics()
   }
 
@@ -492,7 +487,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     previousLayoutBoundsSize = bounds.size
     scrollView.frame = bounds
     updateScrollContentGeometry()
-    updateViewportLayerFrames()
+    updateViewportAttachment()
 
     updateZoomScaleIfNeeded(refitsToMinimum: shouldRefitToMinimumZoom)
     let didApplyDisplayedContentRect = applyDisplayedContentRectIfNeeded()
@@ -500,39 +495,31 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       centerContentIfNeeded()
       restoreVisibleContentCenterIfNeeded(visibleCenter)
     }
-    updateViewportLayerFrames()
-    updateVisibleContentRect()
+    updateViewportAttachment()
     publishMetrics()
   }
 
   public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-    attachmentContentView
+    zoomContentView
   }
 
   public func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
-    beginViewportInteractionRendering()
+    viewportMetalView.updateViewportIfNeeded()
   }
 
   public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-    updateVisibleContentRect()
-    scheduleStopViewportInteractionRendering()
+    viewportMetalView.updateViewportIfNeeded()
     publishMetrics()
   }
 
   public func scrollViewDidZoom(_ scrollView: UIScrollView) {
-    keepViewportInteractionRenderingAlive()
     centerContentIfNeeded()
-    updateViewportLayerFrames()
-    updateVisibleContentRect()
+    viewportMetalView.updateViewportIfNeeded()
     publishMetrics()
   }
 
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-    if isZoomInteractionActive {
-      keepViewportInteractionRenderingAlive()
-    }
-    updateViewportLayerFrames()
-    updateVisibleContentRect()
+    viewportMetalView.updateViewportIfNeeded()
     publishMetrics()
   }
 
@@ -622,29 +609,29 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   private func updateScrollContentGeometry() {
     let displayBounds = displayBoundsRect
     guard lastAppliedScrollContentBounds != displayBounds
-      || attachmentContentView.bounds != displayBounds
+      || zoomContentView.bounds != displayBounds
     else {
       return
     }
 
-    attachmentContentView.bounds = displayBounds
-    attachmentContentView.frame = CGRect(origin: .zero, size: displayBounds.size)
+    zoomContentView.bounds = displayBounds
+    zoomContentView.frame = CGRect(origin: .zero, size: displayBounds.size)
     scrollView.contentSize = displayBounds.size
     lastAppliedScrollContentBounds = displayBounds
+    viewportMetalView.invalidateViewport()
   }
 
-  private func updateViewportLayerFrames() {
-    let viewportFrame = CGRect(
+  private func updateViewportAttachment() {
+    viewportGestureView.frame = CGRect(
       origin: scrollView.bounds.origin,
       size: scrollView.bounds.size
     )
-
-    viewportCanvasView.frame = viewportFrame
-    viewportGestureView.frame = viewportFrame
-
-    canvasView?.frame = viewportCanvasView.bounds
-    canvasView?.contentScaleFactor = window?.screen.scale ?? UIScreen.main.scale
-    fallbackLabel.frame = viewportCanvasView.bounds
+    viewportMetalView.attach(
+      to: scrollView,
+      viewportView: scrollView,
+      contentView: zoomContentView,
+      contentBounds: displayBoundsRect
+    )
   }
 
   private func updateZoomScaleIfNeeded(refitsToMinimum: Bool) {
@@ -759,7 +746,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   }
 
   private func visibleContentCenter() -> CGPoint? {
-    let visibleRect = scrollView.convert(scrollView.bounds, to: attachmentContentView)
+    let visibleRect = scrollView.convert(scrollView.bounds, to: zoomContentView)
       .intersection(displayBoundsRect)
 
     guard visibleRect.isNull == false, visibleRect.isEmpty == false else {
@@ -817,123 +804,8 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     )
   }
 
-  private func updateVisibleContentRect() {
-    let displayBounds = displayBoundsRect
-    let viewportContentRect = scrollView.convert(scrollView.bounds, to: attachmentContentView)
-    let liveVisibleRect = viewportContentRect
-      .intersection(displayBounds)
-
-    let effectiveLiveRect: CGRect
-    if liveVisibleRect.isNull || liveVisibleRect.isEmpty {
-      effectiveLiveRect = displayBounds
-    } else {
-      effectiveLiveRect = liveVisibleRect
-    }
-    let visibleCanvasFrame = viewportFrame(forContentRect: effectiveLiveRect)
-
-    canvasView?.setViewport(
-      visibleContentRect: effectiveLiveRect,
-      visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: scrollView.zoomScale
-    )
-
-  }
-
-  private func viewportFrame(forContentRect contentRect: CGRect) -> CGRect {
-    let displayBounds = displayBoundsRect
-    let contentSize = zoomedScrollContentSize
-    return CGRect(
-      x: viewportAxisOrigin(
-        contentMin: contentRect.minX,
-        displayMin: displayBounds.minX,
-        viewportLength: scrollView.bounds.width,
-        zoomedContentLength: contentSize.width,
-        contentOffset: scrollView.contentOffset.x,
-        centeringInset: scrollView.contentInset.left
-      ),
-      y: viewportAxisOrigin(
-        contentMin: contentRect.minY,
-        displayMin: displayBounds.minY,
-        viewportLength: scrollView.bounds.height,
-        zoomedContentLength: contentSize.height,
-        contentOffset: scrollView.contentOffset.y,
-        centeringInset: scrollView.contentInset.top
-      ),
-      width: contentRect.width * scrollView.zoomScale,
-      height: contentRect.height * scrollView.zoomScale
-    )
-  }
-
-  private func viewportAxisOrigin(
-    contentMin: CGFloat,
-    displayMin: CGFloat,
-    viewportLength: CGFloat,
-    zoomedContentLength: CGFloat,
-    contentOffset: CGFloat,
-    centeringInset: CGFloat
-  ) -> CGFloat {
-    let origin = (contentMin - displayMin) * scrollView.zoomScale - contentOffset
-    let isUnderfilled = zoomedContentLength < viewportLength - 0.5
-    let isOffsetAlreadyInset = contentOffset <= -centeringInset + 0.5
-    if isUnderfilled && isOffsetAlreadyInset == false {
-      return origin + centeringInset
-    } else {
-      return origin
-    }
-  }
-
-  private func beginViewportInteractionRendering() {
-    guard canvasView != nil, viewportRenderingDisplayLink == nil else {
-      return
-    }
-
-    let displayLink = CADisplayLink(
-      target: self,
-      selector: #selector(viewportRenderingDisplayLinkDidTick(_:))
-    )
-    displayLink.preferredFramesPerSecond = window?.screen.maximumFramesPerSecond
-      ?? UIScreen.main.maximumFramesPerSecond
-    displayLink.add(to: .main, forMode: .common)
-    viewportRenderingDisplayLink = displayLink
-  }
-
-  private func keepViewportInteractionRenderingAlive() {
-    beginViewportInteractionRendering()
-    scheduleStopViewportInteractionRendering()
-  }
-
-  private func scheduleStopViewportInteractionRendering() {
-    viewportRenderingStopWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      if self.isZoomInteractionActive {
-        self.scheduleStopViewportInteractionRendering()
-      } else {
-        self.stopViewportInteractionRendering()
-      }
-    }
-
-    viewportRenderingStopWorkItem = workItem
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-  }
-
-  private func stopViewportInteractionRendering() {
-    viewportRenderingStopWorkItem?.cancel()
-    viewportRenderingStopWorkItem = nil
-    viewportRenderingDisplayLink?.invalidate()
-    viewportRenderingDisplayLink = nil
-    canvasView?.setNeedsDisplay()
-  }
-
-  @objc private func viewportRenderingDisplayLinkDidTick(_ displayLink: CADisplayLink) {
-    updateViewportLayerFrames()
-    updateVisibleContentRect()
-    canvasView?.setNeedsDisplay()
-  }
-
   private func contentPoint(fromViewportPoint point: CGPoint) -> CGPoint {
-    viewportGestureView.convert(point, to: attachmentContentView)
+    viewportGestureView.convert(point, to: zoomContentView)
   }
 
   private func publishMetrics() {
