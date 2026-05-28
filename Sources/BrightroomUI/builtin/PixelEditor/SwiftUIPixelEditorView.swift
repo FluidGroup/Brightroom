@@ -286,7 +286,7 @@ private struct PixelEditorCanvas: View {
         .brush(canvasBrush(in: proxy.size))
         .smoothing(.init())
         .opacity(viewModel.mode.isCrop ? 0 : 1)
-        .allowsHitTesting(viewModel.mode.isMasking)
+        .allowsHitTesting(viewModel.mode.allowsCanvasInteraction)
 
         SwiftUICropView(
           editingStack: viewModel.editingStack,
@@ -1375,6 +1375,15 @@ private extension PixelEditorViewModel.Mode {
     case .masking:
       return true
     case .crop, .editing, .preview:
+      return false
+    }
+  }
+
+  var allowsCanvasInteraction: Bool {
+    switch self {
+    case .editing, .masking, .preview:
+      return true
+    case .crop:
       return false
     }
   }
