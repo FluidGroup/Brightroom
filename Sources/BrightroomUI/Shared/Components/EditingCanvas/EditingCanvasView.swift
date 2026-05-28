@@ -84,7 +84,6 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       canvasView.onStrokeCommit = { [weak self] record, completion in
         self?.commit(record: record, completion: completion)
       }
-      canvasView.setViewportImageRenderingEnabled(true)
       canvasView.setViewportCachedSourceEnabled(true)
       viewportCanvasView.addSubview(canvasView)
     } else {

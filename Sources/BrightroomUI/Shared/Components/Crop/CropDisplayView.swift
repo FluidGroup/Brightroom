@@ -72,7 +72,6 @@ final class CropViewportDisplayView: UIView, CropDisplayRenderable {
     isHidden = true
 
     canvasView.isUserInteractionEnabled = false
-    canvasView.setViewportImageRenderingEnabled(true)
     canvasView.setViewportCachedSourceEnabled(true)
     addSubview(canvasView)
   }

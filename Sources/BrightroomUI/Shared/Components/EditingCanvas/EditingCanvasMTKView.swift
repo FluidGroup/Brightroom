@@ -13,18 +13,6 @@ struct EditingCanvasBrushUniforms {
   var _padding: Float = 0
 }
 
-struct EditingCanvasLiveOverlayUniforms {
-  var viewportOrigin: SIMD2<Float>
-  var viewportSize: SIMD2<Float>
-  var drawableSize: SIMD2<Float>
-}
-
-struct EditingCanvasVisibleImageTextureKey: Equatable {
-  var visibleContentRect: CGRect
-  var pixelWidth: Int
-  var pixelHeight: Int
-}
-
 private struct EditingCanvasViewportSourceTextureKey: Equatable {
   var sourceExtent: CGRect
   var visibleContentRect: CGRect
@@ -88,7 +76,6 @@ struct EditingCanvasRenderImages {
 final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   private typealias BrushUniforms = EditingCanvasBrushUniforms
-  private static let maximumLiveTextureDimension = 8192
   private enum LiveFrameRate {
     static let minimum = 60
     static let maximum = 120
@@ -111,17 +98,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private let canvasSize: CGSize
   private let commandQueue: MTLCommandQueue
   private let brushPipeline: MTLRenderPipelineState
-  private let liveOverlayPipeline: MTLRenderPipelineState
-  private var liveStrokeTexture: MTLTexture?
   private var renderImages: EditingCanvasRenderImages?
   private var committedStrokes: [EditingCanvasStrokeRecord] = []
-  private var visibleAdjustedImageTexture: MTLTexture?
-  private var visibleAdjustedImageTextureKey: EditingCanvasVisibleImageTextureKey?
   private var viewportSourceTexture: EditingCanvasViewportSourceTexture?
   private var viewportCoreImageBaseLayerCache: EditingCanvasViewportCoreImageBaseLayerCache?
   private var viewportCoreImageLocalLayerCache: EditingCanvasViewportCoreImageLocalLayerCache?
   private var viewportRenderTextures: EditingCanvasViewportRenderTextures?
-  private var usesViewportImageRendering = false
   private var usesViewportCachedSourceRendering = false
   private var brush = EditingCanvasBrush(
     size: 56,
@@ -140,7 +122,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private var activeStrokeStamps: [CGPoint] = []
   private var pendingLiveStamps: [CGPoint] = []
   private var liveDisplayLink: CADisplayLink?
-  private var liveOverlayGeneration = 0
+  private var strokeGeneration = 0
   private var lastLiveMetricsPublishTime: CFTimeInterval = 0
   private let liveMetricsPublishInterval: CFTimeInterval = 1.0 / 12.0
   private var drawSampleStartTime: CFTimeInterval = CACurrentMediaTime()
@@ -182,7 +164,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     do {
       let library = try Self.makeShaderLibrary(device: device)
       self.brushPipeline = try Self.makeBrushPipeline(device: device, library: library)
-      self.liveOverlayPipeline = try Self.makeLiveOverlayPipeline(device: device, library: library)
     } catch {
       fatalError("Failed to create Editing Canvas pipeline: \(error)")
     }
@@ -209,7 +190,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       metalLayer.maximumDrawableCount = 3
     }
 
-    makeLayerTextures()
     reset()
   }
 
@@ -247,18 +227,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func setRenderImages(_ images: EditingCanvasRenderImages) {
     renderImages = images
-    visibleAdjustedImageTextureKey = nil
     viewportRenderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    if usesViewportImageRendering {
-      visibleAdjustedImageTexture = nil
-      setNeedsDisplay()
-      return
-    }
-    updateVisibleAdjustedImageTextureIfNeeded()
-    if isHidden == false {
-      setNeedsDisplay()
-    }
+    setNeedsDisplay()
   }
 
   func setViewportCachedSourceEnabled(_ isEnabled: Bool) {
@@ -270,38 +241,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportSourceTexture = nil
     viewportRenderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    if usesViewportImageRendering {
-      setNeedsDisplay()
-    }
+    setNeedsDisplay()
   }
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
     committedStrokes = records
     viewportRenderTextures = nil
-    if usesViewportImageRendering {
-      setNeedsDisplay()
-    }
-  }
-
-  func setViewportImageRenderingEnabled(_ isEnabled: Bool) {
-    guard usesViewportImageRendering != isEnabled else {
-      return
-    }
-
-    usesViewportImageRendering = isEnabled
-    visibleAdjustedImageTexture = nil
-    visibleAdjustedImageTextureKey = nil
-    viewportSourceTexture = nil
-    viewportRenderTextures = nil
-    invalidateViewportCoreImageLayerCaches()
-
-    if isEnabled {
-      stopLiveDisplayLink()
-      isHidden = false
-      setNeedsDisplay()
-    } else if activeStrokeStamps.isEmpty {
-      isHidden = true
-    }
+    setNeedsDisplay()
   }
 
   func setViewport(
@@ -320,29 +266,16 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let didChangeViewport = visibleContentRect.equalTo(nextRect) == false
       || visibleCanvasFrame.equalTo(nextFrame) == false
     guard didChangeViewport else {
-      if usesViewportImageRendering {
-        setNeedsDisplay()
-      } else {
-        updateVisibleAdjustedImageTextureIfNeeded()
-      }
+      setNeedsDisplay()
       return
     }
 
     visibleContentRect = nextRect
     visibleCanvasFrame = nextFrame
-    visibleAdjustedImageTextureKey = nil
     viewportSourceTexture = nil
     viewportRenderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    if usesViewportImageRendering {
-      setNeedsDisplay()
-      onMetricsChange?()
-      return
-    }
-    updateVisibleAdjustedImageTextureIfNeeded()
-    if isHidden == false {
-      setNeedsDisplay()
-    }
+    setNeedsDisplay()
     onMetricsChange?()
   }
 
@@ -355,15 +288,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if activeStrokeStamps.isEmpty == false {
       cancelActiveStroke()
     }
-    liveStrokeTexture = makeStrokeTexture(size: size)
-    visibleAdjustedImageTextureKey = nil
     viewportRenderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    if usesViewportImageRendering {
-      setNeedsDisplay()
-    } else {
-      updateVisibleAdjustedImageTextureIfNeeded()
-    }
+    setNeedsDisplay()
   }
 
   func draw(in view: MTKView) {
@@ -371,23 +298,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       recordDrawSample()
     }
 
-    if usesViewportImageRendering {
-      renderViewportImage()
-    } else {
-      renderLiveOverlay()
-    }
+    renderViewportImage()
   }
 
   func beginStroke(at rawPoint: CGPoint) {
-    liveOverlayGeneration += 1
+    strokeGeneration += 1
     isHidden = false
     activeStrokeStamps.removeAll(keepingCapacity: true)
-    if usesViewportImageRendering {
-      pendingLiveStamps.removeAll(keepingCapacity: true)
-    } else {
-      ensureLiveStrokeTextureMatchesDrawable()
-      clearLiveStrokeTexture(hidesOverlay: false)
-    }
+    pendingLiveStamps.removeAll(keepingCapacity: true)
     strokeSmoother.begin(at: rawPoint)
     lastStampPoint = rawPoint
     renderLiveStamps([rawPoint], flushImmediately: true)
@@ -430,173 +348,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     cancelActiveStroke()
   }
 
-  private func makeLayerTextures() {
-    liveStrokeTexture = nil
-  }
-
-  private func makeStrokeTexture(size: CGSize) -> MTLTexture? {
-    guard let device else {
-      return nil
-    }
-
-    let width = max(Int(size.width.rounded(.up)), 1)
-    let height = max(Int(size.height.rounded(.up)), 1)
-    guard width <= Self.maximumLiveTextureDimension,
-          height <= Self.maximumLiveTextureDimension
-    else {
-      return nil
-    }
-
-    let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-      pixelFormat: .rgba8Unorm,
-      width: width,
-      height: height,
-      mipmapped: false
-    )
-    descriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
-    descriptor.storageMode = .private
-    return device.makeTexture(descriptor: descriptor)
-  }
-
-  private func makeLiveStrokeTextureForCurrentDrawable() -> MTLTexture? {
-    let size = drawableSize
-    let fallback = CGSize(
-      width: max(bounds.width, 1) * contentScaleFactor,
-      height: max(bounds.height, 1) * contentScaleFactor
-    )
-    let target = size.width > 0 && size.height > 0 ? size : fallback
-    return makeStrokeTexture(size: target)
-  }
-
-  private func updateVisibleAdjustedImageTextureIfNeeded() {
-    guard
-      let renderImages,
-      renderImages.hasLocalEffect,
-      let device,
-      visibleContentRect.width > 0,
-      visibleContentRect.height > 0,
-      visibleCanvasFrame.width > 0,
-      visibleCanvasFrame.height > 0,
-      bounds.width > 0,
-      bounds.height > 0
-    else {
-      visibleAdjustedImageTexture = nil
-      visibleAdjustedImageTextureKey = nil
-      return
-    }
-    let adjustedImage = renderImages.adjusted
-
-    let drawableScaleX = drawableSize.width / bounds.width
-    let drawableScaleY = drawableSize.height / bounds.height
-    let pixelWidth = min(
-      Self.maximumLiveTextureDimension,
-      alignedPixelSize(visibleCanvasFrame.width * drawableScaleX)
-    )
-    let pixelHeight = min(
-      Self.maximumLiveTextureDimension,
-      alignedPixelSize(visibleCanvasFrame.height * drawableScaleY)
-    )
-    guard pixelWidth > 0, pixelHeight > 0 else {
-      visibleAdjustedImageTexture = nil
-      visibleAdjustedImageTextureKey = nil
-      return
-    }
-
-    let key = EditingCanvasVisibleImageTextureKey(
-      visibleContentRect: visibleContentRect,
-      pixelWidth: pixelWidth,
-      pixelHeight: pixelHeight
-    )
-    guard visibleAdjustedImageTextureKey != key else {
-      return
-    }
-
-    let texture: MTLTexture
-    if let existingTexture = visibleAdjustedImageTexture,
-       existingTexture.width == pixelWidth,
-       existingTexture.height == pixelHeight
-    {
-      texture = existingTexture
-    } else {
-      let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-        pixelFormat: .bgra8Unorm,
-        width: pixelWidth,
-        height: pixelHeight,
-        mipmapped: false
-      )
-      descriptor.usage = [.renderTarget, .shaderRead, .shaderWrite]
-      descriptor.storageMode = .private
-      guard let newTexture = device.makeTexture(descriptor: descriptor) else {
-        return
-      }
-      texture = newTexture
-    }
-
-    guard
-      let commandBuffer = commandQueue.makeCommandBuffer()
-    else {
-      return
-    }
-
-    render(
-      adjustedImage,
-      canvasRect: visibleContentRect,
-      pixelWidth: pixelWidth,
-      pixelHeight: pixelHeight,
-      into: texture,
-      commandBuffer: commandBuffer
-    )
-    commandBuffer.commit()
-
-    visibleAdjustedImageTexture = texture
-    visibleAdjustedImageTextureKey = key
-  }
-
-  private func render(
-    _ image: CIImage,
-    canvasRect: CGRect,
-    pixelWidth: Int,
-    pixelHeight: Int,
-    into texture: MTLTexture,
-    commandBuffer: MTLCommandBuffer
-  ) {
-    let renderBounds = CGRect(
-      x: 0,
-      y: 0,
-      width: pixelWidth,
-      height: pixelHeight
-    )
-    let scaleX = CGFloat(pixelWidth) / canvasRect.width
-    let scaleY = CGFloat(pixelHeight) / canvasRect.height
-    let visibleImage = image
-      .transformed(
-        by: CGAffineTransform(
-          translationX: -canvasRect.minX,
-          y: -canvasRect.minY
-        )
-      )
-      .transformed(
-        by: CGAffineTransform(
-          scaleX: scaleX,
-          y: scaleY
-        )
-      )
-      .cropped(to: renderBounds)
-
-    ciContext.render(
-      visibleImage,
-      to: texture,
-      commandBuffer: commandBuffer,
-      bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
-    )
-  }
-
-  private func alignedPixelSize(_ value: CGFloat) -> Int {
-    let raw = max(Int(value.rounded()), 4)
-    return (raw + 3) & ~3
-  }
-
   private func recordDrawSample(now: CFTimeInterval = CACurrentMediaTime()) {
     if drawSampleCount == 0, now - drawSampleStartTime > drawSampleIdleResetInterval {
       drawSampleStartTime = now
@@ -614,41 +365,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     onMetricsChange?()
   }
 
-  private func ensureLiveStrokeTextureMatchesDrawable() {
-    let target = drawableSize
-    guard target.width > 0, target.height > 0 else {
-      return
-    }
-    let current = liveStrokeTexture
-    if let current,
-       current.width == Int(target.width.rounded(.up)),
-       current.height == Int(target.height.rounded(.up))
-    {
-      return
-    }
-    liveStrokeTexture = makeStrokeTexture(size: target)
-  }
-
-  private func clearLiveStrokeTexture(hidesOverlay: Bool = true) {
-    if hidesOverlay {
-      isHidden = usesViewportImageRendering == false
-    }
-    clearTexture(liveStrokeTexture)
-    setNeedsDisplay()
-  }
-
-  private func clearTexture(_ texture: MTLTexture?) {
-    guard
-      let texture,
-      let commandBuffer = commandQueue.makeCommandBuffer()
-    else {
-      return
-    }
-
-    encodeClearTexture(texture, commandBuffer: commandBuffer)
-    commandBuffer.commit()
-  }
-
   private func encodeClearTexture(_ texture: MTLTexture?, commandBuffer: MTLCommandBuffer) {
     guard let texture else {
       return
@@ -664,12 +380,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   private func cancelActiveStroke() {
-    liveOverlayGeneration += 1
+    strokeGeneration += 1
     strokeSmoother.reset()
     activeStrokeStamps.removeAll(keepingCapacity: true)
     pendingLiveStamps.removeAll(keepingCapacity: true)
     stopLiveDisplayLink()
-    clearLiveStrokeTexture()
+    isHidden = false
+    setNeedsDisplay()
     lastStampPoint = nil
   }
 
@@ -716,22 +433,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     activeStrokeStamps += stamps
     pendingLiveStamps += stamps
     isHidden = false
-    if usesViewportImageRendering {
-      startLiveDisplayLinkIfNeeded()
-      if flushImmediately {
-        pendingLiveStamps.removeAll(keepingCapacity: true)
-        setNeedsDisplay()
-        publishLiveMetricsIfNeeded(force: true)
-      } else {
-        publishLiveMetricsIfNeeded()
-      }
-      return
-    }
-
     startLiveDisplayLinkIfNeeded()
-
     if flushImmediately {
-      flushPendingLiveStamps()
+      pendingLiveStamps.removeAll(keepingCapacity: true)
+      setNeedsDisplay()
       publishLiveMetricsIfNeeded(force: true)
     } else {
       publishLiveMetricsIfNeeded()
@@ -740,68 +445,43 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   private func commitActiveStroke() {
     guard activeStrokeStamps.isEmpty == false else {
-      clearLiveStrokeTexture()
+      setNeedsDisplay()
       return
     }
 
-    flushPendingLiveStamps()
     stopLiveDisplayLink()
 
     let stamps = activeStrokeStamps
     activeStrokeStamps.removeAll(keepingCapacity: true)
-    let generation = liveOverlayGeneration
+    let generation = strokeGeneration
 
     let record = EditingCanvasStrokeRecord(stamps: stamps, brush: brush)
-    let clearLiveOverlay = { [weak self] in
+    let finishStrokeRendering = { [weak self] in
       guard let self else { return }
-      self.finishCommittedStrokeOverlay(for: generation)
+      self.finishCommittedStrokeRendering(for: generation)
     }
 
     if let onStrokeCommit {
-      onStrokeCommit(record, clearLiveOverlay)
+      onStrokeCommit(record, finishStrokeRendering)
     } else {
-      clearLiveOverlay()
+      finishStrokeRendering()
     }
   }
 
-  private func finishCommittedStrokeOverlay(for generation: Int) {
+  private func finishCommittedStrokeRendering(for generation: Int) {
     if Thread.isMainThread == false {
       DispatchQueue.main.async { [weak self] in
-        self?.finishCommittedStrokeOverlay(for: generation)
+        self?.finishCommittedStrokeRendering(for: generation)
       }
       return
     }
 
-    guard liveOverlayGeneration == generation, activeStrokeStamps.isEmpty else {
+    guard strokeGeneration == generation, activeStrokeStamps.isEmpty else {
       return
     }
 
-    isHidden = usesViewportImageRendering == false
+    isHidden = false
     onMetricsChange?()
-
-    DispatchQueue.main.async { [weak self] in
-      guard let self else { return }
-      guard self.liveOverlayGeneration == generation, self.activeStrokeStamps.isEmpty else {
-        return
-      }
-      self.clearTexture(self.liveStrokeTexture)
-    }
-  }
-
-  private func renderStamps(
-    _ stamps: [CGPoint],
-    into texture: MTLTexture?
-  ) {
-    guard
-      stamps.isEmpty == false,
-      let texture,
-      let commandBuffer = commandQueue.makeCommandBuffer()
-    else {
-      return
-    }
-
-    encodeLiveStamps(stamps, into: texture, commandBuffer: commandBuffer)
-    commandBuffer.commit()
     setNeedsDisplay()
   }
 
@@ -828,27 +508,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   @objc private func liveDisplayLinkDidTick(_ displayLink: CADisplayLink) {
-    if usesViewportImageRendering {
-      if pendingLiveStamps.isEmpty == false {
-        pendingLiveStamps.removeAll(keepingCapacity: true)
-        setNeedsDisplay()
-      }
-      publishLiveMetricsIfNeeded(now: displayLink.timestamp)
-      return
+    if pendingLiveStamps.isEmpty == false {
+      pendingLiveStamps.removeAll(keepingCapacity: true)
+      setNeedsDisplay()
     }
-
-    flushPendingLiveStamps()
     publishLiveMetricsIfNeeded(now: displayLink.timestamp)
-  }
-
-  private func flushPendingLiveStamps() {
-    guard pendingLiveStamps.isEmpty == false else {
-      return
-    }
-
-    let stamps = pendingLiveStamps
-    pendingLiveStamps.removeAll(keepingCapacity: true)
-    renderStamps(stamps, into: liveStrokeTexture)
   }
 
   private func publishLiveMetricsIfNeeded(
@@ -861,114 +525,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     lastLiveMetricsPublishTime = now
     onMetricsChange?()
-  }
-
-  private func encodeLiveStamps(
-    _ canvasStamps: [CGPoint],
-    into texture: MTLTexture,
-    commandBuffer: MTLCommandBuffer
-  ) {
-    let visible = visibleContentRect
-    let viewportFrame = visibleCanvasFrame
-    let target = drawableSize
-    guard
-      canvasStamps.isEmpty == false,
-      visible.width > 0, visible.height > 0,
-      viewportFrame.width > 0, viewportFrame.height > 0,
-      bounds.width > 0, bounds.height > 0,
-      target.width > 0, target.height > 0
-    else {
-      return
-    }
-
-    let drawableScaleX = target.width / bounds.width
-    let drawableScaleY = target.height / bounds.height
-    let contentToViewScaleX = viewportFrame.width / visible.width
-    let contentToViewScaleY = viewportFrame.height / visible.height
-    let pixelScaleX = contentToViewScaleX * drawableScaleX
-    let pixelScaleY = contentToViewScaleY * drawableScaleY
-    let brushPixelScale = (pixelScaleX + pixelScaleY) * 0.5
-    let targetSize = SIMD2(Float(target.width), Float(target.height))
-    let hardness = Float(brush.hardness)
-    let opacity = Float(brush.opacity)
-    let pixelRadius = Float(brush.size / 2 * Double(brushPixelScale))
-
-    let descriptor = MTLRenderPassDescriptor()
-    descriptor.colorAttachments[0].texture = texture
-    descriptor.colorAttachments[0].loadAction = .load
-    descriptor.colorAttachments[0].storeAction = .store
-
-    guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
-      return
-    }
-
-    encoder.setRenderPipelineState(brushPipeline)
-
-    for stamp in canvasStamps {
-      var uniforms = BrushUniforms(
-        canvasSize: targetSize,
-        center: SIMD2(
-          Float((viewportFrame.minX + (stamp.x - visible.minX) * contentToViewScaleX) * drawableScaleX),
-          Float((viewportFrame.minY + (stamp.y - visible.minY) * contentToViewScaleY) * drawableScaleY)
-        ),
-        radius: pixelRadius,
-        hardness: hardness,
-        opacity: opacity
-      )
-
-      encoder.setVertexBytes(&uniforms, length: MemoryLayout<BrushUniforms>.stride, index: 0)
-      encoder.setFragmentBytes(&uniforms, length: MemoryLayout<BrushUniforms>.stride, index: 0)
-      encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-    }
-
-    encoder.endEncoding()
-  }
-
-  private func renderLiveOverlay() {
-    guard
-      let liveStrokeTexture,
-      let visibleAdjustedImageTexture,
-      let drawable = currentDrawable,
-      let descriptor = currentRenderPassDescriptor,
-      let commandBuffer = commandQueue.makeCommandBuffer()
-    else {
-      return
-    }
-
-    descriptor.colorAttachments[0].loadAction = .clear
-    descriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-    descriptor.colorAttachments[0].storeAction = .store
-
-    guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) else {
-      return
-    }
-
-    encoder.setRenderPipelineState(liveOverlayPipeline)
-    encoder.setFragmentTexture(liveStrokeTexture, index: 0)
-    encoder.setFragmentTexture(visibleAdjustedImageTexture, index: 1)
-    let drawableScaleX = drawableSize.width / max(bounds.width, 1)
-    let drawableScaleY = drawableSize.height / max(bounds.height, 1)
-    var overlayUniforms = EditingCanvasLiveOverlayUniforms(
-      viewportOrigin: CGPoint(
-        x: visibleCanvasFrame.minX * drawableScaleX,
-        y: visibleCanvasFrame.minY * drawableScaleY
-      ).simdFloat2,
-      viewportSize: CGSize(
-        width: visibleCanvasFrame.width * drawableScaleX,
-        height: visibleCanvasFrame.height * drawableScaleY
-      ).simdFloat2,
-      drawableSize: drawableSize.simdFloat2
-    )
-    encoder.setFragmentBytes(
-      &overlayUniforms,
-      length: MemoryLayout<EditingCanvasLiveOverlayUniforms>.stride,
-      index: 0
-    )
-    encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-
-    encoder.endEncoding()
-    commandBuffer.present(drawable)
-    commandBuffer.commit()
   }
 
   private func renderViewportImage() {
@@ -1793,17 +1349,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
     descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
     descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
-    return try device.makeRenderPipelineState(descriptor: descriptor)
-  }
-
-  private static func makeLiveOverlayPipeline(
-    device: MTLDevice,
-    library: MTLLibrary
-  ) throws -> MTLRenderPipelineState {
-    let descriptor = MTLRenderPipelineDescriptor()
-    descriptor.vertexFunction = library.makeFunction(name: "displayVertex")
-    descriptor.fragmentFunction = library.makeFunction(name: "liveOverlayFragment")
-    descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
     return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 
