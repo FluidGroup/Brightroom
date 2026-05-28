@@ -12,7 +12,13 @@ import SwiftUI
 struct SwiftUIDemoApp: App {
     var body: some Scene {
         WindowGroup {
+          if ProcessInfo.processInfo.arguments.contains("-CropTransformMock") {
+            NavigationStack {
+              CropTransformMockView()
+            }
+          } else {
             ContentView()
+          }
         }
     }
 }

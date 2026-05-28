@@ -66,6 +66,10 @@ struct ContentView: View {
             RenderingDemoView()
           }
 
+          NavigationLink("Crop Transform Mock") {
+            CropTransformMockView()
+          }
+
           Section("Restoration Horizontal") {
             Button("Masking") {
               fullScreenView = .init {
