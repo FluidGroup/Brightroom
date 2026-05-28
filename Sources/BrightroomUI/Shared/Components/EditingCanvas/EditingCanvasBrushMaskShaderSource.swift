@@ -1,11 +1,15 @@
 import Metal
 
-enum EditingCanvasShaderSource {
+/// Metal source used only to rasterize brush stamps into a mask texture.
+///
+/// Image rendering and filter composition stay in Core Image. This shader draws
+/// soft circular alpha stamps for local-adjustment masks.
+enum EditingCanvasBrushMaskShaderSource {
   static let source = """
   #include <metal_stdlib>
   using namespace metal;
 
-  struct BrushUniforms {
+  struct BrushStampUniforms {
     float2 canvasSize;
     float2 center;
     float radius;
@@ -14,14 +18,14 @@ enum EditingCanvasShaderSource {
     float padding;
   };
 
-  struct BrushVertexOut {
+  struct BrushStampVertexOut {
     float4 position [[position]];
     float2 local;
   };
 
-  vertex BrushVertexOut brushVertex(
+  vertex BrushStampVertexOut brushStampVertex(
     uint vertexID [[vertex_id]],
-    constant BrushUniforms& brush [[buffer(0)]]
+    constant BrushStampUniforms& brush [[buffer(0)]]
   ) {
     constexpr float2 corners[4] = {
       float2(-1.0, -1.0),
@@ -37,15 +41,15 @@ enum EditingCanvasShaderSource {
       1.0 - pixel.y / brush.canvasSize.y * 2.0
     );
 
-    BrushVertexOut out;
+    BrushStampVertexOut out;
     out.position = float4(position, 0.0, 1.0);
     out.local = local;
     return out;
   }
 
-  fragment float4 brushFragment(
-    BrushVertexOut in [[stage_in]],
-    constant BrushUniforms& brush [[buffer(0)]]
+  fragment float4 brushStampFragment(
+    BrushStampVertexOut in [[stage_in]],
+    constant BrushStampUniforms& brush [[buffer(0)]]
   ) {
     float distanceFromCenter = length(in.local);
     if (distanceFromCenter > 1.0) {
