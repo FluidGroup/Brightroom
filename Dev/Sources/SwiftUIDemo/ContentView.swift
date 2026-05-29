@@ -86,26 +86,6 @@ struct ContentView: View {
             PencilKitReferenceSandboxView()
           }
 
-          Section("Restoration Horizontal") {
-            Button("Masking") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  horizontalStack
-                }
-              }
-            }
-          }
-
-          Section("Restoration Vertical") {
-            Button("Masking") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  verticalStack
-                }
-              }
-            }
-          }
-
           Section(
             "PhotosCrop FaceDetection",
             content: {
@@ -134,33 +114,6 @@ struct ContentView: View {
 
             }
           )
-
-          Section("Blur Masking") {
-            Button("Local") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  Mocks.makeEditingStack(
-                    image: Asset.horizontalRect.image
-                  )
-                }
-              }
-            }
-
-            Button("Remote") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  EditingStack(
-                    imageProvider: .init(
-                      editableRemoteURL: URL(
-                        string:
-                          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-                      )!
-                    )
-                  )
-                }
-              }
-            }
-          }
 
           Section(
             "PhotosCrop",
@@ -320,16 +273,6 @@ struct WorkingOnPicked: View {
       if let selectedImage {
         Section("Selected Photo") {
           PickedImageSummary(image: selectedImage)
-        }
-
-        Section("Components") {
-          Button("Masking") {
-            fullScreenView = .init {
-              DemoMaskingView {
-                selectedImage.makeEditingStack()
-              }
-            }
-          }
         }
 
         Section("BuiltIn") {
