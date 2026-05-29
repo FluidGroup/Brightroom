@@ -21,6 +21,7 @@
 
 import SwiftUI
 import UIKit
+import MetalKit
 
 import BrightroomEngine
 
@@ -167,7 +168,35 @@ final class CropView: UIView, UIScrollViewDelegate {
    */
   private let scrollBackdropView = UIView()
 
-  private var viewportDisplayView: CropViewportDisplayView?
+  private var canvasView: _EditingCanvasMTKView?
+  private var canvasViewCanvasSize: CGSize?
+  private var currentCanvasInputKey: CanvasInputKey?
+  private var surfaceMode: CropViewSurfaceMode = .crop
+  private var canvasInteractionMode: EditingCanvasInteractionMode = .view
+  private var canvasBrush: EditingCanvasBrush = .init()
+  private var canvasStrokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
+  private var editingCanvasLocalAdjustmentLayerID: UUID?
+  private lazy var drawingGestureRecognizer: _EditingCanvasDrawingGestureRecognizer = {
+    let recognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
+    recognizer.delegate = self
+    recognizer.isEnabled = false
+    recognizer.onBegin = { [weak self] point in
+      guard let self else { return }
+      self.canvasView?.beginStroke(at: self.imagePoint(fromPlatterPoint: point))
+    }
+    recognizer.onMove = { [weak self] points in
+      guard let self else { return }
+      self.canvasView?.appendStroke(points: points.map { self.imagePoint(fromPlatterPoint: $0) })
+    }
+    recognizer.onEnd = { [weak self] point in
+      guard let self else { return }
+      self.canvasView?.endStroke(at: self.imagePoint(fromPlatterPoint: point))
+    }
+    recognizer.onCancel = { [weak self] in
+      self?.canvasView?.cancelStroke()
+    }
+    return recognizer
+  }()
 
   private var hasSetupScrollViewCompleted = false
 
@@ -286,6 +315,7 @@ final class CropView: UIView, UIScrollViewDelegate {
 
     imagePlatterView.isUserInteractionEnabled = true
     scrollView.addSubview(imagePlatterView)
+    imagePlatterView.addGestureRecognizer(drawingGestureRecognizer)
 
     if #available(iOS 26.0, *) {
       scrollView.topEdgeEffect.isHidden = true
@@ -339,7 +369,7 @@ final class CropView: UIView, UIScrollViewDelegate {
     _pixeleditor_ensureMainThread()
 
     prepareForCropIfNeeded(crop)
-    viewportDisplayView?.display(.empty)
+    hideCanvasView()
     setImage(image)
     setProposedCrop(crop, forcesLayout: true)
   }
@@ -552,8 +582,7 @@ extension CropView {
     if state.proposedCrop?.imageSize != crop.imageSize {
       hasSetupScrollViewCompleted = false
       lastLaidOutCrop = nil
-      viewportDisplayView?.removeFromSuperview()
-      viewportDisplayView = nil
+      removeCanvasView()
     }
   }
 
@@ -569,48 +598,180 @@ extension CropView {
     switch displayMode {
     case .cropInteractionImage:
       imagePlatterView.display(.cropInteractionImage(loadedState.imageForCrop))
-      viewportDisplayView?.display(.empty)
+      hideCanvasView()
 
     case .renderedEditPreview:
       imagePlatterView.display(.empty)
 
-      guard let viewportDisplayView = ensureViewportDisplayView(canvasSize: crop.imageSize) else {
+      guard ensureCanvasView(canvasSize: crop.imageSize) != nil else {
         return
       }
 
-      viewportDisplayView.display(.renderedEditPreview(.init(
-        loadedState: loadedState,
-        crop: crop
-      )))
+      updateCanvasContent(loadedState: loadedState, crop: crop)
       updateCropDisplayViewport()
     }
   }
 
-  private func ensureViewportDisplayView(canvasSize: CGSize) -> CropViewportDisplayView? {
-    if let viewportDisplayView, viewportDisplayView.canvasSize == canvasSize {
-      return viewportDisplayView
+  @discardableResult
+  private func ensureCanvasView(canvasSize: CGSize) -> _EditingCanvasMTKView? {
+    if let canvasView, canvasViewCanvasSize == canvasSize {
+      return canvasView
     }
 
-    viewportDisplayView?.removeFromSuperview()
+    removeCanvasView()
 
-    guard let view = CropViewportDisplayView(canvasSize: canvasSize) else {
-      viewportDisplayView = nil
+    guard
+      canvasSize.width > 0,
+      canvasSize.height > 0,
+      let device = MTLCreateSystemDefaultDevice()
+    else {
       return nil
     }
 
+    let view = _EditingCanvasMTKView(canvasSize: canvasSize, device: device)
+    view.isUserInteractionEnabled = false
+    view.isHidden = true
+    view.setViewportCachedSourceEnabled(true)
+    view.configure(brush: canvasBrush, smoothing: canvasStrokeSmoothing)
+    view.onStrokeCommit = { [weak self] record, completion in
+      self?.commitCanvasStroke(record: record, completion: completion)
+    }
     scrollView.insertSubview(view, belowSubview: imagePlatterView)
-    viewportDisplayView = view
+    canvasView = view
+    canvasViewCanvasSize = canvasSize
     return view
+  }
+
+  private func removeCanvasView() {
+    canvasView?.removeFromSuperview()
+    canvasView = nil
+    canvasViewCanvasSize = nil
+    currentCanvasInputKey = nil
+  }
+
+  private func hideCanvasView() {
+    canvasView?.isHidden = true
+  }
+
+  private func updateCanvasRenderedEditPreview(
+    loadedState: EditingStack.Loaded,
+    crop: EditingCrop
+  ) {
+    guard crop.imageSize == canvasViewCanvasSize, let canvasView else {
+      return
+    }
+
+    let key = CanvasInputKey(loadedState: loadedState, crop: crop)
+    guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
+      canvasView.isHidden = false
+      return
+    }
+
+    let renderPlan = CanvasRenderPlan(
+      localAdjustments: loadedState.currentEdit.localAdjustments
+    )
+    guard
+      let images = EditingCanvasRenderImageFactory.makeRenderImages(
+        loadedState: loadedState,
+        canvasSize: crop.imageSize,
+        mode: renderPlan.canvasMode
+      )
+    else {
+      return
+    }
+
+    canvasView.setRenderImages(images)
+    canvasView.setCommittedStrokes(renderPlan.committedStrokes)
+    canvasView.isHidden = false
+    currentCanvasInputKey = key
   }
 
   private func updateCropDisplayViewport() {
     guard displayMode == .renderedEditPreview else {
-      viewportDisplayView?.updateViewport(nil)
+      hideCanvasView()
       stopViewportInteractionRendering()
       return
     }
 
-    viewportDisplayView?.updateViewport(makeCropDisplayViewport())
+    applyCanvasViewport(makeCropDisplayViewport())
+  }
+
+  private func applyCanvasViewport(_ viewport: CropDisplayViewport?) {
+    guard let canvasView else {
+      return
+    }
+
+    guard let viewport else {
+      canvasView.isHidden = true
+      return
+    }
+
+    canvasView.isHidden = false
+    canvasView.frame = viewport.viewportFrameInScrollView
+    canvasView.contentScaleFactor = viewport.contentScaleFactor
+    canvasView.setViewport(
+      visibleContentRect: viewport.visibleContentRect,
+      visibleCanvasFrame: viewport.visibleCanvasFrame,
+      zoomScale: viewport.zoomScale
+    )
+  }
+
+  private struct CanvasInputKey: Equatable {
+    var imageSize: CGSize
+    var sourceExtent: CGRect
+    var filters: EditingStack.Edit.Filters
+    var localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
+
+    init(loadedState: EditingStack.Loaded, crop: EditingCrop) {
+      let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+      self.imageSize = crop.imageSize
+      self.sourceExtent = previewSourceImage.extent
+      self.filters = loadedState.currentEdit.filters
+      self.localAdjustments = loadedState.currentEdit.localAdjustments
+    }
+  }
+
+  private enum CanvasRenderPlan: Equatable {
+    case viewportBase
+    case singleLocalAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
+    case renderedEditPreview
+
+    init(localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]) {
+      let activeLayers = localAdjustments.filter {
+        $0.isEnabled && $0.effect.isActive && $0.mask.isEmpty == false
+      }
+
+      switch activeLayers.count {
+      case 0:
+        self = .viewportBase
+      case 1:
+        self = .singleLocalAdjustment(activeLayers[0])
+      default:
+        self = .renderedEditPreview
+      }
+    }
+
+    var canvasMode: EditingCanvasMode {
+      switch self {
+      case .viewportBase:
+        return .viewportBase
+      case let .singleLocalAdjustment(layer):
+        return .localAdjustment(effect: layer.effect)
+      case .renderedEditPreview:
+        return .renderedEditPreview
+      }
+    }
+
+    var committedStrokes: [EditingCanvasStrokeRecord] {
+      switch self {
+      case .viewportBase, .renderedEditPreview:
+        return []
+      case let .singleLocalAdjustment(layer):
+        return layer.mask.strokes.map {
+          EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
+        }
+      }
+    }
   }
 
   private func makeCropDisplayViewport() -> CropDisplayViewport? {
@@ -975,18 +1136,18 @@ extension CropView {
         // zoom
         do {
 
-          let (min, max) = crop.calculateZoomScale(
-            visibleSize: guideView.bounds
-              .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
-              .size
-          )
-
-          scrollView.minimumZoomScale = min
-          scrollView.maximumZoomScale = max
-
           imagePlatterView.frame.origin = .zero
 
-          func _zoom() {
+          if surfaceMode == .crop {
+
+            let (min, max) = crop.calculateZoomScale(
+              visibleSize: guideView.bounds
+                .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
+                .size
+            )
+
+            scrollView.minimumZoomScale = min
+            scrollView.maximumZoomScale = max
 
             scrollView.customZoom(
               to: crop.zoomExtent(),
@@ -1001,9 +1162,9 @@ extension CropView {
               scrollView.maximumZoomScale = scale
             }
 
+          } else {
+            applyViewportZoomAndInset(crop: crop)
           }
-
-          _zoom()
 
         }
 
@@ -1113,8 +1274,64 @@ extension CropView {
   }
 
   private func updateScrollViewInset(crop: EditingCrop) {
+    guard surfaceMode == .crop else {
+      // The non-crop free viewport sets its own clamping inset in
+      // applyViewportZoomAndInset(crop:).
+      return
+    }
     scrollView.contentInset = makeScrollViewInset(
       aggregatedRotaion: crop.aggregatedRotation.radians
+    )
+  }
+
+  /// ② Non-crop free viewport: fit the fixed crop region, lock zoom-out to the
+  /// fit scale, allow zoom-in, and clamp pan to the crop region via contentInset.
+  private func applyViewportZoomAndInset(crop: EditingCrop) {
+    let zoomExtent = crop.zoomExtent()
+    let guideSize = guideView.bounds.size
+    guard
+      zoomExtent.width > 0, zoomExtent.height > 0,
+      guideSize.width > 0, guideSize.height > 0
+    else {
+      return
+    }
+
+    let fitScale = min(
+      guideSize.width / zoomExtent.width,
+      guideSize.height / zoomExtent.height
+    )
+
+    scrollView.minimumZoomScale = fitScale
+    scrollView.maximumZoomScale = max(fitScale * 8, fitScale)
+    if abs(scrollView.zoomScale - fitScale) > 0.0001 {
+      scrollView.zoomScale = fitScale
+    }
+    scrollView.contentInset = makeViewportScrollInset(crop: crop)
+    scrollView.contentOffset = scrollView.minContentOffset
+  }
+
+  /// Inset that restricts the scrollable area to the (rotated) crop region, so
+  /// panning the free viewport can never reveal image outside the crop. Depends
+  /// on the current zoomScale, so it is recomputed when zooming ends.
+  private func makeViewportScrollInset(crop: EditingCrop) -> UIEdgeInsets {
+    let guideSize = guideView.bounds.size
+    let boundsSize = scrollView.bounds.size
+    let contentSize = CGSize(
+      width: imagePlatterView.bounds.width * scrollView.zoomScale,
+      height: imagePlatterView.bounds.height * scrollView.zoomScale
+    )
+    let cropRegion = crop.zoomExtent()
+      .rotated(crop.aggregatedRotation.radians)
+      .applying(CGAffineTransform(scaleX: scrollView.zoomScale, y: scrollView.zoomScale))
+
+    let horizontalGuideMargin = (boundsSize.width - guideSize.width) / 2
+    let verticalGuideMargin = (boundsSize.height - guideSize.height) / 2
+
+    return UIEdgeInsets(
+      top: verticalGuideMargin - cropRegion.minY,
+      left: horizontalGuideMargin - cropRegion.minX,
+      bottom: cropRegion.maxY - contentSize.height + verticalGuideMargin,
+      right: cropRegion.maxX - contentSize.width + horizontalGuideMargin
     )
   }
 
@@ -1137,6 +1354,13 @@ extension CropView {
 
   @discardableResult
   private func record() -> EditingCrop? {
+
+    // Crop recording only applies while adjusting the crop. In masking/viewing
+    // surface modes the scroll view is a free pan/zoom viewport and must not
+    // mutate the crop extent.
+    guard surfaceMode == .crop else {
+      return state.proposedCrop
+    }
 
     guard var crop = state.proposedCrop else {
       return nil
@@ -1333,7 +1557,7 @@ extension CropView {
 
   private func beginViewportInteractionRendering() {
     guard displayMode == .renderedEditPreview,
-          viewportDisplayView != nil,
+          canvasView != nil,
           viewportRenderingDisplayLink == nil
     else {
       return
@@ -1376,7 +1600,7 @@ extension CropView {
     viewportRenderingDisplayLink?.invalidate()
     viewportRenderingDisplayLink = nil
     if displayMode == .renderedEditPreview {
-      viewportDisplayView?.updateViewport(makeCropDisplayViewport())
+      applyCanvasViewport(makeCropDisplayViewport())
     }
   }
 
@@ -1426,6 +1650,7 @@ extension CropView {
     debounce.on { [weak self] in
 
       guard let self = self else { return }
+      guard self.surfaceMode == .crop else { return }
 
       self.updateCropLayout()
     }
@@ -1442,6 +1667,10 @@ extension CropView {
     debounce.on { [weak self] in
 
       guard let self = self else {
+        return
+      }
+
+      guard self.surfaceMode == .crop else {
         return
       }
 
@@ -1479,6 +1708,10 @@ extension CropView {
     atScale scale: CGFloat
   ) {
     debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
+    if surfaceMode != .crop, let crop = state.proposedCrop {
+      // Re-clamp pan range to the crop region at the settled zoom scale.
+      scrollView.contentInset = makeViewportScrollInset(crop: crop)
+    }
     endScrollViewAdjustment(.zoom)
     scheduleStopViewportInteractionRendering()
   }
@@ -1755,4 +1988,230 @@ extension UIScrollView {
 
   }
 
+}
+
+// MARK: - Editing canvas (brush surface)
+
+public enum CropViewSurfaceMode: Equatable {
+  case crop
+  case masking(EditingStack.Edit.LocalAdjustmentEffect)
+  case viewing
+
+  var localEffect: EditingStack.Edit.LocalAdjustmentEffect? {
+    switch self {
+    case .crop, .viewing:
+      return nil
+    case let .masking(effect):
+      return effect
+    }
+  }
+}
+
+extension CropView: UIGestureRecognizerDelegate {
+
+  func setSurfaceMode(_ mode: CropViewSurfaceMode) {
+    guard surfaceMode != mode else {
+      return
+    }
+
+    let previousEffect = surfaceMode.localEffect
+    surfaceMode = mode
+
+    if previousEffect?.editingCanvasEffectIdentity != mode.localEffect?.editingCanvasEffectIdentity {
+      editingCanvasLocalAdjustmentLayerID = nil
+    }
+
+    applySurfaceMode()
+    updateCurrentEditingStackDisplay()
+  }
+
+  func setCanvasBrush(_ brush: EditingCanvasBrush) {
+    canvasBrush = brush
+    canvasView?.configure(brush: brush, smoothing: canvasStrokeSmoothing)
+  }
+
+  func setCanvasStrokeSmoothing(_ smoothing: EditingCanvasStrokeSmoothingConfiguration) {
+    canvasStrokeSmoothing = smoothing
+    canvasView?.configure(brush: canvasBrush, smoothing: smoothing)
+  }
+
+  private func applySurfaceMode() {
+    let isCropMode: Bool
+    let isDrawingEnabled: Bool
+    switch surfaceMode {
+    case .crop:
+      isCropMode = true
+      isDrawingEnabled = false
+    case .viewing:
+      isCropMode = false
+      isDrawingEnabled = false
+    case .masking:
+      isCropMode = false
+      isDrawingEnabled = true
+    }
+
+    canvasInteractionMode = isDrawingEnabled ? .draw : .view
+
+    if isDrawingEnabled == false {
+      canvasView?.cancelStroke()
+    }
+    drawingGestureRecognizer.isEnabled = isDrawingEnabled
+
+    // Pan/zoom stay enabled in BOTH modes, but the semantics differ:
+    //  - crop: scrolling the image under the guide IS the crop adjustment.
+    //  - non-crop (masking/viewing): a free viewport over the FIXED crop region —
+    //    pan/zoom navigate within the crop, never re-crop. The viewport zoom
+    //    limits + pan-clamp inset are applied in updateScrollContainerView and
+    //    crop recording is gated to `.crop` in record()/updateCropLayout.
+    scrollView.isScrollEnabled = true
+    scrollView.pinchGestureRecognizer?.isEnabled = true
+    scrollView.panGestureRecognizer.minimumNumberOfTouches = isDrawingEnabled ? 2 : 1
+
+    // Clip the rotated content to the crop region while not adjusting the crop.
+    // Assigning fires didSet → updateCropLayout(), which re-fits (reset-to-fit)
+    // and applies the per-mode zoom/inset configuration.
+    clipsToGuide = !isCropMode
+  }
+
+  public func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+  ) -> Bool {
+    guard
+      gestureRecognizer === drawingGestureRecognizer
+        || otherGestureRecognizer === drawingGestureRecognizer
+    else {
+      return false
+    }
+
+    let panGesture = scrollView.panGestureRecognizer
+    let pinchGesture = scrollView.pinchGestureRecognizer
+    return gestureRecognizer === panGesture
+      || otherGestureRecognizer === panGesture
+      || gestureRecognizer === pinchGesture
+      || otherGestureRecognizer === pinchGesture
+  }
+
+  fileprivate func updateCanvasContent(
+    loadedState: EditingStack.Loaded,
+    crop: EditingCrop
+  ) {
+    switch surfaceMode {
+    case .crop, .viewing:
+      updateCanvasRenderedEditPreview(loadedState: loadedState, crop: crop)
+    case let .masking(effect):
+      updateCanvasMasking(loadedState: loadedState, crop: crop, effect: effect)
+    }
+  }
+
+  private func updateCanvasMasking(
+    loadedState: EditingStack.Loaded,
+    crop: EditingCrop,
+    effect: EditingStack.Edit.LocalAdjustmentEffect
+  ) {
+    guard crop.imageSize == canvasViewCanvasSize, let canvasView else {
+      return
+    }
+
+    guard
+      let images = EditingCanvasRenderImageFactory.makeRenderImages(
+        loadedState: loadedState,
+        canvasSize: crop.imageSize,
+        mode: .localAdjustment(effect: effect)
+      )
+    else {
+      return
+    }
+
+    canvasView.setRenderImages(images)
+    canvasView.isHidden = false
+    syncCommittedStrokesFromEditingStack()
+    currentCanvasInputKey = nil
+  }
+
+  fileprivate func commitCanvasStroke(
+    record: EditingCanvasStrokeRecord,
+    completion: @escaping () -> Void
+  ) {
+    appendRecordToEditingStack(record)
+    syncCommittedStrokesFromEditingStack()
+    completion()
+  }
+
+  private func appendRecordToEditingStack(_ record: EditingCanvasStrokeRecord) {
+    guard let currentLocalEffect = surfaceMode.localEffect else {
+      return
+    }
+
+    var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
+    let layerIndex: Int
+    if let existingIndex = editingCanvasLayerIndex(in: localAdjustments) {
+      layerIndex = existingIndex
+    } else {
+      let id = UUID()
+      editingCanvasLocalAdjustmentLayerID = id
+      localAdjustments.append(
+        .init(
+          id: id,
+          effect: currentLocalEffect,
+          mask: .init()
+        )
+      )
+      layerIndex = localAdjustments.index(before: localAdjustments.endIndex)
+    }
+
+    localAdjustments[layerIndex].isEnabled = true
+    localAdjustments[layerIndex].effect = currentLocalEffect
+    localAdjustments[layerIndex].mask.strokes.append(record.localAdjustmentStroke)
+    editingStack.set(localAdjustments: localAdjustments)
+  }
+
+  private func syncCommittedStrokesFromEditingStack() {
+    let localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
+    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
+      canvasView?.setCommittedStrokes([])
+      return
+    }
+
+    let records = localAdjustments[layerIndex].mask.strokes.map {
+      EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
+    }
+    canvasView?.setCommittedStrokes(records)
+  }
+
+  private func editingCanvasLayerIndex(
+    in localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
+  ) -> Int? {
+    guard let currentLocalEffect = surfaceMode.localEffect else {
+      return nil
+    }
+
+    if
+      let editingCanvasLocalAdjustmentLayerID,
+      let index = localAdjustments.firstIndex(where: { $0.id == editingCanvasLocalAdjustmentLayerID })
+    {
+      return index
+    }
+
+    guard let index = localAdjustments.firstIndex(where: { layer in
+      layer.effect.editingCanvasEffectIdentity == currentLocalEffect.editingCanvasEffectIdentity
+    }) else {
+      return nil
+    }
+
+    editingCanvasLocalAdjustmentLayerID = localAdjustments[index].id
+    return index
+  }
+
+  fileprivate func imagePoint(fromPlatterPoint point: CGPoint) -> CGPoint {
+    guard let crop = state.proposedCrop else {
+      return point
+    }
+
+    let contentSize = crop.scrollViewContentSize()
+    return CGPoint(
+      x: point.x * (crop.imageSize.width / max(contentSize.width, 0.0001)),
+      y: point.y * (crop.imageSize.height / max(contentSize.height, 0.0001))
+    )
+  }
 }
