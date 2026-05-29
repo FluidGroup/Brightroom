@@ -1138,32 +1138,26 @@ extension CropView {
 
           imagePlatterView.frame.origin = .zero
 
-          if surfaceMode == .crop {
+          let (min, max) = crop.calculateZoomScale(
+            visibleSize: guideView.bounds
+              .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
+              .size
+          )
 
-            let (min, max) = crop.calculateZoomScale(
-              visibleSize: guideView.bounds
-                .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
-                .size
-            )
+          scrollView.minimumZoomScale = min
+          scrollView.maximumZoomScale = max
 
-            scrollView.minimumZoomScale = min
-            scrollView.maximumZoomScale = max
+          scrollView.customZoom(
+            to: crop.zoomExtent(),
+            guideSize: guideView.bounds.size,
+            adjustmentRotation: crop.aggregatedRotation.radians,
+            animated: false
+          )
 
-            scrollView.customZoom(
-              to: crop.zoomExtent(),
-              guideSize: guideView.bounds.size,
-              adjustmentRotation: crop.aggregatedRotation.radians,
-              animated: false
-            )
-
-            if isZoomEnabled == false {
-              let scale = scrollView.zoomScale
-              scrollView.minimumZoomScale = scale
-              scrollView.maximumZoomScale = scale
-            }
-
-          } else {
-            applyViewportZoomAndInset(crop: crop)
+          if isZoomEnabled == false {
+            let scale = scrollView.zoomScale
+            scrollView.minimumZoomScale = scale
+            scrollView.maximumZoomScale = scale
           }
 
         }
@@ -1190,7 +1184,7 @@ extension CropView {
           $0.isUserInteractionEnabled = false
           $0.addCompletion { _ in
             UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
-              self.guideView.alpha = 1
+              self.setCropGuideVisibility(isVisible: self.surfaceMode == .crop)
             }
             .startAnimation(afterDelay: 0.8)
           }
@@ -1274,64 +1268,8 @@ extension CropView {
   }
 
   private func updateScrollViewInset(crop: EditingCrop) {
-    guard surfaceMode == .crop else {
-      // The non-crop free viewport sets its own clamping inset in
-      // applyViewportZoomAndInset(crop:).
-      return
-    }
     scrollView.contentInset = makeScrollViewInset(
       aggregatedRotaion: crop.aggregatedRotation.radians
-    )
-  }
-
-  /// ② Non-crop free viewport: fit the fixed crop region, lock zoom-out to the
-  /// fit scale, allow zoom-in, and clamp pan to the crop region via contentInset.
-  private func applyViewportZoomAndInset(crop: EditingCrop) {
-    let zoomExtent = crop.zoomExtent()
-    let guideSize = guideView.bounds.size
-    guard
-      zoomExtent.width > 0, zoomExtent.height > 0,
-      guideSize.width > 0, guideSize.height > 0
-    else {
-      return
-    }
-
-    let fitScale = min(
-      guideSize.width / zoomExtent.width,
-      guideSize.height / zoomExtent.height
-    )
-
-    scrollView.minimumZoomScale = fitScale
-    scrollView.maximumZoomScale = max(fitScale * 8, fitScale)
-    if abs(scrollView.zoomScale - fitScale) > 0.0001 {
-      scrollView.zoomScale = fitScale
-    }
-    scrollView.contentInset = makeViewportScrollInset(crop: crop)
-    scrollView.contentOffset = scrollView.minContentOffset
-  }
-
-  /// Inset that restricts the scrollable area to the (rotated) crop region, so
-  /// panning the free viewport can never reveal image outside the crop. Depends
-  /// on the current zoomScale, so it is recomputed when zooming ends.
-  private func makeViewportScrollInset(crop: EditingCrop) -> UIEdgeInsets {
-    let guideSize = guideView.bounds.size
-    let boundsSize = scrollView.bounds.size
-    let contentSize = CGSize(
-      width: imagePlatterView.bounds.width * scrollView.zoomScale,
-      height: imagePlatterView.bounds.height * scrollView.zoomScale
-    )
-    let cropRegion = crop.zoomExtent()
-      .rotated(crop.aggregatedRotation.radians)
-      .applying(CGAffineTransform(scaleX: scrollView.zoomScale, y: scrollView.zoomScale))
-
-    let horizontalGuideMargin = (boundsSize.width - guideSize.width) / 2
-    let verticalGuideMargin = (boundsSize.height - guideSize.height) / 2
-
-    return UIEdgeInsets(
-      top: verticalGuideMargin - cropRegion.minY,
-      left: horizontalGuideMargin - cropRegion.minX,
-      bottom: cropRegion.maxY - contentSize.height + verticalGuideMargin,
-      right: cropRegion.maxX - contentSize.width + horizontalGuideMargin
     )
   }
 
@@ -1708,10 +1646,6 @@ extension CropView {
     atScale scale: CGFloat
   ) {
     debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
-    if surfaceMode != .crop, let crop = state.proposedCrop {
-      // Re-clamp pan range to the crop region at the settled zoom scale.
-      scrollView.contentInset = makeViewportScrollInset(crop: crop)
-    }
     endScrollViewAdjustment(.zoom)
     scheduleStopViewportInteractionRendering()
   }
@@ -2057,20 +1991,32 @@ extension CropView: UIGestureRecognizerDelegate {
     }
     drawingGestureRecognizer.isEnabled = isDrawingEnabled
 
-    // Pan/zoom stay enabled in BOTH modes, but the semantics differ:
-    //  - crop: scrolling the image under the guide IS the crop adjustment.
-    //  - non-crop (masking/viewing): a free viewport over the FIXED crop region —
-    //    pan/zoom navigate within the crop, never re-crop. The viewport zoom
-    //    limits + pan-clamp inset are applied in updateScrollContainerView and
-    //    crop recording is gated to `.crop` in record()/updateCropLayout.
-    scrollView.isScrollEnabled = true
-    scrollView.pinchGestureRecognizer?.isEnabled = true
+    // Crop geometry is shared across modes. Non-crop tools can draw or preview
+    // on the current crop result, but they do not introduce a separate viewport.
+    scrollView.isScrollEnabled = isCropMode
+    scrollView.pinchGestureRecognizer?.isEnabled = isCropMode
     scrollView.panGestureRecognizer.minimumNumberOfTouches = isDrawingEnabled ? 2 : 1
 
-    // Clip the rotated content to the crop region while not adjusting the crop.
-    // Assigning fires didSet → updateCropLayout(), which re-fits (reset-to-fit)
-    // and applies the per-mode zoom/inset configuration.
-    clipsToGuide = !isCropMode
+    setCropGuideVisibility(isVisible: isCropMode)
+
+    if clipsToGuide {
+      clipsToGuide = false
+    }
+  }
+
+  private func setCropGuideVisibility(isVisible: Bool) {
+    let alpha: CGFloat = isVisible ? 1 : 0
+    let guideViews: [UIView] = [
+      guideOutsideContainerView,
+      guideMaximumView,
+      guideShadowingView,
+      guideBackdropView,
+      guideView
+    ]
+
+    guideViews.forEach { view in
+      view.alpha = alpha
+    }
   }
 
   public func gestureRecognizer(

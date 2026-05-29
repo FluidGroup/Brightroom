@@ -470,25 +470,29 @@ private struct PhotosCropToolbar: ToolbarContent {
 
   var body: some ToolbarContent {
     ToolbarItem(placement: .topBarLeading) {
-      HStack(spacing: 14) {
-        PhotosCropToolbarTextButton(
-          title: cancelTitle,
-          accessibilityIdentifier: "photos.crop.cancel",
-          isEnabled: true,
-          role: .normal,
-          minWidth: nil,
-          action: onCancel
-        )
+      PhotosCropToolbarTextButton(
+        title: cancelTitle,
+        accessibilityIdentifier: "photos.crop.cancel",
+        isEnabled: true,
+        role: .normal,
+        minWidth: nil,
+        action: onCancel
+      )
+    }
 
-        PhotosCropToolbarIconButton(
-          systemName: "rotate.left",
-          accessibilityLabel: "Rotate",
-          accessibilityIdentifier: "photos.crop.rotate",
-          isEnabled: isLoaded && mode == .crop,
-          isHighlighted: false,
-          action: onRotate
-        )
-      }
+    if #available(iOS 26.0, *) {
+      ToolbarSpacer(.fixed, placement: .topBarLeading)
+    }
+
+    ToolbarItem(placement: .topBarLeading) {
+      PhotosCropToolbarIconButton(
+        systemName: "rotate.left",
+        accessibilityLabel: "Rotate",
+        accessibilityIdentifier: "photos.crop.rotate",
+        isEnabled: isLoaded && mode == .crop,
+        isHighlighted: false,
+        action: onRotate
+      )
     }
 
     ToolbarItem(placement: .principal) {
@@ -509,26 +513,30 @@ private struct PhotosCropToolbar: ToolbarContent {
     }
 
     ToolbarItem(placement: .topBarTrailing) {
-      HStack(spacing: 14) {
-        PhotosCropToolbarIconButton(
-          systemName: "aspectratio",
-          accessibilityLabel: "Aspect Ratio",
-          accessibilityIdentifier: "photos.crop.aspect",
-          isEnabled: isLoaded && mode == .crop && isAspectRatioControlAvailable,
-          isHighlighted: isSelectingAspectRatio,
-          action: onToggleAspectRatio
-        )
-        .opacity(isAspectRatioControlAvailable ? 1 : 0)
+      PhotosCropToolbarIconButton(
+        systemName: "aspectratio",
+        accessibilityLabel: "Aspect Ratio",
+        accessibilityIdentifier: "photos.crop.aspect",
+        isEnabled: isLoaded && mode == .crop && isAspectRatioControlAvailable,
+        isHighlighted: isSelectingAspectRatio,
+        action: onToggleAspectRatio
+      )
+      .opacity(isAspectRatioControlAvailable ? 1 : 0)
+    }
 
-        PhotosCropToolbarTextButton(
-          title: doneTitle,
-          accessibilityIdentifier: "photos.crop.done",
-          isEnabled: isDoneEnabled,
-          role: .highlighted,
-          minWidth: nil,
-          action: onDone
-        )
-      }
+    if #available(iOS 26.0, *) {
+      ToolbarSpacer(.fixed, placement: .topBarTrailing)
+    }
+
+    ToolbarItem(placement: .topBarTrailing) {
+      PhotosCropToolbarTextButton(
+        title: doneTitle,
+        accessibilityIdentifier: "photos.crop.done",
+        isEnabled: isDoneEnabled,
+        role: .highlighted,
+        minWidth: nil,
+        action: onDone
+      )
     }
 
     ToolbarItem(placement: .bottomBar) {
@@ -553,13 +561,11 @@ private struct PhotosCropToolbarIconButton: View {
   var body: some View {
     Button(action: action) {
       Image(systemName: systemName)
-        .font(.system(size: 17, weight: .regular))
+        .font(.system(size: 20, weight: .regular))
         .imageScale(.medium)
         .symbolRenderingMode(.monochrome)
         .foregroundStyle(isHighlighted ? Color(uiColor: .systemYellow) : Color(white: 0.6))
     }
-    .buttonStyle(.plain)
-    .controlSize(.small)
     .disabled(!isEnabled)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityLabel)
@@ -586,9 +592,7 @@ private struct PhotosCropToolbarTextButton: View {
       Text(title)
         .font(.system(size: fontSize))
         .foregroundStyle(foregroundStyle)
-        .frame(minWidth: minWidth, minHeight: 44)
     }
-    .buttonStyle(.plain)
     .disabled(!isEnabled)
     .accessibilityIdentifier(accessibilityIdentifier)
   }
@@ -655,7 +659,7 @@ private struct PhotosCropModeToolbarButton: View {
             .frame(width: 32, height: 22)
 
           Image(systemName: "triangle.fill")
-            .font(.system(size: 7, weight: .bold))
+            .font(.system(size: 5, weight: .bold))
             .foregroundStyle(Color(uiColor: .systemYellow))
             .rotationEffect(.degrees(180))
             .offset(y: -7)
@@ -670,7 +674,6 @@ private struct PhotosCropModeToolbarButton: View {
       .foregroundStyle(foregroundStyle)
       .frame(width: 60, height: 48)
     }
-    .buttonStyle(.plain)
     .disabled(!isEnabled)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(mode.accessibilityLabel)
@@ -1229,4 +1232,24 @@ private enum PhotosCropAspectRatioDirection {
       return "photos.crop.aspect.direction.horizontal"
     }
   }
+}
+
+#Preview {
+
+  NavigationStack {
+    Color.blue
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Hello") {
+
+          }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Hello") {
+
+          }
+        }
+      }
+  }
+
 }
