@@ -1234,7 +1234,13 @@ private enum PhotosCropAspectRatioDirection {
   }
 }
 
-#Preview {
+#if DEBUG
+
+#Preview("PhotosCrop Checkerboard") {
+  PhotosCropPreviewHost()
+}
+
+#Preview("Toolbar Groups") {
 
   NavigationStack {
     Color.blue
@@ -1253,3 +1259,76 @@ private enum PhotosCropAspectRatioDirection {
   }
 
 }
+
+private struct PhotosCropPreviewHost: View {
+
+  @State private var editingStack = PhotosCropPreviewFixtures.makeEditingStack()
+
+  var body: some View {
+    SwiftUIPhotosCropView(
+      editingStack: editingStack,
+      onDone: {},
+      onCancel: {}
+    )
+  }
+}
+
+private enum PhotosCropPreviewFixtures {
+
+  static func makeEditingStack() -> EditingStack {
+    EditingStack(
+      imageProvider: .init(image: makeCheckerboardImage())
+    )
+  }
+
+  private static func makeCheckerboardImage() -> UIImage {
+    let size = CGSize(width: 1400, height: 900)
+    let cellSize: CGFloat = 100
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+
+    return UIGraphicsImageRenderer(size: size, format: format).image { context in
+      let cgContext = context.cgContext
+      let canvasRect = CGRect(origin: .zero, size: size)
+      UIColor.systemBackground.setFill()
+      cgContext.fill(canvasRect)
+
+      let columnCount = Int(ceil(size.width / cellSize))
+      let rowCount = Int(ceil(size.height / cellSize))
+
+      for row in 0..<rowCount {
+        for column in 0..<columnCount {
+          let rect = CGRect(
+            x: CGFloat(column) * cellSize,
+            y: CGFloat(row) * cellSize,
+            width: cellSize,
+            height: cellSize
+          )
+          let color = (row + column).isMultiple(of: 2)
+            ? UIColor(white: 0.86, alpha: 1)
+            : UIColor(white: 0.98, alpha: 1)
+          color.setFill()
+          cgContext.fill(rect)
+        }
+      }
+
+      UIColor.black.withAlphaComponent(0.22).setStroke()
+      cgContext.setLineWidth(2)
+
+      for column in 0...columnCount {
+        let x = CGFloat(column) * cellSize
+        cgContext.move(to: CGPoint(x: x, y: 0))
+        cgContext.addLine(to: CGPoint(x: x, y: size.height))
+      }
+
+      for row in 0...rowCount {
+        let y = CGFloat(row) * cellSize
+        cgContext.move(to: CGPoint(x: 0, y: y))
+        cgContext.addLine(to: CGPoint(x: size.width, y: y))
+      }
+
+      cgContext.strokePath()
+    }
+  }
+}
+#endif
