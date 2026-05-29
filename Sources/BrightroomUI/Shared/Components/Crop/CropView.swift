@@ -25,11 +25,25 @@ import MetalKit
 
 import BrightroomEngine
 
-/// A view that previews how crops the image.
+/// A UIKit crop surface that previews crop geometry and hosts tool-mode canvas
+/// interactions.
 ///
-/// The cropping adjustument is avaibleble from 2 ways:
-/// - Scrolling image
-/// - Panning guide
+/// Based on the editing vision in `docs/vision-of-editing.md`, this view treats
+/// tool modes as operations that happen before the final crop:
+///
+/// ```text
+/// Source -> Tool Operations -> Final Crop -> Output
+/// ```
+///
+/// Crop mode edits the final crop frame. Tool modes, such as blur masking,
+/// paint or inspect the pre-final-crop image domain while using the crop frame
+/// as the visible viewport and final clipping boundary. In practice, this means
+/// tool navigation must not mutate crop geometry, and tool previews should avoid
+/// drawing pixels that would be clipped by the final crop.
+///
+/// Crop adjustment is available in two ways:
+/// - Scrolling the image.
+/// - Panning the guide.
 ///
 /// - TODO:
 ///   - Implicit animations occurs in first time load with remote image.

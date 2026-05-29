@@ -54,6 +54,7 @@ struct EditingDocument {
 
 enum EditingOperation {
   case crop(CropParameters)
+  case geometryCorrection(GeometryCorrectionParameters)
   case mask(MaskParameters)
   case adjustment(AdjustmentParameters)
   case filter(FilterParameters)
@@ -88,6 +89,24 @@ Crop(original image)
 
 This means crop cannot be treated only as a final export option. It must also be
 valid as a middle operation in the stack.
+
+### Geometry Correction
+
+Geometry correction is a domain-transforming operation. It includes perspective
+or keystone correction, and it changes how later operations map onto the image.
+
+The ideal geometry correction operation should include:
+
+- source control points
+- destination control points
+- interpolation policy
+- output extent policy
+- transparent or clamped edge policy
+
+Geometry correction is not only a visual filter. It changes the coordinate
+meaning for every operation that appears after it. A mask painted before the
+correction is warped by the correction. A mask painted after the correction is
+authored in the corrected domain.
 
 ### Mask
 
@@ -214,25 +233,96 @@ Crop A
 `Mask B` and `Mask D` may not share the same coordinate meaning. The document
 model should make that obvious.
 
-## Near-Term Direction
+## Operation Order and Painting Semantics
 
-PhotosCrop blur masking is a useful first pressure test because it already wants
-the stack to behave like:
+Parametric editing makes operation order fully expressible. This matters for
+painting tools such as blur masks because brush geometry is part of the edit,
+not just a temporary input device event.
+
+Consider perspective correction:
+
+```text
+Source
+  -> Mask
+  -> Geometry Correction
+  -> Adjust
+```
+
+In this sequence, the user paints in the pre-correction domain. The correction
+warps the painted mask along with the image. A round brush stroke may become
+non-uniform after the perspective transform, and the apparent brush width may
+change across the corrected output.
+
+The reverse order has different semantics:
+
+```text
+Source
+  -> Geometry Correction
+  -> Mask
+  -> Adjust
+```
+
+Here, the user paints in the corrected domain. The brush width is uniform in the
+corrected image, and the stored stroke geometry belongs to the post-correction
+operation domain. If the renderer needs to sample from source pixels, it uses
+the inverse operation chain to map the corrected-domain mask back to the source
+image.
+
+Both are valid. They should be represented as different operation stacks, not as
+ambiguous flags on a single mask. This is one of the main reasons the document
+model needs explicit operation domains and a renderer that can compile the full
+chain.
+
+The same rule applies to crop-like tools. A UI may let the user adjust the crop
+frame before opening a painting tool, but the engine still needs to define
+whether that means:
 
 ```text
 Source
   -> Crop
-  -> Blur Mask
+  -> Mask
+  -> Adjust
+```
+
+or:
+
+```text
+Source
+  -> Mask
+  -> Adjust
+  -> Crop
+```
+
+Those are different documents. In the first document, the mask is authored in
+the cropped domain. In the second document, the mask is authored before the
+final crop, and the crop clips the already-adjusted image.
+
+## Near-Term Direction
+
+PhotosCrop blur masking is a useful first pressure test because it already wants
+the current Crop and Tool relationship to behave like:
+
+```text
+Source
+  -> Tool Operations
+  -> Final Crop
   -> Output
 ```
 
+In other words, the current PhotosCrop UI may visually use the crop frame as the
+editing window, but the engine semantics should treat Blur Masking, Filters, and
+Adjustments as operations that happen before the final Crop. Crop is the final
+framing/clipping operation for this UI path.
+
 The next step is to make that shape feel natural rather than special-cased:
 
-- Crop defines the current editing domain.
-- Blur masking edits only inside that domain.
-- The mask renderer does not draw crop-external pixels.
-- Tool zoom and pan inspect the cropped result without mutating crop.
-- Later filters and adjustments can attach to the same operation model.
+- Tool operations are authored in the pre-final-crop image domain.
+- The crop frame acts as the UI viewport and final clipping boundary.
+- The mask renderer should not draw crop-external pixels in this UI path because
+  the preview is showing the final cropped output.
+- Tool zoom and pan inspect the final-cropped result without mutating crop.
+- Later filters and adjustments can attach to the same pre-final-crop tool
+  operation model.
 
 This should be treated as a small UI expression of the larger parametric engine,
 not as a one-off PhotosCrop feature.
@@ -241,6 +331,9 @@ not as a one-off PhotosCrop feature.
 
 - Should masks after a crop be stored in source image coordinates, current
   operation coordinates, or both with an explicit transform?
+- Should mask strokes store brush width in the authoring operation domain, or
+  should some tools opt into screen-space width that is reprojected at render
+  time?
 - How should operation references work when an adjustment depends on a mask
   generated by an earlier operation?
 - What is the smallest public data model that can express repeated
