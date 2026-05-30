@@ -39,11 +39,7 @@ extension CropView {
     }
     
     private func initialize() {
-      if #available(iOS 11.0, *) {
-        contentInsetAdjustmentBehavior = .never        
-      } else {
-        // Fallback on earlier versions
-      }
+      contentInsetAdjustmentBehavior = .never        
       insetsLayoutMarginsFromSafeArea = false
       showsVerticalScrollIndicator = false
       showsHorizontalScrollIndicator = false
