@@ -120,7 +120,6 @@ struct PhotosCropContentView: View {
           hasChanges: loadedState?.isDirty ?? false,
           isDoneEnabled: isLoaded,
           mode: editingMode,
-          isAspectRatioControlAvailable: isAspectRatioControlAvailable,
           isSelectingAspectRatio: isSelectingAspectRatio,
           onRotate: rotate,
           onReset: reset,
@@ -459,7 +458,6 @@ private struct PhotosCropToolbar: ToolbarContent {
   let hasChanges: Bool
   let isDoneEnabled: Bool
   let mode: PhotosCropEditingMode
-  let isAspectRatioControlAvailable: Bool
   let isSelectingAspectRatio: Bool
   let onRotate: () -> Void
   let onReset: () -> Void
@@ -483,18 +481,27 @@ private struct PhotosCropToolbar: ToolbarContent {
     if #available(iOS 26.0, *) {
       ToolbarSpacer(.fixed, placement: .topBarLeading)
     }
-
-    ToolbarItem(placement: .topBarLeading) {
-      PhotosCropToolbarIconButton(
-        systemName: "rotate.left",
-        accessibilityLabel: "Rotate",
-        accessibilityIdentifier: "photos.crop.rotate",
-        isEnabled: isLoaded && mode == .crop,
-        isHighlighted: false,
-        action: onRotate
-      )
+    
+    ToolbarItem(placement: .topBarLeading) {      
+      switch mode {
+      case .crop:
+        PhotosCropToolbarIconButton(
+          systemName: "rotate.left",
+          accessibilityLabel: "Rotate",
+          accessibilityIdentifier: "photos.crop.rotate",
+          isEnabled: isLoaded && mode == .crop,
+          isHighlighted: false,
+          action: onRotate
+        )
+      case .adjustments:
+        EmptyView()
+      case .blurMasking:
+        EmptyView()
+      case .filters:
+        EmptyView()
+      }
     }
-
+    
     ToolbarItem(placement: .principal) {
       if hasChanges && mode == .crop {
         PhotosCropToolbarTextButton(
@@ -511,17 +518,25 @@ private struct PhotosCropToolbar: ToolbarContent {
           .accessibilityHidden(true)
       }
     }
-
-    ToolbarItem(placement: .topBarTrailing) {
-      PhotosCropToolbarIconButton(
-        systemName: "aspectratio",
-        accessibilityLabel: "Aspect Ratio",
-        accessibilityIdentifier: "photos.crop.aspect",
-        isEnabled: isLoaded && mode == .crop && isAspectRatioControlAvailable,
-        isHighlighted: isSelectingAspectRatio,
-        action: onToggleAspectRatio
-      )
-      .opacity(isAspectRatioControlAvailable ? 1 : 0)
+    
+    ToolbarItem(placement: .topBarTrailing) {      
+      switch mode {
+      case .crop:
+        PhotosCropToolbarIconButton(
+          systemName: "aspectratio",
+          accessibilityLabel: "Aspect Ratio",
+          accessibilityIdentifier: "photos.crop.aspect",
+          isEnabled: isLoaded && mode == .crop,
+          isHighlighted: isSelectingAspectRatio,
+          action: onToggleAspectRatio
+        )
+      case .adjustments:
+        EmptyView()
+      case .blurMasking:
+        EmptyView()
+      case .filters:
+        EmptyView()
+      }
     }
 
     if #available(iOS 26.0, *) {
