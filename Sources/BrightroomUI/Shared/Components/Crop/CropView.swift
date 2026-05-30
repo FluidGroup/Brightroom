@@ -92,7 +92,7 @@ final class CropView: UIView, UIScrollViewDelegate {
   ///
   /// The platter is shared because crop and tool scroll views are siblings under
   /// the same clipping and mask plane. It should not be owned by either surface.
-  private struct SurfaceHost: ~Copyable {
+  private final class SurfaceHost {
     let platterView = UIView()
     let backdropView = UIView()
   }
@@ -100,18 +100,17 @@ final class CropView: UIView, UIScrollViewDelegate {
   /// Owns the scroll, image platter, and Metal canvas state used while
   /// adjusting the final Crop Feature.
   ///
-  /// `CropView` intentionally keeps this noncopyable so the UIKit view graph and
-  /// cached canvas state have one owner.
-  private struct CropSurface: ~Copyable {
+  /// This is a reference type because UIKit may re-enter scroll-view delegate
+  /// callbacks while the surface is updating its views and layers.
+  private final class CropSurface {
     let scrollView = _ScrollView()
     let imagePlatterView = ImagePlatterView()
-    let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
     var canvasView: _EditingCanvasMTKView?
     var canvasSize: CGSize?
     var currentCanvasInputKey: CanvasInputKey?
 
     @discardableResult
-    mutating func ensureCanvasView(
+    func ensureCanvasView(
       canvasSize: CGSize,
       brush: EditingCanvasBrush,
       smoothing: EditingCanvasStrokeSmoothingConfiguration,
@@ -143,7 +142,7 @@ final class CropView: UIView, UIScrollViewDelegate {
       return view
     }
 
-    mutating func removeCanvasView() {
+    func removeCanvasView() {
       canvasView?.removeFromSuperview()
       canvasView = nil
       canvasSize = nil
@@ -161,27 +160,11 @@ final class CropView: UIView, UIScrollViewDelegate {
       canvasView?.configure(brush: brush, smoothing: smoothing)
     }
 
-    func beginStroke(at imagePoint: CGPoint) {
-      canvasView?.beginStroke(at: imagePoint)
-    }
-
-    func appendStroke(points imagePoints: [CGPoint]) {
-      canvasView?.appendStroke(points: imagePoints)
-    }
-
-    func endStroke(at imagePoint: CGPoint) {
-      canvasView?.endStroke(at: imagePoint)
-    }
-
-    func cancelStroke() {
-      canvasView?.cancelStroke()
-    }
-
     func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
       canvasView?.setCommittedStrokes(records)
     }
 
-    mutating func updateRenderedEditPreview(
+    func updateRenderedEditPreview(
       loadedState: EditingStack.Loaded,
       crop: EditingCrop
     ) {
@@ -338,19 +321,42 @@ final class CropView: UIView, UIScrollViewDelegate {
   /// The tool surface has its own scroll view because Tool navigation is a
   /// viewing interaction over the evaluated result; it must not mutate the Crop
   /// Feature's scroll geometry.
-  private struct ToolSurface: ~Copyable {
+  private final class ToolSurface {
     let scrollView = _ScrollView()
     let contentView = UIView()
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-    let cropMaskLayer = CAShapeLayer()
-    let cropIndicatorLayer: CAShapeLayer = {
+    /// Clips the whole Tool surface to the final crop viewport.
+    let cropClipLayer: CAShapeLayer = {
+      let layer = CAShapeLayer()
+      layer.fillColor = UIColor.white.cgColor
+      return layer
+    }()
+    /// Clips the Metal canvas to the same crop boundary in canvas coordinates.
+    let canvasClipLayer: CAShapeLayer = {
+      let layer = CAShapeLayer()
+      layer.fillColor = UIColor.white.cgColor
+      return layer
+    }()
+    /// Darkens the non-crop area around the visible crop boundary.
+    ///
+    /// The path is an even-odd fill in the same coordinate space as
+    /// `cropBoundaryOverlayLayer`, so the crop rectangle stays clear while the
+    /// surrounding area is visually pushed back.
+    let cropBoundaryDimmingLayer: CAShapeLayer = {
+      let layer = CAShapeLayer()
+      layer.fillColor = UIColor.black.withAlphaComponent(0.45).cgColor
+      layer.fillRule = .evenOdd
+      layer.isHidden = true
+      return layer
+    }()
+    let cropBoundaryOverlayLayer: CAShapeLayer = {
       let layer = CAShapeLayer()
       layer.fillColor = UIColor.clear.cgColor
-      layer.strokeColor = UIColor.white.withAlphaComponent(0.9).cgColor
+      layer.strokeColor = UIColor.clear.cgColor
       layer.lineJoin = .round
       layer.lineCap = .round
       layer.shadowColor = UIColor.black.cgColor
-      layer.shadowOpacity = 0.45
+      layer.shadowOpacity = 0
       layer.shadowRadius = 2
       layer.shadowOffset = .zero
       layer.isHidden = true
@@ -359,9 +365,11 @@ final class CropView: UIView, UIScrollViewDelegate {
     var canvasView: _EditingCanvasMTKView?
     var canvasSize: CGSize?
     var crop: EditingCrop?
+    var cropPathInContent: CGPath?
+    weak var cropBoundaryOverlayContainerView: UIView?
 
     @discardableResult
-    mutating func ensureCanvasView(
+    func ensureCanvasView(
       canvasSize: CGSize,
       brush: EditingCanvasBrush,
       smoothing: EditingCanvasStrokeSmoothingConfiguration,
@@ -393,11 +401,16 @@ final class CropView: UIView, UIScrollViewDelegate {
       return view
     }
 
-    mutating func removeCanvasView() {
+    func removeCanvasView() {
+      canvasView?.layer.mask = nil
       canvasView?.removeFromSuperview()
       canvasView = nil
       canvasSize = nil
       crop = nil
+      cropPathInContent = nil
+      cropBoundaryDimmingLayer.removeFromSuperlayer()
+      cropBoundaryOverlayLayer.removeFromSuperlayer()
+      cropBoundaryOverlayContainerView = nil
     }
 
     func hideCanvasView() {
@@ -474,6 +487,7 @@ final class CropView: UIView, UIScrollViewDelegate {
         visibleCanvasFrame: viewport.visibleCanvasFrame,
         zoomScale: viewport.zoomScale
       )
+      updateCanvasMask()
     }
 
     func applyMode(
@@ -486,39 +500,106 @@ final class CropView: UIView, UIScrollViewDelegate {
       scrollView.panGestureRecognizer.minimumNumberOfTouches = isDrawingEnabled ? 2 : 1
     }
 
-    func installCropIndicatorLayerIfNeeded() {
-      guard cropIndicatorLayer.superlayer !== contentView.layer else {
-        return
-      }
-
-      cropIndicatorLayer.removeFromSuperlayer()
-      contentView.layer.addSublayer(cropIndicatorLayer)
-    }
-
     func hideCropBoundary() {
-      cropIndicatorLayer.isHidden = true
+      cropPathInContent = nil
+      canvasView?.layer.mask = nil
+      cropBoundaryDimmingLayer.removeFromSuperlayer()
+      cropBoundaryDimmingLayer.path = nil
+      cropBoundaryDimmingLayer.isHidden = true
+      cropBoundaryOverlayLayer.removeFromSuperlayer()
+      cropBoundaryOverlayLayer.path = nil
+      cropBoundaryOverlayLayer.isHidden = true
+      cropBoundaryOverlayContainerView = nil
     }
 
     func updateCropBoundary(
       cropRectInPlatter: CGRect,
       cropPathInContent: CGPath,
       platterBounds: CGRect,
-      contentBounds: CGRect
+      cropBoundaryOverlayPath: CGPath,
+      cropBoundaryOverlayBounds: CGRect,
+      cropBoundaryOverlayContainerView: UIView
     ) {
-      cropMaskLayer.frame = platterBounds
-      cropMaskLayer.path = UIBezierPath(rect: cropRectInPlatter).cgPath
+      self.cropPathInContent = cropPathInContent
+      self.cropBoundaryOverlayContainerView = cropBoundaryOverlayContainerView
+      cropClipLayer.frame = platterBounds
+      cropClipLayer.path = UIBezierPath(rect: cropRectInPlatter).cgPath
+
+      if cropBoundaryDimmingLayer.superlayer !== cropBoundaryOverlayContainerView.layer {
+        cropBoundaryDimmingLayer.removeFromSuperlayer()
+        cropBoundaryOverlayContainerView.layer.addSublayer(cropBoundaryDimmingLayer)
+      }
+
+      cropBoundaryOverlayLayer.removeFromSuperlayer()
+      cropBoundaryOverlayContainerView.layer.addSublayer(cropBoundaryOverlayLayer)
 
       CATransaction.begin()
       CATransaction.setDisableActions(true)
-      cropIndicatorLayer.frame = contentBounds
-      cropIndicatorLayer.path = cropPathInContent
+      cropBoundaryDimmingLayer.frame = cropBoundaryOverlayBounds
+      cropBoundaryDimmingLayer.path = Self.makeBoundaryDimmingPath(
+        bounds: CGRect(origin: .zero, size: cropBoundaryOverlayBounds.size),
+        cropBoundaryPath: cropBoundaryOverlayPath
+      )
+      cropBoundaryDimmingLayer.isHidden = false
+      cropBoundaryOverlayLayer.frame = cropBoundaryOverlayBounds
+      cropBoundaryOverlayLayer.path = cropBoundaryOverlayPath
       updateCropBoundaryLineWidth()
-      cropIndicatorLayer.isHidden = false
+      cropBoundaryOverlayLayer.isHidden = false
       CATransaction.commit()
+
+      updateCanvasMask()
     }
 
     func updateCropBoundaryLineWidth() {
-      cropIndicatorLayer.lineWidth = 1 / max(scrollView.zoomScale, 0.0001)
+      cropBoundaryOverlayLayer.lineWidth = 1
+    }
+
+    func updateCanvasMask() {
+      guard let canvasView, let cropPathInContent else {
+        self.canvasView?.layer.mask = nil
+        return
+      }
+
+      var transform = Self.affineTransform(from: contentView, to: canvasView)
+      guard let cropPathInCanvas = cropPathInContent.copy(using: &transform) else {
+        canvasView.layer.mask = nil
+        return
+      }
+
+      CATransaction.begin()
+      CATransaction.setDisableActions(true)
+      canvasClipLayer.frame = canvasView.bounds
+      canvasClipLayer.path = cropPathInCanvas
+      canvasView.layer.mask = canvasClipLayer
+      CATransaction.commit()
+    }
+
+    private static func makeBoundaryDimmingPath(
+      bounds: CGRect,
+      cropBoundaryPath: CGPath
+    ) -> CGPath {
+      let path = CGMutablePath()
+      path.addRect(bounds)
+      path.addPath(cropBoundaryPath)
+      return path
+    }
+
+    private static func affineTransform(
+      from sourceView: UIView,
+      to targetView: UIView
+    ) -> CGAffineTransform {
+      let origin = sourceView.convert(CGPoint.zero, to: targetView)
+      let unitX = sourceView.convert(CGPoint(x: 1, y: 0), to: targetView)
+      let unitY = sourceView.convert(CGPoint(x: 0, y: 1), to: targetView)
+
+      return CGAffineTransform(
+        a: unitX.x - origin.x,
+        b: unitX.y - origin.y,
+        c: unitY.x - origin.x,
+        d: unitY.y - origin.y,
+        tx: origin.x,
+        ty: origin.y
+      )
     }
   }
 
@@ -603,9 +684,9 @@ final class CropView: UIView, UIScrollViewDelegate {
   }()
   #endif
 
-  private var surfaceHost = SurfaceHost()
-  private var cropSurface = CropSurface()
-  private var toolSurface = ToolSurface()
+  private let surfaceHost = SurfaceHost()
+  private let cropSurface = CropSurface()
+  private let toolSurface = ToolSurface()
 
   private var surfaceMode: CropViewSurfaceMode = .crop
   private var canvasBrush: EditingCanvasBrush = .init()
@@ -728,16 +809,13 @@ final class CropView: UIView, UIScrollViewDelegate {
     addSubview(guideBackdropView)
     addSubview(guideView)
 
-    configureSurfaceDrawingGestures()
+    configureToolDrawingGesture()
 
-    cropSurface.imagePlatterView.isUserInteractionEnabled = true
     cropSurface.scrollView.addSubview(cropSurface.imagePlatterView)
-    cropSurface.imagePlatterView.addGestureRecognizer(cropSurface.drawingGestureRecognizer)
 
     toolSurface.contentView.isUserInteractionEnabled = true
     toolSurface.scrollView.isHidden = true
     toolSurface.scrollView.addSubview(toolSurface.contentView)
-    toolSurface.installCropIndicatorLayerIfNeeded()
     toolSurface.contentView.addGestureRecognizer(toolSurface.drawingGestureRecognizer)
 
     if #available(iOS 26.0, *) {
@@ -778,27 +856,7 @@ final class CropView: UIView, UIScrollViewDelegate {
 
   }
 
-  private func configureSurfaceDrawingGestures() {
-    cropSurface.drawingGestureRecognizer.delegate = self
-    cropSurface.drawingGestureRecognizer.isEnabled = false
-    cropSurface.drawingGestureRecognizer.onBegin = { [weak self] point in
-      guard let self else { return }
-      self.cropSurface.beginStroke(at: self.imagePoint(fromPlatterPoint: point))
-    }
-    cropSurface.drawingGestureRecognizer.onMove = { [weak self] points in
-      guard let self else { return }
-      self.cropSurface.appendStroke(
-        points: points.map { self.imagePoint(fromPlatterPoint: $0) }
-      )
-    }
-    cropSurface.drawingGestureRecognizer.onEnd = { [weak self] point in
-      guard let self else { return }
-      self.cropSurface.endStroke(at: self.imagePoint(fromPlatterPoint: point))
-    }
-    cropSurface.drawingGestureRecognizer.onCancel = { [weak self] in
-      self?.cropSurface.cancelStroke()
-    }
-
+  private func configureToolDrawingGesture() {
     toolSurface.drawingGestureRecognizer.delegate = self
     toolSurface.drawingGestureRecognizer.isEnabled = false
     toolSurface.drawingGestureRecognizer.onBegin = { [weak self] point in
@@ -1155,6 +1213,7 @@ extension CropView {
       return
     }
 
+    updateToolCropMask()
     toolSurface.applyViewport(makeToolCropDisplayViewport())
   }
 
@@ -1267,16 +1326,21 @@ extension CropView {
       return nil
     }
 
-    let viewportFrame = guideView
+    let cropViewportFrame = guideView
       .convert(guideView.bounds, to: toolSurface.scrollView)
       .standardized
-    guard viewportFrame.width > 0, viewportFrame.height > 0 else {
+    guard cropViewportFrame.width > 0, cropViewportFrame.height > 0 else {
+      return nil
+    }
+
+    let canvasFrame = convert(bounds, to: toolSurface.scrollView).standardized
+    guard canvasFrame.width > 0, canvasFrame.height > 0 else {
       return nil
     }
 
     let platterBounds = CGRect(origin: .zero, size: toolSurface.contentView.bounds.size)
     let visiblePlatterRect = toolSurface.scrollView
-      .convert(viewportFrame, to: toolSurface.contentView)
+      .convert(cropViewportFrame, to: toolSurface.contentView)
       .intersection(platterBounds)
 
     guard visiblePlatterRect.isNull == false, visiblePlatterRect.isEmpty == false else {
@@ -1297,12 +1361,12 @@ extension CropView {
       to: toolSurface.scrollView
     )
     let visibleCanvasFrame = resolvedVisibleScrollRect.offsetBy(
-      dx: -viewportFrame.minX,
-      dy: -viewportFrame.minY
+      dx: -canvasFrame.minX,
+      dy: -canvasFrame.minY
     )
 
     return .init(
-      viewportFrameInScrollView: viewportFrame,
+      viewportFrameInScrollView: canvasFrame,
       visibleContentRect: visibleImageRect,
       visibleCanvasFrame: visibleCanvasFrame,
       zoomScale: toolSurface.scrollView.zoomScale,
@@ -1813,34 +1877,86 @@ extension CropView {
       return
     }
 
-    let cropRectInContent = imageRectToPlatterRect(crop.cropExtent, crop: crop).standardized
-    let cropPathInContent = makeToolCropBoundaryPathInContent(
-      cropRectInContent: cropRectInContent,
-      rotationRadians: crop.aggregatedRotation.radians
-    )
+    let cropPathInContent = makeToolCropBoundaryPathInContent()
     toolSurface.updateCropBoundary(
       cropRectInPlatter: cropRect,
       cropPathInContent: cropPathInContent,
       platterBounds: surfaceHost.platterView.bounds,
-      contentBounds: toolSurface.contentView.bounds
+      cropBoundaryOverlayPath: makeToolCropExtentBoundaryPath(crop: crop, in: self),
+      cropBoundaryOverlayBounds: bounds,
+      cropBoundaryOverlayContainerView: self
     )
-    surfaceHost.platterView.layer.mask = toolSurface.cropMaskLayer
+    surfaceHost.platterView.layer.mask = toolSurface.cropClipLayer
   }
 
-  private func makeToolCropBoundaryPathInContent(
-    cropRectInContent: CGRect,
-    rotationRadians: CGFloat
-  ) -> CGPath {
-    let path = UIBezierPath(rect: cropRectInContent).cgPath
-    guard rotationRadians != 0 else {
+  private func makeToolCropBoundaryPathInContent() -> CGPath {
+    makeToolCropBoundaryPath(in: toolSurface.contentView)
+  }
+
+  private func makeToolCropBoundaryPath(in targetView: UIView) -> CGPath {
+    let bounds = guideView.bounds
+    let corners = [
+      CGPoint(x: bounds.minX, y: bounds.minY),
+      CGPoint(x: bounds.maxX, y: bounds.minY),
+      CGPoint(x: bounds.maxX, y: bounds.maxY),
+      CGPoint(x: bounds.minX, y: bounds.maxY)
+    ]
+      .map { guideView.convert($0, to: targetView) }
+
+    let path = CGMutablePath()
+    guard let first = corners.first else {
       return path
     }
 
+    path.move(to: first)
+    corners.dropFirst().forEach { path.addLine(to: $0) }
+    path.closeSubpath()
+    return path
+  }
+
+  private func makeToolCropExtentBoundaryPath(
+    crop: EditingCrop,
+    in targetView: UIView
+  ) -> CGPath {
+    let cropRectInContent = imageRectToPlatterRect(crop.cropExtent, crop: crop).standardized
+    let cornersInContent = toolCropExtentBoundaryPointsInContent(
+      cropRectInContent: cropRectInContent,
+      rotationRadians: crop.aggregatedRotation.radians
+    )
+    let corners = cornersInContent.map { toolSurface.contentView.convert($0, to: targetView) }
+
+    let path = CGMutablePath()
+    guard let first = corners.first else {
+      return path
+    }
+
+    path.move(to: first)
+    corners.dropFirst().forEach { path.addLine(to: $0) }
+    path.closeSubpath()
+    return path
+  }
+
+  private func toolCropExtentBoundaryPointsInContent(
+    cropRectInContent: CGRect,
+    rotationRadians: CGFloat
+  ) -> [CGPoint] {
+    let corners = [
+      CGPoint(x: cropRectInContent.minX, y: cropRectInContent.minY),
+      CGPoint(x: cropRectInContent.maxX, y: cropRectInContent.minY),
+      CGPoint(x: cropRectInContent.maxX, y: cropRectInContent.maxY),
+      CGPoint(x: cropRectInContent.minX, y: cropRectInContent.maxY)
+    ]
+
+    guard rotationRadians != 0 else {
+      return corners
+    }
+
     let center = CGPoint(x: cropRectInContent.midX, y: cropRectInContent.midY)
-    var transform = CGAffineTransform(translationX: center.x, y: center.y)
+    let transform = CGAffineTransform(translationX: center.x, y: center.y)
       .rotated(by: -rotationRadians)
       .translatedBy(x: -center.x, y: -center.y)
-    return path.copy(using: &transform) ?? path
+
+    return corners.map { $0.applying(transform) }
   }
 
   @inline(__always)
@@ -2459,6 +2575,7 @@ extension CropView: UIGestureRecognizerDelegate {
     }
 
     applySurfaceMode()
+    syncEditingCanvasLocalEffectIfNeeded()
     updateCurrentEditingStackDisplay()
   }
 
@@ -2490,10 +2607,8 @@ extension CropView: UIGestureRecognizerDelegate {
     }
 
     if isDrawingEnabled == false {
-      cropSurface.cancelStroke()
       toolSurface.cancelStroke()
     }
-    cropSurface.drawingGestureRecognizer.isEnabled = false
     toolSurface.drawingGestureRecognizer.isEnabled = isDrawingEnabled
 
     cropSurface.applyMode(isActive: isCropMode)
@@ -2529,17 +2644,13 @@ extension CropView: UIGestureRecognizerDelegate {
     shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
     guard
-      gestureRecognizer === cropSurface.drawingGestureRecognizer
-        || gestureRecognizer === toolSurface.drawingGestureRecognizer
-        || otherGestureRecognizer === cropSurface.drawingGestureRecognizer
+      gestureRecognizer === toolSurface.drawingGestureRecognizer
         || otherGestureRecognizer === toolSurface.drawingGestureRecognizer
     else {
       return false
     }
 
     let viewportGestures = [
-      cropSurface.scrollView.panGestureRecognizer,
-      cropSurface.scrollView.pinchGestureRecognizer,
       toolSurface.scrollView.panGestureRecognizer,
       toolSurface.scrollView.pinchGestureRecognizer
     ]
@@ -2595,6 +2706,26 @@ extension CropView: UIGestureRecognizerDelegate {
     localAdjustments[layerIndex].isEnabled = true
     localAdjustments[layerIndex].effect = currentLocalEffect
     localAdjustments[layerIndex].mask.strokes.append(record.localAdjustmentStroke)
+    editingStack.set(localAdjustments: localAdjustments)
+  }
+
+  private func syncEditingCanvasLocalEffectIfNeeded() {
+    // TODO: Revisit whether the masking surface can make this sync unnecessary
+    // by deriving the displayed and committed effect from one source of truth.
+    guard let currentLocalEffect = surfaceMode.localEffect else {
+      return
+    }
+
+    var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
+    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
+      return
+    }
+
+    guard localAdjustments[layerIndex].effect != currentLocalEffect else {
+      return
+    }
+
+    localAdjustments[layerIndex].effect = currentLocalEffect
     editingStack.set(localAdjustments: localAdjustments)
   }
 
