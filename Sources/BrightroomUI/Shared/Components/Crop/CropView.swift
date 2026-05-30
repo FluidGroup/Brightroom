@@ -29,10 +29,10 @@ import BrightroomEngine
 /// interactions.
 ///
 /// Based on the editing vision in `docs/vision-of-editing.md`, this view treats
-/// tool modes as operations that happen before the final crop:
+/// tool modes as Features that happen before the final crop:
 ///
 /// ```text
-/// Source -> Tool Operations -> Final Crop -> Output
+/// Source -> Tool Features -> Final Crop -> Output
 /// ```
 ///
 /// Crop mode edits the final crop frame. Tool modes, such as blur masking,

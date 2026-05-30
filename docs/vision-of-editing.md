@@ -9,8 +9,8 @@ editing engine. It is not a description of the current implementation, and it
 does not require every built-in UI to expose this model immediately.
 
 The central goal is to bring an Onshape-like parametric editing concept to image
-editing: each edit is an explicit operation with parameters, later operations
-receive the result of earlier operations, and the whole document remains
+editing: each edit is an explicit Feature with parameters, later Features
+receive the result of earlier Features, and the whole document remains
 recomputable from source material and edit parameters.
 
 ## Core Idea
@@ -34,25 +34,30 @@ adjustment into the base image; it defines where a later adjustment applies.
 An adjustment does not mutate the previous image; it describes a transformation
 from input image to output image.
 
-The important property is that downstream operations see the result of upstream
-operations. A second crop can crop the already-cropped result. A mask can be
-drawn on the current output of the previous steps. Another adjustment can then
-operate only inside that mask.
+The important property is that downstream Features see the result of upstream
+Features. A second crop can crop the already-cropped result. A mask can be drawn
+on the current output of the previous steps. Another adjustment can then operate
+only inside that mask.
 
 ## Parametric Stack
 
-The engine should treat editing operations as data. An operation should be
+The engine should treat editing Features as data. A Feature should be
 serializable, inspectable, reorderable when valid, and re-renderable.
+
+In Brightroom's parametric model, "Feature" is the name for each item in the
+stack. Crop, Mask, Adjust, Filter, and Geometry Correction are all Features.
+Renderer implementation may compile Features into Core Image operations or
+transforms, but the document model should expose them as Features.
 
 Conceptually:
 
 ```swift
 struct EditingDocument {
   var source: ImageSource
-  var operations: [EditingOperation]
+  var features: [EditingFeature]
 }
 
-enum EditingOperation {
+enum EditingFeature {
   case crop(CropParameters)
   case geometryCorrection(GeometryCorrectionParameters)
   case mask(MaskParameters)
@@ -65,14 +70,14 @@ This shape is intentionally broader than the current UI. A UI may present a
 simple Photos-like editor, but the engine should still be able to describe a
 deeper sequence.
 
-## Operation Semantics
+## Feature Semantics
 
 ### Crop
 
-Crop is a domain operation. It defines the visible and renderable extent passed
-to the next operation.
+Crop is a domain Feature. It defines the visible and renderable extent passed to
+the next Feature.
 
-The ideal crop operation should include:
+The ideal crop Feature should include:
 
 - crop extent
 - rotation
@@ -88,14 +93,14 @@ Crop(original image)
 ```
 
 This means crop cannot be treated only as a final export option. It must also be
-valid as a middle operation in the stack.
+valid as a middle Feature in the stack.
 
 ### Geometry Correction
 
-Geometry correction is a domain-transforming operation. It includes perspective
-or keystone correction, and it changes how later operations map onto the image.
+Geometry correction is a domain-transforming Feature. It includes perspective or
+keystone correction, and it changes how later Features map onto the image.
 
-The ideal geometry correction operation should include:
+The ideal geometry correction Feature should include:
 
 - source control points
 - destination control points
@@ -104,16 +109,16 @@ The ideal geometry correction operation should include:
 - transparent or clamped edge policy
 
 Geometry correction is not only a visual filter. It changes the coordinate
-meaning for every operation that appears after it. A mask painted before the
+meaning for every Feature that appears after it. A mask painted before the
 correction is warped by the correction. A mask painted after the correction is
 authored in the corrected domain.
 
 ### Mask
 
-Mask is a selection operation. It creates a grayscale or alpha field that later
-operations can use as input.
+Mask is a selection Feature. It creates a grayscale or alpha field that later
+Features can use as input.
 
-The ideal mask operation should support:
+The ideal mask Feature should support:
 
 - brush strokes
 - erase strokes
@@ -123,15 +128,15 @@ The ideal mask operation should support:
 Mask coordinates need a clear contract. For early Brightroom work, masks are
 often easiest to store in oriented original image coordinates. In a fully
 parametric stack, a mask that appears after a crop may instead be authored in the
-current operation domain. The engine should make this explicit rather than
+current Feature domain. The engine should make this explicit rather than
 letting UI coordinate systems leak into the document format.
 
 ### Adjust
 
-Adjust is a transform operation. It takes an input image and produces an output
+Adjust is a transform Feature. It takes an input image and produces an output
 image.
 
-The ideal adjustment operation should support:
+The ideal adjustment Feature should support:
 
 - global adjustment
 - local adjustment using a referenced mask
@@ -147,7 +152,7 @@ need an input `CIImage`, parameters, and an optional mask.
 If this model is done well, the rendering language can mostly be a Core Image
 graph.
 
-Each operation can be compiled into a `CIImage -> CIImage` transform:
+Each Feature can be compiled into a `CIImage -> CIImage` transform:
 
 ```text
 CIImage source
@@ -181,7 +186,7 @@ need to expose unlimited depth.
 Performance will degrade as the stack grows. That is expected. The UI should
 control this with product-level constraints:
 
-- limit the number of visible layers or operations
+- limit the number of visible layers or Features
 - offer flattening when the stack becomes expensive
 - warn before destructive simplification
 - choose preview quality during interaction
@@ -199,11 +204,47 @@ The renderer should support different evaluation modes for the same document:
 - high-quality export
 - thumbnail rendering
 - mask-only inspection
-- debug rendering for individual operations
+- debug rendering for individual Features
 
-All of these modes should compile from the same operation stack. They may choose
-different caching and resolution strategies, but they should not invent separate
-meaning for crop, mask, or adjustment.
+All of these modes should compile from the same Feature stack. They may choose
+different caching and resolution strategies, but they should not invent
+separate meaning for crop, mask, or adjustment.
+
+## Viewing Point and Adjustment Point
+
+Parametric editing separates the point being viewed from the point being
+adjusted.
+
+The renderer may evaluate the full Feature stack and show the user the final
+result, while the active tool edits only one Feature in the middle of that
+stack. The UI should not assume that the displayed image domain and the edited
+Feature domain are the same.
+
+For example, an editor may have this stack:
+
+```text
+Source
+  -> Tool Features
+  -> Crop
+  -> View
+```
+
+Both Tool mode and Crop mode can show the same evaluated `View`, where Tool
+Features and Crop have both been applied. What changes is the adjustment
+point:
+
+- Tool mode adjusts `Tool Features`.
+- Crop mode adjusts `Crop`.
+
+This is not a contradiction. It is the expected behavior of a parametric editor.
+The user should be able to edit an upstream Feature while seeing the
+downstream result that will actually be exported.
+
+This distinction is especially important for CropView. The current UI should
+not be interpreted as "Tool edits happen after Crop" merely because the user
+paints through the crop frame. The crop frame can be the viewing window for the
+fully evaluated result while Tool Features remain authored before the final
+Crop.
 
 ## Coordinate Direction
 
@@ -212,16 +253,16 @@ The hardest part of this vision is coordinate ownership.
 The engine should define explicit domains:
 
 - source image domain
-- current operation domain
+- current Feature domain
 - mask authoring domain
 - output domain
 - viewport display domain
 
 UI gestures live in viewport display coordinates. Stored edits should not.
-Every gesture should be converted into the correct operation domain before it is
+Every gesture should be converted into the correct Feature domain before it is
 committed to the document.
 
-This becomes especially important when operations repeat:
+This becomes especially important when Features repeat:
 
 ```text
 Crop A
@@ -233,9 +274,9 @@ Crop A
 `Mask B` and `Mask D` may not share the same coordinate meaning. The document
 model should make that obvious.
 
-## Operation Order and Painting Semantics
+## Feature Order and Painting Semantics
 
-Parametric editing makes operation order fully expressible. This matters for
+Parametric editing makes Feature order fully expressible. This matters for
 painting tools such as blur masks because brush geometry is part of the edit,
 not just a temporary input device event.
 
@@ -264,13 +305,13 @@ Source
 
 Here, the user paints in the corrected domain. The brush width is uniform in the
 corrected image, and the stored stroke geometry belongs to the post-correction
-operation domain. If the renderer needs to sample from source pixels, it uses
-the inverse operation chain to map the corrected-domain mask back to the source
+Feature domain. If the renderer needs to sample from source pixels, it uses
+the inverse Feature chain to map the corrected-domain mask back to the source
 image.
 
-Both are valid. They should be represented as different operation stacks, not as
+Both are valid. They should be represented as different Feature stacks, not as
 ambiguous flags on a single mask. This is one of the main reasons the document
-model needs explicit operation domains and a renderer that can compile the full
+model needs explicit Feature domains and a renderer that can compile the full
 chain.
 
 The same rule applies to crop-like tools. A UI may let the user adjust the crop
@@ -304,25 +345,27 @@ the current Crop and Tool relationship to behave like:
 
 ```text
 Source
-  -> Tool Operations
+  -> Tool Features
   -> Final Crop
   -> Output
 ```
 
 In other words, the current PhotosCrop UI may visually use the crop frame as the
 editing window, but the engine semantics should treat Blur Masking, Filters, and
-Adjustments as operations that happen before the final Crop. Crop is the final
-framing/clipping operation for this UI path.
+Adjustments as Features that happen before the final Crop. Crop is the final
+framing/clipping Feature for this UI path.
 
 The next step is to make that shape feel natural rather than special-cased:
 
-- Tool operations are authored in the pre-final-crop image domain.
+- Tool Features are authored in the pre-final-crop image domain.
 - The crop frame acts as the UI viewport and final clipping boundary.
 - The mask renderer should not draw crop-external pixels in this UI path because
   the preview is showing the final cropped output.
 - Tool zoom and pan inspect the final-cropped result without mutating crop.
+- Crop mode adjusts the final crop while still viewing the result of Tool
+  Features plus Crop.
 - Later filters and adjustments can attach to the same pre-final-crop tool
-  operation model.
+  Feature model.
 
 This should be treated as a small UI expression of the larger parametric engine,
 not as a one-off PhotosCrop feature.
@@ -330,15 +373,15 @@ not as a one-off PhotosCrop feature.
 ## Open Questions
 
 - Should masks after a crop be stored in source image coordinates, current
-  operation coordinates, or both with an explicit transform?
-- Should mask strokes store brush width in the authoring operation domain, or
+  Feature coordinates, or both with an explicit transform?
+- Should mask strokes store brush width in the authoring Feature domain, or
   should some tools opt into screen-space width that is reprojected at render
   time?
-- How should operation references work when an adjustment depends on a mask
-  generated by an earlier operation?
+- How should Feature references work when an adjustment depends on a mask
+  generated by an earlier Feature?
 - What is the smallest public data model that can express repeated
   crop-mask-adjust sequences without overfitting to a layer UI?
-- Where should Brightroom expose flattening: document operation, renderer cache,
+- Where should Brightroom expose flattening: document Feature, renderer cache,
   or UI-only workflow?
 - How much of the current `EditingStack.Edit` shape can evolve into this model
   without a disruptive migration?

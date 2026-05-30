@@ -55,7 +55,7 @@ open Dev/Brightroom.xcodeproj
 Read `docs/vision-of-editing.md` before making architectural changes to
 BrightroomEngine, EditingStack, crop/mask/adjustment semantics, or renderer
 evaluation strategy. The target direction is an Onshape-like parametric editing
-stack where operations such as Crop, Mask, and Adjust can repeat, pass their
+stack where Features such as Crop, Mask, and Adjust can repeat, pass their
 results downstream, and compile into a Core Image graph.
 
 ### State Management
