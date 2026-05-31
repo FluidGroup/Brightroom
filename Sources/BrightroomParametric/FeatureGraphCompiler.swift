@@ -334,19 +334,7 @@ private extension FeatureGraphCompiler {
       .cropped(to: image.extent)
 
     case let .vignette(feature):
-      let radius = ParametricRadiusCalculator.radius(
-        value: feature.value,
-        max: ParametricFilterConstants.vignetteSliderMax,
-        imageExtent: image.extent
-      )
-      return image.applyingFilter(
-        "CIVignette",
-        parameters: [
-          kCIInputRadiusKey: radius,
-          kCIInputIntensityKey: feature.value,
-        ]
-      )
-      .cropped(to: image.extent)
+      return ParametricVignetteRenderer.apply(value: feature.value, to: image)
 
     case let .fade(feature):
       let foreground = CIImage(

@@ -55,6 +55,38 @@ enum ParametricRadiusCalculator {
   }
 }
 
+/// Applies a vignette centered in the image's current domain.
+///
+/// `CIVignette` accepts a scalar radius and does not expose the effect center,
+/// which makes repeated crop operations hard to reason about. The parametric
+/// renderer uses `CIVignetteEffect` so the vignette is explicitly evaluated
+/// against the current feature output extent.
+enum ParametricVignetteRenderer {
+
+  /// Applies a vignette to the supplied image while preserving its extent.
+  static func apply(
+    value: Double,
+    to image: CIImage
+  ) -> CIImage {
+    guard abs(value) > 0.0001 else {
+      return image
+    }
+
+    let extent = image.extent
+    let radius = max(extent.width, extent.height) * 0.5
+    return image.applyingFilter(
+      "CIVignetteEffect",
+      parameters: [
+        kCIInputCenterKey: CIVector(x: extent.midX, y: extent.midY),
+        kCIInputRadiusKey: radius,
+        kCIInputIntensityKey: value,
+        "inputFalloff": 0.5,
+      ]
+    )
+    .cropped(to: extent)
+  }
+}
+
 /// Geometry helpers kept inside the Parametric layer so the renderer can be
 /// compiled without BrightroomEngine's UIKit-backed support files.
 enum ParametricImageGeometry {

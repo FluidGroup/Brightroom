@@ -568,19 +568,7 @@ public enum BrightroomFeatureDefinitions {
       to image: CIImage,
       context: FeatureEvaluationContext
     ) throws -> CIImage {
-      let radius = ParametricRadiusCalculator.radius(
-        value: payload.value,
-        max: ParametricFilterConstants.vignetteSliderMax,
-        imageExtent: image.extent
-      )
-      return image.applyingFilter(
-        "CIVignette",
-        parameters: [
-          kCIInputRadiusKey: radius,
-          kCIInputIntensityKey: payload.value,
-        ]
-      )
-      .cropped(to: image.extent)
+      ParametricVignetteRenderer.apply(value: payload.value, to: image)
     }
   }
 

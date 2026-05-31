@@ -317,6 +317,10 @@ struct ParametricMacPreviewRenderer {
       }
     }
 
+    let preCropEffects = try makeGlobalColorEffects(settings: settings)
+    features.append(contentsOf: preCropEffects.features.map(FeatureTreeNode.effect))
+    treeLines.append(contentsOf: preCropEffects.treeLines)
+
     if settings.isSecondCropEnabled {
       let cropRect = insetRect(size: currentSize, inset: settings.secondCropInset)
       features.append(
@@ -332,9 +336,10 @@ struct ParametricMacPreviewRenderer {
       treeLines.append(.init(level: 1, kind: "domain", value: "Crop 2 -> \(sizeDescription(currentSize))"))
     }
 
-    let globalEffects = try makeGlobalEffects(settings: settings)
-    features.append(contentsOf: globalEffects.features.map(FeatureTreeNode.effect))
-    treeLines.append(contentsOf: globalEffects.treeLines)
+    if let vignette = try makeVignetteEffect(settings: settings) {
+      features.append(.effect(vignette.feature))
+      treeLines.append(vignette.treeLine)
+    }
 
     return (
       FeatureDocument(mainTree: FeatureMainTree(features: features)),
@@ -342,7 +347,7 @@ struct ParametricMacPreviewRenderer {
     )
   }
 
-  private func makeGlobalEffects(
+  private func makeGlobalColorEffects(
     settings: ParametricMacPreviewSettings
   ) throws -> (features: [FeatureNode], treeLines: [ParametricMacTreeLine]) {
     var features: [FeatureNode] = []
@@ -370,18 +375,24 @@ struct ParametricMacPreviewRenderer {
       treeLines.append(.init(level: 1, kind: "effect", value: "Saturation \(settings.globalSaturation.formatted(.number.precision(.fractionLength(2))))"))
     }
 
-    if settings.globalVignette > 0.001 {
-      features.append(
-        try FeatureNode(
-          BrightroomFeatureDefinitions.Vignette.self,
-          id: FeatureID(rawValue: "mac-demo-global-vignette"),
-          payload: .init(value: settings.globalVignette)
-        )
-      )
-      treeLines.append(.init(level: 1, kind: "effect", value: "Vignette \(settings.globalVignette.formatted(.number.precision(.fractionLength(2))))"))
+    return (features, treeLines)
+  }
+
+  private func makeVignetteEffect(
+    settings: ParametricMacPreviewSettings
+  ) throws -> (feature: FeatureNode, treeLine: ParametricMacTreeLine)? {
+    guard settings.globalVignette > 0.001 else {
+      return nil
     }
 
-    return (features, treeLines)
+    return (
+      try FeatureNode(
+        BrightroomFeatureDefinitions.Vignette.self,
+        id: FeatureID(rawValue: "mac-demo-global-vignette"),
+        payload: .init(value: settings.globalVignette)
+      ),
+      .init(level: 1, kind: "effect", value: "Vignette \(settings.globalVignette.formatted(.number.precision(.fractionLength(2))))")
+    )
   }
 
   private func makeBrushMask(

@@ -418,6 +418,77 @@ final class ParametricFeatureTreeTests: XCTestCase {
     XCTAssertEqual(output.image.extent, CGRect(x: 0, y: 0, width: 25, height: 30))
   }
 
+  func testImageEffectReceivesCurrentExtentAfterCrop() throws {
+    var registry = FeatureRegistry.brightroomDefault
+    registry.registerImageEffect(TestExtentProbeFeature.self)
+    let compiler = FeatureGraphCompiler(featureRegistry: registry)
+    let document = FeatureDocument(
+      mainTree: FeatureMainTree(
+        features: [
+          .domain(
+            try FeatureNode(
+              BrightroomFeatureDefinitions.Crop.self,
+              id: FeatureID(rawValue: "extent-probe-crop"),
+              payload: .init(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+            )
+          ),
+          .effect(
+            try FeatureNode(
+              TestExtentProbeFeature.self,
+              id: FeatureID(rawValue: "extent-probe-effect"),
+              payload: .init()
+            )
+          ),
+        ]
+      )
+    )
+    let input = CIImage.parametricColorPatchImage(
+      extent: CGRect(x: 0, y: 0, width: 80, height: 60)
+    )
+
+    let output = try compiler.makeOutput(from: input, document: document)
+
+    XCTAssertEqual(output.image.extent, CGRect(x: 0, y: 0, width: 40, height: 20))
+    let rendered = try Self.render(output.image)
+    let pixel = Self.rgba(in: rendered, x: 20, y: 10)
+    XCTAssertLessThanOrEqual(abs(Int(pixel.red) - 102), 2)
+    XCTAssertLessThanOrEqual(abs(Int(pixel.green) - 51), 2)
+  }
+
+  func testVignetteUsesCurrentExtentAfterCrop() throws {
+    let document = FeatureDocument(
+      mainTree: FeatureMainTree(
+        features: [
+          .domain(
+            try FeatureNode(
+              BrightroomFeatureDefinitions.Crop.self,
+              id: FeatureID(rawValue: "vignette-crop"),
+              payload: .init(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+            )
+          ),
+          .effect(
+            try FeatureNode(
+              BrightroomFeatureDefinitions.Vignette.self,
+              id: FeatureID(rawValue: "vignette-after-crop"),
+              payload: .init(value: 0.5)
+            )
+          ),
+        ]
+      )
+    )
+    let input = CIImage.parametricColorPatchImage(
+      extent: CGRect(x: 0, y: 0, width: 80, height: 60)
+    )
+    let cropped = input
+      .cropped(to: CGRect(x: 10, y: 8, width: 40, height: 20))
+      .transformed(by: CGAffineTransform(translationX: -10, y: -8))
+    let expected = Self.vignetteEffectImage(value: 0.5, image: cropped)
+
+    let output = try Self.compiler.makeOutput(from: input, document: document)
+
+    try Self.assertImagesMatch(expected, output.image, tolerance: 2)
+  }
+
   func testLocalAdjustmentsAndGlobalEffectEvaluateInOrder() throws {
     let localExposure = LocalAdjustmentFeature(
       id: FeatureID(rawValue: "local-exposure"),
@@ -843,6 +914,21 @@ final class ParametricFeatureTreeTests: XCTestCase {
     }
   }
 
+  private static func vignetteEffectImage(value: Double, image: CIImage) -> CIImage {
+    let extent = image.extent
+    let radius = max(extent.width, extent.height) * 0.5
+    return image.applyingFilter(
+      "CIVignetteEffect",
+      parameters: [
+        kCIInputCenterKey: CIVector(x: extent.midX, y: extent.midY),
+        kCIInputRadiusKey: radius,
+        kCIInputIntensityKey: value,
+        "inputFalloff": 0.5,
+      ]
+    )
+    .cropped(to: extent)
+  }
+
   private static func makeColorCubeData(dimension: Int) -> Data {
     var values: [Float] = []
     values.reserveCapacity(dimension * dimension * dimension * 4)
@@ -1009,6 +1095,33 @@ final class ParametricFeatureTreeTests: XCTestCase {
           "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
           "inputBiasVector": CIVector(x: CGFloat(payload.amount), y: 0, z: 0, w: 0),
         ]
+      )
+      .cropped(to: image.extent)
+    }
+  }
+
+  private enum TestExtentProbeFeature: ImageEffectFeatureDefinition {
+
+    static let typeID: FeatureTypeID = "test.effect.extentProbe"
+    static let currentSchemaVersion = 1
+
+    struct Payload: Codable, Equatable, Sendable {
+      init() {}
+    }
+
+    static func apply(
+      payload: Payload,
+      node: FeatureNode,
+      to image: CIImage,
+      context: FeatureEvaluationContext
+    ) throws -> CIImage {
+      CIImage(
+        color: CIColor(
+          red: min(image.extent.width / 100, 1),
+          green: min(image.extent.height / 100, 1),
+          blue: 0,
+          alpha: 1
+        )
       )
       .cropped(to: image.extent)
     }
