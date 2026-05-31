@@ -66,6 +66,14 @@ struct ContentView: View {
             RenderingDemoView()
           }
 
+          NavigationLink("Parametric Features") {
+            ParametricFeaturePreviewView()
+          }
+
+          NavigationLink("Parametric Video") {
+            ParametricVideoRenderPlaygroundView()
+          }
+
           Section("Restoration Horizontal") {
             Button("Masking") {
               fullScreenView = .init {
