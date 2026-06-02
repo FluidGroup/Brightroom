@@ -34,6 +34,8 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
   let transform: (Double) -> Double
   let hapticIdentity: (Double) -> AnyHashable?
   let onHaptic: () -> Void
+  /// Called with the settled value after user-driven slider editing finishes.
+  let onEditingEnded: (Double) -> Void
   let topMarker: (BrightroomSteppedSliderTickContext) -> TopMarker
   let tick: (BrightroomSteppedSliderTickContext) -> Tick
 
@@ -46,6 +48,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     transform: @escaping (Double) -> Double,
     hapticIdentity: @escaping (Double) -> AnyHashable?,
     onHaptic: @escaping () -> Void,
+    onEditingEnded: @escaping (Double) -> Void = { _ in },
     @ViewBuilder topMarker: @escaping (BrightroomSteppedSliderTickContext) -> TopMarker,
     @ViewBuilder tick: @escaping (BrightroomSteppedSliderTickContext) -> Tick
   ) {
@@ -57,6 +60,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     self.transform = transform
     self.hapticIdentity = hapticIdentity
     self.onHaptic = onHaptic
+    self.onEditingEnded = onEditingEnded
     self.topMarker = topMarker
     self.tick = tick
   }
@@ -72,6 +76,11 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
         self.value = newValue
       }
     }
+    uiView.onEditingEnded = { newValue in
+      Task { @MainActor in
+        self.onEditingEnded(newValue)
+      }
+    }
 
     uiView.isEnabled = isEnabled
     return uiView
@@ -81,6 +90,11 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     uiView.onValueChanged = { newValue in
       Task { @MainActor in
         self.value = newValue
+      }
+    }
+    uiView.onEditingEnded = { newValue in
+      Task { @MainActor in
+        self.onEditingEnded(newValue)
       }
     }
 
@@ -183,6 +197,7 @@ private struct BrightroomSteppedSliderLayoutGeometry: Equatable {
 final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIControl, UIScrollViewDelegate {
 
   var onValueChanged: (Double) -> Void = { _ in }
+  var onEditingEnded: (Double) -> Void = { _ in }
 
   private var configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick>
   private let proxy = BrightroomSteppedSliderRenderProxy()
@@ -390,12 +405,14 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
       return
     }
 
-    snapToNearestTick(animated: true)
+    if snapToNearestTick(animated: true) == false {
+      finishEditing()
+    }
   }
 
   func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-    snapToNearestTick(animated: false)
-    commitValueFromCurrentOffset()
+    _ = snapToNearestTick(animated: false)
+    finishEditing()
   }
 
   func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
@@ -404,7 +421,7 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
 
     if isAnimatingUserSnap {
       isAnimatingUserSnap = false
-      commitValueFromCurrentOffset()
+      finishEditing()
     }
   }
 
@@ -470,11 +487,12 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     return contentOffsetForFloatingIndex(nearestIndex)
   }
 
-  private func snapToNearestTick(animated: Bool) {
+  @discardableResult
+  private func snapToNearestTick(animated: Bool) -> Bool {
     let targetContentOffset = targetContentOffsetForNearestTick(from: scrollView.contentOffset)
     guard distance(from: scrollView.contentOffset, to: targetContentOffset) > 0.000_001 else {
       updateRenderProxy()
-      return
+      return false
     }
 
     isAnimatingUserSnap = animated
@@ -483,7 +501,10 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     if animated == false {
       isAnimatingUserSnap = false
       updateRenderProxy()
+      return false
     }
+
+    return true
   }
 
   private func commitValueFromCurrentOffset() {
@@ -502,6 +523,12 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     triggerHapticIfNeeded(for: newValue)
     onValueChanged(newValue)
     sendActions(for: .valueChanged)
+  }
+
+  private func finishEditing() {
+    commitValueFromCurrentOffset()
+    onEditingEnded(value)
+    sendActions(for: .editingDidEnd)
   }
 
   private func applyAccessibilityStep(_ delta: Int) {
@@ -523,6 +550,7 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     setContentOffsetForValue(newValue, animated: true)
     triggerHapticIfNeeded(for: newValue)
     onValueChanged(newValue)
+    onEditingEnded(newValue)
     sendActions(for: .valueChanged)
   }
 
@@ -544,6 +572,7 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     setContentOffsetForValue(resetValue, animated: true)
     triggerHapticIfNeeded(for: resetValue)
     onValueChanged(resetValue)
+    onEditingEnded(resetValue)
     sendActions(for: .valueChanged)
   }
 
