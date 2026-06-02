@@ -1,10 +1,10 @@
 /// Selects how `SwiftUICropView` builds the image shown inside the crop surface.
 public enum CropViewDisplayMode: Equatable {
-  /// Uses the legacy crop interaction image stored in `EditingStack.Loaded`.
+  /// Uses the lightweight viewport renderer for crop interaction.
   ///
-  /// This mode preserves the previous CG-backed crop display path. It is useful
-  /// as a comparison point or for Photos-like crop surfaces that intentionally
-  /// do not show the full edit stack during crop interaction.
+  /// This mode intentionally skips saved local-adjustment layers and renders
+  /// the interaction base through the Metal crop viewport instead of a legacy
+  /// `UIImageView` surface.
   case cropInteractionImage
 
   /// Uses the viewport renderer to display the full current edit stack.

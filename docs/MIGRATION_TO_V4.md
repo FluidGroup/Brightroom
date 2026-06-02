@@ -369,9 +369,11 @@ SwiftUI wrappers instead.
 | v3 / main | v4 |
 | --- | --- |
 | `CropView` | `SwiftUICropView` |
-| `BlurryMaskingView` | `SwiftUIBlurryMaskingView` |
 | `ImagePreviewView` | `SwiftUIImagePreviewView` |
 | `MetalImageView` | `SwiftUIMetalImageView` |
+
+The legacy `BlurryMaskingView` component and its SwiftUI wrapper were removed.
+Use PixelEditor masking for blur-mask editing flows.
 
 If your app subclasses or directly configures these UIKit views, migrate that
 code to SwiftUI composition. If you need a missing customization hook, treat it

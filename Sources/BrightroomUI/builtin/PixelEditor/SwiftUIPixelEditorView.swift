@@ -277,24 +277,13 @@ private struct PixelEditorCanvas: View {
 
     GeometryReader { proxy in
       ZStack {
-        SwiftUIEditingCanvasView(
-          editingStack: viewModel.editingStack,
-          mode: canvasMode
-        )
-        .interactionMode(canvasInteractionMode)
-        .displayedImageRect(canvasDisplayedImageRect)
-        .brush(canvasBrush(in: proxy.size))
-        .smoothing(.init())
-        .opacity(viewModel.mode.isCrop ? 0 : 1)
-        .allowsHitTesting(viewModel.mode.allowsCanvasInteraction)
-
         SwiftUICropView(
           editingStack: viewModel.editingStack,
-          isGuideInteractionEnabled: viewModel.options.croppingAspectRatio == nil,
+          isGuideInteractionEnabled: isGuideInteractionEnabled,
           isAutoApplyEditingStackEnabled: false,
           contentInset: .zero,
           cropInsideOverlay: { adjustmentKind in
-            if viewModel.options.croppingAspectRatio == nil {
+            if viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil {
               PixelEditorFreeCropGuideOverlay(isAdjustmentActive: adjustmentKind != nil)
             }
           },
@@ -309,9 +298,10 @@ private struct PixelEditorCanvas: View {
         )
         .croppingAspectRatio(viewModel.options.croppingAspectRatio)
         .displayMode(.renderedEditPreview)
+        .surfaceMode(surfaceMode)
+        .brush(canvasBrush(in: proxy.size))
+        .strokeSmoothing(.init())
         .registerApplyAction(viewModel.cropApplyAction)
-        .opacity(viewModel.mode.isCrop ? 1 : 0)
-        .allowsHitTesting(viewModel.mode.isCrop)
 
         if viewModel.editingStack.isLoading {
           ProgressView()
@@ -324,34 +314,19 @@ private struct PixelEditorCanvas: View {
     }
   }
 
-  private var canvasMode: EditingCanvasMode {
+  private var surfaceMode: CropViewSurfaceMode {
     switch viewModel.mode {
-    case .masking:
-      return .localAdjustment(effect: maskingEffect)
-    case .editing, .preview:
-      if canUseViewportMaskingAdjustment {
-        return .localAdjustment(effect: maskingEffect)
-      }
-      if committedLocalAdjustments.isEmpty == false {
-        return .renderedEditPreview
-      }
-      return .viewportBase
     case .crop:
-      return .viewportBase
-    }
-  }
-
-  private var canvasInteractionMode: EditingCanvasInteractionMode {
-    switch viewModel.mode {
+      return .crop
     case .masking:
-      return .draw
-    case .crop, .editing, .preview:
-      return .view
+      return .masking(maskingEffect)
+    case .editing, .preview:
+      return .viewing
     }
   }
 
-  private var canvasDisplayedImageRect: CGRect? {
-    viewModel.displayCrop?.cropExtent
+  private var isGuideInteractionEnabled: Bool {
+    viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil
   }
 
   private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {
@@ -361,25 +336,6 @@ private struct PixelEditorCanvas: View {
 
     let diagonalLength = hypot(crop.cropExtent.width, crop.cropExtent.height)
     return .gaussianBlur(radius: max(diagonalLength / 50, 1))
-  }
-
-  private var canUseViewportMaskingAdjustment: Bool {
-    guard committedLocalAdjustments.count == 1 else {
-      return false
-    }
-
-    switch committedLocalAdjustments[0].effect {
-    case .gaussianBlur:
-      return true
-    case .exposure:
-      return false
-    }
-  }
-
-  private var committedLocalAdjustments: [EditingStack.Edit.LocalAdjustmentLayer] {
-    viewModel.editingStack.loadedState?.currentEdit.localAdjustments.filter {
-      $0.isEnabled && $0.mask.isEmpty == false
-    } ?? []
   }
 
   private func canvasBrush(in viewportSize: CGSize) -> EditingCanvasBrush {

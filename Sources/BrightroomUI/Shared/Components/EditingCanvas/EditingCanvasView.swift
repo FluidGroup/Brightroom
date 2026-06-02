@@ -61,8 +61,6 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     scrollView.showsVerticalScrollIndicator = false
     scrollView.showsHorizontalScrollIndicator = false
     scrollView.bouncesZoom = true
-    scrollView.alwaysBounceHorizontal = true
-    scrollView.alwaysBounceVertical = true
     scrollView.delaysContentTouches = false
     scrollView.canCancelContentTouches = true
     scrollView.panGestureRecognizer.minimumNumberOfTouches = interactionMode.panMinimumNumberOfTouches
@@ -197,7 +195,11 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     displayedContentRect = sanitizedRect
     lastAppliedDisplayedContentRect = nil
     setNeedsLayout()
+    updateScrollContentGeometry()
+    updateZoomScaleIfNeeded(refitsToMinimum: false)
     applyDisplayedContentRectIfNeeded()
+    updateViewportLayerFrames()
+    updateVisibleContentRect()
   }
 
   private func applyInteractionMode() {
@@ -828,7 +830,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     } else {
       effectiveLiveRect = liveVisibleRect
     }
-    let visibleCanvasFrame = viewportFrame(forContentRect: effectiveLiveRect)
+    let visibleCanvasFrame = attachmentContentView.convert(effectiveLiveRect, to: viewportCanvasView)
 
     canvasView?.setViewport(
       visibleContentRect: effectiveLiveRect,
@@ -836,49 +838,6 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       zoomScale: scrollView.zoomScale
     )
 
-  }
-
-  private func viewportFrame(forContentRect contentRect: CGRect) -> CGRect {
-    let displayBounds = displayBoundsRect
-    let contentSize = zoomedScrollContentSize
-    return CGRect(
-      x: viewportAxisOrigin(
-        contentMin: contentRect.minX,
-        displayMin: displayBounds.minX,
-        viewportLength: scrollView.bounds.width,
-        zoomedContentLength: contentSize.width,
-        contentOffset: scrollView.contentOffset.x,
-        centeringInset: scrollView.contentInset.left
-      ),
-      y: viewportAxisOrigin(
-        contentMin: contentRect.minY,
-        displayMin: displayBounds.minY,
-        viewportLength: scrollView.bounds.height,
-        zoomedContentLength: contentSize.height,
-        contentOffset: scrollView.contentOffset.y,
-        centeringInset: scrollView.contentInset.top
-      ),
-      width: contentRect.width * scrollView.zoomScale,
-      height: contentRect.height * scrollView.zoomScale
-    )
-  }
-
-  private func viewportAxisOrigin(
-    contentMin: CGFloat,
-    displayMin: CGFloat,
-    viewportLength: CGFloat,
-    zoomedContentLength: CGFloat,
-    contentOffset: CGFloat,
-    centeringInset: CGFloat
-  ) -> CGFloat {
-    let origin = (contentMin - displayMin) * scrollView.zoomScale - contentOffset
-    let isUnderfilled = zoomedContentLength < viewportLength - 0.5
-    let isOffsetAlreadyInset = contentOffset <= -centeringInset + 0.5
-    if isUnderfilled && isOffsetAlreadyInset == false {
-      return origin + centeringInset
-    } else {
-      return origin
-    }
   }
 
   private func beginViewportInteractionRendering() {
