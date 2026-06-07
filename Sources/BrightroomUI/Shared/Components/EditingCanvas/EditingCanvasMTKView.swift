@@ -76,6 +76,18 @@ struct EditingCanvasRenderImages {
 
 final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
+  /// Source-image viewport values used to render the current drawable.
+  ///
+  /// A viewport may be supplied at draw time so the renderer can resolve
+  /// presentation-layer geometry as close as possible to the Metal draw pass.
+  struct Viewport {
+    var visibleContentRect: CGRect
+    var visibleCanvasFrame: CGRect
+    var zoomScale: CGFloat
+  }
+
+  typealias ViewportProvider = () -> Viewport?
+
   private typealias BrushStampUniforms = EditingCanvasBrushStampUniforms
   private enum LiveFrameRate {
     static let minimum = 60
@@ -147,6 +159,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private var strokeState = StrokeState()
   private var liveRefreshState = LiveRefreshState()
   private var drawMetrics = DrawMetrics()
+  private var viewportProvider: ViewportProvider?
   var activeStampCount: Int {
     strokeState.activeStamps.count
   }
@@ -266,14 +279,37 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     setNeedsDisplay()
   }
 
+  func setViewportProvider(_ provider: ViewportProvider?) {
+    viewportProvider = provider
+    setNeedsDisplay()
+  }
+
   func setViewport(
     visibleContentRect rect: CGRect,
     visibleCanvasFrame frame: CGRect,
     zoomScale: CGFloat
   ) {
+    updateViewport(
+      .init(
+        visibleContentRect: rect,
+        visibleCanvasFrame: frame,
+        zoomScale: zoomScale
+      ),
+      schedulesDisplay: true
+    )
+  }
+
+  func setViewport(_ viewport: Viewport) {
+    updateViewport(viewport, schedulesDisplay: true)
+  }
+
+  private func updateViewport(
+    _ viewport: Viewport,
+    schedulesDisplay: Bool
+  ) {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
-    let nextRect = rect.intersection(canvasRect)
-    let nextFrame = frame
+    let nextRect = viewport.visibleContentRect.intersection(canvasRect)
+    let nextFrame = viewport.visibleCanvasFrame
 
     guard nextRect.isNull == false, nextRect.isEmpty == false else {
       return
@@ -282,7 +318,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let didChangeViewport = viewportState.visibleContentRect.equalTo(nextRect) == false
       || viewportState.visibleCanvasFrame.equalTo(nextFrame) == false
     guard didChangeViewport else {
-      setNeedsDisplay()
+      if schedulesDisplay {
+        setNeedsDisplay()
+      }
       return
     }
 
@@ -291,8 +329,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.sourceTexture = nil
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    setNeedsDisplay()
-    onMetricsChange?()
+    if schedulesDisplay {
+      setNeedsDisplay()
+      onMetricsChange?()
+    }
   }
 
   func reset() {
@@ -314,7 +354,16 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       recordDrawSample()
     }
 
+    updateViewportFromProvider()
     renderViewportImage()
+  }
+
+  private func updateViewportFromProvider() {
+    guard let viewport = viewportProvider?() else {
+      return
+    }
+
+    updateViewport(viewport, schedulesDisplay: false)
   }
 
   func beginStroke(at rawPoint: CGPoint) {

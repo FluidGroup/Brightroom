@@ -344,24 +344,29 @@ final class CropView: UIView {
       currentCanvasInputKey = key
     }
 
-    func applyViewport(_ viewport: CropDisplayViewport?) {
+    func applyViewport(
+      _ viewport: CropDisplayViewport?,
+      viewportProvider: _EditingCanvasMTKView.ViewportProvider? = nil
+    ) {
       guard let canvasView else {
         return
       }
 
       guard let viewport else {
         canvasView.isHidden = true
+        canvasView.setViewportProvider(nil)
         return
       }
 
       canvasView.isHidden = false
       canvasView.frame = viewport.viewportFrameInScrollView
       canvasView.contentScaleFactor = viewport.contentScaleFactor
-      canvasView.setViewport(
-        visibleContentRect: viewport.visibleContentRect,
-        visibleCanvasFrame: viewport.visibleCanvasFrame,
-        zoomScale: viewport.zoomScale
-      )
+      if let viewportProvider {
+        canvasView.setViewportProvider(viewportProvider)
+      } else {
+        canvasView.setViewportProvider(nil)
+        canvasView.setViewport(viewport.editingCanvasViewport)
+      }
     }
 
     func applyMode(isActive: Bool) {
@@ -697,24 +702,29 @@ final class CropView: UIView {
       canvasView.isHidden = false
     }
 
-    func applyViewport(_ viewport: CropDisplayViewport?) {
+    func applyViewport(
+      _ viewport: CropDisplayViewport?,
+      viewportProvider: _EditingCanvasMTKView.ViewportProvider? = nil
+    ) {
       guard let canvasView else {
         return
       }
 
       guard let viewport else {
         canvasView.isHidden = true
+        canvasView.setViewportProvider(nil)
         return
       }
 
       canvasView.isHidden = false
       canvasView.frame = viewport.viewportFrameInScrollView
       canvasView.contentScaleFactor = viewport.contentScaleFactor
-      canvasView.setViewport(
-        visibleContentRect: viewport.visibleContentRect,
-        visibleCanvasFrame: viewport.visibleCanvasFrame,
-        zoomScale: viewport.zoomScale
-      )
+      if let viewportProvider {
+        canvasView.setViewportProvider(viewportProvider)
+      } else {
+        canvasView.setViewportProvider(nil)
+        canvasView.setViewport(viewport.editingCanvasViewport)
+      }
     }
 
     func applyMode(
@@ -1564,21 +1574,25 @@ extension CropView {
     }
 
     let usesPresentationLayers = cropSurface.isInteractiveZoomGestureActive == false
-    let viewportFrame = Self.currentLayerRect(
+    let visibleViewportFrame = Self.currentLayerRect(
       bounds,
       from: self,
       to: cropSurface.scrollView,
       usesPresentationLayers: usesPresentationLayers
     )
       .standardized
-    guard viewportFrame.width > 0, viewportFrame.height > 0 else {
+    guard visibleViewportFrame.width > 0, visibleViewportFrame.height > 0 else {
       return nil
     }
 
+    let renderFrame = Self.renderOverscanFrame(
+      for: visibleViewportFrame,
+      rotationRadians: crop.aggregatedRotation.radians
+    )
     let platterBounds = CGRect(origin: .zero, size: cropSurface.imagePlatterView.bounds.size)
     let visiblePlatterRect = Self.currentLayerRect(
-      bounds,
-      from: self,
+      renderFrame,
+      from: cropSurface.scrollView,
       to: cropSurface.imagePlatterView,
       usesPresentationLayers: usesPresentationLayers
     )
@@ -1606,12 +1620,12 @@ extension CropView {
     )
       .standardized
     let visibleCanvasFrame = resolvedVisibleScrollRect.offsetBy(
-      dx: -viewportFrame.minX,
-      dy: -viewportFrame.minY
+      dx: -renderFrame.minX,
+      dy: -renderFrame.minY
     )
 
     return .init(
-      viewportFrameInScrollView: viewportFrame,
+      viewportFrameInScrollView: renderFrame,
       visibleContentRect: visibleImageRect,
       visibleCanvasFrame: visibleCanvasFrame,
       zoomScale: cropSurface.scrollView.zoomScale,
@@ -1687,6 +1701,32 @@ extension CropView {
   }
 
   // MARK: Static Helpers
+
+  private static func renderOverscanFrame(
+    for viewportFrame: CGRect,
+    rotationRadians: CGFloat
+  ) -> CGRect {
+    let viewportFrame = viewportFrame.standardized
+    guard viewportFrame.width > 0, viewportFrame.height > 0 else {
+      return viewportFrame
+    }
+
+    let cosine = abs(CGFloat(cos(Double(rotationRadians))))
+    let sine = abs(CGFloat(sin(Double(rotationRadians))))
+    let rotatedWidth = viewportFrame.width * cosine + viewportFrame.height * sine
+    let rotatedHeight = viewportFrame.width * sine + viewportFrame.height * cosine
+    let renderSize = CGSize(
+      width: max(viewportFrame.width, rotatedWidth),
+      height: max(viewportFrame.height, rotatedHeight)
+    )
+
+    return CGRect(
+      x: viewportFrame.midX - renderSize.width / 2,
+      y: viewportFrame.midY - renderSize.height / 2,
+      width: renderSize.width,
+      height: renderSize.height
+    )
+  }
 
   private static func currentLayerRect(
     _ rect: CGRect,
@@ -2637,9 +2677,19 @@ extension CropView {
   private func applyViewport(for surface: ViewportRenderingSurface) {
     switch surface {
     case .crop:
-      cropSurface.applyViewport(makeCropDisplayViewport())
+      cropSurface.applyViewport(
+        makeCropDisplayViewport(),
+        viewportProvider: { [weak self] in
+          self?.makeCropDisplayViewport()?.editingCanvasViewport
+        }
+      )
     case .tool:
-      toolSurface.applyViewport(makeToolCropDisplayViewport())
+      toolSurface.applyViewport(
+        makeToolCropDisplayViewport(),
+        viewportProvider: { [weak self] in
+          self?.makeToolCropDisplayViewport()?.editingCanvasViewport
+        }
+      )
     }
   }
 
@@ -2711,6 +2761,16 @@ extension CGRect {
       && abs(height - other.height) <= tolerance
   }
 
+}
+
+private extension CropDisplayViewport {
+  var editingCanvasViewport: _EditingCanvasMTKView.Viewport {
+    .init(
+      visibleContentRect: visibleContentRect,
+      visibleCanvasFrame: visibleCanvasFrame,
+      zoomScale: zoomScale
+    )
+  }
 }
 
 extension UIScrollView {
