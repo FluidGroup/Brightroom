@@ -861,12 +861,13 @@ private struct PhotosCropRotationSlider: View {
       stepCount: 90,
       style: .photosCropRotationSlider,
       resetValue: 0,
+      snapsToTicksOnEditingEnd: false,
       transform: { source in
         if (-PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees).contains(source) {
           return 0
         }
 
-        return source.rounded(.toNearestOrEven)
+        return source
       },
       hapticIdentity: { value in
         let degree = Int(value.rounded(.toNearestOrEven))

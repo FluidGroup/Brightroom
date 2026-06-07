@@ -279,9 +279,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     setNeedsDisplay()
   }
 
-  func setViewportProvider(_ provider: ViewportProvider?) {
+  func setViewportProvider(
+    _ provider: ViewportProvider?,
+    schedulesDisplay: Bool = true
+  ) {
     viewportProvider = provider
-    setNeedsDisplay()
+    if schedulesDisplay {
+      setNeedsDisplay()
+    }
   }
 
   func setViewport(
@@ -318,9 +323,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let didChangeViewport = viewportState.visibleContentRect.equalTo(nextRect) == false
       || viewportState.visibleCanvasFrame.equalTo(nextFrame) == false
     guard didChangeViewport else {
-      if schedulesDisplay {
-        setNeedsDisplay()
-      }
       return
     }
 

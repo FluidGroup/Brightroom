@@ -354,7 +354,7 @@ final class CropView: UIView {
 
       guard let viewport else {
         canvasView.isHidden = true
-        canvasView.setViewportProvider(nil)
+        canvasView.setViewportProvider(nil, schedulesDisplay: false)
         return
       }
 
@@ -364,7 +364,7 @@ final class CropView: UIView {
       if let viewportProvider {
         canvasView.setViewportProvider(viewportProvider)
       } else {
-        canvasView.setViewportProvider(nil)
+        canvasView.setViewportProvider(nil, schedulesDisplay: false)
         canvasView.setViewport(viewport.editingCanvasViewport)
       }
     }
@@ -575,6 +575,17 @@ final class CropView: UIView {
       canvasView != nil
     }
 
+    var isInteractiveZoomGestureActive: Bool {
+      switch scrollView.pinchGestureRecognizer?.state {
+      case .began, .changed:
+        return true
+      case .cancelled, .ended, .failed, .possible, .none:
+        return false
+      @unknown default:
+        return false
+      }
+    }
+
     var isZoomInteractionActive: Bool {
       if scrollView.isZooming || scrollView.isZoomBouncing {
         return true
@@ -712,7 +723,7 @@ final class CropView: UIView {
 
       guard let viewport else {
         canvasView.isHidden = true
-        canvasView.setViewportProvider(nil)
+        canvasView.setViewportProvider(nil, schedulesDisplay: false)
         return
       }
 
@@ -722,7 +733,7 @@ final class CropView: UIView {
       if let viewportProvider {
         canvasView.setViewportProvider(viewportProvider)
       } else {
-        canvasView.setViewportProvider(nil)
+        canvasView.setViewportProvider(nil, schedulesDisplay: false)
         canvasView.setViewport(viewport.editingCanvasViewport)
       }
     }
@@ -1108,7 +1119,7 @@ final class CropView: UIView {
       cropSurface.onWillBeginZooming = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-begin")
-        self.beginViewportRendering(for: .crop)
+        self.stopViewportRendering(for: .crop, appliesViewport: false)
         self.beginScrollViewAdjustment(.zoom)
       }
       cropSurface.onDidEndDragging = { [weak self] decelerate in
@@ -1123,7 +1134,7 @@ final class CropView: UIView {
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
         self.endScrollViewAdjustment(.zoom)
-        self.scheduleStopViewportRendering(for: .crop)
+        self.updateCropViewportDuringScrollInteraction()
       }
       cropSurface.onDidEndDecelerating = { [weak self] in
         guard let self else { return }
@@ -1143,7 +1154,7 @@ final class CropView: UIView {
         }
       }
       toolSurface.onWillBeginZooming = { [weak self] in
-        self?.beginViewportRendering(for: .tool)
+        self?.stopViewportRendering(for: .tool, appliesViewport: false)
       }
       toolSurface.onDidEndDragging = { [weak self] in
         self?.updateToolCropDisplayViewport()
@@ -1151,7 +1162,6 @@ final class CropView: UIView {
       toolSurface.onDidEndZooming = { [weak self] in
         guard let self else { return }
         self.updateToolViewportDuringScrollInteraction()
-        self.scheduleStopViewportRendering(for: .tool)
       }
       toolSurface.onDidEndDecelerating = { [weak self] in
         self?.updateToolCropDisplayViewport()
@@ -1307,7 +1317,7 @@ final class CropView: UIView {
     }
 
     crop.adjustmentAngle = angle
-    setProposedCrop(crop)
+    setProposedCrop(crop, animatesLayout: false)
 
     if recordsCropExtent {
       record()
@@ -1835,7 +1845,8 @@ extension CropView {
   private func setProposedCrop(
     _ crop: EditingCrop,
     previousCrop: EditingCrop? = nil,
-    forcesLayout: Bool = false
+    forcesLayout: Bool = false,
+    animatesLayout: Bool = true
   ) {
     let previousCrop = previousCrop ?? state.proposedCrop
     let hasChanges = updateProposedCrop(crop)
@@ -1844,7 +1855,7 @@ extension CropView {
       return
     }
 
-    updateCropLayout(previousCrop: previousCrop)
+    updateCropLayout(previousCrop: previousCrop, animatesLayout: animatesLayout)
   }
 
   private func emitStateSnapshot() {
@@ -1936,7 +1947,10 @@ extension CropView {
     editingStack.crop(crop)
   }
 
-  private func updateCropLayout(previousCrop: EditingCrop? = nil) {
+  private func updateCropLayout(
+    previousCrop: EditingCrop? = nil,
+    animatesLayout: Bool = true
+  ) {
     guard let crop = state.proposedCrop else {
       return
     }
@@ -1972,7 +1986,9 @@ extension CropView {
     updateScrollContainerView(
       by: crop,
       preferredAspectRatio: state.preferredAspectRatio,
-      animated: areAnimationsEnabled && animationSourceCrop != nil /* whether first time load */,
+      animated: animatesLayout
+        && areAnimationsEnabled
+        && animationSourceCrop != nil /* whether first time load */,
       animatesRotation: animationSourceCrop?.rotation != crop.rotation
     )
 
@@ -2544,6 +2560,12 @@ extension CropView {
   }
 
   private func updateCropViewportDuringScrollInteraction() {
+    guard cropSurface.isInteractiveZoomGestureActive == false else {
+      stopViewportRendering(for: .crop, appliesViewport: false)
+      updateCropDisplayViewport()
+      return
+    }
+
     keepViewportRenderingAlive(for: .crop)
 
     if cropSurface.viewportRendering.isRunning == false {
@@ -2552,6 +2574,12 @@ extension CropView {
   }
 
   private func updateToolViewportDuringScrollInteraction() {
+    guard toolSurface.isInteractiveZoomGestureActive == false else {
+      stopViewportRendering(for: .tool, appliesViewport: false)
+      updateToolCropDisplayViewport()
+      return
+    }
+
     keepViewportRenderingAlive(for: .tool)
 
     if toolSurface.viewportRendering.isRunning == false {
@@ -2623,6 +2651,11 @@ extension CropView {
       return
     }
 
+    guard isViewportInteractiveZoomGestureActive(for: surface) == false else {
+      stopViewportRendering(for: surface, appliesViewport: false)
+      return
+    }
+
     applyViewport(for: surface)
 
     if isViewportZoomInteractionActive(for: surface) == false,
@@ -2662,6 +2695,15 @@ extension CropView {
       return isZoomInteractionActive
     case .tool:
       return toolSurface.isZoomInteractionActive
+    }
+  }
+
+  private func isViewportInteractiveZoomGestureActive(for surface: ViewportRenderingSurface) -> Bool {
+    switch surface {
+    case .crop:
+      return cropSurface.isInteractiveZoomGestureActive
+    case .tool:
+      return toolSurface.isInteractiveZoomGestureActive
     }
   }
 

@@ -31,6 +31,8 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
   let stepCount: Int
   let style: BrightroomSteppedSliderStyle
   let resetValue: Double?
+  /// Whether user-driven editing settles on the nearest visual tick.
+  let snapsToTicksOnEditingEnd: Bool
   let transform: (Double) -> Double
   let hapticIdentity: (Double) -> AnyHashable?
   let onHaptic: () -> Void
@@ -45,6 +47,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     stepCount: Int,
     style: BrightroomSteppedSliderStyle,
     resetValue: Double? = nil,
+    snapsToTicksOnEditingEnd: Bool = true,
     transform: @escaping (Double) -> Double,
     hapticIdentity: @escaping (Double) -> AnyHashable?,
     onHaptic: @escaping () -> Void,
@@ -57,6 +60,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     self.stepCount = stepCount
     self.style = style
     self.resetValue = resetValue
+    self.snapsToTicksOnEditingEnd = snapsToTicksOnEditingEnd
     self.transform = transform
     self.hapticIdentity = hapticIdentity
     self.onHaptic = onHaptic
@@ -111,6 +115,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
       stepCount: stepCount,
       style: style,
       resetValue: resetValue,
+      snapsToTicksOnEditingEnd: snapsToTicksOnEditingEnd,
       transform: transform,
       hapticIdentity: hapticIdentity,
       onHaptic: onHaptic,
@@ -126,6 +131,8 @@ struct BrightroomSteppedSliderConfiguration<TopMarker: View, Tick: View> {
   let stepCount: Int
   let style: BrightroomSteppedSliderStyle
   let resetValue: Double?
+  /// Whether user-driven editing settles on the nearest visual tick.
+  let snapsToTicksOnEditingEnd: Bool
   let transform: (Double) -> Double
   let hapticIdentity: (Double) -> AnyHashable?
   let onHaptic: () -> Void
@@ -395,6 +402,10 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
     withVelocity velocity: CGPoint,
     targetContentOffset: UnsafeMutablePointer<CGPoint>
   ) {
+    guard configuration.snapsToTicksOnEditingEnd else {
+      return
+    }
+
     targetContentOffset.pointee = targetContentOffsetForNearestTick(
       from: targetContentOffset.pointee
     )
@@ -405,12 +416,23 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
       return
     }
 
+    guard configuration.snapsToTicksOnEditingEnd else {
+      finishEditing()
+      return
+    }
+
     if snapToNearestTick(animated: true) == false {
       finishEditing()
     }
   }
 
   func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+    guard configuration.snapsToTicksOnEditingEnd else {
+      updateRenderProxy()
+      finishEditing()
+      return
+    }
+
     _ = snapToNearestTick(animated: false)
     finishEditing()
   }
