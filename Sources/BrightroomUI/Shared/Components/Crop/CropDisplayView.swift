@@ -4,6 +4,9 @@ import CoreGraphics
 /// crop preview surface.
 struct CropDisplayViewport {
   /// The UIKit frame of the Metal surface in its owning scroll view.
+  ///
+  /// This can be larger than the visible crop viewport when the renderer needs
+  /// overscan pixels for rotation or presentation-layer animation.
   var viewportFrameInScrollView: CGRect
 
   /// The source-image rect that should be sampled for the current viewport.
