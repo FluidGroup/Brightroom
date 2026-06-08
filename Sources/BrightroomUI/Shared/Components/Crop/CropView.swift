@@ -35,11 +35,11 @@ import BrightroomEngine
 /// Source -> Tool Features -> Final Crop -> Output
 /// ```
 ///
-/// Crop mode edits the final crop frame. Tool modes, such as blur masking,
-/// paint or inspect the pre-final-crop image domain while using the crop frame
-/// as the visible viewport and final clipping boundary. In practice, this means
-/// tool navigation must not mutate crop geometry, and tool previews should avoid
-/// drawing pixels that would be clipped by the final crop.
+/// Crop mode edits the final crop frame while showing the result of earlier
+/// Tool Features. Tool modes, such as blur masking, inspect the final cropped
+/// output while authoring parameters that still belong to the pre-final-crop
+/// image domain. In practice, this means Tool navigation must not mutate crop
+/// geometry, and Tool strokes cross domains when they are displayed or saved.
 ///
 /// Crop adjustment is available in two ways:
 /// - Scrolling the image.
@@ -507,56 +507,33 @@ final class CropView: UIView {
   }
 
   /// Owns the scroll and Metal canvas state used while adjusting Tool Features
-  /// before the final Crop Feature.
+  /// that are evaluated before the final Crop Feature.
   ///
-  /// The tool surface has its own scroll view because Tool navigation is a
-  /// viewing interaction over the evaluated result; it must not mutate the Crop
-  /// Feature's scroll geometry.
+  /// The Tool surface navigates the crop-output image. Drawing gestures arrive
+  /// in that crop-output coordinate space, then `CropView` maps the committed
+  /// stroke back into the pre-crop Feature domain before saving it.
   private final class ToolSurface: NSObject, UIScrollViewDelegate {
     let scrollView = _ScrollView()
-    let contentView = UIView()
+    let contentView: UIView = {
+      let view = UIView()
+      view.backgroundColor = .clear
+      view.isOpaque = false
+      view.accessibilityIdentifier = "toolSurfaceContentView"
+      return view
+    }()
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-    /// Clips the whole Tool surface to the final crop viewport.
-    let cropClipLayer: CAShapeLayer = {
-      let layer = CAShapeLayer()
-      layer.fillColor = UIColor.white.cgColor
-      return layer
-    }()
-    /// Darkens the non-crop area around the visible crop boundary.
-    ///
-    /// The path is an even-odd fill in the same coordinate space as
-    /// `cropBoundaryOverlayLayer`, so the crop rectangle stays clear while the
-    /// surrounding area is visually pushed back.
-    let cropBoundaryDimmingLayer: CAShapeLayer = {
-      let layer = CAShapeLayer()
-      layer.fillColor = UIColor.black.withAlphaComponent(0.45).cgColor
-      layer.fillRule = .evenOdd
-      layer.isHidden = true
-      return layer
-    }()
-    let cropBoundaryOverlayLayer: CAShapeLayer = {
-      let layer = CAShapeLayer()
-      layer.fillColor = UIColor.clear.cgColor
-      layer.strokeColor = UIColor.clear.cgColor
-      layer.lineJoin = .round
-      layer.lineCap = .round
-      layer.shadowColor = UIColor.black.cgColor
-      layer.shadowOpacity = 0
-      layer.shadowRadius = 2
-      layer.shadowOffset = .zero
-      layer.isHidden = true
-      return layer
-    }()
     var canvasView: _EditingCanvasMTKView?
     var canvasSize: CGSize?
     var crop: EditingCrop?
-    weak var cropBoundaryOverlayContainerView: UIView?
+    var outputGeometry: EditingCanvasCropOutputGeometry?
     let viewportRendering = ViewportRenderingState(surface: .tool)
 
     /// Called when the tool scroll view changes zoom scale.
     var onDidZoom: (() -> Void)?
     /// Called when the tool scroll view changes content offset.
     var onDidScroll: (() -> Void)?
+    /// Called when the user starts panning the tool viewport.
+    var onWillBeginDragging: (() -> Void)?
     /// Called when the user starts pinching the tool viewport.
     var onWillBeginZooming: (() -> Void)?
     /// Called when tool viewport dragging ends.
@@ -652,9 +629,7 @@ final class CropView: UIView {
       canvasView = nil
       canvasSize = nil
       crop = nil
-      cropBoundaryDimmingLayer.removeFromSuperlayer()
-      cropBoundaryOverlayLayer.removeFromSuperlayer()
-      cropBoundaryOverlayContainerView = nil
+      outputGeometry = nil
     }
 
     func hideCanvasView() {
@@ -690,18 +665,19 @@ final class CropView: UIView {
 
     func updateCanvas(
       loadedState: EditingStack.Loaded,
-      crop: EditingCrop,
+      geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,
       committedStrokes: [EditingCanvasStrokeRecord]
     ) {
-      guard crop.imageSize == canvasSize, let canvasView else {
+      guard geometry.outputSize == canvasSize, let canvasView else {
         return
       }
+      outputGeometry = geometry
 
       guard
-        let images = EditingCanvasRenderImageFactory.makeRenderImages(
+        let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
           loadedState: loadedState,
-          canvasSize: crop.imageSize,
+          geometry: geometry,
           mode: mode
         )
       else {
@@ -756,12 +732,15 @@ final class CropView: UIView {
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-      updateCropBoundaryLineWidth()
       onDidZoom?()
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
       onDidScroll?()
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+      onWillBeginDragging?()
     }
 
     func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
@@ -784,53 +763,28 @@ final class CropView: UIView {
       onDidEndDecelerating?()
     }
 
-    func hideCropBoundary() {
-      canvasView?.layer.mask = nil
-      cropBoundaryDimmingLayer.removeFromSuperlayer()
-      cropBoundaryDimmingLayer.path = nil
-      cropBoundaryDimmingLayer.isHidden = true
-      cropBoundaryOverlayLayer.removeFromSuperlayer()
-      cropBoundaryOverlayLayer.path = nil
-      cropBoundaryOverlayLayer.isHidden = true
-      cropBoundaryOverlayContainerView = nil
-    }
-
-    func updateCropBoundary(
-      cropRectInPlatter: CGRect,
-      platterBounds: CGRect,
-      cropBoundaryOverlayPath: CGPath,
-      cropBoundaryOverlayBounds: CGRect,
-      cropBoundaryOverlayContainerView: UIView
-    ) {
-      self.cropBoundaryOverlayContainerView = cropBoundaryOverlayContainerView
-      cropClipLayer.frame = platterBounds
-      cropClipLayer.path = UIBezierPath(rect: cropRectInPlatter).cgPath
-
-      if cropBoundaryDimmingLayer.superlayer !== cropBoundaryOverlayContainerView.layer {
-        cropBoundaryDimmingLayer.removeFromSuperlayer()
-        cropBoundaryOverlayContainerView.layer.addSublayer(cropBoundaryDimmingLayer)
-      }
-
-      cropBoundaryOverlayLayer.removeFromSuperlayer()
-      cropBoundaryOverlayContainerView.layer.addSublayer(cropBoundaryOverlayLayer)
-
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      cropBoundaryDimmingLayer.frame = cropBoundaryOverlayBounds
-      cropBoundaryDimmingLayer.path = CropView.makeBoundaryDimmingPath(
-        bounds: CGRect(origin: .zero, size: cropBoundaryOverlayBounds.size),
-        cropBoundaryPath: cropBoundaryOverlayPath
+    /// Centers the crop-output image when the zoomed content is smaller than
+    /// the Tool viewport. Tool mode presents the crop output as an image, so
+    /// empty space belongs around that image rather than inside the image.
+    func centerContentInViewport() {
+      let contentSize = zoomedContentSize
+      scrollView.contentSize = contentSize
+      let horizontalInset = max((scrollView.bounds.width - contentSize.width) / 2, 0)
+      let verticalInset = max((scrollView.bounds.height - contentSize.height) / 2, 0)
+      scrollView.contentInset = UIEdgeInsets(
+        top: verticalInset,
+        left: horizontalInset,
+        bottom: verticalInset,
+        right: horizontalInset
       )
-      cropBoundaryDimmingLayer.isHidden = false
-      cropBoundaryOverlayLayer.frame = cropBoundaryOverlayBounds
-      cropBoundaryOverlayLayer.path = cropBoundaryOverlayPath
-      updateCropBoundaryLineWidth()
-      cropBoundaryOverlayLayer.isHidden = false
-      CATransaction.commit()
     }
 
-    func updateCropBoundaryLineWidth() {
-      cropBoundaryOverlayLayer.lineWidth = 1
+    var zoomedContentSize: CGSize {
+      let contentSize = outputGeometry?.outputSize ?? contentView.frame.size
+      return CGSize(
+        width: contentSize.width * scrollView.zoomScale,
+        height: contentSize.height * scrollView.zoomScale
+      )
     }
 
   }
@@ -1041,17 +995,15 @@ final class CropView: UIView {
       toolSurface.drawingGestureRecognizer.isEnabled = false
       toolSurface.drawingGestureRecognizer.onBegin = { [weak self] point in
         guard let self else { return }
-        self.toolSurface.beginStroke(at: self.imagePoint(fromPlatterPoint: point))
+        self.toolSurface.beginStroke(at: point)
       }
       toolSurface.drawingGestureRecognizer.onMove = { [weak self] points in
         guard let self else { return }
-        self.toolSurface.appendStroke(
-          points: points.map { self.imagePoint(fromPlatterPoint: $0) }
-        )
+        self.toolSurface.appendStroke(points: points)
       }
       toolSurface.drawingGestureRecognizer.onEnd = { [weak self] point in
         guard let self else { return }
-        self.toolSurface.endStroke(at: self.imagePoint(fromPlatterPoint: point))
+        self.toolSurface.endStroke(at: point)
       }
       toolSurface.drawingGestureRecognizer.onCancel = { [weak self] in
         self?.toolSurface.cancelStroke()
@@ -1143,15 +1095,15 @@ final class CropView: UIView {
       }
 
       toolSurface.onDidZoom = { [weak self] in
-        self?.updateToolViewportDuringScrollInteraction()
+        guard let self else { return }
+        self.toolSurface.centerContentInViewport()
+        self.updateToolViewportDuringScrollInteraction()
       }
       toolSurface.onDidScroll = { [weak self] in
-        guard let self else { return }
-        if self.toolSurface.isZoomInteractionActive || self.toolSurface.viewportRendering.isRunning {
-          self.updateToolViewportDuringScrollInteraction()
-        } else {
-          self.updateToolCropDisplayViewport()
-        }
+        self?.updateToolViewportDuringScrollInteraction()
+      }
+      toolSurface.onWillBeginDragging = { [weak self] in
+        self?.beginViewportRendering(for: .tool)
       }
       toolSurface.onWillBeginZooming = { [weak self] in
         self?.stopViewportRendering(for: .tool, appliesViewport: false)
@@ -1440,10 +1392,10 @@ extension CropView {
       return
     }
 
-    func ensureToolCanvas() -> Bool {
+    func ensureToolCanvas(geometry: EditingCanvasCropOutputGeometry) -> Bool {
       cropSurface.hideCanvasView()
       return toolSurface.ensureCanvasView(
-        canvasSize: crop.imageSize,
+        canvasSize: geometry.outputSize,
         brush: canvasBrush,
         smoothing: canvasStrokeSmoothing,
         onStrokeCommit: { [weak self] record, completion in
@@ -1472,28 +1424,34 @@ extension CropView {
       updateCropDisplayViewport()
 
     case .viewing:
-      guard ensureToolCanvas() else {
+      guard
+        let geometry = EditingCanvasCropOutputGeometry(crop: crop),
+        ensureToolCanvas(geometry: geometry)
+      else {
         return
       }
 
       toolSurface.updateCanvas(
         loadedState: loadedState,
-        crop: crop,
+        geometry: geometry,
         mode: .renderedEditPreview,
         committedStrokes: []
       )
       updateToolCropDisplayViewport()
 
     case let .masking(effect):
-      guard ensureToolCanvas() else {
+      guard
+        let geometry = EditingCanvasCropOutputGeometry(crop: crop),
+        ensureToolCanvas(geometry: geometry)
+      else {
         return
       }
 
       toolSurface.updateCanvas(
         loadedState: loadedState,
-        crop: crop,
+        geometry: geometry,
         mode: .localAdjustment(effect: effect),
-        committedStrokes: currentToolCommittedStrokes()
+        committedStrokes: currentToolCommittedStrokes(in: geometry)
       )
       updateToolCropDisplayViewport()
     }
@@ -1515,7 +1473,7 @@ extension CropView {
       return
     }
 
-    updateToolCropMask()
+    surfaceHost.platterView.layer.mask = nil
     toolSurface.applyViewport(makeToolCropDisplayViewport())
   }
 
@@ -1644,68 +1602,52 @@ extension CropView {
   }
 
   private func makeToolCropDisplayViewport() -> CropDisplayViewport? {
-    guard let crop = state.proposedCrop else {
+    guard let geometry = toolSurface.outputGeometry else {
       return nil
     }
 
-    let canvasFrame = Self.currentLayerRect(
-      bounds,
-      from: self,
-      to: toolSurface.scrollView
-    )
+    let canvasFrame = toolSurface.scrollView.bounds
       .standardized
     guard canvasFrame.width > 0, canvasFrame.height > 0 else {
       return nil
     }
 
-    let cropViewportFrame = Self.currentLayerRect(
-      guideView.bounds,
-      from: guideView,
-      to: toolSurface.scrollView
+    let zoomScale = max(toolSurface.scrollView.zoomScale, 0.0001)
+    let viewportOriginInOutput = CGPoint(
+      x: (toolSurface.scrollView.contentOffset.x + toolSurface.scrollView.contentInset.left)
+        / zoomScale,
+      y: (toolSurface.scrollView.contentOffset.y + toolSurface.scrollView.contentInset.top)
+        / zoomScale
     )
-      .standardized
-    guard cropViewportFrame.width > 0, cropViewportFrame.height > 0 else {
+    let outputBounds = geometry.outputBounds
+    let visibleOutputRect = CGRect(
+      x: viewportOriginInOutput.x,
+      y: viewportOriginInOutput.y,
+      width: canvasFrame.width / zoomScale,
+      height: canvasFrame.height / zoomScale
+    )
+      .intersection(outputBounds)
+
+    guard visibleOutputRect.isNull == false, visibleOutputRect.isEmpty == false else {
       return nil
     }
 
-    let platterBounds = CGRect(origin: .zero, size: toolSurface.contentView.bounds.size)
-    let visiblePlatterRect = Self.currentLayerRect(
-      guideView.bounds,
-      from: guideView,
-      to: toolSurface.contentView
-    )
-      .standardized
-      .intersection(platterBounds)
-
-    guard visiblePlatterRect.isNull == false, visiblePlatterRect.isEmpty == false else {
-      return nil
-    }
-
-    let imageBounds = CGRect(origin: .zero, size: crop.imageSize)
-    let visibleImageRect = Self.platterRectToImageRect(visiblePlatterRect, crop: crop)
-      .intersection(imageBounds)
-
-    guard visibleImageRect.isNull == false, visibleImageRect.isEmpty == false else {
-      return nil
-    }
-
-    let resolvedVisiblePlatterRect = Self.imageRectToPlatterRect(visibleImageRect, crop: crop)
-    let resolvedVisibleScrollRect = Self.currentLayerRect(
-      resolvedVisiblePlatterRect,
-      from: toolSurface.contentView,
-      to: toolSurface.scrollView
-    )
-      .standardized
-    let visibleCanvasFrame = resolvedVisibleScrollRect.offsetBy(
-      dx: -canvasFrame.minX,
-      dy: -canvasFrame.minY
+    let visibleCanvasFrame = CGRect(
+      x: toolSurface.scrollView.contentInset.left
+        + visibleOutputRect.minX * zoomScale
+        - (toolSurface.scrollView.contentOffset.x + toolSurface.scrollView.contentInset.left),
+      y: toolSurface.scrollView.contentInset.top
+        + visibleOutputRect.minY * zoomScale
+        - (toolSurface.scrollView.contentOffset.y + toolSurface.scrollView.contentInset.top),
+      width: visibleOutputRect.width * zoomScale,
+      height: visibleOutputRect.height * zoomScale
     )
 
     return .init(
       viewportFrameInScrollView: canvasFrame,
-      visibleContentRect: visibleImageRect,
+      visibleContentRect: visibleOutputRect,
       visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: toolSurface.scrollView.zoomScale,
+      zoomScale: zoomScale,
       contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
     )
   }
@@ -1781,39 +1723,6 @@ extension CropView {
         y: contentSize.height / max(crop.imageSize.height, 0.0001)
       )
     )
-  }
-
-  private static func toolCropExtentBoundaryPointsInContent(
-    cropRectInContent: CGRect,
-    rotationRadians: CGFloat
-  ) -> [CGPoint] {
-    let corners = [
-      CGPoint(x: cropRectInContent.minX, y: cropRectInContent.minY),
-      CGPoint(x: cropRectInContent.maxX, y: cropRectInContent.minY),
-      CGPoint(x: cropRectInContent.maxX, y: cropRectInContent.maxY),
-      CGPoint(x: cropRectInContent.minX, y: cropRectInContent.maxY)
-    ]
-
-    guard rotationRadians != 0 else {
-      return corners
-    }
-
-    let center = CGPoint(x: cropRectInContent.midX, y: cropRectInContent.midY)
-    let transform = CGAffineTransform(translationX: center.x, y: center.y)
-      .rotated(by: -rotationRadians)
-      .translatedBy(x: -center.x, y: -center.y)
-
-    return corners.map { $0.applying(transform) }
-  }
-
-  private static func makeBoundaryDimmingPath(
-    bounds: CGRect,
-    cropBoundaryPath: CGPath
-  ) -> CGPath {
-    let path = CGMutablePath()
-    path.addRect(bounds)
-    path.addPath(cropBoundaryPath)
-    return path
   }
 
   #if DEBUG
@@ -2024,7 +1933,6 @@ extension CropView {
     #endif
 
     updateCropDisplayViewport()
-    updateToolCropMask()
     updateToolCropDisplayViewport()
   }
 
@@ -2258,7 +2166,11 @@ extension CropView {
     crop: EditingCrop,
     syncsViewportFromCropSurface: Bool = false
   ) {
-    let contentSize = crop.scrollViewContentSize()
+    guard let geometry = EditingCanvasCropOutputGeometry(crop: crop) else {
+      return
+    }
+
+    let contentSize = geometry.outputSize
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
     let shouldResetToolSurface = syncsViewportFromCropSurface
       || isContentSizeChanged
@@ -2270,77 +2182,62 @@ extension CropView {
       toolSurface.scrollView.contentSize = contentSize
     }
 
-    toolSurface.scrollView.bounds.size = cropSurface.scrollView.bounds.size
-    toolSurface.scrollView.center = cropSurface.scrollView.center
-    toolSurface.scrollView.transform = cropSurface.scrollView.transform
-    toolSurface.scrollView.contentInset = cropSurface.scrollView.contentInset
-    toolSurface.scrollView.minimumZoomScale = cropSurface.scrollView.minimumZoomScale
-    toolSurface.scrollView.maximumZoomScale = max(
-      cropSurface.scrollView.zoomScale * 8,
-      cropSurface.scrollView.minimumZoomScale * 8,
-      cropSurface.scrollView.zoomScale
+    let toolFrame = self
+      .convert(bounds, to: surfaceHost.platterView)
+      .standardized
+    guard toolFrame.width > 0, toolFrame.height > 0 else {
+      return
+    }
+
+    toolSurface.scrollView.transform = .identity
+    toolSurface.scrollView.frame = toolFrame
+
+    let minZoomScale = min(
+      toolFrame.width / max(contentSize.width, 0.0001),
+      toolFrame.height / max(contentSize.height, 0.0001)
     )
+    toolSurface.scrollView.minimumZoomScale = minZoomScale
+    toolSurface.scrollView.maximumZoomScale = max(minZoomScale * 8, minZoomScale)
 
     if shouldResetToolSurface {
-      // Rendering equivalence does not include viewport-only crop scroll changes.
-      // When entering Tool mode, copy the live Crop viewport so mask rendering
-      // starts from the same zoom/offset the user was just inspecting.
-      toolSurface.scrollView.setZoomScale(cropSurface.scrollView.zoomScale, animated: false)
-      toolSurface.scrollView.setContentOffset(cropSurface.scrollView.contentOffset, animated: false)
+      // Tool mode displays the crop output as its own image. Entering Tool mode
+      // resets navigation to the fitted crop-output viewport rather than copying
+      // Crop mode's source-image pan and rotation state.
+      toolSurface.scrollView.setZoomScale(minZoomScale, animated: false)
       toolSurface.crop = crop
+      toolSurface.outputGeometry = geometry
+      toolSurface.centerContentInViewport()
+      resetToolScrollViewContentOffset()
     } else if toolSurface.scrollView.zoomScale < toolSurface.scrollView.minimumZoomScale {
       toolSurface.scrollView.setZoomScale(toolSurface.scrollView.minimumZoomScale, animated: false)
+      toolSurface.centerContentInViewport()
+      resetToolScrollViewContentOffset()
     } else if toolSurface.scrollView.zoomScale > toolSurface.scrollView.maximumZoomScale {
       toolSurface.scrollView.setZoomScale(toolSurface.scrollView.maximumZoomScale, animated: false)
+      toolSurface.centerContentInViewport()
+      resetToolScrollViewContentOffset()
+    } else {
+      toolSurface.outputGeometry = geometry
+      toolSurface.centerContentInViewport()
     }
 
-    updateToolCropMask()
+    surfaceHost.platterView.layer.mask = nil
   }
 
-  private func updateToolCropMask() {
-    guard surfaceMode != .crop, let crop = state.proposedCrop else {
-      surfaceHost.platterView.layer.mask = nil
-      toolSurface.hideCropBoundary()
-      return
-    }
-
-    let cropRect = guideView.convert(guideView.bounds, to: surfaceHost.platterView).standardized
-    guard cropRect.width > 0, cropRect.height > 0 else {
-      surfaceHost.platterView.layer.mask = nil
-      toolSurface.hideCropBoundary()
-      return
-    }
-
-    toolSurface.updateCropBoundary(
-      cropRectInPlatter: cropRect,
-      platterBounds: surfaceHost.platterView.bounds,
-      cropBoundaryOverlayPath: makeToolCropExtentBoundaryPath(crop: crop, in: self),
-      cropBoundaryOverlayBounds: bounds,
-      cropBoundaryOverlayContainerView: self
+  private func resetToolScrollViewContentOffset() {
+    let scrollView = toolSurface.scrollView
+    let contentSize = toolSurface.zoomedContentSize
+    let offset = CGPoint(
+      x: (contentSize.width - scrollView.bounds.width) / 2,
+      y: (contentSize.height - scrollView.bounds.height) / 2
     )
-    surfaceHost.platterView.layer.mask = toolSurface.cropClipLayer
-  }
-
-  private func makeToolCropExtentBoundaryPath(
-    crop: EditingCrop,
-    in targetView: UIView
-  ) -> CGPath {
-    let cropRectInContent = Self.imageRectToPlatterRect(crop.cropExtent, crop: crop).standardized
-    let cornersInContent = Self.toolCropExtentBoundaryPointsInContent(
-      cropRectInContent: cropRectInContent,
-      rotationRadians: crop.aggregatedRotation.radians
+    scrollView.setContentOffset(
+      CGPoint(
+        x: max(offset.x, -scrollView.contentInset.left),
+        y: max(offset.y, -scrollView.contentInset.top)
+      ),
+      animated: false
     )
-    let corners = cornersInContent.map { toolSurface.contentView.convert($0, to: targetView) }
-
-    let path = CGMutablePath()
-    guard let first = corners.first else {
-      return path
-    }
-
-    path.move(to: first)
-    corners.dropFirst().forEach { path.addLine(to: $0) }
-    path.closeSubpath()
-    return path
   }
 
   @inline(__always)
@@ -2423,7 +2320,6 @@ extension CropView {
       normalizedCropExtent,
       currentCrop: crop
     )
-
     debugLogRecordedCropExtent(
       source: scrollViewAdjustmentKind,
       normalizedRect: normalizedCropExtent,
@@ -2574,12 +2470,6 @@ extension CropView {
   }
 
   private func updateToolViewportDuringScrollInteraction() {
-    guard toolSurface.isInteractiveZoomGestureActive == false else {
-      stopViewportRendering(for: .tool, appliesViewport: false)
-      updateToolCropDisplayViewport()
-      return
-    }
-
     keepViewportRenderingAlive(for: .tool)
 
     if toolSurface.viewportRendering.isRunning == false {
@@ -2651,7 +2541,7 @@ extension CropView {
       return
     }
 
-    guard isViewportInteractiveZoomGestureActive(for: surface) == false else {
+    guard surface == .tool || isViewportInteractiveZoomGestureActive(for: surface) == false else {
       stopViewportRendering(for: surface, appliesViewport: false)
       return
     }
@@ -2940,6 +2830,12 @@ extension CropView: UIGestureRecognizerDelegate {
 
     let wasCropMode = surfaceMode == .crop
     let previousEffect = surfaceMode.localEffect
+    if wasCropMode && mode != .crop {
+      // Leaving Crop mode commits the currently visible crop viewport before
+      // Tool mode derives its crop-output display geometry.
+      record()
+    }
+
     surfaceMode = mode
 
     if previousEffect?.editingCanvasEffectIdentity != mode.localEffect?.editingCanvasEffectIdentity {
@@ -2996,7 +2892,7 @@ extension CropView: UIGestureRecognizerDelegate {
     }
 
     setCropGuideVisibility(isVisible: isCropMode)
-    updateToolCropMask()
+    surfaceHost.platterView.layer.mask = nil
     updateCropDisplayViewport()
     updateToolCropDisplayViewport()
 
@@ -3067,7 +2963,18 @@ extension CropView: UIGestureRecognizerDelegate {
     record: EditingCanvasStrokeRecord,
     completion: @escaping () -> Void
   ) {
-    appendRecordToEditingStack(record)
+    let committedRecord: EditingCanvasStrokeRecord
+    if
+      surfaceMode != .crop,
+      let crop = state.proposedCrop,
+      let geometry = EditingCanvasCropOutputGeometry(crop: crop)
+    {
+      committedRecord = geometry.sourceRecord(fromOutputRecord: record)
+    } else {
+      committedRecord = record
+    }
+
+    appendRecordToEditingStack(committedRecord)
     syncCommittedStrokesFromEditingStack()
     completion()
   }
@@ -3121,12 +3028,31 @@ extension CropView: UIGestureRecognizerDelegate {
   }
 
   private func syncCommittedStrokesFromEditingStack() {
-    let records = currentToolCommittedStrokes()
-    cropSurface.setCommittedStrokes(records)
-    toolSurface.setCommittedStrokes(records)
+    let sourceRecords = currentSourceCommittedStrokes()
+    cropSurface.setCommittedStrokes(sourceRecords)
+
+    guard
+      let crop = state.proposedCrop,
+      let geometry = EditingCanvasCropOutputGeometry(crop: crop)
+    else {
+      toolSurface.setCommittedStrokes(sourceRecords)
+      return
+    }
+
+    toolSurface.setCommittedStrokes(
+      sourceRecords.map { geometry.outputRecord(fromSourceRecord: $0) }
+    )
   }
 
-  private func currentToolCommittedStrokes() -> [EditingCanvasStrokeRecord] {
+  private func currentToolCommittedStrokes(
+    in geometry: EditingCanvasCropOutputGeometry
+  ) -> [EditingCanvasStrokeRecord] {
+    currentSourceCommittedStrokes().map {
+      geometry.outputRecord(fromSourceRecord: $0)
+    }
+  }
+
+  private func currentSourceCommittedStrokes() -> [EditingCanvasStrokeRecord] {
     let localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
       return []
@@ -3159,17 +3085,5 @@ extension CropView: UIGestureRecognizerDelegate {
 
     editingCanvasLocalAdjustmentLayerID = localAdjustments[index].id
     return index
-  }
-
-  fileprivate func imagePoint(fromPlatterPoint point: CGPoint) -> CGPoint {
-    guard let crop = state.proposedCrop else {
-      return point
-    }
-
-    let contentSize = crop.scrollViewContentSize()
-    return CGPoint(
-      x: point.x * (crop.imageSize.width / max(contentSize.width, 0.0001)),
-      y: point.y * (crop.imageSize.height / max(contentSize.height, 0.0001))
-    )
   }
 }

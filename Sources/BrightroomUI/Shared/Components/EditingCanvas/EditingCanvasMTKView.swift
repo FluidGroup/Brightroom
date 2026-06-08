@@ -76,7 +76,7 @@ struct EditingCanvasRenderImages {
 
 final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
-  /// Source-image viewport values used to render the current drawable.
+  /// Canvas-content viewport values used to render the current drawable.
   ///
   /// A viewport may be supplied at draw time so the renderer can resolve
   /// presentation-layer geometry as close as possible to the Metal draw pass.
@@ -1119,28 +1119,18 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
     guard
-      let imageBounds = viewportTextureContentFrame(
-        pixelWidth: pixelWidth,
-        pixelHeight: pixelHeight
-      )?.intersection(renderBounds),
-      imageBounds.isEmpty == false
-    else {
-      clearCurrentDrawable()
-      return
-    }
-    guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds),
+      )?.cropped(to: renderBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds),
+      )?.cropped(to: renderBounds),
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds)
+      )?.cropped(to: renderBounds)
     else {
       clearCurrentDrawable()
       return
@@ -1154,7 +1144,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
           kCIInputMaskImageKey: maskImage,
         ]
       )
-      .cropped(to: imageBounds)
+      .cropped(to: renderBounds)
 
     renderDrawableImage(
       compositedImage,

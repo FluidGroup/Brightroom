@@ -404,10 +404,6 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       cropView.displayMode = displayMode
     }
 
-    cropView.setCanvasBrush(brush)
-    cropView.setCanvasStrokeSmoothing(strokeSmoothing)
-    cropView.setSurfaceMode(surfaceMode)
-
     context.coordinator.applySwiftUIInputs {
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
@@ -422,6 +418,10 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
 
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
     }
+
+    cropView.setCanvasBrush(brush)
+    cropView.setCanvasStrokeSmoothing(strokeSmoothing)
+    cropView.setSurfaceMode(surfaceMode)
 
     cropView.updateCurrentEditingStackDisplay()
     configureActions(on: cropView)

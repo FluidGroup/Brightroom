@@ -89,6 +89,86 @@ enum EditingCanvasRenderImageFactory {
     )
   }
 
+  static func makeCropOutputRenderImages(
+    loadedState: EditingStack.Loaded,
+    geometry: EditingCanvasCropOutputGeometry,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
+    let canvasRect = geometry.outputBounds
+    let sourceRect = CGRect(origin: .zero, size: geometry.sourceImageSize)
+    let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+    let displaySourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
+    let sourceImage = scaledImage(
+      displaySourceImage,
+      canvasSize: geometry.sourceImageSize,
+      canvasRect: sourceRect
+    )
+    let sourceExtent = sourceImage.extent
+    guard sourceExtent.width > 0, sourceExtent.height > 0 else {
+      return nil
+    }
+
+    let cropOutputSourceImage = cropOutputImage(sourceImage, geometry: geometry)
+      .cropped(to: canvasRect)
+
+    let baseImage: CIImage
+    let adjustedImage: CIImage
+    let renderEffect: EditingStack.Edit.LocalAdjustmentEffect
+    switch mode {
+    case .viewportBase:
+      baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        loadedState.currentEdit.filters.apply(to: cropOutputSourceImage)
+          .cropped(to: canvasRect),
+        source: cropOutputSourceImage
+      )
+      adjustedImage = baseImage
+      renderEffect = .gaussianBlur(radius: 0)
+
+    case let .localAdjustment(localEffect):
+      let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        loadedState.currentEdit.filters
+          .apply(to: sourceImage)
+          .cropped(to: sourceExtent),
+        source: sourceImage
+      )
+      let adjustedSourceImage: CIImage
+      if localEffect.usesEditingCanvasShaderCompositeExposure {
+        adjustedSourceImage = filteredSourceImage
+      } else {
+        adjustedSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+          localEffect.apply(to: filteredSourceImage, previewScale: 1)
+            .cropped(to: sourceExtent),
+          source: sourceImage
+        )
+      }
+
+      baseImage = cropOutputImage(filteredSourceImage, geometry: geometry)
+        .cropped(to: canvasRect)
+      adjustedImage = cropOutputImage(adjustedSourceImage, geometry: geometry)
+        .cropped(to: canvasRect)
+      renderEffect = localEffect
+
+    case .renderedEditPreview, .preview:
+      let previewImage = loadedState.currentEdit
+        .makePreviewImage(from: sourceImage, purpose: .editing)
+        .cropped(to: sourceExtent)
+      let displayPreviewImage = cropOutputImage(previewImage, geometry: geometry)
+        .cropped(to: canvasRect)
+      baseImage = displayPreviewImage
+      adjustedImage = displayPreviewImage
+      renderEffect = .gaussianBlur(radius: 0)
+    }
+
+    return .init(
+      source: cropOutputSourceImage,
+      filters: loadedState.currentEdit.filters,
+      base: baseImage,
+      adjusted: adjustedImage,
+      localEffect: renderEffect,
+      usesPreparedBaseImage: true
+    )
+  }
+
   private static func scaledImage(
     _ image: CIImage,
     canvasSize: CGSize,
@@ -109,6 +189,15 @@ enum EditingCanvasRenderImageFactory {
     } else {
       return image.cropped(to: canvasRect)
     }
+  }
+
+  private static func cropOutputImage(
+    _ image: CIImage,
+    geometry: EditingCanvasCropOutputGeometry
+  ) -> CIImage {
+    image
+      .transformed(by: geometry.sourceToOutputTransform)
+      .cropped(to: geometry.outputBounds)
   }
 
   private static func sanitizedRenderBounds(
