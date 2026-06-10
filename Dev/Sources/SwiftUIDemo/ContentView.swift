@@ -81,7 +81,6 @@ struct ContentView: View {
           NavigationLink("Parametric Video") {
             ParametricVideoRenderPlaygroundView()
           }
-
           NavigationLink("Metal Brush Sandbox NASA") {
             MetalBrushSandboxView(fileURL: nasaImageURL)
           }
