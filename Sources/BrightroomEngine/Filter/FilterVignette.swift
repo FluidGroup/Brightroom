@@ -33,14 +33,22 @@ public struct FilterVignette: Filtering, Equatable, Codable, Sendable {
     
   public func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
 
-    let radius = RadiusCalculator.radius(value: value, max: FilterVignette.range.max, imageExtent: image.extent)
+    guard abs(value) > 0.0001 else {
+      return image
+    }
 
-    return
-      image.applyingFilter(
-        "CIVignette",
-        parameters: [
-          kCIInputRadiusKey: radius as AnyObject,
-          kCIInputIntensityKey: value as AnyObject,
-        ])
+    let extent = image.extent
+    let radius = max(extent.width, extent.height) * 0.5
+
+    return image.applyingFilter(
+      "CIVignetteEffect",
+      parameters: [
+        kCIInputCenterKey: CIVector(x: extent.midX, y: extent.midY),
+        kCIInputRadiusKey: radius,
+        kCIInputIntensityKey: value,
+        "inputFalloff": 0.5,
+      ]
+    )
+    .cropped(to: extent)
   }
 }
