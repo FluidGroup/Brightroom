@@ -62,7 +62,6 @@ extension CropView {
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
 
     private unowned let containerView: CropView
-    private unowned let imageView: UIView
 
     private lazy var invertedMaskShapeLayerView = MaskView()
 
@@ -76,11 +75,9 @@ extension CropView {
 
     init(
       containerView: CropView,
-      imageView: UIView,
       insetOfGuideFlexibility: UIEdgeInsets
     ) {
       self.containerView = containerView
-      self.imageView = imageView
       self.insetOfGuideFlexibility = insetOfGuideFlexibility
 
       super.init(frame: .zero)

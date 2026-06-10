@@ -14,10 +14,6 @@ struct IsolatedEditinView: View {
           DemoPhotosCropView(stack: editingStack)
         }
       }
-
-      Button("Blur Mask") {
-        fullScreenView = .init { SwiftUIBlurryMaskingView(editingStack: editingStack) }
-      }
     }
     .navigationTitle("Isolated-Editing")
     .fullScreenCover(

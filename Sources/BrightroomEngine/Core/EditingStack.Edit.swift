@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 
 import CoreImage
+import Foundation
+import UIKit
 
 extension EditingStack {
   // TODO: Consider more effective shape
@@ -35,6 +37,7 @@ extension EditingStack {
     /// In orientation.up
     public var crop: EditingCrop
     public var filters: Filters = .init()
+    public var localAdjustments: [LocalAdjustmentLayer] = []
     public var drawings: Drawings = .init()
     
     init(crop: EditingCrop) {
@@ -43,8 +46,74 @@ extension EditingStack {
 
     func isRenderingEquivalent(to other: Self) -> Bool {
       filters == other.filters
+        && localAdjustments == other.localAdjustments
         && drawings == other.drawings
         && crop.isRenderingEquivalent(to: other.crop)
+    }
+
+    public struct LocalAdjustmentLayer: Equatable {
+      public var id: UUID
+      public var isEnabled: Bool
+      public var effect: LocalAdjustmentEffect
+      public var mask: LocalAdjustmentMask
+
+      public init(
+        id: UUID = UUID(),
+        isEnabled: Bool = true,
+        effect: LocalAdjustmentEffect,
+        mask: LocalAdjustmentMask = .init()
+      ) {
+        self.id = id
+        self.isEnabled = isEnabled
+        self.effect = effect
+        self.mask = mask
+      }
+    }
+
+    public enum LocalAdjustmentEffect: Equatable {
+      case gaussianBlur(radius: CGFloat)
+      case exposure(value: Double)
+    }
+
+    public struct LocalAdjustmentMask: Equatable {
+      public var strokes: [LocalAdjustmentStroke]
+
+      public init(strokes: [LocalAdjustmentStroke] = []) {
+        self.strokes = strokes
+      }
+
+      public var isEmpty: Bool {
+        strokes.allSatisfy(\.stamps.isEmpty)
+      }
+    }
+
+    public struct LocalAdjustmentStroke: Equatable {
+      public var stamps: [CGPoint]
+      public var brush: LocalAdjustmentBrush
+
+      public init(
+        stamps: [CGPoint],
+        brush: LocalAdjustmentBrush
+      ) {
+        self.stamps = stamps
+        self.brush = brush
+      }
+    }
+
+    public struct LocalAdjustmentBrush: Equatable {
+      public var size: CGFloat
+      public var hardness: CGFloat
+      public var opacity: CGFloat
+
+      public init(
+        size: CGFloat,
+        hardness: CGFloat,
+        opacity: CGFloat
+      ) {
+        self.size = size
+        self.hardness = hardness
+        self.opacity = opacity
+      }
     }
     
     public struct Drawings: Equatable {
