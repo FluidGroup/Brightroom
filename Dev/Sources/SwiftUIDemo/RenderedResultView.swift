@@ -4,11 +4,13 @@ struct ResultImage: Identifiable {
   let id: String
   let cgImage: CGImage
   let image: Image
+  let metadata: [String]
 
-  init(cgImage: CGImage) {
+  init(cgImage: CGImage, metadata: [String] = []) {
     self.id = UUID().uuidString
     self.cgImage = cgImage
     self.image = .init(decorative: cgImage, scale: 1, orientation: .up)
+    self.metadata = metadata
   }
 }
 
@@ -26,6 +28,17 @@ struct RenderedResultView: View {
       Text(Self.makeMetadataString(image: result.cgImage))
         .foregroundStyle(.secondary)
         .font(.caption)
+
+      if !result.metadata.isEmpty {
+        VStack(alignment: .leading, spacing: 2) {
+          ForEach(result.metadata, id: \.self) { line in
+            Text(line)
+              .foregroundStyle(.secondary)
+              .font(.caption)
+          }
+        }
+        .accessibilityIdentifier("rendered-result-edit-metadata")
+      }
     }
   }
 

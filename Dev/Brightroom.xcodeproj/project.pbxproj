@@ -2214,7 +2214,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -2236,7 +2236,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

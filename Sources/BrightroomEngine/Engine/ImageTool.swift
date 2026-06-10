@@ -116,7 +116,19 @@ public enum ImageTool: Sendable {
       [
         kCGImageSourceCreateThumbnailWithTransform: fixesOrientation
       ] as CFDictionary
-    )
+      )
+  }
+
+  static func makeDecodedCGImage(from image: CGImage) -> CGImage? {
+    autoreleasepool {
+      guard let context = try? CGContext.makeContext(for: image) else {
+        return nil
+      }
+
+      context.interpolationQuality = .none
+      context.draw(image, in: context.boundingBoxOfClipPath)
+      return context.makeImage()
+    }
   }
 
   public static func writeImageToTmpDirectory(image: UIImage) -> URL? {
