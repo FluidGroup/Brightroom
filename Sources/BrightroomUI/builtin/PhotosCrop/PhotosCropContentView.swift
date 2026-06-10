@@ -41,6 +41,7 @@ struct PhotosCropContentView: View {
   @State private var resetAction = SwiftUICropView.ResetAction()
   @State private var rotateAction = SwiftUICropView.RotateAction()
   @State private var applyAction = SwiftUICropView.ApplyAction()
+  @State private var adjustmentAngleCommitAction = SwiftUICropView.AdjustmentAngleCommitAction()
 
   init(
     editingStack: EditingStack,
@@ -85,7 +86,8 @@ struct PhotosCropContentView: View {
             croppingAspectRatio: croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio),
             resetAction: resetAction,
             rotateAction: rotateAction,
-            applyAction: applyAction
+            applyAction: applyAction,
+            adjustmentAngleCommitAction: adjustmentAngleCommitAction
           )
           .layoutPriority(1)
 
@@ -100,6 +102,7 @@ struct PhotosCropContentView: View {
             isLoaded: isLoaded,
             onSelectAspectRatio: selectAspectRatio,
             onSetAdjustmentAngle: setAdjustmentAngle,
+            onCommitAdjustmentAngle: commitAdjustmentAngle,
             onSetBrushDiameter: setBlurMaskingBrushDiameter,
             onClearBlurMask: clearBlurMaskingLayer
           )
@@ -184,6 +187,10 @@ struct PhotosCropContentView: View {
     }
 
     adjustmentAngle = angle
+  }
+
+  private func commitAdjustmentAngle(_ degrees: Double) {
+    adjustmentAngleCommitAction(.init(degrees: degrees))
   }
 
   private func setBlurMaskingBrushDiameter(_ diameter: CGFloat) {
@@ -342,6 +349,7 @@ private struct PhotosCropCanvasHost: View {
   let resetAction: SwiftUICropView.ResetAction
   let rotateAction: SwiftUICropView.RotateAction
   let applyAction: SwiftUICropView.ApplyAction
+  let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction
 
   var body: some View {
     GeometryReader { proxy in
@@ -359,6 +367,7 @@ private struct PhotosCropCanvasHost: View {
       .registerResetAction(resetAction)
       .registerRotateAction(rotateAction)
       .registerApplyAction(applyAction)
+      .registerAdjustmentAngleCommitAction(adjustmentAngleCommitAction)
       .frame(width: proxy.size.width, height: proxy.size.height)
     }
   }
@@ -414,6 +423,7 @@ private struct PhotosCropControlHost: View {
   let isLoaded: Bool
   let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
   let onSetAdjustmentAngle: (Double) -> Void
+  let onCommitAdjustmentAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearBlurMask: () -> Void
 
@@ -429,7 +439,8 @@ private struct PhotosCropControlHost: View {
           isSelectingAspectRatio: isSelectingAspectRatio,
           isLoaded: isLoaded,
           onSelectAspectRatio: onSelectAspectRatio,
-          onSetAdjustmentAngle: onSetAdjustmentAngle
+          onSetAdjustmentAngle: onSetAdjustmentAngle,
+          onCommitAdjustmentAngle: onCommitAdjustmentAngle
         )
 
       case .blurMasking:
@@ -810,6 +821,7 @@ private struct PhotosCropAdjustmentControl: View {
   let isLoaded: Bool
   let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
   let onSetAdjustmentAngle: (Double) -> Void
+  let onCommitAdjustmentAngle: (Double) -> Void
 
   var body: some View {
     Group {
@@ -825,7 +837,8 @@ private struct PhotosCropAdjustmentControl: View {
         PhotosCropRotationSlider(
           value: adjustmentAngle?.degrees ?? 0,
           isEnabled: isLoaded,
-          onChange: onSetAdjustmentAngle
+          onChange: onSetAdjustmentAngle,
+          onEditingEnded: onCommitAdjustmentAngle
         )
         .transition(.opacity)
       }
@@ -839,6 +852,7 @@ private struct PhotosCropRotationSlider: View {
   let value: Double
   let isEnabled: Bool
   let onChange: (Double) -> Void
+  let onEditingEnded: (Double) -> Void
 
   var body: some View {
     BrightroomSteppedSlider(
@@ -847,12 +861,13 @@ private struct PhotosCropRotationSlider: View {
       stepCount: 90,
       style: .photosCropRotationSlider,
       resetValue: 0,
+      snapsToTicksOnEditingEnd: false,
       transform: { source in
         if (-PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees).contains(source) {
           return 0
         }
 
-        return source.rounded(.toNearestOrEven)
+        return source
       },
       hapticIdentity: { value in
         let degree = Int(value.rounded(.toNearestOrEven))
@@ -861,6 +876,7 @@ private struct PhotosCropRotationSlider: View {
       onHaptic: {
         UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.4)
       },
+      onEditingEnded: onEditingEnded,
       topMarker: { context in
         Circle()
           .frame(width: 6, height: 6)
@@ -897,7 +913,7 @@ private struct PhotosCropRotationSlider: View {
 }
 
 private enum PhotosCropRotationSliderMetrics {
-  static let neutralDeadZoneDegrees: Double = 2.5
+  static let neutralDeadZoneDegrees: Double = 0.5
 }
 
 private extension BrightroomSteppedSliderStyle {

@@ -118,6 +118,24 @@ public struct SwiftUICropView: View {
     }
   }
 
+  /// Commits the current live straighten angle into CropView's recorded crop
+  /// geometry.
+  ///
+  /// Use this from controls that stream `adjustmentAngle` while dragging but
+  /// only want to record the crop extent after the interaction settles.
+  public final class AdjustmentAngleCommitAction {
+
+    var onCall: (EditingCrop.AdjustmentAngle) -> Void = { _ in }
+
+    public init() {
+
+    }
+
+    public func callAsFunction(_ angle: EditingCrop.AdjustmentAngle) {
+      onCall(angle)
+    }
+  }
+
   private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
   private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
@@ -129,6 +147,7 @@ public struct SwiftUICropView: View {
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
   private var _applyAction: ApplyAction?
+  private var _adjustmentAngleCommitAction: AdjustmentAngleCommitAction?
 
   private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
@@ -195,6 +214,7 @@ public struct SwiftUICropView: View {
           resetAction: _resetAction,
           rotateAction: _rotateAction,
           applyAction: _applyAction,
+          adjustmentAngleCommitAction: _adjustmentAngleCommitAction,
           stateHandler: stateHandler,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
           isAutoApplyEditingStackEnabled: isAutoApplyEditingStackEnabled,
@@ -237,6 +257,11 @@ public struct SwiftUICropView: View {
   public consuming func adjustmentAngle(_ angle: Binding<EditingCrop.AdjustmentAngle?>) -> Self {
 
     self.adjustmentAngleInput = angle
+    return self
+  }
+
+  public consuming func registerAdjustmentAngleCommitAction(_ action: AdjustmentAngleCommitAction) -> Self {
+    self._adjustmentAngleCommitAction = action
     return self
   }
 
@@ -311,6 +336,7 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let resetAction: SwiftUICropView.ResetAction?
   let rotateAction: SwiftUICropView.RotateAction?
   let applyAction: SwiftUICropView.ApplyAction?
+  let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction?
   let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
   let isGuideInteractionEnabled: Bool
   let isAutoApplyEditingStackEnabled: Bool
@@ -378,21 +404,24 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       cropView.displayMode = displayMode
     }
 
-    cropView.setCanvasBrush(brush)
-    cropView.setCanvasStrokeSmoothing(strokeSmoothing)
-    cropView.setSurfaceMode(surfaceMode)
-
     context.coordinator.applySwiftUIInputs {
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
       }
 
       if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
-        cropView.setAdjustmentAngle(adjustmentAngle)
+        cropView.setAdjustmentAngle(
+          adjustmentAngle,
+          recordsCropExtent: adjustmentAngleCommitAction == nil
+        )
       }
 
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
     }
+
+    cropView.setCanvasBrush(brush)
+    cropView.setCanvasStrokeSmoothing(strokeSmoothing)
+    cropView.setSurfaceMode(surfaceMode)
 
     cropView.updateCurrentEditingStackDisplay()
     configureActions(on: cropView)
@@ -425,6 +454,10 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
 
     applyAction?.onCall = { [weak cropView] in
       cropView?.applyEditingStack()
+    }
+
+    adjustmentAngleCommitAction?.onCall = { [weak cropView] angle in
+      cropView?.commitAdjustmentAngle(angle)
     }
   }
 

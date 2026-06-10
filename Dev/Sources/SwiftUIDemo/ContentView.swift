@@ -73,23 +73,13 @@ struct ContentView: View {
           NavigationLink("Metal Brush Sandbox") {
             MetalBrushSandboxView()
           }
-          
+
           NavigationLink("Parametric Features") {
             ParametricFeaturePreviewView()
           }
 
           NavigationLink("Parametric Video") {
             ParametricVideoRenderPlaygroundView()
-          }
-
-          Section("Restoration Horizontal") {
-            Button("Masking") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  horizontalStack
-                }
-              }
-            }
           }
 
           NavigationLink("Metal Brush Sandbox NASA") {

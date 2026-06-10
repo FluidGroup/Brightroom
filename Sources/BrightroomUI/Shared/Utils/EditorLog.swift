@@ -52,4 +52,12 @@ extension OSLog {
     #endif
   }()
 
+  static let editingCanvasPerformance: OSLog = {
+    #if DEBUG
+    return OSLog.init(subsystem: "BrightroomUI", category: "EditingCanvasPerformance")
+    #else
+    return .disabled
+    #endif
+  }()
+
 }

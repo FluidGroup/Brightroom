@@ -61,6 +61,14 @@ private struct EditingCanvasViewportRenderTextures {
   let maskTexture: MTLTexture
 }
 
+private enum EditingCanvasViewportRenderPath: String {
+  case clear
+  case baseImage = "base-image"
+  case cachedSourceBase = "cached-source-base"
+  case cachedSourceComposite = "cached-source-composite"
+  case coreImageComposite = "core-image-composite"
+}
+
 struct EditingCanvasRenderImages {
   let source: CIImage
   let filters: EditingStack.Edit.Filters
@@ -75,6 +83,18 @@ struct EditingCanvasRenderImages {
 }
 
 final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
+
+  /// Canvas-content viewport values used to render the current drawable.
+  ///
+  /// A viewport may be supplied at draw time so the renderer can resolve
+  /// presentation-layer geometry as close as possible to the Metal draw pass.
+  struct Viewport {
+    var visibleContentRect: CGRect
+    var visibleCanvasFrame: CGRect
+    var zoomScale: CGFloat
+  }
+
+  typealias ViewportProvider = () -> Viewport?
 
   private typealias BrushStampUniforms = EditingCanvasBrushStampUniforms
   private enum LiveFrameRate {
@@ -140,6 +160,150 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let idleResetInterval: CFTimeInterval = 1.0
   }
 
+  #if DEBUG
+  /// Debug-only counters for spotting expensive canvas-rendering path drift.
+  ///
+  /// The summary log is intentionally coarse-grained: it reports path counts,
+  /// cache misses, and slow-frame counts once per interval without changing the
+  /// render behavior that is being measured.
+  private struct PerformanceDiagnostics {
+    enum CacheMiss: String {
+      case sourceTexture = "source-texture"
+      case renderTextures = "render-textures"
+      case coreImageBaseLayer = "core-image-base-layer"
+      case coreImageLocalLayer = "core-image-local-layer"
+    }
+
+    enum Invalidation: String {
+      case renderImages = "render-images"
+      case cachedSourceMode = "cached-source-mode"
+      case committedStrokes = "committed-strokes"
+      case viewport = "viewport"
+      case drawableSize = "drawable-size"
+    }
+
+    var lastLogTime = CACurrentMediaTime()
+    var frameCount = 0
+    var slowFrameCount = 0
+    var clearFrameCount = 0
+    var baseImageFrameCount = 0
+    var cachedSourceBaseFrameCount = 0
+    var cachedSourceCompositeFrameCount = 0
+    var coreImageCompositeFrameCount = 0
+    var sourceTextureMissCount = 0
+    var renderTexturesMissCount = 0
+    var coreImageBaseLayerMissCount = 0
+    var coreImageLocalLayerMissCount = 0
+    var invalidationCount = 0
+    var lastInvalidation: Invalidation?
+
+    let logInterval: CFTimeInterval = 1.0
+
+    mutating func recordInvalidation(_ reason: Invalidation) {
+      invalidationCount += 1
+      lastInvalidation = reason
+    }
+
+    mutating func recordCacheMiss(_ cache: CacheMiss) {
+      switch cache {
+      case .sourceTexture:
+        sourceTextureMissCount += 1
+      case .renderTextures:
+        renderTexturesMissCount += 1
+      case .coreImageBaseLayer:
+        coreImageBaseLayerMissCount += 1
+      case .coreImageLocalLayer:
+        coreImageLocalLayerMissCount += 1
+      }
+    }
+
+    mutating func recordRender(
+      path: EditingCanvasViewportRenderPath,
+      duration: CFTimeInterval,
+      frameBudget: CFTimeInterval,
+      usesCachedSourceRendering: Bool,
+      usesPreparedBaseImage: Bool,
+      hasLocalEffect: Bool,
+      hasRenderableStroke: Bool,
+      drawableSize: CGSize?,
+      visibleContentRect: CGRect,
+      visibleCanvasFrame: CGRect
+    ) {
+      frameCount += 1
+      if duration > frameBudget {
+        slowFrameCount += 1
+      }
+
+      switch path {
+      case .clear:
+        clearFrameCount += 1
+      case .baseImage:
+        baseImageFrameCount += 1
+      case .cachedSourceBase:
+        cachedSourceBaseFrameCount += 1
+      case .cachedSourceComposite:
+        cachedSourceCompositeFrameCount += 1
+      case .coreImageComposite:
+        coreImageCompositeFrameCount += 1
+      }
+
+      let now = CACurrentMediaTime()
+      guard now - lastLogTime >= logInterval else {
+        return
+      }
+
+      EditorLog.debug(.editingCanvasPerformance, """
+        [EditingCanvasRender]
+        frames:\(frameCount) slow:\(slowFrameCount) budgetMs:\(formatMilliseconds(frameBudget))
+        path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) cachedComposite:\(cachedSourceCompositeFrameCount) coreComposite:\(coreImageCompositeFrameCount)
+        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) baseLayer:\(coreImageBaseLayerMissCount) localLayer:\(coreImageLocalLayerMissCount)
+        invalidations:\(invalidationCount) lastInvalidation:\(lastInvalidation?.rawValue ?? "none")
+        last path:\(path.rawValue) ms:\(formatMilliseconds(duration)) cachedSourceEnabled:\(usesCachedSourceRendering) preparedBase:\(usesPreparedBaseImage) localEffect:\(hasLocalEffect) stroke:\(hasRenderableStroke) drawable:\(format(drawableSize))
+        content:\(format(visibleContentRect)) canvasFrame:\(format(visibleCanvasFrame))
+        """)
+
+      resetInterval(now: now)
+    }
+
+    private mutating func resetInterval(now: CFTimeInterval) {
+      lastLogTime = now
+      frameCount = 0
+      slowFrameCount = 0
+      clearFrameCount = 0
+      baseImageFrameCount = 0
+      cachedSourceBaseFrameCount = 0
+      cachedSourceCompositeFrameCount = 0
+      coreImageCompositeFrameCount = 0
+      sourceTextureMissCount = 0
+      renderTexturesMissCount = 0
+      coreImageBaseLayerMissCount = 0
+      coreImageLocalLayerMissCount = 0
+      invalidationCount = 0
+      lastInvalidation = nil
+    }
+
+    private func formatMilliseconds(_ duration: CFTimeInterval) -> String {
+      String(format: "%.2f", duration * 1000)
+    }
+
+    private func format(_ size: CGSize?) -> String {
+      guard let size else {
+        return "nil"
+      }
+
+      return "\(formatNumber(size.width))x\(formatNumber(size.height))"
+    }
+
+    private func format(_ rect: CGRect) -> String {
+      "(\(formatNumber(rect.minX)),\(formatNumber(rect.minY)),\(formatNumber(rect.width)),\(formatNumber(rect.height)))"
+    }
+
+    private func formatNumber(_ value: CGFloat) -> String {
+      String(format: "%.1f", Double(value))
+    }
+  }
+  #endif
+
   private let canvasSize: CGSize
   private let commandQueue: MTLCommandQueue
   private let brushMaskPipeline: MTLRenderPipelineState
@@ -147,6 +311,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private var strokeState = StrokeState()
   private var liveRefreshState = LiveRefreshState()
   private var drawMetrics = DrawMetrics()
+  #if DEBUG
+  private var performanceDiagnostics = PerformanceDiagnostics()
+  #endif
+  private var viewportProvider: ViewportProvider?
   var activeStampCount: Int {
     strokeState.activeStamps.count
   }
@@ -245,6 +413,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.renderImages = images
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.renderImages)
+    #endif
     setNeedsDisplay()
   }
 
@@ -257,13 +428,29 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.sourceTexture = nil
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.cachedSourceMode)
+    #endif
     setNeedsDisplay()
   }
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
     strokeState.committedRecords = records
     viewportState.renderTextures = nil
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.committedStrokes)
+    #endif
     setNeedsDisplay()
+  }
+
+  func setViewportProvider(
+    _ provider: ViewportProvider?,
+    schedulesDisplay: Bool = true
+  ) {
+    viewportProvider = provider
+    if schedulesDisplay {
+      setNeedsDisplay()
+    }
   }
 
   func setViewport(
@@ -271,9 +458,27 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     visibleCanvasFrame frame: CGRect,
     zoomScale: CGFloat
   ) {
+    updateViewport(
+      .init(
+        visibleContentRect: rect,
+        visibleCanvasFrame: frame,
+        zoomScale: zoomScale
+      ),
+      schedulesDisplay: true
+    )
+  }
+
+  func setViewport(_ viewport: Viewport) {
+    updateViewport(viewport, schedulesDisplay: true)
+  }
+
+  private func updateViewport(
+    _ viewport: Viewport,
+    schedulesDisplay: Bool
+  ) {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
-    let nextRect = rect.intersection(canvasRect)
-    let nextFrame = frame
+    let nextRect = viewport.visibleContentRect.intersection(canvasRect)
+    let nextFrame = viewport.visibleCanvasFrame
 
     guard nextRect.isNull == false, nextRect.isEmpty == false else {
       return
@@ -282,7 +487,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let didChangeViewport = viewportState.visibleContentRect.equalTo(nextRect) == false
       || viewportState.visibleCanvasFrame.equalTo(nextFrame) == false
     guard didChangeViewport else {
-      setNeedsDisplay()
       return
     }
 
@@ -291,8 +495,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.sourceTexture = nil
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
-    setNeedsDisplay()
-    onMetricsChange?()
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.viewport)
+    #endif
+    if schedulesDisplay {
+      setNeedsDisplay()
+      onMetricsChange?()
+    }
   }
 
   func reset() {
@@ -306,6 +515,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.drawableSize)
+    #endif
     setNeedsDisplay()
   }
 
@@ -314,7 +526,16 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       recordDrawSample()
     }
 
+    updateViewportFromProvider()
     renderViewportImage()
+  }
+
+  private func updateViewportFromProvider() {
+    guard let viewport = viewportProvider?() else {
+      return
+    }
+
+    updateViewport(viewport, schedulesDisplay: false)
   }
 
   func beginStroke(at rawPoint: CGPoint) {
@@ -555,6 +776,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   private func renderViewportImage() {
+    #if DEBUG
+    let renderStartTime = CACurrentMediaTime()
+    let diagnosticsRenderImages = viewportState.renderImages
+    #endif
+
     guard
       let renderImages = viewportState.renderImages,
       let drawable = currentDrawable,
@@ -568,21 +794,42 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       viewportState.visibleCanvasFrame.height > 0
     else {
       clearCurrentDrawable()
+      #if DEBUG
+      recordPerformanceRender(
+        path: .clear,
+        startedAt: renderStartTime,
+        renderImages: diagnosticsRenderImages,
+        drawable: nil,
+        hasRenderableStroke: false
+      )
+      #endif
       return
     }
 
-    guard viewportState.usesCachedSourceRendering == false || renderImages.usesPreparedBaseImage else {
-      renderViewportCachedSource(
+    let hasRenderableStroke = hasRenderableStroke(in: viewportState.visibleContentRect)
+
+    if viewportState.usesCachedSourceRendering, renderImages.usesPreparedBaseImage == false {
+      let path = renderViewportCachedSource(
         renderImages,
+        hasRenderableStroke: hasRenderableStroke,
         drawable: drawable,
         descriptor: descriptor,
         commandBuffer: commandBuffer
       )
+      #if DEBUG
+      recordPerformanceRender(
+        path: path,
+        startedAt: renderStartTime,
+        renderImages: renderImages,
+        drawable: drawable,
+        hasRenderableStroke: hasRenderableStroke
+      )
+      #endif
       return
     }
 
     guard renderImages.hasLocalEffect,
-          hasRenderableStroke(in: viewportState.visibleContentRect)
+          hasRenderableStroke
     else {
       renderViewportBaseImage(
         renderImages.base,
@@ -590,6 +837,15 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         descriptor: descriptor,
         commandBuffer: commandBuffer
       )
+      #if DEBUG
+      recordPerformanceRender(
+        path: .baseImage,
+        startedAt: renderStartTime,
+        renderImages: renderImages,
+        drawable: drawable,
+        hasRenderableStroke: hasRenderableStroke
+      )
+      #endif
       return
     }
 
@@ -599,7 +855,44 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       descriptor: descriptor,
       commandBuffer: commandBuffer
     )
+    #if DEBUG
+    recordPerformanceRender(
+      path: .coreImageComposite,
+      startedAt: renderStartTime,
+      renderImages: renderImages,
+      drawable: drawable,
+      hasRenderableStroke: hasRenderableStroke
+    )
+    #endif
   }
+
+  #if DEBUG
+  private func recordPerformanceRender(
+    path: EditingCanvasViewportRenderPath,
+    startedAt startTime: CFTimeInterval,
+    renderImages: EditingCanvasRenderImages?,
+    drawable: CAMetalDrawable?,
+    hasRenderableStroke: Bool
+  ) {
+    let frameBudget = 1.0 / Double(max(preferredFramesPerSecond, LiveFrameRate.minimum))
+    let drawableSize = drawable.map {
+      CGSize(width: CGFloat($0.texture.width), height: CGFloat($0.texture.height))
+    }
+
+    performanceDiagnostics.recordRender(
+      path: path,
+      duration: CACurrentMediaTime() - startTime,
+      frameBudget: frameBudget,
+      usesCachedSourceRendering: viewportState.usesCachedSourceRendering,
+      usesPreparedBaseImage: renderImages?.usesPreparedBaseImage ?? false,
+      hasLocalEffect: renderImages?.hasLocalEffect ?? false,
+      hasRenderableStroke: hasRenderableStroke,
+      drawableSize: drawableSize,
+      visibleContentRect: viewportState.visibleContentRect,
+      visibleCanvasFrame: viewportState.visibleCanvasFrame
+    )
+  }
+  #endif
 
   private func renderViewportBaseImage(
     _ image: CIImage,
@@ -661,12 +954,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     commandBuffer.commit()
   }
 
+  @discardableResult
   private func renderViewportCachedSource(
     _ renderImages: EditingCanvasRenderImages,
+    hasRenderableStroke: Bool,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
-  ) {
+  ) -> EditingCanvasViewportRenderPath {
     let pixelWidth = drawable.texture.width
     let pixelHeight = drawable.texture.height
     guard
@@ -679,7 +974,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       )
     else {
       clearCurrentDrawable()
-      return
+      return .clear
     }
 
     let baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
@@ -690,7 +985,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     )
 
     guard renderImages.hasLocalEffect,
-          hasRenderableStroke(in: viewportState.visibleContentRect)
+          hasRenderableStroke
     else {
       renderDrawableImage(
         baseImage,
@@ -698,7 +993,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         descriptor: descriptor,
         commandBuffer: commandBuffer
       )
-      return
+      return .cachedSourceBase
     }
 
     renderViewportCachedCoreImageComposite(
@@ -710,6 +1005,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       descriptor: descriptor,
       commandBuffer: commandBuffer
     )
+    return .cachedSourceComposite
   }
 
   private func viewportPreviewScale(
@@ -754,6 +1050,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if let cachedSource = viewportState.sourceTexture, cachedSource.key == key {
       return cachedSource.image
     }
+    #if DEBUG
+    performanceDiagnostics.recordCacheMiss(.sourceTexture)
+    #endif
 
     guard
       let sourceTexture = makeRenderTexture(
@@ -923,6 +1222,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if let cache = viewportState.coreImageBaseLayerCache, cache.key == key {
       return cache.image
     }
+    #if DEBUG
+    performanceDiagnostics.recordCacheMiss(.coreImageBaseLayer)
+    #endif
 
     guard
       let texture = makeRenderTexture(
@@ -965,6 +1267,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if let cache = viewportState.coreImageLocalLayerCache, cache.key == key {
       return cache.image
     }
+    #if DEBUG
+    performanceDiagnostics.recordCacheMiss(.coreImageLocalLayer)
+    #endif
 
     let adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
       localEffect
@@ -1068,28 +1373,18 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
     guard
-      let imageBounds = viewportTextureContentFrame(
-        pixelWidth: pixelWidth,
-        pixelHeight: pixelHeight
-      )?.intersection(renderBounds),
-      imageBounds.isEmpty == false
-    else {
-      clearCurrentDrawable()
-      return
-    }
-    guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds),
+      )?.cropped(to: renderBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds),
+      )?.cropped(to: renderBounds),
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
         options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-      )?.cropped(to: imageBounds)
+      )?.cropped(to: renderBounds)
     else {
       clearCurrentDrawable()
       return
@@ -1103,7 +1398,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
           kCIInputMaskImageKey: maskImage,
         ]
       )
-      .cropped(to: imageBounds)
+      .cropped(to: renderBounds)
 
     renderDrawableImage(
       compositedImage,
@@ -1204,6 +1499,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     {
       return textures
     }
+    #if DEBUG
+    performanceDiagnostics.recordCacheMiss(.renderTextures)
+    #endif
 
     guard
       let maskTexture = makeRenderTexture(

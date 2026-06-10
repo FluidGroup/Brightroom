@@ -24,15 +24,15 @@ import UIKit
 
 extension EditingStack.Edit {
 
-  public enum PreviewPurpose: Sendable {
+  enum PreviewPurpose: Sendable {
     case editingBase
     case editing
     case cropInteraction
   }
 
-  public func makePreviewImage(
+  func makePreviewImage(
     from sourceImage: CIImage,
-    purpose: PreviewPurpose = .editing
+    purpose: PreviewPurpose
   ) -> CIImage {
     switch purpose {
     case .editingBase:
@@ -44,7 +44,7 @@ extension EditingStack.Edit {
     }
   }
 
-  func applyLocalAdjustments(to image: CIImage) -> CIImage {
+  private func applyLocalAdjustments(to image: CIImage) -> CIImage {
     localAdjustments.reduce(image) { currentImage, layer in
       layer.apply(to: currentImage)
     }
@@ -131,7 +131,7 @@ extension EditingStack.Edit.LocalAdjustmentEffect {
 
 extension EditingStack.Edit.LocalAdjustmentMask {
 
-  func makeCIImage(size: CGSize) -> CIImage? {
+  fileprivate func makeCIImage(size: CGSize) -> CIImage? {
     let targetSize = CGSize(
       width: max(size.width.rounded(), 1),
       height: max(size.height.rounded(), 1)
@@ -155,7 +155,12 @@ extension EditingStack.Edit.LocalAdjustmentMask {
       return nil
     }
 
+    // The mask is authored in EditingCanvas display coordinates. Convert the
+    // UIGraphics raster into Core Image's composition orientation.
     return CIImage(cgImage: cgImage)
+      .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
+      .transformed(by: CGAffineTransform(translationX: 0, y: targetSize.height))
+      .cropped(to: CGRect(origin: .zero, size: targetSize))
   }
 }
 

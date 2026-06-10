@@ -75,18 +75,17 @@ public enum EditingCanvasMode: Equatable {
   /// kept in the canvas runtime instead of being rasterized through CoreGraphics.
   case localAdjustment(effect: EditingStack.Edit.LocalAdjustmentEffect)
 
-  /// Materializes the full edit stack into a read-only preview image.
+  /// Materializes the global edit stack into a read-only preview image.
   ///
-  /// This mode is useful for idle or final-preview surfaces that need the same
-  /// composed result as the engine path. It can be expensive when local
-  /// adjustments exist because the compatibility path may rasterize saved masks
-  /// through CoreGraphics.
+  /// Saved local adjustments are intentionally excluded from this UI preview
+  /// path. Use `localAdjustment(effect:)` while editing one local adjustment, and
+  /// use the renderer when the final composed result is required.
   case renderedEditPreview
 
   /// Compatibility spelling for `renderedEditPreview`.
   ///
-  /// Prefer `viewportBase` for realtime preview and `renderedEditPreview` when
-  /// the heavier, fully materialized edit result is explicitly required.
+  /// Prefer `viewportBase` for realtime preview and `renderedEditPreview` only
+  /// when a materialized global-filter preview is explicitly required.
   case preview
 
   var localEffect: EditingStack.Edit.LocalAdjustmentEffect {
@@ -104,15 +103,6 @@ public enum EditingCanvasMode: Equatable {
       return nil
     case let .localAdjustment(effect):
       return effect
-    }
-  }
-
-  var rendersFullEditPreview: Bool {
-    switch self {
-    case .renderedEditPreview, .preview:
-      return true
-    case .viewportBase, .localAdjustment:
-      return false
     }
   }
 
