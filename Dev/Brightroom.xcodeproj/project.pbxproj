@@ -59,8 +59,11 @@
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
 		B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* Reveal-SDK */; };
 		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
+		EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = E41DF318FBB3443697FEC673 /* BrightroomParametric */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
+		8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = 23449504C30943C981A14D75 /* BrightroomParametric */; };
+		8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = BC5DE159959545B49CA01241 /* BrightroomParametric */; };
 		FC110D8F2660FD5500CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */; };
 		FC110D902660FD5500CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2E2660FD2200CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg */; };
 		FC110D922660FD5500CC45EA /* 7acc832f70b2ca62e58a953f3b90fd82.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D302660FD2300CC45EA /* 7acc832f70b2ca62e58a953f3b90fd82.jpg */; };
@@ -476,6 +479,7 @@
 		4B600B3E216B7CE9001E1456 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		4B9369E725F940E600B18571 /* nasa.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = nasa.jpg; sourceTree = "<group>"; };
 		4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftUIDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ParametricMacDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BB4B104260F8589007617D7 /* LUT_64_Neutral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = LUT_64_Neutral.png; path = Resources/LUT_64_Neutral.png; sourceTree = SOURCE_ROOT; };
 		4BB7B9C8277A439B0014B62A /* LUT_64_Dark_HighContrast_v3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Dark_HighContrast_v3.png; sourceTree = "<group>"; };
 		4BB7B9CB277A452A0014B62A /* LUT_64_Gloss.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LUT_64_Gloss.png; sourceTree = "<group>"; };
@@ -898,6 +902,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		5462C745534F43D9AF56EE28 /* ParametricMacDemo */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ParametricMacDemo; sourceTree = "<group>"; };
 		B036D2DC2FC2A64400C834BA /* Sources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B036D2F12FC2A64500C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, B036D2F22FC2A64500C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Sources; sourceTree = "<group>"; };
 		B036D2FF2FC2A67700C834BA /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B036D30B2FC2A67800C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -907,6 +912,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
 				B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */,
@@ -919,6 +925,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */,
+				8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		343D35A6DAD74B728C225FC3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -986,6 +1001,7 @@
 			children = (
 				4B524FE129B8F6A600C1A416 /* Packages */,
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
+				5462C745534F43D9AF56EE28 /* ParametricMacDemo */,
 				B036D2DC2FC2A64400C834BA /* Sources */,
 				B036D2FF2FC2A67700C834BA /* Tests */,
 				4B600AFE216B7A94001E1456 /* Products */,
@@ -999,6 +1015,7 @@
 			isa = PBXGroup;
 			children = (
 				4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */,
+				6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */,
 				4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */,
 				4BED49C8261C9BBD0011A98F /* Import LUT.appex */,
 				4BED49E0261C9CE20011A98F /* ShareLUT.appex */,
@@ -1471,6 +1488,7 @@
 			);
 			name = SwiftUIDemo;
 			packageProductDependencies = (
+				E41DF318FBB3443697FEC673 /* BrightroomParametric */,
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
 				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
@@ -1498,10 +1516,34 @@
 			name = BrightroomEngineTests;
 			packageProductDependencies = (
 				4B487E5E28EEC0670026A8CF /* BrightroomEngine */,
+				23449504C30943C981A14D75 /* BrightroomParametric */,
 			);
 			productName = PixelEngineTests;
 			productReference = 4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		07F65785A7D046C59571D0DA /* ParametricMacDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4B5EC9EDB4A64C4A90F0F2CF /* Build configuration list for PBXNativeTarget "ParametricMacDemo" */;
+			buildPhases = (
+				C83159EA590F42CD9C3A522E /* Sources */,
+				343D35A6DAD74B728C225FC3 /* Frameworks */,
+				9137E31FED744F129A0FD278 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5462C745534F43D9AF56EE28 /* ParametricMacDemo */,
+			);
+			name = ParametricMacDemo;
+			packageProductDependencies = (
+				BC5DE159959545B49CA01241 /* BrightroomParametric */,
+			);
+			productName = ParametricMacDemo;
+			productReference = 6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */;
+			productType = "com.apple.product-type.application";
 		};
 		4BED49C7261C9BBD0011A98F /* Import LUT */ = {
 			isa = PBXNativeTarget;
@@ -1553,6 +1595,9 @@
 					4BDEE09725F8CF5800FA22CB = {
 						CreatedOnToolsVersion = 12.4;
 					};
+					07F65785A7D046C59571D0DA = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					4BED49C7261C9BBD0011A98F = {
 						CreatedOnToolsVersion = 12.4;
 					};
@@ -1579,6 +1624,7 @@
 			targets = (
 				4BDEE09725F8CF5800FA22CB /* BrightroomEngineTests */,
 				4B98CCB825EFF31300E4F61F /* SwiftUIDemo */,
+				07F65785A7D046C59571D0DA /* ParametricMacDemo */,
 				4BED49C7261C9BBD0011A98F /* Import LUT */,
 				4BED49DF261C9CE20011A98F /* ShareLUT */,
 			);
@@ -2016,6 +2062,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9137E31FED744F129A0FD278 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4BED49C6261C9BBD0011A98F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2044,6 +2097,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4BDEE09425F8CF5800FA22CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C83159EA590F42CD9C3A522E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -2250,6 +2310,58 @@
 			};
 			name = Release;
 		};
+		45686D40D781452D8F290221 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = JX92XL88RZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.brightroom.ParametricMacDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7D01513049A3457588506C28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = JX92XL88RZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.brightroom.ParametricMacDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		4BDEE09D25F8CF5800FA22CB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2389,6 +2501,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		4B5EC9EDB4A64C4A90F0F2CF /* Build configuration list for PBXNativeTarget "ParametricMacDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45686D40D781452D8F290221 /* Debug */,
+				7D01513049A3457588506C28 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		4BDEE09F25F8CF5800FA22CB /* Build configuration list for PBXNativeTarget "BrightroomEngineTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2434,6 +2555,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
 		};
+		23449504C30943C981A14D75 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
+		};
 		B027724B2FC2B70A006D7796 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */;
@@ -2442,6 +2567,14 @@
 		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = "Reveal-SDK";
+		};
+		BC5DE159959545B49CA01241 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
+		};
+		E41DF318FBB3443697FEC673 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
