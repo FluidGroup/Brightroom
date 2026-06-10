@@ -1,10 +1,12 @@
-/// Selects how `SwiftUICropView` builds the image shown inside the crop surface.
+/// Selects how `SwiftUICropView` builds the image shown inside its editing
+/// surfaces.
 public enum CropViewDisplayMode: Equatable {
   /// Uses the lightweight viewport renderer for crop interaction.
   ///
   /// This mode intentionally skips saved local-adjustment layers and renders
   /// the interaction base through the Metal crop viewport instead of a legacy
-  /// `UIImageView` surface.
+  /// `UIImageView` surface. Tool viewing may still display a single saved
+  /// local-adjustment layer through the Metal canvas runtime.
   case cropInteractionImage
 
   /// Uses the viewport renderer to display the full current edit stack.

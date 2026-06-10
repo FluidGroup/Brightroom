@@ -27,10 +27,15 @@ import BrightroomEngine
 
 public struct SwiftUIPixelEditorView: View {
 
-  @State private var viewModel: PixelEditorViewModel
   @State private var controlRoute: PixelEditorControlRoute = .root
   @State private var displayedRootPanel: PixelEditorRootPanel = .filter
+  @State private var maskingBrushSize: MaskingBrushSize = .point(30)
+  @State private var proposedCrop: EditingCrop?
+  @State private var cropApplyAction = SwiftUICropView.ApplyAction()
 
+  private let editingStack: EditingStack
+  private let options: PixelEditorOptions
+  private let localizedStrings: PixelEditorLocalizedStrings
   private let onEndEditing: (EditingStack) -> Void
   private let onCancelEditing: () -> Void
 
@@ -41,13 +46,10 @@ public struct SwiftUIPixelEditorView: View {
     onEndEditing: @escaping (EditingStack) -> Void = { _ in },
     onCancelEditing: @escaping () -> Void = {}
   ) {
-    self._viewModel = State(
-      initialValue: PixelEditorViewModel(
-        editingStack: editingStack,
-        options: options,
-        localizedStrings: localizedStrings
-      )
-    )
+    Self.configureCropModifier(on: editingStack, options: options)
+    self.editingStack = editingStack
+    self.options = options
+    self.localizedStrings = localizedStrings
     self.onEndEditing = onEndEditing
     self.onCancelEditing = onCancelEditing
   }
@@ -61,24 +63,36 @@ public struct SwiftUIPixelEditorView: View {
 
       VStack(spacing: 0) {
         PixelEditorTopBar(
-          mode: viewModel.mode,
-          title: viewModel.title,
-          cancelText: viewModel.localizedStrings.cancel,
-          doneText: viewModel.localizedStrings.done,
+          mode: controlRoute.mode,
+          title: controlRoute.title(localizedStrings: localizedStrings),
+          cancelText: localizedStrings.cancel,
+          doneText: localizedStrings.done,
           onCancel: onCancelEditing,
           onDone: {
-            onEndEditing(viewModel.editingStack)
+            onEndEditing(editingStack)
           }
         )
 
-        PixelEditorCanvas(viewModel: viewModel)
+        PixelEditorCanvas(
+          editingStack: editingStack,
+          options: options,
+          mode: controlRoute.mode,
+          maskingBrushSize: maskingBrushSize,
+          proposedCrop: $proposedCrop,
+          cropApplyAction: cropApplyAction
+        )
           .frame(width: canvasLength, height: canvasLength)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         PixelEditorControlPanel(
-          viewModel: viewModel,
+          editingStack: editingStack,
+          options: options,
+          localizedStrings: localizedStrings,
           route: $controlRoute,
-          displayedRootPanel: $displayedRootPanel
+          displayedRootPanel: $displayedRootPanel,
+          maskingBrushSize: $maskingBrushSize,
+          proposedCrop: $proposedCrop,
+          cropApplyAction: cropApplyAction
         )
         .frame(height: PixelEditorLayout.controlPanelHeight)
       }
@@ -87,9 +101,24 @@ public struct SwiftUIPixelEditorView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(PixelEditorColor.background)
     .task {
-      viewModel.startEditingStack()
+      editingStack.start()
     }
     .accessibilityIdentifier("swiftui.pixel.editor")
+  }
+
+  private static func configureCropModifier(
+    on editingStack: EditingStack,
+    options: PixelEditorOptions
+  ) {
+    if options.isFaceDetectionEnabled {
+      editingStack.cropModifier = .faceDetection(aspectRatio: options.croppingAspectRatio)
+    } else if let aspectRatio = options.croppingAspectRatio {
+      editingStack.cropModifier = .init { _, crop, completion in
+        var new = crop
+        new.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
+        completion(new)
+      }
+    }
   }
 }
 
@@ -100,9 +129,45 @@ private enum PixelEditorControlRoute: Equatable {
   case filter(PixelEditorFilterKind)
 }
 
+private extension PixelEditorControlRoute {
+
+  var mode: PixelEditorMode {
+    switch self {
+    case .root:
+      return .preview
+    case .crop:
+      return .crop
+    case .masking:
+      return .masking
+    case .filter:
+      return .editing
+    }
+  }
+
+  func title(localizedStrings: PixelEditorLocalizedStrings) -> String {
+    switch self {
+    case .root:
+      return ""
+    case .crop:
+      return localizedStrings.editAdjustment
+    case .masking:
+      return localizedStrings.editMask
+    case let .filter(kind):
+      return kind.title(localizedStrings: localizedStrings)
+    }
+  }
+}
+
 private enum PixelEditorRootPanel {
   case filter
   case edit
+}
+
+private enum PixelEditorMode {
+  case crop
+  case masking
+  case editing
+  case preview
 }
 
 private enum PixelEditorFilterKind: CaseIterable {
@@ -145,7 +210,7 @@ private enum PixelEditorColor {
 
 private struct PixelEditorTopBar: View {
 
-  let mode: PixelEditorViewModel.Mode
+  let mode: PixelEditorMode
   let title: String
   let cancelText: String
   let doneText: String
@@ -270,20 +335,23 @@ private extension View {
 
 private struct PixelEditorCanvas: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let options: PixelEditorOptions
+  let mode: PixelEditorMode
+  let maskingBrushSize: MaskingBrushSize
+  @Binding var proposedCrop: EditingCrop?
+  let cropApplyAction: SwiftUICropView.ApplyAction
 
   var body: some View {
-    let _ = viewModel.editingStackObservationVersion
-
     GeometryReader { proxy in
       ZStack {
         SwiftUICropView(
-          editingStack: viewModel.editingStack,
+          editingStack: editingStack,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
           isAutoApplyEditingStackEnabled: false,
           contentInset: .zero,
           cropInsideOverlay: { adjustmentKind in
-            if viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil {
+            if mode.isCrop && options.croppingAspectRatio == nil {
               PixelEditorFreeCropGuideOverlay(isAdjustmentActive: adjustmentKind != nil)
             }
           },
@@ -291,19 +359,19 @@ private struct PixelEditorCanvas: View {
             PixelEditorColor.background
           },
           stateHandler: { state in
-            if let proposedCrop = state.proposedCrop {
-              viewModel.setProposedCrop(proposedCrop)
+            if let nextCrop = state.proposedCrop, proposedCrop != nextCrop {
+              proposedCrop = nextCrop
             }
           }
         )
-        .croppingAspectRatio(viewModel.options.croppingAspectRatio)
-        .displayMode(.renderedEditPreview)
+        .croppingAspectRatio(options.croppingAspectRatio)
+        .displayMode(.cropInteractionImage)
         .surfaceMode(surfaceMode)
         .brush(canvasBrush(in: proxy.size))
         .strokeSmoothing(.init())
-        .registerApplyAction(viewModel.cropApplyAction)
+        .registerApplyAction(cropApplyAction)
 
-        if viewModel.editingStack.isLoading {
+        if editingStack.isLoading {
           ProgressView()
             .progressViewStyle(.circular)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -315,7 +383,7 @@ private struct PixelEditorCanvas: View {
   }
 
   private var surfaceMode: CropViewSurfaceMode {
-    switch viewModel.mode {
+    switch mode {
     case .crop:
       return .crop
     case .masking:
@@ -326,11 +394,11 @@ private struct PixelEditorCanvas: View {
   }
 
   private var isGuideInteractionEnabled: Bool {
-    viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil
+    mode.isCrop && options.croppingAspectRatio == nil
   }
 
   private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {
-    guard let crop = viewModel.editingStack.loadedState?.currentEdit.crop else {
+    guard let crop = editingStack.loadedState?.currentEdit.crop else {
       return .gaussianBlur(radius: 18)
     }
 
@@ -343,17 +411,17 @@ private struct PixelEditorCanvas: View {
       size: Double(imageSpaceBrushSize(in: viewportSize)),
       hardness: 0.72,
       opacity: 0.9,
-      spacing: 0.18
+      spacing: 0.12
     )
   }
 
   private func imageSpaceBrushSize(in viewportSize: CGSize) -> CGFloat {
-    switch viewModel.maskingBrushSize {
+    switch maskingBrushSize {
     case let .pixel(value):
       return value
     case let .point(value):
       guard
-        let crop = viewModel.editingStack.loadedState?.currentEdit.crop,
+        let crop = editingStack.loadedState?.currentEdit.crop,
         viewportSize.width > 0,
         viewportSize.height > 0,
         crop.cropExtent.width > 0,
@@ -449,9 +517,14 @@ private struct PixelEditorCropGuideHandles: Shape {
 
 private struct PixelEditorControlPanel: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let options: PixelEditorOptions
+  let localizedStrings: PixelEditorLocalizedStrings
   @Binding var route: PixelEditorControlRoute
   @Binding var displayedRootPanel: PixelEditorRootPanel
+  @Binding var maskingBrushSize: MaskingBrushSize
+  @Binding var proposedCrop: EditingCrop?
+  let cropApplyAction: SwiftUICropView.ApplyAction
 
   @State private var presentedDetailRoute: PixelEditorControlRoute?
   @State private var isDetailControlVisible = false
@@ -461,7 +534,9 @@ private struct PixelEditorControlPanel: View {
   var body: some View {
     ZStack(alignment: .bottom) {
       PixelEditorRootControl(
-        viewModel: viewModel,
+        editingStack: editingStack,
+        options: options,
+        localizedStrings: localizedStrings,
         displayedPanel: $displayedRootPanel,
         onSelectRoute: showRoute
       )
@@ -478,11 +553,9 @@ private struct PixelEditorControlPanel: View {
       }
     }
     .onAppear {
-      configureMode(for: route)
       updatePresentedControl(for: route, animated: false)
     }
     .onChange(of: route) { _, newRoute in
-      configureMode(for: newRoute)
       updatePresentedControl(for: newRoute, animated: true)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -496,14 +569,14 @@ private struct PixelEditorControlPanel: View {
 
     case .crop:
       PixelEditorCropControl(
-        viewModel: viewModel,
+        localizedStrings: localizedStrings,
         onCancel: {
-          viewModel.endCrop(save: false)
+          endCrop(save: false)
           finishDetailEditing()
           showRoute(.root)
         },
         onDone: {
-          viewModel.endCrop(save: true)
+          endCrop(save: true)
           finishDetailEditing()
           showRoute(.root)
         }
@@ -511,13 +584,15 @@ private struct PixelEditorControlPanel: View {
 
     case .masking:
       PixelEditorMaskControl(
-        viewModel: viewModel,
+        editingStack: editingStack,
+        localizedStrings: localizedStrings,
+        maskingBrushSize: $maskingBrushSize,
         onCancel: {
           restoreDetailEntryRevision()
           showRoute(.root)
         },
         onDone: {
-          viewModel.endMasking(save: true)
+          editingStack.takeSnapshot()
           finishDetailEditing()
           showRoute(.root)
         }
@@ -525,14 +600,15 @@ private struct PixelEditorControlPanel: View {
 
     case let .filter(kind):
       PixelEditorFilterControl(
-        viewModel: viewModel,
+        editingStack: editingStack,
+        localizedStrings: localizedStrings,
         kind: kind,
         onCancel: {
           restoreDetailEntryRevision()
           showRoute(.root)
         },
         onDone: {
-          viewModel.editingStack.takeSnapshot()
+          editingStack.takeSnapshot()
           finishDetailEditing()
           showRoute(.root)
         }
@@ -542,23 +618,6 @@ private struct PixelEditorControlPanel: View {
 
   private func showRoute(_ route: PixelEditorControlRoute) {
     self.route = route
-  }
-
-  private func configureMode(for route: PixelEditorControlRoute) {
-    switch route {
-    case .root:
-      viewModel.setMode(.preview)
-
-    case .crop:
-      viewModel.setMode(.crop)
-
-    case .masking:
-      viewModel.setMode(.masking)
-
-    case let .filter(kind):
-      viewModel.setMode(.editing)
-      viewModel.setTitle(kind.title(localizedStrings: viewModel.localizedStrings))
-    }
   }
 
   private func updatePresentedControl(for route: PixelEditorControlRoute, animated: Bool) {
@@ -576,7 +635,7 @@ private struct PixelEditorControlPanel: View {
 
     case .masking, .filter(_):
       if route != presentedDetailRoute || !isDetailControlVisible {
-        detailEntryRevision = viewModel.editingStack.currentRevision
+        detailEntryRevision = editingStack.currentRevision
         detailSessionID += 1
       }
       presentedDetailRoute = route
@@ -586,11 +645,44 @@ private struct PixelEditorControlPanel: View {
 
   private func restoreDetailEntryRevision() {
     if let detailEntryRevision {
-      viewModel.editingStack.revert(to: detailEntryRevision)
+      editingStack.revert(to: detailEntryRevision)
     } else {
-      viewModel.editingStack.revertEdit()
+      editingStack.revertEdit()
     }
     finishDetailEditing()
+  }
+
+  private func endCrop(save: Bool) {
+    if save {
+      let fallbackCrop = resolvedCropForDisplay()
+      let cropBeforeApplying = editingStack.loadedState?.currentEdit.crop
+      cropApplyAction()
+
+      if editingStack.loadedState?.currentEdit.crop == cropBeforeApplying, let fallbackCrop {
+        editingStack.crop(fallbackCrop)
+      }
+
+      proposedCrop = editingStack.loadedState?.currentEdit.crop ?? fallbackCrop
+      editingStack.takeSnapshot()
+    } else {
+      guard let loadedState = editingStack.loadedState else {
+        assertionFailure()
+        return
+      }
+      proposedCrop = loadedState.currentEdit.crop
+    }
+  }
+
+  private func resolvedCropForDisplay() -> EditingCrop? {
+    guard var crop = proposedCrop ?? editingStack.loadedState?.currentEdit.crop else {
+      return nil
+    }
+
+    if let aspectRatio = options.croppingAspectRatio {
+      crop.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
+    }
+
+    return crop
   }
 
   private func finishDetailEditing() {
@@ -614,20 +706,27 @@ private struct PixelEditorControlPanel: View {
 
 private struct PixelEditorRootControl: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let options: PixelEditorOptions
+  let localizedStrings: PixelEditorLocalizedStrings
   @Binding var displayedPanel: PixelEditorRootPanel
   let onSelectRoute: (PixelEditorControlRoute) -> Void
 
   var body: some View {
     VStack(spacing: 0) {
       ZStack {
-        PixelEditorPresetList(viewModel: viewModel)
+        PixelEditorPresetList(
+          editingStack: editingStack,
+          localizedStrings: localizedStrings
+        )
           .pixelEditorControlPresentation(isVisible: displayedPanel == .filter, hiddenOffsetY: 6)
           .allowsHitTesting(displayedPanel == .filter)
           .accessibilityHidden(displayedPanel != .filter)
 
         PixelEditorEditMenuView(
-          viewModel: viewModel,
+          editingStack: editingStack,
+          options: options,
+          localizedStrings: localizedStrings,
           onSelectRoute: onSelectRoute
         )
         .pixelEditorControlPresentation(isVisible: displayedPanel == .edit, hiddenOffsetY: 6)
@@ -640,7 +739,7 @@ private struct PixelEditorRootControl: View {
         Button {
           displayedPanel = .filter
         } label: {
-          Text(viewModel.localizedStrings.filter)
+          Text(localizedStrings.filter)
             .font(.system(size: 17, weight: .bold))
             .foregroundStyle(displayedPanel == .filter ? PixelEditorColor.primary : PixelEditorColor.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -650,7 +749,7 @@ private struct PixelEditorRootControl: View {
         Button {
           displayedPanel = .edit
         } label: {
-          Text(viewModel.localizedStrings.edit)
+          Text(localizedStrings.edit)
             .font(.system(size: 17, weight: .bold))
             .foregroundStyle(displayedPanel == .edit ? PixelEditorColor.primary : PixelEditorColor.secondary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -664,7 +763,8 @@ private struct PixelEditorRootControl: View {
 
 private struct PixelEditorPresetList: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let localizedStrings: PixelEditorLocalizedStrings
 
   var body: some View {
     ScrollViewReader { proxy in
@@ -674,8 +774,8 @@ private struct PixelEditorPresetList: View {
             setPreset(nil)
           } label: {
             PixelEditorPresetCell(
-              title: viewModel.localizedStrings.control_preset_normal_name,
-              image: viewModel.editingStack.loadedState?.thumbnailImage,
+              title: localizedStrings.control_preset_normal_name,
+              image: editingStack.loadedState?.thumbnailImage,
               isSelected: currentPreset == nil
             )
           }
@@ -683,7 +783,7 @@ private struct PixelEditorPresetList: View {
           .accessibilityIdentifier("swiftui.pixel.preset.normal")
           .id("normal")
 
-          if let previews = viewModel.editingStack.loadedState?.previewFilterPresets {
+          if let previews = editingStack.loadedState?.previewFilterPresets {
             ForEach(previews, id: \.filter.identifier) { preview in
               Button {
                 setPreset(preview.filter)
@@ -710,14 +810,14 @@ private struct PixelEditorPresetList: View {
   }
 
   private var currentPreset: FilterPreset? {
-    viewModel.editingStack.loadedState?.currentEdit.filters.preset
+    editingStack.loadedState?.currentEdit.filters.preset
   }
 
   private func setPreset(_ preset: FilterPreset?) {
-    viewModel.editingStack.set(filters: {
+    editingStack.set(filters: {
       $0.preset = preset
     })
-    viewModel.editingStack.takeSnapshot()
+    editingStack.takeSnapshot()
   }
 
   private func scrollToSelection(proxy: ScrollViewProxy) {
@@ -758,7 +858,9 @@ private struct PixelEditorPresetCell: View {
 
 private struct PixelEditorEditMenuView: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let options: PixelEditorOptions
+  let localizedStrings: PixelEditorLocalizedStrings
   let onSelectRoute: (PixelEditorControlRoute) -> Void
 
   var body: some View {
@@ -769,9 +871,9 @@ private struct PixelEditorEditMenuView: View {
             onSelectRoute(menu.route)
           } label: {
             PixelEditorEditMenuCell(
-              title: menu.title(localizedStrings: viewModel.localizedStrings),
+              title: menu.title(localizedStrings: localizedStrings),
               imageName: menu.imageName,
-              hasChanges: menu.hasChanges(in: viewModel.editingStack.loadedState?.currentEdit)
+              hasChanges: menu.hasChanges(in: editingStack.loadedState?.currentEdit)
             )
           }
           .buttonStyle(.plain)
@@ -784,7 +886,7 @@ private struct PixelEditorEditMenuView: View {
   }
 
   private var displayedMenus: [PixelEditorEditMenu] {
-    viewModel.options.editMenus.filter { !viewModel.options.ignoredEditMenus.contains($0) }
+    options.editMenus.filter { !options.ignoredEditMenus.contains($0) }
   }
 }
 
@@ -825,7 +927,7 @@ private struct PixelEditorEditMenuCell: View {
 
 private struct PixelEditorCropControl: View {
 
-  let viewModel: PixelEditorViewModel
+  let localizedStrings: PixelEditorLocalizedStrings
   let onCancel: () -> Void
   let onDone: () -> Void
 
@@ -833,8 +935,8 @@ private struct PixelEditorCropControl: View {
     VStack(spacing: 0) {
       Spacer(minLength: 0)
       PixelEditorControlNavigation(
-        cancelText: viewModel.localizedStrings.cancel,
-        doneText: viewModel.localizedStrings.done,
+        cancelText: localizedStrings.cancel,
+        doneText: localizedStrings.done,
         onCancel: onCancel,
         onDone: onDone
       )
@@ -844,7 +946,9 @@ private struct PixelEditorCropControl: View {
 
 private struct PixelEditorMaskControl: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let localizedStrings: PixelEditorLocalizedStrings
+  @Binding var maskingBrushSize: MaskingBrushSize
   let onCancel: () -> Void
   let onDone: () -> Void
 
@@ -861,17 +965,17 @@ private struct PixelEditorMaskControl: View {
         PixelEditorBrushSizeSlider(
           value: brushSize,
           onChange: { size in
-            viewModel.setBrushSize(size)
+            maskingBrushSize = .point(size)
           }
         )
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .padding(.horizontal, 36)
 
-        Button(viewModel.localizedStrings.clear) {
-          viewModel.editingStack.set(localAdjustments: [])
-          viewModel.editingStack.set(blurringMaskPaths: [])
-          viewModel.editingStack.takeSnapshot()
+        Button(localizedStrings.clear) {
+          editingStack.set(localAdjustments: [])
+          editingStack.set(blurringMaskPaths: [])
+          editingStack.takeSnapshot()
         }
         .font(.system(size: 17, weight: .bold))
         .foregroundStyle(PixelEditorColor.primary)
@@ -880,8 +984,8 @@ private struct PixelEditorMaskControl: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       PixelEditorControlNavigation(
-        cancelText: viewModel.localizedStrings.cancel,
-        doneText: viewModel.localizedStrings.done,
+        cancelText: localizedStrings.cancel,
+        doneText: localizedStrings.done,
         onCancel: onCancel,
         onDone: onDone
       )
@@ -889,7 +993,7 @@ private struct PixelEditorMaskControl: View {
   }
 
   private var brushSize: CGFloat {
-    switch viewModel.maskingBrushSize {
+    switch maskingBrushSize {
     case let .point(value), let .pixel(value):
       return value
     }
@@ -949,13 +1053,14 @@ private enum PixelEditorBrushSizeMetrics {
 
 private struct PixelEditorFilterControl: View {
 
-  let viewModel: PixelEditorViewModel
+  let editingStack: EditingStack
+  let localizedStrings: PixelEditorLocalizedStrings
   let kind: PixelEditorFilterKind
   let onCancel: () -> Void
   let onDone: () -> Void
 
   var body: some View {
-    let displayValue = kind.displayValue(in: viewModel.editingStack.loadedState?.currentEdit.filters)
+    let displayValue = kind.displayValue(in: editingStack.loadedState?.currentEdit.filters)
 
     VStack(spacing: 0) {
       VStack(spacing: 8) {
@@ -969,7 +1074,7 @@ private struct PixelEditorFilterControl: View {
           range: PixelEditorAdjustmentSliderMetrics.displayRange,
           mode: kind.sliderMode,
           onChange: {
-            kind.setDisplayValue($0, editingStack: viewModel.editingStack)
+            kind.setDisplayValue($0, editingStack: editingStack)
           }
         )
         .frame(height: 44)
@@ -979,8 +1084,8 @@ private struct PixelEditorFilterControl: View {
       .accessibilityIdentifier("swiftui.pixel.filter.\(kind.accessibilityIdentifier)")
 
       PixelEditorControlNavigation(
-        cancelText: viewModel.localizedStrings.cancel,
-        doneText: viewModel.localizedStrings.done,
+        cancelText: localizedStrings.cancel,
+        doneText: localizedStrings.done,
         onCancel: onCancel,
         onDone: onDone
       )
@@ -1315,7 +1420,7 @@ private struct PixelEditorControlNavigation: View {
   }
 }
 
-private extension PixelEditorViewModel.Mode {
+private extension PixelEditorMode {
 
   var isCrop: Bool {
     switch self {
@@ -1325,34 +1430,6 @@ private extension PixelEditorViewModel.Mode {
       return false
     }
   }
-
-  var isMasking: Bool {
-    switch self {
-    case .masking:
-      return true
-    case .crop, .editing, .preview:
-      return false
-    }
-  }
-
-  var allowsCanvasInteraction: Bool {
-    switch self {
-    case .editing, .masking, .preview:
-      return true
-    case .crop:
-      return false
-    }
-  }
-
-  var isEditing: Bool {
-    switch self {
-    case .editing:
-      return true
-    case .crop, .masking, .preview:
-      return false
-    }
-  }
-
 }
 
 private extension PixelEditorEditMenu {

@@ -146,6 +146,21 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     )
   }
 
+  func testLocalAdjustmentMaskUsesDisplayYCoordinates() throws {
+    let sourceImage = Self.makeSolidImage(width: 40, height: 40, white: 0.25)
+    let sourceCIImage = CIImage(cgImage: sourceImage)
+    let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 6))
+
+    let renderedImage = try XCTUnwrap(
+      Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
+    )
+
+    let maskedPixel = Self.rgbaInDisplayCoordinates(in: renderedImage, x: 20, y: 6)
+    let mirroredPixel = Self.rgbaInDisplayCoordinates(in: renderedImage, x: 20, y: 34)
+
+    XCTAssertGreaterThan(maskedPixel.red, mirroredPixel.red)
+  }
+
   func testRendererAppliesLocalAdjustmentBeforeCrop() throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let imageSource = ImageSource(cgImage: sourceImage)
@@ -264,6 +279,22 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     }.cgImage!
   }
 
+  private static func makeSolidImage(
+    width: Int,
+    height: Int,
+    white: CGFloat
+  ) -> CGImage {
+    let size = CGSize(width: width, height: height)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+
+    return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+      UIColor(white: white, alpha: 1).setFill()
+      UIRectFill(CGRect(origin: .zero, size: size))
+    }.cgImage!
+  }
+
   private static func rgba(in image: CGImage, x: Int, y: Int) -> RGBA {
     let width = image.width
     let height = image.height
@@ -290,6 +321,10 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       blue: pixels[offset + 2],
       alpha: pixels[offset + 3]
     )
+  }
+
+  private static func rgbaInDisplayCoordinates(in image: CGImage, x: Int, y: Int) -> RGBA {
+    rgba(in: image, x: x, y: image.height - 1 - y)
   }
 
   private struct RGBA: Equatable {

@@ -8,7 +8,6 @@ private struct EditingCanvasRenderInputKey: Equatable {
   var displayBounds: CGRect
   var filters: EditingStack.Edit.Filters
   var mode: EditingCanvasMode
-  var renderedPreviewLocalAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]?
 }
 
 @_spi(Development)
@@ -372,8 +371,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       sourceExtent: previewSourceImage.extent,
       displayBounds: displayBoundsRect,
       filters: loadedState.currentEdit.filters,
-      mode: mode,
-      renderedPreviewLocalAdjustments: mode.rendersFullEditPreview ? loadedState.currentEdit.localAdjustments : nil
+      mode: mode
     )
   }
 

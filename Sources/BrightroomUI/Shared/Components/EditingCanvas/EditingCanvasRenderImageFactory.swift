@@ -65,11 +65,8 @@ enum EditingCanvasRenderImageFactory {
       usesPreparedBaseImage = false
 
     case .renderedEditPreview, .preview:
-      // The compatibility local-adjustment path rasterizes saved masks in the
-      // image's zero-origin coordinate space. Keep that full-image pipeline
-      // intact, then clip to the displayed crop as the final step.
-      let previewImage = loadedState.currentEdit
-        .makePreviewImage(from: scaledPreviewSourceImage, purpose: .editing)
+      let previewImage = loadedState.currentEdit.filters
+        .apply(to: scaledPreviewSourceImage)
         .cropped(to: canvasRect)
       let displayPreviewImage = displayOrientedImage(previewImage, canvasSize: canvasSize)
         .cropped(to: renderBounds)
@@ -149,8 +146,13 @@ enum EditingCanvasRenderImageFactory {
       renderEffect = localEffect
 
     case .renderedEditPreview, .preview:
-      let previewImage = loadedState.currentEdit
-        .makePreviewImage(from: sourceImage, purpose: .editing)
+      let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        loadedState.currentEdit.filters
+          .apply(to: sourceImage)
+          .cropped(to: sourceExtent),
+        source: sourceImage
+      )
+      let previewImage = filteredSourceImage
         .cropped(to: sourceExtent)
       let displayPreviewImage = cropOutputImage(previewImage, geometry: geometry)
         .cropped(to: canvasRect)

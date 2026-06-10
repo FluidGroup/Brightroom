@@ -913,7 +913,7 @@ private struct PhotosCropRotationSlider: View {
 }
 
 private enum PhotosCropRotationSliderMetrics {
-  static let neutralDeadZoneDegrees: Double = 2.5
+  static let neutralDeadZoneDegrees: Double = 0.5
 }
 
 private extension BrightroomSteppedSliderStyle {

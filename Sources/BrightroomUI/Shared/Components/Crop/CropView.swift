@@ -578,6 +578,10 @@ final class CropView: UIView {
       }
     }
 
+    var isZoomBouncing: Bool {
+      scrollView.isZoomBouncing
+    }
+
     var isViewportPresentationSettled: Bool {
       let tolerance: CGFloat = 0.5
 
@@ -763,12 +767,21 @@ final class CropView: UIView {
       onDidEndDecelerating?()
     }
 
+    /// Synchronizes the scrollable content size with the current zoomed
+    /// crop-output image.
+    ///
+    /// This updates the scroll range without changing centering insets, so it
+    /// can run while UIKit is animating zoom bounce-back.
+    func synchronizeZoomedContentSize() {
+      scrollView.contentSize = zoomedContentSize
+    }
+
     /// Centers the crop-output image when the zoomed content is smaller than
     /// the Tool viewport. Tool mode presents the crop output as an image, so
     /// empty space belongs around that image rather than inside the image.
     func centerContentInViewport() {
-      let contentSize = zoomedContentSize
-      scrollView.contentSize = contentSize
+      synchronizeZoomedContentSize()
+      let contentSize = scrollView.contentSize
       let horizontalInset = max((scrollView.bounds.width - contentSize.width) / 2, 0)
       let verticalInset = max((scrollView.bounds.height - contentSize.height) / 2, 0)
       scrollView.contentInset = UIEdgeInsets(
@@ -849,6 +862,15 @@ final class CropView: UIView {
     }
   }
 
+  private var allowsToolViewingRenderedEditPreview: Bool {
+    switch displayMode {
+    case .cropInteractionImage:
+      return false
+    case .renderedEditPreview:
+      return true
+    }
+  }
+
   let editingStack: EditingStack
 
   #if DEBUG
@@ -869,6 +891,13 @@ final class CropView: UIView {
   private var canvasBrush: EditingCanvasBrush = .init()
   private var canvasStrokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
   private var editingCanvasLocalAdjustmentLayerID: UUID?
+  /// True while an external control streams straighten angle changes before
+  /// committing the resulting crop extent.
+  ///
+  /// Streaming straighten updates mutate the crop scroll transform without
+  /// animation. During that phase, viewport conversion should read model layers
+  /// so Metal rendering does not chase stale presentation-layer geometry.
+  private var isStreamingAdjustmentAngle = false
 
   private var hasSetupScrollViewCompleted = false
 
@@ -1096,7 +1125,11 @@ final class CropView: UIView {
 
       toolSurface.onDidZoom = { [weak self] in
         guard let self else { return }
-        self.toolSurface.centerContentInViewport()
+        if self.toolSurface.isZoomBouncing {
+          self.toolSurface.synchronizeZoomedContentSize()
+        } else {
+          self.toolSurface.centerContentInViewport()
+        }
         self.updateToolViewportDuringScrollInteraction()
       }
       toolSurface.onDidScroll = { [weak self] in
@@ -1268,17 +1301,21 @@ final class CropView: UIView {
       return
     }
 
+    isStreamingAdjustmentAngle = recordsCropExtent == false
     crop.adjustmentAngle = angle
     setProposedCrop(crop, animatesLayout: false)
 
     if recordsCropExtent {
       record()
+      isStreamingAdjustmentAngle = false
     }
   }
 
   func commitAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
     setAdjustmentAngle(angle, recordsCropExtent: false)
     record()
+    isStreamingAdjustmentAngle = false
+    updateCropDisplayViewport()
   }
 
   func setCrop(_ crop: EditingCrop) {
@@ -1431,11 +1468,15 @@ extension CropView {
         return
       }
 
+      let renderPlan = CanvasRenderPlan(
+        localAdjustments: loadedState.currentEdit.localAdjustments,
+        allowsRenderedEditPreview: allowsToolViewingRenderedEditPreview
+      )
       toolSurface.updateCanvas(
         loadedState: loadedState,
         geometry: geometry,
-        mode: .renderedEditPreview,
-        committedStrokes: []
+        mode: renderPlan.canvasMode,
+        committedStrokes: renderPlan.committedStrokes
       )
       updateToolCropDisplayViewport()
 
@@ -1498,7 +1539,10 @@ extension CropView {
     case singleLocalAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
     case renderedEditPreview
 
-    init(localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]) {
+    init(
+      localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer],
+      allowsRenderedEditPreview: Bool = true
+    ) {
       let activeLayers = localAdjustments.filter {
         $0.isEnabled && $0.effect.isActive && $0.mask.isEmpty == false
       }
@@ -1509,7 +1553,7 @@ extension CropView {
       case 1:
         self = .singleLocalAdjustment(activeLayers[0])
       default:
-        self = .renderedEditPreview
+        self = allowsRenderedEditPreview ? .renderedEditPreview : .viewportBase
       }
     }
 
@@ -1542,6 +1586,7 @@ extension CropView {
     }
 
     let usesPresentationLayers = cropSurface.isInteractiveZoomGestureActive == false
+      && isStreamingAdjustmentAngle == false
     let visibleViewportFrame = Self.currentLayerRect(
       bounds,
       from: self,
@@ -2526,6 +2571,10 @@ extension CropView {
     appliesViewport: Bool = true
   ) {
     viewportRenderingState(for: surface).invalidate()
+
+    if surface == .tool {
+      toolSurface.centerContentInViewport()
+    }
 
     if appliesViewport {
       applyViewport(for: surface)
