@@ -525,20 +525,46 @@ struct CatmullRomSegment {
   private func point(at t: CGFloat) -> CGPoint {
     let t2 = t * t
     let t3 = t2 * t
+    let x = Self.interpolate(
+      point0.x,
+      point1.x,
+      point2.x,
+      point3.x,
+      t: t,
+      t2: t2,
+      t3: t3
+    )
+    let y = Self.interpolate(
+      point0.y,
+      point1.y,
+      point2.y,
+      point3.y,
+      t: t,
+      t2: t2,
+      t3: t3
+    )
 
-    return CGPoint(
-      x: 0.5 * (
-        2 * point1.x
-          + (-point0.x + point2.x) * t
-          + (2 * point0.x - 5 * point1.x + 4 * point2.x - point3.x) * t2
-          + (-point0.x + 3 * point1.x - 3 * point2.x + point3.x) * t3
-      ),
-      y: 0.5 * (
-        2 * point1.y
-          + (-point0.y + point2.y) * t
-          + (2 * point0.y - 5 * point1.y + 4 * point2.y - point3.y) * t2
-          + (-point0.y + 3 * point1.y - 3 * point2.y + point3.y) * t3
-      )
+    return CGPoint(x: x, y: y)
+  }
+
+  private static func interpolate(
+    _ p0: CGFloat,
+    _ p1: CGFloat,
+    _ p2: CGFloat,
+    _ p3: CGFloat,
+    t: CGFloat,
+    t2: CGFloat,
+    t3: CGFloat
+  ) -> CGFloat {
+    let base = 2 * p1
+    let linear = (p2 - p0) * t
+    let quadratic = (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2
+    let cubic = (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+    return 0.5 * (
+      base
+        + linear
+        + quadratic
+        + cubic
     )
   }
 }
