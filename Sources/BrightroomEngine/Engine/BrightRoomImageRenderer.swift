@@ -46,7 +46,7 @@ public final class BrightRoomImageRenderer {
     ///   - workingColorSpace:
     public init(
       resolution: BrightRoomImageRenderer.Resolution = .full,
-      workingFormat: CIFormat = .BGRA8,
+      workingFormat: CIFormat = .ARGB8,
       workingColorSpace: CGColorSpace? = nil
     ) {
       self.resolution = resolution
@@ -124,7 +124,6 @@ public final class BrightRoomImageRenderer {
   public struct Edit {
     public var croppingRect: EditingCrop?
     public var modifiers: [AnyFilter] = []
-    public var localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer] = []
     public var drawer: [GraphicsDrawing] = []
   }
 
@@ -172,11 +171,7 @@ public final class BrightRoomImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
-    if edit.drawer.isEmpty,
-       edit.modifiers.isEmpty,
-       edit.localAdjustments.isEmpty,
-       options.workingColorSpace == nil
-    {
+    if edit.drawer.isEmpty, edit.modifiers.isEmpty, options.workingColorSpace == nil {
       return try renderOnlyCropping(options: options)
     } else {
       return try renderRevison2(options: options)
@@ -293,12 +288,8 @@ public final class BrightRoomImageRenderer {
      */
     EngineLog.debug(.renderer, "Applies Effect")
 
-    let filtered_CIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
+    let effected_CIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
       modifier.apply(to: image, sourceImage: sourceCIImage)
-    }
-
-    let effected_CIImage = edit.localAdjustments.reduce(filtered_CIImage) { image, layer in
-      layer.apply(to: image)
     }
 
     /**

@@ -28,6 +28,15 @@
       }
     },
     {
+      "identity" : "swiftui-hosting",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidGroup/swiftui-Hosting",
+      "state" : {
+        "revision" : "f0f309cbb9a7e055bc57e931a3506ebb26bf0134",
+        "version" : "2.6.0"
+      }
+    },
+    {
       "identity" : "transitionpatch",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/TransitionPatch.git",

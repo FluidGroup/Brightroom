@@ -20,10 +20,7 @@
 // THE SOFTWARE.
 
 import CoreGraphics
-import Combine
-import Foundation
 import Observation
-import StateGraph
 
 import BrightroomEngine
 
@@ -49,12 +46,6 @@ public final class PixelEditorViewModel {
   public var maskingBrushSize: MaskingBrushSize = .point(30)
   var drawnPaths: [DrawnPath] = []
   public var proposedCrop: EditingCrop? = nil
-  var displayCrop: EditingCrop?
-  var editingStackObservationVersion = 0
-  let cropApplyAction = SwiftUICropView.ApplyAction()
-
-  @ObservationIgnored
-  private var editingStackObservation: AnyCancellable?
 
   public init(
     editingStack: EditingStack,
@@ -74,9 +65,6 @@ public final class PixelEditorViewModel {
         completion(new)
       }
     }
-
-    bindEditingStackObservation()
-    refreshDisplayStateFromEditingStack()
   }
 
   func setTitle(_ title: String) {
@@ -116,68 +104,21 @@ public final class PixelEditorViewModel {
 
   func endCrop(save: Bool) {
     if save {
-      let fallbackCrop = resolvedCropForDisplay()
-      let cropBeforeApplying = editingStack.loadedState?.currentEdit.crop
-      cropApplyAction()
-
-      if editingStack.loadedState?.currentEdit.crop == cropBeforeApplying, let fallbackCrop {
-        editingStack.crop(fallbackCrop)
+      if let proposed = proposedCrop {
+        editingStack.crop(proposed)
+        editingStack.takeSnapshot()
       }
 
-      proposedCrop = editingStack.loadedState?.currentEdit.crop ?? fallbackCrop
-      refreshDisplayStateFromEditingStack()
-      editingStack.takeSnapshot()
     } else {
       guard let loadedState = editingStack.loadedState else {
         assertionFailure()
         return
       }
       proposedCrop = loadedState.currentEdit.crop
-      refreshDisplayStateFromEditingStack()
     }
   }
 
   func setProposedCrop(_ proposedCrop: EditingCrop) {
     self.proposedCrop = proposedCrop
-    refreshDisplayStateFromEditingStack()
-  }
-
-  func startEditingStack() {
-    editingStack.start { [weak self] in
-      self?.refreshDisplayStateFromEditingStack()
-    }
-  }
-
-  private func bindEditingStackObservation() {
-    editingStackObservation = withGraphTracking {
-      withGraphTrackingMap(
-        from: editingStack,
-        map: { stack in
-          stack.loadedState?.currentEdit
-        },
-        onChange: { [weak self] _ in
-          DispatchQueue.main.async {
-            self?.refreshDisplayStateFromEditingStack()
-          }
-        }
-      )
-    }
-  }
-
-  private func refreshDisplayStateFromEditingStack() {
-    displayCrop = resolvedCropForDisplay()
-    editingStackObservationVersion += 1
-  }
-
-  private func resolvedCropForDisplay() -> EditingCrop? {
-    guard var crop = proposedCrop ?? editingStack.loadedState?.currentEdit.crop else {
-      return nil
-    }
-
-    if let aspectRatio = options.croppingAspectRatio {
-      crop.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
-    }
-
-    return crop
   }
 }

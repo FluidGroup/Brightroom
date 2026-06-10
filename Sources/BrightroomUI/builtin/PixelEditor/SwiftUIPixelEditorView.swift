@@ -87,7 +87,7 @@ public struct SwiftUIPixelEditorView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(PixelEditorColor.background)
     .task {
-      viewModel.startEditingStack()
+      viewModel.editingStack.start()
     }
     .accessibilityIdentifier("swiftui.pixel.editor")
   }
@@ -273,101 +273,52 @@ private struct PixelEditorCanvas: View {
   let viewModel: PixelEditorViewModel
 
   var body: some View {
-    let _ = viewModel.editingStackObservationVersion
-
-    GeometryReader { proxy in
-      ZStack {
-        SwiftUICropView(
-          editingStack: viewModel.editingStack,
-          isGuideInteractionEnabled: isGuideInteractionEnabled,
-          isAutoApplyEditingStackEnabled: false,
-          contentInset: .zero,
-          cropInsideOverlay: { adjustmentKind in
-            if viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil {
-              PixelEditorFreeCropGuideOverlay(isAdjustmentActive: adjustmentKind != nil)
-            }
-          },
-          cropOutsideOverlay: { _ in
-            PixelEditorColor.background
-          },
-          stateHandler: { state in
-            if let proposedCrop = state.proposedCrop {
-              viewModel.setProposedCrop(proposedCrop)
-            }
-          }
-        )
-        .croppingAspectRatio(viewModel.options.croppingAspectRatio)
-        .displayMode(.renderedEditPreview)
-        .surfaceMode(surfaceMode)
-        .brush(canvasBrush(in: proxy.size))
-        .strokeSmoothing(.init())
-        .registerApplyAction(viewModel.cropApplyAction)
-
-        if viewModel.editingStack.isLoading {
-          ProgressView()
-            .progressViewStyle(.circular)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(PixelEditorColor.background.opacity(0.5))
-        }
-      }
-      .clipped()
-    }
-  }
-
-  private var surfaceMode: CropViewSurfaceMode {
-    switch viewModel.mode {
-    case .crop:
-      return .crop
-    case .masking:
-      return .masking(maskingEffect)
-    case .editing, .preview:
-      return .viewing
-    }
-  }
-
-  private var isGuideInteractionEnabled: Bool {
-    viewModel.mode.isCrop && viewModel.options.croppingAspectRatio == nil
-  }
-
-  private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {
-    guard let crop = viewModel.editingStack.loadedState?.currentEdit.crop else {
-      return .gaussianBlur(radius: 18)
-    }
-
-    let diagonalLength = hypot(crop.cropExtent.width, crop.cropExtent.height)
-    return .gaussianBlur(radius: max(diagonalLength / 50, 1))
-  }
-
-  private func canvasBrush(in viewportSize: CGSize) -> EditingCanvasBrush {
-    .init(
-      size: Double(imageSpaceBrushSize(in: viewportSize)),
-      hardness: 0.72,
-      opacity: 0.9,
-      spacing: 0.18
-    )
-  }
-
-  private func imageSpaceBrushSize(in viewportSize: CGSize) -> CGFloat {
-    switch viewModel.maskingBrushSize {
-    case let .pixel(value):
-      return value
-    case let .point(value):
-      guard
-        let crop = viewModel.editingStack.loadedState?.currentEdit.crop,
-        viewportSize.width > 0,
-        viewportSize.height > 0,
-        crop.cropExtent.width > 0,
-        crop.cropExtent.height > 0
-      else {
-        return value
-      }
-
-      let fitScale = min(
-        viewportSize.width / crop.cropExtent.width,
-        viewportSize.height / crop.cropExtent.height
+    ZStack {
+      PixelEditorImagePreviewRepresentable(
+        editingStack: viewModel.editingStack,
+        displayBackground: .color(.systemBackground)
       )
-      return value / max(fitScale, 0.0001)
+        .opacity(viewModel.mode.isCrop ? 0 : 1)
+        .allowsHitTesting(false)
+
+      SwiftUIBlurryMaskingView(editingStack: viewModel.editingStack)
+        .brushSize(viewModel.maskingBrushSize)
+        .hideBackdropImageView(true)
+        .hideBlurryImageView(viewModel.mode.isEditing || viewModel.mode.isCrop)
+        .opacity(viewModel.mode.displaysMaskingView ? 1 : 0)
+        .allowsHitTesting(viewModel.mode.isMasking)
+
+      SwiftUICropView(
+        editingStack: viewModel.editingStack,
+        isGuideInteractionEnabled: viewModel.options.croppingAspectRatio == nil,
+        isAutoApplyEditingStackEnabled: false,
+        contentInset: .zero,
+        cropInsideOverlay: { adjustmentKind in
+          if viewModel.options.croppingAspectRatio == nil {
+            PixelEditorFreeCropGuideOverlay(isAdjustmentActive: adjustmentKind != nil)
+          }
+        },
+        cropOutsideOverlay: { _ in
+          PixelEditorColor.background
+        },
+        stateHandler: { state in
+          if let proposedCrop = state.proposedCrop {
+            viewModel.setProposedCrop(proposedCrop)
+          }
+        }
+      )
+      .croppingAspectRatio(viewModel.options.croppingAspectRatio)
+      .opacity(viewModel.mode.isCrop ? 1 : 0)
+      .allowsHitTesting(viewModel.mode.isCrop)
+
+      if viewModel.editingStack.isLoading {
+        ProgressView()
+          .progressViewStyle(.circular)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(PixelEditorColor.background.opacity(0.5))
+      }
     }
+    .clipped()
   }
 }
 
@@ -680,7 +631,6 @@ private struct PixelEditorPresetList: View {
             )
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("swiftui.pixel.preset.normal")
           .id("normal")
 
           if let previews = viewModel.editingStack.loadedState?.previewFilterPresets {
@@ -695,7 +645,6 @@ private struct PixelEditorPresetList: View {
                 )
               }
               .buttonStyle(.plain)
-              .accessibilityIdentifier("swiftui.pixel.preset.\(preview.filter.name)")
               .id(preview.filter.identifier)
             }
           }
@@ -775,7 +724,6 @@ private struct PixelEditorEditMenuView: View {
             )
           }
           .buttonStyle(.plain)
-          .accessibilityIdentifier("swiftui.pixel.menu.\(menu.accessibilityIdentifier)")
         }
       }
       .padding(.horizontal, 36)
@@ -869,13 +817,11 @@ private struct PixelEditorMaskControl: View {
         .padding(.horizontal, 36)
 
         Button(viewModel.localizedStrings.clear) {
-          viewModel.editingStack.set(localAdjustments: [])
           viewModel.editingStack.set(blurringMaskPaths: [])
           viewModel.editingStack.takeSnapshot()
         }
         .font(.system(size: 17, weight: .bold))
         .foregroundStyle(PixelEditorColor.primary)
-        .accessibilityIdentifier("swiftui.pixel.mask.clear")
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -976,7 +922,6 @@ private struct PixelEditorFilterControl: View {
       }
       .padding(.horizontal, PixelEditorLayout.controlHorizontalMargin)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .accessibilityIdentifier("swiftui.pixel.filter.\(kind.accessibilityIdentifier)")
 
       PixelEditorControlNavigation(
         cancelText: viewModel.localizedStrings.cancel,
@@ -1315,6 +1260,17 @@ private struct PixelEditorControlNavigation: View {
   }
 }
 
+private struct PixelEditorImagePreviewRepresentable: View {
+
+  let editingStack: EditingStack
+  let displayBackground: ImageDisplayBackground
+
+  var body: some View {
+    SwiftUIImagePreviewView(editingStack: editingStack)
+      .displayBackground(displayBackground)
+  }
+}
+
 private extension PixelEditorViewModel.Mode {
 
   var isCrop: Bool {
@@ -1335,15 +1291,6 @@ private extension PixelEditorViewModel.Mode {
     }
   }
 
-  var allowsCanvasInteraction: Bool {
-    switch self {
-    case .editing, .masking, .preview:
-      return true
-    case .crop:
-      return false
-    }
-  }
-
   var isEditing: Bool {
     switch self {
     case .editing:
@@ -1353,6 +1300,14 @@ private extension PixelEditorViewModel.Mode {
     }
   }
 
+  var displaysMaskingView: Bool {
+    switch self {
+    case .masking, .preview:
+      return true
+    case .crop, .editing:
+      return false
+    }
+  }
 }
 
 private extension PixelEditorEditMenu {
@@ -1450,37 +1405,6 @@ private extension PixelEditorEditMenu {
     }
   }
 
-  var accessibilityIdentifier: String {
-    switch self {
-    case .adjustment:
-      return "adjustment"
-    case .mask:
-      return "mask"
-    case .exposure:
-      return "exposure"
-    case .gaussianBlur:
-      return "gaussian-blur"
-    case .contrast:
-      return "contrast"
-    case .temperature:
-      return "temperature"
-    case .saturation:
-      return "saturation"
-    case .highlights:
-      return "highlights"
-    case .shadows:
-      return "shadows"
-    case .vignette:
-      return "vignette"
-    case .fade:
-      return "fade"
-    case .sharpen:
-      return "sharpen"
-    case .clarity:
-      return "clarity"
-    }
-  }
-
   func hasChanges(in edit: EditingStack.Edit?) -> Bool {
     guard let edit else {
       return false
@@ -1491,7 +1415,6 @@ private extension PixelEditorEditMenu {
       return false
     case .mask:
       return !edit.drawings.blurredMaskPaths.isEmpty
-        || edit.localAdjustments.contains { $0.isEnabled && !$0.mask.isEmpty }
     case .exposure:
       return edit.filters.exposure != nil
     case .gaussianBlur:
@@ -1580,33 +1503,6 @@ private extension PixelEditorFilterKind {
       return localizedStrings.editSharpen
     case .clarity:
       return localizedStrings.editClarity
-    }
-  }
-
-  var accessibilityIdentifier: String {
-    switch self {
-    case .exposure:
-      return "exposure"
-    case .gaussianBlur:
-      return "gaussian-blur"
-    case .contrast:
-      return "contrast"
-    case .temperature:
-      return "temperature"
-    case .saturation:
-      return "saturation"
-    case .highlights:
-      return "highlights"
-    case .shadows:
-      return "shadows"
-    case .vignette:
-      return "vignette"
-    case .fade:
-      return "fade"
-    case .sharpen:
-      return "sharpen"
-    case .clarity:
-      return "clarity"
     }
   }
 

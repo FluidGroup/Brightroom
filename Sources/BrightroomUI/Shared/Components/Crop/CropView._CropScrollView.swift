@@ -26,7 +26,7 @@ extension CropView {
   /**
    Internal UIScrollView's subclass.
    */
-  final class _ScrollView: UIScrollView {
+  final class _CropScrollView: UIScrollView {
     override init(frame: CGRect) {
       super.init(frame: frame)
       
@@ -39,7 +39,11 @@ extension CropView {
     }
     
     private func initialize() {
-      contentInsetAdjustmentBehavior = .never        
+      if #available(iOS 11.0, *) {
+        contentInsetAdjustmentBehavior = .never        
+      } else {
+        // Fallback on earlier versions
+      }
       insetsLayoutMarginsFromSafeArea = false
       showsVerticalScrollIndicator = false
       showsHorizontalScrollIndicator = false
@@ -64,11 +68,31 @@ extension CropView {
     }()
     #endif
 
+    var image: UIImage? {
+      get {
+        imageView.image
+      }
+      set {
+        imageView.image = newValue
+      }
+    }
+
+    let imageView: UIImageView
+
+    var overlay: UIView? {
+      didSet {
+        oldValue?.removeFromSuperview()
+        if let overlay {
+          addSubview(overlay)
+        }
+      }
+    }
+
     override init(frame: CGRect) {
+      self.imageView = _ImageView()
       super.init(frame: frame)
 
-      backgroundColor = .clear
-      isOpaque = false
+      addSubview(imageView)
     }
     
     required init?(coder: NSCoder) {
@@ -77,6 +101,8 @@ extension CropView {
     
     override func layoutSubviews() {
       super.layoutSubviews()
+      imageView.frame = bounds
+      overlay?.frame = bounds
       #if DEBUG
       layer.addSublayer(debugShapeLayer)
       debugShapeLayer.frame = bounds

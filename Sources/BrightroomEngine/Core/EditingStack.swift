@@ -70,7 +70,8 @@ open class EditingStack: Hashable {
     var thumbnailImage: CIImage
   }
 
-  private struct CropInteractionImageRenderRequest: Equatable {
+  private struct CropImageRenderRequest: Equatable {
+    var filters: Edit.Filters
     var editingSourceCGImage: CGImage
     var orientation: CGImagePropertyOrientation
   }
@@ -91,19 +92,7 @@ open class EditingStack: Hashable {
      */
     public var currentEdit: Edit {
       didSet {
-        if currentEdit.filters != oldValue.filters {
-          editingPreviewImage = currentEdit.makePreviewImage(
-            from: editingSourceImage,
-            purpose: .editingBase
-          )
-        }
-
-        if currentEdit.crop != oldValue.crop {
-          cropInteractionPreviewImage = currentEdit.makePreviewImage(
-            from: editingSourceImage,
-            purpose: .cropInteraction
-          )
-        }
+        editingPreviewImage = currentEdit.filters.apply(to: editingSourceImage)
       }
     }
 
@@ -126,21 +115,8 @@ open class EditingStack: Hashable {
      */
     public let editingSourceImage: CIImage
 
-    /**
-     A lightweight editing preview used by legacy interactive views.
-     Local adjustments are intentionally excluded from automatic refresh because
-     their mask rasterization can be expensive and should be owned by the render
-     path that knows its target resolution.
-     */
     public fileprivate(set) var editingPreviewImage: CIImage
 
-    public fileprivate(set) var cropInteractionPreviewImage: CIImage
-
-    /**
-     A `CGImage` materialization of `cropInteractionPreviewImage`.
-     This intentionally follows the crop interaction preview policy rather
-     than the full editing preview policy.
-     */
     public fileprivate(set) var imageForCrop: CGImage
 
     public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
@@ -184,7 +160,6 @@ open class EditingStack: Hashable {
       editingSourceCGImage: CGImage,
       editingSourceCIImage: CIImage,
       editingPreviewCIImage: CIImage,
-      cropInteractionPreviewCIImage: CIImage,
       imageForCrop: CGImage,
       previewFilterPresets: [PreviewFilterPreset] = []
     ) {
@@ -197,19 +172,11 @@ open class EditingStack: Hashable {
       self.editingSourceCGImage = editingSourceCGImage
       self.editingSourceImage = editingSourceCIImage
       self.editingPreviewImage = editingPreviewCIImage
-      self.cropInteractionPreviewImage = cropInteractionPreviewCIImage
       self.previewFilterPresets = previewFilterPresets
       self.imageForCrop = imageForCrop
     }
 
     // MARK: - Functions
-
-    public func makeOriginalCIImage() -> CIImage {
-      imageSource
-        .makeOriginalCIImage()
-        .oriented(metadata.orientation)
-        .removingExtentOffset()
-    }
 
     mutating func makeVersion() {
       history.append(currentEdit)
@@ -368,9 +335,10 @@ open class EditingStack: Hashable {
 
       withGraphTrackingMap(
         from: self,
-        map: { stack -> CropInteractionImageRenderRequest? in
+        map: { stack -> CropImageRenderRequest? in
           stack.loadedState.map {
-            CropInteractionImageRenderRequest(
+            CropImageRenderRequest(
+              filters: $0.currentEdit.filters,
               editingSourceCGImage: $0.editingSourceCGImage,
               orientation: $0.metadata.orientation
             )
@@ -420,6 +388,7 @@ open class EditingStack: Hashable {
       let cgImageForCrop: CGImage = {
         do {
           return try Self.renderCGImageForCrop(
+            filters: [],
             source: .init(cgImage: editingSourceCGImage),
             orientation: metadata.orientation
           )
@@ -454,14 +423,7 @@ open class EditingStack: Hashable {
             thumbnailCIImage: _thumbnailImage,
             editingSourceCGImage: editingSourceCGImage,
             editingSourceCIImage: _editingSourceCIImage,
-            editingPreviewCIImage: initialEdit.makePreviewImage(
-              from: _editingSourceCIImage,
-              purpose: .editingBase
-            ),
-            cropInteractionPreviewCIImage: initialEdit.makePreviewImage(
-              from: _editingSourceCIImage,
-              purpose: .cropInteraction
-            ),
+            editingPreviewCIImage: initialEdit.filters.apply(to: _editingSourceCIImage),
             imageForCrop: cgImageForCrop
           )
 
@@ -517,13 +479,14 @@ open class EditingStack: Hashable {
     EngineLog.debug("[EditingStack] deinit")
   }
 
-  private func scheduleCropImageRender(_ request: CropInteractionImageRenderRequest) {
+  private func scheduleCropImageRender(_ request: CropImageRenderRequest) {
     debounceForCreatingCGImage.on { [weak self] in
       guard let self else { return }
 
       let cgImageForCrop: CGImage = {
         do {
           return try Self.renderCGImageForCrop(
+            filters: request.filters.makeFilters(),
             source: .init(cgImage: request.editingSourceCGImage),
             orientation: request.orientation
           )
@@ -607,20 +570,6 @@ open class EditingStack: Hashable {
     }
   }
 
-  public func set(localAdjustments: [Edit.LocalAdjustmentLayer]) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.localAdjustments = localAdjustments
-    }
-  }
-
-  public func append(localAdjustment: Edit.LocalAdjustmentLayer) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.localAdjustments.append(localAdjustment)
-    }
-  }
-
   public func makeRenderer() throws -> BrightRoomImageRenderer {
 
     guard let loaded = loadedState else {
@@ -639,7 +588,6 @@ open class EditingStack: Hashable {
     let edit = loaded.currentEdit
 
     renderer.edit.croppingRect = edit.crop
-    renderer.edit.localAdjustments = edit.localAdjustments
 
     if edit.drawings.blurredMaskPaths.isEmpty == false {
       renderer.edit.drawer = [
@@ -686,11 +634,13 @@ open class EditingStack: Hashable {
   }
 
   private static func renderCGImageForCrop(
+    filters: [AnyFilter],
     source: ImageSource,
     orientation: CGImagePropertyOrientation
   ) throws -> CGImage {
 
     let renderer = BrightRoomImageRenderer(source: source, orientation: orientation)
+    renderer.edit.modifiers = filters
 
     let result = try renderer.render().cgImage
 

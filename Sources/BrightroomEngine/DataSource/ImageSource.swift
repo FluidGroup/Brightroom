@@ -49,23 +49,21 @@ public final class ImageSource: Equatable {
 
   public init(image: UIImage) {
     precondition(image.cgImage != nil)
-    let originalCGImage = image.cgImage!
-    let decodedCGImage = ImageTool.makeDecodedCGImage(from: originalCGImage) ?? originalCGImage
     self.closures = .init(
       readImageSize: {
-        CGSize(width: decodedCGImage.width, height: decodedCGImage.height)
+        image.size.applying(.init(scaleX: image.scale, y: image.scale))
       },
       loadOriginalCGImage: {
-        decodedCGImage
+        image.cgImage!
       },
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
         return ImageTool.makeResizedCGImage(
-          from: decodedCGImage,
+          from: image.cgImage!,
           maxPixelSizeHint: maxPixelSize
         )!
       },
       makeCIImage: {
-        CIImage(cgImage: decodedCGImage)
+        CIImage(image: image)!
       }
     )
   }
