@@ -242,6 +242,12 @@ struct PhotosCropContentView: View {
       return
     }
 
+    // Leaving a tool commits its work as a version, so undo/redo steps at
+    // tool granularity. The stack snapshots the whole feature-list document.
+    if editingStack.loadedState?.hasUncommitedChanges == true {
+      editingStack.takeSnapshot()
+    }
+
     editingMode = mode
   }
 
@@ -286,6 +292,9 @@ struct PhotosCropContentView: View {
 
   private func finish() {
     applyAction()
+    if editingStack.loadedState?.hasUncommitedChanges == true {
+      editingStack.takeSnapshot()
+    }
     onDone()
   }
 

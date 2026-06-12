@@ -83,7 +83,9 @@ open class EditingStack: Hashable {
      */
     public var currentEdit: Edit {
       didSet {
-        if currentEdit.filters != oldValue.filters {
+        // Keyed on every globalEffects feature, not just the first projection;
+        // a document may carry more than one.
+        if currentEdit.globalEffectsSequence != oldValue.globalEffectsSequence {
           editingPreviewImage = currentEdit.makePreviewImage(
             from: editingSourceImage,
             purpose: .editingBase
@@ -98,9 +100,15 @@ open class EditingStack: Hashable {
     }
 
     /**
-     A stack of editing history
+     A stack of editing history: snapshots of the feature-list document.
      */
     public fileprivate(set) var history: [Edit] = []
+
+    /**
+     Versions undone from `history`, available for redo until the next
+     mutationsnapshot.
+     */
+    public fileprivate(set) var redoHistory: [Edit] = []
 
     public fileprivate(set) var thumbnailImage: CIImage
 
@@ -122,7 +130,17 @@ open class EditingStack: Hashable {
     public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
 
     public var canUndo: Bool {
-      return history.count > 0
+      // Mirror undoEditing: a history top equal to the current edit is
+      // skipped, and an empty history can still undo back to the initial
+      // editing when there are uncommitted changes.
+      if history.last == currentEdit {
+        return history.count > 1 || currentEdit != initialEditing
+      }
+      return history.count > 0 || currentEdit != initialEditing
+    }
+
+    public var canRedo: Bool {
+      return redoHistory.count > 0
     }
 
     /**
@@ -177,6 +195,7 @@ open class EditingStack: Hashable {
 
     mutating func makeVersion() {
       history.append(currentEdit)
+      redoHistory = []
     }
 
     mutating func revertCurrentEditing() {
@@ -184,12 +203,37 @@ open class EditingStack: Hashable {
     }
 
     mutating func revert(to revision: Revision) {
-      history.removeSubrange(revision..<history.count)
+      // A captured revision can go stale when undo or history purges shrink
+      // the stack; clamp instead of trapping on the invalid range.
+      let clamped = min(max(revision, 0), history.count)
+      history.removeSubrange(clamped..<history.count)
+      redoHistory = []
       currentEdit = history.last ?? initialEditing
     }
 
     mutating func undoEditing() {
-      currentEdit = history.popLast() ?? initialEditing
+      // Commit-style snapshots (PhotosCrop snapshots when leaving a tool)
+      // leave history.last equal to currentEdit at settled states; drop it so
+      // one undo press always changes visible state and redoHistory gets no
+      // duplicates.
+      if history.last == currentEdit {
+        history.removeLast()
+      }
+      if let last = history.popLast() {
+        redoHistory.append(currentEdit)
+        currentEdit = last
+      } else if currentEdit != initialEditing {
+        redoHistory.append(currentEdit)
+        currentEdit = initialEditing
+      }
+    }
+
+    mutating func redoEditing() {
+      guard let next = redoHistory.popLast() else {
+        return
+      }
+      history.append(currentEdit)
+      currentEdit = next
     }
 
   }
@@ -475,10 +519,20 @@ open class EditingStack: Hashable {
 
   /**
    Undo editing, pulling the latest history back into the current edit.
+   The undone version stays available for `redoEdit`.
    */
   public func undoEdit() {
     _pixelengine_ensureMainThread()
     loadedState?.undoEditing()
+  }
+
+  /**
+   Redo the most recently undone version. No-op when there is nothing to redo.
+   Any new snapshot clears the redo stack.
+   */
+  public func redoEdit() {
+    _pixelengine_ensureMainThread()
+    loadedState?.redoEditing()
   }
 
   /**
@@ -487,6 +541,7 @@ open class EditingStack: Hashable {
   public func removeAllEditsHistory() {
     _pixelengine_ensureMainThread()
     loadedState?.history = []
+    loadedState?.redoHistory = []
   }
 
   public func set(filters: (inout Edit.Filters) -> Void) {
@@ -500,20 +555,6 @@ open class EditingStack: Hashable {
     _pixelengine_ensureMainThread()
     applyIfChanged {
       $0.crop = value
-    }
-  }
-
-  public func set(blurringMaskPaths: [DrawnPath]) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.drawings.blurredMaskPaths = blurringMaskPaths
-    }
-  }
-
-  public func append<C: Collection>(blurringMaskPaths: C) where C.Element == DrawnPath {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.drawings.blurredMaskPaths += blurringMaskPaths
     }
   }
 
@@ -544,20 +585,23 @@ open class EditingStack: Hashable {
       orientation: loaded.metadata.orientation
     )
 
-    // TODO: Clean up ImageRenderer.Edit
-
     let edit = loaded.currentEdit
 
     renderer.edit.croppingRect = edit.crop
-    renderer.edit.localAdjustments = edit.localAdjustments
-
-    if edit.drawings.blurredMaskPaths.isEmpty == false {
-      renderer.edit.drawer = [
-        BlurredMask(paths: edit.drawings.blurredMaskPaths)
-      ]
+    // Compile the document in feature order. The crop feature is the domain
+    // feature handled via croppingRect; pixel operations keep their list
+    // positions so a filters feature after an adjustment stays after it.
+    renderer.edit.operations = edit.features.compactMap { feature in
+      switch feature.payload {
+      case .globalEffects(let filters):
+        let modifiers = filters.makeFilters()
+        return modifiers.isEmpty ? nil : .filters(modifiers)
+      case .localAdjustment(let layer):
+        return .localAdjustment(layer)
+      case .crop:
+        return nil
+      }
     }
-
-    renderer.edit.modifiers = edit.makeFilters()
 
     return renderer
   }

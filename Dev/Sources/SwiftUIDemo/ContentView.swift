@@ -172,69 +172,58 @@ struct ContentView: View {
           )
 
           Section(content: {
-            Button("PixelEditor Square") {
-              fullScreenView = .init {
-                DemoPixelEditor(editingStack: {
-                  EditingStack.init(
-                    imageProvider: .init(image: Asset.l1000316.image),
-                    cropModifier: .init { _, crop, completion in
-                      var new = crop
-                      new.updateCropExtent(toFitAspectRatio: .square)
-                      completion(new)
-                    }
-                  )
-                })
-              }
-            }
-
-            Button("PixelEditor") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop Square (modifier)") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
+                      imageProvider: .init(image: Asset.l1000316.image),
+                      cropModifier: .init { _, crop, completion in
+                        var new = crop
+                        new.updateCropExtent(toFitAspectRatio: .square)
+                        completion(new)
+                      }
                     )
                   },
-                  options: .init(croppingAspectRatio: nil)
+                  options: .fixedAspectRatio(.square)
                 )
               }
             }
 
-            Button("PixelEditor 4:5") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop 4:5") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Asset.l1000316.image)
                     )
                   },
-                  options: .init(croppingAspectRatio: .init(width: 4, height: 5))
+                  options: .fixedAspectRatio(.init(width: 4, height: 5))
                 )
               }
             }
 
-            Button("PixelEditor 5:4") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop 5:4") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Asset.l1000316.image)
                     )
                   },
-                  options: .init(croppingAspectRatio: .init(width: 5, height: 4))
+                  options: .fixedAspectRatio(.init(width: 5, height: 4))
                 )
               }
             }
 
-            Button("PixelEditor left") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop left") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Mocks.imageOrientationLeft())
                     )
-                  },
-                  options: .init(croppingAspectRatio: nil)
+                  }
                 )
               }
             }
@@ -290,27 +279,19 @@ struct WorkingOnPicked: View {
             }
           }
 
-          Button("PixelEditor") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
+          Button("PhotosCrop Square") {
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoPhotosCropView(stack: {
                 selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: nil))
+              }, options: .fixedAspectRatio(.square))
             }
           }
 
-          Button("PixelEditor Square") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
+          Button("PhotosCrop 4:5") {
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoPhotosCropView(stack: {
                 selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: .square))
-            }
-          }
-
-          Button("PixelEditor 4:5") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
-                selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: .init(width: 4, height: 5)))
+              }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
             }
           }
         }
@@ -490,99 +471,6 @@ private extension SwiftUIPhotosCropView.Options {
   }
 }
 
-struct DemoPixelEditor: View {
-
-  @Environment(\.dismiss) private var dismiss
-
-  @ObjectEdge var editingStack: EditingStack
-  @State var resultImage: ResultImage?
-
-  let options: PixelEditorOptions
-
-  init(
-    editingStack: @escaping () -> EditingStack,
-    options: PixelEditorOptions = .init()
-  ) {
-    self._editingStack = .init(wrappedValue: editingStack())
-    self.options = options
-  }
-
-  var body: some View {
-    SwiftUIPixelEditorView(
-      editingStack: editingStack,
-      options: options,
-      onEndEditing: { editingStack in
-        let metadata = PixelEditorResultMetadata.makeLines(
-          edit: editingStack.loadedState?.currentEdit
-        )
-        // Rendering synchronously here would hang the main thread for the
-        // full-resolution export (mask rasterization + CIContext + readback);
-        // the async overload renders on the renderer's serial queue and calls
-        // back on main.
-        try! editingStack.makeRenderer().render { result in
-          switch result {
-          case .success(let rendered):
-            self.resultImage = .init(cgImage: rendered.cgImage, metadata: metadata)
-          case .failure(let error):
-            assertionFailure("\(error)")
-          }
-        }
-      },
-      onCancelEditing: {
-        dismiss()
-      }
-    )
-    .sheet(item: $resultImage) {
-      RenderedResultView(result: $0)
-    }
-  }
-}
-
 #Preview {
   ContentView()
-}
-
-private enum PixelEditorResultMetadata {
-
-  static func makeLines(edit: EditingStack.Edit?) -> [String] {
-    guard let edit else {
-      return []
-    }
-
-    let enabledLocalAdjustments = edit.localAdjustments.filter(\.isEnabled)
-    let localStrokeCount = enabledLocalAdjustments.reduce(0) { partialResult, layer in
-      partialResult + layer.mask.strokes.count
-    }
-    let localStampCount = enabledLocalAdjustments.reduce(0) { partialResult, layer in
-      partialResult + layer.mask.strokes.reduce(0) { $0 + $1.stamps.count }
-    }
-
-    return [
-      "pixel-edit-preset: \(edit.filters.preset?.name ?? "none")",
-      "pixel-edit-filters: \(makeFilterNames(edit.filters))",
-      "pixel-edit-crop: \(edit.crop.isRenderingEquivalent(to: edit.crop.makeInitial()) ? "initial" : "changed")",
-      "pixel-edit-local-layers: \(enabledLocalAdjustments.count)",
-      "pixel-edit-local-strokes: \(localStrokeCount)",
-      "pixel-edit-local-stamps: \(localStampCount)",
-    ]
-  }
-
-  private static func makeFilterNames(_ filters: EditingStack.Edit.Filters) -> String {
-    var names: [String] = []
-    if filters.preset != nil { names.append("preset") }
-    if filters.brightness != nil { names.append("brightness") }
-    if filters.contrast != nil { names.append("contrast") }
-    if filters.saturation != nil { names.append("saturation") }
-    if filters.exposure != nil { names.append("exposure") }
-    if filters.highlights != nil { names.append("highlights") }
-    if filters.shadows != nil { names.append("shadows") }
-    if filters.temperature != nil { names.append("temperature") }
-    if filters.sharpen != nil { names.append("sharpen") }
-    if filters.gaussianBlur != nil { names.append("gaussian-blur") }
-    if filters.unsharpMask != nil { names.append("clarity") }
-    if filters.vignette != nil { names.append("vignette") }
-    if filters.fade != nil { names.append("fade") }
-    if !filters.additionalFilters.isEmpty { names.append("additional") }
-    return names.isEmpty ? "none" : names.joined(separator: ",")
-  }
 }

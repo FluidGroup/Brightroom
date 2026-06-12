@@ -40,50 +40,23 @@ public enum FeatureTreePoint: Equatable, Sendable {
   case output
 }
 
-/// A FeatureTree projection of `EditingStack.Edit`.
+/// A FeatureTree view of `EditingStack.Edit`.
 ///
 /// The tree is the contract between `EditingStack` and feature-editing UI
 /// components: the UI previews the evaluated result at a `FeatureTreePoint`
 /// and edits a feature node that may live at a different point.
 ///
-/// Node order matches render order:
-///
-/// ```text
-/// Source
-///   -> globalEffects (Edit.Filters)
-///   -> localAdjustment (each Edit.LocalAdjustmentLayer, in order)
-///   -> crop (final EditingCrop)
-///   -> Output
-/// ```
-///
-/// The projection is derived data. Mutations go through
-/// `EditingStack.updateFeature(id:mutate:)` and friends, which write back into
-/// `EditingStack.Edit`; the tree itself never stores pixels or UI state.
+/// The document IS the feature list — `Edit.features` — so this view mirrors
+/// it one-to-one. Node order is evaluation order. Mutations go through
+/// `EditingStack.updateFeature(id:mutate:)` and friends, which rewrite
+/// `Edit.features`; the tree itself never stores pixels or UI state.
 public struct EditingFeatureTree: Equatable {
 
   /// The parameters of a single feature node.
-  public enum Payload: Equatable {
-
-    /// The global, extent-preserving filter chain evaluated first.
-    case globalEffects(EditingStack.Edit.Filters)
-
-    /// A masked local adjustment evaluated in the pre-final-crop domain.
-    case localAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
-
-    /// The final framing/clipping crop.
-    case crop(EditingCrop)
-  }
+  public typealias Payload = EditingFeature.Payload
 
   /// A feature node with a stable identity.
-  public struct Node: Equatable, Identifiable {
-    public let id: FeatureID
-    public var payload: Payload
-
-    public init(id: FeatureID, payload: Payload) {
-      self.id = id
-      self.payload = payload
-    }
-  }
+  public typealias Node = EditingFeature
 
   /// The features evaluated in source-to-output order.
   public private(set) var nodes: [Node]
@@ -92,55 +65,28 @@ public struct EditingFeatureTree: Equatable {
 
   /// The identity of the global effects node.
   ///
-  /// The node is always present, even when no filter is set, so UI can anchor
-  /// editing affordances to a stable identity.
-  public static let globalEffectsNodeID = FeatureID(
-    rawValue: "brightroom.editing-stack.global-effects"
-  )
+  /// Present in every canonical document (created by `Edit.init(crop:)`), so
+  /// UI can anchor editing affordances to a stable identity.
+  public static let globalEffectsNodeID = EditingFeature.globalEffectsID
 
   /// The identity of the final crop node.
-  public static let finalCropNodeID = FeatureID(
-    rawValue: "brightroom.editing-stack.final-crop"
-  )
-
-  private static let localAdjustmentNodeIDPrefix = "brightroom.editing-stack.local-adjustment."
+  public static let finalCropNodeID = EditingFeature.finalCropID
 
   /// The tree identity for a local adjustment layer.
   public static func nodeID(forLocalAdjustment id: UUID) -> FeatureID {
-    FeatureID(rawValue: localAdjustmentNodeIDPrefix + id.uuidString)
+    EditingFeature.localAdjustmentID(for: id)
   }
 
   /// The local adjustment layer id encoded in a tree identity, if any.
   public static func localAdjustmentID(from nodeID: FeatureID) -> UUID? {
-    guard nodeID.rawValue.hasPrefix(localAdjustmentNodeIDPrefix) else {
-      return nil
-    }
-
-    return UUID(uuidString: String(nodeID.rawValue.dropFirst(localAdjustmentNodeIDPrefix.count)))
+    EditingFeature.localAdjustmentLayerID(from: nodeID)
   }
 
   // MARK: - Projection
 
-  /// Projects an `EditingStack.Edit` into the feature tree.
+  /// Mirrors an `EditingStack.Edit`'s feature list one-to-one.
   public init(edit: EditingStack.Edit) {
-    var nodes: [Node] = []
-    nodes.reserveCapacity(edit.localAdjustments.count + 2)
-
-    nodes.append(
-      .init(id: Self.globalEffectsNodeID, payload: .globalEffects(edit.filters))
-    )
-
-    for layer in edit.localAdjustments {
-      nodes.append(
-        .init(id: Self.nodeID(forLocalAdjustment: layer.id), payload: .localAdjustment(layer))
-      )
-    }
-
-    nodes.append(
-      .init(id: Self.finalCropNodeID, payload: .crop(edit.crop))
-    )
-
-    self.nodes = nodes
+    self.nodes = edit.features
   }
 
   // MARK: - Accessors
@@ -226,63 +172,27 @@ public struct EditingFeatureTree: Equatable {
 
   /// Applies a payload mutation to the node with `id` inside `edit`.
   ///
-  /// The mutation must keep the payload kind stable; switching a crop node to a
-  /// local adjustment is rejected. Returns false when the node does not exist
-  /// or the mutation changed the payload kind.
+  /// The mutation must keep the payload kind stable. Returns false when the
+  /// node does not exist or the mutation changed the payload kind.
   @discardableResult
   static func updateFeature(
     id: FeatureID,
     in edit: inout EditingStack.Edit,
     mutate: (inout Payload) -> Void
   ) -> Bool {
-    let tree = EditingFeatureTree(edit: edit)
-    guard let node = tree.node(id: id) else {
-      return false
-    }
-
-    var payload = node.payload
-    mutate(&payload)
-
-    switch (node.payload, payload) {
-    case (.globalEffects, let .globalEffects(filters)):
-      edit.filters = filters
-      return true
-
-    case (.localAdjustment(let previousLayer), let .localAdjustment(layer)):
-      guard
-        let index = edit.localAdjustments.firstIndex(where: { $0.id == previousLayer.id })
-      else {
-        return false
-      }
-      edit.localAdjustments[index] = layer
-      return true
-
-    case (.crop, let .crop(crop)):
-      edit.crop = crop
-      return true
-
-    default:
-      assertionFailure("updateFeature must not change the payload kind of \(id.rawValue)")
-      return false
-    }
+    edit.updateFeature(id: id, mutate: mutate)
   }
 
   /// Removes the feature with `id` from `edit`.
   ///
-  /// Only local adjustment nodes are removable; global effects and the final
-  /// crop are structural. Returns false when nothing was removed.
+  /// Crop features are structural and not removable. Returns false when
+  /// nothing was removed.
   @discardableResult
   static func removeFeature(
     id: FeatureID,
     from edit: inout EditingStack.Edit
   ) -> Bool {
-    guard let layerID = localAdjustmentID(from: id) else {
-      return false
-    }
-
-    let previousCount = edit.localAdjustments.count
-    edit.localAdjustments.removeAll(where: { $0.id == layerID })
-    return edit.localAdjustments.count != previousCount
+    edit.removeFeature(id: id)
   }
 }
 
@@ -331,19 +241,27 @@ extension EditingStack {
     }
   }
 
-  /// Appends a local adjustment feature and returns its tree identity.
+  /// Appends a local adjustment feature before the final crop and returns its
+  /// tree identity.
   @discardableResult
   public func appendFeature(
     localAdjustment layer: Edit.LocalAdjustmentLayer
   ) -> FeatureID {
-    append(localAdjustment: layer)
-    return EditingFeatureTree.nodeID(forLocalAdjustment: layer.id)
+    _pixelengine_ensureMainThread()
+
+    let id = EditingFeature.localAdjustmentID(for: layer.id)
+    guard var edit = loadedState?.currentEdit else {
+      return id
+    }
+    edit.insertFeatureBeforeFinalCrop(.init(id: id, payload: .localAdjustment(layer)))
+    loadedState?.currentEdit = edit
+    return id
   }
 
   /// Removes the feature node with `id`.
   ///
-  /// Only local adjustment nodes are removable. Returns false when nothing was
-  /// removed.
+  /// Crop features are structural and not removable; everything else is.
+  /// Returns false when nothing was removed.
   @discardableResult
   public func removeFeature(id: FeatureID) -> Bool {
     _pixelengine_ensureMainThread()
@@ -364,15 +282,9 @@ extension EditingStack {
     guard let current = loadedState?.currentEdit else {
       return
     }
-
-    if current.filters != edit.filters {
-      set(filters: { $0 = edit.filters })
+    guard current != edit else {
+      return
     }
-    if current.localAdjustments != edit.localAdjustments {
-      set(localAdjustments: edit.localAdjustments)
-    }
-    if current.crop != edit.crop {
-      crop(edit.crop)
-    }
+    loadedState?.currentEdit = edit
   }
 }

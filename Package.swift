@@ -18,7 +18,11 @@ let package = Package(
   ],
   targets: [
     .target(
-      name: "BrightroomParametric"
+      name: "BrightroomParametric",
+      resources: [
+        // Runtime-compiled Core Image kernels; see ParametricKernelRegistry.
+        .copy("ParametricKernels.metal")
+      ]
     ),
     .target(
       name: "BrightroomEngine",

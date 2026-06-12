@@ -27,6 +27,11 @@ import Foundation
 /// The compiler returns `CIImage` recipes and does not create intermediate
 /// `CGImage` or `CGContext` values. Callers choose when and how to materialize
 /// the returned image through `CIContext`.
+///
+/// Feature evaluation is native protocol dispatch: effects and domain features
+/// implement `apply(to:context:)` themselves. The compiler owns the document
+/// walk, tree-level validation, local-adjustment compositing, and the
+/// mask-tree renderer.
 public struct FeatureGraphCompiler: Sendable {
 
   /// Rendering options for the feature graph compiler.
@@ -48,18 +53,13 @@ public struct FeatureGraphCompiler: Sendable {
   /// The kernel registry used for custom Core Image operations.
   public var kernelRegistry: ParametricKernelRegistry
 
-  /// The feature registry used to resolve registry-backed feature nodes.
-  public var featureRegistry: FeatureRegistry
-
   /// Creates a feature graph compiler.
   public init(
     options: Options = .init(),
-    kernelRegistry: ParametricKernelRegistry = .init(),
-    featureRegistry: FeatureRegistry = .brightroomDefault
+    kernelRegistry: ParametricKernelRegistry = .init()
   ) {
     self.options = options
     self.kernelRegistry = kernelRegistry
-    self.featureRegistry = featureRegistry
   }
 
   /// Compiles and evaluates a document from an input image.
@@ -74,56 +74,17 @@ public struct FeatureGraphCompiler: Sendable {
   ) throws -> FeatureGraphOutput {
     try validate(document)
 
+    let context = FeatureEvaluationContext(kernelRegistry: kernelRegistry)
     var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
 
     for feature in document.mainTree.features where feature.isEnabled {
       switch feature {
       case let .domain(domainFeature):
-        image = try apply(domainFeature, to: image)
+        image = try domainFeature.apply(to: image, context: context)
 
       case let .effect(effect):
-        image = try apply(effect, to: image)
-
-      case let .localAdjustment(localAdjustment):
-        let output = try apply(localAdjustment, to: image)
-        image = output.image
-        localAdjustmentMasks[localAdjustment.id] = output.mask
-      }
-    }
-
-    return FeatureGraphOutput(
-      image: image,
-      localAdjustmentMasks: localAdjustmentMasks
-    )
-  }
-
-  /// Compiles and evaluates a registry-backed document from an input image.
-  ///
-  /// - Parameters:
-  ///   - input: The source image used as the first graph node.
-  ///   - document: The registry-backed parametric document to evaluate.
-  /// - Returns: The final image recipe and debug mask outputs.
-  public func makeOutput(
-    from input: CIImage,
-    document: FeatureDocument
-  ) throws -> FeatureGraphOutput {
-    try validate(document)
-
-    let context = FeatureEvaluationContext(
-      featureRegistry: featureRegistry,
-      kernelRegistry: kernelRegistry
-    )
-    var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
-    var localAdjustmentMasks: [FeatureID: CIImage] = [:]
-
-    for feature in document.mainTree.features where feature.isEnabled {
-      switch feature {
-      case let .domain(node):
-        image = try featureRegistry.applyDomainFeature(node, to: image, context: context)
-
-      case let .effect(node):
-        image = try featureRegistry.applyImageEffect(node, to: image, context: context)
+        image = try effect.apply(to: image, context: context)
 
       case let .localAdjustment(localAdjustment):
         let output = try apply(localAdjustment, to: image, context: context)
@@ -182,292 +143,8 @@ public enum FeatureGraphCompilerError: Error, Equatable, Sendable {
 
 private extension FeatureGraphCompiler {
 
-  func apply(_ feature: DomainFeature, to image: CIImage) throws -> CIImage {
-    switch feature {
-    case let .crop(crop):
-      guard crop.isEnabled else {
-        return image
-      }
-      return try apply(crop, to: image)
-    }
-  }
-
-  func apply(_ crop: CropFeature, to image: CIImage) throws -> CIImage {
-    let cropRect = crop.cropRect
-    guard cropRect.isParametricValidExtent else {
-      throw FeatureGraphCompilerError.invalidCropRect(crop.id, cropRect)
-    }
-
-    let absoluteCropRect = cropRect.offsetBy(
-      dx: image.extent.minX,
-      dy: image.extent.minY
-    )
-    return image
-      .cropped(to: absoluteCropRect)
-      .transformed(
-        by: CGAffineTransform(
-          translationX: -absoluteCropRect.minX,
-          y: -absoluteCropRect.minY
-        )
-      )
-  }
-
-  func apply(_ effect: ImageEffectFeature, to image: CIImage) throws -> CIImage {
-    guard effect.isEnabled else {
-      return image
-    }
-
-    switch effect {
-    case let .preset(feature):
-      guard feature.isEnabled else {
-        return image
-      }
-      return try feature.effects.reduce(image) { image, effect in
-        try apply(effect, to: image)
-      }
-
-    case let .colorCube(feature):
-      guard feature.isEnabled else {
-        return image
-      }
-      return try apply(feature, to: image)
-
-    case let .brightness(feature):
-      return image.applyingFilter(
-        "CIColorControls",
-        parameters: ["inputBrightness": feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .contrast(feature):
-      return image.applyingFilter(
-        "CIColorControls",
-        parameters: [kCIInputContrastKey: 1 + feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .saturation(feature):
-      return image.applyingFilter(
-        "CIColorControls",
-        parameters: [kCIInputSaturationKey: 1 + feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .exposure(feature):
-      guard abs(feature.value) > 0.0001 else {
-        return image
-      }
-      return image.applyingFilter(
-        "CIExposureAdjust",
-        parameters: [kCIInputEVKey: feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .highlights(feature):
-      return image.applyingFilter(
-        "CIHighlightShadowAdjust",
-        parameters: ["inputHighlightAmount": 1 - feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .shadows(feature):
-      return image.applyingFilter(
-        "CIHighlightShadowAdjust",
-        parameters: ["inputShadowAmount": feature.value]
-      )
-      .cropped(to: image.extent)
-
-    case let .highlightShadowTint(feature):
-      return try apply(feature, to: image)
-
-    case let .temperature(feature):
-      return image.applyingFilter(
-        "CITemperatureAndTint",
-        parameters: [
-          "inputNeutral": CIVector(x: CGFloat(feature.value) + 6500, y: 0),
-          "inputTargetNeutral": CIVector(x: 6500, y: 0),
-        ]
-      )
-      .cropped(to: image.extent)
-
-    case let .sharpen(feature):
-      let radius = ParametricRadiusCalculator.radius(
-        value: feature.radius,
-        max: ParametricFilterConstants.gaussianBlurSliderMax,
-        imageExtent: image.extent
-      )
-      return image.applyingFilter(
-        "CISharpenLuminance",
-        parameters: [
-          "inputRadius": radius,
-          "inputSharpness": feature.sharpness,
-        ]
-      )
-      .cropped(to: image.extent)
-
-    case let .gaussianBlur(feature):
-      let radius = resolve(feature.radius, extent: image.extent)
-      guard radius > 0.0001 else {
-        return image
-      }
-      return image
-        .clamped(to: image.extent)
-        .applyingFilter(
-          "CIGaussianBlur",
-          parameters: [kCIInputRadiusKey: radius]
-        )
-        .cropped(to: image.extent)
-
-    case let .unsharpMask(feature):
-      let radius = ParametricRadiusCalculator.radius(
-        value: feature.radius,
-        max: ParametricFilterConstants.unsharpMaskRadiusSliderMax,
-        imageExtent: image.extent
-      )
-      return image.applyingFilter(
-        "CIUnsharpMask",
-        parameters: [
-          "inputIntensity": feature.intensity,
-          "inputRadius": radius,
-        ]
-      )
-      .cropped(to: image.extent)
-
-    case let .vignette(feature):
-      return ParametricVignetteRenderer.apply(value: feature.value, to: image)
-
-    case let .fade(feature):
-      let foreground = CIImage(
-        color: CIColor(
-          red: 1,
-          green: 1,
-          blue: 1,
-          alpha: CGFloat(feature.intensity)
-        )
-      )
-      .cropped(to: image.extent)
-
-      guard let output = CIFilter(
-        name: "CISourceOverCompositing",
-        parameters: [
-          kCIInputImageKey: foreground,
-          kCIInputBackgroundImageKey: image,
-        ]
-      )?.outputImage else {
-        throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
-      }
-
-      return output.cropped(to: image.extent)
-    }
-  }
-
-  func apply(_ feature: ColorCubeFeature, to image: CIImage) throws -> CIImage {
-    let expectedByteCount = colorCubeByteCount(dimension: feature.dimension)
-    guard feature.cubeData.count == expectedByteCount else {
-      throw FeatureGraphCompilerError.invalidColorCubeData(
-        feature.id,
-        expectedByteCount: expectedByteCount,
-        actualByteCount: feature.cubeData.count
-      )
-    }
-
-    let filter = ParametricColorCubeHelper.makeColorCubeFilter(
-      cubeData: feature.cubeData,
-      dimension: feature.dimension,
-      cacheKey: feature.identifier
-    )
-    filter.setValue(image, forKeyPath: kCIInputImageKey)
-
-    guard let filtered = filter.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CIColorCubeWithColorSpace")
-    }
-
-    let foreground = filtered.applyingFilter(
-      "CIColorMatrix",
-      parameters: [
-        "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
-        "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
-        "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
-        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(feature.amount)),
-        "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-      ]
-    )
-
-    guard let output = CIFilter(
-      name: "CISourceOverCompositing",
-      parameters: [
-        kCIInputImageKey: foreground,
-        kCIInputBackgroundImageKey: image,
-      ]
-    )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
-    }
-
-    return output.cropped(to: image.extent)
-  }
-
-  func apply(_ feature: HighlightShadowTintFeature, to image: CIImage) throws -> CIImage {
-    let shadow = CIImage(color: feature.shadowColor.ciColor)
-      .cropped(to: image.extent)
-    guard let shadowOutput = CIFilter(
-      name: "CISourceOverCompositing",
-      parameters: [
-        kCIInputImageKey: shadow,
-        kCIInputBackgroundImageKey: image,
-      ]
-    )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
-    }
-
-    let highlight = CIImage(color: feature.highlightColor.ciColor)
-      .cropped(to: image.extent)
-    guard let highlightOutput = CIFilter(
-      name: "CISourceOverCompositing",
-      parameters: [
-        kCIInputImageKey: highlight,
-        kCIInputBackgroundImageKey: shadowOutput,
-      ]
-    )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
-    }
-
-    return highlightOutput.cropped(to: image.extent)
-  }
-
   func apply(
     _ localAdjustment: LocalAdjustmentFeature,
-    to base: CIImage
-  ) throws -> (image: CIImage, mask: CIImage) {
-    guard localAdjustment.isEnabled else {
-      return (base, CIImage.parametricTransparent(extent: base.extent))
-    }
-
-    let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
-    guard enabledEffects.isEmpty == false else {
-      throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
-    }
-
-    let adjusted = try enabledEffects.reduce(base) { image, effect in
-      try apply(effect, to: image)
-    }
-    let mask = try render(localAdjustment.maskTree, extent: base.extent)
-
-    switch localAdjustment.blendMode {
-    case .alpha:
-      let composited = adjusted.applyingFilter(
-        "CIBlendWithAlphaMask",
-        parameters: [
-          kCIInputBackgroundImageKey: base,
-          kCIInputMaskImageKey: mask,
-        ]
-      )
-      .cropped(to: base.extent)
-      return (composited, mask)
-    }
-  }
-
-  func apply(
-    _ localAdjustment: FeatureLocalAdjustment,
     to base: CIImage,
     context: FeatureEvaluationContext
   ) throws -> (image: CIImage, mask: CIImage) {
@@ -481,9 +158,9 @@ private extension FeatureGraphCompiler {
     }
 
     let adjusted = try enabledEffects.reduce(base) { image, effect in
-      try featureRegistry.applyImageEffect(effect, to: image, context: context)
+      try effect.apply(to: image, context: context)
     }
-    let mask = try featureRegistry.renderMask(localAdjustment.mask, extent: base.extent, context: context)
+    let mask = try render(localAdjustment.maskTree, extent: base.extent)
 
     switch localAdjustment.blendMode {
     case .alpha:
@@ -640,13 +317,12 @@ private extension FeatureGraphCompiler {
       try insert(feature.id)
 
       switch feature {
-      case let .domain(.crop(crop)):
-        guard crop.cropRect.isParametricValidExtent else {
-          throw FeatureGraphCompilerError.invalidCropRect(crop.id, crop.cropRect)
-        }
+      case let .domain(domainFeature):
+        try domainFeature.validate()
 
-      case .effect:
-        break
+      case let .effect(effect):
+        try effect.validate()
+        try validateChildren(of: effect, insert: insert)
 
       case let .localAdjustment(localAdjustment):
         let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
@@ -655,114 +331,25 @@ private extension FeatureGraphCompiler {
         }
 
         for effect in localAdjustment.effectPipeline.effects {
-          try validate(effect, insert: insert)
+          try insert(effect.id)
+          try effect.validate()
+          try validateChildren(of: effect, insert: insert)
         }
         try validate(localAdjustment.maskTree.root, insert: insert)
       }
     }
   }
 
-  func validate(_ document: FeatureDocument) throws {
-    var ids = Set<FeatureID>()
-
-    func insert(_ id: FeatureID) throws {
-      guard ids.insert(id).inserted else {
-        throw FeatureGraphCompilerError.duplicateID(id)
-      }
-    }
-
-    for feature in document.mainTree.features {
-      switch feature {
-      case let .domain(node):
-        try validateDomainFeature(node, insert: insert)
-
-      case let .effect(node):
-        try validateImageEffect(node, insert: insert)
-
-      case let .localAdjustment(localAdjustment):
-        try insert(localAdjustment.id)
-
-        let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
-        guard enabledEffects.isEmpty == false else {
-          throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
-        }
-
-        for effect in localAdjustment.effectPipeline.effects {
-          try validateImageEffect(effect, insert: insert)
-        }
-        try validateMask(localAdjustment.mask, insert: insert)
-      }
-    }
-  }
-
-  func validateDomainFeature(
-    _ node: FeatureNode,
+  func validateChildren(
+    of effect: any ImageEffectFeatureType,
     insert: (FeatureID) throws -> Void
   ) throws {
-    try insert(node.id)
-    try featureRegistry.domainDefinition(for: node).validate(node)
-  }
-
-  func validateImageEffect(
-    _ node: FeatureNode,
-    insert: (FeatureID) throws -> Void
-  ) throws {
-    try insert(node.id)
-    let definition = try featureRegistry.imageEffectDefinition(for: node)
-    try definition.validate(node)
-    for child in try definition.childImageEffects(in: node) {
-      try validateImageEffect(child, insert: insert)
-    }
-  }
-
-  func validateMask(
-    _ node: FeatureNode,
-    insert: (FeatureID) throws -> Void
-  ) throws {
-    try insert(node.id)
-    let definition = try featureRegistry.maskDefinition(for: node)
-    try definition.validate(node)
-    for child in try definition.childMasks(in: node) {
-      try validateMask(child, insert: insert)
-    }
-  }
-
-  func validate(
-    _ effect: ImageEffectFeature,
-    insert: (FeatureID) throws -> Void
-  ) throws {
-    try insert(effect.id)
-
-    switch effect {
-    case let .preset(preset):
-      for effect in preset.effects {
-        try validate(effect, insert: insert)
+    for child in effect.childFeatures {
+      try insert(child.id)
+      if let childEffect = child as? any ImageEffectFeatureType {
+        try childEffect.validate()
+        try validateChildren(of: childEffect, insert: insert)
       }
-
-    case let .colorCube(colorCube):
-      let expectedByteCount = colorCubeByteCount(dimension: colorCube.dimension)
-      guard colorCube.cubeData.count == expectedByteCount else {
-        throw FeatureGraphCompilerError.invalidColorCubeData(
-          colorCube.id,
-          expectedByteCount: expectedByteCount,
-          actualByteCount: colorCube.cubeData.count
-        )
-      }
-
-    case .brightness,
-      .contrast,
-      .saturation,
-      .exposure,
-      .highlights,
-      .shadows,
-      .highlightShadowTint,
-      .temperature,
-      .sharpen,
-      .gaussianBlur,
-      .unsharpMask,
-      .vignette,
-      .fade:
-      break
     }
   }
 
@@ -802,46 +389,5 @@ private extension FeatureGraphCompiler {
       try validate(subtract.base, insert: insert)
       try validate(subtract.removing, insert: insert)
     }
-  }
-}
-
-private func resolve(_ radius: GaussianBlurRadius, extent: CGRect) -> Double {
-  switch radius {
-  case let .absolute(value):
-    value
-  case let .editingStackFilterValue(value):
-    ParametricRadiusCalculator.radius(
-      value: value,
-      max: ParametricFilterConstants.gaussianBlurSliderMax,
-      imageExtent: extent
-    )
-  }
-}
-
-private func colorCubeByteCount(dimension: Int) -> Int {
-  dimension * dimension * dimension * 4 * MemoryLayout<Float>.size
-}
-
-private extension ParametricRGBAColor {
-
-  var ciColor: CIColor {
-    CIColor(
-      red: CGFloat(red),
-      green: CGFloat(green),
-      blue: CGFloat(blue),
-      alpha: CGFloat(alpha)
-    )
-  }
-}
-
-private extension CGRect {
-
-  var isParametricValidExtent: Bool {
-    origin.x.isFinite
-      && origin.y.isFinite
-      && size.width.isFinite
-      && size.height.isFinite
-      && size.width > 0
-      && size.height > 0
   }
 }

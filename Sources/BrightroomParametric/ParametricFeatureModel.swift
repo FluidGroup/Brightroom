@@ -42,11 +42,13 @@ public struct FeatureID: Codable, Equatable, Hashable, Sendable {
   }
 }
 
-/// A serializable parametric operation that can appear in an editing document.
+/// A parametric operation that can appear in an editing document.
 ///
-/// Concrete feature enums use this protocol to expose common identity and
-/// enabled-state behavior without storing protocol existentials in documents.
-public protocol Feature: Codable, Equatable, Sendable {
+/// Features are pure parameter values. Evaluation behavior is added by
+/// capability protocols (`ImageEffectFeatureType`, `DomainFeatureType`);
+/// persistence is added by `PersistableFeature`. The runtime document is not
+/// Codable by itself — serialization goes through `ParametricDocumentCodec`.
+public protocol Feature: Equatable, Sendable {
 
   /// The stable identity of this feature.
   var id: FeatureID { get }
@@ -60,7 +62,7 @@ public protocol Feature: Codable, Equatable, Sendable {
 /// The document intentionally stores edit parameters only. The source image is
 /// supplied to the compiler so the same document can be evaluated for preview,
 /// export, or debugging without baking pixels into the model.
-public struct EditingDocument: Codable, Equatable, Sendable {
+public struct EditingDocument: Equatable, Sendable {
 
   /// The ordered main feature tree evaluated from source image to output image.
   public var mainTree: MainTree
@@ -76,7 +78,7 @@ public struct EditingDocument: Codable, Equatable, Sendable {
 /// Main-tree features are evaluated in array order. Domain-changing features
 /// such as crop are allowed here, while local adjustment subtrees are restricted
 /// to extent-preserving operations.
-public struct MainTree: Codable, Equatable, Sendable {
+public struct MainTree: Equatable, Sendable {
 
   /// The features evaluated in source-to-output order.
   public var features: [MainFeature]
@@ -88,16 +90,33 @@ public struct MainTree: Codable, Equatable, Sendable {
 }
 
 /// A feature that can appear in the document's main tree.
-public enum MainFeature: Codable, Equatable, Sendable {
+///
+/// The effect and domain vocabularies are open: any type conforming to the
+/// capability protocols can appear here, including host-defined features.
+/// Local adjustments are a structural branch owned by the engine.
+public enum MainFeature: Equatable, Sendable {
 
   /// A feature that may change image extent or coordinate domain.
-  case domain(DomainFeature)
+  case domain(any DomainFeatureType)
 
   /// A global, extent-preserving image effect.
-  case effect(ImageEffectFeature)
+  case effect(any ImageEffectFeatureType)
 
   /// A local branch that composites an effect pipeline through a mask tree.
   case localAdjustment(LocalAdjustmentFeature)
+
+  public static func == (lhs: Self, rhs: Self) -> Bool {
+    switch (lhs, rhs) {
+    case let (.domain(a), .domain(b)):
+      return parametricFeatureIsEqual(a, b)
+    case let (.effect(a), .effect(b)):
+      return parametricFeatureIsEqual(a, b)
+    case let (.localAdjustment(a), .localAdjustment(b)):
+      return a == b
+    default:
+      return false
+    }
+  }
 }
 
 extension MainFeature: Feature {
@@ -125,39 +144,12 @@ extension MainFeature: Feature {
   }
 }
 
-/// A main-tree feature that may change the current image domain.
-///
-/// Domain features are deliberately excluded from local adjustment subtrees.
-/// This makes crop and future geometry correction semantics explicit.
-public enum DomainFeature: Codable, Equatable, Sendable {
-
-  /// Crops the current domain and resets the resulting image to zero origin.
-  case crop(CropFeature)
-}
-
-extension DomainFeature: Feature {
-
-  public var id: FeatureID {
-    switch self {
-    case let .crop(feature):
-      feature.id
-    }
-  }
-
-  public var isEnabled: Bool {
-    switch self {
-    case let .crop(feature):
-      feature.isEnabled
-    }
-  }
-}
-
 /// A crop in the current main-tree domain.
 ///
 /// The crop rectangle is interpreted relative to the image produced by the
 /// previous main-tree feature. A second crop therefore crops the already-cropped
 /// output of the first crop.
-public struct CropFeature: Feature {
+public struct CropFeature: Feature, Codable {
 
   /// The stable identity of this crop.
   public var id: FeatureID
@@ -180,136 +172,10 @@ public struct CropFeature: Feature {
   }
 }
 
-/// An extent-preserving image effect.
-///
-/// Image effects can appear directly in the main tree or inside a local
-/// adjustment effect pipeline.
-public enum ImageEffectFeature: Codable, Equatable, Sendable {
-
-  /// Applies a named group of image effects.
-  case preset(PresetFeature)
-
-  /// Applies a color-cube lookup table.
-  case colorCube(ColorCubeFeature)
-
-  /// Adjusts luminance using Core Image color controls.
-  case brightness(BrightnessFeature)
-
-  /// Adjusts contrast using Core Image color controls.
-  case contrast(ContrastFeature)
-
-  /// Adjusts saturation using Core Image color controls.
-  case saturation(SaturationFeature)
-
-  /// Adjusts exposure value.
-  case exposure(ExposureFeature)
-
-  /// Recovers highlight values using Core Image highlight/shadow adjustment.
-  case highlights(HighlightsFeature)
-
-  /// Opens shadow values using Core Image highlight/shadow adjustment.
-  case shadows(ShadowsFeature)
-
-  /// Blends separate tint colors over highlight and shadow regions.
-  case highlightShadowTint(HighlightShadowTintFeature)
-
-  /// Adjusts color temperature.
-  case temperature(TemperatureFeature)
-
-  /// Sharpens luminance using Core Image sharpen luminance.
-  case sharpen(SharpenFeature)
-
-  /// Applies a Gaussian blur while preserving the input extent.
-  case gaussianBlur(GaussianBlurFeature)
-
-  /// Applies an unsharp mask.
-  case unsharpMask(UnsharpMaskFeature)
-
-  /// Applies a vignette.
-  case vignette(VignetteFeature)
-
-  /// Blends white over the input image.
-  case fade(FadeFeature)
-}
-
-extension ImageEffectFeature: Feature {
-
-  public var id: FeatureID {
-    switch self {
-    case let .preset(feature):
-      feature.id
-    case let .colorCube(feature):
-      feature.id
-    case let .brightness(feature):
-      feature.id
-    case let .contrast(feature):
-      feature.id
-    case let .saturation(feature):
-      feature.id
-    case let .exposure(feature):
-      feature.id
-    case let .highlights(feature):
-      feature.id
-    case let .shadows(feature):
-      feature.id
-    case let .highlightShadowTint(feature):
-      feature.id
-    case let .temperature(feature):
-      feature.id
-    case let .sharpen(feature):
-      feature.id
-    case let .gaussianBlur(feature):
-      feature.id
-    case let .unsharpMask(feature):
-      feature.id
-    case let .vignette(feature):
-      feature.id
-    case let .fade(feature):
-      feature.id
-    }
-  }
-
-  public var isEnabled: Bool {
-    switch self {
-    case let .preset(feature):
-      feature.isEnabled
-    case let .colorCube(feature):
-      feature.isEnabled
-    case let .brightness(feature):
-      feature.isEnabled
-    case let .contrast(feature):
-      feature.isEnabled
-    case let .saturation(feature):
-      feature.isEnabled
-    case let .exposure(feature):
-      feature.isEnabled
-    case let .highlights(feature):
-      feature.isEnabled
-    case let .shadows(feature):
-      feature.isEnabled
-    case let .highlightShadowTint(feature):
-      feature.isEnabled
-    case let .temperature(feature):
-      feature.isEnabled
-    case let .sharpen(feature):
-      feature.isEnabled
-    case let .gaussianBlur(feature):
-      feature.isEnabled
-    case let .unsharpMask(feature):
-      feature.isEnabled
-    case let .vignette(feature):
-      feature.isEnabled
-    case let .fade(feature):
-      feature.isEnabled
-    }
-  }
-}
-
 /// A named group of extent-preserving effects.
 ///
-/// This is the parametric equivalent of a filter preset. It stores concrete
-/// supported effects rather than arbitrary `AnyFilter` values so the document
-/// remains Codable and inspectable.
+/// This is the parametric equivalent of a filter preset. It stores typed
+/// effect values so the document remains inspectable.
 public struct PresetFeature: Feature {
 
   /// The stable identity of this preset feature.
@@ -325,7 +191,7 @@ public struct PresetFeature: Feature {
   public var identifier: String
 
   /// The effects evaluated inside the preset, in order.
-  public var effects: [ImageEffectFeature]
+  public var effects: [any ImageEffectFeatureType]
 
   /// Creates a preset feature.
   public init(
@@ -333,7 +199,7 @@ public struct PresetFeature: Feature {
     isEnabled: Bool = true,
     name: String,
     identifier: String,
-    effects: [ImageEffectFeature]
+    effects: [any ImageEffectFeatureType]
   ) {
     self.id = id
     self.isEnabled = isEnabled
@@ -341,13 +207,21 @@ public struct PresetFeature: Feature {
     self.identifier = identifier
     self.effects = effects
   }
+
+  public static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.id == rhs.id
+      && lhs.isEnabled == rhs.isEnabled
+      && lhs.name == rhs.name
+      && lhs.identifier == rhs.identifier
+      && parametricFeaturesAreEqual(lhs.effects, rhs.effects)
+  }
 }
 
 /// A color-cube lookup-table effect.
 ///
 /// The feature stores cube data directly so rendering can stay in the Core Image
 /// graph without asking an `ImageSource` or bundle resource to materialize.
-public struct ColorCubeFeature: Feature {
+public struct ColorCubeFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -391,7 +265,7 @@ public struct ColorCubeFeature: Feature {
 }
 
 /// A brightness adjustment.
-public struct BrightnessFeature: Feature {
+public struct BrightnessFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -415,7 +289,7 @@ public struct BrightnessFeature: Feature {
 }
 
 /// A contrast adjustment.
-public struct ContrastFeature: Feature {
+public struct ContrastFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -439,7 +313,7 @@ public struct ContrastFeature: Feature {
 }
 
 /// A saturation adjustment.
-public struct SaturationFeature: Feature {
+public struct SaturationFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -463,7 +337,7 @@ public struct SaturationFeature: Feature {
 }
 
 /// An exposure adjustment.
-public struct ExposureFeature: Feature {
+public struct ExposureFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -487,7 +361,7 @@ public struct ExposureFeature: Feature {
 }
 
 /// A highlight recovery adjustment.
-public struct HighlightsFeature: Feature {
+public struct HighlightsFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -511,7 +385,7 @@ public struct HighlightsFeature: Feature {
 }
 
 /// A shadow lift adjustment.
-public struct ShadowsFeature: Feature {
+public struct ShadowsFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -564,7 +438,7 @@ public struct ParametricRGBAColor: Codable, Equatable, Sendable {
 }
 
 /// A highlight/shadow tint effect.
-public struct HighlightShadowTintFeature: Feature {
+public struct HighlightShadowTintFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -593,7 +467,7 @@ public struct HighlightShadowTintFeature: Feature {
 }
 
 /// A color temperature adjustment.
-public struct TemperatureFeature: Feature {
+public struct TemperatureFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -617,7 +491,7 @@ public struct TemperatureFeature: Feature {
 }
 
 /// A luminance sharpen adjustment.
-public struct SharpenFeature: Feature {
+public struct SharpenFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -656,7 +530,7 @@ public enum GaussianBlurRadius: Codable, Equatable, Sendable {
 }
 
 /// A Gaussian blur that preserves the input extent.
-public struct GaussianBlurFeature: Feature {
+public struct GaussianBlurFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -691,7 +565,7 @@ public struct GaussianBlurFeature: Feature {
 }
 
 /// An unsharp mask adjustment.
-public struct UnsharpMaskFeature: Feature {
+public struct UnsharpMaskFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -720,7 +594,7 @@ public struct UnsharpMaskFeature: Feature {
 }
 
 /// A vignette adjustment.
-public struct VignetteFeature: Feature {
+public struct VignetteFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -744,7 +618,7 @@ public struct VignetteFeature: Feature {
 }
 
 /// A fade adjustment that overlays white.
-public struct FadeFeature: Feature {
+public struct FadeFeature: Feature, Codable {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -768,14 +642,18 @@ public struct FadeFeature: Feature {
 }
 
 /// An ordered chain of extent-preserving effects.
-public struct EffectPipeline: Codable, Equatable, Sendable {
+public struct EffectPipeline: Equatable, Sendable {
 
   /// The effects applied from first to last.
-  public var effects: [ImageEffectFeature]
+  public var effects: [any ImageEffectFeatureType]
 
   /// Creates an effect pipeline.
-  public init(effects: [ImageEffectFeature] = []) {
+  public init(effects: [any ImageEffectFeatureType] = []) {
     self.effects = effects
+  }
+
+  public static func == (lhs: Self, rhs: Self) -> Bool {
+    parametricFeaturesAreEqual(lhs.effects, rhs.effects)
   }
 }
 
@@ -859,7 +737,7 @@ public indirect enum MaskNode: Codable, Equatable, Sendable {
 }
 
 /// A brush-authored mask.
-public struct BrushMask: Feature {
+public struct BrushMask: Feature, Codable {
 
   /// The stable identity of this mask leaf.
   public var id: FeatureID

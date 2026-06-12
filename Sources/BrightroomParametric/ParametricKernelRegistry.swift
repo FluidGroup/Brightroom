@@ -86,9 +86,24 @@ public enum ParametricKernelRegistryError: Error, Equatable, Sendable {
 
   /// Core Image failed to compile the Metal source.
   case failedToCompileMetalSource(String)
+
+  /// The bundled kernel source resource is missing or unreadable.
+  case missingKernelSourceResource(String)
 }
 
 private enum ParametricMetalKernelStore {
+
+  /// The bundled Metal source file holding every parametric kernel
+  /// (`ParametricKernels.metal`).
+  ///
+  /// Xcode's SwiftPM integration compiles the file into `default.metallib`
+  /// inside the resource bundle, so the kernels load precompiled by function
+  /// name. Pure SwiftPM builds honor the `.copy` resource declaration and
+  /// ship the source text instead; those compile it at runtime. Either way
+  /// the `.metal` file is the single source of truth.
+  private static let sourceResourceName = "ParametricKernels"
+
+  private static let kernelNames = ["brushStamp", "maskSubtract"]
 
   static func colorKernel(named name: String) throws -> CIColorKernel {
     switch loadedKernels {
@@ -103,8 +118,12 @@ private enum ParametricMetalKernelStore {
   }
 
   private static let loadedKernels: Result<[String: CIColorKernel], ParametricKernelRegistryError> = {
+    if let kernels = loadPrecompiledKernels() {
+      return .success(kernels)
+    }
+
     do {
-      let kernels = try CIKernel.kernels(withMetalString: metalSource)
+      let kernels = try CIKernel.kernels(withMetalString: loadMetalSource())
       var result: [String: CIColorKernel] = [:]
       for kernel in kernels {
         if let colorKernel = kernel as? CIColorKernel {
@@ -112,49 +131,46 @@ private enum ParametricMetalKernelStore {
         }
       }
       return .success(result)
+    } catch let error as ParametricKernelRegistryError {
+      return .failure(error)
     } catch {
       return .failure(.failedToCompileMetalSource(String(describing: error)))
     }
   }()
 
-  private static let metalSource = """
-  #include <CoreImage/CoreImage.h>
-  using namespace metal;
-
-  extern "C" { namespace coreimage {
-    [[ stitchable ]] float4 brushStamp(
-      float2 center,
-      float radius,
-      float hardness,
-      float opacity,
-      destination dest
-    ) {
-      if (radius <= 0.0 || opacity <= 0.0) {
-        return float4(0.0);
-      }
-
-      float distanceFromCenter = length(dest.coord() - center);
-      if (distanceFromCenter > radius) {
-        return float4(0.0);
-      }
-
-      float normalizedDistance = distanceFromCenter / radius;
-      float alpha = 1.0;
-      if (hardness < 0.999) {
-        float start = clamp(hardness, 0.0, 0.998);
-        alpha = 1.0 - smoothstep(start, 1.0, normalizedDistance);
-      }
-
-      alpha *= clamp(opacity, 0.0, 1.0);
-      return float4(alpha, alpha, alpha, alpha);
+  private static func loadPrecompiledKernels() -> [String: CIColorKernel]? {
+    guard
+      let url = Bundle.module.url(forResource: "default", withExtension: "metallib"),
+      let data = try? Data(contentsOf: url)
+    else {
+      return nil
     }
 
-    [[ stitchable ]] float4 maskSubtract(sample_t removing, sample_t base) {
-      float alpha = max(base.a - removing.a, 0.0);
-      return float4(alpha, alpha, alpha, alpha);
+    var result: [String: CIColorKernel] = [:]
+    for name in kernelNames {
+      guard let kernel = try? CIColorKernel(functionName: name, fromMetalLibraryData: data) else {
+        return nil
+      }
+      result[name] = kernel
     }
-  }}
-  """
+    return result
+  }
+
+  private static func loadMetalSource() throws -> String {
+    guard
+      let url = Bundle.module.url(forResource: sourceResourceName, withExtension: "metal")
+    else {
+      throw ParametricKernelRegistryError.missingKernelSourceResource(sourceResourceName)
+    }
+
+    do {
+      return try String(contentsOf: url, encoding: .utf8)
+    } catch {
+      throw ParametricKernelRegistryError.missingKernelSourceResource(
+        "\(sourceResourceName): \(String(describing: error))"
+      )
+    }
+  }
 }
 
 extension CIImage {

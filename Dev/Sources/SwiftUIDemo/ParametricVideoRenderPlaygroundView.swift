@@ -188,16 +188,15 @@ struct ParametricVideoRenderPlaygroundView: View {
     }
   }
 
-  private func makeFeatureDocument() throws -> FeatureDocument {
-    var features: [FeatureTreeNode] = []
+  private func makeFeatureDocument() throws -> EditingDocument {
+    var features: [MainFeature] = []
 
     if isCropEnabled {
       features.append(
         .domain(
-          try FeatureNode(
-            BrightroomFeatureDefinitions.Crop.self,
+          CropFeature(
             id: Self.cropID,
-            payload: .init(cropRect: cropRect)
+            cropRect: cropRect
           )
         )
       )
@@ -206,10 +205,9 @@ struct ParametricVideoRenderPlaygroundView: View {
     if abs(brightness) > 0.001 {
       features.append(
         .effect(
-          try FeatureNode(
-            BrightroomFeatureDefinitions.Brightness.self,
+          BrightnessFeature(
             id: Self.brightnessID,
-            payload: .init(value: brightness)
+            value: brightness
           )
         )
       )
@@ -218,10 +216,9 @@ struct ParametricVideoRenderPlaygroundView: View {
     if abs(saturation) > 0.001 {
       features.append(
         .effect(
-          try FeatureNode(
-            BrightroomFeatureDefinitions.Saturation.self,
+          SaturationFeature(
             id: Self.saturationID,
-            payload: .init(value: saturation)
+            value: saturation
           )
         )
       )
@@ -230,17 +227,16 @@ struct ParametricVideoRenderPlaygroundView: View {
     if blurRadius > 0.1 {
       features.append(
         .effect(
-          try FeatureNode(
-            BrightroomFeatureDefinitions.GaussianBlur.self,
+          GaussianBlurFeature(
             id: Self.blurID,
-            payload: .init(radius: .absolute(blurRadius))
+            radius: blurRadius
           )
         )
       )
     }
 
-    return FeatureDocument(
-      mainTree: FeatureMainTree(features: features)
+    return EditingDocument(
+      mainTree: MainTree(features: features)
     )
   }
 

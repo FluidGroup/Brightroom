@@ -173,21 +173,17 @@ struct ParametricFeaturePreviewView: View {
   private func makeDocument() -> EditingDocument {
     var features: [MainFeature] = [
       .domain(
-        .crop(
-          CropFeature(
-            id: Self.firstCropID,
-            isEnabled: isFirstCropEnabled,
-            cropRect: firstCropRect
-          )
+        CropFeature(
+          id: Self.firstCropID,
+          isEnabled: isFirstCropEnabled,
+          cropRect: firstCropRect
         )
       ),
       .domain(
-        .crop(
-          CropFeature(
-            id: Self.secondCropID,
-            isEnabled: isSecondCropEnabled,
-            cropRect: secondCropRect
-          )
+        CropFeature(
+          id: Self.secondCropID,
+          isEnabled: isSecondCropEnabled,
+          cropRect: secondCropRect
         )
       ),
       .localAdjustment(
@@ -197,11 +193,9 @@ struct ParametricFeaturePreviewView: View {
           maskTree: MaskTree(root: localExposureMask),
           effectPipeline: EffectPipeline(
             effects: [
-              .exposure(
-                ExposureFeature(
-                  id: FeatureID(rawValue: "preview-local-exposure-effect"),
-                  value: localExposureValue
-                )
+              ExposureFeature(
+                id: FeatureID(rawValue: "preview-local-exposure-effect"),
+                value: localExposureValue
               ),
             ]
           )
@@ -214,11 +208,9 @@ struct ParametricFeaturePreviewView: View {
           maskTree: MaskTree(root: localBlurMask),
           effectPipeline: EffectPipeline(
             effects: [
-              .gaussianBlur(
-                GaussianBlurFeature(
-                  id: FeatureID(rawValue: "preview-local-blur-effect"),
-                  radius: localBlurRadius
-                )
+              GaussianBlurFeature(
+                id: FeatureID(rawValue: "preview-local-blur-effect"),
+                radius: localBlurRadius
               ),
             ]
           )
@@ -229,11 +221,9 @@ struct ParametricFeaturePreviewView: View {
     if abs(globalBrightness) > 0.001 {
       features.append(
         .effect(
-          .brightness(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "preview-global-brightness"),
-              value: globalBrightness
-            )
+          BrightnessFeature(
+            id: FeatureID(rawValue: "preview-global-brightness"),
+            value: globalBrightness
           )
         )
       )

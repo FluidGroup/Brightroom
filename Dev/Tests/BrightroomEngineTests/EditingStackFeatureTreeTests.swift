@@ -217,16 +217,29 @@ final class EditingStackFeatureTreeTests: XCTestCase {
     XCTAssertTrue(edit.localAdjustments.isEmpty)
   }
 
-  func testStructuralFeaturesAreNotRemovable() {
+  func testFinalCropIsNotRemovable() {
     var edit = makeEdit()
     let original = edit
 
     XCTAssertFalse(
       EditingFeatureTree.removeFeature(id: EditingFeatureTree.finalCropNodeID, from: &edit)
     )
-    XCTAssertFalse(
+    XCTAssertEqual(edit, original)
+  }
+
+  func testGlobalEffectsIsRemovableAndFiltersFallBackToNeutral() {
+    var edit = makeEdit()
+
+    XCTAssertTrue(
       EditingFeatureTree.removeFeature(id: EditingFeatureTree.globalEffectsNodeID, from: &edit)
     )
-    XCTAssertEqual(edit, original)
+    XCTAssertEqual(edit.filters, .init())
+
+    // The canonical projection re-creates the feature before the final crop.
+    var filters = EditingStack.Edit.Filters()
+    filters.brightness = FilterBrightness()
+    edit.filters = filters
+    XCTAssertEqual(edit.filters, filters)
+    XCTAssertEqual(edit.features.last?.payload.kind, .crop)
   }
 }

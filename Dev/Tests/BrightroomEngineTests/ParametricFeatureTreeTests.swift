@@ -12,11 +12,9 @@ final class ParametricFeatureTreeTests: XCTestCase {
       mainTree: MainTree(
         features: [
           .domain(
-            .crop(
-              CropFeature(
-                id: FeatureID(rawValue: "crop-a"),
-                cropRect: CGRect(x: 4, y: 5, width: 30, height: 20)
-              )
+            CropFeature(
+              id: FeatureID(rawValue: "crop-a"),
+              cropRect: CGRect(x: 4, y: 5, width: 30, height: 20)
             )
           ),
           .localAdjustment(
@@ -43,55 +41,50 @@ final class ParametricFeatureTreeTests: XCTestCase {
               ),
               effectPipeline: EffectPipeline(
                 effects: [
-                  .brightness(BrightnessFeature(id: FeatureID(rawValue: "brightness-a"), value: 0.1)),
-                  .gaussianBlur(GaussianBlurFeature(id: FeatureID(rawValue: "blur-a"), radius: 3)),
+                  BrightnessFeature(id: FeatureID(rawValue: "brightness-a"), value: 0.1),
+                  GaussianBlurFeature(id: FeatureID(rawValue: "blur-a"), radius: 3),
                 ]
               )
             )
           ),
           .effect(
-            .exposure(
-              ExposureFeature(id: FeatureID(rawValue: "exposure-a"), value: 0.25)
-            )
+            ExposureFeature(id: FeatureID(rawValue: "exposure-a"), value: 0.25)
           ),
-          .effect(.contrast(ContrastFeature(id: FeatureID(rawValue: "contrast-a"), value: 0.08))),
-          .effect(.saturation(SaturationFeature(id: FeatureID(rawValue: "saturation-a"), value: 0.12))),
-          .effect(.highlights(HighlightsFeature(id: FeatureID(rawValue: "highlights-a"), value: 0.2))),
-          .effect(.shadows(ShadowsFeature(id: FeatureID(rawValue: "shadows-a"), value: 0.15))),
+          .effect(ContrastFeature(id: FeatureID(rawValue: "contrast-a"), value: 0.08)),
+          .effect(SaturationFeature(id: FeatureID(rawValue: "saturation-a"), value: 0.12)),
+          .effect(HighlightsFeature(id: FeatureID(rawValue: "highlights-a"), value: 0.2)),
+          .effect(ShadowsFeature(id: FeatureID(rawValue: "shadows-a"), value: 0.15)),
           .effect(
-            .highlightShadowTint(
-              HighlightShadowTintFeature(
-                id: FeatureID(rawValue: "highlight-shadow-tint-a"),
-                highlightColor: ParametricRGBAColor(red: 1, green: 0.2, blue: 0.1, alpha: 0.05),
-                shadowColor: ParametricRGBAColor(red: 0.1, green: 0.2, blue: 1, alpha: 0.04)
-              )
+            HighlightShadowTintFeature(
+              id: FeatureID(rawValue: "highlight-shadow-tint-a"),
+              highlightColor: ParametricRGBAColor(red: 1, green: 0.2, blue: 0.1, alpha: 0.05),
+              shadowColor: ParametricRGBAColor(red: 0.1, green: 0.2, blue: 1, alpha: 0.04)
             )
           ),
-          .effect(.temperature(TemperatureFeature(id: FeatureID(rawValue: "temperature-a"), value: 450))),
-          .effect(.sharpen(SharpenFeature(id: FeatureID(rawValue: "sharpen-a"), sharpness: 0.2, radius: 4))),
-          .effect(.unsharpMask(UnsharpMaskFeature(id: FeatureID(rawValue: "unsharp-a"), intensity: 0.1, radius: 0.25))),
-          .effect(.vignette(VignetteFeature(id: FeatureID(rawValue: "vignette-a"), value: 0.35))),
-          .effect(.fade(FadeFeature(id: FeatureID(rawValue: "fade-a"), intensity: 0.05))),
+          .effect(TemperatureFeature(id: FeatureID(rawValue: "temperature-a"), value: 450)),
+          .effect(SharpenFeature(id: FeatureID(rawValue: "sharpen-a"), sharpness: 0.2, radius: 4)),
+          .effect(UnsharpMaskFeature(id: FeatureID(rawValue: "unsharp-a"), intensity: 0.1, radius: 0.25)),
+          .effect(VignetteFeature(id: FeatureID(rawValue: "vignette-a"), value: 0.35)),
+          .effect(FadeFeature(id: FeatureID(rawValue: "fade-a"), intensity: 0.05)),
         ]
       )
     )
 
-    let data = try JSONEncoder().encode(document)
-    let decoded = try JSONDecoder().decode(EditingDocument.self, from: data)
+    let codec = ParametricDocumentCodec()
+    let data = try codec.encode(document)
+    let decoded = try codec.decode(data)
 
     XCTAssertEqual(decoded, document)
   }
 
-  func testFeatureDocumentRoundTripAndMatchesEnumDocument() throws {
-    let enumDocument = EditingDocument(
+  func testCodecRoundTripMatchesOriginalDocumentRendering() throws {
+    let document = EditingDocument(
       mainTree: MainTree(
         features: [
           .domain(
-            .crop(
-              CropFeature(
-                id: FeatureID(rawValue: "node-crop"),
-                cropRect: CGRect(x: 4, y: 3, width: 36, height: 24)
-              )
+            CropFeature(
+              id: FeatureID(rawValue: "node-crop"),
+              cropRect: CGRect(x: 4, y: 3, width: 36, height: 24)
             )
           ),
           .localAdjustment(
@@ -118,51 +111,49 @@ final class ParametricFeatureTreeTests: XCTestCase {
               ),
               effectPipeline: EffectPipeline(
                 effects: [
-                  .exposure(ExposureFeature(id: FeatureID(rawValue: "node-local-exposure"), value: 0.5)),
+                  ExposureFeature(id: FeatureID(rawValue: "node-local-exposure"), value: 0.5),
                 ]
               )
             )
           ),
-          .effect(.brightness(BrightnessFeature(id: FeatureID(rawValue: "node-brightness"), value: 0.05))),
+          .effect(BrightnessFeature(id: FeatureID(rawValue: "node-brightness"), value: 0.05)),
         ]
       )
     )
-    let featureDocument = try FeatureDocument(editingDocument: enumDocument)
-    let data = try JSONEncoder().encode(featureDocument)
-    let decoded = try JSONDecoder().decode(FeatureDocument.self, from: data)
+    let codec = ParametricDocumentCodec()
+    let data = try codec.encode(document)
+    let decoded = try codec.decode(data)
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 48, height: 36)
     )
 
-    let enumOutput = try Self.compiler.makeOutput(from: input, document: enumDocument)
-    let featureOutput = try Self.compiler.makeOutput(from: input, document: decoded)
+    let originalOutput = try Self.compiler.makeOutput(from: input, document: document)
+    let decodedOutput = try Self.compiler.makeOutput(from: input, document: decoded)
 
-    XCTAssertEqual(decoded, featureDocument)
+    XCTAssertEqual(decoded, document)
     try Self.assertImagesMatch(
-      enumOutput.image,
-      featureOutput.image,
+      originalOutput.image,
+      decodedOutput.image,
       tolerance: 2
     )
   }
 
-  func testCustomRegistryFeatureRendersLikeDefaultFeatures() throws {
-    var registry = FeatureRegistry.brightroomDefault
-    registry.registerImageEffect(TestRedBoostFeature.self)
-    let compiler = FeatureGraphCompiler(featureRegistry: registry)
-    let customFeature = try FeatureNode(
-      TestRedBoostFeature.self,
-      id: FeatureID(rawValue: "custom-red-boost"),
-      payload: TestRedBoostFeature.Payload(amount: 0.25)
-    )
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+  func testCustomRegisteredFeatureRendersLikeDefaultFeatures() throws {
+    var codec = ParametricDocumentCodec()
+    codec.register(TestRedBoostFeature.self)
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
-          .effect(customFeature),
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Brightness.self,
+            TestRedBoostFeature(
+              id: FeatureID(rawValue: "custom-red-boost"),
+              amount: 0.25
+            )
+          ),
+          .effect(
+            BrightnessFeature(
               id: FeatureID(rawValue: "registry-brightness"),
-              payload: .init(value: 0.02)
+              value: 0.02
             )
           ),
         ]
@@ -189,9 +180,9 @@ final class ParametricFeatureTreeTests: XCTestCase {
       )
       .cropped(to: input.extent)
 
-    let data = try JSONEncoder().encode(document)
-    let decoded = try JSONDecoder().decode(FeatureDocument.self, from: data)
-    let output = try compiler.makeOutput(from: input, document: decoded)
+    let data = try codec.encode(document)
+    let decoded = try codec.decode(data)
+    let output = try FeatureGraphCompiler().makeOutput(from: input, document: decoded)
 
     try Self.assertImagesMatch(
       expected,
@@ -200,22 +191,179 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testParametricImageRendererMatchesFeatureGraphCompiler() throws {
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+  func testCodecRoundTripPreservesDocumentWithCustomRegisteredFeature() throws {
+    var codec = ParametricDocumentCodec()
+    codec.register(TestRedBoostFeature.self)
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Brightness.self,
-              id: FeatureID(rawValue: "image-renderer-brightness"),
-              payload: .init(value: 0.05)
+            TestRedBoostFeature(
+              id: FeatureID(rawValue: "round-trip-red-boost"),
+              amount: 0.4
             )
           ),
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Saturation.self,
+            BrightnessFeature(
+              id: FeatureID(rawValue: "round-trip-brightness"),
+              value: 0.03
+            )
+          ),
+        ]
+      )
+    )
+
+    let data = try codec.encode(document)
+    let decoded = try codec.decode(data)
+
+    XCTAssertEqual(decoded, document)
+  }
+
+  func testDecodingUnregisteredFeatureTypeThrows() throws {
+    var registeringCodec = ParametricDocumentCodec()
+    registeringCodec.register(TestRedBoostFeature.self)
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestRedBoostFeature(
+              id: FeatureID(rawValue: "unregistered-red-boost"),
+              amount: 0.1
+            )
+          ),
+        ]
+      )
+    )
+    let data = try registeringCodec.encode(document)
+
+    let plainCodec = ParametricDocumentCodec()
+    XCTAssertThrowsError(try plainCodec.decode(data)) { error in
+      XCTAssertEqual(
+        error as? ParametricDocumentCodecError,
+        .unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
+      )
+    }
+  }
+
+  func testEncodingUnregisteredFeatureTypeThrowsAtSaveTime() throws {
+    // A codec must refuse to write a document it cannot read back.
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestRedBoostFeature(
+              id: FeatureID(rawValue: "save-time-red-boost"),
+              amount: 0.1
+            )
+          ),
+        ]
+      )
+    )
+
+    let plainCodec = ParametricDocumentCodec()
+    XCTAssertThrowsError(try plainCodec.encode(document)) { error in
+      XCTAssertEqual(
+        error as? ParametricDocumentCodecError,
+        .unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
+      )
+    }
+  }
+
+  func testPlainJSONCodingWithoutCodecThrowsMissingRegistry() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(BrightnessFeature(id: FeatureID(rawValue: "plain-brightness"), value: 0.1)),
+        ]
+      )
+    )
+
+    XCTAssertThrowsError(try JSONEncoder().encode(document)) { error in
+      XCTAssertEqual(
+        error as? ParametricDocumentCodecError,
+        .missingRegistry
+      )
+    }
+
+    let codec = ParametricDocumentCodec()
+    let data = try codec.encode(document)
+    XCTAssertThrowsError(try JSONDecoder().decode(EditingDocument.self, from: data)) { error in
+      XCTAssertEqual(
+        error as? ParametricDocumentCodecError,
+        .missingRegistry
+      )
+    }
+  }
+
+  func testSchemaVersionMigrationDecodesOldPayload() throws {
+    // Write with the v1 shape under the shared key, then decode with the v2
+    // type whose decodeParameters converts the old payload.
+    var writingCodec = ParametricDocumentCodec()
+    writingCodec.register(TestMigratingFeatureV1.self)
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestMigratingFeatureV1(
+              id: FeatureID(rawValue: "migrating-feature"),
+              amount: 0.5
+            )
+          ),
+        ]
+      )
+    )
+    let data = try writingCodec.encode(document)
+
+    var readingCodec = ParametricDocumentCodec()
+    readingCodec.register(TestMigratingFeatureV2.self)
+    let decoded = try readingCodec.decode(data)
+
+    guard case let .effect(effect) = decoded.mainTree.features.first,
+          let migrated = effect as? TestMigratingFeatureV2
+    else {
+      XCTFail("expected the migrated v2 feature")
+      return
+    }
+    XCTAssertEqual(migrated.id, FeatureID(rawValue: "migrating-feature"))
+    XCTAssertEqual(migrated.strength, 0.5)
+  }
+
+  func testUnsupportedDocumentFormatVersionThrows() throws {
+    let codec = ParametricDocumentCodec()
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(BrightnessFeature(id: FeatureID(rawValue: "format-brightness"), value: 0.1)),
+        ]
+      )
+    )
+    let data = try codec.encode(document)
+    let mutated = String(decoding: data, as: UTF8.self)
+      .replacingOccurrences(of: "\"formatVersion\":1", with: "\"formatVersion\":99")
+      .data(using: .utf8)!
+
+    XCTAssertThrowsError(try codec.decode(mutated)) { error in
+      XCTAssertEqual(
+        error as? ParametricDocumentCodecError,
+        .unsupportedDocumentFormatVersion(99)
+      )
+    }
+  }
+
+  func testParametricImageRendererMatchesFeatureGraphCompiler() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            BrightnessFeature(
+              id: FeatureID(rawValue: "image-renderer-brightness"),
+              value: 0.05
+            )
+          ),
+          .effect(
+            SaturationFeature(
               id: FeatureID(rawValue: "image-renderer-saturation"),
-              payload: .init(value: 0.12)
+              value: 0.12
             )
           ),
         ]
@@ -241,22 +389,20 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testVideoFrameRendererMatchesFeatureDocumentRendering() throws {
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+  func testVideoFrameRendererMatchesDocumentRendering() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Exposure.self,
+            ExposureFeature(
               id: FeatureID(rawValue: "video-exposure"),
-              payload: .init(value: 0.4)
+              value: 0.4
             )
           ),
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Brightness.self,
+            BrightnessFeature(
               id: FeatureID(rawValue: "video-brightness"),
-              payload: .init(value: 0.04)
+              value: 0.04
             )
           ),
         ]
@@ -283,14 +429,13 @@ final class ParametricFeatureTreeTests: XCTestCase {
   }
 
   func testVideoRendererResolvesCropOutputRenderSize() throws {
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .domain(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Crop.self,
+            CropFeature(
               id: FeatureID(rawValue: "video-crop"),
-              payload: .init(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18))
+              cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)
             )
           ),
         ]
@@ -312,14 +457,13 @@ final class ParametricFeatureTreeTests: XCTestCase {
     defer {
       try? FileManager.default.removeItem(at: asset.url)
     }
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Brightness.self,
+            BrightnessFeature(
               id: FeatureID(rawValue: "video-composition-brightness"),
-              payload: .init(value: 0.03)
+              value: 0.03
             )
           ),
         ]
@@ -336,21 +480,19 @@ final class ParametricFeatureTreeTests: XCTestCase {
   }
 
   func testVideoFrameRendererPlacesOutputInsideRenderExtent() throws {
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .domain(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Crop.self,
+            CropFeature(
               id: FeatureID(rawValue: "video-crop-place"),
-              payload: .init(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18))
+              cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)
             )
           ),
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Brightness.self,
+            BrightnessFeature(
               id: FeatureID(rawValue: "video-crop-brightness"),
-              payload: .init(value: 0.05)
+              value: 0.05
             )
           ),
         ]
@@ -390,19 +532,15 @@ final class ParametricFeatureTreeTests: XCTestCase {
       mainTree: MainTree(
         features: [
           .domain(
-            .crop(
-              CropFeature(
-                id: FeatureID(rawValue: "crop-a"),
-                cropRect: CGRect(x: 10, y: 10, width: 80, height: 80)
-              )
+            CropFeature(
+              id: FeatureID(rawValue: "crop-a"),
+              cropRect: CGRect(x: 10, y: 10, width: 80, height: 80)
             )
           ),
           .domain(
-            .crop(
-              CropFeature(
-                id: FeatureID(rawValue: "crop-b"),
-                cropRect: CGRect(x: 20, y: 20, width: 25, height: 30)
-              )
+            CropFeature(
+              id: FeatureID(rawValue: "crop-b"),
+              cropRect: CGRect(x: 20, y: 20, width: 25, height: 30)
             )
           ),
         ]
@@ -419,24 +557,18 @@ final class ParametricFeatureTreeTests: XCTestCase {
   }
 
   func testImageEffectReceivesCurrentExtentAfterCrop() throws {
-    var registry = FeatureRegistry.brightroomDefault
-    registry.registerImageEffect(TestExtentProbeFeature.self)
-    let compiler = FeatureGraphCompiler(featureRegistry: registry)
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .domain(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Crop.self,
+            CropFeature(
               id: FeatureID(rawValue: "extent-probe-crop"),
-              payload: .init(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+              cropRect: CGRect(x: 10, y: 8, width: 40, height: 20)
             )
           ),
           .effect(
-            try FeatureNode(
-              TestExtentProbeFeature.self,
-              id: FeatureID(rawValue: "extent-probe-effect"),
-              payload: .init()
+            TestExtentProbeFeature(
+              id: FeatureID(rawValue: "extent-probe-effect")
             )
           ),
         ]
@@ -446,7 +578,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       extent: CGRect(x: 0, y: 0, width: 80, height: 60)
     )
 
-    let output = try compiler.makeOutput(from: input, document: document)
+    let output = try FeatureGraphCompiler().makeOutput(from: input, document: document)
 
     XCTAssertEqual(output.image.extent, CGRect(x: 0, y: 0, width: 40, height: 20))
     let rendered = try Self.render(output.image)
@@ -456,21 +588,19 @@ final class ParametricFeatureTreeTests: XCTestCase {
   }
 
   func testVignetteUsesCurrentExtentAfterCrop() throws {
-    let document = FeatureDocument(
-      mainTree: FeatureMainTree(
+    let document = EditingDocument(
+      mainTree: MainTree(
         features: [
           .domain(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Crop.self,
+            CropFeature(
               id: FeatureID(rawValue: "vignette-crop"),
-              payload: .init(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+              cropRect: CGRect(x: 10, y: 8, width: 40, height: 20)
             )
           ),
           .effect(
-            try FeatureNode(
-              BrightroomFeatureDefinitions.Vignette.self,
+            VignetteFeature(
               id: FeatureID(rawValue: "vignette-after-crop"),
-              payload: .init(value: 0.5)
+              value: 0.5
             )
           ),
         ]
@@ -507,7 +637,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       ),
       effectPipeline: EffectPipeline(
         effects: [
-          .exposure(ExposureFeature(id: FeatureID(rawValue: "local-exposure-effect"), value: 1)),
+          ExposureFeature(id: FeatureID(rawValue: "local-exposure-effect"), value: 1),
         ]
       )
     )
@@ -528,7 +658,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       ),
       effectPipeline: EffectPipeline(
         effects: [
-          .gaussianBlur(GaussianBlurFeature(id: FeatureID(rawValue: "blur-effect"), radius: 5)),
+          GaussianBlurFeature(id: FeatureID(rawValue: "blur-effect"), radius: 5),
         ]
       )
     )
@@ -537,7 +667,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
         features: [
           .localAdjustment(localExposure),
           .localAdjustment(localBlur),
-          .effect(.brightness(BrightnessFeature(id: FeatureID(rawValue: "global-brightness"), value: 0.05))),
+          .effect(BrightnessFeature(id: FeatureID(rawValue: "global-brightness"), value: 0.05)),
         ]
       )
     )
@@ -630,7 +760,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       idPrefix: "legacy-filter"
     )
     let document = EditingDocument(
-      mainTree: MainTree(features: pipeline.effects.map(MainFeature.effect))
+      mainTree: MainTree(features: pipeline.effects.map { MainFeature.effect($0) })
     )
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 80, height: 60)
@@ -645,18 +775,16 @@ final class ParametricFeatureTreeTests: XCTestCase {
       tolerance: 2
     )
 
-    let featurePipeline = try FeatureEffectPipeline(
-      editingStackFilters: filters,
-      idPrefix: "legacy-feature-node-filter"
-    )
-    let featureDocument = FeatureDocument(
-      mainTree: FeatureMainTree(features: featurePipeline.effects.map(FeatureTreeNode.effect))
-    )
-    let featureOutput = try Self.compiler.makeOutput(from: input, document: featureDocument)
+    // The bridged document must also survive the persistence boundary and
+    // render identically afterwards.
+    let codec = ParametricDocumentCodec()
+    let decoded = try codec.decode(try codec.encode(document))
+    XCTAssertEqual(decoded, document)
+    let decodedOutput = try Self.compiler.makeOutput(from: input, document: decoded)
 
     try Self.assertImagesMatch(
       legacyImage,
-      featureOutput.image,
+      decodedOutput.image,
       tolerance: 2
     )
   }
@@ -690,7 +818,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       idPrefix: "preset-filter"
     )
     let document = EditingDocument(
-      mainTree: MainTree(features: pipeline.effects.map(MainFeature.effect))
+      mainTree: MainTree(features: pipeline.effects.map { MainFeature.effect($0) })
     )
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 32, height: 32)
@@ -705,18 +833,16 @@ final class ParametricFeatureTreeTests: XCTestCase {
       tolerance: 2
     )
 
-    let featurePipeline = try FeatureEffectPipeline(
-      editingStackFilters: filters,
-      idPrefix: "preset-feature-node-filter"
-    )
-    let featureDocument = FeatureDocument(
-      mainTree: FeatureMainTree(features: featurePipeline.effects.map(FeatureTreeNode.effect))
-    )
-    let featureOutput = try Self.compiler.makeOutput(from: input, document: featureDocument)
+    // The bridged preset document must also survive the persistence boundary
+    // and render identically afterwards.
+    let codec = ParametricDocumentCodec()
+    let decoded = try codec.decode(try codec.encode(document))
+    XCTAssertEqual(decoded, document)
+    let decodedOutput = try Self.compiler.makeOutput(from: input, document: decoded)
 
     try Self.assertImagesMatch(
       legacyImage,
-      featureOutput.image,
+      decodedOutput.image,
       tolerance: 2
     )
   }
@@ -745,7 +871,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
               ),
               effectPipeline: EffectPipeline(
                 effects: [
-                  .exposure(ExposureFeature(id: FeatureID(rawValue: "invert-exposure"), value: 1)),
+                  ExposureFeature(id: FeatureID(rawValue: "invert-exposure"), value: 1),
                 ]
               )
             )
@@ -771,8 +897,8 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
-          .effect(.brightness(BrightnessFeature(id: id, value: 0.1))),
-          .effect(.exposure(ExposureFeature(id: id, value: 0.1))),
+          .effect(BrightnessFeature(id: id, value: 0.1)),
+          .effect(ExposureFeature(id: id, value: 0.1)),
         ]
       )
     )
@@ -1071,21 +1197,15 @@ final class ParametricFeatureTreeTests: XCTestCase {
     var alpha: UInt8
   }
 
-  private enum TestRedBoostFeature: ImageEffectFeatureDefinition {
+  private struct TestRedBoostFeature: ImageEffectFeatureType, PersistableFeature {
 
-    static let typeID: FeatureTypeID = "test.effect.redBoost"
-    static let currentSchemaVersion = 1
+    static let featureTypeKey: FeatureTypeKey = "test.red-boost"
 
-    struct Payload: Codable, Equatable, Sendable {
-      var amount: Double
-    }
+    var id: FeatureID = .init()
+    var isEnabled: Bool = true
+    var amount: Double
 
-    static func apply(
-      payload: Payload,
-      node: FeatureNode,
-      to image: CIImage,
-      context: FeatureEvaluationContext
-    ) throws -> CIImage {
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       image.applyingFilter(
         "CIColorMatrix",
         parameters: [
@@ -1093,28 +1213,19 @@ final class ParametricFeatureTreeTests: XCTestCase {
           "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
           "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
           "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 1),
-          "inputBiasVector": CIVector(x: CGFloat(payload.amount), y: 0, z: 0, w: 0),
+          "inputBiasVector": CIVector(x: CGFloat(amount), y: 0, z: 0, w: 0),
         ]
       )
       .cropped(to: image.extent)
     }
   }
 
-  private enum TestExtentProbeFeature: ImageEffectFeatureDefinition {
+  private struct TestExtentProbeFeature: ImageEffectFeatureType {
 
-    static let typeID: FeatureTypeID = "test.effect.extentProbe"
-    static let currentSchemaVersion = 1
+    var id: FeatureID = .init()
+    var isEnabled: Bool = true
 
-    struct Payload: Codable, Equatable, Sendable {
-      init() {}
-    }
-
-    static func apply(
-      payload: Payload,
-      node: FeatureNode,
-      to image: CIImage,
-      context: FeatureEvaluationContext
-    ) throws -> CIImage {
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       CIImage(
         color: CIColor(
           red: min(image.extent.width / 100, 1),
@@ -1124,6 +1235,56 @@ final class ParametricFeatureTreeTests: XCTestCase {
         )
       )
       .cropped(to: image.extent)
+    }
+  }
+
+  /// The v1 shape of the migrating test feature: field named `amount`.
+  private struct TestMigratingFeatureV1: ImageEffectFeatureType, PersistableFeature {
+
+    static let featureTypeKey: FeatureTypeKey = "test.migrating"
+
+    var id: FeatureID = .init()
+    var isEnabled: Bool = true
+    var amount: Double
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      image
+    }
+  }
+
+  /// The v2 shape under the same key: field renamed to `strength`, with a
+  /// typed migration from the v1 payload.
+  private struct TestMigratingFeatureV2: ImageEffectFeatureType, PersistableFeature {
+
+    static let featureTypeKey: FeatureTypeKey = "test.migrating"
+    static let schemaVersion = 2
+
+    var id: FeatureID = .init()
+    var isEnabled: Bool = true
+    var strength: Double
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      image
+    }
+
+    static func decodeParameters(from decoder: Decoder, version: Int) throws -> Self {
+      switch version {
+      case 2:
+        return try Self(from: decoder)
+      case 1:
+        struct V1: Decodable {
+          var id: FeatureID
+          var isEnabled: Bool
+          var amount: Double
+        }
+        let old = try V1(from: decoder)
+        return Self(id: old.id, isEnabled: old.isEnabled, strength: old.amount)
+      default:
+        throw ParametricDocumentCodecError.unsupportedSchemaVersion(
+          featureTypeKey,
+          version: version
+        )
+      }
     }
   }
 

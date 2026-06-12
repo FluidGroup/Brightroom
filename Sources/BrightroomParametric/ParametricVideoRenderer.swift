@@ -69,7 +69,7 @@ public struct ParametricVideoRenderer: Sendable {
   /// - Returns: A Core Image recipe for the filtered frame.
   public func makeFrameImage(
     from sourceImage: CIImage,
-    document: FeatureDocument,
+    document: EditingDocument,
     renderExtent: CGRect? = nil
   ) throws -> CIImage {
     let output = try imageRenderer.makeImage(
@@ -91,7 +91,7 @@ public struct ParametricVideoRenderer: Sendable {
   /// real video frame.
   public func resolveRenderSize(
     sourceRenderSize: CGSize,
-    document: FeatureDocument,
+    document: EditingDocument,
     mode: RenderSizeMode
   ) throws -> CGSize {
     guard sourceRenderSize.isParametricVideoValidRenderSize else {
@@ -132,7 +132,7 @@ public struct ParametricVideoRenderer: Sendable {
   /// or `AVAssetExportSession.videoComposition`.
   public func makeVideoComposition(
     for asset: AVAsset,
-    document: FeatureDocument,
+    document: EditingDocument,
     renderSizeMode: RenderSizeMode = .featureOutput,
     ciContext: CIContext? = nil
   ) throws -> AVMutableVideoComposition {

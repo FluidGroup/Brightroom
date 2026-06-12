@@ -134,11 +134,37 @@ public final class BrightRoomImageRenderer {
     case resize(maxPixelSize: CGFloat)
   }
 
+  /// One pixel-transforming step, applied in array order.
+  public enum Operation {
+    case filters([AnyFilter])
+    case localAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
+  }
+
   public struct Edit {
     public var croppingRect: EditingCrop?
+
+    /// Ordered pixel operations compiled from the editing document. When set,
+    /// this takes precedence over `modifiers`/`localAdjustments`, which remain
+    /// as direct renderer inputs for callers that do not carry a document.
+    public var operations: [Operation]?
+
     public var modifiers: [AnyFilter] = []
     public var localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer] = []
     public var drawer: [GraphicsDrawing] = []
+
+    /// The operations to evaluate: the explicit document order when present,
+    /// otherwise the legacy fixed order (all filters, then all adjustments).
+    var resolvedOperations: [Operation] {
+      if let operations {
+        return operations
+      }
+      var resolved: [Operation] = []
+      if modifiers.isEmpty == false {
+        resolved.append(.filters(modifiers))
+      }
+      resolved.append(contentsOf: localAdjustments.map { .localAdjustment($0) })
+      return resolved
+    }
   }
 
   public let source: ImageSource
@@ -186,8 +212,7 @@ public final class BrightRoomImageRenderer {
    */
   public func render(options: Options = .init()) throws -> Rendered {
     if edit.drawer.isEmpty,
-       edit.modifiers.isEmpty,
-       edit.localAdjustments.isEmpty,
+       edit.resolvedOperations.isEmpty,
        options.workingColorSpace == nil
     {
       return try renderOnlyCropping(options: options)
@@ -303,12 +328,17 @@ public final class BrightRoomImageRenderer {
      */
     EngineLog.debug(.renderer, "Applies Effect")
 
-    let filtered_CIImage = edit.modifiers.reduce(sourceCIImage) { image, modifier in
-      modifier.apply(to: image, sourceImage: sourceCIImage)
-    }
-
-    let effected_CIImage = edit.localAdjustments.reduce(filtered_CIImage) { image, layer in
-      layer.apply(to: image)
+    // Operations are evaluated in document order: a later filters feature can
+    // legitimately follow a local adjustment.
+    let effected_CIImage = edit.resolvedOperations.reduce(sourceCIImage) { image, operation in
+      switch operation {
+      case .filters(let filters):
+        return filters.reduce(image) { image, modifier in
+          modifier.apply(to: image, sourceImage: sourceCIImage)
+        }
+      case .localAdjustment(let layer):
+        return layer.apply(to: image)
+      }
     }
 
     /**

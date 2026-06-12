@@ -38,10 +38,7 @@ public struct ParametricImageRenderer: Sendable {
     self.compiler = compiler
   }
 
-  /// Evaluates an enum-backed editing document from a source image.
-  ///
-  /// This path exists for the first parametric prototype and migration tests.
-  /// New saved documents should prefer the registry-backed `FeatureDocument`.
+  /// Evaluates an editing document from a source image.
   public func makeOutput(
     from sourceImage: CIImage,
     document: EditingDocument
@@ -52,33 +49,10 @@ public struct ParametricImageRenderer: Sendable {
     )
   }
 
-  /// Evaluates a registry-backed feature document from a source image.
-  public func makeOutput(
-    from sourceImage: CIImage,
-    document: FeatureDocument
-  ) throws -> FeatureGraphOutput {
-    try compiler.makeOutput(
-      from: sourceImage,
-      document: document
-    )
-  }
-
-  /// Returns only the final image recipe for an enum-backed document.
+  /// Returns only the final image recipe.
   public func makeImage(
     from sourceImage: CIImage,
     document: EditingDocument
-  ) throws -> CIImage {
-    try makeOutput(
-      from: sourceImage,
-      document: document
-    )
-    .image
-  }
-
-  /// Returns only the final image recipe for a registry-backed document.
-  public func makeImage(
-    from sourceImage: CIImage,
-    document: FeatureDocument
   ) throws -> CIImage {
     try makeOutput(
       from: sourceImage,

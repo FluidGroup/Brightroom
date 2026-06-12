@@ -49,7 +49,7 @@ public extension EffectPipeline {
     idPrefix: String = "editing-stack-filter"
   ) throws {
     self.init(
-      effects: try ImageEffectFeature.makeFeatures(
+      effects: try ParametricEditingStackBridge.makeFeatures(
         editingStackFilters: filters,
         idPrefix: idPrefix
       )
@@ -57,38 +57,20 @@ public extension EffectPipeline {
   }
 }
 
-public extension FeatureEffectPipeline {
-
-  /// Creates a registry-backed effect pipeline from the filters supported by
-  /// `EditingStack.Edit.Filters`.
-  ///
-  /// The returned nodes use the same ordering as
-  /// `EditingStack.Edit.Filters.makeFilters()`.
-  init(
-    editingStackFilters filters: EditingStack.Edit.Filters,
-    idPrefix: String = "editing-stack-filter"
-  ) throws {
-    self.init(
-      effects: try ImageEffectFeature
-        .makeFeatures(editingStackFilters: filters, idPrefix: idPrefix)
-        .map(FeatureNode.init(imageEffect:))
-    )
-  }
-}
-
-public extension ImageEffectFeature {
+/// Converts legacy `EditingStack.Edit.Filters` values into parametric effects.
+public enum ParametricEditingStackBridge {
 
   /// Creates parametric effects from the filters supported by
   /// `EditingStack.Edit.Filters`.
   ///
   /// The returned effects use the same ordering as
   /// `EditingStack.Edit.Filters.makeFilters()`.
-  static func makeFeatures(
+  public static func makeFeatures(
     editingStackFilters filters: EditingStack.Edit.Filters,
     idPrefix: String = "editing-stack-filter"
-  ) throws -> [ImageEffectFeature] {
+  ) throws -> [any ImageEffectFeatureType] {
     var idFactory = ParametricFeatureIDFactory(prefix: idPrefix)
-    var effects: [ImageEffectFeature] = []
+    var effects: [any ImageEffectFeatureType] = []
 
     if let preset = filters.preset {
       effects.append(
@@ -101,74 +83,68 @@ public extension ImageEffectFeature {
     }
 
     if let filter = filters.exposure {
-      effects.append(.exposure(ExposureFeature(id: idFactory.next("exposure"), value: filter.value)))
+      effects.append(ExposureFeature(id: idFactory.next("exposure"), value: filter.value))
     }
 
     if let filter = filters.brightness {
-      effects.append(.brightness(BrightnessFeature(id: idFactory.next("brightness"), value: filter.value)))
+      effects.append(BrightnessFeature(id: idFactory.next("brightness"), value: filter.value))
     }
 
     if let filter = filters.temperature {
-      effects.append(.temperature(TemperatureFeature(id: idFactory.next("temperature"), value: filter.value)))
+      effects.append(TemperatureFeature(id: idFactory.next("temperature"), value: filter.value))
     }
 
     if let filter = filters.highlights {
-      effects.append(.highlights(HighlightsFeature(id: idFactory.next("highlights"), value: filter.value)))
+      effects.append(HighlightsFeature(id: idFactory.next("highlights"), value: filter.value))
     }
 
     if let filter = filters.shadows {
-      effects.append(.shadows(ShadowsFeature(id: idFactory.next("shadows"), value: filter.value)))
+      effects.append(ShadowsFeature(id: idFactory.next("shadows"), value: filter.value))
     }
 
     if let filter = filters.saturation {
-      effects.append(.saturation(SaturationFeature(id: idFactory.next("saturation"), value: filter.value)))
+      effects.append(SaturationFeature(id: idFactory.next("saturation"), value: filter.value))
     }
 
     if let filter = filters.contrast {
-      effects.append(.contrast(ContrastFeature(id: idFactory.next("contrast"), value: filter.value)))
+      effects.append(ContrastFeature(id: idFactory.next("contrast"), value: filter.value))
     }
 
     if let filter = filters.sharpen {
       effects.append(
-        .sharpen(
-          SharpenFeature(
-            id: idFactory.next("sharpen"),
-            sharpness: filter.sharpness,
-            radius: filter.radius
-          )
+        SharpenFeature(
+          id: idFactory.next("sharpen"),
+          sharpness: filter.sharpness,
+          radius: filter.radius
         )
       )
     }
 
     if let filter = filters.unsharpMask {
       effects.append(
-        .unsharpMask(
-          UnsharpMaskFeature(
-            id: idFactory.next("unsharp-mask"),
-            intensity: filter.intensity,
-            radius: filter.radius
-          )
+        UnsharpMaskFeature(
+          id: idFactory.next("unsharp-mask"),
+          intensity: filter.intensity,
+          radius: filter.radius
         )
       )
     }
 
     if let filter = filters.gaussianBlur {
       effects.append(
-        .gaussianBlur(
-          GaussianBlurFeature(
-            id: idFactory.next("gaussian-blur"),
-            value: filter.value
-          )
+        GaussianBlurFeature(
+          id: idFactory.next("gaussian-blur"),
+          value: filter.value
         )
       )
     }
 
     if let filter = filters.fade {
-      effects.append(.fade(FadeFeature(id: idFactory.next("fade"), intensity: filter.intensity)))
+      effects.append(FadeFeature(id: idFactory.next("fade"), intensity: filter.intensity))
     }
 
     if let filter = filters.vignette {
-      effects.append(.vignette(VignetteFeature(id: idFactory.next("vignette"), value: filter.value)))
+      effects.append(VignetteFeature(id: idFactory.next("vignette"), value: filter.value))
     }
 
     for filter in filters.additionalFilters {
@@ -226,12 +202,12 @@ public extension ColorCubeFeature {
   }
 }
 
-private extension ImageEffectFeature {
+private extension ParametricEditingStackBridge {
 
   static func makeFeature(
     anyFilter: AnyFilter,
     idFactory: inout ParametricFeatureIDFactory
-  ) throws -> ImageEffectFeature {
+  ) throws -> any ImageEffectFeatureType {
     let base = anyFilter.base.base
 
     switch base {
@@ -242,61 +218,51 @@ private extension ImageEffectFeature {
         idFactory: &idFactory
       )
     case let filter as FilterColorCube:
-      return .colorCube(
-        try ColorCubeFeature(
-          id: idFactory.next("color-cube"),
-          filter: filter
-        )
+      return try ColorCubeFeature(
+        id: idFactory.next("color-cube"),
+        filter: filter
       )
     case let filter as FilterExposure:
-      return .exposure(ExposureFeature(id: idFactory.next("exposure"), value: filter.value))
+      return ExposureFeature(id: idFactory.next("exposure"), value: filter.value)
     case let filter as FilterBrightness:
-      return .brightness(BrightnessFeature(id: idFactory.next("brightness"), value: filter.value))
+      return BrightnessFeature(id: idFactory.next("brightness"), value: filter.value)
     case let filter as FilterTemperature:
-      return .temperature(TemperatureFeature(id: idFactory.next("temperature"), value: filter.value))
+      return TemperatureFeature(id: idFactory.next("temperature"), value: filter.value)
     case let filter as FilterHighlights:
-      return .highlights(HighlightsFeature(id: idFactory.next("highlights"), value: filter.value))
+      return HighlightsFeature(id: idFactory.next("highlights"), value: filter.value)
     case let filter as FilterShadows:
-      return .shadows(ShadowsFeature(id: idFactory.next("shadows"), value: filter.value))
+      return ShadowsFeature(id: idFactory.next("shadows"), value: filter.value)
     case let filter as FilterHighlightShadowTint:
-      return .highlightShadowTint(
-        HighlightShadowTintFeature(
-          id: idFactory.next("highlight-shadow-tint"),
-          highlightColor: ParametricRGBAColor(color: filter.highlightColor),
-          shadowColor: ParametricRGBAColor(color: filter.shadowColor)
-        )
+      return HighlightShadowTintFeature(
+        id: idFactory.next("highlight-shadow-tint"),
+        highlightColor: ParametricRGBAColor(color: filter.highlightColor),
+        shadowColor: ParametricRGBAColor(color: filter.shadowColor)
       )
     case let filter as FilterSaturation:
-      return .saturation(SaturationFeature(id: idFactory.next("saturation"), value: filter.value))
+      return SaturationFeature(id: idFactory.next("saturation"), value: filter.value)
     case let filter as FilterContrast:
-      return .contrast(ContrastFeature(id: idFactory.next("contrast"), value: filter.value))
+      return ContrastFeature(id: idFactory.next("contrast"), value: filter.value)
     case let filter as FilterSharpen:
-      return .sharpen(
-        SharpenFeature(
-          id: idFactory.next("sharpen"),
-          sharpness: filter.sharpness,
-          radius: filter.radius
-        )
+      return SharpenFeature(
+        id: idFactory.next("sharpen"),
+        sharpness: filter.sharpness,
+        radius: filter.radius
       )
     case let filter as FilterUnsharpMask:
-      return .unsharpMask(
-        UnsharpMaskFeature(
-          id: idFactory.next("unsharp-mask"),
-          intensity: filter.intensity,
-          radius: filter.radius
-        )
+      return UnsharpMaskFeature(
+        id: idFactory.next("unsharp-mask"),
+        intensity: filter.intensity,
+        radius: filter.radius
       )
     case let filter as FilterGaussianBlur:
-      return .gaussianBlur(
-        GaussianBlurFeature(
-          id: idFactory.next("gaussian-blur"),
-          value: filter.value
-        )
+      return GaussianBlurFeature(
+        id: idFactory.next("gaussian-blur"),
+        value: filter.value
       )
     case let filter as FilterFade:
-      return .fade(FadeFeature(id: idFactory.next("fade"), intensity: filter.intensity))
+      return FadeFeature(id: idFactory.next("fade"), intensity: filter.intensity)
     case let filter as FilterVignette:
-      return .vignette(VignetteFeature(id: idFactory.next("vignette"), value: filter.value))
+      return VignetteFeature(id: idFactory.next("vignette"), value: filter.value)
     default:
       throw ParametricEditingStackBridgeError.unsupportedFilter(
         String(describing: type(of: base))
@@ -308,18 +274,16 @@ private extension ImageEffectFeature {
     preset: FilterPreset,
     id: FeatureID,
     idFactory: inout ParametricFeatureIDFactory
-  ) throws -> ImageEffectFeature {
+  ) throws -> any ImageEffectFeatureType {
     let effects = try preset.filters.map { filter in
       try makeFeature(anyFilter: filter, idFactory: &idFactory)
     }
 
-    return .preset(
-      PresetFeature(
-        id: id,
-        name: preset.name,
-        identifier: preset.identifier,
-        effects: effects
-      )
+    return PresetFeature(
+      id: id,
+      name: preset.name,
+      identifier: preset.identifier,
+      effects: effects
     )
   }
 }

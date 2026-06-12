@@ -433,13 +433,12 @@ private struct LUTImportDemoView: View {
       Section {
         PhotosPicker("Import LUT", selection: $selectedItem)
 
-        Button("Open PixelEditor") {
-          fullScreenView = .init {
-            DemoPixelEditor(
-              editingStack: {
+        Button("Open PhotosCrop") {
+          fullScreenView = .init(showsDismissButton: false) {
+            DemoPhotosCropView(
+              stack: {
                 EditingStack(imageProvider: .init(image: Asset.l1000316.image))
-              },
-              options: .init(croppingAspectRatio: nil)
+              }
             )
           }
         }

@@ -29,21 +29,29 @@ extension EditingStack.Edit {
     case editing
   }
 
+  /// Evaluates the feature list in document order, like the export renderer.
+  ///
+  /// `.editingBase` skips local adjustments (their mask rasterization is
+  /// owned by the render path that knows its target resolution); `.editing`
+  /// includes them. Crop features are domain features and not evaluated here.
   func makePreviewImage(
     from sourceImage: CIImage,
     purpose: PreviewPurpose
   ) -> CIImage {
-    switch purpose {
-    case .editingBase:
-      filters.apply(to: sourceImage)
-    case .editing:
-      applyLocalAdjustments(to: filters.apply(to: sourceImage))
-    }
-  }
-
-  private func applyLocalAdjustments(to image: CIImage) -> CIImage {
-    localAdjustments.reduce(image) { currentImage, layer in
-      layer.apply(to: currentImage)
+    features.reduce(sourceImage) { image, feature in
+      switch feature.payload {
+      case .globalEffects(let filters):
+        return filters.apply(to: image)
+      case .localAdjustment(let layer):
+        switch purpose {
+        case .editingBase:
+          return image
+        case .editing:
+          return layer.apply(to: image)
+        }
+      case .crop:
+        return image
+      }
     }
   }
 }
