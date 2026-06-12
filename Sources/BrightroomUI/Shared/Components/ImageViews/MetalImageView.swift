@@ -117,9 +117,36 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
     self.device!.makeCommandQueue()!
   }()
 
+  /// CIContext creation costs ~100ms+ on device; instances of this view are
+  /// created per cell in places like the filter-preset list, so the context is
+  /// shared per Metal device instead of per view. CIContext is thread-safe.
+  private static let sharedCIContextLock = NSLock()
+  private static var sharedCIContexts: [ObjectIdentifier: CIContext] = [:]
+
+  private static func sharedCIContext(for device: MTLDevice) -> CIContext {
+    sharedCIContextLock.lock()
+    defer { sharedCIContextLock.unlock() }
+
+    let key = ObjectIdentifier(device)
+    if let cached = sharedCIContexts[key] {
+      return cached
+    }
+    // The context now outlives the views; keep intermediate caching off so it
+    // does not accumulate render caches for the process lifetime.
+    let context = CIContext(
+      mtlDevice: device,
+      options: [
+        .name: "MetalImageView.shared",
+        .cacheIntermediates: false,
+      ]
+    )
+    sharedCIContexts[key] = context
+    return context
+  }
+
   private lazy var ciContext: CIContext = {
     [unowned self] in
-    CIContext(mtlDevice: self.device!)
+    Self.sharedCIContext(for: self.device!)
   }()
 
   override var contentMode: UIView.ContentMode {

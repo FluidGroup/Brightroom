@@ -18,7 +18,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     XCTAssertEqual(Self.rgba(in: sourceImage, x: 35, y: 10), Self.rgba(in: renderedImage, x: 35, y: 10))
   }
 
-  func testCropInteractionPreviewSkipsEditingEffects() throws {
+  func testEditingPreviewAppliesFiltersAndLocalAdjustments() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -37,28 +37,13 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     ]
 
     let editingPreview = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
-    let cropInteractionPreview = edit.makePreviewImage(
-      from: sourceCIImage,
-      purpose: .cropInteraction
-    )
     let editingImage = try XCTUnwrap(
       Self.context.createCGImage(editingPreview, from: sourceCIImage.extent)
-    )
-    let cropInteractionImage = try XCTUnwrap(
-      Self.context.createCGImage(cropInteractionPreview, from: sourceCIImage.extent)
     )
 
     XCTAssertGreaterThan(
       Self.rgba(in: editingImage, x: 5, y: 10).red,
       Self.rgba(in: sourceImage, x: 5, y: 10).red
-    )
-    XCTAssertEqual(
-      Self.rgba(in: sourceImage, x: 5, y: 10),
-      Self.rgba(in: cropInteractionImage, x: 5, y: 10)
-    )
-    XCTAssertEqual(
-      Self.rgba(in: sourceImage, x: 20, y: 10),
-      Self.rgba(in: cropInteractionImage, x: 20, y: 10)
     )
   }
 
@@ -88,12 +73,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       editingPreviewCIImage: initialEdit.makePreviewImage(
         from: sourceCIImage,
         purpose: .editingBase
-      ),
-      cropInteractionPreviewCIImage: initialEdit.makePreviewImage(
-        from: sourceCIImage,
-        purpose: .cropInteraction
-      ),
-      imageForCrop: sourceImage
+      )
     )
     var editWithLocalAdjustment = initialEdit
     editWithLocalAdjustment.localAdjustments = [
@@ -155,8 +135,12 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
     )
 
-    let maskedPixel = Self.rgbaInDisplayCoordinates(in: renderedImage, x: 20, y: 6)
-    let mirroredPixel = Self.rgbaInDisplayCoordinates(in: renderedImage, x: 20, y: 34)
+    // Stamps are authored in display coordinates (top-left origin, y-down),
+    // matching where the user painted on the interactive canvas. `rgba(in:)`
+    // reads with the same top-left origin, so the authored position is read
+    // directly — no mirroring.
+    let maskedPixel = Self.rgba(in: renderedImage, x: 20, y: 6)
+    let mirroredPixel = Self.rgba(in: renderedImage, x: 20, y: 34)
 
     XCTAssertGreaterThan(maskedPixel.red, mirroredPixel.red)
   }
@@ -321,10 +305,6 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       blue: pixels[offset + 2],
       alpha: pixels[offset + 3]
     )
-  }
-
-  private static func rgbaInDisplayCoordinates(in image: CGImage, x: Int, y: Int) -> RGBA {
-    rgba(in: image, x: x, y: image.height - 1 - y)
   }
 
   private struct RGBA: Equatable {

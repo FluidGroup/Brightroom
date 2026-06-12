@@ -63,6 +63,8 @@ struct EditingCanvasStrokeRecord {
   }
 }
 
+extension EditingCanvasStrokeRecord: Equatable {}
+
 struct EditingCanvasStrokeSmoother {
 
   private var configuration = EditingCanvasStrokeSmoothingConfiguration(

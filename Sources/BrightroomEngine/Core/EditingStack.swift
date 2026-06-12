@@ -70,11 +70,6 @@ open class EditingStack: Hashable {
     var thumbnailImage: CIImage
   }
 
-  private struct CropInteractionImageRenderRequest: Equatable {
-    var editingSourceCGImage: CGImage
-    var orientation: CGImagePropertyOrientation
-  }
-
   public struct Loaded: Equatable {
 
     // MARK: - Properties
@@ -95,13 +90,6 @@ open class EditingStack: Hashable {
           editingPreviewImage = currentEdit.makePreviewImage(
             from: editingSourceImage,
             purpose: .editingBase
-          )
-        }
-
-        if currentEdit.crop != oldValue.crop {
-          cropInteractionPreviewImage = currentEdit.makePreviewImage(
-            from: editingSourceImage,
-            purpose: .cropInteraction
           )
         }
       }
@@ -134,15 +122,6 @@ open class EditingStack: Hashable {
      */
     public fileprivate(set) var editingPreviewImage: CIImage
 
-    public fileprivate(set) var cropInteractionPreviewImage: CIImage
-
-    /**
-     A `CGImage` materialization of `cropInteractionPreviewImage`.
-     This intentionally follows the crop interaction preview policy rather
-     than the full editing preview policy.
-     */
-    public fileprivate(set) var imageForCrop: CGImage
-
     public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
 
     public var canUndo: Bool {
@@ -157,19 +136,11 @@ open class EditingStack: Hashable {
     }
 
     public var hasUncommitedChanges: Bool {
-      guard currentEdit.isRenderingEquivalent(to: initialEditing) else {
-        return true
-      }
-
       guard let latestHistory = history.last else {
-        return false
+        return currentEdit.isRenderingEquivalent(to: initialEditing) == false
       }
 
-      guard latestHistory.isRenderingEquivalent(to: currentEdit) else {
-        return true
-      }
-
-      return false
+      return latestHistory.isRenderingEquivalent(to: currentEdit) == false
     }
 
     // MARK: - Initializers
@@ -184,8 +155,6 @@ open class EditingStack: Hashable {
       editingSourceCGImage: CGImage,
       editingSourceCIImage: CIImage,
       editingPreviewCIImage: CIImage,
-      cropInteractionPreviewCIImage: CIImage,
-      imageForCrop: CGImage,
       previewFilterPresets: [PreviewFilterPreset] = []
     ) {
       self.imageSource = imageSource
@@ -197,9 +166,7 @@ open class EditingStack: Hashable {
       self.editingSourceCGImage = editingSourceCGImage
       self.editingSourceImage = editingSourceCIImage
       self.editingPreviewImage = editingPreviewCIImage
-      self.cropInteractionPreviewImage = cropInteractionPreviewCIImage
       self.previewFilterPresets = previewFilterPresets
-      self.imageForCrop = imageForCrop
     }
 
     // MARK: - Functions
@@ -261,11 +228,6 @@ open class EditingStack: Hashable {
   public var cropModifier: CropModifier
 
   private let editingImageMaxPixelSize: CGFloat = 2560
-
-  private let debounceForCreatingCGImage = _BrightroomDebounce(
-    interval: 0.1,
-    queue: DispatchQueue.init(label: "Brightroom.cgImage")
-  )
 
   // MARK: - Initializers
 
@@ -366,22 +328,6 @@ open class EditingStack: Hashable {
         }
       )
 
-      withGraphTrackingMap(
-        from: self,
-        map: { stack -> CropInteractionImageRenderRequest? in
-          stack.loadedState.map {
-            CropInteractionImageRenderRequest(
-              editingSourceCGImage: $0.editingSourceCGImage,
-              orientation: $0.metadata.orientation
-            )
-          }
-        },
-        onChange: { [weak self] request in
-          guard let self, let request else { return }
-
-          self.scheduleCropImageRender(request)
-        }
-      )
     }
     .store(in: &subscriptions)
   }
@@ -417,21 +363,6 @@ open class EditingStack: Hashable {
         usesMTLTexture: self.options.usesMTLTextureForEditingImage
       )
 
-      let cgImageForCrop: CGImage = {
-        do {
-          return try Self.renderCGImageForCrop(
-            source: .init(cgImage: editingSourceCGImage),
-            orientation: metadata.orientation
-          )
-        } catch {
-          EngineSanitizer.global.onDidFindRuntimeError(
-            .failedToRenderCGImageForCrop(sourceImage: editingSourceCGImage)
-          )
-          assertionFailure()
-          return editingSourceCGImage
-        }
-      }()
-
       self.adjustCropExtent(
         image: _editingSourceCIImage,
         imageSize: metadata.imageSize,
@@ -457,12 +388,7 @@ open class EditingStack: Hashable {
             editingPreviewCIImage: initialEdit.makePreviewImage(
               from: _editingSourceCIImage,
               purpose: .editingBase
-            ),
-            cropInteractionPreviewCIImage: initialEdit.makePreviewImage(
-              from: _editingSourceCIImage,
-              purpose: .cropInteraction
-            ),
-            imageForCrop: cgImageForCrop
+            )
           )
 
           self.imageProviderSubscription = nil
@@ -517,26 +443,6 @@ open class EditingStack: Hashable {
     EngineLog.debug("[EditingStack] deinit")
   }
 
-  private func scheduleCropImageRender(_ request: CropInteractionImageRenderRequest) {
-    debounceForCreatingCGImage.on { [weak self] in
-      guard let self else { return }
-
-      let cgImageForCrop: CGImage = {
-        do {
-          return try Self.renderCGImageForCrop(
-            source: .init(cgImage: request.editingSourceCGImage),
-            orientation: request.orientation
-          )
-        } catch {
-          assertionFailure()
-          return request.editingSourceCGImage
-        }
-      }()
-
-      self.loadedState?.imageForCrop = cgImageForCrop
-    }
-  }
-
   // MARK: - Functions
 
   /**
@@ -588,6 +494,7 @@ open class EditingStack: Hashable {
   }
 
   public func crop(_ value: EditingCrop) {
+    _pixelengine_ensureMainThread()
     applyIfChanged {
       $0.crop = value
     }
@@ -669,32 +576,20 @@ open class EditingStack: Hashable {
     let scaled = image.transformed(
       by: .init(
         scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
-        y: image.extent.height < imageSize.width ? imageSize.height / image.extent.height : 1
+        y: image.extent.height < imageSize.height ? imageSize.height / image.extent.height : 1
       )
     )
 
     let translated = scaled.transformed(
       by: .init(
-        translationX: scaled.extent.origin.x,
-        y: scaled.extent.origin.y
+        translationX: -scaled.extent.origin.x,
+        y: -scaled.extent.origin.y
       )
     )
 
     let actualSizeFromDownsampledImage = translated
 
     cropModifier.run(actualSizeFromDownsampledImage, editingCrop: crop, completion: completion)
-  }
-
-  private static func renderCGImageForCrop(
-    source: ImageSource,
-    orientation: CGImagePropertyOrientation
-  ) throws -> CGImage {
-
-    let renderer = BrightRoomImageRenderer(source: source, orientation: orientation)
-
-    let result = try renderer.render().cgImage
-
-    return result
   }
 
 }

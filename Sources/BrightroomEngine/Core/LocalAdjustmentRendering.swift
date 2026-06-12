@@ -27,7 +27,6 @@ extension EditingStack.Edit {
   enum PreviewPurpose: Sendable {
     case editingBase
     case editing
-    case cropInteraction
   }
 
   func makePreviewImage(
@@ -39,8 +38,6 @@ extension EditingStack.Edit {
       filters.apply(to: sourceImage)
     case .editing:
       applyLocalAdjustments(to: filters.apply(to: sourceImage))
-    case .cropInteraction:
-      sourceImage
     }
   }
 
@@ -129,6 +126,67 @@ extension EditingStack.Edit.LocalAdjustmentEffect {
   }
 }
 
+/// Memoizes the CPU mask raster, which costs O(image area + stamp count) per
+/// pass (~150ms at full resolution). Masks are Equatable value types, so an
+/// equality-validated cache returns bit-identical rasters.
+///
+/// Only preview-scale rasters are retained: editing previews are bounded by
+/// `EditingStack`'s 2560px editing size and re-render repeatedly, while an
+/// export-resolution raster is produced once per export and never requested
+/// again — pinning one in a process-lifetime static would cost ~200MB for a
+/// 48MP image.
+private enum LocalAdjustmentMaskRasterStore {
+
+  private struct Entry {
+    let mask: EditingStack.Edit.LocalAdjustmentMask
+    let size: CGSize
+    let cgImage: CGImage
+    let byteCost: Int
+  }
+
+  private static let lock = NSLock()
+  private static var entries: [Entry] = []
+  private static let maxEntryByteCost = 32 * 1024 * 1024
+  private static let totalByteBudget = 64 * 1024 * 1024
+
+  static func image(
+    for mask: EditingStack.Edit.LocalAdjustmentMask,
+    size: CGSize
+  ) -> CGImage? {
+    lock.lock()
+    defer { lock.unlock() }
+
+    guard let index = entries.firstIndex(where: { $0.size == size && $0.mask == mask }) else {
+      return nil
+    }
+    let entry = entries.remove(at: index)
+    entries.append(entry)
+    return entry.cgImage
+  }
+
+  static func store(
+    _ cgImage: CGImage,
+    for mask: EditingStack.Edit.LocalAdjustmentMask,
+    size: CGSize
+  ) {
+    let byteCost = cgImage.bytesPerRow * cgImage.height
+    guard byteCost <= maxEntryByteCost else {
+      return
+    }
+
+    lock.lock()
+    defer { lock.unlock() }
+
+    entries.removeAll { $0.size == size && $0.mask == mask }
+    entries.append(Entry(mask: mask, size: size, cgImage: cgImage, byteCost: byteCost))
+
+    var totalCost = entries.reduce(0) { $0 + $1.byteCost }
+    while totalCost > totalByteBudget, entries.isEmpty == false {
+      totalCost -= entries.removeFirst().byteCost
+    }
+  }
+}
+
 extension EditingStack.Edit.LocalAdjustmentMask {
 
   fileprivate func makeCIImage(size: CGSize) -> CIImage? {
@@ -136,6 +194,12 @@ extension EditingStack.Edit.LocalAdjustmentMask {
       width: max(size.width.rounded(), 1),
       height: max(size.height.rounded(), 1)
     )
+
+    if let cached = LocalAdjustmentMaskRasterStore.image(for: self, size: targetSize) {
+      return CIImage(cgImage: cached)
+        .cropped(to: CGRect(origin: .zero, size: targetSize))
+    }
+
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
     format.opaque = false
@@ -155,11 +219,15 @@ extension EditingStack.Edit.LocalAdjustmentMask {
       return nil
     }
 
-    // The mask is authored in EditingCanvas display coordinates. Convert the
-    // UIGraphics raster into Core Image's composition orientation.
+    LocalAdjustmentMaskRasterStore.store(cgImage, for: self, size: targetSize)
+
+    // Stamps are authored in display coordinates (top-left origin, y-down),
+    // which is exactly UIGraphics' coordinate system, so the raster is
+    // already visually correct. `CIImage(cgImage:)` preserves visual
+    // orientation — adding a flip here renders exported masks upside-down
+    // relative to the interactive preview. (A flip is required for
+    // `CIImage(mtlTexture:)`, not for `CIImage(cgImage:)`.)
     return CIImage(cgImage: cgImage)
-      .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
-      .transformed(by: CGAffineTransform(translationX: 0, y: targetSize.height))
       .cropped(to: CGRect(origin: .zero, size: targetSize))
   }
 }
@@ -175,63 +243,71 @@ extension EditingStack.Edit.LocalAdjustmentStroke {
     let opacity = min(max(brush.opacity, 0), 1)
     let hardness = min(max(brush.hardness, 0), 1)
 
-    for stamp in stamps {
-      let rect = CGRect(
-        x: stamp.x - radius,
-        y: stamp.y - radius,
-        width: radius * 2,
-        height: radius * 2
-      )
+    // The gradient depends only on the per-stroke brush, so build it once
+    // instead of per stamp; a long stroke holds hundreds of stamps.
+    let softStampGradient: CGGradient?
+    if hardness >= 0.999 {
+      softStampGradient = nil
+    } else {
+      guard let gradient = Self.makeSoftStampGradient(hardness: hardness, opacity: opacity) else {
+        return
+      }
+      softStampGradient = gradient
+    }
 
-      if hardness >= 0.999 {
+    for stamp in stamps {
+      if let softStampGradient {
+        context.drawRadialGradient(
+          softStampGradient,
+          startCenter: stamp,
+          startRadius: 0,
+          endCenter: stamp,
+          endRadius: radius,
+          options: []
+        )
+      } else {
+        let rect = CGRect(
+          x: stamp.x - radius,
+          y: stamp.y - radius,
+          width: radius * 2,
+          height: radius * 2
+        )
         context.setFillColor(UIColor(white: 1, alpha: opacity).cgColor)
         context.fillEllipse(in: rect)
-      } else {
-        drawSoftStamp(
-          in: context,
-          center: stamp,
-          radius: radius,
-          hardness: hardness,
-          opacity: opacity
-        )
       }
     }
   }
 
-  private func drawSoftStamp(
-    in context: CGContext,
-    center: CGPoint,
-    radius: CGFloat,
+  private static func makeSoftStampGradient(
     hardness: CGFloat,
     opacity: CGFloat
-  ) {
+  ) -> CGGradient? {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let colors = [
-      UIColor(white: 1, alpha: opacity).cgColor,
-      UIColor(white: 1, alpha: opacity).cgColor,
-      UIColor(white: 1, alpha: 0).cgColor,
-    ] as CFArray
-    var locations: [CGFloat] = [
-      0,
-      min(max(hardness, 0.001), 0.999),
-      1,
-    ]
 
-    guard let gradient = CGGradient(
-      colorsSpace: colorSpace,
-      colors: colors,
-      locations: &locations
-    ) else {
-      return
+    // The falloff must match the interactive Metal brush
+    // (EditingCanvasBrushMaskShaderSource):
+    //   alpha = (1 - smoothstep(hardness, 1, distance)) * opacity
+    // A plain linear ramp renders a fatter tail per stamp, and over-blending
+    // across overlapping stamps compounds that into visibly wider and
+    // stronger coverage in exports than the preview ever showed.
+    let hardnessStop = min(max(hardness, 0.001), 0.999)
+    let stepCount = 16
+    var locations: [CGFloat] = [0, hardnessStop]
+    var colors: [CGColor] = [
+      UIColor(white: 1, alpha: opacity).cgColor,
+      UIColor(white: 1, alpha: opacity).cgColor,
+    ]
+    for index in 1...stepCount {
+      let bandFraction = CGFloat(index) / CGFloat(stepCount)
+      let smooth = bandFraction * bandFraction * (3 - 2 * bandFraction)
+      locations.append(hardnessStop + (1 - hardnessStop) * bandFraction)
+      colors.append(UIColor(white: 1, alpha: opacity * (1 - smooth)).cgColor)
     }
 
-    context.drawRadialGradient(
-      gradient,
-      startCenter: center,
-      startRadius: 0,
-      endCenter: center,
-      endRadius: radius,
-      options: []
+    return CGGradient(
+      colorsSpace: colorSpace,
+      colors: colors as CFArray,
+      locations: &locations
     )
   }
 }

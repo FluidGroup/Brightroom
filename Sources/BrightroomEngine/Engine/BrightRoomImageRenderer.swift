@@ -116,6 +116,19 @@ public final class BrightRoomImageRenderer {
 
   private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
 
+  enum RenderingDevice {
+    /// GPU rendering, falling back to software rendering when the image
+    /// exceeds the GPU context's maximum input or output size.
+    case automatic
+    /// CPU-based rendering (`.useSoftwareRenderer`).
+    case software
+    /// GPU rendering with no size-limit fallback.
+    case gpu
+  }
+
+  /// Internal hook for tests to compare GPU and software rendering output.
+  var renderingDevice: RenderingDevice = .automatic
+
   public enum Resolution {
     case full
     case resize(maxPixelSize: CGFloat)
@@ -255,18 +268,7 @@ public final class BrightRoomImageRenderer {
     debug: @escaping (CIImage) -> Void = { _ in }
   ) throws -> Rendered {
 
-    let ciContext = CIContext(
-      options: [
-        .workingFormat: options.workingFormat,
-        .highQualityDownsample: true,
-        .useSoftwareRenderer: true,
-        .cacheIntermediates: false
-      ]
-    )
-
     let startTime = CACurrentMediaTime()
-
-    EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
 
     /*
      ===
@@ -276,6 +278,14 @@ public final class BrightRoomImageRenderer {
     EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
 
     let sourceCIImage: CIImage = source.makeOriginalCIImage().oriented(orientation)
+
+    let ciContext = Self.makeCIContext(
+      workingFormat: options.workingFormat,
+      device: renderingDevice,
+      imageExtent: sourceCIImage.extent
+    )
+
+    EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
 
     EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
 
@@ -373,5 +383,76 @@ public final class BrightRoomImageRenderer {
 
     return .init(cgImage: resizedImage, options: options, engine: .combined)
 
+  }
+
+  private struct CIContextCacheKey: Hashable {
+    let workingFormatRawValue: Int32
+    let useSoftwareRenderer: Bool
+  }
+
+  private static let ciContextCacheLock = NSLock()
+  private static var ciContextCache: [CIContextCacheKey: CIContext] = [:]
+
+  /// CIContext creation costs tens to hundreds of milliseconds; CIContext is
+  /// thread-safe, so contexts are shared across renders keyed by the options
+  /// that affect their output.
+  private static func sharedCIContext(
+    workingFormat: CIFormat,
+    useSoftwareRenderer: Bool
+  ) -> CIContext {
+    let key = CIContextCacheKey(
+      workingFormatRawValue: workingFormat.rawValue,
+      useSoftwareRenderer: useSoftwareRenderer
+    )
+
+    ciContextCacheLock.lock()
+    defer { ciContextCacheLock.unlock() }
+
+    if let cached = ciContextCache[key] {
+      return cached
+    }
+
+    let context = CIContext(
+      options: [
+        .workingFormat: workingFormat,
+        .highQualityDownsample: true,
+        .useSoftwareRenderer: useSoftwareRenderer,
+        .cacheIntermediates: false
+      ]
+    )
+    ciContextCache[key] = context
+    return context
+  }
+
+  private static func makeCIContext(
+    workingFormat: CIFormat,
+    device: RenderingDevice,
+    imageExtent: CGRect
+  ) -> CIContext {
+
+    switch device {
+    case .software:
+      return sharedCIContext(workingFormat: workingFormat, useSoftwareRenderer: true)
+    case .gpu:
+      return sharedCIContext(workingFormat: workingFormat, useSoftwareRenderer: false)
+    case .automatic:
+      let gpuContext = sharedCIContext(workingFormat: workingFormat, useSoftwareRenderer: false)
+
+      // GPU contexts are bounded by Metal texture size limits (typically 8192–16384px).
+      let inputLimit = gpuContext.inputImageMaximumSize()
+      let outputLimit = gpuContext.outputImageMaximumSize()
+
+      if imageExtent.width <= min(inputLimit.width, outputLimit.width),
+         imageExtent.height <= min(inputLimit.height, outputLimit.height)
+      {
+        return gpuContext
+      }
+
+      EngineLog.debug(
+        .renderer,
+        "Image size \(imageExtent.size) exceeds GPU limits (input: \(inputLimit), output: \(outputLimit)); falling back to software renderer."
+      )
+      return sharedCIContext(workingFormat: workingFormat, useSoftwareRenderer: true)
+    }
   }
 }

@@ -30,7 +30,6 @@ public struct SwiftUIPixelEditorView: View {
   @State private var controlRoute: PixelEditorControlRoute = .root
   @State private var displayedRootPanel: PixelEditorRootPanel = .filter
   @State private var maskingBrushSize: MaskingBrushSize = .point(30)
-  @State private var proposedCrop: EditingCrop?
   @State private var cropApplyAction = SwiftUICropView.ApplyAction()
 
   private let editingStack: EditingStack
@@ -78,7 +77,6 @@ public struct SwiftUIPixelEditorView: View {
           options: options,
           mode: controlRoute.mode,
           maskingBrushSize: maskingBrushSize,
-          proposedCrop: $proposedCrop,
           cropApplyAction: cropApplyAction
         )
           .frame(width: canvasLength, height: canvasLength)
@@ -91,7 +89,6 @@ public struct SwiftUIPixelEditorView: View {
           route: $controlRoute,
           displayedRootPanel: $displayedRootPanel,
           maskingBrushSize: $maskingBrushSize,
-          proposedCrop: $proposedCrop,
           cropApplyAction: cropApplyAction
         )
         .frame(height: PixelEditorLayout.controlPanelHeight)
@@ -339,16 +336,15 @@ private struct PixelEditorCanvas: View {
   let options: PixelEditorOptions
   let mode: PixelEditorMode
   let maskingBrushSize: MaskingBrushSize
-  @Binding var proposedCrop: EditingCrop?
   let cropApplyAction: SwiftUICropView.ApplyAction
 
   var body: some View {
-    GeometryReader { proxy in
+    GeometryReader { _ in
       ZStack {
         SwiftUICropView(
           editingStack: editingStack,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
-          isAutoApplyEditingStackEnabled: false,
+          isAutoApplyEditingStackEnabled: true,
           contentInset: .zero,
           cropInsideOverlay: { adjustmentKind in
             if mode.isCrop && options.croppingAspectRatio == nil {
@@ -357,17 +353,11 @@ private struct PixelEditorCanvas: View {
           },
           cropOutsideOverlay: { _ in
             PixelEditorColor.background
-          },
-          stateHandler: { state in
-            if let nextCrop = state.proposedCrop, proposedCrop != nextCrop {
-              proposedCrop = nextCrop
-            }
           }
         )
         .croppingAspectRatio(options.croppingAspectRatio)
-        .displayMode(.cropInteractionImage)
-        .surfaceMode(surfaceMode)
-        .brush(canvasBrush(in: proxy.size))
+        .featureFocus(featureFocus)
+        .maskingBrush(maskingBrush)
         .strokeSmoothing(.init())
         .registerApplyAction(cropApplyAction)
 
@@ -382,14 +372,15 @@ private struct PixelEditorCanvas: View {
     }
   }
 
-  private var surfaceMode: CropViewSurfaceMode {
+  private var featureFocus: CropViewFeatureFocus {
     switch mode {
     case .crop:
-      return .crop
+      return .finalCrop
     case .masking:
-      return .masking(maskingEffect)
+      // CropView derives the blur seed effect from the current crop.
+      return .masking()
     case .editing, .preview:
-      return .viewing
+      return .output
     }
   }
 
@@ -397,44 +388,12 @@ private struct PixelEditorCanvas: View {
     mode.isCrop && options.croppingAspectRatio == nil
   }
 
-  private var maskingEffect: EditingStack.Edit.LocalAdjustmentEffect {
-    guard let crop = editingStack.loadedState?.currentEdit.crop else {
-      return .gaussianBlur(radius: 18)
-    }
-
-    let diagonalLength = hypot(crop.cropExtent.width, crop.cropExtent.height)
-    return .gaussianBlur(radius: max(diagonalLength / 50, 1))
-  }
-
-  private func canvasBrush(in viewportSize: CGSize) -> EditingCanvasBrush {
-    .init(
-      size: Double(imageSpaceBrushSize(in: viewportSize)),
-      hardness: 0.72,
-      opacity: 0.9,
-      spacing: 0.12
-    )
-  }
-
-  private func imageSpaceBrushSize(in viewportSize: CGSize) -> CGFloat {
+  private var maskingBrush: CropViewMaskingBrush {
     switch maskingBrushSize {
     case let .pixel(value):
-      return value
+      return .init(diameter: .imagePixels(value))
     case let .point(value):
-      guard
-        let crop = editingStack.loadedState?.currentEdit.crop,
-        viewportSize.width > 0,
-        viewportSize.height > 0,
-        crop.cropExtent.width > 0,
-        crop.cropExtent.height > 0
-      else {
-        return value
-      }
-
-      let fitScale = min(
-        viewportSize.width / crop.cropExtent.width,
-        viewportSize.height / crop.cropExtent.height
-      )
-      return value / max(fitScale, 0.0001)
+      return .init(diameter: .viewportPoints(value))
     }
   }
 }
@@ -523,7 +482,6 @@ private struct PixelEditorControlPanel: View {
   @Binding var route: PixelEditorControlRoute
   @Binding var displayedRootPanel: PixelEditorRootPanel
   @Binding var maskingBrushSize: MaskingBrushSize
-  @Binding var proposedCrop: EditingCrop?
   let cropApplyAction: SwiftUICropView.ApplyAction
 
   @State private var presentedDetailRoute: PixelEditorControlRoute?
@@ -571,12 +529,14 @@ private struct PixelEditorControlPanel: View {
       PixelEditorCropControl(
         localizedStrings: localizedStrings,
         onCancel: {
-          endCrop(save: false)
-          finishDetailEditing()
+          restoreDetailEntryRevision()
           showRoute(.root)
         },
         onDone: {
-          endCrop(save: true)
+          // Crop changes auto-apply into the stack; flush any pending change
+          // and snapshot like the other tools.
+          cropApplyAction()
+          editingStack.takeSnapshot()
           finishDetailEditing()
           showRoute(.root)
         }
@@ -625,15 +585,7 @@ private struct PixelEditorControlPanel: View {
     case .root:
       setDetailControlVisible(false, animated: animated)
 
-    case .crop:
-      if route != presentedDetailRoute || !isDetailControlVisible {
-        detailEntryRevision = nil
-        detailSessionID += 1
-      }
-      presentedDetailRoute = route
-      setDetailControlVisible(true, animated: animated)
-
-    case .masking, .filter(_):
+    case .crop, .masking, .filter(_):
       if route != presentedDetailRoute || !isDetailControlVisible {
         detailEntryRevision = editingStack.currentRevision
         detailSessionID += 1
@@ -650,39 +602,6 @@ private struct PixelEditorControlPanel: View {
       editingStack.revertEdit()
     }
     finishDetailEditing()
-  }
-
-  private func endCrop(save: Bool) {
-    if save {
-      let fallbackCrop = resolvedCropForDisplay()
-      let cropBeforeApplying = editingStack.loadedState?.currentEdit.crop
-      cropApplyAction()
-
-      if editingStack.loadedState?.currentEdit.crop == cropBeforeApplying, let fallbackCrop {
-        editingStack.crop(fallbackCrop)
-      }
-
-      proposedCrop = editingStack.loadedState?.currentEdit.crop ?? fallbackCrop
-      editingStack.takeSnapshot()
-    } else {
-      guard let loadedState = editingStack.loadedState else {
-        assertionFailure()
-        return
-      }
-      proposedCrop = loadedState.currentEdit.crop
-    }
-  }
-
-  private func resolvedCropForDisplay() -> EditingCrop? {
-    guard var crop = proposedCrop ?? editingStack.loadedState?.currentEdit.crop else {
-      return nil
-    }
-
-    if let aspectRatio = options.croppingAspectRatio {
-      crop.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
-    }
-
-    return crop
   }
 
   private func finishDetailEditing() {
@@ -814,9 +733,9 @@ private struct PixelEditorPresetList: View {
   }
 
   private func setPreset(_ preset: FilterPreset?) {
-    editingStack.set(filters: {
+    editingStack.updateGlobalEffectsFeature {
       $0.preset = preset
-    })
+    }
     editingStack.takeSnapshot()
   }
 
@@ -1727,7 +1646,7 @@ private extension PixelEditorFilterKind {
   }
 
   func setValue(_ value: Double, editingStack: EditingStack) {
-    editingStack.set(filters: { filters in
+    editingStack.updateGlobalEffectsFeature { filters in
       switch self {
       case .exposure:
         filters.exposure = value.nonZeroFilter { FilterExposure(value: $0) }
@@ -1762,7 +1681,7 @@ private extension PixelEditorFilterKind {
           return filter
         }
       }
-    })
+    }
   }
 
   private func displayValue(forNativeValue value: Double) -> Double {

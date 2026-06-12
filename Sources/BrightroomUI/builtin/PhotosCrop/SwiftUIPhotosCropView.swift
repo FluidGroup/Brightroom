@@ -38,6 +38,7 @@ public struct SwiftUIPhotosCropView: View {
     public var button_aspectratio_original: String = "ORIGINAL"
     public var button_aspectratio_freeform: String = "FREEFORM"
     public var button_aspectratio_square: String = "SQUARE"
+    public var button_filter_original: String = "ORIGINAL"
 
     public init() {}
   }
@@ -50,6 +51,11 @@ public struct SwiftUIPhotosCropView: View {
     }
 
     public var aspectRatioOptions: AspectRatioOptions = .selectable
+
+    /// The presets offered by the Filters mode. Presets write into the
+    /// FeatureTree's global-effects node. Pass an empty array to offer no
+    /// presets.
+    public var filterPresets: [FilterPreset] = PhotosCropDefaultFilterPresets.make()
 
     public init() {
 

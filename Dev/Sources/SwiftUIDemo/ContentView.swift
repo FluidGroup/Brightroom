@@ -460,8 +460,17 @@ struct DemoPhotosCropView: View {
       editingStack: stack,
       options: options,
       onDone: {
-        let image = try! stack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image)
+        // Rendering synchronously here would hang the main thread for the
+        // full-resolution export; the async overload renders on the
+        // renderer's serial queue and calls back on main.
+        try! stack.makeRenderer().render { result in
+          switch result {
+          case .success(let rendered):
+            self.resultImage = .init(cgImage: rendered.cgImage)
+          case .failure(let error):
+            assertionFailure("\(error)")
+          }
+        }
       },
       onCancel: {
         dismiss()
@@ -506,8 +515,18 @@ struct DemoPixelEditor: View {
         let metadata = PixelEditorResultMetadata.makeLines(
           edit: editingStack.loadedState?.currentEdit
         )
-        let image = try! editingStack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image, metadata: metadata)
+        // Rendering synchronously here would hang the main thread for the
+        // full-resolution export (mask rasterization + CIContext + readback);
+        // the async overload renders on the renderer's serial queue and calls
+        // back on main.
+        try! editingStack.makeRenderer().render { result in
+          switch result {
+          case .success(let rendered):
+            self.resultImage = .init(cgImage: rendered.cgImage, metadata: metadata)
+          case .failure(let error):
+            assertionFailure("\(error)")
+          }
+        }
       },
       onCancelEditing: {
         dismiss()

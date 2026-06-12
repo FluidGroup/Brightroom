@@ -31,6 +31,7 @@ let package = Package(
       name: "BrightroomUI",
       dependencies: [
         "BrightroomEngine",
+        "BrightroomParametric",
         .product(name: "StateGraph", package: "swift-state-graph"),
         "TransitionPatch",
       ]

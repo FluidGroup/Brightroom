@@ -3,8 +3,11 @@ import BrightroomEngine
 import MetalKit
 import UIKit
 
+/// The source image is compared by identity; `EditingStack.Loaded` stores it
+/// as an immutable property, so a new editing source always produces a new
+/// instance. Comparing by extent would miss a same-extent source replacement.
 private struct EditingCanvasRenderInputKey: Equatable {
-  var sourceExtent: CGRect
+  var sourceImage: ObjectIdentifier
   var displayBounds: CGRect
   var filters: EditingStack.Edit.Filters
   var mode: EditingCanvasMode
@@ -39,7 +42,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   private var currentMode: EditingCanvasMode = .viewportBase
   private var currentLocalEffect: EditingStack.Edit.LocalAdjustmentEffect?
   private var currentRenderInputKey: EditingCanvasRenderInputKey?
-  private var editingCanvasLocalAdjustmentLayerID: UUID?
+  private let strokeCommitPipeline = EditingCanvasStrokeCommitPipeline()
   public var onMetricsChange: ((EditingCanvasMetrics) -> Void)?
 
   public init(canvasSize: CGSize) {
@@ -269,7 +272,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
     if didChangeLocalEffect {
       if localEffect == nil {
-        editingCanvasLocalAdjustmentLayerID = nil
+        strokeCommitPipeline.resetLayerTracking()
       }
       updateEditingCanvasLocalAdjustmentEffect(localEffect)
     }
@@ -337,7 +340,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     if let currentEditingStack {
       currentEditingStack.set(localAdjustments: [])
     }
-    editingCanvasLocalAdjustmentLayerID = nil
+    strokeCommitPipeline.resetLayerTracking()
     updateVisibleContentRect()
     publishMetrics()
   }
@@ -366,9 +369,8 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     loadedState: EditingStack.Loaded,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderInputKey {
-    let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
     return .init(
-      sourceExtent: previewSourceImage.extent,
+      sourceImage: ObjectIdentifier(loadedState.editingSourceImage),
       displayBounds: displayBoundsRect,
       filters: loadedState.currentEdit.filters,
       mode: mode
@@ -392,27 +394,11 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       return
     }
 
-    var localAdjustments = currentEditingStack.loadedState?.currentEdit.localAdjustments ?? []
-    let layerIndex: Int
-    if let existingIndex = editingCanvasLayerIndex(in: localAdjustments) {
-      layerIndex = existingIndex
-    } else {
-      let id = UUID()
-      editingCanvasLocalAdjustmentLayerID = id
-      localAdjustments.append(
-        .init(
-          id: id,
-          effect: currentLocalEffect,
-          mask: .init()
-        )
-      )
-      layerIndex = localAdjustments.index(before: localAdjustments.endIndex)
-    }
-
-    localAdjustments[layerIndex].isEnabled = true
-    localAdjustments[layerIndex].effect = currentLocalEffect
-    localAdjustments[layerIndex].mask.strokes.append(record.localAdjustmentStroke)
-    currentEditingStack.set(localAdjustments: localAdjustments)
+    strokeCommitPipeline.append(
+      record: record,
+      effect: currentLocalEffect,
+      to: currentEditingStack
+    )
   }
 
   private func updateEditingCanvasLocalAdjustmentEffect(
@@ -422,56 +408,16 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       return
     }
 
-    var localAdjustments = currentEditingStack.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
-      return
-    }
-
-    guard localAdjustments[layerIndex].effect != localEffect else {
-      return
-    }
-
-    localAdjustments[layerIndex].effect = localEffect
-    currentEditingStack.set(localAdjustments: localAdjustments)
+    strokeCommitPipeline.updateEffect(localEffect, in: currentEditingStack)
   }
 
   private func syncCommittedStrokesFromEditingStack() {
-    let localAdjustments = currentEditingStack?.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = editingCanvasLayerIndex(in: localAdjustments) else {
-      canvasView?.setCommittedStrokes([])
-      publishMetrics()
-      return
-    }
-
-    let records = localAdjustments[layerIndex].mask.strokes.map {
-      EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
-    }
+    let records = strokeCommitPipeline.committedRecords(
+      matching: currentLocalEffect,
+      in: currentEditingStack
+    )
     canvasView?.setCommittedStrokes(records)
     publishMetrics()
-  }
-
-  private func editingCanvasLayerIndex(
-    in localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
-  ) -> Int? {
-    guard let currentLocalEffect else {
-      return nil
-    }
-
-    if
-      let editingCanvasLocalAdjustmentLayerID,
-      let index = localAdjustments.firstIndex(where: { $0.id == editingCanvasLocalAdjustmentLayerID })
-    {
-      return index
-    }
-
-    guard let index = localAdjustments.firstIndex(where: { layer in
-      layer.effect.editingCanvasEffectIdentity == currentLocalEffect.editingCanvasEffectIdentity
-    }) else {
-      return nil
-    }
-
-    editingCanvasLocalAdjustmentLayerID = localAdjustments[index].id
-    return index
   }
 
   public override func layoutSubviews() {

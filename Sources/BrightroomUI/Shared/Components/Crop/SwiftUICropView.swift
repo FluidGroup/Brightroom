@@ -154,9 +154,8 @@ public struct SwiftUICropView: View {
   private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
   private let contentInset: UIEdgeInsets?
-  private var displayMode: CropViewDisplayMode
-  private var surfaceMode: CropViewSurfaceMode = .crop
-  private var brush: EditingCanvasBrush = .init()
+  private var featureFocus: CropViewFeatureFocus = .finalCrop
+  private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
   private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
 
   public init<InsideOverlay: View, OutsideOverlay: View>(
@@ -165,7 +164,6 @@ public struct SwiftUICropView: View {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    displayMode: CropViewDisplayMode = .renderedEditPreview,
     @ViewBuilder cropInsideOverlay: @escaping (AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
@@ -175,7 +173,6 @@ public struct SwiftUICropView: View {
     self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
-    self.displayMode = displayMode
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
     self.cropOutsideOverlay = { AnyView(cropOutsideOverlay($0)) }
     self.stateHandler = stateHandler
@@ -187,7 +184,6 @@ public struct SwiftUICropView: View {
     isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    displayMode: CropViewDisplayMode = .renderedEditPreview,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
@@ -197,7 +193,6 @@ public struct SwiftUICropView: View {
     self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
-    self.displayMode = displayMode
     self.stateHandler = stateHandler
   }
 
@@ -220,9 +215,8 @@ public struct SwiftUICropView: View {
           isAutoApplyEditingStackEnabled: isAutoApplyEditingStackEnabled,
           areAnimationsEnabled: areAnimationsEnabled,
           contentInset: contentInset,
-          displayMode: displayMode,
-          surfaceMode: surfaceMode,
-          brush: brush,
+          featureFocus: featureFocus,
+          maskingBrush: maskingBrush,
           strokeSmoothing: strokeSmoothing
         )
         .transition(.opacity.animation(.smooth))
@@ -279,18 +273,17 @@ public struct SwiftUICropView: View {
 
   }
 
-  public consuming func displayMode(_ mode: CropViewDisplayMode) -> Self {
-    self.displayMode = mode
+  /// Sets which FeatureTree point is previewed and which feature node canvas
+  /// gestures edit.
+  public consuming func featureFocus(_ focus: CropViewFeatureFocus) -> Self {
+    self.featureFocus = focus
     return self
   }
 
-  public consuming func surfaceMode(_ mode: CropViewSurfaceMode) -> Self {
-    self.surfaceMode = mode
-    return self
-  }
-
-  public consuming func brush(_ brush: EditingCanvasBrush) -> Self {
-    self.brush = brush
+  /// Sets the masking brush. The diameter may be authored in viewport points
+  /// or image pixels; CropView resolves it against its own geometry.
+  public consuming func maskingBrush(_ brush: CropViewMaskingBrush) -> Self {
+    self.maskingBrush = brush
     return self
   }
 
@@ -342,9 +335,8 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let isAutoApplyEditingStackEnabled: Bool
   let areAnimationsEnabled: Bool
   let contentInset: UIEdgeInsets?
-  let displayMode: CropViewDisplayMode
-  let surfaceMode: CropViewSurfaceMode
-  let brush: EditingCanvasBrush
+  let featureFocus: CropViewFeatureFocus
+  let maskingBrush: CropViewMaskingBrush
   let strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration
 
   func makeCoordinator() -> Coordinator {
@@ -362,10 +354,9 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
-    view.displayMode = displayMode
-    view.setCanvasBrush(brush)
+    view.setMaskingBrush(maskingBrush)
     view.setCanvasStrokeSmoothing(strokeSmoothing)
-    view.setSurfaceMode(surfaceMode)
+    view.setFeatureFocus(featureFocus)
     bindStateHandler(to: view, coordinator: context.coordinator)
 
     if let cropInsideOverlay {
@@ -400,10 +391,6 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       cropView.areAnimationsEnabled = areAnimationsEnabled
     }
 
-    if cropView.displayMode != displayMode {
-      cropView.displayMode = displayMode
-    }
-
     context.coordinator.applySwiftUIInputs {
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
@@ -419,9 +406,9 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
     }
 
-    cropView.setCanvasBrush(brush)
+    cropView.setMaskingBrush(maskingBrush)
     cropView.setCanvasStrokeSmoothing(strokeSmoothing)
-    cropView.setSurfaceMode(surfaceMode)
+    cropView.setFeatureFocus(featureFocus)
 
     cropView.updateCurrentEditingStackDisplay()
     configureActions(on: cropView)

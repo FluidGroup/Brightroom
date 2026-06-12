@@ -20,6 +20,7 @@
 		4B2A1112266B7B3000B0C885 /* test-image-11 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A1105266B7B3000B0C885 /* test-image-11 */; };
 		4B2A1113266B7B3000B0C885 /* test-image-3 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A1106266B7B3000B0C885 /* test-image-3 */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
+		4B487E6128EEC0670026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6028EEC0670026A8CF /* BrightroomUI */; };
 		4B58E82A260F0027004A834F /* orientation_left_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */; };
 		4B58E82B260F0027004A834F /* orientation_down_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE9260BB32600F77E9A /* orientation_down_mirrored.HEIC */; };
 		4B58E82C260F0027004A834F /* orientation_right_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */; };
@@ -933,6 +934,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */,
+				4B487E6128EEC0670026A8CF /* BrightroomUI in Frameworks */,
 				8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1539,6 +1541,7 @@
 			name = BrightroomEngineTests;
 			packageProductDependencies = (
 				4B487E5E28EEC0670026A8CF /* BrightroomEngine */,
+				4B487E6028EEC0670026A8CF /* BrightroomUI */,
 				23449504C30943C981A14D75 /* BrightroomParametric */,
 			);
 			productName = PixelEngineTests;
@@ -2558,6 +2561,10 @@
 		4B487E5E28EEC0670026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
+		};
+		4B487E6028EEC0670026A8CF /* BrightroomUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomUI;
 		};
 		B027724B2FC2B70A006D7796 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;

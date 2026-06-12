@@ -38,6 +38,7 @@ struct PhotosCropContentView: View {
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: PhotosCropEditingMode = .crop
   @State private var blurMaskingState = PhotosCropBlurMaskingState()
+  @State private var adjustmentParameter: PhotosCropAdjustmentParameter = .exposure
   @State private var resetAction = SwiftUICropView.ResetAction()
   @State private var rotateAction = SwiftUICropView.RotateAction()
   @State private var applyAction = SwiftUICropView.ApplyAction()
@@ -96,6 +97,9 @@ struct PhotosCropContentView: View {
             originalAspectRatio: originalAspectRatio,
             aspectRatioSelection: aspectRatioSelection,
             blurMaskingState: blurMaskingState,
+            filterPresets: options.filterPresets,
+            currentFilters: loadedState?.currentEdit.filters,
+            adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
             isSelectingAspectRatio: isSelectingAspectRatio,
@@ -104,7 +108,10 @@ struct PhotosCropContentView: View {
             onSetAdjustmentAngle: setAdjustmentAngle,
             onCommitAdjustmentAngle: commitAdjustmentAngle,
             onSetBrushDiameter: setBlurMaskingBrushDiameter,
-            onClearBlurMask: clearBlurMaskingLayer
+            onClearBlurMask: clearBlurMaskingLayer,
+            onSelectFilterPreset: selectFilterPreset,
+            onSelectAdjustmentParameter: selectAdjustmentParameter,
+            onSetAdjustmentValue: setAdjustmentValue
           )
           .frame(maxWidth: bottomControlMaxWidth)
           .frame(maxWidth: .infinity)
@@ -120,7 +127,7 @@ struct PhotosCropContentView: View {
           cancelTitle: localizedStrings.button_cancel_title,
           doneTitle: localizedStrings.button_done_title,
           isLoaded: isLoaded,
-          hasChanges: loadedState?.isDirty ?? false,
+          hasCropChanges: hasCropChanges(loadedState: loadedState),
           isDoneEnabled: isLoaded,
           mode: editingMode,
           isSelectingAspectRatio: isSelectingAspectRatio,
@@ -148,6 +155,10 @@ struct PhotosCropContentView: View {
       }
       .accessibilityIdentifier("photos.crop")
     }
+    // PhotosCrop is a dark, full-screen editor; keep system toolbar glass
+    // resolved against dark traits even when the host app is in Light Mode.
+    .preferredColorScheme(.dark)
+    .environment(\.colorScheme, .dark)
   }
 
   private var isAspectRatioControlAvailable: Bool {
@@ -157,6 +168,31 @@ struct PhotosCropContentView: View {
     case .fixed:
       return false
     }
+  }
+
+  /// Whether the crop differs from what the Reset button would restore.
+  ///
+  /// Reset only restores the crop (`EditingCrop.makeInitial()`), so its
+  /// visibility tracks crop state alone — painting a blur mask must not
+  /// surface a Reset button that would do nothing.
+  ///
+  /// The extent comparison tolerates sub-pixel drift because leaving Crop
+  /// mode re-commits the guide's laid-out geometry, which can differ from
+  /// the document crop by a fraction of a pixel.
+  private func hasCropChanges(loadedState: EditingStack.Loaded?) -> Bool {
+    guard let crop = loadedState?.currentEdit.crop else {
+      return false
+    }
+
+    let initial = crop.makeInitial()
+    let tolerance: CGFloat = 1
+
+    return crop.rotation != initial.rotation
+      || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001
+      || abs(crop.cropExtent.minX - initial.cropExtent.minX) > tolerance
+      || abs(crop.cropExtent.minY - initial.cropExtent.minY) > tolerance
+      || abs(crop.cropExtent.width - initial.cropExtent.width) > tolerance
+      || abs(crop.cropExtent.height - initial.cropExtent.height) > tolerance
   }
 
   private func rotate() {
@@ -209,8 +245,33 @@ struct PhotosCropContentView: View {
     editingMode = mode
   }
 
+  /// Writes the selected preset into the global-effects feature node.
+  private func selectFilterPreset(_ preset: FilterPreset?) {
+    editingStack.updateGlobalEffectsFeature { filters in
+      guard filters.preset?.identifier != preset?.identifier else {
+        return
+      }
+      filters.preset = preset
+    }
+  }
+
+  private func selectAdjustmentParameter(_ parameter: PhotosCropAdjustmentParameter) {
+    guard adjustmentParameter != parameter else {
+      return
+    }
+    adjustmentParameter = parameter
+  }
+
+  /// Writes a slider value for the selected parameter into the global-effects
+  /// feature node.
+  private func setAdjustmentValue(_ sliderValue: Double) {
+    editingStack.updateGlobalEffectsFeature { filters in
+      adjustmentParameter.apply(sliderValue: sliderValue, to: &filters)
+    }
+  }
+
   private func clearBlurMaskingLayer() {
-    let blurIdentity = blurMaskingEffect.editingCanvasEffectIdentity
+    let blurIdentity = EditingStack.Edit.LocalAdjustmentEffect.EditingCanvasEffectIdentity.blur
     let localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     let remainingLocalAdjustments = localAdjustments.filter {
       $0.effect.editingCanvasEffectIdentity != blurIdentity
@@ -239,9 +300,6 @@ struct PhotosCropContentView: View {
     }
   }
 
-  private var blurMaskingEffect: EditingStack.Edit.LocalAdjustmentEffect {
-    PhotosCropBlurMaskingState.blurEffect(for: editingStack.loadedState?.currentEdit.crop)
-  }
 }
 
 /// A top-level editing mode shown in the PhotosCrop bottom toolbar.
@@ -312,10 +370,8 @@ private enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
 
   var isAvailable: Bool {
     switch self {
-    case .crop, .blurMasking:
+    case .crop, .blurMasking, .filters, .adjustments:
       return true
-    case .filters, .adjustments:
-      return false
     }
   }
 }
@@ -323,19 +379,9 @@ private enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
 /// Mutable state for PhotosCrop's first local-adjustment mode.
 ///
 /// The brush diameter is stored in viewport points so the visible control reads
-/// like a Photos-style tool. `PhotosCropCanvasHost` converts it into image
-/// space before handing it to CropView's masking surface.
+/// like a Photos-style tool; CropView resolves it into image space.
 private struct PhotosCropBlurMaskingState: Equatable {
   var brushDiameter: CGFloat = 30
-
-  static func blurEffect(for crop: EditingCrop?) -> EditingStack.Edit.LocalAdjustmentEffect {
-    guard let crop else {
-      return .gaussianBlur(radius: 18)
-    }
-
-    let diagonalLength = hypot(crop.cropExtent.width, crop.cropExtent.height)
-    return .gaussianBlur(radius: max(diagonalLength / 50, 1))
-  }
 }
 
 private struct PhotosCropCanvasHost: View {
@@ -352,62 +398,39 @@ private struct PhotosCropCanvasHost: View {
   let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction
 
   var body: some View {
-    GeometryReader { proxy in
-      SwiftUICropView(
-        editingStack: editingStack,
-        isGuideInteractionEnabled: mode == .crop,
-        isAutoApplyEditingStackEnabled: true
-      )
-      .rotation(rotation)
-      .adjustmentAngle(adjustmentAngle)
-      .croppingAspectRatio(croppingAspectRatio)
-      .surfaceMode(surfaceMode)
-      .brush(canvasBrush(in: proxy.size))
-      .strokeSmoothing(.init())
-      .registerResetAction(resetAction)
-      .registerRotateAction(rotateAction)
-      .registerApplyAction(applyAction)
-      .registerAdjustmentAngleCommitAction(adjustmentAngleCommitAction)
-      .frame(width: proxy.size.width, height: proxy.size.height)
-    }
+    SwiftUICropView(
+      editingStack: editingStack,
+      isGuideInteractionEnabled: mode == .crop,
+      isAutoApplyEditingStackEnabled: true
+    )
+    .rotation(rotation)
+    .adjustmentAngle(adjustmentAngle)
+    .croppingAspectRatio(croppingAspectRatio)
+    .featureFocus(featureFocus)
+    .maskingBrush(.init(diameter: .viewportPoints(blurMaskingState.brushDiameter)))
+    .strokeSmoothing(.init())
+    .registerResetAction(resetAction)
+    .registerRotateAction(rotateAction)
+    .registerApplyAction(applyAction)
+    .registerAdjustmentAngleCommitAction(adjustmentAngleCommitAction)
   }
 
-  private var surfaceMode: CropViewSurfaceMode {
+  /// The FeatureTree focus for the current editing mode.
+  ///
+  /// Every mode views the evaluated output (`.output`); what changes is the
+  /// adjustment point. Crop edits the final crop node, blur masking paints a
+  /// pre-crop local adjustment (CropView derives the blur seed from the
+  /// current crop), and filters/adjustments edit the global effects node
+  /// through controls outside the canvas.
+  private var featureFocus: CropViewFeatureFocus {
     switch mode {
     case .crop:
-      return .crop
+      return .finalCrop
     case .blurMasking:
-      return .masking(PhotosCropBlurMaskingState.blurEffect(for: editingStack.loadedState?.currentEdit.crop))
+      return .masking()
     case .filters, .adjustments:
-      return .viewing
+      return .output
     }
-  }
-
-  private func canvasBrush(in viewportSize: CGSize) -> EditingCanvasBrush {
-    .init(
-      size: Double(imageSpaceBrushDiameter(in: viewportSize)),
-      hardness: 0.72,
-      opacity: 0.9,
-      spacing: 0.18
-    )
-  }
-
-  private func imageSpaceBrushDiameter(in viewportSize: CGSize) -> CGFloat {
-    guard
-      let crop = editingStack.loadedState?.currentEdit.crop,
-      viewportSize.width > 0,
-      viewportSize.height > 0,
-      crop.cropExtent.width > 0,
-      crop.cropExtent.height > 0
-    else {
-      return blurMaskingState.brushDiameter
-    }
-
-    let fitScale = min(
-      viewportSize.width / crop.cropExtent.width,
-      viewportSize.height / crop.cropExtent.height
-    )
-    return blurMaskingState.brushDiameter / max(fitScale, 0.0001)
   }
 }
 
@@ -417,6 +440,9 @@ private struct PhotosCropControlHost: View {
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: PhotosCropAspectRatioSelection
   let blurMaskingState: PhotosCropBlurMaskingState
+  let filterPresets: [FilterPreset]
+  let currentFilters: EditingStack.Edit.Filters?
+  let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let adjustmentAngle: EditingCrop.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
@@ -426,6 +452,9 @@ private struct PhotosCropControlHost: View {
   let onCommitAdjustmentAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearBlurMask: () -> Void
+  let onSelectFilterPreset: (FilterPreset?) -> Void
+  let onSelectAdjustmentParameter: (PhotosCropAdjustmentParameter) -> Void
+  let onSetAdjustmentValue: (Double) -> Void
 
   var body: some View {
     Group {
@@ -451,9 +480,23 @@ private struct PhotosCropControlHost: View {
           onClearBlurMask: onClearBlurMask
         )
 
-      case .filters, .adjustments:
-        Color.clear
-          .accessibilityHidden(true)
+      case .filters:
+        PhotosCropFilterControl(
+          presets: filterPresets,
+          selectedPresetIdentifier: currentFilters?.preset?.identifier,
+          localizedStrings: localizedStrings,
+          isLoaded: isLoaded,
+          onSelectPreset: onSelectFilterPreset
+        )
+
+      case .adjustments:
+        PhotosCropAdjustmentsControl(
+          selection: adjustmentParameter,
+          sliderValue: currentFilters.map { adjustmentParameter.sliderValue(in: $0) } ?? 0,
+          isLoaded: isLoaded,
+          onSelectParameter: onSelectAdjustmentParameter,
+          onSetValue: onSetAdjustmentValue
+        )
       }
     }
     .animation(.spring(response: 0.32, dampingFraction: 1), value: mode)
@@ -466,7 +509,7 @@ private struct PhotosCropToolbar: ToolbarContent {
   let cancelTitle: String
   let doneTitle: String
   let isLoaded: Bool
-  let hasChanges: Bool
+  let hasCropChanges: Bool
   let isDoneEnabled: Bool
   let mode: PhotosCropEditingMode
   let isSelectingAspectRatio: Bool
@@ -514,7 +557,7 @@ private struct PhotosCropToolbar: ToolbarContent {
     }
     
     ToolbarItem(placement: .principal) {
-      if hasChanges && mode == .crop {
+      if hasCropChanges && mode == .crop {
         PhotosCropToolbarTextButton(
           title: resetTitle,
           accessibilityIdentifier: "photos.crop.reset",
@@ -811,6 +854,295 @@ private enum PhotosCropBrushSizeMetrics {
   static let stepCount = Int(maximumSize - minimumSize)
 }
 
+/// A global adjustment parameter editable in PhotosCrop's Adjust mode.
+///
+/// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
+/// value onto the corresponding `EditingStack.Edit.Filters` property. The
+/// parameters write into the FeatureTree's global-effects node, which is
+/// evaluated before local adjustments and the final crop.
+enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
+  case exposure
+  case brightness
+  case contrast
+  case saturation
+  case temperature
+  case highlights
+  case shadows
+  case vignette
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .exposure: return "Exposure"
+    case .brightness: return "Brightness"
+    case .contrast: return "Contrast"
+    case .saturation: return "Saturation"
+    case .temperature: return "Warmth"
+    case .highlights: return "Highlights"
+    case .shadows: return "Shadows"
+    case .vignette: return "Vignette"
+    }
+  }
+
+  var systemImageName: String {
+    switch self {
+    case .exposure: return "plusminus.circle"
+    case .brightness: return "sun.max"
+    case .contrast: return "circle.lefthalf.filled"
+    case .saturation: return "drop"
+    case .temperature: return "thermometer.medium"
+    case .highlights: return "circle.tophalf.filled"
+    case .shadows: return "circle.bottomhalf.filled"
+    case .vignette: return "circle.dashed.inset.filled"
+    }
+  }
+
+  var accessibilityIdentifier: String {
+    "photos.crop.adjustments.\(String(describing: self))"
+  }
+
+  /// Zero-based parameters only strengthen in one direction.
+  private var isZeroBased: Bool {
+    switch self {
+    case .highlights, .vignette:
+      return true
+    case .exposure, .brightness, .contrast, .saturation, .temperature, .shadows:
+      return false
+    }
+  }
+
+  var sliderRange: ClosedRange<Double> {
+    isZeroBased ? 0...100 : -100...100
+  }
+
+  /// The maximum filter value the slider's positive end maps to.
+  private var maximumFilterValue: Double {
+    switch self {
+    case .exposure: return FilterExposure.range.max
+    case .brightness: return FilterBrightness.range.max
+    case .contrast: return FilterContrast.range.max
+    case .saturation: return FilterSaturation.range.max
+    case .temperature: return FilterTemperature.range.max
+    case .highlights: return FilterHighlights.range.max
+    case .shadows: return FilterShadows.range.max
+    case .vignette: return FilterVignette.range.max
+    }
+  }
+
+  /// The current slider value for this parameter.
+  func sliderValue(in filters: EditingStack.Edit.Filters) -> Double {
+    let filterValue: Double
+    switch self {
+    case .exposure: filterValue = filters.exposure?.value ?? 0
+    case .brightness: filterValue = filters.brightness?.value ?? 0
+    case .contrast: filterValue = filters.contrast?.value ?? 0
+    case .saturation: filterValue = filters.saturation?.value ?? 0
+    case .temperature: filterValue = filters.temperature?.value ?? 0
+    case .highlights: filterValue = filters.highlights?.value ?? 0
+    case .shadows: filterValue = filters.shadows?.value ?? 0
+    case .vignette: filterValue = filters.vignette?.value ?? 0
+    }
+
+    guard maximumFilterValue != 0 else {
+      return 0
+    }
+
+    return (filterValue / maximumFilterValue * 100).rounded()
+  }
+
+  /// Whether this parameter currently deviates from its neutral value.
+  func isActive(in filters: EditingStack.Edit.Filters) -> Bool {
+    sliderValue(in: filters) != 0
+  }
+
+  /// Writes a slider value into the filters. A neutral value clears the
+  /// corresponding filter so untouched parameters stay absent from the edit.
+  func apply(sliderValue: Double, to filters: inout EditingStack.Edit.Filters) {
+    let clamped = min(max(sliderValue, sliderRange.lowerBound), sliderRange.upperBound)
+    let filterValue = clamped / 100 * maximumFilterValue
+    let isNeutral = abs(clamped) < 0.5
+
+    switch self {
+    case .exposure:
+      filters.exposure = isNeutral ? nil : updated(filters.exposure ?? FilterExposure(), filterValue) { $0.value = $1 }
+    case .brightness:
+      filters.brightness = isNeutral ? nil : updated(filters.brightness ?? FilterBrightness(), filterValue) { $0.value = $1 }
+    case .contrast:
+      filters.contrast = isNeutral ? nil : updated(filters.contrast ?? FilterContrast(), filterValue) { $0.value = $1 }
+    case .saturation:
+      filters.saturation = isNeutral ? nil : updated(filters.saturation ?? FilterSaturation(), filterValue) { $0.value = $1 }
+    case .temperature:
+      filters.temperature = isNeutral ? nil : updated(filters.temperature ?? FilterTemperature(), filterValue) { $0.value = $1 }
+    case .highlights:
+      filters.highlights = isNeutral ? nil : updated(filters.highlights ?? FilterHighlights(), filterValue) { $0.value = $1 }
+    case .shadows:
+      filters.shadows = isNeutral ? nil : updated(filters.shadows ?? FilterShadows(), filterValue) { $0.value = $1 }
+    case .vignette:
+      filters.vignette = isNeutral ? nil : updated(filters.vignette ?? FilterVignette(), filterValue) { $0.value = $1 }
+    }
+  }
+
+  private func updated<F>(
+    _ filter: F,
+    _ value: Double,
+    _ write: (inout F, Double) -> Void
+  ) -> F {
+    var filter = filter
+    write(&filter, value)
+    return filter
+  }
+}
+
+/// Filter preset chips evaluated inside the global-effects feature node.
+private struct PhotosCropFilterControl: View {
+
+  let presets: [FilterPreset]
+  let selectedPresetIdentifier: String?
+  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let isLoaded: Bool
+  let onSelectPreset: (FilterPreset?) -> Void
+
+  var body: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 12) {
+        PhotosCropAspectRatioButton(
+          title: localizedStrings.button_filter_original,
+          isSelected: selectedPresetIdentifier == nil
+        ) {
+          onSelectPreset(nil)
+        }
+        .accessibilityIdentifier("photos.crop.filters.original")
+
+        ForEach(presets, id: \.identifier) { preset in
+          PhotosCropAspectRatioButton(
+            title: preset.name,
+            isSelected: selectedPresetIdentifier == preset.identifier
+          ) {
+            onSelectPreset(preset)
+          }
+          .accessibilityIdentifier("photos.crop.filters.\(preset.identifier)")
+        }
+      }
+      .padding(.horizontal, 24)
+      .frame(maxHeight: .infinity)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .opacity(isLoaded ? 1 : 0.5)
+    .disabled(!isLoaded)
+    .environment(\.colorScheme, .dark)
+    .accessibilityIdentifier("photos.crop.filters")
+  }
+}
+
+/// Parameter selector plus value slider for PhotosCrop's Adjust mode.
+private struct PhotosCropAdjustmentsControl: View {
+
+  let selection: PhotosCropAdjustmentParameter
+  let sliderValue: Double
+  let isLoaded: Bool
+  let onSelectParameter: (PhotosCropAdjustmentParameter) -> Void
+  let onSetValue: (Double) -> Void
+
+  var body: some View {
+    VStack(spacing: 4) {
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 16) {
+          ForEach(PhotosCropAdjustmentParameter.allCases) { parameter in
+            PhotosCropAdjustmentParameterButton(
+              parameter: parameter,
+              isSelected: parameter == selection,
+              action: { onSelectParameter(parameter) }
+            )
+          }
+        }
+        .padding(.horizontal, 24)
+      }
+      .frame(height: 56)
+
+      BrightroomSteppedSlider(
+        value: valueBinding,
+        range: selection.sliderRange,
+        stepCount: Int((selection.sliderRange.upperBound - selection.sliderRange.lowerBound) / 4),
+        style: .photosCropAdjustmentSlider,
+        resetValue: 0,
+        snapsToTicksOnEditingEnd: false,
+        transform: { $0.rounded() },
+        hapticIdentity: { value in
+          let step = Int(value.rounded())
+          return step.isMultiple(of: 25) ? AnyHashable(step) : nil
+        },
+        onHaptic: {
+          UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.35)
+        },
+        topMarker: { context in
+          Circle()
+            .frame(width: 6, height: 6)
+            .opacity(context.isZero && sliderValue != 0 ? 1 : 0)
+            .animation(.spring, value: sliderValue == 0)
+        },
+        tick: { context in
+          Capsule()
+            .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
+        }
+      )
+      .id(selection)
+      .tint(.white)
+      .frame(height: 44)
+      .padding(.horizontal, 24)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .opacity(isLoaded ? 1 : 0.5)
+    .disabled(!isLoaded)
+    .environment(\.colorScheme, .dark)
+    .accessibilityIdentifier("photos.crop.adjustments")
+  }
+
+  private var valueBinding: Binding<Double> {
+    Binding(
+      get: { sliderValue },
+      set: { newValue in
+        let rounded = newValue.rounded()
+        guard rounded != sliderValue else {
+          return
+        }
+
+        onSetValue(rounded)
+      }
+    )
+  }
+}
+
+private struct PhotosCropAdjustmentParameterButton: View {
+
+  let parameter: PhotosCropAdjustmentParameter
+  let isSelected: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      VStack(spacing: 3) {
+        Image(systemName: parameter.systemImageName)
+          .font(.system(size: 17, weight: .regular))
+          .symbolRenderingMode(.monochrome)
+          .frame(width: 30, height: 22)
+
+        Text(parameter.title)
+          .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+          .lineLimit(1)
+          .minimumScaleFactor(0.7)
+      }
+      .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.55))
+      .frame(width: 64, height: 48)
+    }
+    .buttonStyle(.plain)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(parameter.title)
+    .accessibilityValue(isSelected ? "selected" : "not selected")
+    .accessibilityIdentifier(parameter.accessibilityIdentifier)
+  }
+}
+
 private struct PhotosCropAdjustmentControl: View {
 
   let originalAspectRatio: PixelAspectRatio?
@@ -918,6 +1250,15 @@ private enum PhotosCropRotationSliderMetrics {
 
 private extension BrightroomSteppedSliderStyle {
   static let photosCropRotationSlider = BrightroomSteppedSliderStyle(
+    tickWidth: 2,
+    tickSpacing: 4,
+    tickHeight: 10,
+    activeTickWidth: 3,
+    activeTickHeight: 18,
+    majorTickInterval: 5
+  )
+
+  static let photosCropAdjustmentSlider = BrightroomSteppedSliderStyle(
     tickWidth: 2,
     tickSpacing: 4,
     tickHeight: 10,
