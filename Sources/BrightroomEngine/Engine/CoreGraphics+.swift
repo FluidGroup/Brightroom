@@ -277,171 +277,21 @@ extension CGImage {
 
 }
 
-import Metal
-import MetalKit
 import CoreImage
 
 extension CGImage {
 
+  /// Creates a `CIImage` from this `CGImage`, applying the given orientation.
+  ///
+  /// The image's color space is carried over intrinsically by `CIImage(cgImage:)`,
+  /// and Core Image uploads pixels to the GPU lazily on first render through a
+  /// Metal-backed `CIContext`. There is no need to pre-decode into an `MTLTexture`
+  /// here: the editing canvas re-renders the source into its own viewport texture
+  /// every frame, so the backing of this image is irrelevant to display.
   func _makeCIImage(
-    orientation: CGImagePropertyOrientation,
-    device: MTLDevice?,
-    usesMTLTexture: Bool
+    orientation: CGImagePropertyOrientation
   ) -> CIImage {
-
-    let cgImage = self
-
-    let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-
-    func createFromCGImage() -> CIImage {
-      return CIImage(
-        cgImage: cgImage
-      )
-      .oriented(orientation)
-    }
-
-    func createFromMTLTexture(device: MTLDevice) throws -> CIImage {
-      let thumbnailTexture = try makeMTLTexture(
-        from: cgImage,
-        device: device
-      )
-
-      let ciImage = try CIImage(
-        mtlTexture: thumbnailTexture,
-        options: [.colorSpace: colorSpace]
-      )
-        .map {
-          $0.transformed(by: .init(scaleX: 1, y: -1))
-        }.map {
-          $0.transformed(by: .init(translationX: 0, y: $0.extent.height))
-        }
-        .map {
-          $0.oriented(orientation)
-        }
-        .unwrap()
-
-      EngineLog.debug(.stack, "Load MTLTexture")
-
-      return ciImage
-    }
-
-    if usesMTLTexture {
-      assert(device != nil)
-    }
-
-    if usesMTLTexture, let device = device {
-
-      do {
-        // TODO: As possible, creates CIImage from MTLTexture
-        // 16bits image can't be MTLTexture with MTKTextureLoader.
-        // https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-        return try createFromMTLTexture(device: device)
-      } catch {
-        EngineLog.debug(
-          .stack,
-          "Unable to create MTLTexutre, fallback to CIImage from CGImage.\n\(cgImage)"
-        )
-
-        return createFromCGImage()
-      }
-    } else {
-
-      if usesMTLTexture, device == nil {
-        EngineLog.error(
-          .stack,
-          "MTLDevice not found, fallback to using CGImage to create CIImage."
-        )
-      }
-
-      return createFromCGImage()
-    }
-
+    return CIImage(cgImage: self).oriented(orientation)
   }
-
-}
-
-
-private enum MTLImageCreationError: Error {
-  case imageTooBig
-}
-
-extension MTLDevice {
-  fileprivate func supportsImage(size: CGSize) -> Bool {
-#if DEBUG
-    switch MTLGPUFamily.apple1 {
-    case .apple1,
-        .apple2,
-        .apple3,
-        .apple4,
-        .apple5,
-        .apple6,
-        .apple7,
-        .apple8,
-        .apple9,
-        .common1,
-        .common2,
-        .common3,
-        .mac1,
-        .mac2,
-        .macCatalyst1,
-        .macCatalyst2,
-        .metal3:
-      break
-    @unknown default:  //If a warning is triggered here, please check https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf for a possibly new value in the Maximum 2D texture width and height table.
-      break
-    }
-#endif
-    let maxSideSize: CGFloat = self.supportsFamily(.apple3) ? 16384 : 8192
-    return size.width <= maxSideSize && size.height <= maxSideSize
-  }
-}
-
-/// TODO: As possible, creates CIImage from MTLTexture
-/// 16bits image can't be MTLTexture with MTKTextureLoader.
-/// https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
-private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> MTLTexture {
-  guard device.supportsImage(size: cgImage.size) else {
-    throw MTLImageCreationError.imageTooBig
-  }
-
-#if true
-  let loader = MTKTextureLoader(device: device)
-  let texture = try loader.newTexture(cgImage: cgImage, options: [:])
-  return texture
-#else
-
-  // Here does not work well.
-
-  let textureDescriptor = MTLTextureDescriptor()
-
-  textureDescriptor.pixelFormat = .rgba16Uint
-  textureDescriptor.width = cgImage.width
-  textureDescriptor.height = cgImage.height
-
-  let texture = try device.makeTexture(descriptor: textureDescriptor).unwrap(
-    orThrow: "Failed to create MTLTexture"
-  )
-
-  let context = try CGContext.makeContext(for: cgImage)
-    .perform { context in
-      let flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(cgImage.height))
-      context.concatenate(flip)
-      context.draw(
-        cgImage,
-        in: CGRect(x: 0, y: 0, width: CGFloat(cgImage.width), height: CGFloat(cgImage.height))
-      )
-    }
-
-  let data = try context.data.unwrap()
-
-  texture.replace(
-    region: MTLRegionMake2D(0, 0, cgImage.width, cgImage.height),
-    mipmapLevel: 0,
-    withBytes: data,
-    bytesPerRow: 8 * cgImage.width
-  )
-
-  return texture
-#endif
 
 }
