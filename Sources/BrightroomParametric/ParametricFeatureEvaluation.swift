@@ -32,9 +32,37 @@ public struct FeatureEvaluationContext: Sendable {
   /// Custom Core Image kernels shared by mask rendering.
   public let kernelRegistry: ParametricKernelRegistry
 
+  /// The image extent that diagonal-based radii (Gaussian blur, sharpen,
+  /// unsharp mask) resolve against, expressed in the **current render pixel
+  /// space**.
+  ///
+  /// A radius like "value 40" means "diagonal / 50 of the image". The basis
+  /// must be the **source** image, not the cropped/zoomed/intermediate extent
+  /// the effect happens to be applied to — otherwise a tighter crop or a
+  /// zoomed viewport silently changes the blur strength. Render pipelines set
+  /// this to the full source extent scaled to the resolution they are
+  /// rendering at, so the radius stays a fixed fraction of the source in every
+  /// path (export, preview, live viewport).
+  ///
+  /// `nil` falls back to the input image's own extent, which is correct only
+  /// when the input *is* the full source at render scale (true for the export
+  /// and preview-composition paths, where the blur runs pre-crop at source
+  /// resolution).
+  public let radiusReferenceExtent: CGRect?
+
   /// Creates an evaluation context.
-  public init(kernelRegistry: ParametricKernelRegistry = .init()) {
+  public init(
+    kernelRegistry: ParametricKernelRegistry = .init(),
+    radiusReferenceExtent: CGRect? = nil
+  ) {
     self.kernelRegistry = kernelRegistry
+    self.radiusReferenceExtent = radiusReferenceExtent
+  }
+
+  /// Returns a copy that resolves diagonal-based radii against `extent`
+  /// (the full source extent in the current render pixel space).
+  public func withRadiusReferenceExtent(_ extent: CGRect?) -> Self {
+    .init(kernelRegistry: kernelRegistry, radiusReferenceExtent: extent)
   }
 }
 

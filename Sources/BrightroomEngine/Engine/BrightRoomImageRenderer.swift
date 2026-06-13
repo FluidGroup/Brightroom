@@ -148,8 +148,6 @@ public final class BrightRoomImageRenderer {
     /// Ordered pixel operations compiled from the editing document, evaluated
     /// in array order through the BrightroomParametric vocabulary.
     public var operations: [Operation] = []
-
-    public var drawer: [GraphicsDrawing] = []
   }
 
   public let source: ImageSource
@@ -196,8 +194,7 @@ public final class BrightRoomImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
-    if edit.drawer.isEmpty,
-       edit.operations.isEmpty,
+    if edit.operations.isEmpty,
        options.workingColorSpace == nil
     {
       return try renderOnlyCropping(options: options)
@@ -335,43 +332,15 @@ public final class BrightRoomImageRenderer {
       deferred: false
     )!
 
-    let drawings_CGImage: CGImage
-
-    if edit.drawer.isEmpty {
-      EngineLog.debug(.renderer, "No drawings")
-
-      drawings_CGImage = effected_CGImage
-    } else {
-      EngineLog.debug(.renderer, "Found drawings")
-      /**
-       Render drawings
-       */
-      drawings_CGImage = try CGContext.makeContext(for: effected_CGImage)
-        .perform { c in
-
-          c.draw(
-            effected_CGImage,
-            in: .init(origin: .zero, size: effected_CGImage.size)
-          )
-
-          self.edit.drawer.forEach { drawer in
-            drawer.draw(in: c)
-          }
-
-        }
-        .makeImage()
-        .unwrap()
-    }
-
     let crop: EditingCrop = edit.croppingRect ?? EditingCrop(
       imageSize: source
         .readImageSize()
         .applying(cgOrientation: orientation) // TODO: Better management of orientation
     )
-    let renderCrop = RenderCrop(crop, imageSize: drawings_CGImage.size)
+    let renderCrop = RenderCrop(crop, imageSize: effected_CGImage.size)
 
     /// Render image as full size
-    let croppedImage = try drawings_CGImage.croppedWithColorspace(
+    let croppedImage = try effected_CGImage.croppedWithColorspace(
       to: renderCrop
     )
 

@@ -74,9 +74,21 @@ extension EffectPipeline {
   /// fails. Failures are programmer errors in built-in effects; custom
   /// effects throwing here degrade to identity rather than poisoning the
   /// whole preview chain.
-  public func applyIgnoringFailure(to image: CIImage) -> CIImage {
+  ///
+  /// `radiusReferenceExtent` is the full source extent in the current render
+  /// pixel space, so diagonal-based radii (blur/sharpen) stay a fixed fraction
+  /// of the source regardless of crop or viewport zoom. Pass it from any path
+  /// that evaluates on a cropped/zoomed intermediate (the live viewport); the
+  /// default `nil` is correct when `image` is itself the full source at render
+  /// scale (export and preview-composition paths).
+  public func applyIgnoringFailure(
+    to image: CIImage,
+    radiusReferenceExtent: CGRect? = nil
+  ) -> CIImage {
+    let context = EngineParametricEvaluation.context
+      .withRadiusReferenceExtent(radiusReferenceExtent)
     do {
-      return try apply(to: image, context: EngineParametricEvaluation.context)
+      return try apply(to: image, context: context)
     } catch {
       assertionFailure("EffectPipeline evaluation failed: \(error)")
       return image

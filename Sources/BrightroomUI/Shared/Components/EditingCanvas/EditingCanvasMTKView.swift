@@ -997,6 +997,46 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     drawable.present()
   }
 
+  /// The full source extent expressed in drawable pixels at the current zoom.
+  ///
+  /// Diagonal-based radii (Gaussian blur, sharpen) use this as their reference
+  /// so a "value 40" blur is always `diagonal(source) / 50` of the source,
+  /// independent of viewport zoom. The scale mirrors the brush-stamp pixel
+  /// scale (content points → drawable pixels): a zoomed-in viewport magnifies
+  /// fewer content points into the same drawable, so the source measured in
+  /// drawable pixels grows, and the radius grows with it — exactly cancelling
+  /// the magnification so the on-screen blur matches the exported result.
+  private func viewportRadiusReferenceExtent(
+    sourceExtent: CGRect,
+    pixelWidth: Int,
+    pixelHeight: Int
+  ) -> CGRect? {
+    let visibleContentRect = viewportState.visibleContentRect
+    let visibleCanvasFrame = viewportState.visibleCanvasFrame
+    guard
+      bounds.width > 0, bounds.height > 0,
+      visibleContentRect.width > 0, visibleContentRect.height > 0,
+      visibleCanvasFrame.width > 0, visibleCanvasFrame.height > 0,
+      sourceExtent.width > 0, sourceExtent.height > 0
+    else {
+      return nil
+    }
+
+    let drawableScaleX = CGFloat(pixelWidth) / bounds.width
+    let drawableScaleY = CGFloat(pixelHeight) / bounds.height
+    let pixelScaleX = visibleCanvasFrame.width * drawableScaleX / visibleContentRect.width
+    let pixelScaleY = visibleCanvasFrame.height * drawableScaleY / visibleContentRect.height
+    let scale = max((pixelScaleX + pixelScaleY) * 0.5, 0.0001)
+
+    return CGRect(
+      origin: .zero,
+      size: CGSize(
+        width: sourceExtent.width * scale,
+        height: sourceExtent.height * scale
+      )
+    )
+  }
+
   @discardableResult
   private func renderViewportCachedSource(
     _ renderImages: EditingCanvasRenderImages,
@@ -1020,9 +1060,18 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return .clear
     }
 
+    // The full source extent in drawable pixels: diagonal-based radii resolve
+    // against this so they stay a fixed fraction of the source regardless of
+    // zoom, instead of tracking the zoomed visible extent of `sourceImage`.
+    let radiusReferenceExtent = viewportRadiusReferenceExtent(
+      sourceExtent: renderImages.source.extent,
+      pixelWidth: pixelWidth,
+      pixelHeight: pixelHeight
+    )
+
     let baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
       renderImages.effects
-        .applyIgnoringFailure(to: sourceImage)
+        .applyIgnoringFailure(to: sourceImage, radiusReferenceExtent: radiusReferenceExtent)
         .cropped(to: sourceImage.extent),
       source: sourceImage
     )
@@ -1044,6 +1093,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       sourceExtent: renderImages.source.extent,
       effects: renderImages.effects,
       localEffect: renderImages.localEffect,
+      radiusReferenceExtent: radiusReferenceExtent,
       drawable: drawable,
       descriptor: descriptor,
       commandBuffer: commandBuffer
@@ -1161,6 +1211,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     sourceExtent: CGRect,
     effects: EffectPipeline,
     localEffect: EffectPipeline,
+    radiusReferenceExtent: CGRect?,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1201,6 +1252,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         baseLayerImage,
         baseKey: baseLayerKey,
         localEffect: localEffect,
+        radiusReferenceExtent: radiusReferenceExtent,
         pixelWidth: pixelWidth,
         pixelHeight: pixelHeight
       )
@@ -1275,6 +1327,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     _ baseImage: CIImage,
     baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey,
     localEffect: EffectPipeline,
+    radiusReferenceExtent: CGRect?,
     pixelWidth: Int,
     pixelHeight: Int
   ) -> CIImage? {
@@ -1289,9 +1342,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     performanceDiagnostics.recordCacheMiss(.coreImageLocalLayer)
     #endif
 
+    // `radiusReferenceExtent` keeps the blur radius a fixed fraction of the
+    // source even though `baseImage` is a zoomed, drawable-resolution slice;
+    // without it the radius would track the visible extent and shrink/grow as
+    // you zoom, diverging from the exported result.
     let adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
       localEffect
-        .applyIgnoringFailure(to: baseImage)
+        .applyIgnoringFailure(to: baseImage, radiusReferenceExtent: radiusReferenceExtent)
         .cropped(to: baseImage.extent),
       source: baseImage
     )

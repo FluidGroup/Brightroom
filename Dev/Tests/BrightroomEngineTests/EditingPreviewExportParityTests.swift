@@ -47,8 +47,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
     )
     renderer.edit = .init(
       croppingRect: edit.crop,
-      operations: compileOperations(from: edit),
-      drawer: []
+      operations: compileOperations(from: edit)
     )
     return try renderer.render(
       options: .init(workingColorSpace: Self.sRGB)

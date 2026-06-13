@@ -56,8 +56,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      operations: [],
-      drawer: []
+      operations: []
     )
 
     let rendered = try renderer.render()
@@ -122,8 +121,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      operations: [.effects(EffectPipeline(effects: [filter]))],
-      drawer: []
+      operations: [.effects(EffectPipeline(effects: [filter]))]
     )
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -146,8 +144,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      operations: [.effects(EffectPipeline(effects: [filter]))],
-      drawer: []
+      operations: [.effects(EffectPipeline(effects: [filter]))]
     )
 
     let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -170,52 +167,12 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      operations: [],
-      drawer: []
+      operations: []
     )
 
     let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
     XCTAssert(image.width == 300 || image.height == 300)
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
-  }
-
-  func testV2_drawing() throws {
-    let imageSource = ImageSource(image: Asset.leica.image)
-
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    var crop = EditingCrop(imageSize: imageSource.readImageSize())
-    crop.updateCropExtent(.init(x: 854.0, y: 1766.0, width: 2863.0, height: 2863.0))
-
-    let data = _pixelengine_bundle.path(forResource: "path-data", ofType: nil)
-      .map {
-        URL(fileURLWithPath: $0)
-      }.map {
-        try! Data.init(contentsOf: $0)
-      }
-
-    let mask = BlurredMask.init(paths: [
-      .init(
-        brush: .init(color: UIColor(white: 0, alpha: 1), pixelSize: 356.4214711729622),
-        path: try NSKeyedUnarchiver.unarchivedObject(ofClass: UIBezierPath.self, from: data!)!
-      ),
-    ])
-
-    renderer.edit = .init(
-      croppingRect: crop,
-      operations: [],
-      drawer: [mask]
-    )
-
-    let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
-
-    #if false
-    // for debugging quickly
-    try UIImage(cgImage: image).jpegData(compressionQuality: 1)?.write(to: URL(fileURLWithPath: "/Users/muukii/Desktop/rendered.jpg"))
-    #endif
-
-//    XCTAssert(image.width == 300 || image.height == 300)
     XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
   }
 
@@ -421,8 +378,7 @@ final class RenderCropRendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: Self.fractionalCrop(for: sourceImage),
-      operations: [],
-      drawer: []
+      operations: []
     )
 
     let renderedImage = try renderer.render().cgImage
@@ -432,18 +388,22 @@ final class RenderCropRendererTests: XCTestCase {
     try Self.assertEdgesAreDark(renderedImage)
   }
 
-  func testDrawingRenderCropExcludesFractionalBrightEdges() throws {
+  func testCoreImageRenderCropExcludesFractionalBrightEdges() throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     renderer.edit = .init(
       croppingRect: Self.fractionalCrop(for: sourceImage),
-      operations: [],
-      drawer: [NoOpDrawing()]
+      operations: []
     )
 
-    let renderedImage = try renderer.render().cgImage
+    // A non-nil workingColorSpace routes through renderRevison2 (the CoreImage
+    // path) rather than the CoreGraphics-only crop path, so this asserts the
+    // CoreImage path also excludes the fractional bright border.
+    let renderedImage = try renderer.render(
+      options: .init(workingColorSpace: CGColorSpaceCreateDeviceRGB())
+    ).cgImage
 
     XCTAssertEqual(renderedImage.width, 14)
     XCTAssertEqual(renderedImage.height, 14)
@@ -564,10 +524,6 @@ final class RenderCropRendererTests: XCTestCase {
       blue: bytes[index + 2],
       alpha: bytes[index + 3]
     )
-  }
-
-  private struct NoOpDrawing: GraphicsDrawing {
-    func draw(in context: CGContext) {}
   }
 
   private struct RGBAPixel {

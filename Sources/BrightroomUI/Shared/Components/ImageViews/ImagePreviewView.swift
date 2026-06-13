@@ -168,7 +168,10 @@ final class _ImagePreviewView: _PixelEditorCodeBasedView {
       )
     }
     imageView.display(image: croppedImage)
-    imageView.postProcessing = state.currentEdit.effects.applyIgnoringFailure(to:)
+    // This preview renders the full, uncropped editing image, so the effect
+    // radii resolve against the source extent by default (nil reference).
+    let effects = state.currentEdit.effects
+    imageView.postProcessing = { effects.applyIgnoringFailure(to: $0) }
     originalImageView.display(image: croppedImage)
 
   }

@@ -82,8 +82,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         case .localAdjustment(let a): return .localAdjustment(a)
         case .crop: return nil
         }
-      },
-      drawer: []
+      }
     )
     return try renderer.render(options: .init(workingColorSpace: Self.sRGB)).cgImage
   }

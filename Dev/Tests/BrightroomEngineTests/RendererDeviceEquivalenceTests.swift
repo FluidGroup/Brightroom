@@ -35,8 +35,7 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
 
         renderer.edit = .init(
           croppingRect: crop,
-          operations: [.effects(effects)],
-          drawer: []
+          operations: [.effects(effects)]
         )
       }
     )

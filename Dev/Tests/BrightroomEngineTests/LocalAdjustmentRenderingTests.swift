@@ -156,8 +156,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       ),
       operations: [
         .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
-      ],
-      drawer: []
+      ]
     )
 
     let renderedImage = try renderer.render(
@@ -189,8 +188,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       operations: [
         .effects(EffectPipeline(effects: [ExposureFeature(value: 0.5)])),
         .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
-      ],
-      drawer: []
+      ]
     )
 
     let renderedImage = try renderer.render(
