@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import CoreImage
-import MetalKit
 import SwiftUI
 import UIKit
 import Combine
@@ -50,8 +49,6 @@ open class EditingStack: Hashable {
   )
 
   public struct Options {
-
-    public var usesMTLTextureForEditingImage: Bool = true
 
     public init() {}
   }
@@ -214,8 +211,6 @@ open class EditingStack: Hashable {
 
   public let options: Options
 
-  private let mtlDevice = MTLCreateSystemDefaultDevice()
-
   public let imageProvider: ImageProvider
 
   private let filterPresets: [FilterPreset]
@@ -352,15 +347,11 @@ open class EditingStack: Hashable {
 
       /// resized
       let _editingSourceCIImage: CIImage = editingSourceCGImage._makeCIImage(
-        orientation: metadata.orientation,
-        device: self.mtlDevice,
-        usesMTLTexture: self.options.usesMTLTextureForEditingImage
+        orientation: metadata.orientation
       )
 
       let _thumbnailImage: CIImage = thumbnailCGImage._makeCIImage(
-        orientation: metadata.orientation,
-        device: self.mtlDevice,
-        usesMTLTexture: self.options.usesMTLTextureForEditingImage
+        orientation: metadata.orientation
       )
 
       self.adjustCropExtent(
@@ -377,7 +368,7 @@ open class EditingStack: Hashable {
 
           let initialEdit = Edit(crop: crop)
 
-          self.loadedState = .init(
+          let loaded = Loaded(
             imageSource: imageSource,
             metadata: metadata,
             initialEditing: initialEdit,
@@ -391,10 +382,24 @@ open class EditingStack: Hashable {
             )
           )
 
-          self.imageProviderSubscription = nil
+          /**
+           Warm Core Image's GPU pipeline off the main thread *before* publishing
+           `loadedState` (which reveals the editing canvas). The source is no longer
+           pre-uploaded as an MTLTexture at load time, so without this the first
+           `draw(in:)` would pay the GPU upload + one-time pipeline compilation on
+           the main thread and visibly stall.
+           */
+          self.backgroundQueue.async { [weak self] in
+            guard let self else { return }
 
-          DispatchQueue.main.async {
-            onPreparationCompleted()
+            EditingImageWarmUp.warmUp(loaded.editingSourceImage)
+
+            self.loadedState = loaded
+            self.imageProviderSubscription = nil
+
+            DispatchQueue.main.async {
+              onPreparationCompleted()
+            }
           }
         }
       )
@@ -430,9 +435,7 @@ open class EditingStack: Hashable {
       return try orientedImage
         .croppedWithColorspace(to: renderCrop)
         ._makeCIImage(
-          orientation: .up,
-          device: mtlDevice,
-          usesMTLTexture: options.usesMTLTextureForEditingImage
+          orientation: .up
         )
     } catch {
       return .init(color: .gray)
