@@ -70,11 +70,15 @@ public struct FeatureGraphCompiler: Sendable {
   /// - Returns: The final image recipe and debug mask outputs.
   public func makeOutput(
     from input: CIImage,
-    document: EditingDocument
+    document: EditingDocument,
+    radiusReferenceExtent: CGRect? = nil
   ) throws -> FeatureGraphOutput {
     try validate(document)
 
-    let context = FeatureEvaluationContext(kernelRegistry: kernelRegistry)
+    let context = FeatureEvaluationContext(
+      kernelRegistry: kernelRegistry,
+      radiusReferenceExtent: radiusReferenceExtent
+    )
     var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
 

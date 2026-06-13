@@ -546,20 +546,12 @@ open class EditingStack: Hashable {
 
     let edit = loaded.currentEdit
 
-    renderer.edit.croppingRect = edit.crop
-    // Compile the document in feature order. The crop feature is the domain
-    // feature handled via croppingRect; pixel operations keep their list
-    // positions so an effects feature after an adjustment stays after it.
-    renderer.edit.operations = edit.features.compactMap { feature in
-      switch feature.payload {
-      case .effects(let pipeline):
-        return pipeline.hasEnabledEffects ? .effects(pipeline) : nil
-      case .localAdjustment(let adjustment):
-        return .localAdjustment(adjustment)
-      case .crop:
-        return nil
-      }
-    }
+    // Lower the editing document into the parametric document the renderer
+    // evaluates. The renderer applies orientation to the source CIImage; the
+    // document is authored in that oriented space, whose size is `crop.imageSize`.
+    renderer.edit = .init(
+      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
+    )
 
     return renderer
   }

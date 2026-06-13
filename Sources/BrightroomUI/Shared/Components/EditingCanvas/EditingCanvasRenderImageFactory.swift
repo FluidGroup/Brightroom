@@ -54,16 +54,18 @@ enum EditingCanvasRenderImageFactory {
         .cropped(to: renderBounds),
         source: viewportSourceImage
       )
-      if localEffect.usesEditingCanvasShaderCompositeExposure {
-        adjustedImage = baseImage
-      } else {
-        adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-          localEffect.applyIgnoringFailure(to: baseImage),
-          source: viewportSourceImage
-        )
-      }
+      adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyIgnoringFailure(to: baseImage),
+        source: viewportSourceImage
+      )
       renderEffect = localEffect
-      usesPreparedBaseImage = false
+      // The local effect is baked into `adjustedImage` at source resolution, so
+      // route it through the prepared path — the same source-resolution
+      // composite ToolSurface and the export renderer use — instead of the
+      // cached-source path, which re-applies the effect at drawable/screen
+      // resolution and so renders a lower-fidelity, foggier blur preview that
+      // diverges from the final result.
+      usesPreparedBaseImage = true
 
     case .renderedEditPreview, .preview:
       let previewImage = loadedState.currentEdit.effects
@@ -129,16 +131,11 @@ enum EditingCanvasRenderImageFactory {
           .cropped(to: sourceExtent),
         source: sourceImage
       )
-      let adjustedSourceImage: CIImage
-      if localEffect.usesEditingCanvasShaderCompositeExposure {
-        adjustedSourceImage = filteredSourceImage
-      } else {
-        adjustedSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-          localEffect.applyIgnoringFailure(to: filteredSourceImage)
-            .cropped(to: sourceExtent),
-          source: sourceImage
-        )
-      }
+      let adjustedSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyIgnoringFailure(to: filteredSourceImage)
+          .cropped(to: sourceExtent),
+        source: sourceImage
+      )
 
       baseImage = cropOutputImage(filteredSourceImage, geometry: geometry)
         .cropped(to: canvasRect)
@@ -249,14 +246,5 @@ extension EffectPipeline {
   /// the type sequence — not the parameter values — is the stable identity.
   var editingCanvasEffectIdentity: [ObjectIdentifier] {
     effects.map { ObjectIdentifier(type(of: $0)) }
-  }
-
-  /// Whether the canvas composites this effect in the Metal shader instead of
-  /// pre-rendering an adjusted Core Image layer: exactly one enabled exposure
-  /// adjustment.
-  var usesEditingCanvasShaderCompositeExposure: Bool {
-    effects.count == 1
-      && effects[0] is ExposureFeature
-      && effects[0].isEnabled
   }
 }

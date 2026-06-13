@@ -20,23 +20,6 @@ final class EditingPreviewExportParityTests: XCTestCase {
 
   // MARK: - Helpers
 
-  /// Mirrors `EditingStack.makeRenderer`'s feature→operation compilation so the
-  /// test exercises the same export vocabulary without async stack loading.
-  private func compileOperations(
-    from edit: EditingStack.Edit
-  ) -> [BrightRoomImageRenderer.Operation] {
-    edit.features.compactMap { feature in
-      switch feature.payload {
-      case .effects(let pipeline):
-        return pipeline.hasEnabledEffects ? .effects(pipeline) : nil
-      case .localAdjustment(let adjustment):
-        return .localAdjustment(adjustment)
-      case .crop:
-        return nil
-      }
-    }
-  }
-
   private func export(
     _ edit: EditingStack.Edit,
     source: CGImage
@@ -45,9 +28,10 @@ final class EditingPreviewExportParityTests: XCTestCase {
       source: ImageSource(cgImage: source),
       orientation: .up
     )
+    // Build the renderer's parametric document through the production bridge —
+    // the same lowering `EditingStack.makeRenderer` uses.
     renderer.edit = .init(
-      croppingRect: edit.crop,
-      operations: compileOperations(from: edit)
+      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
     )
     return try renderer.render(
       options: .init(workingColorSpace: Self.sRGB)
@@ -94,13 +78,13 @@ final class EditingPreviewExportParityTests: XCTestCase {
 
     XCTAssertEqual(exported.width, preview.width)
     XCTAssertEqual(exported.height, preview.height)
-    // Both paths run the same engineRender/mask/effect code on the same image,
-    // so they compose identically. The small residual is CIContext working
-    // precision: export renders through a BGRA8 working context, the preview
-    // composition through a default context, which round 8-bit channels a
-    // touch differently at the blur gradient. A real composition bug (wrong
-    // order, missing/unmasked adjustment) diverges by tens-to-hundreds of LSB.
-    assertImagesMatch(exported, preview, tolerance: 8)
+    // Export now composes through the parametric compiler (GPU mask kernel)
+    // while this preview composition still uses the engine's CPU mask raster,
+    // so the blur-gradient edge rounds a few extra LSB apart until the preview
+    // path is unified onto the same graph. A real composition bug (wrong order,
+    // missing/unmasked adjustment, a y-flip) still diverges by tens-to-hundreds
+    // of LSB, far beyond this tolerance.
+    assertImagesMatch(exported, preview, tolerance: 16)
   }
 
   /// A non-identity crop (no rotation): export pixel (x, y) must equal the

@@ -75,14 +75,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private func exportRender(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
     let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
     renderer.edit = .init(
-      croppingRect: edit.crop,
-      operations: edit.features.compactMap { feature in
-        switch feature.payload {
-        case .effects(let p): return p.hasEnabledEffects ? .effects(p) : nil
-        case .localAdjustment(let a): return .localAdjustment(a)
-        case .crop: return nil
-        }
-      }
+      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
     )
     return try renderer.render(options: .init(workingColorSpace: Self.sRGB)).cgImage
   }

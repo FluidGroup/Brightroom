@@ -33,10 +33,7 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
         var crop = EditingCrop(imageSize: renderer.source.readImageSize())
         crop.updateCropExtent(toFitAspectRatio: .square)
 
-        renderer.edit = .init(
-          croppingRect: crop,
-          operations: [.effects(effects)]
-        )
+        renderer.edit = .make(crop: crop, effects: effects)
       }
     )
   }
@@ -46,9 +43,10 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
       image: Asset.instaLogo.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { renderer in
-        renderer.edit.operations = [
-          .effects(EffectPipeline(effects: [ExposureFeature(value: -0.5)]))
-        ]
+        renderer.edit = .make(
+          crop: EditingCrop(imageSize: renderer.source.readImageSize()),
+          effects: EffectPipeline(effects: [ExposureFeature(value: -0.5)])
+        )
       }
     )
   }
@@ -59,9 +57,10 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
       image: Asset.unsplash3.image,
       options: .init(),
       configure: { renderer in
-        renderer.edit.operations = [
-          .effects(EffectPipeline(effects: [ExposureFeature(value: 0.72)]))
-        ]
+        renderer.edit = .make(
+          crop: EditingCrop(imageSize: renderer.source.readImageSize()),
+          effects: EffectPipeline(effects: [ExposureFeature(value: 0.72)])
+        )
       }
     )
   }

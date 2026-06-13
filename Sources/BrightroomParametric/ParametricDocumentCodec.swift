@@ -510,6 +510,35 @@ extension PresetFeature {
 
 extension CropFeature: PersistableFeature {
   public static let featureTypeKey: FeatureTypeKey = "brightroom.domain.crop"
+
+  /// v2 added `rotation` + `straightenRadians`. v1 documents stored only the
+  /// crop rect and decode with no rotation and zero straighten.
+  public static var schemaVersion: Int { 2 }
+
+  private struct V1Parameters: Decodable {
+    var id: FeatureID
+    var isEnabled: Bool
+    var cropRect: CGRect
+  }
+
+  public static func decodeParameters(from decoder: Decoder, version: Int) throws -> CropFeature {
+    switch version {
+    case 2:
+      return try CropFeature(from: decoder)
+    case 1:
+      let v1 = try V1Parameters(from: decoder)
+      return CropFeature(
+        id: v1.id,
+        isEnabled: v1.isEnabled,
+        cropRect: v1.cropRect
+      )
+    default:
+      throw ParametricDocumentCodecError.unsupportedSchemaVersion(
+        featureTypeKey,
+        version: version
+      )
+    }
+  }
 }
 
 extension PresetFeature: PersistableFeature, Codable {

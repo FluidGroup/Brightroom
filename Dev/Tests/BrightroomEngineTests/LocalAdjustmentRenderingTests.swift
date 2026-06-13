@@ -149,13 +149,13 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    renderer.edit = .init(
-      croppingRect: EditingCrop(
+    renderer.edit = .make(
+      crop: EditingCrop(
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 20, y: 0, width: 20, height: 20)
       ),
-      operations: [
-        .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
+      localAdjustments: [
+        Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ]
     )
 
@@ -180,14 +180,14 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    renderer.edit = .init(
-      croppingRect: EditingCrop(
+    renderer.edit = .make(
+      crop: EditingCrop(
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 0, y: 0, width: 40, height: 20)
       ),
-      operations: [
-        .effects(EffectPipeline(effects: [ExposureFeature(value: 0.5)])),
-        .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
+      effects: EffectPipeline(effects: [ExposureFeature(value: 0.5)]),
+      localAdjustments: [
+        Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ]
     )
 

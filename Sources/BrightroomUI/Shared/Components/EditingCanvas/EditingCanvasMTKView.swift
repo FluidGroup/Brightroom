@@ -29,32 +29,6 @@ private struct EditingCanvasViewportSourceTexture {
   let image: CIImage
 }
 
-private struct EditingCanvasViewportCoreImageBaseLayerCacheKey: Equatable {
-  var sourceExtent: CGRect
-  var visibleContentRect: CGRect
-  var visibleCanvasFrame: CGRect
-  var pixelWidth: Int
-  var pixelHeight: Int
-  var effects: EffectPipeline
-}
-
-private struct EditingCanvasViewportCoreImageLocalLayerCacheKey: Equatable {
-  var baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey
-  var localEffect: EffectPipeline
-}
-
-private struct EditingCanvasViewportCoreImageBaseLayerCache {
-  let key: EditingCanvasViewportCoreImageBaseLayerCacheKey
-  let texture: MTLTexture
-  let image: CIImage
-}
-
-private struct EditingCanvasViewportCoreImageLocalLayerCache {
-  let key: EditingCanvasViewportCoreImageLocalLayerCacheKey
-  let texture: MTLTexture
-  let image: CIImage
-}
-
 private struct EditingCanvasViewportRenderTextures {
   let pixelWidth: Int
   let pixelHeight: Int
@@ -86,7 +60,6 @@ private enum EditingCanvasViewportRenderPath: String {
   case clear
   case baseImage = "base-image"
   case cachedSourceBase = "cached-source-base"
-  case cachedSourceComposite = "cached-source-composite"
   case coreImageComposite = "core-image-composite"
 }
 
@@ -141,8 +114,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private struct ViewportState: ~Copyable {
     var renderImages: EditingCanvasRenderImages?
     var sourceTexture: EditingCanvasViewportSourceTexture?
-    var coreImageBaseLayerCache: EditingCanvasViewportCoreImageBaseLayerCache?
-    var coreImageLocalLayerCache: EditingCanvasViewportCoreImageLocalLayerCache?
     var preparedLayersCache: EditingCanvasViewportPreparedLayersCache?
     var renderTextures: EditingCanvasViewportRenderTextures?
     var usesCachedSourceRendering = false
@@ -192,8 +163,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     enum CacheMiss: String {
       case sourceTexture = "source-texture"
       case renderTextures = "render-textures"
-      case coreImageBaseLayer = "core-image-base-layer"
-      case coreImageLocalLayer = "core-image-local-layer"
       case preparedLayers = "prepared-layers"
     }
 
@@ -211,12 +180,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     var clearFrameCount = 0
     var baseImageFrameCount = 0
     var cachedSourceBaseFrameCount = 0
-    var cachedSourceCompositeFrameCount = 0
     var coreImageCompositeFrameCount = 0
     var sourceTextureMissCount = 0
     var renderTexturesMissCount = 0
-    var coreImageBaseLayerMissCount = 0
-    var coreImageLocalLayerMissCount = 0
     var preparedLayersMissCount = 0
     var invalidationCount = 0
     var lastInvalidation: Invalidation?
@@ -234,10 +200,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         sourceTextureMissCount += 1
       case .renderTextures:
         renderTexturesMissCount += 1
-      case .coreImageBaseLayer:
-        coreImageBaseLayerMissCount += 1
-      case .coreImageLocalLayer:
-        coreImageLocalLayerMissCount += 1
       case .preparedLayers:
         preparedLayersMissCount += 1
       }
@@ -267,8 +229,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         baseImageFrameCount += 1
       case .cachedSourceBase:
         cachedSourceBaseFrameCount += 1
-      case .cachedSourceComposite:
-        cachedSourceCompositeFrameCount += 1
       case .coreImageComposite:
         coreImageCompositeFrameCount += 1
       }
@@ -281,8 +241,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       EditorLog.debug(.editingCanvasPerformance, """
         [EditingCanvasRender]
         frames:\(frameCount) slow:\(slowFrameCount) budgetMs:\(formatMilliseconds(frameBudget))
-        path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) cachedComposite:\(cachedSourceCompositeFrameCount) coreComposite:\(coreImageCompositeFrameCount)
-        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) baseLayer:\(coreImageBaseLayerMissCount) localLayer:\(coreImageLocalLayerMissCount) preparedLayers:\(preparedLayersMissCount)
+        path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) coreComposite:\(coreImageCompositeFrameCount)
+        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) preparedLayers:\(preparedLayersMissCount)
         invalidations:\(invalidationCount) lastInvalidation:\(lastInvalidation?.rawValue ?? "none")
         last path:\(path.rawValue) ms:\(formatMilliseconds(duration)) cachedSourceEnabled:\(usesCachedSourceRendering) preparedBase:\(usesPreparedBaseImage) localEffect:\(hasLocalEffect) stroke:\(hasRenderableStroke) drawable:\(format(drawableSize))
         content:\(format(visibleContentRect)) canvasFrame:\(format(visibleCanvasFrame))
@@ -298,12 +258,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       clearFrameCount = 0
       baseImageFrameCount = 0
       cachedSourceBaseFrameCount = 0
-      cachedSourceCompositeFrameCount = 0
       coreImageCompositeFrameCount = 0
       sourceTextureMissCount = 0
       renderTexturesMissCount = 0
-      coreImageBaseLayerMissCount = 0
-      coreImageLocalLayerMissCount = 0
       preparedLayersMissCount = 0
       invalidationCount = 0
       lastInvalidation = nil
@@ -853,7 +810,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if viewportState.usesCachedSourceRendering, renderImages.usesPreparedBaseImage == false {
       let path = renderViewportCachedSource(
         renderImages,
-        hasRenderableStroke: hasRenderableStroke,
         drawable: drawable,
         descriptor: descriptor,
         commandBuffer: commandBuffer
@@ -1038,9 +994,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   @discardableResult
+  /// The cached-source path now only serves the no-local-effect base preview
+  /// (mode `.viewportBase`): every local adjustment bakes its effect and uses
+  /// the prepared path. So this just renders the effects-applied base.
   private func renderViewportCachedSource(
     _ renderImages: EditingCanvasRenderImages,
-    hasRenderableStroke: Bool,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1076,34 +1034,16 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       source: sourceImage
     )
 
-    guard renderImages.hasLocalEffect,
-          hasRenderableStroke
-    else {
-      renderDrawableImage(
-        baseImage,
-        drawable: drawable,
-        descriptor: descriptor,
-        commandBuffer: commandBuffer
-      )
-      return .cachedSourceBase
-    }
-
-    renderViewportCachedCoreImageComposite(
-      baseImage: baseImage,
-      sourceExtent: renderImages.source.extent,
-      effects: renderImages.effects,
-      localEffect: renderImages.localEffect,
-      radiusReferenceExtent: radiusReferenceExtent,
+    renderDrawableImage(
+      baseImage,
       drawable: drawable,
       descriptor: descriptor,
       commandBuffer: commandBuffer
     )
-    return .cachedSourceComposite
+    return .cachedSourceBase
   }
 
   private func invalidateViewportCoreImageLayerCaches() {
-    viewportState.coreImageBaseLayerCache = nil
-    viewportState.coreImageLocalLayerCache = nil
     viewportState.preparedLayersCache = nil
   }
 
@@ -1204,219 +1144,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     commandBuffer.commit()
     commandBuffer.waitUntilScheduled()
     drawable.present()
-  }
-
-  private func renderViewportCachedCoreImageComposite(
-    baseImage: CIImage,
-    sourceExtent: CGRect,
-    effects: EffectPipeline,
-    localEffect: EffectPipeline,
-    radiusReferenceExtent: CGRect?,
-    drawable: CAMetalDrawable,
-    descriptor: MTLRenderPassDescriptor,
-    commandBuffer: MTLCommandBuffer
-  ) {
-    let pixelWidth = drawable.texture.width
-    let pixelHeight = drawable.texture.height
-    guard pixelWidth > 0, pixelHeight > 0 else {
-      clearCurrentDrawable()
-      return
-    }
-
-    let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-    guard let textures else {
-      clearCurrentDrawable()
-      return
-    }
-
-    encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
-    encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
-
-    let baseLayerKey = EditingCanvasViewportCoreImageBaseLayerCacheKey(
-      sourceExtent: sourceExtent,
-      visibleContentRect: viewportState.visibleContentRect,
-      visibleCanvasFrame: viewportState.visibleCanvasFrame,
-      pixelWidth: pixelWidth,
-      pixelHeight: pixelHeight,
-      effects: effects
-    )
-
-    guard
-      let baseLayerImage = viewportCoreImageBaseLayerImage(
-        baseImage,
-        key: baseLayerKey,
-        pixelWidth: pixelWidth,
-        pixelHeight: pixelHeight
-      ),
-      let adjustedLayerImage = viewportCoreImageLocalLayerImage(
-        baseLayerImage,
-        baseKey: baseLayerKey,
-        localEffect: localEffect,
-        radiusReferenceExtent: radiusReferenceExtent,
-        pixelWidth: pixelWidth,
-        pixelHeight: pixelHeight
-      )
-    else {
-      clearCurrentDrawable()
-      return
-    }
-
-    guard let maskImage = CIImage(
-      mtlTexture: textures.maskTexture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-    )?.cropped(to: baseLayerImage.extent) else {
-      clearCurrentDrawable()
-      return
-    }
-
-    let compositedImage = adjustedLayerImage
-      .applyingFilter(
-        "CIBlendWithAlphaMask",
-        parameters: [
-          kCIInputBackgroundImageKey: baseLayerImage,
-          kCIInputMaskImageKey: maskImage,
-        ]
-      )
-      .cropped(to: baseLayerImage.extent)
-
-    renderDrawableImage(
-      compositedImage,
-      drawable: drawable,
-      descriptor: descriptor,
-      commandBuffer: commandBuffer
-    )
-  }
-
-  private func viewportCoreImageBaseLayerImage(
-    _ image: CIImage,
-    key: EditingCanvasViewportCoreImageBaseLayerCacheKey,
-    pixelWidth: Int,
-    pixelHeight: Int
-  ) -> CIImage? {
-    if let cache = viewportState.coreImageBaseLayerCache, cache.key == key {
-      return cache.image
-    }
-    #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.coreImageBaseLayer)
-    #endif
-
-    guard
-      let texture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
-        width: pixelWidth,
-        height: pixelHeight
-      ),
-      let cachedImage = makeCachedViewportLayerImage(
-        image,
-        texture: texture
-      )
-    else {
-      return nil
-    }
-
-    viewportState.coreImageBaseLayerCache = EditingCanvasViewportCoreImageBaseLayerCache(
-      key: key,
-      texture: texture,
-      image: cachedImage
-    )
-    viewportState.coreImageLocalLayerCache = nil
-    return cachedImage
-  }
-
-  private func viewportCoreImageLocalLayerImage(
-    _ baseImage: CIImage,
-    baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey,
-    localEffect: EffectPipeline,
-    radiusReferenceExtent: CGRect?,
-    pixelWidth: Int,
-    pixelHeight: Int
-  ) -> CIImage? {
-    let key = EditingCanvasViewportCoreImageLocalLayerCacheKey(
-      baseKey: baseKey,
-      localEffect: localEffect
-    )
-    if let cache = viewportState.coreImageLocalLayerCache, cache.key == key {
-      return cache.image
-    }
-    #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.coreImageLocalLayer)
-    #endif
-
-    // `radiusReferenceExtent` keeps the blur radius a fixed fraction of the
-    // source even though `baseImage` is a zoomed, drawable-resolution slice;
-    // without it the radius would track the visible extent and shrink/grow as
-    // you zoom, diverging from the exported result.
-    let adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-      localEffect
-        .applyIgnoringFailure(to: baseImage, radiusReferenceExtent: radiusReferenceExtent)
-        .cropped(to: baseImage.extent),
-      source: baseImage
-    )
-    guard
-      let texture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
-        width: pixelWidth,
-        height: pixelHeight
-      ),
-      let cachedImage = makeCachedViewportLayerImage(
-        adjustedImage,
-        texture: texture
-      )
-    else {
-      return nil
-    }
-
-    viewportState.coreImageLocalLayerCache = EditingCanvasViewportCoreImageLocalLayerCache(
-      key: key,
-      texture: texture,
-      image: cachedImage
-    )
-    return cachedImage
-  }
-
-  /// Bakes `image` into `texture` in a dedicated command buffer, committed
-  /// before returning, so the texture is safe to publish in a cross-frame
-  /// cache. Encoding into the caller's frame buffer would poison the cache
-  /// with never-filled textures whenever the frame is abandoned before commit
-  /// (e.g. `clearCurrentDrawable` after a later guard fails). No CPU wait:
-  /// consumers sample the texture through `ciContext` on the same command
-  /// queue, so GPU-side ordering suffices — sequential commits also keep the
-  /// base-layer fill ahead of the local-layer fill that samples it.
-  private func makeCachedViewportLayerImage(
-    _ image: CIImage,
-    texture: MTLTexture
-  ) -> CIImage? {
-    guard let fillCommandBuffer = commandQueue.makeCommandBuffer() else {
-      return nil
-    }
-    encodeClearTexture(texture, commandBuffer: fillCommandBuffer)
-    renderCachedViewportImage(image, into: texture, commandBuffer: fillCommandBuffer)
-    fillCommandBuffer.commit()
-    return CIImage(
-      mtlTexture: texture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
-    )?.cropped(to: cachedViewportLayerExtent(for: image, texture: texture))
-  }
-
-  private func renderCachedViewportImage(
-    _ image: CIImage,
-    into texture: MTLTexture,
-    commandBuffer: MTLCommandBuffer
-  ) {
-    let renderBounds = CGRect(
-      x: 0,
-      y: 0,
-      width: texture.width,
-      height: texture.height
-    )
-
-    ciContext.render(
-      image.cropped(to: renderBounds),
-      to: texture,
-      commandBuffer: commandBuffer,
-      bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
-    )
   }
 
   private func renderViewportCoreImageComposite(
@@ -1612,16 +1339,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       bounds: renderBounds,
       colorSpace: EditingCanvasImageProcessing.colorSpace
     )
-  }
-
-  private func cachedViewportLayerExtent(for image: CIImage, texture: MTLTexture) -> CGRect {
-    let renderBounds = CGRect(x: 0, y: 0, width: texture.width, height: texture.height)
-    let imageBounds = image.extent.intersection(renderBounds)
-    if imageBounds.isNull == false, imageBounds.isEmpty == false {
-      return imageBounds
-    } else {
-      return renderBounds
-    }
   }
 
   private func viewportTextureContentFrame(pixelWidth: Int, pixelHeight: Int) -> CGRect? {

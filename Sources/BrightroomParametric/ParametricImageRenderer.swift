@@ -39,24 +39,34 @@ public struct ParametricImageRenderer: Sendable {
   }
 
   /// Evaluates an editing document from a source image.
+  ///
+  /// `radiusReferenceExtent` is the full source extent in the current render
+  /// pixel space; pass it from paths that evaluate on a cropped/zoomed
+  /// intermediate so diagonal-based radii stay a fixed fraction of the source.
+  /// `nil` (the default) is correct when `sourceImage` is the full source at
+  /// render scale (export, preview composition).
   public func makeOutput(
     from sourceImage: CIImage,
-    document: EditingDocument
+    document: EditingDocument,
+    radiusReferenceExtent: CGRect? = nil
   ) throws -> FeatureGraphOutput {
     try compiler.makeOutput(
       from: sourceImage,
-      document: document
+      document: document,
+      radiusReferenceExtent: radiusReferenceExtent
     )
   }
 
   /// Returns only the final image recipe.
   public func makeImage(
     from sourceImage: CIImage,
-    document: EditingDocument
+    document: EditingDocument,
+    radiusReferenceExtent: CGRect? = nil
   ) throws -> CIImage {
     try makeOutput(
       from: sourceImage,
-      document: document
+      document: document,
+      radiusReferenceExtent: radiusReferenceExtent
     )
     .image
   }

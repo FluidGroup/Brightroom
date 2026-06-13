@@ -54,10 +54,7 @@ final class RendererTests: XCTestCase {
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
 
-    renderer.edit = .init(
-      croppingRect: crop,
-      operations: []
-    )
+    renderer.edit = .make(crop: crop)
 
     let rendered = try renderer.render()
     print(rendered)
@@ -99,7 +96,10 @@ final class RendererTests: XCTestCase {
 
     let filter = ExposureFeature(value: 0.72)
 
-    renderer.edit.operations = [.effects(EffectPipeline(effects: [filter]))]
+    renderer.edit = .make(
+      crop: EditingCrop(imageSize: imageSource.readImageSize()),
+      effects: EffectPipeline(effects: [filter])
+    )
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -119,10 +119,7 @@ final class RendererTests: XCTestCase {
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
 
-    renderer.edit = .init(
-      croppingRect: crop,
-      operations: [.effects(EffectPipeline(effects: [filter]))]
-    )
+    renderer.edit = .make(crop: crop, effects: EffectPipeline(effects: [filter]))
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -142,10 +139,7 @@ final class RendererTests: XCTestCase {
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
 
-    renderer.edit = .init(
-      croppingRect: crop,
-      operations: [.effects(EffectPipeline(effects: [filter]))]
-    )
+    renderer.edit = .make(crop: crop, effects: EffectPipeline(effects: [filter]))
 
     let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -165,10 +159,7 @@ final class RendererTests: XCTestCase {
     crop.rotation = .angle_90
     crop.updateCropExtent(toFitAspectRatio: .square)
 
-    renderer.edit = .init(
-      croppingRect: crop,
-      operations: []
-    )
+    renderer.edit = .make(crop: crop)
 
     let image = try renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -376,10 +367,7 @@ final class RenderCropRendererTests: XCTestCase {
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    renderer.edit = .init(
-      croppingRect: Self.fractionalCrop(for: sourceImage),
-      operations: []
-    )
+    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage))
 
     let renderedImage = try renderer.render().cgImage
 
@@ -393,10 +381,7 @@ final class RenderCropRendererTests: XCTestCase {
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    renderer.edit = .init(
-      croppingRect: Self.fractionalCrop(for: sourceImage),
-      operations: []
-    )
+    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage))
 
     // A non-nil workingColorSpace routes through renderRevison2 (the CoreImage
     // path) rather than the CoreGraphics-only crop path, so this asserts the
@@ -408,6 +393,42 @@ final class RenderCropRendererTests: XCTestCase {
     XCTAssertEqual(renderedImage.width, 14)
     XCTAssertEqual(renderedImage.height, 14)
     try Self.assertEdgesAreDark(renderedImage)
+  }
+
+  /// The parametric crop path must reproduce the engine's `croppedWithColorspace`
+  /// rotation — the pre-unification behavior. This pins the rotation SIGN, which
+  /// the dimension-only rotation test cannot catch (both signs share dimensions).
+  func testParametricCropRotationMatchesEngineOracle() throws {
+    let source = try Self.makeAsymmetricMarkerImage(width: 8, height: 12)
+    let imageSource = ImageSource(cgImage: source)
+    let oriented = try source.oriented(.up)
+
+    for rotation in EditingCrop.Rotation.allCases {
+      var crop = EditingCrop(imageSize: source.size)
+      crop.rotation = rotation
+
+      let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+      renderer.edit = .make(crop: crop)
+      let parametric = try renderer.render().cgImage
+
+      let oracle = try oriented.croppedWithColorspace(
+        to: RenderCrop(crop, imageSize: oriented.size)
+      )
+
+      XCTAssertEqual(parametric.width, oracle.width, "width @ \(rotation)")
+      XCTAssertEqual(parametric.height, oracle.height, "height @ \(rotation)")
+
+      for x in stride(from: 0, to: min(parametric.width, oracle.width), by: 2) {
+        for y in stride(from: 0, to: min(parametric.height, oracle.height), by: 2) {
+          let a = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: parametric)
+          let b = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: oracle)
+          XCTAssertLessThanOrEqual(
+            abs(Int(a.red) - Int(b.red)), 24,
+            "luma (\(x),\(y)) @ \(rotation): parametric \(a.red) vs oracle \(b.red)"
+          )
+        }
+      }
+    }
   }
 
   func testPreviewCropExcludesFractionalBrightEdges() throws {
@@ -440,6 +461,29 @@ final class RenderCropRendererTests: XCTestCase {
         height: CGFloat(image.height) - 0.4
       )
     )
+  }
+
+  private static func makeAsymmetricMarkerImage(width: Int, height: Int) throws -> CGImage {
+    let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
+      | CGImageAlphaInfo.premultipliedLast.rawValue
+    let context = try XCTUnwrap(
+      CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: width * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: bitmapInfo
+      )
+    )
+    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    // A single bright quadrant — asymmetric in both axes, so a wrong rotation
+    // sign (90° vs 270°) moves it to a different corner and the test fails.
+    context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
+    context.fill(CGRect(x: 0, y: height / 2, width: width / 2, height: height - height / 2))
+    return try XCTUnwrap(context.makeImage())
   }
 
   private static func makeImageWithBrightBorder(size: Int) throws -> CGImage {

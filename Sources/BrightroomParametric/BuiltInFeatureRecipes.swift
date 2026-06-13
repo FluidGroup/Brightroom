@@ -45,14 +45,48 @@ extension CropFeature: DomainFeatureType {
       dx: image.extent.minX,
       dy: image.extent.minY
     )
-    return image
-      .cropped(to: absoluteCropRect)
-      .transformed(
-        by: CGAffineTransform(
-          translationX: -absoluteCropRect.minX,
-          y: -absoluteCropRect.minY
-        )
+
+    // Rotate the source about the crop-rect center BEFORE extracting the crop
+    // window, so a free straighten angle pulls in surrounding source content —
+    // matching the engine's CGContext crop, which rotates the destination about
+    // the same center and then clips to the crop rect. The engine rotates the
+    // destination CTM by `-aggregatedRotation`, which in its y-up context shows
+    // the content rotated `+aggregatedRotation`; reproducing that as an image
+    // rotation in Core Image's y-up space means rotating by the NEGATED angle.
+    // For the default `.zero` / 0 rotation this is the identity transform, so
+    // the crop reduces to a pure extent change (existing crop behavior is
+    // unchanged).
+    let angle = -aggregatedRotationRadians
+
+    let cropped: CIImage
+    if angle == 0 {
+      cropped = image.cropped(to: absoluteCropRect)
+    } else {
+      let center = CGPoint(x: absoluteCropRect.midX, y: absoluteCropRect.midY)
+      let rotateAboutCenter = CGAffineTransform(translationX: center.x, y: center.y)
+        .rotated(by: angle)
+        .translatedBy(x: -center.x, y: -center.y)
+      // Match the engine's fixed crop-rect canvas: a rotation can leave parts of
+      // the crop rect uncovered (triangular corners under a free angle, bands
+      // under a quarter turn). Compositing over a transparent canvas of the crop
+      // rect keeps the output extent exactly the crop rect instead of shrinking
+      // it to the rotated content's intersection. `CIImage(color:)` is the
+      // infinite-extent transparent source (unlike `CIImage.empty()`, whose
+      // extent is empty and would crop away to nothing).
+      let canvas = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
+        .cropped(to: absoluteCropRect)
+      cropped = image
+        .transformed(by: rotateAboutCenter)
+        .cropped(to: absoluteCropRect)
+        .composited(over: canvas)
+    }
+
+    return cropped.transformed(
+      by: CGAffineTransform(
+        translationX: -absoluteCropRect.minX,
+        y: -absoluteCropRect.minY
       )
+    )
   }
 }
 

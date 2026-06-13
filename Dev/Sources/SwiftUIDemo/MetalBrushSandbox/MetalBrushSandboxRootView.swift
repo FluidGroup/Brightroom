@@ -29,7 +29,7 @@ final class MetalBrushSandboxModel {
     self.values = values
 
     switch change {
-    case .interactionMode, .localEffect, .localEffectValue, .brush, .smoothing:
+    case .interactionMode, .localEffectValue, .brush, .smoothing:
       break
 
     case .exposure:
@@ -116,10 +116,8 @@ private struct MetalBrushSandboxControlsRepresentable: UIViewRepresentable {
 
 struct MetalBrushSandboxControlValues: Equatable {
   var exposure: Double = 0
-  var localEffectKind: MetalBrushSandboxLocalEffectKind = .blur
   var brushSize: Double = 56
   var blurRadius: Double = 18
-  var localExposure: Double = 0.8
   var hardness: Double = 0.72
   var opacity: Double = 0.9
   var spacing: Double = 0.18
@@ -144,42 +142,17 @@ struct MetalBrushSandboxControlValues: Equatable {
   }
 
   var localAdjustmentEffect: EffectPipeline {
-    // Fixed ids: this is computed on every SwiftUI body evaluation, and a
-    // fresh FeatureID per call would make the canvas mode compare unequal
-    // each frame — rebuilding render images and rewriting the committed
-    // layer's pipeline on every render pass.
-    switch localEffectKind {
-    case .blur:
-      return .init(effects: [
-        GaussianBlurFeature(id: .init(rawValue: "sandbox.local-blur"), radius: blurRadius)
-      ])
-    case .exposure:
-      return .init(effects: [
-        ExposureFeature(id: .init(rawValue: "sandbox.local-exposure"), value: localExposure)
-      ])
-    }
-  }
-}
-
-enum MetalBrushSandboxLocalEffectKind: String, CaseIterable, Identifiable {
-  case blur
-  case exposure
-
-  var id: Self { self }
-
-  var title: String {
-    switch self {
-    case .blur:
-      return "Blur"
-    case .exposure:
-      return "Exposure"
-    }
+    // Fixed id: this is computed on every SwiftUI body evaluation; a fresh
+    // FeatureID per call would make the canvas mode compare unequal each frame,
+    // rebuilding render images and rewriting the committed layer every pass.
+    .init(effects: [
+      GaussianBlurFeature(id: .init(rawValue: "sandbox.local-blur"), radius: blurRadius)
+    ])
   }
 }
 
 enum MetalBrushSandboxControlChange {
   case interactionMode
-  case localEffect
   case exposure
   case localEffectValue
   case brush
@@ -201,7 +174,6 @@ final class MetalBrushSandboxControlsView: UIView {
   private let stampsMetricsLabel = UILabel()
   private let fpsMetricsLabel = UILabel()
   private let modeControl = UISegmentedControl(items: EditingCanvasInteractionMode.allCases.map(\.title))
-  private let localEffectControl = UISegmentedControl(items: MetalBrushSandboxLocalEffectKind.allCases.map(\.title))
   private let smoothingControl = UISegmentedControl(items: EditingCanvasStrokeSmoothingAlgorithm.allCases.map(\.title))
   private let exposureRow = MetalBrushSandboxSliderRow(
     title: "Exposure",
@@ -217,11 +189,6 @@ final class MetalBrushSandboxControlsView: UIView {
     title: "Blur",
     range: 0...40,
     accessibilityIdentifier: "metal-brush-blur-radius"
-  )
-  private let localExposureRow = MetalBrushSandboxSliderRow(
-    title: "Local EV",
-    range: -1.5...1.5,
-    accessibilityIdentifier: "metal-brush-local-exposure"
   )
   private let brushSizeRow = MetalBrushSandboxSliderRow(
     title: "Size",
@@ -280,17 +247,14 @@ final class MetalBrushSandboxControlsView: UIView {
   func configure(_ values: MetalBrushSandboxControlValues) {
     self.values = values
     modeControl.selectedSegmentIndex = EditingCanvasInteractionMode.allCases.firstIndex(of: values.interactionMode) ?? 0
-    localEffectControl.selectedSegmentIndex = MetalBrushSandboxLocalEffectKind.allCases.firstIndex(of: values.localEffectKind) ?? 0
     smoothingControl.selectedSegmentIndex = EditingCanvasStrokeSmoothingAlgorithm.allCases.firstIndex(of: values.smoothingAlgorithm) ?? 0
     exposureRow.value = values.exposure
     smoothingStrengthRow.value = values.smoothingStrength
     blurRadiusRow.value = values.blurRadius
-    localExposureRow.value = values.localExposure
     brushSizeRow.value = values.brushSize
     hardnessRow.value = values.hardness
     opacityRow.value = values.opacity
     spacingRow.value = values.spacing
-    updateLocalEffectRows()
   }
 
   func updateMetrics(_ metrics: EditingCanvasMetrics) {
@@ -332,7 +296,6 @@ final class MetalBrushSandboxControlsView: UIView {
     metricsStackView.addArrangedSubview(UIView())
 
     modeControl.accessibilityIdentifier = "metal-brush-interaction-mode"
-    localEffectControl.accessibilityIdentifier = "metal-brush-local-effect"
     smoothingControl.accessibilityIdentifier = "metal-brush-smoothing"
 
     let resetRow = UIStackView(arrangedSubviews: [UIView(), resetButton])
@@ -341,12 +304,10 @@ final class MetalBrushSandboxControlsView: UIView {
     stackView.addArrangedSubview(resetRow)
     stackView.addArrangedSubview(metricsStackView)
     stackView.addArrangedSubview(modeControl)
-    stackView.addArrangedSubview(localEffectControl)
     stackView.addArrangedSubview(smoothingControl)
     stackView.addArrangedSubview(exposureRow)
     stackView.addArrangedSubview(smoothingStrengthRow)
     stackView.addArrangedSubview(blurRadiusRow)
-    stackView.addArrangedSubview(localExposureRow)
     stackView.addArrangedSubview(brushSizeRow)
     stackView.addArrangedSubview(hardnessRow)
     stackView.addArrangedSubview(opacityRow)
@@ -368,7 +329,6 @@ final class MetalBrushSandboxControlsView: UIView {
   private func setupActions() {
     resetButton.addTarget(self, action: #selector(resetButtonDidTap), for: .touchUpInside)
     modeControl.addTarget(self, action: #selector(modeControlDidChange), for: .valueChanged)
-    localEffectControl.addTarget(self, action: #selector(localEffectControlDidChange), for: .valueChanged)
     smoothingControl.addTarget(self, action: #selector(smoothingControlDidChange), for: .valueChanged)
 
     exposureRow.onValueChange = { [weak self] value in
@@ -381,10 +341,6 @@ final class MetalBrushSandboxControlsView: UIView {
     }
     blurRadiusRow.onValueChange = { [weak self] value in
       self?.values.blurRadius = value
-      self?.publish(.localEffectValue)
-    }
-    localExposureRow.onValueChange = { [weak self] value in
-      self?.values.localExposure = value
       self?.publish(.localEffectValue)
     }
     brushSizeRow.onValueChange = { [weak self] value in
@@ -417,13 +373,6 @@ final class MetalBrushSandboxControlsView: UIView {
   }
 
   @objc
-  private func localEffectControlDidChange() {
-    values.localEffectKind = MetalBrushSandboxLocalEffectKind.allCases[safe: localEffectControl.selectedSegmentIndex] ?? .blur
-    updateLocalEffectRows()
-    publish(.localEffect)
-  }
-
-  @objc
   private func smoothingControlDidChange() {
     values.smoothingAlgorithm = EditingCanvasStrokeSmoothingAlgorithm.allCases[safe: smoothingControl.selectedSegmentIndex] ?? .bezier
     publish(.smoothing)
@@ -431,12 +380,6 @@ final class MetalBrushSandboxControlsView: UIView {
 
   private func publish(_ change: MetalBrushSandboxControlChange) {
     onValuesChange?(values, change)
-  }
-
-  private func updateLocalEffectRows() {
-    blurRadiusRow.isHidden = values.localEffectKind != .blur
-    localExposureRow.isHidden = values.localEffectKind != .exposure
-    invalidateIntrinsicContentSize()
   }
 }
 

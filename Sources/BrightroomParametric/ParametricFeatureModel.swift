@@ -144,11 +144,38 @@ extension MainFeature: Feature {
   }
 }
 
+/// A quarter-turn rotation step applied by a crop feature.
+///
+/// Raw values are the signed degrees the engine uses (`EditingCrop.Rotation.angle`),
+/// so the sign convention is identical and host bridges map 1:1. This is a pure
+/// CoreGraphics/Foundation type with no SwiftUI dependency.
+public enum QuarterTurn: Int, Codable, Equatable, Sendable, CaseIterable {
+
+  /// No rotation (0°).
+  case zero = 0
+
+  /// A quarter turn (-90°), matching `EditingCrop.Rotation.angle_90`.
+  case quarterCW = -90
+
+  /// A half turn (-180°).
+  case half = -180
+
+  /// A three-quarter turn (-270°).
+  case quarterCCW = -270
+
+  /// The rotation expressed in radians.
+  public var radians: Double {
+    Double(rawValue) * .pi / 180
+  }
+}
+
 /// A crop in the current main-tree domain.
 ///
 /// The crop rectangle is interpreted relative to the image produced by the
 /// previous main-tree feature. A second crop therefore crops the already-cropped
-/// output of the first crop.
+/// output of the first crop. The crop also carries the quarter-turn rotation and
+/// the free straightening angle, both applied about the crop-rect center, so the
+/// whole crop geometry is expressed as a single parametric feature.
 public struct CropFeature: Feature, Codable {
 
   /// The stable identity of this crop.
@@ -157,18 +184,35 @@ public struct CropFeature: Feature, Codable {
   /// A Boolean value indicating whether this crop participates in rendering.
   public var isEnabled: Bool
 
-  /// The rectangle to keep, expressed in the current domain.
+  /// The rectangle to keep, expressed in the current domain (Core Image
+  /// bottom-left, y-up).
   public var cropRect: CGRect
+
+  /// The quarter-turn rotation applied about the crop-rect center.
+  public var rotation: QuarterTurn
+
+  /// A free straightening angle in radians, applied about the crop-rect center
+  /// in addition to `rotation`.
+  public var straightenRadians: Double
+
+  /// The combined rotation (quarter turn + straighten) in radians.
+  public var aggregatedRotationRadians: Double {
+    rotation.radians + (straightenRadians.isFinite ? straightenRadians : 0)
+  }
 
   /// Creates a current-domain crop feature.
   public init(
     id: FeatureID = .init(),
     isEnabled: Bool = true,
-    cropRect: CGRect
+    cropRect: CGRect,
+    rotation: QuarterTurn = .zero,
+    straightenRadians: Double = 0
   ) {
     self.id = id
     self.isEnabled = isEnabled
     self.cropRect = cropRect
+    self.rotation = rotation
+    self.straightenRadians = straightenRadians
   }
 }
 

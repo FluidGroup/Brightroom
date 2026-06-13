@@ -136,18 +136,16 @@ public final class BrightRoomImageRenderer {
     case resize(maxPixelSize: CGFloat)
   }
 
-  /// One pixel-transforming step, applied in array order.
-  public enum Operation {
-    case effects(EffectPipeline)
-    case localAdjustment(LocalAdjustmentFeature)
-  }
-
   public struct Edit {
-    public var croppingRect: EditingCrop?
 
-    /// Ordered pixel operations compiled from the editing document, evaluated
-    /// in array order through the BrightroomParametric vocabulary.
-    public var operations: [Operation] = []
+    /// The parametric document evaluated by `ParametricImageRenderer`. Crop is
+    /// a domain feature inside the document, so export and preview share one
+    /// evaluation path.
+    public var document: EditingDocument
+
+    public init(document: EditingDocument = .init()) {
+      self.document = document
+    }
   }
 
   public let source: ImageSource
@@ -194,20 +192,30 @@ public final class BrightRoomImageRenderer {
    - Attension: This operation can be run background-thread.
    */
   public func render(options: Options = .init()) throws -> Rendered {
-    if edit.operations.isEmpty,
-       options.workingColorSpace == nil
-    {
-      return try renderOnlyCropping(options: options)
-    } else {
-      return try renderRevison2(options: options)
+    // CoreGraphics fast path for an unedited image or an axis-aligned crop with
+    // no pixel effects: skips the CIContext entirely. Anything else — effects,
+    // local adjustments, rotation/straighten, or an explicit working color
+    // space — evaluates through the parametric graph.
+    if options.workingColorSpace == nil {
+      let enabledFeatures = edit.document.mainTree.features.filter(\.isEnabled)
+      if enabledFeatures.isEmpty {
+        return try renderOnlyCropping(cropFeature: nil, options: options)
+      }
+      if let cropFeature = edit.document.axisAlignedCropOnlyFeature {
+        return try renderOnlyCropping(cropFeature: cropFeature, options: options)
+      }
     }
+    return try renderRevison2(options: options)
   }
 
   /**
    Render for only cropping using CoreGraphics
    */
-  private func renderOnlyCropping(options: Options = .init()) throws -> Rendered {
-    
+  private func renderOnlyCropping(
+    cropFeature: CropFeature?,
+    options: Options = .init()
+  ) throws -> Rendered {
+
     assert(options.workingColorSpace == nil, "This rendering operation no supports working with specifying colorspace.")
 
     EngineLog.debug(.renderer, "Start render in using CoreGraphics")
@@ -233,20 +241,21 @@ public final class BrightRoomImageRenderer {
      - Uses full size crop info if there's no request.
      */
 
-    let crop: EditingCrop = edit.croppingRect ?? EditingCrop(
-      imageSize: source
-        .readImageSize()
-        .applying(cgOrientation: orientation) // TODO: Better management of orientation
-    )
-
-    let renderCrop = RenderCrop(crop, imageSize: orientedImage.size)
-
-    EngineLog.debug(.renderer, "Crop CGImage with extent \(renderCrop)")
-
-    /// Render image as full size
-    let croppedImage = try orientedImage.croppedWithColorspace(
-      to: renderCrop
-    )
+    // The fast path only fires for an axis-aligned crop (or an unedited image),
+    // so reconstruct the engine y-down pixel rect from the (y-up) crop feature
+    // against the oriented image height — the exact inverse of the document
+    // bridge's flip. A nil crop feature means "no crop": use the full image.
+    let croppedImage: CGImage
+    if let cropFeature {
+      let pixelCrop = cropFeature.pixelCropRect(orientedImageHeight: CGFloat(orientedImage.height))
+      EngineLog.debug(.renderer, "Crop CGImage with extent \(pixelCrop)")
+      croppedImage = try orientedImage.croppedWithColorspace(
+        to: pixelCrop,
+        adjustmentAngleRadians: 0
+      )
+    } else {
+      croppedImage = orientedImage
+    }
 
     /*
      ===
@@ -296,53 +305,32 @@ public final class BrightRoomImageRenderer {
 
     EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
 
-    assert(
-      {
-        guard let crop = edit.croppingRect else { return true }
-        return crop.imageSize == CGSize(image: sourceCIImage)
-      }()
-    )
-
     /*
      ===
      ===
      ===
      */
-    EngineLog.debug(.renderer, "Applies Effect")
+    EngineLog.debug(.renderer, "Evaluate parametric document")
 
-    // Operations are evaluated in document order: a later effects feature can
-    // legitimately follow a local adjustment.
-    let effected_CIImage = try edit.operations.reduce(sourceCIImage) { image, operation in
-      switch operation {
-      case .effects(let pipeline):
-        return try pipeline.apply(to: image, context: EngineParametricEvaluation.context)
-      case .localAdjustment(let adjustment):
-        return try adjustment.engineRender(over: image)
-      }
-    }
+    // Single evaluation path: the document (effects, local adjustments, and the
+    // crop as a domain feature) compiles to one CIImage recipe whose extent is
+    // already the cropped, zero-origin output. `radiusReferenceExtent` is nil
+    // because the source here is the full image at render scale.
+    let outputCIImage = try ParametricImageRenderer().makeImage(
+      from: sourceCIImage,
+      document: edit.document
+    )
 
     /**
      To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
      */
-    let effected_CGImage = ciContext.createCGImage(
-      effected_CIImage,
-      from: effected_CIImage.extent,
+    let croppedImage = ciContext.createCGImage(
+      outputCIImage,
+      from: outputCIImage.extent,
       format: options.workingFormat,
       colorSpace: options.workingColorSpace ?? sourceCIImage.colorSpace,
       deferred: false
     )!
-
-    let crop: EditingCrop = edit.croppingRect ?? EditingCrop(
-      imageSize: source
-        .readImageSize()
-        .applying(cgOrientation: orientation) // TODO: Better management of orientation
-    )
-    let renderCrop = RenderCrop(crop, imageSize: effected_CGImage.size)
-
-    /// Render image as full size
-    let croppedImage = try effected_CGImage.croppedWithColorspace(
-      to: renderCrop
-    )
 
     /*
      ===

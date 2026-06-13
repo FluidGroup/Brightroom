@@ -41,8 +41,10 @@ final class LocalAdjustmentMaskOrientationTests: XCTestCase {
 
     func render(localAdjustments: [LocalAdjustmentFeature]) throws -> CGImage {
       let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-      renderer.edit.croppingRect = EditingCrop(imageSize: imageSize)
-      renderer.edit.operations = localAdjustments.map { .localAdjustment($0) }
+      renderer.edit = .make(
+        crop: EditingCrop(imageSize: imageSize),
+        localAdjustments: localAdjustments
+      )
       return try renderer.render().cgImage
     }
 
