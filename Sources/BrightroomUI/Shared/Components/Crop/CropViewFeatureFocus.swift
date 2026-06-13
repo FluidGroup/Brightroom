@@ -60,12 +60,12 @@ public struct CropViewFeatureFocus: Equatable {
     /// identity is adopted instead when present, matching
     /// `EditingCanvasStrokeCommitPipeline` semantics.
     ///
-    /// When `seedEffect` is nil, CropView derives the standard blur effect
-    /// (radius scaled by the current crop diagonal) at layer-creation time, so
-    /// hosts do not need to compute document parameters themselves.
+    /// When `seedEffect` is nil, CropView uses the standard blur pipeline at
+    /// layer-creation time, so hosts do not need to compute document
+    /// parameters themselves.
     case localAdjustmentMask(
       id: FeatureID?,
-      seedEffect: EditingStack.Edit.LocalAdjustmentEffect?
+      seedEffect: EffectPipeline?
     )
   }
 
@@ -102,10 +102,10 @@ public struct CropViewFeatureFocus: Equatable {
 
   /// Paints a local adjustment mask while viewing the evaluated output.
   ///
-  /// Pass nil (the default) to let CropView derive the standard blur seed
-  /// effect from the current crop at layer-creation time.
+  /// Pass nil (the default) to let CropView seed new layers with the standard
+  /// blur pipeline at layer-creation time.
   public static func masking(
-    _ seedEffect: EditingStack.Edit.LocalAdjustmentEffect? = nil,
+    _ seedEffect: EffectPipeline? = nil,
     id: FeatureID? = nil
   ) -> Self {
     Self(
@@ -132,10 +132,10 @@ public struct CropViewFeatureFocus: Equatable {
     return false
   }
 
-  /// The explicit effect that seeds layer creation for mask editing, when the
-  /// host specified one. nil while mask editing means CropView derives the
-  /// default blur seed from the current crop.
-  var maskSeedEffect: EditingStack.Edit.LocalAdjustmentEffect? {
+  /// The explicit effect pipeline that seeds layer creation for mask editing,
+  /// when the host specified one. nil while mask editing means CropView uses
+  /// the standard blur pipeline.
+  var maskSeedEffect: EffectPipeline? {
     if case let .localAdjustmentMask(_, seedEffect) = editingTarget {
       return seedEffect
     }
@@ -144,12 +144,12 @@ public struct CropViewFeatureFocus: Equatable {
 
   /// The explicitly targeted local adjustment layer id, when the editing
   /// target references an existing node.
-  var maskTargetLayerID: UUID? {
+  var maskTargetLayerID: FeatureID? {
     guard
       case let .localAdjustmentMask(id?, _) = editingTarget
     else {
       return nil
     }
-    return EditingFeatureTree.localAdjustmentID(from: id)
+    return id
   }
 }

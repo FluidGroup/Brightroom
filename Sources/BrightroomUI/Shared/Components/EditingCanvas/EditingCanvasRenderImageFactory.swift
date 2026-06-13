@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import CoreImage
 import CoreGraphics
 
@@ -32,24 +33,24 @@ enum EditingCanvasRenderImageFactory {
 
     let baseImage: CIImage
     let adjustedImage: CIImage
-    let renderEffect: EditingStack.Edit.LocalAdjustmentEffect
+    let renderEffect: EffectPipeline
     let usesPreparedBaseImage: Bool
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.filters
-        .apply(to: viewportSourceImage)
+        loadedState.currentEdit.effects
+        .applyIgnoringFailure(to: viewportSourceImage)
         .cropped(to: renderBounds),
         source: viewportSourceImage
       )
       adjustedImage = baseImage
-      renderEffect = .gaussianBlur(radius: 0)
+      renderEffect = .init()
       usesPreparedBaseImage = false
 
     case let .localAdjustment(localEffect):
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.filters
-        .apply(to: viewportSourceImage)
+        loadedState.currentEdit.effects
+        .applyIgnoringFailure(to: viewportSourceImage)
         .cropped(to: renderBounds),
         source: viewportSourceImage
       )
@@ -57,7 +58,7 @@ enum EditingCanvasRenderImageFactory {
         adjustedImage = baseImage
       } else {
         adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-          localEffect.apply(to: baseImage, previewScale: 1),
+          localEffect.applyIgnoringFailure(to: baseImage),
           source: viewportSourceImage
         )
       }
@@ -65,20 +66,20 @@ enum EditingCanvasRenderImageFactory {
       usesPreparedBaseImage = false
 
     case .renderedEditPreview, .preview:
-      let previewImage = loadedState.currentEdit.filters
-        .apply(to: scaledPreviewSourceImage)
+      let previewImage = loadedState.currentEdit.effects
+        .applyIgnoringFailure(to: scaledPreviewSourceImage)
         .cropped(to: canvasRect)
       let displayPreviewImage = displayOrientedImage(previewImage, canvasSize: canvasSize)
         .cropped(to: renderBounds)
       baseImage = displayPreviewImage
       adjustedImage = displayPreviewImage
-      renderEffect = .gaussianBlur(radius: 0)
+      renderEffect = .init()
       usesPreparedBaseImage = true
     }
 
     return .init(
       source: viewportSourceImage,
-      filters: loadedState.currentEdit.filters,
+      effects: loadedState.currentEdit.effects,
       base: baseImage,
       adjusted: adjustedImage,
       localEffect: renderEffect,
@@ -110,21 +111,21 @@ enum EditingCanvasRenderImageFactory {
 
     let baseImage: CIImage
     let adjustedImage: CIImage
-    let renderEffect: EditingStack.Edit.LocalAdjustmentEffect
+    let renderEffect: EffectPipeline
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.filters.apply(to: cropOutputSourceImage)
+        loadedState.currentEdit.effects.applyIgnoringFailure(to: cropOutputSourceImage)
           .cropped(to: canvasRect),
         source: cropOutputSourceImage
       )
       adjustedImage = baseImage
-      renderEffect = .gaussianBlur(radius: 0)
+      renderEffect = .init()
 
     case let .localAdjustment(localEffect):
       let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.filters
-          .apply(to: sourceImage)
+        loadedState.currentEdit.effects
+          .applyIgnoringFailure(to: sourceImage)
           .cropped(to: sourceExtent),
         source: sourceImage
       )
@@ -133,7 +134,7 @@ enum EditingCanvasRenderImageFactory {
         adjustedSourceImage = filteredSourceImage
       } else {
         adjustedSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-          localEffect.apply(to: filteredSourceImage, previewScale: 1)
+          localEffect.applyIgnoringFailure(to: filteredSourceImage)
             .cropped(to: sourceExtent),
           source: sourceImage
         )
@@ -147,8 +148,8 @@ enum EditingCanvasRenderImageFactory {
 
     case .renderedEditPreview, .preview:
       let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.filters
-          .apply(to: sourceImage)
+        loadedState.currentEdit.effects
+          .applyIgnoringFailure(to: sourceImage)
           .cropped(to: sourceExtent),
         source: sourceImage
       )
@@ -158,12 +159,12 @@ enum EditingCanvasRenderImageFactory {
         .cropped(to: canvasRect)
       baseImage = displayPreviewImage
       adjustedImage = displayPreviewImage
-      renderEffect = .gaussianBlur(radius: 0)
+      renderEffect = .init()
     }
 
     return .init(
       source: cropOutputSourceImage,
-      filters: loadedState.currentEdit.filters,
+      effects: loadedState.currentEdit.effects,
       base: baseImage,
       adjusted: adjustedImage,
       localEffect: renderEffect,
@@ -240,27 +241,22 @@ enum EditingCanvasRenderImageFactory {
   }
 }
 
-extension EditingStack.Edit.LocalAdjustmentEffect {
-  enum EditingCanvasEffectIdentity: Equatable {
-    case blur
-    case exposure
+extension EffectPipeline {
+
+  /// The effect-type sequence used to match a committed local adjustment
+  /// layer to the effect a canvas is editing. Parameter values may drift
+  /// after the layer freezes them (PhotosCrop recomputes its blur seed), so
+  /// the type sequence — not the parameter values — is the stable identity.
+  var editingCanvasEffectIdentity: [ObjectIdentifier] {
+    effects.map { ObjectIdentifier(type(of: $0)) }
   }
 
+  /// Whether the canvas composites this effect in the Metal shader instead of
+  /// pre-rendering an adjusted Core Image layer: exactly one enabled exposure
+  /// adjustment.
   var usesEditingCanvasShaderCompositeExposure: Bool {
-    switch self {
-    case .gaussianBlur:
-      return false
-    case .exposure:
-      return true
-    }
-  }
-
-  var editingCanvasEffectIdentity: EditingCanvasEffectIdentity {
-    switch self {
-    case .gaussianBlur:
-      return .blur
-    case .exposure:
-      return .exposure
-    }
+    effects.count == 1
+      && effects[0] is ExposureFeature
+      && effects[0].isEnabled
   }
 }

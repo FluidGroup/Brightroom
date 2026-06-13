@@ -29,19 +29,24 @@ open Dev/Brightroom.xcodeproj
 
 ### Core Modules
 
-1. **BrightroomEngine** - Core image processing engine
-   - `Sources/BrightroomEngine/Core/` - Core data models (EditingStack, ImageProvider)
-   - `Sources/BrightroomEngine/Filter/` - Image filters and effects
-   - `Sources/BrightroomEngine/Engine/` - Metal-based rendering pipeline
+1. **BrightroomParametric** - Dependency-free parametric editing vocabulary
+   - Typed effect/mask/crop features (`ExposureFeature`, `GaussianBlurFeature`,
+     `LocalAdjustmentFeature`, `MaskTree`, `EffectPipeline`, ...)
+   - `FeatureGraphCompiler` / renderers compile features into Core Image graphs
+   - `ParametricDocumentCodec` is the persistence boundary (runtime stays a
+     Swift value tree; Codable is only for saving)
+
+2. **BrightroomEngine** - Core image processing engine (depends on BrightroomParametric)
+   - `Sources/BrightroomEngine/Core/` - Core data models (EditingStack, ImageProvider);
+     `EditingStack.Edit` stores `[EditingFeature]` whose payloads carry parametric types
+   - `Sources/BrightroomEngine/Engine/` - Rendering pipeline (BrightRoomImageRenderer)
    - Uses Verge for reactive state management
 
-2. **BrightroomUI** - UI components for image editing
+3. **BrightroomUI** - UI components for image editing
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
-   - `Sources/BrightroomUI/Built-in/` - Pre-built editor UIs (ClassicImageEdit)
+     (CropView, EditingCanvas Metal surface)
+   - `Sources/BrightroomUI/builtin/PhotosCrop/` - iOS Photos app-style editor
    - Provides both UIKit and SwiftUI interfaces
-
-3. **BrightroomUIPhotosCrop** - iOS Photos app-style cropping UI
-   - Specialized cropping interface matching system Photos app behavior
 
 ### Key Concepts
 
@@ -67,12 +72,18 @@ The project uses Verge (swift-state-graph) for state management. When modifying 
 
 ## Development Guidelines
 
-### Adding New Filters
-1. Create new filter class in `Sources/BrightroomEngine/Filter/`
-2. Inherit from appropriate base class (e.g., `CIImageFilter`)
-3. Define parameters as properties
-4. Implement `apply(to:)` method
-5. Register in `FilterPresets` if it should appear in UI
+### Adding New Effects
+1. Create a value-type feature in `Sources/BrightroomParametric/` conforming to
+   `ImageEffectFeatureType` (requires `id: FeatureID`, `isEnabled`, and
+   `apply(to:context:)`; `validate()`/`childFeatures` have defaults)
+2. Implement the recipe as a `CIImage -> CIImage` transform (see
+   `BuiltInFeatureRecipes.swift`)
+3. Conform to `PersistableFeature` and register it in `ParametricDocumentCodec`
+   if documents should persist it
+4. Surface it in UI by upserting into the global-effects `EffectPipeline`
+   (PhotosCrop orders effects via `PhotosCropEffectOrder`)
+5. Give programmatically-created features deterministic `FeatureID(rawValue:)`
+   ids when equal values must compare equal across calls (cache keys, presets)
 
 ### Working with Metal
 - Metal shaders are in `Sources/BrightroomEngine/Engine/`

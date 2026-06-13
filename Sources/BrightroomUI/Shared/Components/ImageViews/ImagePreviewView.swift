@@ -168,7 +168,7 @@ final class _ImagePreviewView: _PixelEditorCodeBasedView {
       )
     }
     imageView.display(image: croppedImage)
-    imageView.postProcessing = state.currentEdit.filters.apply
+    imageView.postProcessing = state.currentEdit.effects.applyIgnoringFailure(to:)
     originalImageView.display(image: croppedImage)
 
   }

@@ -4,6 +4,13 @@
 
 Draft for the Metal Brush Sandbox v1.
 
+> Historical note (2026-06): the engine types named in this document predate
+> the parametric convergence. `EditingStack.Edit.LocalAdjustmentLayer` /
+> `LocalAdjustmentEffect` / `LocalAdjustmentMask.makeCIImage(size:)` became
+> `LocalAdjustmentFeature` / `EffectPipeline` /
+> `MaskTree.engineMakeMaskImage(size:)` (BrightroomParametric vocabulary).
+> The coordinate and falloff contracts described here still apply.
+
 This document defines the target behavior for a zoomable viewport-rendered
 preview that displays an `EditingStack` result and adds local adjustment layers
 with a brush mask. Earlier experiments treated a committed tile grid as the

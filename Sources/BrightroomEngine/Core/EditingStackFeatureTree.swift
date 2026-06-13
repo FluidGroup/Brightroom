@@ -72,16 +72,6 @@ public struct EditingFeatureTree: Equatable {
   /// The identity of the final crop node.
   public static let finalCropNodeID = EditingFeature.finalCropID
 
-  /// The tree identity for a local adjustment layer.
-  public static func nodeID(forLocalAdjustment id: UUID) -> FeatureID {
-    EditingFeature.localAdjustmentID(for: id)
-  }
-
-  /// The local adjustment layer id encoded in a tree identity, if any.
-  public static func localAdjustmentID(from nodeID: FeatureID) -> UUID? {
-    EditingFeature.localAdjustmentLayerID(from: nodeID)
-  }
-
   // MARK: - Projection
 
   /// Mirrors an `EditingStack.Edit`'s feature list one-to-one.
@@ -110,11 +100,11 @@ public struct EditingFeatureTree: Equatable {
   }
 
   /// The global effects feature.
-  public var globalEffects: EditingStack.Edit.Filters? {
-    guard case let .globalEffects(filters)? = node(id: Self.globalEffectsNodeID)?.payload else {
+  public var globalEffects: EffectPipeline? {
+    guard case let .effects(pipeline)? = node(id: Self.globalEffectsNodeID)?.payload else {
       return nil
     }
-    return filters
+    return pipeline
   }
 
   /// The local adjustment nodes in evaluation order.
@@ -127,12 +117,12 @@ public struct EditingFeatureTree: Equatable {
     }
   }
 
-  /// The local adjustment layer addressed by a tree identity.
-  public func localAdjustment(id: FeatureID) -> EditingStack.Edit.LocalAdjustmentLayer? {
-    guard case let .localAdjustment(layer)? = node(id: id)?.payload else {
+  /// The local adjustment addressed by a tree identity.
+  public func localAdjustment(id: FeatureID) -> LocalAdjustmentFeature? {
+    guard case let .localAdjustment(adjustment)? = node(id: id)?.payload else {
       return nil
     }
-    return layer
+    return adjustment
   }
 
   // MARK: - Point resolution
@@ -228,16 +218,16 @@ extension EditingStack {
     return true
   }
 
-  /// Mutates the global effects feature.
+  /// Mutates the global effects pipeline feature.
   public func updateGlobalEffectsFeature(
-    _ mutate: (inout Edit.Filters) -> Void
+    _ mutate: (inout EffectPipeline) -> Void
   ) {
     updateFeature(id: EditingFeatureTree.globalEffectsNodeID) { payload in
-      guard case var .globalEffects(filters) = payload else {
+      guard case var .effects(pipeline) = payload else {
         return
       }
-      mutate(&filters)
-      payload = .globalEffects(filters)
+      mutate(&pipeline)
+      payload = .effects(pipeline)
     }
   }
 
@@ -245,17 +235,16 @@ extension EditingStack {
   /// tree identity.
   @discardableResult
   public func appendFeature(
-    localAdjustment layer: Edit.LocalAdjustmentLayer
+    localAdjustment adjustment: LocalAdjustmentFeature
   ) -> FeatureID {
     _pixelengine_ensureMainThread()
 
-    let id = EditingFeature.localAdjustmentID(for: layer.id)
     guard var edit = loadedState?.currentEdit else {
-      return id
+      return adjustment.id
     }
-    edit.insertFeatureBeforeFinalCrop(.init(id: id, payload: .localAdjustment(layer)))
+    edit.insertFeatureBeforeFinalCrop(.init(localAdjustment: adjustment))
     loadedState?.currentEdit = edit
-    return id
+    return adjustment.id
   }
 
   /// Removes the feature node with `id`.

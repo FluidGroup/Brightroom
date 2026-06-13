@@ -655,6 +655,50 @@ public struct EffectPipeline: Equatable, Sendable {
   public static func == (lhs: Self, rhs: Self) -> Bool {
     parametricFeaturesAreEqual(lhs.effects, rhs.effects)
   }
+
+  // MARK: - Typed queries
+
+  /// The first effect of the given type, if present.
+  public func first<T: ImageEffectFeatureType>(of type: T.Type) -> T? {
+    for effect in effects {
+      if let typed = effect as? T {
+        return typed
+      }
+    }
+    return nil
+  }
+
+  /// The index of the first effect of the given type, if present.
+  public func firstIndex<T: ImageEffectFeatureType>(of type: T.Type) -> Int? {
+    effects.firstIndex(where: { $0 is T })
+  }
+
+  /// Replaces the first effect of `T` in place, removes it when `value` is
+  /// nil, or inserts a new value when absent.
+  ///
+  /// Ordering is the caller's decision: `insertionIndex` resolves where a
+  /// NEW effect goes (defaults to appending). An existing effect keeps its
+  /// position.
+  public mutating func set<T: ImageEffectFeatureType>(
+    _ value: T?,
+    insertionIndex: (EffectPipeline) -> Int = { $0.effects.count }
+  ) {
+    if let index = firstIndex(of: T.self) {
+      if let value {
+        effects[index] = value
+      } else {
+        effects.remove(at: index)
+      }
+    } else if let value {
+      let index = min(max(insertionIndex(self), 0), effects.count)
+      effects.insert(value, at: index)
+    }
+  }
+
+  /// Whether the pipeline contains no effects.
+  public var isEmpty: Bool {
+    effects.isEmpty
+  }
 }
 
 /// A local adjustment branch.

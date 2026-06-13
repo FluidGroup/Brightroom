@@ -535,7 +535,7 @@ final class CropView: UIView {
     /// instance.
     struct CanvasRenderInputKey: Equatable {
       var sourceImage: ObjectIdentifier
-      var filters: EditingStack.Edit.Filters
+      var effects: EffectPipeline
       var geometry: EditingCanvasCropOutputGeometry
       var mode: EditingCanvasMode
     }
@@ -592,7 +592,7 @@ final class CropView: UIView {
 
       let inputKey = CanvasRenderInputKey(
         sourceImage: ObjectIdentifier(loadedState.editingSourceImage),
-        filters: loadedState.currentEdit.filters,
+        effects: loadedState.currentEdit.effects,
         geometry: geometry,
         mode: mode
       )
@@ -1420,8 +1420,8 @@ extension CropView {
     var imageSize: CGSize
     var sourceImage: ObjectIdentifier
     var sourceExtent: CGRect
-    var filters: EditingStack.Edit.Filters
-    var localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
+    var effects: EffectPipeline
+    var localAdjustments: [LocalAdjustmentFeature]
 
     init(loadedState: EditingStack.Loaded, crop: EditingCrop) {
       let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
@@ -1430,7 +1430,7 @@ extension CropView {
       // editing source is always capped to the same max pixel size).
       self.sourceImage = ObjectIdentifier(loadedState.editingSourceImage)
       self.sourceExtent = previewSourceImage.extent
-      self.filters = loadedState.currentEdit.filters
+      self.effects = loadedState.currentEdit.effects
       self.localAdjustments = loadedState.currentEdit.localAdjustments
     }
   }
@@ -1439,14 +1439,16 @@ extension CropView {
   // Internal (not private) so tests can verify the stroke-domain mapping.
   enum CanvasRenderPlan: Equatable {
     case viewportBase
-    case singleLocalAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
+    case singleLocalAdjustment(LocalAdjustmentFeature)
     case renderedEditPreview
 
     init(
-      localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]
+      localAdjustments: [LocalAdjustmentFeature]
     ) {
       let activeLayers = localAdjustments.filter {
-        $0.isEnabled && $0.effect.isActive && $0.mask.isEmpty == false
+        $0.isEnabled
+          && $0.effectPipeline.hasEnabledEffects
+          && $0.maskTree.canvasIsEffectivelyEmpty == false
       }
 
       switch activeLayers.count {
@@ -1464,7 +1466,7 @@ extension CropView {
       case .viewportBase:
         return .viewportBase
       case let .singleLocalAdjustment(layer):
-        return .localAdjustment(effect: layer.effect)
+        return .localAdjustment(effect: layer.effectPipeline)
       case .renderedEditPreview:
         return .renderedEditPreview
       }
@@ -1480,8 +1482,8 @@ extension CropView {
       case .viewportBase, .renderedEditPreview:
         return []
       case let .singleLocalAdjustment(layer):
-        let sourceRecords = layer.mask.strokes.map {
-          EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
+        let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
+          EditingCanvasStrokeRecord(brushMaskStroke: $0)
         }
         guard let geometry else {
           return sourceRecords
@@ -2967,25 +2969,23 @@ extension CropView: UIGestureRecognizerDelegate {
     completion()
   }
 
-  /// The seed effect for the given focus, deriving the standard blur from the
-  /// current crop when mask editing without an explicit seed. The derivation
-  /// lives here — not in the hosts — because the seed is a document parameter
+  /// The seed effect for the given focus, defaulting to the standard blur
+  /// pipeline when mask editing without an explicit seed. The default lives
+  /// here — not in the hosts — because the seed is a document parameter
   /// (the exported effect strength), frozen into the layer at first stroke.
   private func resolvedMaskSeedEffect(
     of focus: CropViewFeatureFocus
-  ) -> EditingStack.Edit.LocalAdjustmentEffect? {
+  ) -> EffectPipeline? {
     guard focus.isMaskEditing else {
       return nil
     }
     if let explicit = focus.maskSeedEffect {
       return explicit
     }
-    return CropViewMaskingDefaults.blurEffect(
-      for: editingStack.loadedState?.currentEdit.crop
-    )
+    return CropViewMaskingDefaults.blurEffectPipeline
   }
 
-  private var resolvedMaskSeedEffect: EditingStack.Edit.LocalAdjustmentEffect? {
+  private var resolvedMaskSeedEffect: EffectPipeline? {
     resolvedMaskSeedEffect(of: featureFocus)
   }
 
@@ -3008,7 +3008,7 @@ extension CropView: UIGestureRecognizerDelegate {
   /// crop), so already-painted layers must not be rewritten to match it.
   private func committedCanvasLocalEffect(
     in loadedState: EditingStack.Loaded
-  ) -> EditingStack.Edit.LocalAdjustmentEffect? {
+  ) -> EffectPipeline? {
     guard let currentLocalEffect = resolvedMaskSeedEffect else {
       return nil
     }

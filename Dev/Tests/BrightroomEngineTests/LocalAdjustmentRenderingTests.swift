@@ -2,6 +2,7 @@ import XCTest
 import UIKit
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 
 final class LocalAdjustmentRenderingTests: XCTestCase {
 
@@ -11,7 +12,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let layer = Self.makeBlurLayer(radius: 0, center: CGPoint(x: 20, y: 10))
 
     let renderedImage = try XCTUnwrap(
-      Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
     XCTAssertEqual(Self.rgba(in: sourceImage, x: 5, y: 10), Self.rgba(in: renderedImage, x: 5, y: 10))
@@ -29,9 +30,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     var edit = EditingStack.Edit(
       crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
     )
-    var brightness = FilterBrightness()
-    brightness.value = 0.2
-    edit.filters.brightness = brightness
+    edit.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.2)])
     edit.localAdjustments = [
       Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
     ]
@@ -113,7 +112,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10))
 
     let renderedImage = try XCTUnwrap(
-      Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
     XCTAssertEqual(
@@ -132,7 +131,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 6))
 
     let renderedImage = try XCTUnwrap(
-      Self.context.createCGImage(layer.apply(to: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
     // Stamps are authored in display coordinates (top-left origin, y-down),
@@ -155,9 +154,8 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 20, y: 0, width: 20, height: 20)
       ),
-      modifiers: [],
-      localAdjustments: [
-        Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
+      operations: [
+        .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
       ],
       drawer: []
     )
@@ -182,17 +180,15 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     )
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-    var exposure = FilterExposure()
-    exposure.value = 0.5
 
     renderer.edit = .init(
       croppingRect: EditingCrop(
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 0, y: 0, width: 40, height: 20)
       ),
-      modifiers: [exposure.asAny()],
-      localAdjustments: [
-        Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
+      operations: [
+        .effects(EffectPipeline(effects: [ExposureFeature(value: 0.5)])),
+        .localAdjustment(Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10))),
       ],
       drawer: []
     )
@@ -213,34 +209,42 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
   private static func makeBlurLayer(
     radius: CGFloat,
     center: CGPoint
-  ) -> EditingStack.Edit.LocalAdjustmentLayer {
+  ) -> LocalAdjustmentFeature {
     .init(
-      effect: .gaussianBlur(radius: radius),
-      mask: .init(
-        strokes: [
-          .init(
-            stamps: [center],
-            brush: .init(size: 18, hardness: 1, opacity: 1)
-          ),
-        ]
-      )
+      maskTree: MaskTree(
+        root: .brush(
+          BrushMask(
+            strokes: [
+              BrushMaskStroke(
+                stamps: [center],
+                brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
+              ),
+            ]
+          )
+        )
+      ),
+      effectPipeline: EffectPipeline(effects: [GaussianBlurFeature(radius: Double(radius))])
     )
   }
 
   private static func makeExposureLayer(
     value: Double,
     center: CGPoint
-  ) -> EditingStack.Edit.LocalAdjustmentLayer {
+  ) -> LocalAdjustmentFeature {
     .init(
-      effect: .exposure(value: value),
-      mask: .init(
-        strokes: [
-          .init(
-            stamps: [center],
-            brush: .init(size: 18, hardness: 1, opacity: 1)
-          ),
-        ]
-      )
+      maskTree: MaskTree(
+        root: .brush(
+          BrushMask(
+            strokes: [
+              BrushMaskStroke(
+                stamps: [center],
+                brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
+              ),
+            ]
+          )
+        )
+      ),
+      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: value)])
     )
   }
 

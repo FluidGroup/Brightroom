@@ -23,6 +23,7 @@ import SwiftUI
 import UIKit
 
 import BrightroomEngine
+import BrightroomParametric
 
 struct PhotosCropContentView: View {
 
@@ -98,7 +99,7 @@ struct PhotosCropContentView: View {
             aspectRatioSelection: aspectRatioSelection,
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
-            currentFilters: loadedState?.currentEdit.filters,
+            currentEffects: loadedState?.currentEdit.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
@@ -252,12 +253,12 @@ struct PhotosCropContentView: View {
   }
 
   /// Writes the selected preset into the global-effects feature node.
-  private func selectFilterPreset(_ preset: FilterPreset?) {
-    editingStack.updateGlobalEffectsFeature { filters in
-      guard filters.preset?.identifier != preset?.identifier else {
+  private func selectFilterPreset(_ preset: PresetFeature?) {
+    editingStack.updateGlobalEffectsFeature { effects in
+      guard effects.first(of: PresetFeature.self)?.identifier != preset?.identifier else {
         return
       }
-      filters.preset = preset
+      effects.set(preset, insertionIndex: PhotosCropEffectOrder.insertionIndex(for: PresetFeature.self))
     }
   }
 
@@ -271,16 +272,16 @@ struct PhotosCropContentView: View {
   /// Writes a slider value for the selected parameter into the global-effects
   /// feature node.
   private func setAdjustmentValue(_ sliderValue: Double) {
-    editingStack.updateGlobalEffectsFeature { filters in
-      adjustmentParameter.apply(sliderValue: sliderValue, to: &filters)
+    editingStack.updateGlobalEffectsFeature { effects in
+      adjustmentParameter.apply(sliderValue: sliderValue, to: &effects)
     }
   }
 
   private func clearBlurMaskingLayer() {
-    let blurIdentity = EditingStack.Edit.LocalAdjustmentEffect.EditingCanvasEffectIdentity.blur
+    let blurIdentity = CropViewMaskingDefaults.blurEffectPipeline.editingCanvasEffectIdentity
     let localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     let remainingLocalAdjustments = localAdjustments.filter {
-      $0.effect.editingCanvasEffectIdentity != blurIdentity
+      $0.effectPipeline.editingCanvasEffectIdentity != blurIdentity
     }
 
     guard remainingLocalAdjustments != localAdjustments else {
@@ -449,8 +450,8 @@ private struct PhotosCropControlHost: View {
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: PhotosCropAspectRatioSelection
   let blurMaskingState: PhotosCropBlurMaskingState
-  let filterPresets: [FilterPreset]
-  let currentFilters: EditingStack.Edit.Filters?
+  let filterPresets: [PresetFeature]
+  let currentEffects: EffectPipeline?
   let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let adjustmentAngle: EditingCrop.AdjustmentAngle?
@@ -461,7 +462,7 @@ private struct PhotosCropControlHost: View {
   let onCommitAdjustmentAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearBlurMask: () -> Void
-  let onSelectFilterPreset: (FilterPreset?) -> Void
+  let onSelectFilterPreset: (PresetFeature?) -> Void
   let onSelectAdjustmentParameter: (PhotosCropAdjustmentParameter) -> Void
   let onSetAdjustmentValue: (Double) -> Void
 
@@ -492,7 +493,7 @@ private struct PhotosCropControlHost: View {
       case .filters:
         PhotosCropFilterControl(
           presets: filterPresets,
-          selectedPresetIdentifier: currentFilters?.preset?.identifier,
+          selectedPresetIdentifier: currentEffects?.first(of: PresetFeature.self)?.identifier,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
           onSelectPreset: onSelectFilterPreset
@@ -501,7 +502,7 @@ private struct PhotosCropControlHost: View {
       case .adjustments:
         PhotosCropAdjustmentsControl(
           selection: adjustmentParameter,
-          sliderValue: currentFilters.map { adjustmentParameter.sliderValue(in: $0) } ?? 0,
+          sliderValue: currentEffects.map { adjustmentParameter.sliderValue(in: $0) } ?? 0,
           isLoaded: isLoaded,
           onSelectParameter: onSelectAdjustmentParameter,
           onSetValue: onSetAdjustmentValue
@@ -866,9 +867,9 @@ private enum PhotosCropBrushSizeMetrics {
 /// A global adjustment parameter editable in PhotosCrop's Adjust mode.
 ///
 /// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
-/// value onto the corresponding `EditingStack.Edit.Filters` property. The
-/// parameters write into the FeatureTree's global-effects node, which is
-/// evaluated before local adjustments and the final crop.
+/// value onto the corresponding effect feature. The parameters write into the
+/// FeatureTree's global-effects node, which is evaluated before local
+/// adjustments and the final crop.
 enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   case exposure
   case brightness
@@ -925,32 +926,35 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     isZeroBased ? 0...100 : -100...100
   }
 
-  /// The maximum filter value the slider's positive end maps to.
+  /// The maximum effect value the slider's positive end maps to.
+  ///
+  /// These mirror the legacy `ParameterRange` maxima; the parametric features
+  /// carry unbounded values, so the slider scale is a PhotosCrop policy.
   private var maximumFilterValue: Double {
     switch self {
-    case .exposure: return FilterExposure.range.max
-    case .brightness: return FilterBrightness.range.max
-    case .contrast: return FilterContrast.range.max
-    case .saturation: return FilterSaturation.range.max
-    case .temperature: return FilterTemperature.range.max
-    case .highlights: return FilterHighlights.range.max
-    case .shadows: return FilterShadows.range.max
-    case .vignette: return FilterVignette.range.max
+    case .exposure: return 1.8
+    case .brightness: return 0.2
+    case .contrast: return 0.18
+    case .saturation: return 1
+    case .temperature: return 3000
+    case .highlights: return 1
+    case .shadows: return 1
+    case .vignette: return 2
     }
   }
 
   /// The current slider value for this parameter.
-  func sliderValue(in filters: EditingStack.Edit.Filters) -> Double {
+  func sliderValue(in effects: EffectPipeline) -> Double {
     let filterValue: Double
     switch self {
-    case .exposure: filterValue = filters.exposure?.value ?? 0
-    case .brightness: filterValue = filters.brightness?.value ?? 0
-    case .contrast: filterValue = filters.contrast?.value ?? 0
-    case .saturation: filterValue = filters.saturation?.value ?? 0
-    case .temperature: filterValue = filters.temperature?.value ?? 0
-    case .highlights: filterValue = filters.highlights?.value ?? 0
-    case .shadows: filterValue = filters.shadows?.value ?? 0
-    case .vignette: filterValue = filters.vignette?.value ?? 0
+    case .exposure: filterValue = effects.first(of: ExposureFeature.self)?.value ?? 0
+    case .brightness: filterValue = effects.first(of: BrightnessFeature.self)?.value ?? 0
+    case .contrast: filterValue = effects.first(of: ContrastFeature.self)?.value ?? 0
+    case .saturation: filterValue = effects.first(of: SaturationFeature.self)?.value ?? 0
+    case .temperature: filterValue = effects.first(of: TemperatureFeature.self)?.value ?? 0
+    case .highlights: filterValue = effects.first(of: HighlightsFeature.self)?.value ?? 0
+    case .shadows: filterValue = effects.first(of: ShadowsFeature.self)?.value ?? 0
+    case .vignette: filterValue = effects.first(of: VignetteFeature.self)?.value ?? 0
     }
 
     guard maximumFilterValue != 0 else {
@@ -961,56 +965,109 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   }
 
   /// Whether this parameter currently deviates from its neutral value.
-  func isActive(in filters: EditingStack.Edit.Filters) -> Bool {
-    sliderValue(in: filters) != 0
+  func isActive(in effects: EffectPipeline) -> Bool {
+    sliderValue(in: effects) != 0
   }
 
-  /// Writes a slider value into the filters. A neutral value clears the
-  /// corresponding filter so untouched parameters stay absent from the edit.
-  func apply(sliderValue: Double, to filters: inout EditingStack.Edit.Filters) {
+  /// Writes a slider value into the global-effects pipeline. A neutral value
+  /// removes the corresponding effect so untouched parameters stay absent
+  /// from the edit.
+  func apply(sliderValue: Double, to effects: inout EffectPipeline) {
     let clamped = min(max(sliderValue, sliderRange.lowerBound), sliderRange.upperBound)
     let filterValue = clamped / 100 * maximumFilterValue
-    let isNeutral = abs(clamped) < 0.5
+    let value: Double? = abs(clamped) < 0.5 ? nil : filterValue
 
     switch self {
     case .exposure:
-      filters.exposure = isNeutral ? nil : updated(filters.exposure ?? FilterExposure(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { ExposureFeature(value: $0) }, update: { $0.value = $1 })
     case .brightness:
-      filters.brightness = isNeutral ? nil : updated(filters.brightness ?? FilterBrightness(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { BrightnessFeature(value: $0) }, update: { $0.value = $1 })
     case .contrast:
-      filters.contrast = isNeutral ? nil : updated(filters.contrast ?? FilterContrast(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { ContrastFeature(value: $0) }, update: { $0.value = $1 })
     case .saturation:
-      filters.saturation = isNeutral ? nil : updated(filters.saturation ?? FilterSaturation(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { SaturationFeature(value: $0) }, update: { $0.value = $1 })
     case .temperature:
-      filters.temperature = isNeutral ? nil : updated(filters.temperature ?? FilterTemperature(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { TemperatureFeature(value: $0) }, update: { $0.value = $1 })
     case .highlights:
-      filters.highlights = isNeutral ? nil : updated(filters.highlights ?? FilterHighlights(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { HighlightsFeature(value: $0) }, update: { $0.value = $1 })
     case .shadows:
-      filters.shadows = isNeutral ? nil : updated(filters.shadows ?? FilterShadows(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { ShadowsFeature(value: $0) }, update: { $0.value = $1 })
     case .vignette:
-      filters.vignette = isNeutral ? nil : updated(filters.vignette ?? FilterVignette(), filterValue) { $0.value = $1 }
+      upsert(value, into: &effects, make: { VignetteFeature(value: $0) }, update: { $0.value = $1 })
     }
   }
 
-  private func updated<F>(
-    _ filter: F,
-    _ value: Double,
-    _ write: (inout F, Double) -> Void
-  ) -> F {
-    var filter = filter
-    write(&filter, value)
-    return filter
+  /// Updates an existing effect in place (keeping its feature identity),
+  /// inserts a new one at PhotosCrop's canonical position, or removes it when
+  /// the slider returns to neutral.
+  private func upsert<T: ImageEffectFeatureType>(
+    _ value: Double?,
+    into effects: inout EffectPipeline,
+    make: (Double) -> T,
+    update: (inout T, Double) -> Void
+  ) {
+    guard let value else {
+      effects.set(nil as T?)
+      return
+    }
+
+    if var existing = effects.first(of: T.self) {
+      update(&existing, value)
+      effects.set(existing)
+    } else {
+      effects.set(make(value), insertionIndex: PhotosCropEffectOrder.insertionIndex(for: T.self))
+    }
+  }
+}
+
+/// PhotosCrop's canonical evaluation order inside the global-effects node.
+///
+/// Effect ordering is a UI policy — the engine evaluates whatever sequence the
+/// UI assembles — so the table lives here, not in `EditingStack`. Unknown
+/// effect types sort after every known one.
+enum PhotosCropEffectOrder {
+
+  private static let order: [ObjectIdentifier] = [
+    ObjectIdentifier(PresetFeature.self),
+    ObjectIdentifier(ExposureFeature.self),
+    ObjectIdentifier(BrightnessFeature.self),
+    ObjectIdentifier(TemperatureFeature.self),
+    ObjectIdentifier(HighlightsFeature.self),
+    ObjectIdentifier(ShadowsFeature.self),
+    ObjectIdentifier(SaturationFeature.self),
+    ObjectIdentifier(ContrastFeature.self),
+    ObjectIdentifier(SharpenFeature.self),
+    ObjectIdentifier(UnsharpMaskFeature.self),
+    ObjectIdentifier(GaussianBlurFeature.self),
+    ObjectIdentifier(FadeFeature.self),
+    ObjectIdentifier(VignetteFeature.self),
+  ]
+
+  private static func rank(of typeIdentity: ObjectIdentifier) -> Int {
+    order.firstIndex(of: typeIdentity) ?? order.count
+  }
+
+  /// The index where a new effect of `type` keeps the canonical order.
+  static func insertionIndex<T: ImageEffectFeatureType>(
+    for type: T.Type
+  ) -> (EffectPipeline) -> Int {
+    let newRank = rank(of: ObjectIdentifier(type))
+    return { pipeline in
+      pipeline.effects.firstIndex { existing in
+        rank(of: ObjectIdentifier(Swift.type(of: existing))) > newRank
+      } ?? pipeline.effects.count
+    }
   }
 }
 
 /// Filter preset chips evaluated inside the global-effects feature node.
 private struct PhotosCropFilterControl: View {
 
-  let presets: [FilterPreset]
+  let presets: [PresetFeature]
   let selectedPresetIdentifier: String?
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let isLoaded: Bool
-  let onSelectPreset: (FilterPreset?) -> Void
+  let onSelectPreset: (PresetFeature?) -> Void
 
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {

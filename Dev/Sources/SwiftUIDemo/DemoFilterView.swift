@@ -1,41 +1,51 @@
 
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 import SwiftUI
 import UIKit
 
-struct DemoFilterView: View {
+/// Custom effects registered into the editing document. Effects are value
+/// types with stable identities; the parametric runtime evaluates them through
+/// `ImageEffectFeatureType.apply(to:context:)`.
+struct DemoInvertFeature: ImageEffectFeatureType {
+  var id: FeatureID = .init(rawValue: "demo.invert")
+  var isEnabled: Bool = true
 
-  struct InvertFilter: Filtering {
-    func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
-      image
-        .applyingFilter("CIColorInvert")
-    }
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    image
+      .applyingFilter("CIColorInvert")
   }
+}
 
-  struct GrayscaleFilter: Filtering {
-    func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
-      let kernel = CIKernel(source: """
-                    kernel vec4 customGrayscale(__sample pixel) {
-                        float grayscale = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
-                        return vec4(grayscale, grayscale, grayscale, pixel.a);
-                    }
-                    """)!
-      let output = kernel.apply(
-        extent: image.extent,
-        roiCallback: { _, rect in
-          rect
-        },
-        arguments: [image]
-      )
+struct DemoGrayscaleFeature: ImageEffectFeatureType {
+  var id: FeatureID = .init(rawValue: "demo.grayscale")
+  var isEnabled: Bool = true
 
-      return output!
-    }
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    let kernel = CIKernel(source: """
+                  kernel vec4 customGrayscale(__sample pixel) {
+                      float grayscale = dot(pixel.rgb, vec3(0.299, 0.587, 0.114));
+                      return vec4(grayscale, grayscale, grayscale, pixel.a);
+                  }
+                  """)!
+    let output = kernel.apply(
+      extent: image.extent,
+      roiCallback: { _, rect in
+        rect
+      },
+      arguments: [image]
+    )
+
+    return output!
   }
+}
 
-  struct MotionBlurFilter: Filtering {
+struct DemoMotionBlurFeature: ImageEffectFeatureType {
+  var id: FeatureID = .init(rawValue: "demo.motion-blur")
+  var isEnabled: Bool = true
 
-    let kernel = CIKernel(source:
+  private static nonisolated(unsafe) let kernel = CIKernel(source:
 """
     kernel vec4 motionBlur(sampler image, vec2 size, float sampleCount, float blur) {
             int sampleCountInt = int(floor(sampleCount));
@@ -60,37 +70,35 @@ struct DemoFilterView: View {
         }
 """)!
 
-    func apply(to image: CIImage, sourceImage: CIImage) -> CIImage {
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
 
-      let width = image.extent.width + image.extent.minX*2
-      let height = image.extent.height + image.extent.minY*2
+    let width = image.extent.width + image.extent.minX*2
+    let height = image.extent.height + image.extent.minY*2
 
-      let base = Double(sqrt(pow(width, 2) + pow(height, 2)))
-      let radius = base / 40
+    let base = Double(sqrt(pow(width, 2) + pow(height, 2)))
+    let radius = base / 40
 
-      let args = [
-        image,
-        CIVector(
-          x: width,
-          y: height
-        ),
-        20,
-        radius,
-      ] as [Any]
+    let args = [
+      image,
+      CIVector(
+        x: width,
+        y: height
+      ),
+      20,
+      radius,
+    ] as [Any]
 
-      return kernel.apply(
-        extent: image.extent,
-        roiCallback: { _, rect in
-          rect
-        },
-        arguments: args
-      )!
-    }
+    return Self.kernel.apply(
+      extent: image.extent,
+      roiCallback: { _, rect in
+        rect
+      },
+      arguments: args
+    )!
   }
+}
 
-  let invertFilter: InvertFilter = .init()
-  let grayscaleFilter: GrayscaleFilter = .init()
-  let motionBlurFilter: MotionBlurFilter = .init()
+struct DemoFilterView: View {
 
   let editingStack: EditingStack
   @State var invertToggle: Bool = false
@@ -116,12 +124,10 @@ struct DemoFilterView: View {
         Toggle("MotionBlur", isOn: $motionBlurToggle)
       }
       .onChange(of: [invertToggle, grayscaleToggle, motionBlurToggle], perform: { _ in
-        editingStack.set(filters: {
-          $0.additionalFilters = [
-            grayscaleToggle ? grayscaleFilter.asAny() : nil,
-            invertToggle ? invertFilter.asAny() : nil,
-            motionBlurToggle ? motionBlurFilter.asAny() : nil,
-          ].compactMap({ $0 })
+        editingStack.set(effects: {
+          $0.set(grayscaleToggle ? DemoGrayscaleFeature() : nil)
+          $0.set(invertToggle ? DemoInvertFeature() : nil)
+          $0.set(motionBlurToggle ? DemoMotionBlurFeature() : nil)
         })
       })
       .padding()

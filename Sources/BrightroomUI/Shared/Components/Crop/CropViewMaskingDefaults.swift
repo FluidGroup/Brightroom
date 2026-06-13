@@ -1,6 +1,7 @@
 import UIKit
 
 import BrightroomEngine
+import BrightroomParametric
 
 /// A masking brush authored in host-friendly units.
 ///
@@ -44,19 +45,23 @@ public struct CropViewMaskingBrush: Equatable {
 /// single definition here so the editors cannot drift apart.
 enum CropViewMaskingDefaults {
 
-  /// Default blur effect whose radius scales with the crop diagonal so the
-  /// apparent strength is comparable across image sizes.
+  /// Default blur pipeline whose radius resolves against the rendered image
+  /// extent so the apparent strength is comparable across image sizes and
+  /// render resolutions.
   ///
-  /// The effect is frozen into the layer at stroke commit; later crop changes
-  /// do not rewrite already-painted layers.
-  static func blurEffect(for crop: EditingCrop?) -> EditingStack.Edit.LocalAdjustmentEffect {
-    guard let crop else {
-      return .gaussianBlur(radius: 18)
-    }
-
-    let diagonalLength = hypot(crop.cropExtent.width, crop.cropExtent.height)
-    return .gaussianBlur(radius: max(diagonalLength / 50, 1))
-  }
+  /// `GaussianBlurFeature(value: 40)` resolves to diagonal/20 × 40/100 =
+  /// diagonal/50 — the strength the legacy crop-frozen seed produced. Because
+  /// the value form is scale-invariant, the seed no longer depends on the
+  /// current crop and can be a constant. The deterministic effect id keeps a
+  /// reloaded document's committed layer equal to this seed.
+  static let blurEffectPipeline = EffectPipeline(
+    effects: [
+      GaussianBlurFeature(
+        id: .init(rawValue: "brightroom.crop-view.masking-blur"),
+        value: 40
+      )
+    ]
+  )
 
   /// Converts a brush diameter authored in viewport points into the
   /// pre-final-crop image pixels the masking surface expects.

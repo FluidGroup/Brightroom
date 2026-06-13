@@ -1,5 +1,6 @@
 import CoreImage
 import BrightroomEngine
+import BrightroomParametric
 import MetalKit
 import simd
 import UIKit
@@ -34,13 +35,12 @@ private struct EditingCanvasViewportCoreImageBaseLayerCacheKey: Equatable {
   var visibleCanvasFrame: CGRect
   var pixelWidth: Int
   var pixelHeight: Int
-  var filters: EditingStack.Edit.Filters
+  var effects: EffectPipeline
 }
 
 private struct EditingCanvasViewportCoreImageLocalLayerCacheKey: Equatable {
   var baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey
-  var localEffect: EditingStack.Edit.LocalAdjustmentEffect
-  var previewScale: CGFloat
+  var localEffect: EffectPipeline
 }
 
 private struct EditingCanvasViewportCoreImageBaseLayerCache {
@@ -92,14 +92,14 @@ private enum EditingCanvasViewportRenderPath: String {
 
 struct EditingCanvasRenderImages {
   let source: CIImage
-  let filters: EditingStack.Edit.Filters
+  let effects: EffectPipeline
   let base: CIImage
   let adjusted: CIImage
-  let localEffect: EditingStack.Edit.LocalAdjustmentEffect
+  let localEffect: EffectPipeline
   let usesPreparedBaseImage: Bool
 
   var hasLocalEffect: Bool {
-    localEffect.isActive
+    localEffect.hasEnabledEffects
   }
 }
 
@@ -1021,8 +1021,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     let baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-      renderImages.filters
-        .apply(to: sourceImage)
+      renderImages.effects
+        .applyIgnoringFailure(to: sourceImage)
         .cropped(to: sourceImage.extent),
       source: sourceImage
     )
@@ -1042,35 +1042,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     renderViewportCachedCoreImageComposite(
       baseImage: baseImage,
       sourceExtent: renderImages.source.extent,
-      filters: renderImages.filters,
+      effects: renderImages.effects,
       localEffect: renderImages.localEffect,
       drawable: drawable,
       descriptor: descriptor,
       commandBuffer: commandBuffer
     )
     return .cachedSourceComposite
-  }
-
-  private func viewportPreviewScale(
-    pixelWidth: Int,
-    pixelHeight: Int
-  ) -> CGFloat {
-    guard
-      bounds.width > 0,
-      bounds.height > 0,
-      viewportState.visibleContentRect.width > 0,
-      viewportState.visibleContentRect.height > 0,
-      viewportState.visibleCanvasFrame.width > 0,
-      viewportState.visibleCanvasFrame.height > 0
-    else {
-      return 1
-    }
-
-    let drawableScaleX = CGFloat(pixelWidth) / bounds.width
-    let drawableScaleY = CGFloat(pixelHeight) / bounds.height
-    let pixelScaleX = viewportState.visibleCanvasFrame.width * drawableScaleX / viewportState.visibleContentRect.width
-    let pixelScaleY = viewportState.visibleCanvasFrame.height * drawableScaleY / viewportState.visibleContentRect.height
-    return max((pixelScaleX + pixelScaleY) * 0.5, 0.0001)
   }
 
   private func invalidateViewportCoreImageLayerCaches() {
@@ -1181,8 +1159,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private func renderViewportCachedCoreImageComposite(
     baseImage: CIImage,
     sourceExtent: CGRect,
-    filters: EditingStack.Edit.Filters,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
+    effects: EffectPipeline,
+    localEffect: EffectPipeline,
     drawable: CAMetalDrawable,
     descriptor: MTLRenderPassDescriptor,
     commandBuffer: MTLCommandBuffer
@@ -1203,14 +1181,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
     encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
 
-    let previewScale = viewportPreviewScale(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
     let baseLayerKey = EditingCanvasViewportCoreImageBaseLayerCacheKey(
       sourceExtent: sourceExtent,
       visibleContentRect: viewportState.visibleContentRect,
       visibleCanvasFrame: viewportState.visibleCanvasFrame,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
-      filters: filters
+      effects: effects
     )
 
     guard
@@ -1224,7 +1201,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         baseLayerImage,
         baseKey: baseLayerKey,
         localEffect: localEffect,
-        previewScale: previewScale,
         pixelWidth: pixelWidth,
         pixelHeight: pixelHeight
       )
@@ -1298,15 +1274,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private func viewportCoreImageLocalLayerImage(
     _ baseImage: CIImage,
     baseKey: EditingCanvasViewportCoreImageBaseLayerCacheKey,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
-    previewScale: CGFloat,
+    localEffect: EffectPipeline,
     pixelWidth: Int,
     pixelHeight: Int
   ) -> CIImage? {
     let key = EditingCanvasViewportCoreImageLocalLayerCacheKey(
       baseKey: baseKey,
-      localEffect: localEffect,
-      previewScale: previewScale
+      localEffect: localEffect
     )
     if let cache = viewportState.coreImageLocalLayerCache, cache.key == key {
       return cache.image
@@ -1317,7 +1291,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     let adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
       localEffect
-        .apply(to: baseImage, previewScale: previewScale)
+        .applyIgnoringFailure(to: baseImage)
         .cropped(to: baseImage.extent),
       source: baseImage
     )

@@ -6,7 +6,7 @@ import Metal
 /// soft circular alpha stamps for local-adjustment masks.
 ///
 /// The falloff curve here is the contract for committed masks: the export
-/// rasterizer (`LocalAdjustmentStroke.drawSoftStamp` in
+/// rasterizer (`BrushMaskStroke.engineDrawMask` in
 /// LocalAdjustmentRendering.swift) must reproduce
 /// `(1 - smoothstep(hardness, 1, distance)) * opacity` exactly, or exported
 /// masks render wider/stronger than the interactive preview.

@@ -1,6 +1,7 @@
 import XCTest
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 @testable import BrightroomUI
 
 /// Guards the stroke coordinate contract of `CropView.CanvasRenderPlan`.
@@ -13,15 +14,15 @@ import XCTest
 /// final crop is non-identity.
 final class CropViewCanvasStrokeDomainTests: XCTestCase {
 
-  private func makeLayer() -> EditingStack.Edit.LocalAdjustmentLayer {
+  private func makeLayer() -> LocalAdjustmentFeature {
     .init(
-      effect: .gaussianBlur(radius: 10),
-      mask: .init(strokes: [
+      maskTree: .init(root: .brush(.init(strokes: [
         .init(
           stamps: [CGPoint(x: 100, y: 80), CGPoint(x: 140, y: 120)],
-          brush: .init(size: 40, hardness: 1, opacity: 1)
+          brush: .init(diameter: 40, hardness: 1, opacity: 1)
         )
-      ])
+      ]))),
+      effectPipeline: .init(effects: [GaussianBlurFeature(radius: 10)])
     )
   }
 
@@ -39,8 +40,8 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
     )
     let geometry = try XCTUnwrap(EditingCanvasCropOutputGeometry(crop: crop))
 
-    let sourceRecords = layer.mask.strokes.map {
-      EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
+    let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
+      EditingCanvasStrokeRecord(brushMaskStroke: $0)
     }
     let expected = sourceRecords.map {
       geometry.outputRecord(fromSourceRecord: $0)
@@ -58,8 +59,8 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
       localAdjustments: [layer]
     )
 
-    let sourceRecords = layer.mask.strokes.map {
-      EditingCanvasStrokeRecord(localAdjustmentStroke: $0)
+    let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
+      EditingCanvasStrokeRecord(brushMaskStroke: $0)
     }
 
     // CropSurface's rendered-edit-preview canvas is sized to crop.imageSize,

@@ -30,16 +30,28 @@ import BrightroomParametric
 /// list order is the evaluation order per `docs/vision-of-editing.md`. The
 /// engine evaluates the list as given — which features exist, and in what
 /// order, is the host UI's responsibility. Hosts address features they manage
-/// through stable identities (`globalEffectsID`, `finalCropID`,
-/// `localAdjustmentID(for:)`) and mutate them via
+/// through stable identities (`globalEffectsID`, `finalCropID`, or the
+/// feature ids they assign) and mutate them via
 /// `EditingStack.updateFeature(id:mutate:)`.
+///
+/// Pixel parameters use the BrightroomParametric vocabulary directly:
+/// `EffectPipeline` for global effects and `LocalAdjustmentFeature`
+/// (pipeline + mask tree) for masked adjustments. The crop stays the engine's
+/// `EditingCrop` until the parametric domain features can express rotation
+/// and straightening.
 public struct EditingFeature: Equatable, Identifiable {
 
   public enum Payload: Equatable {
-    /// Global filter chain applied to the whole image.
-    case globalEffects(EditingStack.Edit.Filters)
-    /// A masked local adjustment authored in the pre-final-crop domain.
-    case localAdjustment(EditingStack.Edit.LocalAdjustmentLayer)
+    /// Global filter chain applied to the whole image, in the open
+    /// BrightroomParametric vocabulary.
+    case effects(EffectPipeline)
+    /// A masked adjustment authored in the pre-final-crop domain.
+    ///
+    /// Brush stamps follow the engine mask contract: oriented display
+    /// coordinates, top-left origin, y-down. The export renderer rasterizes
+    /// brush masks on the CPU in that space; feeding them to the parametric
+    /// GPU compiler requires a vertical flip at that boundary.
+    case localAdjustment(LocalAdjustmentFeature)
     /// A domain feature defining the visible extent. Currently only the final
     /// crop is evaluated; mid-list crops are reserved for the parametric
     /// renderer.
@@ -47,14 +59,14 @@ public struct EditingFeature: Equatable, Identifiable {
 
     /// The payload kind, used to keep mutations kind-stable.
     public enum Kind: Equatable {
-      case globalEffects
+      case effects
       case localAdjustment
       case crop
     }
 
     public var kind: Kind {
       switch self {
-      case .globalEffects: return .globalEffects
+      case .effects: return .effects
       case .localAdjustment: return .localAdjustment
       case .crop: return .crop
       }
@@ -69,6 +81,12 @@ public struct EditingFeature: Equatable, Identifiable {
     self.payload = payload
   }
 
+  /// Creates a local adjustment node, reusing the adjustment's own identity.
+  public init(localAdjustment: LocalAdjustmentFeature) {
+    self.id = localAdjustment.id
+    self.payload = .localAdjustment(localAdjustment)
+  }
+
   // MARK: - Known identities
 
   /// The identity of the global effects node in the canonical document.
@@ -80,20 +98,4 @@ public struct EditingFeature: Equatable, Identifiable {
   public static let finalCropID = FeatureID(
     rawValue: "brightroom.editing-stack.final-crop"
   )
-
-  private static let localAdjustmentIDPrefix = "brightroom.editing-stack.local-adjustment."
-
-  /// The tree identity for a local adjustment layer.
-  public static func localAdjustmentID(for id: UUID) -> FeatureID {
-    FeatureID(rawValue: localAdjustmentIDPrefix + id.uuidString)
-  }
-
-  /// The local adjustment layer id encoded in a feature identity, if any.
-  public static func localAdjustmentLayerID(from featureID: FeatureID) -> UUID? {
-    guard featureID.rawValue.hasPrefix(localAdjustmentIDPrefix) else {
-      return nil
-    }
-
-    return UUID(uuidString: String(featureID.rawValue.dropFirst(localAdjustmentIDPrefix.count)))
-  }
 }

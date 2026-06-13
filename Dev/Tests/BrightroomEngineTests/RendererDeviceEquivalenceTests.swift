@@ -1,6 +1,7 @@
 import XCTest
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 
 /// Verifies the GPU-backed CIContext path produces output equivalent to the
 /// software renderer that exports historically used (#105, #169), so that
@@ -27,15 +28,14 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
       image: Asset.unsplash2.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { renderer in
-        var filter = FilterExposure()
-        filter.value = 0.72
+        let effects = EffectPipeline(effects: [ExposureFeature(value: 0.72)])
 
         var crop = EditingCrop(imageSize: renderer.source.readImageSize())
         crop.updateCropExtent(toFitAspectRatio: .square)
 
         renderer.edit = .init(
           croppingRect: crop,
-          modifiers: [filter.asAny()],
+          operations: [.effects(effects)],
           drawer: []
         )
       }
@@ -47,10 +47,9 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
       image: Asset.instaLogo.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { renderer in
-        var filter = FilterExposure()
-        filter.value = -0.5
-
-        renderer.edit.modifiers = [filter.asAny()]
+        renderer.edit.operations = [
+          .effects(EffectPipeline(effects: [ExposureFeature(value: -0.5)]))
+        ]
       }
     )
   }
@@ -61,10 +60,9 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
       image: Asset.unsplash3.image,
       options: .init(),
       configure: { renderer in
-        var filter = FilterExposure()
-        filter.value = 0.72
-
-        renderer.edit.modifiers = [filter.asAny()]
+        renderer.edit.operations = [
+          .effects(EffectPipeline(effects: [ExposureFeature(value: 0.72)]))
+        ]
       }
     )
   }

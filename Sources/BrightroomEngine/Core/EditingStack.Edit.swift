@@ -30,10 +30,13 @@ extension EditingStack {
   /// The editing document.
   ///
   /// All editing state is stored as an ordered `features` list — the list
-  /// order is the evaluation order. The named accessors (`crop`, `filters`,
+  /// order is the evaluation order. The named accessors (`crop`, `effects`,
   /// `localAdjustments`) are projections over that list, kept so callers that
   /// only care about the canonical arrangement do not need to walk features
   /// themselves. Their setters rewrite the corresponding feature in place.
+  ///
+  /// Pixel parameters use the BrightroomParametric vocabulary
+  /// (`EffectPipeline`, `LocalAdjustmentFeature`).
   public struct Edit: Equatable {
 
     /// The ordered editing document. Assembly — which features exist and in
@@ -42,11 +45,11 @@ extension EditingStack {
     /// the last one acts as the final crop.
     public private(set) var features: [EditingFeature]
 
-    /// Creates the canonical default document: a neutral global-effects
-    /// feature followed by the final crop.
+    /// Creates the canonical default document: a neutral effects pipeline
+    /// followed by the final crop.
     init(crop: EditingCrop) {
       self.features = [
-        .init(id: EditingFeature.globalEffectsID, payload: .globalEffects(.init())),
+        .init(id: EditingFeature.globalEffectsID, payload: .effects(.init())),
         .init(id: EditingFeature.finalCropID, payload: .crop(crop)),
       ]
     }
@@ -62,22 +65,18 @@ extension EditingStack {
       self.features = features
     }
 
-    func makeFilters() -> [AnyFilter] {
-      return filters.makeFilters()
+    public var imageSize: CGSize {
+      crop.imageSize
     }
 
-    /// Every globalEffects payload in document order; the preview refresh key.
-    var globalEffectsSequence: [Filters] {
+    /// Every effects pipeline in document order; the preview refresh key.
+    var effectsSequence: [EffectPipeline] {
       features.compactMap {
-        if case let .globalEffects(filters) = $0.payload {
-          return filters
+        if case let .effects(pipeline) = $0.payload {
+          return pipeline
         }
         return nil
       }
-    }
-
-    public var imageSize: CGSize {
-      crop.imageSize
     }
 
     // MARK: - Feature list mutations
@@ -157,41 +156,42 @@ extension EditingStack {
       }
     }
 
-    /// The first global-effects feature, or neutral filters when the document
+    /// The first effects pipeline, or an empty pipeline when the document
     /// has none.
-    public var filters: Filters {
+    public var effects: EffectPipeline {
       get {
         for feature in features {
-          if case let .globalEffects(filters) = feature.payload {
-            return filters
+          if case let .effects(pipeline) = feature.payload {
+            return pipeline
           }
         }
         return .init()
       }
       set {
-        if let index = features.firstIndex(where: { $0.payload.kind == .globalEffects }) {
-          features[index].payload = .globalEffects(newValue)
+        if let index = features.firstIndex(where: { $0.payload.kind == .effects }) {
+          features[index].payload = .effects(newValue)
         } else {
           // Canonical-arrangement convenience: hosts composing custom
           // documents insert the feature explicitly instead.
           insertFeatureBeforeFinalCrop(
-            .init(id: EditingFeature.globalEffectsID, payload: .globalEffects(newValue))
+            .init(id: EditingFeature.globalEffectsID, payload: .effects(newValue))
           )
         }
       }
     }
 
-    /// All local adjustment layers in document order.
+    /// All local adjustments in document order.
     ///
-    /// The setter is position-preserving: layers matched by id update their
-    /// feature in place, removed layers drop their feature, and new layers
-    /// insert before the final crop. Reordering existing layers is not
-    /// expressible through this projection — mutate `features` directly.
-    public var localAdjustments: [LocalAdjustmentLayer] {
+    /// The setter is position-preserving: adjustments matched by id update
+    /// their feature in place, removed adjustments drop their feature, and
+    /// new adjustments insert before the final crop. Reordering existing
+    /// adjustments is not expressible through this projection — mutate
+    /// `features` directly.
+    public var localAdjustments: [LocalAdjustmentFeature] {
       get {
         features.compactMap {
-          if case let .localAdjustment(layer) = $0.payload {
-            return layer
+          if case let .localAdjustment(adjustment) = $0.payload {
+            return adjustment
           }
           return nil
         }
@@ -203,18 +203,15 @@ extension EditingStack {
             continue
           }
           if let matched = remaining.firstIndex(where: { $0.id == existing.id }) {
-            features[index].payload = .localAdjustment(remaining.remove(at: matched))
+            let adjustment = remaining.remove(at: matched)
+            features[index].id = adjustment.id
+            features[index].payload = .localAdjustment(adjustment)
           } else {
             features.remove(at: index)
           }
         }
-        for layer in remaining {
-          insertFeatureBeforeFinalCrop(
-            .init(
-              id: EditingFeature.localAdjustmentID(for: layer.id),
-              payload: .localAdjustment(layer)
-            )
-          )
+        for adjustment in remaining {
+          insertFeatureBeforeFinalCrop(.init(localAdjustment: adjustment))
         }
       }
     }
@@ -228,138 +225,12 @@ extension EditingStack {
         switch (lhs.payload, rhs.payload) {
         case let (.crop(a), .crop(b)):
           return a.isRenderingEquivalent(to: b)
-        case let (.globalEffects(a), .globalEffects(b)):
+        case let (.effects(a), .effects(b)):
           return a == b
         case let (.localAdjustment(a), .localAdjustment(b)):
           return a == b
         default:
           return false
-        }
-      }
-    }
-
-    public struct LocalAdjustmentLayer: Equatable {
-      public var id: UUID
-      public var isEnabled: Bool
-      public var effect: LocalAdjustmentEffect
-      public var mask: LocalAdjustmentMask
-
-      public init(
-        id: UUID = UUID(),
-        isEnabled: Bool = true,
-        effect: LocalAdjustmentEffect,
-        mask: LocalAdjustmentMask = .init()
-      ) {
-        self.id = id
-        self.isEnabled = isEnabled
-        self.effect = effect
-        self.mask = mask
-      }
-    }
-
-    public enum LocalAdjustmentEffect: Equatable {
-      case gaussianBlur(radius: CGFloat)
-      case exposure(value: Double)
-    }
-
-    public struct LocalAdjustmentMask: Equatable {
-      public var strokes: [LocalAdjustmentStroke]
-
-      public init(strokes: [LocalAdjustmentStroke] = []) {
-        self.strokes = strokes
-      }
-
-      public var isEmpty: Bool {
-        strokes.allSatisfy(\.stamps.isEmpty)
-      }
-    }
-
-    public struct LocalAdjustmentStroke: Equatable {
-      public var stamps: [CGPoint]
-      public var brush: LocalAdjustmentBrush
-
-      public init(
-        stamps: [CGPoint],
-        brush: LocalAdjustmentBrush
-      ) {
-        self.stamps = stamps
-        self.brush = brush
-      }
-    }
-
-    public struct LocalAdjustmentBrush: Equatable {
-      public var size: CGFloat
-      public var hardness: CGFloat
-      public var opacity: CGFloat
-
-      public init(
-        size: CGFloat,
-        hardness: CGFloat,
-        opacity: CGFloat
-      ) {
-        self.size = size
-        self.hardness = hardness
-        self.opacity = opacity
-      }
-    }
-    
-    public struct Filters: Equatable {
-
-      public var preset: FilterPreset?
-      
-      public var brightness: FilterBrightness?
-      public var contrast: FilterContrast?
-      public var saturation: FilterSaturation?
-      public var exposure: FilterExposure?
-      
-      public var highlights: FilterHighlights?
-      public var shadows: FilterShadows?
-      
-      public var temperature: FilterTemperature?
-      
-      public var sharpen: FilterSharpen?
-      public var gaussianBlur: FilterGaussianBlur?
-      public var unsharpMask: FilterUnsharpMask?
-      
-      public var vignette: FilterVignette?
-      public var fade: FilterFade?
-
-      public var additionalFilters: [AnyFilter] = []
-
-      func makeFilters() -> [AnyFilter] {
-        return (
-          ([
-
-            /**
-             Must be first filter since color-cube does not support wide range color.
-             */
-            preset?.asAny(),
-
-            // Before
-            exposure?.asAny(),
-            brightness?.asAny(),
-            temperature?.asAny(),
-            highlights?.asAny(),
-            shadows?.asAny(),
-            saturation?.asAny(),
-            contrast?.asAny(),
-
-            // After
-            sharpen?.asAny(),
-            unsharpMask?.asAny(),
-            gaussianBlur?.asAny(),
-            fade?.asAny(),
-            vignette?.asAny(),
-
-          ] as [AnyFilter?])
-          + additionalFilters
-        )
-        .compactMap { $0 }
-      }
-      
-      public func apply(to ciImage: CIImage) -> CIImage {
-        makeFilters().reduce(ciImage) { (image, filter) -> CIImage in
-          filter.apply(to: image, sourceImage: image)
         }
       }
     }

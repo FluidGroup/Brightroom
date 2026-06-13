@@ -22,6 +22,13 @@
 import CoreImage
 import UIKit
 
+import BrightroomParametric
+
+/// The shared evaluation context for engine-side parametric evaluation.
+enum EngineParametricEvaluation {
+  static let context = FeatureEvaluationContext()
+}
+
 extension EditingStack.Edit {
 
   enum PreviewPurpose: Sendable {
@@ -40,14 +47,14 @@ extension EditingStack.Edit {
   ) -> CIImage {
     features.reduce(sourceImage) { image, feature in
       switch feature.payload {
-      case .globalEffects(let filters):
-        return filters.apply(to: image)
-      case .localAdjustment(let layer):
+      case .effects(let pipeline):
+        return pipeline.applyIgnoringFailure(to: image)
+      case .localAdjustment(let adjustment):
         switch purpose {
         case .editingBase:
           return image
         case .editing:
-          return layer.apply(to: image)
+          return adjustment.engineRenderIgnoringFailure(over: image)
         }
       case .crop:
         return image
@@ -56,20 +63,56 @@ extension EditingStack.Edit {
   }
 }
 
-extension EditingStack.Edit.LocalAdjustmentLayer {
+extension EffectPipeline {
 
-  func apply(to image: CIImage) -> CIImage {
-    guard isEnabled, mask.isEmpty == false else {
+  /// Whether the pipeline contains any enabled effect.
+  public var hasEnabledEffects: Bool {
+    effects.contains(where: \.isEnabled)
+  }
+
+  /// Applies the pipeline, returning the input unchanged when evaluation
+  /// fails. Failures are programmer errors in built-in effects; custom
+  /// effects throwing here degrade to identity rather than poisoning the
+  /// whole preview chain.
+  public func applyIgnoringFailure(to image: CIImage) -> CIImage {
+    do {
+      return try apply(to: image, context: EngineParametricEvaluation.context)
+    } catch {
+      assertionFailure("EffectPipeline evaluation failed: \(error)")
+      return image
+    }
+  }
+}
+
+extension LocalAdjustmentFeature {
+
+  /// Engine-side evaluation: applies the effect pipeline through the mask,
+  /// preserving the input extent.
+  ///
+  /// Brush masks are rasterized on the CPU in the engine's mask space
+  /// (oriented display coordinates, top-left origin, y-down); other mask
+  /// trees evaluate through the parametric GPU renderer with a vertical flip
+  /// at that boundary. Either way the renderer's evaluation strategy stays
+  /// independent from the document semantics.
+  ///
+  /// Throws when the effect pipeline fails to evaluate, so the export path
+  /// surfaces the error like a global effects operation does instead of
+  /// silently exporting without the adjustment.
+  func engineRender(over image: CIImage) throws -> CIImage {
+    guard isEnabled, maskTree.engineIsEffectivelyEmpty == false else {
+      return image
+    }
+    guard effectPipeline.hasEnabledEffects else {
       return image
     }
 
     let extent = image.extent
     let imageInZeroOrigin = image.removingExtentOffset()
-    let adjustedImage = effect
-      .apply(to: imageInZeroOrigin, previewScale: 1)
+    let adjustedImage = try effectPipeline
+      .apply(to: imageInZeroOrigin, context: EngineParametricEvaluation.context)
       .cropped(to: CGRect(origin: .zero, size: extent.size))
 
-    guard let maskImage = mask.makeCIImage(size: extent.size) else {
+    guard let maskImage = maskTree.engineMakeMaskImage(size: extent.size) else {
       return image
     }
 
@@ -89,47 +132,68 @@ extension EditingStack.Edit.LocalAdjustmentLayer {
       )
     }
   }
-}
 
-extension EditingStack.Edit.LocalAdjustmentEffect {
-
-  public var isActive: Bool {
-    switch self {
-    case let .gaussianBlur(radius):
-      return radius > 0.01
-    case let .exposure(value):
-      return abs(value) > 0.001
+  /// Preview variant of `engineRender(over:)` that degrades to identity when
+  /// evaluation fails, so one failing effect cannot poison the whole preview
+  /// chain. Export must use the throwing variant.
+  func engineRenderIgnoringFailure(over image: CIImage) -> CIImage {
+    do {
+      return try engineRender(over: image)
+    } catch {
+      assertionFailure("Local adjustment evaluation failed: \(error)")
+      return image
     }
   }
+}
 
-  public func apply(
-    to image: CIImage,
-    previewScale: CGFloat = 1
-  ) -> CIImage {
-    switch self {
-    case let .gaussianBlur(radius):
-      let scaledRadius = radius * max(previewScale, 0.0001)
-      guard scaledRadius > 0.01 else {
-        return image
+extension MaskTree {
+
+  /// Whether the mask cannot select anything: a brush-rooted tree that is
+  /// disabled or whose strokes carry no stamps. Composite trees are
+  /// conservatively treated as non-empty.
+  ///
+  /// The disabled check mirrors `FeatureGraphCompiler`, which renders a
+  /// disabled brush leaf as fully transparent — both evaluation strategies
+  /// must agree on what a disabled leaf selects.
+  var engineIsEffectivelyEmpty: Bool {
+    if case let .brush(mask) = root {
+      return mask.isEnabled == false || mask.strokes.allSatisfy(\.stamps.isEmpty)
+    }
+    return false
+  }
+
+  /// Rasterizes the mask for the engine render path.
+  ///
+  /// Brush-rooted trees draw on the CPU in display coordinates (top-left
+  /// origin, y-down — `CIImage(cgImage:)` preserves visual orientation, so no
+  /// flip is applied; the falloff matches the interactive Metal brush).
+  /// Other trees render through the parametric compiler, whose working space
+  /// is y-up, and are flipped back into the display contract.
+  func engineMakeMaskImage(size: CGSize) -> CIImage? {
+    let targetSize = CGSize(
+      width: max(size.width.rounded(), 1),
+      height: max(size.height.rounded(), 1)
+    )
+
+    if case let .brush(mask) = root {
+      guard mask.isEnabled else {
+        return nil
       }
+      return mask.engineMakeCIImage(size: targetSize)
+    }
 
-      return image
-        .clamped(to: image.extent)
-        .applyingFilter(
-          "CIGaussianBlur",
-          parameters: [kCIInputRadiusKey: scaledRadius]
-        )
-        .cropped(to: image.extent)
-
-    case let .exposure(value):
-      guard abs(value) > 0.001 else {
-        return image
-      }
-
-      return image.applyingFilter(
-        "CIExposureAdjust",
-        parameters: [kCIInputEVKey: value]
-      )
+    do {
+      let compiler = FeatureGraphCompiler()
+      let extent = CGRect(origin: .zero, size: targetSize)
+      let rendered = try compiler.renderMask(self, extent: extent)
+      // Stamps are authored y-down; the parametric compiler evaluates y-up.
+      return rendered
+        .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
+        .transformed(by: CGAffineTransform(translationX: 0, y: targetSize.height))
+        .cropped(to: extent)
+    } catch {
+      assertionFailure("Parametric mask rendering failed: \(error)")
+      return nil
     }
   }
 }
@@ -146,7 +210,7 @@ extension EditingStack.Edit.LocalAdjustmentEffect {
 private enum LocalAdjustmentMaskRasterStore {
 
   private struct Entry {
-    let mask: EditingStack.Edit.LocalAdjustmentMask
+    let mask: BrushMask
     let size: CGSize
     let cgImage: CGImage
     let byteCost: Int
@@ -158,7 +222,7 @@ private enum LocalAdjustmentMaskRasterStore {
   private static let totalByteBudget = 64 * 1024 * 1024
 
   static func image(
-    for mask: EditingStack.Edit.LocalAdjustmentMask,
+    for mask: BrushMask,
     size: CGSize
   ) -> CGImage? {
     lock.lock()
@@ -174,7 +238,7 @@ private enum LocalAdjustmentMaskRasterStore {
 
   static func store(
     _ cgImage: CGImage,
-    for mask: EditingStack.Edit.LocalAdjustmentMask,
+    for mask: BrushMask,
     size: CGSize
   ) {
     let byteCost = cgImage.bytesPerRow * cgImage.height
@@ -195,14 +259,9 @@ private enum LocalAdjustmentMaskRasterStore {
   }
 }
 
-extension EditingStack.Edit.LocalAdjustmentMask {
+extension BrushMask {
 
-  fileprivate func makeCIImage(size: CGSize) -> CIImage? {
-    let targetSize = CGSize(
-      width: max(size.width.rounded(), 1),
-      height: max(size.height.rounded(), 1)
-    )
-
+  fileprivate func engineMakeCIImage(size targetSize: CGSize) -> CIImage? {
     if let cached = LocalAdjustmentMaskRasterStore.image(for: self, size: targetSize) {
       return CIImage(cgImage: cached)
         .cropped(to: CGRect(origin: .zero, size: targetSize))
@@ -219,7 +278,7 @@ extension EditingStack.Edit.LocalAdjustmentMask {
       context.fill(CGRect(origin: .zero, size: targetSize))
 
       for stroke in strokes {
-        stroke.drawMask(in: context)
+        stroke.engineDrawMask(in: context)
       }
     }
 
@@ -240,16 +299,16 @@ extension EditingStack.Edit.LocalAdjustmentMask {
   }
 }
 
-extension EditingStack.Edit.LocalAdjustmentStroke {
+extension BrushMaskStroke {
 
-  fileprivate func drawMask(in context: CGContext) {
+  fileprivate func engineDrawMask(in context: CGContext) {
     guard stamps.isEmpty == false else {
       return
     }
 
-    let radius = max(brush.size / 2, 0.5)
-    let opacity = min(max(brush.opacity, 0), 1)
-    let hardness = min(max(brush.hardness, 0), 1)
+    let radius = max(CGFloat(brush.diameter) / 2, 0.5)
+    let opacity = CGFloat(min(max(brush.opacity, 0), 1))
+    let hardness = CGFloat(min(max(brush.hardness, 0), 1))
 
     // The gradient depends only on the per-stroke brush, so build it once
     // instead of per stamp; a long stroke holds hundreds of stamps.
@@ -293,7 +352,8 @@ extension EditingStack.Edit.LocalAdjustmentStroke {
     let colorSpace = CGColorSpaceCreateDeviceRGB()
 
     // The falloff must match the interactive Metal brush
-    // (EditingCanvasBrushMaskShaderSource):
+    // (EditingCanvasBrushMaskShaderSource) and the parametric GPU kernel
+    // (ParametricKernels.metal):
     //   alpha = (1 - smoothstep(hardness, 1, distance)) * opacity
     // A plain linear ramp renders a fatter tail per stamp, and over-blending
     // across overlapping stamps compounds that into visibly wider and

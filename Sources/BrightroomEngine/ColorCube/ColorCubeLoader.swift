@@ -2,10 +2,13 @@ import CoreGraphics
 import Foundation
 import ImageIO
 
+import BrightroomParametric
+
 public enum ColorCubeLoaderError: Error {
   case failedToGetDimensionFromFilename(String)
   case failedToCreageCGDataProvider(String)
   case failedToCraeteCGImageSource(String)
+  case failedToCreateCGImage(String)
   case unsupportedFileExtension(String)
 }
 
@@ -21,7 +24,7 @@ public final class ColorCubeLoader {
     self.bundle = bundle
   }
 
-  public func load() throws -> [FilterColorCube] {
+  public func load() throws -> [ColorCubeFeature] {
     let rootPath = bundle.bundlePath as NSString
     let fileList = try FileManager.default.contentsOfDirectory(atPath: rootPath as String)
 
@@ -56,25 +59,26 @@ public final class ColorCubeLoader {
 
     let parser = ColorCubeTextParser()
 
-    let filters =
+    let features =
       try fileList
       .filter {
         let pathExtension = ($0 as NSString).pathExtension.lowercased()
         return $0.hasPrefix("LUT_") || pathExtension == "cube"
       }
       .sorted()
-      .map { path -> FilterColorCube in
+      .map { path -> ColorCubeFeature in
 
         let url = URL(fileURLWithPath: rootPath.appendingPathComponent(path))
         let pathExtension = (path as NSString).pathExtension.lowercased()
 
         if pathExtension == "cube" {
           let parsedCube = try parser.parse(contentsOf: url)
-          return FilterColorCube(
+          return ColorCubeFeature(
+            id: .init(rawValue: path),
             name: parsedCube.title ?? name(from: path, dimension: parsedCube.dimension),
             identifier: path,
-            cubeData: parsedCube.cubeData,
-            dimension: parsedCube.dimension
+            dimension: parsedCube.dimension,
+            cubeData: parsedCube.cubeData
           )
         }
 
@@ -94,13 +98,25 @@ public final class ColorCubeLoader {
           throw ColorCubeLoaderError.failedToCraeteCGImageSource(path)
         }
 
-        return FilterColorCube(
+        guard let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+          throw ColorCubeLoaderError.failedToCreateCGImage(path)
+        }
+
+        // The parametric document stores cube data directly, so image-based
+        // LUTs are materialized into float cube data at load time.
+        let cubeData = try ColorCubeHelper.createColorCubeData(
+          inputImage: cgImage,
+          cubeDimension: dimension
+        )
+
+        return ColorCubeFeature(
+          id: .init(rawValue: path),
           name: name(from: path, dimension: dimension),
           identifier: path,
-          lutImage: .init(cgImageSource: imageSource),
-          dimension: dimension
+          dimension: dimension,
+          cubeData: cubeData
         )
       }
-    return filters
+    return features
   }
 }

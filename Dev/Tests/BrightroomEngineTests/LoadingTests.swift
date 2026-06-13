@@ -24,6 +24,7 @@ import XCTest
 import StateGraph
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 
 final class LoadingTests: XCTestCase {
 
@@ -144,29 +145,22 @@ final class ColorCubeTextParserTests: XCTestCase {
     XCTAssertEqual(filters[0].name, "Bundle Look")
     XCTAssertEqual(filters[0].identifier, "BundleLook.cube")
     XCTAssertEqual(filters[0].dimension, 2)
-
-    guard case .cubeData(let cubeData, let dimension) = filters[0].lookupTable else {
-      XCTFail("Expected cube data lookup table.")
-      return
-    }
-
-    XCTAssertEqual(dimension, 2)
-    XCTAssertEqual(cubeData.count, 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
+    XCTAssertEqual(filters[0].cubeData.count, 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
   }
 
   func testCubeDataFilterCreatesOutputImage() throws {
     let parsedCube = try ColorCubeTextParser().parse(Self.identityCube(size: 2, title: "Identity 2"))
-    let filter = FilterColorCube(
+    let filter = ColorCubeFeature(
       name: "Identity 2",
       identifier: "Identity2.cube",
-      cubeData: parsedCube.cubeData,
-      dimension: parsedCube.dimension
+      dimension: parsedCube.dimension,
+      cubeData: parsedCube.cubeData
     )
 
     let image = CIImage(color: CIColor(red: 1, green: 0, blue: 0, alpha: 1))
       .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
 
-    let outputImage = filter.apply(to: image, sourceImage: image)
+    let outputImage = try filter.apply(to: image, context: FeatureEvaluationContext())
 
     XCTAssertEqual(outputImage.extent, image.extent)
   }

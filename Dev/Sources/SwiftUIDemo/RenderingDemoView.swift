@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 import MetalKit
 import PhotosUI
@@ -498,18 +499,30 @@ private struct LUTImportDemoView: View {
       return
     }
 
+    guard let cgImage = image.cgImage else {
+      status = "Invalid LUT: no CGImage backing."
+      return
+    }
+
     let identifier = "Imported_\(Int(Date().timeIntervalSince1970))"
-    let filter = FilterColorCube(
+    let cubeData: Data
+    do {
+      cubeData = try ColorCubeHelper.createColorCubeData(inputImage: cgImage, cubeDimension: 64)
+    } catch {
+      status = "Invalid LUT: \(error)"
+      return
+    }
+
+    let cube = ColorCubeFeature(
       name: identifier,
       identifier: identifier,
-      lutImage: .init(image: image),
-      dimension: 64
+      dimension: 64,
+      cubeData: cubeData
     )
-    let preset = FilterPreset(
-      name: filter.name,
-      identifier: filter.identifier,
-      filters: [filter.asAny()],
-      userInfo: [:]
+    let preset = PresetFeature(
+      name: cube.name,
+      identifier: cube.identifier,
+      effects: [cube]
     )
     PresetStorage.default.presets.insert(preset, at: 0)
 

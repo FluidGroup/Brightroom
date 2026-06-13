@@ -1,5 +1,6 @@
 import CoreImage
 import BrightroomEngine
+import BrightroomParametric
 import MetalKit
 import UIKit
 
@@ -9,7 +10,7 @@ import UIKit
 private struct EditingCanvasRenderInputKey: Equatable {
   var sourceImage: ObjectIdentifier
   var displayBounds: CGRect
-  var filters: EditingStack.Edit.Filters
+  var effects: EffectPipeline
   var mode: EditingCanvasMode
 }
 
@@ -40,7 +41,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   private var previousInteractivePopGestureEnabled: Bool?
   private weak var currentEditingStack: EditingStack?
   private var currentMode: EditingCanvasMode = .viewportBase
-  private var currentLocalEffect: EditingStack.Edit.LocalAdjustmentEffect?
+  private var currentLocalEffect: EffectPipeline?
   private var currentRenderInputKey: EditingCanvasRenderInputKey?
   private let strokeCommitPipeline = EditingCanvasStrokeCommitPipeline()
   public var onMetricsChange: ((EditingCanvasMetrics) -> Void)?
@@ -162,7 +163,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
   public func configure(
     interactionMode: EditingCanvasInteractionMode,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect,
+    localEffect: EffectPipeline,
     brush: EditingCanvasBrush,
     smoothing: EditingCanvasStrokeSmoothingConfiguration
   ) {
@@ -176,7 +177,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
   private func configure(
     interactionMode: EditingCanvasInteractionMode,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect?,
+    localEffect: EffectPipeline?,
     brush: EditingCanvasBrush,
     smoothing: EditingCanvasStrokeSmoothingConfiguration
   ) {
@@ -293,14 +294,14 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
 
   public func setEditingStack(
     _ editingStack: EditingStack,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect
+    localEffect: EffectPipeline
   ) {
     setEditingStack(editingStack, localEffect: Optional(localEffect))
   }
 
   private func setEditingStack(
     _ editingStack: EditingStack,
-    localEffect: EditingStack.Edit.LocalAdjustmentEffect?
+    localEffect: EffectPipeline?
   ) {
     setEditingStack(
       editingStack,
@@ -372,7 +373,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     return .init(
       sourceImage: ObjectIdentifier(loadedState.editingSourceImage),
       displayBounds: displayBoundsRect,
-      filters: loadedState.currentEdit.filters,
+      effects: loadedState.currentEdit.effects,
       mode: mode
     )
   }
@@ -402,7 +403,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
   }
 
   private func updateEditingCanvasLocalAdjustmentEffect(
-    _ localEffect: EditingStack.Edit.LocalAdjustmentEffect?
+    _ localEffect: EffectPipeline?
   ) {
     guard let currentEditingStack, let localEffect else {
       return

@@ -98,6 +98,15 @@ public struct FeatureGraphCompiler: Sendable {
       localAdjustmentMasks: localAdjustmentMasks
     )
   }
+
+  /// Renders a mask tree to an alpha image covering the given extent.
+  ///
+  /// Brush stamps are interpreted in Core Image working-space coordinates
+  /// (bottom-left origin, y-up). Callers holding masks authored in a y-down
+  /// display space flip at this boundary.
+  public func renderMask(_ tree: MaskTree, extent: CGRect) throws -> CIImage {
+    try render(tree, extent: extent)
+  }
 }
 
 /// The result of compiling a parametric feature graph.

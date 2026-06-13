@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 import Observation
 import SwiftUI
@@ -37,13 +38,13 @@ final class MetalBrushSandboxModel {
   }
 
   private func applyExposure(_ exposure: Double) {
-    editingStack.set(filters: { filters in
+    editingStack.set(effects: { effects in
       if abs(exposure) < 0.001 {
-        filters.exposure = nil
+        effects.set(nil as ExposureFeature?)
       } else {
-        var filter = FilterExposure()
-        filter.value = exposure
-        filters.exposure = filter
+        // Fixed id: a fresh FeatureID per slider tick makes equal values
+        // compare unequal and churns Equatable-keyed render caches.
+        effects.set(ExposureFeature(id: .init(rawValue: "sandbox.global-exposure"), value: exposure))
       }
     })
   }
@@ -142,12 +143,20 @@ struct MetalBrushSandboxControlValues: Equatable {
     )
   }
 
-  var localAdjustmentEffect: EditingStack.Edit.LocalAdjustmentEffect {
+  var localAdjustmentEffect: EffectPipeline {
+    // Fixed ids: this is computed on every SwiftUI body evaluation, and a
+    // fresh FeatureID per call would make the canvas mode compare unequal
+    // each frame — rebuilding render images and rewriting the committed
+    // layer's pipeline on every render pass.
     switch localEffectKind {
     case .blur:
-      return .gaussianBlur(radius: CGFloat(blurRadius))
+      return .init(effects: [
+        GaussianBlurFeature(id: .init(rawValue: "sandbox.local-blur"), radius: blurRadius)
+      ])
     case .exposure:
-      return .exposure(value: localExposure)
+      return .init(effects: [
+        ExposureFeature(id: .init(rawValue: "sandbox.local-exposure"), value: localExposure)
+      ])
     }
   }
 }

@@ -25,6 +25,8 @@ import UIKit
 import Combine
 import StateGraph
 
+import BrightroomParametric
+
 public enum EditingStackError: Error, Sendable {
   case unableToCreateRendererInLoading
 }
@@ -63,10 +65,6 @@ open class EditingStack: Hashable {
 
   // MARK: - Nested Types
 
-  private struct PreviewFilterPresetRequest: Equatable {
-    var thumbnailImage: CIImage
-  }
-
   public struct Loaded: Equatable {
 
     // MARK: - Properties
@@ -83,9 +81,9 @@ open class EditingStack: Hashable {
      */
     public var currentEdit: Edit {
       didSet {
-        // Keyed on every globalEffects feature, not just the first projection;
+        // Keyed on every effects feature, not just the first projection;
         // a document may carry more than one.
-        if currentEdit.globalEffectsSequence != oldValue.globalEffectsSequence {
+        if currentEdit.effectsSequence != oldValue.effectsSequence {
           editingPreviewImage = currentEdit.makePreviewImage(
             from: editingSourceImage,
             purpose: .editingBase
@@ -127,8 +125,6 @@ open class EditingStack: Hashable {
      */
     public fileprivate(set) var editingPreviewImage: CIImage
 
-    public fileprivate(set) var previewFilterPresets: [PreviewFilterPreset] = []
-
     public var canUndo: Bool {
       // Mirror undoEditing: a history top equal to the current edit is
       // skipped, and an empty history can still undo back to the initial
@@ -169,8 +165,7 @@ open class EditingStack: Hashable {
       thumbnailCIImage: CIImage,
       editingSourceCGImage: CGImage,
       editingSourceCIImage: CIImage,
-      editingPreviewCIImage: CIImage,
-      previewFilterPresets: [PreviewFilterPreset] = []
+      editingPreviewCIImage: CIImage
     ) {
       self.imageSource = imageSource
       self.metadata = metadata
@@ -181,7 +176,6 @@ open class EditingStack: Hashable {
       self.editingSourceCGImage = editingSourceCGImage
       self.editingSourceImage = editingSourceCIImage
       self.editingPreviewImage = editingPreviewCIImage
-      self.previewFilterPresets = previewFilterPresets
     }
 
     // MARK: - Functions
@@ -257,8 +251,6 @@ open class EditingStack: Hashable {
 
   public let imageProvider: ImageProvider
 
-  private let filterPresets: [FilterPreset]
-
   private var subscriptions: Set<AnyCancellable> = .init()
   private var imageProviderSubscription: AnyCancellable?
 
@@ -274,19 +266,15 @@ open class EditingStack: Hashable {
   /// - Parameters:
   ///   - source:
   ///   - previewSize:
-  ///   - colorCubeStorage:
   ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
   public init(
     imageProvider: ImageProvider,
-    presetStorage: PresetStorage = .default,
     options: Options = .init(),
     cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
   ) {
 
     self.options = options
     self.cropModifier = cropModifier
-
-    filterPresets = presetStorage.presets
 
     self.imageProvider = imageProvider
   }
@@ -307,8 +295,6 @@ open class EditingStack: Hashable {
       }
       return
     }
-
-    bindLoadedStateProcessing()
 
     /**
      Start downloading image
@@ -342,33 +328,6 @@ open class EditingStack: Hashable {
 
     hasStartedEditing = true
     return true
-  }
-
-  private func bindLoadedStateProcessing() {
-    withGraphTracking { [weak self] in
-      guard let self else { return }
-
-      withGraphTrackingMap(
-        from: self,
-        map: { stack -> PreviewFilterPresetRequest? in
-          stack.loadedState.map {
-            PreviewFilterPresetRequest(thumbnailImage: $0.thumbnailImage)
-          }
-        },
-        onChange: { [weak self] request in
-          guard let self, let request else { return }
-
-          self.backgroundQueue.async {
-            let presets = self.filterPresets.map {
-              PreviewFilterPreset(sourceImage: request.thumbnailImage, filter: $0)
-            }
-            self.loadedState?.previewFilterPresets = presets
-          }
-        }
-      )
-
-    }
-    .store(in: &subscriptions)
   }
 
   private func handleImageLoaded(
@@ -544,10 +503,10 @@ open class EditingStack: Hashable {
     loadedState?.redoHistory = []
   }
 
-  public func set(filters: (inout Edit.Filters) -> Void) {
+  public func set(effects: (inout EffectPipeline) -> Void) {
     _pixelengine_ensureMainThread()
     applyIfChanged {
-      filters(&$0.filters)
+      effects(&$0.effects)
     }
   }
 
@@ -558,14 +517,14 @@ open class EditingStack: Hashable {
     }
   }
 
-  public func set(localAdjustments: [Edit.LocalAdjustmentLayer]) {
+  public func set(localAdjustments: [LocalAdjustmentFeature]) {
     _pixelengine_ensureMainThread()
     applyIfChanged {
       $0.localAdjustments = localAdjustments
     }
   }
 
-  public func append(localAdjustment: Edit.LocalAdjustmentLayer) {
+  public func append(localAdjustment: LocalAdjustmentFeature) {
     _pixelengine_ensureMainThread()
     applyIfChanged {
       $0.localAdjustments.append(localAdjustment)
@@ -590,14 +549,13 @@ open class EditingStack: Hashable {
     renderer.edit.croppingRect = edit.crop
     // Compile the document in feature order. The crop feature is the domain
     // feature handled via croppingRect; pixel operations keep their list
-    // positions so a filters feature after an adjustment stays after it.
+    // positions so an effects feature after an adjustment stays after it.
     renderer.edit.operations = edit.features.compactMap { feature in
       switch feature.payload {
-      case .globalEffects(let filters):
-        let modifiers = filters.makeFilters()
-        return modifiers.isEmpty ? nil : .filters(modifiers)
-      case .localAdjustment(let layer):
-        return .localAdjustment(layer)
+      case .effects(let pipeline):
+        return pipeline.hasEnabledEffects ? .effects(pipeline) : nil
+      case .localAdjustment(let adjustment):
+        return .localAdjustment(adjustment)
       case .crop:
         return nil
       }

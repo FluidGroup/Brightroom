@@ -24,6 +24,7 @@ import StateGraph
 import XCTest
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 
 final class RendererTests: XCTestCase {
   enum ColorSpaces {
@@ -55,7 +56,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [],
+      operations: [],
       drawer: []
     )
 
@@ -97,10 +98,9 @@ final class RendererTests: XCTestCase {
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    var filter = FilterExposure()
-    filter.value = 0.72
+    let filter = ExposureFeature(value: 0.72)
 
-    renderer.edit.modifiers = [filter.asAny()]
+    renderer.edit.operations = [.effects(EffectPipeline(effects: [filter]))]
 
     let image = try renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -115,15 +115,14 @@ final class RendererTests: XCTestCase {
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    var filter = FilterExposure()
-    filter.value = 0.72
+    let filter = ExposureFeature(value: 0.72)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [filter.asAny()],
+      operations: [.effects(EffectPipeline(effects: [filter]))],
       drawer: []
     )
 
@@ -140,15 +139,14 @@ final class RendererTests: XCTestCase {
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
-    var filter = FilterExposure()
-    filter.value = 0.72
+    let filter = ExposureFeature(value: 0.72)
 
     var crop = EditingCrop(imageSize: imageSource.readImageSize())
     crop.updateCropExtent(toFitAspectRatio: .square)
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [filter.asAny()],
+      operations: [.effects(EffectPipeline(effects: [filter]))],
       drawer: []
     )
 
@@ -172,7 +170,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [],
+      operations: [],
       drawer: []
     )
 
@@ -206,7 +204,7 @@ final class RendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: crop,
-      modifiers: [],
+      operations: [],
       drawer: [mask]
     )
 
@@ -423,7 +421,7 @@ final class RenderCropRendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: Self.fractionalCrop(for: sourceImage),
-      modifiers: [],
+      operations: [],
       drawer: []
     )
 
@@ -441,7 +439,7 @@ final class RenderCropRendererTests: XCTestCase {
 
     renderer.edit = .init(
       croppingRect: Self.fractionalCrop(for: sourceImage),
-      modifiers: [],
+      operations: [],
       drawer: [NoOpDrawing()]
     )
 

@@ -22,6 +22,7 @@
 import SwiftUI
 
 import BrightroomEngine
+import BrightroomParametric
 
 /**
  Apple's Photos app like crop view.
@@ -55,7 +56,7 @@ public struct SwiftUIPhotosCropView: View {
     /// The presets offered by the Filters mode. Presets write into the
     /// FeatureTree's global-effects node. Pass an empty array to offer no
     /// presets.
-    public var filterPresets: [FilterPreset] = PhotosCropDefaultFilterPresets.make()
+    public var filterPresets: [PresetFeature] = PhotosCropDefaultFilterPresets.make()
 
     public init() {
 

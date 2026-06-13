@@ -1,6 +1,7 @@
 import XCTest
 
 @testable import BrightroomEngine
+@testable import BrightroomParametric
 
 /// Guards the coordinate contract of exported local-adjustment masks.
 ///
@@ -19,26 +20,34 @@ final class LocalAdjustmentMaskOrientationTests: XCTestCase {
     // The vertically mirrored position must remain untouched.
     let mirroredCenter = CGPoint(x: imageSize.width * 0.25, y: imageSize.height * 0.75)
 
-    let layer = EditingStack.Edit.LocalAdjustmentLayer(
-      id: UUID(),
-      effect: .exposure(value: 2),
-      mask: .init(strokes: [
-        .init(
-          stamps: [stampCenter],
-          brush: .init(size: imageSize.width * 0.2, hardness: 1, opacity: 1)
+    let adjustment = LocalAdjustmentFeature(
+      maskTree: MaskTree(
+        root: .brush(
+          BrushMask(strokes: [
+            BrushMaskStroke(
+              stamps: [stampCenter],
+              brush: BrushMaskBrush(
+                diameter: imageSize.width * 0.2,
+                hardness: 1,
+                opacity: 1
+              )
+            )
+          ])
         )
-      ])
+      ),
+      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)]),
+      blendMode: .alpha
     )
 
-    func render(localAdjustments: [EditingStack.Edit.LocalAdjustmentLayer]) throws -> CGImage {
+    func render(localAdjustments: [LocalAdjustmentFeature]) throws -> CGImage {
       let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
       renderer.edit.croppingRect = EditingCrop(imageSize: imageSize)
-      renderer.edit.localAdjustments = localAdjustments
+      renderer.edit.operations = localAdjustments.map { .localAdjustment($0) }
       return try renderer.render().cgImage
     }
 
     let base = try render(localAdjustments: [])
-    let adjusted = try render(localAdjustments: [layer])
+    let adjusted = try render(localAdjustments: [adjustment])
 
     let deltaAtStamp = abs(
       try Self.brightness(of: adjusted, at: stampCenter)

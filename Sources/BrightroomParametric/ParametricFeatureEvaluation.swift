@@ -87,6 +87,21 @@ extension DomainFeatureType {
   public func validate() throws {}
 }
 
+extension EffectPipeline {
+
+  /// Evaluates the enabled effects in order over the input image.
+  ///
+  /// This is the pipeline-level evaluator UIs and renderers use without
+  /// fabricating a whole document.
+  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try effects
+      .filter(\.isEnabled)
+      .reduce(image) { image, effect in
+        try effect.apply(to: image, context: context)
+      }
+  }
+}
+
 extension Feature {
 
   /// Compares this feature against another behind an existential.

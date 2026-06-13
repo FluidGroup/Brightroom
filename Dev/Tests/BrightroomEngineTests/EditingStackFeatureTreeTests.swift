@@ -28,23 +28,34 @@ import XCTest
 final class EditingStackFeatureTreeTests: XCTestCase {
 
   private func makeEdit(
-    localAdjustmentIDs: [UUID] = []
+    localAdjustmentIDs: [FeatureID] = []
   ) -> EditingStack.Edit {
     var edit = EditingStack.Edit(
       crop: .init(imageSize: CGSize(width: 1200, height: 800))
     )
     edit.localAdjustments = localAdjustmentIDs.map { id in
-      .init(
+      LocalAdjustmentFeature(
         id: id,
-        effect: .gaussianBlur(radius: 10),
-        mask: .init(
-          strokes: [
-            .init(
-              stamps: [CGPoint(x: 10, y: 20)],
-              brush: .init(size: 24, hardness: 0.7, opacity: 0.9)
+        maskTree: MaskTree(
+          root: .brush(
+            BrushMask(
+              id: .init(rawValue: id.rawValue + ".mask"),
+              strokes: [
+                BrushMaskStroke(
+                  stamps: [CGPoint(x: 10, y: 20)],
+                  brush: BrushMaskBrush(diameter: 24, hardness: 0.7, opacity: 0.9)
+                )
+              ]
             )
-          ]
-        )
+          )
+        ),
+        // The effect id is derived from the layer id so two edits built from
+        // the same layer ids are value-equal: parametric features carry
+        // identity, and a fresh FeatureID per call would make "equivalent"
+        // edits differ by effect identity alone.
+        effectPipeline: EffectPipeline(effects: [
+          GaussianBlurFeature(id: .init(rawValue: id.rawValue + ".blur"), radius: 10)
+        ])
       )
     }
     return edit
@@ -53,21 +64,21 @@ final class EditingStackFeatureTreeTests: XCTestCase {
   // MARK: - Projection
 
   func testProjectionOrderMatchesRenderOrder() {
-    let layerA = UUID()
-    let layerB = UUID()
+    let layerA = FeatureID()
+    let layerB = FeatureID()
     let edit = makeEdit(localAdjustmentIDs: [layerA, layerB])
 
     let tree = EditingFeatureTree(edit: edit)
 
     XCTAssertEqual(tree.nodes.count, 4)
     XCTAssertEqual(tree.nodes[0].id, EditingFeatureTree.globalEffectsNodeID)
-    XCTAssertEqual(tree.nodes[1].id, EditingFeatureTree.nodeID(forLocalAdjustment: layerA))
-    XCTAssertEqual(tree.nodes[2].id, EditingFeatureTree.nodeID(forLocalAdjustment: layerB))
+    XCTAssertEqual(tree.nodes[1].id, layerA)
+    XCTAssertEqual(tree.nodes[2].id, layerB)
     XCTAssertEqual(tree.nodes[3].id, EditingFeatureTree.finalCropNodeID)
   }
 
   func testProjectionIsStableAcrossEquivalentEdits() {
-    let layer = UUID()
+    let layer = FeatureID()
 
     let treeA = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
     let treeB = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
@@ -77,31 +88,23 @@ final class EditingStackFeatureTreeTests: XCTestCase {
   }
 
   func testAccessors() {
-    let layer = UUID()
+    let layer = FeatureID()
     let edit = makeEdit(localAdjustmentIDs: [layer])
     let tree = EditingFeatureTree(edit: edit)
 
     XCTAssertEqual(tree.finalCrop, edit.crop)
-    XCTAssertEqual(tree.globalEffects, edit.filters)
+    XCTAssertEqual(tree.globalEffects, edit.effects)
     XCTAssertEqual(tree.localAdjustmentNodes.count, 1)
     XCTAssertEqual(
-      tree.localAdjustment(id: EditingFeatureTree.nodeID(forLocalAdjustment: layer)),
+      tree.localAdjustment(id: layer),
       edit.localAdjustments[0]
     )
-  }
-
-  func testLocalAdjustmentNodeIDRoundTrip() {
-    let id = UUID()
-    let nodeID = EditingFeatureTree.nodeID(forLocalAdjustment: id)
-
-    XCTAssertEqual(EditingFeatureTree.localAdjustmentID(from: nodeID), id)
-    XCTAssertNil(EditingFeatureTree.localAdjustmentID(from: EditingFeatureTree.finalCropNodeID))
   }
 
   // MARK: - Point resolution
 
   func testAppliedFeatureCount() {
-    let layer = UUID()
+    let layer = FeatureID()
     let tree = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
 
     XCTAssertEqual(tree.appliedFeatureCount(at: .source), 0)
@@ -110,7 +113,7 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       1
     )
     XCTAssertEqual(
-      tree.appliedFeatureCount(at: .after(EditingFeatureTree.nodeID(forLocalAdjustment: layer))),
+      tree.appliedFeatureCount(at: .after(layer)),
       2
     )
     XCTAssertEqual(tree.appliedFeatureCount(at: .output), 3)
@@ -118,9 +121,9 @@ final class EditingStackFeatureTreeTests: XCTestCase {
   }
 
   func testPointIncludesFeature() {
-    let layer = UUID()
+    let layer = FeatureID()
     let tree = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
-    let layerNodeID = EditingFeatureTree.nodeID(forLocalAdjustment: layer)
+    let layerNodeID = layer
     let cropNodeID = EditingFeatureTree.finalCropNodeID
 
     XCTAssertEqual(tree.point(.output, includes: cropNodeID), true)
@@ -151,30 +154,29 @@ final class EditingStackFeatureTreeTests: XCTestCase {
 
   func testUpdateGlobalEffectsFeature() {
     var edit = makeEdit()
-    var exposure = FilterExposure()
-    exposure.value = 0.5
+    let exposure = ExposureFeature(value: 0.5)
 
     let result = EditingFeatureTree.updateFeature(
       id: EditingFeatureTree.globalEffectsNodeID,
       in: &edit
     ) { payload in
-      guard case var .globalEffects(filters) = payload else {
+      guard case var .effects(pipeline) = payload else {
         return
       }
-      filters.exposure = exposure
-      payload = .globalEffects(filters)
+      pipeline.set(exposure)
+      payload = .effects(pipeline)
     }
 
     XCTAssertTrue(result)
-    XCTAssertEqual(edit.filters.exposure, exposure)
+    XCTAssertEqual(edit.effects.first(of: ExposureFeature.self), exposure)
   }
 
   func testUpdateLocalAdjustmentFeature() {
-    let layer = UUID()
+    let layer = FeatureID()
     var edit = makeEdit(localAdjustmentIDs: [layer])
 
     let result = EditingFeatureTree.updateFeature(
-      id: EditingFeatureTree.nodeID(forLocalAdjustment: layer),
+      id: layer,
       in: &edit
     ) { payload in
       guard case var .localAdjustment(value) = payload else {
@@ -205,11 +207,11 @@ final class EditingStackFeatureTreeTests: XCTestCase {
   }
 
   func testRemoveLocalAdjustmentFeature() {
-    let layer = UUID()
+    let layer = FeatureID()
     var edit = makeEdit(localAdjustmentIDs: [layer])
 
     let result = EditingFeatureTree.removeFeature(
-      id: EditingFeatureTree.nodeID(forLocalAdjustment: layer),
+      id: layer,
       from: &edit
     )
 
@@ -227,19 +229,19 @@ final class EditingStackFeatureTreeTests: XCTestCase {
     XCTAssertEqual(edit, original)
   }
 
-  func testGlobalEffectsIsRemovableAndFiltersFallBackToNeutral() {
+  func testGlobalEffectsIsRemovableAndEffectsFallBackToNeutral() {
     var edit = makeEdit()
 
     XCTAssertTrue(
       EditingFeatureTree.removeFeature(id: EditingFeatureTree.globalEffectsNodeID, from: &edit)
     )
-    XCTAssertEqual(edit.filters, .init())
+    XCTAssertEqual(edit.effects, .init())
 
     // The canonical projection re-creates the feature before the final crop.
-    var filters = EditingStack.Edit.Filters()
-    filters.brightness = FilterBrightness()
-    edit.filters = filters
-    XCTAssertEqual(edit.filters, filters)
+    var pipeline = EffectPipeline()
+    pipeline.set(BrightnessFeature(value: 0.1))
+    edit.effects = pipeline
+    XCTAssertEqual(edit.effects, pipeline)
     XCTAssertEqual(edit.features.last?.payload.kind, .crop)
   }
 }

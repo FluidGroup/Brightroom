@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import CoreGraphics
 import SwiftUI
 import UIKit
@@ -73,7 +74,7 @@ public enum EditingCanvasMode: Equatable {
   /// Use this mode with `.interactionMode(.view)` when an existing local
   /// adjustment should remain visible while drawing is disabled. The mask is
   /// kept in the canvas runtime instead of being rasterized through CoreGraphics.
-  case localAdjustment(effect: EditingStack.Edit.LocalAdjustmentEffect)
+  case localAdjustment(effect: EffectPipeline)
 
   /// Materializes the global edit stack into a read-only preview image.
   ///
@@ -88,16 +89,16 @@ public enum EditingCanvasMode: Equatable {
   /// when a materialized global-filter preview is explicitly required.
   case preview
 
-  var localEffect: EditingStack.Edit.LocalAdjustmentEffect {
+  var localEffect: EffectPipeline {
     switch self {
     case .viewportBase, .renderedEditPreview, .preview:
-      return .gaussianBlur(radius: 0)
+      return .init()
     case let .localAdjustment(effect):
       return effect
     }
   }
 
-  var activeLocalEffect: EditingStack.Edit.LocalAdjustmentEffect? {
+  var activeLocalEffect: EffectPipeline? {
     switch self {
     case .viewportBase, .renderedEditPreview, .preview:
       return nil
