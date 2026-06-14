@@ -12,95 +12,94 @@ import XCTest
 
 final class RendererOrientationTests: XCTestCase {
 
-  private func run(image: UIImage, orientation: CGImagePropertyOrientation) throws
+  private func run(image: UIImage, orientation: CGImagePropertyOrientation) async throws
     -> BrightRoomImageRenderer.Rendered
   {
 
     let imageSource = ImageSource(image: image)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: orientation)
 
-    let rendered = try renderer.render()
-    XCTAssert(rendered.engine == .coreGraphics)
+    let rendered = try await renderer.render()
     return rendered
   }
 
-  func testOrientationRight() throws {
-    let r = try run(
+  func testOrientationRight() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_right.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .right
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationDown() throws {
-    let r = try run(
+  func testOrientationDown() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_down.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .down
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationLeft() throws {
-    let r = try run(
+  func testOrientationLeft() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_left.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .left
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationUp() throws {
-    let r = try run(
+  func testOrientationUp() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_up.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .up
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationLeftMirrored() throws {
-    let r = try run(
+  func testOrientationLeftMirrored() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_left_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .leftMirrored
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationDownMirrored() throws {
-    let r = try run(
+  func testOrientationDownMirrored() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_down_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .downMirrored
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationRightMirrored() throws {
-    let r = try run(
+  func testOrientationRightMirrored() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_right_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .rightMirrored
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 
-  func testOrientationUpMirrored() throws {
-    let r = try run(
+  func testOrientationUpMirrored() async throws {
+    let r = try await run(
       image: UIImage(named: "orientation_up_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .upMirrored
     )
-    let cgImage = r.cgImage
-    let uiImage = r.uiImage
+    let cgImage = try r.cgImage
+    let uiImage = try r.uiImage
     print(cgImage, uiImage)
   }
 }

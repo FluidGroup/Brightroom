@@ -12,53 +12,58 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
     static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
   }
 
-  func testEquivalence_displayP3Input_noEffects() throws {
+  func testEquivalence_displayP3Input_noEffects() async throws {
     let image = Asset.instaLogo.image
     XCTAssertEqual(ImageSource(image: image).loadOriginalCGImage().colorSpace, ColorSpaces.displayP3)
 
-    try assertDeviceEquivalence(
+    try await assertDeviceEquivalence(
       image: image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { _ in }
     )
   }
 
-  func testEquivalence_sRGBInput_effects_crop() throws {
-    try assertDeviceEquivalence(
+  func testEquivalence_sRGBInput_effects_crop() async throws {
+    try await assertDeviceEquivalence(
       image: Asset.unsplash2.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { renderer in
         let effects = EffectPipeline(effects: [ExposureFeature(value: 0.72)])
 
-        var crop = EditingCrop(imageSize: renderer.source.readImageSize())
-        crop.updateCropExtent(toFitAspectRatio: .square)
+        let size = renderer.source.readImageSize()
+        let crop = CropFeature.test(
+          imageSize: size,
+          cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+        )
 
-        renderer.edit = .make(crop: crop, effects: effects)
+        renderer.edit = .make(crop: crop, orientedImageSize: size, effects: effects)
       }
     )
   }
 
-  func testEquivalence_displayP3Input_effects() throws {
-    try assertDeviceEquivalence(
+  func testEquivalence_displayP3Input_effects() async throws {
+    try await assertDeviceEquivalence(
       image: Asset.instaLogo.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
       configure: { renderer in
         renderer.edit = .make(
-          crop: EditingCrop(imageSize: renderer.source.readImageSize()),
+          crop: CropFeature.test(imageSize: renderer.source.readImageSize()),
+          orientedImageSize: renderer.source.readImageSize(),
           effects: EffectPipeline(effects: [ExposureFeature(value: -0.5)])
         )
       }
     )
   }
 
-  func testEquivalence_sRGBInput_intrinsicColorSpace_effects() throws {
+  func testEquivalence_sRGBInput_intrinsicColorSpace_effects() async throws {
     // workingColorSpace nil: rendering uses the source's intrinsic color space.
-    try assertDeviceEquivalence(
+    try await assertDeviceEquivalence(
       image: Asset.unsplash3.image,
       options: .init(),
       configure: { renderer in
         renderer.edit = .make(
-          crop: EditingCrop(imageSize: renderer.source.readImageSize()),
+          crop: CropFeature.test(imageSize: renderer.source.readImageSize()),
+          orientedImageSize: renderer.source.readImageSize(),
           effects: EffectPipeline(effects: [ExposureFeature(value: 0.72)])
         )
       }
@@ -74,15 +79,12 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
     maxChannelDifference: Int = 3,
     file: StaticString = #filePath,
     line: UInt = #line
-  ) throws {
-    let gpuRendered = try render(image: image, device: .gpu, options: options, configure: configure)
-    let cpuRendered = try render(image: image, device: .software, options: options, configure: configure)
+  ) async throws {
+    let gpuRendered = try await render(image: image, device: .gpu, options: options, configure: configure)
+    let cpuRendered = try await render(image: image, device: .software, options: options, configure: configure)
 
-    XCTAssertEqual(gpuRendered.engine, .combined, file: file, line: line)
-    XCTAssertEqual(cpuRendered.engine, .combined, file: file, line: line)
-
-    let gpuImage = gpuRendered.cgImage
-    let cpuImage = cpuRendered.cgImage
+    let gpuImage = try gpuRendered.cgImage
+    let cpuImage = try cpuRendered.cgImage
 
     XCTAssertEqual(gpuImage.width, cpuImage.width, file: file, line: line)
     XCTAssertEqual(gpuImage.height, cpuImage.height, file: file, line: line)
@@ -120,11 +122,11 @@ final class RendererDeviceEquivalenceTests: XCTestCase {
     device: BrightRoomImageRenderer.RenderingDevice,
     options: BrightRoomImageRenderer.Options,
     configure: (BrightRoomImageRenderer) -> Void
-  ) throws -> BrightRoomImageRenderer.Rendered {
+  ) async throws -> BrightRoomImageRenderer.Rendered {
     let renderer = BrightRoomImageRenderer(source: ImageSource(image: image), orientation: .up)
     renderer.renderingDevice = device
     configure(renderer)
-    return try renderer.render(options: options)
+    return try await renderer.render(options: options)
   }
 
   private func rgba8Data(of image: CGImage) throws -> [UInt8] {

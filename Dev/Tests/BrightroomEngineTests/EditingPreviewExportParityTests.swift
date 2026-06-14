@@ -23,7 +23,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   private func export(
     _ edit: EditingStack.Edit,
     source: CGImage
-  ) throws -> CGImage {
+  ) async throws -> CGImage {
     let renderer = BrightRoomImageRenderer(
       source: ImageSource(cgImage: source),
       orientation: .up
@@ -31,9 +31,9 @@ final class EditingPreviewExportParityTests: XCTestCase {
     // Build the renderer's parametric document through the production bridge —
     // the same lowering `EditingStack.makeRenderer` uses.
     renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
+      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize)
     )
-    return try renderer.render(
+    return try await renderer.render(
       options: .init(workingColorSpace: Self.sRGB)
     ).cgImage
   }
@@ -60,37 +60,37 @@ final class EditingPreviewExportParityTests: XCTestCase {
 
   /// Effects + a masked local adjustment with an identity crop: the export and
   /// the preview composition must be pixel-equivalent across the whole frame.
-  func testPreviewMatchesExportWithoutCrop() throws {
+  func testPreviewMatchesExportWithoutCrop() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
       leftWhite: 0.2,
       rightWhite: 0.8
     )
-    var edit = EditingStack.Edit(crop: EditingCrop(imageSize: CGSize(width: 60, height: 24)))
+    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
     edit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
     edit.localAdjustments = [
       Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
     ]
 
-    let exported = try export(edit, source: source)
+    let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
 
     XCTAssertEqual(exported.width, preview.width)
     XCTAssertEqual(exported.height, preview.height)
-    // Export now composes through the parametric compiler (GPU mask kernel)
-    // while this preview composition still uses the engine's CPU mask raster,
-    // so the blur-gradient edge rounds a few extra LSB apart until the preview
-    // path is unified onto the same graph. A real composition bug (wrong order,
-    // missing/unmasked adjustment, a y-flip) still diverges by tens-to-hundreds
-    // of LSB, far beyond this tolerance.
+    // Both paths now rasterize the brush mask through the same parametric
+    // `brushStamp` kernel (preview via `engineMakeMaskImage`, export via the
+    // compiler), so they agree closely; the small tolerance only absorbs
+    // resampling/rounding at the blur-gradient edge. A real composition bug
+    // (wrong order, missing/unmasked adjustment, a y-flip) still diverges by
+    // tens-to-hundreds of LSB, far beyond this tolerance.
     assertImagesMatch(exported, preview, tolerance: 16)
   }
 
   /// A non-identity crop (no rotation): export pixel (x, y) must equal the
   /// preview composition at (cropMinX + x, cropMinY + y), proving both paths
   /// apply the crop to the same composed image.
-  func testPreviewMatchesExportThroughCrop() throws {
+  func testPreviewMatchesExportThroughCrop() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -98,8 +98,8 @@ final class EditingPreviewExportParityTests: XCTestCase {
       rightWhite: 0.8
     )
     let cropRect = CGRect(x: 30, y: 0, width: 30, height: 24)
-    var edit = EditingStack.Edit(crop: EditingCrop(imageSize: CGSize(width: 60, height: 24)))
-    edit.crop = EditingCrop(
+    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
+    edit.crop = CropFeature.test(
       imageSize: CGSize(width: 60, height: 24),
       cropRect: cropRect
     )
@@ -108,7 +108,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
       Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
     ]
 
-    let exported = try export(edit, source: source)
+    let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
 
     XCTAssertEqual(exported.width, Int(cropRect.width))
@@ -128,7 +128,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// A disabled brush leaf must select nothing in BOTH paths: export and
   /// preview equal the globally-adjusted image with no local blur, matching the
   /// parametric compiler's transparent disabled-leaf contract.
-  func testDisabledMaskLeafIsIgnoredByBothPaths() throws {
+  func testDisabledMaskLeafIsIgnoredByBothPaths() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -137,7 +137,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
     )
     let baseImageSize = CGSize(width: 60, height: 24)
 
-    var disabledEdit = EditingStack.Edit(crop: EditingCrop(imageSize: baseImageSize))
+    var disabledEdit = EditingStack.Edit.test(imageSize: baseImageSize)
     disabledEdit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
     var disabledLayer = Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12))
     if case var .brush(mask) = disabledLayer.maskTree.root {
@@ -147,11 +147,11 @@ final class EditingPreviewExportParityTests: XCTestCase {
     disabledEdit.localAdjustments = [disabledLayer]
 
     // Reference: same document with no local adjustment at all.
-    var globalOnlyEdit = EditingStack.Edit(crop: EditingCrop(imageSize: baseImageSize))
+    var globalOnlyEdit = EditingStack.Edit.test(imageSize: baseImageSize)
     globalOnlyEdit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
 
-    let disabledExport = try export(disabledEdit, source: source)
-    let globalOnlyExport = try export(globalOnlyEdit, source: source)
+    let disabledExport = try await export(disabledEdit, source: source)
+    let globalOnlyExport = try await export(globalOnlyEdit, source: source)
     let disabledPreview = try previewComposition(disabledEdit, source: source)
 
     // The disabled-leaf export must equal the no-adjustment export...
@@ -167,9 +167,9 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// (The preview path's release-mode degrade-to-identity is not asserted here:
   /// `engineRenderIgnoringFailure` calls `assertionFailure`, which traps in the
   /// debug test build — the same intentional contract global effects use.)
-  func testThrowingLocalAdjustmentFailsExport() throws {
+  func testThrowingLocalAdjustmentFailsExport() async throws {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
-    var edit = EditingStack.Edit(crop: EditingCrop(imageSize: CGSize(width: 32, height: 32)))
+    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 32, height: 32))
 
     let throwingLayer = LocalAdjustmentFeature(
       maskTree: MaskTree(
@@ -186,16 +186,20 @@ final class EditingPreviewExportParityTests: XCTestCase {
     )
     edit.localAdjustments = [throwingLayer]
 
-    XCTAssertThrowsError(try export(edit, source: source)) { error in
+    do {
+      _ = try await export(edit, source: source)
+      XCTFail("expected export to throw")
+    } catch {
       XCTAssertTrue(error is ThrowingEffectFeature.EvaluationError)
     }
   }
 
-  /// The export mask raster (CPU) must reproduce the live canvas brush shader's
-  /// falloff `(1 - smoothstep(hardness, 1, d)) * opacity`. If the export used a
-  /// hard disc or a linear ramp, painted blur edges would render wider/harder
-  /// than the interactive preview showed. This samples the alpha profile of a
-  /// single soft stamp and checks it against that contract.
+  /// The shared parametric `brushStamp` kernel (used by the engine preview and
+  /// the export renderer via `engineMakeMaskImage` / `renderMask`) must produce
+  /// the falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
+  /// shader also draws. If it used a hard disc or a linear ramp, painted blur
+  /// edges would render wider/harder than the interactive preview showed. This
+  /// samples the alpha profile of a single soft stamp and checks that contract.
   func testExportMaskReproducesLiveCanvasBrushFalloff() throws {
     let canvas = 300
     let center = CGPoint(x: 150, y: 150)

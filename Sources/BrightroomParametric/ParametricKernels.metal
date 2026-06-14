@@ -28,11 +28,15 @@
 // loader can switch to `CIColorKernel(functionName:fromMetalLibraryData:)`
 // without touching this source.
 //
-// The brushStamp falloff is a shared contract:
-//   alpha = (1 - smoothstep(hardness, 1, normalizedDistance)) * opacity
-// It must stay in sync with the interactive Metal brush
-// (EditingCanvasBrushMaskShaderSource) and the CPU raster
-// (LocalAdjustmentRendering.makeSoftStampGradient).
+// This `brushStamp` kernel is one of the brush-mask rasterizers; the live
+// in-flight-stroke render shader (EditingCanvasBrushMaskShaderSource) is the
+// other. Both now share ONE falloff — `brushStampAlpha`, defined in
+// `BrushStampSharedSource.falloffFunctionMSL` and prepended to this source at
+// runtime by `ParametricKernelRegistry` — so the falloff cannot drift.
+//
+// `brushStampAlpha` is injected, NOT defined here. If this file is ever switched
+// from a `.copy` resource to build-time metallib compilation, inline the shared
+// function (or the build will fail on the undefined symbol).
 
 #include <CoreImage/CoreImage.h>
 using namespace metal;
@@ -45,23 +49,12 @@ extern "C" { namespace coreimage {
     float opacity,
     destination dest
   ) {
-    if (radius <= 0.0 || opacity <= 0.0) {
+    if (radius <= 0.0) {
       return float4(0.0);
     }
 
-    float distanceFromCenter = length(dest.coord() - center);
-    if (distanceFromCenter > radius) {
-      return float4(0.0);
-    }
-
-    float normalizedDistance = distanceFromCenter / radius;
-    float alpha = 1.0;
-    if (hardness < 0.999) {
-      float start = clamp(hardness, 0.0, 0.998);
-      alpha = 1.0 - smoothstep(start, 1.0, normalizedDistance);
-    }
-
-    alpha *= clamp(opacity, 0.0, 1.0);
+    float normalizedDistance = length(dest.coord() - center) / radius;
+    float alpha = brushStampAlpha(normalizedDistance, hardness, opacity);
     return float4(alpha, alpha, alpha, alpha);
   }
 

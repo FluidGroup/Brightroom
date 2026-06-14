@@ -30,9 +30,7 @@ final class EditingStackFeatureTreeTests: XCTestCase {
   private func makeEdit(
     localAdjustmentIDs: [FeatureID] = []
   ) -> EditingStack.Edit {
-    var edit = EditingStack.Edit(
-      crop: .init(imageSize: CGSize(width: 1200, height: 800))
-    )
+    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 1200, height: 800))
     edit.localAdjustments = localAdjustmentIDs.map { id in
       LocalAdjustmentFeature(
         id: id,
@@ -138,14 +136,17 @@ final class EditingStackFeatureTreeTests: XCTestCase {
 
   func testUpdateCropFeature() {
     var edit = makeEdit()
-    var newCrop = edit.crop
-    newCrop.updateCropExtent(CGRect(x: 100, y: 100, width: 400, height: 300))
+    let newCrop = CropFeature(
+      id: edit.crop.id,
+      displayCropRect: CGRect(x: 100, y: 100, width: 400, height: 300),
+      imageSize: CGSize(width: 1200, height: 800)
+    )
 
     let result = EditingFeatureTree.updateFeature(
       id: EditingFeatureTree.finalCropNodeID,
       in: &edit
-    ) { payload in
-      payload = .crop(newCrop)
+    ) { feature in
+      feature = .domain(newCrop)
     }
 
     XCTAssertTrue(result)
@@ -159,12 +160,15 @@ final class EditingStackFeatureTreeTests: XCTestCase {
     let result = EditingFeatureTree.updateFeature(
       id: EditingFeatureTree.globalEffectsNodeID,
       in: &edit
-    ) { payload in
-      guard case var .effects(pipeline) = payload else {
+    ) { feature in
+      guard
+        case let .effect(effect) = feature,
+        var bundle = effect as? EffectPipelineFeature
+      else {
         return
       }
-      pipeline.set(exposure)
-      payload = .effects(pipeline)
+      bundle.pipeline.set(exposure)
+      feature = .effect(bundle)
     }
 
     XCTAssertTrue(result)
@@ -178,12 +182,12 @@ final class EditingStackFeatureTreeTests: XCTestCase {
     let result = EditingFeatureTree.updateFeature(
       id: layer,
       in: &edit
-    ) { payload in
-      guard case var .localAdjustment(value) = payload else {
+    ) { feature in
+      guard case var .localAdjustment(value) = feature else {
         return
       }
       value.isEnabled = false
-      payload = .localAdjustment(value)
+      feature = .localAdjustment(value)
     }
 
     XCTAssertTrue(result)
@@ -242,6 +246,10 @@ final class EditingStackFeatureTreeTests: XCTestCase {
     pipeline.set(BrightnessFeature(value: 0.1))
     edit.effects = pipeline
     XCTAssertEqual(edit.effects, pipeline)
-    XCTAssertEqual(edit.features.last?.payload.kind, .crop)
+    if case .domain = edit.features.last {
+      // The crop domain feature remains last.
+    } else {
+      XCTFail("The final feature must be the crop domain.")
+    }
   }
 }

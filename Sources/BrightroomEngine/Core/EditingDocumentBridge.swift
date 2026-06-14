@@ -51,101 +51,50 @@ extension EditingStack.Edit {
     makeEditingDocument(through: .full, orientedImageSize: orientedImageSize)
   }
 
-  /// Lowers a subset of the feature list into a parametric `EditingDocument`.
+  /// Lowers a subset of the document into a parametric `EditingDocument`.
   ///
-  /// The mapping is order-preserving: an effects pipeline expands into one
-  /// `.effect` per effect, a local adjustment passes through (with its brush
-  /// mask flipped into the compiler's y-up space), and a crop becomes a
-  /// `.domain(CropFeature)` whose geometry matches the engine's `RenderCrop`.
+  /// `Edit` already stores a parametric `EditingDocument`, so this is nearly the
+  /// identity: effect nodes (the bundled `EffectPipelineFeature`, flattened by
+  /// the compiler) and crop domain features pass through unchanged, and a local
+  /// adjustment has its brush mask flipped from the engine's y-down authoring
+  /// space into the compiler's y-up working space.
   public func makeEditingDocument(
     through subset: DocumentSubset,
     orientedImageSize: CGSize
   ) -> EditingDocument {
 
-    let sourceFeatures: ArraySlice<EditingFeature>
+    let allFeatures = features
+    let sourceFeatures: ArraySlice<MainFeature>
     switch subset {
     case .full:
-      sourceFeatures = features[...]
+      sourceFeatures = allFeatures[...]
     case .throughFinalCropExclusive:
-      if let lastCropIndex = features.lastIndex(where: { $0.payload.kind == .crop }) {
-        sourceFeatures = features[..<lastCropIndex]
+      if let lastCropIndex = allFeatures.lastIndex(where: Self.isCropFeature) {
+        sourceFeatures = allFeatures[..<lastCropIndex]
       } else {
-        sourceFeatures = features[...]
+        sourceFeatures = allFeatures[...]
       }
     }
 
-    var mainFeatures: [MainFeature] = []
-    for feature in sourceFeatures {
-      switch feature.payload {
-      case .effects(let pipeline):
-        // Expand the pipeline into individual main-tree effects so document
-        // order is preserved across interleaved effects/adjustments. The
-        // compiler skips disabled features, so no pre-filter is needed.
-        mainFeatures.append(contentsOf: pipeline.effects.map { MainFeature.effect($0) })
-
+    let mainFeatures = sourceFeatures.map { feature -> MainFeature in
+      switch feature {
       case .localAdjustment(let adjustment):
-        mainFeatures.append(
-          .localAdjustment(
-            adjustment.loweredToParametricDocument(domainHeight: orientedImageSize.height)
-          )
+        return .localAdjustment(
+          adjustment.loweredToParametricDocument(domainHeight: orientedImageSize.height)
         )
-
-      case .crop(let crop):
-        mainFeatures.append(
-          .domain(crop.parametricCropFeature(id: feature.id, orientedImageSize: orientedImageSize))
-        )
+      case .effect, .domain:
+        return feature
       }
     }
 
-    return EditingDocument(mainTree: MainTree(features: mainFeatures))
+    return EditingDocument(mainTree: MainTree(features: Array(mainFeatures)))
   }
-}
 
-// MARK: - EditingCrop → CropFeature
-
-extension QuarterTurn {
-
-  /// Maps the engine's quarter-turn rotation. The signed-degree raw values
-  /// match `EditingCrop.Rotation.angle`, so the sign convention is preserved.
-  init(engine rotation: EditingCrop.Rotation) {
-    switch rotation {
-    case .angle_0: self = .zero
-    case .angle_90: self = .quarterCW
-    case .angle_180: self = .half
-    case .angle_270: self = .quarterCCW
+  private static func isCropFeature(_ feature: MainFeature) -> Bool {
+    if case let .domain(domain) = feature, domain is CropFeature {
+      return true
     }
-  }
-}
-
-extension EditingCrop {
-
-  /// Lowers the engine crop into a pure parametric crop feature.
-  ///
-  /// The crop rect is snapped to the engine's inward-integer pixel contract
-  /// (`RenderCrop`/`PixelCropRect`) so the materialized extent matches the
-  /// legacy `croppedWithColorspace` output, and flipped from the engine's
-  /// y-down display space into the compiler's y-up working space. Rotation and
-  /// the free straighten angle carry over and are applied about the crop center
-  /// by `CropFeature.apply`.
-  func parametricCropFeature(id: FeatureID, orientedImageSize: CGSize) -> CropFeature {
-    let renderCrop = RenderCrop(self, imageSize: orientedImageSize)
-    let snapped = renderCrop.cropRect
-    let imageHeight = CGFloat(renderCrop.imageSize.height)
-
-    let ciCropRect = CGRect(
-      x: CGFloat(snapped.x),
-      y: imageHeight - CGFloat(snapped.y) - CGFloat(snapped.height),
-      width: CGFloat(snapped.width),
-      height: CGFloat(snapped.height)
-    )
-
-    return CropFeature(
-      id: id,
-      isEnabled: true,
-      cropRect: ciCropRect,
-      rotation: QuarterTurn(engine: rotation),
-      straightenRadians: adjustmentAngle.radians
-    )
+    return false
   }
 }
 
@@ -200,43 +149,5 @@ extension MaskNode {
       subtract.removing = subtract.removing.flippingStampsY(domainHeight: domainHeight)
       return .subtract(subtract)
     }
-  }
-}
-
-// MARK: - CoreGraphics fast-path support
-
-extension EditingDocument {
-
-  /// The single crop feature when the document reduces to an axis-aligned crop
-  /// with no other enabled feature — the case the CoreGraphics fast path can
-  /// render without a `CIContext`. Returns nil when any effect/adjustment is
-  /// enabled or the crop carries rotation/straighten.
-  var axisAlignedCropOnlyFeature: CropFeature? {
-    let enabled = mainTree.features.filter(\.isEnabled)
-    guard
-      enabled.count == 1,
-      case let .domain(domain) = enabled[0],
-      let crop = domain as? CropFeature,
-      crop.rotation == .zero,
-      crop.straightenRadians == 0
-    else {
-      return nil
-    }
-    return crop
-  }
-}
-
-extension CropFeature {
-
-  /// The crop rect as the engine's y-down integer pixel rect — the inverse of
-  /// the bridge's y-up flip. Only meaningful for axis-aligned (no rotation)
-  /// crops; used by the CoreGraphics fast path.
-  func pixelCropRect(orientedImageHeight: CGFloat) -> PixelCropRect {
-    PixelCropRect(
-      x: Int(cropRect.minX.rounded()),
-      y: Int((orientedImageHeight - cropRect.maxY).rounded()),
-      width: max(1, Int(cropRect.width.rounded())),
-      height: max(1, Int(cropRect.height.rounded()))
-    )
   }
 }

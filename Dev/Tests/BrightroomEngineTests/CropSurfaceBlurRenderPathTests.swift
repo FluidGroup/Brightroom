@@ -27,7 +27,7 @@ final class CropSurfaceBlurRenderPathTests: XCTestCase {
       UIRectFill(CGRect(origin: .zero, size: size))
     }.cgImage!
     let ci = CIImage(cgImage: cg)
-    let edit = EditingStack.Edit(crop: EditingCrop(imageSize: size))
+    let edit = EditingStack.Edit.test(imageSize: size)
     return EditingStack.Loaded(
       imageSource: ImageSource(cgImage: cg),
       metadata: .init(orientation: .up, imageSize: size),
@@ -74,9 +74,12 @@ final class CropSurfaceBlurRenderPathTests: XCTestCase {
   /// ToolSurface already used the prepared path; this guards that they agree.
   func testToolSurfaceBlurAlsoUsesPreparedPath() throws {
     let loaded = makeLoaded(width: 64, height: 48)
-    let crop = EditingCrop(
-      imageSize: CGSize(width: 64, height: 48),
-      cropRect: CGRect(x: 8, y: 6, width: 48, height: 36)
+    let crop = CropEditingState(
+      cropFeature: CropFeature.test(
+        imageSize: CGSize(width: 64, height: 48),
+        cropRect: CGRect(x: 8, y: 6, width: 48, height: 36)
+      ),
+      imageSize: CGSize(width: 64, height: 48)
     )
     let geometry = try XCTUnwrap(EditingCanvasCropOutputGeometry(crop: crop))
     let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])

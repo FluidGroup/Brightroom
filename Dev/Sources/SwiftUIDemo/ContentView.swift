@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 import PhotosUI
 import SwiftUI
@@ -173,9 +174,14 @@ struct ContentView: View {
                   stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Asset.l1000316.image),
-                      cropModifier: .init { _, crop, completion in
-                        var new = crop
-                        new.updateCropExtent(toFitAspectRatio: .square)
+                      cropModifier: .init { _, crop, imageSize, completion in
+                        let new = CropFeature(
+                          id: crop.id,
+                          displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
+                          imageSize: imageSize,
+                          rotation: crop.rotation,
+                          straighten: crop.straightenRadians
+                        )
                         completion(new)
                       }
                     )
@@ -436,14 +442,21 @@ struct DemoPhotosCropView: View {
       editingStack: stack,
       options: options,
       onDone: {
-        // Rendering synchronously here would hang the main thread for the
-        // full-resolution export; the async overload renders on the
-        // renderer's serial queue and calls back on main.
-        try! stack.makeRenderer().render { result in
-          switch result {
-          case .success(let rendered):
-            self.resultImage = .init(cgImage: rendered.cgImage)
-          case .failure(let error):
+        // Export straight to disk with bounded memory (strip render into an
+        // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
+        // then preview from a DOWNSAMPLED decode so the read-back doesn't
+        // re-spike to the full resolution.
+        let url = FileManager.default.temporaryDirectory
+          .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
+          .appendingPathExtension("heic")
+        Task {
+          do {
+            let rendered = try await stack.makeRenderer().render(
+              options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
+            )
+            let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
+            await MainActor.run { self.resultImage = .init(cgImage: cgImage) }
+          } catch {
             assertionFailure("\(error)")
           }
         }

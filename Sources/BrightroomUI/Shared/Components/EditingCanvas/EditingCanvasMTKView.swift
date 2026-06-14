@@ -56,6 +56,7 @@ private struct EditingCanvasViewportPreparedLayersCache {
   let adjustedImage: CIImage
 }
 
+
 private enum EditingCanvasViewportRenderPath: String {
   case clear
   case baseImage = "base-image"
@@ -429,13 +430,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
     // Hosts re-send committed strokes on every state update; identical records
-    // would needlessly drop the mask texture and schedule a frame.
+    // would needlessly schedule a frame.
     guard strokeState.committedRecords != records else {
       return
     }
 
+    // Committed strokes are rasterized live every frame (no cache), so updating
+    // the records and scheduling a redraw is all that is needed.
     strokeState.committedRecords = records
-    viewportState.renderTextures = nil
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.committedStrokes)
     #endif
@@ -1159,13 +1161,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return
     }
 
-    guard
-      let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
-    else {
-      clearCurrentDrawable()
-      return
-    }
-
     let renderBounds = CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight)
 
     guard
@@ -1182,9 +1177,21 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let baseImage = preparedLayers.baseImage
     let adjustedImage = preparedLayers.adjustedImage
 
+    // Committed AND in-flight strokes rasterize through the SAME Metal stamp
+    // shader every frame — no cache, no intermediate full-canvas texture. The
+    // shared `brushStampAlpha` falloff matches the parametric export kernel, and
+    // the pipeline's `.max` blend mirrors the export's `componentMax`
+    // accumulation, so the live mask agrees with export by construction. Memory
+    // is bounded by the viewport-sized mask texture.
+    guard
+      hasRenderableStroke(in: viewportState.visibleContentRect),
+      let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+    else {
+      clearCurrentDrawable()
+      return
+    }
     encodeClearTexture(textures.maskTexture, commandBuffer: commandBuffer)
     encodeStrokeMaskForViewport(into: textures.maskTexture, commandBuffer: commandBuffer)
-
     guard
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
@@ -1416,6 +1423,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     return device.makeTexture(descriptor: descriptor)
   }
 
+  /// Rasterizes the committed strokes AND the in-flight (active) stroke into the
+  /// viewport mask texture, live every frame — no cache, no intermediate
+  /// full-canvas texture. Stamps accumulate with `max` (`brushMaskPipeline`) and
+  /// use the shared `brushStampAlpha` falloff, so the result matches the
+  /// parametric export kernel's `componentMax` rasterization by construction.
+  /// Cost is O(visible stamp coverage); only stamps intersecting the viewport
+  /// are drawn.
   private func encodeStrokeMaskForViewport(
     into texture: MTLTexture,
     commandBuffer: MTLCommandBuffer
@@ -1481,8 +1495,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       }
     }
 
-    for stroke in strokeState.committedRecords where stroke.bounds.intersects(visible) {
-      encode(stamps: stroke.stamps, brush: stroke.brush)
+    // Committed strokes share the active stroke's canvas-content coordinate space
+    // and the same shader, so they render in the same pass with `.max` blend.
+    for record in strokeState.committedRecords where record.stamps.isEmpty == false {
+      encode(stamps: record.stamps, brush: record.brush)
     }
 
     if let activeBrush = strokeState.activeBrush, strokeState.activeStamps.isEmpty == false {
@@ -1492,21 +1508,30 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     encoder.endEncoding()
   }
 
+  /// Whether any committed or in-flight stroke intersects the viewport. Gates the
+  /// composite render path (committed strokes show through the parametric mask
+  /// even with no active stroke).
   private func hasRenderableStroke(in canvasRect: CGRect) -> Bool {
-    if let activeBrush = strokeState.activeBrush,
-       strokeState.activeStamps.contains(where: {
-         stampIntersectsVisibleRect(
-           $0,
-           radius: CGFloat(activeBrush.size / 2),
-           visible: canvasRect
-         )
-       })
-    {
+    if hasRenderableActiveStroke(in: canvasRect) {
       return true
     }
 
     return strokeState.committedRecords.contains { stroke in
       stroke.bounds.intersects(canvasRect) && stroke.stamps.isEmpty == false
+    }
+  }
+
+  /// Whether the in-flight (active) stroke has stamps intersecting the viewport.
+  private func hasRenderableActiveStroke(in canvasRect: CGRect) -> Bool {
+    guard let activeBrush = strokeState.activeBrush else {
+      return false
+    }
+    return strokeState.activeStamps.contains {
+      stampIntersectsVisibleRect(
+        $0,
+        radius: CGFloat(activeBrush.size / 2),
+        visible: canvasRect
+      )
     }
   }
 
@@ -1553,16 +1578,25 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     descriptor.fragmentFunction = library.makeFunction(name: "brushStampFragment")
     descriptor.colorAttachments[0].pixelFormat = .rgba8Unorm
     descriptor.colorAttachments[0].isBlendingEnabled = true
-    descriptor.colorAttachments[0].rgbBlendOperation = .add
-    descriptor.colorAttachments[0].alphaBlendOperation = .add
+    // Overlapping stamps within the active stroke take the per-channel maximum,
+    // matching the parametric mask's `CIBlendKernel.componentMax` accumulation
+    // (FeatureGraphCompiler.render(_:BrushMask)). Metal ignores the blend factors
+    // for `.max`, but they are set to `.one` for clarity.
+    descriptor.colorAttachments[0].rgbBlendOperation = .max
+    descriptor.colorAttachments[0].alphaBlendOperation = .max
     descriptor.colorAttachments[0].sourceRGBBlendFactor = .one
-    descriptor.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
+    descriptor.colorAttachments[0].destinationRGBBlendFactor = .one
     descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
-    descriptor.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
+    descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
     return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 
   private static func makeBrushMaskShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    try device.makeLibrary(source: EditingCanvasBrushMaskShaderSource.source, options: nil)
+    // Prepend the shared brush falloff so the live stroke rasterizes identically
+    // to the parametric `brushStamp` kernel from one definition.
+    let source = BrushStampSharedSource.falloffFunctionMSL
+      + "\n"
+      + EditingCanvasBrushMaskShaderSource.source
+    return try device.makeLibrary(source: source, options: nil)
   }
 }

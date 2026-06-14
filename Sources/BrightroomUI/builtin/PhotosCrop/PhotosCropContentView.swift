@@ -33,8 +33,8 @@ struct PhotosCropContentView: View {
   let onDone: @MainActor () -> Void
   let onCancel: @MainActor () -> Void
 
-  @State private var rotation: EditingCrop.Rotation?
-  @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
+  @State private var rotation: CropEditingState.Rotation?
+  @State private var adjustmentAngle: CropEditingState.AdjustmentAngle?
   @State private var aspectRatioSelection: PhotosCropAspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: PhotosCropEditingMode = .crop
@@ -173,7 +173,7 @@ struct PhotosCropContentView: View {
 
   /// Whether the crop differs from what the Reset button would restore.
   ///
-  /// Reset only restores the crop (`EditingCrop.makeInitial()`), so its
+  /// Reset only restores the crop (`CropEditingState.makeInitial()`), so its
   /// visibility tracks crop state alone — painting a blur mask must not
   /// surface a Reset button that would do nothing.
   ///
@@ -181,10 +181,16 @@ struct PhotosCropContentView: View {
   /// mode re-commits the guide's laid-out geometry, which can differ from
   /// the document crop by a fraction of a pixel.
   private func hasCropChanges(loadedState: EditingStack.Loaded?) -> Bool {
-    guard let crop = loadedState?.currentEdit.crop else {
+    guard let loadedState else {
       return false
     }
 
+    // Lower the stored crop into the UI working model so the comparison stays in
+    // the same y-down display space the reset (`makeInitial`) produces.
+    let crop = CropEditingState(
+      cropFeature: loadedState.currentEdit.crop,
+      imageSize: loadedState.currentEdit.imageSize
+    )
     let initial = crop.makeInitial()
     let tolerance: CGFloat = 1
 
@@ -217,7 +223,7 @@ struct PhotosCropContentView: View {
   }
 
   private func setAdjustmentAngle(_ degrees: Double) {
-    let angle = EditingCrop.AdjustmentAngle(degrees: degrees)
+    let angle = CropEditingState.AdjustmentAngle(degrees: degrees)
 
     guard adjustmentAngle != angle else {
       return
@@ -399,8 +405,8 @@ private struct PhotosCropCanvasHost: View {
   let editingStack: EditingStack
   let mode: PhotosCropEditingMode
   let blurMaskingState: PhotosCropBlurMaskingState
-  let rotation: Binding<EditingCrop.Rotation?>
-  let adjustmentAngle: Binding<EditingCrop.AdjustmentAngle?>
+  let rotation: Binding<CropEditingState.Rotation?>
+  let adjustmentAngle: Binding<CropEditingState.AdjustmentAngle?>
   let croppingAspectRatio: Binding<PixelAspectRatio?>
   let resetAction: SwiftUICropView.ResetAction
   let rotateAction: SwiftUICropView.RotateAction
@@ -454,7 +460,7 @@ private struct PhotosCropControlHost: View {
   let currentEffects: EffectPipeline?
   let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let adjustmentAngle: EditingCrop.AdjustmentAngle?
+  let adjustmentAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
@@ -1214,7 +1220,7 @@ private struct PhotosCropAdjustmentControl: View {
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: PhotosCropAspectRatioSelection
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let adjustmentAngle: EditingCrop.AdjustmentAngle?
+  let adjustmentAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void

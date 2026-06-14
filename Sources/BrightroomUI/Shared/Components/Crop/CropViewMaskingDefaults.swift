@@ -73,21 +73,23 @@ enum CropViewMaskingDefaults {
   static func imageSpaceBrushDiameter(
     pointDiameter: CGFloat,
     viewportSize: CGSize,
-    crop: EditingCrop?
+    crop: CropFeature?
   ) -> CGFloat {
     guard
       let crop,
       viewportSize.width > 0,
       viewportSize.height > 0,
-      crop.cropExtent.width > 0,
-      crop.cropExtent.height > 0
+      crop.cropRect.width > 0,
+      crop.cropRect.height > 0
     else {
       return pointDiameter
     }
 
+    // The crop's pixel dimensions are rotation-independent, so the y-up
+    // `cropRect` size matches the y-down display crop size used for the fit.
     let fitScale = min(
-      viewportSize.width / crop.cropExtent.width,
-      viewportSize.height / crop.cropExtent.height
+      viewportSize.width / crop.cropRect.width,
+      viewportSize.height / crop.cropRect.height
     )
     return pointDiameter / max(fitScale, 0.0001)
   }

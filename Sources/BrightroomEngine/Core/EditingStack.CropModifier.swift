@@ -22,65 +22,93 @@
 import CoreImage
 import Vision
 
+import BrightroomParametric
+
 extension EditingStack {
   public struct CropModifier {
-    public typealias Closure = (CIImage, EditingCrop, @escaping (EditingCrop) -> Void) -> Void
-    
+    /// `(image, current crop, oriented image size, completion(new crop))`.
+    ///
+    /// `CropFeature` carries no image size, so the oriented source size is
+    /// passed alongside it. The completion crop keeps the input crop's identity,
+    /// rotation, and straighten — only its rect changes.
+    public typealias Closure = (CIImage, CropFeature, CGSize, @escaping (CropFeature) -> Void) -> Void
+
     private let modifier: Closure
-    
+
     public init(modify: @escaping Closure) {
       modifier = modify
     }
-    
-    func run(_ image: CIImage, editingCrop: EditingCrop, completion: @escaping (EditingCrop) -> Void) {
-      modifier(image, editingCrop) { result in
+
+    func run(
+      _ image: CIImage,
+      crop: CropFeature,
+      imageSize: CGSize,
+      completion: @escaping (CropFeature) -> Void
+    ) {
+      modifier(image, crop, imageSize) { result in
         completion(result)
       }
     }
-    
-    public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
-      return .init { image, crop, completion in
 
-        var fallbackCrop: EditingCrop {
+    public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
+      return .init { image, crop, imageSize, completion in
+
+        // Rebuild a crop from a y-down display rect, sharing the engine's
+        // pixel-snap and preserving the crop's identity / rotation / straighten.
+        func makeCrop(displayRect: CGRect) -> CropFeature {
+          CropFeature(
+            id: crop.id,
+            displayCropRect: displayRect,
+            imageSize: imageSize,
+            rotation: crop.rotation,
+            straighten: crop.straightenRadians
+          )
+        }
+
+        var fallbackCrop: CropFeature {
           guard let aspectRatio = aspectRatio else {
             return crop
           }
-          var new = crop
-          new.updateCropExtentIfNeeded(toFitAspectRatio: aspectRatio)
-          return new
+          return makeCrop(
+            displayRect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: imageSize)
+          )
         }
-        
+
         let request = VNDetectFaceRectanglesRequest { request, error in
-          
+
           if let error = error {
             EngineLog.debug(error)
             completion(fallbackCrop)
             return
           }
-          
+
           guard let results = request.results as? [VNFaceObservation] else {
             completion(fallbackCrop)
             return
           }
-          
+
           guard let first = results.first else {
             completion(fallbackCrop)
             return
           }
-          
-          var new = crop
+
           let box = first.boundingBox
-          
-          let denormalizedRect = VNImageRectForNormalizedRect(box, Int(crop.imageSize.width), Int(crop.imageSize.height))
-          
+
+          let denormalizedRect = VNImageRectForNormalizedRect(box, Int(imageSize.width), Int(imageSize.height))
+
           let paddingRect = denormalizedRect.insetBy(dx: -denormalizedRect.width * paddingBias, dy: -denormalizedRect.height * paddingBias)
-          
-          let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(crop.imageSize.width), Int(crop.imageSize.height))
-          
-          new.updateCropExtent(toFitBoundingBox: normalizedRect, respectingApectRatio: aspectRatio ?? .init(crop.imageSize))
-          completion(new)
+
+          let normalizedRect = VNNormalizedRectForImageRect(paddingRect, Int(imageSize.width), Int(imageSize.height))
+
+          let displayRect = CropGeometry.cropRect(
+            toFitBoundingBox: normalizedRect,
+            within: crop.displayCropRect(imageSize: imageSize),
+            in: imageSize,
+            respectingAspectRatio: aspectRatio ?? PixelAspectRatio(imageSize)
+          )
+          completion(makeCrop(displayRect: displayRect))
         }
-        
+
         request.revision = VNDetectFaceRectanglesRequestRevision2
 #if targetEnvironment(simulator)
         request.usesCPUOnly = true

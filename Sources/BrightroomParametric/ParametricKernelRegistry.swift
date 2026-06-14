@@ -123,7 +123,11 @@ private enum ParametricMetalKernelStore {
     }
 
     do {
-      let kernels = try CIKernel.kernels(withMetalString: loadMetalSource())
+      // Prepend the shared brush falloff so `brushStamp` and the live render
+      // shader rasterize identically from one definition.
+      let metalSource = try loadMetalSource()
+      let combinedSource = BrushStampSharedSource.falloffFunctionMSL + "\n" + metalSource
+      let kernels = try CIKernel.kernels(withMetalString: combinedSource)
       var result: [String: CIColorKernel] = [:]
       for kernel in kernels {
         if let colorKernel = kernel as? CIColorKernel {

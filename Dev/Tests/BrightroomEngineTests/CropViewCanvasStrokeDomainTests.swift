@@ -33,10 +33,13 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
     )
 
     // A non-identity final crop: offset extent plus a 90° rotation.
-    let crop = EditingCrop(
-      imageSize: CGSize(width: 400, height: 300),
-      cropRect: CGRect(x: 60, y: 40, width: 200, height: 150),
-      rotation: .angle_90
+    let crop = CropEditingState(
+      cropFeature: CropFeature.test(
+        imageSize: CGSize(width: 400, height: 300),
+        cropRect: CGRect(x: 60, y: 40, width: 200, height: 150),
+        rotation: .quarterCW
+      ),
+      imageSize: CGSize(width: 400, height: 300)
     )
     let geometry = try XCTUnwrap(EditingCanvasCropOutputGeometry(crop: crop))
 

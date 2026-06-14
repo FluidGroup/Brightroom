@@ -48,23 +48,35 @@ enum EditingCanvasRenderImageFactory {
       usesPreparedBaseImage = false
 
     case let .localAdjustment(localEffect):
-      baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects
-        .applyIgnoringFailure(to: viewportSourceImage)
-        .cropped(to: renderBounds),
-        source: viewportSourceImage
+      // Evaluate the local-adjustment preview at the downsampled SOURCE
+      // resolution and upscale the result, rather than applying the effect on
+      // the full-canvas (`canvasSize`) image. On very large sources the
+      // full-canvas blur intermediate exhausts memory (a 12000×12000 blur ROI
+      // OOM-crashes); evaluating at the ~2560 editing source bounds it. The
+      // blur radius is a fraction of the image extent (radiusReferenceExtent
+      // is nil → `image.extent`), so applying it at source resolution and
+      // upscaling reproduces the same fractional blur the full-resolution
+      // export produces — preview and export stay consistent (modulo the
+      // inherent downscale/upscale resampling difference).
+      let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        loadedState.currentEdit.effects.applyIgnoringFailure(to: sourceImage),
+        source: sourceImage
       )
-      adjustedImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(to: baseImage),
-        source: viewportSourceImage
+      let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyIgnoringFailure(to: sourceBase),
+        source: sourceImage
       )
+      baseImage = scaledImage(sourceBase, canvasSize: canvasSize, canvasRect: canvasRect)
+        .cropped(to: renderBounds)
+      adjustedImage = scaledImage(sourceAdjusted, canvasSize: canvasSize, canvasRect: canvasRect)
+        .cropped(to: renderBounds)
       renderEffect = localEffect
-      // The local effect is baked into `adjustedImage` at source resolution, so
-      // route it through the prepared path — the same source-resolution
-      // composite ToolSurface and the export renderer use — instead of the
-      // cached-source path, which re-applies the effect at drawable/screen
-      // resolution and so renders a lower-fidelity, foggier blur preview that
-      // diverges from the final result.
+      // The local effect is baked into `adjustedImage`, so route it through the
+      // prepared path — the same source-resolution composite ToolSurface and
+      // the export renderer use — instead of the cached-source path, which
+      // re-applies the effect at drawable/screen resolution and so renders a
+      // lower-fidelity, foggier blur preview that diverges from the final
+      // result.
       usesPreparedBaseImage = true
 
     case .renderedEditPreview, .preview:
@@ -125,16 +137,29 @@ enum EditingCanvasRenderImageFactory {
       renderEffect = .init()
 
     case let .localAdjustment(localEffect):
-      let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects
-          .applyIgnoringFailure(to: sourceImage)
-          .cropped(to: sourceExtent),
-        source: sourceImage
+      // Evaluate effects + the local effect at the native (downsampled) source
+      // resolution BEFORE upscaling to the crop-output source size, so a huge
+      // source (`geometry.sourceImageSize == crop.imageSize`) never
+      // materializes a full-resolution blur intermediate (OOM). The blur radius
+      // is a fraction of the image extent, so it upscales to the same
+      // fractional blur the full-resolution export produces.
+      let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        loadedState.currentEdit.effects.applyIgnoringFailure(to: displaySourceImage),
+        source: displaySourceImage
       )
-      let adjustedSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(to: filteredSourceImage)
-          .cropped(to: sourceExtent),
-        source: sourceImage
+      let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyIgnoringFailure(to: displayFiltered),
+        source: displaySourceImage
+      )
+      let filteredSourceImage = scaledImage(
+        displayFiltered,
+        canvasSize: geometry.sourceImageSize,
+        canvasRect: sourceRect
+      )
+      let adjustedSourceImage = scaledImage(
+        displayAdjusted,
+        canvasSize: geometry.sourceImageSize,
+        canvasRect: sourceRect
       )
 
       baseImage = cropOutputImage(filteredSourceImage, geometry: geometry)

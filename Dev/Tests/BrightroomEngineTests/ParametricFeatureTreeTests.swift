@@ -389,6 +389,38 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
+  /// An `EffectPipelineFeature` (the document's bundled global-effects node)
+  /// must render identically to the same effects scattered as individual
+  /// `.effect` main-tree features. This is the contract that lets the editing
+  /// stack store one identity-stable effects node while the compiler flattens
+  /// it through `childFeatures`.
+  func testEffectPipelineFeatureMatchesScatteredEffects() throws {
+    let brightness = BrightnessFeature(id: FeatureID(rawValue: "pipeline-brightness"), value: 0.05)
+    let saturation = SaturationFeature(id: FeatureID(rawValue: "pipeline-saturation"), value: 0.12)
+
+    let scattered = EditingDocument(
+      mainTree: MainTree(features: [.effect(brightness), .effect(saturation)])
+    )
+    let bundled = EditingDocument(
+      mainTree: MainTree(features: [
+        .effect(
+          EffectPipelineFeature(
+            id: FeatureID(rawValue: "pipeline-node"),
+            pipeline: EffectPipeline(effects: [brightness, saturation])
+          )
+        )
+      ])
+    )
+
+    let input = CIImage.parametricColorPatchImage(
+      extent: CGRect(x: 0, y: 0, width: 36, height: 24)
+    )
+    let scatteredOutput = try Self.compiler.makeOutput(from: input, document: scattered).image
+    let bundledOutput = try Self.compiler.makeOutput(from: input, document: bundled).image
+
+    try Self.assertImagesMatch(scatteredOutput, bundledOutput, tolerance: 2)
+  }
+
   func testVideoFrameRendererMatchesDocumentRendering() throws {
     let document = EditingDocument(
       mainTree: MainTree(

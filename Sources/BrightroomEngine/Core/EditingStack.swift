@@ -270,7 +270,7 @@ open class EditingStack: Hashable {
   public init(
     imageProvider: ImageProvider,
     options: Options = .init(),
-    cropModifier: CropModifier = .init(modify: { _, c, completion in completion(c) })
+    cropModifier: CropModifier = .init(modify: { _, c, _, completion in completion(c) })
   ) {
 
     self.options = options
@@ -369,7 +369,7 @@ open class EditingStack: Hashable {
               == (metadata.imageSize.width > metadata.imageSize.height)
           )
 
-          let initialEdit = Edit(crop: crop)
+          let initialEdit = Edit(crop: crop, orientedImageSize: metadata.imageSize)
 
           let loaded = Loaded(
             imageSource: imageSource,
@@ -416,24 +416,39 @@ open class EditingStack: Hashable {
    */
   public func makeCroppedCIImage(
     sourceImage: CGImage,
-    crop: EditingCrop,
+    crop: CropFeature,
+    orientedImageSize: CGSize,
     orientation: CGImagePropertyOrientation
   ) -> CIImage {
 
     do {
 
-      // orientation-respected
-      let imageSize = sourceImage.size
-        .applying(cgOrientation: orientation)
-
-      let scaledCrop = crop.scaledWithPixelPerfect(
-        maxPixelSize: max(imageSize.width, imageSize.height)
-      )
-
       let orientedImage = try sourceImage
         // TODO: better to combine these operations - oriented and cropping
         .oriented(orientation)
-      let renderCrop = RenderCrop(scaledCrop, imageSize: orientedImage.size)
+
+      // The crop's rect is authored against `orientedImageSize` (the full
+      // oriented source). `sourceImage` may be a downsampled editing image, so
+      // scale the crop's y-down display rect into the source's oriented pixel
+      // space before snapping. When the source is full size this is the
+      // identity.
+      let sourceOrientedSize = orientedImage.size
+      let displayRect = crop.displayCropRect(imageSize: orientedImageSize)
+      let scaleX = sourceOrientedSize.width / orientedImageSize.width
+      let scaleY = sourceOrientedSize.height / orientedImageSize.height
+      let scaledDisplayRect = CGRect(
+        x: displayRect.minX * scaleX,
+        y: displayRect.minY * scaleY,
+        width: displayRect.width * scaleX,
+        height: displayRect.height * scaleY
+      )
+
+      let renderCrop = RenderCrop(
+        cropRectYDown: scaledDisplayRect,
+        imageSize: sourceOrientedSize,
+        rotation: crop.rotation,
+        straightenRadians: crop.straightenRadians
+      )
 
       return try orientedImage
         .croppedWithColorspace(to: renderCrop)
@@ -510,7 +525,7 @@ open class EditingStack: Hashable {
     }
   }
 
-  public func crop(_ value: EditingCrop) {
+  public func crop(_ value: CropFeature) {
     _pixelengine_ensureMainThread()
     applyIfChanged {
       $0.crop = value
@@ -548,9 +563,10 @@ open class EditingStack: Hashable {
 
     // Lower the editing document into the parametric document the renderer
     // evaluates. The renderer applies orientation to the source CIImage; the
-    // document is authored in that oriented space, whose size is `crop.imageSize`.
+    // document is authored in that oriented space, whose size is
+    // `edit.orientedImageSize`.
     renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
+      document: edit.makeEditingDocument(orientedImageSize: edit.orientedImageSize)
     )
 
     return renderer
@@ -566,9 +582,13 @@ open class EditingStack: Hashable {
   private func adjustCropExtent(
     image: CIImage,
     imageSize: CGSize,
-    completion: @escaping (EditingCrop) -> Void
+    completion: @escaping (CropFeature) -> Void
   ) {
-    let crop = EditingCrop(imageSize: imageSize)
+    let crop = CropFeature(
+      id: Edit.finalCropID,
+      displayCropRect: CGRect(origin: .zero, size: imageSize),
+      imageSize: imageSize
+    )
 
     let scaled = image.transformed(
       by: .init(
@@ -586,7 +606,12 @@ open class EditingStack: Hashable {
 
     let actualSizeFromDownsampledImage = translated
 
-    cropModifier.run(actualSizeFromDownsampledImage, editingCrop: crop, completion: completion)
+    cropModifier.run(
+      actualSizeFromDownsampledImage,
+      crop: crop,
+      imageSize: imageSize,
+      completion: completion
+    )
   }
 
 }

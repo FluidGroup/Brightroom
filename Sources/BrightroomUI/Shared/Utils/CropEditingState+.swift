@@ -18,7 +18,7 @@ import BrightroomEngine
 /// conversion below derives from the single `imageToPlatterScale()` scalar so
 /// recorded crop extents and rendered viewports can never disagree about the
 /// mapping.
-extension EditingCrop {
+extension CropEditingState {
 
   func scrollViewContentSize() -> CGSize {
     PixelAspectRatio(imageSize).size(byWidth: 1000)

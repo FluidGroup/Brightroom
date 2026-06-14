@@ -27,9 +27,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
       rightWhite: 0.75
     )
     let sourceCIImage = CIImage(cgImage: sourceImage)
-    var edit = EditingStack.Edit(
-      crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
-    )
+    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
     edit.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.2)])
     edit.localAdjustments = [
       Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
@@ -55,9 +53,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     )
     let sourceCIImage = CIImage(cgImage: sourceImage)
     let imageSource = ImageSource(cgImage: sourceImage)
-    let initialEdit = EditingStack.Edit(
-      crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
-    )
+    let initialEdit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
     var loadedState = EditingStack.Loaded(
       imageSource: imageSource,
       metadata: .init(
@@ -144,22 +140,23 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     XCTAssertGreaterThan(maskedPixel.red, mirroredPixel.red)
   }
 
-  func testRendererAppliesLocalAdjustmentBeforeCrop() throws {
+  func testRendererAppliesLocalAdjustmentBeforeCrop() async throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     renderer.edit = .make(
-      crop: EditingCrop(
+      crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 20, y: 0, width: 20, height: 20)
       ),
+      orientedImageSize: CGSize(width: 40, height: 20),
       localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ]
     )
 
-    let renderedImage = try renderer.render(
+    let renderedImage = try await renderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
@@ -170,7 +167,7 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     XCTAssertGreaterThan(farPixel.red, 245)
   }
 
-  func testRendererComposesGlobalFilterAndLocalAdjustment() throws {
+  func testRendererComposesGlobalFilterAndLocalAdjustment() async throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -181,17 +178,18 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     renderer.edit = .make(
-      crop: EditingCrop(
+      crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
         cropRect: CGRect(x: 0, y: 0, width: 40, height: 20)
       ),
+      orientedImageSize: CGSize(width: 40, height: 20),
       effects: EffectPipeline(effects: [ExposureFeature(value: 0.5)]),
       localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ]
     )
 
-    let renderedImage = try renderer.render(
+    let renderedImage = try await renderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 20, y: 10)

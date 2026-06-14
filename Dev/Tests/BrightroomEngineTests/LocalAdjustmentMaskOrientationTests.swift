@@ -11,7 +11,7 @@ import XCTest
 /// painted on the interactive canvas.
 final class LocalAdjustmentMaskOrientationTests: XCTestCase {
 
-  func testMaskAppliesAtAuthoredDisplayPosition() throws {
+  func testMaskAppliesAtAuthoredDisplayPosition() async throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
     let imageSize = imageSource.readImageSize()
 
@@ -39,17 +39,18 @@ final class LocalAdjustmentMaskOrientationTests: XCTestCase {
       blendMode: .alpha
     )
 
-    func render(localAdjustments: [LocalAdjustmentFeature]) throws -> CGImage {
+    func render(localAdjustments: [LocalAdjustmentFeature]) async throws -> CGImage {
       let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
       renderer.edit = .make(
-        crop: EditingCrop(imageSize: imageSize),
+        crop: CropFeature.test(imageSize: imageSize),
+        orientedImageSize: imageSize,
         localAdjustments: localAdjustments
       )
-      return try renderer.render().cgImage
+      return try await renderer.render().cgImage
     }
 
-    let base = try render(localAdjustments: [])
-    let adjusted = try render(localAdjustments: [adjustment])
+    let base = try await render(localAdjustments: [])
+    let adjusted = try await render(localAdjustments: [adjustment])
 
     let deltaAtStamp = abs(
       try Self.brightness(of: adjusted, at: stampCenter)

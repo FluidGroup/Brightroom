@@ -165,6 +165,7 @@ public struct ParametricFeatureTypeRegistry: Sendable {
     var registry = ParametricFeatureTypeRegistry()
     registry.register(CropFeature.self)
     registry.register(PresetFeature.self)
+    registry.register(EffectPipelineFeature.self)
     registry.register(ColorCubeFeature.self)
     registry.register(BrightnessFeature.self)
     registry.register(ContrastFeature.self)
@@ -543,6 +544,10 @@ extension CropFeature: PersistableFeature {
 
 extension PresetFeature: PersistableFeature, Codable {
   public static let featureTypeKey: FeatureTypeKey = "brightroom.effect.preset"
+}
+
+extension EffectPipelineFeature: PersistableFeature {
+  public static let featureTypeKey: FeatureTypeKey = "brightroom.effect.pipeline"
 }
 
 extension ColorCubeFeature: PersistableFeature {

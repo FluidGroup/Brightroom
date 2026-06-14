@@ -4,13 +4,45 @@ import UIKit
 @testable import BrightroomParametric
 @testable import BrightroomEngine
 
-/// Contracts of the feature-list editing document: `Edit` stores nothing but
-/// an ordered `[EditingFeature]`, the engine never reorders it, and history
+private extension MainFeature {
+  /// A stable string tag for the feature case, replacing the old
+  /// `EditingFeature.Payload.Kind` the tests asserted against.
+  var testKind: String {
+    switch self {
+    case .effect: return "effect"
+    case .localAdjustment: return "localAdjustment"
+    case .domain: return "crop"
+    }
+  }
+}
+
+/// Contracts of the parametric editing document: `Edit` stores an
+/// `EditingDocument`, the engine never reorders its main tree, and history
 /// versions are whole-document snapshots with undo/redo.
 final class EditingFeatureDocumentTests: XCTestCase {
 
-  private func makeCrop() -> EditingCrop {
-    EditingCrop(imageSize: CGSize(width: 1200, height: 800))
+  private let imageSize = CGSize(width: 1200, height: 800)
+
+  private func makeCrop() -> CropFeature {
+    CropFeature.test(imageSize: imageSize)
+  }
+
+  private func effectsFeature(
+    id: FeatureID = EditingStack.Edit.globalEffectsID,
+    _ pipeline: EffectPipeline = .init()
+  ) -> MainFeature {
+    .effect(EffectPipelineFeature(id: id, pipeline: pipeline))
+  }
+
+  private func cropFeature(id: FeatureID = EditingStack.Edit.finalCropID) -> MainFeature {
+    .domain(CropFeature.test(imageSize: imageSize).with(id: id))
+  }
+
+  private func makeEdit(features: [MainFeature]) -> EditingStack.Edit {
+    EditingStack.Edit(
+      document: EditingDocument(mainTree: MainTree(features: features)),
+      orientedImageSize: imageSize
+    )
   }
 
   private func makeAdjustment() -> LocalAdjustmentFeature {
@@ -32,22 +64,22 @@ final class EditingFeatureDocumentTests: XCTestCase {
   // MARK: - Document shape
 
   func testCanonicalDefaultDocument() {
-    let edit = EditingStack.Edit(crop: makeCrop())
+    let edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
 
-    XCTAssertEqual(edit.features.map(\.payload.kind), [.effects, .crop])
-    XCTAssertEqual(edit.features.first?.id, EditingFeature.globalEffectsID)
-    XCTAssertEqual(edit.features.last?.id, EditingFeature.finalCropID)
+    XCTAssertEqual(edit.features.map(\.testKind), ["effect", "crop"])
+    XCTAssertEqual(edit.features.first?.id, EditingStack.Edit.globalEffectsID)
+    XCTAssertEqual(edit.features.last?.id, EditingStack.Edit.finalCropID)
   }
 
   func testLocalAdjustmentsProjectionInsertsBeforeFinalCrop() {
-    var edit = EditingStack.Edit(crop: makeCrop())
+    var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
     let adjustment = makeAdjustment()
 
     edit.localAdjustments = [adjustment]
 
     XCTAssertEqual(
-      edit.features.map(\.payload.kind),
-      [.effects, .localAdjustment, .crop]
+      edit.features.map(\.testKind),
+      ["effect", "localAdjustment", "crop"]
     )
     XCTAssertEqual(edit.localAdjustments, [adjustment])
     XCTAssertEqual(edit.features[1].id, adjustment.id)
@@ -58,18 +90,18 @@ final class EditingFeatureDocumentTests: XCTestCase {
     // effects. Assembly is the host's decision; projection writes must keep
     // positions.
     let adjustment = makeAdjustment()
-    var edit = EditingStack.Edit(features: [
-      .init(localAdjustment: adjustment),
-      .init(id: EditingFeature.globalEffectsID, payload: .effects(.init())),
-      .init(id: EditingFeature.finalCropID, payload: .crop(makeCrop())),
+    var edit = makeEdit(features: [
+      .localAdjustment(adjustment),
+      effectsFeature(),
+      cropFeature(),
     ])
 
     let effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
     edit.effects = effects
 
     XCTAssertEqual(
-      edit.features.map(\.payload.kind),
-      [.localAdjustment, .effects, .crop]
+      edit.features.map(\.testKind),
+      ["localAdjustment", "effect", "crop"]
     )
     XCTAssertEqual(edit.effects, effects)
 
@@ -80,24 +112,27 @@ final class EditingFeatureDocumentTests: XCTestCase {
     edit.localAdjustments = [replacedAdjustment]
 
     XCTAssertEqual(
-      edit.features.map(\.payload.kind),
-      [.localAdjustment, .effects, .crop]
+      edit.features.map(\.testKind),
+      ["localAdjustment", "effect", "crop"]
     )
     XCTAssertEqual(edit.localAdjustments, [replacedAdjustment])
   }
 
   func testUpdateFeatureKeepsKindStableAndRejectsUnknownIDs() {
-    var edit = EditingStack.Edit(crop: makeCrop())
+    var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
 
     XCTAssertFalse(
       edit.updateFeature(id: FeatureID(rawValue: "unknown")) { _ in }
     )
 
-    var newCrop = makeCrop()
-    newCrop.updateCropExtentIfNeeded(toFitAspectRatio: .square)
+    let newCrop = CropFeature(
+      id: EditingStack.Edit.finalCropID,
+      displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
+      imageSize: imageSize
+    )
     XCTAssertTrue(
-      edit.updateFeature(id: EditingFeature.finalCropID) { payload in
-        payload = .crop(newCrop)
+      edit.updateFeature(id: EditingStack.Edit.finalCropID) { feature in
+        feature = .domain(newCrop)
       }
     )
     XCTAssertEqual(edit.crop, newCrop)
@@ -117,9 +152,7 @@ final class EditingFeatureDocumentTests: XCTestCase {
     }.cgImage!
 
     let sourceCIImage = CIImage(cgImage: cgImage)
-    let initialEdit = EditingStack.Edit(
-      crop: EditingCrop(imageSize: CGSize(width: 40, height: 20))
-    )
+    let initialEdit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
     return EditingStack.Loaded(
       imageSource: ImageSource(cgImage: cgImage),
       metadata: .init(orientation: .up, imageSize: CGSize(width: 40, height: 20)),
@@ -174,12 +207,12 @@ final class EditingFeatureDocumentTests: XCTestCase {
     ])
     let secondEffectsID = FeatureID(rawValue: "test.second-global-effects")
 
-    var edit = EditingStack.Edit(features: [
-      .init(id: EditingFeature.globalEffectsID, payload: .effects(.init())),
-      .init(localAdjustment: adjustmentA),
-      .init(id: secondEffectsID, payload: .effects(.init())),
-      .init(localAdjustment: adjustmentB),
-      .init(id: EditingFeature.finalCropID, payload: .crop(makeCrop())),
+    var edit = makeEdit(features: [
+      effectsFeature(),
+      .localAdjustment(adjustmentA),
+      effectsFeature(id: secondEffectsID),
+      .localAdjustment(adjustmentB),
+      cropFeature(),
     ])
 
     let adjustmentC = makeAdjustment()
@@ -188,12 +221,12 @@ final class EditingFeatureDocumentTests: XCTestCase {
     XCTAssertEqual(
       edit.features.map(\.id),
       [
-        EditingFeature.globalEffectsID,
+        EditingStack.Edit.globalEffectsID,
         adjustmentA.id,
         secondEffectsID,
         adjustmentB.id,
         adjustmentC.id,
-        EditingFeature.finalCropID,
+        EditingStack.Edit.finalCropID,
       ]
     )
 
@@ -202,11 +235,11 @@ final class EditingFeatureDocumentTests: XCTestCase {
     XCTAssertEqual(
       edit.features.map(\.id),
       [
-        EditingFeature.globalEffectsID,
+        EditingStack.Edit.globalEffectsID,
         adjustmentA.id,
         secondEffectsID,
         adjustmentB.id,
-        EditingFeature.finalCropID,
+        EditingStack.Edit.finalCropID,
       ]
     )
   }
@@ -258,5 +291,15 @@ final class EditingFeatureDocumentTests: XCTestCase {
     loaded.makeVersion()
 
     XCTAssertFalse(loaded.canRedo)
+  }
+}
+
+private extension CropFeature {
+  /// Returns a copy with a replaced identity (test convenience for building
+  /// custom main-tree arrangements with well-known node ids).
+  func with(id: FeatureID) -> CropFeature {
+    var copy = self
+    copy.id = id
+    return copy
   }
 }

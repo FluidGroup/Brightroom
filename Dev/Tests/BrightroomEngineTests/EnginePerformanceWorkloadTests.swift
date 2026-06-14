@@ -16,9 +16,9 @@ import UIKit
 /// `-only-testing:BrightroomEngineTests/EnginePerformanceWorkloadTests`.
 ///
 /// Covered hot paths:
-/// - export render (`BrightRoomImageRenderer.renderRevison2`)
+/// - export render (`BrightRoomImageRenderer.render`)
 /// - preview composition (`Edit.makePreviewImage(.editing)`)
-/// - CPU brush-mask raster (`LocalAdjustmentMaskRasterStore` cache miss)
+/// - brush-mask raster (`MaskTree.engineMakeMaskImage` via the parametric `brushStamp` kernel)
 /// - parametric evaluation (`EffectPipeline.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 
@@ -75,9 +75,11 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private func exportRender(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
     let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
     renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
+      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize)
     )
-    return try renderer.render(options: .init(workingColorSpace: Self.sRGB)).cgImage
+    // `measure {}` is synchronous; use the internal synchronous render core so
+    // the benchmark measures the render work itself, not the async hop.
+    return try renderer.renderSynchronously(options: .init(workingColorSpace: Self.sRGB)).cgImage
   }
 
   @inline(never)
@@ -137,7 +139,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   private static func makeDocument(imageSize: CGSize) -> EditingStack.Edit {
-    var edit = EditingStack.Edit(crop: EditingCrop(imageSize: imageSize))
+    var edit = EditingStack.Edit.test(imageSize: imageSize)
     edit.effects = makeEffectPipeline()
     edit.localAdjustments = [
       LocalAdjustmentFeature(
@@ -148,7 +150,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         ])
       )
     ]
-    edit.crop = EditingCrop(
+    edit.crop = CropFeature.test(
       imageSize: imageSize,
       cropRect: CGRect(
         x: imageSize.width * 0.1,

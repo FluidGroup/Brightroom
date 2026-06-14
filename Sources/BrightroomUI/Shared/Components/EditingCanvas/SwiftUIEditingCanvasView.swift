@@ -28,7 +28,8 @@ public struct SwiftUIEditingCanvasView: View {
           canvasSize: loadedState.metadata.imageSize,
           mode: mode,
           interactionMode: interactionMode ?? mode.defaultInteractionMode,
-          displayedImageRect: displayedImageRect ?? loadedState.currentEdit.crop.cropExtent,
+          displayedImageRect: displayedImageRect
+            ?? loadedState.currentEdit.crop.displayCropRect(imageSize: loadedState.currentEdit.imageSize),
           brush: brush,
           smoothing: smoothing,
           onMetricsChange: onMetricsChange

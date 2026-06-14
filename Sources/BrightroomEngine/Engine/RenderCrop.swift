@@ -22,6 +22,8 @@
 import CoreGraphics
 import SwiftUI
 
+import BrightroomParametric
+
 internal enum RenderGeometry {
   internal static let pixelEpsilon: CGFloat = 1e-8
 }
@@ -182,68 +184,141 @@ internal struct RenderCrop: Equatable, Sendable {
 
   internal var imageSize: PixelDimensions
   internal var cropRect: PixelCropRect
-  internal var rotation: EditingCrop.Rotation
-  internal var adjustmentAngle: EditingCrop.AdjustmentAngle
+
+  /// The quarter-turn rotation, expressed in the parametric vocabulary so the
+  /// render crop no longer depends on `EditingCrop`.
+  internal var rotation: QuarterTurn
+
+  /// The free straightening angle in radians (the engine's adjustment angle).
+  internal var straightenRadians: Double
 
   internal var cropExtent: CGRect {
     cropRect.cgRect
   }
 
-  internal var aggregatedRotation: EditingCrop.AdjustmentAngle {
-    rotation.angle + adjustmentAngle
+  /// The combined rotation (quarter turn + straighten) in radians, the value the
+  /// CoreGraphics crop rotates by.
+  internal var aggregatedRotationRadians: Double {
+    rotation.radians + (straightenRadians.isFinite ? straightenRadians : 0)
   }
 
+  /// Snaps a y-down display crop rect against the source pixel grid.
+  ///
+  /// `cropRectYDown` is in the engine's top-left-origin display space (the same
+  /// space as `EditingCrop.cropExtent`). The integer pixel contract lives in
+  /// `PixelCropRect`, so this initializer is the single snapper UI commits and
+  /// engine renders both flow through.
   internal init(
-    _ crop: EditingCrop,
-    imageSize: CGSize? = nil,
-    epsilon: CGFloat = Self.pixelEpsilon
-  ) {
-    self.init(
-      imageSize: imageSize ?? crop.imageSize,
-      cropExtent: crop.cropExtent,
-      rotation: crop.rotation,
-      adjustmentAngle: crop.adjustmentAngle,
-      epsilon: epsilon
-    )
-  }
-
-  internal init(
+    cropRectYDown: CGRect,
     imageSize: CGSize,
-    cropExtent: CGRect,
-    rotation: EditingCrop.Rotation = .angle_0,
-    adjustmentAngle: EditingCrop.AdjustmentAngle = .zero,
+    rotation: QuarterTurn = .zero,
+    straightenRadians: Double = 0,
     epsilon: CGFloat = Self.pixelEpsilon
   ) {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
 
     self.imageSize = pixelImageSize
     self.cropRect = PixelCropRect(
-      cropExtent: cropExtent,
+      cropExtent: cropRectYDown,
       in: pixelImageSize,
       epsilon: epsilon
     )
     self.rotation = rotation
-    self.adjustmentAngle = adjustmentAngle
+    self.straightenRadians = straightenRadians
   }
 
   internal init(
     imageSize: PixelDimensions,
     cropRect: PixelCropRect,
-    rotation: EditingCrop.Rotation = .angle_0,
-    adjustmentAngle: EditingCrop.AdjustmentAngle = .zero
+    rotation: QuarterTurn = .zero,
+    straightenRadians: Double = 0
   ) {
     self.imageSize = imageSize
     self.cropRect = cropRect
     self.rotation = rotation
-    self.adjustmentAngle = adjustmentAngle
+    self.straightenRadians = straightenRadians
   }
 }
 
-extension EditingCrop {
-  public func isRenderingEquivalent(
-    to other: Self,
-    imageSize: CGSize? = nil
-  ) -> Bool {
-    RenderCrop(self, imageSize: imageSize) == RenderCrop(other, imageSize: imageSize)
+// MARK: - CropFeature ⇄ engine display space (shared y-flip + integer snap)
+
+extension CropFeature {
+
+  /// Creates a crop feature from a y-down display crop rect, reusing the engine's
+  /// integer pixel snap so UI commits and engine renders agree exactly.
+  ///
+  /// The display rect is snapped to the inward-integer pixel contract
+  /// (`RenderCrop`/`PixelCropRect`) and then flipped from the engine's y-down
+  /// display space (top-left origin) into the compiler's y-up working space
+  /// (Core Image bottom-left). UI crop sessions MUST build committed crops
+  /// through this initializer; authoring an independent snapper makes
+  /// `isRenderingEquivalent` oscillate against the engine and the crop jitters.
+  public init(
+    id: FeatureID = .init(),
+    isEnabled: Bool = true,
+    displayCropRect: CGRect,
+    imageSize: CGSize,
+    rotation: QuarterTurn = .zero,
+    straighten: Double = 0
+  ) {
+    let renderCrop = RenderCrop(
+      cropRectYDown: displayCropRect,
+      imageSize: imageSize,
+      rotation: rotation,
+      straightenRadians: straighten
+    )
+    let snapped = renderCrop.cropRect
+    let imageHeight = CGFloat(renderCrop.imageSize.height)
+
+    self.init(
+      id: id,
+      isEnabled: isEnabled,
+      cropRect: CGRect(
+        x: CGFloat(snapped.x),
+        y: imageHeight - CGFloat(snapped.y) - CGFloat(snapped.height),
+        width: CGFloat(snapped.width),
+        height: CGFloat(snapped.height)
+      ),
+      rotation: rotation,
+      straightenRadians: straighten
+    )
+  }
+
+  /// The stored crop rect mapped back into the engine's y-down display space.
+  ///
+  /// The inverse of `init(displayCropRect:…)`. UI crop sessions seed their y-down
+  /// working model from this. The stored rect is already pixel-snapped, so the
+  /// round trip through `init(displayCropRect:…)` is stable.
+  public func displayCropRect(imageSize: CGSize) -> CGRect {
+    CGRect(
+      x: cropRect.minX,
+      y: imageSize.height - cropRect.maxY,
+      width: cropRect.width,
+      height: cropRect.height
+    )
+  }
+
+  /// Builds the engine's integer-snapped render crop for this feature against an
+  /// oriented source pixel size.
+  func renderCrop(orientedImageSize: CGSize) -> RenderCrop {
+    RenderCrop(
+      cropRectYDown: displayCropRect(imageSize: orientedImageSize),
+      imageSize: orientedImageSize,
+      rotation: rotation,
+      straightenRadians: straightenRadians
+    )
+  }
+
+  /// Whether two crops snap to the same integer render rect (plus the same
+  /// rotation and straighten) against an oriented source size.
+  ///
+  /// This is the engine's pixel-snap equivalence the UI uses to decide whether a
+  /// crop change is renderable — sub-pixel differences that snap to the same
+  /// render rect are equivalent. Public so the BrightroomUI crop session can
+  /// reuse the same contract instead of re-deriving it.
+  public func isRenderingEquivalent(to other: CropFeature, orientedImageSize: CGSize) -> Bool {
+    renderCrop(orientedImageSize: orientedImageSize)
+      == other.renderCrop(orientedImageSize: orientedImageSize)
   }
 }
+

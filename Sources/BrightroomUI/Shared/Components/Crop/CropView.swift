@@ -57,7 +57,7 @@ final class CropView: UIView {
 
   private struct State {
 
-    var proposedCrop: EditingCrop?
+    var proposedCrop: CropEditingState?
 
     var frame: CGRect = .zero
 
@@ -83,7 +83,7 @@ final class CropView: UIView {
 
   private struct ScrollViewAdjustmentSession {
     let kind: ScrollViewAdjustmentKind
-    let baselineCrop: EditingCrop
+    let baselineCrop: CropEditingState
   }
 
   private typealias CanvasStrokeCommitHandler = (
@@ -386,7 +386,7 @@ final class CropView: UIView {
 
     func updateRenderedEditPreview(
       loadedState: EditingStack.Loaded,
-      crop: EditingCrop
+      crop: CropEditingState
     ) {
       guard crop.imageSize == canvasSize, let canvasView else {
         return
@@ -431,7 +431,7 @@ final class CropView: UIView {
     func remainingScroll(
       guideRectInPlatter: CGRect,
       guideSize: CGSize,
-      crop: EditingCrop
+      crop: CropEditingState
     ) -> UIEdgeInsets {
       let scale = Geometry.diagonalRatio(to: guideSize, from: guideRectInPlatter.size)
       let outbound = imagePlatterView.bounds
@@ -542,7 +542,7 @@ final class CropView: UIView {
 
     let contentView: UIView
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-    var crop: EditingCrop?
+    var crop: CropEditingState?
     var outputGeometry: EditingCanvasCropOutputGeometry?
     var currentCanvasRenderInputKey: CanvasRenderInputKey?
 
@@ -811,7 +811,7 @@ final class CropView: UIView {
 
   var isAutoApplyEditingStackEnabled = false
 
-  private var lastLaidOutCrop: EditingCrop?
+  private var lastLaidOutCrop: CropEditingState?
 
   // MARK: - Initializers
 
@@ -1043,7 +1043,12 @@ final class CropView: UIView {
 
   func loadCurrentEditingStackState() {
     let loadedState = editingStack.requireLoadedStateForLoadedUIView()
-    load(crop: loadedState.currentEdit.crop)
+    load(
+      crop: CropEditingState(
+        cropFeature: loadedState.currentEdit.crop,
+        imageSize: loadedState.currentEdit.imageSize
+      )
+    )
     updateDisplay(loadedState: loadedState)
   }
 
@@ -1052,7 +1057,10 @@ final class CropView: UIView {
       return
     }
 
-    let stackCrop = loadedState.currentEdit.crop
+    let stackCrop = CropEditingState(
+      cropFeature: loadedState.currentEdit.crop,
+      imageSize: loadedState.currentEdit.imageSize
+    )
     if state.proposedCrop == nil || state.proposedCrop?.imageSize != stackCrop.imageSize {
       load(crop: stackCrop)
     } else if
@@ -1079,9 +1087,9 @@ final class CropView: UIView {
 
    - Attension: This operation can be run background-thread.
    */
-  func renderImage() throws -> BrightRoomImageRenderer.Rendered? {
+  func renderImage() async throws -> BrightRoomImageRenderer.Rendered? {
     applyEditingStack()
-    return try editingStack.makeRenderer().render()
+    return try await editingStack.makeRenderer().render()
   }
 
   /**
@@ -1113,7 +1121,7 @@ final class CropView: UIView {
     emitStateSnapshot()
   }
 
-  func setRotation(_ rotation: EditingCrop.Rotation) {
+  func setRotation(_ rotation: CropEditingState.Rotation) {
     _pixeleditor_ensureMainThread()
 
     guard var crop = state.proposedCrop, crop.rotation != rotation else {
@@ -1150,7 +1158,7 @@ final class CropView: UIView {
   }
 
   func setAdjustmentAngle(
-    _ angle: EditingCrop.AdjustmentAngle,
+    _ angle: CropEditingState.AdjustmentAngle,
     recordsCropExtent: Bool = true
   ) {
     guard var crop = state.proposedCrop, crop.adjustmentAngle != angle else {
@@ -1167,14 +1175,14 @@ final class CropView: UIView {
     }
   }
 
-  func commitAdjustmentAngle(_ angle: EditingCrop.AdjustmentAngle) {
+  func commitAdjustmentAngle(_ angle: CropEditingState.AdjustmentAngle) {
     setAdjustmentAngle(angle, recordsCropExtent: false)
     record()
     isStreamingAdjustmentAngle = false
     updateCropDisplayViewport()
   }
 
-  func setCrop(_ crop: EditingCrop) {
+  func setCrop(_ crop: CropEditingState) {
     _pixeleditor_ensureMainThread()
 
     var crop = crop
@@ -1266,12 +1274,12 @@ final class CropView: UIView {
 // MARK: Internal
 
 extension CropView {
-  private func load(crop: EditingCrop) {
+  private func load(crop: CropEditingState) {
     prepareForCropIfNeeded(crop)
     setProposedCrop(crop, forcesLayout: true)
   }
 
-  private func prepareForCropIfNeeded(_ crop: EditingCrop) {
+  private func prepareForCropIfNeeded(_ crop: CropEditingState) {
     if state.proposedCrop?.imageSize != crop.imageSize {
       hasSetupScrollViewCompleted = false
       lastLaidOutCrop = nil
@@ -1385,14 +1393,14 @@ extension CropView {
   /// The crop describing the tool surface's display domain for the current
   /// viewing point: the final crop when the viewing point includes it, or the
   /// identity crop (the full pre-crop image) when previewing an earlier point.
-  private func toolDisplayCrop(from crop: EditingCrop) -> EditingCrop {
+  private func toolDisplayCrop(from crop: CropEditingState) -> CropEditingState {
     viewingPointIncludesFinalCrop ? crop : crop.makeInitial()
   }
 
   /// The source-to-display geometry the tool surface uses for the current
   /// viewing point. Strokes committed through this geometry always land in the
   /// pre-crop feature domain regardless of the viewing point.
-  private func makeToolOutputGeometry(crop: EditingCrop) -> EditingCanvasCropOutputGeometry? {
+  private func makeToolOutputGeometry(crop: CropEditingState) -> EditingCanvasCropOutputGeometry? {
     EditingCanvasCropOutputGeometry(crop: toolDisplayCrop(from: crop))
   }
 
@@ -1423,7 +1431,7 @@ extension CropView {
     var effects: EffectPipeline
     var localAdjustments: [LocalAdjustmentFeature]
 
-    init(loadedState: EditingStack.Loaded, crop: EditingCrop) {
+    init(loadedState: EditingStack.Loaded, crop: CropEditingState) {
       let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
@@ -1691,8 +1699,8 @@ extension CropView {
   #endif
 
   private func setProposedCrop(
-    _ crop: EditingCrop,
-    previousCrop: EditingCrop? = nil,
+    _ crop: CropEditingState,
+    previousCrop: CropEditingState? = nil,
     forcesLayout: Bool = false,
     animatesLayout: Bool = true
   ) {
@@ -1711,7 +1719,7 @@ extension CropView {
   }
 
   @discardableResult
-  private func updateProposedCrop(_ crop: EditingCrop) -> Bool {
+  private func updateProposedCrop(_ crop: CropEditingState) -> Bool {
     guard state.proposedCrop != crop else {
       return false
     }
@@ -1782,21 +1790,24 @@ extension CropView {
   private func debugLogScrollViewAdjustment(_ event: String) {}
   #endif
 
-  private func applyCropToEditingStackIfRenderingChanged(_ crop: EditingCrop) {
+  private func applyCropToEditingStackIfRenderingChanged(_ crop: CropEditingState) {
+    let feature = crop.makeCropFeature()
     guard let currentCrop = editingStack.loadedState?.currentEdit.crop else {
-      editingStack.crop(crop)
+      editingStack.crop(feature)
       return
     }
 
-    guard currentCrop.isRenderingEquivalent(to: crop) == false else {
+    guard
+      currentCrop.isRenderingEquivalent(to: feature, orientedImageSize: crop.imageSize) == false
+    else {
       return
     }
 
-    editingStack.crop(crop)
+    editingStack.crop(feature)
   }
 
   private func updateCropLayout(
-    previousCrop: EditingCrop? = nil,
+    previousCrop: CropEditingState? = nil,
     animatesLayout: Bool = true
   ) {
     guard let crop = state.proposedCrop else {
@@ -1879,7 +1890,7 @@ extension CropView {
   }
 
   private func updateScrollContainerView(
-    by crop: EditingCrop,
+    by crop: CropEditingState,
     preferredAspectRatio: PixelAspectRatio?,
     animated: Bool,
     animatesRotation: Bool
@@ -2098,14 +2109,14 @@ extension CropView {
     return insetsForActual
   }
 
-  private func updateScrollViewInset(crop: EditingCrop) {
+  private func updateScrollViewInset(crop: CropEditingState) {
     cropSurface.scrollView.contentInset = makeScrollViewInset(
       aggregatedRotaion: crop.aggregatedRotation.radians
     )
   }
 
   private func updateToolScrollGeometry(
-    crop: EditingCrop,
+    crop: CropEditingState,
     syncsViewportFromCropSurface: Bool = false
   ) {
     let displayCrop = toolDisplayCrop(from: crop)
@@ -2203,7 +2214,7 @@ extension CropView {
   }
 
   @discardableResult
-  private func record() -> EditingCrop? {
+  private func record() -> CropEditingState? {
 
     // Crop recording only applies while the focus edits a crop node. In
     // masking/viewing focuses the scroll view is a free pan/zoom viewport and
@@ -2280,7 +2291,7 @@ extension CropView {
 
   private func cropExtentRespectingPreferredAspectRatio(
     _ cropExtent: CGRect,
-    currentCrop: EditingCrop
+    currentCrop: CropEditingState
   ) -> CGRect {
     guard let preferredAspectRatio = state.preferredAspectRatio else {
       return cropExtent
@@ -2298,7 +2309,7 @@ extension CropView {
 
   private func normalizedCropExtentForScrollViewRecording(
     _ cropExtent: CGRect,
-    currentCrop: EditingCrop
+    currentCrop: CropEditingState
   ) -> CGRect {
     guard
       let adjustmentSession = scrollViewAdjustmentSession,
@@ -2790,7 +2801,10 @@ extension CropView: UIGestureRecognizerDelegate {
         else {
           return false
         }
-        return proposedCrop.isRenderingEquivalent(to: stackCrop) == false
+        return proposedCrop.makeCropFeature().isRenderingEquivalent(
+          to: stackCrop,
+          orientedImageSize: proposedCrop.imageSize
+        ) == false
       }()
       if documentDiverged == false {
         record()
@@ -2939,7 +2953,7 @@ extension CropView: UIGestureRecognizerDelegate {
 
   fileprivate func updateCanvasContent(
     loadedState: EditingStack.Loaded,
-    crop: EditingCrop
+    crop: CropEditingState
   ) {
     guard featureFocus.isCropEditing else {
       cropSurface.hideCanvasView()

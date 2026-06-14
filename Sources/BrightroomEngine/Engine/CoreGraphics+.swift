@@ -131,7 +131,7 @@ extension CGImage {
   ) throws -> CGImage {
     try croppedWithColorspace(
       to: crop.cropRect,
-      adjustmentAngleRadians: crop.aggregatedRotation.radians
+      adjustmentAngleRadians: crop.aggregatedRotationRadians
     )
   }
 
@@ -267,12 +267,6 @@ extension CGImage {
     let result = try rotated(angle: angle, flipping: flipping)
 
     return result
-  }
-
-  func rotated(rotation: EditingCrop.Rotation, flipping: Flipping? = nil)
-    throws -> CGImage
-  {
-    try rotated(angle: -rotation.angle.radians, flipping: flipping)
   }
 
 }

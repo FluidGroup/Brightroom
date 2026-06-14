@@ -16,7 +16,7 @@ final class PreviewExportVisualEvidenceTests: XCTestCase {
   private static let context = CIContext()
   private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-  func testRenderPreviewAndExportEvidence() throws {
+  func testRenderPreviewAndExportEvidence() async throws {
     let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
     let imageSize = CGSize(width: source.width, height: source.height)
 
@@ -53,11 +53,11 @@ final class PreviewExportVisualEvidenceTests: XCTestCase {
 
     // 2) Export of the full edit with an identity crop, and 3) the preview
     //    composition of the same edit — these must look identical.
-    var fullEdit = EditingStack.Edit(crop: EditingCrop(imageSize: imageSize))
+    var fullEdit = EditingStack.Edit.test(imageSize: imageSize)
     fullEdit.effects = effects
     fullEdit.localAdjustments = [blurLayer]
 
-    let export = try renderExport(fullEdit, source: source)
+    let export = try await renderExport(fullEdit, source: source)
     attach(cgImage: export, name: "2-export-no-crop")
 
     let preview = previewComposition(fullEdit, source: source)
@@ -72,8 +72,8 @@ final class PreviewExportVisualEvidenceTests: XCTestCase {
       height: imageSize.height * 0.7
     ).integral
     var croppedEdit = fullEdit
-    croppedEdit.crop = EditingCrop(imageSize: imageSize, cropRect: cropRect)
-    let croppedExport = try renderExport(croppedEdit, source: source)
+    croppedEdit.crop = CropFeature.test(imageSize: imageSize, cropRect: cropRect)
+    let croppedExport = try await renderExport(croppedEdit, source: source)
     attach(cgImage: croppedExport, name: "4-export-with-crop")
 
     // Leave a breadcrumb in the log for extraction.
@@ -82,12 +82,12 @@ final class PreviewExportVisualEvidenceTests: XCTestCase {
 
   // MARK: - Rendering
 
-  private func renderExport(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
+  private func renderExport(_ edit: EditingStack.Edit, source: CGImage) async throws -> CGImage {
     let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
     renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.crop.imageSize)
+      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize)
     )
-    return try renderer.render(options: .init(workingColorSpace: Self.sRGB)).cgImage
+    return try await renderer.render(options: .init(workingColorSpace: Self.sRGB)).cgImage
   }
 
   private func previewComposition(_ edit: EditingStack.Edit, source: CGImage) -> CIImage {

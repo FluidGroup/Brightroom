@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import CoreImage
+import ImageIO
 import SwiftUI
 import UIKit
 
@@ -31,72 +32,166 @@ public typealias ImageRenderer = BrightRoomImageRenderer
 /// It renders an image with options
 public final class BrightRoomImageRenderer {
 
+  /// An encoded file format for `Output.file`.
+  public enum ExportFileType {
+    /// Lossy JPEG. `quality` is 0...1 (1 = best).
+    case jpeg(quality: CGFloat)
+    /// HEIF (HEIC). `quality` is 0...1 (1 = best).
+    case heif(quality: CGFloat)
+    /// Lossless PNG.
+    case png
+  }
+
+  /// Where a render stores its result.
+  public enum Output {
+    /// Render into an in-memory bitmap (a full-resolution `CGImage`). Simple,
+    /// but allocates the whole output buffer (≈ W·H·4 bytes; ~576MB at 12000²).
+    case memory
+    /// Stream the render straight to a file via Core Image's tiled writer — no
+    /// full-resolution `CGImage`, peak memory bounded to ~a tile plus encoder
+    /// state. The right choice for very large images.
+    case file(url: URL, fileType: ExportFileType)
+  }
+
   public struct Options {
 
     public var resolution: Resolution
     public var workingFormat: CIFormat
-        
+
     /// An colorspace that uses on rendering.
     /// Result image would use this colorspace.
     /// Nil means letting the renderer use the intrinsic colorspace of the working image.
     public var workingColorSpace: CGColorSpace?
-    
+
+    /// Where the result is stored (in-memory bitmap or a file on disk).
+    public var output: Output
+
     ///
     /// - Parameters:
     ///   - resolution:
     ///   - workingFormat:
     ///   - workingColorSpace:
+    ///   - output: In-memory bitmap (`.memory`, default) or a tiled write to a
+    ///     file (`.file`). Either way the result is returned as a `Rendered`.
     public init(
       resolution: BrightRoomImageRenderer.Resolution = .full,
       workingFormat: CIFormat = .BGRA8,
-      workingColorSpace: CGColorSpace? = nil
+      workingColorSpace: CGColorSpace? = nil,
+      output: Output = .memory
     ) {
       self.resolution = resolution
       self.workingFormat = workingFormat
       self.workingColorSpace = workingColorSpace
+      self.output = output
     }
 
   }
 
+  public enum RenderingError: Swift.Error {
+    /// A file-backed render could not be decoded back into a `CGImage`.
+    case failedToDecodeRenderedFile(URL)
+  }
+
   /**
    A result of rendering.
+
+   `Rendered` hides whether the result lives in memory or on disk: the same type
+   is returned for `Output.memory` and `Output.file`. Ask it for whatever you
+   need (`cgImage`, `uiImage`, `fileURL`, `thumbnail`) and it resolves the
+   backing for you.
    */
   public struct Rendered {
-
-    public enum Engine {
-      case coreGraphics
-      case combined
-    }
 
     public enum DataType {
       case jpeg(quality: CGFloat)
       case png
     }
 
-    /// A type of engine how rendered by
-    public let engine: Engine
+    enum Storage {
+      case memory(CGImage)
+      case file(URL)
+    }
 
     /// An Options instance that used in redering.
     public let options: Options
 
-    /// A rendered image that working on specified color-space.
-    /// Orientation fixed.
-    public let cgImage: CGImage
+    private let storage: Storage
+
+    init(cgImage: CGImage, options: Options) {
+      self.storage = .memory(cgImage)
+      self.options = options
+    }
+
+    init(fileURL: URL, options: Options) {
+      self.storage = .file(fileURL)
+      self.options = options
+    }
+
+    /// The on-disk location when the render targeted `Output.file`; `nil` for an
+    /// in-memory render.
+    public var fileURL: URL? {
+      if case .file(let url) = storage { return url }
+      return nil
+    }
+
+    /// The result as a `CGImage`, orientation fixed and tagged with the working
+    /// color space. An in-memory render returns immediately; a file-backed
+    /// render decodes the file (which loads the full image into memory — avoid
+    /// it on the large exports `Output.file` exists to keep bounded).
+    public var cgImage: CGImage {
+      get throws {
+        switch storage {
+        case .memory(let image):
+          return image
+        case .file(let url):
+          guard
+            let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+            let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+          else {
+            throw RenderingError.failedToDecodeRenderedFile(url)
+          }
+          return image
+        }
+      }
+    }
 
     public var uiImage: UIImage {
-      UIImage(cgImage: cgImage, scale: 1, orientation: .up)
-        .withRenderingMode(.alwaysOriginal)
+      get throws {
+        UIImage(cgImage: try cgImage, scale: 1, orientation: .up)
+          .withRenderingMode(.alwaysOriginal)
+      }
     }
 
     @available(iOS 13.0, *)
     public var swiftUIImage: SwiftUI.Image {
-      .init(decorative: cgImage, scale: 1, orientation: .up)
+      get throws {
+        .init(decorative: try cgImage, scale: 1, orientation: .up)
+      }
     }
 
-    init(cgImage: CGImage, options: Options, engine: Engine) {
-      self.cgImage = cgImage
-      self.options = options
-      self.engine = engine
+    /// A downsampled decode of the result, capped to `maxPixelSize` on the long
+    /// side — preview a large export WITHOUT the full-resolution decode spike.
+    /// A file result decodes a thumbnail via Image I/O (bounded memory); an
+    /// in-memory result returns the already-resident image unchanged.
+    public func thumbnail(maxPixelSize: CGFloat) throws -> CGImage {
+      switch storage {
+      case .memory(let image):
+        return image
+      case .file(let url):
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+          throw RenderingError.failedToDecodeRenderedFile(url)
+        }
+        let options: [CFString: Any] = [
+          kCGImageSourceCreateThumbnailFromImageAlways: true,
+          kCGImageSourceCreateThumbnailWithTransform: true,
+          kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+          kCGImageSourceShouldCacheImmediately: true,
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+          throw RenderingError.failedToDecodeRenderedFile(url)
+        }
+        return image
+      }
     }
 
     /**
@@ -105,12 +200,12 @@ public final class BrightRoomImageRenderer {
      Since the rendered image is working on DisplayP3 profile, that data might display wrong color on other platform devices.
      To avoid those issues, use this method to create data to send instead of creating data from `cgImageDisplayP3`.
      */
-    public func makeOptimizedForSharingData(dataType: DataType) -> Data {
+    public func makeOptimizedForSharingData(dataType: DataType) throws -> Data {
       switch dataType {
       case .jpeg(let quality):
-        return ImageTool.makeImageForJPEGOptimizedSharing(image: cgImage, quality: quality)
+        return ImageTool.makeImageForJPEGOptimizedSharing(image: try cgImage, quality: quality)
       case .png:
-        return ImageTool.makeImageForPNGOptimizedSharing(image: cgImage)
+        return ImageTool.makeImageForPNGOptimizedSharing(image: try cgImage)
       }
     }
 
@@ -159,140 +254,114 @@ public final class BrightRoomImageRenderer {
     edit = .init()
   }
 
-  /// Renders the image according edits asynchronously
-  ///
-  /// - Parameters:
-  ///   - options:
-  ///   - callbackQueue: A queue that completion closure runs on.
-  ///   - completion: A closure that runs on rendering completed.
-  public func render(
-    options: Options = .init(),
-    callbackQueue: DispatchQueue = .main,
-    completion: @escaping (
-      Result<Rendered, Error>
-    ) -> Void
-  ) {
-    type(of: self).queue.async {
-      do {
-        let rendered = try self.render(options: options)
-        callbackQueue.async {
-          completion(.success(rendered))
-        }
-      } catch {
-        callbackQueue.async {
-          completion(.failure(error))
-        }
-      }
-    }
-  }
-
   /**
    Renders an image according to the editing.
 
-   - Attension: This operation can be run background-thread.
+   Single rendering path: the edit (effects, local adjustments, and the crop as a
+   domain feature) compiles to one `CIImage` recipe through
+   `ParametricImageRenderer`, which Core Image evaluates. An unedited image or a
+   pure crop is just an identity/crop-only document on the same path.
+
+   The result is returned as a `Rendered`, which hides whether it is backed by an
+   in-memory bitmap or a file — controlled by `options.output`:
+
+   - `.memory` materializes a full-resolution `CGImage` (`createCGImage`).
+   - `.file` streams the render to disk through Core Image's tiled writer (no
+     full-resolution `CGImage`; bounded peak memory) — use it for large images.
+
+   The work runs on the renderer's private serial queue, off the calling actor.
    */
-  public func render(options: Options = .init()) throws -> Rendered {
-    // CoreGraphics fast path for an unedited image or an axis-aligned crop with
-    // no pixel effects: skips the CIContext entirely. Anything else — effects,
-    // local adjustments, rotation/straighten, or an explicit working color
-    // space — evaluates through the parametric graph.
-    if options.workingColorSpace == nil {
-      let enabledFeatures = edit.document.mainTree.features.filter(\.isEnabled)
-      if enabledFeatures.isEmpty {
-        return try renderOnlyCropping(cropFeature: nil, options: options)
-      }
-      if let cropFeature = edit.document.axisAlignedCropOnlyFeature {
-        return try renderOnlyCropping(cropFeature: cropFeature, options: options)
+  public func render(options: Options = .init()) async throws -> Rendered {
+    try await withCheckedThrowingContinuation { continuation in
+      Self.queue.async {
+        do {
+          continuation.resume(returning: try self.renderSynchronously(options: options))
+        } catch {
+          continuation.resume(throwing: error)
+        }
       }
     }
-    return try renderRevison2(options: options)
   }
 
-  /**
-   Render for only cropping using CoreGraphics
-   */
-  private func renderOnlyCropping(
-    cropFeature: CropFeature?,
-    options: Options = .init()
-  ) throws -> Rendered {
-
-    assert(options.workingColorSpace == nil, "This rendering operation no supports working with specifying colorspace.")
-
-    EngineLog.debug(.renderer, "Start render in using CoreGraphics")
-
-    /*
-     - load original image
-     - the image might not be suitable for rendering by orientation wise.
-     */
-    EngineLog.debug(.renderer, "Load full resolution CGImage from ImageSource.")
-
-    let sourceCGImage: CGImage = source.loadOriginalCGImage()
-
-    /*
-     - Fix the image orientation
-     */
-    EngineLog.debug(.renderer, "Fix orientation")
-
-    let orientedImage = try sourceCGImage.oriented(orientation)
-
-    /*
-     - Crops image
-     - Uses specified data
-     - Uses full size crop info if there's no request.
-     */
-
-    // The fast path only fires for an axis-aligned crop (or an unedited image),
-    // so reconstruct the engine y-down pixel rect from the (y-up) crop feature
-    // against the oriented image height — the exact inverse of the document
-    // bridge's flip. A nil crop feature means "no crop": use the full image.
-    let croppedImage: CGImage
-    if let cropFeature {
-      let pixelCrop = cropFeature.pixelCropRect(orientedImageHeight: CGFloat(orientedImage.height))
-      EngineLog.debug(.renderer, "Crop CGImage with extent \(pixelCrop)")
-      croppedImage = try orientedImage.croppedWithColorspace(
-        to: pixelCrop,
-        adjustmentAngleRadians: 0
-      )
-    } else {
-      croppedImage = orientedImage
-    }
-
-    /*
-     ===
-     ===
-     ===
-     */
-    EngineLog.debug(.renderer, "Resize if needed")
-
-    let resizedImage: CGImage
-
-    switch options.resolution {
-    case .full:
-      resizedImage = croppedImage
-    case .resize(let maxPixelSize):
-      resizedImage = try croppedImage.resized(maxPixelSize: maxPixelSize)
-    }
-
-    return .init(cgImage: resizedImage, options: options, engine: .coreGraphics)
-  }
-
-  /**
-   Render for full features using CoreImage and CoreGraphics
-   */
-  private func renderRevison2(
-    options: Options = .init(),
-    debug: @escaping (CIImage) -> Void = { _ in }
-  ) throws -> Rendered {
-
+  /// The synchronous render core shared by `render`. Builds the parametric
+  /// `CIImage` recipe once and either materializes a `CGImage` (`.memory`) or
+  /// streams it to a file (`.file`). Internal so size-sensitive benchmarks can
+  /// measure it without the async hop.
+  func renderSynchronously(options: Options) throws -> Rendered {
     let startTime = CACurrentMediaTime()
 
-    /*
-     ===
-     ===
-     ===
-     */
-    EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
+    let evaluated = try makeEvaluatedCIImage(options: options)
+    // `Resolution.resize` is a Core Image scale on the recipe, so the downscale
+    // is part of the same (tiled) evaluation for both outputs.
+    let image = Self.scaled(evaluated.image, for: options.resolution)
 
+    EngineLog.debug(.renderer, "Start render using CIContext => \(evaluated.context)")
+    EngineLog.debug(.renderer, "Evaluate parametric document => \(image)")
+
+    let rendered: Rendered
+    switch options.output {
+    case .memory:
+      /// To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
+      let cgImage = evaluated.context.createCGImage(
+        image,
+        from: image.extent,
+        format: options.workingFormat,
+        colorSpace: evaluated.colorSpace,
+        deferred: false
+      )!
+      rendered = .init(cgImage: cgImage, options: options)
+
+    case let .file(url, fileType):
+      // Hand the recipe straight to Core Image's tiled writer — no
+      // full-resolution `CGImage`, no `CGImageDestination`. Peak memory is
+      // bounded to ~a tile plus the encoder state.
+      try Self.write(
+        image,
+        to: url,
+        fileType: fileType,
+        context: evaluated.context,
+        // The write APIs require a concrete color space; fall back to sRGB when
+        // the source has none (mirrors `createCGImage(colorSpace: nil)`).
+        colorSpace: evaluated.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+      )
+      rendered = .init(fileURL: url, options: options)
+    }
+
+    let duration = CACurrentMediaTime() - startTime
+    EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
+
+    return rendered
+  }
+
+  private static func write(
+    _ image: CIImage,
+    to url: URL,
+    fileType: ExportFileType,
+    context: CIContext,
+    colorSpace: CGColorSpace
+  ) throws {
+    // Bounded-memory write: render the recipe strip-by-strip into a disk-backed
+    // (mmap'd) buffer and encode lazily, instead of `write{JPEG,HEIF}Representation`
+    // which renders the full bitmap into RAM first. See CIImageStreamingFileWriter.
+    try CIImageStreamingFileWriter.write(
+      image,
+      to: url,
+      fileType: fileType,
+      context: context,
+      colorSpace: colorSpace
+    )
+  }
+
+  /// Builds the evaluated output `CIImage`, its `CIContext`, and the working
+  /// color space — the shared front half of every full-feature render. The
+  /// document (effects, local adjustments, crop-as-domain-feature) compiles to
+  /// one lazy `CIImage` recipe whose extent is already the cropped, zero-origin
+  /// output. `radiusReferenceExtent` is nil because the source here is the full
+  /// image at render scale.
+  private func makeEvaluatedCIImage(
+    options: Options
+  ) throws -> (image: CIImage, context: CIContext, colorSpace: CGColorSpace?) {
+    EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
     let sourceCIImage: CIImage = source.makeOriginalCIImage().oriented(orientation)
 
     let ciContext = Self.makeCIContext(
@@ -301,58 +370,42 @@ public final class BrightRoomImageRenderer {
       imageExtent: sourceCIImage.extent
     )
 
-    EngineLog.debug(.renderer, "Start render in v2 using CIContext => \(ciContext)")
-
-    EngineLog.debug(.renderer, "Input oriented CIImage => \(sourceCIImage)")
-
-    /*
-     ===
-     ===
-     ===
-     */
-    EngineLog.debug(.renderer, "Evaluate parametric document")
-
-    // Single evaluation path: the document (effects, local adjustments, and the
-    // crop as a domain feature) compiles to one CIImage recipe whose extent is
-    // already the cropped, zero-origin output. `radiusReferenceExtent` is nil
-    // because the source here is the full image at render scale.
     let outputCIImage = try ParametricImageRenderer().makeImage(
       from: sourceCIImage,
       document: edit.document
     )
 
-    /**
-     To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
-     */
-    let croppedImage = ciContext.createCGImage(
-      outputCIImage,
-      from: outputCIImage.extent,
-      format: options.workingFormat,
-      colorSpace: options.workingColorSpace ?? sourceCIImage.colorSpace,
-      deferred: false
-    )!
+    return (outputCIImage, ciContext, options.workingColorSpace ?? sourceCIImage.colorSpace)
+  }
 
-    /*
-     ===
-     ===
-     ===
-     */
-    EngineLog.debug(.renderer, "Resize if needed")
-
-    let resizedImage: CGImage
-
-    switch options.resolution {
+  /// Applies `Resolution.resize` as a Core Image Lanczos scale so the downscale
+  /// is part of the tiled recipe (the `CIContext` already has
+  /// `.highQualityDownsample`). `.full` returns the image unchanged.
+  private static func scaled(_ image: CIImage, for resolution: Resolution) -> CIImage {
+    switch resolution {
     case .full:
-      resizedImage = croppedImage
+      return image
     case .resize(let maxPixelSize):
-      resizedImage = try croppedImage.resized(maxPixelSize: maxPixelSize)
+      let extent = image.extent
+      let longest = max(extent.width, extent.height)
+      guard longest > maxPixelSize, longest > 0 else {
+        return image
+      }
+      let scale = maxPixelSize / longest
+      let scaled = image
+        .applyingFilter(
+          "CILanczosScaleTransform",
+          parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1.0]
+        )
+      // Lanczos can grow the extent by sub-pixels (filter support); crop back to
+      // the integer target so the encoded file has exact dimensions. The
+      // parametric output is zero-origin.
+      let targetSize = CGSize(
+        width: (extent.width * scale).rounded(),
+        height: (extent.height * scale).rounded()
+      )
+      return scaled.cropped(to: CGRect(origin: .zero, size: targetSize))
     }
-
-    let duration = CACurrentMediaTime() - startTime
-    EngineLog.debug(.renderer, "Rendering has completed - took \(duration * 1000)ms")
-
-    return .init(cgImage: resizedImage, options: options, engine: .combined)
-
   }
 
   private struct CIContextCacheKey: Hashable {

@@ -61,13 +61,13 @@ public struct SwiftUICropView: View {
   }
 
   public struct StateSnapshot: Equatable {
-    public var proposedCrop: EditingCrop?
+    public var proposedCrop: CropEditingState?
     public var frame: CGRect
     public var adjustmentKind: AdjustmentKind
     public var preferredAspectRatio: PixelAspectRatio?
 
     public init(
-      proposedCrop: EditingCrop?,
+      proposedCrop: CropEditingState?,
       frame: CGRect,
       adjustmentKind: AdjustmentKind,
       preferredAspectRatio: PixelAspectRatio?
@@ -125,13 +125,13 @@ public struct SwiftUICropView: View {
   /// only want to record the crop extent after the interaction settles.
   public final class AdjustmentAngleCommitAction {
 
-    var onCall: (EditingCrop.AdjustmentAngle) -> Void = { _ in }
+    var onCall: (CropEditingState.AdjustmentAngle) -> Void = { _ in }
 
     public init() {
 
     }
 
-    public func callAsFunction(_ angle: EditingCrop.AdjustmentAngle) {
+    public func callAsFunction(_ angle: CropEditingState.AdjustmentAngle) {
       onCall(angle)
     }
   }
@@ -141,8 +141,8 @@ public struct SwiftUICropView: View {
 
   private let editingStack: EditingStack
 
-  private var rotationInput: Binding<EditingCrop.Rotation?> = .constant(nil)
-  private var adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?> = .constant(nil)
+  private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
+  private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
   private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
@@ -231,24 +231,24 @@ public struct SwiftUICropView: View {
     }
   }
 
-  public consuming func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
+  public consuming func rotation(_ rotation: CropEditingState.Rotation?) -> Self {
     self.rotationInput = .constant(rotation)
     return self
   }
 
-  public consuming func rotation(_ rotation: Binding<EditingCrop.Rotation?>) -> Self {
+  public consuming func rotation(_ rotation: Binding<CropEditingState.Rotation?>) -> Self {
 
     self.rotationInput = rotation
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+  public consuming func adjustmentAngle(_ angle: CropEditingState.AdjustmentAngle?) -> Self {
 
     self.adjustmentAngleInput = .constant(angle)
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: Binding<EditingCrop.AdjustmentAngle?>) -> Self {
+  public consuming func adjustmentAngle(_ angle: Binding<CropEditingState.AdjustmentAngle?>) -> Self {
 
     self.adjustmentAngleInput = angle
     return self
@@ -323,8 +323,8 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let editingStack: EditingStack
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
-  let rotationInput: Binding<EditingCrop.Rotation?>
-  let adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?>
+  let rotationInput: Binding<CropEditingState.Rotation?>
+  let adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?>
   let croppingAspectRatioInput: Binding<PixelAspectRatio?>
   let resetAction: SwiftUICropView.ResetAction?
   let rotateAction: SwiftUICropView.RotateAction?

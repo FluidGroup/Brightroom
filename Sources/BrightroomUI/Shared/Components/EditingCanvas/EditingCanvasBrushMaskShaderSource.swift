@@ -1,15 +1,18 @@
 import Metal
 
-/// Metal source used only to rasterize brush stamps into a mask texture.
+/// Metal render source for the **in-flight (active)** brush stroke, rasterized
+/// into a mask texture for low-latency live painting feedback. This render
+/// pipeline exists because re-rasterizing a growing active stroke
+/// (hundreds–thousands of stamps) through the parametric `brushStamp` CIKernel
+/// every frame would not hold frame rate.
 ///
-/// Image rendering and filter composition stay in Core Image. This shader draws
-/// soft circular alpha stamps for local-adjustment masks.
-///
-/// The falloff curve here is the contract for committed masks: the export
-/// rasterizer (`BrushMaskStroke.engineDrawMask` in
-/// LocalAdjustmentRendering.swift) must reproduce
-/// `(1 - smoothstep(hardness, 1, distance)) * opacity` exactly, or exported
-/// masks render wider/stronger than the interactive preview.
+/// The falloff is NOT duplicated here: `brushStampFragment` calls the shared
+/// `brushStampAlpha` (`BrushStampSharedSource.falloffFunctionMSL`), which
+/// `makeBrushMaskShaderLibrary` prepends to this source — the exact same
+/// function the parametric `brushStamp` kernel uses. Stamp accumulation uses a
+/// `.max` blend (`makeBrushMaskPipeline`), mirroring the kernel's
+/// `CIBlendKernel.componentMax`. So the live stroke and the committed/export
+/// mask converge by construction.
 enum EditingCanvasBrushMaskShaderSource {
   static let source = """
   #include <metal_stdlib>
@@ -57,18 +60,10 @@ enum EditingCanvasBrushMaskShaderSource {
     BrushStampVertexOut in [[stage_in]],
     constant BrushStampUniforms& brush [[buffer(0)]]
   ) {
-    float distanceFromCenter = length(in.local);
-    if (distanceFromCenter > 1.0) {
-      return float4(0.0);
-    }
-
-    float alpha = 1.0;
-    if (brush.hardness < 0.999) {
-      float start = clamp(brush.hardness, 0.0, 0.998);
-      alpha = 1.0 - smoothstep(start, 1.0, distanceFromCenter);
-    }
-
-    alpha *= brush.opacity;
+    // `in.local` is the [-1, 1] quad coordinate, so its length is already the
+    // normalized distance the shared falloff expects.
+    float normalizedDistance = length(in.local);
+    float alpha = brushStampAlpha(normalizedDistance, brush.hardness, brush.opacity);
     return float4(alpha, alpha, alpha, alpha);
   }
 

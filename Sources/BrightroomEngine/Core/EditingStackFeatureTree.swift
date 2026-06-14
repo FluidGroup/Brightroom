@@ -52,11 +52,8 @@ public enum FeatureTreePoint: Equatable, Sendable {
 /// `Edit.features`; the tree itself never stores pixels or UI state.
 public struct EditingFeatureTree: Equatable {
 
-  /// The parameters of a single feature node.
-  public typealias Payload = EditingFeature.Payload
-
   /// A feature node with a stable identity.
-  public typealias Node = EditingFeature
+  public typealias Node = MainFeature
 
   /// The features evaluated in source-to-output order.
   public private(set) var nodes: [Node]
@@ -67,10 +64,10 @@ public struct EditingFeatureTree: Equatable {
   ///
   /// Present in every canonical document (created by `Edit.init(crop:)`), so
   /// UI can anchor editing affordances to a stable identity.
-  public static let globalEffectsNodeID = EditingFeature.globalEffectsID
+  public static let globalEffectsNodeID = EditingStack.Edit.globalEffectsID
 
   /// The identity of the final crop node.
-  public static let finalCropNodeID = EditingFeature.finalCropID
+  public static let finalCropNodeID = EditingStack.Edit.finalCropID
 
   // MARK: - Projection
 
@@ -92,8 +89,11 @@ public struct EditingFeatureTree: Equatable {
   }
 
   /// The final crop feature.
-  public var finalCrop: EditingCrop? {
-    guard case let .crop(crop)? = node(id: Self.finalCropNodeID)?.payload else {
+  public var finalCrop: CropFeature? {
+    guard
+      case let .domain(domain)? = node(id: Self.finalCropNodeID),
+      let crop = domain as? CropFeature
+    else {
       return nil
     }
     return crop
@@ -101,16 +101,19 @@ public struct EditingFeatureTree: Equatable {
 
   /// The global effects feature.
   public var globalEffects: EffectPipeline? {
-    guard case let .effects(pipeline)? = node(id: Self.globalEffectsNodeID)?.payload else {
+    guard
+      case let .effect(effect)? = node(id: Self.globalEffectsNodeID),
+      let bundle = effect as? EffectPipelineFeature
+    else {
       return nil
     }
-    return pipeline
+    return bundle.pipeline
   }
 
   /// The local adjustment nodes in evaluation order.
   public var localAdjustmentNodes: [Node] {
     nodes.filter {
-      if case .localAdjustment = $0.payload {
+      if case .localAdjustment = $0 {
         return true
       }
       return false
@@ -119,7 +122,7 @@ public struct EditingFeatureTree: Equatable {
 
   /// The local adjustment addressed by a tree identity.
   public func localAdjustment(id: FeatureID) -> LocalAdjustmentFeature? {
-    guard case let .localAdjustment(adjustment)? = node(id: id)?.payload else {
+    guard case let .localAdjustment(adjustment)? = node(id: id) else {
       return nil
     }
     return adjustment
@@ -168,7 +171,7 @@ public struct EditingFeatureTree: Equatable {
   static func updateFeature(
     id: FeatureID,
     in edit: inout EditingStack.Edit,
-    mutate: (inout Payload) -> Void
+    mutate: (inout MainFeature) -> Void
   ) -> Bool {
     edit.updateFeature(id: id, mutate: mutate)
   }
@@ -202,7 +205,7 @@ extension EditingStack {
   @discardableResult
   public func updateFeature(
     id: FeatureID,
-    mutate: (inout EditingFeatureTree.Payload) -> Void
+    mutate: (inout MainFeature) -> Void
   ) -> Bool {
     _pixelengine_ensureMainThread()
 
@@ -222,12 +225,15 @@ extension EditingStack {
   public func updateGlobalEffectsFeature(
     _ mutate: (inout EffectPipeline) -> Void
   ) {
-    updateFeature(id: EditingFeatureTree.globalEffectsNodeID) { payload in
-      guard case var .effects(pipeline) = payload else {
+    updateFeature(id: EditingFeatureTree.globalEffectsNodeID) { feature in
+      guard
+        case let .effect(effect) = feature,
+        var bundle = effect as? EffectPipelineFeature
+      else {
         return
       }
-      mutate(&pipeline)
-      payload = .effects(pipeline)
+      mutate(&bundle.pipeline)
+      feature = .effect(bundle)
     }
   }
 
@@ -242,7 +248,7 @@ extension EditingStack {
     guard var edit = loadedState?.currentEdit else {
       return adjustment.id
     }
-    edit.insertFeatureBeforeFinalCrop(.init(localAdjustment: adjustment))
+    edit.insertFeatureBeforeFinalCrop(.localAdjustment(adjustment))
     loadedState?.currentEdit = edit
     return adjustment.id
   }

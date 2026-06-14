@@ -111,6 +111,21 @@ extension PresetFeature: ImageEffectFeatureType {
   }
 }
 
+extension EffectPipelineFeature: ImageEffectFeatureType {
+
+  public var childFeatures: [any Feature] { pipeline.effects }
+
+  public func validate() throws {
+    for effect in pipeline.effects {
+      try effect.validate()
+    }
+  }
+
+  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try pipeline.apply(to: image, context: context)
+  }
+}
+
 extension ColorCubeFeature: ImageEffectFeatureType {
 
   private var expectedByteCount: Int {

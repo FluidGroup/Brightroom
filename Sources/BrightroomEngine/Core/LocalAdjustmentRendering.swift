@@ -19,8 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import CoreGraphics
 import CoreImage
-import UIKit
 
 import BrightroomParametric
 
@@ -46,9 +46,9 @@ extension EditingStack.Edit {
     purpose: PreviewPurpose
   ) -> CIImage {
     features.reduce(sourceImage) { image, feature in
-      switch feature.payload {
-      case .effects(let pipeline):
-        return pipeline.applyIgnoringFailure(to: image)
+      switch feature {
+      case .effect(let effect):
+        return effect.applyIgnoringFailure(to: image)
       case .localAdjustment(let adjustment):
         switch purpose {
         case .editingBase:
@@ -56,9 +56,32 @@ extension EditingStack.Edit {
         case .editing:
           return adjustment.engineRenderIgnoringFailure(over: image)
         }
-      case .crop:
+      case .domain:
         return image
       }
+    }
+  }
+}
+
+extension ImageEffectFeatureType {
+
+  /// Applies a single effect node, returning the input unchanged when the node
+  /// is disabled or evaluation fails. Mirrors `EffectPipeline.applyIgnoringFailure`
+  /// for the per-node reduction the preview path performs.
+  func applyIgnoringFailure(
+    to image: CIImage,
+    radiusReferenceExtent: CGRect? = nil
+  ) -> CIImage {
+    guard isEnabled else {
+      return image
+    }
+    let context = EngineParametricEvaluation.context
+      .withRadiusReferenceExtent(radiusReferenceExtent)
+    do {
+      return try apply(to: image, context: context)
+    } catch {
+      assertionFailure("Effect evaluation failed: \(error)")
+      return image
     }
   }
 }
@@ -174,31 +197,31 @@ extension MaskTree {
     return false
   }
 
-  /// Rasterizes the mask for the engine render path.
+  /// Rasterizes the mask for the engine render path through the shared
+  /// parametric `brushStamp` kernel (`FeatureGraphCompiler.renderMask`) — the
+  /// identical rasterizer the export renderer (`ParametricImageRenderer`) uses —
+  /// so the preview and the exported result agree by construction.
   ///
-  /// Brush-rooted trees draw on the CPU in display coordinates (top-left
-  /// origin, y-down — `CIImage(cgImage:)` preserves visual orientation, so no
-  /// flip is applied; the falloff matches the interactive Metal brush).
-  /// Other trees render through the parametric compiler, whose working space
-  /// is y-up, and are flipped back into the display contract.
+  /// Stamps are authored y-down (display, top-left origin); the parametric
+  /// compiler evaluates y-up, so the rendered alpha is flipped back into the
+  /// display contract. Flipping the image by the canvas height is equivalent to
+  /// the export path's stamp pre-flip (`EditingDocumentBridge.flippingStampsY`),
+  /// so both produce the same alpha field.
   func engineMakeMaskImage(size: CGSize) -> CIImage? {
     let targetSize = CGSize(
       width: max(size.width.rounded(), 1),
       height: max(size.height.rounded(), 1)
     )
 
-    if case let .brush(mask) = root {
-      guard mask.isEnabled else {
-        return nil
-      }
-      return mask.engineMakeCIImage(size: targetSize)
+    // A disabled brush leaf selects nothing; skip the composite entirely.
+    if case let .brush(mask) = root, mask.isEnabled == false {
+      return nil
     }
 
     do {
       let compiler = FeatureGraphCompiler()
       let extent = CGRect(origin: .zero, size: targetSize)
       let rendered = try compiler.renderMask(self, extent: extent)
-      // Stamps are authored y-down; the parametric compiler evaluates y-up.
       return rendered
         .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
         .transformed(by: CGAffineTransform(translationX: 0, y: targetSize.height))
@@ -207,187 +230,5 @@ extension MaskTree {
       assertionFailure("Parametric mask rendering failed: \(error)")
       return nil
     }
-  }
-}
-
-/// Memoizes the CPU mask raster, which costs O(image area + stamp count) per
-/// pass (~150ms at full resolution). Masks are Equatable value types, so an
-/// equality-validated cache returns bit-identical rasters.
-///
-/// Only preview-scale rasters are retained: editing previews are bounded by
-/// `EditingStack`'s 2560px editing size and re-render repeatedly, while an
-/// export-resolution raster is produced once per export and never requested
-/// again — pinning one in a process-lifetime static would cost ~200MB for a
-/// 48MP image.
-private enum LocalAdjustmentMaskRasterStore {
-
-  private struct Entry {
-    let mask: BrushMask
-    let size: CGSize
-    let cgImage: CGImage
-    let byteCost: Int
-  }
-
-  private static let lock = NSLock()
-  private static var entries: [Entry] = []
-  private static let maxEntryByteCost = 32 * 1024 * 1024
-  private static let totalByteBudget = 64 * 1024 * 1024
-
-  static func image(
-    for mask: BrushMask,
-    size: CGSize
-  ) -> CGImage? {
-    lock.lock()
-    defer { lock.unlock() }
-
-    guard let index = entries.firstIndex(where: { $0.size == size && $0.mask == mask }) else {
-      return nil
-    }
-    let entry = entries.remove(at: index)
-    entries.append(entry)
-    return entry.cgImage
-  }
-
-  static func store(
-    _ cgImage: CGImage,
-    for mask: BrushMask,
-    size: CGSize
-  ) {
-    let byteCost = cgImage.bytesPerRow * cgImage.height
-    guard byteCost <= maxEntryByteCost else {
-      return
-    }
-
-    lock.lock()
-    defer { lock.unlock() }
-
-    entries.removeAll { $0.size == size && $0.mask == mask }
-    entries.append(Entry(mask: mask, size: size, cgImage: cgImage, byteCost: byteCost))
-
-    var totalCost = entries.reduce(0) { $0 + $1.byteCost }
-    while totalCost > totalByteBudget, entries.isEmpty == false {
-      totalCost -= entries.removeFirst().byteCost
-    }
-  }
-}
-
-extension BrushMask {
-
-  fileprivate func engineMakeCIImage(size targetSize: CGSize) -> CIImage? {
-    if let cached = LocalAdjustmentMaskRasterStore.image(for: self, size: targetSize) {
-      return CIImage(cgImage: cached)
-        .cropped(to: CGRect(origin: .zero, size: targetSize))
-    }
-
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 1
-    format.opaque = false
-
-    let image = UIGraphicsImageRenderer(size: targetSize, format: format).image { rendererContext in
-      let context = rendererContext.cgContext
-      context.setBlendMode(.normal)
-      context.setFillColor(UIColor.clear.cgColor)
-      context.fill(CGRect(origin: .zero, size: targetSize))
-
-      for stroke in strokes {
-        stroke.engineDrawMask(in: context)
-      }
-    }
-
-    guard let cgImage = image.cgImage else {
-      return nil
-    }
-
-    LocalAdjustmentMaskRasterStore.store(cgImage, for: self, size: targetSize)
-
-    // Stamps are authored in display coordinates (top-left origin, y-down),
-    // which is exactly UIGraphics' coordinate system, so the raster is
-    // already visually correct. `CIImage(cgImage:)` preserves visual
-    // orientation — adding a flip here renders exported masks upside-down
-    // relative to the interactive preview. (A flip is required for
-    // `CIImage(mtlTexture:)`, not for `CIImage(cgImage:)`.)
-    return CIImage(cgImage: cgImage)
-      .cropped(to: CGRect(origin: .zero, size: targetSize))
-  }
-}
-
-extension BrushMaskStroke {
-
-  fileprivate func engineDrawMask(in context: CGContext) {
-    guard stamps.isEmpty == false else {
-      return
-    }
-
-    let radius = max(CGFloat(brush.diameter) / 2, 0.5)
-    let opacity = CGFloat(min(max(brush.opacity, 0), 1))
-    let hardness = CGFloat(min(max(brush.hardness, 0), 1))
-
-    // The gradient depends only on the per-stroke brush, so build it once
-    // instead of per stamp; a long stroke holds hundreds of stamps.
-    let softStampGradient: CGGradient?
-    if hardness >= 0.999 {
-      softStampGradient = nil
-    } else {
-      guard let gradient = Self.makeSoftStampGradient(hardness: hardness, opacity: opacity) else {
-        return
-      }
-      softStampGradient = gradient
-    }
-
-    for stamp in stamps {
-      if let softStampGradient {
-        context.drawRadialGradient(
-          softStampGradient,
-          startCenter: stamp,
-          startRadius: 0,
-          endCenter: stamp,
-          endRadius: radius,
-          options: []
-        )
-      } else {
-        let rect = CGRect(
-          x: stamp.x - radius,
-          y: stamp.y - radius,
-          width: radius * 2,
-          height: radius * 2
-        )
-        context.setFillColor(UIColor(white: 1, alpha: opacity).cgColor)
-        context.fillEllipse(in: rect)
-      }
-    }
-  }
-
-  private static func makeSoftStampGradient(
-    hardness: CGFloat,
-    opacity: CGFloat
-  ) -> CGGradient? {
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-
-    // The falloff must match the interactive Metal brush
-    // (EditingCanvasBrushMaskShaderSource) and the parametric GPU kernel
-    // (ParametricKernels.metal):
-    //   alpha = (1 - smoothstep(hardness, 1, distance)) * opacity
-    // A plain linear ramp renders a fatter tail per stamp, and over-blending
-    // across overlapping stamps compounds that into visibly wider and
-    // stronger coverage in exports than the preview ever showed.
-    let hardnessStop = min(max(hardness, 0.001), 0.999)
-    let stepCount = 16
-    var locations: [CGFloat] = [0, hardnessStop]
-    var colors: [CGColor] = [
-      UIColor(white: 1, alpha: opacity).cgColor,
-      UIColor(white: 1, alpha: opacity).cgColor,
-    ]
-    for index in 1...stepCount {
-      let bandFraction = CGFloat(index) / CGFloat(stepCount)
-      let smooth = bandFraction * bandFraction * (3 - 2 * bandFraction)
-      locations.append(hardnessStop + (1 - hardnessStop) * bandFraction)
-      colors.append(UIColor(white: 1, alpha: opacity * (1 - smooth)).cgColor)
-    }
-
-    return CGGradient(
-      colorsSpace: colorSpace,
-      colors: colors as CFArray,
-      locations: &locations
-    )
   }
 }

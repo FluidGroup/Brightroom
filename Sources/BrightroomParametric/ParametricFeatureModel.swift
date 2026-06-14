@@ -745,6 +745,35 @@ public struct EffectPipeline: Equatable, Sendable {
   }
 }
 
+/// A main-tree effect node that bundles an ordered `EffectPipeline`.
+///
+/// This is the document representation of the editing stack's global-effects
+/// node: it keeps the `EffectPipeline` editing vocabulary as a single,
+/// identity-stable feature, while the compiler flattens it through
+/// `childFeatures` exactly like `PresetFeature`.
+public struct EffectPipelineFeature: Feature, Codable {
+
+  /// The stable identity of this effect node.
+  public var id: FeatureID
+
+  /// A Boolean value indicating whether this node participates in rendering.
+  public var isEnabled: Bool
+
+  /// The ordered effects applied when this node evaluates.
+  public var pipeline: EffectPipeline
+
+  /// Creates an effect-pipeline feature.
+  public init(
+    id: FeatureID = .init(),
+    isEnabled: Bool = true,
+    pipeline: EffectPipeline
+  ) {
+    self.id = id
+    self.isEnabled = isEnabled
+    self.pipeline = pipeline
+  }
+}
+
 /// A local adjustment branch.
 ///
 /// The branch evaluates an effect pipeline from the current main image, evaluates
