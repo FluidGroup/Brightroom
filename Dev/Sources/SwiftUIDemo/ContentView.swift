@@ -8,7 +8,6 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State var horizontalStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
   @State private var photosCropHorizontalStack = Mocks.makeEditingStack(
     image: Asset.horizontalRect.image
@@ -60,10 +59,6 @@ struct ContentView: View {
             NavigationLink("Pick image") {
               WorkingOnPicked()
             }
-          }
-
-          NavigationLink("Custom Filter") {
-            DemoFilterView(editingStack: horizontalStack)
           }
 
           NavigationLink("Rendering") {

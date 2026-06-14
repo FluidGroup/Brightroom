@@ -10,12 +10,6 @@ struct RenderingDemoView: View {
 
   var body: some View {
     Form {
-      Section("Preview") {
-        NavigationLink("SwiftUIImagePreviewView") {
-          ImagePreviewDemoView()
-        }
-      }
-
       Section("Rendering") {
         NavigationLink("Metal / CIImage Display") {
           MetalRenderingDemoView()
@@ -41,97 +35,6 @@ private enum DemoResource {
     Bundle.main.path(forResource: name, ofType: type).map {
       URL(fileURLWithPath: $0)
     }!
-  }
-}
-
-private struct ImagePreviewDemoView: View {
-
-  @ObjectEdge private var retainedStack = EditingStack(
-    imageProvider: .init(image: Asset.leica.image),
-    cropModifier: .init { _, crop, completion in
-      var new = crop
-      new.updateCropExtent(toFitAspectRatio: .square)
-      completion(new)
-    }
-  )
-
-  @State private var previewStack = EditingStack(imageProvider: .init(image: Asset.leica.image))
-  @State private var selectedItem: PhotosPickerItem?
-  @State private var status = "Example"
-
-  var body: some View {
-    VStack(spacing: 0) {
-      Form {
-        Section {
-          PhotosPicker("Pick Image", selection: $selectedItem)
-
-          Button("Example") {
-            previewStack = EditingStack(imageProvider: .init(image: Asset.leica.image))
-            status = "Example"
-          }
-
-          Button("Example with keeping") {
-            previewStack = retainedStack
-            status = "Example with keeping"
-          }
-
-          Button("Oriented image") {
-            previewStack = EditingStack(
-              imageProvider: try! .init(
-                fileURL: DemoResource.url(forResource: "orientation_right", ofType: "HEIC")
-              )
-            )
-            status = "Oriented image"
-          }
-
-          Button("Remote image") {
-            previewStack = EditingStack(
-              imageProvider: .init(
-                editableRemoteURL: URL(
-                  string:
-                    "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-                )!
-              )
-            )
-            status = "Remote image"
-          }
-        } footer: {
-          Text(status)
-        }
-      }
-      .frame(maxHeight: 340)
-
-      SwiftUIImagePreviewView(editingStack: previewStack)
-        .id(ObjectIdentifier(previewStack))
-        .background(Color.black)
-    }
-    .navigationTitle("SwiftUIImagePreviewView")
-    .onChange(of: selectedItem, perform: loadPickedImage)
-  }
-
-  private func loadPickedImage(_ item: PhotosPickerItem?) {
-    guard let item else { return }
-
-    Task {
-      do {
-        guard let data = try await item.loadTransferable(type: Data.self) else {
-          await MainActor.run {
-            status = "Failed to load selected image."
-          }
-          return
-        }
-
-        let stack = EditingStack(imageProvider: try .init(data: data))
-        await MainActor.run {
-          previewStack = stack
-          status = "Picked image"
-        }
-      } catch {
-        await MainActor.run {
-          status = "Failed to load selected image: \(error)"
-        }
-      }
-    }
   }
 }
 
