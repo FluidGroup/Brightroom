@@ -32,7 +32,59 @@ extension CGRect {
 }
 
 enum EditingCanvasImageProcessing {
-  static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+
+  // MARK: - Color contract
+  //
+  // The editing canvas crosses the Metal<->Core Image boundary many times
+  // (source bake, prepared base/adjusted, mask, drawable). Each crossing has a
+  // DISTINCT color-space role; collapsing them into one constant is what made
+  // the canvas clamp Display-P3 to sRGB. The four contracts below keep wide
+  // gamut intact while avoiding double color management:
+  //
+  //   working      == intermediate   (extended-linear Display-P3)
+  //     -> every intermediate texture is WRITTEN and READ BACK in this same
+  //        space, so each hop round-trips losslessly through a float texture.
+  //   drawable     == CAMetalLayer.colorspace (Display-P3, SDR)
+  //     -> the single linear->display conversion happens only at the final
+  //        drawable write; the layer interprets the same space (no re-convert).
+  //   mask                             (sRGB — a [0,1] selection field, not color)
+  //     -> pinned independently so changing the color contract never perturbs
+  //        the brush feather fed to CIBlendWithAlphaMask.
+
+  /// Core Image working (math) space. Extended-linear so wide-gamut and
+  /// out-of-sRGB chroma survive filtering instead of being gamut-clamped.
+  static let workingColorSpace =
+    CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3) ?? CGColorSpaceCreateDeviceRGB()
+
+  /// Encoding for every intermediate COLOR texture, used by BOTH the
+  /// `ciContext.render(...)` that writes it and the `CIImage(mtlTexture:)` that
+  /// reads it back. MUST equal `workingColorSpace` for a lossless round-trip.
+  static let intermediateColorSpace =
+    CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3) ?? CGColorSpaceCreateDeviceRGB()
+
+  /// Encoding of the final drawable write. MUST equal the CAMetalLayer's
+  /// colorspace (Display-P3, SDR); a mismatch double-manages color.
+  static let drawableColorSpace =
+    CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
+
+  /// The brush mask is a [0,1] selection field, not color content. Kept on a
+  /// fixed space independent of the color contract so the feather is
+  /// deterministic and unaffected by wide-gamut changes (behavior-preserving).
+  static let maskColorSpace =
+    CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+
+  /// Core Image working precision — half-float so the working buffer carries
+  /// extended-range / wide-gamut values without 8-bit clamping or banding.
+  static let workingFormat: CIFormat = .RGBAh
+
+  /// Pixel format for intermediate COLOR textures (source / base / adjusted).
+  /// Float so the extended-linear-Display-P3 round-trip stays lossless (and is
+  /// EDR-ready). The mask texture stays `.rgba8Unorm` — a [0,1] field needs no float.
+  static let colorTextureFormat: MTLPixelFormat = .rgba16Float
+
+  /// Drawable pixel format — 10-bit unorm shows Display-P3 SDR without 8-bit
+  /// banding at half the bandwidth of a float drawable (EDR would need rgba16Float).
+  static let drawablePixelFormat: MTLPixelFormat = .bgr10a2Unorm
 
   static func clippedToSourceAlpha(_ image: CIImage, source: CIImage) -> CIImage {
     let extent = image.extent

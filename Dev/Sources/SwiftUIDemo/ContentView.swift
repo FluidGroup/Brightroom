@@ -27,6 +27,9 @@ struct ContentView: View {
   @State private var photosCropSuperSmallStack = Mocks.makeEditingStack(
     image: Asset.superSmall.image
   )
+  @State private var photosCropInstaLogoStack = Mocks.makeEditingStack(
+    image: Asset.instaLogo.image
+  )
   @State private var photosCropRemoteStack = EditingStack(
     imageProvider: .init(
       editableRemoteURL: URL(
@@ -148,6 +151,12 @@ struct ContentView: View {
               Button("Super small") {
                 fullScreenView = .init(showsDismissButton: false) {
                   DemoPhotosCropView(stack: photosCropSuperSmallStack)
+                }
+              }
+
+              Button("Insta Logo") {
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropInstaLogoStack)
                 }
               }
 

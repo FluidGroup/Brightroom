@@ -286,8 +286,16 @@ public struct ParametricExportRenderer {
     device: RenderingDevice = .automatic
   ) throws -> Rendered {
 
+    let colorSpace = options.workingColorSpace ?? source.colorSpace
+
+    // Always process through a half-float WORKING buffer so wide-gamut and
+    // out-of-range (>1 / <0) values survive the multi-filter chain — an 8-bit
+    // working format would clamp/band them mid-chain. This is the processing
+    // precision only; it is independent of the OUTPUT format below, which stays
+    // `options.workingFormat` (the caller's delivery format — 8-bit Display-P3
+    // is fine for SDR; bumping the output to float is a per-call delivery choice).
     let ciContext = Self.makeCIContext(
-      workingFormat: options.workingFormat,
+      workingFormat: .RGBAh,
       device: device,
       imageExtent: source.extent
     )
@@ -300,8 +308,6 @@ public struct ParametricExportRenderer {
     // `Resolution.resize` is a Core Image scale on the recipe, so the downscale
     // is part of the same (tiled) evaluation for both outputs.
     let image = Self.scaled(outputCIImage, for: options.resolution)
-
-    let colorSpace = options.workingColorSpace ?? source.colorSpace
 
     switch options.output {
     case .memory:
@@ -391,6 +397,16 @@ public struct ParametricExportRenderer {
   // of the Swift 6 global-mutable-state check rather than re-isolating.
   private nonisolated(unsafe) static var ciContextCache: [CIContextCacheKey: CIContext] = [:]
 
+  /// Extended-linear, wide-gamut (Display-P3 primaries) CIContext WORKING space.
+  /// Paired with the half-float working format, this extended space lets
+  /// out-of-sRGB / out-of-range values survive the filter chain, so edited
+  /// wide-gamut sources (Display-P3, Adobe RGB, ...) export faithfully instead
+  /// of being gamut-clipped into the default sRGB-primary working space. It
+  /// matches the editing canvas working space so canvas and export agree.
+  /// (Distinct from `Options.workingColorSpace`, which is the OUTPUT tag.)
+  private static let processingColorSpace =
+    CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3) ?? CGColorSpaceCreateDeviceRGB()
+
   /// CIContext creation costs tens to hundreds of milliseconds; CIContext is
   /// thread-safe, so contexts are shared across renders keyed by the options
   /// that affect their output.
@@ -413,6 +429,7 @@ public struct ParametricExportRenderer {
     let context = CIContext(
       options: [
         .workingFormat: workingFormat,
+        .workingColorSpace: processingColorSpace,
         .highQualityDownsample: true,
         .useSoftwareRenderer: useSoftwareRenderer,
         .cacheIntermediates: false
