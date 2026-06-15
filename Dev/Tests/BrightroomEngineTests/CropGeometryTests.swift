@@ -19,52 +19,54 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import XCTest
+import Testing
+import Foundation
+import CoreGraphics
 
 @testable import BrightroomEngine
 
 /// Direct coverage for the `CropGeometry` helper. `EditingCrop` delegates to it
 /// today, but `EditingCrop` is removed later in the refactor, so these pin the
 /// clamp / aspect-fit / bounding-box math independently of it.
-final class CropGeometryTests: XCTestCase {
+struct CropGeometryTests {
 
   private let imageSize = CGSize(width: 200, height: 100)
 
-  func testFittingRectClampsToImageBounds() {
+  @Test func `Fitting rect clamps to image bounds`() {
     let result = CropGeometry.fittingRect(
       rect: .init(x: -10, y: -10, width: 250, height: 150),
       in: imageSize,
       respectingAspectRatio: nil
     )
-    XCTAssertEqual(result, .init(x: 0, y: 0, width: 200, height: 100))
+    #expect(result == .init(x: 0, y: 0, width: 200, height: 100))
   }
 
-  func testFittingRectFitsCenteredAspectRatio() {
+  @Test func `Fitting rect fits centered aspect ratio`() {
     // A full-image rect constrained to square: centered horizontally, 100×100.
     let result = CropGeometry.fittingRect(
       rect: .init(x: 0, y: 0, width: 200, height: 100),
       in: imageSize,
       respectingAspectRatio: .square
     )
-    XCTAssertEqual(result, .init(x: 50, y: 0, width: 100, height: 100))
+    #expect(result == .init(x: 50, y: 0, width: 100, height: 100))
   }
 
-  func testCropRectToFitAspectRatioIsMaximalAndCentered() {
+  @Test func `Crop rect to fit aspect ratio is maximal and centered`() {
     let result = CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize)
-    XCTAssertEqual(result, .init(x: 50, y: 0, width: 100, height: 100))
+    #expect(result == .init(x: 50, y: 0, width: 100, height: 100))
   }
 
-  func testCropRectToFitAspectRatioIsIdempotent() {
+  @Test func `Crop rect to fit aspect ratio is idempotent`() {
     let first = CropGeometry.cropRect(toFitAspectRatio: .init(width: 4, height: 5), in: imageSize)
     let second = CropGeometry.fittingRect(
       rect: first,
       in: imageSize,
       respectingAspectRatio: .init(width: 4, height: 5)
     )
-    XCTAssertEqual(first, second)
+    #expect(first == second)
   }
 
-  func testCropRectToFitBoundingBoxFlipsVisionYUpToDisplayYDown() {
+  @Test func `Crop rect to fit bounding box flips vision y up to display y down`() {
     // Vision's bottom-left quadrant (y-up, normalized) must land in the display
     // lower-left quadrant (y-down): y spans 50…100 in a 100-tall image.
     let result = CropGeometry.cropRect(
@@ -73,6 +75,6 @@ final class CropGeometryTests: XCTestCase {
       in: imageSize,
       respectingAspectRatio: nil
     )
-    XCTAssertEqual(result, .init(x: 0, y: 50, width: 100, height: 50))
+    #expect(result == .init(x: 0, y: 50, width: 100, height: 50))
   }
 }

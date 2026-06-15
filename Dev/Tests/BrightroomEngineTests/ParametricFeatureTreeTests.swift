@@ -1,13 +1,14 @@
 import AVFoundation
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
 
-final class ParametricFeatureTreeTests: XCTestCase {
+struct ParametricFeatureTreeTests {
 
-  func testDocumentCodableRoundTrip() throws {
+  @Test func documentCodableRoundTrip() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -74,10 +75,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let data = try codec.encode(document)
     let decoded = try codec.decode(data)
 
-    XCTAssertEqual(decoded, document)
+    #expect(decoded == document)
   }
 
-  func testCodecRoundTripMatchesOriginalDocumentRendering() throws {
+  @Test func codecRoundTripMatchesOriginalDocumentRendering() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -130,7 +131,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let originalOutput = try Self.compiler.makeOutput(from: input, document: document)
     let decodedOutput = try Self.compiler.makeOutput(from: input, document: decoded)
 
-    XCTAssertEqual(decoded, document)
+    #expect(decoded == document)
     try Self.assertImagesMatch(
       originalOutput.image,
       decodedOutput.image,
@@ -138,7 +139,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testCustomRegisteredFeatureRendersLikeDefaultFeatures() throws {
+  @Test func customRegisteredFeatureRendersLikeDefaultFeatures() throws {
     var codec = ParametricDocumentCodec()
     codec.register(TestRedBoostFeature.self)
     let document = EditingDocument(
@@ -191,7 +192,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testCodecRoundTripPreservesDocumentWithCustomRegisteredFeature() throws {
+  @Test func codecRoundTripPreservesDocumentWithCustomRegisteredFeature() throws {
     var codec = ParametricDocumentCodec()
     codec.register(TestRedBoostFeature.self)
     let document = EditingDocument(
@@ -216,10 +217,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let data = try codec.encode(document)
     let decoded = try codec.decode(data)
 
-    XCTAssertEqual(decoded, document)
+    #expect(decoded == document)
   }
 
-  func testDecodingUnregisteredFeatureTypeThrows() throws {
+  @Test func decodingUnregisteredFeatureTypeThrows() throws {
     var registeringCodec = ParametricDocumentCodec()
     registeringCodec.register(TestRedBoostFeature.self)
     let document = EditingDocument(
@@ -237,15 +238,14 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let data = try registeringCodec.encode(document)
 
     let plainCodec = ParametricDocumentCodec()
-    XCTAssertThrowsError(try plainCodec.decode(data)) { error in
-      XCTAssertEqual(
-        error as? ParametricDocumentCodecError,
-        .unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
-      )
+    #expect(
+      throws: ParametricDocumentCodecError.unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
+    ) {
+      try plainCodec.decode(data)
     }
   }
 
-  func testEncodingUnregisteredFeatureTypeThrowsAtSaveTime() throws {
+  @Test func encodingUnregisteredFeatureTypeThrowsAtSaveTime() throws {
     // A codec must refuse to write a document it cannot read back.
     let document = EditingDocument(
       mainTree: MainTree(
@@ -261,15 +261,14 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
 
     let plainCodec = ParametricDocumentCodec()
-    XCTAssertThrowsError(try plainCodec.encode(document)) { error in
-      XCTAssertEqual(
-        error as? ParametricDocumentCodecError,
-        .unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
-      )
+    #expect(
+      throws: ParametricDocumentCodecError.unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
+    ) {
+      try plainCodec.encode(document)
     }
   }
 
-  func testPlainJSONCodingWithoutCodecThrowsMissingRegistry() throws {
+  @Test func plainJSONCodingWithoutCodecThrowsMissingRegistry() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -278,24 +277,18 @@ final class ParametricFeatureTreeTests: XCTestCase {
       )
     )
 
-    XCTAssertThrowsError(try JSONEncoder().encode(document)) { error in
-      XCTAssertEqual(
-        error as? ParametricDocumentCodecError,
-        .missingRegistry
-      )
+    #expect(throws: ParametricDocumentCodecError.missingRegistry) {
+      try JSONEncoder().encode(document)
     }
 
     let codec = ParametricDocumentCodec()
     let data = try codec.encode(document)
-    XCTAssertThrowsError(try JSONDecoder().decode(EditingDocument.self, from: data)) { error in
-      XCTAssertEqual(
-        error as? ParametricDocumentCodecError,
-        .missingRegistry
-      )
+    #expect(throws: ParametricDocumentCodecError.missingRegistry) {
+      try JSONDecoder().decode(EditingDocument.self, from: data)
     }
   }
 
-  func testSchemaVersionMigrationDecodesOldPayload() throws {
+  @Test func schemaVersionMigrationDecodesOldPayload() throws {
     // Write with the v1 shape under the shared key, then decode with the v2
     // type whose decodeParameters converts the old payload.
     var writingCodec = ParametricDocumentCodec()
@@ -318,17 +311,17 @@ final class ParametricFeatureTreeTests: XCTestCase {
     readingCodec.register(TestMigratingFeatureV2.self)
     let decoded = try readingCodec.decode(data)
 
-    guard case let .effect(effect) = decoded.mainTree.features.first,
-          let migrated = effect as? TestMigratingFeatureV2
-    else {
-      XCTFail("expected the migrated v2 feature")
+    let firstFeature = try #require(decoded.mainTree.features.first)
+    guard case let .effect(effect) = firstFeature else {
+      Issue.record("expected the migrated v2 feature")
       return
     }
-    XCTAssertEqual(migrated.id, FeatureID(rawValue: "migrating-feature"))
-    XCTAssertEqual(migrated.strength, 0.5)
+    let migrated = try #require(effect as? TestMigratingFeatureV2, "expected the migrated v2 feature")
+    #expect(migrated.id == FeatureID(rawValue: "migrating-feature"))
+    #expect(migrated.strength == 0.5)
   }
 
-  func testUnsupportedDocumentFormatVersionThrows() throws {
+  @Test func unsupportedDocumentFormatVersionThrows() throws {
     let codec = ParametricDocumentCodec()
     let document = EditingDocument(
       mainTree: MainTree(
@@ -342,15 +335,12 @@ final class ParametricFeatureTreeTests: XCTestCase {
       .replacingOccurrences(of: "\"formatVersion\":1", with: "\"formatVersion\":99")
       .data(using: .utf8)!
 
-    XCTAssertThrowsError(try codec.decode(mutated)) { error in
-      XCTAssertEqual(
-        error as? ParametricDocumentCodecError,
-        .unsupportedDocumentFormatVersion(99)
-      )
+    #expect(throws: ParametricDocumentCodecError.unsupportedDocumentFormatVersion(99)) {
+      try codec.decode(mutated)
     }
   }
 
-  func testParametricImageRendererMatchesFeatureGraphCompiler() throws {
+  @Test func parametricImageRendererMatchesFeatureGraphCompiler() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -394,7 +384,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
   /// `.effect` main-tree features. This is the contract that lets the editing
   /// stack store one identity-stable effects node while the compiler flattens
   /// it through `childFeatures`.
-  func testEffectPipelineFeatureMatchesScatteredEffects() throws {
+  @Test func effectPipelineFeatureMatchesScatteredEffects() throws {
     let brightness = BrightnessFeature(id: FeatureID(rawValue: "pipeline-brightness"), value: 0.05)
     let saturation = SaturationFeature(id: FeatureID(rawValue: "pipeline-saturation"), value: 0.12)
 
@@ -421,7 +411,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     try Self.assertImagesMatch(scatteredOutput, bundledOutput, tolerance: 2)
   }
 
-  func testVideoFrameRendererMatchesDocumentRendering() throws {
+  @Test func videoFrameRendererMatchesDocumentRendering() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -460,7 +450,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testVideoRendererResolvesCropOutputRenderSize() throws {
+  @Test func videoRendererResolvesCropOutputRenderSize() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -480,10 +470,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
       mode: .featureOutput
     )
 
-    XCTAssertEqual(renderSize, CGSize(width: 24, height: 18))
+    #expect(renderSize == CGSize(width: 24, height: 18))
   }
 
-  func testVideoRendererCreatesVideoComposition() throws {
+  @Test func videoRendererCreatesVideoComposition() throws {
     let assetSize = CGSize(width: 48, height: 36)
     let asset = try Self.makeTestVideoAsset(size: assetSize)
     defer {
@@ -508,10 +498,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
       renderSizeMode: .source
     )
 
-    XCTAssertEqual(composition.renderSize, assetSize)
+    #expect(composition.renderSize == assetSize)
   }
 
-  func testVideoFrameRendererPlacesOutputInsideRenderExtent() throws {
+  @Test func videoFrameRendererPlacesOutputInsideRenderExtent() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -551,7 +541,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       renderExtent: renderExtent
     )
 
-    XCTAssertEqual(output.extent, renderExtent)
+    #expect(output.extent == renderExtent)
     try Self.assertImagesMatch(
       expected,
       output,
@@ -559,7 +549,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     )
   }
 
-  func testMultipleCropsEvaluateInCurrentDomain() throws {
+  @Test func multipleCropsEvaluateInCurrentDomain() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -585,10 +575,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
 
     let output = try Self.compiler.makeOutput(from: input, document: document)
 
-    XCTAssertEqual(output.image.extent, CGRect(x: 0, y: 0, width: 25, height: 30))
+    #expect(output.image.extent == CGRect(x: 0, y: 0, width: 25, height: 30))
   }
 
-  func testImageEffectReceivesCurrentExtentAfterCrop() throws {
+  @Test func imageEffectReceivesCurrentExtentAfterCrop() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -612,14 +602,14 @@ final class ParametricFeatureTreeTests: XCTestCase {
 
     let output = try FeatureGraphCompiler().makeOutput(from: input, document: document)
 
-    XCTAssertEqual(output.image.extent, CGRect(x: 0, y: 0, width: 40, height: 20))
+    #expect(output.image.extent == CGRect(x: 0, y: 0, width: 40, height: 20))
     let rendered = try Self.render(output.image)
     let pixel = Self.rgba(in: rendered, x: 20, y: 10)
-    XCTAssertLessThanOrEqual(abs(Int(pixel.red) - 102), 2)
-    XCTAssertLessThanOrEqual(abs(Int(pixel.green) - 51), 2)
+    #expect(abs(Int(pixel.red) - 102) <= 2)
+    #expect(abs(Int(pixel.green) - 51) <= 2)
   }
 
-  func testVignetteUsesCurrentExtentAfterCrop() throws {
+  @Test func vignetteUsesCurrentExtentAfterCrop() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -651,7 +641,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
     try Self.assertImagesMatch(expected, output.image, tolerance: 2)
   }
 
-  func testLocalAdjustmentsAndGlobalEffectEvaluateInOrder() throws {
+  @Test func localAdjustmentsAndGlobalEffectEvaluateInOrder() throws {
     let localExposure = LocalAdjustmentFeature(
       id: FeatureID(rawValue: "local-exposure"),
       maskTree: MaskTree(
@@ -717,12 +707,12 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let blurredNeighborPixel = Self.rgba(in: renderedImage, x: 19, y: 10)
     let stripePixel = Self.rgba(in: renderedImage, x: 22, y: 10)
 
-    XCTAssertGreaterThan(localPixel.red, outsidePixel.red)
-    XCTAssertGreaterThan(blurredNeighborPixel.red, outsidePixel.red)
-    XCTAssertLessThan(blurredNeighborPixel.red, stripePixel.red)
+    #expect(localPixel.red > outsidePixel.red)
+    #expect(blurredNeighborPixel.red > outsidePixel.red)
+    #expect(blurredNeighborPixel.red < stripePixel.red)
   }
 
-  func testInvertedMaskAppliesOutsideBrush() throws {
+  @Test func invertedMaskAppliesOutsideBrush() throws {
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -764,10 +754,10 @@ final class ParametricFeatureTreeTests: XCTestCase {
     let center = Self.rgba(in: renderedImage, x: 10, y: 10)
     let corner = Self.rgba(in: renderedImage, x: 1, y: 1)
 
-    XCTAssertGreaterThan(corner.red, center.red)
+    #expect(corner.red > center.red)
   }
 
-  func testDuplicateIDsThrowValidationError() throws {
+  @Test func duplicateIDsThrowValidationError() throws {
     let id = FeatureID(rawValue: "duplicate")
     let document = EditingDocument(
       mainTree: MainTree(
@@ -778,14 +768,12 @@ final class ParametricFeatureTreeTests: XCTestCase {
       )
     )
 
-    XCTAssertThrowsError(
+    #expect(throws: FeatureGraphCompilerError.duplicateID(id)) {
       try Self.compiler.makeOutput(from: Self.smallInput, document: document)
-    ) { error in
-      XCTAssertEqual(error as? FeatureGraphCompilerError, .duplicateID(id))
     }
   }
 
-  func testEmptyLocalAdjustmentPipelineThrowsValidationError() throws {
+  @Test func emptyLocalAdjustmentPipelineThrowsValidationError() throws {
     let id = FeatureID(rawValue: "empty-local")
     let document = EditingDocument(
       mainTree: MainTree(
@@ -801,14 +789,12 @@ final class ParametricFeatureTreeTests: XCTestCase {
       )
     )
 
-    XCTAssertThrowsError(
+    #expect(throws: FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(id)) {
       try Self.compiler.makeOutput(from: Self.smallInput, document: document)
-    ) { error in
-      XCTAssertEqual(error as? FeatureGraphCompilerError, .emptyLocalAdjustmentEffectPipeline(id))
     }
   }
 
-  func testMetalKernelRegistryCanCreateBrushStampRecipe() throws {
+  @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
     let registry = ParametricKernelRegistry()
 
     let image = try registry.makeBrushStamp(
@@ -819,7 +805,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
       opacity: 1
     )
 
-    XCTAssertEqual(image.extent, CGRect(x: 0, y: 0, width: 12, height: 12))
+    #expect(image.extent == CGRect(x: 0, y: 0, width: 12, height: 12))
   }
 
   private static let compiler = FeatureGraphCompiler()
@@ -832,7 +818,7 @@ final class ParametricFeatureTreeTests: XCTestCase {
   private static let context = CIContext()
 
   private static func render(_ image: CIImage) throws -> CGImage {
-    try XCTUnwrap(Self.context.createCGImage(image, from: image.extent))
+    try #require(Self.context.createCGImage(image, from: image.extent))
   }
 
   private static func rgba(in image: CGImage, x: Int, y: Int) -> RGBA {
@@ -866,15 +852,19 @@ final class ParametricFeatureTreeTests: XCTestCase {
     _ lhs: CIImage,
     _ rhs: CIImage,
     tolerance: Int,
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = SourceLocation(
+      fileID: #fileID,
+      filePath: #filePath,
+      line: #line,
+      column: #column
+    )
   ) throws {
-    XCTAssertEqual(lhs.extent, rhs.extent, file: file, line: line)
+    #expect(lhs.extent == rhs.extent, sourceLocation: sourceLocation)
 
     let lhsImage = try render(lhs)
     let rhsImage = try render(rhs)
-    XCTAssertEqual(lhsImage.width, rhsImage.width, file: file, line: line)
-    XCTAssertEqual(lhsImage.height, rhsImage.height, file: file, line: line)
+    #expect(lhsImage.width == rhsImage.width, sourceLocation: sourceLocation)
+    #expect(lhsImage.height == rhsImage.height, sourceLocation: sourceLocation)
 
     let sampleXs = [4, lhsImage.width / 3, lhsImage.width / 2, max(lhsImage.width - 5, 0)]
     let sampleYs = [4, lhsImage.height / 3, lhsImage.height / 2, max(lhsImage.height - 5, 0)]
@@ -883,33 +873,25 @@ final class ParametricFeatureTreeTests: XCTestCase {
       for x in sampleXs {
         let lhsPixel = rgba(in: lhsImage, x: x, y: y)
         let rhsPixel = rgba(in: rhsImage, x: x, y: y)
-        XCTAssertLessThanOrEqual(
-          abs(Int(lhsPixel.red) - Int(rhsPixel.red)),
-          tolerance,
+        #expect(
+          abs(Int(lhsPixel.red) - Int(rhsPixel.red)) <= tolerance,
           "red mismatch at \(x),\(y)",
-          file: file,
-          line: line
+          sourceLocation: sourceLocation
         )
-        XCTAssertLessThanOrEqual(
-          abs(Int(lhsPixel.green) - Int(rhsPixel.green)),
-          tolerance,
+        #expect(
+          abs(Int(lhsPixel.green) - Int(rhsPixel.green)) <= tolerance,
           "green mismatch at \(x),\(y)",
-          file: file,
-          line: line
+          sourceLocation: sourceLocation
         )
-        XCTAssertLessThanOrEqual(
-          abs(Int(lhsPixel.blue) - Int(rhsPixel.blue)),
-          tolerance,
+        #expect(
+          abs(Int(lhsPixel.blue) - Int(rhsPixel.blue)) <= tolerance,
           "blue mismatch at \(x),\(y)",
-          file: file,
-          line: line
+          sourceLocation: sourceLocation
         )
-        XCTAssertLessThanOrEqual(
-          abs(Int(lhsPixel.alpha) - Int(rhsPixel.alpha)),
-          tolerance,
+        #expect(
+          abs(Int(lhsPixel.alpha) - Int(rhsPixel.alpha)) <= tolerance,
           "alpha mismatch at \(x),\(y)",
-          file: file,
-          line: line
+          sourceLocation: sourceLocation
         )
       }
     }

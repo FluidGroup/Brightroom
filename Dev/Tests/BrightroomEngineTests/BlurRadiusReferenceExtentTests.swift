@@ -1,5 +1,6 @@
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 import UIKit
 
 @testable import BrightroomParametric
@@ -13,13 +14,13 @@ import UIKit
 /// crop changes and viewport zoom, so the CropView preview matches the
 /// exported result. Before the fix, the live viewport re-resolved `value=40`
 /// against the zoomed drawable extent, so zooming changed the visible blur.
-final class BlurRadiusReferenceExtentTests: XCTestCase {
+struct BlurRadiusReferenceExtentTests {
 
   private static let context = CIContext()
 
   /// `value=40` with a source reference resolves to `diagonal(reference)/50`,
   /// independent of the small input image it is applied to.
-  func testValueBlurResolvesRadiusAgainstReferenceExtent() throws {
+  @Test func `value blur resolves radius against reference extent`() throws {
     // An 80×80 input that, in the viewport, is a zoomed slice of a larger
     // 800×800 source.
     let input = Self.stepEdge(side: 80)
@@ -36,7 +37,7 @@ final class BlurRadiusReferenceExtentTests: XCTestCase {
       to: input,
       context: FeatureEvaluationContext()
     )
-    XCTAssertTrue(
+    #expect(
       Self.areNearlyEqual(viaValue, viaAbsolute, extent: input.extent, tolerance: 3),
       "value blur must resolve its radius from the reference extent"
     )
@@ -48,8 +49,8 @@ final class BlurRadiusReferenceExtentTests: XCTestCase {
       to: input,
       context: FeatureEvaluationContext()
     )
-    XCTAssertFalse(
-      Self.areNearlyEqual(viaValue, viaInputExtent, extent: input.extent, tolerance: 3),
+    #expect(
+      !Self.areNearlyEqual(viaValue, viaInputExtent, extent: input.extent, tolerance: 3),
       "value blur must NOT resolve its radius from the input extent"
     )
   }
@@ -57,7 +58,7 @@ final class BlurRadiusReferenceExtentTests: XCTestCase {
   /// With `radiusReferenceExtent` nil, the radius falls back to the input
   /// extent — the contract the export and preview-composition paths rely on,
   /// where the input IS the full source at render scale.
-  func testNilReferenceFallsBackToInputExtent() throws {
+  @Test func `nil reference falls back to input extent`() throws {
     let input = Self.stepEdge(side: 200)
     let viaNil = try GaussianBlurFeature(value: 40).apply(
       to: input,
@@ -67,7 +68,7 @@ final class BlurRadiusReferenceExtentTests: XCTestCase {
       to: input,
       context: FeatureEvaluationContext()
     )
-    XCTAssertTrue(
+    #expect(
       Self.areNearlyEqual(viaNil, viaInputExtent, extent: input.extent, tolerance: 3),
       "nil reference must fall back to the input extent"
     )

@@ -1,5 +1,6 @@
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -15,11 +16,11 @@ import XCTest
 /// the rendered image. These must produce the same alpha field, in the same
 /// display orientation (top-left origin, y-down) — a regression here re-opens the
 /// preview≠export / upside-down-export class of bugs.
-final class CommittedMaskParametricParityTests: XCTestCase {
+struct CommittedMaskParametricParityTests {
 
   private static let context = CIContext(options: [.workingColorSpace: NSNull()])
 
-  func testLiveCommittedFlipMatchesEnginePostFlipAndOrientation() throws {
+  @Test func `Live committed flip matches engine post-flip and orientation`() throws {
     let canvas = 200
     let height = CGFloat(canvas)
     let brush = BrushMaskBrush(diameter: 48, hardness: 1, opacity: 1)
@@ -30,7 +31,7 @@ final class CommittedMaskParametricParityTests: XCTestCase {
     let mirrored = CGPoint(x: 70, y: height - 40)
 
     // Engine preview path: renderMask(unflipped stamps) + post-flip by height.
-    let engineMask = try XCTUnwrap(
+    let engineMask = try #require(
       MaskTree(root: .brush(BrushMask(strokes: [
         BrushMaskStroke(stamps: [authored], brush: brush)
       ])))
@@ -57,18 +58,18 @@ final class CommittedMaskParametricParityTests: XCTestCase {
     let liveMirrored = Self.alpha(in: liveCG, at: mirrored)
 
     // Orientation: alpha lands at the authored (top) position, not the mirror.
-    XCTAssertGreaterThan(engineAuthored, 0.9, "engine mask missing at authored position")
-    XCTAssertGreaterThan(liveAuthored, 0.9, "live mask missing at authored position")
-    XCTAssertLessThan(engineMirrored, 0.1, "engine mask leaked to the mirrored position (y-flip regression)")
-    XCTAssertLessThan(liveMirrored, 0.1, "live mask leaked to the mirrored position (y-flip regression)")
+    #expect(engineAuthored > 0.9, "engine mask missing at authored position")
+    #expect(liveAuthored > 0.9, "live mask missing at authored position")
+    #expect(engineMirrored < 0.1, "engine mask leaked to the mirrored position (y-flip regression)")
+    #expect(liveMirrored < 0.1, "live mask leaked to the mirrored position (y-flip regression)")
 
     // Equivalence: the two flip strategies agree pixel-for-pixel.
-    XCTAssertEqual(engineAuthored, liveAuthored, accuracy: 0.02, "live committed flip diverges from engine post-flip")
-    XCTAssertEqual(engineMirrored, liveMirrored, accuracy: 0.02)
+    #expect(abs(engineAuthored - liveAuthored) <= 0.02, "live committed flip diverges from engine post-flip")
+    #expect(abs(engineMirrored - liveMirrored) <= 0.02)
   }
 
   private func render(_ image: CIImage, canvas: Int) throws -> CGImage {
-    try XCTUnwrap(
+    try #require(
       Self.context.createCGImage(
         image,
         from: CGRect(x: 0, y: 0, width: canvas, height: canvas)

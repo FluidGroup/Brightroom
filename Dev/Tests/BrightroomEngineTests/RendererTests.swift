@@ -19,14 +19,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import Foundation
 import MobileCoreServices
 import StateGraph
-import XCTest
+import Testing
+import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
 
-final class RendererTests: XCTestCase {
+struct RendererTests {
   enum ColorSpaces {
     static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
     static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
@@ -34,19 +36,23 @@ final class RendererTests: XCTestCase {
 
   private func assertStandardRGBInputColorSpace(
     _ colorSpace: CGColorSpace?,
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: Testing.SourceLocation = Testing.SourceLocation(
+      fileID: #fileID,
+      filePath: #filePath,
+      line: #line,
+      column: #column
+    )
   ) {
     guard let colorSpace else {
-      XCTFail("Expected input image to have an RGB color space.", file: file, line: line)
+      Issue.record("Expected input image to have an RGB color space.", sourceLocation: sourceLocation)
       return
     }
 
-    XCTAssertEqual(colorSpace.model, .rgb, file: file, line: line)
-    XCTAssertNotEqual(colorSpace, ColorSpaces.displayP3, file: file, line: line)
+    #expect(colorSpace.model == .rgb, sourceLocation: sourceLocation)
+    #expect(colorSpace != ColorSpaces.displayP3, sourceLocation: sourceLocation)
   }
 
-  func testCropping() async throws {
+  @Test func cropping() async throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
@@ -63,20 +69,20 @@ final class RendererTests: XCTestCase {
     print(rendered)
   }
 
-  func testV2_InputDisplayP3_no_effects() async throws {
+  @Test func `V2 input display P3 no effects`() async throws {
     let imageSource = ImageSource(image: Asset.instaLogo.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
+    #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_InputSRGB_no_effects() async throws {
+  @Test func `V2 input sRGB no effects`() async throws {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -86,10 +92,10 @@ final class RendererTests: XCTestCase {
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_InputSRGB_effects() async throws {
+  @Test func `V2 input sRGB effects`() async throws {
     let imageSource = ImageSource(image: Asset.unsplash3.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -107,10 +113,10 @@ final class RendererTests: XCTestCase {
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_InputSRGB_effects_crop() async throws {
+  @Test func `V2 input sRGB effects crop`() async throws {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -130,10 +136,10 @@ final class RendererTests: XCTestCase {
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_InputSRGB_effects_crop_resizing() async throws {
+  @Test func `V2 input sRGB effects crop resizing`() async throws {
     let imageSource = ImageSource(image: Asset.unsplash2.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -153,11 +159,11 @@ final class RendererTests: XCTestCase {
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssert(image.width == 300 || image.height == 300)
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.width == 300 || image.height == 300)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_InputSRGB_rotation_resizing() async throws {
+  @Test func `V2 input sRGB rotation resizing`() async throws {
     let imageSource = ImageSource(image: Asset.unsplash1.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
@@ -176,61 +182,61 @@ final class RendererTests: XCTestCase {
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssert(image.width == 300 || image.height == 300)
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.width == 300 || image.height == 300)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
-  func testV2_DisplayP3_to_sRGB() async throws {
+  @Test func `V2 display P3 to sRGB`() async throws {
     let imageSource = ImageSource(image: Asset.instaLogo.image)
 
     let inputCGImage = imageSource.loadOriginalCGImage()
-    XCTAssertEqual(inputCGImage.colorSpace, ColorSpaces.displayP3)
+    #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
-    XCTAssertEqual(image.colorSpace, ColorSpaces.displayP3)
+    #expect(image.colorSpace == ColorSpaces.displayP3)
 
     let data = ImageTool.makeImageForJPEGOptimizedSharing(image: image)
 
     let result = UIImage(data: data as Data)!.cgImage
 
-    XCTAssertEqual(result?.colorSpace, ColorSpaces.sRGB)
+    #expect(result?.colorSpace == ColorSpaces.sRGB)
   }
 }
 
-final class RenderCropTests: XCTestCase {
+struct RenderCropTests {
 
-  func testCanonicalizesImageSizeToPixelDimensions() {
+  @Test func `canonicalizes image size to pixel dimensions`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 0, y: 0, width: 100, height: 100),
       imageSize: .init(width: 99.999999999, height: 100.2)
     )
 
-    XCTAssertEqual(crop.imageSize, .init(width: 100, height: 100))
+    #expect(crop.imageSize == .init(width: 100, height: 100))
   }
 
-  func testCanonicalizesFractionalOriginInward() {
+  @Test func `canonicalizes fractional origin inward`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 0.2, y: 3.4, width: 20.8, height: 30.9),
       imageSize: .init(width: 100, height: 100)
     )
 
-    XCTAssertEqual(crop.cropRect, .init(x: 1, y: 4, width: 20, height: 30))
-    XCTAssertEqual(crop.cropExtent, .init(x: 1, y: 4, width: 20, height: 30))
+    #expect(crop.cropRect == .init(x: 1, y: 4, width: 20, height: 30))
+    #expect(crop.cropExtent == .init(x: 1, y: 4, width: 20, height: 30))
   }
 
-  func testCanonicalizesFractionalMaxInward() {
+  @Test func `canonicalizes fractional max inward`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 0, y: 0, width: 999.8, height: 499.8),
       imageSize: .init(width: 1000, height: 1000)
     )
 
-    XCTAssertEqual(crop.cropExtent, .init(x: 0, y: 0, width: 999, height: 499))
+    #expect(crop.cropExtent == .init(x: 0, y: 0, width: 999, height: 499))
   }
 
-  func testTreatsNearIntegersAsIntegers() {
+  @Test func `treats near integers as integers`() {
     let crop = RenderCrop(
       cropRectYDown: .init(
         x: 0.000000001,
@@ -241,28 +247,28 @@ final class RenderCropTests: XCTestCase {
       imageSize: .init(width: 100, height: 100)
     )
 
-    XCTAssertEqual(crop.cropExtent, .init(x: 0, y: 0, width: 100, height: 100))
+    #expect(crop.cropExtent == .init(x: 0, y: 0, width: 100, height: 100))
   }
 
-  func testClampsOutsideImageBounds() {
+  @Test func `clamps outside image bounds`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: -10.4, y: -20.1, width: 150.9, height: 130.2),
       imageSize: .init(width: 100, height: 100)
     )
 
-    XCTAssertEqual(crop.cropExtent, .init(x: 0, y: 0, width: 100, height: 100))
+    #expect(crop.cropExtent == .init(x: 0, y: 0, width: 100, height: 100))
   }
 
-  func testSubPixelCropFallsBackToNearestSinglePixel() {
+  @Test func `sub pixel crop falls back to nearest single pixel`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 10.2, y: 20.2, width: 0.2, height: 0.2),
       imageSize: .init(width: 100, height: 100)
     )
 
-    XCTAssertEqual(crop.cropExtent, .init(x: 10, y: 20, width: 1, height: 1))
+    #expect(crop.cropExtent == .init(x: 10, y: 20, width: 1, height: 1))
   }
 
-  func testBrokenCropFallsBackToSinglePixelAtOrigin() {
+  @Test func `broken crop falls back to single pixel at origin`() {
     let crop = RenderCrop(
       cropRectYDown: .init(
         x: CGFloat.nan,
@@ -273,10 +279,10 @@ final class RenderCropTests: XCTestCase {
       imageSize: .init(width: 100, height: 100)
     )
 
-    XCTAssertEqual(crop.cropExtent, CGRect(x: 0, y: 0, width: 1, height: 1))
+    #expect(crop.cropExtent == CGRect(x: 0, y: 0, width: 1, height: 1))
   }
 
-  func testCanonicalizationIsIdempotent() {
+  @Test func `canonicalization is idempotent`() {
     let first = RenderCrop(
       cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100)
@@ -288,10 +294,10 @@ final class RenderCropTests: XCTestCase {
       straightenRadians: first.straightenRadians
     )
 
-    XCTAssertEqual(second, first)
+    #expect(second == first)
   }
 
-  func testAspectRatioCropDoesNotIntroduceFractionalRenderRectLoop() {
+  @Test func `aspect ratio crop does not introduce fractional render rect loop`() {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cropRect = CropGeometry.cropRect(toFitAspectRatio: .init(width: 4, height: 5), in: imageSize)
 
@@ -303,10 +309,10 @@ final class RenderCropTests: XCTestCase {
       straightenRadians: first.straightenRadians
     )
 
-    XCTAssertEqual(first, second)
+    #expect(first == second)
   }
 
-  func testRetainsRotationAndAdjustmentAngle() {
+  @Test func `retains rotation and adjustment angle`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100),
@@ -314,11 +320,11 @@ final class RenderCropTests: XCTestCase {
       straightenRadians: 0.25 * .pi / 180
     )
 
-    XCTAssertEqual(crop.rotation, .quarterCW)
-    XCTAssertEqual(crop.straightenRadians, 0.25 * .pi / 180, accuracy: 1e-12)
+    #expect(crop.rotation == .quarterCW)
+    #expect(abs(crop.straightenRadians - 0.25 * .pi / 180) <= 1e-12)
   }
 
-  func testEditRenderingEquivalenceUsesPixelCropContract() {
+  @Test func `edit rendering equivalence uses pixel crop contract`() {
     let initial = EditingStack.Edit.test(
       imageSize: .init(width: 100, height: 100),
       cropRect: .init(x: 0, y: 0, width: 100, height: 100)
@@ -337,17 +343,17 @@ final class RenderCropTests: XCTestCase {
       cropRect: .init(x: 0.2, y: 0, width: 99.8, height: 100)
     )
 
-    XCTAssertTrue(initial.isRenderingEquivalent(to: nearInteger))
-    XCTAssertFalse(initial.isRenderingEquivalent(to: inwardPixel))
+    #expect(initial.isRenderingEquivalent(to: nearInteger))
+    #expect(!initial.isRenderingEquivalent(to: inwardPixel))
   }
 }
 
 /// Pins the shared y-flip + integer-snap contract on `CropFeature` that UI crop
 /// commits (`CropEditingState`) and the engine bridge both flow through. If these
 /// drift, `isRenderingEquivalent` oscillates and the live crop jitters / reverts.
-final class CropFeatureDisplaySpaceTests: XCTestCase {
+struct CropFeatureDisplaySpaceTests {
 
-  func testDisplayRectFlipMapsYDownTopLeftToYUpBottomLeft() {
+  @Test func `display rect flip maps y-down top-left to y-up bottom-left`() {
     let imageSize = CGSize(width: 200, height: 100)
     // y-down display rect anchored at the top-left of the image.
     let feature = CropFeature(
@@ -356,10 +362,10 @@ final class CropFeatureDisplaySpaceTests: XCTestCase {
     )
     // Stored (y-up) rect: top edge (display y=20) becomes the far edge from the
     // bottom: maxY = 100 - 20 = 80, so minY = 80 - 30 = 50.
-    XCTAssertEqual(feature.cropRect, .init(x: 10, y: 50, width: 80, height: 30))
+    #expect(feature.cropRect == .init(x: 10, y: 50, width: 80, height: 30))
   }
 
-  func testDisplayRectRoundTripIsStable() {
+  @Test func `display rect round trip is stable`() {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cases: [(CGRect, QuarterTurn, Double)] = [
       (.init(x: 0, y: 0, width: 7864, height: 5248), .zero, 0),
@@ -384,17 +390,17 @@ final class CropFeatureDisplaySpaceTests: XCTestCase {
         rotation: feature.rotation,
         straighten: feature.straightenRadians
       )
-      XCTAssertEqual(reseeded.cropRect, feature.cropRect, "rect @ \(rotation)")
-      XCTAssertEqual(reseeded.rotation, feature.rotation, "rotation @ \(rotation)")
-      XCTAssertEqual(reseeded.straightenRadians, feature.straightenRadians, "straighten @ \(rotation)")
+      #expect(reseeded.cropRect == feature.cropRect, "rect @ \(rotation)")
+      #expect(reseeded.rotation == feature.rotation, "rotation @ \(rotation)")
+      #expect(reseeded.straightenRadians == feature.straightenRadians, "straighten @ \(rotation)")
     }
   }
 
 }
 
-final class RenderCropRendererTests: XCTestCase {
+struct RenderCropRendererTests {
 
-  func testFullRenderCropExcludesFractionalBrightEdges() async throws {
+  @Test func `full render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
@@ -403,12 +409,12 @@ final class RenderCropRendererTests: XCTestCase {
 
     let renderedImage = try await renderer.render().cgImage
 
-    XCTAssertEqual(renderedImage.width, 14)
-    XCTAssertEqual(renderedImage.height, 14)
+    #expect(renderedImage.width == 14)
+    #expect(renderedImage.height == 14)
     try Self.assertEdgesAreDark(renderedImage)
   }
 
-  func testCoreImageRenderCropExcludesFractionalBrightEdges() async throws {
+  @Test func `Core Image render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
@@ -422,15 +428,15 @@ final class RenderCropRendererTests: XCTestCase {
       options: .init(workingColorSpace: CGColorSpaceCreateDeviceRGB())
     ).cgImage
 
-    XCTAssertEqual(renderedImage.width, 14)
-    XCTAssertEqual(renderedImage.height, 14)
+    #expect(renderedImage.width == 14)
+    #expect(renderedImage.height == 14)
     try Self.assertEdgesAreDark(renderedImage)
   }
 
   /// The parametric crop path must reproduce the engine's `croppedWithColorspace`
   /// rotation — the pre-unification behavior. This pins the rotation SIGN, which
   /// the dimension-only rotation test cannot catch (both signs share dimensions).
-  func testParametricCropRotationMatchesEngineOracle() async throws {
+  @Test func `parametric crop rotation matches engine oracle`() async throws {
     let source = try Self.makeAsymmetricMarkerImage(width: 8, height: 12)
     let imageSource = ImageSource(cgImage: source)
     let oriented = try source.oriented(.up)
@@ -446,15 +452,15 @@ final class RenderCropRendererTests: XCTestCase {
         to: crop.renderCrop(orientedImageSize: oriented.size)
       )
 
-      XCTAssertEqual(parametric.width, oracle.width, "width @ \(rotation)")
-      XCTAssertEqual(parametric.height, oracle.height, "height @ \(rotation)")
+      #expect(parametric.width == oracle.width, "width @ \(rotation)")
+      #expect(parametric.height == oracle.height, "height @ \(rotation)")
 
       for x in stride(from: 0, to: min(parametric.width, oracle.width), by: 2) {
         for y in stride(from: 0, to: min(parametric.height, oracle.height), by: 2) {
           let a = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: parametric)
           let b = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: oracle)
-          XCTAssertLessThanOrEqual(
-            abs(Int(a.red) - Int(b.red)), 24,
+          #expect(
+            abs(Int(a.red) - Int(b.red)) <= 24,
             "luma (\(x),\(y)) @ \(rotation): parametric \(a.red) vs oracle \(b.red)"
           )
         }
@@ -477,7 +483,7 @@ final class RenderCropRendererTests: XCTestCase {
   private static func makeAsymmetricMarkerImage(width: Int, height: Int) throws -> CGImage {
     let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
       | CGImageAlphaInfo.premultipliedLast.rawValue
-    let context = try XCTUnwrap(
+    let context = try #require(
       CGContext(
         data: nil,
         width: width,
@@ -494,7 +500,7 @@ final class RenderCropRendererTests: XCTestCase {
     // sign (90° vs 270°) moves it to a different corner and the test fails.
     context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
     context.fill(CGRect(x: 0, y: height / 2, width: width / 2, height: height - height / 2))
-    return try XCTUnwrap(context.makeImage())
+    return try #require(context.makeImage())
   }
 
   private static func makeImageWithBrightBorder(size: Int) throws -> CGImage {
@@ -502,7 +508,7 @@ final class RenderCropRendererTests: XCTestCase {
     let maxCoordinate = CGFloat(size - 1)
     let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
       | CGImageAlphaInfo.premultipliedLast.rawValue
-    let context = try XCTUnwrap(
+    let context = try #require(
       CGContext(
         data: nil,
         width: size,
@@ -522,13 +528,17 @@ final class RenderCropRendererTests: XCTestCase {
     context.fill(.init(x: 0, y: 0, width: 1, height: extent))
     context.fill(.init(x: maxCoordinate, y: 0, width: 1, height: extent))
 
-    return try XCTUnwrap(context.makeImage())
+    return try #require(context.makeImage())
   }
 
   private static func assertEdgesAreDark(
     _ image: CGImage,
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: Testing.SourceLocation = Testing.SourceLocation(
+      fileID: #fileID,
+      filePath: #filePath,
+      line: #line,
+      column: #column
+    )
   ) throws {
     let maxX = CGFloat(image.width - 1)
     let maxY = CGFloat(image.height - 1)
@@ -547,14 +557,14 @@ final class RenderCropRendererTests: XCTestCase {
 
     for point in points {
       let pixel = try rgbaPixel(at: point, in: image)
-      XCTAssertLessThan(pixel.maximumRGB, 8, file: file, line: line)
+      #expect(pixel.maximumRGB < 8, sourceLocation: sourceLocation)
     }
   }
 
   private static func rgbaPixel(at point: CGPoint, in image: CGImage) throws -> RGBAPixel {
     let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
       | CGImageAlphaInfo.premultipliedLast.rawValue
-    let context = try XCTUnwrap(
+    let context = try #require(
       CGContext(
         data: nil,
         width: image.width,
@@ -568,7 +578,7 @@ final class RenderCropRendererTests: XCTestCase {
 
     context.draw(image, in: .init(origin: .zero, size: image.size))
 
-    let bytes = try XCTUnwrap(context.data)
+    let bytes = try #require(context.data)
       .assumingMemoryBound(to: UInt8.self)
     let x = Int(point.x)
     let y = Int(point.y)

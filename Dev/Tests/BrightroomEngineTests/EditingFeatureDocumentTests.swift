@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 import UIKit
 
 @testable import BrightroomParametric
@@ -19,7 +20,7 @@ private extension MainFeature {
 /// Contracts of the parametric editing document: `Edit` stores an
 /// `EditingDocument`, the engine never reorders its main tree, and history
 /// versions are whole-document snapshots with undo/redo.
-final class EditingFeatureDocumentTests: XCTestCase {
+struct EditingFeatureDocumentTests {
 
   private let imageSize = CGSize(width: 1200, height: 800)
 
@@ -63,29 +64,28 @@ final class EditingFeatureDocumentTests: XCTestCase {
 
   // MARK: - Document shape
 
-  func testCanonicalDefaultDocument() {
+  @Test func `Canonical default document`() {
     let edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
 
-    XCTAssertEqual(edit.features.map(\.testKind), ["effect", "crop"])
-    XCTAssertEqual(edit.features.first?.id, EditingStack.Edit.globalEffectsID)
-    XCTAssertEqual(edit.features.last?.id, EditingStack.Edit.finalCropID)
+    #expect(edit.features.map(\.testKind) == ["effect", "crop"])
+    #expect(edit.features.first?.id == EditingStack.Edit.globalEffectsID)
+    #expect(edit.features.last?.id == EditingStack.Edit.finalCropID)
   }
 
-  func testLocalAdjustmentsProjectionInsertsBeforeFinalCrop() {
+  @Test func `Local adjustments projection inserts before final crop`() {
     var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
     let adjustment = makeAdjustment()
 
     edit.localAdjustments = [adjustment]
 
-    XCTAssertEqual(
-      edit.features.map(\.testKind),
-      ["effect", "localAdjustment", "crop"]
+    #expect(
+      edit.features.map(\.testKind) == ["effect", "localAdjustment", "crop"]
     )
-    XCTAssertEqual(edit.localAdjustments, [adjustment])
-    XCTAssertEqual(edit.features[1].id, adjustment.id)
+    #expect(edit.localAdjustments == [adjustment])
+    #expect(edit.features[1].id == adjustment.id)
   }
 
-  func testCustomArrangementIsNotReorderedByProjectionWrites() {
+  @Test func `Custom arrangement is not reordered by projection writes`() {
     // A non-canonical arrangement: adjustment evaluated BEFORE the global
     // effects. Assembly is the host's decision; projection writes must keep
     // positions.
@@ -99,11 +99,10 @@ final class EditingFeatureDocumentTests: XCTestCase {
     let effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
     edit.effects = effects
 
-    XCTAssertEqual(
-      edit.features.map(\.testKind),
-      ["localAdjustment", "effect", "crop"]
+    #expect(
+      edit.features.map(\.testKind) == ["localAdjustment", "effect", "crop"]
     )
-    XCTAssertEqual(edit.effects, effects)
+    #expect(edit.effects == effects)
 
     var replacedAdjustment = adjustment
     replacedAdjustment.effectPipeline = EffectPipeline(effects: [
@@ -111,18 +110,17 @@ final class EditingFeatureDocumentTests: XCTestCase {
     ])
     edit.localAdjustments = [replacedAdjustment]
 
-    XCTAssertEqual(
-      edit.features.map(\.testKind),
-      ["localAdjustment", "effect", "crop"]
+    #expect(
+      edit.features.map(\.testKind) == ["localAdjustment", "effect", "crop"]
     )
-    XCTAssertEqual(edit.localAdjustments, [replacedAdjustment])
+    #expect(edit.localAdjustments == [replacedAdjustment])
   }
 
-  func testUpdateFeatureKeepsKindStableAndRejectsUnknownIDs() {
+  @Test func `Update feature keeps kind stable and rejects unknown IDs`() {
     var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
 
-    XCTAssertFalse(
-      edit.updateFeature(id: FeatureID(rawValue: "unknown")) { _ in }
+    #expect(
+      !edit.updateFeature(id: FeatureID(rawValue: "unknown")) { _ in }
     )
 
     let newCrop = CropFeature(
@@ -130,12 +128,12 @@ final class EditingFeatureDocumentTests: XCTestCase {
       displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
       imageSize: imageSize
     )
-    XCTAssertTrue(
+    #expect(
       edit.updateFeature(id: EditingStack.Edit.finalCropID) { feature in
         feature = .domain(newCrop)
       }
     )
-    XCTAssertEqual(edit.crop, newCrop)
+    #expect(edit.crop == newCrop)
   }
 
   // MARK: - Undo / redo
@@ -168,7 +166,7 @@ final class EditingFeatureDocumentTests: XCTestCase {
     )
   }
 
-  func testUndoRedoWalksVersions() {
+  @Test func `Undo redo walks versions`() {
     var loaded = makeLoaded()
     let v0 = loaded.currentEdit
 
@@ -183,21 +181,21 @@ final class EditingFeatureDocumentTests: XCTestCase {
     loaded.currentEdit = v2
 
     loaded.undoEditing()
-    XCTAssertEqual(loaded.currentEdit, v1)
-    XCTAssertTrue(loaded.canRedo)
+    #expect(loaded.currentEdit == v1)
+    #expect(loaded.canRedo)
 
     loaded.undoEditing()
-    XCTAssertEqual(loaded.currentEdit, v0)
+    #expect(loaded.currentEdit == v0)
 
     loaded.redoEditing()
-    XCTAssertEqual(loaded.currentEdit, v1)
+    #expect(loaded.currentEdit == v1)
 
     loaded.redoEditing()
-    XCTAssertEqual(loaded.currentEdit, v2)
-    XCTAssertFalse(loaded.canRedo)
+    #expect(loaded.currentEdit == v2)
+    #expect(!loaded.canRedo)
   }
 
-  func testInterleavedArrangementSurvivesLocalAdjustmentsWrites() {
+  @Test func `Interleaved arrangement survives local adjustments writes`() {
     // [GE1, LA_A, GE2, LA_B, crop]: appending an adjustment through the
     // projection must not move LA_B across GE2.
     let adjustmentA = makeAdjustment()
@@ -218,9 +216,8 @@ final class EditingFeatureDocumentTests: XCTestCase {
     let adjustmentC = makeAdjustment()
     edit.localAdjustments = [adjustmentA, adjustmentB, adjustmentC]
 
-    XCTAssertEqual(
-      edit.features.map(\.id),
-      [
+    #expect(
+      edit.features.map(\.id) == [
         EditingStack.Edit.globalEffectsID,
         adjustmentA.id,
         secondEffectsID,
@@ -232,9 +229,8 @@ final class EditingFeatureDocumentTests: XCTestCase {
 
     // Removing an adjustment keeps the others in place.
     edit.localAdjustments = [adjustmentA, adjustmentB]
-    XCTAssertEqual(
-      edit.features.map(\.id),
-      [
+    #expect(
+      edit.features.map(\.id) == [
         EditingStack.Edit.globalEffectsID,
         adjustmentA.id,
         secondEffectsID,
@@ -244,7 +240,7 @@ final class EditingFeatureDocumentTests: XCTestCase {
     )
   }
 
-  func testCommitStyleSnapshotUndoChangesStateOnFirstPress() {
+  @Test func `Commit style snapshot undo changes state on first press`() {
     // PhotosCrop snapshots AFTER mutating (commit style): history.last equals
     // currentEdit at settled states. One undo press must still change state.
     var loaded = makeLoaded()
@@ -260,21 +256,21 @@ final class EditingFeatureDocumentTests: XCTestCase {
     loaded.currentEdit = v2
     loaded.makeVersion()
 
-    XCTAssertTrue(loaded.canUndo)
+    #expect(loaded.canUndo)
     loaded.undoEditing()
-    XCTAssertEqual(loaded.currentEdit, v1)
+    #expect(loaded.currentEdit == v1)
 
     loaded.undoEditing()
-    XCTAssertEqual(loaded.currentEdit, v0)
+    #expect(loaded.currentEdit == v0)
 
     loaded.redoEditing()
-    XCTAssertEqual(loaded.currentEdit, v1)
+    #expect(loaded.currentEdit == v1)
     loaded.redoEditing()
-    XCTAssertEqual(loaded.currentEdit, v2)
-    XCTAssertFalse(loaded.canRedo)
+    #expect(loaded.currentEdit == v2)
+    #expect(!loaded.canRedo)
   }
 
-  func testNewVersionClearsRedo() {
+  @Test func `New version clears redo`() {
     var loaded = makeLoaded()
 
     loaded.makeVersion()
@@ -283,14 +279,14 @@ final class EditingFeatureDocumentTests: XCTestCase {
     loaded.currentEdit = v1
 
     loaded.undoEditing()
-    XCTAssertTrue(loaded.canRedo)
+    #expect(loaded.canRedo)
 
     var divergent = loaded.currentEdit
     divergent.effects = EffectPipeline(effects: [ContrastFeature(value: 0.1)])
     loaded.currentEdit = divergent
     loaded.makeVersion()
 
-    XCTAssertFalse(loaded.canRedo)
+    #expect(!loaded.canRedo)
   }
 }
 

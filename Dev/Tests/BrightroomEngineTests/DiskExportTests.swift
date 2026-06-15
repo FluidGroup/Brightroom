@@ -1,5 +1,6 @@
+import Foundation
 import ImageIO
-import XCTest
+import Testing
 import UIKit
 
 @testable import BrightroomEngine
@@ -15,20 +16,19 @@ import UIKit
 /// device memory-watermark concern); these tests pin CORRECTNESS of the new path:
 /// the file is written, it is full resolution, the local adjustment is applied,
 /// and `Resolution.resize` caps the output — all without a `CGImage`/`CGImageDestination`.
-final class DiskExportTests: XCTestCase {
+final class DiskExportTests {
 
   private static let side = 2048
 
   private var scratchURLs: [URL] = []
 
-  override func tearDownWithError() throws {
+  deinit {
     for url in scratchURLs {
       try? FileManager.default.removeItem(at: url)
     }
-    scratchURLs.removeAll()
   }
 
-  func testDiskExportWritesFullResolutionMaskedImage() async throws {
+  @Test func diskExportWritesFullResolutionMaskedImage() async throws {
     let url = makeScratchURL(ext: "jpg")
     let side = Self.side
     let size = CGSize(width: side, height: side)
@@ -42,26 +42,25 @@ final class DiskExportTests: XCTestCase {
 
     // The file exists and is non-empty.
     let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-    let fileSize = try XCTUnwrap(attributes[.size] as? Int)
-    XCTAssertGreaterThan(fileSize, 0, "Export must write a non-empty file")
+    let fileSize = try #require(attributes[.size] as? Int)
+    #expect(fileSize > 0, "Export must write a non-empty file")
 
     // It decodes back at full source resolution.
     let exported = try loadCGImage(url)
-    XCTAssertEqual(exported.width, side)
-    XCTAssertEqual(exported.height, side)
+    #expect(exported.width == side)
+    #expect(exported.height == side)
 
     // The centered exposure lift is present: center is brighter than a corner
     // far outside the mask. (JPEG is lossy, so compare regions, not exact values.)
     let center = Self.rgba(in: exported, x: side / 2, y: side / 2)
     let corner = Self.rgba(in: exported, x: 4, y: 4)
-    XCTAssertGreaterThan(
-      Int(center.red),
-      Int(corner.red) + 20,
+    #expect(
+      Int(center.red) > Int(corner.red) + 20,
       "Masked center should be clearly brighter than the unmasked corner"
     )
   }
 
-  func testDiskExportPNGIsFullResolutionAndMasked() async throws {
+  @Test func diskExportPNGIsFullResolutionAndMasked() async throws {
     let url = makeScratchURL(ext: "png")
     let side = Self.side
     let size = CGSize(width: side, height: side)
@@ -74,15 +73,15 @@ final class DiskExportTests: XCTestCase {
     )
 
     let exported = try loadCGImage(url)
-    XCTAssertEqual(exported.width, side)
-    XCTAssertEqual(exported.height, side)
+    #expect(exported.width == side)
+    #expect(exported.height == side)
 
     let center = Self.rgba(in: exported, x: side / 2, y: side / 2)
     let corner = Self.rgba(in: exported, x: 4, y: 4)
-    XCTAssertGreaterThan(Int(center.red), Int(corner.red) + 20)
+    #expect(Int(center.red) > Int(corner.red) + 20)
   }
 
-  func testDiskExportResizeCapsLongestSide() async throws {
+  @Test func diskExportResizeCapsLongestSide() async throws {
     let url = makeScratchURL(ext: "jpg")
     let side = Self.side
     let size = CGSize(width: side, height: side)
@@ -97,17 +96,17 @@ final class DiskExportTests: XCTestCase {
     )
 
     let exported = try loadCGImage(url)
-    XCTAssertEqual(CGFloat(max(exported.width, exported.height)), cap, accuracy: 1)
+    #expect(abs(CGFloat(max(exported.width, exported.height)) - cap) <= 1)
     // Still masked after the CI-side downscale.
     let center = Self.rgba(in: exported, x: exported.width / 2, y: exported.height / 2)
     let corner = Self.rgba(in: exported, x: 2, y: 2)
-    XCTAssertGreaterThan(Int(center.red), Int(corner.red) + 20)
+    #expect(Int(center.red) > Int(corner.red) + 20)
   }
 
   /// Guards the streaming writer's y-mapping: a top-white / bottom-black source
   /// must come back top-white through `Output.file` (no vertical flip in the
   /// strip loop).
-  func testDiskExportPreservesVerticalOrientation() async throws {
+  @Test func diskExportPreservesVerticalOrientation() async throws {
     let url = makeScratchURL(ext: "png")
     let side = 256
     let size = CGSize(width: side, height: side)
@@ -125,14 +124,14 @@ final class DiskExportTests: XCTestCase {
     let exported = try loadCGImage(url)
     let topMid = Self.rgba(in: exported, x: side / 2, y: side / 8)
     let bottomMid = Self.rgba(in: exported, x: side / 2, y: side * 7 / 8)
-    XCTAssertGreaterThan(Int(topMid.red), 200, "top should be white — no vertical flip")
-    XCTAssertLessThan(Int(bottomMid.red), 64, "bottom should be black")
+    #expect(Int(topMid.red) > 200, "top should be white — no vertical flip")
+    #expect(Int(bottomMid.red) < 64, "bottom should be black")
   }
 
   /// Guards the writer's pixel format: a distinct R>G>B source must keep its
   /// channel order (catches an RGBA/BGRA byte-order mistake). PNG = lossless, so
   /// only a small color-management tolerance is needed.
-  func testDiskExportPreservesChannelOrder() async throws {
+  @Test func diskExportPreservesChannelOrder() async throws {
     let url = makeScratchURL(ext: "png")
     let side = 128
     let size = CGSize(width: side, height: side)
@@ -148,11 +147,11 @@ final class DiskExportTests: XCTestCase {
     )
 
     let px = Self.rgba(in: try loadCGImage(url), x: side / 2, y: side / 2)
-    XCTAssertEqual(Double(px.red), 200, accuracy: 20)
-    XCTAssertEqual(Double(px.green), 100, accuracy: 20)
-    XCTAssertEqual(Double(px.blue), 30, accuracy: 20)
-    XCTAssertGreaterThan(Int(px.red), Int(px.green), "R>G channel order preserved")
-    XCTAssertGreaterThan(Int(px.green), Int(px.blue), "G>B channel order preserved")
+    #expect(abs(Double(px.red) - 200) <= 20)
+    #expect(abs(Double(px.green) - 100) <= 20)
+    #expect(abs(Double(px.blue) - 30) <= 20)
+    #expect(Int(px.red) > Int(px.green), "R>G channel order preserved")
+    #expect(Int(px.green) > Int(px.blue), "G>B channel order preserved")
   }
 
   // MARK: - Fixtures
@@ -203,8 +202,8 @@ final class DiskExportTests: XCTestCase {
   }
 
   private func loadCGImage(_ url: URL) throws -> CGImage {
-    let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil), "exported file should be a decodable image")
-    return try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+    let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil), "exported file should be a decodable image")
+    return try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
   }
 
   private static func makeSolidImage(width: Int, height: Int, white: CGFloat) -> CGImage {

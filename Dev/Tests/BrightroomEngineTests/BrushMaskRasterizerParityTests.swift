@@ -20,8 +20,9 @@
 // THE SOFTWARE.
 
 import CoreImage
+import Foundation
 import Metal
-import XCTest
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -43,7 +44,7 @@ import XCTest
 /// the same place. A flip regression would move alpha by the full canvas
 /// height — tens to hundreds of levels at the sampled points — far outside the
 /// anti-aliasing tolerance.
-final class BrushMaskRasterizerParityTests: XCTestCase {
+struct BrushMaskRasterizerParityTests {
 
   private static let context = CIContext(options: [.workingColorSpace: NSNull()])
 
@@ -64,11 +65,10 @@ final class BrushMaskRasterizerParityTests: XCTestCase {
     ]
   }
 
-  func testLiveMetalRasterizerMatchesParametricKernel() throws {
-    guard let device = MTLCreateSystemDefaultDevice() else {
-      throw XCTSkip("No Metal device available; skipping live-rasterizer parity test.")
-    }
-    let rasterizer = try XCTUnwrap(
+  @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+  func `Live Metal rasterizer matches parametric kernel`() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let rasterizer = try #require(
       BrushMaskMetalRasterizer(device: device),
       "Failed to build the live brush-mask Metal pipeline."
     )
@@ -76,7 +76,7 @@ final class BrushMaskRasterizerParityTests: XCTestCase {
     let extent = CGRect(x: 0, y: 0, width: canvas, height: canvas)
 
     // Path A — live Metal rasterizer (the in-flight-stroke shader, standalone).
-    let maskA = try XCTUnwrap(
+    let maskA = try #require(
       rasterizer.rasterize(
         stamps: stampCenters.map {
           BrushMaskMetalRasterizer.Stamp(
@@ -138,9 +138,8 @@ final class BrushMaskRasterizerParityTests: XCTestCase {
     for point in samplePoints {
       let a = Self.alpha(in: cgA, atX: point.x, y: point.y)
       let b = Self.alpha(in: cgB, atX: point.x, y: point.y)
-      XCTAssertEqual(
-        Int(a), Int(b),
-        accuracy: 20,
+      #expect(
+        abs(Int(a) - Int(b)) <= 20,
         "live vs parametric diverged at \(point.label) (\(point.x),\(point.y)): live=\(a) parametric=\(b)"
       )
     }
@@ -149,16 +148,16 @@ final class BrushMaskRasterizerParityTests: XCTestCase {
     // stamp centers must be near full alpha in BOTH paths, and the corner must
     // be empty in BOTH paths. This also catches a flip — a flip would empty the
     // (top-heavy) authored rows and fill their mirrors.
-    XCTAssertGreaterThan(Int(Self.alpha(in: cgA, atX: 40, y: h - 30)), 220, "live center-0 not painted")
-    XCTAssertGreaterThan(Int(Self.alpha(in: cgB, atX: 40, y: h - 30)), 220, "parametric center-0 not painted")
-    XCTAssertLessThan(Int(Self.alpha(in: cgA, atX: 4, y: 4)), 20, "live corner not empty")
-    XCTAssertLessThan(Int(Self.alpha(in: cgB, atX: 4, y: 4)), 20, "parametric corner not empty")
+    #expect(Int(Self.alpha(in: cgA, atX: 40, y: h - 30)) > 220, "live center-0 not painted")
+    #expect(Int(Self.alpha(in: cgB, atX: 40, y: h - 30)) > 220, "parametric center-0 not painted")
+    #expect(Int(Self.alpha(in: cgA, atX: 4, y: 4)) < 20, "live corner not empty")
+    #expect(Int(Self.alpha(in: cgB, atX: 4, y: 4)) < 20, "parametric corner not empty")
   }
 
   // MARK: - Helpers
 
   private func render(_ image: CIImage, extent: CGRect) throws -> CGImage {
-    try XCTUnwrap(Self.context.createCGImage(image, from: extent))
+    try #require(Self.context.createCGImage(image, from: extent))
   }
 
   /// Reads the alpha at a CGImage pixel (top-left origin, y-down). Both

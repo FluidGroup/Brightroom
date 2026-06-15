@@ -1,5 +1,6 @@
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 import UIKit
 
 @testable import BrightroomEngine
@@ -11,12 +12,12 @@ import UIKit
 ///
 /// The numeric parity is pinned by `EditingPreviewExportParityTests`; this
 /// test exists to render shareable evidence, not to assert.
-final class PreviewExportVisualEvidenceTests: XCTestCase {
+struct PreviewExportVisualEvidenceTests {
 
   private static let context = CIContext()
   private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-  func testRenderPreviewAndExportEvidence() async throws {
+  @Test func `Render preview and export evidence`() async throws {
     let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
     let imageSize = CGSize(width: source.width, height: source.height)
 
@@ -116,9 +117,8 @@ final class PreviewExportVisualEvidenceTests: XCTestCase {
 
   private func attach(cgImage: CGImage, name: String) {
     let uiImage = UIImage(cgImage: cgImage)
-    let attachment = XCTAttachment(image: uiImage)
-    attachment.name = name
-    attachment.lifetime = .keepAlways
-    add(attachment)
+    if let data = uiImage.pngData() {
+      Attachment.record(data, named: "\(name).png")
+    }
   }
 }

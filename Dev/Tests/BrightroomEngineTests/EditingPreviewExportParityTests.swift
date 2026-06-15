@@ -1,5 +1,6 @@
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 import UIKit
 
 @testable import BrightroomEngine
@@ -13,7 +14,7 @@ import UIKit
 ///
 /// These run at a single resolution (small images, no editing-size downscale)
 /// so the comparison isolates the composition contract from resampling.
-final class EditingPreviewExportParityTests: XCTestCase {
+struct EditingPreviewExportParityTests {
 
   private static let context = CIContext()
   private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
@@ -46,7 +47,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   ) throws -> CGImage {
     let sourceCIImage = CIImage(cgImage: source)
     let composed = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
-    return try XCTUnwrap(
+    return try #require(
       Self.context.createCGImage(
         composed,
         from: sourceCIImage.extent,
@@ -60,7 +61,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
 
   /// Effects + a masked local adjustment with an identity crop: the export and
   /// the preview composition must be pixel-equivalent across the whole frame.
-  func testPreviewMatchesExportWithoutCrop() async throws {
+  @Test func `Preview matches export without crop`() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -76,8 +77,8 @@ final class EditingPreviewExportParityTests: XCTestCase {
     let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
 
-    XCTAssertEqual(exported.width, preview.width)
-    XCTAssertEqual(exported.height, preview.height)
+    #expect(exported.width == preview.width)
+    #expect(exported.height == preview.height)
     // Both paths now rasterize the brush mask through the same parametric
     // `brushStamp` kernel (preview via `engineMakeMaskImage`, export via the
     // compiler), so they agree closely; the small tolerance only absorbs
@@ -90,7 +91,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// A non-identity crop (no rotation): export pixel (x, y) must equal the
   /// preview composition at (cropMinX + x, cropMinY + y), proving both paths
   /// apply the crop to the same composed image.
-  func testPreviewMatchesExportThroughCrop() async throws {
+  @Test func `Preview matches export through crop`() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -111,8 +112,8 @@ final class EditingPreviewExportParityTests: XCTestCase {
     let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
 
-    XCTAssertEqual(exported.width, Int(cropRect.width))
-    XCTAssertEqual(exported.height, Int(cropRect.height))
+    #expect(exported.width == Int(cropRect.width))
+    #expect(exported.height == Int(cropRect.height))
 
     for (x, y) in [(2, 12), (14, 6), (27, 18)] {
       let exportedPixel = Self.rgba(in: exported, x: x, y: y)
@@ -128,7 +129,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// A disabled brush leaf must select nothing in BOTH paths: export and
   /// preview equal the globally-adjusted image with no local blur, matching the
   /// parametric compiler's transparent disabled-leaf contract.
-  func testDisabledMaskLeafIsIgnoredByBothPaths() async throws {
+  @Test func `Disabled mask leaf is ignored by both paths`() async throws {
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -167,7 +168,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// (The preview path's release-mode degrade-to-identity is not asserted here:
   /// `engineRenderIgnoringFailure` calls `assertionFailure`, which traps in the
   /// debug test build — the same intentional contract global effects use.)
-  func testThrowingLocalAdjustmentFailsExport() async throws {
+  @Test func `Throwing local adjustment fails export`() async throws {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
     var edit = EditingStack.Edit.test(imageSize: CGSize(width: 32, height: 32))
 
@@ -186,12 +187,10 @@ final class EditingPreviewExportParityTests: XCTestCase {
     )
     edit.localAdjustments = [throwingLayer]
 
-    do {
+    let error = await #expect(throws: (any Error).self) {
       _ = try await export(edit, source: source)
-      XCTFail("expected export to throw")
-    } catch {
-      XCTAssertTrue(error is ThrowingEffectFeature.EvaluationError)
     }
+    #expect(error is ThrowingEffectFeature.EvaluationError)
   }
 
   /// The shared parametric `brushStamp` kernel (used by the engine preview and
@@ -200,7 +199,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
   /// shader also draws. If it used a hard disc or a linear ramp, painted blur
   /// edges would render wider/harder than the interactive preview showed. This
   /// samples the alpha profile of a single soft stamp and checks that contract.
-  func testExportMaskReproducesLiveCanvasBrushFalloff() throws {
+  @Test func `Export mask reproduces live canvas brush falloff`() throws {
     let canvas = 300
     let center = CGPoint(x: 150, y: 150)
     let diameter = 200.0
@@ -213,10 +212,10 @@ final class EditingPreviewExportParityTests: XCTestCase {
         brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: 1)
       )
     ])))
-    let maskCIImage = try XCTUnwrap(
+    let maskCIImage = try #require(
       tree.engineMakeMaskImage(size: CGSize(width: canvas, height: canvas))
     )
-    let maskCG = try XCTUnwrap(
+    let maskCG = try #require(
       Self.context.createCGImage(maskCIImage, from: CGRect(x: 0, y: 0, width: canvas, height: canvas))
     )
 
@@ -234,17 +233,17 @@ final class EditingPreviewExportParityTests: XCTestCase {
 
     // Core is fully covered, edge is clear, falloff is monotonic, and the
     // midpoint matches the smoothstep value (a hard disc would read ~1.0 there).
-    XCTAssertGreaterThan(alpha(atNormalizedRadius: 0.2), 0.95)
-    XCTAssertGreaterThan(alpha(atNormalizedRadius: hardness - 0.05), 0.95)
-    XCTAssertLessThan(alpha(atNormalizedRadius: 1.1), 0.05)
+    #expect(alpha(atNormalizedRadius: 0.2) > 0.95)
+    #expect(alpha(atNormalizedRadius: hardness - 0.05) > 0.95)
+    #expect(alpha(atNormalizedRadius: 1.1) < 0.05)
 
     var previous = 1.1
     for t in stride(from: 0.55, through: 1.0, by: 0.05) {
       let a = alpha(atNormalizedRadius: t)
-      XCTAssertLessThanOrEqual(a, previous + 0.02, "falloff not monotonic at t=\(t)")
+      #expect(a <= previous + 0.02, "falloff not monotonic at t=\(t)")
       previous = a
-      XCTAssertEqual(
-        a, smoothstepFalloff(t), accuracy: 0.08,
+      #expect(
+        abs(a - smoothstepFalloff(t)) <= 0.08,
         "export falloff at t=\(t) (\(a)) deviates from the live brush smoothstep (\(smoothstepFalloff(t)))"
       )
     }
@@ -256,11 +255,15 @@ final class EditingPreviewExportParityTests: XCTestCase {
     _ lhs: CGImage,
     _ rhs: CGImage,
     tolerance: Int,
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = SourceLocation(
+      fileID: #fileID,
+      filePath: #filePath,
+      line: #line,
+      column: #column
+    )
   ) {
-    XCTAssertEqual(lhs.width, rhs.width, "width", file: file, line: line)
-    XCTAssertEqual(lhs.height, rhs.height, "height", file: file, line: line)
+    #expect(lhs.width == rhs.width, "width", sourceLocation: sourceLocation)
+    #expect(lhs.height == rhs.height, "height", sourceLocation: sourceLocation)
     let step = max(1, lhs.width / 12)
     for x in stride(from: 0, to: lhs.width, by: step) {
       for y in stride(from: 0, to: lhs.height, by: max(1, lhs.height / 6)) {
@@ -269,8 +272,7 @@ final class EditingPreviewExportParityTests: XCTestCase {
           Self.rgba(in: rhs, x: x, y: y),
           tolerance: tolerance,
           label: "(\(x),\(y))",
-          file: file,
-          line: line
+          sourceLocation: sourceLocation
         )
       }
     }
@@ -281,19 +283,21 @@ final class EditingPreviewExportParityTests: XCTestCase {
     _ rhs: RGBA,
     tolerance: Int,
     label: String,
-    file: StaticString = #filePath,
-    line: UInt = #line
+    sourceLocation: SourceLocation = SourceLocation(
+      fileID: #fileID,
+      filePath: #filePath,
+      line: #line,
+      column: #column
+    )
   ) {
     func diff(_ a: UInt8, _ b: UInt8) -> Int { abs(Int(a) - Int(b)) }
     let r = diff(lhs.red, rhs.red)
     let g = diff(lhs.green, rhs.green)
     let b = diff(lhs.blue, rhs.blue)
-    XCTAssertLessThanOrEqual(
-      max(r, g, b),
-      tolerance,
+    #expect(
+      max(r, g, b) <= tolerance,
       "pixel \(label) diverged: export \(lhs) vs preview \(rhs)",
-      file: file,
-      line: line
+      sourceLocation: sourceLocation
     )
   }
 

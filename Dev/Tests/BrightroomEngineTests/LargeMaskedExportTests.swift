@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 import UIKit
 
 @testable import BrightroomEngine
@@ -14,13 +15,13 @@ import UIKit
 /// asserting on a multi-gigabyte intermediate, which is too memory-heavy to
 /// stand up reliably in CI; 4096x4096 drives the identical resolution-
 /// independent kernel path at scale without that cost.
-final class LargeMaskedExportTests: XCTestCase {
+struct LargeMaskedExportTests {
 
   /// A large-but-simulator-safe source side length. See type doc for why this
   /// is not pushed past the >16384 tiling threshold.
   private static let side = 4096
 
-  func testLargeBrushMaskedExposureExportAppliesOnlyInsideMask() async throws {
+  @Test func `Large brush masked exposure export applies only inside mask`() async throws {
     let side = Self.side
     let size = CGSize(width: side, height: side)
     let center = CGPoint(x: CGFloat(side) / 2, y: CGFloat(side) / 2)
@@ -77,10 +78,10 @@ final class LargeMaskedExportTests: XCTestCase {
     ).cgImage
 
     // Identity crop preserves the source dimensions at full scale.
-    XCTAssertEqual(adjusted.width, side)
-    XCTAssertEqual(adjusted.height, side)
-    XCTAssertEqual(baseline.width, side)
-    XCTAssertEqual(baseline.height, side)
+    #expect(adjusted.width == side)
+    #expect(adjusted.height == side)
+    #expect(baseline.width == side)
+    #expect(baseline.height == side)
 
     // INSIDE the painted region: the exposure lift makes the center brighter
     // than the same pixel in the unadjusted baseline export.
@@ -88,9 +89,8 @@ final class LargeMaskedExportTests: XCTestCase {
     let centerY = side / 2
     let adjustedCenter = Self.rgba(in: adjusted, x: centerX, y: centerY)
     let baselineCenter = Self.rgba(in: baseline, x: centerX, y: centerY)
-    XCTAssertGreaterThan(
-      Int(adjustedCenter.red),
-      Int(baselineCenter.red),
+    #expect(
+      Int(adjustedCenter.red) > Int(baselineCenter.red),
       "Masked center pixel should be brightened by the local exposure adjustment"
     )
 
@@ -99,9 +99,8 @@ final class LargeMaskedExportTests: XCTestCase {
     let cornerY = 2
     let adjustedCorner = Self.rgba(in: adjusted, x: cornerX, y: cornerY)
     let baselineCorner = Self.rgba(in: baseline, x: cornerX, y: cornerY)
-    XCTAssertEqual(
-      adjustedCorner,
-      baselineCorner,
+    #expect(
+      adjustedCorner == baselineCorner,
       "Pixel far outside the mask must be untouched by the local adjustment"
     )
   }
