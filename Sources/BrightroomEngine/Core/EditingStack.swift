@@ -409,57 +409,6 @@ open class EditingStack: Hashable {
     }
   }
 
-  /**
-   Returns a CIImage applied cropping in current editing.
-
-   For previewing image
-   */
-  public func makeCroppedCIImage(
-    sourceImage: CGImage,
-    crop: CropFeature,
-    orientedImageSize: CGSize,
-    orientation: CGImagePropertyOrientation
-  ) -> CIImage {
-
-    do {
-
-      let orientedImage = try sourceImage
-        // TODO: better to combine these operations - oriented and cropping
-        .oriented(orientation)
-
-      // The crop's rect is authored against `orientedImageSize` (the full
-      // oriented source). `sourceImage` may be a downsampled editing image, so
-      // scale the crop's y-down display rect into the source's oriented pixel
-      // space before snapping. When the source is full size this is the
-      // identity.
-      let sourceOrientedSize = orientedImage.size
-      let displayRect = crop.displayCropRect(imageSize: orientedImageSize)
-      let scaleX = sourceOrientedSize.width / orientedImageSize.width
-      let scaleY = sourceOrientedSize.height / orientedImageSize.height
-      let scaledDisplayRect = CGRect(
-        x: displayRect.minX * scaleX,
-        y: displayRect.minY * scaleY,
-        width: displayRect.width * scaleX,
-        height: displayRect.height * scaleY
-      )
-
-      let renderCrop = RenderCrop(
-        cropRectYDown: scaledDisplayRect,
-        imageSize: sourceOrientedSize,
-        rotation: crop.rotation,
-        straightenRadians: crop.straightenRadians
-      )
-
-      return try orientedImage
-        .croppedWithColorspace(to: renderCrop)
-        ._makeCIImage(
-          orientation: .up
-        )
-    } catch {
-      return .init(color: .gray)
-    }
-  }
-
   deinit {
     EngineLog.debug("[EditingStack] deinit")
   }

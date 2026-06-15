@@ -462,27 +462,6 @@ final class RenderCropRendererTests: XCTestCase {
     }
   }
 
-  func testPreviewCropExcludesFractionalBrightEdges() throws {
-    let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
-    let stack = EditingStack(
-      imageProvider: .init(image: UIImage(cgImage: sourceImage))
-    )
-
-    let croppedImage = stack.makeCroppedCIImage(
-      sourceImage: sourceImage,
-      crop: Self.fractionalCrop(for: sourceImage),
-      orientedImageSize: sourceImage.size,
-      orientation: .up
-    )
-    let renderedImage = try XCTUnwrap(
-      CIContext().createCGImage(croppedImage, from: croppedImage.extent)
-    )
-
-    XCTAssertEqual(renderedImage.width, 14)
-    XCTAssertEqual(renderedImage.height, 14)
-    try Self.assertEdgesAreDark(renderedImage)
-  }
-
   private static func fractionalCrop(for image: CGImage) -> CropFeature {
     CropFeature.test(
       imageSize: image.size,
