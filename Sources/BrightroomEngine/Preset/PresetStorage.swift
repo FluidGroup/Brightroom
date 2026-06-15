@@ -6,6 +6,11 @@ import BrightroomParametric
 ///
 /// UI layers (e.g. PhotosCrop's Filters mode) read presets from here and write
 /// the selected one into the document's global-effects node.
+///
+/// Main-actor isolated: it is a UI-facing shared store, configured once
+/// (`loadLUTs`) and read while building the editor UI. The isolation makes the
+/// shared `default` instance and its mutable `presets` race-free under Swift 6.
+@MainActor
 open class PresetStorage {
 
   public static let `default` = PresetStorage(presets: [])

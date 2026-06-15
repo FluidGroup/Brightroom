@@ -40,7 +40,7 @@ import UIKit
 public struct ParametricExportRenderer {
 
   /// An encoded file format for `Output.file`.
-  public enum ExportFileType {
+  public enum ExportFileType: Sendable {
     /// Lossy JPEG. `quality` is 0...1 (1 = best).
     case jpeg(quality: CGFloat)
     /// HEIF (HEIC). `quality` is 0...1 (1 = best).
@@ -50,7 +50,7 @@ public struct ParametricExportRenderer {
   }
 
   /// Where a render stores its result.
-  public enum Output {
+  public enum Output: Sendable {
     /// Render into an in-memory bitmap (a full-resolution `CGImage`). Simple,
     /// but allocates the whole output buffer (≈ W·H·4 bytes; ~576MB at 12000²).
     case memory
@@ -60,7 +60,7 @@ public struct ParametricExportRenderer {
     case file(url: URL, fileType: ExportFileType)
   }
 
-  public struct Options {
+  public struct Options: Sendable {
 
     public var resolution: Resolution
     public var workingFormat: CIFormat
@@ -107,14 +107,14 @@ public struct ParametricExportRenderer {
    need (`cgImage`, `uiImage`, `fileURL`, `thumbnail`) and it resolves the
    backing for you.
    */
-  public struct Rendered {
+  public struct Rendered: Sendable {
 
-    public enum DataType {
+    public enum DataType: Sendable {
       case jpeg(quality: CGFloat)
       case png
     }
 
-    enum Storage {
+    enum Storage: Sendable {
       case memory(CGImage)
       case file(URL)
     }
@@ -239,7 +239,7 @@ public struct ParametricExportRenderer {
 
   }
 
-  public enum RenderingDevice {
+  public enum RenderingDevice: Sendable {
     /// GPU rendering, falling back to software rendering when the image
     /// exceeds the GPU context's maximum input or output size.
     case automatic
@@ -249,7 +249,7 @@ public struct ParametricExportRenderer {
     case gpu
   }
 
-  public enum Resolution {
+  public enum Resolution: Sendable {
     case full
     case resize(maxPixelSize: CGFloat)
   }
@@ -387,7 +387,9 @@ public struct ParametricExportRenderer {
   }
 
   private static let ciContextCacheLock = NSLock()
-  private static var ciContextCache: [CIContextCacheKey: CIContext] = [:]
+  // Guarded by ciContextCacheLock; the lock makes access race-free, so opt out
+  // of the Swift 6 global-mutable-state check rather than re-isolating.
+  private nonisolated(unsafe) static var ciContextCache: [CIContextCacheKey: CIContext] = [:]
 
   /// CIContext creation costs tens to hundreds of milliseconds; CIContext is
   /// thread-safe, so contexts are shared across renders keyed by the options

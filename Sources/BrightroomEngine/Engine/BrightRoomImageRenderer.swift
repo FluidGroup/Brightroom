@@ -63,8 +63,6 @@ public final class BrightRoomImageRenderer {
     }
   }
 
-  private static let queue = DispatchQueue.init(label: "app.muukii.Pixel.renderer")
-
   /// Internal hook for tests to compare GPU and software rendering output.
   var renderingDevice: RenderingDevice = .automatic
 
@@ -82,25 +80,41 @@ public final class BrightRoomImageRenderer {
   /**
    Renders an image according to the editing.
 
-   The work runs on the renderer's private serial queue, off the calling actor.
-   See `ParametricExportRenderer.render` for the evaluation and output details.
+   The heavy Core Image work runs on the renderer's private serial queue, off the
+   calling actor — `nonisolated` so it never runs on a caller's global actor even
+   if this type later gains isolation. See `ParametricExportRenderer.render` for
+   the evaluation and output details.
    */
-  public func render(options: Options = .init()) async throws -> Rendered {
-    try await withCheckedThrowingContinuation { continuation in
-      Self.queue.async {
-        do {
-          continuation.resume(returning: try self.renderSynchronously(options: options))
-        } catch {
-          continuation.resume(throwing: error)
-        }
-      }
-    }
+  @concurrent
+  public nonisolated func render(options: Options = .init()) async throws -> Rendered {
+    
+    let source = self.source
+    let orientation = self.orientation
+    let document = edit.document
+    let device = renderingDevice
+
+    return try Self.render(
+      source: source,
+      orientation: orientation,
+      document: document,
+      device: device,
+      options: options
+    )
+    
   }
 
-  /// The synchronous render core shared by `render`. Loads the oriented source
-  /// `CIImage` and hands it to `ParametricExportRenderer`. Internal so
-  /// size-sensitive benchmarks can measure it without the async hop.
-  func renderSynchronously(options: Options) throws -> Rendered {
+
+  /// Shared synchronous render core: loads the oriented source `CIImage` and
+  /// hands it to `ParametricExportRenderer`. Static so it does not capture the
+  /// non-Sendable renderer instance. Internal so size-sensitive benchmarks can
+  /// measure the render work without the async/executor hop.
+  static nonisolated func render(
+    source: ImageSource,
+    orientation: CGImagePropertyOrientation,
+    document: EditingDocument,
+    device: RenderingDevice,
+    options: Options
+  ) throws -> Rendered {
     let startTime = CACurrentMediaTime()
 
     EngineLog.debug(.renderer, "Take full resolution CIImage from ImageSource.")
@@ -108,9 +122,9 @@ public final class BrightRoomImageRenderer {
 
     let rendered = try ParametricExportRenderer().render(
       source: sourceCIImage,
-      document: edit.document,
+      document: document,
       options: options,
-      device: renderingDevice
+      device: device
     )
 
     let duration = CACurrentMediaTime() - startTime

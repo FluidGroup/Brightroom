@@ -92,6 +92,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   typealias ViewportProvider = () -> Viewport?
 
   private typealias BrushStampUniforms = EditingCanvasBrushStampUniforms
+  // @MainActor: reads UIScreen frame-rate properties, which are main-actor only.
+  @MainActor
   private enum LiveFrameRate {
     static let minimum = 60
     static let maximum = 120
@@ -372,7 +374,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     fatalError("init(coder:) has not been implemented")
   }
 
-  deinit {
+  isolated deinit {
     stopLiveDisplayLink()
   }
 

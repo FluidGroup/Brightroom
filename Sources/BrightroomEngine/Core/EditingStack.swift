@@ -495,7 +495,10 @@ open class EditingStack: Hashable {
     }
   }
 
-  public func makeRenderer() throws -> BrightRoomImageRenderer {
+  // `sending`: the renderer is freshly created here and not retained by the
+  // stack, so it forms a disconnected region the caller can hand to the
+  // off-actor `render()` without a data-race risk.
+  public func makeRenderer() throws -> sending BrightRoomImageRenderer {
 
     guard let loaded = loadedState else {
       throw EditingStackError.unableToCreateRendererInLoading

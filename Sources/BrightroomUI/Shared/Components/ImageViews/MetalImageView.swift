@@ -92,7 +92,7 @@ private struct MetalImageRepresentable: UIViewRepresentable {
 }
 
 /// https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
-final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
+final class _MetalImageView: MTKView, MTKViewDelegate {
   enum DisplayBackground {
     case transparent
     case color(UIColor)
@@ -121,7 +121,9 @@ final class _MetalImageView: MTKView, CIImageDisplaying, MTKViewDelegate {
   /// created per cell in places like the filter-preset list, so the context is
   /// shared per Metal device instead of per view. CIContext is thread-safe.
   private static let sharedCIContextLock = NSLock()
-  private static var sharedCIContexts: [ObjectIdentifier: CIContext] = [:]
+  // Guarded by sharedCIContextLock; the lock makes access race-free, so opt out
+  // of the Swift 6 global-mutable-state check rather than re-isolating.
+  private nonisolated(unsafe) static var sharedCIContexts: [ObjectIdentifier: CIContext] = [:]
 
   private static func sharedCIContext(for device: MTLDevice) -> CIContext {
     sharedCIContextLock.lock()

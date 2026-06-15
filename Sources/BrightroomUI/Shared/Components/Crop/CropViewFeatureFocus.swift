@@ -44,10 +44,10 @@ import BrightroomParametric
 ///   pre-crop features participate.
 /// - Crop editing always views the evaluated output through the crop frame,
 ///   which acts as the viewing window per the editing vision.
-public struct CropViewFeatureFocus: Equatable {
+public struct CropViewFeatureFocus: Equatable, Sendable {
 
   /// The feature being edited through the canvas.
-  public enum EditingTarget: Equatable {
+  public enum EditingTarget: Equatable, Sendable {
 
     /// Adjust the geometry of a crop node with the crop guide and scroll
     /// surface. Currently only the final crop node is supported.

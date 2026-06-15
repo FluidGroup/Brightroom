@@ -126,7 +126,7 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     fatalError("init(coder:) has not been implemented")
   }
 
-  deinit {
+  isolated deinit {
     stopViewportInteractionRendering()
     restoreNavigationBackGesture()
   }

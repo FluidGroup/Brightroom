@@ -73,13 +73,15 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
 
   @inline(never)
   private func exportRender(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
-    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
-    renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize)
-    )
-    // `measure {}` is synchronous; use the internal synchronous render core so
-    // the benchmark measures the render work itself, not the async hop.
-    return try renderer.renderSynchronously(options: .init(workingColorSpace: Self.sRGB)).cgImage
+    // `measure {}` is synchronous; call the synchronous render core directly so
+    // the benchmark measures the render work itself, not the async/executor hop.
+    return try BrightRoomImageRenderer.render(
+      source: ImageSource(cgImage: source),
+      orientation: .up,
+      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize),
+      device: .automatic,
+      options: .init(workingColorSpace: Self.sRGB)
+    ).cgImage
   }
 
   @inline(never)

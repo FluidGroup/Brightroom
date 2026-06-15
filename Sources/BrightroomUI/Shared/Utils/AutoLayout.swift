@@ -8,8 +8,9 @@
 
 import UIKit
 
+@MainActor
 enum AutoLayoutTools {
-  
+
   static func setEdge(_ contentView: UIView, _ targetView: UIView) {
     contentView.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([

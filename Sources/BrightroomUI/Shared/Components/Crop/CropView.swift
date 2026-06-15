@@ -101,6 +101,11 @@ final class CropView: UIView {
   /// The state object is retained by the surface, while the display link
   /// targets this object rather than `CropView` to avoid a run-loop retain cycle
   /// against the whole crop view.
+  ///
+  /// Main-actor isolated: the display link is added to the main run loop, so the
+  /// tick callback and lifecycle (`begin`/`invalidate`) all run on the main
+  /// actor.
+  @MainActor
   private final class ViewportRenderingState: NSObject {
     weak var owner: CropView?
     let surface: ViewportRenderingSurface
@@ -136,7 +141,7 @@ final class CropView: UIView {
       displayLink = nil
     }
 
-    deinit {
+    isolated deinit {
       invalidate()
     }
 
@@ -154,6 +159,7 @@ final class CropView: UIView {
   ///
   /// The platter is shared because crop and tool scroll views are siblings under
   /// the same clipping and mask plane. It should not be owned by either surface.
+  @MainActor
   private final class SurfaceHost {
     let platterView = UIView()
     let backdropView = UIView()
@@ -1030,7 +1036,7 @@ final class CropView: UIView {
     fatalError("init(coder:) has not been implemented")
   }
 
-  deinit {
+  isolated deinit {
     cropSurface.viewportRendering.invalidate()
     toolSurface.viewportRendering.invalidate()
   }

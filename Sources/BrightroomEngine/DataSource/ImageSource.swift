@@ -32,7 +32,12 @@ import UIKit
 
 
 /// An object that provides an image-data from multiple backing storage.
-public final class ImageSource: Equatable {
+///
+/// Immutable after init: it stores read-only closures over thread-safe Core
+/// Graphics objects (`CGImage`/`CGImageSource`), so sharing it across threads is
+/// safe. `@unchecked` because the stored closures are not `@Sendable` function
+/// types, not because the data is mutable.
+public final class ImageSource: Equatable, @unchecked Sendable {
 
   private struct Closures {
     let readImageSize: () -> CGSize
