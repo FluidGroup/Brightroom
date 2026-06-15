@@ -189,7 +189,7 @@ struct BrushMaskMetalRasterizer {
     guard
       let textureImage = CIImage(
         mtlTexture: texture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.maskColorSpace]
       )
     else {
       return nil

@@ -323,7 +323,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     [unowned self] in
     CIContext(
       mtlCommandQueue: self.commandQueue,
-      options: [.name: "EditingCanvas"]
+      options: [
+        .name: "EditingCanvas",
+        // Wide-gamut, high-precision working space so Display-P3 / out-of-sRGB
+        // chroma survives filtering instead of being clamped (see the color
+        // contract in EditingCanvasImageProcessing).
+        .workingColorSpace: EditingCanvasImageProcessing.workingColorSpace,
+        .workingFormat: EditingCanvasImageProcessing.workingFormat,
+      ]
     )
   }()
 
@@ -345,7 +352,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     isOpaque = false
     layer.isOpaque = false
     framebufferOnly = false
-    colorPixelFormat = .bgra8Unorm
+    colorPixelFormat = EditingCanvasImageProcessing.drawablePixelFormat
     clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
     enableSetNeedsDisplay = true
     isPaused = true
@@ -365,8 +372,20 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if let metalLayer = layer as? CAMetalLayer {
       metalLayer.maximumDrawableCount = 3
     }
+    applyColorSpaceContract()
 
     reset()
+  }
+
+  /// Pins the drawable's color contract so the Display-P3 pixels Core Image
+  /// encodes into the drawable are interpreted as Display-P3 by the compositor —
+  /// one conversion, no double color management. MTKView (re)creates its
+  /// CAMetalLayer/drawable from `colorPixelFormat`, so the layer colorspace is
+  /// (re)asserted here and again from `didMoveToWindow`. This is SDR Display-P3
+  /// (no EDR); it matches the export's Display-P3 tag.
+  private func applyColorSpaceContract() {
+    guard let metalLayer = layer as? CAMetalLayer else { return }
+    metalLayer.colorspace = EditingCanvasImageProcessing.drawableColorSpace
   }
 
   @available(*, unavailable)
@@ -380,6 +399,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
+    // Re-assert: MTKView can rebuild its drawable/layer when entering a window,
+    // which would drop the colorspace and silently reinterpret the drawable.
+    applyColorSpaceContract()
     updatePreferredFrameRate()
   }
 
@@ -950,7 +972,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.drawableColorSpace
     )
     commandBuffer.commit()
     commandBuffer.waitUntilScheduled()
@@ -1072,7 +1094,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     guard
       let sourceTexture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
+        pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
         width: pixelWidth,
         height: pixelHeight
       ),
@@ -1092,7 +1114,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     guard let sourceImage = CIImage(
       mtlTexture: sourceTexture,
-      options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+      options: [.colorSpace: EditingCanvasImageProcessing.intermediateColorSpace]
     ) else {
       return nil
     }
@@ -1143,7 +1165,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: drawable.texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.drawableColorSpace
     )
     commandBuffer.commit()
     commandBuffer.waitUntilScheduled()
@@ -1197,7 +1219,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     guard
       let maskImage = CIImage(
         mtlTexture: textures.maskTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.maskColorSpace]
       )?.cropped(to: renderBounds)
     else {
       clearCurrentDrawable()
@@ -1255,12 +1277,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     guard
       let baseTexture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
+        pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
         width: pixelWidth,
         height: pixelHeight
       ),
       let adjustedTexture = makeRenderTexture(
-        pixelFormat: .bgra8Unorm,
+        pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
         width: pixelWidth,
         height: pixelHeight
       ),
@@ -1280,11 +1302,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     guard
       let baseImage = CIImage(
         mtlTexture: baseTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.intermediateColorSpace]
       )?.cropped(to: renderBounds),
       let adjustedImage = CIImage(
         mtlTexture: adjustedTexture,
-        options: [.colorSpace: EditingCanvasImageProcessing.colorSpace]
+        options: [.colorSpace: EditingCanvasImageProcessing.intermediateColorSpace]
       )?.cropped(to: renderBounds)
     else {
       return nil
@@ -1346,7 +1368,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       to: texture,
       commandBuffer: commandBuffer,
       bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.colorSpace
+      colorSpace: EditingCanvasImageProcessing.intermediateColorSpace
     )
   }
 
