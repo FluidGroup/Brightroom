@@ -20,6 +20,14 @@ import BrightroomEngine
 /// mapping.
 extension CropEditingState {
 
+  /// The smallest crop-output side the crop surface may author, in image pixels.
+  ///
+  /// The masking tool treats the final crop output as its editable canvas. Letting
+  /// crop zoom create a smaller output forces the tool surface into very large
+  /// zoom scales and resolves viewport-sized brushes into sub-pixel image-space
+  /// strokes, which is not a meaningful blur-mask editing domain.
+  static let minimumAuthoredCropOutputSideLength: CGFloat = 128
+
   func scrollViewContentSize() -> CGSize {
     PixelAspectRatio(imageSize).size(byWidth: 1000)
   }
@@ -36,6 +44,11 @@ extension CropEditingState {
     imageToPlatterScale()
   }
 
+  /// Returns the crop scroll view's zoom range for a visible crop guide size.
+  ///
+  /// `max` is finite by design: the crop output becomes the masking tool's
+  /// canvas, so crop authoring must stop before that output becomes too small to
+  /// paint with a viewport-sized brush reliably.
   func calculateZoomScale(visibleSize: CGSize) -> (min: CGFloat, max: CGFloat) {
 
     let contentSize = scrollViewContentSize()
@@ -47,7 +60,18 @@ extension CropEditingState {
      */
     let minScale = max(minXScale, minYScale)
 
-    return (min: minScale, max: .greatestFiniteMagnitude)
+    let platterScale = imageToPlatterScale()
+    let effectiveMinimumOutputSide = min(
+      Self.minimumAuthoredCropOutputSideLength,
+      max(min(imageSize.width, imageSize.height), 1)
+    )
+    let minimumPlatterSide = effectiveMinimumOutputSide * platterScale
+    let maxScale = min(
+      visibleSize.width / max(minimumPlatterSide, 0.0001),
+      visibleSize.height / max(minimumPlatterSide, 0.0001)
+    )
+
+    return (min: minScale, max: max(minScale, maxScale))
   }
 
   func platterRect(fromImageRect rect: CGRect) -> CGRect {
