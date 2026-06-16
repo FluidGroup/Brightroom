@@ -22,6 +22,7 @@
 import CoreGraphics
 import CoreImage
 import Foundation
+import Metal
 import Testing
 
 @testable import BrightroomUI
@@ -63,6 +64,17 @@ struct EditingCanvasColorContractTests {
         == EditingCanvasImageProcessing.intermediateColorSpace.name,
       "intermediate space must equal the working space for a lossless round-trip"
     )
+  }
+
+  /// The Simulator compositor is not a reliable target for the 10-bit drawable
+  /// used on device. Keep the display fallback explicit while preserving the
+  /// wide-gamut math contract tested below.
+  @Test func `Drawable pixel format is simulator safe`() {
+    #if targetEnvironment(simulator)
+    #expect(EditingCanvasImageProcessing.drawablePixelFormat == .bgra8Unorm)
+    #else
+    #expect(EditingCanvasImageProcessing.drawablePixelFormat == .bgr10a2Unorm)
+    #endif
   }
 
   /// The canvas contract preserves an out-of-sRGB-gamut Display-P3 red, while the

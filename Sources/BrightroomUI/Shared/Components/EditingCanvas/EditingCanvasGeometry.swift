@@ -82,9 +82,18 @@ enum EditingCanvasImageProcessing {
   /// EDR-ready). The mask texture stays `.rgba8Unorm` — a [0,1] field needs no float.
   static let colorTextureFormat: MTLPixelFormat = .rgba16Float
 
-  /// Drawable pixel format — 10-bit unorm shows Display-P3 SDR without 8-bit
-  /// banding at half the bandwidth of a float drawable (EDR would need rgba16Float).
+  /// Pixel format for the final drawable written by the editing canvas.
+  ///
+  /// Device builds use a 10-bit unorm drawable for Display-P3 SDR with less
+  /// banding than an 8-bit surface. Simulator builds intentionally fall back to
+  /// `.bgra8Unorm`: recent Simulator runtimes can create the view with
+  /// `.bgr10a2Unorm` but present a black drawable, while the color math is still
+  /// covered by the wide-gamut working and intermediate contracts above.
+  #if targetEnvironment(simulator)
+  static let drawablePixelFormat: MTLPixelFormat = .bgra8Unorm
+  #else
   static let drawablePixelFormat: MTLPixelFormat = .bgr10a2Unorm
+  #endif
 
   static func clippedToSourceAlpha(_ image: CIImage, source: CIImage) -> CIImage {
     let extent = image.extent
