@@ -1,25 +1,26 @@
-import XCTest
+import Testing
+import Foundation
 import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
 
-final class LocalAdjustmentRenderingTests: XCTestCase {
+struct LocalAdjustmentRenderingTests {
 
-  func testZeroRadiusLocalAdjustmentKeepsImageUnchanged() throws {
+  @Test func `Zero radius local adjustment keeps image unchanged`() throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let sourceCIImage = CIImage(cgImage: sourceImage)
     let layer = Self.makeBlurLayer(radius: 0, center: CGPoint(x: 20, y: 10))
 
-    let renderedImage = try XCTUnwrap(
+    let renderedImage = try #require(
       Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
-    XCTAssertEqual(Self.rgba(in: sourceImage, x: 5, y: 10), Self.rgba(in: renderedImage, x: 5, y: 10))
-    XCTAssertEqual(Self.rgba(in: sourceImage, x: 35, y: 10), Self.rgba(in: renderedImage, x: 35, y: 10))
+    #expect(Self.rgba(in: sourceImage, x: 5, y: 10) == Self.rgba(in: renderedImage, x: 5, y: 10))
+    #expect(Self.rgba(in: sourceImage, x: 35, y: 10) == Self.rgba(in: renderedImage, x: 35, y: 10))
   }
 
-  func testEditingPreviewAppliesFiltersAndLocalAdjustments() throws {
+  @Test func `Editing preview applies filters and local adjustments`() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -34,17 +35,16 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     ]
 
     let editingPreview = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
-    let editingImage = try XCTUnwrap(
+    let editingImage = try #require(
       Self.context.createCGImage(editingPreview, from: sourceCIImage.extent)
     )
 
-    XCTAssertGreaterThan(
-      Self.rgba(in: editingImage, x: 5, y: 10).red,
-      Self.rgba(in: sourceImage, x: 5, y: 10).red
+    #expect(
+      Self.rgba(in: editingImage, x: 5, y: 10).red > Self.rgba(in: sourceImage, x: 5, y: 10).red
     )
   }
 
-  func testLoadedEditingPreviewSkipsAutomaticLocalAdjustmentRasterization() throws {
+  @Test func `Loaded editing preview skips automatic local adjustment rasterization`() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -77,27 +77,25 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
 
     loadedState.currentEdit = editWithLocalAdjustment
 
-    let loadedPreviewImage = try XCTUnwrap(
+    let loadedPreviewImage = try #require(
       Self.context.createCGImage(loadedState.editingPreviewImage, from: sourceCIImage.extent)
     )
-    let fullEditingPreviewImage = try XCTUnwrap(
+    let fullEditingPreviewImage = try #require(
       Self.context.createCGImage(
         editWithLocalAdjustment.makePreviewImage(from: sourceCIImage, purpose: .editing),
         from: sourceCIImage.extent
       )
     )
 
-    XCTAssertEqual(
-      Self.rgba(in: sourceImage, x: 20, y: 10),
-      Self.rgba(in: loadedPreviewImage, x: 20, y: 10)
+    #expect(
+      Self.rgba(in: sourceImage, x: 20, y: 10) == Self.rgba(in: loadedPreviewImage, x: 20, y: 10)
     )
-    XCTAssertGreaterThan(
-      Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10).red,
-      Self.rgba(in: sourceImage, x: 20, y: 10).red
+    #expect(
+      Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10).red > Self.rgba(in: sourceImage, x: 20, y: 10).red
     )
   }
 
-  func testExposureLocalAdjustmentAppliesOnlyInsideMask() throws {
+  @Test func `Exposure local adjustment applies only inside mask`() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -107,26 +105,24 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let sourceCIImage = CIImage(cgImage: sourceImage)
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10))
 
-    let renderedImage = try XCTUnwrap(
+    let renderedImage = try #require(
       Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
-    XCTAssertEqual(
-      Self.rgba(in: sourceImage, x: 5, y: 10),
-      Self.rgba(in: renderedImage, x: 5, y: 10)
+    #expect(
+      Self.rgba(in: sourceImage, x: 5, y: 10) == Self.rgba(in: renderedImage, x: 5, y: 10)
     )
-    XCTAssertGreaterThan(
-      Self.rgba(in: renderedImage, x: 20, y: 10).red,
-      Self.rgba(in: sourceImage, x: 20, y: 10).red
+    #expect(
+      Self.rgba(in: renderedImage, x: 20, y: 10).red > Self.rgba(in: sourceImage, x: 20, y: 10).red
     )
   }
 
-  func testLocalAdjustmentMaskUsesDisplayYCoordinates() throws {
+  @Test func `Local adjustment mask uses display Y coordinates`() throws {
     let sourceImage = Self.makeSolidImage(width: 40, height: 40, white: 0.25)
     let sourceCIImage = CIImage(cgImage: sourceImage)
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 6))
 
-    let renderedImage = try XCTUnwrap(
+    let renderedImage = try #require(
       Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
     )
 
@@ -137,10 +133,10 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let maskedPixel = Self.rgba(in: renderedImage, x: 20, y: 6)
     let mirroredPixel = Self.rgba(in: renderedImage, x: 20, y: 34)
 
-    XCTAssertGreaterThan(maskedPixel.red, mirroredPixel.red)
+    #expect(maskedPixel.red > mirroredPixel.red)
   }
 
-  func testRendererAppliesLocalAdjustmentBeforeCrop() async throws {
+  @Test func `Renderer applies local adjustment before crop`() async throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
@@ -162,12 +158,12 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let edgePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 19, y: 10)
 
-    XCTAssertLessThan(edgePixel.red, 245)
-    XCTAssertGreaterThan(edgePixel.red, 10)
-    XCTAssertGreaterThan(farPixel.red, 245)
+    #expect(edgePixel.red < 245)
+    #expect(edgePixel.red > 10)
+    #expect(farPixel.red > 245)
   }
 
-  func testRendererComposesGlobalFilterAndLocalAdjustment() async throws {
+  @Test func `Renderer composes global filter and local adjustment`() async throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -195,9 +191,9 @@ final class LocalAdjustmentRenderingTests: XCTestCase {
     let edgePixel = Self.rgba(in: renderedImage, x: 20, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 35, y: 10)
 
-    XCTAssertGreaterThan(farPixel.red, 160)
-    XCTAssertGreaterThan(edgePixel.red, 60)
-    XCTAssertLessThan(edgePixel.red, farPixel.red)
+    #expect(farPixel.red > 160)
+    #expect(edgePixel.red > 60)
+    #expect(edgePixel.red < farPixel.red)
   }
 
   private static let context = CIContext()

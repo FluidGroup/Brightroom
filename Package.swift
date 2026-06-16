@@ -21,7 +21,11 @@ let package = Package(
       name: "BrightroomParametric",
       resources: [
         // Runtime-compiled Core Image kernels; see ParametricKernelRegistry.
-        .copy("ParametricKernels.metal")
+        // Named `.metal.txt` (not `.metal`) so SwiftPM/Xcode ship it as a copied
+        // resource instead of build-compiling it into a metallib — the kernels
+        // reference `brushStampAlpha`, which is injected at runtime and is not
+        // present at build time (build-time Metal compilation would fail).
+        .copy("ParametricKernels.metal.txt")
       ]
     ),
     .target(

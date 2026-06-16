@@ -94,14 +94,20 @@ public enum ParametricKernelRegistryError: Error, Equatable, Sendable {
 private enum ParametricMetalKernelStore {
 
   /// The bundled Metal source file holding every parametric kernel
-  /// (`ParametricKernels.metal`).
+  /// (`ParametricKernels.metal.txt`).
   ///
-  /// Xcode's SwiftPM integration compiles the file into `default.metallib`
-  /// inside the resource bundle, so the kernels load precompiled by function
-  /// name. Pure SwiftPM builds honor the `.copy` resource declaration and
-  /// ship the source text instead; those compile it at runtime. Either way
-  /// the `.metal` file is the single source of truth.
+  /// The resource is named `.metal.txt` rather than `.metal` so SwiftPM/Xcode
+  /// ship it as a copied resource and never build-compile it into a metallib:
+  /// the kernels reference `brushStampAlpha`, which is injected at runtime by
+  /// prepending `BrushStampSharedSource.falloffFunctionMSL`, so a build-time
+  /// compilation would fail on the undefined symbol. The source text is read
+  /// and compiled at runtime via `CIKernel.kernels(withMetalString:)`.
+  ///
+  /// `loadPrecompiledKernels` remains as a forward-looking fast path for if a
+  /// real precompiled `default.metallib` is ever shipped; today it finds none
+  /// and the loader falls back to the runtime source.
   private static let sourceResourceName = "ParametricKernels"
+  private static let sourceResourceExtension = "metal.txt"
 
   private static let kernelNames = ["brushStamp", "maskSubtract"]
 
@@ -162,7 +168,7 @@ private enum ParametricMetalKernelStore {
 
   private static func loadMetalSource() throws -> String {
     guard
-      let url = Bundle.module.url(forResource: sourceResourceName, withExtension: "metal")
+      let url = Bundle.module.url(forResource: sourceResourceName, withExtension: sourceResourceExtension)
     else {
       throw ParametricKernelRegistryError.missingKernelSourceResource(sourceResourceName)
     }

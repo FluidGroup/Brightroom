@@ -1,5 +1,6 @@
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 import UIKit
 
 @testable import BrightroomEngine
@@ -22,7 +23,7 @@ import UIKit
 /// — "loose" because the preview starts from a downsampled source, so a small
 /// resampling discrepancy is expected and acceptable (the same kind of
 /// preview/export drift any editor has).
-final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
+struct MaskedPreviewExportScaleConsistencyTests {
 
   /// Downsampled editing-source side (stands in for the ~2560 editing source).
   private static let sourceSide = 256
@@ -31,7 +32,7 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
 
   private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
-  func testSourceResolutionBlurPreviewMatchesFullResolutionExport() throws {
+  @Test func `Source resolution blur preview matches full resolution export`() throws {
     let fullSize = CGSize(width: Self.fullSide, height: Self.fullSide)
 
     // A hard vertical edge: left half black, right half white. The edge is
@@ -63,7 +64,7 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
     // applied to the whole image (the mask selects it later in compositing), so
     // it is directly comparable to a global blur. With the OOM fix this is
     // computed at the 256 source and upscaled to 1024.
-    let previewImages = try XCTUnwrap(
+    let previewImages = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
         loadedState: loaded,
         canvasSize: fullSize,
@@ -80,10 +81,10 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
 
     // Sanity: both are dark on the left and bright on the right (the blur did
     // not destroy the edge, and orientation matches).
-    XCTAssertLessThan(Int(previewRow[Self.fullSide / 8]), 64, "preview left should be dark")
-    XCTAssertGreaterThan(Int(previewRow[Self.fullSide * 7 / 8]), 191, "preview right should be bright")
-    XCTAssertLessThan(Int(exportRow[Self.fullSide / 8]), 64, "export left should be dark")
-    XCTAssertGreaterThan(Int(exportRow[Self.fullSide * 7 / 8]), 191, "export right should be bright")
+    #expect(Int(previewRow[Self.fullSide / 8]) < 64, "preview left should be dark")
+    #expect(Int(previewRow[Self.fullSide * 7 / 8]) > 191, "preview right should be bright")
+    #expect(Int(exportRow[Self.fullSide / 8]) < 64, "export left should be dark")
+    #expect(Int(exportRow[Self.fullSide * 7 / 8]) > 191, "export right should be bright")
 
     // (1) Holistic agreement: the whole blurred profile must match on average.
     // A divergent blur *fraction* would smear a large difference across the
@@ -97,9 +98,8 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
       total += Double(abs(Int(previewRow[x]) - Int(exportRow[x])))
     }
     let meanDiff = total / Double(Self.fullSide)
-    XCTAssertLessThan(
-      meanDiff,
-      6,
+    #expect(
+      meanDiff < 6,
       "Source-resolution blur preview should match full-resolution export on average (mean diff \(meanDiff))"
     )
 
@@ -109,10 +109,8 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
     // it; sub-pixel edge phase will not.
     let previewWidth = Self.riseWidth(previewRow)
     let exportWidth = Self.riseWidth(exportRow)
-    XCTAssertEqual(
-      Double(previewWidth),
-      Double(exportWidth),
-      accuracy: max(4, Double(exportWidth) * 0.15),
+    #expect(
+      abs(Double(previewWidth) - Double(exportWidth)) <= max(4, Double(exportWidth) * 0.15),
       "Blur ramp width (∝ radius) must match between source-res preview and full-res export (preview \(previewWidth)px, export \(exportWidth)px)"
     )
   }
@@ -133,7 +131,7 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
   /// NOTE: this exercises the lazy render chain at Nasa scale; the *definitive*
   /// memory confirmation is a manual paint on the real 12000² image (a device
   /// memory-watermark crash cannot be asserted in a unit test).
-  func testNasaScaleLocalAdjustmentRendersBoundedRegion() throws {
+  @Test func `Nasa scale local adjustment renders bounded region`() throws {
     let canvasSide = 12000
     let canvasSize = CGSize(width: canvasSide, height: canvasSide)
 
@@ -154,14 +152,14 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
     let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
     // displayedContentRect nil → renderBounds is the FULL 12000² canvas (the
     // not-zoomed case that crashed): the adjusted image carries a 12000² extent.
-    let images = try XCTUnwrap(
+    let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
         loadedState: loaded,
         canvasSize: canvasSize,
         mode: .localAdjustment(effect: blur)
       )
     )
-    XCTAssertEqual(images.adjusted.extent.width, CGFloat(canvasSide), accuracy: 1)
+    #expect(abs(images.adjusted.extent.width - CGFloat(canvasSide)) <= 1)
 
     // Render a full-width, 4px-tall strip at the vertical center. The OUTPUT is
     // tiny (12000×4 ≈ 192KB) and the ROI maps back to the ~256-wide source (the
@@ -170,7 +168,7 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
     // blur-input buffer. That this render succeeds at all is the boundedness
     // signal; the values then pin the upscale coordinate mapping.
     let strip = CGRect(x: 0, y: CGFloat(canvasSide) / 2 - 2, width: CGFloat(canvasSide), height: 4)
-    let cg = try XCTUnwrap(
+    let cg = try #require(
       ciContext.createCGImage(
         images.adjusted,
         from: strip,
@@ -179,21 +177,19 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
       ),
       "Rendering a full-width strip of the Nasa-scale adjusted image must succeed"
     )
-    XCTAssertEqual(cg.width, canvasSide)
+    #expect(cg.width == canvasSide)
 
     let row = try centerRow(ofCG: cg)
     // Far from the edge the blur has fully settled: black on the left, white on
     // the right. (Sample well clear of the wide blur ramp.)
-    XCTAssertLessThan(Int(row[200]), 32, "far left of the Nasa-scale edge should be black")
-    XCTAssertGreaterThan(Int(row[canvasSide - 200]), 223, "far right of the Nasa-scale edge should be white")
+    #expect(Int(row[200]) < 32, "far left of the Nasa-scale edge should be black")
+    #expect(Int(row[canvasSide - 200]) > 223, "far right of the Nasa-scale edge should be white")
 
     // The source edge at x=128/256 must land at x=6000/12000 (×46.875 upscale).
     // The blur is symmetric, so the 50%-brightness crossing stays on the edge.
     let crossing = row.firstIndex { $0 >= 128 } ?? -1
-    XCTAssertEqual(
-      Double(crossing),
-      6000,
-      accuracy: 300,
+    #expect(
+      abs(Double(crossing) - 6000) <= 300,
       "Upscaled edge crossing should land at x≈6000 (got \(crossing))"
     )
   }
@@ -213,7 +209,7 @@ final class MaskedPreviewExportScaleConsistencyTests: XCTestCase {
   /// Reads the horizontal center row's red channel from a `CIImage` rendered to
   /// a `side`×`side` bitmap.
   private func centerRow(of image: CIImage, side: Int) throws -> [UInt8] {
-    let cg = try XCTUnwrap(
+    let cg = try #require(
       ciContext.createCGImage(
         image,
         from: CGRect(x: 0, y: 0, width: side, height: side),

@@ -1,4 +1,6 @@
-import XCTest
+import CoreGraphics
+import Foundation
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -9,9 +11,9 @@ import XCTest
 /// A regression that flips the rasterized mask renders the adjustment at the
 /// vertically mirrored position — the export no longer matches what the user
 /// painted on the interactive canvas.
-final class LocalAdjustmentMaskOrientationTests: XCTestCase {
+struct LocalAdjustmentMaskOrientationTests {
 
-  func testMaskAppliesAtAuthoredDisplayPosition() async throws {
+  @Test func `Mask applies at authored display position`() async throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
     let imageSize = imageSource.readImageSize()
 
@@ -61,14 +63,12 @@ final class LocalAdjustmentMaskOrientationTests: XCTestCase {
         - Self.brightness(of: base, at: mirroredCenter)
     )
 
-    XCTAssertGreaterThan(
-      deltaAtStamp,
-      0.05,
+    #expect(
+      deltaAtStamp > 0.05,
       "The adjustment must land where the stamp was authored."
     )
-    XCTAssertLessThan(
-      deltaAtMirrored,
-      0.01,
+    #expect(
+      deltaAtMirrored < 0.01,
       "The vertically mirrored position changed — the exported mask is y-flipped."
     )
   }
@@ -81,10 +81,10 @@ final class LocalAdjustmentMaskOrientationTests: XCTestCase {
       width: 1,
       height: 1
     )
-    let cropped = try XCTUnwrap(image.cropping(to: cropRect))
+    let cropped = try #require(image.cropping(to: cropRect))
 
     var pixel = [UInt8](repeating: 0, count: 4)
-    let context = try XCTUnwrap(
+    let context = try #require(
       CGContext(
         data: &pixel,
         width: 1,

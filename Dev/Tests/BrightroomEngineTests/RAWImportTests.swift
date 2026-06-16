@@ -6,14 +6,16 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
+import CoreImage
 import Foundation
-import XCTest
+import ImageIO
+import Testing
 
 @testable import BrightroomEngine
 
-final class RAWImportTests: XCTestCase {
+struct RAWImportTests {
 
-  func testImport() {
+  @Test func `import`() {
 
     // simulator does not work well
 
@@ -27,19 +29,19 @@ final class RAWImportTests: XCTestCase {
     }
   }
 
-  func testLoadOrientationFromURL() {
+  @Test func `Load orientation from URL`() {
 
     let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
 
     let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
     let value = ImageTool.readOrientation(from: source)
 
-    XCTAssertNotNil(value)
-    XCTAssertEqual(value, .right)
+    #expect(value != nil)
+    #expect(value == .right)
 
   }
 
-  func testLoadOrientationFromData() {
+  @Test func `Load orientation from data`() {
 
     let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
     let data = try! Data.init(contentsOf: url)
@@ -47,8 +49,8 @@ final class RAWImportTests: XCTestCase {
     let source = CGImageSourceCreateWithData(data as CFData, nil)!
     let value = ImageTool.readOrientation(from: source)
 
-    XCTAssertNotNil(value)
-    XCTAssertEqual(value, .right)
+    #expect(value != nil)
+    #expect(value == .right)
 
   }
 }

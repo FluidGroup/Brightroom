@@ -20,12 +20,13 @@
 // THE SOFTWARE.
 
 import CoreGraphics
-import XCTest
+import Foundation
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
 
-final class EditingStackFeatureTreeTests: XCTestCase {
+struct EditingStackFeatureTreeTests {
 
   private func makeEdit(
     localAdjustmentIDs: [FeatureID] = []
@@ -61,80 +62,77 @@ final class EditingStackFeatureTreeTests: XCTestCase {
 
   // MARK: - Projection
 
-  func testProjectionOrderMatchesRenderOrder() {
+  @Test func `Projection order matches render order`() {
     let layerA = FeatureID()
     let layerB = FeatureID()
     let edit = makeEdit(localAdjustmentIDs: [layerA, layerB])
 
     let tree = EditingFeatureTree(edit: edit)
 
-    XCTAssertEqual(tree.nodes.count, 4)
-    XCTAssertEqual(tree.nodes[0].id, EditingFeatureTree.globalEffectsNodeID)
-    XCTAssertEqual(tree.nodes[1].id, layerA)
-    XCTAssertEqual(tree.nodes[2].id, layerB)
-    XCTAssertEqual(tree.nodes[3].id, EditingFeatureTree.finalCropNodeID)
+    #expect(tree.nodes.count == 4)
+    #expect(tree.nodes[0].id == EditingFeatureTree.globalEffectsNodeID)
+    #expect(tree.nodes[1].id == layerA)
+    #expect(tree.nodes[2].id == layerB)
+    #expect(tree.nodes[3].id == EditingFeatureTree.finalCropNodeID)
   }
 
-  func testProjectionIsStableAcrossEquivalentEdits() {
+  @Test func `Projection is stable across equivalent edits`() {
     let layer = FeatureID()
 
     let treeA = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
     let treeB = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
 
-    XCTAssertEqual(treeA, treeB)
-    XCTAssertEqual(treeA.nodes.map(\.id), treeB.nodes.map(\.id))
+    #expect(treeA == treeB)
+    #expect(treeA.nodes.map(\.id) == treeB.nodes.map(\.id))
   }
 
-  func testAccessors() {
+  @Test func accessors() {
     let layer = FeatureID()
     let edit = makeEdit(localAdjustmentIDs: [layer])
     let tree = EditingFeatureTree(edit: edit)
 
-    XCTAssertEqual(tree.finalCrop, edit.crop)
-    XCTAssertEqual(tree.globalEffects, edit.effects)
-    XCTAssertEqual(tree.localAdjustmentNodes.count, 1)
-    XCTAssertEqual(
-      tree.localAdjustment(id: layer),
-      edit.localAdjustments[0]
+    #expect(tree.finalCrop == edit.crop)
+    #expect(tree.globalEffects == edit.effects)
+    #expect(tree.localAdjustmentNodes.count == 1)
+    #expect(
+      tree.localAdjustment(id: layer) == edit.localAdjustments[0]
     )
   }
 
   // MARK: - Point resolution
 
-  func testAppliedFeatureCount() {
+  @Test func `Applied feature count`() {
     let layer = FeatureID()
     let tree = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
 
-    XCTAssertEqual(tree.appliedFeatureCount(at: .source), 0)
-    XCTAssertEqual(
-      tree.appliedFeatureCount(at: .after(EditingFeatureTree.globalEffectsNodeID)),
-      1
+    #expect(tree.appliedFeatureCount(at: .source) == 0)
+    #expect(
+      tree.appliedFeatureCount(at: .after(EditingFeatureTree.globalEffectsNodeID)) == 1
     )
-    XCTAssertEqual(
-      tree.appliedFeatureCount(at: .after(layer)),
-      2
+    #expect(
+      tree.appliedFeatureCount(at: .after(layer)) == 2
     )
-    XCTAssertEqual(tree.appliedFeatureCount(at: .output), 3)
-    XCTAssertNil(tree.appliedFeatureCount(at: .after(FeatureID(rawValue: "unknown"))))
+    #expect(tree.appliedFeatureCount(at: .output) == 3)
+    #expect(tree.appliedFeatureCount(at: .after(FeatureID(rawValue: "unknown"))) == nil)
   }
 
-  func testPointIncludesFeature() {
+  @Test func `Point includes feature`() {
     let layer = FeatureID()
     let tree = EditingFeatureTree(edit: makeEdit(localAdjustmentIDs: [layer]))
     let layerNodeID = layer
     let cropNodeID = EditingFeatureTree.finalCropNodeID
 
-    XCTAssertEqual(tree.point(.output, includes: cropNodeID), true)
-    XCTAssertEqual(tree.point(.source, includes: cropNodeID), false)
-    XCTAssertEqual(tree.point(.after(layerNodeID), includes: cropNodeID), false)
-    XCTAssertEqual(tree.point(.after(cropNodeID), includes: cropNodeID), true)
-    XCTAssertEqual(tree.point(.after(layerNodeID), includes: layerNodeID), true)
-    XCTAssertNil(tree.point(.after(FeatureID(rawValue: "unknown")), includes: cropNodeID))
+    #expect(tree.point(.output, includes: cropNodeID) == true)
+    #expect(tree.point(.source, includes: cropNodeID) == false)
+    #expect(tree.point(.after(layerNodeID), includes: cropNodeID) == false)
+    #expect(tree.point(.after(cropNodeID), includes: cropNodeID) == true)
+    #expect(tree.point(.after(layerNodeID), includes: layerNodeID) == true)
+    #expect(tree.point(.after(FeatureID(rawValue: "unknown")), includes: cropNodeID) == nil)
   }
 
   // MARK: - Mutations
 
-  func testUpdateCropFeature() {
+  @Test func `Update crop feature`() {
     var edit = makeEdit()
     let newCrop = CropFeature(
       id: edit.crop.id,
@@ -149,11 +147,11 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       feature = .domain(newCrop)
     }
 
-    XCTAssertTrue(result)
-    XCTAssertEqual(edit.crop, newCrop)
+    #expect(result)
+    #expect(edit.crop == newCrop)
   }
 
-  func testUpdateGlobalEffectsFeature() {
+  @Test func `Update global effects feature`() {
     var edit = makeEdit()
     let exposure = ExposureFeature(value: 0.5)
 
@@ -171,11 +169,11 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       feature = .effect(bundle)
     }
 
-    XCTAssertTrue(result)
-    XCTAssertEqual(edit.effects.first(of: ExposureFeature.self), exposure)
+    #expect(result)
+    #expect(edit.effects.first(of: ExposureFeature.self) == exposure)
   }
 
-  func testUpdateLocalAdjustmentFeature() {
+  @Test func `Update local adjustment feature`() {
     let layer = FeatureID()
     var edit = makeEdit(localAdjustmentIDs: [layer])
 
@@ -190,12 +188,12 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       feature = .localAdjustment(value)
     }
 
-    XCTAssertTrue(result)
-    XCTAssertEqual(edit.localAdjustments[0].isEnabled, false)
-    XCTAssertEqual(edit.localAdjustments[0].id, layer)
+    #expect(result)
+    #expect(edit.localAdjustments[0].isEnabled == false)
+    #expect(edit.localAdjustments[0].id == layer)
   }
 
-  func testUpdateUnknownFeatureFails() {
+  @Test func `Update unknown feature fails`() {
     var edit = makeEdit()
     let original = edit
 
@@ -203,14 +201,14 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       id: FeatureID(rawValue: "unknown"),
       in: &edit
     ) { _ in
-      XCTFail("mutation must not run for unknown features")
+      Issue.record("mutation must not run for unknown features")
     }
 
-    XCTAssertFalse(result)
-    XCTAssertEqual(edit, original)
+    #expect(!result)
+    #expect(edit == original)
   }
 
-  func testRemoveLocalAdjustmentFeature() {
+  @Test func `Remove local adjustment feature`() {
     let layer = FeatureID()
     var edit = makeEdit(localAdjustmentIDs: [layer])
 
@@ -219,37 +217,37 @@ final class EditingStackFeatureTreeTests: XCTestCase {
       from: &edit
     )
 
-    XCTAssertTrue(result)
-    XCTAssertTrue(edit.localAdjustments.isEmpty)
+    #expect(result)
+    #expect(edit.localAdjustments.isEmpty)
   }
 
-  func testFinalCropIsNotRemovable() {
+  @Test func `Final crop is not removable`() {
     var edit = makeEdit()
     let original = edit
 
-    XCTAssertFalse(
-      EditingFeatureTree.removeFeature(id: EditingFeatureTree.finalCropNodeID, from: &edit)
+    #expect(
+      !EditingFeatureTree.removeFeature(id: EditingFeatureTree.finalCropNodeID, from: &edit)
     )
-    XCTAssertEqual(edit, original)
+    #expect(edit == original)
   }
 
-  func testGlobalEffectsIsRemovableAndEffectsFallBackToNeutral() {
+  @Test func `Global effects is removable and effects fall back to neutral`() {
     var edit = makeEdit()
 
-    XCTAssertTrue(
+    #expect(
       EditingFeatureTree.removeFeature(id: EditingFeatureTree.globalEffectsNodeID, from: &edit)
     )
-    XCTAssertEqual(edit.effects, .init())
+    #expect(edit.effects == .init())
 
     // The canonical projection re-creates the feature before the final crop.
     var pipeline = EffectPipeline()
     pipeline.set(BrightnessFeature(value: 0.1))
     edit.effects = pipeline
-    XCTAssertEqual(edit.effects, pipeline)
+    #expect(edit.effects == pipeline)
     if case .domain = edit.features.last {
       // The crop domain feature remains last.
     } else {
-      XCTFail("The final feature must be the crop domain.")
+      Issue.record("The final feature must be the crop domain.")
     }
   }
 }

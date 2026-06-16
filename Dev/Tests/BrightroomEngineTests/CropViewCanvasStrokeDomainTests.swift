@@ -1,4 +1,6 @@
-import XCTest
+import Testing
+import Foundation
+import CoreGraphics
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -12,7 +14,7 @@ import XCTest
 /// that hands raw source records to that canvas renders the painted mask
 /// translated and rotated away from where the user painted it whenever the
 /// final crop is non-identity.
-final class CropViewCanvasStrokeDomainTests: XCTestCase {
+struct CropViewCanvasStrokeDomainTests {
 
   private func makeLayer() -> LocalAdjustmentFeature {
     .init(
@@ -26,7 +28,7 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
     )
   }
 
-  func testViewingStrokesAreMappedIntoCropOutputDomain() throws {
+  @Test func `Viewing strokes are mapped into crop output domain`() throws {
     let layer = makeLayer()
     let plan = CropView.CanvasRenderPlan(
       localAdjustments: [layer]
@@ -41,7 +43,7 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
       ),
       imageSize: CGSize(width: 400, height: 300)
     )
-    let geometry = try XCTUnwrap(EditingCanvasCropOutputGeometry(crop: crop))
+    let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
 
     let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
       EditingCanvasStrokeRecord(brushMaskStroke: $0)
@@ -51,12 +53,12 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
     }
 
     let viewingRecords = plan.committedStrokes(in: geometry)
-    XCTAssertEqual(viewingRecords, expected)
+    #expect(viewingRecords == expected)
     // The original bug shape: raw source records on the crop-output canvas.
-    XCTAssertNotEqual(viewingRecords, sourceRecords)
+    #expect(viewingRecords != sourceRecords)
   }
 
-  func testSourceDomainCanvasReceivesRawRecords() {
+  @Test func `Source domain canvas receives raw records`() {
     let layer = makeLayer()
     let plan = CropView.CanvasRenderPlan(
       localAdjustments: [layer]
@@ -68,6 +70,6 @@ final class CropViewCanvasStrokeDomainTests: XCTestCase {
 
     // CropSurface's rendered-edit-preview canvas is sized to crop.imageSize,
     // so a source-domain canvas must keep the raw records.
-    XCTAssertEqual(plan.committedStrokes(in: nil), sourceRecords)
+    #expect(plan.committedStrokes(in: nil) == sourceRecords)
   }
 }

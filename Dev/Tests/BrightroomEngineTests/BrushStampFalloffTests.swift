@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 
 import CoreImage
-import XCTest
+import Foundation
+import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -38,7 +39,7 @@ import XCTest
 /// tests read the red channel. A single stamp is rendered centered so the y-up
 /// (Core Image working space) vs y-down (CGImage) origin distinction is
 /// symmetric and does not affect the asserted points.
-final class BrushStampFalloffTests: XCTestCase {
+struct BrushStampFalloffTests {
 
   private static let context = CIContext()
 
@@ -51,34 +52,34 @@ final class BrushStampFalloffTests: XCTestCase {
   /// Center alpha must reach `opacity * 255` (within an 8-bit / AA tolerance),
   /// a point clearly outside the radius must be ~0, and a mid-radius point must
   /// fall strictly between the two — i.e. the falloff is monotonic-ish.
-  func testCenterFullOutsideZeroMidRadiusBetween() throws {
+  @Test func `Center full outside zero mid radius between`() throws {
     let opacity: Double = 1
     let image = try Self.renderSingleStamp(hardness: 0, opacity: opacity)
 
     // Center: full opacity.
     let centerValue = Self.red(in: image, x: 32, y: 32)
-    XCTAssertEqual(Int(centerValue), Int(opacity * 255), accuracy: 6, "center should be ~opacity*255")
+    #expect(abs(Int(centerValue) - Int(opacity * 255)) <= 6, "center should be ~opacity*255")
 
     // Clearly outside the radius (distance 28 > radius 20): zero.
     let outsideValue = Self.red(in: image, x: 60, y: 32)
-    XCTAssertLessThanOrEqual(Int(outsideValue), 4, "pixel outside the radius should be ~0")
+    #expect(Int(outsideValue) <= 4, "pixel outside the radius should be ~0")
 
     // Mid-radius (distance 10, normalizedDistance 0.5): strictly between.
     let midValue = Self.red(in: image, x: 42, y: 32)
-    XCTAssertGreaterThan(Int(midValue), Int(outsideValue), "mid-radius should exceed the outside value")
-    XCTAssertLessThan(Int(midValue), Int(centerValue), "mid-radius should be below the center value")
+    #expect(Int(midValue) > Int(outsideValue), "mid-radius should exceed the outside value")
+    #expect(Int(midValue) < Int(centerValue), "mid-radius should be below the center value")
   }
 
   /// The falloff is monotonically non-increasing as distance grows along a ray
   /// from the stamp center.
-  func testFalloffIsMonotonicAlongRay() throws {
+  @Test func `Falloff is monotonic along ray`() throws {
     let image = try Self.renderSingleStamp(hardness: 0, opacity: 1)
 
     // Sample x from the center outward; alpha must never increase.
     var previous = 256
     for x in stride(from: 32, through: 56, by: 2) {
       let value = Int(Self.red(in: image, x: x, y: 32))
-      XCTAssertLessThanOrEqual(value, previous + 2, "falloff increased at x=\(x): \(value) > \(previous)")
+      #expect(value <= previous + 2, "falloff increased at x=\(x): \(value) > \(previous)")
       previous = value
     }
   }
@@ -87,7 +88,7 @@ final class BrushStampFalloffTests: XCTestCase {
 
   /// At a near-edge point, hardness 1.0 (hard) keeps full alpha while hardness
   /// 0.0 (soft) has already faded — so the hard edge is sharper.
-  func testHardEdgeIsSharperThanSoftEdge() throws {
+  @Test func `Hard edge is sharper than soft edge`() throws {
     let hard = try Self.renderSingleStamp(hardness: 1, opacity: 1)
     let soft = try Self.renderSingleStamp(hardness: 0, opacity: 1)
 
@@ -98,9 +99,9 @@ final class BrushStampFalloffTests: XCTestCase {
     let softValue = Int(Self.red(in: soft, x: nearEdge.x, y: nearEdge.y))
 
     // Hard brush holds full alpha right up to the radius edge.
-    XCTAssertGreaterThan(hardValue, 240, "hard near-edge should remain ~full alpha")
+    #expect(hardValue > 240, "hard near-edge should remain ~full alpha")
     // Soft brush has faded substantially by the same point.
-    XCTAssertLessThan(softValue, hardValue - 40, "soft near-edge should be clearly weaker than hard")
+    #expect(softValue < hardValue - 40, "soft near-edge should be clearly weaker than hard")
   }
 
   // MARK: - Rendering
@@ -121,7 +122,7 @@ final class BrushStampFalloffTests: XCTestCase {
     )
 
     let ciImage = try FeatureGraphCompiler().renderMask(maskTree, extent: extent)
-    return try XCTUnwrap(context.createCGImage(ciImage, from: extent))
+    return try #require(context.createCGImage(ciImage, from: extent))
   }
 
   /// Reads the red channel at the given pixel. The brush kernel writes

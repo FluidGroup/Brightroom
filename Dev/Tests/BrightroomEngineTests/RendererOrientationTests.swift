@@ -6,11 +6,14 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
-import XCTest
+import Foundation
+import ImageIO
+import Testing
+import UIKit
 
 @testable import BrightroomEngine
 
-final class RendererOrientationTests: XCTestCase {
+struct RendererOrientationTests {
 
   private func run(image: UIImage, orientation: CGImagePropertyOrientation) async throws
     -> BrightRoomImageRenderer.Rendered
@@ -23,7 +26,7 @@ final class RendererOrientationTests: XCTestCase {
     return rendered
   }
 
-  func testOrientationRight() async throws {
+  @Test func orientationRight() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_right.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .right
@@ -33,7 +36,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationDown() async throws {
+  @Test func orientationDown() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_down.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .down
@@ -43,7 +46,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationLeft() async throws {
+  @Test func orientationLeft() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_left.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .left
@@ -53,7 +56,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationUp() async throws {
+  @Test func orientationUp() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_up.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .up
@@ -63,7 +66,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationLeftMirrored() async throws {
+  @Test func `orientation left mirrored`() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_left_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .leftMirrored
@@ -73,7 +76,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationDownMirrored() async throws {
+  @Test func `orientation down mirrored`() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_down_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .downMirrored
@@ -83,7 +86,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationRightMirrored() async throws {
+  @Test func `orientation right mirrored`() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_right_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .rightMirrored
@@ -93,7 +96,7 @@ final class RendererOrientationTests: XCTestCase {
     print(cgImage, uiImage)
   }
 
-  func testOrientationUpMirrored() async throws {
+  @Test func `orientation up mirrored`() async throws {
     let r = try await run(
       image: UIImage(named: "orientation_up_mirrored.HEIC", in: _pixelengine_bundle, with: nil)!,
       orientation: .upMirrored

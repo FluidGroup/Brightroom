@@ -1546,7 +1546,7 @@
 			);
 			productName = PixelEngineTests;
 			productReference = 4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		4BED49C7261C9BBD0011A98F /* Import LUT */ = {
 			isa = PBXNativeTarget;

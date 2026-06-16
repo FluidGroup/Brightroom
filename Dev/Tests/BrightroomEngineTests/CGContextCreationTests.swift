@@ -7,13 +7,14 @@
 //
 
 import Foundation
-import XCTest
+import Testing
+import UIKit
 
 @testable import BrightroomEngine
 
-final class CGContextCreationTests: XCTestCase {
+struct CGContextCreationTests {
 
-  func test_create_cgcontext() {
+  @Test func `create cgcontext`() {
 
     (1...12).forEach { i in
       let imageName = "test-image-\(i)"
@@ -25,7 +26,7 @@ final class CGContextCreationTests: XCTestCase {
         print(cgImage.colorSpace as Any)
         print(imageName, error.localizedDescription)
         print("===")
-        XCTFail(error.localizedDescription)
+        Issue.record("\(error.localizedDescription)")
       }
     }
 

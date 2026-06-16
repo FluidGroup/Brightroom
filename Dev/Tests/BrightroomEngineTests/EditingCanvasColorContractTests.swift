@@ -19,9 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import CoreImage
 import CoreGraphics
-import XCTest
+import CoreImage
+import Foundation
+import Testing
 
 @testable import BrightroomUI
 
@@ -35,31 +36,31 @@ import XCTest
 /// the old contract, both encoded into a common Display-P3 buffer, and asserts
 /// the new path stays saturated while the old path desaturates — so a
 /// regression back to sRGB clamping fails here, not silently in the field.
-final class EditingCanvasColorContractTests: XCTestCase {
+struct EditingCanvasColorContractTests {
 
   private let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
   private let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
   /// The four boundary contracts must keep COLOR content wide-gamut. (The mask
   /// contract is intentionally sRGB — a [0,1] selection field, not color.)
-  func test_colorContracts_areWideGamut() {
-    XCTAssertTrue(
+  @Test func `Color contracts are wide gamut`() {
+    #expect(
       EditingCanvasImageProcessing.workingColorSpace.isWideGamutRGB,
       "working space must be wide-gamut so P3 chroma survives filtering"
     )
-    XCTAssertTrue(
+    #expect(
       EditingCanvasImageProcessing.intermediateColorSpace.isWideGamutRGB,
       "intermediate texture space must be wide-gamut and match the working space"
     )
-    XCTAssertTrue(
+    #expect(
       EditingCanvasImageProcessing.drawableColorSpace.isWideGamutRGB,
       "drawable space must be wide-gamut (Display-P3)"
     )
     // The intermediate round-trip is lossless only if write-space == read-space
     // == working-space. Assert they are the same color space.
-    XCTAssertEqual(
-      EditingCanvasImageProcessing.workingColorSpace.name,
-      EditingCanvasImageProcessing.intermediateColorSpace.name,
+    #expect(
+      EditingCanvasImageProcessing.workingColorSpace.name
+        == EditingCanvasImageProcessing.intermediateColorSpace.name,
       "intermediate space must equal the working space for a lossless round-trip"
     )
   }
@@ -67,7 +68,7 @@ final class EditingCanvasColorContractTests: XCTestCase {
   /// The canvas contract preserves an out-of-sRGB-gamut Display-P3 red, while the
   /// previous sRGB-working/8-bit contract clamps it (visible as desaturation once
   /// both are expressed in the same Display-P3 space).
-  func test_canvasContract_preservesDisplayP3Red_whereSRGBContractClamps() throws {
+  @Test func `Canvas contract preserves Display-P3 red where sRGB contract clamps`() throws {
     // A pure Display-P3 red — its chroma lies OUTSIDE the sRGB gamut.
     let p3Red = CIImage(
       color: CIColor(red: 1, green: 0, blue: 0, colorSpace: displayP3)!
@@ -90,20 +91,20 @@ final class EditingCanvasColorContractTests: XCTestCase {
     let legacyPixel = renderPixel(p3Red, context: legacyContext, outputColorSpace: displayP3)
 
     // New contract keeps P3 red ~pure: red maxed, green/blue near zero.
-    XCTAssertGreaterThan(canvasPixel.r, 250, "canvas contract should keep P3 red at full red")
-    XCTAssertLessThan(canvasPixel.g, 12, "canvas contract should not bleed green into P3 red")
-    XCTAssertLessThan(canvasPixel.b, 12, "canvas contract should not bleed blue into P3 red")
+    #expect(canvasPixel.r > 250, "canvas contract should keep P3 red at full red")
+    #expect(canvasPixel.g < 12, "canvas contract should not bleed green into P3 red")
+    #expect(canvasPixel.b < 12, "canvas contract should not bleed blue into P3 red")
 
     // Old contract clamps P3 red into the sRGB gamut; expressed back in P3 the
     // sRGB red primary is visibly desaturated (green/blue rise).
-    XCTAssertGreaterThan(
-      legacyPixel.g, 20,
+    #expect(
+      legacyPixel.g > 20,
       "sanity: the legacy sRGB contract should desaturate P3 red (else the test proves nothing)"
     )
 
     // The fix must preserve strictly more saturation than the old contract.
-    XCTAssertLessThan(
-      Int(canvasPixel.g), Int(legacyPixel.g),
+    #expect(
+      Int(canvasPixel.g) < Int(legacyPixel.g),
       "canvas contract must preserve more P3 saturation than the legacy sRGB contract"
     )
   }

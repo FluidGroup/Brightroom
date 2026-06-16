@@ -6,6 +6,9 @@ on:
 jobs:
   test:
     runs-on: macos-26
+    # Safety net: a hung test should fail the job in minutes, not burn the
+    # 6-hour GitHub default.
+    timeout-minutes: 30
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.6.0
@@ -21,12 +24,16 @@ jobs:
             -scheme BrightroomEngineTests \
             test \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 180 \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
 
   swiftpm:
     runs-on: macos-26
+    timeout-minutes: 30
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.6.0
