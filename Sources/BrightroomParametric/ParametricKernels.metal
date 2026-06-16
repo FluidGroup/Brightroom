@@ -21,25 +21,16 @@
 
 // Core Image kernels used by the parametric feature graph compiler.
 //
-// This file ships as a bundle resource and is compiled at runtime through
-// `CIKernel.kernels(withMetalString:)`. SwiftPM cannot pass the Metal linker
-// flags `[[stitchable]]` kernels need for build-time metallib compilation
-// (`-framework CoreImage`); when the build pipeline gains that capability the
-// loader can switch to `CIColorKernel(functionName:fromMetalLibraryData:)`
-// without touching this source.
+// This file is build-compiled into the package target's `default.metallib` and
+// loaded with `CIColorKernel(functionName:fromMetalLibraryData:)`.
 //
 // This `brushStamp` kernel is one of the brush-mask rasterizers; the live
-// in-flight-stroke render shader (EditingCanvasBrushMaskShaderSource) is the
-// other. Both now share ONE falloff — `brushStampAlpha`, defined in
-// `BrushStampSharedSource.falloffFunctionMSL` and prepended to this source at
-// runtime by `ParametricKernelRegistry` — so the falloff cannot drift.
-//
-// `brushStampAlpha` is injected, NOT defined here. If this file is ever switched
-// from a `.copy` resource to build-time metallib compilation, inline the shared
-// function (or the build will fail on the undefined symbol).
+// in-flight-stroke render shader (`BrushMaskRenderShader.metal`) is the other.
+// Both share ONE falloff from `BrushStampFalloff.metalh`, so preview/live and
+// committed/export masks cannot drift.
 
 #include <CoreImage/CoreImage.h>
-using namespace metal;
+#include "BrushStampFalloff.metalh"
 
 extern "C" { namespace coreimage {
   [[ stitchable ]] float4 brushStamp(

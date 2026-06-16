@@ -34,7 +34,7 @@ import Testing
 /// (`FeatureGraphCompiler.renderMask`, the export/preview path) for the same
 /// stamps and canvas.
 ///
-/// Both rasterizers prepend the shared `BrushStampSharedSource.falloffFunctionMSL`
+/// Both rasterizers compile with the shared `BrushStampFalloff.metalh`
 /// (`brushStampAlpha`) and accumulate stamps with a `max` blend
 /// (`MTLBlendOperation.max` / `CIBlendKernel.componentMax`), so they should
 /// agree by construction. This test pins that they actually do — including

@@ -26,8 +26,7 @@ import Foundation
 ///
 /// Documents store semantic feature data only. This registry is renderer
 /// infrastructure and all custom operations are represented as Metal-backed
-/// Core Image kernels. The backing source can evolve from inlined Metal source
-/// to compiled metallib resources without changing document Codable shape.
+/// Core Image kernels loaded from BrightroomParametric's compiled Metal library.
 public struct ParametricKernelRegistry: Sendable {
 
   /// Creates a registry for Metal-backed parametric kernels.
@@ -78,37 +77,25 @@ public struct ParametricKernelRegistry: Sendable {
 /// Errors thrown while preparing or applying parametric custom kernels.
 public enum ParametricKernelRegistryError: Error, Equatable, Sendable {
 
-  /// A named kernel was not present in the loaded Metal source.
+  /// A named kernel was not present in the loaded kernel cache.
   case missingKernel(String)
 
   /// Core Image returned nil while applying a named kernel.
   case failedToApplyKernel(String)
 
-  /// Core Image failed to compile the Metal source.
-  case failedToCompileMetalSource(String)
+  /// A named Core Image kernel could not be loaded from the compiled metallib.
+  case failedToLoadKernel(String, String)
 
-  /// The bundled kernel source resource is missing or unreadable.
-  case missingKernelSourceResource(String)
+  /// The bundled compiled Metal library is missing or unreadable.
+  case missingKernelLibraryResource(String)
 }
 
 private enum ParametricMetalKernelStore {
 
-  /// The bundled Metal source file holding every parametric kernel
-  /// (`ParametricKernels.metal.txt`).
+  /// Loads the bundled compiled Metal library for the parametric kernels.
   ///
-  /// The resource is named `.metal.txt` rather than `.metal` so SwiftPM/Xcode
-  /// ship it as a copied resource and never build-compile it into a metallib:
-  /// the kernels reference `brushStampAlpha`, which is injected at runtime by
-  /// prepending `BrushStampSharedSource.falloffFunctionMSL`, so a build-time
-  /// compilation would fail on the undefined symbol. The source text is read
-  /// and compiled at runtime via `CIKernel.kernels(withMetalString:)`.
-  ///
-  /// `loadPrecompiledKernels` remains as a forward-looking fast path for if a
-  /// real precompiled `default.metallib` is ever shipped; today it finds none
-  /// and the loader falls back to the runtime source.
-  private static let sourceResourceName = "ParametricKernels"
-  private static let sourceResourceExtension = "metal.txt"
-
+  /// `ParametricKernels.metal` is build-compiled into `default.metallib`, then
+  /// loaded by function name through `CIColorKernel(functionName:fromMetalLibraryData:)`.
   private static let kernelNames = ["brushStamp", "maskSubtract"]
 
   static func colorKernel(named name: String) throws -> CIColorKernel {
@@ -124,62 +111,29 @@ private enum ParametricMetalKernelStore {
   }
 
   private static let loadedKernels: Result<[String: CIColorKernel], ParametricKernelRegistryError> = {
-    if let kernels = loadPrecompiledKernels() {
-      return .success(kernels)
-    }
-
     do {
-      // Prepend the shared brush falloff so `brushStamp` and the live render
-      // shader rasterize identically from one definition.
-      let metalSource = try loadMetalSource()
-      let combinedSource = BrushStampSharedSource.falloffFunctionMSL + "\n" + metalSource
-      let kernels = try CIKernel.kernels(withMetalString: combinedSource)
-      var result: [String: CIColorKernel] = [:]
-      for kernel in kernels {
-        if let colorKernel = kernel as? CIColorKernel {
-          result[kernel.name] = colorKernel
-        }
-      }
-      return .success(result)
+      let kernels = try loadCompiledKernels()
+      return .success(kernels)
+    } catch let error as BrushStampMetalLibraryError {
+      return .failure(.missingKernelLibraryResource(String(describing: error)))
     } catch let error as ParametricKernelRegistryError {
       return .failure(error)
     } catch {
-      return .failure(.failedToCompileMetalSource(String(describing: error)))
+      return .failure(.missingKernelLibraryResource(String(describing: error)))
     }
   }()
 
-  private static func loadPrecompiledKernels() -> [String: CIColorKernel]? {
-    guard
-      let url = Bundle.module.url(forResource: "default", withExtension: "metallib"),
-      let data = try? Data(contentsOf: url)
-    else {
-      return nil
-    }
-
+  private static func loadCompiledKernels() throws -> [String: CIColorKernel] {
+    let data = try BrushStampMetalLibrary.data()
     var result: [String: CIColorKernel] = [:]
     for name in kernelNames {
-      guard let kernel = try? CIColorKernel(functionName: name, fromMetalLibraryData: data) else {
-        return nil
+      do {
+        result[name] = try CIColorKernel(functionName: name, fromMetalLibraryData: data)
+      } catch {
+        throw ParametricKernelRegistryError.failedToLoadKernel(name, String(describing: error))
       }
-      result[name] = kernel
     }
     return result
-  }
-
-  private static func loadMetalSource() throws -> String {
-    guard
-      let url = Bundle.module.url(forResource: sourceResourceName, withExtension: sourceResourceExtension)
-    else {
-      throw ParametricKernelRegistryError.missingKernelSourceResource(sourceResourceName)
-    }
-
-    do {
-      return try String(contentsOf: url, encoding: .utf8)
-    } catch {
-      throw ParametricKernelRegistryError.missingKernelSourceResource(
-        "\(sourceResourceName): \(String(describing: error))"
-      )
-    }
   }
 }
 

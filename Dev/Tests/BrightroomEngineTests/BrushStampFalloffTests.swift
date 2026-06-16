@@ -29,7 +29,7 @@ import Testing
 /// Pins the canonical brush-stamp falloff produced by the parametric CIKernel
 /// rasterizer (`FeatureGraphCompiler.renderMask`, the export/preview path).
 ///
-/// The falloff is `BrushStampSharedSource.brushStampAlpha`:
+/// The falloff is `BrushStampFalloff.metalh`'s `brushStampAlpha`:
 /// `alpha = (normalizedDistance > 1) ? 0
 ///        : (hardness < 0.999 ? 1 - smoothstep(clamp(hardness,0,0.998), 1, d) : 1)
 ///          * clamp(opacity, 0, 1)`
