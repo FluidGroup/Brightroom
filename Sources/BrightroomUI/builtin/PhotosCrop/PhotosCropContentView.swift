@@ -19,6 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import CoreImage
 import SwiftUI
 import UIKit
 
@@ -99,6 +100,7 @@ struct PhotosCropContentView: View {
             aspectRatioSelection: aspectRatioSelection,
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
+            filterPreviewBaseImage: loadedState?.thumbnailImage,
             currentEffects: loadedState?.currentEdit.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
@@ -457,6 +459,7 @@ private struct PhotosCropControlHost: View {
   let aspectRatioSelection: PhotosCropAspectRatioSelection
   let blurMaskingState: PhotosCropBlurMaskingState
   let filterPresets: [PresetFeature]
+  let filterPreviewBaseImage: CIImage?
   let currentEffects: EffectPipeline?
   let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
@@ -499,6 +502,7 @@ private struct PhotosCropControlHost: View {
       case .filters:
         PhotosCropFilterControl(
           presets: filterPresets,
+          baseImage: filterPreviewBaseImage,
           selectedPresetIdentifier: currentEffects?.first(of: PresetFeature.self)?.identifier,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
@@ -1066,44 +1070,159 @@ enum PhotosCropEffectOrder {
   }
 }
 
-/// Filter preset chips evaluated inside the global-effects feature node.
+/// Filter preset swatches evaluated inside the global-effects feature node.
+///
+/// Each chip previews the current image with that preset applied. The strip is
+/// lazy: a chip renders its own swatch only as it first scrolls into view and
+/// holds it in `@State`, which a `LazyHStack` retains for the chip's lifetime —
+/// so scrolling never re-renders, only re-entering Filters mode does.
 private struct PhotosCropFilterControl: View {
 
+  /// On-screen edge length of a swatch.
+  static let thumbnailPointSize: CGFloat = 56
+
+  /// Scroll identity for the Original chip (preset chips use their identifier).
+  private static let originalScrollID = "brightroom.filters.original"
+
   let presets: [PresetFeature]
+  let baseImage: CIImage?
   let selectedPresetIdentifier: String?
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let isLoaded: Bool
   let onSelectPreset: (PresetFeature?) -> Void
 
+  /// The chip centered by `.scrollPosition` (also written back as the user
+  /// scrolls). Driven to the selected chip whenever the selection changes.
+  @State private var scrolledFilterID: String?
+
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 12) {
-        PhotosCropAspectRatioButton(
+      LazyHStack(spacing: 12) {
+        PhotosCropFilterChip(
           title: localizedStrings.button_filter_original,
-          isSelected: selectedPresetIdentifier == nil
-        ) {
-          onSelectPreset(nil)
-        }
+          preset: nil,
+          baseImage: baseImage,
+          pointSize: Self.thumbnailPointSize,
+          isSelected: selectedPresetIdentifier == nil,
+          action: { onSelectPreset(nil) }
+        )
+        .id(Self.originalScrollID)
         .accessibilityIdentifier("photos.crop.filters.original")
 
         ForEach(presets, id: \.identifier) { preset in
-          PhotosCropAspectRatioButton(
+          PhotosCropFilterChip(
             title: preset.name,
-            isSelected: selectedPresetIdentifier == preset.identifier
-          ) {
-            onSelectPreset(preset)
-          }
+            preset: preset,
+            baseImage: baseImage,
+            pointSize: Self.thumbnailPointSize,
+            isSelected: selectedPresetIdentifier == preset.identifier,
+            action: { onSelectPreset(preset) }
+          )
+          .id(preset.identifier)
           .accessibilityIdentifier("photos.crop.filters.\(preset.identifier)")
         }
       }
+      .scrollTargetLayout()
       .padding(.horizontal, 24)
       .frame(maxHeight: .infinity)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .scrollPosition(id: $scrolledFilterID, anchor: .center)
     .opacity(isLoaded ? 1 : 0.5)
     .disabled(!isLoaded)
     .environment(\.colorScheme, .dark)
     .accessibilityIdentifier("photos.crop.filters")
+    // Center the selected swatch on selection. ScrollView clamps at the ends, so
+    // Original / the last filter just rest at the edge (Photos-like).
+    .onChange(of: selectedPresetIdentifier) { _, newValue in
+      withAnimation(.snappy) {
+        scrolledFilterID = newValue ?? Self.originalScrollID
+      }
+    }
+  }
+}
+
+/// A single filter swatch: a square preview thumbnail above the preset name.
+///
+/// The chip renders its own swatch when it appears (`.task`) into its `@State`,
+/// computed once for the chip's lifetime. `preset == nil` is the no-filter
+/// ("Original") swatch.
+private struct PhotosCropFilterChip: View {
+
+  let title: String
+  let preset: PresetFeature?
+  let baseImage: CIImage?
+  let pointSize: CGFloat
+  let isSelected: Bool
+  let action: () -> Void
+
+  @Environment(\.displayScale) private var displayScale
+  @State private var image: UIImage?
+
+  var body: some View {
+    Button(action: action) {
+      VStack(spacing: 6) {
+        ZStack {
+          if let image {
+            Image(uiImage: image)
+              .resizable()
+              .scaledToFill()
+          } else {
+            Color.white.opacity(0.08)
+          }
+        }
+        .frame(width: pointSize, height: pointSize)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+          // The dark drop shadow keeps the white ring legible on bright swatches
+          // (Original / Mono / Noir on light photos), where a plain white border
+          // would have no contrast against the image.
+          RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .strokeBorder(Color.white, lineWidth: 2.5)
+            .shadow(color: Color.black.opacity(isSelected ? 0.55 : 0), radius: 2)
+            .opacity(isSelected ? 1 : 0)
+        }
+        .animation(.easeInOut(duration: 0.2), value: image != nil)
+
+        Text(title)
+          .font(.system(size: 11))
+          .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.5))
+          .lineLimit(1)
+      }
+    }
+    .buttonStyle(.plain)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(title)
+    .accessibilityValue(isSelected ? "selected" : "not selected")
+    .task(id: renderKey) {
+      guard let baseImage else {
+        image = nil
+        return
+      }
+      let rendered = await PhotosCropFilterThumbnailRenderer.render(
+        base: baseImage,
+        preset: preset,
+        pointSize: pointSize,
+        scale: displayScale
+      )
+      guard !Task.isCancelled else { return }
+      image = rendered
+    }
+  }
+
+  /// Re-render only when the source thumbnail, the preset, or the scale changes.
+  private var renderKey: RenderKey {
+    RenderKey(
+      baseImageID: baseImage.map(ObjectIdentifier.init),
+      presetIdentifier: preset?.identifier,
+      scale: displayScale
+    )
+  }
+
+  private struct RenderKey: Equatable {
+    let baseImageID: ObjectIdentifier?
+    let presetIdentifier: String?
+    let scale: CGFloat
   }
 }
 
