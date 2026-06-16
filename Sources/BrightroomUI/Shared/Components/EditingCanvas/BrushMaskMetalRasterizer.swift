@@ -40,9 +40,9 @@ import simd
 /// the contract.
 ///
 /// The pipeline is built EXACTLY as the live view builds it:
-/// - library = `BrushStampSharedSource.falloffFunctionMSL` + "\n" +
-///   `EditingCanvasBrushMaskShaderSource.source` (so the live shader and the
-///   parametric kernel share one `brushStampAlpha`).
+/// - library = `BrushStampMetalLibrary.url()` (the BrightroomParametric
+///   build-compiled metallib that contains the live render shader and the
+///   parametric Core Image kernels).
 /// - render pipeline: vertex `brushStampVertex`, fragment `brushStampFragment`,
 ///   `colorAttachments[0].pixelFormat = .rgba8Unorm`, blending enabled, rgb and
 ///   alpha `BlendOperation = .max`, all blend factors `.one` (mirroring the
@@ -50,7 +50,7 @@ import simd
 ///
 /// The `BrushStampUniforms` layout is replicated field-for-field from the live
 /// view's `EditingCanvasBrushStampUniforms` and the MSL `BrushStampUniforms`
-/// struct in `EditingCanvasBrushMaskShaderSource.source`.
+/// struct in `BrushMaskRenderShader.metal`.
 struct BrushMaskMetalRasterizer {
 
   /// Uniform values for drawing one soft circular brush stamp into a mask
@@ -206,14 +206,9 @@ struct BrushMaskMetalRasterizer {
   // MARK: - Pipeline construction (mirrors _EditingCanvasMTKView)
 
   private static func makeBrushMaskShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    // Prepend the shared brush falloff so the live stroke rasterizes identically
-    // to the parametric `brushStamp` kernel from one definition. This is the
-    // exact concatenation `_EditingCanvasMTKView.makeBrushMaskShaderLibrary`
-    // uses.
-    let source = BrushStampSharedSource.falloffFunctionMSL
-      + "\n"
-      + EditingCanvasBrushMaskShaderSource.source
-    return try device.makeLibrary(source: source, options: nil)
+    // The compiled library lives in BrightroomParametric so the live shader and
+    // the parametric export kernel are built as one brush-mask rasterization family.
+    return try device.makeLibrary(URL: BrushStampMetalLibrary.url())
   }
 
   private static func makeBrushMaskPipeline(

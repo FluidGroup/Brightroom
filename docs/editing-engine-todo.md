@@ -9,9 +9,9 @@ Status context (as of the v5 parametric migration):
 - `EditingCrop` / `EditingFeature` are deleted. `EditingStack.Edit` stores an
   `EditingDocument` directly; crop is a parametric `CropFeature`. BrightroomUI
   edits crop through `CropEditingState` / `CropRotation`.
-- Brush-mask rasterization shares ONE falloff (`BrushStampSharedSource.brushStampAlpha`)
-  across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`) and
-  the live Metal render shader (`EditingCanvasBrushMaskShaderSource`).
+- Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
+  across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
+  and the live Metal render shader (`BrushMaskRenderShader.metal`).
 - The live canvas renders committed + active strokes in one real-time Metal pass
   (no committed-mask cache). Export/preview stay on Core Image (auto-tiling).
 - The local-adjustment **preview is evaluated at the downsampled editing-source

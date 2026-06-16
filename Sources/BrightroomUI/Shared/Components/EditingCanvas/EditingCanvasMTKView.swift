@@ -1616,11 +1616,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   private static func makeBrushMaskShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    // Prepend the shared brush falloff so the live stroke rasterizes identically
-    // to the parametric `brushStamp` kernel from one definition.
-    let source = BrushStampSharedSource.falloffFunctionMSL
-      + "\n"
-      + EditingCanvasBrushMaskShaderSource.source
-    return try device.makeLibrary(source: source, options: nil)
+    // The compiled library lives in BrightroomParametric so the live shader and
+    // the parametric export kernel are built as one brush-mask rasterization family.
+    return try device.makeLibrary(URL: BrushStampMetalLibrary.url())
   }
 }
