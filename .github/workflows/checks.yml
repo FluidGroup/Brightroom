@@ -24,6 +24,9 @@ jobs:
             -scheme BrightroomEngineTests \
             test \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 180 \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
