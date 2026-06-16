@@ -83,15 +83,9 @@ public enum EditingCanvasMode: Equatable {
   /// use the renderer when the final composed result is required.
   case renderedEditPreview
 
-  /// Compatibility spelling for `renderedEditPreview`.
-  ///
-  /// Prefer `viewportBase` for realtime preview and `renderedEditPreview` only
-  /// when a materialized global-filter preview is explicitly required.
-  case preview
-
   var localEffect: EffectPipeline {
     switch self {
-    case .viewportBase, .renderedEditPreview, .preview:
+    case .viewportBase, .renderedEditPreview:
       return .init()
     case let .localAdjustment(effect):
       return effect
@@ -100,7 +94,7 @@ public enum EditingCanvasMode: Equatable {
 
   var activeLocalEffect: EffectPipeline? {
     switch self {
-    case .viewportBase, .renderedEditPreview, .preview:
+    case .viewportBase, .renderedEditPreview:
       return nil
     case let .localAdjustment(effect):
       return effect
@@ -109,7 +103,7 @@ public enum EditingCanvasMode: Equatable {
 
   var defaultInteractionMode: EditingCanvasInteractionMode {
     switch self {
-    case .viewportBase, .renderedEditPreview, .preview:
+    case .viewportBase, .renderedEditPreview:
       return .view
     case .localAdjustment:
       return .draw
