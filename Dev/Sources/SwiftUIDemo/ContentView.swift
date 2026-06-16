@@ -458,13 +458,18 @@ struct DemoPhotosCropView: View {
         let url = FileManager.default.temporaryDirectory
           .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
           .appendingPathExtension("heic")
+        // Snapshot the parametric document that produced this render so the
+        // result screen can show the feature tree used for it.
+        let document = stack.loadedState?.currentEdit.document
         Task {
           do {
             let rendered = try await stack.makeRenderer().render(
               options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
             )
             let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
-            await MainActor.run { self.resultImage = .init(cgImage: cgImage) }
+            await MainActor.run {
+              self.resultImage = .init(cgImage: cgImage, document: document)
+            }
           } catch {
             assertionFailure("\(error)")
           }
