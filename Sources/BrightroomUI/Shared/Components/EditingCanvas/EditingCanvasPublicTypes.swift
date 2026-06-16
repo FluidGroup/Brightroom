@@ -126,8 +126,8 @@ public struct EditingCanvasBrush: Equatable {
   public init(
     size: Double = 56,
     hardness: Double = 0.72,
-    opacity: Double = 0.9,
-    spacing: Double = 0.18
+    opacity: Double = 1.0,
+    spacing: Double = 0.05
   ) {
     self.size = size
     self.hardness = hardness

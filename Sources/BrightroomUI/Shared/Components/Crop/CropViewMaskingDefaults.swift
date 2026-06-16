@@ -29,8 +29,8 @@ public struct CropViewMaskingBrush: Equatable {
   public init(
     diameter: Diameter,
     hardness: Double = 0.72,
-    opacity: Double = 0.9,
-    spacing: Double = 0.18
+    opacity: Double = 1.0,
+    spacing: Double = 0.05
   ) {
     self.diameter = diameter
     self.hardness = hardness

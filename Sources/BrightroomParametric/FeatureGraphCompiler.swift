@@ -275,28 +275,66 @@ private extension FeatureGraphCompiler {
       return CIImage.parametricTransparent(extent: extent)
     }
 
-    var accumulated = CIImage.parametricTransparent(extent: extent)
-
+    // Each stamp compiles to one CIImage layer. `componentMax` is associative
+    // and commutative, so the stamps reduce in any grouping; folding them in a
+    // balanced tree keeps the Core Image graph depth at O(log n) instead of
+    // O(n). A dense brush (small spacing) emits hundreds–thousands of stamps
+    // per stroke, and a linear fold built a chain that deep — slow to compile
+    // and at risk of stack overflow during render. The tree keeps the same
+    // node count and the same result.
+    var stampImages: [CIImage] = []
     for stroke in mask.strokes {
       let radius = max(stroke.brush.diameter / 2, 0)
       for stamp in stroke.stamps {
-        let stampImage = try kernelRegistry.makeBrushStamp(
-          extent: extent,
-          center: stamp,
-          radius: radius,
-          hardness: stroke.brush.hardness,
-          opacity: stroke.brush.opacity
-        )
-        accumulated = try blendMask(
-          foreground: stampImage,
-          background: accumulated,
-          kernel: .componentMax,
-          extent: extent
+        stampImages.append(
+          try kernelRegistry.makeBrushStamp(
+            extent: extent,
+            center: stamp,
+            radius: radius,
+            hardness: stroke.brush.hardness,
+            opacity: stroke.brush.opacity
+          )
         )
       }
     }
 
-    return accumulated.cropped(to: extent)
+    return try reduceComponentMax(stampImages, extent: extent)
+  }
+
+  /// Reduces mask layers with `componentMax` in a balanced tree so the Core
+  /// Image graph depth stays O(log n). `componentMax` is associative and
+  /// commutative and `componentMax(transparent, x) == x`, so the pairwise
+  /// grouping produces the same alpha field as a linear fold over a transparent
+  /// base.
+  private func reduceComponentMax(_ images: [CIImage], extent: CGRect) throws -> CIImage {
+    guard images.isEmpty == false else {
+      return CIImage.parametricTransparent(extent: extent)
+    }
+
+    var level = images
+    while level.count > 1 {
+      var next: [CIImage] = []
+      next.reserveCapacity((level.count + 1) / 2)
+      var index = 0
+      while index < level.count {
+        if index + 1 < level.count {
+          next.append(
+            try blendMask(
+              foreground: level[index + 1],
+              background: level[index],
+              kernel: .componentMax,
+              extent: extent
+            )
+          )
+        } else {
+          next.append(level[index])
+        }
+        index += 2
+      }
+      level = next
+    }
+
+    return level[0].cropped(to: extent)
   }
 
   func blendMask(

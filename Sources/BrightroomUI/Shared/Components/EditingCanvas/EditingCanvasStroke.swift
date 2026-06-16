@@ -47,7 +47,10 @@ struct EditingCanvasStrokeRecord {
         size: stroke.brush.diameter,
         hardness: stroke.brush.hardness,
         opacity: stroke.brush.opacity,
-        spacing: 0.18
+        // `BrushMaskStroke` does not persist spacing; committed strokes render
+        // from their stored stamps, so this is a placeholder kept in sync with
+        // the authoring default (CropViewMaskingBrush / EditingCanvasBrush).
+        spacing: 0.05
       )
     )
   }
