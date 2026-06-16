@@ -6,6 +6,9 @@ on:
 jobs:
   test:
     runs-on: macos-26
+    # Safety net: a hung test should fail the job in minutes, not burn the
+    # 6-hour GitHub default.
+    timeout-minutes: 30
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.6.0
@@ -27,6 +30,7 @@ jobs:
 
   swiftpm:
     runs-on: macos-26
+    timeout-minutes: 30
 
     steps:
       - uses: maxim-lobanov/setup-xcode@v1.6.0

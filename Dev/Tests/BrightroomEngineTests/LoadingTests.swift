@@ -33,50 +33,54 @@ import Testing
 @MainActor
 struct LoadingTests {
 
-  @Test(.timeLimit(.minutes(1)))
+  @Test(.timeLimit(.minutes(2)))
   func orientation() async throws {
 
     var subscriptions: [Any] = []
 
-    func fetch(image: ImageProvider) async -> CGImagePropertyOrientation {
+    // Resolve `ImageProvider.orientation` reactively, but bound the wait with a
+    // hard, cancellation-aware timeout. A `withCheckedContinuation` that never
+    // resumes cannot be interrupted by `.timeLimit` (task cancellation does not
+    // resume a suspended continuation), so a value that never arrives would hang
+    // the run indefinitely. The original XCTest used `wait(for:timeout:10)`;
+    // this polls a captured flag with `Task.sleep`, which is cancellable.
+    func fetch(image: ImageProvider) async throws -> CGImagePropertyOrientation {
 
       image.start()
 
-      var previousOrientation: CGImagePropertyOrientation?
-
-      return await withCheckedContinuation { continuation in
-        var didResume = false
-        let subscription = withGraphTracking {
-          withGraphTrackingGroup {
-            let orientation = image.orientation
-            if orientation != previousOrientation {
-              previousOrientation = orientation
-              if let orientation = orientation, !didResume {
-                didResume = true
-                continuation.resume(returning: orientation)
-              }
-            }
+      var resolved: CGImagePropertyOrientation?
+      let subscription = withGraphTracking {
+        withGraphTrackingGroup {
+          let orientation = image.orientation
+          if resolved == nil, let orientation = orientation {
+            resolved = orientation
           }
         }
-        subscriptions.append(subscription)
       }
+      subscriptions.append(subscription)
+
+      let deadline = ContinuousClock.now + .seconds(10)
+      while resolved == nil, ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(20))
+      }
+      return try #require(resolved, "orientation did not resolve within 10s")
     }
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.right.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.right.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.down.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.down.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.left.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.left.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.up.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.up.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.leftMirrored.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.leftMirrored.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.downMirrored.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.downMirrored.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.rightMirrored.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.rightMirrored.rawValue)
 
-    #expect(await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.upMirrored.rawValue)
+    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.upMirrored.rawValue)
 
     withExtendedLifetime(subscriptions) {}
   }
