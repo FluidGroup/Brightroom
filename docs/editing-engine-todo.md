@@ -145,3 +145,42 @@ materialize a full-canvas intermediate and could OOM on huge sources; apply the
 same source-resolution-then-upscale treatment there.
 
 Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasRenderImageFactory.swift`.
+
+### 7. Texture bit-depth / memory for the GPU-resident source + content bake
+
+The CropView-rotation perf work added persistent GPU textures. Two memory
+reductions are **done**; one open question remains.
+
+Done:
+- **Adaptive source depth.** `EditingSourcePreparation.makeGPUResidentSource`
+  picks the texture format from `cgImage.bitsPerComponent`: `rgba8Unorm` for an
+  8-bit source (the common case — lossless, half the memory), `rgba16Float` for
+  >8-bit / HDR (preserves precision + extended range). Guard:
+  `EditingSourceTextureTests` sweeps both depths × 8 orientations.
+- **Bake only the expensive layer.** The content bake now bakes ONLY `adjusted`
+  (the blur), not `base`. `base` is the global effects on the GPU-resident source
+  — pointwise, so re-evaluating it per frame is cheap and needs no held texture.
+  When there is no local effect, nothing is baked. (See `preparedAdjustedLayer`.)
+
+Net (8-bit source): plain crop/rotate now holds just the source texture (~26MB,
+~back to the pre-change CGImage footprint); a blur-mask gesture adds one ~52MB
+`adjusted` bake. Down from ~104MB / ~156MB.
+
+Open:
+- The `adjusted` bake is still `rgba16Float` (`colorTextureFormat`). It can't
+  simply drop to 8-bit: it holds the effects+blur result in the
+  **extended-linear-Display-P3** intermediate space, where 8-bit *linear* bands
+  in shadows and can't carry out-of-[0,1] (exposure overshoot / wide gamut). Any
+  reduction here must be gated on the wide-gamut/EDR color contract, not the
+  source's nominal depth. Lower-risk levers if the bake memory still matters:
+  cap the bake nearer the drawable resolution instead of the 2560 source cap, or
+  a 10-bit option for confirmed-SDR-in-range content. Measure on-device first.
+- Confirm on device that keeping `base` as a live (un-baked) graph did not
+  re-introduce per-frame cost (it shouldn't — pointwise on a GPU texture).
+
+Files: `Sources/BrightroomEngine/Engine/EditingSourcePreparation.swift`,
+`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasContentBake.swift`,
+`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`
+(`preparedAdjustedLayer`),
+`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasGeometry.swift`
+(`colorTextureFormat`).

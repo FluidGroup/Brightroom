@@ -56,6 +56,21 @@ private struct EditingCanvasViewportPreparedLayersCache {
   let adjustedImage: CIImage
 }
 
+/// Texture-backed bake of `renderImages.adjusted` (the local-effect layer), keyed
+/// only on the render-images generation (NOT the viewport). `setRenderImages`
+/// invalidates it, so during a gesture (rotation / pan / zoom — which change only
+/// the viewport) the expensive blur graph is evaluated once and every frame
+/// resamples this texture instead of re-running it.
+///
+/// Only `adjusted` is baked: `base` is the global effects applied to the
+/// (now GPU-resident) source, which are pointwise and cheap to re-evaluate per
+/// frame — baking it too would just double the held texture memory for no
+/// meaningful frame-time win.
+private struct EditingCanvasPreparedContentLayers {
+  let adjustedTexture: MTLTexture
+  let adjustedImage: CIImage
+}
+
 
 private enum EditingCanvasViewportRenderPath: String {
   case clear
@@ -117,6 +132,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private struct ViewportState: ~Copyable {
     var renderImages: EditingCanvasRenderImages?
     var sourceTexture: EditingCanvasViewportSourceTexture?
+    var preparedContentLayers: EditingCanvasPreparedContentLayers?
     var preparedLayersCache: EditingCanvasViewportPreparedLayersCache?
     var renderTextures: EditingCanvasViewportRenderTextures?
     var usesCachedSourceRendering = false
@@ -166,6 +182,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     enum CacheMiss: String {
       case sourceTexture = "source-texture"
       case renderTextures = "render-textures"
+      case preparedContentLayers = "prepared-content-layers"
       case preparedLayers = "prepared-layers"
     }
 
@@ -186,6 +203,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     var coreImageCompositeFrameCount = 0
     var sourceTextureMissCount = 0
     var renderTexturesMissCount = 0
+    var preparedContentLayersMissCount = 0
     var preparedLayersMissCount = 0
     var invalidationCount = 0
     var lastInvalidation: Invalidation?
@@ -203,6 +221,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         sourceTextureMissCount += 1
       case .renderTextures:
         renderTexturesMissCount += 1
+      case .preparedContentLayers:
+        preparedContentLayersMissCount += 1
       case .preparedLayers:
         preparedLayersMissCount += 1
       }
@@ -245,7 +265,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
         [EditingCanvasRender]
         frames:\(frameCount) slow:\(slowFrameCount) budgetMs:\(formatMilliseconds(frameBudget))
         path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) coreComposite:\(coreImageCompositeFrameCount)
-        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) preparedLayers:\(preparedLayersMissCount)
+        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) contentLayers:\(preparedContentLayersMissCount) preparedLayers:\(preparedLayersMissCount)
         invalidations:\(invalidationCount) lastInvalidation:\(lastInvalidation?.rawValue ?? "none")
         last path:\(path.rawValue) ms:\(formatMilliseconds(duration)) cachedSourceEnabled:\(usesCachedSourceRendering) preparedBase:\(usesPreparedBaseImage) localEffect:\(hasLocalEffect) stroke:\(hasRenderableStroke) drawable:\(format(drawableSize))
         content:\(format(visibleContentRect)) canvasFrame:\(format(visibleCanvasFrame))
@@ -264,6 +284,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       coreImageCompositeFrameCount = 0
       sourceTextureMissCount = 0
       renderTexturesMissCount = 0
+      preparedContentLayersMissCount = 0
       preparedLayersMissCount = 0
       invalidationCount = 0
       lastInvalidation = nil
@@ -431,6 +452,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.sourceTexture = nil
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
+    invalidatePreparedContentLayers()
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.renderImages)
     #endif
@@ -446,6 +468,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     viewportState.sourceTexture = nil
     viewportState.renderTextures = nil
     invalidateViewportCoreImageLayerCaches()
+    invalidatePreparedContentLayers()
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.cachedSourceMode)
     #endif
@@ -855,6 +878,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     guard renderImages.hasLocalEffect,
           hasRenderableStroke
     else {
+      // No local effect here: `base` is the global effects applied to the
+      // GPU-resident source (pointwise → cheap), so re-evaluating it per frame
+      // needs no bake.
       renderViewportBaseImage(
         renderImages.base,
         drawable: drawable,
@@ -1069,8 +1095,70 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     return .cachedSourceBase
   }
 
+  /// Invalidates ONLY the viewport-scoped layer cache. This runs on every
+  /// viewport change (rotation / pan / zoom), so it must NOT drop the
+  /// content-scoped bake (`preparedContentLayers`) — that survives viewport
+  /// changes and is dropped separately by `invalidatePreparedContentLayers`
+  /// when the render images themselves change.
   private func invalidateViewportCoreImageLayerCaches() {
     viewportState.preparedLayersCache = nil
+  }
+
+  /// Drops the content-scoped base/adjusted bake. Only the render-images
+  /// generation (and the cached-source mode that reinterprets it) changes the
+  /// baked content, so only those call this — NOT viewport updates.
+  private func invalidatePreparedContentLayers() {
+    viewportState.preparedContentLayers = nil
+  }
+
+  /// Texture-backed bake of the current `adjusted` (local-effect) layer, built
+  /// once per render-images generation. The cache is cleared in
+  /// `invalidatePreparedContentLayers` — i.e. ONLY on `setRenderImages` /
+  /// `setViewportCachedSourceEnabled`, never on viewport changes — so the
+  /// composite path samples it instead of re-evaluating the blur graph, which is
+  /// invariant across viewport-only changes like rotation.
+  ///
+  /// Returns `nil` when there is no distinct local effect (`adjusted === base`)
+  /// or no Metal device: in those cases the caller uses the live `base` graph,
+  /// which is pointwise on the GPU-resident source and cheap to re-evaluate.
+  private func preparedAdjustedLayer(
+    _ renderImages: EditingCanvasRenderImages
+  ) -> CIImage? {
+    guard renderImages.adjusted !== renderImages.base else {
+      return nil
+    }
+    if let cache = viewportState.preparedContentLayers {
+      return cache.adjustedImage
+    }
+    guard let device else {
+      return nil
+    }
+    #if DEBUG
+    performanceDiagnostics.recordCacheMiss(.preparedContentLayers)
+    #endif
+
+    // Cap the bake at the editing-source resolution: detail beyond it does not
+    // exist, so this is visually lossless for the fit-to-frame preview while
+    // bounding the texture memory the bake holds for the gesture's duration.
+    guard
+      let bake = EditingCanvasContentBake.bake(
+        renderImages.adjusted,
+        cap: EditingCanvasImageProcessing.contentBakeMaxPixelSize,
+        device: device,
+        commandQueue: commandQueue,
+        ciContext: ciContext,
+        pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
+        colorSpace: EditingCanvasImageProcessing.intermediateColorSpace
+      )
+    else {
+      return nil
+    }
+
+    viewportState.preparedContentLayers = .init(
+      adjustedTexture: bake.texture,
+      adjustedImage: bake.image
+    )
+    return bake.image
   }
 
   private func viewportSourceImage(
@@ -1291,10 +1379,17 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return nil
     }
 
+    // The blur-heavy `adjusted` layer is sampled from its once-per-generation
+    // bake, so this per-frame fill is a cheap affine resample instead of a full
+    // re-evaluation of the blur graph. `base` stays the live graph — it is
+    // pointwise on the GPU-resident source, so re-evaluating it per frame is
+    // cheap and avoids holding a second large texture.
+    let adjustedContent = preparedAdjustedLayer(renderImages) ?? renderImages.adjusted
+
     encodeClearTexture(baseTexture, commandBuffer: fillCommandBuffer)
     encodeClearTexture(adjustedTexture, commandBuffer: fillCommandBuffer)
     renderViewportImage(renderImages.base, into: baseTexture, commandBuffer: fillCommandBuffer)
-    renderViewportImage(renderImages.adjusted, into: adjustedTexture, commandBuffer: fillCommandBuffer)
+    renderViewportImage(adjustedContent, into: adjustedTexture, commandBuffer: fillCommandBuffer)
     // No CPU wait: consumers sample these textures through `ciContext` on the
     // same command queue, so GPU-side ordering suffices.
     fillCommandBuffer.commit()

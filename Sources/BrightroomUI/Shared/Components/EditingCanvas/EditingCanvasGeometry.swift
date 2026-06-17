@@ -82,6 +82,15 @@ enum EditingCanvasImageProcessing {
   /// EDR-ready). The mask texture stays `.rgba8Unorm` — a [0,1] field needs no float.
   static let colorTextureFormat: MTLPixelFormat = .rgba16Float
 
+  /// Longest-side cap (in pixels) for the per-generation base/adjusted content
+  /// bake. MUST stay equal to the engine's editing-source resolution
+  /// (`EditingStack.editingImageMaxPixelSize`, currently also 2560): the effects
+  /// + blur graph carries no detail beyond it, so baking at this cap is visually
+  /// lossless for the fit-to-frame preview while bounding the texture memory the
+  /// bake holds for a gesture's duration. If one value moves, move both — the
+  /// modules can't enforce the equality at compile time.
+  static let contentBakeMaxPixelSize: CGFloat = 2560
+
   /// Pixel format for the final drawable written by the editing canvas.
   ///
   /// Device builds use a 10-bit unorm drawable for Display-P3 SDR with less
