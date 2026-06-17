@@ -79,7 +79,7 @@ enum EditingCanvasRenderImageFactory {
       // result.
       usesPreparedBaseImage = true
 
-    case .renderedEditPreview, .preview:
+    case .renderedEditPreview:
       let previewImage = loadedState.currentEdit.effects
         .applyIgnoringFailure(to: scaledPreviewSourceImage)
         .cropped(to: canvasRect)
@@ -168,7 +168,7 @@ enum EditingCanvasRenderImageFactory {
         .cropped(to: canvasRect)
       renderEffect = localEffect
 
-    case .renderedEditPreview, .preview:
+    case .renderedEditPreview:
       let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
         loadedState.currentEdit.effects
           .applyIgnoringFailure(to: sourceImage)
