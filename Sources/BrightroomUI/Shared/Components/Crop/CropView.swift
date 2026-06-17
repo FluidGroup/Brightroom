@@ -925,6 +925,13 @@ final class CropView: UIView {
         self.debounce.on { [weak self] in
           guard let self else { return }
           guard self.featureFocus.isCropEditing else { return }
+          // A held-still pinch (fingers down, no movement) stops emitting
+          // scrollViewDidZoom events, so the trailing debounce would otherwise
+          // fire mid-gesture and snap the scroll view back to the not-yet-
+          // recorded proposedCrop via updateCropLayout()'s customZoom. Defer the
+          // settle layout until the pinch actually ends, mirroring the
+          // isTracking guard used by onDidScroll for drags.
+          guard self.cropSurface.isInteractiveZoomGestureActive == false else { return }
 
           self.updateCropLayout()
         }
