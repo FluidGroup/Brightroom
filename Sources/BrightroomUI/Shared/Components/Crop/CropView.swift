@@ -1603,7 +1603,20 @@ extension CropView {
     // while the scroll view's model values are already clamped to the minimum
     // zoom. Derive both the sampled output rect and the canvas placement from
     // layer conversion so the mask canvas follows that visible bounce.
-    let usesPresentationLayers = toolSurface.isInteractiveZoomGestureActive == false
+    //
+    // Presentation-layer reads are ONLY valid while the viewport display link is
+    // actively re-sampling that in-flight bounce. When the tool viewport is
+    // applied as a one-shot with the link idle — e.g. entering Blur from Crop,
+    // where `updateToolScrollGeometry` just reconfigured the freshly-un-hidden
+    // scroll view synchronously in this same runloop turn — the presentation
+    // layers still hold the previous session's geometry until the next Core
+    // Animation commit. Sampling them then renders the crop output small and
+    // pinned to the top-left, and with no display link to re-sample, that stale
+    // frame sticks until the next mode switch (the "switch back and forth fixes
+    // it" symptom). Fall back to the model layers, which the synchronous
+    // reconfigure already made authoritative, whenever the link is idle.
+    let usesPresentationLayers = toolSurface.viewportRendering.isRunning
+      && toolSurface.isInteractiveZoomGestureActive == false
     let canvasFrame = Self.currentLayerRect(
       bounds,
       from: self,
