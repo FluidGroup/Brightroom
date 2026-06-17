@@ -238,15 +238,6 @@ final class CropView: UIView {
       scrollView.isZoomBouncing
     }
 
-    /// True while the scroll view drives the zoom by mutating its model values
-    /// every frame: the user's active pinch (including rubber-banding past the
-    /// limits). This deliberately excludes `isZoomBouncing`, the post-release
-    /// settle where UIKit animates the presentation layer while the model has
-    /// already jumped to the clamped value.
-    var isInteractiveZoomDriving: Bool {
-      scrollView.isZooming || isInteractiveZoomGestureActive
-    }
-
     var isViewportPresentationSettled: Bool {
       let tolerance: CGFloat = 0.5
 
@@ -1530,15 +1521,12 @@ extension CropView {
       return nil
     }
 
-    // An active pinch (including rubber-banding past the limits) mutates the
+    // Zoom (interactive pinch AND the frame-driven bounce-back) mutates the
     // scroll view's model values every frame, so presentation layers lag one
     // committed frame behind and sampling them produces a per-frame wobble.
-    // The post-release zoom bounce-back is the opposite: UIKit animates the
-    // presentation layer while the model has already jumped to the clamped
-    // value, so reading the model there snaps the canvas instantly. Sample the
-    // presentation layer for the bounce-back (and UIViewPropertyAnimator-driven
-    // layouts) and the model only while the pinch is actively driving zoom.
-    let usesPresentationLayers = cropSurface.isInteractiveZoomDriving == false
+    // Presentation reads are only for UIViewPropertyAnimator-driven layouts,
+    // where the model jumps to the final value and presentation interpolates.
+    let usesPresentationLayers = cropSurface.isZoomInteractionActive == false
       && isStreamingAdjustmentAngle == false
     let visibleViewportFrame = Self.currentLayerRect(
       bounds,
