@@ -1082,10 +1082,14 @@ final class CropView: UIView {
       state.adjustmentKind.isEmpty,
       cropSurface.scrollView.isTracking == false,
       cropSurface.scrollView.isDragging == false,
-      cropSurface.scrollView.isZooming == false,
+      cropSurface.scrollView.isDecelerating == false,
+      isZoomInteractionActive == false,
       let proposedCrop = state.proposedCrop,
       proposedCrop.isRenderingEquivalent(to: stackCrop) == false
     {
+      // Reloading the document crop also re-lays out the scroll view with a
+      // non-animated `customZoom`. Wait for UIKit scroll/zoom settling first so
+      // a live bounce-back is not cancelled by an unrelated document refresh.
       // Under auto-apply this view's own edits always land in the stack, so a
       // rendering-relevant difference means the document crop changed outside
       // this view (undo, revert, external mutation) — follow the document.
@@ -1521,12 +1525,14 @@ extension CropView {
       return nil
     }
 
-    // Zoom (interactive pinch AND the frame-driven bounce-back) mutates the
-    // scroll view's model values every frame, so presentation layers lag one
-    // committed frame behind and sampling them produces a per-frame wobble.
-    // Presentation reads are only for UIViewPropertyAnimator-driven layouts,
-    // where the model jumps to the final value and presentation interpolates.
-    let usesPresentationLayers = cropSurface.isZoomInteractionActive == false
+    // A live pinch mutates the scroll view's model values every frame, so
+    // presentation layers lag one committed frame behind and sampling them
+    // produces a per-frame wobble. The post-release bounce-back is the
+    // opposite: UIKit animates the presentation layer while the model has
+    // already jumped to the clamped zoom. Sample presentation layers after the
+    // pinch ends so the Metal canvas follows the visible bounce instead of
+    // snapping to the final model geometry.
+    let usesPresentationLayers = cropSurface.isInteractiveZoomGestureActive == false
       && isStreamingAdjustmentAngle == false
     let visibleViewportFrame = Self.currentLayerRect(
       bounds,
@@ -1592,41 +1598,54 @@ extension CropView {
       return nil
     }
 
-    let canvasFrame = toolSurface.scrollView.bounds
+    // Tool mode scrolls the crop-output image directly. During a post-release
+    // zoom bounce, UIKit animates the zooming content view's presentation layer
+    // while the scroll view's model values are already clamped to the minimum
+    // zoom. Derive both the sampled output rect and the canvas placement from
+    // layer conversion so the mask canvas follows that visible bounce.
+    let usesPresentationLayers = toolSurface.isInteractiveZoomGestureActive == false
+    let canvasFrame = Self.currentLayerRect(
+      bounds,
+      from: self,
+      to: toolSurface.scrollView,
+      usesPresentationLayers: usesPresentationLayers
+    )
       .standardized
     guard canvasFrame.width > 0, canvasFrame.height > 0 else {
       return nil
     }
 
-    let zoomScale = max(toolSurface.scrollView.zoomScale, 0.0001)
-    let viewportOriginInOutput = CGPoint(
-      x: (toolSurface.scrollView.contentOffset.x + toolSurface.scrollView.contentInset.left)
-        / zoomScale,
-      y: (toolSurface.scrollView.contentOffset.y + toolSurface.scrollView.contentInset.top)
-        / zoomScale
-    )
     let outputBounds = geometry.outputBounds
-    let visibleOutputRect = CGRect(
-      x: viewportOriginInOutput.x,
-      y: viewportOriginInOutput.y,
-      width: canvasFrame.width / zoomScale,
-      height: canvasFrame.height / zoomScale
+    let visibleOutputRect = Self.currentLayerRect(
+      canvasFrame,
+      from: toolSurface.scrollView,
+      to: toolSurface.contentView,
+      usesPresentationLayers: usesPresentationLayers
     )
+      .standardized
       .intersection(outputBounds)
 
     guard visibleOutputRect.isNull == false, visibleOutputRect.isEmpty == false else {
       return nil
     }
 
-    let visibleCanvasFrame = CGRect(
-      x: toolSurface.scrollView.contentInset.left
-        + visibleOutputRect.minX * zoomScale
-        - (toolSurface.scrollView.contentOffset.x + toolSurface.scrollView.contentInset.left),
-      y: toolSurface.scrollView.contentInset.top
-        + visibleOutputRect.minY * zoomScale
-        - (toolSurface.scrollView.contentOffset.y + toolSurface.scrollView.contentInset.top),
-      width: visibleOutputRect.width * zoomScale,
-      height: visibleOutputRect.height * zoomScale
+    let visibleScrollRect = Self.currentLayerRect(
+      visibleOutputRect,
+      from: toolSurface.contentView,
+      to: toolSurface.scrollView,
+      usesPresentationLayers: usesPresentationLayers
+    )
+      .standardized
+    let visibleCanvasFrame = visibleScrollRect.offsetBy(
+      dx: -canvasFrame.minX,
+      dy: -canvasFrame.minY
+    )
+    let zoomScale = max(
+      min(
+        visibleCanvasFrame.width / max(visibleOutputRect.width, 0.0001),
+        visibleCanvasFrame.height / max(visibleOutputRect.height, 0.0001)
+      ),
+      0.0001
     )
 
     return .init(
