@@ -258,6 +258,10 @@ open class EditingStack: Hashable {
 
   public var cropModifier: CropModifier
 
+  // The editing source is downsampled to this longest-side resolution; it is the
+  // upper bound on detail anywhere downstream. Keep in sync with the canvas
+  // preview bake cap `EditingCanvasImageProcessing.contentBakeMaxPixelSize`
+  // (BrightroomUI): that bake is "visually lossless" only while the two match.
   private let editingImageMaxPixelSize: CGFloat = 2560
 
   // MARK: - Initializers
@@ -371,31 +375,41 @@ open class EditingStack: Hashable {
 
           let initialEdit = Edit(crop: crop, orientedImageSize: metadata.imageSize)
 
-          let loaded = Loaded(
-            imageSource: imageSource,
-            metadata: metadata,
-            initialEditing: initialEdit,
-            currentEdit: initialEdit,
-            thumbnailCIImage: _thumbnailImage,
-            editingSourceCGImage: editingSourceCGImage,
-            editingSourceCIImage: _editingSourceCIImage,
-            editingPreviewCIImage: initialEdit.makePreviewImage(
-              from: _editingSourceCIImage,
-              purpose: .editingBase
-            )
-          )
-
           /**
-           Warm Core Image's GPU pipeline off the main thread *before* publishing
-           `loadedState` (which reveals the editing canvas). The source is no longer
-           pre-uploaded as an MTLTexture at load time, so without this the first
-           `draw(in:)` would pay the GPU upload + one-time pipeline compilation on
-           the main thread and visibly stall.
+           Upload the editing source into a persistent GPU texture off the main
+           thread *before* publishing `loadedState` (which reveals the editing
+           canvas). The canvas re-renders the source into its own viewport texture
+           every frame, and zoom / pan / rotation invalidate that cache every
+           frame; a `CIImage(cgImage:)` source would re-blit its bitmap CPU->GPU
+           on each of those frames. A texture-backed source keeps it GPU-resident,
+           eliminating that per-frame upload. Building the texture also warms Core
+           Image's pipeline, so the first `draw(in:)` no longer pays the upload +
+           one-time pipeline compilation on the main thread.
            */
           self.backgroundQueue.async { [weak self] in
             guard let self else { return }
 
-            EditingImageWarmUp.warmUp(loaded.editingSourceImage)
+            // Fall back to the CPU-backed source if no Metal device is available
+            // (e.g. unsupported environment); display still works, just without
+            // the GPU-residency win.
+            let editingSource = EditingSourcePreparation.makeGPUResidentSource(
+              cgImage: editingSourceCGImage,
+              orientation: metadata.orientation
+            ) ?? _editingSourceCIImage
+
+            let loaded = Loaded(
+              imageSource: imageSource,
+              metadata: metadata,
+              initialEditing: initialEdit,
+              currentEdit: initialEdit,
+              thumbnailCIImage: _thumbnailImage,
+              editingSourceCGImage: editingSourceCGImage,
+              editingSourceCIImage: editingSource,
+              editingPreviewCIImage: initialEdit.makePreviewImage(
+                from: editingSource,
+                purpose: .editingBase
+              )
+            )
 
             self.loadedState = loaded
             self.imageProviderSubscription = nil
