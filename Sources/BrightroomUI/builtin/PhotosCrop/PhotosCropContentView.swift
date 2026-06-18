@@ -888,6 +888,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   case temperature
   case highlights
   case shadows
+  case blur
   case vignette
 
   var id: Self { self }
@@ -901,6 +902,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     case .temperature: return "Warmth"
     case .highlights: return "Highlights"
     case .shadows: return "Shadows"
+    case .blur: return "Blur"
     case .vignette: return "Vignette"
     }
   }
@@ -914,6 +916,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     case .temperature: return "thermometer.medium"
     case .highlights: return "circle.tophalf.filled"
     case .shadows: return "circle.bottomhalf.filled"
+    case .blur: return "drop.fill"
     case .vignette: return "circle.dashed.inset.filled"
     }
   }
@@ -925,7 +928,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   /// Zero-based parameters only strengthen in one direction.
   private var isZeroBased: Bool {
     switch self {
-    case .highlights, .vignette:
+    case .highlights, .blur, .vignette:
       return true
     case .exposure, .brightness, .contrast, .saturation, .temperature, .shadows:
       return false
@@ -949,6 +952,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     case .temperature: return 3000
     case .highlights: return 1
     case .shadows: return 1
+    case .blur: return 100
     case .vignette: return 2
     }
   }
@@ -964,6 +968,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     case .temperature: filterValue = effects.first(of: TemperatureFeature.self)?.value ?? 0
     case .highlights: filterValue = effects.first(of: HighlightsFeature.self)?.value ?? 0
     case .shadows: filterValue = effects.first(of: ShadowsFeature.self)?.value ?? 0
+    case .blur: filterValue = effects.first(of: GaussianBlurFeature.self)?.editingStackFilterValue ?? 0
     case .vignette: filterValue = effects.first(of: VignetteFeature.self)?.value ?? 0
     }
 
@@ -1002,6 +1007,8 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
       upsert(value, into: &effects, make: { HighlightsFeature(value: $0) }, update: { $0.value = $1 })
     case .shadows:
       upsert(value, into: &effects, make: { ShadowsFeature(value: $0) }, update: { $0.value = $1 })
+    case .blur:
+      upsert(value, into: &effects, make: { GaussianBlurFeature(value: $0) }, update: { $0.radius = .editingStackFilterValue($1) })
     case .vignette:
       upsert(value, into: &effects, make: { VignetteFeature(value: $0) }, update: { $0.value = $1 })
     }
@@ -1066,6 +1073,24 @@ enum PhotosCropEffectOrder {
       pipeline.effects.firstIndex { existing in
         rank(of: ObjectIdentifier(Swift.type(of: existing))) > newRank
       } ?? pipeline.effects.count
+    }
+  }
+}
+
+private extension GaussianBlurFeature {
+
+  /// The PhotosCrop adjustment-slider value when this blur was authored by the
+  /// global Adjust tool.
+  ///
+  /// Absolute-radius blurs do not have enough context here to map back onto a
+  /// source-relative slider value, so the PhotosCrop control treats them as
+  /// neutral and preserves them unless the user edits Blur.
+  var editingStackFilterValue: Double? {
+    switch radius {
+    case let .editingStackFilterValue(value):
+      return value
+    case .absolute:
+      return nil
     }
   }
 }
