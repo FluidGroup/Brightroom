@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import SwiftUI
 import UIKit
 
@@ -29,7 +30,10 @@ public struct SwiftUIEditingCanvasView: View {
           mode: mode,
           interactionMode: interactionMode ?? mode.defaultInteractionMode,
           displayedImageRect: displayedImageRect
-            ?? loadedState.currentEdit.crop.displayCropRect(imageSize: loadedState.currentEdit.imageSize),
+            ?? EditingFeatureTree(edit: loadedState.currentEdit)
+              .finalCrop?
+              .displayCropRect(imageSize: loadedState.currentEdit.imageSize)
+            ?? CGRect(origin: .zero, size: loadedState.currentEdit.imageSize),
           brush: brush,
           smoothing: smoothing,
           onMetricsChange: onMetricsChange

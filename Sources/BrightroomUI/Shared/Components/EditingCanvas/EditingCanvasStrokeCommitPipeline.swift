@@ -13,7 +13,7 @@ import BrightroomParametric
 /// - A committed layer's effect pipeline is frozen at creation. Appending
 ///   strokes never rewrites the pipeline, because UI-side effect values may
 ///   drift and committed document parameters must stay stable.
-/// - `updateEffect(_:in:)` exists for deliberate effect changes only
+  /// - `updateEffect(_:in:insertingBefore:)` exists for deliberate effect changes only
 ///   (e.g. the user adjusts the effect parameter of the active layer).
 final class EditingCanvasStrokeCommitPipeline {
 
@@ -38,7 +38,8 @@ final class EditingCanvasStrokeCommitPipeline {
   func append(
     record: EditingCanvasStrokeRecord,
     effect: EffectPipeline,
-    to editingStack: EditingStack
+    to editingStack: EditingStack,
+    insertingBefore insertionTargetID: FeatureID?
   ) {
     var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     let layerIndex: Int
@@ -59,13 +60,18 @@ final class EditingCanvasStrokeCommitPipeline {
 
     localAdjustments[layerIndex].isEnabled = true
     localAdjustments[layerIndex].maskTree.appendCanvasBrushStroke(record.brushMaskStroke)
-    editingStack.set(localAdjustments: localAdjustments)
+    replaceLocalAdjustments(
+      localAdjustments,
+      in: editingStack,
+      insertingBefore: insertionTargetID
+    )
   }
 
   /// Deliberately updates the tracked layer's effect pipeline.
   func updateEffect(
     _ effect: EffectPipeline,
-    in editingStack: EditingStack
+    in editingStack: EditingStack,
+    insertingBefore insertionTargetID: FeatureID?
   ) {
     var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     guard let layerIndex = layerIndex(in: localAdjustments, matching: effect) else {
@@ -77,7 +83,33 @@ final class EditingCanvasStrokeCommitPipeline {
     }
 
     localAdjustments[layerIndex].effectPipeline = effect
-    editingStack.set(localAdjustments: localAdjustments)
+    replaceLocalAdjustments(
+      localAdjustments,
+      in: editingStack,
+      insertingBefore: insertionTargetID
+    )
+  }
+
+  /// Rewrites the local-adjustment Features while preserving their current
+  /// document positions. New layers are inserted before the caller-selected
+  /// FeatureTree target.
+  func replaceLocalAdjustments(
+    _ localAdjustments: [LocalAdjustmentFeature],
+    in editingStack: EditingStack,
+    insertingBefore insertionTargetID: FeatureID?
+  ) {
+    guard var edit = editingStack.loadedState?.currentEdit else {
+      return
+    }
+
+    EditingFeatureTree.replaceLocalAdjustments(
+      localAdjustments,
+      in: &edit,
+      insertingBefore: insertionTargetID
+    )
+    if editingStack.loadedState?.currentEdit != edit {
+      editingStack.loadedState?.currentEdit = edit
+    }
   }
 
   /// The effect pipeline persisted on the tracked layer, if one exists.

@@ -30,9 +30,9 @@ struct LocalAdjustmentRenderingTests {
     let sourceCIImage = CIImage(cgImage: sourceImage)
     var edit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
     edit.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.2)])
-    edit.localAdjustments = [
+    edit.setPhotosCropLocalAdjustmentsForTest([
       Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
-    ]
+    ])
 
     let editingPreview = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
     let editingImage = try #require(
@@ -44,7 +44,7 @@ struct LocalAdjustmentRenderingTests {
     )
   }
 
-  @Test func `Loaded editing preview skips automatic local adjustment rasterization`() throws {
+  @Test func `Editing base preview skips local adjustment rasterization`() throws {
     let sourceImage = Self.makeSplitImage(
       width: 40,
       height: 20,
@@ -52,33 +52,18 @@ struct LocalAdjustmentRenderingTests {
       rightWhite: 0.25
     )
     let sourceCIImage = CIImage(cgImage: sourceImage)
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let initialEdit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
-    var loadedState = EditingStack.Loaded(
-      imageSource: imageSource,
-      metadata: .init(
-        orientation: .up,
-        imageSize: CGSize(width: 40, height: 20)
-      ),
-      initialEditing: initialEdit,
-      currentEdit: initialEdit,
-      thumbnailCIImage: sourceCIImage,
-      editingSourceCGImage: sourceImage,
-      editingSourceCIImage: sourceCIImage,
-      editingPreviewCIImage: initialEdit.makePreviewImage(
-        from: sourceCIImage,
-        purpose: .editingBase
-      )
+    var editWithLocalAdjustment = EditingStack.Edit.test(
+      imageSize: CGSize(width: 40, height: 20)
     )
-    var editWithLocalAdjustment = initialEdit
-    editWithLocalAdjustment.localAdjustments = [
+    editWithLocalAdjustment.setPhotosCropLocalAdjustmentsForTest([
       Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10)),
-    ]
+    ])
 
-    loadedState.currentEdit = editWithLocalAdjustment
-
-    let loadedPreviewImage = try #require(
-      Self.context.createCGImage(loadedState.editingPreviewImage, from: sourceCIImage.extent)
+    let editingBasePreviewImage = try #require(
+      Self.context.createCGImage(
+        editWithLocalAdjustment.makePreviewImage(from: sourceCIImage, purpose: .editingBase),
+        from: sourceCIImage.extent
+      )
     )
     let fullEditingPreviewImage = try #require(
       Self.context.createCGImage(
@@ -87,12 +72,12 @@ struct LocalAdjustmentRenderingTests {
       )
     )
 
-    #expect(
-      Self.rgba(in: sourceImage, x: 20, y: 10) == Self.rgba(in: loadedPreviewImage, x: 20, y: 10)
-    )
-    #expect(
-      Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10).red > Self.rgba(in: sourceImage, x: 20, y: 10).red
-    )
+    let sourcePixel = Self.rgba(in: sourceImage, x: 20, y: 10)
+    let editingBasePixel = Self.rgba(in: editingBasePreviewImage, x: 20, y: 10)
+    let fullEditingPixel = Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10)
+
+    #expect(sourcePixel == editingBasePixel)
+    #expect(fullEditingPixel.red > sourcePixel.red)
   }
 
   @Test func `Exposure local adjustment applies only inside mask`() throws {

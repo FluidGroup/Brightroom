@@ -31,6 +31,128 @@ public enum EditingStackError: Error, Sendable {
   case unableToCreateRendererInLoading
 }
 
+/// A value-type undo/redo journal for document snapshots.
+///
+/// `EditingStack` owns this because history is a property of the editable
+/// document, while feature-specific UIs decide when the current edit should
+/// become a checkpoint.
+private struct EditingHistory<State: Equatable>: Equatable {
+
+  /// The edit the stack loaded with.
+  let initial: State
+
+  /// The edit currently being previewed and rendered.
+  var current: State
+
+  /// Committed undo checkpoints.
+  private var checkpoints: [State]
+
+  /// Checkpoints undone from `checkpoints`, available until the next commit.
+  private var redoStack: [State]
+
+  /// Creates a history journal around the loaded edit.
+  init(
+    initial: State,
+    current: State,
+    checkpoints: [State] = [],
+    redoStack: [State] = []
+  ) {
+    self.initial = initial
+    self.current = current
+    self.checkpoints = checkpoints
+    self.redoStack = redoStack
+  }
+
+  /// The current revision index, matching the number of committed checkpoints.
+  var revision: Int {
+    checkpoints.count
+  }
+
+  /// Whether undo can move the current edit to another state.
+  var canUndo: Bool {
+    if checkpoints.last == current {
+      return checkpoints.count > 1 || current != initial
+    }
+    return checkpoints.isEmpty == false || current != initial
+  }
+
+  /// Whether redo can move the current edit to another state.
+  var canRedo: Bool {
+    redoStack.isEmpty == false
+  }
+
+  /// Whether the current edit differs from the loaded edit.
+  var isDirty: Bool {
+    current != initial
+  }
+
+  /// Whether the current edit differs from the latest committed checkpoint.
+  var hasUncommittedChanges: Bool {
+    guard let latestCheckpoint = checkpoints.last else {
+      return current != initial
+    }
+    return latestCheckpoint != current
+  }
+
+  /// Commits the current edit when it differs from the latest checkpoint.
+  mutating func commitCurrentIfNeeded() {
+    guard hasUncommittedChanges else {
+      return
+    }
+    commitCurrent()
+  }
+
+  /// Commits the current edit as a checkpoint and clears redo.
+  mutating func commitCurrent() {
+    checkpoints.append(current)
+    redoStack = []
+  }
+
+  /// Reverts the current edit to the latest checkpoint, or the initial edit.
+  mutating func revertCurrent() {
+    current = checkpoints.last ?? initial
+  }
+
+  /// Reverts to the checkpoint at `revision`, clamping stale revision values.
+  mutating func revert(to revision: Int) {
+    let clamped = min(max(revision, 0), checkpoints.count)
+    checkpoints.removeSubrange(clamped..<checkpoints.count)
+    redoStack = []
+    current = checkpoints.last ?? initial
+  }
+
+  /// Moves the current edit to the previous checkpoint.
+  mutating func undo() {
+    // Commit-style checkpoints may leave `checkpoints.last == current`.
+    // Drop that duplicate first so one undo action changes visible state.
+    if checkpoints.last == current {
+      checkpoints.removeLast()
+    }
+    if let previous = checkpoints.popLast() {
+      redoStack.append(current)
+      current = previous
+    } else if current != initial {
+      redoStack.append(current)
+      current = initial
+    }
+  }
+
+  /// Reapplies the most recently undone checkpoint.
+  mutating func redo() {
+    guard let next = redoStack.popLast() else {
+      return
+    }
+    checkpoints.append(current)
+    current = next
+  }
+
+  /// Removes all committed and redo checkpoints without changing `current`.
+  mutating func removeAllCheckpoints() {
+    checkpoints = []
+    redoStack = []
+  }
+}
+
 /// A stateful object that manages current editing status from original image.
 /// And supports rendering a result image.
 ///
@@ -73,40 +195,22 @@ open class EditingStack: Hashable {
 
     public let metadata: ImageProvider.ImageMetadata
 
-    private let initialEditing: Edit
+    private var editHistory: EditingHistory<Edit>
 
-    /**
-
-     - TODO: Should be marked as `fileprivate(set)`, but compile fails in CocoaPods installed.
-     */
+    /// The edit currently being previewed and rendered.
     public var currentEdit: Edit {
-      didSet {
-        // Keyed on every effects feature, not just the first projection;
-        // a document may carry more than one.
-        if currentEdit.effectsSequence != oldValue.effectsSequence {
-          editingPreviewImage = currentEdit.makePreviewImage(
-            from: editingSourceImage,
-            purpose: .editingBase
-          )
-        }
+      get {
+        editHistory.current
+      }
+      set {
+        editHistory.current = newValue
       }
     }
 
     /// Won't change from initial state
     public var imageSize: CGSize {
-      initialEditing.imageSize
+      editHistory.initial.imageSize
     }
-
-    /**
-     A stack of editing history: snapshots of the feature-list document.
-     */
-    public fileprivate(set) var history: [Edit] = []
-
-    /**
-     Versions undone from `history`, available for redo until the next
-     mutationsnapshot.
-     */
-    public fileprivate(set) var redoHistory: [Edit] = []
 
     public fileprivate(set) var thumbnailImage: CIImage
 
@@ -117,41 +221,24 @@ open class EditingStack: Hashable {
      */
     public let editingSourceImage: CIImage
 
-    /**
-     A lightweight editing preview used by legacy interactive views.
-     Local adjustments are intentionally excluded from automatic refresh because
-     their mask rasterization can be expensive and should be owned by the render
-     path that knows its target resolution.
-     */
-    public fileprivate(set) var editingPreviewImage: CIImage
-
     public var canUndo: Bool {
-      // Mirror undoEditing: a history top equal to the current edit is
-      // skipped, and an empty history can still undo back to the initial
-      // editing when there are uncommitted changes.
-      if history.last == currentEdit {
-        return history.count > 1 || currentEdit != initialEditing
-      }
-      return history.count > 0 || currentEdit != initialEditing
+      editHistory.canUndo
     }
 
     public var canRedo: Bool {
-      return redoHistory.count > 0
+      editHistory.canRedo
     }
 
     /**
      A boolean value that indicates if EditingStack has updates against the original image.
      */
     public var isDirty: Bool {
-      return currentEdit.isRenderingEquivalent(to: initialEditing) == false
+      editHistory.isDirty
     }
 
-    public var hasUncommitedChanges: Bool {
-      guard let latestHistory = history.last else {
-        return currentEdit.isRenderingEquivalent(to: initialEditing) == false
-      }
-
-      return latestHistory.isRenderingEquivalent(to: currentEdit) == false
+    /// Whether the current edit differs from the latest committed checkpoint.
+    public var hasUncommittedChanges: Bool {
+      editHistory.hasUncommittedChanges
     }
 
     // MARK: - Initializers
@@ -161,21 +248,21 @@ open class EditingStack: Hashable {
       metadata: ImageProvider.ImageMetadata,
       initialEditing: EditingStack.Edit,
       currentEdit: EditingStack.Edit,
-      history: [EditingStack.Edit] = [],
+      checkpoints: [EditingStack.Edit] = [],
       thumbnailCIImage: CIImage,
       editingSourceCGImage: CGImage,
-      editingSourceCIImage: CIImage,
-      editingPreviewCIImage: CIImage
+      editingSourceCIImage: CIImage
     ) {
       self.imageSource = imageSource
       self.metadata = metadata
-      self.initialEditing = initialEditing
-      self.currentEdit = currentEdit
-      self.history = history
+      self.editHistory = EditingHistory(
+        initial: initialEditing,
+        current: currentEdit,
+        checkpoints: checkpoints
+      )
       self.thumbnailImage = thumbnailCIImage
       self.editingSourceCGImage = editingSourceCGImage
       self.editingSourceImage = editingSourceCIImage
-      self.editingPreviewImage = editingPreviewCIImage
     }
 
     // MARK: - Functions
@@ -187,47 +274,36 @@ open class EditingStack: Hashable {
         .removingExtentOffset()
     }
 
-    mutating func makeVersion() {
-      history.append(currentEdit)
-      redoHistory = []
+    var currentRevision: Revision {
+      editHistory.revision
     }
 
-    mutating func revertCurrentEditing() {
-      currentEdit = history.last ?? initialEditing
+    mutating func commitCurrentEditIfNeeded() {
+      editHistory.commitCurrentIfNeeded()
+    }
+
+    mutating func commitCurrentEdit() {
+      editHistory.commitCurrent()
+    }
+
+    mutating func revertCurrentEdit() {
+      editHistory.revertCurrent()
     }
 
     mutating func revert(to revision: Revision) {
-      // A captured revision can go stale when undo or history purges shrink
-      // the stack; clamp instead of trapping on the invalid range.
-      let clamped = min(max(revision, 0), history.count)
-      history.removeSubrange(clamped..<history.count)
-      redoHistory = []
-      currentEdit = history.last ?? initialEditing
+      editHistory.revert(to: revision)
     }
 
-    mutating func undoEditing() {
-      // Commit-style snapshots (PhotosCrop snapshots when leaving a tool)
-      // leave history.last equal to currentEdit at settled states; drop it so
-      // one undo press always changes visible state and redoHistory gets no
-      // duplicates.
-      if history.last == currentEdit {
-        history.removeLast()
-      }
-      if let last = history.popLast() {
-        redoHistory.append(currentEdit)
-        currentEdit = last
-      } else if currentEdit != initialEditing {
-        redoHistory.append(currentEdit)
-        currentEdit = initialEditing
-      }
+    mutating func undo() {
+      editHistory.undo()
     }
 
-    mutating func redoEditing() {
-      guard let next = redoHistory.popLast() else {
-        return
-      }
-      history.append(currentEdit)
-      currentEdit = next
+    mutating func redo() {
+      editHistory.redo()
+    }
+
+    mutating func removeAllHistory() {
+      editHistory.removeAllCheckpoints()
     }
 
   }
@@ -373,7 +449,10 @@ open class EditingStack: Hashable {
               == (metadata.imageSize.width > metadata.imageSize.height)
           )
 
-          let initialEdit = Edit(crop: crop, orientedImageSize: metadata.imageSize)
+          let initialEdit = EditingFeatureTree.canonicalEdit(
+            finalCrop: crop,
+            orientedImageSize: metadata.imageSize
+          )
 
           /**
            Upload the editing source into a persistent GPU texture off the main
@@ -404,11 +483,7 @@ open class EditingStack: Hashable {
               currentEdit: initialEdit,
               thumbnailCIImage: _thumbnailImage,
               editingSourceCGImage: editingSourceCGImage,
-              editingSourceCIImage: editingSource,
-              editingPreviewCIImage: initialEdit.makePreviewImage(
-                from: editingSource,
-                purpose: .editingBase
-              )
+              editingSourceCIImage: editingSource
             )
 
             self.loadedState = loaded
@@ -429,84 +504,45 @@ open class EditingStack: Hashable {
 
   // MARK: - Functions
 
-  /**
-   Adds a new snapshot as a history.
-   */
-  public func takeSnapshot() {
-    loadedState?.makeVersion()
+  /// Commits the current edit as an undo checkpoint when it changed.
+  public func commitCurrentEditIfNeeded() {
+    _pixelengine_ensureMainThread()
+    loadedState?.commitCurrentEditIfNeeded()
   }
 
   public typealias Revision = Int
 
   public var currentRevision: Revision? {
-    loadedState?.history.count
+    loadedState?.currentRevision
   }
 
   public func revert(to revision: Revision) {
+    _pixelengine_ensureMainThread()
     loadedState?.revert(to: revision)
   }
 
-  /**
-   Reverts the current editing.
-   */
-  public func revertEdit() {
+  /// Reverts the current edit to the latest checkpoint, or the initial edit.
+  public func revertCurrentEdit() {
     _pixelengine_ensureMainThread()
-    loadedState?.revertCurrentEditing()
+    loadedState?.revertCurrentEdit()
   }
 
-  /**
-   Undo editing, pulling the latest history back into the current edit.
-   The undone version stays available for `redoEdit`.
-   */
-  public func undoEdit() {
+  /// Moves the current edit to the previous checkpoint.
+  public func undo() {
     _pixelengine_ensureMainThread()
-    loadedState?.undoEditing()
+    loadedState?.undo()
   }
 
-  /**
-   Redo the most recently undone version. No-op when there is nothing to redo.
-   Any new snapshot clears the redo stack.
-   */
-  public func redoEdit() {
+  /// Reapplies the most recently undone checkpoint.
+  public func redo() {
     _pixelengine_ensureMainThread()
-    loadedState?.redoEditing()
+    loadedState?.redo()
   }
 
-  /**
-   Purges the all of the history
-   */
-  public func removeAllEditsHistory() {
+  /// Removes all undo and redo checkpoints without changing the current edit.
+  public func removeAllHistory() {
     _pixelengine_ensureMainThread()
-    loadedState?.history = []
-    loadedState?.redoHistory = []
-  }
-
-  public func set(effects: (inout EffectPipeline) -> Void) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      effects(&$0.effects)
-    }
-  }
-
-  public func crop(_ value: CropFeature) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.crop = value
-    }
-  }
-
-  public func set(localAdjustments: [LocalAdjustmentFeature]) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.localAdjustments = localAdjustments
-    }
-  }
-
-  public func append(localAdjustment: LocalAdjustmentFeature) {
-    _pixelengine_ensureMainThread()
-    applyIfChanged {
-      $0.localAdjustments.append(localAdjustment)
-    }
+    loadedState?.removeAllHistory()
   }
 
   // `sending`: the renderer is freshly created here and not retained by the
@@ -538,20 +574,13 @@ open class EditingStack: Hashable {
     return renderer
   }
 
-  private func applyIfChanged(_ perform: (inout Edit) -> Void) {
-    guard loadedState != nil else {
-      return
-    }
-    perform(&loadedState!.currentEdit)
-  }
-
   private func adjustCropExtent(
     image: CIImage,
     imageSize: CGSize,
     completion: @escaping (CropFeature) -> Void
   ) {
     let crop = CropFeature(
-      id: Edit.finalCropID,
+      id: EditingFeatureTree.finalCropNodeID,
       displayCropRect: CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize
     )

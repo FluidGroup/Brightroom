@@ -29,9 +29,30 @@ extension EditingStack.Edit {
   /// Test helper: the canonical default edit for an image of `imageSize`,
   /// optionally with a non-default final crop rect (y-down display space).
   static func test(imageSize: CGSize, cropRect: CGRect? = nil) -> Self {
-    .init(
-      crop: CropFeature.test(imageSize: imageSize, cropRect: cropRect),
+    EditingFeatureTree.canonicalEdit(
+      finalCrop: CropFeature.test(imageSize: imageSize, cropRect: cropRect),
       orientedImageSize: imageSize
+    )
+  }
+
+  /// Test helper for PhotosCrop-style documents: local adjustments are authored
+  /// before the built-in final crop node.
+  mutating func setPhotosCropLocalAdjustmentsForTest(
+    _ localAdjustments: [LocalAdjustmentFeature]
+  ) {
+    EditingFeatureTree.replaceLocalAdjustments(
+      localAdjustments,
+      in: &self,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
+  }
+
+  /// Test helper for replacing the built-in final crop node.
+  mutating func setFinalCropForTest(_ crop: CropFeature) {
+    _ = EditingFeatureTree.updateCropFeature(
+      id: EditingFeatureTree.finalCropNodeID,
+      in: &self,
+      with: crop
     )
   }
 }
@@ -51,9 +72,12 @@ extension BrightRoomImageRenderer.Edit {
     effects: EffectPipeline = .init(),
     localAdjustments: [LocalAdjustmentFeature] = []
   ) -> Self {
-    var edit = EditingStack.Edit(crop: crop, orientedImageSize: orientedImageSize)
+    var edit = EditingFeatureTree.canonicalEdit(
+      finalCrop: crop,
+      orientedImageSize: orientedImageSize
+    )
     edit.effects = effects
-    edit.localAdjustments = localAdjustments
+    edit.setPhotosCropLocalAdjustmentsForTest(localAdjustments)
     return .init(document: edit.makeEditingDocument(orientedImageSize: orientedImageSize))
   }
 }

@@ -427,28 +427,34 @@ struct DemoPhotosCropView: View {
   @Environment(\.dismiss) private var dismiss
 
   @State var resultImage: ResultImage?
+  private let editingModel: PhotosCropEditingModel
   private let options: SwiftUIPhotosCropView.Options
 
+  @MainActor
   init(
     stack: EditingStack,
     options: SwiftUIPhotosCropView.Options = .init()
   ) {
     self._stack = .init(wrappedValue: stack)
+    self.editingModel = PhotosCropEditingModel(editingStack: stack)
     self.options = options
   }
 
+  @MainActor
   init(
     stack: @escaping () -> EditingStack,
     options: SwiftUIPhotosCropView.Options = .init()
   ) {
-    self._stack = .init(wrappedValue: stack())
+    let stack = stack()
+    self._stack = .init(wrappedValue: stack)
+    self.editingModel = PhotosCropEditingModel(editingStack: stack)
     self.options = options
   }
 
   var body: some View {
 
     SwiftUIPhotosCropView(
-      editingStack: stack,
+      editingModel: editingModel,
       options: options,
       onDone: {
         // Export straight to disk with bounded memory (strip render into an

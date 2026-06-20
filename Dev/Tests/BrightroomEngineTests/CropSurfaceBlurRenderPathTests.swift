@@ -36,8 +36,7 @@ struct CropSurfaceBlurRenderPathTests {
       currentEdit: edit,
       thumbnailCIImage: ci,
       editingSourceCGImage: cg,
-      editingSourceCIImage: ci,
-      editingPreviewCIImage: edit.makePreviewImage(from: ci, purpose: .editingBase)
+      editingSourceCIImage: ci
     )
   }
 

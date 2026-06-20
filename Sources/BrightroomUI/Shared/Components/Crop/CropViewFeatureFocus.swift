@@ -152,4 +152,12 @@ public struct CropViewFeatureFocus: Equatable, Sendable {
     }
     return id
   }
+
+  /// The explicitly targeted crop node id, when the focus edits crop geometry.
+  var cropTargetID: FeatureID? {
+    guard case let .crop(id) = editingTarget else {
+      return nil
+    }
+    return id
+  }
 }

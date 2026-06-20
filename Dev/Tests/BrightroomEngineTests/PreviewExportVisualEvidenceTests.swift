@@ -56,7 +56,7 @@ struct PreviewExportVisualEvidenceTests {
     //    composition of the same edit — these must look identical.
     var fullEdit = EditingStack.Edit.test(imageSize: imageSize)
     fullEdit.effects = effects
-    fullEdit.localAdjustments = [blurLayer]
+    fullEdit.setPhotosCropLocalAdjustmentsForTest([blurLayer])
 
     let export = try await renderExport(fullEdit, source: source)
     attach(cgImage: export, name: "2-export-no-crop")
@@ -73,7 +73,7 @@ struct PreviewExportVisualEvidenceTests {
       height: imageSize.height * 0.7
     ).integral
     var croppedEdit = fullEdit
-    croppedEdit.crop = CropFeature.test(imageSize: imageSize, cropRect: cropRect)
+    croppedEdit.setFinalCropForTest(CropFeature.test(imageSize: imageSize, cropRect: cropRect))
     let croppedExport = try await renderExport(croppedEdit, source: source)
     attach(cgImage: croppedExport, name: "4-export-with-crop")
 

@@ -54,8 +54,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
       currentEdit: edit,
       thumbnailCIImage: sourceEdgeCI,
       editingSourceCGImage: sourceEdgeCG,
-      editingSourceCIImage: sourceEdgeCI,
-      editingPreviewCIImage: edit.makePreviewImage(from: sourceEdgeCI, purpose: .editingBase)
+      editingSourceCIImage: sourceEdgeCI
     )
 
     let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
@@ -145,8 +144,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
       currentEdit: edit,
       thumbnailCIImage: sourceEdgeCI,
       editingSourceCGImage: sourceEdgeCG,
-      editingSourceCIImage: sourceEdgeCI,
-      editingPreviewCIImage: edit.makePreviewImage(from: sourceEdgeCI, purpose: .editingBase)
+      editingSourceCIImage: sourceEdgeCI
     )
 
     let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])

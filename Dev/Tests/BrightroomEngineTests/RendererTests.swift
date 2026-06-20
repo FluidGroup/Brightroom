@@ -324,28 +324,6 @@ struct RenderCropTests {
     #expect(abs(crop.straightenRadians - 0.25 * .pi / 180) <= 1e-12)
   }
 
-  @Test func `edit rendering equivalence uses pixel crop contract`() {
-    let initial = EditingStack.Edit.test(
-      imageSize: .init(width: 100, height: 100),
-      cropRect: .init(x: 0, y: 0, width: 100, height: 100)
-    )
-    let nearInteger = EditingStack.Edit.test(
-      imageSize: .init(width: 100, height: 100),
-      cropRect: .init(
-        x: 0.000000001,
-        y: 0.000000001,
-        width: 99.999999998,
-        height: 99.999999998
-      )
-    )
-    let inwardPixel = EditingStack.Edit.test(
-      imageSize: .init(width: 100, height: 100),
-      cropRect: .init(x: 0.2, y: 0, width: 99.8, height: 100)
-    )
-
-    #expect(initial.isRenderingEquivalent(to: nearInteger))
-    #expect(!initial.isRenderingEquivalent(to: inwardPixel))
-  }
 }
 
 /// Pins the shared y-flip + integer-snap contract on `CropFeature` that UI crop

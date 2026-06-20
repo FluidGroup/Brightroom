@@ -28,7 +28,7 @@ import BrightroomParametric
 
 struct PhotosCropContentView: View {
 
-  let editingStack: EditingStack
+  let editingModel: PhotosCropEditingModel
   let options: SwiftUIPhotosCropView.Options
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let onDone: @MainActor () -> Void
@@ -47,13 +47,13 @@ struct PhotosCropContentView: View {
   @State private var adjustmentAngleCommitAction = SwiftUICropView.AdjustmentAngleCommitAction()
 
   init(
-    editingStack: EditingStack,
+    editingModel: PhotosCropEditingModel,
     options: SwiftUIPhotosCropView.Options,
     localizedStrings: SwiftUIPhotosCropView.LocalizedStrings,
     onDone: @escaping @MainActor () -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
-    self.editingStack = editingStack
+    self.editingModel = editingModel
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -68,9 +68,9 @@ struct PhotosCropContentView: View {
   }
 
   var body: some View {
-    let loadedState = editingStack.loadedState
-    let originalAspectRatio = loadedState.map { PixelAspectRatio($0.imageSize) }
-    let isLoaded = loadedState != nil
+    let model = editingModel
+    let originalAspectRatio = model.originalAspectRatio
+    let isLoaded = model.isLoaded
     let bottomControlHeight: CGFloat = 120
     let bottomControlMaxWidth: CGFloat = 560
 
@@ -81,7 +81,7 @@ struct PhotosCropContentView: View {
 
         VStack(spacing: 0) {
           PhotosCropCanvasHost(
-            editingStack: editingStack,
+            editingModel: model,
             mode: editingMode,
             blurMaskingState: blurMaskingState,
             rotation: $rotation,
@@ -90,7 +90,8 @@ struct PhotosCropContentView: View {
             resetAction: resetAction,
             rotateAction: rotateAction,
             applyAction: applyAction,
-            adjustmentAngleCommitAction: adjustmentAngleCommitAction
+            adjustmentAngleCommitAction: adjustmentAngleCommitAction,
+            featureFocus: model.featureFocus(for: editingMode)
           )
           .layoutPriority(1)
 
@@ -100,8 +101,8 @@ struct PhotosCropContentView: View {
             aspectRatioSelection: aspectRatioSelection,
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
-            filterPreviewBaseImage: loadedState?.thumbnailImage,
-            currentEffects: loadedState?.currentEdit.effects,
+            filterPreviewBaseImage: model.filterPreviewBaseImage,
+            currentEffects: model.currentEffects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
@@ -130,7 +131,7 @@ struct PhotosCropContentView: View {
           cancelTitle: localizedStrings.button_cancel_title,
           doneTitle: localizedStrings.button_done_title,
           isLoaded: isLoaded,
-          hasCropChanges: hasCropChanges(loadedState: loadedState),
+          hasCropChanges: model.hasCropChanges(),
           isDoneEnabled: isLoaded,
           mode: editingMode,
           isSelectingAspectRatio: isSelectingAspectRatio,
@@ -144,7 +145,7 @@ struct PhotosCropContentView: View {
       }
       .foregroundStyle(.white)
       .task {
-        editingStack.start()
+        model.start()
       }
       .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
         if isAvailable == false {
@@ -171,37 +172,6 @@ struct PhotosCropContentView: View {
     case .fixed:
       return false
     }
-  }
-
-  /// Whether the crop differs from what the Reset button would restore.
-  ///
-  /// Reset only restores the crop (`CropEditingState.makeInitial()`), so its
-  /// visibility tracks crop state alone — painting a blur mask must not
-  /// surface a Reset button that would do nothing.
-  ///
-  /// The extent comparison tolerates sub-pixel drift because leaving Crop
-  /// mode re-commits the guide's laid-out geometry, which can differ from
-  /// the document crop by a fraction of a pixel.
-  private func hasCropChanges(loadedState: EditingStack.Loaded?) -> Bool {
-    guard let loadedState else {
-      return false
-    }
-
-    // Lower the stored crop into the UI working model so the comparison stays in
-    // the same y-down display space the reset (`makeInitial`) produces.
-    let crop = CropEditingState(
-      cropFeature: loadedState.currentEdit.crop,
-      imageSize: loadedState.currentEdit.imageSize
-    )
-    let initial = crop.makeInitial()
-    let tolerance: CGFloat = 1
-
-    return crop.rotation != initial.rotation
-      || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001
-      || abs(crop.cropExtent.minX - initial.cropExtent.minX) > tolerance
-      || abs(crop.cropExtent.minY - initial.cropExtent.minY) > tolerance
-      || abs(crop.cropExtent.width - initial.cropExtent.width) > tolerance
-      || abs(crop.cropExtent.height - initial.cropExtent.height) > tolerance
   }
 
   private func rotate() {
@@ -251,23 +221,19 @@ struct PhotosCropContentView: View {
       return
     }
 
-    // Leaving a tool commits its work as a version, so undo/redo steps at
-    // tool granularity. The stack snapshots the whole feature-list document.
-    if editingStack.loadedState?.hasUncommitedChanges == true {
-      editingStack.takeSnapshot()
+    if editingMode == .crop {
+      applyAction()
     }
+
+    // Leaving a tool commits its work as a checkpoint, so undo/redo steps at
+    // tool granularity. The stack owns the whole feature-list history.
+    editingModel.commitCurrentEditIfNeeded()
 
     editingMode = mode
   }
 
-  /// Writes the selected preset into the global-effects feature node.
   private func selectFilterPreset(_ preset: PresetFeature?) {
-    editingStack.updateGlobalEffectsFeature { effects in
-      guard effects.first(of: PresetFeature.self)?.identifier != preset?.identifier else {
-        return
-      }
-      effects.set(preset, insertionIndex: PhotosCropEffectOrder.insertionIndex(for: PresetFeature.self))
-    }
+    editingModel.selectFilterPreset(preset)
   }
 
   private func selectAdjustmentParameter(_ parameter: PhotosCropAdjustmentParameter) {
@@ -277,33 +243,17 @@ struct PhotosCropContentView: View {
     adjustmentParameter = parameter
   }
 
-  /// Writes a slider value for the selected parameter into the global-effects
-  /// feature node.
   private func setAdjustmentValue(_ sliderValue: Double) {
-    editingStack.updateGlobalEffectsFeature { effects in
-      adjustmentParameter.apply(sliderValue: sliderValue, to: &effects)
-    }
+    editingModel.setAdjustmentValue(sliderValue, parameter: adjustmentParameter)
   }
 
   private func clearBlurMaskingLayer() {
-    let blurIdentity = CropViewMaskingDefaults.blurEffectPipeline.editingCanvasEffectIdentity
-    let localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
-    let remainingLocalAdjustments = localAdjustments.filter {
-      $0.effectPipeline.editingCanvasEffectIdentity != blurIdentity
-    }
-
-    guard remainingLocalAdjustments != localAdjustments else {
-      return
-    }
-
-    editingStack.set(localAdjustments: remainingLocalAdjustments)
+    editingModel.clearBlurMaskingLayer()
   }
 
   private func finish() {
     applyAction()
-    if editingStack.loadedState?.hasUncommitedChanges == true {
-      editingStack.takeSnapshot()
-    }
+    editingModel.commitCurrentEditIfNeeded()
     onDone()
   }
 
@@ -326,7 +276,7 @@ struct PhotosCropContentView: View {
 /// interaction surface `SwiftUICropView` exposes. Future modes are represented
 /// here even before their controls are implemented so the UI tree can settle
 /// around the same routing model.
-private enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
+enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
   case crop
   case blurMasking
   case filters
@@ -404,7 +354,7 @@ private struct PhotosCropBlurMaskingState: Equatable {
 
 private struct PhotosCropCanvasHost: View {
 
-  let editingStack: EditingStack
+  let editingModel: PhotosCropEditingModel
   let mode: PhotosCropEditingMode
   let blurMaskingState: PhotosCropBlurMaskingState
   let rotation: Binding<CropEditingState.Rotation?>
@@ -414,12 +364,12 @@ private struct PhotosCropCanvasHost: View {
   let rotateAction: SwiftUICropView.RotateAction
   let applyAction: SwiftUICropView.ApplyAction
   let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction
+  let featureFocus: CropViewFeatureFocus
 
   var body: some View {
     SwiftUICropView(
-      editingStack: editingStack,
-      isGuideInteractionEnabled: mode == .crop,
-      isAutoApplyEditingStackEnabled: true
+      editingModel: editingModel,
+      isGuideInteractionEnabled: mode == .crop
     )
     .rotation(rotation)
     .adjustmentAngle(adjustmentAngle)
@@ -433,23 +383,6 @@ private struct PhotosCropCanvasHost: View {
     .registerAdjustmentAngleCommitAction(adjustmentAngleCommitAction)
   }
 
-  /// The FeatureTree focus for the current editing mode.
-  ///
-  /// Every mode views the evaluated output (`.output`); what changes is the
-  /// adjustment point. Crop edits the final crop node, blur masking paints a
-  /// pre-crop local adjustment (CropView derives the blur seed from the
-  /// current crop), and filters/adjustments edit the global effects node
-  /// through controls outside the canvas.
-  private var featureFocus: CropViewFeatureFocus {
-    switch mode {
-    case .crop:
-      return .finalCrop
-    case .blurMasking:
-      return .masking()
-    case .filters, .adjustments:
-      return .output
-    }
-  }
 }
 
 private struct PhotosCropControlHost: View {
@@ -1825,11 +1758,13 @@ private enum PhotosCropAspectRatioDirection {
 
 private struct PhotosCropPreviewHost: View {
 
-  @State private var editingStack = PhotosCropPreviewFixtures.makeEditingStack()
+  private let editingModel = PhotosCropEditingModel(
+    editingStack: PhotosCropPreviewFixtures.makeEditingStack()
+  )
 
   var body: some View {
     SwiftUIPhotosCropView(
-      editingStack: editingStack,
+      editingModel: editingModel,
       onDone: {},
       onCancel: {}
     )
