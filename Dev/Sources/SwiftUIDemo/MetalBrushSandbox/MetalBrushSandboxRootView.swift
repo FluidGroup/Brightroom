@@ -18,7 +18,7 @@ final class MetalBrushSandboxModel {
   }
 
   func reset() {
-    editingStack.set(localAdjustments: [])
+    replaceLocalAdjustments([])
     metrics = .init()
   }
 
@@ -38,15 +38,44 @@ final class MetalBrushSandboxModel {
   }
 
   private func applyExposure(_ exposure: Double) {
-    editingStack.set(effects: { effects in
+    editingStack.updateFeature(id: EditingFeatureTree.globalEffectsNodeID) { feature in
+      guard
+        case let .effect(effect) = feature,
+        var bundle = effect as? EffectPipelineFeature
+      else {
+        return
+      }
+
       if abs(exposure) < 0.001 {
-        effects.set(nil as ExposureFeature?)
+        bundle.pipeline.set(nil as ExposureFeature?)
       } else {
         // Fixed id: a fresh FeatureID per slider tick makes equal values
         // compare unequal and churns Equatable-keyed render caches.
-        effects.set(ExposureFeature(id: .init(rawValue: "sandbox.global-exposure"), value: exposure))
+        bundle.pipeline.set(
+          ExposureFeature(
+            id: .init(rawValue: "sandbox.global-exposure"),
+            value: exposure
+          )
+        )
       }
-    })
+
+      feature = .effect(bundle)
+    }
+  }
+
+  private func replaceLocalAdjustments(_ localAdjustments: [LocalAdjustmentFeature]) {
+    guard var edit = editingStack.loadedState?.currentEdit else {
+      return
+    }
+
+    EditingFeatureTree.replaceLocalAdjustments(
+      localAdjustments,
+      in: &edit,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
+    if editingStack.loadedState?.currentEdit != edit {
+      editingStack.loadedState?.currentEdit = edit
+    }
   }
 }
 

@@ -112,8 +112,6 @@ performance is already good.
 
 - Mask rasters are memoized (`LocalAdjustmentMaskRasterStore`, 32 MB/entry,
   64 MB total) — repeated previews of the same mask are free.
-- `EditingStack.Loaded.editingPreviewImage` only recomputes when the effects
-  sequence actually changes (keyed on `effectsSequence`).
-- The export and preview share one composition path (proven equivalent by
-  `EditingPreviewExportParityTests`), so there is no duplicated render logic to
+- The export and explicit preview composition path are proven equivalent by
+  `EditingPreviewExportParityTests`, so there is no duplicated render logic to
   optimize twice.

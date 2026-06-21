@@ -216,13 +216,10 @@ Implementation status:
 
 - `EditingStack.Edit.makePreviewImage(from:purpose:)` is the shared policy
   entrypoint.
-- `EditingStack.Loaded.editingPreviewImage` uses `.editing`.
-- `EditingStack.Loaded.cropInteractionPreviewImage` uses `.cropInteraction`.
-- `EditingStack.Loaded.imageForCrop` is the current `CGImage` materialization
-  used by Crop UI and follows the crop interaction policy.
-- Crop interaction currently returns the normalized source image only; adding
-  lightweight color-only adjustments should be a product decision, not an
-  accidental side effect of reusing the editing preview.
+- `.editingBase` skips local adjustments so mask rasterization remains owned by
+  the render path that knows its target resolution.
+- `.editing` includes local adjustments and is used by explicit preview/export
+  parity tests.
 
 ### Local Adjustment Effect Policy
 

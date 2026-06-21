@@ -143,7 +143,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private static func makeDocument(imageSize: CGSize) -> EditingStack.Edit {
     var edit = EditingStack.Edit.test(imageSize: imageSize)
     edit.effects = makeEffectPipeline()
-    edit.localAdjustments = [
+    edit.setPhotosCropLocalAdjustmentsForTest([
       LocalAdjustmentFeature(
         id: .init(rawValue: "perf.local"),
         maskTree: cachedMaskTree,
@@ -151,8 +151,8 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
           GaussianBlurFeature(id: .init(rawValue: "perf.local.blur"), value: 60)
         ])
       )
-    ]
-    edit.crop = CropFeature.test(
+    ])
+    edit.setFinalCropForTest(CropFeature.test(
       imageSize: imageSize,
       cropRect: CGRect(
         x: imageSize.width * 0.1,
@@ -160,7 +160,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         width: imageSize.width * 0.8,
         height: imageSize.height * 0.8
       ).integral
-    )
+    ))
     return edit
   }
 }

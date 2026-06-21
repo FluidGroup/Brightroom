@@ -339,7 +339,11 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     canvasView?.reset()
     canvasView?.setCommittedStrokes([])
     if let currentEditingStack {
-      currentEditingStack.set(localAdjustments: [])
+      strokeCommitPipeline.replaceLocalAdjustments(
+        [],
+        in: currentEditingStack,
+        insertingBefore: EditingFeatureTree.finalCropNodeID
+      )
     }
     strokeCommitPipeline.resetLayerTracking()
     updateVisibleContentRect()
@@ -398,7 +402,8 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
     strokeCommitPipeline.append(
       record: record,
       effect: currentLocalEffect,
-      to: currentEditingStack
+      to: currentEditingStack,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
     )
   }
 
@@ -409,7 +414,11 @@ public final class _EditingCanvasView: UIView, UIScrollViewDelegate, UIGestureRe
       return
     }
 
-    strokeCommitPipeline.updateEffect(localEffect, in: currentEditingStack)
+    strokeCommitPipeline.updateEffect(
+      localEffect,
+      in: currentEditingStack,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
   }
 
   private func syncCommittedStrokesFromEditingStack() {

@@ -70,9 +70,9 @@ struct EditingPreviewExportParityTests {
     )
     var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
     edit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
-    edit.localAdjustments = [
+    edit.setPhotosCropLocalAdjustmentsForTest([
       Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
-    ]
+    ])
 
     let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
@@ -100,14 +100,14 @@ struct EditingPreviewExportParityTests {
     )
     let cropRect = CGRect(x: 30, y: 0, width: 30, height: 24)
     var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
-    edit.crop = CropFeature.test(
+    edit.setFinalCropForTest(CropFeature.test(
       imageSize: CGSize(width: 60, height: 24),
       cropRect: cropRect
-    )
+    ))
     edit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
-    edit.localAdjustments = [
+    edit.setPhotosCropLocalAdjustmentsForTest([
       Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
-    ]
+    ])
 
     let exported = try await export(edit, source: source)
     let preview = try previewComposition(edit, source: source)
@@ -145,7 +145,7 @@ struct EditingPreviewExportParityTests {
       mask.isEnabled = false
       disabledLayer.maskTree.root = .brush(mask)
     }
-    disabledEdit.localAdjustments = [disabledLayer]
+    disabledEdit.setPhotosCropLocalAdjustmentsForTest([disabledLayer])
 
     // Reference: same document with no local adjustment at all.
     var globalOnlyEdit = EditingStack.Edit.test(imageSize: baseImageSize)
@@ -185,7 +185,7 @@ struct EditingPreviewExportParityTests {
       ),
       effectPipeline: EffectPipeline(effects: [ThrowingEffectFeature()])
     )
-    edit.localAdjustments = [throwingLayer]
+    edit.setPhotosCropLocalAdjustmentsForTest([throwingLayer])
 
     let error = await #expect(throws: (any Error).self) {
       _ = try await export(edit, source: source)

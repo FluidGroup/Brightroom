@@ -26,8 +26,8 @@ import MetalKit
 import BrightroomEngine
 import BrightroomParametric
 
-/// A UIKit canvas that previews a point in the EditingStack's FeatureTree and
-/// edits a feature node that may live at a different point.
+/// A UIKit canvas that previews a point in the document FeatureTree and edits
+/// a feature node that may live at a different point.
 ///
 /// Based on the editing vision in `docs/vision-of-editing.md`, this view treats
 /// tool edits as Features that happen before the final crop:
@@ -391,25 +391,25 @@ final class CropView: UIView {
     }
 
     func updateRenderedEditPreview(
-      loadedState: EditingStack.Loaded,
+      document: CropViewDocumentSnapshot,
       crop: CropEditingState
     ) {
       guard crop.imageSize == canvasSize, let canvasView else {
         return
       }
 
-      let key = CanvasInputKey(loadedState: loadedState, crop: crop)
+      let key = CanvasInputKey(document: document, crop: crop)
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
       let renderPlan = CanvasRenderPlan(
-        localAdjustments: loadedState.currentEdit.localAdjustments
+        localAdjustments: document.localAdjustments
       )
       guard
         let images = EditingCanvasRenderImageFactory.makeRenderImages(
-          loadedState: loadedState,
+          document: document,
           canvasSize: crop.imageSize,
           mode: renderPlan.canvasMode
         )
@@ -536,7 +536,7 @@ final class CropView: UIView {
 
     /// Inputs that determine the output of
     /// `EditingCanvasRenderImageFactory.makeCropOutputRenderImages`. The source
-    /// image is compared by identity; `EditingStack.Loaded` stores it as an
+    /// image is compared by identity; `CropViewDocumentSnapshot` stores it as an
     /// immutable property, so a new editing source always produces a new
     /// instance.
     struct CanvasRenderInputKey: Equatable {
@@ -586,7 +586,7 @@ final class CropView: UIView {
     }
 
     func updateCanvas(
-      loadedState: EditingStack.Loaded,
+      document: CropViewDocumentSnapshot,
       geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,
       committedStrokes: [EditingCanvasStrokeRecord]
@@ -597,8 +597,8 @@ final class CropView: UIView {
       outputGeometry = geometry
 
       let inputKey = CanvasRenderInputKey(
-        sourceImage: ObjectIdentifier(loadedState.editingSourceImage),
-        effects: loadedState.currentEdit.effects,
+        sourceImage: ObjectIdentifier(document.editingSourceImage),
+        effects: document.effects,
         geometry: geometry,
         mode: mode
       )
@@ -609,7 +609,7 @@ final class CropView: UIView {
       if currentCanvasRenderInputKey != inputKey || canvasView.hasRenderImages == false {
         guard
           let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-            loadedState: loadedState,
+            document: document,
             geometry: geometry,
             mode: mode
           )
@@ -719,7 +719,7 @@ final class CropView: UIView {
     }
   }
 
-  let editingStack: EditingStack
+  private let document: CropViewDocument
 
   #if DEBUG
   private let _debug_shapeLayer: CAShapeLayer = {
@@ -744,7 +744,6 @@ final class CropView: UIView {
   /// geometry it resolves against has changed.
   private var appliedCanvasBrush: EditingCanvasBrush?
   private var canvasStrokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
-  private let strokeCommitPipeline = EditingCanvasStrokeCommitPipeline()
   /// True while an external control streams straighten angle changes before
   /// committing the resulting crop extent.
   ///
@@ -815,37 +814,17 @@ final class CropView: UIView {
 
   private var stateHandler: @MainActor (StateSnapshot) -> Void = { _ in }
 
-  var isAutoApplyEditingStackEnabled = false
-
   private var lastLaidOutCrop: CropEditingState?
 
   // MARK: - Initializers
 
-  /**
-   Creates an instance for using as standalone.
-
-   This initializer offers us to get cropping function without detailed setup.
-   To get a result image, call `renderImage()`.
-   */
-  convenience init(
-    image: UIImage,
-    contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
-  ) throws {
-    self.init(
-      editingStack: .init(
-        imageProvider: .init(image: image)
-      ),
-      contentInset: contentInset
-    )
-  }
-
   init(
-    editingStack: EditingStack,
+    document: CropViewDocument,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
     _pixeleditor_ensureMainThread()
 
-    self.editingStack = editingStack
+    self.document = document
     self.contentInset = contentInset
 
     super.init(frame: .zero)
@@ -1054,70 +1033,50 @@ final class CropView: UIView {
     self.stateHandler = handler
   }
 
-  func loadCurrentEditingStackState() {
-    let loadedState = editingStack.requireLoadedStateForLoadedUIView()
-    load(
-      crop: CropEditingState(
-        cropFeature: loadedState.currentEdit.crop,
-        imageSize: loadedState.currentEdit.imageSize
-      )
-    )
-    updateDisplay(loadedState: loadedState)
+  func loadCurrentDocumentState() {
+    let snapshot = document.requireSnapshotForLoadedCropView()
+    guard let crop = displayCropEditingState(in: snapshot) else {
+      return
+    }
+    load(crop: crop)
+    updateDisplay(document: snapshot)
   }
 
-  func updateCurrentEditingStackDisplay() {
-    guard let loadedState = editingStack.loadedState else {
+  func updateCurrentDocumentDisplay() {
+    guard let snapshot = document.snapshot else {
       return
     }
 
-    let stackCrop = CropEditingState(
-      cropFeature: loadedState.currentEdit.crop,
-      imageSize: loadedState.currentEdit.imageSize
-    )
-    if state.proposedCrop == nil || state.proposedCrop?.imageSize != stackCrop.imageSize {
-      load(crop: stackCrop)
-    } else if
-      isAutoApplyEditingStackEnabled,
-      isStreamingAdjustmentAngle == false,
-      state.adjustmentKind.isEmpty,
-      cropSurface.scrollView.isTracking == false,
-      cropSurface.scrollView.isDragging == false,
-      cropSurface.scrollView.isDecelerating == false,
-      isZoomInteractionActive == false,
-      let proposedCrop = state.proposedCrop,
-      proposedCrop.isRenderingEquivalent(to: stackCrop) == false
-    {
-      // Reloading the document crop also re-lays out the scroll view with a
-      // non-animated `customZoom`. Wait for UIKit scroll/zoom settling first so
-      // a live bounce-back is not cancelled by an unrelated document refresh.
-      // Under auto-apply this view's own edits always land in the stack, so a
-      // rendering-relevant difference means the document crop changed outside
-      // this view (undo, revert, external mutation) — follow the document.
-      load(crop: stackCrop)
+    guard let documentCrop = displayCropEditingState(in: snapshot) else {
+      return
+    }
+    if state.proposedCrop == nil || state.proposedCrop?.imageSize != documentCrop.imageSize {
+      load(crop: documentCrop)
     }
 
-    updateDisplay(loadedState: loadedState)
+    updateDisplay(document: snapshot)
   }
 
   /**
    Renders an image according to the editing.
 
-   - Attension: This operation can be run background-thread.
+   - Attention: The UI crop state is committed on the main actor before the
+     renderer performs its asynchronous work.
    */
   func renderImage() async throws -> BrightRoomImageRenderer.Rendered? {
-    applyEditingStack()
-    return try await editingStack.makeRenderer().render()
+    applyDocumentChanges()
+    return try await document.renderImage()
   }
 
   /**
-   Applies the current state to the EditingStack.
+   Applies the current crop state to the document.
    */
-  func applyEditingStack() {
-    guard let crop = state.proposedCrop else {
-      EditorLog.error(.cropView, "EditingStack has not completed loading.")
+  func applyDocumentChanges() {
+    guard let crop = record() ?? state.proposedCrop else {
+      EditorLog.error(.cropView, "CropViewDocument has not completed loading.")
       return
     }
-    applyCropToEditingStackIfRenderingChanged(crop)
+    applyCropToDocumentIfRenderingChanged(crop)
   }
 
   func resetCrop() {
@@ -1305,7 +1264,7 @@ extension CropView {
     }
   }
 
-  private func updateDisplay(loadedState: EditingStack.Loaded) {
+  private func updateDisplay(document: CropViewDocumentSnapshot) {
     guard let crop = state.proposedCrop else {
       return
     }
@@ -1341,7 +1300,7 @@ extension CropView {
         return
       }
 
-      updateCanvasContent(loadedState: loadedState, crop: crop)
+      updateCanvasContent(document: document, crop: crop)
       updateCropDisplayViewport()
 
     } else if let seedEffect = resolvedMaskSeedEffect {
@@ -1357,9 +1316,9 @@ extension CropView {
       // committed effect keeps the preview equal to the exported result even
       // when the host recomputes the seed effect from a new crop.
       toolSurface.updateCanvas(
-        loadedState: loadedState,
+        document: document,
         geometry: geometry,
-        mode: .localAdjustment(effect: committedCanvasLocalEffect(in: loadedState) ?? seedEffect),
+        mode: .localAdjustment(effect: committedCanvasLocalEffect() ?? seedEffect),
         committedStrokes: currentToolCommittedStrokes(in: geometry)
       )
       updateToolCropDisplayViewport()
@@ -1373,10 +1332,10 @@ extension CropView {
       }
 
       let renderPlan = CanvasRenderPlan(
-        localAdjustments: loadedState.currentEdit.localAdjustments
+        localAdjustments: document.localAdjustments
       )
       toolSurface.updateCanvas(
-        loadedState: loadedState,
+        document: document,
         geometry: geometry,
         mode: renderPlan.canvasMode,
         committedStrokes: renderPlan.committedStrokes(in: geometry)
@@ -1395,7 +1354,7 @@ extension CropView {
       return false
     case .after:
       guard
-        let tree = editingStack.featureTree,
+        let tree = document.snapshot?.featureTree,
         let includes = tree.point(
           featureFocus.viewingPoint,
           includes: EditingFeatureTree.finalCropNodeID
@@ -1448,15 +1407,15 @@ extension CropView {
     var effects: EffectPipeline
     var localAdjustments: [LocalAdjustmentFeature]
 
-    init(loadedState: EditingStack.Loaded, crop: CropEditingState) {
-      let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+    init(document: CropViewDocumentSnapshot, crop: CropEditingState) {
+      let previewSourceImage = document.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
       // editing source is always capped to the same max pixel size).
-      self.sourceImage = ObjectIdentifier(loadedState.editingSourceImage)
+      self.sourceImage = ObjectIdentifier(document.editingSourceImage)
       self.sourceExtent = previewSourceImage.extent
-      self.effects = loadedState.currentEdit.effects
-      self.localAdjustments = loadedState.currentEdit.localAdjustments
+      self.effects = document.effects
+      self.localAdjustments = document.localAdjustments
     }
   }
 
@@ -1518,6 +1477,22 @@ extension CropView {
         }
       }
     }
+  }
+
+  /// The crop state that defines the canvas display domain for the current
+  /// document.
+  ///
+  /// PhotosCrop currently displays the built-in final crop as the viewport even
+  /// when a tool edits an upstream feature. Crop editing writes through
+  /// `featureFocus.cropTargetID`; display resolution stays here so those two
+  /// responsibilities do not collapse back into `Edit.crop`.
+  private func displayCropEditingState(
+    in document: CropViewDocumentSnapshot
+  ) -> CropEditingState? {
+    return CropEditingState(
+      cropFeature: document.displayCrop,
+      imageSize: document.imageSize
+    )
   }
 
   private func makeCropDisplayViewport() -> CropDisplayViewport? {
@@ -1771,10 +1746,6 @@ extension CropView {
 
     state.proposedCrop = crop
 
-    if isAutoApplyEditingStackEnabled {
-      applyCropToEditingStackIfRenderingChanged(crop)
-    }
-
     emitStateSnapshot()
 
     return true
@@ -1835,10 +1806,12 @@ extension CropView {
   private func debugLogScrollViewAdjustment(_ event: String) {}
   #endif
 
-  private func applyCropToEditingStackIfRenderingChanged(_ crop: CropEditingState) {
-    let feature = crop.makeCropFeature()
-    guard let currentCrop = editingStack.loadedState?.currentEdit.crop else {
-      editingStack.crop(feature)
+  private func applyCropToDocumentIfRenderingChanged(_ crop: CropEditingState) {
+    let targetID = featureFocus.cropTargetID ?? crop.id
+    var feature = crop.makeCropFeature()
+    feature.id = targetID
+    guard let currentCrop = document.snapshot?.cropFeature(id: targetID) else {
+      document.updateCropFeature(id: targetID, with: feature)
       return
     }
 
@@ -1848,7 +1821,7 @@ extension CropView {
       return
     }
 
-    editingStack.crop(feature)
+    document.updateCropFeature(id: targetID, with: feature)
   }
 
   private func updateCropLayout(
@@ -2835,38 +2808,18 @@ extension CropView: UIGestureRecognizerDelegate {
     let previousViewingIncludedFinalCrop = viewingPointIncludesFinalCrop
     let leavesCropEditing = wasCropEditing && focus.isCropEditing == false
     if leavesCropEditing {
-      // Leaving crop editing commits the currently visible crop viewport
-      // before the tool surface derives its display geometry — unless, under
-      // auto-apply, the document crop diverged from this session (cancel /
-      // revert / undo mutated the stack while the viewport still shows the
-      // old crop). Re-recording then would write the stale viewport back
-      // into the document; instead the document-follow branch in
-      // updateCurrentEditingStackDisplay resyncs the view below.
-      let documentDiverged: Bool = {
-        guard
-          isAutoApplyEditingStackEnabled,
-          let stackCrop = editingStack.loadedState?.currentEdit.crop,
-          let proposedCrop = state.proposedCrop
-        else {
-          return false
-        }
-        return proposedCrop.makeCropFeature().isRenderingEquivalent(
-          to: stackCrop,
-          orientedImageSize: proposedCrop.imageSize
-        ) == false
-      }()
-      if documentDiverged == false {
-        record()
-      }
+      // Leaving crop editing commits the currently visible crop viewport before
+      // the tool surface derives its display geometry.
+      applyDocumentChanges()
     }
 
     featureFocus = focus
 
     if previousSeedEffect?.editingCanvasEffectIdentity != resolvedMaskSeedEffect(of: focus)?.editingCanvasEffectIdentity {
-      strokeCommitPipeline.resetLayerTracking()
+      document.resetMaskLayerTracking()
     }
     if let layerID = focus.maskTargetLayerID {
-      strokeCommitPipeline.adoptLayer(id: layerID)
+      document.adoptMaskLayer(id: layerID)
     }
 
     // The tool surface needs a geometry re-sync when entering it from crop
@@ -2876,7 +2829,7 @@ extension CropView: UIGestureRecognizerDelegate {
       && previousViewingIncludedFinalCrop != viewingPointIncludesFinalCrop
 
     applySurfaceMode(syncsToolViewportFromCrop: leavesCropEditing || crossesFinalCrop)
-    updateCurrentEditingStackDisplay()
+    updateCurrentDocumentDisplay()
   }
 
   func setMaskingBrush(_ brush: CropViewMaskingBrush) {
@@ -2899,7 +2852,7 @@ extension CropView: UIGestureRecognizerDelegate {
       imageDiameter = CropViewMaskingDefaults.imageSpaceBrushDiameter(
         pointDiameter: value,
         viewportSize: bounds.size,
-        crop: editingStack.loadedState?.currentEdit.crop
+        crop: document.snapshot?.featureTree.finalCrop
       )
     }
     return .init(
@@ -3001,7 +2954,7 @@ extension CropView: UIGestureRecognizerDelegate {
   }
 
   fileprivate func updateCanvasContent(
-    loadedState: EditingStack.Loaded,
+    document: CropViewDocumentSnapshot,
     crop: CropEditingState
   ) {
     guard featureFocus.isCropEditing else {
@@ -3009,7 +2962,7 @@ extension CropView: UIGestureRecognizerDelegate {
       return
     }
 
-    cropSurface.updateRenderedEditPreview(loadedState: loadedState, crop: crop)
+    cropSurface.updateRenderedEditPreview(document: document, crop: crop)
   }
 
   fileprivate func commitCanvasStroke(
@@ -3027,8 +2980,8 @@ extension CropView: UIGestureRecognizerDelegate {
       committedRecord = record
     }
 
-    appendRecordToEditingStack(committedRecord)
-    syncCommittedStrokesFromEditingStack()
+    appendRecordToDocument(committedRecord)
+    syncCommittedStrokesFromDocument()
     completion()
   }
 
@@ -3052,15 +3005,14 @@ extension CropView: UIGestureRecognizerDelegate {
     resolvedMaskSeedEffect(of: featureFocus)
   }
 
-  private func appendRecordToEditingStack(_ record: EditingCanvasStrokeRecord) {
+  private func appendRecordToDocument(_ record: EditingCanvasStrokeRecord) {
     guard let currentLocalEffect = resolvedMaskSeedEffect else {
       return
     }
 
-    strokeCommitPipeline.append(
+    document.appendMaskStroke(
       record: record,
-      effect: currentLocalEffect,
-      to: editingStack
+      effect: currentLocalEffect
     )
   }
 
@@ -3069,20 +3021,15 @@ extension CropView: UIGestureRecognizerDelegate {
   /// Document parameters are frozen at layer creation. The focus's seed effect
   /// may drift afterwards (the default blur seed derives from the current
   /// crop), so already-painted layers must not be rewritten to match it.
-  private func committedCanvasLocalEffect(
-    in loadedState: EditingStack.Loaded
-  ) -> EffectPipeline? {
+  private func committedCanvasLocalEffect() -> EffectPipeline? {
     guard let currentLocalEffect = resolvedMaskSeedEffect else {
       return nil
     }
 
-    return strokeCommitPipeline.committedEffect(
-      matching: currentLocalEffect,
-      in: loadedState
-    )
+    return document.committedMaskEffect(matching: currentLocalEffect)
   }
 
-  private func syncCommittedStrokesFromEditingStack() {
+  private func syncCommittedStrokesFromDocument() {
     let sourceRecords = currentSourceCommittedStrokes()
     cropSurface.setCommittedStrokes(sourceRecords)
 
@@ -3108,9 +3055,6 @@ extension CropView: UIGestureRecognizerDelegate {
   }
 
   private func currentSourceCommittedStrokes() -> [EditingCanvasStrokeRecord] {
-    strokeCommitPipeline.committedRecords(
-      matching: resolvedMaskSeedEffect,
-      in: editingStack
-    )
+    document.committedMaskRecords(matching: resolvedMaskSeedEffect)
   }
 }

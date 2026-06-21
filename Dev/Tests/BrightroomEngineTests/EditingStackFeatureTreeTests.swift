@@ -32,7 +32,7 @@ struct EditingStackFeatureTreeTests {
     localAdjustmentIDs: [FeatureID] = []
   ) -> EditingStack.Edit {
     var edit = EditingStack.Edit.test(imageSize: CGSize(width: 1200, height: 800))
-    edit.localAdjustments = localAdjustmentIDs.map { id in
+    edit.setPhotosCropLocalAdjustmentsForTest(localAdjustmentIDs.map { id in
       LocalAdjustmentFeature(
         id: id,
         maskTree: MaskTree(
@@ -56,7 +56,7 @@ struct EditingStackFeatureTreeTests {
           GaussianBlurFeature(id: .init(rawValue: id.rawValue + ".blur"), radius: 10)
         ])
       )
-    }
+    })
     return edit
   }
 
@@ -91,7 +91,7 @@ struct EditingStackFeatureTreeTests {
     let edit = makeEdit(localAdjustmentIDs: [layer])
     let tree = EditingFeatureTree(edit: edit)
 
-    #expect(tree.finalCrop == edit.crop)
+    #expect(tree.finalCrop?.id == EditingFeatureTree.finalCropNodeID)
     #expect(tree.globalEffects == edit.effects)
     #expect(tree.localAdjustmentNodes.count == 1)
     #expect(
@@ -135,7 +135,7 @@ struct EditingStackFeatureTreeTests {
   @Test func `Update crop feature`() {
     var edit = makeEdit()
     let newCrop = CropFeature(
-      id: edit.crop.id,
+      id: EditingFeatureTree.finalCropNodeID,
       displayCropRect: CGRect(x: 100, y: 100, width: 400, height: 300),
       imageSize: CGSize(width: 1200, height: 800)
     )
@@ -148,7 +148,7 @@ struct EditingStackFeatureTreeTests {
     }
 
     #expect(result)
-    #expect(edit.crop == newCrop)
+    #expect(EditingFeatureTree(edit: edit).finalCrop == newCrop)
   }
 
   @Test func `Update global effects feature`() {

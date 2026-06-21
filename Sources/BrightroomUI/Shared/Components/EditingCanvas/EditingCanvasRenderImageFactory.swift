@@ -10,12 +10,43 @@ enum EditingCanvasRenderImageFactory {
     displayedContentRect: CGRect? = nil,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
+    makeRenderImages(
+      editingSourceImage: loadedState.editingSourceImage,
+      effects: loadedState.currentEdit.effects,
+      canvasSize: canvasSize,
+      displayedContentRect: displayedContentRect,
+      mode: mode
+    )
+  }
+
+  static func makeRenderImages(
+    document: CropViewDocumentSnapshot,
+    canvasSize: CGSize,
+    displayedContentRect: CGRect? = nil,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
+    makeRenderImages(
+      editingSourceImage: document.editingSourceImage,
+      effects: document.effects,
+      canvasSize: canvasSize,
+      displayedContentRect: displayedContentRect,
+      mode: mode
+    )
+  }
+
+  private static func makeRenderImages(
+    editingSourceImage: CIImage,
+    effects: EffectPipeline,
+    canvasSize: CGSize,
+    displayedContentRect: CGRect? = nil,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
     let renderBounds = sanitizedRenderBounds(
       displayedContentRect,
       canvasRect: canvasRect
     )
-    let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+    let previewSourceImage = editingSourceImage.removingExtentOffset()
     let sourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
     let displaySourceExtent = sourceImage.extent
     guard displaySourceExtent.width > 0, displaySourceExtent.height > 0 else {
@@ -38,7 +69,7 @@ enum EditingCanvasRenderImageFactory {
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects
+        effects
         .applyIgnoringFailure(to: viewportSourceImage)
         .cropped(to: renderBounds),
         source: viewportSourceImage
@@ -59,7 +90,7 @@ enum EditingCanvasRenderImageFactory {
       // export produces — preview and export stay consistent (modulo the
       // inherent downscale/upscale resampling difference).
       let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects.applyIgnoringFailure(to: sourceImage),
+        effects.applyIgnoringFailure(to: sourceImage),
         source: sourceImage
       )
       let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
@@ -80,7 +111,7 @@ enum EditingCanvasRenderImageFactory {
       usesPreparedBaseImage = true
 
     case .renderedEditPreview:
-      let previewImage = loadedState.currentEdit.effects
+      let previewImage = effects
         .applyIgnoringFailure(to: scaledPreviewSourceImage)
         .cropped(to: canvasRect)
       let displayPreviewImage = displayOrientedImage(previewImage, canvasSize: canvasSize)
@@ -93,7 +124,7 @@ enum EditingCanvasRenderImageFactory {
 
     return .init(
       source: viewportSourceImage,
-      effects: loadedState.currentEdit.effects,
+      effects: effects,
       base: baseImage,
       adjusted: adjustedImage,
       localEffect: renderEffect,
@@ -106,9 +137,36 @@ enum EditingCanvasRenderImageFactory {
     geometry: EditingCanvasCropOutputGeometry,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
+    makeCropOutputRenderImages(
+      editingSourceImage: loadedState.editingSourceImage,
+      effects: loadedState.currentEdit.effects,
+      geometry: geometry,
+      mode: mode
+    )
+  }
+
+  static func makeCropOutputRenderImages(
+    document: CropViewDocumentSnapshot,
+    geometry: EditingCanvasCropOutputGeometry,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
+    makeCropOutputRenderImages(
+      editingSourceImage: document.editingSourceImage,
+      effects: document.effects,
+      geometry: geometry,
+      mode: mode
+    )
+  }
+
+  private static func makeCropOutputRenderImages(
+    editingSourceImage: CIImage,
+    effects: EffectPipeline,
+    geometry: EditingCanvasCropOutputGeometry,
+    mode: EditingCanvasMode
+  ) -> EditingCanvasRenderImages? {
     let canvasRect = geometry.outputBounds
     let sourceRect = CGRect(origin: .zero, size: geometry.sourceImageSize)
-    let previewSourceImage = loadedState.editingSourceImage.removingExtentOffset()
+    let previewSourceImage = editingSourceImage.removingExtentOffset()
     let displaySourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
     let sourceImage = scaledImage(
       displaySourceImage,
@@ -129,7 +187,7 @@ enum EditingCanvasRenderImageFactory {
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects.applyIgnoringFailure(to: cropOutputSourceImage)
+        effects.applyIgnoringFailure(to: cropOutputSourceImage)
           .cropped(to: canvasRect),
         source: cropOutputSourceImage
       )
@@ -144,7 +202,7 @@ enum EditingCanvasRenderImageFactory {
       // is a fraction of the image extent, so it upscales to the same
       // fractional blur the full-resolution export produces.
       let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects.applyIgnoringFailure(to: displaySourceImage),
+        effects.applyIgnoringFailure(to: displaySourceImage),
         source: displaySourceImage
       )
       let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
@@ -170,7 +228,7 @@ enum EditingCanvasRenderImageFactory {
 
     case .renderedEditPreview:
       let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        loadedState.currentEdit.effects
+        effects
           .applyIgnoringFailure(to: sourceImage)
           .cropped(to: sourceExtent),
         source: sourceImage
@@ -186,7 +244,7 @@ enum EditingCanvasRenderImageFactory {
 
     return .init(
       source: cropOutputSourceImage,
-      effects: loadedState.currentEdit.effects,
+      effects: effects,
       base: baseImage,
       adjusted: adjustedImage,
       localEffect: renderEffect,

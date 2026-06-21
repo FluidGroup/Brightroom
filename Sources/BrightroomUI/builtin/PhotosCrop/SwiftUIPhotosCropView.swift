@@ -63,20 +63,20 @@ public struct SwiftUIPhotosCropView: View {
     }
   }
 
-  private let editingStack: EditingStack
+  private let editingModel: PhotosCropEditingModel
   private let options: Options
   private let localizedStrings: LocalizedStrings
   private let onDone: @MainActor () -> Void
   private let onCancel: @MainActor () -> Void
 
   public init(
-    editingStack: EditingStack,
+    editingModel: PhotosCropEditingModel,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
     onDone: @escaping @MainActor () -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
-    self.editingStack = editingStack
+    self.editingModel = editingModel
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -85,7 +85,7 @@ public struct SwiftUIPhotosCropView: View {
 
   public var body: some View {
     PhotosCropContentView(
-      editingStack: editingStack,
+      editingModel: editingModel,
       options: options,
       localizedStrings: localizedStrings,
       onDone: onDone,

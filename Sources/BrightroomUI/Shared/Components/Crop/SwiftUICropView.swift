@@ -23,28 +23,6 @@ import UIKit
 import SwiftUI
 import BrightroomEngine
 
-final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
-  
-  let bodyView: BodyView
-  
-  init(bodyView: BodyView) {
-    self.bodyView = bodyView
-    super.init(nibName: nil, bundle: nil)
-  }
-  
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-  
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    
-    view.addSubview(bodyView)
-    AutoLayoutTools.setEdge(bodyView, view)
-  }
-}
-
 @available(iOS 14, *)
 public struct SwiftUICropView: View {
 
@@ -139,7 +117,7 @@ public struct SwiftUICropView: View {
   private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
   private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
-  private let editingStack: EditingStack
+  private let document: CropViewDocument
 
   private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
   private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
@@ -151,7 +129,6 @@ public struct SwiftUICropView: View {
 
   private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
-  private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
   private let contentInset: UIEdgeInsets?
   private var featureFocus: CropViewFeatureFocus = .finalCrop
@@ -161,16 +138,14 @@ public struct SwiftUICropView: View {
   public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
-    isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
-    self.editingStack = editingStack
+    self.document = CropViewDocument(editingStack: editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
-    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
@@ -181,16 +156,30 @@ public struct SwiftUICropView: View {
   public init(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
-    isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
-    self.editingStack = editingStack
+    self.document = CropViewDocument(editingStack: editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
-    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
+    self.areAnimationsEnabled = areAnimationsEnabled
+    self.contentInset = contentInset
+    self.stateHandler = stateHandler
+  }
+
+  init(
+    document: CropViewDocument,
+    isGuideInteractionEnabled: Bool = true,
+    areAnimationsEnabled: Bool = true,
+    contentInset: UIEdgeInsets? = nil,
+    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
+  ) {
+    self.cropInsideOverlay = nil
+    self.cropOutsideOverlay = nil
+    self.document = document
+    self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
@@ -198,9 +187,9 @@ public struct SwiftUICropView: View {
 
   public var body: some View {
     ZStack {
-      if editingStack.loadedState != nil {
+      if document.snapshot != nil {
         LoadedCropViewRepresentable(
-          editingStack: editingStack,
+          document: document,
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
@@ -212,7 +201,6 @@ public struct SwiftUICropView: View {
           adjustmentAngleCommitAction: _adjustmentAngleCommitAction,
           stateHandler: stateHandler,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
-          isAutoApplyEditingStackEnabled: isAutoApplyEditingStackEnabled,
           areAnimationsEnabled: areAnimationsEnabled,
           contentInset: contentInset,
           featureFocus: featureFocus,
@@ -227,7 +215,7 @@ public struct SwiftUICropView: View {
       }
     }
     .onAppear {
-      editingStack.start()
+      document.start()
     }
   }
 
@@ -316,11 +304,9 @@ public struct SwiftUICropView: View {
 }
 
 @available(iOS 14, *)
-private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
+private struct LoadedCropViewRepresentable: UIViewRepresentable {
 
-  typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
-
-  let editingStack: EditingStack
+  let document: CropViewDocument
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let rotationInput: Binding<CropEditingState.Rotation?>
@@ -332,7 +318,6 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
   let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction?
   let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
   let isGuideInteractionEnabled: Bool
-  let isAutoApplyEditingStackEnabled: Bool
   let areAnimationsEnabled: Bool
   let contentInset: UIEdgeInsets?
   let featureFocus: CropViewFeatureFocus
@@ -343,15 +328,14 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     Coordinator()
   }
 
-  func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
+  func makeUIView(context: Context) -> CropView {
     let view: CropView
     if let contentInset {
-      view = .init(editingStack: editingStack, contentInset: contentInset)
+      view = .init(document: document, contentInset: contentInset)
     } else {
-      view = .init(editingStack: editingStack)
+      view = .init(document: document)
     }
 
-    view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
     view.setMaskingBrush(maskingBrush)
@@ -369,22 +353,17 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
 
     configureActions(on: view)
     context.coordinator.applySwiftUIInputs {
-      view.loadCurrentEditingStackState()
+      view.loadCurrentDocumentState()
     }
 
-    return .init(bodyView: view)
+    return view
   }
 
-  func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
-    let cropView = uiViewController.bodyView
+  func updateUIView(_ cropView: CropView, context: Context) {
     bindStateHandler(to: cropView, coordinator: context.coordinator)
 
     if cropView.isGuideInteractionEnabled != isGuideInteractionEnabled {
       cropView.isGuideInteractionEnabled = isGuideInteractionEnabled
-    }
-
-    if cropView.isAutoApplyEditingStackEnabled != isAutoApplyEditingStackEnabled {
-      cropView.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     }
 
     if cropView.areAnimationsEnabled != areAnimationsEnabled {
@@ -410,7 +389,7 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     cropView.setCanvasStrokeSmoothing(strokeSmoothing)
     cropView.setFeatureFocus(featureFocus)
 
-    cropView.updateCurrentEditingStackDisplay()
+    cropView.updateCurrentDocumentDisplay()
     configureActions(on: cropView)
   }
 
@@ -440,7 +419,7 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     }
 
     applyAction?.onCall = { [weak cropView] in
-      cropView?.applyEditingStack()
+      cropView?.applyDocumentChanges()
     }
 
     adjustmentAngleCommitAction?.onCall = { [weak cropView] angle in

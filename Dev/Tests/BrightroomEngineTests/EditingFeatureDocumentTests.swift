@@ -18,8 +18,8 @@ private extension MainFeature {
 }
 
 /// Contracts of the parametric editing document: `Edit` stores an
-/// `EditingDocument`, the engine never reorders its main tree, and history
-/// versions are whole-document snapshots with undo/redo.
+/// `EditingDocument`, the engine never reorders its main tree, and undo/redo
+/// checkpoints are whole-document values.
 struct EditingFeatureDocumentTests {
 
   private let imageSize = CGSize(width: 1200, height: 800)
@@ -29,13 +29,13 @@ struct EditingFeatureDocumentTests {
   }
 
   private func effectsFeature(
-    id: FeatureID = EditingStack.Edit.globalEffectsID,
+    id: FeatureID = EditingFeatureTree.globalEffectsNodeID,
     _ pipeline: EffectPipeline = .init()
   ) -> MainFeature {
     .effect(EffectPipelineFeature(id: id, pipeline: pipeline))
   }
 
-  private func cropFeature(id: FeatureID = EditingStack.Edit.finalCropID) -> MainFeature {
+  private func cropFeature(id: FeatureID = EditingFeatureTree.finalCropNodeID) -> MainFeature {
     .domain(CropFeature.test(imageSize: imageSize).with(id: id))
   }
 
@@ -65,18 +65,28 @@ struct EditingFeatureDocumentTests {
   // MARK: - Document shape
 
   @Test func `Canonical default document`() {
-    let edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
+    let edit = EditingFeatureTree.canonicalEdit(
+      finalCrop: makeCrop(),
+      orientedImageSize: imageSize
+    )
 
     #expect(edit.features.map(\.testKind) == ["effect", "crop"])
-    #expect(edit.features.first?.id == EditingStack.Edit.globalEffectsID)
-    #expect(edit.features.last?.id == EditingStack.Edit.finalCropID)
+    #expect(edit.features.first?.id == EditingFeatureTree.globalEffectsNodeID)
+    #expect(edit.features.last?.id == EditingFeatureTree.finalCropNodeID)
   }
 
   @Test func `Local adjustments projection inserts before final crop`() {
-    var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
+    var edit = EditingFeatureTree.canonicalEdit(
+      finalCrop: makeCrop(),
+      orientedImageSize: imageSize
+    )
     let adjustment = makeAdjustment()
 
-    edit.localAdjustments = [adjustment]
+    EditingFeatureTree.replaceLocalAdjustments(
+      [adjustment],
+      in: &edit,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
 
     #expect(
       edit.features.map(\.testKind) == ["effect", "localAdjustment", "crop"]
@@ -108,7 +118,11 @@ struct EditingFeatureDocumentTests {
     replacedAdjustment.effectPipeline = EffectPipeline(effects: [
       ExposureFeature(value: 0.5)
     ])
-    edit.localAdjustments = [replacedAdjustment]
+    EditingFeatureTree.replaceLocalAdjustments(
+      [replacedAdjustment],
+      in: &edit,
+      insertingBefore: nil
+    )
 
     #expect(
       edit.features.map(\.testKind) == ["localAdjustment", "effect", "crop"]
@@ -116,24 +130,81 @@ struct EditingFeatureDocumentTests {
     #expect(edit.localAdjustments == [replacedAdjustment])
   }
 
+  @Test func `Effect features preserve separate effect nodes`() {
+    let first = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
+    let second = EffectPipeline(effects: [ContrastFeature(value: 0.2)])
+    let secondEffectsID = FeatureID(rawValue: "test.second-global-effects")
+
+    let firstNode = effectsFeature(id: EditingFeatureTree.globalEffectsNodeID, first)
+    let secondNode = effectsFeature(id: secondEffectsID, second)
+
+    let edit = makeEdit(features: [
+      firstNode,
+      .localAdjustment(makeAdjustment()),
+      secondNode,
+      cropFeature(),
+    ])
+
+    #expect(edit.effectFeatures == [firstNode, secondNode])
+  }
+
+  @Test func `Edit equality is document equality, not render crop equivalence`() {
+    let cropID = EditingFeatureTree.finalCropNodeID
+    let exactCrop = CropFeature(
+      id: cropID,
+      cropRect: CGRect(x: 0, y: 0, width: 100, height: 100)
+    )
+    let subpixelCrop = CropFeature(
+      id: cropID,
+      cropRect: CGRect(
+        x: 0.000000001,
+        y: 0,
+        width: 99.999999998,
+        height: 100
+      )
+    )
+    let exactEdit = EditingFeatureTree.canonicalEdit(
+      finalCrop: exactCrop,
+      orientedImageSize: CGSize(width: 100, height: 100)
+    )
+    let subpixelEdit = EditingFeatureTree.canonicalEdit(
+      finalCrop: subpixelCrop,
+      orientedImageSize: CGSize(width: 100, height: 100)
+    )
+
+    #expect(
+      exactCrop.isRenderingEquivalent(
+        to: subpixelCrop,
+        orientedImageSize: CGSize(width: 100, height: 100)
+      )
+    )
+    #expect(EditingFeatureTree(edit: exactEdit) != EditingFeatureTree(edit: subpixelEdit))
+    #expect(exactEdit != subpixelEdit)
+  }
+
   @Test func `Update feature keeps kind stable and rejects unknown IDs`() {
-    var edit = EditingStack.Edit(crop: makeCrop(), orientedImageSize: imageSize)
+    var edit = EditingFeatureTree.canonicalEdit(
+      finalCrop: makeCrop(),
+      orientedImageSize: imageSize
+    )
 
     #expect(
       !edit.updateFeature(id: FeatureID(rawValue: "unknown")) { _ in }
     )
 
     let newCrop = CropFeature(
-      id: EditingStack.Edit.finalCropID,
+      id: EditingFeatureTree.finalCropNodeID,
       displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
       imageSize: imageSize
     )
     #expect(
-      edit.updateFeature(id: EditingStack.Edit.finalCropID) { feature in
-        feature = .domain(newCrop)
-      }
+      EditingFeatureTree.updateCropFeature(
+        id: EditingFeatureTree.finalCropNodeID,
+        in: &edit,
+        with: newCrop
+      )
     )
-    #expect(edit.crop == newCrop)
+    #expect(EditingFeatureTree(edit: edit).finalCrop == newCrop)
   }
 
   // MARK: - Undo / redo
@@ -158,11 +229,7 @@ struct EditingFeatureDocumentTests {
       currentEdit: initialEdit,
       thumbnailCIImage: sourceCIImage,
       editingSourceCGImage: cgImage,
-      editingSourceCIImage: sourceCIImage,
-      editingPreviewCIImage: initialEdit.makePreviewImage(
-        from: sourceCIImage,
-        purpose: .editingBase
-      )
+      editingSourceCIImage: sourceCIImage
     )
   }
 
@@ -170,27 +237,27 @@ struct EditingFeatureDocumentTests {
     var loaded = makeLoaded()
     let v0 = loaded.currentEdit
 
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
     var v1 = v0
     v1.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
     loaded.currentEdit = v1
 
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
     var v2 = v1
-    v2.localAdjustments = [makeAdjustment()]
+    v2.setPhotosCropLocalAdjustmentsForTest([makeAdjustment()])
     loaded.currentEdit = v2
 
-    loaded.undoEditing()
+    loaded.undo()
     #expect(loaded.currentEdit == v1)
     #expect(loaded.canRedo)
 
-    loaded.undoEditing()
+    loaded.undo()
     #expect(loaded.currentEdit == v0)
 
-    loaded.redoEditing()
+    loaded.redo()
     #expect(loaded.currentEdit == v1)
 
-    loaded.redoEditing()
+    loaded.redo()
     #expect(loaded.currentEdit == v2)
     #expect(!loaded.canRedo)
   }
@@ -214,58 +281,66 @@ struct EditingFeatureDocumentTests {
     ])
 
     let adjustmentC = makeAdjustment()
-    edit.localAdjustments = [adjustmentA, adjustmentB, adjustmentC]
+    EditingFeatureTree.replaceLocalAdjustments(
+      [adjustmentA, adjustmentB, adjustmentC],
+      in: &edit,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
 
     #expect(
       edit.features.map(\.id) == [
-        EditingStack.Edit.globalEffectsID,
+        EditingFeatureTree.globalEffectsNodeID,
         adjustmentA.id,
         secondEffectsID,
         adjustmentB.id,
         adjustmentC.id,
-        EditingStack.Edit.finalCropID,
+        EditingFeatureTree.finalCropNodeID,
       ]
     )
 
     // Removing an adjustment keeps the others in place.
-    edit.localAdjustments = [adjustmentA, adjustmentB]
+    EditingFeatureTree.replaceLocalAdjustments(
+      [adjustmentA, adjustmentB],
+      in: &edit,
+      insertingBefore: EditingFeatureTree.finalCropNodeID
+    )
     #expect(
       edit.features.map(\.id) == [
-        EditingStack.Edit.globalEffectsID,
+        EditingFeatureTree.globalEffectsNodeID,
         adjustmentA.id,
         secondEffectsID,
         adjustmentB.id,
-        EditingStack.Edit.finalCropID,
+        EditingFeatureTree.finalCropNodeID,
       ]
     )
   }
 
-  @Test func `Commit style snapshot undo changes state on first press`() {
-    // PhotosCrop snapshots AFTER mutating (commit style): history.last equals
-    // currentEdit at settled states. One undo press must still change state.
+  @Test func `Commit style checkpoint undo changes state on first press`() {
+    // PhotosCrop commits AFTER mutating: the latest checkpoint can equal the
+    // current edit at settled states. One undo press must still change state.
     var loaded = makeLoaded()
     let v0 = loaded.currentEdit
 
     var v1 = v0
     v1.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
     loaded.currentEdit = v1
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
 
     var v2 = v1
-    v2.localAdjustments = [makeAdjustment()]
+    v2.setPhotosCropLocalAdjustmentsForTest([makeAdjustment()])
     loaded.currentEdit = v2
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
 
     #expect(loaded.canUndo)
-    loaded.undoEditing()
+    loaded.undo()
     #expect(loaded.currentEdit == v1)
 
-    loaded.undoEditing()
+    loaded.undo()
     #expect(loaded.currentEdit == v0)
 
-    loaded.redoEditing()
+    loaded.redo()
     #expect(loaded.currentEdit == v1)
-    loaded.redoEditing()
+    loaded.redo()
     #expect(loaded.currentEdit == v2)
     #expect(!loaded.canRedo)
   }
@@ -273,20 +348,36 @@ struct EditingFeatureDocumentTests {
   @Test func `New version clears redo`() {
     var loaded = makeLoaded()
 
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
     var v1 = loaded.currentEdit
     v1.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
     loaded.currentEdit = v1
 
-    loaded.undoEditing()
+    loaded.undo()
     #expect(loaded.canRedo)
 
     var divergent = loaded.currentEdit
     divergent.effects = EffectPipeline(effects: [ContrastFeature(value: 0.1)])
     loaded.currentEdit = divergent
-    loaded.makeVersion()
+    loaded.commitCurrentEdit()
 
     #expect(!loaded.canRedo)
+  }
+
+  @Test func `Commit current edit if needed skips duplicate checkpoints`() {
+    var loaded = makeLoaded()
+
+    loaded.commitCurrentEditIfNeeded()
+    #expect(loaded.currentRevision == 0)
+
+    var edited = loaded.currentEdit
+    edited.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.1)])
+    loaded.currentEdit = edited
+    loaded.commitCurrentEditIfNeeded()
+    #expect(loaded.currentRevision == 1)
+
+    loaded.commitCurrentEditIfNeeded()
+    #expect(loaded.currentRevision == 1)
   }
 }
 
