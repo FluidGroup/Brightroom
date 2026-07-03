@@ -725,9 +725,6 @@ final class CropView: UIView {
 
     /// Synchronizes the scrollable content size with the current zoomed
     /// crop-output image.
-    ///
-    /// This updates the scroll range without changing centering insets, so it
-    /// can run while UIKit is animating zoom bounce-back.
     func synchronizeZoomedContentSize() {
       scrollView.contentSize = zoomedContentSize
     }
@@ -735,17 +732,54 @@ final class CropView: UIView {
     /// Centers the crop-output image when the zoomed content is smaller than
     /// the Tool viewport. Tool mode presents the crop output as an image, so
     /// empty space belongs around that image rather than inside the image.
+    ///
+    /// The centering inset is derived from the FITTED scale
+    /// (`max(zoomScale, minimumZoomScale)`), never the raw live zoom. During a
+    /// below-fit rubber-band the model `zoomScale` dips under
+    /// `minimumZoomScale`; taking the inset from that live value would inflate
+    /// it, and once the zoom clamps back to the minimum for the bounce the
+    /// inflated inset no longer matches the settled content size — the content
+    /// snaps to a wrong place and is corrected only at settle (the observed
+    /// gaptooth). Clamping keeps the centering inset CONSTANT across the whole
+    /// overshoot + bounce window, so it never changes while UIKit animates the
+    /// bounce. This mirrors the crop surface, whose guide-derived inset also
+    /// carries no zoom term and stays fixed through a gesture: both surfaces
+    /// then bounce on a stable, self-consistent scroll model and only the
+    /// canvas rides the presentation spring.
+    ///
+    /// The constant inset alone cannot keep the content centered WHILE the
+    /// pinch is still down, though: below fit the live content is smaller than
+    /// the fit box the inset describes, so UIKit's per-tick offset clamp pins
+    /// it to the box's top-left corner for the whole below-fit phase of the
+    /// gesture. The interactive offset is model-driven and re-derived on every
+    /// pinch tick, so the below-fit branch below pins it back to the centered
+    /// point each tick instead.
     func centerContentInViewport() {
       synchronizeZoomedContentSize()
-      let contentSize = scrollView.contentSize
-      let horizontalInset = max((scrollView.bounds.width - contentSize.width) / 2, 0)
-      let verticalInset = max((scrollView.bounds.height - contentSize.height) / 2, 0)
+      let outputSize = outputGeometry?.outputSize ?? contentView.frame.size
+      let centeringScale = max(scrollView.zoomScale, scrollView.minimumZoomScale)
+      let centeredWidth = outputSize.width * centeringScale
+      let centeredHeight = outputSize.height * centeringScale
+      let horizontalInset = max((scrollView.bounds.width - centeredWidth) / 2, 0)
+      let verticalInset = max((scrollView.bounds.height - centeredHeight) / 2, 0)
       scrollView.contentInset = UIEdgeInsets(
         top: verticalInset,
         left: horizontalInset,
         bottom: verticalInset,
         right: horizontalInset
       )
+
+      // Interactive ticks only — never the bounce window. During the bounce
+      // the model is already settled at the minimum scale (this branch is
+      // naturally false) and UIKit's pre-committed bounce target, computed
+      // against the constant fit inset, already lands on the centered offset;
+      // writing the offset there would fight the ride.
+      if scrollView.isZooming, scrollView.zoomScale < scrollView.minimumZoomScale {
+        scrollView.contentOffset = CGPoint(
+          x: -(scrollView.bounds.width - scrollView.contentSize.width) / 2,
+          y: -(scrollView.bounds.height - scrollView.contentSize.height) / 2
+        )
+      }
     }
 
     var zoomedContentSize: CGSize {
@@ -1062,11 +1096,13 @@ final class CropView: UIView {
 
       toolSurface.onDidZoom = { [weak self] in
         guard let self else { return }
-        if self.toolSurface.isZoomBouncing {
-          self.toolSurface.synchronizeZoomedContentSize()
-        } else {
-          self.toolSurface.centerContentInViewport()
-        }
+        // Always recenter consistently, including while the zoom is bouncing.
+        // The centering inset is clamped to the fit scale (see
+        // centerContentInViewport), so it does not change during a below-fit
+        // bounce; only contentSize tracks the live zoom. The previous
+        // isZoomBouncing branch updated contentSize while freezing the inset,
+        // which desynced the pair and made the tool content snap at settle.
+        self.toolSurface.centerContentInViewport()
         self.updateToolViewportDuringScrollInteraction()
       }
       toolSurface.onDidScroll = { [weak self] in
