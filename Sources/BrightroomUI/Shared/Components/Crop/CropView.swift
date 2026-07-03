@@ -208,6 +208,15 @@ final class CropView: UIView {
       canvasView != nil
     }
 
+    /// While true, the canvas is temporarily parented inside `zoomingView`
+    /// (with a transform compensating the model zoom scale) so UIKit's own
+    /// zoom bounce-back presentation animation carries it. The bounce emits no
+    /// per-frame delegate ticks, so this is the only way to move the canvas in
+    /// exact phase with the spring; presentation-layer sampling from a display
+    /// link is always one frame out of phase.
+    private(set) var isRidingZoomBounce = false
+    private var zoomBounceRideRestorationFrame: CGRect?
+
     var isInteractiveZoomGestureActive: Bool {
       switch scrollView.pinchGestureRecognizer?.state {
       case .began, .changed:
@@ -283,10 +292,78 @@ final class CropView: UIView {
     }
 
     func removeCanvasView() {
+      endZoomBounceRide()
       viewportRendering.invalidate()
       canvasView?.removeFromSuperview()
       canvasView = nil
       canvasSize = nil
+    }
+
+    /// Hands the canvas to the zooming view so the in-flight zoom bounce-back
+    /// carries it. Call after applying the settled-model viewport: the frame
+    /// and the render must already describe the final geometry so the ride
+    /// lands pixel-exact. The reparent and the compensating transform commit
+    /// in the same transaction as that render, so the screen never shows the
+    /// intermediate model-snapped placement.
+    func beginZoomBounceRide() {
+      guard
+        isRidingZoomBounce == false,
+        scrollView.isZoomBouncing,
+        let canvasView,
+        canvasView.isHidden == false
+      else {
+        return
+      }
+
+      let zoomScale = scrollView.zoomScale
+      guard zoomScale > 0 else {
+        return
+      }
+
+      let frameInScrollView = canvasView.frame
+      zoomBounceRideRestorationFrame = frameInScrollView
+      let centerInZoomingView = scrollView.convert(
+        CGPoint(x: frameInScrollView.midX, y: frameInScrollView.midY),
+        to: zoomingView
+      )
+      // The bounce-start delegate callback runs inside UIKit's own animation
+      // context, so plain property writes here would be implicitly animated —
+      // the canvas would spring from its old placement instead of being
+      // carried by the parent. Place it without animation and strip anything
+      // that already attached in this transaction.
+      UIView.performWithoutAnimation {
+        zoomingView.insertSubview(canvasView, at: 0)
+        canvasView.transform = CGAffineTransform(scaleX: 1 / zoomScale, y: 1 / zoomScale)
+        canvasView.center = centerInZoomingView
+      }
+      canvasView.layer.removeAllAnimations()
+      isRidingZoomBounce = true
+    }
+
+    /// Returns the canvas to its normal scroll-view placement. Visually
+    /// continuous when the bounce has settled: the presentation transform has
+    /// converged to the model, so the restored scroll-view frame maps to the
+    /// same pixels the ride ended on.
+    func endZoomBounceRide() {
+      guard isRidingZoomBounce else {
+        return
+      }
+      isRidingZoomBounce = false
+
+      let restorationFrame = zoomBounceRideRestorationFrame
+      zoomBounceRideRestorationFrame = nil
+
+      guard let canvasView else {
+        return
+      }
+      UIView.performWithoutAnimation {
+        canvasView.transform = .identity
+        scrollView.insertSubview(canvasView, belowSubview: zoomingView)
+        if let restorationFrame {
+          canvasView.frame = restorationFrame
+        }
+      }
+      canvasView.layer.removeAllAnimations()
     }
 
     func hideCanvasView() {
@@ -309,6 +386,14 @@ final class CropView: UIView {
       viewportProvider: _EditingCanvasMTKView.ViewportProvider? = nil
     ) {
       guard let canvasView else {
+        return
+      }
+
+      // While riding the zoom bounce the canvas lives inside the zooming view
+      // with a compensating transform, so scroll-view-space frames don't
+      // apply. The model is already settled during the bounce; the viewport
+      // applied when the ride ends produces the same geometry.
+      guard isRidingZoomBounce == false else {
         return
       }
 
@@ -904,13 +989,25 @@ final class CropView: UIView {
         self.debounce.on { [weak self] in
           guard let self else { return }
           guard self.featureFocus.isCropEditing else { return }
-          // A held-still pinch (fingers down, no movement) stops emitting
-          // scrollViewDidZoom events, so the trailing debounce would otherwise
-          // fire mid-gesture and snap the scroll view back to the not-yet-
-          // recorded proposedCrop via updateCropLayout()'s customZoom. Defer the
-          // settle layout until the pinch actually ends, mirroring the
-          // isTracking guard used by onDidScroll for drags.
+          // This trailing debounce runs updateCropLayout(), which snaps the
+          // scroll view back to the not-yet-recorded proposedCrop via
+          // customZoom. It must not fire while the user is still touching the
+          // content, or that snap reverts an in-progress zoom. Two cases:
+          //
+          // 1. A held-still pinch (two fingers down, no movement) stops
+          //    emitting scrollViewDidZoom events; the pinch recognizer is
+          //    still active.
+          // 2. One finger lifts mid-pinch (2→1). UIScrollView keeps the zoom
+          //    and pans with the remaining finger, but the pinch recognizer
+          //    has already ended — so the isInteractiveZoomGestureActive guard
+          //    alone would let this fire and revert the zoom.
+          //
+          // Guard on isTracking (any touch down) to cover both, mirroring the
+          // isTracking guard onDidScroll uses for drags. record() runs from the
+          // settle path once every touch is up, and the pan's own onDidScroll
+          // debounce then re-lays out against the recorded crop.
           guard self.cropSurface.isInteractiveZoomGestureActive == false else { return }
+          guard self.cropSurface.scrollView.isTracking == false else { return }
 
           self.updateCropLayout()
         }
@@ -1495,7 +1592,27 @@ extension CropView {
     )
   }
 
-  private func makeCropDisplayViewport() -> CropDisplayViewport? {
+  /// Extra canvas coverage on every side, as a fraction of the viewport, added
+  /// while the canvas rides the zoom bounce. At fit the rendered content sits
+  /// flush against the canvas edges; the bounce's zoom + offset spring can then
+  /// shift content past an edge, clipping it (the "right edge disappears"
+  /// artifact). The overscan renders a margin of extra content so the spring
+  /// has slack. Bounded by iOS rubber-banding, so a fixed fraction suffices;
+  /// the measured clip was ~6% of the viewport, so 0.25 leaves ample margin
+  /// while keeping the transient ride drawable to ~2.25x area.
+  private static let zoomBounceRideOverscanFraction: CGFloat = 0.25
+
+  /// - Parameters:
+  ///   - forcesModelGeometry: read model layers regardless of the in-flight
+  ///     animation state. Used at zoom-bounce-ride start, where the model
+  ///     already holds the settled values the ride must land on while the
+  ///     presentation is still mid-spring.
+  ///   - zoomBounceRideOverscan: expand the canvas beyond the visible viewport
+  ///     so the bounce spring cannot shift rendered content past a canvas edge.
+  private func makeCropDisplayViewport(
+    forcesModelGeometry: Bool = false,
+    zoomBounceRideOverscan: Bool = false
+  ) -> CropDisplayViewport? {
     guard let crop = state.proposedCrop else {
       return nil
     }
@@ -1507,9 +1624,10 @@ extension CropView {
     // already jumped to the clamped zoom. Sample presentation layers after the
     // pinch ends so the Metal canvas follows the visible bounce instead of
     // snapping to the final model geometry.
-    let usesPresentationLayers = cropSurface.isInteractiveZoomGestureActive == false
+    let usesPresentationLayers = forcesModelGeometry == false
+      && cropSurface.isInteractiveZoomGestureActive == false
       && isStreamingAdjustmentAngle == false
-    let visibleViewportFrame = Self.currentLayerRect(
+    var visibleViewportFrame = Self.currentLayerRect(
       bounds,
       from: self,
       to: cropSurface.scrollView,
@@ -1518,6 +1636,13 @@ extension CropView {
       .standardized
     guard visibleViewportFrame.width > 0, visibleViewportFrame.height > 0 else {
       return nil
+    }
+
+    if zoomBounceRideOverscan {
+      visibleViewportFrame = visibleViewportFrame.insetBy(
+        dx: -visibleViewportFrame.width * Self.zoomBounceRideOverscanFraction,
+        dy: -visibleViewportFrame.height * Self.zoomBounceRideOverscanFraction
+      )
     }
 
     let renderFrame = Self.renderOverscanFrame(
@@ -1568,7 +1693,11 @@ extension CropView {
     )
   }
 
-  private func makeToolCropDisplayViewport() -> CropDisplayViewport? {
+  /// - Parameters: see `makeCropDisplayViewport`.
+  private func makeToolCropDisplayViewport(
+    forcesModelGeometry: Bool = false,
+    zoomBounceRideOverscan: Bool = false
+  ) -> CropDisplayViewport? {
     guard let geometry = toolSurface.outputGeometry else {
       return nil
     }
@@ -1590,9 +1719,10 @@ extension CropView {
     // frame sticks until the next mode switch (the "switch back and forth fixes
     // it" symptom). Fall back to the model layers, which the synchronous
     // reconfigure already made authoritative, whenever the link is idle.
-    let usesPresentationLayers = toolSurface.viewportRendering.isRunning
+    let usesPresentationLayers = forcesModelGeometry == false
+      && toolSurface.viewportRendering.isRunning
       && toolSurface.isInteractiveZoomGestureActive == false
-    let canvasFrame = Self.currentLayerRect(
+    var canvasFrame = Self.currentLayerRect(
       bounds,
       from: self,
       to: toolSurface.scrollView,
@@ -1601,6 +1731,13 @@ extension CropView {
       .standardized
     guard canvasFrame.width > 0, canvasFrame.height > 0 else {
       return nil
+    }
+
+    if zoomBounceRideOverscan {
+      canvasFrame = canvasFrame.insetBy(
+        dx: -canvasFrame.width * Self.zoomBounceRideOverscanFraction,
+        dy: -canvasFrame.height * Self.zoomBounceRideOverscanFraction
+      )
     }
 
     let outputBounds = geometry.outputBounds
@@ -2430,6 +2567,16 @@ extension CropView {
   }
 
   private func updateCropViewportDuringScrollInteraction() {
+    // Check the bounce BEFORE the interactive-pinch guard: when one finger
+    // stays down after a pinch, the pinch recognizer remains .changed while
+    // UIKit already runs the zoom bounce-back, so the guard below would snap
+    // the canvas to model geometry mid-bounce (the 2-fingers→1 flicker). The
+    // bounce state is authoritative regardless of the recognizer.
+    if cropSurface.scrollView.isZoomBouncing {
+      beginZoomBounceRide(for: .crop)
+      return
+    }
+
     guard cropSurface.isInteractiveZoomGestureActive == false else {
       stopViewportRendering(for: .crop, appliesViewport: false)
       updateCropDisplayViewport()
@@ -2444,10 +2591,68 @@ extension CropView {
   }
 
   private func updateToolViewportDuringScrollInteraction() {
+    if toolSurface.scrollView.isZoomBouncing {
+      beginZoomBounceRide(for: .tool)
+      return
+    }
+
     keepViewportRenderingAlive(for: .tool)
 
     if toolSurface.viewportRendering.isRunning == false {
       updateToolCropDisplayViewport()
+    }
+  }
+
+  /// Starts carrying the canvas through the zoom bounce-back on UIKit's own
+  /// presentation animation.
+  ///
+  /// At bounce start the scroll view's model has already jumped to the clamped
+  /// final values and emits no further delegate ticks, so: render the final
+  /// viewport once from model geometry, then parent the canvas into the
+  /// zooming view whose layer is running the bounce spring. The display link
+  /// keeps ticking only to detect when the presentation settles; it does not
+  /// re-place or re-render the canvas.
+  private func beginZoomBounceRide(for surface: ViewportRenderingSurface) {
+    let canvasSurface = canvasSurfaceBase(for: surface)
+    guard canvasSurface.isRidingZoomBounce == false else {
+      return
+    }
+    guard canRenderViewport(for: surface) else {
+      return
+    }
+
+    let viewport: CropDisplayViewport?
+    switch surface {
+    case .crop:
+      viewport = makeCropDisplayViewport(
+        forcesModelGeometry: true,
+        zoomBounceRideOverscan: true
+      )
+    case .tool:
+      viewport = makeToolCropDisplayViewport(
+        forcesModelGeometry: true,
+        zoomBounceRideOverscan: true
+      )
+    }
+    guard let viewport else {
+      return
+    }
+
+    // applyViewport writes the canvas frame; inside the bounce-start delegate
+    // callback that write would otherwise inherit UIKit's animation context.
+    UIView.performWithoutAnimation {
+      canvasSurface.applyViewport(viewport)
+    }
+    canvasSurface.beginZoomBounceRide()
+    beginViewportRendering(for: surface)
+  }
+
+  private func canvasSurfaceBase(for surface: ViewportRenderingSurface) -> CanvasSurface {
+    switch surface {
+    case .crop:
+      return cropSurface
+    case .tool:
+      return toolSurface
     }
   }
 
@@ -2500,6 +2705,7 @@ extension CropView {
     appliesViewport: Bool = true
   ) {
     viewportRenderingState(for: surface).invalidate()
+    canvasSurfaceBase(for: surface).endZoomBounceRide()
 
     if surface == .tool {
       toolSurface.centerContentInViewport()
@@ -2516,6 +2722,39 @@ extension CropView {
   ) {
     guard canRenderViewport(for: surface) else {
       stopViewportRendering(for: surface)
+      return
+    }
+
+    let canvasSurface = canvasSurfaceBase(for: surface)
+
+    // Delegate callbacks are not guaranteed to observe `isZoomBouncing == true`
+    // at bounce start (the flag may flip after they return), so the running
+    // display link is the reliable detector: the first tick inside the bounce
+    // window hands the canvas over to the ride. Falls through to the chase
+    // when the handover is not possible. Gate on the scroll view's actual
+    // zooming state, not the pinch recognizer — the recognizer stays .changed
+    // for as long as one finger remains down after the pinch.
+    if canvasSurface.isRidingZoomBounce == false,
+       canvasSurface.scrollView.isZoomBouncing,
+       canvasSurface.scrollView.isZooming == false
+    {
+      beginZoomBounceRide(for: surface)
+    }
+
+    if canvasSurface.isRidingZoomBounce {
+      // The canvas is riding UIKit's bounce presentation animation inside the
+      // zooming view; there is nothing to chase. Detach when the spring
+      // settles, or immediately when a real new pinch (isZooming, not the
+      // lingering recognizer) grabs the bounce so the model-driven interactive
+      // path takes over. A single remaining finger may pan during the ride;
+      // the canvas is content-parented, so the pan carries it correctly.
+      if canvasSurface.scrollView.isZooming {
+        stopViewportRendering(for: surface, appliesViewport: false)
+      } else if canvasSurface.scrollView.isZoomBouncing == false,
+                isViewportPresentationSettled(for: surface)
+      {
+        stopViewportRendering(for: surface)
+      }
       return
     }
 
