@@ -262,6 +262,32 @@ public struct EditingFeatureTree: Equatable {
     return size
   }
 
+  /// The crop feature that frames the evaluated result at `point` — the last
+  /// enabled crop at or before the point.
+  ///
+  /// This is the viewport window a canvas displays through when previewing that
+  /// point: `.output` resolves to the last crop (the final crop in the built-in
+  /// arrangement), a mid-stack `.after(x)` resolves to the newest crop up to and
+  /// including `x`, and `.source` (or a point before any crop) resolves to nil —
+  /// the full-source identity viewport. Disabled crops are skipped.
+  public func viewportCrop(at point: FeatureTreePoint) -> CropFeature? {
+    guard let appliedCount = appliedFeatureCount(at: point) else {
+      return nil
+    }
+
+    for feature in nodes[0..<appliedCount].reversed() {
+      guard
+        case let .domain(domain) = feature,
+        let crop = domain as? CropFeature,
+        crop.isEnabled
+      else {
+        continue
+      }
+      return crop
+    }
+    return nil
+  }
+
   // MARK: - Mutation core
 
   /// Whether a main-tree node is a crop domain feature.

@@ -1439,33 +1439,46 @@ extension CropView {
     }
   }
 
-  /// Whether the evaluated image at the current viewing point contains the
-  /// final crop. Unknown points fall back to the output behavior.
-  private var viewingPointIncludesFinalCrop: Bool {
-    switch featureFocus.viewingPoint {
-    case .output:
+  /// The tool surface's display crop for a viewing point: the crop that frames
+  /// the previewed result (`EditingFeatureTree.viewportCrop`), sized to its
+  /// input domain. nil when no crop frames the point — the full pre-crop image,
+  /// e.g. `.source`. Derived from the FeatureTree, not the built-in final crop,
+  /// so the tool surface follows any viewing point.
+  private func viewportDisplayCrop(at point: FeatureTreePoint) -> CropEditingState? {
+    guard
+      let snapshot = document.snapshot,
+      let crop = snapshot.featureTree.viewportCrop(at: point)
+    else {
+      return nil
+    }
+    let domainSize = snapshot.featureTree.inputDomainSize(
+      ofFeature: crop.id,
+      sourceSize: snapshot.imageSize
+    ) ?? snapshot.imageSize
+    return CropEditingState(cropFeature: crop, imageSize: domainSize)
+  }
+
+  /// Whether two viewport display crops frame the same domain (nil is the full
+  /// pre-crop image).
+  private func viewportDisplayCropsAreEquivalent(
+    _ lhs: CropEditingState?,
+    _ rhs: CropEditingState?
+  ) -> Bool {
+    switch (lhs, rhs) {
+    case (nil, nil):
       return true
-    case .source:
+    case let (lhs?, rhs?):
+      return lhs.isRenderingEquivalent(to: rhs)
+    default:
       return false
-    case .after:
-      guard
-        let tree = document.snapshot?.featureTree,
-        let includes = tree.point(
-          featureFocus.viewingPoint,
-          includes: EditingFeatureTree.finalCropNodeID
-        )
-      else {
-        return true
-      }
-      return includes
     }
   }
 
   /// The crop describing the tool surface's display domain for the current
-  /// viewing point: the final crop when the viewing point includes it, or the
-  /// identity crop (the full pre-crop image) when previewing an earlier point.
+  /// viewing point: the crop framing the previewed result, or the identity crop
+  /// (the full pre-crop image) when no crop precedes the viewing point.
   private func toolDisplayCrop(from crop: CropEditingState) -> CropEditingState {
-    viewingPointIncludesFinalCrop ? crop : crop.makeInitial()
+    viewportDisplayCrop(at: featureFocus.viewingPoint) ?? crop.makeInitial()
   }
 
   /// The source-to-display geometry the tool surface uses for the current
@@ -3090,7 +3103,7 @@ extension CropView: UIGestureRecognizerDelegate {
 
     let wasCropEditing = featureFocus.isCropEditing
     let previousSeedEffect = resolvedMaskSeedEffect(of: featureFocus)
-    let previousViewingIncludedFinalCrop = viewingPointIncludesFinalCrop
+    let previousViewportDisplayCrop = viewportDisplayCrop(at: featureFocus.viewingPoint)
     let leavesCropEditing = wasCropEditing && focus.isCropEditing == false
     if leavesCropEditing {
       // Leaving crop editing commits the currently visible crop viewport before
@@ -3108,13 +3121,20 @@ extension CropView: UIGestureRecognizerDelegate {
     }
 
     // The tool surface needs a geometry re-sync when entering it from crop
-    // editing, and also when the viewing point crosses the final crop while
-    // staying on the tool surface (output domain <-> pre-crop domain).
-    let crossesFinalCrop = focus.isCropEditing == false
-      && previousViewingIncludedFinalCrop != viewingPointIncludesFinalCrop
+    // editing, and also when the viewing point moves to a different framing crop
+    // while staying on the tool surface (e.g. the output domain <-> a pre-crop
+    // domain).
+    let viewportCropChanged = focus.isCropEditing == false
+      && viewportDisplayCropsAreEquivalent(
+        previousViewportDisplayCrop,
+        viewportDisplayCrop(at: focus.viewingPoint)
+      ) == false
 
-    applySurfaceMode(syncsToolViewportFromCrop: leavesCropEditing || crossesFinalCrop)
+    applySurfaceMode(syncsToolViewportFromCrop: leavesCropEditing || viewportCropChanged)
     updateCurrentDocumentDisplay()
+    // The masking brush fits against the viewport crop, which can change with
+    // the viewing point.
+    refreshCanvasBrushIfNeeded()
   }
 
   func setMaskingBrush(_ brush: CropViewMaskingBrush) {
@@ -3137,7 +3157,7 @@ extension CropView: UIGestureRecognizerDelegate {
       imageDiameter = CropViewMaskingDefaults.imageSpaceBrushDiameter(
         pointDiameter: value,
         viewportSize: bounds.size,
-        crop: document.snapshot?.featureTree.finalCrop
+        crop: document.snapshot?.featureTree.viewportCrop(at: featureFocus.viewingPoint)
       )
     }
     return .init(

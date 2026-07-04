@@ -264,6 +264,41 @@ struct EditingStackFeatureTreeTests {
     #expect(tree.inputPoint(ofFeature: FeatureID(rawValue: "nope")) == nil)
   }
 
+  @Test func `Viewport crop resolves the framing crop per viewing point`() {
+    // Canonical single-crop tree: [globalEffects, finalCrop].
+    let single = EditingFeatureTree(edit: makeEdit())
+    #expect(single.viewportCrop(at: .output)?.id == EditingFeatureTree.finalCropNodeID)
+    #expect(single.viewportCrop(at: .source) == nil)
+    #expect(single.viewportCrop(at: .after(EditingFeatureTree.finalCropNodeID))?.id == EditingFeatureTree.finalCropNodeID)
+    // A point before the final crop (after the global-effects node) has no crop.
+    #expect(single.viewportCrop(at: .after(EditingFeatureTree.globalEffectsNodeID)) == nil)
+
+    // Multi-crop tree: [globalEffects, cropA, localAdjustment, finalCrop(=cropC)].
+    var edit = makeEdit(localAdjustmentIDs: [FeatureID(rawValue: "mask")])
+    let cropAID = FeatureID(rawValue: "viewport.crop.a")
+    let maskIndex = edit.features.firstIndex {
+      if case .localAdjustment = $0 { return true } else { return false }
+    }!
+    edit.insertFeature(
+      .domain(CropFeature(id: cropAID, cropRect: CGRect(x: 0, y: 0, width: 800, height: 600))),
+      at: maskIndex
+    )
+    let multi = EditingFeatureTree(edit: edit)
+    // [globalEffects, cropA, mask, finalCrop]
+    #expect(multi.viewportCrop(at: .output)?.id == EditingFeatureTree.finalCropNodeID)
+    #expect(multi.viewportCrop(at: .after(cropAID))?.id == cropAID)
+    #expect(multi.viewportCrop(at: .after(FeatureID(rawValue: "mask")))?.id == cropAID)
+    #expect(multi.viewportCrop(at: .source) == nil)
+
+    // Disabled final crop falls back to the upstream crop.
+    edit.updateFeature(id: EditingFeatureTree.finalCropNodeID) { feature in
+      guard case let .domain(domain) = feature, var crop = domain as? CropFeature else { return }
+      crop.isEnabled = false
+      feature = .domain(crop)
+    }
+    #expect(EditingFeatureTree(edit: edit).viewportCrop(at: .output)?.id == cropAID)
+  }
+
   @Test func `Local adjustments insert before an arbitrary anchor, not just the final crop`() {
     var edit = makeEdit()
 
