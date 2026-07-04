@@ -231,6 +231,64 @@ struct EditingStackFeatureTreeTests {
     #expect(edit == original)
   }
 
+  @Test func `Input domain resolves upstream crops`() {
+    let source = CGSize(width: 1200, height: 800)
+    var edit = makeEdit()
+
+    // Canonical: [globalEffects, finalCrop]. The final crop's input domain is
+    // the full source (its only upstream feature is global effects).
+    let tree0 = EditingFeatureTree(edit: edit)
+    #expect(tree0.inputPrefixFeatureCount(ofFeature: EditingFeatureTree.finalCropNodeID) == 1)
+    #expect(tree0.inputPoint(ofFeature: EditingFeatureTree.finalCropNodeID) == .after(EditingFeatureTree.globalEffectsNodeID))
+    #expect(tree0.inputDomainSize(ofFeature: EditingFeatureTree.finalCropNodeID, sourceSize: source) == source)
+
+    // Insert an upstream crop that shrinks the domain to 600x400.
+    let cropAID = FeatureID(rawValue: "crop.a")
+    let finalIndex = edit.features.firstIndex { $0.id == EditingFeatureTree.finalCropNodeID }!
+    edit.insertFeature(
+      .domain(CropFeature(id: cropAID, cropRect: CGRect(x: 0, y: 0, width: 600, height: 400))),
+      at: finalIndex
+    )
+
+    let tree = EditingFeatureTree(edit: edit)
+    // Crop A's own input domain is still the full source.
+    #expect(tree.inputDomainSize(ofFeature: cropAID, sourceSize: source) == source)
+    #expect(tree.inputPoint(ofFeature: cropAID) == .after(EditingFeatureTree.globalEffectsNodeID))
+    // The final crop now sees Crop A's 600x400 output as its input domain.
+    #expect(tree.inputDomainSize(ofFeature: EditingFeatureTree.finalCropNodeID, sourceSize: source) == CGSize(width: 600, height: 400))
+    #expect(tree.inputPoint(ofFeature: EditingFeatureTree.finalCropNodeID) == .after(cropAID))
+    #expect(tree.inputPrefixFeatureCount(ofFeature: EditingFeatureTree.finalCropNodeID) == 2)
+
+    // Unknown feature.
+    #expect(tree.inputDomainSize(ofFeature: FeatureID(rawValue: "nope"), sourceSize: source) == nil)
+    #expect(tree.inputPoint(ofFeature: FeatureID(rawValue: "nope")) == nil)
+  }
+
+  @Test func `Non-final crop feature is removable`() {
+    var edit = makeEdit()
+
+    // Insert an additional, repeated crop before the final crop.
+    let extraCropID = FeatureID(rawValue: "test.extra-crop")
+    let finalCropIndex = edit.features.firstIndex { $0.id == EditingFeatureTree.finalCropNodeID } ?? edit.features.count
+    edit.insertFeature(
+      .domain(
+        CropFeature(
+          id: extraCropID,
+          cropRect: CGRect(x: 0, y: 0, width: 600, height: 400)
+        )
+      ),
+      at: finalCropIndex
+    )
+    #expect(EditingFeatureTree(edit: edit).crop(id: extraCropID) != nil)
+
+    let removed = EditingFeatureTree.removeFeature(id: extraCropID, from: &edit)
+
+    #expect(removed)
+    #expect(EditingFeatureTree(edit: edit).crop(id: extraCropID) == nil)
+    // The final crop survives.
+    #expect(EditingFeatureTree(edit: edit).finalCrop != nil)
+  }
+
   @Test func `Global effects is removable and effects fall back to neutral`() {
     var edit = makeEdit()
 

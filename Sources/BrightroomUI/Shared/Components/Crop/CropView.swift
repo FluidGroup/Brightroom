@@ -477,35 +477,59 @@ final class CropView: UIView {
 
     func updateRenderedEditPreview(
       document: CropViewDocumentSnapshot,
-      crop: CropEditingState
+      crop: CropEditingState,
+      inputDomainImage: CIImage?,
+      inputDomainFeatures: [MainFeature]
     ) {
       guard crop.imageSize == canvasSize, let canvasView else {
         return
       }
 
-      let key = CanvasInputKey(document: document, crop: crop)
+      let key = CanvasInputKey(
+        document: document,
+        crop: crop,
+        inputDomainFeatures: inputDomainFeatures
+      )
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
-      let renderPlan = CanvasRenderPlan(
-        localAdjustments: document.localAdjustments
-      )
-      guard
-        let images = EditingCanvasRenderImageFactory.makeRenderImages(
+      let images: EditingCanvasRenderImages?
+      let committedStrokes: [EditingCanvasStrokeRecord]
+
+      if let inputDomainImage {
+        // Editing a repeated crop upstream of the final crop: its input domain
+        // has every upstream feature already baked into `inputDomainImage`, so
+        // present it as a flat preview (no residual effects, no live strokes)
+        // and let the crop guide frame it.
+        images = EditingCanvasRenderImageFactory.makeRenderImages(
+          editingSourceImage: inputDomainImage,
+          effects: .init(),
+          canvasSize: crop.imageSize,
+          mode: .renderedEditPreview
+        )
+        committedStrokes = []
+      } else {
+        let renderPlan = CanvasRenderPlan(
+          localAdjustments: document.localAdjustments
+        )
+        images = EditingCanvasRenderImageFactory.makeRenderImages(
           document: document,
           canvasSize: crop.imageSize,
           mode: renderPlan.canvasMode
         )
-      else {
+        // This canvas is sized to crop.imageSize, so records stay in the
+        // source domain.
+        committedStrokes = renderPlan.committedStrokes(in: nil)
+      }
+
+      guard let images else {
         return
       }
 
       canvasView.setRenderImages(images)
-      // This canvas is sized to crop.imageSize, so records stay in the
-      // source domain.
-      canvasView.setCommittedStrokes(renderPlan.committedStrokes(in: nil))
+      canvasView.setCommittedStrokes(committedStrokes)
       canvasView.isHidden = false
       currentCanvasInputKey = key
     }
@@ -1477,8 +1501,16 @@ extension CropView {
     var sourceExtent: CGRect
     var effects: EffectPipeline
     var localAdjustments: [LocalAdjustmentFeature]
+    // The upstream features baked into a repeated crop's input-domain preview.
+    // Empty for the default source path; captures the prefix by value so an
+    // upstream crop or effect change re-renders the crop surface.
+    var inputDomainFeatures: [MainFeature]
 
-    init(document: CropViewDocumentSnapshot, crop: CropEditingState) {
+    init(
+      document: CropViewDocumentSnapshot,
+      crop: CropEditingState,
+      inputDomainFeatures: [MainFeature] = []
+    ) {
       let previewSourceImage = document.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
@@ -1487,6 +1519,7 @@ extension CropView {
       self.sourceExtent = previewSourceImage.extent
       self.effects = document.effects
       self.localAdjustments = document.localAdjustments
+      self.inputDomainFeatures = inputDomainFeatures
     }
   }
 
@@ -1560,6 +1593,25 @@ extension CropView {
   private func displayCropEditingState(
     in document: CropViewDocumentSnapshot
   ) -> CropEditingState? {
+    // When the focus edits a specific crop node, load that crop's own geometry
+    // against its input domain — the size of the image produced by every
+    // upstream feature. For the final crop with no upstream crops this reduces
+    // to the source size, matching the single-crop baseline. Non-crop focuses
+    // (mask/preview) carry no crop target and frame the final crop as viewport.
+    if
+      let targetID = featureFocus.cropTargetID,
+      let targetCrop = document.cropFeature(id: targetID),
+      let domainSize = document.featureTree.inputDomainSize(
+        ofFeature: targetID,
+        sourceSize: document.imageSize
+      )
+    {
+      return CropEditingState(
+        cropFeature: targetCrop,
+        imageSize: domainSize
+      )
+    }
+
     return CropEditingState(
       cropFeature: document.displayCrop,
       imageSize: document.imageSize
@@ -3195,7 +3247,20 @@ extension CropView: UIGestureRecognizerDelegate {
       return
     }
 
-    cropSurface.updateRenderedEditPreview(document: document, crop: crop)
+    // Editing a repeated crop upstream of the final crop shows that crop's input
+    // domain — every upstream feature evaluated into one image — so the guide
+    // frames the already-cropped result rather than the full source. nil keeps
+    // the final-crop path on the existing source-plus-effects preview.
+    let targetID = featureFocus.cropTargetID
+    let inputDomainImage = document.cropEditingInputImage(forTarget: targetID)
+    let inputDomainFeatures = document.cropEditingInputFeatures(forTarget: targetID) ?? []
+
+    cropSurface.updateRenderedEditPreview(
+      document: document,
+      crop: crop,
+      inputDomainImage: inputDomainImage,
+      inputDomainFeatures: inputDomainFeatures
+    )
   }
 
   fileprivate func commitCanvasStroke(

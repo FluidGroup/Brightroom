@@ -210,6 +210,58 @@ public struct EditingFeatureTree: Equatable {
     return featureIndex < appliedCount
   }
 
+  /// The `FeatureTreePoint` whose evaluated result is the *input domain* of the
+  /// feature with `id` — the point immediately upstream of it.
+  ///
+  /// A feature that edits geometry (a crop) is authored against this domain, so
+  /// a UI editing that feature previews this point while the feature itself and
+  /// everything downstream are excluded. Returns nil when `id` is unknown.
+  public func inputPoint(ofFeature id: FeatureID) -> FeatureTreePoint? {
+    guard let index = index(of: id) else {
+      return nil
+    }
+    guard index > 0 else {
+      return .source
+    }
+    return .after(nodes[index - 1].id)
+  }
+
+  /// The number of leading features that produce the input domain of the
+  /// feature with `id` (i.e. its position). Returns nil when `id` is unknown.
+  ///
+  /// This is the prefix length to pass to
+  /// `FeatureGraphCompiler.makeOutput(prefixFeatureCount:)` to evaluate that
+  /// feature's input domain.
+  public func inputPrefixFeatureCount(ofFeature id: FeatureID) -> Int? {
+    index(of: id)
+  }
+
+  /// The pixel size of the image domain feeding the feature with `id`, given
+  /// the oriented `sourceSize`.
+  ///
+  /// Crops are the only extent-changing feature: each enabled upstream crop
+  /// replaces the running domain with its crop-rect size, while effects and
+  /// local adjustments preserve extent. Disabled features are skipped, matching
+  /// the renderer's `where feature.isEnabled` evaluation. Returns nil when `id`
+  /// is unknown.
+  public func inputDomainSize(ofFeature id: FeatureID, sourceSize: CGSize) -> CGSize? {
+    guard let index = index(of: id) else {
+      return nil
+    }
+
+    var size = sourceSize
+    for feature in nodes[0..<index] where feature.isEnabled {
+      guard
+        case let .domain(domain) = feature,
+        let crop = domain as? CropFeature
+      else {
+        continue
+      }
+      size = crop.cropRect.size
+    }
+    return size
+  }
+
   // MARK: - Mutation core
 
   /// Whether a main-tree node is a crop domain feature.
@@ -254,15 +306,18 @@ public struct EditingFeatureTree: Equatable {
 
   /// Removes the feature with `id` from `edit`.
   ///
-  /// Returns false when nothing was removed.
+  /// The final crop node is protected because the canonical document must always
+  /// carry an output-framing crop; every other node — including additional,
+  /// repeated crop features in the stack — is removable. Returns false when
+  /// nothing was removed.
   @discardableResult
   static func removeFeature(
     id: FeatureID,
     from edit: inout EditingStack.Edit
   ) -> Bool {
     guard
-      let node = EditingFeatureTree(edit: edit).node(id: id),
-      isCropFeature(node) == false
+      id != finalCropNodeID,
+      EditingFeatureTree(edit: edit).node(id: id) != nil
     else {
       return false
     }

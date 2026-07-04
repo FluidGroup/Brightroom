@@ -30,6 +30,9 @@ struct ContentView: View {
   @State private var photosCropInstaLogoStack = Mocks.makeEditingStack(
     image: Asset.instaLogo.image
   )
+  @State private var parametricEditorStack = Mocks.makeEditingStack(
+    image: Asset.horizontalRect.image
+  )
   @State private var photosCropRemoteStack = EditingStack(
     imageProvider: .init(
       editableRemoteURL: URL(
@@ -75,6 +78,12 @@ struct ContentView: View {
 
           NavigationLink("Parametric Features") {
             ParametricFeaturePreviewView()
+          }
+
+          Button("Parametric Editor") {
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoParametricFeatureEditorView(stack: parametricEditorStack)
+            }
           }
 
           NavigationLink("Parametric Video") {
@@ -418,6 +427,29 @@ private struct PickedImageSummary: View {
       .foregroundStyle(.secondary)
     }
     .accessibilityElement(children: .combine)
+  }
+}
+
+struct DemoParametricFeatureEditorView: View {
+
+  @ObjectEdge var stack: EditingStack
+  @Environment(\.dismiss) private var dismiss
+  private let editingModel: ParametricFeatureEditorModel
+
+  @MainActor
+  init(stack: EditingStack) {
+    self._stack = .init(wrappedValue: stack)
+    self.editingModel = ParametricFeatureEditorModel(editingStack: stack)
+  }
+
+  var body: some View {
+    SwiftUIParametricFeatureEditorView(
+      model: editingModel,
+      onClose: {
+        dismiss()
+      }
+    )
+    .ignoresSafeArea()
   }
 }
 

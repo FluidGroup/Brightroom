@@ -34,7 +34,7 @@ enum EditingCanvasRenderImageFactory {
     )
   }
 
-  private static func makeRenderImages(
+  static func makeRenderImages(
     editingSourceImage: CIImage,
     effects: EffectPipeline,
     canvasSize: CGSize,

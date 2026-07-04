@@ -54,6 +54,53 @@ struct CropViewDocumentSnapshot {
   func cropFeature(id: FeatureID) -> CropFeature? {
     featureTree.crop(id: id)
   }
+
+  /// The prefix of features whose evaluated result is the input domain of the
+  /// crop identified by `cropTargetID`.
+  ///
+  /// Returns nil (use the default source-plus-effects crop surface) unless an
+  /// *upstream crop* reshaped the input domain away from the source extent. This
+  /// is the criterion — not whether the target is the final crop: the final crop
+  /// authored over an upstream crop must frame that crop's already-cropped
+  /// output, while any crop with no upstream crop still frames the full source
+  /// (which the default path already renders, preserving the single-crop
+  /// PhotosCrop behavior including its live local-adjustment preview).
+  func cropEditingInputFeatures(forTarget cropTargetID: FeatureID?) -> [MainFeature]? {
+    guard
+      let cropTargetID,
+      let prefix = featureTree.inputPrefixFeatureCount(ofFeature: cropTargetID),
+      prefix > 0
+    else {
+      return nil
+    }
+
+    let features = Array(featureTree.nodes.prefix(prefix))
+    guard features.contains(where: EditingFeatureTree.isCropFeature) else {
+      return nil
+    }
+    return features
+  }
+
+  /// The base image the crop surface displays while editing the crop identified
+  /// by `cropTargetID`: its input domain, i.e. every upstream feature evaluated
+  /// into a single image so the crop guide frames the already-cropped,
+  /// already-adjusted result. Returns nil to use the default source path.
+  func cropEditingInputImage(forTarget cropTargetID: FeatureID?) -> CIImage? {
+    guard let features = cropEditingInputFeatures(forTarget: cropTargetID) else {
+      return nil
+    }
+
+    let document = EditingDocument(mainTree: MainTree(features: features))
+    do {
+      let output = try FeatureGraphCompiler().makeOutput(
+        from: editingSourceImage.removingExtentOffset(),
+        document: document
+      )
+      return output.image
+    } catch {
+      return nil
+    }
+  }
 }
 
 /// The document boundary used by `CropView`.

@@ -67,10 +67,19 @@ public struct FeatureGraphCompiler: Sendable {
   /// - Parameters:
   ///   - input: The source image used as the first graph node.
   ///   - document: The parametric document to evaluate.
+  ///   - prefixFeatureCount: When non-nil, only the leading `prefixFeatureCount`
+  ///     features (by document position, disabled features included in the
+  ///     count) participate. This evaluates the graph at an intermediate
+  ///     `FeatureTreePoint` — e.g. the input domain of a mid-stack crop, which a
+  ///     parametric editor previews while editing that crop upstream of the
+  ///     final output. The whole document is still validated for identity
+  ///     uniqueness. nil evaluates the full document.
+  ///   - radiusReferenceExtent: The extent used to resolve relative blur radii.
   /// - Returns: The final image recipe and debug mask outputs.
   public func makeOutput(
     from input: CIImage,
     document: EditingDocument,
+    prefixFeatureCount: Int? = nil,
     radiusReferenceExtent: CGRect? = nil
   ) throws -> FeatureGraphOutput {
     try validate(document)
@@ -82,7 +91,10 @@ public struct FeatureGraphCompiler: Sendable {
     var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
 
-    for feature in document.mainTree.features where feature.isEnabled {
+    let features = document.mainTree.features
+    let cutoff = prefixFeatureCount.map { min(max($0, 0), features.count) } ?? features.count
+
+    for feature in features[0..<cutoff] where feature.isEnabled {
       switch feature {
       case let .domain(domainFeature):
         image = try domainFeature.apply(to: image, context: context)
