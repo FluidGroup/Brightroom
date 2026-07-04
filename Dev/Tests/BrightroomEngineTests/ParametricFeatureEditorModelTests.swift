@@ -74,7 +74,8 @@ struct ParametricFeatureEditorModelTests {
         viewingPoint: .output,
         editingTarget: .localAdjustmentMask(
           id: localAdjustment?.id,
-          seedEffect: localAdjustment?.effectPipeline
+          seedEffect: localAdjustment?.effectPipeline,
+          insertBefore: EditingFeatureTree.finalCropNodeID
         )
       )
     )

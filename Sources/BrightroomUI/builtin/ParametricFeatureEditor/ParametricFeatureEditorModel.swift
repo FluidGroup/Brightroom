@@ -654,7 +654,8 @@ public final class ParametricFeatureEditorModel {
         viewingPoint: .output,
         editingTarget: .localAdjustmentMask(
           id: row.id,
-          seedEffect: seedEffect
+          seedEffect: seedEffect,
+          insertBefore: EditingFeatureTree.finalCropNodeID
         )
       )
     }

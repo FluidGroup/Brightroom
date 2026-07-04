@@ -112,7 +112,8 @@ public final class PhotosCropEditingModel {
         viewingPoint: .output,
         editingTarget: .localAdjustmentMask(
           id: nil,
-          seedEffect: CropViewMaskingDefaults.blurEffectPipeline
+          seedEffect: CropViewMaskingDefaults.blurEffectPipeline,
+          insertBefore: EditingFeatureTree.finalCropNodeID
         )
       )
     case .filters, .adjustments:

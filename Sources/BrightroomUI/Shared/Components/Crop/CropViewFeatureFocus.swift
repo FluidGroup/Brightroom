@@ -50,22 +50,32 @@ public struct CropViewFeatureFocus: Equatable, Sendable {
   public enum EditingTarget: Equatable, Sendable {
 
     /// Adjust the geometry of a crop node with the crop guide and scroll
-    /// surface. Currently only the final crop node is supported.
+    /// surface. Any crop node in the tree can be edited: CropView loads that
+    /// node's own geometry against its input domain (upstream features
+    /// evaluated), so a mid-stack crop frames the already-cropped result of the
+    /// crops before it.
     case crop(id: FeatureID)
 
     /// Paint the mask of a local adjustment node with brush gestures.
     ///
     /// When `id` is nil the layer does not exist yet: the first stroke creates
-    /// it, seeded with `seedEffect`. An existing layer with the same effect
-    /// identity is adopted instead when present, matching
-    /// `EditingCanvasStrokeCommitPipeline` semantics.
+    /// it, seeded with `seedEffect`, inserted before `insertBefore`. An existing
+    /// layer with the same effect identity is adopted instead when present,
+    /// matching `EditingCanvasStrokeCommitPipeline` semantics.
     ///
     /// When `seedEffect` is nil, CropView uses the standard blur pipeline at
     /// layer-creation time, so hosts do not need to compute document
     /// parameters themselves.
+    ///
+    /// `insertBefore` is the FeatureTree node a newly created layer is inserted
+    /// ahead of — the host's choice of the mask authoring domain. CropView does
+    /// not assume the final crop: the host names the anchor (e.g. the final crop
+    /// to author in the pre-final-crop domain, or a mid-stack crop to author
+    /// between two crops). It is ignored when `id` names an existing layer.
     case localAdjustmentMask(
       id: FeatureID?,
-      seedEffect: EffectPipeline?
+      seedEffect: EffectPipeline?,
+      insertBefore: FeatureID
     )
   }
 
@@ -103,14 +113,21 @@ public struct CropViewFeatureFocus: Equatable, Sendable {
   /// Paints a local adjustment mask while viewing the evaluated output.
   ///
   /// Pass nil (the default) to let CropView seed new layers with the standard
-  /// blur pipeline at layer-creation time.
+  /// blur pipeline at layer-creation time. `insertBefore` names the node a new
+  /// layer is authored ahead of; it defaults to the final crop so a new mask
+  /// lands in the pre-final-crop domain (the built-in Photos-style arrangement).
   public static func masking(
     _ seedEffect: EffectPipeline? = nil,
-    id: FeatureID? = nil
+    id: FeatureID? = nil,
+    insertBefore: FeatureID = EditingFeatureTree.finalCropNodeID
   ) -> Self {
     Self(
       viewingPoint: .output,
-      editingTarget: .localAdjustmentMask(id: id, seedEffect: seedEffect)
+      editingTarget: .localAdjustmentMask(
+        id: id,
+        seedEffect: seedEffect,
+        insertBefore: insertBefore
+      )
     )
   }
 
@@ -136,7 +153,7 @@ public struct CropViewFeatureFocus: Equatable, Sendable {
   /// when the host specified one. nil while mask editing means CropView uses
   /// the standard blur pipeline.
   var maskSeedEffect: EffectPipeline? {
-    if case let .localAdjustmentMask(_, seedEffect) = editingTarget {
+    if case let .localAdjustmentMask(_, seedEffect, _) = editingTarget {
       return seedEffect
     }
     return nil
@@ -146,11 +163,21 @@ public struct CropViewFeatureFocus: Equatable, Sendable {
   /// target references an existing node.
   var maskTargetLayerID: FeatureID? {
     guard
-      case let .localAdjustmentMask(id?, _) = editingTarget
+      case let .localAdjustmentMask(id?, _, _) = editingTarget
     else {
       return nil
     }
     return id
+  }
+
+  /// The FeatureTree node a newly created mask layer is inserted ahead of, when
+  /// the focus edits a mask. The host owns this choice of authoring domain;
+  /// CropView follows it instead of assuming the final crop.
+  var maskInsertionAnchor: FeatureID? {
+    if case let .localAdjustmentMask(_, _, insertBefore) = editingTarget {
+      return insertBefore
+    }
+    return nil
   }
 
   /// The explicitly targeted crop node id, when the focus edits crop geometry.

@@ -264,6 +264,37 @@ struct EditingStackFeatureTreeTests {
     #expect(tree.inputPoint(ofFeature: FeatureID(rawValue: "nope")) == nil)
   }
 
+  @Test func `Local adjustments insert before an arbitrary anchor, not just the final crop`() {
+    var edit = makeEdit()
+
+    // Build [globalEffects, cropA, finalCrop].
+    let cropAID = FeatureID(rawValue: "anchor.crop.a")
+    let finalIndex = edit.features.firstIndex { $0.id == EditingFeatureTree.finalCropNodeID }!
+    edit.insertFeature(
+      .domain(CropFeature(id: cropAID, cropRect: CGRect(x: 0, y: 0, width: 600, height: 400))),
+      at: finalIndex
+    )
+
+    // Author a mask layer before cropA (a mid-stack anchor), NOT before the
+    // final crop — the flexibility CropView's mask insertion anchor exposes.
+    let layerID = FeatureID(rawValue: "anchor.layer")
+    let layer = LocalAdjustmentFeature(
+      id: layerID,
+      maskTree: MaskTree(root: .brush(BrushMask(id: FeatureID(rawValue: "anchor.layer.mask")))),
+      effectPipeline: EffectPipeline(effects: [
+        GaussianBlurFeature(id: FeatureID(rawValue: "anchor.layer.blur"), radius: 10)
+      ])
+    )
+    EditingFeatureTree.replaceLocalAdjustments([layer], in: &edit, insertingBefore: cropAID)
+
+    #expect(edit.features.map(\.id) == [
+      EditingFeatureTree.globalEffectsNodeID,
+      layerID,
+      cropAID,
+      EditingFeatureTree.finalCropNodeID,
+    ])
+  }
+
   @Test func `Non-final crop feature is removable`() {
     var edit = makeEdit()
 

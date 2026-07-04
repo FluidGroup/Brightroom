@@ -45,7 +45,8 @@ struct PhotosCropEditingModelTests {
         viewingPoint: .output,
         editingTarget: .localAdjustmentMask(
           id: nil,
-          seedEffect: CropViewMaskingDefaults.blurEffectPipeline
+          seedEffect: CropViewMaskingDefaults.blurEffectPipeline,
+          insertBefore: EditingFeatureTree.finalCropNodeID
         )
       )
     )

@@ -3304,13 +3304,17 @@ extension CropView: UIGestureRecognizerDelegate {
   }
 
   private func appendRecordToDocument(_ record: EditingCanvasStrokeRecord) {
-    guard let currentLocalEffect = resolvedMaskSeedEffect else {
+    guard
+      let currentLocalEffect = resolvedMaskSeedEffect,
+      let insertionAnchor = featureFocus.maskInsertionAnchor
+    else {
       return
     }
 
     document.appendMaskStroke(
       record: record,
-      effect: currentLocalEffect
+      effect: currentLocalEffect,
+      insertingBefore: insertionAnchor
     )
   }
 

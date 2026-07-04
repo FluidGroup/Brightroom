@@ -168,15 +168,20 @@ final class CropViewDocument {
   }
 
   /// Appends a brush stroke to the active local-adjustment mask layer.
+  ///
+  /// `insertingBefore` names the node a newly created layer is inserted ahead
+  /// of — the host's chosen mask authoring domain, carried on the focus. This
+  /// boundary is not assumed to be the final crop.
   func appendMaskStroke(
     record: EditingCanvasStrokeRecord,
-    effect: EffectPipeline
+    effect: EffectPipeline,
+    insertingBefore insertionTargetID: FeatureID
   ) {
     strokeCommitPipeline.append(
       record: record,
       effect: effect,
       to: editingStack,
-      insertingBefore: EditingFeatureTree.finalCropNodeID
+      insertingBefore: insertionTargetID
     )
   }
 
