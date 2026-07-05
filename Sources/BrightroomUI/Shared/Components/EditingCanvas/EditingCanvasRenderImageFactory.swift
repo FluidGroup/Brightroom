@@ -158,7 +158,7 @@ enum EditingCanvasRenderImageFactory {
     )
   }
 
-  private static func makeCropOutputRenderImages(
+  static func makeCropOutputRenderImages(
     editingSourceImage: CIImage,
     effects: EffectPipeline,
     geometry: EditingCanvasCropOutputGeometry,

@@ -55,20 +55,20 @@ struct CropViewDocumentSnapshot {
     featureTree.crop(id: id)
   }
 
-  /// The prefix of features whose evaluated result is the input domain of the
-  /// crop identified by `cropTargetID`.
+  /// The prefix of features evaluated to produce the input domain of the
+  /// feature identified by `featureID` — every node before it.
   ///
-  /// Returns nil (use the default source-plus-effects crop surface) unless an
-  /// *upstream crop* reshaped the input domain away from the source extent. This
-  /// is the criterion — not whether the target is the final crop: the final crop
-  /// authored over an upstream crop must frame that crop's already-cropped
-  /// output, while any crop with no upstream crop still frames the full source
-  /// (which the default path already renders, preserving the single-crop
+  /// Returns nil (use the default source-plus-effects path) unless an *upstream
+  /// crop* reshaped the input domain away from the source extent. This is the
+  /// criterion — not whether the target is the final crop: a feature authored
+  /// over an upstream crop must be shown against that crop's already-cropped
+  /// output, while a feature with no upstream crop still works against the full
+  /// source (which the default path already renders, preserving the single-crop
   /// PhotosCrop behavior including its live local-adjustment preview).
-  func cropEditingInputFeatures(forTarget cropTargetID: FeatureID?) -> [MainFeature]? {
+  func inputDomainFeatures(before featureID: FeatureID?) -> [MainFeature]? {
     guard
-      let cropTargetID,
-      let prefix = featureTree.inputPrefixFeatureCount(ofFeature: cropTargetID),
+      let featureID,
+      let prefix = featureTree.inputPrefixFeatureCount(ofFeature: featureID),
       prefix > 0
     else {
       return nil
@@ -81,12 +81,16 @@ struct CropViewDocumentSnapshot {
     return features
   }
 
-  /// The base image the crop surface displays while editing the crop identified
-  /// by `cropTargetID`: its input domain, i.e. every upstream feature evaluated
-  /// into a single image so the crop guide frames the already-cropped,
-  /// already-adjusted result. Returns nil to use the default source path.
-  func cropEditingInputImage(forTarget cropTargetID: FeatureID?) -> CIImage? {
-    guard let features = cropEditingInputFeatures(forTarget: cropTargetID) else {
+  /// The input-domain base image for the feature identified by `featureID`:
+  /// every upstream feature evaluated into a single image, so a canvas frames
+  /// the already-cropped, already-adjusted result rather than the full source.
+  ///
+  /// The crop surface passes the edited crop (to frame its input), and the tool
+  /// surface passes the edited mask layer (to composite it live over its input)
+  /// or the viewport crop (to preview the pre-crop result). Returns nil to use
+  /// the default full-source path.
+  func inputDomainImage(before featureID: FeatureID?) -> CIImage? {
+    guard let features = inputDomainFeatures(before: featureID) else {
       return nil
     }
 

@@ -653,6 +653,11 @@ final class CropView: UIView {
       var effects: EffectPipeline
       var geometry: EditingCanvasCropOutputGeometry
       var mode: EditingCanvasMode
+      // The upstream features baked into the tool surface's input-domain base
+      // when a viewport crop reshaped the domain. Empty for the default
+      // full-source path; captures the prefix by value so an upstream change
+      // re-renders.
+      var inputDomainFeatures: [MainFeature]
     }
 
     let contentView: UIView
@@ -698,7 +703,9 @@ final class CropView: UIView {
       document: CropViewDocumentSnapshot,
       geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,
-      committedStrokes: [EditingCanvasStrokeRecord]
+      committedStrokes: [EditingCanvasStrokeRecord],
+      inputDomainImage: CIImage?,
+      inputDomainFeatures: [MainFeature]
     ) {
       guard geometry.outputSize == canvasSize, let canvasView else {
         return
@@ -709,20 +716,35 @@ final class CropView: UIView {
         sourceImage: ObjectIdentifier(document.editingSourceImage),
         effects: document.effects,
         geometry: geometry,
-        mode: mode
+        mode: mode,
+        inputDomainFeatures: inputDomainFeatures
       )
 
       // Hosts call this on every state update (stroke commits, brush changes,
       // unrelated SwiftUI re-renders). Rebuilding identical render-image graphs
       // would discard the canvas's viewport texture caches each time.
       if currentCanvasRenderInputKey != inputKey || canvasView.hasRenderImages == false {
-        guard
-          let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+        let images: EditingCanvasRenderImages?
+        if let inputDomainImage {
+          // A viewport crop upstream of this surface reshaped the domain; its
+          // input domain is already evaluated into `inputDomainImage`, so the
+          // tool surface renders from it with residual effects empty (baked)
+          // while the active mask effect still composites live.
+          images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+            editingSourceImage: inputDomainImage,
+            effects: .init(),
+            geometry: geometry,
+            mode: mode
+          )
+        } else {
+          images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
             document: document,
             geometry: geometry,
             mode: mode
           )
-        else {
+        }
+
+        guard let images else {
           return
         }
 
@@ -1410,11 +1432,20 @@ extension CropView {
       // effect only seeds layers that don't exist yet. Rendering with the
       // committed effect keeps the preview equal to the exported result even
       // when the host recomputes the seed effect from a new crop.
+      //
+      // The base is the mask's own input domain (features before the edited
+      // layer, or its insertion anchor for a new layer). An upstream crop makes
+      // that a pre-cropped image; the edited mask still composites live on top.
+      let maskBase = toolInputDomainBase(
+        before: featureFocus.maskTargetLayerID ?? featureFocus.maskInsertionAnchor
+      )
       toolSurface.updateCanvas(
         document: document,
         geometry: geometry,
         mode: .localAdjustment(effect: committedCanvasLocalEffect() ?? seedEffect),
-        committedStrokes: currentToolCommittedStrokes(in: geometry)
+        committedStrokes: currentToolCommittedStrokes(in: geometry),
+        inputDomainImage: maskBase.image,
+        inputDomainFeatures: maskBase.features
       )
       updateToolCropDisplayViewport()
 
@@ -1429,14 +1460,38 @@ extension CropView {
       let renderPlan = CanvasRenderPlan(
         localAdjustments: document.localAdjustments
       )
+      // A pure preview frames the viewport crop's input domain (every feature
+      // before it, including any mask, baked in). An upstream crop makes that a
+      // pre-cropped image rather than the full source.
+      let previewBase = toolInputDomainBase(
+        before: document.featureTree.viewportCrop(at: featureFocus.viewingPoint)?.id
+      )
       toolSurface.updateCanvas(
         document: document,
         geometry: geometry,
         mode: renderPlan.canvasMode,
-        committedStrokes: renderPlan.committedStrokes(in: geometry)
+        committedStrokes: renderPlan.committedStrokes(in: geometry),
+        inputDomainImage: previewBase.image,
+        inputDomainFeatures: previewBase.features
       )
       updateToolCropDisplayViewport()
     }
+  }
+
+  /// The input-domain base override for the tool surface, keyed to the feature
+  /// the surface is authored against. nil image = the default full-source path
+  /// (no upstream crop reshaped the domain), keeping single-crop behavior
+  /// identical.
+  private func toolInputDomainBase(
+    before featureID: FeatureID?
+  ) -> (image: CIImage?, features: [MainFeature]) {
+    guard let snapshot = document.snapshot else {
+      return (nil, [])
+    }
+    return (
+      snapshot.inputDomainImage(before: featureID),
+      snapshot.inputDomainFeatures(before: featureID) ?? []
+    )
   }
 
   /// The tool surface's display crop for a viewing point: the crop that frames
@@ -3272,8 +3327,8 @@ extension CropView: UIGestureRecognizerDelegate {
     // frames the already-cropped result rather than the full source. nil keeps
     // the final-crop path on the existing source-plus-effects preview.
     let targetID = featureFocus.cropTargetID
-    let inputDomainImage = document.cropEditingInputImage(forTarget: targetID)
-    let inputDomainFeatures = document.cropEditingInputFeatures(forTarget: targetID) ?? []
+    let inputDomainImage = document.inputDomainImage(before: targetID)
+    let inputDomainFeatures = document.inputDomainFeatures(before: targetID) ?? []
 
     cropSurface.updateRenderedEditPreview(
       document: document,

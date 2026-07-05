@@ -123,8 +123,8 @@ struct ParametricFeatureEditorModelTests {
     // With only the final crop, nothing upstream reshapes the domain, so the
     // crop surface uses the default source path.
     #expect(
-      model.cropViewDocument.snapshot?.cropEditingInputFeatures(
-        forTarget: EditingFeatureTree.finalCropNodeID
+      model.cropViewDocument.snapshot?.inputDomainFeatures(
+        before: EditingFeatureTree.finalCropNodeID
       ) == nil
     )
 
@@ -133,14 +133,41 @@ struct ParametricFeatureEditorModelTests {
 
     let snapshot = model.cropViewDocument.snapshot
     // The added crop has no upstream crop -> default source path.
-    #expect(snapshot?.cropEditingInputFeatures(forTarget: cropID) == nil)
+    #expect(snapshot?.inputDomainFeatures(before: cropID) == nil)
     // The final crop now sits downstream of the added crop, so its crop surface
     // must partial-evaluate that crop's output as the input domain.
-    let finalInput = snapshot?.cropEditingInputFeatures(
-      forTarget: EditingFeatureTree.finalCropNodeID
+    let finalInput = snapshot?.inputDomainFeatures(
+      before: EditingFeatureTree.finalCropNodeID
     )
     #expect(finalInput != nil)
     #expect(finalInput?.contains { $0.id == cropID } == true)
+  }
+
+  @Test func `Mask over an upstream crop previews the crop's input domain without baking the mask`() {
+    let stack = makeStack()
+    let model = ParametricFeatureEditorModel(editingStack: stack)
+
+    model.addCrop()
+    let cropID = model.selection.activeFeatureID
+    model.addBlurMaskAdjustment()
+    let maskID = model.selection.activeFeatureID
+
+    // Tree is [globalEffects, crop, mask, finalCrop].
+    let snapshot = model.cropViewDocument.snapshot
+    let maskInput = snapshot?.inputDomainFeatures(before: maskID)
+    // The mask's tool base includes the upstream crop but NOT the mask itself
+    // (it is composited live on top, not baked).
+    #expect(maskInput != nil)
+    #expect(maskInput?.contains { $0.id == cropID } == true)
+    #expect(maskInput?.contains { $0.id == maskID } == false)
+    #expect(snapshot?.inputDomainImage(before: maskID) != nil)
+
+    // With no upstream crop (a fresh single-crop stack) the mask uses the
+    // default full-source path.
+    let plainModel = ParametricFeatureEditorModel(editingStack: makeStack())
+    plainModel.addBlurMaskAdjustment()
+    let plainMaskID = plainModel.selection.activeFeatureID
+    #expect(plainModel.cropViewDocument.snapshot?.inputDomainFeatures(before: plainMaskID) == nil)
   }
 
   @Test func `Removing an added crop restores the canonical rows and final crop focus`() {
