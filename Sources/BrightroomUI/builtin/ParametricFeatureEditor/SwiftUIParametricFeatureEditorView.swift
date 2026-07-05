@@ -30,9 +30,10 @@ import BrightroomParametric
 /// A SwiftUI parametric editor that pairs one CropView canvas with a feature
 /// list.
 ///
-/// iPhone presents the list as a bottom sheet-like panel. iPad presents the
-/// same list as a leading sidebar. The active feature row determines both the
-/// row-local controls and the `CropViewFeatureFocus` applied to the canvas.
+/// iPhone docks the feature pipeline in a bottom panel so the canvas stays
+/// visible above it. iPad presents the same features as a leading sidebar. The
+/// active feature determines both the row-local controls and the
+/// `CropViewFeatureFocus` applied to the canvas.
 @available(iOS 17, *)
 public struct SwiftUIParametricFeatureEditorView: View {
 
@@ -63,7 +64,7 @@ public struct SwiftUIParametricFeatureEditorView: View {
   public var body: some View {
     ParametricFeatureEditorRoot(
       model: model,
-      layout: horizontalSizeClass == .regular ? .sidebar : .bottomSheet,
+      layout: horizontalSizeClass == .regular ? .sidebar : .compact,
       resetAction: resetAction,
       rotateAction: rotateAction,
       applyAction: applyAction,
@@ -98,7 +99,7 @@ private struct ParametricFeatureEditorRoot: View {
 
   enum Layout {
     case sidebar
-    case bottomSheet
+    case compact
   }
 
   let model: ParametricFeatureEditorModel
@@ -108,9 +109,6 @@ private struct ParametricFeatureEditorRoot: View {
   let applyAction: SwiftUICropView.ApplyAction
   let onSelectRow: (ParametricFeatureEditorRow) -> Void
   let onClose: (() -> Void)?
-
-  @State private var isCompactFeatureSheetPresented = true
-  @State private var compactFeatureSheetDetent = PresentationDetent.height(320)
 
   var body: some View {
     switch layout {
@@ -123,7 +121,7 @@ private struct ParametricFeatureEditorRoot: View {
           onSelectRow: onSelectRow,
           onClose: onClose
         )
-        .frame(width: 360)
+        .frame(width: 340)
         .background(Color(uiColor: .secondarySystemBackground))
 
         ParametricFeatureEditorCanvas(
@@ -134,31 +132,183 @@ private struct ParametricFeatureEditorRoot: View {
         )
       }
 
-    case .bottomSheet:
-      ParametricFeatureEditorCanvas(
-        model: model,
-        resetAction: resetAction,
-        rotateAction: rotateAction,
-        applyAction: applyAction
-      )
-      .sheet(isPresented: $isCompactFeatureSheetPresented) {
-        ParametricFeatureListPanel(
+    case .compact:
+      VStack(spacing: 0) {
+        ParametricFeatureEditorCanvas(
+          model: model,
+          resetAction: resetAction,
+          rotateAction: rotateAction,
+          applyAction: applyAction
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(edges: .top)
+
+        ParametricFeatureBottomPanel(
           model: model,
           resetAction: resetAction,
           rotateAction: rotateAction,
           onSelectRow: onSelectRow,
           onClose: onClose
         )
-        .presentationDetents(
-          [.height(320), .medium, .large],
-          selection: $compactFeatureSheetDetent
-        )
-        .presentationDragIndicator(.visible)
-        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-        .interactiveDismissDisabled()
       }
-      .onAppear {
-        isCompactFeatureSheetPresented = true
+    }
+  }
+}
+
+/// The iPhone docked panel: a header, a horizontal feature pipeline, and the
+/// active feature's controls. Docking keeps the canvas visible above it, and
+/// the pipeline strip makes the stack order — and where a new feature lands —
+/// explicit.
+@available(iOS 17, *)
+private struct ParametricFeatureBottomPanel: View {
+
+  let model: ParametricFeatureEditorModel
+  let resetAction: SwiftUICropView.ResetAction
+  let rotateAction: SwiftUICropView.RotateAction
+  let onSelectRow: (ParametricFeatureEditorRow) -> Void
+  let onClose: (() -> Void)?
+
+  var body: some View {
+    VStack(spacing: 0) {
+      ParametricFeatureListHeader(model: model, onClose: onClose, showsTitle: false)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+
+      ParametricFeaturePipelineStrip(
+        model: model,
+        onSelectRow: onSelectRow
+      )
+
+      Divider()
+        .overlay(Color.white.opacity(0.08))
+
+      ParametricActiveFeatureControls(
+        model: model,
+        resetAction: resetAction,
+        rotateAction: rotateAction
+      )
+      .frame(height: 142, alignment: .top)
+      .padding(.horizontal, 16)
+      .padding(.top, 12)
+    }
+    .background {
+      // Only the background reaches the screen edge; the controls stay above
+      // the home indicator.
+      UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
+        .fill(Color(uiColor: .secondarySystemBackground))
+        .overlay(alignment: .top) {
+          UnevenRoundedRectangle(topLeadingRadius: 20, topTrailingRadius: 20)
+            .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
+  }
+}
+
+/// The horizontal feature pipeline: one chip per row in source-to-output order,
+/// chevrons between them, the active one highlighted. Selecting a chip activates
+/// that feature; adding a feature scrolls its new chip into view.
+@available(iOS 17, *)
+private struct ParametricFeaturePipelineStrip: View {
+
+  let model: ParametricFeatureEditorModel
+  let onSelectRow: (ParametricFeatureEditorRow) -> Void
+
+  var body: some View {
+    ScrollViewReader { proxy in
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 4) {
+          ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
+            if index > 0 {
+              Image(systemName: "chevron.compact.right")
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+            }
+
+            ParametricFeatureChip(
+              row: row,
+              isActive: row.id == model.selection.activeFeatureID,
+              onSelect: { onSelectRow(row) }
+            )
+            .id(row.id)
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+      }
+      .onChange(of: model.selection.activeFeatureID) { _, id in
+        withAnimation(.easeInOut(duration: 0.25)) {
+          proxy.scrollTo(id, anchor: .center)
+        }
+      }
+    }
+  }
+}
+
+@available(iOS 17, *)
+private struct ParametricFeatureChip: View {
+
+  let row: ParametricFeatureEditorRow
+  let isActive: Bool
+  let onSelect: () -> Void
+
+  var body: some View {
+    Button(action: onSelect) {
+      VStack(spacing: 5) {
+        Image(systemName: row.systemImageName)
+          .font(.system(size: 18, weight: .semibold))
+          .frame(height: 22)
+        Text(row.title)
+          .font(.system(size: 11, weight: .medium))
+          .lineLimit(2)
+          .multilineTextAlignment(.center)
+          .minimumScaleFactor(0.8)
+      }
+      .frame(width: 68, height: 62)
+      .padding(.horizontal, 2)
+      .foregroundStyle(isActive ? Color.white : Color.secondary)
+      .background(
+        isActive ? Color.accentColor : Color.white.opacity(0.07),
+        in: RoundedRectangle(cornerRadius: 14)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 14)
+          .stroke(Color.white.opacity(isActive ? 0 : 0.08), lineWidth: 1)
+      )
+      .opacity(row.isEnabled ? 1 : 0.4)
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+/// The active feature's controls, shown in a fixed-height area so switching
+/// features does not resize the panel.
+@available(iOS 17, *)
+private struct ParametricActiveFeatureControls: View {
+
+  let model: ParametricFeatureEditorModel
+  let resetAction: SwiftUICropView.ResetAction
+  let rotateAction: SwiftUICropView.RotateAction
+
+  var body: some View {
+    Group {
+      if let row = model.activeRow {
+        ScrollView {
+          ParametricFeatureRowControls(
+            model: model,
+            row: row,
+            resetAction: resetAction,
+            rotateAction: rotateAction
+          )
+          .padding(.bottom, 4)
+        }
+        .scrollIndicators(.hidden)
+      } else {
+        Text("Loading…")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .center)
       }
     }
   }
@@ -175,47 +325,17 @@ private struct ParametricFeatureEditorCanvas: View {
   var body: some View {
     let focus = model.currentFeatureFocus
 
-    ZStack(alignment: .topLeading) {
-      SwiftUICropView(
-        document: model.cropViewDocument,
-        isGuideInteractionEnabled: focus.isCropEditing
-      )
-      .featureFocus(focus)
-      .maskingBrush(model.maskingBrush)
-      .registerResetAction(resetAction)
-      .registerRotateAction(rotateAction)
-      .registerApplyAction(applyAction)
-      .background(Color.black)
-
-      if let row = model.activeRow {
-        ParametricFeatureCanvasBadge(row: row, mode: model.selection.mode)
-          .padding(12)
-      }
-    }
+    SwiftUICropView(
+      document: model.cropViewDocument,
+      isGuideInteractionEnabled: focus.isCropEditing
+    )
+    .featureFocus(focus)
+    .maskingBrush(model.maskingBrush)
+    .registerResetAction(resetAction)
+    .registerRotateAction(rotateAction)
+    .registerApplyAction(applyAction)
+    .background(Color.black)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-  }
-}
-
-@available(iOS 17, *)
-private struct ParametricFeatureCanvasBadge: View {
-
-  let row: ParametricFeatureEditorRow
-  let mode: ParametricFeatureEditorSelection.Mode
-
-  var body: some View {
-    HStack(spacing: 8) {
-      Image(systemName: row.systemImageName)
-        .font(.footnote.weight(.semibold))
-      Text(row.title)
-        .font(.footnote.weight(.semibold))
-      Text(mode.title)
-        .font(.caption2.weight(.medium))
-        .foregroundStyle(.secondary)
-    }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 7)
-    .foregroundStyle(.white)
-    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
   }
 }
 
@@ -263,6 +383,7 @@ private struct ParametricFeatureListHeader: View {
 
   let model: ParametricFeatureEditorModel
   let onClose: (() -> Void)?
+  var showsTitle: Bool = true
 
   var body: some View {
     HStack(spacing: 10) {
@@ -272,8 +393,10 @@ private struct ParametricFeatureListHeader: View {
           .accessibilityLabel("Close Editor")
       }
 
-      Text("Features")
-        .font(.headline)
+      if showsTitle {
+        Text("Features")
+          .font(.headline)
+      }
 
       Spacer()
 

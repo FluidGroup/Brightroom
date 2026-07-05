@@ -449,7 +449,6 @@ struct DemoParametricFeatureEditorView: View {
         dismiss()
       }
     )
-    .ignoresSafeArea()
   }
 }
 
