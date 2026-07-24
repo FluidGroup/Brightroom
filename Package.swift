@@ -41,6 +41,10 @@ let package = Package(
         "TransitionPatch",
       ]
     ),
-  ],  
+    .testTarget(
+      name: "BrightroomParametricTests",
+      dependencies: ["BrightroomParametric"]
+    ),
+  ],
   swiftLanguageModes: [.v6]
 )

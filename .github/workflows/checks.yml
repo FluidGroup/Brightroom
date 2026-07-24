@@ -40,6 +40,16 @@ jobs:
         with:
           xcode-version: "26.5"
       - uses: actions/checkout@v2
+      - name: Test BrightroomParametric
+        run: |
+          set -o pipefail && xcodebuild \
+            -scheme Brightroom-Package \
+            test \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            -only-testing:BrightroomParametricTests \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify
       - name: Build
         run: |
           set -o pipefail && xcodebuild \
