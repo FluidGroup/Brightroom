@@ -7,6 +7,7 @@ let package = Package(
     .iOS(.v17)
   ],
   products: [
+    .library(name: "BrightroomParametric", targets: ["BrightroomParametric"]),
     .library(name: "BrightroomEngine", targets: ["BrightroomEngine"]),
     .library(name: "BrightroomUI", targets: ["BrightroomUI"]),
   ],
@@ -15,6 +16,14 @@ let package = Package(
     .package(url: "https://github.com/FluidGroup/TransitionPatch", from: "1.0.3"),
   ],
   targets: [
+    .target(
+      name: "BrightroomParametric",
+      exclude: [
+        // Included by the compiled `.metal` sources; not a standalone package
+        // input.
+        "BrushStampFalloff.metalh"
+      ]
+    ),
     .target(
       name: "BrightroomEngine",
       dependencies: [
@@ -28,6 +37,10 @@ let package = Package(
         .product(name: "StateGraph", package: "swift-state-graph"),
         "TransitionPatch",
       ]
+    ),
+    .testTarget(
+      name: "BrightroomParametricTests",
+      dependencies: ["BrightroomParametric"]
     ),
   ]
 )
