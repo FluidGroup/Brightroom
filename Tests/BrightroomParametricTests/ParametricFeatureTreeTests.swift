@@ -449,6 +449,48 @@ struct ParametricFeatureTreeTests {
     )
   }
 
+  @Test func videoFrameRendererPassesPresentationTimeToFeatureEvaluation() throws {
+    let presentationTime = CMTime(value: 17, timescale: 30)
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestPresentationTimeFeature(
+              id: FeatureID(rawValue: "video-presentation-time"),
+              expectedPresentationTime: presentationTime
+            )
+          )
+        ]
+      )
+    )
+
+    _ = try ParametricVideoRenderer().makeFrameImage(
+      from: Self.smallInput,
+      document: document,
+      presentationTime: presentationTime
+    )
+  }
+
+  @Test func imageRendererDefaultsPresentationTimeToZero() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestPresentationTimeFeature(
+              id: FeatureID(rawValue: "still-presentation-time"),
+              expectedPresentationTime: .zero
+            )
+          )
+        ]
+      )
+    )
+
+    _ = try ParametricImageRenderer().makeImage(
+      from: Self.smallInput,
+      document: document
+    )
+  }
+
   @Test func videoRendererResolvesCropOutputRenderSize() throws {
     let document = EditingDocument(
       mainTree: MainTree(
@@ -1064,6 +1106,29 @@ struct ParametricFeatureTreeTests {
       )
       .cropped(to: image.extent)
     }
+  }
+
+  /// Verifies that render-time values reach a host-defined effect without being
+  /// stored as authored feature parameters.
+  private struct TestPresentationTimeFeature: ImageEffectFeatureType {
+
+    var id: FeatureID
+    var isEnabled: Bool = true
+    var expectedPresentationTime: CMTime
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      guard context.presentationTime == expectedPresentationTime else {
+        throw TestPresentationTimeError.unexpectedTime(
+          expected: expectedPresentationTime,
+          actual: context.presentationTime
+        )
+      }
+      return image
+    }
+  }
+
+  private enum TestPresentationTimeError: Error {
+    case unexpectedTime(expected: CMTime, actual: CMTime)
   }
 
   /// The v1 shape of the migrating test feature: field named `amount`.

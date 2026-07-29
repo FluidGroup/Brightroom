@@ -20,17 +20,26 @@
 // THE SOFTWARE.
 
 import CoreImage
+import CoreMedia
 import Foundation
 
 /// Values available to features while they evaluate.
 ///
-/// The context deliberately carries no document state — a feature sees only
-/// its input image and shared facilities. This keeps evaluation a pure
-/// function of (parameters, input).
+/// The context deliberately carries no document state. A feature sees its input
+/// image, explicit render-time values, and shared facilities. This keeps
+/// evaluation a pure function of (parameters, input, context).
 public struct FeatureEvaluationContext: Sendable {
 
   /// Custom Core Image kernels shared by mask rendering.
   public let kernelRegistry: ParametricKernelRegistry
+
+  /// The presentation time of the image being evaluated.
+  ///
+  /// Video renderers supply the exact AVFoundation composition time for each
+  /// frame. Still-image renderers use `.zero` by default, which gives
+  /// time-sensitive effects a deterministic sample without adding time to the
+  /// persisted feature parameters.
+  public let presentationTime: CMTime
 
   /// The image extent that diagonal-based radii (Gaussian blur, sharpen,
   /// unsharp mask) resolve against, expressed in the **current render pixel
@@ -53,16 +62,22 @@ public struct FeatureEvaluationContext: Sendable {
   /// Creates an evaluation context.
   public init(
     kernelRegistry: ParametricKernelRegistry = .init(),
-    radiusReferenceExtent: CGRect? = nil
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
   ) {
     self.kernelRegistry = kernelRegistry
     self.radiusReferenceExtent = radiusReferenceExtent
+    self.presentationTime = presentationTime
   }
 
   /// Returns a copy that resolves diagonal-based radii against `extent`
   /// (the full source extent in the current render pixel space).
   public func withRadiusReferenceExtent(_ extent: CGRect?) -> Self {
-    .init(kernelRegistry: kernelRegistry, radiusReferenceExtent: extent)
+    .init(
+      kernelRegistry: kernelRegistry,
+      radiusReferenceExtent: extent,
+      presentationTime: presentationTime
+    )
   }
 }
 
