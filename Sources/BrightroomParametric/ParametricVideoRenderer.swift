@@ -66,15 +66,19 @@ public struct ParametricVideoRenderer: Sendable {
   ///   - renderExtent: The optional output canvas. When specified, the feature
   ///     output is placed at the canvas origin and cropped/expanded to that
   ///     extent using a transparent Core Image background.
+  ///   - presentationTime: The presentation time represented by `sourceImage`.
+  ///     The default keeps direct single-frame evaluation deterministic.
   /// - Returns: A Core Image recipe for the filtered frame.
   public func makeFrameImage(
     from sourceImage: CIImage,
     document: EditingDocument,
-    renderExtent: CGRect? = nil
+    renderExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
   ) throws -> CIImage {
     let output = try imageRenderer.makeImage(
       from: sourceImage,
-      document: document
+      document: document,
+      presentationTime: presentationTime
     )
 
     guard let renderExtent else {
@@ -156,7 +160,8 @@ public struct ParametricVideoRenderer: Sendable {
         let output = try ParametricVideoRenderer(imageRenderer: imageRenderer).makeFrameImage(
           from: request.sourceImage,
           document: document,
-          renderExtent: renderExtent
+          renderExtent: renderExtent,
+          presentationTime: request.compositionTime
         )
         request.finish(with: output, context: ciContext)
       } catch {

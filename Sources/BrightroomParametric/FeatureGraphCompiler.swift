@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import CoreImage
+import CoreMedia
 import Foundation
 
 /// Compiles a parametric editing document into a Core Image graph.
@@ -67,17 +68,22 @@ public struct FeatureGraphCompiler: Sendable {
   /// - Parameters:
   ///   - input: The source image used as the first graph node.
   ///   - document: The parametric document to evaluate.
+  ///   - radiusReferenceExtent: The full source extent in the current render
+  ///     pixel space, used to resolve proportional radii.
+  ///   - presentationTime: The presentation time represented by `input`.
   /// - Returns: The final image recipe and debug mask outputs.
   public func makeOutput(
     from input: CIImage,
     document: EditingDocument,
-    radiusReferenceExtent: CGRect? = nil
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
   ) throws -> FeatureGraphOutput {
     try validate(document)
 
     let context = FeatureEvaluationContext(
       kernelRegistry: kernelRegistry,
-      radiusReferenceExtent: radiusReferenceExtent
+      radiusReferenceExtent: radiusReferenceExtent,
+      presentationTime: presentationTime
     )
     var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
