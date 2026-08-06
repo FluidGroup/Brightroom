@@ -331,7 +331,12 @@ private final class _StepSlider: UISlider {
 
     minimumTrackTintColor = UIColor.clear
     maximumTrackTintColor = UIColor.clear
-    setThumbImage(UIImage(named: "slider_thumb", in: bundle, compatibleWith: nil), for: [])
+    let thumbImage = UIImage(named: "slider_thumb", in: bundle, compatibleWith: nil)
+    if #available(iOS 26, *) {
+      setThumbImage(thumbImage?.withRenderingMode(.alwaysOriginal), for: [])
+    } else {
+      setThumbImage(thumbImage, for: [])
+    }
     tintColor = ClassicImageEditStyle.default.black
 
     let label = stepLabel
