@@ -287,7 +287,7 @@ extension TemperatureFeature: ImageEffectFeatureType {
     image.applyingFilter(
       "CITemperatureAndTint",
       parameters: [
-        "inputNeutral": CIVector(x: CGFloat(value) + 6500, y: 0),
+        "inputNeutral": CIVector(x: CGFloat(value) + 6500, y: CGFloat(tint)),
         "inputTargetNeutral": CIVector(x: 6500, y: 0),
       ]
     )
