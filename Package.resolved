@@ -1,4 +1,5 @@
 {
+  "originHash" : "5dd64f04db315d12c22d36e8db967b983ca07fa10e068a80540b966438ee6846",
   "pins" : [
     {
       "identity" : "normalization",
@@ -14,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/PrecisionLevelSlider",
       "state" : {
-        "revision" : "d16becc518758b6f984ff07f8e8c6a0fa9245492",
-        "version" : "2.2.0"
+        "revision" : "c546d7a420bfc05fd9f96d3b1c0d3aab1a40db26",
+        "version" : "3.0.0"
       }
     },
     {
@@ -86,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FluidGroup/swiftui-Hosting",
       "state" : {
-        "revision" : "f0f309cbb9a7e055bc57e931a3506ebb26bf0134",
-        "version" : "2.6.0"
+        "revision" : "9714566b32f84b3edce049ca3b0df06ecd0ec0c2",
+        "version" : "3.0.0"
       }
     },
     {
@@ -118,5 +119,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
