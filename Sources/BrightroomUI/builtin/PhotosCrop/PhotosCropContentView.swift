@@ -33,7 +33,10 @@ struct PhotosCropContentView: View {
   let onCancel: @MainActor () -> Void
 
   @State private var rotation: EditingCrop.Rotation?
+  @State private var flip: EditingCrop.Flip?
   @State private var adjustmentAngle: EditingCrop.AdjustmentAngle?
+  @State private var perspectiveCorrection: EditingCrop.PerspectiveCorrection?
+  @State private var adjustmentMode: PhotosCropAdjustmentMode = .straighten
   @State private var aspectRatioSelection: PhotosCropAspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var resetAction = SwiftUICropView.ResetAction()
@@ -65,7 +68,7 @@ struct PhotosCropContentView: View {
     let loadedState = editingStack.loadedState
     let originalAspectRatio = loadedState.map { PixelAspectRatio($0.imageSize) }
     let isLoaded = loadedState != nil
-    let bottomControlHeight: CGFloat = 112
+    let bottomControlHeight: CGFloat = 124
     let bottomControlMaxWidth: CGFloat = 560
 
     NavigationStack {
@@ -79,7 +82,9 @@ struct PhotosCropContentView: View {
             isAutoApplyEditingStackEnabled: true
           )
           .rotation($rotation)
+          .flip($flip)
           .adjustmentAngle($adjustmentAngle)
+          .perspectiveCorrection($perspectiveCorrection)
           .croppingAspectRatio(croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio))
           .registerResetAction(resetAction)
           .registerRotateAction(rotateAction)
@@ -91,10 +96,13 @@ struct PhotosCropContentView: View {
             aspectRatioSelection: aspectRatioSelection,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
+            perspectiveCorrection: perspectiveCorrection,
+            adjustmentMode: $adjustmentMode,
             isSelectingAspectRatio: isSelectingAspectRatio,
             isLoaded: isLoaded,
             onSelectAspectRatio: selectAspectRatio,
-            onSetAdjustmentAngle: setAdjustmentAngle
+            onSetAdjustmentAngle: setAdjustmentAngle,
+            onSetPerspectiveCorrection: setPerspectiveCorrection
           )
           .frame(maxWidth: bottomControlMaxWidth)
           .frame(maxWidth: .infinity)
@@ -114,7 +122,10 @@ struct PhotosCropContentView: View {
           isDoneEnabled: isLoaded,
           isAspectRatioControlAvailable: isAspectRatioControlAvailable,
           isSelectingAspectRatio: isSelectingAspectRatio,
+          flip: flip ?? [],
           onRotate: rotate,
+          onToggleHorizontalFlip: toggleHorizontalFlip,
+          onToggleVerticalFlip: toggleVerticalFlip,
           onReset: reset,
           onToggleAspectRatio: toggleAspectRatioControl,
           onCancel: onCancel,
@@ -147,7 +158,29 @@ struct PhotosCropContentView: View {
     rotateAction()
   }
 
+  private func toggleHorizontalFlip() {
+    toggleFlip(.horizontal)
+  }
+
+  private func toggleVerticalFlip() {
+    toggleFlip(.vertical)
+  }
+
+  private func toggleFlip(_ axis: EditingCrop.Flip) {
+    var nextFlip = flip ?? []
+    if nextFlip.contains(axis) {
+      nextFlip.remove(axis)
+    } else {
+      nextFlip.insert(axis)
+    }
+    flip = nextFlip
+  }
+
   private func reset() {
+    rotation = .angle_0
+    flip = []
+    adjustmentAngle = .zero
+    perspectiveCorrection = .identity
     resetAction()
   }
 
@@ -171,6 +204,21 @@ struct PhotosCropContentView: View {
     }
 
     adjustmentAngle = angle
+  }
+
+  private func setPerspectiveCorrection(
+    _ value: Double,
+    axis: PhotosCropPerspectiveAxis
+  ) {
+    let normalizedValue = CGFloat(value / 100)
+    let current = perspectiveCorrection ?? .identity
+
+    switch axis {
+    case .vertical:
+      perspectiveCorrection = current.settingVertical(normalizedValue)
+    case .horizontal:
+      perspectiveCorrection = current.settingHorizontal(normalizedValue)
+    }
   }
 
   private func finish() {
@@ -200,14 +248,17 @@ private struct PhotosCropToolbar: ToolbarContent {
   let isDoneEnabled: Bool
   let isAspectRatioControlAvailable: Bool
   let isSelectingAspectRatio: Bool
+  let flip: EditingCrop.Flip
   let onRotate: () -> Void
+  let onToggleHorizontalFlip: () -> Void
+  let onToggleVerticalFlip: () -> Void
   let onReset: () -> Void
   let onToggleAspectRatio: () -> Void
   let onCancel: () -> Void
   let onDone: () -> Void
 
   var body: some ToolbarContent {
-    ToolbarItem(placement: .topBarLeading) {
+    ToolbarItemGroup(placement: .topBarLeading) {
       PhotosCropToolbarIconButton(
         systemName: "rotate.left",
         accessibilityLabel: "Rotate",
@@ -215,6 +266,24 @@ private struct PhotosCropToolbar: ToolbarContent {
         isEnabled: isLoaded,
         isHighlighted: false,
         action: onRotate
+      )
+
+      PhotosCropToolbarIconButton(
+        systemName: "arrow.left.and.right",
+        accessibilityLabel: "Flip Horizontal",
+        accessibilityIdentifier: "photos.crop.flip.horizontal",
+        isEnabled: isLoaded,
+        isHighlighted: flip.contains(.horizontal),
+        action: onToggleHorizontalFlip
+      )
+
+      PhotosCropToolbarIconButton(
+        systemName: "arrow.up.and.down",
+        accessibilityLabel: "Flip Vertical",
+        accessibilityIdentifier: "photos.crop.flip.vertical",
+        isEnabled: isLoaded,
+        isHighlighted: flip.contains(.vertical),
+        action: onToggleVerticalFlip
       )
     }
 
@@ -346,16 +415,56 @@ private struct PhotosCropToolbarTextButton: View {
   }
 }
 
+private enum PhotosCropAdjustmentMode: String, CaseIterable, Identifiable {
+  case straighten
+  case vertical
+  case horizontal
+
+  var id: Self {
+    self
+  }
+
+  var title: String {
+    switch self {
+    case .straighten:
+      return "Straighten"
+    case .vertical:
+      return "Vertical"
+    case .horizontal:
+      return "Horizontal"
+    }
+  }
+
+  var accessibilityLabel: String {
+    switch self {
+    case .straighten:
+      return "Rotation"
+    case .vertical:
+      return "Vertical Perspective"
+    case .horizontal:
+      return "Horizontal Perspective"
+    }
+  }
+}
+
+private enum PhotosCropPerspectiveAxis {
+  case vertical
+  case horizontal
+}
+
 private struct PhotosCropAdjustmentControl: View {
 
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: PhotosCropAspectRatioSelection
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let adjustmentAngle: EditingCrop.AdjustmentAngle?
+  let perspectiveCorrection: EditingCrop.PerspectiveCorrection?
+  @Binding var adjustmentMode: PhotosCropAdjustmentMode
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
   let onSetAdjustmentAngle: (Double) -> Void
+  let onSetPerspectiveCorrection: (Double, PhotosCropPerspectiveAxis) -> Void
 
   var body: some View {
     Group {
@@ -368,37 +477,101 @@ private struct PhotosCropAdjustmentControl: View {
         )
         .transition(.opacity)
       } else {
-        PhotosCropRotationSlider(
-          value: adjustmentAngle?.degrees ?? 0,
-          isEnabled: isLoaded,
-          onChange: onSetAdjustmentAngle
-        )
+        VStack(spacing: 8) {
+          PhotosCropAdjustmentModePicker(selection: $adjustmentMode)
+
+          PhotosCropAdjustmentSlider(
+            value: sliderValue,
+            range: sliderRange,
+            stepCount: sliderStepCount,
+            accessibilityLabel: adjustmentMode.accessibilityLabel,
+            isEnabled: isLoaded,
+            onChange: setSliderValue
+          )
+        }
+        .padding(.top, 8)
         .transition(.opacity)
       }
     }
     .animation(.spring(response: 0.35, dampingFraction: 1), value: isSelectingAspectRatio)
   }
+
+  private var sliderValue: Double {
+    switch adjustmentMode {
+    case .straighten:
+      return adjustmentAngle?.degrees ?? 0
+    case .vertical:
+      return Double((perspectiveCorrection ?? .identity).vertical * 100)
+    case .horizontal:
+      return Double((perspectiveCorrection ?? .identity).horizontal * 100)
+    }
+  }
+
+  private var sliderRange: ClosedRange<Double> {
+    switch adjustmentMode {
+    case .straighten:
+      return -45...45
+    case .vertical, .horizontal:
+      return -100...100
+    }
+  }
+
+  private var sliderStepCount: Int {
+    switch adjustmentMode {
+    case .straighten:
+      return 90
+    case .vertical, .horizontal:
+      return 200
+    }
+  }
+
+  private func setSliderValue(_ value: Double) {
+    switch adjustmentMode {
+    case .straighten:
+      onSetAdjustmentAngle(value)
+    case .vertical:
+      onSetPerspectiveCorrection(value, .vertical)
+    case .horizontal:
+      onSetPerspectiveCorrection(value, .horizontal)
+    }
+  }
 }
 
-private struct PhotosCropRotationSlider: View {
+private struct PhotosCropAdjustmentModePicker: View {
+
+  @Binding var selection: PhotosCropAdjustmentMode
+
+  var body: some View {
+    Picker("Adjustment", selection: $selection) {
+      ForEach(PhotosCropAdjustmentMode.allCases) { mode in
+        Text(mode.title)
+          .tag(mode)
+      }
+    }
+    .pickerStyle(.segmented)
+    .frame(maxWidth: 360)
+    .padding(.horizontal, 24)
+    .accessibilityIdentifier("photos.crop.adjustment.mode")
+  }
+}
+
+private struct PhotosCropAdjustmentSlider: View {
 
   let value: Double
+  let range: ClosedRange<Double>
+  let stepCount: Int
+  let accessibilityLabel: String
   let isEnabled: Bool
   let onChange: (Double) -> Void
 
   var body: some View {
     BrightroomSteppedSlider(
       value: valueBinding,
-      range: -45...45,
-      stepCount: 90,
-      style: .photosCropRotationSlider,
-      resetValue: 0,
+      range: range,
+      stepCount: stepCount,
+      style: .photosCropAdjustmentSlider,
       transform: { source in
-        if (-PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees).contains(source) {
-          return 0
-        }
-
-        return source.rounded(.toNearestOrEven)
+        source.rounded(.toNearestOrEven)
       },
       hapticIdentity: { value in
         let degree = Int(value.rounded(.toNearestOrEven))
@@ -419,13 +592,13 @@ private struct PhotosCropRotationSlider: View {
       }
     )
     .tint(.white)
+    .accentColor(.white)
     .frame(height: 50)
     .padding(.horizontal, 24)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .opacity(isEnabled ? 1 : 0.5)
     .disabled(!isEnabled)
-    .accessibilityLabel("Rotation")
-    .environment(\.colorScheme, .dark)
+    .accessibilityLabel(accessibilityLabel)
   }
 
   private var valueBinding: Binding<Double> {
@@ -442,16 +615,12 @@ private struct PhotosCropRotationSlider: View {
   }
 }
 
-private enum PhotosCropRotationSliderMetrics {
-  static let neutralDeadZoneDegrees: Double = 2.5
-}
-
 private extension BrightroomSteppedSliderStyle {
-  static let photosCropRotationSlider = BrightroomSteppedSliderStyle(
-    tickWidth: 2,
+  static let photosCropAdjustmentSlider = BrightroomSteppedSliderStyle(
+    tickWidth: 1,
     tickSpacing: 4,
     tickHeight: 10,
-    activeTickWidth: 3,
+    activeTickWidth: nil,
     activeTickHeight: 18,
     majorTickInterval: 5
   )

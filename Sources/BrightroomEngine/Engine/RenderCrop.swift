@@ -183,7 +183,9 @@ internal struct RenderCrop: Equatable, Sendable {
   internal var imageSize: PixelDimensions
   internal var cropRect: PixelCropRect
   internal var rotation: EditingCrop.Rotation
+  internal var flip: EditingCrop.Flip
   internal var adjustmentAngle: EditingCrop.AdjustmentAngle
+  internal var perspectiveCorrection: EditingCrop.PerspectiveCorrection
 
   internal var cropExtent: CGRect {
     cropRect.cgRect
@@ -202,7 +204,9 @@ internal struct RenderCrop: Equatable, Sendable {
       imageSize: imageSize ?? crop.imageSize,
       cropExtent: crop.cropExtent,
       rotation: crop.rotation,
+      flip: crop.flip,
       adjustmentAngle: crop.adjustmentAngle,
+      perspectiveCorrection: crop.perspectiveCorrection,
       epsilon: epsilon
     )
   }
@@ -211,7 +215,9 @@ internal struct RenderCrop: Equatable, Sendable {
     imageSize: CGSize,
     cropExtent: CGRect,
     rotation: EditingCrop.Rotation = .angle_0,
+    flip: EditingCrop.Flip = [],
     adjustmentAngle: EditingCrop.AdjustmentAngle = .zero,
+    perspectiveCorrection: EditingCrop.PerspectiveCorrection = .identity,
     epsilon: CGFloat = Self.pixelEpsilon
   ) {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
@@ -223,19 +229,25 @@ internal struct RenderCrop: Equatable, Sendable {
       epsilon: epsilon
     )
     self.rotation = rotation
+    self.flip = flip
     self.adjustmentAngle = adjustmentAngle
+    self.perspectiveCorrection = perspectiveCorrection
   }
 
   internal init(
     imageSize: PixelDimensions,
     cropRect: PixelCropRect,
     rotation: EditingCrop.Rotation = .angle_0,
-    adjustmentAngle: EditingCrop.AdjustmentAngle = .zero
+    flip: EditingCrop.Flip = [],
+    adjustmentAngle: EditingCrop.AdjustmentAngle = .zero,
+    perspectiveCorrection: EditingCrop.PerspectiveCorrection = .identity
   ) {
     self.imageSize = imageSize
     self.cropRect = cropRect
     self.rotation = rotation
+    self.flip = flip
     self.adjustmentAngle = adjustmentAngle
+    self.perspectiveCorrection = perspectiveCorrection
   }
 }
 

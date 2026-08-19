@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import CoreGraphics
+import CoreImage
 import ImageIO
 
 extension CGContext {
@@ -118,6 +119,21 @@ extension CGContext {
     translateBy(x: -anchor.x, y: -anchor.y)
 
   }
+
+  func transformForCrop(
+    radians: CGFloat,
+    flip: EditingCrop.Flip,
+    anchor: CGPoint
+  ) {
+    translateBy(x: anchor.x, y: anchor.y)
+
+    let scaleX: CGFloat = flip.contains(.horizontal) ? -1 : 1
+    let scaleY: CGFloat = flip.contains(.vertical) ? -1 : 1
+    scaleBy(x: scaleX, y: scaleY)
+
+    rotate(by: radians)
+    translateBy(x: -anchor.x, y: -anchor.y)
+  }
 }
 
 extension CGImage {
@@ -129,15 +145,19 @@ extension CGImage {
   func croppedWithColorspace(
     to crop: RenderCrop
   ) throws -> CGImage {
-    try croppedWithColorspace(
+    let sourceImage = try perspectiveTransformed(crop.perspectiveCorrection)
+
+    return try sourceImage.croppedWithColorspace(
       to: crop.cropRect,
-      adjustmentAngleRadians: crop.aggregatedRotation.radians
+      adjustmentAngleRadians: crop.aggregatedRotation.radians,
+      flip: crop.flip
     )
   }
 
   func croppedWithColorspace(
     to cropRect: PixelCropRect,
-    adjustmentAngleRadians: CGFloat
+    adjustmentAngleRadians: CGFloat,
+    flip: EditingCrop.Flip = []
   ) throws -> CGImage {
 
     let cropExtent = cropRect.cgRect
@@ -147,8 +167,9 @@ extension CGImage {
       let context = try CGContext.makeContext(for: self, pixelDimensions: cropRect.size)
         .perform { context in
 
-          context.rotate(
+          context.transformForCrop(
             radians: -adjustmentAngleRadians,
+            flip: flip,
             anchor: .init(x: context.boundingBoxOfClipPath.midX, y: context.boundingBoxOfClipPath.midY)
           )
 
@@ -169,6 +190,45 @@ extension CGImage {
 
     return try cgImage.unwrap()
 
+  }
+
+  public func perspectiveTransformed(
+    _ correction: EditingCrop.PerspectiveCorrection
+  ) throws -> CGImage {
+    guard correction.isIdentity == false else {
+      return self
+    }
+
+    let targetExtent = CGRect(origin: .zero, size: size)
+    let quadrilateral = correction.coreImageTargetQuadrilateral(in: targetExtent)
+    let colorSpace = colorSpace ?? CGColorSpaceCreateDeviceRGB()
+    let sourceImage = CIImage(cgImage: self)
+
+    let corrected = sourceImage.applyingFilter(
+      "CIPerspectiveTransformWithExtent",
+      parameters: [
+        "inputExtent": CIVector(cgRect: targetExtent),
+        "inputTopLeft": CIVector(cgPoint: quadrilateral.topLeft),
+        "inputTopRight": CIVector(cgPoint: quadrilateral.topRight),
+        "inputBottomRight": CIVector(cgPoint: quadrilateral.bottomRight),
+        "inputBottomLeft": CIVector(cgPoint: quadrilateral.bottomLeft),
+      ]
+    )
+
+    let context = CIContext(options: [
+      .workingColorSpace: colorSpace,
+      .outputColorSpace: colorSpace,
+      .cacheIntermediates: false,
+    ])
+
+    return try context.createCGImage(
+      corrected,
+      from: targetExtent,
+      format: .RGBA8,
+      colorSpace: colorSpace,
+      deferred: false
+    )
+    .unwrap()
   }
 
   func resized(maxPixelSize: CGFloat) throws -> CGImage {
@@ -366,6 +426,14 @@ private enum MTLImageCreationError: Error {
 }
 
 extension MTLDevice {
+  fileprivate var brightroomMaximum2DTextureSideSize: Int {
+    #if targetEnvironment(simulator)
+    8192
+    #else
+    supportsFamily(.apple3) ? 16384 : 8192
+    #endif
+  }
+
   fileprivate func supportsImage(size: CGSize) -> Bool {
 #if DEBUG
     switch MTLGPUFamily.apple1 {
@@ -391,7 +459,7 @@ extension MTLDevice {
       break
     }
 #endif
-    let maxSideSize: CGFloat = self.supportsFamily(.apple3) ? 16384 : 8192
+    let maxSideSize = CGFloat(brightroomMaximum2DTextureSideSize)
     return size.width <= maxSideSize && size.height <= maxSideSize
   }
 }
@@ -400,7 +468,11 @@ extension MTLDevice {
 /// 16bits image can't be MTLTexture with MTKTextureLoader.
 /// https://stackoverflow.com/questions/54710592/cant-load-large-jpeg-into-a-mtltexture-with-mtktextureloader
 private func makeMTLTexture(from cgImage: CGImage, device: MTLDevice) throws -> MTLTexture {
-  guard device.supportsImage(size: cgImage.size) else {
+  guard
+    device.supportsImage(size: cgImage.size),
+    cgImage.width <= device.brightroomMaximum2DTextureSideSize,
+    cgImage.height <= device.brightroomMaximum2DTextureSideSize
+  else {
     throw MTLImageCreationError.imageTooBig
   }
 

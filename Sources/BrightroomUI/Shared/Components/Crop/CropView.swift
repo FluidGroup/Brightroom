@@ -386,6 +386,33 @@ final class CropView: UIView, UIScrollViewDelegate {
     setProposedCrop(crop)
   }
 
+  func setFlip(_ flip: EditingCrop.Flip) {
+    _pixeleditor_ensureMainThread()
+
+    guard var crop = state.proposedCrop, crop.flip != flip else {
+      return
+    }
+
+    crop.flip = flip
+    setProposedCrop(crop, forcesLayout: true)
+  }
+
+  func toggleFlip(_ axis: EditingCrop.Flip) {
+    _pixeleditor_ensureMainThread()
+
+    guard var crop = state.proposedCrop else {
+      return
+    }
+
+    if crop.flip.contains(axis) {
+      crop.flip.remove(axis)
+    } else {
+      crop.flip.insert(axis)
+    }
+
+    setProposedCrop(crop, forcesLayout: true)
+  }
+
   func rotateClockwise() {
     _pixeleditor_ensureMainThread()
 
@@ -416,6 +443,18 @@ final class CropView: UIView, UIScrollViewDelegate {
     crop.adjustmentAngle = angle
     setProposedCrop(crop)
 
+    record()
+  }
+
+  func setPerspectiveCorrection(_ correction: EditingCrop.PerspectiveCorrection) {
+    _pixeleditor_ensureMainThread()
+
+    guard var crop = state.proposedCrop, crop.perspectiveCorrection != correction else {
+      return
+    }
+
+    crop.perspectiveCorrection = correction
+    setProposedCrop(crop, forcesLayout: true)
     record()
   }
 
@@ -693,6 +732,7 @@ extension CropView {
       preferredAspectRatio: state.preferredAspectRatio,
       animated: areAnimationsEnabled && animationSourceCrop != nil /* whether first time load */,
       animatesRotation: animationSourceCrop?.rotation != crop.rotation
+        || animationSourceCrop?.flip != crop.flip
     )
 
     lastLaidOutCrop = crop
@@ -804,7 +844,7 @@ extension CropView {
 
         guideView.frame = contentRect
 
-        scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
+        scrollView.transform = crop.cropDisplayTransform()
 
         updateScrollViewInset(crop: crop)
 
@@ -812,22 +852,32 @@ extension CropView {
         do {
 
           let (min, max) = crop.calculateZoomScale(
-            visibleSize: guideView.bounds
-              .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
-              .size
+            visibleSize: guideView.bounds.size
           )
 
           scrollView.minimumZoomScale = min
           scrollView.maximumZoomScale = max
 
           imagePlatterView.frame.origin = .zero
+          imagePlatterView.perspectiveCorrection = crop.perspectiveCorrection
 
           func _zoom() {
 
             scrollView.customZoom(
               to: crop.zoomExtent(),
               guideSize: guideView.bounds.size,
-              adjustmentRotation: crop.aggregatedRotation.radians,
+              adjustmentTransform: crop.cropDisplayTransform(),
+              contentInsetForZoomScale: { [weak self] zoomScale in
+                guard let self else {
+                  return .zero
+                }
+
+                return self.makeScrollViewInset(
+                  displayTransform: crop.cropDisplayTransform(),
+                  coveredContentRect: crop.perspectiveCoveredContentRect(),
+                  zoomScale: zoomScale
+                )
+              },
               animated: false
             )
 
@@ -894,7 +944,11 @@ extension CropView {
     debounce.on { /* for debounce */  }
   }
 
-  private func makeScrollViewInset(aggregatedRotaion: CGFloat) -> UIEdgeInsets {
+  private func makeScrollViewInset(
+    displayTransform: CGAffineTransform,
+    coveredContentRect: CGRect,
+    zoomScale: CGFloat
+  ) -> UIEdgeInsets {
 
     let o: CGPoint = {
 
@@ -929,27 +983,37 @@ extension CropView {
       .convert(
         guideView.bounds.applying(
           CGAffineTransform(translationX: -anchorOffset.x, y: -anchorOffset.y)
-            .concatenating(.init(rotationAngle: -aggregatedRotaion))
+            .concatenating(displayTransform.inverted())
             .concatenating(.init(translationX: anchorOffset.x, y: anchorOffset.y))
         ),
         to: scrollBackdropView
       )
 
     let bounds = scrollBackdropView.bounds
+    let contentSize = CGSize(
+      width: imagePlatterView.bounds.width * zoomScale,
+      height: imagePlatterView.bounds.height * zoomScale
+    )
+    let coveredContentRect = coveredContentRect.applying(.init(scaleX: zoomScale, y: zoomScale))
 
     let insetsForActual = UIEdgeInsets.init(
-      top: actualRect.minY,
-      left: actualRect.minX,
-      bottom: bounds.maxY - actualRect.maxY,
-      right: bounds.maxX - actualRect.maxX
+      top: actualRect.minY - coveredContentRect.minY,
+      left: actualRect.minX - coveredContentRect.minX,
+      bottom: bounds.maxY + coveredContentRect.maxY - actualRect.maxY - contentSize.height,
+      right: bounds.maxX + coveredContentRect.maxX - actualRect.maxX - contentSize.width
     )
 
     return insetsForActual
   }
 
-  private func updateScrollViewInset(crop: EditingCrop) {
+  private func updateScrollViewInset(
+    crop: EditingCrop,
+    zoomScale: CGFloat? = nil
+  ) {
     scrollView.contentInset = makeScrollViewInset(
-      aggregatedRotaion: crop.aggregatedRotation.radians
+      displayTransform: crop.cropDisplayTransform(),
+      coveredContentRect: crop.perspectiveCoveredContentRect(),
+      zoomScale: zoomScale ?? scrollView.zoomScale
     )
   }
 
@@ -991,9 +1055,10 @@ extension CropView {
       let offsetY = croppingRect.midY - guideBackdropView.bounds.midY
 
       // move focusing area to center
-      scrollView.transform = CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)
+      let displayTransform = crop.cropDisplayTransform()
+      scrollView.transform = displayTransform
         .concatenating(.init(translationX: -offsetX, y: -offsetY))
-        .concatenating(.init(rotationAngle: -crop.aggregatedRotation.radians))
+        .concatenating(displayTransform.inverted())
 
       // TODO: Find calculation way withoug using convert rect
       // To work correctly, ignoring transform temporarily.
@@ -1044,15 +1109,15 @@ extension CropView {
     _ cropExtent: CGRect,
     currentCrop: EditingCrop
   ) -> CGRect {
-    guard let preferredAspectRatio = state.preferredAspectRatio else {
-      return cropExtent
-    }
-
-    let imageBounds = CGRect(origin: .zero, size: currentCrop.imageSize)
-    let boundedCropExtent = imageBounds.intersection(cropExtent)
+    let coverageBounds = currentCrop.perspectiveCoveredImageRect()
+    let boundedCropExtent = coverageBounds.intersection(cropExtent)
 
     guard boundedCropExtent.isNull == false, boundedCropExtent.isEmpty == false else {
       return cropExtent
+    }
+
+    guard let preferredAspectRatio = state.preferredAspectRatio else {
+      return boundedCropExtent
     }
 
     return preferredAspectRatio.rectThatFits(in: boundedCropExtent)
@@ -1138,6 +1203,7 @@ extension CropView {
     if
       let baselineCrop = scrollViewAdjustmentSession?.baselineCrop,
       let recordedCrop,
+      baselineCrop.perspectiveCorrection.isIdentity,
       baselineCrop.isRenderingEquivalent(to: recordedCrop)
     {
       setProposedCrop(baselineCrop)
@@ -1175,6 +1241,10 @@ extension CropView {
   func scrollViewDidZoom(_ scrollView: UIScrollView) {
 
     debugLogScrollViewAdjustment("did-zoom")
+
+    if let crop = state.proposedCrop {
+      updateScrollViewInset(crop: crop)
+    }
 
     // TODO: consider if we need this.
     // adjustFrameToCenterOnZooming
@@ -1263,120 +1333,29 @@ extension CropView {
       return .zero
     }
 
-    let sourceInsets: UIEdgeInsets = {
+    let targetQuadrilateral = crop.perspectiveCorrection.displayTargetQuadrilateral(
+      in: imagePlatterView.bounds
+    )
+    let projectedQuadrilateral = ProjectedQuadrilateral(
+      topLeft: imagePlatterView.convert(targetQuadrilateral.topLeft, to: self),
+      topRight: imagePlatterView.convert(targetQuadrilateral.topRight, to: self),
+      bottomRight: imagePlatterView.convert(targetQuadrilateral.bottomRight, to: self),
+      bottomLeft: imagePlatterView.convert(targetQuadrilateral.bottomLeft, to: self)
+    )
+    let coveredRect = projectedQuadrilateral.axisAlignedInnerRect()
+    let guideRect = guideView.convert(guideView.bounds, to: self)
 
-      let guideViewRectInPlatter = guideView.convert(guideView.bounds, to: imagePlatterView)
-
-      let scale = Geometry.diagonalRatio(to: guideView.bounds.size, from: guideViewRectInPlatter.size)
-
-      let outbound = imagePlatterView.bounds
-
-      let value = UIEdgeInsets(
-        top: guideViewRectInPlatter.minY - outbound.minY,
-        left: guideViewRectInPlatter.minX - outbound.minX,
-        bottom: outbound.maxY - guideViewRectInPlatter.maxY,
-        right: outbound.maxX - guideViewRectInPlatter.maxX
-      )
-
-#if false
-
-      let maxRectInPlatter = imagePlatterView.convert(
-        guideViewRectInPlatter.inset(by: value.inversed()),
-        to: imagePlatterView
-      )
-
-      let path = UIBezierPath()
-      path.append(.init(rect: guideViewRectInPlatter))
-      path.append(.init(rect: maxRectInPlatter))
-
-      imagePlatterView._debug_setPath(path: path)
-
-#endif
-
-      return value.multiplied(scale)
-
-    }()
-
-    var patternAngleDegree = crop.aggregatedRotation.degrees.truncatingRemainder(dividingBy: 360)
-    if patternAngleDegree > 0 {
-      patternAngleDegree -= 360
+    guard coveredRect.isEmpty == false else {
+      return .zero
     }
 
-    var resolvedInsets: UIEdgeInsets {
-      switch patternAngleDegree {
-
-      case 0:
-        return sourceInsets
-      case -90:
-
-        return .init(
-          top: sourceInsets.right,
-          left: sourceInsets.top,
-          bottom: sourceInsets.left,
-          right: sourceInsets.bottom
-        )
-
-      case -180:
-
-        return .init(
-          top: sourceInsets.bottom,
-          left: sourceInsets.right,
-          bottom: sourceInsets.top,
-          right: sourceInsets.left
-        )
-
-      case -270:
-
-        return .init(
-          top: sourceInsets.left,
-          left: sourceInsets.bottom,
-          bottom: sourceInsets.right,
-          right: sourceInsets.top
-        )
-
-      case -90..<0:
-
-        return .init(
-          top: min(sourceInsets.top, sourceInsets.right),
-          left: min(sourceInsets.top, sourceInsets.left),
-          bottom: min(sourceInsets.bottom, sourceInsets.left),
-          right: min(sourceInsets.bottom, sourceInsets.right)
-        )
-
-      case -180..<(-90):
-
-        return .init(
-          top: min(sourceInsets.bottom, sourceInsets.right),
-          left: min(sourceInsets.top, sourceInsets.right),
-          bottom: min(sourceInsets.top, sourceInsets.left),
-          right: min(sourceInsets.bottom, sourceInsets.left)
-        )
-
-      case -270..<(-180):
-
-        return .init(
-          top: min(sourceInsets.bottom, sourceInsets.left),
-          left: min(sourceInsets.bottom, sourceInsets.right),
-          bottom: min(sourceInsets.top, sourceInsets.right),
-          right: min(sourceInsets.top, sourceInsets.left)
-        )
-
-      case -360..<(-270):
-
-        return .init(
-          top: min(sourceInsets.top, sourceInsets.left),
-          left: min(sourceInsets.bottom, sourceInsets.left),
-          bottom: min(sourceInsets.bottom, sourceInsets.right),
-          right: min(sourceInsets.top, sourceInsets.right)
-        )
-
-      default:
-        return sourceInsets
-      }
-
-    }
-
-    return resolvedInsets
+    return UIEdgeInsets(
+      top: guideRect.minY - coveredRect.minY,
+      left: guideRect.minX - coveredRect.minX,
+      bottom: coveredRect.maxY - guideRect.maxY,
+      right: coveredRect.maxX - guideRect.maxX
+    )
+    .minZero()
 
   }
 }
@@ -1425,6 +1404,14 @@ extension CGRect {
     )
   }
 
+  fileprivate func applyingAroundCenter(_ transform: CGAffineTransform) -> CGRect {
+    let centeredTransform = CGAffineTransform(translationX: midX, y: midY)
+      .concatenating(transform)
+      .concatenating(.init(translationX: -midX, y: -midY))
+
+    return applying(centeredTransform)
+  }
+
 }
 
 extension UIScrollView {
@@ -1463,7 +1450,8 @@ extension UIScrollView {
   fileprivate func customZoom(
     to rect: CGRect,
     guideSize: CGSize,
-    adjustmentRotation: CGFloat,
+    adjustmentTransform: CGAffineTransform,
+    contentInsetForZoomScale: @escaping (CGFloat) -> UIEdgeInsets,
     animated: Bool
   ) {
 
@@ -1474,12 +1462,16 @@ extension UIScrollView {
 
       let minXScale = boundSize.width / targetContentSize.width
       let minYScale = boundSize.height / targetContentSize.height
-      let targetScale = min(minXScale, minYScale)
+      let targetScale = min(
+        max(min(minXScale, minYScale), minimumZoomScale),
+        maximumZoomScale
+      )
       setZoomScale(targetScale, animated: false)
+      contentInset = contentInsetForZoomScale(targetScale)
 
       var targetContentOffset =
         rect
-        .rotated(adjustmentRotation)
+        .applyingAroundCenter(adjustmentTransform)
         .applying(.init(scaleX: targetScale, y: targetScale))
         .origin
 

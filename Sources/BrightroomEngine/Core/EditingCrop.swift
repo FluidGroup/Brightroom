@@ -67,6 +67,166 @@ public struct EditingCrop: Equatable, Sendable {
 
   public typealias AdjustmentAngle = SwiftUI.Angle
 
+  public struct Flip: OptionSet, Equatable, Sendable, Hashable {
+
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+      self.rawValue = rawValue
+    }
+
+    public static let horizontal = Flip(rawValue: 1 << 0)
+    public static let vertical = Flip(rawValue: 1 << 1)
+  }
+
+  public struct PerspectiveCorrection: Equatable, Sendable, Hashable {
+
+    public struct Quadrilateral: Equatable, Sendable, Hashable {
+      public var topLeft: CGPoint
+      public var topRight: CGPoint
+      public var bottomRight: CGPoint
+      public var bottomLeft: CGPoint
+    }
+
+    public static let identity = PerspectiveCorrection()
+
+    public static let maximumInsetRatio: CGFloat = 0.36
+
+    public private(set) var horizontal: CGFloat
+    public private(set) var vertical: CGFloat
+
+    public var isIdentity: Bool {
+      horizontal == 0 && vertical == 0
+    }
+
+    public init(
+      horizontal: CGFloat = 0,
+      vertical: CGFloat = 0
+    ) {
+      self.horizontal = Self.clamped(horizontal)
+      self.vertical = Self.clamped(vertical)
+    }
+
+    public func settingHorizontal(_ horizontal: CGFloat) -> Self {
+      .init(horizontal: horizontal, vertical: vertical)
+    }
+
+    public func settingVertical(_ vertical: CGFloat) -> Self {
+      .init(horizontal: horizontal, vertical: vertical)
+    }
+
+    public func coreImageTargetQuadrilateral(in rect: CGRect) -> Quadrilateral {
+      guard rect.isEmpty == false else {
+        let origin = rect.origin
+        return .init(
+          topLeft: origin,
+          topRight: origin,
+          bottomRight: origin,
+          bottomLeft: origin
+        )
+      }
+
+      var topLeft = CGPoint(x: rect.minX, y: rect.maxY)
+      var topRight = CGPoint(x: rect.maxX, y: rect.maxY)
+      var bottomRight = CGPoint(x: rect.maxX, y: rect.minY)
+      var bottomLeft = CGPoint(x: rect.minX, y: rect.minY)
+
+      let verticalInset = rect.width * min(abs(vertical), 1) * Self.maximumInsetRatio
+      if vertical > 0 {
+        topLeft.x += verticalInset
+        topRight.x -= verticalInset
+      } else if vertical < 0 {
+        bottomLeft.x += verticalInset
+        bottomRight.x -= verticalInset
+      }
+
+      let horizontalInset = rect.height * min(abs(horizontal), 1) * Self.maximumInsetRatio
+      if horizontal > 0 {
+        topLeft.y -= horizontalInset
+        bottomLeft.y += horizontalInset
+      } else if horizontal < 0 {
+        topRight.y -= horizontalInset
+        bottomRight.y += horizontalInset
+      }
+
+      return .init(
+        topLeft: topLeft,
+        topRight: topRight,
+        bottomRight: bottomRight,
+        bottomLeft: bottomLeft
+      )
+    }
+
+    public func displayTargetQuadrilateral(in rect: CGRect) -> Quadrilateral {
+      guard rect.isEmpty == false else {
+        let origin = rect.origin
+        return .init(
+          topLeft: origin,
+          topRight: origin,
+          bottomRight: origin,
+          bottomLeft: origin
+        )
+      }
+
+      var topLeft = CGPoint(x: rect.minX, y: rect.minY)
+      var topRight = CGPoint(x: rect.maxX, y: rect.minY)
+      var bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+      var bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+
+      let verticalInset = rect.width * min(abs(vertical), 1) * Self.maximumInsetRatio
+      if vertical > 0 {
+        topLeft.x += verticalInset
+        topRight.x -= verticalInset
+      } else if vertical < 0 {
+        bottomLeft.x += verticalInset
+        bottomRight.x -= verticalInset
+      }
+
+      let horizontalInset = rect.height * min(abs(horizontal), 1) * Self.maximumInsetRatio
+      if horizontal > 0 {
+        topLeft.y += horizontalInset
+        bottomLeft.y -= horizontalInset
+      } else if horizontal < 0 {
+        topRight.y += horizontalInset
+        bottomRight.y -= horizontalInset
+      }
+
+      return .init(
+        topLeft: topLeft,
+        topRight: topRight,
+        bottomRight: bottomRight,
+        bottomLeft: bottomLeft
+      )
+    }
+
+    public func axisAlignedCoverageRect(in rect: CGRect) -> CGRect {
+      guard rect.isEmpty == false else {
+        return rect
+      }
+
+      let quadrilateral = displayTargetQuadrilateral(in: rect)
+      let minX = max(quadrilateral.topLeft.x, quadrilateral.bottomLeft.x)
+      let maxX = min(quadrilateral.topRight.x, quadrilateral.bottomRight.x)
+      let minY = max(quadrilateral.topLeft.y, quadrilateral.topRight.y)
+      let maxY = min(quadrilateral.bottomLeft.y, quadrilateral.bottomRight.y)
+
+      guard minX < maxX, minY < maxY else {
+        return rect
+      }
+
+      return .init(
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY
+      )
+    }
+
+    static func clamped(_ value: CGFloat) -> CGFloat {
+      min(max(value, -1), 1)
+    }
+  }
+
   /// The dimensions in pixel for the image.
   /// Applied image-orientation.
   public var imageSize: CGSize
@@ -77,10 +237,16 @@ public struct EditingCrop: Equatable, Sendable {
   /// The angle that specifies rotation for the image.
   public var rotation: Rotation = .angle_0
 
+  /// Mirroring applied to the visible crop result.
+  public var flip: Flip = []
+
   public private(set) var _usedAspectRatio: PixelAspectRatio?
 
   /// An angle to rotate in addition to the specified rotation.
   public var adjustmentAngle: AdjustmentAngle = .zero
+
+  /// Perspective correction applied to the image before producing the crop.
+  public var perspectiveCorrection: PerspectiveCorrection = .identity
 
   public var aggregatedRotation: AdjustmentAngle {
     rotation.angle + adjustmentAngle
@@ -107,11 +273,15 @@ public struct EditingCrop: Equatable, Sendable {
     imageSize: CGSize,
     cropRect: CGRect,
     rotation: Rotation = .angle_0,
+    flip: Flip = [],
+    perspectiveCorrection: PerspectiveCorrection = .identity,
     scaleToRestore: CGFloat = 1
   ) {
     self.imageSize = imageSize
     self.cropExtent = Self.fittingRect(rect: cropRect, in: imageSize, respectingAspectRatio: nil)
     self.rotation = rotation
+    self.flip = flip
+    self.perspectiveCorrection = perspectiveCorrection
     self.scaleToRestore = scaleToRestore
   }
 
