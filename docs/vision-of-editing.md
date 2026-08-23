@@ -370,10 +370,32 @@ The next step is to make that shape feel natural rather than special-cased:
 This should be treated as a small UI expression of the larger parametric engine,
 not as a one-off PhotosCrop feature.
 
+## Decided Semantics
+
+Decisions made ahead of repeatable crops (2026-08), so that behavior that
+currently holds by feature order becomes declared rather than incidental:
+
+- **Mask coordinates are current-Feature-domain.** A mask is authored in, and
+  evaluated against, the input domain of its owning Feature at that point in
+  the stack. Masks are frame-anchored, not content-anchored: when an upstream
+  crop changes, the content under the mask shifts accordingly, and no
+  restoration to the original pixels is attempted. This is the parametric
+  reading — each Feature is a function of its input — and it means the
+  compiler's existing rasterization into the current base extent is the
+  correct implementation, not a limitation.
+- **Proportional (value-form) radii resolve against the render pass's
+  chain-entry extent.** A value like `GaussianBlurFeature(value: 40)` means a
+  fixed fraction of the image as it entered the parametric chain for the
+  current render, regardless of where crops sit in the feature list. Editing
+  or moving a crop can therefore never retroactively change the strength of a
+  committed effect. The basis is per-render-pass (the downsampled preview and
+  the full-resolution export each resolve against their own entry scale), so
+  preview and export stay visually consistent. Render paths that evaluate on
+  an intermediate that is not the chain entry (for example a zoomed viewport
+  slice) must pass the entry extent explicitly.
+
 ## Open Questions
 
-- Should masks after a crop be stored in source image coordinates, current
-  Feature coordinates, or both with an explicit transform?
 - Should mask strokes store brush width in the authoring Feature domain, or
   should some tools opt into screen-space width that is reprojected at render
   time?

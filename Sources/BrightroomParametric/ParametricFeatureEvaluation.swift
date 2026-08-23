@@ -53,10 +53,11 @@ public struct FeatureEvaluationContext: Sendable {
   /// rendering at, so the radius stays a fixed fraction of the source in every
   /// path (export, preview, live viewport).
   ///
-  /// `nil` falls back to the input image's own extent, which is correct only
-  /// when the input *is* the full source at render scale (true for the export
-  /// and preview-composition paths, where the blur runs pre-crop at source
-  /// resolution).
+  /// `nil` falls back to the input image's own extent at the recipe level.
+  /// `FeatureGraphCompiler` never relies on that fallback: it resolves the
+  /// reference ONCE at chain entry, so a mid-chain crop cannot re-base the
+  /// radius. The fallback only applies to direct `apply(to:context:)` calls
+  /// outside the compiler, where the input is expected to be the chain entry.
   public let radiusReferenceExtent: CGRect?
 
   /// Creates an evaluation context.

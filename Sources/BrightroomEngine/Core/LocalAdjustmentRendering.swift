@@ -45,16 +45,28 @@ extension EditingStack.Edit {
     from sourceImage: CIImage,
     purpose: PreviewPurpose
   ) -> CIImage {
-    features.reduce(sourceImage) { image, feature in
+    // Value-form radii resolve against the CHAIN-ENTRY extent of this render
+    // pass, by declaration — not against whatever intermediate an effect
+    // happens to receive. This keeps the resolved radius independent of where
+    // crops sit in the feature list, matching FeatureGraphCompiler.
+    let radiusReference: CGRect? =
+      sourceImage.extent.isInfinite ? nil : sourceImage.extent
+    return features.reduce(sourceImage) { image, feature in
       switch feature {
       case .effect(let effect):
-        return effect.applyIgnoringFailure(to: image)
+        return effect.applyIgnoringFailure(
+          to: image,
+          radiusReferenceExtent: radiusReference
+        )
       case .localAdjustment(let adjustment):
         switch purpose {
         case .editingBase:
           return image
         case .editing:
-          return adjustment.engineRenderIgnoringFailure(over: image)
+          return adjustment.engineRenderIgnoringFailure(
+            over: image,
+            radiusReferenceExtent: radiusReference
+          )
         }
       case .domain:
         return image
@@ -98,12 +110,11 @@ extension EffectPipeline {
   /// effects throwing here degrade to identity rather than poisoning the
   /// whole preview chain.
   ///
-  /// `radiusReferenceExtent` is the full source extent in the current render
-  /// pixel space, so diagonal-based radii (blur/sharpen) stay a fixed fraction
-  /// of the source regardless of crop or viewport zoom. Pass it from any path
-  /// that evaluates on a cropped/zoomed intermediate (the live viewport); the
-  /// default `nil` is correct when `image` is itself the full source at render
-  /// scale (export and preview-composition paths).
+  /// `radiusReferenceExtent` is the chain-entry extent of the current render
+  /// pass, so diagonal-based radii (blur/sharpen) stay a fixed fraction of
+  /// the source regardless of crop position or viewport zoom. Callers should
+  /// pass it explicitly; the `nil` fallback (the input's own extent) is only
+  /// correct when `image` is itself the chain entry.
   public func applyIgnoringFailure(
     to image: CIImage,
     radiusReferenceExtent: CGRect? = nil
@@ -133,7 +144,10 @@ extension LocalAdjustmentFeature {
   /// Throws when the effect pipeline fails to evaluate, so the export path
   /// surfaces the error like a global effects operation does instead of
   /// silently exporting without the adjustment.
-  func engineRender(over image: CIImage) throws -> CIImage {
+  func engineRender(
+    over image: CIImage,
+    radiusReferenceExtent: CGRect? = nil
+  ) throws -> CIImage {
     guard isEnabled, maskTree.engineIsEffectivelyEmpty == false else {
       return image
     }
@@ -144,7 +158,11 @@ extension LocalAdjustmentFeature {
     let extent = image.extent
     let imageInZeroOrigin = image.removingExtentOffset()
     let adjustedImage = try effectPipeline
-      .apply(to: imageInZeroOrigin, context: EngineParametricEvaluation.context)
+      .apply(
+        to: imageInZeroOrigin,
+        context: EngineParametricEvaluation.context
+          .withRadiusReferenceExtent(radiusReferenceExtent)
+      )
       .cropped(to: CGRect(origin: .zero, size: extent.size))
 
     guard let maskImage = maskTree.engineMakeMaskImage(size: extent.size) else {
@@ -171,9 +189,15 @@ extension LocalAdjustmentFeature {
   /// Preview variant of `engineRender(over:)` that degrades to identity when
   /// evaluation fails, so one failing effect cannot poison the whole preview
   /// chain. Export must use the throwing variant.
-  func engineRenderIgnoringFailure(over image: CIImage) -> CIImage {
+  func engineRenderIgnoringFailure(
+    over image: CIImage,
+    radiusReferenceExtent: CGRect? = nil
+  ) -> CIImage {
     do {
-      return try engineRender(over: image)
+      return try engineRender(
+        over: image,
+        radiusReferenceExtent: radiusReferenceExtent
+      )
     } catch {
       assertionFailure("Local adjustment evaluation failed: \(error)")
       return image
