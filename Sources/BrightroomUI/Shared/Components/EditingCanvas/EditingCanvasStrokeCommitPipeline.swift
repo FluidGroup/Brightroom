@@ -6,8 +6,8 @@ import BrightroomParametric
 /// Single owner of the `LocalAdjustmentFeature` that an editing canvas commits
 /// brush strokes into.
 ///
-/// Both `CropView` and `_EditingCanvasView` route their stroke commits through
-/// this type so layer lookup, creation, and effect semantics cannot diverge.
+/// `CropView` routes its stroke commits through this type so layer lookup,
+/// creation, and effect semantics stay in one place.
 ///
 /// Semantics:
 /// - A committed layer's effect pipeline is frozen at creation. Appending

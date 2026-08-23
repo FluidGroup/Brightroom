@@ -4,62 +4,7 @@ import CoreGraphics
 import SwiftUI
 import UIKit
 
-public enum EditingCanvasInteractionMode: String, CaseIterable, Identifiable {
-  case draw
-  case view
-
-  public var id: Self { self }
-
-  public var title: String {
-    switch self {
-    case .draw:
-      return "Draw"
-    case .view:
-      return "View"
-    }
-  }
-}
-
-extension EditingCanvasInteractionMode {
-  var isDrawingEnabled: Bool {
-    switch self {
-    case .draw:
-      return true
-    case .view:
-      return false
-    }
-  }
-
-  var panMinimumNumberOfTouches: Int {
-    switch self {
-    case .draw:
-      return 2
-    case .view:
-      return 1
-    }
-  }
-}
-
-public struct EditingCanvasMetrics: Equatable {
-  public var zoomScale: Double
-  public var stampCount: Int
-  public var strokeCount: Int
-  public var framesPerSecond: Double
-
-  public init(
-    zoomScale: Double = 1,
-    stampCount: Int = 0,
-    strokeCount: Int = 0,
-    framesPerSecond: Double = 0
-  ) {
-    self.zoomScale = zoomScale
-    self.stampCount = stampCount
-    self.strokeCount = strokeCount
-    self.framesPerSecond = framesPerSecond
-  }
-}
-
-/// Selects how `SwiftUIEditingCanvasView` builds the image shown by its
+/// Selects how an editing canvas host builds the image shown by its
 /// viewport.
 public enum EditingCanvasMode: Equatable {
   /// Draws the current crop/source with global filters in the visible viewport.
@@ -98,15 +43,6 @@ public enum EditingCanvasMode: Equatable {
       return nil
     case let .localAdjustment(effect):
       return effect
-    }
-  }
-
-  var defaultInteractionMode: EditingCanvasInteractionMode {
-    switch self {
-    case .viewportBase, .renderedEditPreview:
-      return .view
-    case .localAdjustment:
-      return .draw
     }
   }
 }

@@ -47,10 +47,6 @@ struct ContentView: View {
     )
   )
 
-  private var nasaImageURL: URL {
-    Bundle.main.url(forResource: "nasa", withExtension: "jpg")!
-  }
-
   var body: some View {
     NavigationSplitView {
       VStack {
@@ -69,10 +65,6 @@ struct ContentView: View {
             RenderingDemoView()
           }
 
-          NavigationLink("Metal Brush Sandbox") {
-            MetalBrushSandboxView()
-          }
-
           NavigationLink("Parametric Features") {
             ParametricFeaturePreviewView()
           }
@@ -80,14 +72,6 @@ struct ContentView: View {
           NavigationLink("Parametric Video") {
             ParametricVideoRenderPlaygroundView()
           }
-          NavigationLink("Metal Brush Sandbox NASA") {
-            MetalBrushSandboxView(fileURL: nasaImageURL)
-          }
-
-          NavigationLink("Editing Canvas Crop Probe") {
-            EditingCanvasCropProbeView()
-          }
-
           NavigationLink("PencilKit Reference") {
             PencilKitReferenceSandboxView()
           }
