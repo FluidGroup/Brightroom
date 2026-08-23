@@ -39,6 +39,74 @@ struct ColorCubeFeatureLoadingTests {
     #expect(feature.cubeData.count == 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
   }
 
+  @Test func `Color cube parser reads CRLF comments and numeric exponents`() throws {
+    let cube = [
+      "  # DaVinci Resolve style comment",
+      "title \"Identity ü\" # inline comment",
+      "lut_3d_size\t2",
+      "lut_3d_input_range 0e0 1e0",
+      "",
+      "0 0 0",
+      "1e0 0 0",
+      "0 1 0",
+      "1 1 0",
+      "0 0 1",
+      "1 0 1",
+      "0 1 1",
+      "1 1 1 # final value",
+    ].joined(separator: "\r\n")
+
+    let parsed = try _ColorCubeTextParser().parse(cube)
+    let values = parsed.cubeData.withUnsafeBytes {
+      Array($0.bindMemory(to: Float.self))
+    }
+
+    #expect(parsed.title == "Identity ü")
+    #expect(parsed.dimension == 2)
+    #expect(
+      values == [
+        0, 0, 0, 1,
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        1, 1, 0, 1,
+        0, 0, 1, 1,
+        1, 0, 1, 1,
+        0, 1, 1, 1,
+        1, 1, 1, 1,
+      ]
+    )
+  }
+
+  @Test func `Color cube parser materializes a production-sized cube`() throws {
+    let parsed = try _ColorCubeTextParser().parse(
+      Self.identityCube(size: 64, title: "Identity 64")
+    )
+
+    #expect(parsed.title == "Identity 64")
+    #expect(parsed.dimension == 64)
+    #expect(
+      parsed.cubeData.count
+        == 64 * 64 * 64 * 4 * MemoryLayout<Float>.size
+    )
+  }
+
+  @Test func `Color cube parser preserves malformed data diagnostics`() {
+    let cube = [
+      "LUT_3D_SIZE 2",
+      "0 0 0",
+      "0 0",
+    ].joined(separator: "\n")
+
+    #expect(
+      throws: ColorCubeFeatureLoadingError.invalidDataLine(
+        "0 0",
+        line: 3
+      )
+    ) {
+      try _ColorCubeTextParser().parse(cube)
+    }
+  }
+
   @Test func `Color cube feature normalizes image LUT data`() throws {
     let image = try Self.makeCubeImage()
     let feature = try ColorCubeFeature(

@@ -61,7 +61,13 @@ struct ParametricFeatureTreeTests {
               shadowColor: ParametricRGBAColor(red: 0.1, green: 0.2, blue: 1, alpha: 0.04)
             )
           ),
-          .effect(TemperatureFeature(id: FeatureID(rawValue: "temperature-a"), value: 450)),
+          .effect(
+            TemperatureFeature(
+              id: FeatureID(rawValue: "temperature-a"),
+              value: 450,
+              tint: -18
+            )
+          ),
           .effect(SharpenFeature(id: FeatureID(rawValue: "sharpen-a"), sharpness: 0.2, radius: 4)),
           .effect(UnsharpMaskFeature(id: FeatureID(rawValue: "unsharp-a"), intensity: 0.1, radius: 0.25)),
           .effect(VignetteFeature(id: FeatureID(rawValue: "vignette-a"), value: 0.35)),
@@ -311,13 +317,69 @@ struct ParametricFeatureTreeTests {
     let decoded = try readingCodec.decode(data)
 
     let firstFeature = try #require(decoded.mainTree.features.first)
-    guard case let .effect(effect) = firstFeature else {
+    guard case .effect(let effect) = firstFeature else {
       Issue.record("expected the migrated v2 feature")
       return
     }
     let migrated = try #require(effect as? TestMigratingFeatureV2, "expected the migrated v2 feature")
     #expect(migrated.id == FeatureID(rawValue: "migrating-feature"))
     #expect(migrated.strength == 0.5)
+  }
+
+  @Test func temperatureV1PayloadDecodesWithNeutralTint() throws {
+    var writingCodec = ParametricDocumentCodec()
+    writingCodec.register(TestTemperatureFeatureV1.self)
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestTemperatureFeatureV1(
+              id: FeatureID(rawValue: "legacy-temperature"),
+              value: 375
+            )
+          )
+        ]
+      )
+    )
+    let data = try writingCodec.encode(document)
+
+    let decoded = try ParametricDocumentCodec().decode(data)
+
+    let firstFeature = try #require(decoded.mainTree.features.first)
+    guard case .effect(let effect) = firstFeature else {
+      Issue.record("Expected the migrated Temperature feature.")
+      return
+    }
+    let temperature = try #require(effect as? TemperatureFeature)
+    #expect(temperature.id == FeatureID(rawValue: "legacy-temperature"))
+    #expect(temperature.value == 375)
+    #expect(temperature.tint == 0)
+  }
+
+  @Test func temperatureFeatureEvaluatesTintAxis() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TemperatureFeature(
+              id: FeatureID(rawValue: "tint-axis"),
+              value: 0,
+              tint: 100
+            )
+          )
+        ]
+      )
+    )
+
+    let output = try Self.compiler.makeOutput(
+      from: Self.smallInput,
+      document: document
+    )
+    let rendered = try Self.render(output.image)
+    let pixel = Self.rgba(in: rendered, x: 4, y: 4)
+
+    #expect(pixel.red > pixel.green)
+    #expect(pixel.blue > pixel.green)
   }
 
   @Test func unsupportedDocumentFormatVersionThrows() throws {
@@ -446,6 +508,48 @@ struct ParametricFeatureTreeTests {
       expected,
       output,
       tolerance: 2
+    )
+  }
+
+  @Test func videoFrameRendererPassesPresentationTimeToFeatureEvaluation() throws {
+    let presentationTime = CMTime(value: 17, timescale: 30)
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestPresentationTimeFeature(
+              id: FeatureID(rawValue: "video-presentation-time"),
+              expectedPresentationTime: presentationTime
+            )
+          )
+        ]
+      )
+    )
+
+    _ = try ParametricVideoRenderer().makeFrameImage(
+      from: Self.smallInput,
+      document: document,
+      presentationTime: presentationTime
+    )
+  }
+
+  @Test func imageRendererDefaultsPresentationTimeToZero() throws {
+    let document = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .effect(
+            TestPresentationTimeFeature(
+              id: FeatureID(rawValue: "still-presentation-time"),
+              expectedPresentationTime: .zero
+            )
+          )
+        ]
+      )
+    )
+
+    _ = try ParametricImageRenderer().makeImage(
+      from: Self.smallInput,
+      document: document
     )
   }
 
@@ -1066,6 +1170,29 @@ struct ParametricFeatureTreeTests {
     }
   }
 
+  /// Verifies that render-time values reach a host-defined effect without being
+  /// stored as authored feature parameters.
+  private struct TestPresentationTimeFeature: ImageEffectFeatureType {
+
+    var id: FeatureID
+    var isEnabled: Bool = true
+    var expectedPresentationTime: CMTime
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      guard context.presentationTime == expectedPresentationTime else {
+        throw TestPresentationTimeError.unexpectedTime(
+          expected: expectedPresentationTime,
+          actual: context.presentationTime
+        )
+      }
+      return image
+    }
+  }
+
+  private enum TestPresentationTimeError: Error {
+    case unexpectedTime(expected: CMTime, actual: CMTime)
+  }
+
   /// The v1 shape of the migrating test feature: field named `amount`.
   private struct TestMigratingFeatureV1: ImageEffectFeatureType, PersistableFeature {
 
@@ -1074,6 +1201,21 @@ struct ParametricFeatureTreeTests {
     var id: FeatureID = .init()
     var isEnabled: Bool = true
     var amount: Double
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      image
+    }
+  }
+
+  /// The persisted shape used by TemperatureFeature before its tint axis was
+  /// added in schema version 2.
+  private struct TestTemperatureFeatureV1: ImageEffectFeatureType, PersistableFeature {
+
+    static let featureTypeKey = TemperatureFeature.featureTypeKey
+
+    var id: FeatureID = .init()
+    var isEnabled: Bool = true
+    var value: Double
 
     func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       image

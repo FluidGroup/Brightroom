@@ -510,7 +510,12 @@ public struct HighlightShadowTintFeature: Feature, Codable {
   }
 }
 
-/// A color temperature adjustment.
+/// A two-axis white-balance adjustment evaluated by Core Image.
+///
+/// `value` shifts color temperature relative to Brightroom's neutral white
+/// point, while `tint` moves the same white point along the green–magenta axis.
+/// Keeping both values in one feature preserves the coupled semantics of
+/// `CITemperatureAndTint` instead of approximating them as sequential filters.
 public struct TemperatureFeature: Feature, Codable {
 
   /// The stable identity of this effect.
@@ -519,18 +524,23 @@ public struct TemperatureFeature: Feature, Codable {
   /// A Boolean value indicating whether this effect participates in rendering.
   public var isEnabled: Bool
 
-  /// The temperature offset from Brightroom's neutral value.
+  /// The color-temperature offset from Brightroom's neutral value, in Kelvin.
   public var value: Double
 
-  /// Creates a temperature adjustment.
+  /// The green–magenta tint offset from Brightroom's neutral value.
+  public var tint: Double
+
+  /// Creates a white-balance adjustment.
   public init(
     id: FeatureID = .init(),
     isEnabled: Bool = true,
-    value: Double
+    value: Double,
+    tint: Double = 0
   ) {
     self.id = id
     self.isEnabled = isEnabled
     self.value = value
+    self.tint = tint
   }
 }
 

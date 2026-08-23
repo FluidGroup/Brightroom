@@ -584,6 +584,39 @@ extension HighlightShadowTintFeature: PersistableFeature {
 
 extension TemperatureFeature: PersistableFeature {
   public static let featureTypeKey: FeatureTypeKey = "brightroom.effect.temperature"
+
+  /// v2 added the tint axis. v1 documents stored only color temperature and
+  /// decode with a neutral tint so their rendering remains unchanged.
+  public static var schemaVersion: Int { 2 }
+
+  private struct V1Parameters: Decodable {
+    var id: FeatureID
+    var isEnabled: Bool
+    var value: Double
+  }
+
+  public static func decodeParameters(
+    from decoder: Decoder,
+    version: Int
+  ) throws -> TemperatureFeature {
+    switch version {
+    case 2:
+      return try TemperatureFeature(from: decoder)
+    case 1:
+      let v1 = try V1Parameters(from: decoder)
+      return TemperatureFeature(
+        id: v1.id,
+        isEnabled: v1.isEnabled,
+        value: v1.value,
+        tint: 0
+      )
+    default:
+      throw ParametricDocumentCodecError.unsupportedSchemaVersion(
+        featureTypeKey,
+        version: version
+      )
+    }
+  }
 }
 
 extension SharpenFeature: PersistableFeature {

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 import CoreImage
+import CoreMedia
 import Foundation
 
 /// Renders parametric feature documents for still images.
@@ -45,28 +46,38 @@ public struct ParametricImageRenderer: Sendable {
   /// intermediate so diagonal-based radii stay a fixed fraction of the source.
   /// `nil` (the default) is correct when `sourceImage` is the full source at
   /// render scale (export, preview composition).
+  ///
+  /// `presentationTime` defaults to `.zero` for deterministic still-image
+  /// evaluation. Video paths pass the frame's exact presentation time.
   public func makeOutput(
     from sourceImage: CIImage,
     document: EditingDocument,
-    radiusReferenceExtent: CGRect? = nil
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
   ) throws -> FeatureGraphOutput {
     try compiler.makeOutput(
       from: sourceImage,
       document: document,
-      radiusReferenceExtent: radiusReferenceExtent
+      radiusReferenceExtent: radiusReferenceExtent,
+      presentationTime: presentationTime
     )
   }
 
   /// Returns only the final image recipe.
+  ///
+  /// `presentationTime` has the same render-time semantics as
+  /// `makeOutput(from:document:radiusReferenceExtent:presentationTime:)`.
   public func makeImage(
     from sourceImage: CIImage,
     document: EditingDocument,
-    radiusReferenceExtent: CGRect? = nil
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
   ) throws -> CIImage {
     try makeOutput(
       from: sourceImage,
       document: document,
-      radiusReferenceExtent: radiusReferenceExtent
+      radiusReferenceExtent: radiusReferenceExtent,
+      presentationTime: presentationTime
     )
     .image
   }
