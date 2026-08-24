@@ -2012,11 +2012,14 @@ extension CropView {
     super.layoutSubviews()
 
     // TODO: Get an optimized size
+    let screenBounds = window?.screen.bounds ?? UIScreen.main.bounds
     guideOutsideContainerView.frame.size = .init(
-      width: UIScreen.main.bounds.width * 1.5,
-      height: UIScreen.main.bounds.height * 1.5
+      width: screenBounds.width * 1.5,
+      height: screenBounds.height * 1.5
     )
-    guideOutsideContainerView.center = center
+    // `center` is expressed in the superview's coordinate space; a subview's
+    // center belongs to this view's own bounds space.
+    guideOutsideContainerView.center = .init(x: bounds.midX, y: bounds.midY)
 
     if let cropOutsideOverlay {
       cropOutsideOverlay.frame = guideOutsideContainerView.bounds
