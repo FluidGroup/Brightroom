@@ -5,16 +5,6 @@ import MetalKit
 import simd
 import UIKit
 
-/// Uniform values for drawing one soft circular brush stamp into a mask texture.
-struct EditingCanvasBrushStampUniforms {
-  var canvasSize: SIMD2<Float>
-  var center: SIMD2<Float>
-  var radius: Float
-  var hardness: Float
-  var opacity: Float
-  var _padding: Float = 0
-}
-
 private struct EditingCanvasViewportSourceTextureKey: Equatable {
   var sourceExtent: CGRect
   var visibleContentRect: CGRect
@@ -106,7 +96,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   typealias ViewportProvider = () -> Viewport?
 
-  private typealias BrushStampUniforms = EditingCanvasBrushStampUniforms
+  private typealias BrushStampUniforms = BrushMaskPipeline.StampUniforms
   // @MainActor: reads UIScreen frame-rate properties, which are main-actor only.
   @MainActor
   private enum LiveFrameRate {
@@ -361,8 +351,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     self.viewportState = ViewportState(canvasSize: canvasSize)
 
     do {
-      let library = try Self.makeBrushMaskShaderLibrary(device: device)
-      self.brushMaskPipeline = try Self.makeBrushMaskPipeline(device: device, library: library)
+      self.brushMaskPipeline = try BrushMaskPipeline.make(device: device)
     } catch {
       fatalError("Failed to create Editing Canvas pipeline: \(error)")
     }
@@ -1590,27 +1579,19 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       let opacity = Float(brush.opacity)
 
       for stamp in stamps where stampIntersectsVisibleRect(stamp, radius: radius, visible: visible) {
-        var uniforms = BrushStampUniforms(
-          canvasSize: targetSize,
-          center: SIMD2(
-            Float((viewportFrame.minX + (stamp.x - visible.minX) * contentToViewScaleX) * drawableScaleX),
-            Float((viewportFrame.minY + (stamp.y - visible.minY) * contentToViewScaleY) * drawableScaleY)
+        BrushMaskPipeline.encodeStamp(
+          BrushStampUniforms(
+            canvasSize: targetSize,
+            center: SIMD2(
+              Float((viewportFrame.minX + (stamp.x - visible.minX) * contentToViewScaleX) * drawableScaleX),
+              Float((viewportFrame.minY + (stamp.y - visible.minY) * contentToViewScaleY) * drawableScaleY)
+            ),
+            radius: pixelRadius,
+            hardness: hardness,
+            opacity: opacity
           ),
-          radius: pixelRadius,
-          hardness: hardness,
-          opacity: opacity
+          into: encoder
         )
-        encoder.setVertexBytes(
-          &uniforms,
-          length: MemoryLayout<BrushStampUniforms>.stride,
-          index: 0
-        )
-        encoder.setFragmentBytes(
-          &uniforms,
-          length: MemoryLayout<BrushStampUniforms>.stride,
-          index: 0
-        )
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
       }
     }
 
@@ -1686,33 +1667,5 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     commandBuffer.commit()
     commandBuffer.waitUntilScheduled()
     drawable.present()
-  }
-
-  private static func makeBrushMaskPipeline(
-    device: MTLDevice,
-    library: MTLLibrary
-  ) throws -> MTLRenderPipelineState {
-    let descriptor = MTLRenderPipelineDescriptor()
-    descriptor.vertexFunction = library.makeFunction(name: "brushStampVertex")
-    descriptor.fragmentFunction = library.makeFunction(name: "brushStampFragment")
-    descriptor.colorAttachments[0].pixelFormat = .rgba8Unorm
-    descriptor.colorAttachments[0].isBlendingEnabled = true
-    // Overlapping stamps within the active stroke take the per-channel maximum,
-    // matching the parametric mask's `CIBlendKernel.componentMax` accumulation
-    // (FeatureGraphCompiler.render(_:BrushMask)). Metal ignores the blend factors
-    // for `.max`, but they are set to `.one` for clarity.
-    descriptor.colorAttachments[0].rgbBlendOperation = .max
-    descriptor.colorAttachments[0].alphaBlendOperation = .max
-    descriptor.colorAttachments[0].sourceRGBBlendFactor = .one
-    descriptor.colorAttachments[0].destinationRGBBlendFactor = .one
-    descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
-    descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
-    return try device.makeRenderPipelineState(descriptor: descriptor)
-  }
-
-  private static func makeBrushMaskShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    // The compiled library lives in BrightroomParametric so the live shader and
-    // the parametric export kernel are built as one brush-mask rasterization family.
-    return try device.makeLibrary(URL: BrushStampMetalLibrary.url())
   }
 }
