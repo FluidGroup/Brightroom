@@ -280,7 +280,7 @@ public final class ImageProvider: Equatable {
           }
 
           guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
-            self.loadingNonFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
+            self.loadingFatalErrors.append(ImageProviderError.failedToGetImageMetadata)
             return
           }
 

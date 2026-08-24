@@ -393,7 +393,19 @@ open class EditingStack: Hashable {
         }
       })
     }
-    imageProviderSubscription = imageProviderSub
+    /**
+     `backgroundQueue` owns the lifecycle of `imageProviderSubscription`.
+
+     `start()` may be called from any thread, while the load completion nils this
+     out on `backgroundQueue`. For an already-loaded provider the `onChange` above
+     fires synchronously inside `withGraphTracking`, so the load is already
+     enqueued by the time we get here — assigning directly would race with that
+     nil-out. Hopping through the serial queue orders the install before the
+     nil-out, so the subscription is always released rather than re-installed.
+     */
+    backgroundQueue.async { [weak self] in
+      self?.imageProviderSubscription = imageProviderSub
+    }
   }
 
   private func markStartedIfNeeded() -> Bool {
@@ -467,6 +479,10 @@ open class EditingStack: Hashable {
            */
           self.backgroundQueue.async { [weak self] in
             guard let self else { return }
+
+            // A second provider emission must never rebuild the loaded state over
+            // edits already in flight; the first load wins.
+            guard self.loadedState == nil else { return }
 
             // Fall back to the CPU-backed source if no Metal device is available
             // (e.g. unsupported environment); display still works, just without
