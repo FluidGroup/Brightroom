@@ -83,12 +83,18 @@ enum EditingCanvasImageProcessing {
   static let colorTextureFormat: MTLPixelFormat = .rgba16Float
 
   /// Longest-side cap (in pixels) for the per-generation base/adjusted content
-  /// bake. MUST stay equal to the engine's editing-source resolution
-  /// (`EditingStack.editingImageMaxPixelSize`, currently also 2560): the effects
-  /// + blur graph carries no detail beyond it, so baking at this cap is visually
-  /// lossless for the fit-to-frame preview while bounding the texture memory the
-  /// bake holds for a gesture's duration. If one value moves, move both — the
-  /// modules can't enforce the equality at compile time.
+  /// bake, bounding the texture memory the bake holds for a gesture's duration.
+  ///
+  /// Numerically this matches the engine's editing-source value
+  /// (`EditingStack.editingImageMaxPixelSize`, currently also 2560), but the two
+  /// are not the same measurement: the engine caps the SHORT side, so its source
+  /// is at least this large on the long side (a 4032×3024 photo loads at
+  /// 3413×2560). Baking at this cap is therefore visually lossless only for
+  /// square content; for other aspect ratios it resamples the fit-to-frame
+  /// preview modestly below the editing source — acceptable because the preview
+  /// is displayed fit-to-frame, but a real difference rather than an identity.
+  /// If one value moves, move both — the modules can't enforce the relation at
+  /// compile time.
   static let contentBakeMaxPixelSize: CGFloat = 2560
 
   /// Pixel format for the final drawable written by the editing canvas.

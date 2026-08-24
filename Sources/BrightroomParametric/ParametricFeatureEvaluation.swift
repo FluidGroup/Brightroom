@@ -71,6 +71,19 @@ public struct FeatureEvaluationContext: Sendable {
     self.presentationTime = presentationTime
   }
 
+  /// Returns the extent that a diagonal-based radius must resolve against when
+  /// the recipe is evaluating `image`.
+  ///
+  /// Every recipe with a proportional radius goes through this accessor rather
+  /// than reading `radiusReferenceExtent` and writing its own fallback: the
+  /// fallback to `image.extent` is correct ONLY when `image` is the chain entry.
+  /// Applied to any mid-chain input — a cropped result, a zoomed viewport slice,
+  /// an intermediate — it re-bases the radius and silently changes the strength
+  /// of a committed effect, which is exactly what the pinned semantics forbid.
+  public func radiusBasis(for image: CIImage) -> CGRect {
+    radiusReferenceExtent ?? image.extent
+  }
+
   /// Returns a copy that resolves diagonal-based radii against `extent`
   /// (the full source extent in the current render pixel space).
   public func withRadiusReferenceExtent(_ extent: CGRect?) -> Self {

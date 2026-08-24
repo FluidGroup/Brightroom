@@ -301,7 +301,7 @@ extension SharpenFeature: ImageEffectFeatureType {
     let radius = ParametricRadiusCalculator.radius(
       value: radius,
       max: ParametricFilterConstants.gaussianBlurSliderMax,
-      imageExtent: context.radiusReferenceExtent ?? image.extent
+      imageExtent: context.radiusBasis(for: image)
     )
     return image.applyingFilter(
       "CISharpenLuminance",
@@ -325,7 +325,7 @@ extension GaussianBlurFeature: ImageEffectFeatureType {
       radius = ParametricRadiusCalculator.radius(
         value: value,
         max: ParametricFilterConstants.gaussianBlurSliderMax,
-        imageExtent: context.radiusReferenceExtent ?? image.extent
+        imageExtent: context.radiusBasis(for: image)
       )
     }
 
@@ -348,7 +348,7 @@ extension UnsharpMaskFeature: ImageEffectFeatureType {
     let radius = ParametricRadiusCalculator.radius(
       value: radius,
       max: ParametricFilterConstants.unsharpMaskRadiusSliderMax,
-      imageExtent: context.radiusReferenceExtent ?? image.extent
+      imageExtent: context.radiusBasis(for: image)
     )
     return image.applyingFilter(
       "CIUnsharpMask",

@@ -334,10 +334,18 @@ open class EditingStack: Hashable {
 
   public var cropModifier: CropModifier
 
-  // The editing source is downsampled to this longest-side resolution; it is the
-  // upper bound on detail anywhere downstream. Keep in sync with the canvas
-  // preview bake cap `EditingCanvasImageProcessing.contentBakeMaxPixelSize`
-  // (BrightroomUI): that bake is "visually lossless" only while the two match.
+  // The editing source is downsampled so that its SHORT side is at most this
+  // value; the long side scales with the aspect ratio and is larger for anything
+  // but a square (a 4032×3024 photo loads at 3413×2560). A source whose short
+  // side is already below it — a wide panorama, say — is not downsampled at all.
+  // See `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`.
+  //
+  // The canvas preview bake cap `EditingCanvasImageProcessing.contentBakeMaxPixelSize`
+  // (BrightroomUI) carries the same number but caps the LONGEST side, so the two
+  // resolutions coincide only for square content; otherwise the bake resamples
+  // somewhat below the editing source. Keep the numbers together anyway: they
+  // express one intent, and neither module can enforce the relation at compile
+  // time.
   private let editingImageMaxPixelSize: CGFloat = 2560
 
   // MARK: - Initializers

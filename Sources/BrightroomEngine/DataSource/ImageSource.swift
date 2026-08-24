@@ -120,7 +120,13 @@ public final class ImageSource: Equatable, @unchecked Sendable {
   }
 
   /**
-   Creates an instance of CGImage resized to maximum pixel size.
+   Creates an instance of CGImage downsampled so that its shortest side is at
+   most `maxPixelSize` pixels.
+
+   `maxPixelSize` is a short-side target, not a longest-side cap: the longest
+   side scales with the aspect ratio and can exceed it, and an image whose
+   shortest side is already below it is returned at full resolution. See
+   `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`.
 
    - Attention: The image is not orientated.
    */
