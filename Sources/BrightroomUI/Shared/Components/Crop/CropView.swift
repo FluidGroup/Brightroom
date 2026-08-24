@@ -629,8 +629,22 @@ final class CropView: UIView {
 
     let contentView: UIView
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-    var crop: CropEditingState?
-    var outputGeometry: EditingCanvasCropOutputGeometry?
+
+    /// A memo of the display crop that produced the currently published
+    /// `outputGeometry`.
+    ///
+    /// This is not the surface's primary state and nothing renders from it: it
+    /// exists so the scroll-geometry pass can detect that the display crop
+    /// changed and reset tool navigation.
+    var lastAppliedDisplayCrop: CropEditingState?
+
+    /// The geometry that the next render and viewport read use.
+    ///
+    /// Published only through `publishOutputGeometry(_:)` (plus the teardown in
+    /// `removeCanvasView`), so the write sites stay greppable and the ordering
+    /// rule lives in one place.
+    private(set) var outputGeometry: EditingCanvasCropOutputGeometry?
+
     var currentCanvasRenderInputKey: CanvasRenderInputKey?
 
     init() {
@@ -644,9 +658,25 @@ final class CropView: UIView {
 
     override func removeCanvasView() {
       super.removeCanvasView()
-      crop = nil
+      lastAppliedDisplayCrop = nil
       outputGeometry = nil
       currentCanvasRenderInputKey = nil
+    }
+
+    /// Publishes the geometry that the next render and viewport read use.
+    ///
+    /// This is the single publish path for `outputGeometry`. Both writers —
+    /// `CropView.updateToolScrollGeometry` and this surface's own
+    /// `updateCanvas` — funnel through here, and both derive the value from
+    /// `toolDisplayCrop(from:)`; that shared derivation is what keeps the two
+    /// call sites consistent.
+    ///
+    /// Ordering contract: publish BEFORE any zoom write. `setZoomScale` emits
+    /// `scrollViewDidZoom` synchronously, and that tick re-renders the canvas
+    /// from `outputGeometry`, so the published value must already describe the
+    /// new crop when the re-entry happens.
+    func publishOutputGeometry(_ geometry: EditingCanvasCropOutputGeometry) {
+      outputGeometry = geometry
     }
 
     func beginStroke(at imagePoint: CGPoint) {
@@ -674,7 +704,7 @@ final class CropView: UIView {
       guard geometry.outputSize == canvasSize, let canvasView else {
         return
       }
-      outputGeometry = geometry
+      publishOutputGeometry(geometry)
 
       let inputKey = CanvasRenderInputKey(
         sourceImage: ObjectIdentifier(document.editingSourceImage),
@@ -2281,7 +2311,7 @@ extension CropView {
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
     let shouldResetToolSurface = syncsViewportFromCropSurface
       || isContentSizeChanged
-      || toolSurface.crop?.isRenderingEquivalent(to: displayCrop) != true
+      || toolSurface.lastAppliedDisplayCrop?.isRenderingEquivalent(to: displayCrop) != true
 
     // Resolve and validate the frame BEFORE any write so a degenerate layout
     // pass cannot leave the surface half-configured.
@@ -2323,8 +2353,8 @@ extension CropView {
     // Publish the display state BEFORE any zoom write: `setZoomScale` emits
     // `scrollViewDidZoom` synchronously, and that tick re-renders the canvas
     // from `outputGeometry` — which must already describe the new crop.
-    toolSurface.crop = displayCrop
-    toolSurface.outputGeometry = geometry
+    toolSurface.lastAppliedDisplayCrop = displayCrop
+    toolSurface.publishOutputGeometry(geometry)
 
     if shouldResetToolSurface {
       // Tool mode displays the crop output as its own image. Entering Tool mode
