@@ -91,7 +91,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   struct Viewport {
     var visibleContentRect: CGRect
     var visibleCanvasFrame: CGRect
-    var zoomScale: CGFloat
   }
 
   typealias ViewportProvider = () -> Viewport?
@@ -147,19 +146,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     var generation = 0
   }
 
-  /// CADisplayLink state for live stroke refreshes and throttled metrics updates.
+  /// CADisplayLink state for live stroke refreshes.
   private struct LiveRefreshState: ~Copyable {
     var displayLink: CADisplayLink?
-    var lastMetricsPublishTime: CFTimeInterval = 0
-    let metricsPublishInterval: CFTimeInterval = 1.0 / 12.0
-  }
-
-  /// Rolling draw-rate sample used by the demo diagnostics overlay.
-  private struct DrawMetrics: ~Copyable {
-    var sampleStartTime: CFTimeInterval = CACurrentMediaTime()
-    var sampleCount = 0
-    var framesPerSecond: Double = 0
-    let idleResetInterval: CFTimeInterval = 1.0
   }
 
   #if DEBUG
@@ -308,24 +297,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private var viewportState: ViewportState
   private var strokeState = StrokeState()
   private var liveRefreshState = LiveRefreshState()
-  private var drawMetrics = DrawMetrics()
   #if DEBUG
   private var performanceDiagnostics = PerformanceDiagnostics()
   #endif
   private var viewportProvider: ViewportProvider?
-  var activeStampCount: Int {
-    strokeState.activeStamps.count
-  }
-  var committedStampCount: Int {
-    strokeState.committedRecords.reduce(0) { $0 + $1.stamps.count }
-  }
-  var strokeCount: Int {
-    strokeState.committedRecords.count
-  }
-  var framesPerSecond: Double {
-    drawMetrics.framesPerSecond
-  }
-  var onMetricsChange: (() -> Void)?
   var onStrokeCommit: ((EditingCanvasStrokeRecord, @escaping () -> Void) -> Void)?
 
   var hasRenderImages: Bool { viewportState.renderImages != nil }
@@ -506,21 +481,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
   }
 
-  func setViewport(
-    visibleContentRect rect: CGRect,
-    visibleCanvasFrame frame: CGRect,
-    zoomScale: CGFloat
-  ) {
-    updateViewport(
-      .init(
-        visibleContentRect: rect,
-        visibleCanvasFrame: frame,
-        zoomScale: zoomScale
-      ),
-      schedulesDisplay: true
-    )
-  }
-
   func setViewport(_ viewport: Viewport) {
     updateViewport(viewport, schedulesDisplay: true)
   }
@@ -553,13 +513,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     #endif
     if schedulesDisplay {
       setNeedsDisplay()
-      onMetricsChange?()
     }
   }
 
   func reset() {
     cancelActiveStroke()
-    onMetricsChange?()
   }
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -575,10 +533,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   func draw(in view: MTKView) {
-    defer {
-      recordDrawSample()
-    }
-
     updateViewportFromProvider()
     renderViewportImage()
   }
@@ -645,23 +599,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func cancelStroke() {
     cancelActiveStroke()
-  }
-
-  private func recordDrawSample(now: CFTimeInterval = CACurrentMediaTime()) {
-    if drawMetrics.sampleCount == 0, now - drawMetrics.sampleStartTime > drawMetrics.idleResetInterval {
-      drawMetrics.sampleStartTime = now
-    }
-
-    drawMetrics.sampleCount += 1
-    let elapsed = now - drawMetrics.sampleStartTime
-    guard elapsed >= 0.5 else {
-      return
-    }
-
-    drawMetrics.framesPerSecond = Double(drawMetrics.sampleCount) / elapsed
-    drawMetrics.sampleCount = 0
-    drawMetrics.sampleStartTime = now
-    onMetricsChange?()
   }
 
   private func encodeClearTexture(_ texture: MTLTexture?, commandBuffer: MTLCommandBuffer) {
@@ -737,9 +674,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     if flushImmediately {
       strokeState.pendingLiveStamps.removeAll(keepingCapacity: true)
       setNeedsDisplay()
-      publishLiveMetricsIfNeeded(force: true)
-    } else {
-      publishLiveMetricsIfNeeded()
     }
   }
 
@@ -782,7 +716,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     isHidden = false
-    onMetricsChange?()
     setNeedsDisplay()
   }
 
@@ -813,19 +746,6 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       strokeState.pendingLiveStamps.removeAll(keepingCapacity: true)
       setNeedsDisplay()
     }
-    publishLiveMetricsIfNeeded(now: displayLink.timestamp)
-  }
-
-  private func publishLiveMetricsIfNeeded(
-    force: Bool = false,
-    now: CFTimeInterval = CACurrentMediaTime()
-  ) {
-    guard force || now - liveRefreshState.lastMetricsPublishTime >= liveRefreshState.metricsPublishInterval else {
-      return
-    }
-
-    liveRefreshState.lastMetricsPublishTime = now
-    onMetricsChange?()
   }
 
   private func renderViewportImage() {

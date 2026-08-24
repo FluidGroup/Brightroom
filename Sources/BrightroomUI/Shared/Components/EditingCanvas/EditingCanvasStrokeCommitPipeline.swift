@@ -13,8 +13,6 @@ import BrightroomParametric
 /// - A committed layer's effect pipeline is frozen at creation. Appending
 ///   strokes never rewrites the pipeline, because UI-side effect values may
 ///   drift and committed document parameters must stay stable.
-  /// - `updateEffect(_:in:insertingBefore:)` exists for deliberate effect changes only
-///   (e.g. the user adjusts the effect parameter of the active layer).
 final class EditingCanvasStrokeCommitPipeline {
 
   /// The layer this pipeline committed to most recently.
@@ -43,7 +41,7 @@ final class EditingCanvasStrokeCommitPipeline {
   ) {
     var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
     let layerIndex: Int
-    if let existingIndex = self.layerIndex(in: localAdjustments, matching: effect) {
+    if let existingIndex = adoptedLayerIndex(in: localAdjustments, matching: effect) {
       layerIndex = existingIndex
     } else {
       let id = FeatureID()
@@ -67,33 +65,10 @@ final class EditingCanvasStrokeCommitPipeline {
     )
   }
 
-  /// Deliberately updates the tracked layer's effect pipeline.
-  func updateEffect(
-    _ effect: EffectPipeline,
-    in editingStack: EditingStack,
-    insertingBefore insertionTargetID: FeatureID?
-  ) {
-    var localAdjustments = editingStack.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = layerIndex(in: localAdjustments, matching: effect) else {
-      return
-    }
-
-    guard localAdjustments[layerIndex].effectPipeline != effect else {
-      return
-    }
-
-    localAdjustments[layerIndex].effectPipeline = effect
-    replaceLocalAdjustments(
-      localAdjustments,
-      in: editingStack,
-      insertingBefore: insertionTargetID
-    )
-  }
-
   /// Rewrites the local-adjustment Features while preserving their current
   /// document positions. New layers are inserted before the caller-selected
   /// FeatureTree target.
-  func replaceLocalAdjustments(
+  private func replaceLocalAdjustments(
     _ localAdjustments: [LocalAdjustmentFeature],
     in editingStack: EditingStack,
     insertingBefore insertionTargetID: FeatureID?
@@ -118,7 +93,7 @@ final class EditingCanvasStrokeCommitPipeline {
     in loadedState: EditingStack.Loaded
   ) -> EffectPipeline? {
     let localAdjustments = loadedState.currentEdit.localAdjustments
-    guard let layerIndex = layerIndex(in: localAdjustments, matching: effect) else {
+    guard let layerIndex = adoptedLayerIndex(in: localAdjustments, matching: effect) else {
       return nil
     }
 
@@ -135,7 +110,7 @@ final class EditingCanvasStrokeCommitPipeline {
     }
 
     let localAdjustments = editingStack?.loadedState?.currentEdit.localAdjustments ?? []
-    guard let layerIndex = layerIndex(in: localAdjustments, matching: effect) else {
+    guard let layerIndex = adoptedLayerIndex(in: localAdjustments, matching: effect) else {
       return []
     }
 
@@ -145,8 +120,9 @@ final class EditingCanvasStrokeCommitPipeline {
   }
 
   /// Finds the tracked layer by its remembered id, falling back to effect
-  /// identity and adopting the found layer.
-  func layerIndex(
+  /// identity and ADOPTING the found layer as the commit target (this mutates
+  /// `layerID`, which is why the name says so).
+  private func adoptedLayerIndex(
     in localAdjustments: [LocalAdjustmentFeature],
     matching effect: EffectPipeline
   ) -> Int? {
@@ -165,6 +141,19 @@ final class EditingCanvasStrokeCommitPipeline {
 
     layerID = localAdjustments[index].id
     return index
+  }
+}
+
+// MARK: - Effect identity
+
+extension EffectPipeline {
+
+  /// The effect-type sequence used to match a committed local adjustment
+  /// layer to the effect a canvas is editing. Parameter values may drift
+  /// after the layer freezes them (PhotosCrop recomputes its blur seed), so
+  /// the type sequence — not the parameter values — is the stable identity.
+  var editingCanvasEffectIdentity: [ObjectIdentifier] {
+    effects.map { ObjectIdentifier(type(of: $0)) }
   }
 }
 

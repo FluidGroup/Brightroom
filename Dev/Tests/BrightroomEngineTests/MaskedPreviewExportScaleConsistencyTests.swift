@@ -148,8 +148,8 @@ struct MaskedPreviewExportScaleConsistencyTests {
     )
 
     let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
-    // displayedContentRect nil → renderBounds is the FULL 12000² canvas (the
-    // not-zoomed case that crashed): the adjusted image carries a 12000² extent.
+    // The factory renders the FULL 12000² canvas (the not-zoomed case that
+    // crashed): the adjusted image carries a 12000² extent.
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
         loadedState: loaded,

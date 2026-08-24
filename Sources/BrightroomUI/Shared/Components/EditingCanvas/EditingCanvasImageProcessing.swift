@@ -1,35 +1,6 @@
+import CoreGraphics
 import CoreImage
-import BrightroomEngine
-import IOSurface
-import MetalKit
-import os
-import simd
-import SwiftUI
-import UIKit
-
-extension CGSize {
-  var simdFloat2: SIMD2<Float> {
-    SIMD2(Float(width), Float(height))
-  }
-}
-
-extension CGFloat {
-  var logString: String {
-    String(format: "%.2f", Double(self))
-  }
-}
-
-extension Double {
-  var logString: String {
-    String(format: "%.2f", self)
-  }
-}
-
-extension CGRect {
-  var logDescription: String {
-    "x:\(minX.logString) y:\(minY.logString) w:\(width.logString) h:\(height.logString)"
-  }
-}
+import Metal
 
 enum EditingCanvasImageProcessing {
 
@@ -145,10 +116,6 @@ enum EditingCanvasImageProcessing {
 }
 
 extension CGPoint {
-  var simdFloat2: SIMD2<Float> {
-    SIMD2(Float(x), Float(y))
-  }
-
   func distance(to point: CGPoint) -> CGFloat {
     hypot(x - point.x, y - point.y)
   }

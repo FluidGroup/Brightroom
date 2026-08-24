@@ -18,9 +18,6 @@ struct CropDisplayViewport {
   /// The rect inside the Metal surface where `visibleContentRect` is rendered.
   var visibleCanvasFrame: CGRect
 
-  /// The scroll-view zoom scale represented by this viewport.
-  var zoomScale: CGFloat
-
   /// The display scale used to size the Metal drawable.
   var contentScaleFactor: CGFloat
 }

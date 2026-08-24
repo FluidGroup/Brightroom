@@ -1,12 +1,6 @@
-import CoreImage
-import BrightroomEngine
 import BrightroomParametric
-import IOSurface
-import MetalKit
-import os
-import simd
-import SwiftUI
-import UIKit
+import CoreGraphics
+import Foundation
 
 struct EditingCanvasStrokeRecord {
   let stamps: [CGPoint]
