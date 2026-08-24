@@ -150,6 +150,20 @@ public enum ImageTool: Sendable {
     return destination
   }
 
+  /// Downsamples the image so that its **shortest** side is at most
+  /// `maxPixelSizeHint` pixels.
+  ///
+  /// Despite the "max pixel size" wording, the hint is a short-side target, not
+  /// a longest-side cap. The longest side lands at `hint × aspectRatio` and may
+  /// far exceed the hint — a 4032×3024 source with a hint of 2560 loads at
+  /// 3413×2560 — and an image whose shortest side is already below the hint is
+  /// not downsampled at all, so a 6000×2000 panorama loads at full resolution.
+  ///
+  /// - Note: Whether this should instead be a true longest-side cap (bounding
+  ///   the memory of extreme aspect ratios at the cost of preview detail on
+  ///   ordinary photos) is an open product decision. The behavior is documented
+  ///   here as it stands; changing it moves preview detail everywhere
+  ///   downstream.
   public static func makeResizedCGImage(
     from imageSource: CGImageSource,
     maxPixelSizeHint: CGFloat,
@@ -207,6 +221,12 @@ public enum ImageTool: Sendable {
     return scaledImage
   }
 
+  /// Downsamples the image so that its **shortest** side is at most
+  /// `maxPixelSizeHint` pixels.
+  ///
+  /// Short-side target, not a longest-side cap; see
+  /// ``makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`` for the
+  /// full contract and its consequences for wide aspect ratios.
   public static func makeResizedCGImage(
     from sourceImage: CGImage,
     maxPixelSizeHint: CGFloat

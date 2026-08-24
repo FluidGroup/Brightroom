@@ -758,6 +758,7 @@ private struct PhotosCropBlurMaskingControl: View {
       )
       .tint(.white)
       .frame(height: 50)
+      .accessibilityLabel("Brush Size")
 
       PhotosCropToolbarIconButton(
         systemName: "trash",
@@ -1238,6 +1239,7 @@ private struct PhotosCropAdjustmentsControl: View {
       .id(selection)
       .tint(.white)
       .frame(height: 44)
+      .accessibilityLabel(selection.title)
       .padding(.horizontal, 24)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
