@@ -420,6 +420,22 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
+
+    guard window != nil else {
+      // Invariant: leaving the window severs the display-link retain chain.
+      // `deinit` alone cannot, because the run loop retains the link and the
+      // link retains its target — so a live stroke keeps this view, and its
+      // rgba16Float texture caches, alive and ticking forever. Teardown can
+      // land mid-stroke (canvas-size change, focus switch during a touch)
+      // because the drawing gesture recognizer lives on the container, not
+      // here, so the owner does not necessarily cancel the stroke first.
+      cancelActiveStroke()
+      // Restated rather than left implicit: stopping the link is the standing
+      // guarantee of this path, not a side effect of stroke bookkeeping.
+      stopLiveDisplayLink()
+      return
+    }
+
     // Re-assert: MTKView can rebuild its drawable/layer when entering a window,
     // which would drop the colorspace and silently reinterpret the drawable.
     applyColorSpaceContract()
