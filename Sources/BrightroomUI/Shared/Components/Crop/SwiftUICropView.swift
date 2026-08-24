@@ -114,10 +114,54 @@ public struct SwiftUICropView: View {
     }
   }
 
+  /// Where this view's `CropViewDocument` comes from.
+  private enum DocumentSource {
+
+    /// The document is created for — and cached against — this stack.
+    case editingStack(EditingStack)
+
+    /// The host owns the document and keeps it stable itself.
+    case document(CropViewDocument)
+  }
+
+  /// Keeps the view-owned `CropViewDocument` stable across body evaluations.
+  ///
+  /// `SwiftUICropView` is a struct, so a document built in `init` is rebuilt on
+  /// every body evaluation of the host — including the stroke-commit session it
+  /// owns — while the mounted `CropView` keeps the instance it was created
+  /// with. Holding the document in a `@State` box, which SwiftUI keeps for the
+  /// view's lifetime, gives the public `init(editingStack:)` paths the same
+  /// stable document PhotosCrop already gets from its editing model.
+  ///
+  /// Populating the box does not invalidate the view, so doing it from `body`
+  /// is not a state write during view update.
+  private final class DocumentStore {
+
+    private var editingStack: EditingStack?
+    private var document: CropViewDocument?
+
+    @MainActor
+    func document(for editingStack: EditingStack) -> CropViewDocument {
+      if let document, self.editingStack === editingStack {
+        return document
+      }
+
+      let document = CropViewDocument(editingStack: editingStack)
+      self.editingStack = editingStack
+      self.document = document
+      return document
+    }
+  }
+
+  /// Fixed at creation. See the initializer documentation.
   private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
+
+  /// Fixed at creation. See the initializer documentation.
   private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
-  private let document: CropViewDocument
+  private let documentSource: DocumentSource
+
+  @State private var documentStore = DocumentStore()
 
   private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
   private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
@@ -130,11 +174,31 @@ public struct SwiftUICropView: View {
   private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
   private let areAnimationsEnabled: Bool
+  /// Fixed at creation. See the initializer documentation.
   private let contentInset: UIEdgeInsets?
   private var featureFocus: CropViewFeatureFocus = .finalCrop
   private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
   private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
 
+  /// Creates a crop canvas over `editingStack` with custom overlays.
+  ///
+  /// - Parameters:
+  ///   - editingStack: The stack whose current edit is displayed and edited.
+  ///     The crop-canvas document created for it is kept for the lifetime of
+  ///     this view; passing a different stack rebuilds the canvas.
+  ///   - isGuideInteractionEnabled: Applied on every update.
+  ///   - areAnimationsEnabled: Applied on every update.
+  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
+  ///     host that derives the inset from safe area or size class must give
+  ///     this view a new identity (for example with `.id`) for a new inset to
+  ///     take effect.
+  ///   - cropInsideOverlay: **Fixed at creation.** The builder is invoked by
+  ///     the mounted canvas, but the closure itself is installed only once, so
+  ///     values it captures are frozen at that point.
+  ///   - cropOutsideOverlay: **Fixed at creation.** Same contract as
+  ///     `cropInsideOverlay`.
+  ///   - stateHandler: Re-bound on every update.
   public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
@@ -144,7 +208,7 @@ public struct SwiftUICropView: View {
     @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
-    self.document = CropViewDocument(editingStack: editingStack)
+    self.documentSource = .editingStack(editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
@@ -153,6 +217,20 @@ public struct SwiftUICropView: View {
     self.stateHandler = stateHandler
   }
 
+  /// Creates a crop canvas over `editingStack` with the built-in overlays.
+  ///
+  /// - Parameters:
+  ///   - editingStack: The stack whose current edit is displayed and edited.
+  ///     The crop-canvas document created for it is kept for the lifetime of
+  ///     this view; passing a different stack rebuilds the canvas.
+  ///   - isGuideInteractionEnabled: Applied on every update.
+  ///   - areAnimationsEnabled: Applied on every update.
+  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
+  ///     host that derives the inset from safe area or size class must give
+  ///     this view a new identity (for example with `.id`) for a new inset to
+  ///     take effect.
+  ///   - stateHandler: Re-bound on every update.
   public init(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
@@ -162,13 +240,19 @@ public struct SwiftUICropView: View {
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
-    self.document = CropViewDocument(editingStack: editingStack)
+    self.documentSource = .editingStack(editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
 
+  /// Creates a crop canvas over a document the host already owns.
+  ///
+  /// The caller is responsible for keeping `document` stable across body
+  /// evaluations; see `PhotosCropEditingModel.cropViewDocument`.
+  ///
+  /// `contentInset` is fixed at creation, as in the public initializers.
   init(
     document: CropViewDocument,
     isGuideInteractionEnabled: Bool = true,
@@ -178,14 +262,28 @@ public struct SwiftUICropView: View {
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
-    self.document = document
+    self.documentSource = .document(document)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
 
+  /// The document backing this view, stable for as long as the view keeps its
+  /// SwiftUI identity and its `EditingStack`.
+  @MainActor
+  private var document: CropViewDocument {
+    switch documentSource {
+    case .editingStack(let editingStack):
+      return documentStore.document(for: editingStack)
+    case .document(let document):
+      return document
+    }
+  }
+
   public var body: some View {
+    let document = self.document
+
     ZStack {
       if document.snapshot != nil {
         LoadedCropViewRepresentable(
@@ -207,6 +305,10 @@ public struct SwiftUICropView: View {
           maskingBrush: maskingBrush,
           strokeSmoothing: strokeSmoothing
         )
+        // `CropView` binds its document once, at creation. Tying the
+        // representable's identity to the document makes a document swap
+        // rebuild the canvas instead of leaving it bound to the old one.
+        .id(ObjectIdentifier(document))
         .transition(.opacity.animation(.smooth))
       } else {
         ProgressView()
@@ -343,6 +445,12 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
     view.setFeatureFocus(featureFocus)
     bindStateHandler(to: view, coordinator: context.coordinator)
 
+    // `contentInset` above and the two overlays below are creation-only inputs,
+    // as documented on SwiftUICropView's initializers. `updateUIView`
+    // deliberately does not re-apply them: `contentInset` is a `let` on
+    // CropView, and re-installing `AnyView` overlay closures on every update
+    // would rebuild the hosted overlays for no gain. Wiring live overlays would
+    // need an explicit change token, not an unconditional re-set.
     if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
     }
@@ -370,6 +478,13 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
       cropView.areAnimationsEnabled = areAnimationsEnabled
     }
 
+    // Everything that pushes SwiftUI inputs into CropView runs inside the
+    // guard. `setFeatureFocus` and `updateCurrentDocumentDisplay` can emit a
+    // state snapshot synchronously, and an unguarded snapshot writes the
+    // rotation/angle/aspect bindings from inside `updateUIView` — a state
+    // mutation during view update. `setMaskingBrush` and
+    // `setCanvasStrokeSmoothing` cannot emit today; they are inside for a
+    // uniform contract, so a future emitting setter is safe by default.
     context.coordinator.applySwiftUIInputs {
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
@@ -383,13 +498,14 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
       }
 
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+
+      cropView.setMaskingBrush(maskingBrush)
+      cropView.setCanvasStrokeSmoothing(strokeSmoothing)
+      cropView.setFeatureFocus(featureFocus)
+
+      cropView.updateCurrentDocumentDisplay()
     }
 
-    cropView.setMaskingBrush(maskingBrush)
-    cropView.setCanvasStrokeSmoothing(strokeSmoothing)
-    cropView.setFeatureFocus(featureFocus)
-
-    cropView.updateCurrentDocumentDisplay()
     configureActions(on: cropView)
   }
 
