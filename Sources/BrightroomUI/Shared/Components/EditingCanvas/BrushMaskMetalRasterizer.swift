@@ -31,40 +31,16 @@ import simd
 /// `_EditingCanvasMTKView` builds and drives the same pipeline inline for live
 /// painting, where the encoding is interleaved with viewport math, drawable
 /// management, and stroke state. This type extracts only the rasterization
-/// kernel — pipeline construction (identical to
-/// `_EditingCanvasMTKView.makeBrushMaskShaderLibrary` /
-/// `makeBrushMaskPipeline`) and a single off-screen stamp pass — so the live
-/// rasterizer can be exercised in isolation and proven, by test, to match the
-/// parametric Core Image CIKernel rasterizer
-/// (`FeatureGraphCompiler.renderMask`) that the shared falloff establishes as
-/// the contract.
+/// kernel — a single off-screen stamp pass — so the live rasterizer can be
+/// exercised in isolation and proven, by test, to match the parametric Core
+/// Image CIKernel rasterizer (`FeatureGraphCompiler.renderMask`) that the
+/// shared falloff establishes as the contract.
 ///
-/// The pipeline is built EXACTLY as the live view builds it:
-/// - library = `BrushStampMetalLibrary.url()` (the BrightroomParametric
-///   build-compiled metallib that contains the live render shader and the
-///   parametric Core Image kernels).
-/// - render pipeline: vertex `brushStampVertex`, fragment `brushStampFragment`,
-///   `colorAttachments[0].pixelFormat = .rgba8Unorm`, blending enabled, rgb and
-///   alpha `BlendOperation = .max`, all blend factors `.one` (mirroring the
-///   parametric mask's `CIBlendKernel.componentMax` stamp accumulation).
-///
-/// The `BrushStampUniforms` layout is replicated field-for-field from the live
-/// view's `EditingCanvasBrushStampUniforms` and the MSL `BrushStampUniforms`
-/// struct in `BrushMaskRenderShader.metal`.
+/// The pipeline, the uniform layout, and the per-stamp encoding all come from
+/// `BrushMaskPipeline`, the same construction the live view uses — so this is
+/// not a replica of the live pipeline, it *is* the live pipeline, and the parity
+/// test covers the live path's construction by construction.
 struct BrushMaskMetalRasterizer {
-
-  /// Uniform values for drawing one soft circular brush stamp into a mask
-  /// texture. Field-for-field identical to `EditingCanvasBrushStampUniforms`
-  /// (and the MSL `BrushStampUniforms` struct), so the same vertex/fragment
-  /// functions interpret these bytes correctly.
-  struct BrushStampUniforms {
-    var canvasSize: SIMD2<Float>
-    var center: SIMD2<Float>
-    var radius: Float
-    var hardness: Float
-    var opacity: Float
-    var _padding: Float = 0
-  }
 
   /// One soft circular stamp to rasterize. `center` and `pixelRadius` are in
   /// canvas pixels (the identity / no-viewport domain — see `rasterize`).
@@ -93,8 +69,7 @@ struct BrushMaskMetalRasterizer {
       return nil
     }
     do {
-      let library = try Self.makeBrushMaskShaderLibrary(device: device)
-      let pipeline = try Self.makeBrushMaskPipeline(device: device, library: library)
+      let pipeline = try BrushMaskPipeline.make(device: device)
       self.device = device
       self.commandQueue = commandQueue
       self.pipeline = pipeline
@@ -161,24 +136,16 @@ struct BrushMaskMetalRasterizer {
 
     let canvasSize = SIMD2(Float(width), Float(height))
     for stamp in stamps {
-      var uniforms = BrushStampUniforms(
-        canvasSize: canvasSize,
-        center: SIMD2(Float(stamp.center.x), Float(stamp.center.y)),
-        radius: Float(stamp.pixelRadius),
-        hardness: stamp.hardness,
-        opacity: stamp.opacity
+      BrushMaskPipeline.encodeStamp(
+        .init(
+          canvasSize: canvasSize,
+          center: SIMD2(Float(stamp.center.x), Float(stamp.center.y)),
+          radius: Float(stamp.pixelRadius),
+          hardness: stamp.hardness,
+          opacity: stamp.opacity
+        ),
+        into: encoder
       )
-      encoder.setVertexBytes(
-        &uniforms,
-        length: MemoryLayout<BrushStampUniforms>.stride,
-        index: 0
-      )
-      encoder.setFragmentBytes(
-        &uniforms,
-        length: MemoryLayout<BrushStampUniforms>.stride,
-        index: 0
-      )
-      encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
     }
 
     encoder.endEncoding()
@@ -201,35 +168,5 @@ struct BrushMaskMetalRasterizer {
     // SAME coordinate the parametric `brushStamp` kernel uses (`dest.coord()`).
     // So the wrapped texture is already in `renderMask`'s frame.
     return textureImage.cropped(to: extent)
-  }
-
-  // MARK: - Pipeline construction (mirrors _EditingCanvasMTKView)
-
-  private static func makeBrushMaskShaderLibrary(device: MTLDevice) throws -> MTLLibrary {
-    // The compiled library lives in BrightroomParametric so the live shader and
-    // the parametric export kernel are built as one brush-mask rasterization family.
-    return try device.makeLibrary(URL: BrushStampMetalLibrary.url())
-  }
-
-  private static func makeBrushMaskPipeline(
-    device: MTLDevice,
-    library: MTLLibrary
-  ) throws -> MTLRenderPipelineState {
-    let descriptor = MTLRenderPipelineDescriptor()
-    descriptor.vertexFunction = library.makeFunction(name: "brushStampVertex")
-    descriptor.fragmentFunction = library.makeFunction(name: "brushStampFragment")
-    descriptor.colorAttachments[0].pixelFormat = .rgba8Unorm
-    descriptor.colorAttachments[0].isBlendingEnabled = true
-    // Overlapping stamps take the per-channel maximum, matching the parametric
-    // mask's `CIBlendKernel.componentMax` accumulation. Metal ignores the blend
-    // factors for `.max`, but they are set to `.one` for clarity — exactly as
-    // `_EditingCanvasMTKView.makeBrushMaskPipeline` does.
-    descriptor.colorAttachments[0].rgbBlendOperation = .max
-    descriptor.colorAttachments[0].alphaBlendOperation = .max
-    descriptor.colorAttachments[0].sourceRGBBlendFactor = .one
-    descriptor.colorAttachments[0].destinationRGBBlendFactor = .one
-    descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
-    descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
-    return try device.makeRenderPipelineState(descriptor: descriptor)
   }
 }
