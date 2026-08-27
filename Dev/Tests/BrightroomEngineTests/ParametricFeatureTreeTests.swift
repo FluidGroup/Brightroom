@@ -794,6 +794,44 @@ struct ParametricFeatureTreeTests {
     }
   }
 
+  @Test func disabledLocalAdjustmentWithEmptyPipelinePassesValidation() throws {
+    // Evaluation skips disabled features, so validation has to accept them too.
+    // Otherwise toggling a layer off makes the whole document unexportable
+    // while the preview still renders it fine.
+    let brightness = BrightnessFeature(
+      id: FeatureID(rawValue: "kept-brightness"),
+      value: 0.1
+    )
+    let withDisabled = EditingDocument(
+      mainTree: MainTree(
+        features: [
+          .localAdjustment(
+            LocalAdjustmentFeature(
+              id: FeatureID(rawValue: "disabled-local"),
+              isEnabled: false,
+              maskTree: MaskTree(
+                root: .brush(BrushMask(id: FeatureID(rawValue: "disabled-mask")))
+              ),
+              effectPipeline: EffectPipeline()
+            )
+          ),
+          .effect(brightness),
+        ]
+      )
+    )
+    let withoutDisabled = EditingDocument(
+      mainTree: MainTree(features: [.effect(brightness)])
+    )
+    let input = CIImage.parametricColorPatchImage(
+      extent: CGRect(x: 0, y: 0, width: 36, height: 24)
+    )
+
+    let output = try Self.compiler.makeOutput(from: input, document: withDisabled).image
+    let expected = try Self.compiler.makeOutput(from: input, document: withoutDisabled).image
+
+    try Self.assertImagesMatch(output, expected, tolerance: 2)
+  }
+
   @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
     let registry = ParametricKernelRegistry()
 

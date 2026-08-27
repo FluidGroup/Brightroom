@@ -397,9 +397,15 @@ private extension FeatureGraphCompiler {
         try validateChildren(of: effect, insert: insert)
 
       case let .localAdjustment(localAdjustment):
-        let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
-        guard enabledEffects.isEmpty == false else {
-          throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
+        // An enabled local adjustment that applies nothing stays an error: it
+        // is a construction mistake worth surfacing. A disabled one is skipped
+        // by evaluation, so failing it here would reject documents the preview
+        // renders — toggling a layer off must not break export.
+        if localAdjustment.isEnabled {
+          let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
+          guard enabledEffects.isEmpty == false else {
+            throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
+          }
         }
 
         for effect in localAdjustment.effectPipeline.effects {

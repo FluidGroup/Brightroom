@@ -148,7 +148,7 @@ extension ColorCubeFeature: ImageEffectFeatureType {
     let filter = ParametricColorCubeHelper.makeColorCubeFilter(
       cubeData: cubeData,
       dimension: dimension,
-      cacheKey: identifier
+      identifier: identifier
     )
     filter.setValue(image, forKeyPath: kCIInputImageKey)
 
