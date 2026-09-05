@@ -1694,7 +1694,6 @@ extension CropView {
       viewportFrameInScrollView: renderFrame,
       visibleContentRect: visibleImageRect,
       visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: cropSurface.scrollView.zoomScale,
       contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
     )
   }
@@ -1775,7 +1774,6 @@ extension CropView {
       viewportFrameInScrollView: canvasFrame,
       visibleContentRect: visibleOutputRect,
       visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: toolSurface.scrollView.zoomScale,
       contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
     )
   }
@@ -3088,8 +3086,7 @@ private extension CropDisplayViewport {
   var editingCanvasViewport: _EditingCanvasMTKView.Viewport {
     .init(
       visibleContentRect: visibleContentRect,
-      visibleCanvasFrame: visibleCanvasFrame,
-      zoomScale: zoomScale
+      visibleCanvasFrame: visibleCanvasFrame
     )
   }
 }

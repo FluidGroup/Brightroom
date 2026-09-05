@@ -1,10 +1,3 @@
-import CoreImage
-import BrightroomEngine
-import IOSurface
-import MetalKit
-import os
-import simd
-import SwiftUI
 import UIKit
 
 final class _EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {

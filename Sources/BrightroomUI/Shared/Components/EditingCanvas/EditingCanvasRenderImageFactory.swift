@@ -7,14 +7,12 @@ enum EditingCanvasRenderImageFactory {
   static func makeRenderImages(
     loadedState: EditingStack.Loaded,
     canvasSize: CGSize,
-    displayedContentRect: CGRect? = nil,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
     makeRenderImages(
       editingSourceImage: loadedState.editingSourceImage,
       effects: loadedState.currentEdit.effects,
       canvasSize: canvasSize,
-      displayedContentRect: displayedContentRect,
       mode: mode
     )
   }
@@ -22,14 +20,12 @@ enum EditingCanvasRenderImageFactory {
   static func makeRenderImages(
     document: CropViewDocumentSnapshot,
     canvasSize: CGSize,
-    displayedContentRect: CGRect? = nil,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
     makeRenderImages(
       editingSourceImage: document.editingSourceImage,
       effects: document.effects,
       canvasSize: canvasSize,
-      displayedContentRect: displayedContentRect,
       mode: mode
     )
   }
@@ -38,14 +34,9 @@ enum EditingCanvasRenderImageFactory {
     editingSourceImage: CIImage,
     effects: EffectPipeline,
     canvasSize: CGSize,
-    displayedContentRect: CGRect? = nil,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
-    let renderBounds = sanitizedRenderBounds(
-      displayedContentRect,
-      canvasRect: canvasRect
-    )
     let previewSourceImage = editingSourceImage.removingExtentOffset()
     let sourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
     let displaySourceExtent = sourceImage.extent
@@ -60,7 +51,7 @@ enum EditingCanvasRenderImageFactory {
       canvasRect: canvasRect
     )
 
-    let viewportSourceImage = scaledSourceImage.cropped(to: renderBounds)
+    let viewportSourceImage = scaledSourceImage.cropped(to: canvasRect)
 
     let baseImage: CIImage
     let adjustedImage: CIImage
@@ -71,7 +62,7 @@ enum EditingCanvasRenderImageFactory {
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
         effects
         .applyIgnoringFailure(to: viewportSourceImage, radiusReferenceExtent: canvasRect)
-        .cropped(to: renderBounds),
+        .cropped(to: canvasRect),
         source: viewportSourceImage
       )
       adjustedImage = baseImage
@@ -99,9 +90,9 @@ enum EditingCanvasRenderImageFactory {
         source: sourceImage
       )
       baseImage = scaledImage(sourceBase, canvasSize: canvasSize, canvasRect: canvasRect)
-        .cropped(to: renderBounds)
+        .cropped(to: canvasRect)
       adjustedImage = scaledImage(sourceAdjusted, canvasSize: canvasSize, canvasRect: canvasRect)
-        .cropped(to: renderBounds)
+        .cropped(to: canvasRect)
       renderEffect = localEffect
       // The local effect is baked into `adjustedImage`, so route it through the
       // prepared path — the same source-resolution composite ToolSurface and
@@ -116,7 +107,7 @@ enum EditingCanvasRenderImageFactory {
         .applyIgnoringFailure(to: scaledPreviewSourceImage, radiusReferenceExtent: canvasRect)
         .cropped(to: canvasRect)
       let displayPreviewImage = displayOrientedImage(previewImage, canvasSize: canvasSize)
-        .cropped(to: renderBounds)
+        .cropped(to: canvasRect)
       baseImage = displayPreviewImage
       adjustedImage = displayPreviewImage
       renderEffect = .init()
@@ -295,32 +286,6 @@ enum EditingCanvasRenderImageFactory {
       .cropped(to: geometry.outputBounds)
   }
 
-  private static func sanitizedRenderBounds(
-    _ rect: CGRect?,
-    canvasRect: CGRect
-  ) -> CGRect {
-    guard let rect else {
-      return canvasRect
-    }
-
-    let finiteRect = rect.standardized
-    guard
-      finiteRect.isNull == false,
-      finiteRect.isInfinite == false,
-      finiteRect.width > 0,
-      finiteRect.height > 0
-    else {
-      return canvasRect
-    }
-
-    let intersection = finiteRect.intersection(canvasRect)
-    guard intersection.isNull == false, intersection.isEmpty == false else {
-      return canvasRect
-    }
-
-    return intersection
-  }
-
   private static func displayOrientedImage(
     _ image: CIImage,
     canvasSize: CGSize
@@ -330,16 +295,5 @@ enum EditingCanvasRenderImageFactory {
       .transformed(by: CGAffineTransform(translationX: 0, y: canvasSize.height))
       .removingExtentOffset()
       .cropped(to: CGRect(origin: .zero, size: canvasSize))
-  }
-}
-
-extension EffectPipeline {
-
-  /// The effect-type sequence used to match a committed local adjustment
-  /// layer to the effect a canvas is editing. Parameter values may drift
-  /// after the layer freezes them (PhotosCrop recomputes its blur seed), so
-  /// the type sequence — not the parameter values — is the stable identity.
-  var editingCanvasEffectIdentity: [ObjectIdentifier] {
-    effects.map { ObjectIdentifier(type(of: $0)) }
   }
 }
