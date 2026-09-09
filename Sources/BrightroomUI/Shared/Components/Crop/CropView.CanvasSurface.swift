@@ -27,52 +27,28 @@ import BrightroomParametric
 
 extension CropView {
 
-  enum ViewportRenderingSurface {
-    case crop
-    case tool
-  }
-
-  /// Holds the display-link lifecycle for a surface viewport.
+  /// Drives the fixed canvas for the lifetime of the visible editor.
   ///
-  /// The state object is retained by the surface, while the display link
-  /// targets this object rather than `CropView` to avoid a run-loop retain cycle
-  /// against the whole crop view.
-  ///
-  /// Main-actor isolated: the display link is added to the main run loop, so the
-  /// tick callback and lifecycle (`begin`/`invalidate`) all run on the main
-  /// actor.
+  /// The run loop retains this proxy, not the editor. Gesture boundaries never
+  /// start or stop the link: every displayed frame samples the scroll geometry.
   @MainActor
-  final class ViewportRenderingState: NSObject {
+  final class ViewportDisplayLink: NSObject {
     weak var owner: CropView?
-    let surface: ViewportRenderingSurface
-    var displayLink: CADisplayLink?
-    var stopWorkItem: DispatchWorkItem?
+    private var displayLink: CADisplayLink?
 
-    var isRunning: Bool {
-      displayLink != nil
-    }
-
-    init(surface: ViewportRenderingSurface) {
-      self.surface = surface
-    }
-
-    func begin(preferredFramesPerSecond: Int) {
-      guard displayLink == nil else {
-        return
+    func start(maximumFramesPerSecond: Int) {
+      if displayLink == nil {
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
       }
-
-      let displayLink = CADisplayLink(
-        target: self,
-        selector: #selector(displayLinkDidTick(_:))
+      let maximum = Float(maximumFramesPerSecond)
+      displayLink?.preferredFrameRateRange = .init(
+        minimum: min(60, maximum), maximum: maximum, preferred: maximum
       )
-      displayLink.preferredFramesPerSecond = preferredFramesPerSecond
-      displayLink.add(to: .main, forMode: .common)
-      self.displayLink = displayLink
     }
 
     func invalidate() {
-      stopWorkItem?.cancel()
-      stopWorkItem = nil
       displayLink?.invalidate()
       displayLink = nil
     }
@@ -81,13 +57,12 @@ extension CropView {
       invalidate()
     }
 
-    @objc private func displayLinkDidTick(_ displayLink: CADisplayLink) {
+    @objc private func tick(_ link: CADisplayLink) {
       guard let owner else {
         invalidate()
         return
       }
-
-      owner.viewportRenderingDisplayLinkDidTick(displayLink, surface: surface)
+      owner.drawViewportFrame()
     }
   }
 
@@ -99,12 +74,15 @@ extension CropView {
   final class SurfaceHost {
     let platterView = UIView()
     let backdropView = UIView()
+    /// An untransformed sibling of the scroll hierarchy. Metal never moves
+    /// with a scroll view; its pixels are placed by the sampled affine mapping.
+    let canvasHostView = UIView()
+    let canvasClipLayer = CAShapeLayer()
   }
 
   /// Common core shared by the Crop and Tool surfaces: a UIScrollView that
-  /// owns pan/zoom physics over a transparent zooming view, with the Metal
-  /// canvas inserted beneath that view so the scroll view never transforms
-  /// rendered pixels directly.
+  /// owns pan/zoom physics over a transparent zooming view. The Metal canvas
+  /// lives in the fixed host coordinate space, outside the scroll hierarchy.
   ///
   /// These are reference types because UIKit may re-enter scroll-view delegate
   /// callbacks while a surface is updating its views and layers.
@@ -112,10 +90,11 @@ extension CropView {
     let scrollView = _ScrollView()
     var canvasView: _EditingCanvasMTKView?
     var canvasSize: CGSize?
-    let viewportRendering: ViewportRenderingState
+    /// The mapping of the last frame submitted for display, also used to
+    /// map drawing gestures back into the surface's editing domain.
+    var displayedViewport: CropDisplayViewport?
 
-    /// The transparent view the scroll view zooms; rendered pixels live on
-    /// the Metal canvas inserted beneath it.
+    /// The transparent view the scroll view zooms to produce navigation geometry.
     let zoomingView: UIView
 
     /// Called when the scroll view changes zoom scale.
@@ -133,25 +112,11 @@ extension CropView {
     /// Called when viewport deceleration ends.
     var onDidEndDecelerating: (() -> Void)?
 
-    init(surface: ViewportRenderingSurface, zoomingView: UIView) {
-      self.viewportRendering = ViewportRenderingState(surface: surface)
+    init(zoomingView: UIView) {
       self.zoomingView = zoomingView
       super.init()
       scrollView.delegate = self
     }
-
-    var hasCanvasView: Bool {
-      canvasView != nil
-    }
-
-    /// While true, the canvas is temporarily parented inside `zoomingView`
-    /// (with a transform compensating the model zoom scale) so UIKit's own
-    /// zoom bounce-back presentation animation carries it. The bounce emits no
-    /// per-frame delegate ticks, so this is the only way to move the canvas in
-    /// exact phase with the spring; presentation-layer sampling from a display
-    /// link is always one frame out of phase.
-    private(set) var isRidingZoomBounce = false
-    private var zoomBounceRideRestorationFrame: CGRect?
 
     var isInteractiveZoomGestureActive: Bool {
       switch scrollView.pinchGestureRecognizer?.state {
@@ -179,19 +144,9 @@ extension CropView {
       }
     }
 
-    var isViewportPresentationSettled: Bool {
-      let tolerance: CGFloat = 0.5
-
-      let isScrollBoundsSettled = scrollView.layer.presentation()?.bounds
-        .isNearlyEqual(to: scrollView.bounds, tolerance: tolerance) ?? true
-      let isZoomingViewFrameSettled = zoomingView.layer.presentation()?.frame
-        .isNearlyEqual(to: zoomingView.frame, tolerance: tolerance) ?? true
-
-      return isScrollBoundsSettled && isZoomingViewFrameSettled
-    }
-
     @discardableResult
     func ensureCanvasView(
+      in hostView: UIView,
       canvasSize: CGSize,
       brush: EditingCanvasBrush,
       smoothing: EditingCanvasStrokeSmoothingConfiguration,
@@ -217,85 +172,19 @@ extension CropView {
       view.setViewportCachedSourceEnabled(true)
       view.configure(brush: brush, smoothing: smoothing)
       view.onStrokeCommit = onStrokeCommit
-      scrollView.insertSubview(view, belowSubview: zoomingView)
+      view.setExternalFrameDrivingEnabled(true)
+      view.frame = hostView.bounds
+      hostView.addSubview(view)
       canvasView = view
       self.canvasSize = canvasSize
       return view
     }
 
     func removeCanvasView() {
-      endZoomBounceRide()
-      viewportRendering.invalidate()
+      displayedViewport = nil
       canvasView?.removeFromSuperview()
       canvasView = nil
       canvasSize = nil
-    }
-
-    /// Hands the canvas to the zooming view so the in-flight zoom bounce-back
-    /// carries it. Call after applying the settled-model viewport: the frame
-    /// and the render must already describe the final geometry so the ride
-    /// lands pixel-exact. The reparent and the compensating transform commit
-    /// in the same transaction as that render, so the screen never shows the
-    /// intermediate model-snapped placement.
-    func beginZoomBounceRide() {
-      guard
-        isRidingZoomBounce == false,
-        scrollView.isZoomBouncing,
-        let canvasView,
-        canvasView.isHidden == false
-      else {
-        return
-      }
-
-      let zoomScale = scrollView.zoomScale
-      guard zoomScale > 0 else {
-        return
-      }
-
-      let frameInScrollView = canvasView.frame
-      zoomBounceRideRestorationFrame = frameInScrollView
-      let centerInZoomingView = scrollView.convert(
-        CGPoint(x: frameInScrollView.midX, y: frameInScrollView.midY),
-        to: zoomingView
-      )
-      // The bounce-start delegate callback runs inside UIKit's own animation
-      // context, so plain property writes here would be implicitly animated —
-      // the canvas would spring from its old placement instead of being
-      // carried by the parent. Place it without animation and strip anything
-      // that already attached in this transaction.
-      UIView.performWithoutAnimation {
-        zoomingView.insertSubview(canvasView, at: 0)
-        canvasView.transform = CGAffineTransform(scaleX: 1 / zoomScale, y: 1 / zoomScale)
-        canvasView.center = centerInZoomingView
-      }
-      canvasView.layer.removeAllAnimations()
-      isRidingZoomBounce = true
-    }
-
-    /// Returns the canvas to its normal scroll-view placement. Visually
-    /// continuous when the bounce has settled: the presentation transform has
-    /// converged to the model, so the restored scroll-view frame maps to the
-    /// same pixels the ride ended on.
-    func endZoomBounceRide() {
-      guard isRidingZoomBounce else {
-        return
-      }
-      isRidingZoomBounce = false
-
-      let restorationFrame = zoomBounceRideRestorationFrame
-      zoomBounceRideRestorationFrame = nil
-
-      guard let canvasView else {
-        return
-      }
-      UIView.performWithoutAnimation {
-        canvasView.transform = .identity
-        scrollView.insertSubview(canvasView, belowSubview: zoomingView)
-        if let restorationFrame {
-          canvasView.frame = restorationFrame
-        }
-      }
-      canvasView.layer.removeAllAnimations()
     }
 
     func hideCanvasView() {
@@ -313,37 +202,20 @@ extension CropView {
       canvasView?.setCommittedStrokes(records)
     }
 
-    func applyViewport(
-      _ viewport: CropDisplayViewport?,
-      viewportProvider: _EditingCanvasMTKView.ViewportProvider? = nil
-    ) {
-      guard let canvasView else {
-        return
-      }
-
-      // While riding the zoom bounce the canvas lives inside the zooming view
-      // with a compensating transform, so scroll-view-space frames don't
-      // apply. The model is already settled during the bounce; the viewport
-      // applied when the ride ends produces the same geometry.
-      guard isRidingZoomBounce == false else {
-        return
-      }
-
+    /// Submits one frame without moving the canvas or scheduling another loop.
+    func draw(viewport: CropDisplayViewport?) {
+      guard let canvasView else { return }
+      displayedViewport = viewport
       guard let viewport else {
         canvasView.isHidden = true
-        canvasView.setViewportProvider(nil, schedulesDisplay: false)
         return
       }
-
       canvasView.isHidden = false
-      canvasView.frame = viewport.viewportFrameInScrollView
-      canvasView.contentScaleFactor = viewport.contentScaleFactor
-      if let viewportProvider {
-        canvasView.setViewportProvider(viewportProvider)
-      } else {
-        canvasView.setViewportProvider(nil, schedulesDisplay: false)
-        canvasView.setViewport(viewport.editingCanvasViewport)
+      if canvasView.contentScaleFactor != viewport.contentScaleFactor {
+        canvasView.contentScaleFactor = viewport.contentScaleFactor
       }
+      canvasView.setViewport(viewport.editingCanvasViewport, schedulesDisplay: false)
+      canvasView.draw()
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -399,7 +271,7 @@ extension CropView {
     init() {
       let platterView = ImagePlatterView()
       self.imagePlatterView = platterView
-      super.init(surface: .crop, zoomingView: platterView)
+      super.init(zoomingView: platterView)
     }
 
     override func removeCanvasView() {
@@ -443,9 +315,6 @@ extension CropView {
     }
 
     func applyMode(isActive: Bool) {
-      if isActive == false {
-        viewportRendering.invalidate()
-      }
       scrollView.isScrollEnabled = isActive
       scrollView.pinchGestureRecognizer?.isEnabled = isActive
       scrollView.isHidden = !isActive
@@ -565,7 +434,6 @@ extension CropView {
 
     let contentView: UIView
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-
     /// A memo of the display crop that produced the currently published
     /// `outputGeometry`.
     ///
@@ -589,7 +457,7 @@ extension CropView {
       view.isOpaque = false
       view.accessibilityIdentifier = "toolSurfaceContentView"
       self.contentView = view
-      super.init(surface: .tool, zoomingView: view)
+      super.init(zoomingView: view)
     }
 
     override func removeCanvasView() {
@@ -607,10 +475,8 @@ extension CropView {
     /// `toolDisplayCrop(from:)`; that shared derivation is what keeps the two
     /// call sites consistent.
     ///
-    /// Ordering contract: publish BEFORE any zoom write. `setZoomScale` emits
-    /// `scrollViewDidZoom` synchronously, and that tick re-renders the canvas
-    /// from `outputGeometry`, so the published value must already describe the
-    /// new crop when the re-entry happens.
+    /// Ordering contract: publish BEFORE any zoom write so reentrant UIKit
+    /// callbacks and the next display frame observe the same output domain.
     func publishOutputGeometry(_ geometry: EditingCanvasCropOutputGeometry) {
       outputGeometry = geometry
     }
@@ -675,13 +541,6 @@ extension CropView {
       isActive: Bool,
       isDrawingEnabled: Bool
     ) {
-      if isActive == false {
-        // Leaving Tool mode mid-bounce would otherwise strand
-        // `isRidingZoomBounce == true` with the canvas parented inside the
-        // zooming view, and every later `applyViewport` silently drops.
-        endZoomBounceRide()
-        viewportRendering.invalidate()
-      }
       scrollView.isHidden = !isActive
       scrollView.isScrollEnabled = isActive
       scrollView.pinchGestureRecognizer?.isEnabled = isActive

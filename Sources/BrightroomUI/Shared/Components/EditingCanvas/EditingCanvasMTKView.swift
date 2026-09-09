@@ -8,7 +8,7 @@ import UIKit
 private struct EditingCanvasViewportSourceTextureKey: Equatable {
   var sourceExtent: CGRect
   var visibleContentRect: CGRect
-  var visibleCanvasFrame: CGRect
+  var contentToCanvasTransform: CGAffineTransform
   var pixelWidth: Int
   var pixelHeight: Int
 }
@@ -27,7 +27,7 @@ private struct EditingCanvasViewportRenderTextures {
 
 private struct EditingCanvasViewportPreparedLayersCacheKey: Equatable {
   var visibleContentRect: CGRect
-  var visibleCanvasFrame: CGRect
+  var contentToCanvasTransform: CGAffineTransform
   var pixelWidth: Int
   var pixelHeight: Int
 }
@@ -52,10 +52,9 @@ private struct EditingCanvasViewportPreparedLayersCache {
 /// the viewport) the expensive blur graph is evaluated once and every frame
 /// resamples this texture instead of re-running it.
 ///
-/// Only `adjusted` is baked: `base` is the global effects applied to the
-/// (now GPU-resident) source, which are pointwise and cheap to re-evaluate per
-/// frame — baking it too would just double the held texture memory for no
-/// meaningful frame-time win.
+/// Only `adjusted` is baked. The base effect graph remains lazy and is evaluated
+/// for each viewport, avoiding a second retained content-sized texture. Global
+/// effects are an open pipeline, so that evaluation is not necessarily cheap.
 private struct EditingCanvasPreparedContentLayers {
   let adjustedTexture: MTLTexture
   let adjustedImage: CIImage
@@ -84,16 +83,49 @@ struct EditingCanvasRenderImages {
 
 final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
-  /// Canvas-content viewport values used to render the current drawable.
+  /// Maps y-down image-content coordinates into the fixed canvas's point space.
   ///
-  /// A viewport may be supplied at draw time so the renderer can resolve
-  /// presentation-layer geometry as close as possible to the Metal draw pass.
+  /// `visibleContentRect` is a conservative content-space bound for culling;
+  /// `contentToCanvasTransform` alone determines placement through translation,
+  /// rotation, and uniform scale; the brush remains circular in this geometry.
+  /// The host samples presentation geometry immediately before drawing, without
+  /// changing the canvas's frame or moving it into the animated scroll hierarchy.
   struct Viewport {
     var visibleContentRect: CGRect
-    var visibleCanvasFrame: CGRect
-  }
+    var contentToCanvasTransform: CGAffineTransform
 
-  typealias ViewportProvider = () -> Viewport?
+    /// The transformed content bounds, for diagnostics and coarse intersection.
+    /// Rotation makes this an enclosing rectangle, not a rendering transform.
+    var visibleCanvasFrame: CGRect {
+      visibleContentRect.applying(contentToCanvasTransform)
+    }
+
+    /// Resolves content coordinates into y-down texture pixels. The caller
+    /// supplies positive canvas and texture sizes for the current drawable.
+    func contentToTextureTransform(
+      canvasSize: CGSize,
+      textureSize: CGSize
+    ) -> CGAffineTransform {
+      contentToCanvasTransform.concatenating(CGAffineTransform(
+        scaleX: textureSize.width / canvasSize.width,
+        y: textureSize.height / canvasSize.height
+      ))
+    }
+
+    /// Scales a circular content-space radius into texture pixels without
+    /// letting rotation inflate it through an axis-aligned bounding box.
+    /// Scroll-view geometry uses uniform scale and rotation; averaging the two
+    /// basis lengths also accommodates drawable-size pixel rounding.
+    func textureRadius(
+      forContentRadius radius: CGFloat,
+      canvasSize: CGSize,
+      textureSize: CGSize
+    ) -> CGFloat {
+      let transform = contentToTextureTransform(canvasSize: canvasSize, textureSize: textureSize)
+      let scale = (hypot(transform.a, transform.b) + hypot(transform.c, transform.d)) * 0.5
+      return radius * scale
+    }
+  }
 
   private typealias BrushStampUniforms = BrushMaskPipeline.StampUniforms
   // @MainActor: reads UIScreen frame-rate properties, which are main-actor only.
@@ -125,11 +157,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     var preparedLayersCache: EditingCanvasViewportPreparedLayersCache?
     var renderTextures: EditingCanvasViewportRenderTextures?
     var usesCachedSourceRendering = false
-    var visibleContentRect: CGRect
-    var visibleCanvasFrame: CGRect = .zero
+    var viewport: Viewport
 
     init(canvasSize: CGSize) {
-      self.visibleContentRect = CGRect(origin: .zero, size: canvasSize)
+      self.viewport = Viewport(
+        visibleContentRect: CGRect(origin: .zero, size: canvasSize),
+        contentToCanvasTransform: .init(scaleX: 0, y: 0)
+      )
     }
   }
 
@@ -300,7 +334,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   #if DEBUG
   private var performanceDiagnostics = PerformanceDiagnostics()
   #endif
-  private var viewportProvider: ViewportProvider?
+  private var isExternallyFrameDriven = false
   var onStrokeCommit: ((EditingCanvasStrokeRecord, @escaping () -> Void) -> Void)?
 
   var hasRenderImages: Bool { viewportState.renderImages != nil }
@@ -343,10 +377,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     isPaused = true
     preferredFramesPerSecond = LiveFrameRate.targetMaximum(for: nil)
     autoResizeDrawable = true
-    // The canvas frame and the host scroll view's transform change in the
-    // same Core Animation transaction (rotation streaming, zoom). Presenting
-    // outside that transaction lets the compositor stretch the previous
-    // texture into the new bounds for a frame, which reads as warping.
+    // Commit the sampled viewport with the surrounding Core Animation frame,
+    // including overlays whose presentation geometry supplied that sample.
     presentsWithTransaction = true
     isMultipleTouchEnabled = true
     delegate = self
@@ -420,7 +452,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     if isHidden == false {
-      setNeedsDisplay()
+      scheduleDisplayIfNeeded()
     }
   }
 
@@ -436,7 +468,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.renderImages)
     #endif
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
   }
 
   func setViewportCachedSourceEnabled(_ isEnabled: Bool) {
@@ -452,7 +484,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.cachedSourceMode)
     #endif
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
   }
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
@@ -468,51 +500,75 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.committedStrokes)
     #endif
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
   }
 
-  func setViewportProvider(
-    _ provider: ViewportProvider?,
-    schedulesDisplay: Bool = true
-  ) {
-    viewportProvider = provider
-    if schedulesDisplay {
-      setNeedsDisplay()
+  /// Transfers frame scheduling to a host that calls `draw()` on every visible
+  /// display-link tick. The host owns pausing that loop offscreen/background;
+  /// this view keeps consuming stroke work in the same draw pass as its viewport.
+  /// Standalone hosts retain on-demand draws and the stroke-only display link.
+  func setExternalFrameDrivingEnabled(_ isEnabled: Bool) {
+    guard isExternallyFrameDriven != isEnabled else { return }
+
+    isExternallyFrameDriven = isEnabled
+    enableSetNeedsDisplay = isEnabled == false
+    if isEnabled {
+      isPaused = true
+      stopLiveDisplayLink()
+    } else {
+      if strokeState.activeBrush != nil {
+        startLiveDisplayLinkIfNeeded()
+      }
+      scheduleDisplayIfNeeded()
     }
   }
 
-  func setViewport(_ viewport: Viewport) {
-    updateViewport(viewport, schedulesDisplay: true)
+  private func scheduleDisplayIfNeeded() {
+    guard isExternallyFrameDriven == false else { return }
+    setNeedsDisplay()
+  }
+
+  /// Updates the sampled viewport. A host that draws once per display-link tick
+  /// can disable scheduling and call `draw()` after applying all frame inputs.
+  func setViewport(_ viewport: Viewport, schedulesDisplay: Bool = true) {
+    updateViewport(viewport, schedulesDisplay: schedulesDisplay)
   }
 
   private func updateViewport(
     _ viewport: Viewport,
     schedulesDisplay: Bool
   ) {
-    let canvasRect = CGRect(origin: .zero, size: canvasSize)
-    let nextRect = viewport.visibleContentRect.intersection(canvasRect)
-    let nextFrame = viewport.visibleCanvasFrame
-
-    guard nextRect.isNull == false, nextRect.isEmpty == false else {
+    let transform = viewport.contentToCanvasTransform
+    guard
+      transform.a.isFinite, transform.b.isFinite,
+      transform.c.isFinite, transform.d.isFinite,
+      transform.tx.isFinite, transform.ty.isFinite,
+      transform.a * transform.d - transform.b * transform.c != 0
+    else {
       return
     }
 
-    let didChangeViewport = viewportState.visibleContentRect.equalTo(nextRect) == false
-      || viewportState.visibleCanvasFrame.equalTo(nextFrame) == false
+    var nextViewport = viewport
+    let canvasRect = CGRect(origin: .zero, size: canvasSize)
+    nextViewport.visibleContentRect = viewport.visibleContentRect.intersection(canvasRect)
+    let didChangeViewport = viewportState.viewport.visibleContentRect != nextViewport.visibleContentRect
+      || viewportState.viewport.contentToCanvasTransform != transform
     guard didChangeViewport else {
       return
     }
 
-    viewportState.visibleContentRect = nextRect
-    viewportState.visibleCanvasFrame = nextFrame
+    // An empty intersection must replace the previous viewport so an image
+    // dragged completely out of sight clears instead of keeping a stale frame.
+    viewportState.viewport = nextViewport
     viewportState.sourceTexture = nil
-    viewportState.renderTextures = nil
+    // The mask texture's allocation depends only on drawable size; each draw
+    // clears and rasterizes it, so changing the viewport can reuse the storage.
     invalidateViewportCoreImageLayerCaches()
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.viewport)
     #endif
     if schedulesDisplay {
-      setNeedsDisplay()
+      scheduleDisplayIfNeeded()
     }
   }
 
@@ -529,20 +585,14 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.drawableSize)
     #endif
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
   }
 
   func draw(in view: MTKView) {
-    updateViewportFromProvider()
-    renderViewportImage()
-  }
-
-  private func updateViewportFromProvider() {
-    guard let viewport = viewportProvider?() else {
-      return
+    if isExternallyFrameDriven, strokeState.pendingLiveStamps.isEmpty == false {
+      strokeState.pendingLiveStamps.removeAll(keepingCapacity: true)
     }
-
-    updateViewport(viewport, schedulesDisplay: false)
+    renderViewportImage()
   }
 
   func beginStroke(at rawPoint: CGPoint) {
@@ -623,7 +673,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     strokeState.activeBrush = nil
     stopLiveDisplayLink()
     isHidden = false
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
     strokeState.lastStampPoint = nil
   }
 
@@ -673,13 +723,13 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     startLiveDisplayLinkIfNeeded()
     if flushImmediately {
       strokeState.pendingLiveStamps.removeAll(keepingCapacity: true)
-      setNeedsDisplay()
+      scheduleDisplayIfNeeded()
     }
   }
 
   private func commitActiveStroke() {
     guard let brush = strokeState.activeBrush, strokeState.activeStamps.isEmpty == false else {
-      setNeedsDisplay()
+      scheduleDisplayIfNeeded()
       return
     }
 
@@ -716,11 +766,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     isHidden = false
-    setNeedsDisplay()
+    scheduleDisplayIfNeeded()
   }
 
   private func startLiveDisplayLinkIfNeeded() {
-    guard liveRefreshState.displayLink == nil else { return }
+    guard isExternallyFrameDriven == false, liveRefreshState.displayLink == nil else { return }
 
     let displayLink = CADisplayLink(
       target: self,
@@ -744,7 +794,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   @objc private func liveDisplayLinkDidTick(_ displayLink: CADisplayLink) {
     if strokeState.pendingLiveStamps.isEmpty == false {
       strokeState.pendingLiveStamps.removeAll(keepingCapacity: true)
-      setNeedsDisplay()
+      scheduleDisplayIfNeeded()
     }
   }
 
@@ -761,10 +811,10 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       let commandBuffer = commandQueue.makeCommandBuffer(),
       bounds.width > 0,
       bounds.height > 0,
-      viewportState.visibleContentRect.width > 0,
-      viewportState.visibleContentRect.height > 0,
-      viewportState.visibleCanvasFrame.width > 0,
-      viewportState.visibleCanvasFrame.height > 0
+      viewportState.viewport.visibleContentRect.width > 0,
+      viewportState.viewport.visibleContentRect.height > 0,
+      viewportState.viewport.visibleCanvasFrame.width > 0,
+      viewportState.viewport.visibleCanvasFrame.height > 0
     else {
       clearCurrentDrawable()
       #if DEBUG
@@ -779,9 +829,15 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return
     }
 
-    let hasRenderableStroke = hasRenderableStroke(in: viewportState.visibleContentRect)
+    let hasRenderableStroke = hasRenderableStroke(in: viewportState.viewport.visibleContentRect)
 
-    if viewportState.usesCachedSourceRendering, renderImages.usesPreparedBaseImage == false {
+    // Global effects are an open pipeline and may depend on direction, extent,
+    // or position. Always evaluate them in content space through `base`, before
+    // the viewport affine, so no pan/zoom/rotation can change their domain.
+    // Sampling the source cache is equivalent only when global effects are idle.
+    if viewportState.usesCachedSourceRendering,
+       renderImages.usesPreparedBaseImage == false,
+       renderImages.effects.hasEnabledEffects == false {
       let path = renderViewportCachedSource(
         renderImages,
         drawable: drawable,
@@ -803,9 +859,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     guard renderImages.hasLocalEffect,
           hasRenderableStroke
     else {
-      // No local effect here: `base` is the global effects applied to the
-      // GPU-resident source (pointwise → cheap), so re-evaluating it per frame
-      // needs no bake.
+      // `base` already expresses the global effects in content coordinates.
+      // Apply the viewport afterward so navigation preserves that effect domain.
       renderViewportBaseImage(
         renderImages.base,
         drawable: drawable,
@@ -863,8 +918,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       hasLocalEffect: renderImages?.hasLocalEffect ?? false,
       hasRenderableStroke: hasRenderableStroke,
       drawableSize: drawableSize,
-      visibleContentRect: viewportState.visibleContentRect,
-      visibleCanvasFrame: viewportState.visibleCanvasFrame
+      visibleContentRect: viewportState.viewport.visibleContentRect,
+      visibleCanvasFrame: viewportState.viewport.visibleCanvasFrame
     )
   }
   #endif
@@ -886,34 +941,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       width: drawable.texture.width,
       height: drawable.texture.height
     )
-    guard let destinationFrame = viewportTextureContentFrame(
-      pixelWidth: drawable.texture.width,
-      pixelHeight: drawable.texture.height
-    ) else {
-      clearCurrentDrawable()
-      return
-    }
-    let scaleX = destinationFrame.width / viewportState.visibleContentRect.width
-    let scaleY = destinationFrame.height / viewportState.visibleContentRect.height
+    let transform = viewportState.viewport.contentToTextureTransform(
+      canvasSize: bounds.size,
+      textureSize: renderBounds.size
+    )
     let visibleImage = image
-      .transformed(
-        by: CGAffineTransform(
-          translationX: -viewportState.visibleContentRect.minX,
-          y: -viewportState.visibleContentRect.minY
-        )
-      )
-      .transformed(
-        by: CGAffineTransform(
-          scaleX: scaleX,
-          y: scaleY
-        )
-      )
-      .transformed(
-        by: CGAffineTransform(
-          translationX: destinationFrame.minX,
-          y: destinationFrame.minY
-        )
-      )
+      .transformed(by: transform)
       .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
       .transformed(by: CGAffineTransform(translationX: 0, y: renderBounds.height))
       .cropped(to: renderBounds)
@@ -930,50 +963,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     drawable.present()
   }
 
-  /// The full source extent expressed in drawable pixels at the current zoom.
-  ///
-  /// Diagonal-based radii (Gaussian blur, sharpen) use this as their reference
-  /// so a "value 40" blur is always `diagonal(source) / 50` of the source,
-  /// independent of viewport zoom. The scale mirrors the brush-stamp pixel
-  /// scale (content points → drawable pixels): a zoomed-in viewport magnifies
-  /// fewer content points into the same drawable, so the source measured in
-  /// drawable pixels grows, and the radius grows with it — exactly cancelling
-  /// the magnification so the on-screen blur matches the exported result.
-  private func viewportRadiusReferenceExtent(
-    sourceExtent: CGRect,
-    pixelWidth: Int,
-    pixelHeight: Int
-  ) -> CGRect? {
-    let visibleContentRect = viewportState.visibleContentRect
-    let visibleCanvasFrame = viewportState.visibleCanvasFrame
-    guard
-      bounds.width > 0, bounds.height > 0,
-      visibleContentRect.width > 0, visibleContentRect.height > 0,
-      visibleCanvasFrame.width > 0, visibleCanvasFrame.height > 0,
-      sourceExtent.width > 0, sourceExtent.height > 0
-    else {
-      return nil
-    }
-
-    let drawableScaleX = CGFloat(pixelWidth) / bounds.width
-    let drawableScaleY = CGFloat(pixelHeight) / bounds.height
-    let pixelScaleX = visibleCanvasFrame.width * drawableScaleX / visibleContentRect.width
-    let pixelScaleY = visibleCanvasFrame.height * drawableScaleY / visibleContentRect.height
-    let scale = max((pixelScaleX + pixelScaleY) * 0.5, 0.0001)
-
-    return CGRect(
-      origin: .zero,
-      size: CGSize(
-        width: sourceExtent.width * scale,
-        height: sourceExtent.height * scale
-      )
-    )
-  }
-
-  @discardableResult
-  /// The cached-source path now only serves the no-local-effect base preview
-  /// (mode `.viewportBase`): every local adjustment bakes its effect and uses
-  /// the prepared path. So this just renders the effects-applied base.
+  /// Renders an unadjusted source through its viewport-resolution texture cache.
+  /// Any enabled global or local effect uses a content-space prepared image.
   private func renderViewportCachedSource(
     _ renderImages: EditingCanvasRenderImages,
     drawable: CAMetalDrawable,
@@ -995,24 +986,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return .clear
     }
 
-    // The full source extent in drawable pixels: diagonal-based radii resolve
-    // against this so they stay a fixed fraction of the source regardless of
-    // zoom, instead of tracking the zoomed visible extent of `sourceImage`.
-    let radiusReferenceExtent = viewportRadiusReferenceExtent(
-      sourceExtent: renderImages.source.extent,
-      pixelWidth: pixelWidth,
-      pixelHeight: pixelHeight
-    )
-
-    let baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-      renderImages.effects
-        .applyIgnoringFailure(to: sourceImage, radiusReferenceExtent: radiusReferenceExtent)
-        .cropped(to: sourceImage.extent),
-      source: sourceImage
-    )
-
     renderDrawableImage(
-      baseImage,
+      sourceImage,
       drawable: drawable,
       descriptor: descriptor,
       commandBuffer: commandBuffer
@@ -1044,8 +1019,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   /// invariant across viewport-only changes like rotation.
   ///
   /// Returns `nil` when there is no distinct local effect (`adjusted === base`)
-  /// or no Metal device: in those cases the caller uses the live `base` graph,
-  /// which is pointwise on the GPU-resident source and cheap to re-evaluate.
+  /// or the bake is unavailable. The caller then evaluates `adjusted` lazily
+  /// for the current viewport.
   private func preparedAdjustedLayer(
     _ renderImages: EditingCanvasRenderImages
   ) -> CIImage? {
@@ -1093,8 +1068,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
   ) -> CIImage? {
     let key = EditingCanvasViewportSourceTextureKey(
       sourceExtent: source.extent,
-      visibleContentRect: viewportState.visibleContentRect,
-      visibleCanvasFrame: viewportState.visibleCanvasFrame,
+      visibleContentRect: viewportState.viewport.visibleContentRect,
+      contentToCanvasTransform: viewportState.viewport.contentToCanvasTransform,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight
     )
@@ -1221,7 +1196,7 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     // accumulation, so the live mask agrees with export by construction. Memory
     // is bounded by the viewport-sized mask texture.
     guard
-      hasRenderableStroke(in: viewportState.visibleContentRect),
+      hasRenderableStroke(in: viewportState.viewport.visibleContentRect),
       let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
     else {
       clearCurrentDrawable()
@@ -1276,8 +1251,8 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     renderBounds: CGRect
   ) -> EditingCanvasViewportPreparedLayersCache? {
     let key = EditingCanvasViewportPreparedLayersCacheKey(
-      visibleContentRect: viewportState.visibleContentRect,
-      visibleCanvasFrame: viewportState.visibleCanvasFrame,
+      visibleContentRect: viewportState.viewport.visibleContentRect,
+      contentToCanvasTransform: viewportState.viewport.contentToCanvasTransform,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight
     )
@@ -1305,10 +1280,9 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
 
     // The blur-heavy `adjusted` layer is sampled from its once-per-generation
-    // bake, so this per-frame fill is a cheap affine resample instead of a full
-    // re-evaluation of the blur graph. `base` stays the live graph — it is
-    // pointwise on the GPU-resident source, so re-evaluating it per frame is
-    // cheap and avoids holding a second large texture.
+    // bake, so its per-frame fill resamples the texture instead of re-evaluating
+    // that effect graph. `base` remains lazy to avoid retaining a second large
+    // content texture; its evaluation cost depends on the global effect pipeline.
     let adjustedContent = preparedAdjustedLayer(renderImages) ?? renderImages.adjusted
 
     encodeClearTexture(baseTexture, commandBuffer: fillCommandBuffer)
@@ -1354,33 +1328,12 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       width: texture.width,
       height: texture.height
     )
-    guard let destinationFrame = viewportTextureContentFrame(
-      pixelWidth: texture.width,
-      pixelHeight: texture.height
-    ) else {
-      return
-    }
-    let scaleX = destinationFrame.width / viewportState.visibleContentRect.width
-    let scaleY = destinationFrame.height / viewportState.visibleContentRect.height
+    let transform = viewportState.viewport.contentToTextureTransform(
+      canvasSize: bounds.size,
+      textureSize: renderBounds.size
+    )
     let visibleImage = image
-      .transformed(
-        by: CGAffineTransform(
-          translationX: -viewportState.visibleContentRect.minX,
-          y: -viewportState.visibleContentRect.minY
-        )
-      )
-      .transformed(
-        by: CGAffineTransform(
-          scaleX: scaleX,
-          y: scaleY
-        )
-      )
-      .transformed(
-        by: CGAffineTransform(
-          translationX: destinationFrame.minX,
-          y: destinationFrame.minY
-        )
-      )
+      .transformed(by: transform)
       .cropped(to: renderBounds)
 
     ciContext.render(
@@ -1397,15 +1350,11 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
       return nil
     }
 
-    let drawableScaleX = CGFloat(pixelWidth) / bounds.width
-    let drawableScaleY = CGFloat(pixelHeight) / bounds.height
-    let frame = CGRect(
-      x: viewportState.visibleCanvasFrame.minX * drawableScaleX,
-      y: viewportState.visibleCanvasFrame.minY * drawableScaleY,
-      width: viewportState.visibleCanvasFrame.width * drawableScaleX,
-      height: viewportState.visibleCanvasFrame.height * drawableScaleY
+    let transform = viewportState.viewport.contentToTextureTransform(
+      canvasSize: bounds.size,
+      textureSize: CGSize(width: pixelWidth, height: pixelHeight)
     )
-      .standardized
+    let frame = viewportState.viewport.visibleContentRect.applying(transform).standardized
 
     guard frame.isNull == false, frame.isEmpty == false else {
       return nil
@@ -1478,23 +1427,21 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
     into texture: MTLTexture,
     commandBuffer: MTLCommandBuffer
   ) {
-    let visible = viewportState.visibleContentRect
-    let viewportFrame = viewportState.visibleCanvasFrame
+    let viewport = viewportState.viewport
+    let visible = viewport.visibleContentRect
     guard
       hasRenderableStroke(in: visible),
       visible.width > 0, visible.height > 0,
-      viewportFrame.width > 0, viewportFrame.height > 0,
       bounds.width > 0, bounds.height > 0
     else {
       return
     }
 
-    let drawableScaleX = CGFloat(texture.width) / bounds.width
-    let drawableScaleY = CGFloat(texture.height) / bounds.height
-    let contentToViewScaleX = viewportFrame.width / visible.width
-    let contentToViewScaleY = viewportFrame.height / visible.height
-    let pixelScaleX = contentToViewScaleX * drawableScaleX
-    let pixelScaleY = contentToViewScaleY * drawableScaleY
+    let textureSize = CGSize(width: texture.width, height: texture.height)
+    let contentToTextureTransform = viewport.contentToTextureTransform(
+      canvasSize: bounds.size,
+      textureSize: textureSize
+    )
     let targetSize = SIMD2(Float(texture.width), Float(texture.height))
 
     let descriptor = MTLRenderPassDescriptor()
@@ -1510,17 +1457,22 @@ final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     func encode(stamps: [CGPoint], brush: EditingCanvasBrush) {
       let radius = CGFloat(brush.size / 2)
-      let pixelRadius = Float(Double(radius) * Double((pixelScaleX + pixelScaleY) * 0.5))
+      let pixelRadius = Float(viewport.textureRadius(
+        forContentRadius: radius,
+        canvasSize: bounds.size,
+        textureSize: textureSize
+      ))
       let hardness = Float(brush.hardness)
       let opacity = Float(brush.opacity)
 
       for stamp in stamps where stampIntersectsVisibleRect(stamp, radius: radius, visible: visible) {
+        let center = stamp.applying(contentToTextureTransform)
         BrushMaskPipeline.encodeStamp(
           BrushStampUniforms(
             canvasSize: targetSize,
             center: SIMD2(
-              Float((viewportFrame.minX + (stamp.x - visible.minX) * contentToViewScaleX) * drawableScaleX),
-              Float((viewportFrame.minY + (stamp.y - visible.minY) * contentToViewScaleY) * drawableScaleY)
+              Float(center.x),
+              Float(center.y)
             ),
             radius: pixelRadius,
             hardness: hardness,
