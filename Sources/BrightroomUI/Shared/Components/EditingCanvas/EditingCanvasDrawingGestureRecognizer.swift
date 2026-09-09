@@ -7,6 +7,10 @@ final class _EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
   var onEnd: ((CGPoint) -> Void)?
   var onCancel: (() -> Void)?
 
+  /// Whether a first touch is pending or drawing. A host may hit-test that
+  /// first touch, but must let additional touches reach the cancellation path.
+  var isTrackingTouch: Bool { activeTouch != nil }
+
   private let directTouchDrawingThreshold: CGFloat = 8
   private weak var activeTouch: UITouch?
   private var activeTouchType: UITouch.TouchType?

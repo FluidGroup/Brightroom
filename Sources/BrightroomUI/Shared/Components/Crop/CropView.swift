@@ -149,6 +149,7 @@ final class CropView: UIView {
   }()
   #endif
 
+  private let viewportDisplayLink = ViewportDisplayLink()
   private let surfaceHost = SurfaceHost()
   private let cropSurface = CropSurface()
   private let toolSurface = ToolSurface()
@@ -264,6 +265,11 @@ final class CropView: UIView {
     surfaceHost.platterView.addSubview(cropSurface.scrollView)
     surfaceHost.platterView.addSubview(toolSurface.scrollView)
 
+    surfaceHost.canvasHostView.isUserInteractionEnabled = false
+    surfaceHost.canvasHostView.clipsToBounds = true
+    surfaceHost.canvasHostView.accessibilityIdentifier = "CropView.fixedCanvasHost"
+    addSubview(surfaceHost.canvasHostView)
+
     addSubview(guideOutsideContainerView)
     addSubview(guideMaximumView)
     addSubview(guideShadowingView)
@@ -275,15 +281,20 @@ final class CropView: UIView {
       toolSurface.drawingGestureRecognizer.isEnabled = false
       toolSurface.drawingGestureRecognizer.onBegin = { [weak self] point in
         guard let self else { return }
-        self.toolSurface.beginStroke(at: point)
+        guard let contentPoint = self.toolContentPoint(from: point) else { return }
+        self.toolSurface.beginStroke(at: contentPoint)
       }
       toolSurface.drawingGestureRecognizer.onMove = { [weak self] points in
         guard let self else { return }
-        self.toolSurface.appendStroke(points: points)
+        self.toolSurface.appendStroke(points: points.compactMap(self.toolContentPoint(from:)))
       }
       toolSurface.drawingGestureRecognizer.onEnd = { [weak self] point in
         guard let self else { return }
-        self.toolSurface.endStroke(at: point)
+        guard let contentPoint = self.toolContentPoint(from: point) else {
+          self.toolSurface.cancelStroke()
+          return
+        }
+        self.toolSurface.endStroke(at: contentPoint)
         // Stroke end is a quiet moment: if an interrupted pinch left the
         // scroll model outside its valid range, recover it here.
         self.settleToolScrollInsetIfNeeded()
@@ -314,7 +325,7 @@ final class CropView: UIView {
     // stale contentSize after a below-minimum pinch and glides any
     // out-of-range rest back into the covering range at quiet boundaries.
     toolSurface.scrollView.addSubview(toolSurface.contentView)
-    toolSurface.contentView.addGestureRecognizer(toolSurface.drawingGestureRecognizer)
+    addGestureRecognizer(toolSurface.drawingGestureRecognizer)
 
     if #available(iOS 26.0, *) {
       cropSurface.scrollView.topEdgeEffect.isHidden = true
@@ -327,16 +338,20 @@ final class CropView: UIView {
       toolSurface.scrollView.rightEdgeEffect.isHidden = true
     }
 
-    viewportRenderingOwners: do {
-      cropSurface.viewportRendering.owner = self
-      toolSurface.viewportRendering.owner = self
-    }
+    viewportDisplayLink.owner = self
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(updateViewportDisplayLink),
+      name: UIApplication.didBecomeActiveNotification, object: nil
+    )
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(updateViewportDisplayLink),
+      name: UIApplication.didEnterBackgroundNotification, object: nil
+    )
 
     scrollEventHandlers: do {
       cropSurface.onDidZoom = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("did-zoom")
-        self.updateCropViewportDuringScrollInteraction()
 
         self.debounce.on { [weak self] in
           guard let self else { return }
@@ -367,11 +382,6 @@ final class CropView: UIView {
       cropSurface.onDidScroll = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("did-scroll")
-        if self.isZoomInteractionActive || self.cropSurface.viewportRendering.isRunning {
-          self.updateCropViewportDuringScrollInteraction()
-        } else {
-          self.updateCropDisplayViewport()
-        }
 
         self.debounce.on { [weak self] in
           guard let self else { return }
@@ -389,7 +399,6 @@ final class CropView: UIView {
       cropSurface.onWillBeginZooming = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-begin")
-        self.stopViewportRendering(for: .crop, appliesViewport: false)
         self.beginScrollViewAdjustment(.zoom)
       }
       cropSurface.onDidEndDragging = { [weak self] decelerate in
@@ -404,7 +413,6 @@ final class CropView: UIView {
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
         self.endScrollViewAdjustment(.zoom)
-        self.updateCropViewportDuringScrollInteraction()
       }
       cropSurface.onDidEndDecelerating = { [weak self] in
         guard let self else { return }
@@ -412,32 +420,12 @@ final class CropView: UIView {
         self.endScrollViewAdjustment(.drag)
       }
 
-      toolSurface.onDidZoom = { [weak self] in
-        guard let self else { return }
-        // Only the canvas chase runs here. The scroll model (contentSize /
-        // contentInset) is never mutated from zoom ticks: the gesture runs on
-        // the zoom-following inset captured at its start, mirroring the crop
-        // surface's static guide inset; settleToolScrollInsetIfNeeded
-        // reconciles it at the gesture boundary.
-        self.updateToolViewportDuringScrollInteraction()
-      }
-      toolSurface.onDidScroll = { [weak self] in
-        self?.updateToolViewportDuringScrollInteraction()
-      }
-      toolSurface.onWillBeginDragging = { [weak self] in
-        self?.beginViewportRendering(for: .tool)
-      }
-      toolSurface.onWillBeginZooming = { [weak self] in
-        self?.stopViewportRendering(for: .tool, appliesViewport: false)
-      }
       toolSurface.onDidEndDragging = { [weak self] _ in
         guard let self else { return }
         self.settleToolScrollInsetIfNeeded()
-        self.updateToolCropDisplayViewport()
       }
       toolSurface.onDidEndZooming = { [weak self] _ in
         guard let self else { return }
-        self.updateToolViewportDuringScrollInteraction()
         // The pinch ran on the inset captured at its start; reconcile it to
         // the settled zoom scale so the offset glides back into the covering
         // range. Deferred one runloop tick: inside this callback
@@ -452,7 +440,6 @@ final class CropView: UIView {
       toolSurface.onDidEndDecelerating = { [weak self] in
         guard let self else { return }
         self.settleToolScrollInsetIfNeeded()
-        self.updateToolCropDisplayViewport()
       }
     }
 
@@ -486,8 +473,8 @@ final class CropView: UIView {
   }
 
   isolated deinit {
-    cropSurface.viewportRendering.invalidate()
-    toolSurface.viewportRendering.invalidate()
+    viewportDisplayLink.invalidate()
+    NotificationCenter.default.removeObserver(self)
   }
 
   // MARK: - Functions
@@ -618,7 +605,7 @@ final class CropView: UIView {
     setAdjustmentAngle(angle, recordsCropExtent: false)
     record()
     isStreamingAdjustmentAngle = false
-    updateCropDisplayViewport()
+
   }
 
   func setCrop(_ crop: CropEditingState) {
@@ -739,6 +726,7 @@ extension CropView {
     func ensureToolCanvas(geometry: EditingCanvasCropOutputGeometry) -> Bool {
       cropSurface.hideCanvasView()
       return toolSurface.ensureCanvasView(
+        in: surfaceHost.canvasHostView,
         canvasSize: geometry.outputSize,
         brush: canvasBrush,
         smoothing: canvasStrokeSmoothing,
@@ -752,6 +740,7 @@ extension CropView {
       toolSurface.hideCanvasView()
       guard
         cropSurface.ensureCanvasView(
+          in: surfaceHost.canvasHostView,
           canvasSize: crop.imageSize,
           brush: canvasBrush,
           smoothing: canvasStrokeSmoothing,
@@ -764,7 +753,6 @@ extension CropView {
       }
 
       updateCanvasContent(document: document, crop: crop)
-      updateCropDisplayViewport()
 
     } else if let seedEffect = resolvedMaskSeedEffect {
       guard
@@ -784,7 +772,7 @@ extension CropView {
         mode: .localAdjustment(effect: committedCanvasLocalEffect() ?? seedEffect),
         committedStrokes: currentToolCommittedStrokes(in: geometry)
       )
-      updateToolCropDisplayViewport()
+
 
     } else {
       guard
@@ -803,7 +791,7 @@ extension CropView {
         mode: renderPlan.canvasMode,
         committedStrokes: renderPlan.committedStrokes(in: geometry)
       )
-      updateToolCropDisplayViewport()
+
     }
   }
 
@@ -841,25 +829,6 @@ extension CropView {
   /// pre-crop feature domain regardless of the viewing point.
   private func makeToolOutputGeometry(crop: CropEditingState) -> EditingCanvasCropOutputGeometry? {
     EditingCanvasCropOutputGeometry(crop: toolDisplayCrop(from: crop))
-  }
-
-  private func updateCropDisplayViewport() {
-    guard featureFocus.isCropEditing else {
-      cropSurface.hideCanvasView()
-      stopViewportRendering(for: .crop, appliesViewport: false)
-      return
-    }
-
-    cropSurface.applyViewport(makeCropDisplayViewport())
-  }
-
-  private func updateToolCropDisplayViewport() {
-    guard featureFocus.isCropEditing == false else {
-      toolSurface.hideCanvasView()
-      return
-    }
-
-    toolSurface.applyViewport(makeToolCropDisplayViewport())
   }
 
   struct CanvasInputKey: Equatable {
@@ -957,231 +926,82 @@ extension CropView {
     )
   }
 
-  /// Extra canvas coverage on every side, as a fraction of the viewport, added
-  /// while the canvas rides the zoom bounce. At fit the rendered content sits
-  /// flush against the canvas edges; the bounce's zoom + offset spring can then
-  /// shift content past an edge, clipping it (the "right edge disappears"
-  /// artifact). The overscan renders a margin of extra content so the spring
-  /// has slack. Bounded by iOS rubber-banding, so a fixed fraction suffices;
-  /// the measured clip was ~6% of the viewport, so 0.25 leaves ample margin
-  /// while keeping the transient ride drawable to ~2.25x area.
-  private static let zoomBounceRideOverscanFraction: CGFloat = 0.25
+  /// The layer coordinates sampled together for one displayed frame.
+  /// Content placement and guide clipping must use the same animation state.
+  private struct DisplayLayers {
+    let content: CALayer
+    let canvas: CALayer
+    let clip: CALayer
+  }
 
-  /// - Parameters:
-  ///   - forcesModelGeometry: read model layers regardless of the in-flight
-  ///     animation state. Used at zoom-bounce-ride start, where the model
-  ///     already holds the settled values the ride must land on while the
-  ///     presentation is still mid-spring.
-  ///   - zoomBounceRideOverscan: expand the canvas beyond the visible viewport
-  ///     so the bounce spring cannot shift rendered content past a canvas edge.
-  private func makeCropDisplayViewport(
-    forcesModelGeometry: Bool = false,
-    zoomBounceRideOverscan: Bool = false
-  ) -> CropDisplayViewport? {
-    guard let crop = state.proposedCrop else {
-      return nil
+  private func hasViewportAnimation(for surface: CanvasSurface) -> Bool {
+    if surface.scrollView.isZoomBouncing { return true }
+    var ancestor: CALayer? = surface.zoomingView.layer
+    while let layer = ancestor, layer !== self.layer {
+      if layer.animationKeys()?.isEmpty == false { return true }
+      ancestor = layer.superlayer
     }
+    return false
+  }
 
-    // A live pinch mutates the scroll view's model values every frame, so
-    // presentation layers lag one committed frame behind and sampling them
-    // produces a per-frame wobble. The post-release bounce-back is the
-    // opposite: UIKit animates the presentation layer while the model has
-    // already jumped to the clamped zoom. Sample presentation layers after the
-    // pinch ends so the Metal canvas follows the visible bounce instead of
-    // snapping to the final model geometry.
-    let usesPresentationLayers = forcesModelGeometry == false
-      && cropSurface.isInteractiveZoomGestureActive == false
-      && isStreamingAdjustmentAngle == false
-    var visibleViewportFrame = Self.currentLayerRect(
-      bounds,
-      from: self,
-      to: cropSurface.scrollView,
-      usesPresentationLayers: usesPresentationLayers
-    )
-      .standardized
-    guard visibleViewportFrame.width > 0, visibleViewportFrame.height > 0 else {
-      return nil
-    }
-
-    if zoomBounceRideOverscan {
-      visibleViewportFrame = visibleViewportFrame.insetBy(
-        dx: -visibleViewportFrame.width * Self.zoomBounceRideOverscanFraction,
-        dy: -visibleViewportFrame.height * Self.zoomBounceRideOverscanFraction
+  /// Live scroll/pinch values come from the model tree. Bounce, offset settle,
+  /// and rotation sample the presentation tree while an animation is present.
+  /// Requiring all three layers avoids combining a new model layout with an
+  /// old presentation clip after a nonanimated update.
+  private func displayLayers(for surface: CanvasSurface) -> DisplayLayers {
+    let content = surface.zoomingView.layer
+    let canvas = surfaceHost.canvasHostView.layer
+    let clip = surfaceHost.platterView.layer
+    if hasViewportAnimation(for: surface),
+       let contentPresentation = content.presentation(),
+       let canvasPresentation = canvas.presentation(),
+       let clipPresentation = clip.presentation() {
+      return DisplayLayers(
+        content: contentPresentation, canvas: canvasPresentation, clip: clipPresentation
       )
     }
-
-    let renderFrame = Self.renderOverscanFrame(
-      for: visibleViewportFrame,
-      rotationRadians: crop.aggregatedRotation.radians
-    )
-    let platterBounds = CGRect(origin: .zero, size: cropSurface.imagePlatterView.bounds.size)
-    let visiblePlatterRect = Self.currentLayerRect(
-      renderFrame,
-      from: cropSurface.scrollView,
-      to: cropSurface.imagePlatterView,
-      usesPresentationLayers: usesPresentationLayers
-    )
-      .standardized
-      .intersection(platterBounds)
-
-    guard visiblePlatterRect.isNull == false, visiblePlatterRect.isEmpty == false else {
-      return nil
-    }
-
-    let imageBounds = CGRect(origin: .zero, size: crop.imageSize)
-    let visibleImageRect = crop.imageRect(fromPlatterRect: visiblePlatterRect)
-      .intersection(imageBounds)
-
-    guard visibleImageRect.isNull == false, visibleImageRect.isEmpty == false else {
-      return nil
-    }
-
-    let resolvedVisiblePlatterRect = crop.platterRect(fromImageRect: visibleImageRect)
-    let resolvedVisibleScrollRect = Self.currentLayerRect(
-      resolvedVisiblePlatterRect,
-      from: cropSurface.imagePlatterView,
-      to: cropSurface.scrollView,
-      usesPresentationLayers: usesPresentationLayers
-    )
-      .standardized
-    let visibleCanvasFrame = resolvedVisibleScrollRect.offsetBy(
-      dx: -renderFrame.minX,
-      dy: -renderFrame.minY
-    )
-
-    return .init(
-      viewportFrameInScrollView: renderFrame,
-      visibleContentRect: visibleImageRect,
-      visibleCanvasFrame: visibleCanvasFrame,
-      contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
-    )
+    return DisplayLayers(content: content, canvas: canvas, clip: clip)
   }
 
-  /// - Parameters: see `makeCropDisplayViewport`.
-  private func makeToolCropDisplayViewport(
-    zoomBounceRideOverscan: Bool = false
+  /// Converts three content landmarks without discarding rotation through an
+  /// enclosing rectangle. The fixed canvas and its drawable retain their size.
+  private func makeDisplayViewport(
+    for surface: CanvasSurface,
+    layers: DisplayLayers,
+    contentSize: CGSize,
+    contentToZoomingScale: CGFloat
   ) -> CropDisplayViewport? {
-    guard let geometry = toolSurface.outputGeometry else {
-      return nil
-    }
+    guard contentSize.width > 0, contentSize.height > 0 else { return nil }
+    let source = layers.content
+    let destination = layers.canvas
 
-    // The tool viewport always derives from MODEL layer geometry. The geometry
-    // source must depend only on gesture state, never on the render-loop
-    // lifecycle — and for the tool no gesture needs presentation sampling:
-    //
-    // - During an interactive pinch or pan the model values are live on every
-    //   delegate tick, so the model is the correct source (presentation lags
-    //   one committed frame and wobbles).
-    // - The post-release zoom bounce emits no delegate ticks; it is carried by
-    //   `beginZoomBounceRide`, which parents the canvas into the zooming view
-    //   so UIKit's own spring moves it. No sampling required.
-    // - One-shot applies (mode switches, layout passes) run in the same
-    //   runloop turn as the synchronous scroll reconfigure, where presentation
-    //   layers still hold the previous state until the next Core Animation
-    //   commit — sampling them rendered the crop output small and pinned to
-    //   the top-left (the "switch back and forth fixes it" symptom).
-    //
-    // The earlier `viewportRendering.isRunning`-gated sampling flipped its
-    // geometry source on the tick right after a pinch ended, producing a
-    // measured one-frame flash (content jumped small-and-shifted for exactly
-    // one frame, once per zoom-in pinch; zero after forcing model geometry).
-    var canvasFrame = Self.currentLayerRect(
-      bounds,
-      from: self,
-      to: toolSurface.scrollView,
-      usesPresentationLayers: false
+    let origin = destination.convert(CGPoint.zero, from: source)
+    let horizontal = destination.convert(
+      CGPoint(x: contentSize.width * contentToZoomingScale, y: 0), from: source
     )
-      .standardized
-    guard canvasFrame.width > 0, canvasFrame.height > 0 else {
-      return nil
-    }
-
-    if zoomBounceRideOverscan {
-      canvasFrame = canvasFrame.insetBy(
-        dx: -canvasFrame.width * Self.zoomBounceRideOverscanFraction,
-        dy: -canvasFrame.height * Self.zoomBounceRideOverscanFraction
-      )
-    }
-
-    let outputBounds = geometry.outputBounds
-    let visibleOutputRect = Self.currentLayerRect(
-      canvasFrame,
-      from: toolSurface.scrollView,
-      to: toolSurface.contentView,
-      usesPresentationLayers: false
+    let vertical = destination.convert(
+      CGPoint(x: 0, y: contentSize.height * contentToZoomingScale), from: source
     )
-      .standardized
-      .intersection(outputBounds)
-
-    guard visibleOutputRect.isNull == false, visibleOutputRect.isEmpty == false else {
-      return nil
-    }
-
-    let visibleScrollRect = Self.currentLayerRect(
-      visibleOutputRect,
-      from: toolSurface.contentView,
-      to: toolSurface.scrollView,
-      usesPresentationLayers: false
+    let transform = CropDisplayViewport.contentTransform(
+      contentSize: contentSize, origin: origin,
+      horizontalCorner: horizontal, verticalCorner: vertical
     )
-      .standardized
-    let visibleCanvasFrame = visibleScrollRect.offsetBy(
-      dx: -canvasFrame.minX,
-      dy: -canvasFrame.minY
-    )
-
-    return .init(
-      viewportFrameInScrollView: canvasFrame,
-      visibleContentRect: visibleOutputRect,
-      visibleCanvasFrame: visibleCanvasFrame,
-      contentScaleFactor: window?.screen.scale ?? UIScreen.main.scale
+    return CropDisplayViewport(
+      contentBounds: CGRect(origin: .zero, size: contentSize),
+      canvasBounds: surfaceHost.canvasHostView.bounds,
+      contentToCanvasTransform: transform,
+      contentScaleFactor: window?.screen.scale ?? traitCollection.displayScale
     )
   }
 
-  // MARK: Static Helpers
-
-  private static func renderOverscanFrame(
-    for viewportFrame: CGRect,
-    rotationRadians: CGFloat
-  ) -> CGRect {
-    let viewportFrame = viewportFrame.standardized
-    guard viewportFrame.width > 0, viewportFrame.height > 0 else {
-      return viewportFrame
-    }
-
-    let cosine = abs(CGFloat(cos(Double(rotationRadians))))
-    let sine = abs(CGFloat(sin(Double(rotationRadians))))
-    let rotatedWidth = viewportFrame.width * cosine + viewportFrame.height * sine
-    let rotatedHeight = viewportFrame.width * sine + viewportFrame.height * cosine
-    let renderSize = CGSize(
-      width: max(viewportFrame.width, rotatedWidth),
-      height: max(viewportFrame.height, rotatedHeight)
+  /// Gesture coordinates are in the host, independent of the invisible zoom
+  /// view. Use the displayed frame's inverse so the brush follows visible pixels
+  /// even if UIKit's model is already at the end of a settle animation.
+  private func toolContentPoint(from hostPoint: CGPoint) -> CGPoint? {
+    guard let viewport = toolSurface.displayedViewport else { return nil }
+    return viewport.contentPoint(
+      fromCanvasPoint: convert(hostPoint, to: surfaceHost.canvasHostView)
     )
-
-    return CGRect(
-      x: viewportFrame.midX - renderSize.width / 2,
-      y: viewportFrame.midY - renderSize.height / 2,
-      width: renderSize.width,
-      height: renderSize.height
-    )
-  }
-
-  private static func currentLayerRect(
-    _ rect: CGRect,
-    from sourceView: UIView,
-    to targetView: UIView,
-    usesPresentationLayers: Bool = true
-  ) -> CGRect {
-    let sourceLayer = sourceView.layer
-    let targetLayer = targetView.layer
-
-    if usesPresentationLayers,
-       let sourcePresentationLayer = sourceLayer.presentation(),
-       let targetPresentationLayer = targetLayer.presentation()
-    {
-      return targetPresentationLayer.convert(rect, from: sourcePresentationLayer)
-    }
-
-    return targetLayer.convert(rect, from: sourceLayer)
   }
 
   #if DEBUG
@@ -1361,12 +1181,20 @@ extension CropView {
       animatesRotation: animationSourceCrop?.rotation != crop.rotation
     )
 
-    updateCropDisplayViewport()
     lastLaidOutCrop = crop
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
+
+    UIView.performWithoutAnimation {
+      surfaceHost.canvasHostView.frame = bounds
+      for surface in [cropSurface as CanvasSurface, toolSurface] {
+        if let canvasView = surface.canvasView, canvasView.frame != surfaceHost.canvasHostView.bounds {
+          canvasView.frame = surfaceHost.canvasHostView.bounds
+        }
+      }
+    }
 
     // TODO: Get an optimized size
     let screenBounds = window?.screen.bounds ?? UIScreen.main.bounds
@@ -1398,8 +1226,7 @@ extension CropView {
     surfaceHost.platterView.layer.addSublayer(_debug_shapeLayer)
     #endif
 
-    updateCropDisplayViewport()
-    updateToolCropDisplayViewport()
+
   }
 
   private func updateScrollContainerView(
@@ -1516,8 +1343,7 @@ extension CropView {
 
         }
 
-        updateCropDisplayViewport()
-        updateToolCropDisplayViewport()
+
       }
 
     }
@@ -1680,9 +1506,8 @@ extension CropView {
     toolSurface.scrollView.minimumZoomScale = minZoomScale
     toolSurface.scrollView.maximumZoomScale = max(minZoomScale * 8, minZoomScale)
 
-    // Publish the display state BEFORE any zoom write: `setZoomScale` emits
-    // `scrollViewDidZoom` synchronously, and that tick re-renders the canvas
-    // from `outputGeometry` — which must already describe the new crop.
+    // Publish the output domain before zoom writes so reentrant UIKit callbacks
+    // and the next display frame observe the same geometry.
     toolSurface.lastAppliedDisplayCrop = displayCrop
     toolSurface.publishOutputGeometry(geometry)
 
@@ -1693,18 +1518,9 @@ extension CropView {
       toolSurface.scrollView.setZoomScale(minZoomScale, animated: false)
       updateToolScrollViewInset()
       resetToolScrollViewContentOffset()
-    } else if toolSurface.scrollView.zoomScale < toolSurface.scrollView.minimumZoomScale {
-      toolSurface.scrollView.setZoomScale(toolSurface.scrollView.minimumZoomScale, animated: false)
-      updateToolScrollViewInset()
-      resetToolScrollViewContentOffset()
-    } else if toolSurface.scrollView.zoomScale > toolSurface.scrollView.maximumZoomScale {
-      toolSurface.scrollView.setZoomScale(toolSurface.scrollView.maximumZoomScale, animated: false)
-      updateToolScrollViewInset()
-      resetToolScrollViewContentOffset()
     } else {
-      // The zoom scale is untouched on this path and it may be running inside
-      // a user gesture; reconcile the inset only when the scroll view is
-      // quiet so the gesture keeps its self-consistent scroll model.
+      // Layout may be reentered during a pinch or bounce. Keep its geometry
+      // until the quiet settle path can animate any zoom/offset correction.
       settleToolScrollInsetIfNeeded()
     }
 
@@ -1757,26 +1573,20 @@ extension CropView {
       scrollView.isDragging == false,
       scrollView.isDecelerating == false,
       scrollView.isZooming == false,
-      scrollView.isZoomBouncing == false
+      scrollView.isZoomBouncing == false,
+      hasViewportAnimation(for: toolSurface) == false
     else {
       return
     }
 
-    // A zoom scale resting outside the valid range means UIKit's own zoom
-    // bounce-back never ran — a pinch that ended through touch cancellation
-    // (or the Simulator's orphaned synthetic touches) skips it. Restore the
-    // fitted state outright; there is no meaningful navigation to preserve in
-    // a state the scroll view itself considers invalid.
+    // A cancelled pinch may leave the model outside its valid zoom range.
+    // Ask UIKit to animate that recovery; the frame loop follows it and
+    // reconciles the inset only after the zoom animation has finished.
     let minZoom = scrollView.minimumZoomScale
     let maxZoom = scrollView.maximumZoomScale
     let clampedZoom = min(max(scrollView.zoomScale, minZoom), maxZoom)
     if abs(clampedZoom - scrollView.zoomScale) > 0.0001 {
-      UIView.performWithoutAnimation {
-        scrollView.setZoomScale(clampedZoom, animated: false)
-      }
-      updateToolScrollViewInset()
-      resetToolScrollViewContentOffset()
-      updateToolCropDisplayViewport()
+      scrollView.setZoomScale(clampedZoom, animated: areAnimationsEnabled)
       return
     }
 
@@ -1792,31 +1602,24 @@ extension CropView {
     let current = scrollView.contentInset
     let tolerance: CGFloat = 0.5
 
-    // UIKit fails to shrink contentSize when a below-minimum pinch is clamped
-    // back to the fit zoom (measured: contentSize kept the pre-pinch zoomed
-    // value while zoomScale rested at minimum). A stale-large contentSize
-    // widens the valid offset range for BOTH UIKit's own clamping and ours,
-    // which is what let the photo rest outside the viewport. Reconcile it —
-    // and never trust scrollView.contentSize for the range math below.
-    if abs(scrollView.contentSize.width - zoomedSize.width) > tolerance
-      || abs(scrollView.contentSize.height - zoomedSize.height) > tolerance
-    {
-      scrollView.contentSize = zoomedSize
-    }
-
+    // A below-minimum pinch can leave UIKit's contentSize larger than the
+    // actual zoomed view. Both size and inset writes may clamp contentOffset
+    // synchronously, so preserve the position before either write. The
+    // animation below owns the visible return into the corrected range.
+    let sizeNeedsWrite =
+      abs(scrollView.contentSize.width - zoomedSize.width) > tolerance
+        || abs(scrollView.contentSize.height - zoomedSize.height) > tolerance
     let insetNeedsWrite =
       abs(current.top - target.top) > tolerance
         || abs(current.left - target.left) > tolerance
         || abs(current.bottom - target.bottom) > tolerance
         || abs(current.right - target.right) > tolerance
 
-    if insetNeedsWrite {
-      // Preserve the visual position across the inset write (UIKit may clamp
-      // the offset synchronously when the range tightens); the glide below
-      // then makes the correction read as a settle, not a snap.
+    if sizeNeedsWrite || insetNeedsWrite {
       let offset = scrollView.contentOffset
       UIView.performWithoutAnimation {
-        scrollView.contentInset = target
+        if sizeNeedsWrite { scrollView.contentSize = zoomedSize }
+        if insetNeedsWrite { scrollView.contentInset = target }
         scrollView.setContentOffset(offset, animated: false)
       }
     }
@@ -1839,9 +1642,6 @@ extension CropView {
     if abs(clamped.x - offset.x) > tolerance || abs(clamped.y - offset.y) > tolerance {
       let animator = UIViewPropertyAnimator(duration: 0.35, dampingRatio: 1) {
         scrollView.contentOffset = clamped
-      }
-      animator.addCompletion { [weak self] _ in
-        self?.updateToolCropDisplayViewport()
       }
       animator.startAnimation()
     }
@@ -2074,300 +1874,60 @@ extension CropView {
     }
   }
 
-  private var viewportRenderingPreferredFramesPerSecond: Int {
-    window?.screen.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    updateViewportDisplayLink()
   }
 
-  private func updateCropViewportDuringScrollInteraction() {
-    // Check the bounce BEFORE the interactive-pinch guard: when one finger
-    // stays down after a pinch, the pinch recognizer remains .changed while
-    // UIKit already runs the zoom bounce-back, so the guard below would snap
-    // the canvas to model geometry mid-bounce (the 2-fingers→1 flicker). The
-    // bounce state is authoritative regardless of the recognizer.
-    if cropSurface.scrollView.isZoomBouncing {
-      beginZoomBounceRide(for: .crop)
+  @objc private func updateViewportDisplayLink() {
+    guard let window, UIApplication.shared.applicationState != .background else {
+      viewportDisplayLink.invalidate()
       return
     }
-
-    guard cropSurface.isInteractiveZoomGestureActive == false else {
-      stopViewportRendering(for: .crop, appliesViewport: false)
-      updateCropDisplayViewport()
-      return
-    }
-
-    keepViewportRenderingAlive(for: .crop)
-
-    if cropSurface.viewportRendering.isRunning == false {
-      updateCropDisplayViewport()
-    }
+    viewportDisplayLink.start(maximumFramesPerSecond: window.screen.maximumFramesPerSecond)
   }
 
-  private func updateToolViewportDuringScrollInteraction() {
-    // Check the bounce BEFORE the interactive-pinch guard: when one finger
-    // stays down after a pinch, the pinch recognizer remains .changed while
-    // UIKit already runs the zoom bounce-back, so the guard below would keep
-    // the ride from engaging (the 2-fingers→1 flicker). The bounce state is
-    // authoritative regardless of the recognizer.
-    if toolSurface.scrollView.isZoomBouncing {
-      beginZoomBounceRide(for: .tool)
-      return
+  /// The only recurring viewport/render entry point for both editing surfaces.
+  /// No scroll delegate or settle timer can end this frame sequence.
+  func drawViewportFrame() {
+    var ancestor: UIView? = self
+    while let view = ancestor {
+      guard view.isHidden == false, view.alpha > 0 else { return }
+      ancestor = view.superview
+    }
+    guard window != nil, surfaceHost.canvasHostView.bounds.isEmpty == false else { return }
+
+    let surface: CanvasSurface = featureFocus.isCropEditing ? cropSurface : toolSurface
+    let layers = displayLayers(for: surface)
+    if clipsToGuide {
+      let clipRect = layers.canvas.convert(layers.clip.bounds, from: layers.clip)
+      CATransaction.begin()
+      CATransaction.setDisableActions(true)
+      surfaceHost.canvasClipLayer.frame = surfaceHost.canvasHostView.bounds
+      surfaceHost.canvasClipLayer.path = UIBezierPath(rect: clipRect).cgPath
+      surfaceHost.canvasHostView.layer.mask = surfaceHost.canvasClipLayer
+      CATransaction.commit()
+    } else {
+      surfaceHost.canvasHostView.layer.mask = nil
     }
 
-    // Mirror the crop surface: while an interactive pinch is live the model
-    // values are fresh on every delegate tick, so apply synchronously and keep
-    // the display-link chase out of the way instead of racing it.
-    guard toolSurface.isInteractiveZoomGestureActive == false else {
-      stopViewportRendering(for: .tool, appliesViewport: false)
-      updateToolCropDisplayViewport()
-      return
-    }
-
-    keepViewportRenderingAlive(for: .tool)
-
-    if toolSurface.viewportRendering.isRunning == false {
-      updateToolCropDisplayViewport()
-    }
-  }
-
-  /// Starts carrying the canvas through the zoom bounce-back on UIKit's own
-  /// presentation animation.
-  ///
-  /// At bounce start the scroll view's model has already jumped to the clamped
-  /// final values and emits no further delegate ticks, so: render the final
-  /// viewport once from model geometry, then parent the canvas into the
-  /// zooming view whose layer is running the bounce spring. The display link
-  /// keeps ticking only to detect when the presentation settles; it does not
-  /// re-place or re-render the canvas.
-  private func beginZoomBounceRide(for surface: ViewportRenderingSurface) {
-    let canvasSurface = canvasSurfaceBase(for: surface)
-    guard canvasSurface.isRidingZoomBounce == false else {
-      return
-    }
-    guard canRenderViewport(for: surface) else {
-      return
-    }
-
-    let viewport: CropDisplayViewport?
-    switch surface {
-    case .crop:
-      viewport = makeCropDisplayViewport(
-        forcesModelGeometry: true,
-        zoomBounceRideOverscan: true
-      )
-    case .tool:
-      viewport = makeToolCropDisplayViewport(
-        zoomBounceRideOverscan: true
-      )
-    }
-    guard let viewport else {
-      return
-    }
-
-    // applyViewport writes the canvas frame; inside the bounce-start delegate
-    // callback that write would otherwise inherit UIKit's animation context.
-    UIView.performWithoutAnimation {
-      canvasSurface.applyViewport(viewport)
-    }
-    canvasSurface.beginZoomBounceRide()
-    beginViewportRendering(for: surface)
-  }
-
-  private func canvasSurfaceBase(for surface: ViewportRenderingSurface) -> CanvasSurface {
-    switch surface {
-    case .crop:
-      return cropSurface
-    case .tool:
-      return toolSurface
-    }
-  }
-
-  private func beginViewportRendering(for surface: ViewportRenderingSurface) {
-    guard canRenderViewport(for: surface) else {
-      return
-    }
-
-    viewportRenderingState(for: surface).begin(
-      preferredFramesPerSecond: viewportRenderingPreferredFramesPerSecond
-    )
-  }
-
-  private func keepViewportRenderingAlive(for surface: ViewportRenderingSurface) {
-    beginViewportRendering(for: surface)
-
-    guard viewportRenderingState(for: surface).isRunning else {
-      return
-    }
-
-    applyViewport(for: surface)
-    scheduleStopViewportRendering(for: surface)
-  }
-
-  private func scheduleStopViewportRendering(for surface: ViewportRenderingSurface) {
-    let rendering = viewportRenderingState(for: surface)
-    guard rendering.isRunning else {
-      return
-    }
-
-    rendering.stopWorkItem?.cancel()
-
-    let workItem = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      if self.isViewportZoomInteractionActive(for: surface)
-        || self.isViewportPresentationSettled(for: surface) == false
-      {
-        self.scheduleStopViewportRendering(for: surface)
-      } else {
-        self.stopViewportRendering(for: surface)
-      }
-    }
-
-    rendering.stopWorkItem = workItem
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-  }
-
-  private func stopViewportRendering(
-    for surface: ViewportRenderingSurface,
-    appliesViewport: Bool = true
-  ) {
-    viewportRenderingState(for: surface).invalidate()
-    canvasSurfaceBase(for: surface).endZoomBounceRide()
-
-    // Below-fit bounces skip the gesture-end inset reconciliation (the model
-    // is mid-bounce there); reconcile at this settle point instead. The
-    // internal quiet-guard makes this a no-op when the stop is a handoff to
-    // a new interaction rather than a settle.
-    if surface == .tool {
+    if featureFocus.isCropEditing {
+      toolSurface.hideCanvasView()
+      guard let crop = state.proposedCrop else { return }
+      cropSurface.draw(viewport: makeDisplayViewport(
+        for: cropSurface, layers: layers, contentSize: crop.imageSize,
+        contentToZoomingScale: crop.imageToPlatterScale()
+      ))
+    } else {
+      cropSurface.hideCanvasView()
+      guard let geometry = toolSurface.outputGeometry else { return }
+      toolSurface.draw(viewport: makeDisplayViewport(
+        for: toolSurface, layers: layers, contentSize: geometry.outputSize, contentToZoomingScale: 1
+      ))
+      // Reconciliation remains a gesture-boundary operation. The old loop's
+      // stop callback owned this quiet check; the persistent loop observes the
+      // same boundary without tying it to rendering's lifetime.
       settleToolScrollInsetIfNeeded()
-    }
-
-    if appliesViewport {
-      applyViewport(for: surface)
-    }
-  }
-
-  func viewportRenderingDisplayLinkDidTick(
-    _ displayLink: CADisplayLink,
-    surface: ViewportRenderingSurface
-  ) {
-    guard canRenderViewport(for: surface) else {
-      stopViewportRendering(for: surface)
-      return
-    }
-
-    let canvasSurface = canvasSurfaceBase(for: surface)
-
-    // Delegate callbacks are not guaranteed to observe `isZoomBouncing == true`
-    // at bounce start (the flag may flip after they return), so the running
-    // display link is the reliable detector: the first tick inside the bounce
-    // window hands the canvas over to the ride. Falls through to the chase
-    // when the handover is not possible. Gate on the scroll view's actual
-    // zooming state, not the pinch recognizer — the recognizer stays .changed
-    // for as long as one finger remains down after the pinch.
-    if canvasSurface.isRidingZoomBounce == false,
-       canvasSurface.scrollView.isZoomBouncing,
-       canvasSurface.scrollView.isZooming == false
-    {
-      beginZoomBounceRide(for: surface)
-    }
-
-    if canvasSurface.isRidingZoomBounce {
-      // The canvas is riding UIKit's bounce presentation animation inside the
-      // zooming view; there is nothing to chase. Detach when the spring
-      // settles, or immediately when a real new pinch (isZooming, not the
-      // lingering recognizer) grabs the bounce so the model-driven interactive
-      // path takes over. A single remaining finger may pan during the ride;
-      // the canvas is content-parented, so the pan carries it correctly.
-      if canvasSurface.scrollView.isZooming {
-        stopViewportRendering(for: surface, appliesViewport: false)
-      } else if canvasSurface.scrollView.isZoomBouncing == false,
-                isViewportPresentationSettled(for: surface)
-      {
-        stopViewportRendering(for: surface)
-      }
-      return
-    }
-
-    guard isViewportInteractiveZoomGestureActive(for: surface) == false else {
-      stopViewportRendering(for: surface, appliesViewport: false)
-      return
-    }
-
-    applyViewport(for: surface)
-
-    if isViewportZoomInteractionActive(for: surface) == false,
-       isViewportPresentationSettled(for: surface)
-    {
-      stopViewportRendering(for: surface)
-    }
-  }
-
-  private func viewportRenderingState(
-    for surface: ViewportRenderingSurface
-  ) -> ViewportRenderingState {
-    switch surface {
-    case .crop:
-      return cropSurface.viewportRendering
-    case .tool:
-      return toolSurface.viewportRendering
-    }
-  }
-
-  private func canRenderViewport(for surface: ViewportRenderingSurface) -> Bool {
-    guard window != nil else {
-      return false
-    }
-
-    switch surface {
-    case .crop:
-      return cropSurface.hasCanvasView
-    case .tool:
-      return toolSurface.hasCanvasView
-    }
-  }
-
-  private func isViewportZoomInteractionActive(for surface: ViewportRenderingSurface) -> Bool {
-    switch surface {
-    case .crop:
-      return isZoomInteractionActive
-    case .tool:
-      return toolSurface.isZoomInteractionActive
-    }
-  }
-
-  private func isViewportInteractiveZoomGestureActive(for surface: ViewportRenderingSurface) -> Bool {
-    switch surface {
-    case .crop:
-      return cropSurface.isInteractiveZoomGestureActive
-    case .tool:
-      return toolSurface.isInteractiveZoomGestureActive
-    }
-  }
-
-  private func isViewportPresentationSettled(for surface: ViewportRenderingSurface) -> Bool {
-    switch surface {
-    case .crop:
-      return cropSurface.isViewportPresentationSettled
-    case .tool:
-      return toolSurface.isViewportPresentationSettled
-    }
-  }
-
-  private func applyViewport(for surface: ViewportRenderingSurface) {
-    switch surface {
-    case .crop:
-      cropSurface.applyViewport(
-        makeCropDisplayViewport(),
-        viewportProvider: { [weak self] in
-          self?.makeCropDisplayViewport()?.editingCanvasViewport
-        }
-      )
-    case .tool:
-      toolSurface.applyViewport(
-        makeToolCropDisplayViewport(),
-        viewportProvider: { [weak self] in
-          self?.makeToolCropDisplayViewport()?.editingCanvasViewport
-        }
-      )
     }
   }
 
@@ -2432,20 +1992,13 @@ extension CGRect {
     )
   }
 
-  func isNearlyEqual(to other: CGRect, tolerance: CGFloat) -> Bool {
-    abs(minX - other.minX) <= tolerance
-      && abs(minY - other.minY) <= tolerance
-      && abs(width - other.width) <= tolerance
-      && abs(height - other.height) <= tolerance
-  }
-
 }
 
 extension CropDisplayViewport {
   var editingCanvasViewport: _EditingCanvasMTKView.Viewport {
     .init(
       visibleContentRect: visibleContentRect,
-      visibleCanvasFrame: visibleCanvasFrame
+      contentToCanvasTransform: contentToCanvasTransform
     )
   }
 }
@@ -2675,8 +2228,6 @@ extension CropView: UIGestureRecognizerDelegate {
     }
 
     setCropGuideVisibility(isVisible: isCropMode)
-    updateCropDisplayViewport()
-    updateToolCropDisplayViewport()
   }
 
   private func setCropGuideVisibility(isVisible: Bool) {
@@ -2692,6 +2243,19 @@ extension CropView: UIGestureRecognizerDelegate {
     guideViews.forEach { view in
       view.alpha = alpha
     }
+  }
+
+  /// Keep stroke starts inside the displayed image even though the recognizer
+  /// now lives on the fixed host. Subsequent points may leave the image bounds.
+  public func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldReceive touch: UITouch
+  ) -> Bool {
+    guard gestureRecognizer === toolSurface.drawingGestureRecognizer else { return true }
+    if toolSurface.drawingGestureRecognizer.isTrackingTouch { return true }
+    guard let geometry = toolSurface.outputGeometry,
+          let point = toolContentPoint(from: touch.location(in: self)) else { return false }
+    return CGRect(origin: .zero, size: geometry.outputSize).contains(point)
   }
 
   public func gestureRecognizer(
