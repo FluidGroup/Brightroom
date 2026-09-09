@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 import PhotosUI
 import SwiftUI
@@ -8,7 +9,6 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State var horizontalStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
   @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
   @State private var photosCropHorizontalStack = Mocks.makeEditingStack(
     image: Asset.horizontalRect.image
@@ -26,6 +26,9 @@ struct ContentView: View {
   )
   @State private var photosCropSuperSmallStack = Mocks.makeEditingStack(
     image: Asset.superSmall.image
+  )
+  @State private var photosCropInstaLogoStack = Mocks.makeEditingStack(
+    image: Asset.instaLogo.image
   )
   @State private var photosCropRemoteStack = EditingStack(
     imageProvider: .init(
@@ -58,32 +61,19 @@ struct ContentView: View {
             }
           }
 
-          NavigationLink("Custom Filter") {
-            DemoFilterView(editingStack: horizontalStack)
-          }
-
           NavigationLink("Rendering") {
             RenderingDemoView()
           }
 
-          Section("Restoration Horizontal") {
-            Button("Masking") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  horizontalStack
-                }
-              }
-            }
+          NavigationLink("Parametric Features") {
+            ParametricFeaturePreviewView()
           }
 
-          Section("Restoration Vertical") {
-            Button("Masking") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  verticalStack
-                }
-              }
-            }
+          NavigationLink("Parametric Video") {
+            ParametricVideoRenderPlaygroundView()
+          }
+          NavigationLink("PencilKit Reference") {
+            PencilKitReferenceSandboxView()
           }
 
           Section(
@@ -114,33 +104,6 @@ struct ContentView: View {
 
             }
           )
-
-          Section("Blur Masking") {
-            Button("Local") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  Mocks.makeEditingStack(
-                    image: Asset.horizontalRect.image
-                  )
-                }
-              }
-            }
-
-            Button("Remote") {
-              fullScreenView = .init {
-                DemoMaskingView {
-                  EditingStack(
-                    imageProvider: .init(
-                      editableRemoteURL: URL(
-                        string:
-                          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-                      )!
-                    )
-                  )
-                }
-              }
-            }
-          }
 
           Section(
             "PhotosCrop",
@@ -175,6 +138,12 @@ struct ContentView: View {
                 }
               }
 
+              Button("Insta Logo") {
+                fullScreenView = .init(showsDismissButton: false) {
+                  DemoPhotosCropView(stack: photosCropInstaLogoStack)
+                }
+              }
+
               Button("Remote") {
 
                 fullScreenView = .init(showsDismissButton: false) {
@@ -192,69 +161,63 @@ struct ContentView: View {
           )
 
           Section(content: {
-            Button("PixelEditor Square") {
-              fullScreenView = .init {
-                DemoPixelEditor(editingStack: {
-                  EditingStack.init(
-                    imageProvider: .init(image: Asset.l1000316.image),
-                    cropModifier: .init { _, crop, completion in
-                      var new = crop
-                      new.updateCropExtent(toFitAspectRatio: .square)
-                      completion(new)
-                    }
-                  )
-                })
-              }
-            }
-
-            Button("PixelEditor") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop Square (modifier)") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
+                      imageProvider: .init(image: Asset.l1000316.image),
+                      cropModifier: .init { _, crop, imageSize, completion in
+                        let new = CropFeature(
+                          id: crop.id,
+                          displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
+                          imageSize: imageSize,
+                          rotation: crop.rotation,
+                          straighten: crop.straightenRadians
+                        )
+                        completion(new)
+                      }
                     )
                   },
-                  options: .init(croppingAspectRatio: nil)
+                  options: .fixedAspectRatio(.square)
                 )
               }
             }
 
-            Button("PixelEditor 4:5") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop 4:5") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Asset.l1000316.image)
                     )
                   },
-                  options: .init(croppingAspectRatio: .init(width: 4, height: 5))
+                  options: .fixedAspectRatio(.init(width: 4, height: 5))
                 )
               }
             }
 
-            Button("PixelEditor 5:4") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop 5:4") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Asset.l1000316.image)
                     )
                   },
-                  options: .init(croppingAspectRatio: .init(width: 5, height: 4))
+                  options: .fixedAspectRatio(.init(width: 5, height: 4))
                 )
               }
             }
 
-            Button("PixelEditor left") {
-              fullScreenView = .init {
-                DemoPixelEditor(
-                  editingStack: {
+            Button("PhotosCrop left") {
+              fullScreenView = .init(showsDismissButton: false) {
+                DemoPhotosCropView(
+                  stack: {
                     EditingStack.init(
                       imageProvider: .init(image: Mocks.imageOrientationLeft())
                     )
-                  },
-                  options: .init(croppingAspectRatio: nil)
+                  }
                 )
               }
             }
@@ -302,16 +265,6 @@ struct WorkingOnPicked: View {
           PickedImageSummary(image: selectedImage)
         }
 
-        Section("Components") {
-          Button("Masking") {
-            fullScreenView = .init {
-              DemoMaskingView {
-                selectedImage.makeEditingStack()
-              }
-            }
-          }
-        }
-
         Section("BuiltIn") {
           Button("PhotosCrop") {
             let stack = photosCropStack(for: selectedImage)
@@ -320,27 +273,19 @@ struct WorkingOnPicked: View {
             }
           }
 
-          Button("PixelEditor") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
+          Button("PhotosCrop Square") {
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoPhotosCropView(stack: {
                 selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: nil))
+              }, options: .fixedAspectRatio(.square))
             }
           }
 
-          Button("PixelEditor Square") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
+          Button("PhotosCrop 4:5") {
+            fullScreenView = .init(showsDismissButton: false) {
+              DemoPhotosCropView(stack: {
                 selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: .square))
-            }
-          }
-
-          Button("PixelEditor 4:5") {
-            fullScreenView = .init {
-              DemoPixelEditor(editingStack: {
-                selectedImage.makeEditingStack()
-              }, options: .init(croppingAspectRatio: .init(width: 4, height: 5)))
+              }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
             }
           }
         }
@@ -466,32 +411,59 @@ struct DemoPhotosCropView: View {
   @Environment(\.dismiss) private var dismiss
 
   @State var resultImage: ResultImage?
+  private let editingModel: PhotosCropEditingModel
   private let options: SwiftUIPhotosCropView.Options
 
+  @MainActor
   init(
     stack: EditingStack,
     options: SwiftUIPhotosCropView.Options = .init()
   ) {
     self._stack = .init(wrappedValue: stack)
+    self.editingModel = PhotosCropEditingModel(editingStack: stack)
     self.options = options
   }
 
+  @MainActor
   init(
     stack: @escaping () -> EditingStack,
     options: SwiftUIPhotosCropView.Options = .init()
   ) {
-    self._stack = .init(wrappedValue: stack())
+    let stack = stack()
+    self._stack = .init(wrappedValue: stack)
+    self.editingModel = PhotosCropEditingModel(editingStack: stack)
     self.options = options
   }
 
   var body: some View {
 
     SwiftUIPhotosCropView(
-      editingStack: stack,
+      editingModel: editingModel,
       options: options,
       onDone: {
-        let image = try! stack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image)
+        // Export straight to disk with bounded memory (strip render into an
+        // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
+        // then preview from a DOWNSAMPLED decode so the read-back doesn't
+        // re-spike to the full resolution.
+        let url = FileManager.default.temporaryDirectory
+          .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
+          .appendingPathExtension("heic")
+        // Snapshot the parametric document that produced this render so the
+        // result screen can show the feature tree used for it.
+        let document = stack.loadedState?.currentEdit.document
+        Task {
+          do {
+            let rendered = try await stack.makeRenderer().render(
+              options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
+            )
+            let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
+            await MainActor.run {
+              self.resultImage = .init(cgImage: cgImage, document: document)
+            }
+          } catch {
+            assertionFailure("\(error)")
+          }
+        }
       },
       onCancel: {
         dismiss()
@@ -508,41 +480,6 @@ private extension SwiftUIPhotosCropView.Options {
     var options = Self()
     options.aspectRatioOptions = .fixed(aspectRatio)
     return options
-  }
-}
-
-struct DemoPixelEditor: View {
-
-  @Environment(\.dismiss) private var dismiss
-
-  @ObjectEdge var editingStack: EditingStack
-  @State var resultImage: ResultImage?
-
-  let options: PixelEditorOptions
-
-  init(
-    editingStack: @escaping () -> EditingStack,
-    options: PixelEditorOptions = .init()
-  ) {
-    self._editingStack = .init(wrappedValue: editingStack())
-    self.options = options
-  }
-
-  var body: some View {
-    SwiftUIPixelEditorView(
-      editingStack: editingStack,
-      options: options,
-      onEndEditing: { editingStack in
-        let image = try! editingStack.makeRenderer().render().cgImage
-        self.resultImage = .init(cgImage: image)
-      },
-      onCancelEditing: {
-        dismiss()
-      }
-    )
-    .sheet(item: $resultImage) {
-      RenderedResultView(result: $0)
-    }
   }
 }
 

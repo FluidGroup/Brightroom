@@ -23,28 +23,6 @@ import UIKit
 import SwiftUI
 import BrightroomEngine
 
-final class _PixelEditor_WrapperViewController<BodyView: UIView>: UIViewController {
-  
-  let bodyView: BodyView
-  
-  init(bodyView: BodyView) {
-    self.bodyView = bodyView
-    super.init(nibName: nil, bundle: nil)
-  }
-  
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-  
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    
-    view.addSubview(bodyView)
-    AutoLayoutTools.setEdge(bodyView, view)
-  }
-}
-
 @available(iOS 14, *)
 public struct SwiftUICropView: View {
 
@@ -61,13 +39,13 @@ public struct SwiftUICropView: View {
   }
 
   public struct StateSnapshot: Equatable {
-    public var proposedCrop: EditingCrop?
+    public var proposedCrop: CropEditingState?
     public var frame: CGRect
     public var adjustmentKind: AdjustmentKind
     public var preferredAspectRatio: PixelAspectRatio?
 
     public init(
-      proposedCrop: EditingCrop?,
+      proposedCrop: CropEditingState?,
       frame: CGRect,
       adjustmentKind: AdjustmentKind,
       preferredAspectRatio: PixelAspectRatio?
@@ -118,37 +96,120 @@ public struct SwiftUICropView: View {
     }
   }
 
+  /// Commits the current live straighten angle into CropView's recorded crop
+  /// geometry.
+  ///
+  /// Use this from controls that stream `adjustmentAngle` while dragging but
+  /// only want to record the crop extent after the interaction settles.
+  public final class AdjustmentAngleCommitAction {
+
+    var onCall: (CropEditingState.AdjustmentAngle) -> Void = { _ in }
+
+    public init() {
+
+    }
+
+    public func callAsFunction(_ angle: CropEditingState.AdjustmentAngle) {
+      onCall(angle)
+    }
+  }
+
+  /// Where this view's `CropViewDocument` comes from.
+  private enum DocumentSource {
+
+    /// The document is created for — and cached against — this stack.
+    case editingStack(EditingStack)
+
+    /// The host owns the document and keeps it stable itself.
+    case document(CropViewDocument)
+  }
+
+  /// Keeps the view-owned `CropViewDocument` stable across body evaluations.
+  ///
+  /// `SwiftUICropView` is a struct, so a document built in `init` is rebuilt on
+  /// every body evaluation of the host — including the stroke-commit session it
+  /// owns — while the mounted `CropView` keeps the instance it was created
+  /// with. Holding the document in a `@State` box, which SwiftUI keeps for the
+  /// view's lifetime, gives the public `init(editingStack:)` paths the same
+  /// stable document PhotosCrop already gets from its editing model.
+  ///
+  /// Populating the box does not invalidate the view, so doing it from `body`
+  /// is not a state write during view update.
+  private final class DocumentStore {
+
+    private var editingStack: EditingStack?
+    private var document: CropViewDocument?
+
+    @MainActor
+    func document(for editingStack: EditingStack) -> CropViewDocument {
+      if let document, self.editingStack === editingStack {
+        return document
+      }
+
+      let document = CropViewDocument(editingStack: editingStack)
+      self.editingStack = editingStack
+      self.document = document
+      return document
+    }
+  }
+
+  /// Fixed at creation. See the initializer documentation.
   private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
+
+  /// Fixed at creation. See the initializer documentation.
   private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
-  private let editingStack: EditingStack
+  private let documentSource: DocumentSource
 
-  private var rotationInput: Binding<EditingCrop.Rotation?> = .constant(nil)
-  private var adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?> = .constant(nil)
+  @State private var documentStore = DocumentStore()
+
+  private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
+  private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
   private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
   private var _applyAction: ApplyAction?
+  private var _adjustmentAngleCommitAction: AdjustmentAngleCommitAction?
 
   private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
-  private let isAutoApplyEditingStackEnabled: Bool
   private let areAnimationsEnabled: Bool
+  /// Fixed at creation. See the initializer documentation.
   private let contentInset: UIEdgeInsets?
+  private var featureFocus: CropViewFeatureFocus = .finalCrop
+  private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
+  private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
 
+  /// Creates a crop canvas over `editingStack` with custom overlays.
+  ///
+  /// - Parameters:
+  ///   - editingStack: The stack whose current edit is displayed and edited.
+  ///     The crop-canvas document created for it is kept for the lifetime of
+  ///     this view; passing a different stack rebuilds the canvas.
+  ///   - isGuideInteractionEnabled: Applied on every update.
+  ///   - areAnimationsEnabled: Applied on every update.
+  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
+  ///     host that derives the inset from safe area or size class must give
+  ///     this view a new identity (for example with `.id`) for a new inset to
+  ///     take effect.
+  ///   - cropInsideOverlay: **Fixed at creation.** The builder is invoked by
+  ///     the mounted canvas, but the closure itself is installed only once, so
+  ///     values it captures are frozen at that point.
+  ///   - cropOutsideOverlay: **Fixed at creation.** Same contract as
+  ///     `cropInsideOverlay`.
+  ///   - stateHandler: Re-bound on every update.
   public init<InsideOverlay: View, OutsideOverlay: View>(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
-    isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (AdjustmentKind?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
-    self.editingStack = editingStack
+    self.documentSource = .editingStack(editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
-    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
@@ -156,29 +217,77 @@ public struct SwiftUICropView: View {
     self.stateHandler = stateHandler
   }
 
+  /// Creates a crop canvas over `editingStack` with the built-in overlays.
+  ///
+  /// - Parameters:
+  ///   - editingStack: The stack whose current edit is displayed and edited.
+  ///     The crop-canvas document created for it is kept for the lifetime of
+  ///     this view; passing a different stack rebuilds the canvas.
+  ///   - isGuideInteractionEnabled: Applied on every update.
+  ///   - areAnimationsEnabled: Applied on every update.
+  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
+  ///     host that derives the inset from safe area or size class must give
+  ///     this view a new identity (for example with `.id`) for a new inset to
+  ///     take effect.
+  ///   - stateHandler: Re-bound on every update.
   public init(
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool = true,
-    isAutoApplyEditingStackEnabled: Bool = false,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
-    self.editingStack = editingStack
+    self.documentSource = .editingStack(editingStack)
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
-    self.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
 
+  /// Creates a crop canvas over a document the host already owns.
+  ///
+  /// The caller is responsible for keeping `document` stable across body
+  /// evaluations; see `PhotosCropEditingModel.cropViewDocument`.
+  ///
+  /// `contentInset` is fixed at creation, as in the public initializers.
+  init(
+    document: CropViewDocument,
+    isGuideInteractionEnabled: Bool = true,
+    areAnimationsEnabled: Bool = true,
+    contentInset: UIEdgeInsets? = nil,
+    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
+  ) {
+    self.cropInsideOverlay = nil
+    self.cropOutsideOverlay = nil
+    self.documentSource = .document(document)
+    self.isGuideInteractionEnabled = isGuideInteractionEnabled
+    self.areAnimationsEnabled = areAnimationsEnabled
+    self.contentInset = contentInset
+    self.stateHandler = stateHandler
+  }
+
+  /// The document backing this view, stable for as long as the view keeps its
+  /// SwiftUI identity and its `EditingStack`.
+  @MainActor
+  private var document: CropViewDocument {
+    switch documentSource {
+    case .editingStack(let editingStack):
+      return documentStore.document(for: editingStack)
+    case .document(let document):
+      return document
+    }
+  }
+
   public var body: some View {
+    let document = self.document
+
     ZStack {
-      if editingStack.loadedState != nil {
+      if document.snapshot != nil {
         LoadedCropViewRepresentable(
-          editingStack: editingStack,
+          document: document,
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
@@ -187,12 +296,19 @@ public struct SwiftUICropView: View {
           resetAction: _resetAction,
           rotateAction: _rotateAction,
           applyAction: _applyAction,
+          adjustmentAngleCommitAction: _adjustmentAngleCommitAction,
           stateHandler: stateHandler,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
-          isAutoApplyEditingStackEnabled: isAutoApplyEditingStackEnabled,
           areAnimationsEnabled: areAnimationsEnabled,
-          contentInset: contentInset
+          contentInset: contentInset,
+          featureFocus: featureFocus,
+          maskingBrush: maskingBrush,
+          strokeSmoothing: strokeSmoothing
         )
+        // `CropView` binds its document once, at creation. Tying the
+        // representable's identity to the document makes a document swap
+        // rebuild the canvas instead of leaving it bound to the old one.
+        .id(ObjectIdentifier(document))
         .transition(.opacity.animation(.smooth))
       } else {
         ProgressView()
@@ -201,30 +317,35 @@ public struct SwiftUICropView: View {
       }
     }
     .onAppear {
-      editingStack.start()
+      document.start()
     }
   }
 
-  public consuming func rotation(_ rotation: EditingCrop.Rotation?) -> Self {
+  public consuming func rotation(_ rotation: CropEditingState.Rotation?) -> Self {
     self.rotationInput = .constant(rotation)
     return self
   }
 
-  public consuming func rotation(_ rotation: Binding<EditingCrop.Rotation?>) -> Self {
+  public consuming func rotation(_ rotation: Binding<CropEditingState.Rotation?>) -> Self {
 
     self.rotationInput = rotation
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: EditingCrop.AdjustmentAngle?) -> Self {
+  public consuming func adjustmentAngle(_ angle: CropEditingState.AdjustmentAngle?) -> Self {
 
     self.adjustmentAngleInput = .constant(angle)
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: Binding<EditingCrop.AdjustmentAngle?>) -> Self {
+  public consuming func adjustmentAngle(_ angle: Binding<CropEditingState.AdjustmentAngle?>) -> Self {
 
     self.adjustmentAngleInput = angle
+    return self
+  }
+
+  public consuming func registerAdjustmentAngleCommitAction(_ action: AdjustmentAngleCommitAction) -> Self {
+    self._adjustmentAngleCommitAction = action
     return self
   }
 
@@ -240,6 +361,25 @@ public struct SwiftUICropView: View {
     self.croppingAspectRatioInput = rect
     return self
 
+  }
+
+  /// Sets which FeatureTree point is previewed and which feature node canvas
+  /// gestures edit.
+  public consuming func featureFocus(_ focus: CropViewFeatureFocus) -> Self {
+    self.featureFocus = focus
+    return self
+  }
+
+  /// Sets the masking brush. The diameter may be authored in viewport points
+  /// or image pixels; CropView resolves it against its own geometry.
+  public consuming func maskingBrush(_ brush: CropViewMaskingBrush) -> Self {
+    self.maskingBrush = brush
+    return self
+  }
+
+  public consuming func strokeSmoothing(_ smoothing: EditingCanvasStrokeSmoothingConfiguration) -> Self {
+    self.strokeSmoothing = smoothing
+    return self
   }
 
   public consuming func registerResetAction(_ action: ResetAction) -> Self {
@@ -266,42 +406,51 @@ public struct SwiftUICropView: View {
 }
 
 @available(iOS 14, *)
-private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
+private struct LoadedCropViewRepresentable: UIViewRepresentable {
 
-  typealias UIViewControllerType = _PixelEditor_WrapperViewController<CropView>
-
-  let editingStack: EditingStack
+  let document: CropViewDocument
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
-  let rotationInput: Binding<EditingCrop.Rotation?>
-  let adjustmentAngleInput: Binding<EditingCrop.AdjustmentAngle?>
+  let rotationInput: Binding<CropEditingState.Rotation?>
+  let adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?>
   let croppingAspectRatioInput: Binding<PixelAspectRatio?>
   let resetAction: SwiftUICropView.ResetAction?
   let rotateAction: SwiftUICropView.RotateAction?
   let applyAction: SwiftUICropView.ApplyAction?
+  let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction?
   let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
   let isGuideInteractionEnabled: Bool
-  let isAutoApplyEditingStackEnabled: Bool
   let areAnimationsEnabled: Bool
   let contentInset: UIEdgeInsets?
+  let featureFocus: CropViewFeatureFocus
+  let maskingBrush: CropViewMaskingBrush
+  let strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration
 
   func makeCoordinator() -> Coordinator {
     Coordinator()
   }
 
-  func makeUIViewController(context: Context) -> _PixelEditor_WrapperViewController<CropView> {
+  func makeUIView(context: Context) -> CropView {
     let view: CropView
     if let contentInset {
-      view = .init(editingStack: editingStack, contentInset: contentInset)
+      view = .init(document: document, contentInset: contentInset)
     } else {
-      view = .init(editingStack: editingStack)
+      view = .init(document: document)
     }
 
-    view.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
+    view.setMaskingBrush(maskingBrush)
+    view.setCanvasStrokeSmoothing(strokeSmoothing)
+    view.setFeatureFocus(featureFocus)
     bindStateHandler(to: view, coordinator: context.coordinator)
 
+    // `contentInset` above and the two overlays below are creation-only inputs,
+    // as documented on SwiftUICropView's initializers. `updateUIView`
+    // deliberately does not re-apply them: `contentInset` is a `let` on
+    // CropView, and re-installing `AnyView` overlay closures on every update
+    // would rebuild the hosted overlays for no gain. Wiring live overlays would
+    // need an explicit change token, not an unconditional re-set.
     if let cropInsideOverlay {
       view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
     }
@@ -312,38 +461,49 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
 
     configureActions(on: view)
     context.coordinator.applySwiftUIInputs {
-      view.loadCurrentEditingStackState()
+      view.loadCurrentDocumentState()
     }
 
-    return .init(bodyView: view)
+    return view
   }
 
-  func updateUIViewController(_ uiViewController: _PixelEditor_WrapperViewController<CropView>, context: Context) {
-    let cropView = uiViewController.bodyView
+  func updateUIView(_ cropView: CropView, context: Context) {
     bindStateHandler(to: cropView, coordinator: context.coordinator)
 
     if cropView.isGuideInteractionEnabled != isGuideInteractionEnabled {
       cropView.isGuideInteractionEnabled = isGuideInteractionEnabled
     }
 
-    if cropView.isAutoApplyEditingStackEnabled != isAutoApplyEditingStackEnabled {
-      cropView.isAutoApplyEditingStackEnabled = isAutoApplyEditingStackEnabled
-    }
-
     if cropView.areAnimationsEnabled != areAnimationsEnabled {
       cropView.areAnimationsEnabled = areAnimationsEnabled
     }
 
+    // Everything that pushes SwiftUI inputs into CropView runs inside the
+    // guard. `setFeatureFocus` and `updateCurrentDocumentDisplay` can emit a
+    // state snapshot synchronously, and an unguarded snapshot writes the
+    // rotation/angle/aspect bindings from inside `updateUIView` — a state
+    // mutation during view update. `setMaskingBrush` and
+    // `setCanvasStrokeSmoothing` cannot emit today; they are inside for a
+    // uniform contract, so a future emitting setter is safe by default.
     context.coordinator.applySwiftUIInputs {
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
       }
 
       if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
-        cropView.setAdjustmentAngle(adjustmentAngle)
+        cropView.setAdjustmentAngle(
+          adjustmentAngle,
+          recordsCropExtent: adjustmentAngleCommitAction == nil
+        )
       }
 
       cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+
+      cropView.setMaskingBrush(maskingBrush)
+      cropView.setCanvasStrokeSmoothing(strokeSmoothing)
+      cropView.setFeatureFocus(featureFocus)
+
+      cropView.updateCurrentDocumentDisplay()
     }
 
     configureActions(on: cropView)
@@ -375,7 +535,11 @@ private struct LoadedCropViewRepresentable: UIViewControllerRepresentable {
     }
 
     applyAction?.onCall = { [weak cropView] in
-      cropView?.applyEditingStack()
+      cropView?.applyDocumentChanges()
+    }
+
+    adjustmentAngleCommitAction?.onCall = { [weak cropView] angle in
+      cropView?.commitAdjustmentAngle(angle)
     }
   }
 

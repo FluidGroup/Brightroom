@@ -1,0 +1,30 @@
+appId: app.muukii.brightroom.SwiftUIDemo
+name: PencilKit Reference
+---
+- launchApp
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    text: "Dismiss"
+    optional: true
+- tapOn:
+    id: "BackButton"
+    optional: true
+- tapOn: "PencilKit Reference"
+- assertVisible: "PencilKit Reference"
+- assertVisible:
+    id: "pencilkit-reference-metrics"
+- assertVisible:
+    id: "pencilkit-reference-canvas"
+- assertVisible:
+    id: "pencilkit-reference-reset"
+- assertVisible: "Zoom .*x"
+- assertVisible: "Subviews .*"
+- assertVisible: "Gestures .*"
+- swipe:
+    start: 35%, 42%
+    end: 62%, 58%
+    duration: 500
+- tapOn:
+    id: "pencilkit-reference-reset"

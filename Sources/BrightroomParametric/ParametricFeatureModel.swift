@@ -482,6 +482,13 @@ public struct ParametricRGBAColor: Codable, Equatable, Sendable {
 }
 
 /// A highlight/shadow tint effect.
+///
+/// - Important: The names describe the intended *use*, not a masked evaluation.
+///   The recipe source-over composites both colors across the whole image with
+///   no luminance or region weighting; the only thing that limits either tint is
+///   the alpha the caller chooses. This reproduces the legacy
+///   `FilterHighlightShadowTint` exactly and must keep doing so — every stored
+///   document renders against it.
 public struct HighlightShadowTintFeature: Feature, Codable {
 
   /// The stable identity of this effect.
@@ -490,10 +497,14 @@ public struct HighlightShadowTintFeature: Feature, Codable {
   /// A Boolean value indicating whether this effect participates in rendering.
   public var isEnabled: Bool
 
-  /// The color composited over highlight regions.
+  /// The tint color composited over the whole image, on top of `shadowColor`.
+  ///
+  /// Not restricted to highlight regions; see the type's discussion.
   public var highlightColor: ParametricRGBAColor
 
-  /// The color composited over shadow regions.
+  /// The tint color composited over the whole image, beneath `highlightColor`.
+  ///
+  /// Not restricted to shadow regions; see the type's discussion.
   public var shadowColor: ParametricRGBAColor
 
   /// Creates a highlight/shadow tint adjustment.
@@ -556,7 +567,9 @@ public struct SharpenFeature: Feature, Codable {
   /// The sharpness value passed to `CISharpenLuminance`.
   public var sharpness: Double
 
-  /// The Brightroom filter radius value, resolved against the current extent.
+  /// The Brightroom filter radius value, resolved against the render pass's
+  /// chain-entry extent (see `FeatureEvaluationContext.radiusReferenceExtent`),
+  /// so a mid-chain crop never re-bases it.
   public var radius: Double
 
   /// Creates a sharpen adjustment.
@@ -579,7 +592,10 @@ public enum GaussianBlurRadius: Codable, Equatable, Sendable {
   /// A Core Image blur radius in image-domain points.
   case absolute(Double)
 
-  /// A `FilterGaussianBlur.value` slider value, resolved against image extent.
+  /// A `FilterGaussianBlur.value` slider value, resolved against the render
+  /// pass's chain-entry extent (see
+  /// `FeatureEvaluationContext.radiusReferenceExtent`), so a mid-chain crop
+  /// never re-bases it.
   case editingStackFilterValue(Double)
 }
 
@@ -630,7 +646,9 @@ public struct UnsharpMaskFeature: Feature, Codable {
   /// The intensity passed to `CIUnsharpMask`.
   public var intensity: Double
 
-  /// The Brightroom filter radius value, resolved against the current extent.
+  /// The Brightroom filter radius value, resolved against the render pass's
+  /// chain-entry extent (see `FeatureEvaluationContext.radiusReferenceExtent`),
+  /// so a mid-chain crop never re-bases it.
   public var radius: Double
 
   /// Creates an unsharp mask adjustment.

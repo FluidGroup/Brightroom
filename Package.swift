@@ -1,10 +1,11 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.3
 import PackageDescription
 
 let package = Package(
   name: "Brightroom",
   platforms: [
-    .iOS(.v17)
+    .iOS(.v17),
+    .macOS(.v14),
   ],
   products: [
     .library(name: "BrightroomParametric", targets: ["BrightroomParametric"]),
@@ -27,6 +28,7 @@ let package = Package(
     .target(
       name: "BrightroomEngine",
       dependencies: [
+        "BrightroomParametric",
         .product(name: "StateGraph", package: "swift-state-graph"),
       ]
     ),
@@ -34,6 +36,7 @@ let package = Package(
       name: "BrightroomUI",
       dependencies: [
         "BrightroomEngine",
+        "BrightroomParametric",
         .product(name: "StateGraph", package: "swift-state-graph"),
         "TransitionPatch",
       ]
@@ -42,5 +45,6 @@ let package = Package(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
     ),
-  ]
+  ],
+  swiftLanguageModes: [.v6]
 )

@@ -119,21 +119,25 @@ Important type renames:
 | `editingStack.store.state.loadedState` | `editingStack.loadedState` |
 | `editingStack.store.state.isLoading` | `editingStack.isLoading` |
 | `editingStack.store.state.hasStartedEditing` | `editingStack.hasStartedEditing` |
-| `editingStack.commit { ... }` | use public methods such as `set(filters:)`, `crop(_:)`, `takeSnapshot()`, `undoEdit()` |
+| `editingStack.commit { ... }` | use document mutation APIs, then `commitCurrentEditIfNeeded()` and `undo()` |
 
-The public editing operations remain the preferred way to mutate an editing
-stack:
+FeatureTree mutation APIs remain the preferred way to mutate an editing stack:
 
 ```swift
-editingStack.set { filters in
-  var exposure = FilterExposure()
-  exposure.value = 0.3
-  filters.exposure = exposure
+editingStack.updateFeature(id: EditingFeatureTree.globalEffectsNodeID) { feature in
+  guard
+    case let .effect(effect) = feature,
+    var bundle = effect as? EffectPipelineFeature
+  else {
+    return
+  }
+
+  bundle.pipeline.set(ExposureFeature(value: 0.3))
+  feature = .effect(bundle)
 }
 
-editingStack.crop(crop)
-editingStack.takeSnapshot()
-editingStack.undoEdit()
+editingStack.commitCurrentEditIfNeeded()
+editingStack.undo()
 let renderer = try editingStack.makeRenderer()
 ```
 
@@ -279,10 +283,11 @@ After:
 
 ```swift
 let editingStack = EditingStack(imageProvider: imageProvider)
+let editingModel = PhotosCropEditingModel(editingStack: editingStack)
 
 let cropController = UIHostingController(
   rootView: SwiftUIPhotosCropView(
-    editingStack: editingStack,
+    editingModel: editingModel,
     options: .init(),
     localizedStrings: .init(),
     onDone: {
@@ -369,9 +374,11 @@ SwiftUI wrappers instead.
 | v3 / main | v4 |
 | --- | --- |
 | `CropView` | `SwiftUICropView` |
-| `BlurryMaskingView` | `SwiftUIBlurryMaskingView` |
 | `ImagePreviewView` | `SwiftUIImagePreviewView` |
 | `MetalImageView` | `SwiftUIMetalImageView` |
+
+The legacy `BlurryMaskingView` component and its SwiftUI wrapper were removed.
+Use PixelEditor masking for blur-mask editing flows.
 
 If your app subclasses or directly configures these UIKit views, migrate that
 code to SwiftUI composition. If you need a missing customization hook, treat it

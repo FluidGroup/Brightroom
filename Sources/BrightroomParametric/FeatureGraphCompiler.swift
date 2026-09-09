@@ -68,8 +68,15 @@ public struct FeatureGraphCompiler: Sendable {
   /// - Parameters:
   ///   - input: The source image used as the first graph node.
   ///   - document: The parametric document to evaluate.
-  ///   - radiusReferenceExtent: The full source extent in the current render
-  ///     pixel space, used to resolve proportional radii.
+  ///   - radiusReferenceExtent: The extent that proportional (value-form)
+  ///     radii resolve against. `nil` (the default) uses the render pass's
+  ///     CHAIN-ENTRY extent — `input`'s extent after normalization — which is
+  ///     the declared semantic: a value like `40` means the same fraction of
+  ///     the source no matter where crops sit in the feature list, and stays
+  ///     consistent between the downsampled preview and the full-resolution
+  ///     export because each pass resolves against its own entry scale. Pass
+  ///     an explicit extent only when `input` is NOT the chain entry (e.g. a
+  ///     zoomed viewport slice of a larger source).
   ///   - presentationTime: The presentation time represented by `input`.
   /// - Returns: The final image recipe and debug mask outputs.
   public func makeOutput(
@@ -80,12 +87,20 @@ public struct FeatureGraphCompiler: Sendable {
   ) throws -> FeatureGraphOutput {
     try validate(document)
 
+    var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
+
+    // Resolve the radius reference ONCE at chain entry. Deriving it lazily
+    // inside each recipe (`?? image.extent`) would re-base the radius on
+    // whatever intermediate the effect happens to receive — a mid-chain crop
+    // would silently change the resolved blur strength, and editing a crop
+    // would retroactively change committed effects. The entry extent is the
+    // declared basis; feature order cannot perturb it.
+    let entryReferenceExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
     let context = FeatureEvaluationContext(
       kernelRegistry: kernelRegistry,
-      radiusReferenceExtent: radiusReferenceExtent,
+      radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
       presentationTime: presentationTime
     )
-    var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
 
     for feature in document.mainTree.features where feature.isEnabled {
@@ -382,9 +397,15 @@ private extension FeatureGraphCompiler {
         try validateChildren(of: effect, insert: insert)
 
       case let .localAdjustment(localAdjustment):
-        let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
-        guard enabledEffects.isEmpty == false else {
-          throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
+        // An enabled local adjustment that applies nothing stays an error: it
+        // is a construction mistake worth surfacing. A disabled one is skipped
+        // by evaluation, so failing it here would reject documents the preview
+        // renders — toggling a layer off must not break export.
+        if localAdjustment.isEnabled {
+          let enabledEffects = localAdjustment.effectPipeline.effects.filter(\.isEnabled)
+          guard enabledEffects.isEmpty == false else {
+            throw FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(localAdjustment.id)
+          }
         }
 
         for effect in localAdjustment.effectPipeline.effects {

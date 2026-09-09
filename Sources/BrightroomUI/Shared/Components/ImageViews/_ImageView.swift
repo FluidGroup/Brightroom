@@ -9,7 +9,7 @@
 import UIKit
 import BrightroomEngine
 
-final class _ImageView: UIImageView, CIImageDisplaying {
+final class _ImageView: UIImageView {
   var postProcessing: (CIImage) -> CIImage = { $0 } {
     didSet {
       update()
@@ -68,4 +68,3 @@ final class _ImageView: UIImageView, CIImageDisplaying {
     image = uiImage
   }
 }
-

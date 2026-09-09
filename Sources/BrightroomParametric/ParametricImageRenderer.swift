@@ -41,11 +41,12 @@ public struct ParametricImageRenderer: Sendable {
 
   /// Evaluates an editing document from a source image.
   ///
-  /// `radiusReferenceExtent` is the full source extent in the current render
-  /// pixel space; pass it from paths that evaluate on a cropped/zoomed
-  /// intermediate so diagonal-based radii stay a fixed fraction of the source.
-  /// `nil` (the default) is correct when `sourceImage` is the full source at
-  /// render scale (export, preview composition).
+  /// `radiusReferenceExtent` overrides the basis that value-form radii
+  /// resolve against. `nil` (the default) resolves against the render pass's
+  /// chain-entry extent — `sourceImage`'s extent — which keeps the radius a
+  /// fixed fraction of the source regardless of where crops sit in the
+  /// feature list. Pass an explicit extent only when `sourceImage` is NOT the
+  /// chain entry (e.g. a zoomed viewport slice of a larger source).
   ///
   /// `presentationTime` defaults to `.zero` for deterministic still-image
   /// evaluation. Video paths pass the frame's exact presentation time.

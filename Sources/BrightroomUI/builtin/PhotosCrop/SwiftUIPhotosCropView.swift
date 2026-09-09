@@ -22,6 +22,7 @@
 import SwiftUI
 
 import BrightroomEngine
+import BrightroomParametric
 
 /**
  Apple's Photos app like crop view.
@@ -38,6 +39,7 @@ public struct SwiftUIPhotosCropView: View {
     public var button_aspectratio_original: String = "ORIGINAL"
     public var button_aspectratio_freeform: String = "FREEFORM"
     public var button_aspectratio_square: String = "SQUARE"
+    public var button_filter_original: String = "ORIGINAL"
 
     public init() {}
   }
@@ -51,25 +53,30 @@ public struct SwiftUIPhotosCropView: View {
 
     public var aspectRatioOptions: AspectRatioOptions = .selectable
 
+    /// The presets offered by the Filters mode. Presets write into the
+    /// FeatureTree's global-effects node. Pass an empty array to offer no
+    /// presets.
+    public var filterPresets: [PresetFeature] = PhotosCropDefaultFilterPresets.make()
+
     public init() {
 
     }
   }
 
-  private let editingStack: EditingStack
+  private let editingModel: PhotosCropEditingModel
   private let options: Options
   private let localizedStrings: LocalizedStrings
   private let onDone: @MainActor () -> Void
   private let onCancel: @MainActor () -> Void
 
   public init(
-    editingStack: EditingStack,
+    editingModel: PhotosCropEditingModel,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
     onDone: @escaping @MainActor () -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
-    self.editingStack = editingStack
+    self.editingModel = editingModel
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -78,7 +85,7 @@ public struct SwiftUIPhotosCropView: View {
 
   public var body: some View {
     PhotosCropContentView(
-      editingStack: editingStack,
+      editingModel: editingModel,
       options: options,
       localizedStrings: localizedStrings,
       onDone: onDone,
