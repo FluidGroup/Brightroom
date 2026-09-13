@@ -62,7 +62,6 @@ extension CropView {
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
 
     private unowned let containerView: CropView
-    private unowned let imageView: UIView
 
     private lazy var invertedMaskShapeLayerView = MaskView()
 
@@ -76,11 +75,9 @@ extension CropView {
 
     init(
       containerView: CropView,
-      imageView: UIView,
       insetOfGuideFlexibility: UIEdgeInsets
     ) {
       self.containerView = containerView
-      self.imageView = imageView
       self.insetOfGuideFlexibility = insetOfGuideFlexibility
 
       super.init(frame: .zero)
@@ -365,6 +362,13 @@ extension CropView {
         .inset(by: reversedInsets)
         .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
 
+      // An empty intersection has no usable bounds; feeding its
+      // infinite/zero coordinates into constraint constants would
+      // corrupt the layout, so keep the previous clamp.
+      guard r.isEmpty == false else {
+        return
+      }
+
       maximumRect = r
 
       leftMaxConstraint?.constant = r.minX
@@ -586,8 +590,7 @@ extension CropView {
       if let aspectRatio = lockedAspectRatio {
         activeConstraints.append(widthAnchor.constraint(
           equalTo: heightAnchor,
-          multiplier: aspectRatio.width / aspectRatio.height,
-          constant: 1
+          multiplier: aspectRatio.width / aspectRatio.height
         )&>.do {
           $0.isActive = true
         })

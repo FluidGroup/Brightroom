@@ -59,60 +59,6 @@ public class ColorCubeHelper {
 extension ColorCubeHelper {
 
   public static func makeColorCubeFilter(
-    lookupTable: ColorCubeLookupTable,
-    cacheKey: String?
-  ) -> CIFilter {
-
-    switch lookupTable {
-    case .image(let lutImage, let dimension):
-      return makeColorCubeFilter(
-        lutImage: lutImage,
-        dimension: dimension,
-        cacheKey: cacheKey
-      )
-    case .cubeData(let cubeData, let dimension):
-      return makeColorCubeFilter(
-        cubeData: cubeData,
-        dimension: dimension,
-        cacheKey: cacheKey
-      )
-    }
-  }
-  
-  public static func makeColorCubeFilter(
-    lutImage: ImageSource,
-    dimension: Int,
-    cacheKey: String?
-  ) -> CIFilter {
-
-    if let cacheKey = cacheKey, let cached = cache.object(forKey: cacheKey as NSString) {
-      return cached.copy() as! CIFilter
-    } else {
-
-      let cgImage = lutImage.loadOriginalCGImage()
-      let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-
-      let data = try! ColorCubeHelper.createColorCubeData(inputImage: cgImage, cubeDimension: dimension)
-
-      let filter = CIFilter(
-        name: "CIColorCubeWithColorSpace",
-        parameters: [
-          "inputCubeDimension" : dimension,
-          "inputCubeData" : data,
-          "inputColorSpace" : colorSpace,
-        ]
-      )!
-      
-      if let cacheKey = cacheKey {
-        cache.setObject(filter, forKey: cacheKey as NSString)
-      }
-
-      return filter
-    }
-        
-  }
-
-  public static func makeColorCubeFilter(
     cubeData: Data,
     dimension: Int,
     cacheKey: String?

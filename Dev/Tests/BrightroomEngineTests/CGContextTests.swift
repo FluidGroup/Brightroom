@@ -7,45 +7,46 @@
 //
 
 import Foundation
-import XCTest
+import Testing
+import UIKit
 
 @testable import BrightroomEngine
 
-final class CGContextTests: XCTestCase {
+struct CGContextTests {
 
-  func test_createContext_PNG_16bpc_P3() {
+  @Test func test_createContext_PNG_16bpc_P3() {
 
     let image = UIImage(named: "screenshot-16bit-p3-alpha.png", in: _pixelengine_bundle, with: nil)!
 
     do {
       _ = try CGContext.makeContext(for: image.cgImage!)
     } catch {
-      XCTFail(error.localizedDescription)
+      Issue.record("\(error.localizedDescription)")
     }
 
     let result = ImageTool.makeResizedCGImage(from: image.cgImage!, maxPixelSize: 300)
-    XCTAssertNotEqual(result, nil)
+    #expect(result != nil)
   }
 
-  func test_createContext_PNG_8bpc_P3() {
+  @Test func test_createContext_PNG_8bpc_P3() {
 
     let image = UIImage(named: "screenshot-8bit-p3-alpha.png", in: _pixelengine_bundle, with: nil)!
 
     do {
       _ = try CGContext.makeContext(for: image.cgImage!)
     } catch {
-      XCTFail(error.localizedDescription)
+      Issue.record("\(error.localizedDescription)")
     }
   }
 
-  func test_resize_PNG_8bpc_lcd() {
+  @Test func test_resize_PNG_8bpc_lcd() {
 
     let image = UIImage(named: "screenshot-8bit-lcd.png", in: _pixelengine_bundle, with: nil)!
 
     do {
       _ = try CGContext.makeContext(for: image.cgImage!)
     } catch {
-      XCTFail(error.localizedDescription)
+      Issue.record("\(error.localizedDescription)")
     }
   }
 

@@ -32,7 +32,12 @@ import UIKit
 
 
 /// An object that provides an image-data from multiple backing storage.
-public final class ImageSource: Equatable {
+///
+/// Immutable after init: it stores read-only closures over thread-safe Core
+/// Graphics objects (`CGImage`/`CGImageSource`), so sharing it across threads is
+/// safe. `@unchecked` because the stored closures are not `@Sendable` function
+/// types, not because the data is mutable.
+public final class ImageSource: Equatable, @unchecked Sendable {
 
   private struct Closures {
     let readImageSize: () -> CGSize
@@ -49,21 +54,23 @@ public final class ImageSource: Equatable {
 
   public init(image: UIImage) {
     precondition(image.cgImage != nil)
+    let originalCGImage = image.cgImage!
+    let decodedCGImage = ImageTool.makeDecodedCGImage(from: originalCGImage) ?? originalCGImage
     self.closures = .init(
       readImageSize: {
-        image.size.applying(.init(scaleX: image.scale, y: image.scale))
+        CGSize(width: decodedCGImage.width, height: decodedCGImage.height)
       },
       loadOriginalCGImage: {
-        image.cgImage!
+        decodedCGImage
       },
       loadThumbnailCGImage: { (maxPixelSize) -> CGImage in
         return ImageTool.makeResizedCGImage(
-          from: image.cgImage!,
+          from: decodedCGImage,
           maxPixelSizeHint: maxPixelSize
         )!
       },
       makeCIImage: {
-        CIImage(image: image)!
+        CIImage(cgImage: decodedCGImage)
       }
     )
   }
@@ -113,7 +120,13 @@ public final class ImageSource: Equatable {
   }
 
   /**
-   Creates an instance of CGImage resized to maximum pixel size.
+   Creates an instance of CGImage downsampled so that its shortest side is at
+   most `maxPixelSize` pixels.
+
+   `maxPixelSize` is a short-side target, not a longest-side cap: the longest
+   side scales with the aspect ratio and can exceed it, and an image whose
+   shortest side is already below it is returned at full resolution. See
+   `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`.
 
    - Attention: The image is not orientated.
    */

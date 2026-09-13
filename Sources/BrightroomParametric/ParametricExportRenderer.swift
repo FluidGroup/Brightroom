@@ -97,6 +97,11 @@ public struct ParametricExportRenderer {
   public enum RenderingError: Swift.Error {
     /// A file-backed render could not be decoded back into a `CGImage`.
     case failedToDecodeRenderedFile(URL)
+
+    /// A memory-backed render could not allocate a `CGImage` for the extent.
+    ///
+    /// Most likely at the sizes `Output.file` exists to avoid.
+    case failedToCreateCGImage(extent: CGRect)
   }
 
   /**
@@ -312,13 +317,15 @@ public struct ParametricExportRenderer {
     switch options.output {
     case .memory:
       /// To keep wide-color(DisplayP3), use createCGImage instead drawing with CIContext
-      let cgImage = ciContext.createCGImage(
+      guard let cgImage = ciContext.createCGImage(
         image,
         from: image.extent,
         format: options.workingFormat,
         colorSpace: colorSpace,
         deferred: false
-      )!
+      ) else {
+        throw RenderingError.failedToCreateCGImage(extent: image.extent)
+      }
       return .init(cgImage: cgImage, options: options)
 
     case let .file(url, fileType):

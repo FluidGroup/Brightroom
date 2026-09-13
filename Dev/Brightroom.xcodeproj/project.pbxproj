@@ -20,6 +20,7 @@
 		4B2A1112266B7B3000B0C885 /* test-image-11 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A1105266B7B3000B0C885 /* test-image-11 */; };
 		4B2A1113266B7B3000B0C885 /* test-image-3 in Resources */ = {isa = PBXBuildFile; fileRef = 4B2A1106266B7B3000B0C885 /* test-image-3 */; };
 		4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E5E28EEC0670026A8CF /* BrightroomEngine */; };
+		4B487E6128EEC0670026A8CF /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B487E6028EEC0670026A8CF /* BrightroomUI */; };
 		4B58E82A260F0027004A834F /* orientation_left_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE6260BB32600F77E9A /* orientation_left_mirrored.HEIC */; };
 		4B58E82B260F0027004A834F /* orientation_down_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE9260BB32600F77E9A /* orientation_down_mirrored.HEIC */; };
 		4B58E82C260F0027004A834F /* orientation_right_mirrored.HEIC in Resources */ = {isa = PBXBuildFile; fileRef = 4B254FE7260BB32600F77E9A /* orientation_right_mirrored.HEIC */; };
@@ -57,8 +58,11 @@
 		4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = 23449504C30943C981A14D75 /* BrightroomParametric */; };
+		8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = BC5DE159959545B49CA01241 /* BrightroomParametric */; };
 		B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* Reveal-SDK */; };
 		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
+		EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = E41DF318FBB3443697FEC673 /* BrightroomParametric */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
 		FC110D8F2660FD5500CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg in Resources */ = {isa = PBXBuildFile; fileRef = FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */; };
@@ -498,6 +502,7 @@
 		4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-16bit-p3-alpha.png"; sourceTree = "<group>"; };
 		4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-8bit-lcd.png"; sourceTree = "<group>"; };
 		4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "screenshot-8bit-p3-alpha.png"; sourceTree = "<group>"; };
+		6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ParametricMacDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC110D2D2660FD2200CC45EA /* 5633ed9d0eb700d0093bf85d86a95ebf.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = 5633ed9d0eb700d0093bf85d86a95ebf.jpg; sourceTree = "<group>"; };
 		FC110D2E2660FD2200CC45EA /* acce3629083f0e348e94fb58f952d3de.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = acce3629083f0e348e94fb58f952d3de.jpg; sourceTree = "<group>"; };
 		FC110D2F2660FD2300CC45EA /* 1cbb1bb37d62c44f67374cd451643dc4.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = 1cbb1bb37d62c44f67374cd451643dc4.jpg; sourceTree = "<group>"; };
@@ -898,15 +903,25 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		5462C745534F43D9AF56EE28 /* ParametricMacDemo */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ParametricMacDemo; sourceTree = "<group>"; };
 		B036D2DC2FC2A64400C834BA /* Sources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B036D2F12FC2A64500C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, B036D2F22FC2A64500C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Sources; sourceTree = "<group>"; };
 		B036D2FF2FC2A67700C834BA /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (B036D30B2FC2A67800C834BA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		343D35A6DAD74B728C225FC3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4B98CCB625EFF31300E4F61F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
 				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
 				B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */,
@@ -919,6 +934,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B487E5F28EEC0670026A8CF /* BrightroomEngine in Frameworks */,
+				4B487E6128EEC0670026A8CF /* BrightroomUI in Frameworks */,
+				8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -986,6 +1003,7 @@
 			children = (
 				4B524FE129B8F6A600C1A416 /* Packages */,
 				4BE9B3D1260BA72D000A3D09 /* Bundle */,
+				5462C745534F43D9AF56EE28 /* ParametricMacDemo */,
 				B036D2DC2FC2A64400C834BA /* Sources */,
 				B036D2FF2FC2A67700C834BA /* Tests */,
 				4B600AFE216B7A94001E1456 /* Products */,
@@ -999,6 +1017,7 @@
 			isa = PBXGroup;
 			children = (
 				4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */,
+				6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */,
 				4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */,
 				4BED49C8261C9BBD0011A98F /* Import LUT.appex */,
 				4BED49E0261C9CE20011A98F /* ShareLUT.appex */,
@@ -1453,6 +1472,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		07F65785A7D046C59571D0DA /* ParametricMacDemo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4B5EC9EDB4A64C4A90F0F2CF /* Build configuration list for PBXNativeTarget "ParametricMacDemo" */;
+			buildPhases = (
+				C83159EA590F42CD9C3A522E /* Sources */,
+				343D35A6DAD74B728C225FC3 /* Frameworks */,
+				9137E31FED744F129A0FD278 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5462C745534F43D9AF56EE28 /* ParametricMacDemo */,
+			);
+			name = ParametricMacDemo;
+			packageProductDependencies = (
+				BC5DE159959545B49CA01241 /* BrightroomParametric */,
+			);
+			productName = ParametricMacDemo;
+			productReference = 6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */;
+			productType = "com.apple.product-type.application";
+		};
 		4B98CCB825EFF31300E4F61F /* SwiftUIDemo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4B98CCC525EFF31400E4F61F /* Build configuration list for PBXNativeTarget "SwiftUIDemo" */;
@@ -1471,6 +1513,7 @@
 			);
 			name = SwiftUIDemo;
 			packageProductDependencies = (
+				E41DF318FBB3443697FEC673 /* BrightroomParametric */,
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
 				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
@@ -1498,10 +1541,12 @@
 			name = BrightroomEngineTests;
 			packageProductDependencies = (
 				4B487E5E28EEC0670026A8CF /* BrightroomEngine */,
+				4B487E6028EEC0670026A8CF /* BrightroomUI */,
+				23449504C30943C981A14D75 /* BrightroomParametric */,
 			);
 			productName = PixelEngineTests;
 			productReference = 4BDEE09825F8CF5800FA22CB /* BrightroomEngineTests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		4BED49C7261C9BBD0011A98F /* Import LUT */ = {
 			isa = PBXNativeTarget;
@@ -1547,6 +1592,9 @@
 				LastUpgradeCheck = 1240;
 				ORGANIZATIONNAME = muukii;
 				TargetAttributes = {
+					07F65785A7D046C59571D0DA = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					4B98CCB825EFF31300E4F61F = {
 						CreatedOnToolsVersion = 12.4;
 					};
@@ -1579,6 +1627,7 @@
 			targets = (
 				4BDEE09725F8CF5800FA22CB /* BrightroomEngineTests */,
 				4B98CCB825EFF31300E4F61F /* SwiftUIDemo */,
+				07F65785A7D046C59571D0DA /* ParametricMacDemo */,
 				4BED49C7261C9BBD0011A98F /* Import LUT */,
 				4BED49DF261C9CE20011A98F /* ShareLUT */,
 			);
@@ -2033,6 +2082,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9137E31FED744F129A0FD278 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -2066,6 +2122,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C83159EA590F42CD9C3A522E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
@@ -2080,6 +2143,32 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		45686D40D781452D8F290221 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = JX92XL88RZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.brightroom.ParametricMacDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 		4B600B03216B7A94001E1456 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2214,7 +2303,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -2236,7 +2325,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -2368,9 +2457,44 @@
 			};
 			name = Release;
 		};
+		7D01513049A3457588506C28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = JX92XL88RZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.muukii.brightroom.ParametricMacDemo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4B5EC9EDB4A64C4A90F0F2CF /* Build configuration list for PBXNativeTarget "ParametricMacDemo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45686D40D781452D8F290221 /* Debug */,
+				7D01513049A3457588506C28 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		4B600AF7216B7A94001E1456 /* Build configuration list for PBXProject "Brightroom" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2430,9 +2554,17 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		23449504C30943C981A14D75 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
+		};
 		4B487E5E28EEC0670026A8CF /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomEngine;
+		};
+		4B487E6028EEC0670026A8CF /* BrightroomUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomUI;
 		};
 		B027724B2FC2B70A006D7796 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -2442,6 +2574,14 @@
 		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = "Reveal-SDK";
+		};
+		BC5DE159959545B49CA01241 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
+		};
+		E41DF318FBB3443697FEC673 /* BrightroomParametric */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomParametric;
 		};
 		FC06C87E2A53AF4500215B89 /* BrightroomEngine */ = {
 			isa = XCSwiftPackageProductDependency;
