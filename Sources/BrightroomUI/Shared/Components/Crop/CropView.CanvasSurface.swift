@@ -30,7 +30,8 @@ extension CropView {
   /// Drives the fixed canvas for the lifetime of the visible editor.
   ///
   /// The run loop retains this proxy, not the editor. Gesture boundaries never
-  /// start or stop the link: every displayed frame samples the scroll geometry.
+  /// start or stop the link: every displayed frame samples the scroll geometry,
+  /// while the canvas submits Metal work only when its input changes.
   @MainActor
   final class ViewportDisplayLink: NSObject {
     weak var owner: CropView?
@@ -78,6 +79,30 @@ extension CropView {
     /// with a scroll view; its pixels are placed by the sampled affine mapping.
     let canvasHostView = UIView()
     let canvasClipLayer = CAShapeLayer()
+    private var displayedClipRect: CGRect?
+
+    /// Applies sampled clipping without rebuilding an unchanged path or causing
+    /// another Core Animation transaction while the canvas is stationary.
+    func updateCanvasClip(_ rect: CGRect?) {
+      guard let rect else {
+        if canvasHostView.layer.mask != nil {
+          canvasHostView.layer.mask = nil
+        }
+        displayedClipRect = nil
+        return
+      }
+      guard displayedClipRect != rect
+        || canvasClipLayer.frame != canvasHostView.bounds
+        || canvasHostView.layer.mask !== canvasClipLayer else { return }
+
+      CATransaction.begin()
+      CATransaction.setDisableActions(true)
+      canvasClipLayer.frame = canvasHostView.bounds
+      canvasClipLayer.path = UIBezierPath(rect: rect).cgPath
+      canvasHostView.layer.mask = canvasClipLayer
+      CATransaction.commit()
+      displayedClipRect = rect
+    }
   }
 
   /// Common core shared by the Crop and Tool surfaces: a UIScrollView that
@@ -169,10 +194,8 @@ extension CropView {
       let view = _EditingCanvasMTKView(canvasSize: canvasSize, device: device)
       view.isUserInteractionEnabled = false
       view.isHidden = true
-      view.setViewportCachedSourceEnabled(true)
       view.configure(brush: brush, smoothing: smoothing)
       view.onStrokeCommit = onStrokeCommit
-      view.setExternalFrameDrivingEnabled(true)
       view.frame = hostView.bounds
       hostView.addSubview(view)
       canvasView = view
@@ -202,7 +225,7 @@ extension CropView {
       canvasView?.setCommittedStrokes(records)
     }
 
-    /// Submits one frame without moving the canvas or scheduling another loop.
+    /// Samples the viewport and submits a changed frame without moving the canvas.
     func draw(viewport: CropDisplayViewport?) {
       guard let canvasView else { return }
       displayedViewport = viewport
@@ -214,8 +237,8 @@ extension CropView {
       if canvasView.contentScaleFactor != viewport.contentScaleFactor {
         canvasView.contentScaleFactor = viewport.contentScaleFactor
       }
-      canvasView.setViewport(viewport.editingCanvasViewport, schedulesDisplay: false)
-      canvasView.draw()
+      canvasView.setViewport(viewport.editingCanvasViewport)
+      canvasView.drawIfNeeded()
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {

@@ -1884,6 +1884,9 @@ extension CropView {
       viewportDisplayLink.invalidate()
       return
     }
+    // Foregrounding may need a fresh drawable without changing image inputs.
+    cropSurface.canvasView?.setNeedsCanvasDisplay()
+    toolSurface.canvasView?.setNeedsCanvasDisplay()
     viewportDisplayLink.start(maximumFramesPerSecond: window.screen.maximumFramesPerSecond)
   }
 
@@ -1901,14 +1904,9 @@ extension CropView {
     let layers = displayLayers(for: surface)
     if clipsToGuide {
       let clipRect = layers.canvas.convert(layers.clip.bounds, from: layers.clip)
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      surfaceHost.canvasClipLayer.frame = surfaceHost.canvasHostView.bounds
-      surfaceHost.canvasClipLayer.path = UIBezierPath(rect: clipRect).cgPath
-      surfaceHost.canvasHostView.layer.mask = surfaceHost.canvasClipLayer
-      CATransaction.commit()
+      surfaceHost.updateCanvasClip(clipRect)
     } else {
-      surfaceHost.canvasHostView.layer.mask = nil
+      surfaceHost.updateCanvasClip(nil)
     }
 
     if featureFocus.isCropEditing {
@@ -1995,7 +1993,7 @@ extension CGRect {
 }
 
 extension CropDisplayViewport {
-  var editingCanvasViewport: _EditingCanvasMTKView.Viewport {
+  var editingCanvasViewport: EditingCanvasRenderer.Viewport {
     .init(
       visibleContentRect: visibleContentRect,
       contentToCanvasTransform: contentToCanvasTransform

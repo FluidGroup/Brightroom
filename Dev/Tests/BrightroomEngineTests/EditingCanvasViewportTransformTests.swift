@@ -11,7 +11,7 @@ import Testing
 struct EditingCanvasViewportTransformTests {
 
   @Test func `Affine viewport keeps offset and drawable scale`() {
-    let viewport = _EditingCanvasMTKView.Viewport(
+    let viewport = EditingCanvasRenderer.Viewport(
       visibleContentRect: CGRect(x: 40, y: 20, width: 200, height: 100),
       contentToCanvasTransform: CGAffineTransform(a: 1.5, b: 0, c: 0, d: 1.5, tx: -50, ty: 0)
     )
@@ -26,7 +26,7 @@ struct EditingCanvasViewportTransformTests {
   }
 
   @Test func `Rotated content landmark lands in the same texture coordinates as its brush`() {
-    let viewport = _EditingCanvasMTKView.Viewport(
+    let viewport = EditingCanvasRenderer.Viewport(
       visibleContentRect: CGRect(x: 0, y: 0, width: 400, height: 300),
       // Rendering receives only the sampled transform, even when the scroll
       // view's model has already settled at a different scale.
@@ -46,7 +46,7 @@ struct EditingCanvasViewportTransformTests {
 
   @Test(arguments: [0.0, Double.pi / 6, Double.pi / 4, Double.pi / 2])
   func `Rotation does not inflate the image space brush radius`(radians: Double) {
-    let viewport = _EditingCanvasMTKView.Viewport(
+    let viewport = EditingCanvasRenderer.Viewport(
       visibleContentRect: CGRect(x: 30, y: 10, width: 400, height: 300),
       contentToCanvasTransform: CGAffineTransform(scaleX: 1.25, y: 1.25)
         .concatenating(CGAffineTransform(rotationAngle: CGFloat(radians)))
@@ -64,7 +64,7 @@ struct EditingCanvasViewportTransformTests {
   }
 
   @Test func `Drawable rounding changes pixel mapping without shifting the content origin`() {
-    let viewport = _EditingCanvasMTKView.Viewport(
+    let viewport = EditingCanvasRenderer.Viewport(
       visibleContentRect: CGRect(x: 0, y: 0, width: 100, height: 80),
       contentToCanvasTransform: CGAffineTransform(translationX: 5, y: 7)
     )

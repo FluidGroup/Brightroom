@@ -28,7 +28,7 @@ import simd
 ///
 /// Two paths rasterize brush stamps with this shader family:
 ///
-/// - `_EditingCanvasMTKView` draws the committed and in-flight strokes live,
+/// - `EditingCanvasRenderer` draws the committed and in-flight strokes live,
 ///   every frame, into the viewport mask texture.
 /// - `BrushMaskMetalRasterizer` draws a stamp list off-screen so
 ///   `BrushMaskRasterizerParityTests` can prove that live rasterization matches

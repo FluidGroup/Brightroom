@@ -26,9 +26,9 @@ import Metal
 import simd
 
 /// A standalone, testable wrapper around the **live** Metal brush-mask render
-/// pipeline used by `_EditingCanvasMTKView`.
+/// pipeline used by `EditingCanvasRenderer`.
 ///
-/// `_EditingCanvasMTKView` builds and drives the same pipeline inline for live
+/// `EditingCanvasRenderer` builds and drives the same pipeline inline for live
 /// painting, where the encoding is interleaved with viewport math, drawable
 /// management, and stroke state. This type extracts only the rasterization
 /// kernel — a single off-screen stamp pass — so the live rasterizer can be

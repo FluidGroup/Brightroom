@@ -55,7 +55,7 @@
          <EnvironmentVariable
             key = "CI_PRINT_TREE"
             value = "4"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
       <MetalAPIValidationSettings

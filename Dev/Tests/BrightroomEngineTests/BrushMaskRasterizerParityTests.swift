@@ -29,7 +29,7 @@ import Testing
 @testable import BrightroomUI
 
 /// Proves the **live** Metal brush rasterizer (`BrushMaskMetalRasterizer`, the
-/// pipeline `_EditingCanvasMTKView` drives for low-latency painting) matches the
+/// pipeline `EditingCanvasRenderer` drives for low-latency painting) matches the
 /// **parametric** Core Image CIKernel rasterizer
 /// (`FeatureGraphCompiler.renderMask`, the export/preview path) for the same
 /// stamps and canvas.
