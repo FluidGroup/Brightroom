@@ -174,6 +174,7 @@ public struct SwiftUICropView: View {
   private let stateHandler: @MainActor (StateSnapshot) -> Void
   private let isGuideInteractionEnabled: Bool
   private let areAnimationsEnabled: Bool
+  private var clipsToGuide: Bool = false
   /// Fixed at creation. See the initializer documentation.
   private let contentInset: UIEdgeInsets?
   private var featureFocus: CropViewFeatureFocus = .finalCrop
@@ -300,6 +301,7 @@ public struct SwiftUICropView: View {
           stateHandler: stateHandler,
           isGuideInteractionEnabled: isGuideInteractionEnabled,
           areAnimationsEnabled: areAnimationsEnabled,
+          clipsToGuide: clipsToGuide,
           contentInset: contentInset,
           featureFocus: featureFocus,
           maskingBrush: maskingBrush,
@@ -319,6 +321,15 @@ public struct SwiftUICropView: View {
     .onAppear {
       document.start()
     }
+  }
+
+  /// Sets whether the image canvas is clipped to the crop guide.
+  ///
+  /// Clipping is disabled by default. Changes are applied to the mounted
+  /// canvas on each update.
+  public consuming func clipsToGuide(_ clipsToGuide: Bool) -> Self {
+    self.clipsToGuide = clipsToGuide
+    return self
   }
 
   public consuming func rotation(_ rotation: CropEditingState.Rotation?) -> Self {
@@ -421,6 +432,7 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
   let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
   let isGuideInteractionEnabled: Bool
   let areAnimationsEnabled: Bool
+  let clipsToGuide: Bool
   let contentInset: UIEdgeInsets?
   let featureFocus: CropViewFeatureFocus
   let maskingBrush: CropViewMaskingBrush
@@ -440,6 +452,7 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
 
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
+    view.clipsToGuide = clipsToGuide
     view.setMaskingBrush(maskingBrush)
     view.setCanvasStrokeSmoothing(strokeSmoothing)
     view.setFeatureFocus(featureFocus)
@@ -486,6 +499,10 @@ private struct LoadedCropViewRepresentable: UIViewRepresentable {
     // `setCanvasStrokeSmoothing` cannot emit today; they are inside for a
     // uniform contract, so a future emitting setter is safe by default.
     context.coordinator.applySwiftUIInputs {
+      if cropView.clipsToGuide != clipsToGuide {
+        cropView.clipsToGuide = clipsToGuide
+      }
+
       if let rotation = rotationInput.wrappedValue {
         cropView.setRotation(rotation)
       }
