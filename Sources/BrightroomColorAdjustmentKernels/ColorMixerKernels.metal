@@ -3,6 +3,10 @@
 //
 
 // Perceptual Color Mixer for unpremultiplied extended-linear Display-P3.
+// SwiftPM also runs its ordinary Metal resource pass. Only the plugin (or a
+// host target configured with -fcikernel) emits these general Core Image kernels.
+#if defined(__METAL_CIKERNEL__)
+
 #include <CoreImage/CoreImage.h>
 using namespace metal;
 
@@ -136,3 +140,5 @@ extern "C" { namespace coreimage {
   }
 
 }}
+
+#endif // __METAL_CIKERNEL__

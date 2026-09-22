@@ -9,6 +9,7 @@
 ## Build generated
 build/
 DerivedData/
+*.metallib
 
 ## Various settings
 *.pbxuser

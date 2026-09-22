@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Hiroshi Kimura(Muukii) <muukii.app@gmail.com>
 //
 
+import BrightroomColorAdjustmentKernels
 import CoreImage
 import Foundation
 import os

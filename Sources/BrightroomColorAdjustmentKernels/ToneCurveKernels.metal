@@ -10,6 +10,10 @@
 // the table boundary with an effective derivative: zero for a moved endpoint,
 // or its spline tangent when it remains at normalized Input 0 or 1.
 
+// SwiftPM also runs its ordinary Metal resource pass. Only the plugin (or a
+// host target configured with -fcikernel) emits these general Core Image kernels.
+#if defined(__METAL_CIKERNEL__)
+
 #include <CoreImage/CoreImage.h>
 using namespace metal;
 
@@ -171,3 +175,5 @@ extern "C" { namespace coreimage {
   }
 
 }}
+
+#endif // __METAL_CIKERNEL__

@@ -170,7 +170,11 @@ render identities include the selected algorithm and the same normalized
 Float32 parameters as the kernel.
 The curve's one-entry plan and table caches use `OSAllocatedUnfairLock`, keeping
 iOS 17 / macOS 14 compatibility. Compiled kernels are loaded from the package
-resource bundle, independently of the host application's Metal library.
+resource bundle, independently of the host application's Metal library. The
+build system compiles the sources in `BrightroomColorAdjustmentKernels`; its
+separate target keeps the general Core Image compiler flags away from the
+existing brush shaders. See [Building the color adjustment kernels](color-adjustment-kernels.md)
+for SwiftPM and Tuist integration.
 
 The default document codec registers both feature types. Persistence stores
 authored parameters and feature identity, validates the payload, and rebuilds

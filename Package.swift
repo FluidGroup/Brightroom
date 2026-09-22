@@ -19,21 +19,19 @@ let package = Package(
   targets: [
     .target(
       name: "BrightroomParametric",
+      dependencies: ["BrightroomColorAdjustmentKernels"],
       exclude: [
         // Included by the compiled `.metal` sources; not a standalone package
         // input.
-        "BrushStampFalloff.metalh",
-        // These general Core Image kernels require -fcikernel. Their checked-in
-        // libraries avoid requiring Metal flags from SwiftPM or Tuist clients.
-        "ToneCurve/ToneCurveKernels.metal",
-        "ColorMixer/ColorMixerKernels.metal",
-        "ColorAdjustmentKernels/manifest.json",
-      ],
-      resources: [
-        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-ios.metallib"),
-        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-simulator.metallib"),
-        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-macos.metallib"),
-        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-catalyst.metallib"),
+        "BrushStampFalloff.metalh"
+      ]
+    ),
+    // General Core Image kernels require different Metal flags from the
+    // stitchable and live brush shaders in BrightroomParametric.
+    .target(
+      name: "BrightroomColorAdjustmentKernels",
+      plugins: [
+        .plugin(name: "BuildColorAdjustmentKernels")
       ]
     ),
     .target(
@@ -55,6 +53,10 @@ let package = Package(
     .testTarget(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
+    ),
+    .plugin(
+      name: "BuildColorAdjustmentKernels",
+      capability: .buildTool()
     ),
   ],
   swiftLanguageModes: [.v6]
