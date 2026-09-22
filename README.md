@@ -3,7 +3,17 @@
 
 Build a photo editor with the included Photos-style UI, compose your own editing interface, or use the rendering engine on its own. Brightroom keeps edits as parameters, so you can change adjustments, revisit crops, and render again from the original image.
 
-This README describes **Brightroom 5**.
+![Image 1][image-1]
+![Image 2][image-2]
+![Image 4][image-4]
+![Image 3][image-3]
+![Image 5][image-5]
+
+[image-1]: https://github.com/user-attachments/assets/50309ba2-e44d-425c-b243-2d8552097049
+[image-2]: https://github.com/user-attachments/assets/82bf8e6c-eed9-47f9-b934-ca3cd9285da6
+[image-3]: https://github.com/user-attachments/assets/c6295d7c-c17e-40d5-a426-2894a7729897
+[image-4]: https://github.com/user-attachments/assets/3cc8106e-b3cd-4de6-97e5-74cd239e54ed
+[image-5]: https://github.com/user-attachments/assets/0bde0caa-d460-4060-af31-b2749c3b8505
 
 ## Features
 
@@ -180,17 +190,6 @@ xcodebuild \
   -destination 'generic/platform=iOS Simulator' \
   build
 ```
-
-<details>
-<summary>Demos from earlier releases</summary>
-
-These recordings show earlier versions of Brightroom. Run the demo apps above to explore the current UI.
-
-| Image Editor | Crop and Rotate | Face Detection | Masking |
-| --- | --- | --- | --- |
-| <img width="200" alt="Image editor demo" src="https://user-images.githubusercontent.com/1888355/112865486-c9154880-90f3-11eb-89eb-bc55f924f517.gif" /> | <img width="200" alt="Crop and rotate demo" src="https://github.com/FluidGroup/Brightroom/assets/1888355/df14adc2-97fc-465b-8919-7727c9bae8bd" /> | <img width="200" alt="Face detection demo" src="https://user-images.githubusercontent.com/1888355/112720303-cde5cb00-8f40-11eb-941f-c134368b87c5.gif" /> | <img width="200" alt="Masking demo" src="https://user-images.githubusercontent.com/1888355/112927084-6487d700-914f-11eb-86a5-28f9373285e6.gif" /> |
-
-</details>
 
 ## Further Reading
 
