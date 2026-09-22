@@ -19,12 +19,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+import BrightroomEngine
+import BrightroomParametric
 import CoreImage
 import SwiftUI
 import UIKit
-
-import BrightroomEngine
-import BrightroomParametric
 
 struct PhotosCropContentView: View {
 
@@ -40,11 +39,13 @@ struct PhotosCropContentView: View {
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: PhotosCropEditingMode = .crop
   @State private var blurMaskingState = PhotosCropBlurMaskingState()
-  @State private var adjustmentParameter: PhotosCropAdjustmentParameter = .exposure
+  @State private var adjustmentParameter: PhotosCropAdjustmentParameter =
+    .exposure
   @State private var resetAction = SwiftUICropView.ResetAction()
   @State private var rotateAction = SwiftUICropView.RotateAction()
   @State private var applyAction = SwiftUICropView.ApplyAction()
-  @State private var adjustmentAngleCommitAction = SwiftUICropView.AdjustmentAngleCommitAction()
+  @State private var adjustmentAngleCommitAction =
+    SwiftUICropView.AdjustmentAngleCommitAction()
 
   init(
     editingModel: PhotosCropEditingModel,
@@ -61,7 +62,9 @@ struct PhotosCropContentView: View {
 
     switch options.aspectRatioOptions {
     case .fixed(let aspectRatio):
-      self._aspectRatioSelection = State(initialValue: .init(aspectRatio: aspectRatio))
+      self._aspectRatioSelection = State(
+        initialValue: .init(aspectRatio: aspectRatio)
+      )
     case .selectable:
       self._aspectRatioSelection = State(initialValue: .freeform)
     }
@@ -86,7 +89,9 @@ struct PhotosCropContentView: View {
             blurMaskingState: blurMaskingState,
             rotation: $rotation,
             adjustmentAngle: $adjustmentAngle,
-            croppingAspectRatio: croppingAspectRatioBinding(originalAspectRatio: originalAspectRatio),
+            croppingAspectRatio: croppingAspectRatioBinding(
+              originalAspectRatio: originalAspectRatio
+            ),
             resetAction: resetAction,
             rotateAction: rotateAction,
             applyAction: applyAction,
@@ -121,6 +126,13 @@ struct PhotosCropContentView: View {
           .frame(maxWidth: .infinity)
           .frame(height: bottomControlHeight)
         }
+      }
+      .safeAreaInset(edge: .bottom) {
+        PhotosCropModeToolbar(
+          selection: editingMode,
+          isLoaded: isLoaded,
+          onSelect: selectMode
+        )
       }
       .navigationTitle("")
       .navigationBarTitleDisplayMode(.inline)
@@ -236,7 +248,9 @@ struct PhotosCropContentView: View {
     editingModel.selectFilterPreset(preset)
   }
 
-  private func selectAdjustmentParameter(_ parameter: PhotosCropAdjustmentParameter) {
+  private func selectAdjustmentParameter(
+    _ parameter: PhotosCropAdjustmentParameter
+  ) {
     guard adjustmentParameter != parameter else {
       return
     }
@@ -257,7 +271,9 @@ struct PhotosCropContentView: View {
     onDone()
   }
 
-  private func croppingAspectRatioBinding(originalAspectRatio: PixelAspectRatio?) -> Binding<PixelAspectRatio?> {
+  private func croppingAspectRatioBinding(
+    originalAspectRatio: PixelAspectRatio?
+  ) -> Binding<PixelAspectRatio?> {
     Binding {
       aspectRatioSelection.aspectRatio(originalAspectRatio: originalAspectRatio)
     } set: { aspectRatio in
@@ -266,6 +282,84 @@ struct PhotosCropContentView: View {
         originalAspectRatio: originalAspectRatio
       )
     }
+  }
+
+  private struct PhotosCropModeToolbar: View {
+
+    let selection: PhotosCropEditingMode
+    let isLoaded: Bool
+    let onSelect: (PhotosCropEditingMode) -> Void
+
+    var body: some View {
+      let body = HStack(spacing: 12) {
+        ForEach(PhotosCropEditingMode.allCases) { mode in
+          _Button(
+            mode: mode,
+            isSelected: selection == mode,
+            isEnabled: isLoaded && mode.isAvailable
+          ) {
+            onSelect(mode)
+          }
+        }
+      }
+      .padding(.horizontal, 18)
+      .padding(.vertical, 8)
+
+      if #available(iOS 26, *) {
+        body
+          .glassEffect(.regular.interactive())
+      } else {
+        body
+      }
+    }
+
+    private struct _Button: View {
+
+      let mode: PhotosCropEditingMode
+      let isSelected: Bool
+      let isEnabled: Bool
+      let action: () -> Void
+
+      var body: some View {
+        Button(action: action) {
+          VStack(spacing: 3) {
+            ZStack(alignment: .top) {
+              Image(systemName: mode.systemImageName)
+                .font(.system(size: 18, weight: .regular))
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 28, height: 28)
+            }
+
+            Text(mode.title)
+              .font(
+                .system(size: 11, weight: isSelected ? .semibold : .regular)
+              )
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+          }
+          .foregroundStyle(foregroundStyle)
+          .frame(width: 48, height: 48)
+        }
+        .disabled(!isEnabled)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(mode.accessibilityLabel)
+        .accessibilityValue(isSelected ? "selected" : "not selected")
+        .accessibilityIdentifier(mode.accessibilityIdentifier)
+      }
+
+      private var foregroundStyle: Color {
+        guard isEnabled else {
+          return Color.white.opacity(0.22)
+        }
+
+        if isSelected {
+          return .white
+        } else {
+          return Color.white.opacity(0.55)
+        }
+      }
+    }
+
   }
 
 }
@@ -375,7 +469,9 @@ private struct PhotosCropCanvasHost: View {
     .adjustmentAngle(adjustmentAngle)
     .croppingAspectRatio(croppingAspectRatio)
     .featureFocus(featureFocus)
-    .maskingBrush(.init(diameter: .viewportPoints(blurMaskingState.brushDiameter)))
+    .maskingBrush(
+      .init(diameter: .viewportPoints(blurMaskingState.brushDiameter))
+    )
     .strokeSmoothing(.init())
     .registerResetAction(resetAction)
     .registerRotateAction(rotateAction)
@@ -436,7 +532,9 @@ private struct PhotosCropControlHost: View {
         PhotosCropFilterControl(
           presets: filterPresets,
           baseImage: filterPreviewBaseImage,
-          selectedPresetIdentifier: currentEffects?.first(of: PresetFeature.self)?.identifier,
+          selectedPresetIdentifier: currentEffects?.first(
+            of: PresetFeature.self
+          )?.identifier,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
           onSelectPreset: onSelectFilterPreset
@@ -445,7 +543,9 @@ private struct PhotosCropControlHost: View {
       case .adjustments:
         PhotosCropAdjustmentsControl(
           selection: adjustmentParameter,
-          sliderValue: currentEffects.map { adjustmentParameter.sliderValue(in: $0) } ?? 0,
+          sliderValue: currentEffects.map {
+            adjustmentParameter.sliderValue(in: $0)
+          } ?? 0,
           isLoaded: isLoaded,
           onSelectParameter: onSelectAdjustmentParameter,
           onSetValue: onSetAdjustmentValue
@@ -488,8 +588,8 @@ private struct PhotosCropToolbar: ToolbarContent {
     if #available(iOS 26.0, *) {
       ToolbarSpacer(.fixed, placement: .topBarLeading)
     }
-    
-    ToolbarItem(placement: .topBarLeading) {      
+
+    ToolbarItem(placement: .topBarLeading) {
       switch mode {
       case .crop:
         PhotosCropToolbarIconButton(
@@ -508,7 +608,7 @@ private struct PhotosCropToolbar: ToolbarContent {
         EmptyView()
       }
     }
-    
+
     ToolbarItem(placement: .principal) {
       if hasCropChanges && mode == .crop {
         PhotosCropToolbarTextButton(
@@ -525,8 +625,8 @@ private struct PhotosCropToolbar: ToolbarContent {
           .accessibilityHidden(true)
       }
     }
-    
-    ToolbarItem(placement: .topBarTrailing) {      
+
+    ToolbarItem(placement: .topBarTrailing) {
       switch mode {
       case .crop:
         PhotosCropToolbarIconButton(
@@ -561,13 +661,6 @@ private struct PhotosCropToolbar: ToolbarContent {
       )
     }
 
-    ToolbarItem(placement: .bottomBar) {
-      PhotosCropModeToolbar(
-        selection: mode,
-        isLoaded: isLoaded,
-        onSelect: onSelectMode
-      )
-    }
   }
 }
 
@@ -586,7 +679,9 @@ private struct PhotosCropToolbarIconButton: View {
         .font(.system(size: 20, weight: .regular))
         .imageScale(.medium)
         .symbolRenderingMode(.monochrome)
-        .foregroundStyle(isHighlighted ? Color(uiColor: .systemYellow) : Color(white: 0.6))
+        .foregroundStyle(
+          isHighlighted ? Color(uiColor: .systemYellow) : Color(white: 0.6)
+        )
     }
     .disabled(!isEnabled)
     .accessibilityElement(children: .ignore)
@@ -642,80 +737,6 @@ private struct PhotosCropToolbarTextButton: View {
   }
 }
 
-private struct PhotosCropModeToolbar: View {
-
-  let selection: PhotosCropEditingMode
-  let isLoaded: Bool
-  let onSelect: (PhotosCropEditingMode) -> Void
-
-  var body: some View {
-    HStack(spacing: 18) {
-      ForEach(PhotosCropEditingMode.allCases) { mode in
-        PhotosCropModeToolbarButton(
-          mode: mode,
-          isSelected: selection == mode,
-          isEnabled: isLoaded && mode.isAvailable
-        ) {
-          onSelect(mode)
-        }
-      }
-    }
-    .frame(maxWidth: .infinity)
-  }
-}
-
-private struct PhotosCropModeToolbarButton: View {
-
-  let mode: PhotosCropEditingMode
-  let isSelected: Bool
-  let isEnabled: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      VStack(spacing: 3) {
-        ZStack(alignment: .top) {
-          Image(systemName: mode.systemImageName)
-            .font(.system(size: 18, weight: .regular))
-            .symbolRenderingMode(.monochrome)
-            .frame(width: 32, height: 22)
-
-          Image(systemName: "triangle.fill")
-            .font(.system(size: 5, weight: .bold))
-            .foregroundStyle(Color(uiColor: .systemYellow))
-            .rotationEffect(.degrees(180))
-            .offset(y: -7)
-            .opacity(isSelected ? 1 : 0)
-        }
-
-        Text(mode.title)
-          .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-          .lineLimit(1)
-          .minimumScaleFactor(0.75)
-      }
-      .foregroundStyle(foregroundStyle)
-      .frame(width: 60, height: 48)
-    }
-    .disabled(!isEnabled)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(mode.accessibilityLabel)
-    .accessibilityValue(isSelected ? "selected" : "not selected")
-    .accessibilityIdentifier(mode.accessibilityIdentifier)
-  }
-
-  private var foregroundStyle: Color {
-    guard isEnabled else {
-      return Color.white.opacity(0.22)
-    }
-
-    if isSelected {
-      return .white
-    } else {
-      return Color.white.opacity(0.55)
-    }
-  }
-}
-
 private struct PhotosCropBlurMaskingControl: View {
 
   let brushDiameter: CGFloat
@@ -742,10 +763,13 @@ private struct PhotosCropBlurMaskingControl: View {
         style: .photosCropBrushSizeSlider,
         transform: { $0.rounded() },
         hapticIdentity: { value in
-          Int(value.rounded()).isMultiple(of: 10) ? AnyHashable(Int(value.rounded())) : nil
+          Int(value.rounded()).isMultiple(of: 10)
+            ? AnyHashable(Int(value.rounded())) : nil
         },
         onHaptic: {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.35)
+          UIImpactFeedbackGenerator(style: .light).impactOccurred(
+            intensity: 0.35
+          )
         },
         topMarker: { _ in
           Color.clear
@@ -785,7 +809,10 @@ private struct PhotosCropBlurMaskingControl: View {
     Binding(
       get: {
         min(
-          max(Double(brushDiameter), PhotosCropBrushSizeMetrics.sizeRange.lowerBound),
+          max(
+            Double(brushDiameter),
+            PhotosCropBrushSizeMetrics.sizeRange.lowerBound
+          ),
           PhotosCropBrushSizeMetrics.sizeRange.upperBound
         )
       },
@@ -895,15 +922,26 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   func sliderValue(in effects: EffectPipeline) -> Double {
     let filterValue: Double
     switch self {
-    case .exposure: filterValue = effects.first(of: ExposureFeature.self)?.value ?? 0
-    case .brightness: filterValue = effects.first(of: BrightnessFeature.self)?.value ?? 0
-    case .contrast: filterValue = effects.first(of: ContrastFeature.self)?.value ?? 0
-    case .saturation: filterValue = effects.first(of: SaturationFeature.self)?.value ?? 0
-    case .temperature: filterValue = effects.first(of: TemperatureFeature.self)?.value ?? 0
-    case .highlights: filterValue = effects.first(of: HighlightsFeature.self)?.value ?? 0
-    case .shadows: filterValue = effects.first(of: ShadowsFeature.self)?.value ?? 0
-    case .blur: filterValue = effects.first(of: GaussianBlurFeature.self)?.editingStackFilterValue ?? 0
-    case .vignette: filterValue = effects.first(of: VignetteFeature.self)?.value ?? 0
+    case .exposure:
+      filterValue = effects.first(of: ExposureFeature.self)?.value ?? 0
+    case .brightness:
+      filterValue = effects.first(of: BrightnessFeature.self)?.value ?? 0
+    case .contrast:
+      filterValue = effects.first(of: ContrastFeature.self)?.value ?? 0
+    case .saturation:
+      filterValue = effects.first(of: SaturationFeature.self)?.value ?? 0
+    case .temperature:
+      filterValue = effects.first(of: TemperatureFeature.self)?.value ?? 0
+    case .highlights:
+      filterValue = effects.first(of: HighlightsFeature.self)?.value ?? 0
+    case .shadows:
+      filterValue = effects.first(of: ShadowsFeature.self)?.value ?? 0
+    case .blur:
+      filterValue =
+        effects.first(of: GaussianBlurFeature.self)?.editingStackFilterValue
+        ?? 0
+    case .vignette:
+      filterValue = effects.first(of: VignetteFeature.self)?.value ?? 0
     }
 
     guard maximumFilterValue != 0 else {
@@ -922,29 +960,77 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   /// removes the corresponding effect so untouched parameters stay absent
   /// from the edit.
   func apply(sliderValue: Double, to effects: inout EffectPipeline) {
-    let clamped = min(max(sliderValue, sliderRange.lowerBound), sliderRange.upperBound)
+    let clamped = min(
+      max(sliderValue, sliderRange.lowerBound),
+      sliderRange.upperBound
+    )
     let filterValue = clamped / 100 * maximumFilterValue
     let value: Double? = abs(clamped) < 0.5 ? nil : filterValue
 
     switch self {
     case .exposure:
-      upsert(value, into: &effects, make: { ExposureFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { ExposureFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .brightness:
-      upsert(value, into: &effects, make: { BrightnessFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { BrightnessFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .contrast:
-      upsert(value, into: &effects, make: { ContrastFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { ContrastFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .saturation:
-      upsert(value, into: &effects, make: { SaturationFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { SaturationFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .temperature:
-      upsert(value, into: &effects, make: { TemperatureFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { TemperatureFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .highlights:
-      upsert(value, into: &effects, make: { HighlightsFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { HighlightsFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .shadows:
-      upsert(value, into: &effects, make: { ShadowsFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { ShadowsFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     case .blur:
-      upsert(value, into: &effects, make: { GaussianBlurFeature(value: $0) }, update: { $0.radius = .editingStackFilterValue($1) })
+      upsert(
+        value,
+        into: &effects,
+        make: { GaussianBlurFeature(value: $0) },
+        update: { $0.radius = .editingStackFilterValue($1) }
+      )
     case .vignette:
-      upsert(value, into: &effects, make: { VignetteFeature(value: $0) }, update: { $0.value = $1 })
+      upsert(
+        value,
+        into: &effects,
+        make: { VignetteFeature(value: $0) },
+        update: { $0.value = $1 }
+      )
     }
   }
 
@@ -966,7 +1052,10 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
       update(&existing, value)
       effects.set(existing)
     } else {
-      effects.set(make(value), insertionIndex: PhotosCropEffectOrder.insertionIndex(for: T.self))
+      effects.set(
+        make(value),
+        insertionIndex: PhotosCropEffectOrder.insertionIndex(for: T.self)
+      )
     }
   }
 }
@@ -1011,7 +1100,7 @@ enum PhotosCropEffectOrder {
   }
 }
 
-private extension GaussianBlurFeature {
+extension GaussianBlurFeature {
 
   /// The PhotosCrop adjustment-slider value when this blur was authored by the
   /// global Adjust tool.
@@ -1019,9 +1108,9 @@ private extension GaussianBlurFeature {
   /// Absolute-radius blurs do not have enough context here to map back onto a
   /// source-relative slider value, so the PhotosCrop control treats them as
   /// neutral and preserves them unless the user edits Blur.
-  var editingStackFilterValue: Double? {
+  fileprivate var editingStackFilterValue: Double? {
     switch radius {
-    case let .editingStackFilterValue(value):
+    case .editingStackFilterValue(let value):
       return value
     case .absolute:
       return nil
@@ -1138,7 +1227,10 @@ private struct PhotosCropFilterChip: View {
           // would have no contrast against the image.
           RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2.5)
-            .shadow(color: Color.black.opacity(isSelected ? 0.55 : 0), radius: 2)
+            .shadow(
+              color: Color.black.opacity(isSelected ? 0.55 : 0),
+              radius: 2
+            )
             .opacity(isSelected ? 1 : 0)
         }
         .animation(.easeInOut(duration: 0.2), value: image != nil)
@@ -1213,7 +1305,10 @@ private struct PhotosCropAdjustmentsControl: View {
       BrightroomSteppedSlider(
         value: valueBinding,
         range: selection.sliderRange,
-        stepCount: Int((selection.sliderRange.upperBound - selection.sliderRange.lowerBound) / 4),
+        stepCount: Int(
+          (selection.sliderRange.upperBound - selection.sliderRange.lowerBound)
+            / 4
+        ),
         style: .photosCropAdjustmentSlider,
         resetValue: 0,
         snapsToTicksOnEditingEnd: false,
@@ -1223,7 +1318,9 @@ private struct PhotosCropAdjustmentsControl: View {
           return step.isMultiple(of: 25) ? AnyHashable(step) : nil
         },
         onHaptic: {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.35)
+          UIImpactFeedbackGenerator(style: .light).impactOccurred(
+            intensity: 0.35
+          )
         },
         topMarker: { context in
           Circle()
@@ -1326,7 +1423,10 @@ private struct PhotosCropAdjustmentControl: View {
         .transition(.opacity)
       }
     }
-    .animation(.spring(response: 0.35, dampingFraction: 1), value: isSelectingAspectRatio)
+    .animation(
+      .spring(response: 0.35, dampingFraction: 1),
+      value: isSelectingAspectRatio
+    )
   }
 }
 
@@ -1346,7 +1446,10 @@ private struct PhotosCropRotationSlider: View {
       resetValue: 0,
       snapsToTicksOnEditingEnd: false,
       transform: { source in
-        if (-PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics.neutralDeadZoneDegrees).contains(source) {
+        if (-PhotosCropRotationSliderMetrics
+          .neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics
+          .neutralDeadZoneDegrees).contains(source)
+        {
           return 0
         }
 
@@ -1399,37 +1502,40 @@ private enum PhotosCropRotationSliderMetrics {
   static let neutralDeadZoneDegrees: Double = 0.5
 }
 
-private extension BrightroomSteppedSliderStyle {
-  static let photosCropRotationSlider = BrightroomSteppedSliderStyle(
-    tickWidth: 2,
-    tickSpacing: 4,
-    tickHeight: 10,
-    activeTickWidth: 3,
-    activeTickHeight: 18,
-    majorTickInterval: 5
-  )
+extension BrightroomSteppedSliderStyle {
+  fileprivate static let photosCropRotationSlider =
+    BrightroomSteppedSliderStyle(
+      tickWidth: 2,
+      tickSpacing: 4,
+      tickHeight: 10,
+      activeTickWidth: 3,
+      activeTickHeight: 18,
+      majorTickInterval: 5
+    )
 
-  static let photosCropAdjustmentSlider = BrightroomSteppedSliderStyle(
-    tickWidth: 2,
-    tickSpacing: 4,
-    tickHeight: 10,
-    activeTickWidth: 3,
-    activeTickHeight: 18,
-    majorTickInterval: 5
-  )
+  fileprivate static let photosCropAdjustmentSlider =
+    BrightroomSteppedSliderStyle(
+      tickWidth: 2,
+      tickSpacing: 4,
+      tickHeight: 10,
+      activeTickWidth: 3,
+      activeTickHeight: 18,
+      majorTickInterval: 5
+    )
 
-  static let photosCropBrushSizeSlider = BrightroomSteppedSliderStyle(
-    tickWidth: 2,
-    tickSpacing: 4,
-    tickHeight: 10,
-    activeTickWidth: 3,
-    activeTickHeight: 18,
-    majorTickInterval: 8
-  )
+  fileprivate static let photosCropBrushSizeSlider =
+    BrightroomSteppedSliderStyle(
+      tickWidth: 2,
+      tickSpacing: 4,
+      tickHeight: 10,
+      activeTickWidth: 3,
+      activeTickHeight: 18,
+      majorTickInterval: 8
+    )
 }
 
-private extension BrightroomSteppedSliderTickContext {
-  var isZero: Bool {
+extension BrightroomSteppedSliderTickContext {
+  fileprivate var isZero: Bool {
     abs(value) < 0.000_001
   }
 }
@@ -1468,7 +1574,8 @@ private enum PhotosCropAspectRatioSelection: Equatable {
     }
   }
 
-  func aspectRatio(originalAspectRatio: PixelAspectRatio?) -> PixelAspectRatio? {
+  func aspectRatio(originalAspectRatio: PixelAspectRatio?) -> PixelAspectRatio?
+  {
     switch self {
     case .freeform:
       return nil
@@ -1479,7 +1586,9 @@ private enum PhotosCropAspectRatioSelection: Equatable {
     }
   }
 
-  func direction(originalAspectRatio: PixelAspectRatio?) -> PhotosCropAspectRatioDirection? {
+  func direction(originalAspectRatio: PixelAspectRatio?)
+    -> PhotosCropAspectRatioDirection?
+  {
     switch self {
     case .freeform:
       return nil
@@ -1508,8 +1617,13 @@ private enum PhotosCropAspectRatioSelection: Equatable {
     }
   }
 
-  mutating func sync(aspectRatio: PixelAspectRatio?, originalAspectRatio: PixelAspectRatio?) {
-    guard self.aspectRatio(originalAspectRatio: originalAspectRatio) != aspectRatio else {
+  mutating func sync(
+    aspectRatio: PixelAspectRatio?,
+    originalAspectRatio: PixelAspectRatio?
+  ) {
+    guard
+      self.aspectRatio(originalAspectRatio: originalAspectRatio) != aspectRatio
+    else {
       return
     }
 
@@ -1521,7 +1635,9 @@ private enum PhotosCropAspectRatioSelection: Equatable {
 
       let swappedOriginalAspectRatio = originalAspectRatio.swapped()
       if aspectRatio == swappedOriginalAspectRatio {
-        self = .original(PhotosCropAspectRatioDirection(swappedOriginalAspectRatio))
+        self = .original(
+          PhotosCropAspectRatioDirection(swappedOriginalAspectRatio)
+        )
         return
       }
     }
@@ -1589,12 +1705,15 @@ private struct PhotosCropAspectRatioPicker: View {
             let minimizedDisplayedRatio = displayedRatio._minimized()
 
             PhotosCropAspectRatioButton(
-              title: "\(Int(minimizedDisplayedRatio.width)):\(Int(minimizedDisplayedRatio.height))",
+              title:
+                "\(Int(minimizedDisplayedRatio.width)):\(Int(minimizedDisplayedRatio.height))",
               isSelected: selection.isRatio(minimizedDisplayedRatio)
             ) {
               onSelect(.ratio(minimizedDisplayedRatio))
             }
-            .accessibilityIdentifier("photos.crop.aspect.\(Int(minimizedDisplayedRatio.width))x\(Int(minimizedDisplayedRatio.height))")
+            .accessibilityIdentifier(
+              "photos.crop.aspect.\(Int(minimizedDisplayedRatio.width))x\(Int(minimizedDisplayedRatio.height))"
+            )
           }
         }
         .padding(.horizontal, 24)
@@ -1603,7 +1722,8 @@ private struct PhotosCropAspectRatioPicker: View {
   }
 
   private var selectedDirection: PhotosCropAspectRatioDirection {
-    selection.direction(originalAspectRatio: originalAspectRatio) ?? originalDirection
+    selection.direction(originalAspectRatio: originalAspectRatio)
+      ?? originalDirection
   }
 
   private var originalDirection: PhotosCropAspectRatioDirection {
@@ -1611,14 +1731,20 @@ private struct PhotosCropAspectRatioPicker: View {
   }
 
   private var canSelectDirection: Bool {
-    guard let selectedAspectRatio = selection.aspectRatio(originalAspectRatio: originalAspectRatio), selectedAspectRatio != .square else {
+    guard
+      let selectedAspectRatio = selection.aspectRatio(
+        originalAspectRatio: originalAspectRatio
+      ), selectedAspectRatio != .square
+    else {
       return false
     }
 
     return true
   }
 
-  private func displayedRatio(for horizontalRatio: PixelAspectRatio) -> PixelAspectRatio {
+  private func displayedRatio(for horizontalRatio: PixelAspectRatio)
+    -> PixelAspectRatio
+  {
     switch selectedDirection {
     case .horizontal:
       return horizontalRatio
@@ -1632,7 +1758,12 @@ private struct PhotosCropAspectRatioPicker: View {
       return
     }
 
-    onSelect(selection.withDirection(direction, originalAspectRatio: originalAspectRatio))
+    onSelect(
+      selection.withDirection(
+        direction,
+        originalAspectRatio: originalAspectRatio
+      )
+    )
   }
 
   private static let horizontalRectangleAspectRatios: [PixelAspectRatio] = [
@@ -1682,7 +1813,10 @@ private struct PhotosCropAspectRatioDirectionButton: View {
     } label: {
       ZStack {
         RoundedRectangle(cornerRadius: 4)
-          .fill(isSelected && isEnabled ? Color(white: 0.6) : Color.black.opacity(0.6))
+          .fill(
+            isSelected && isEnabled
+              ? Color(white: 0.6) : Color.black.opacity(0.6)
+          )
 
         RoundedRectangle(cornerRadius: 4)
           .stroke(Color(white: 0.6).opacity(isEnabled ? 1 : 0.3), lineWidth: 1)
@@ -1759,101 +1893,103 @@ private enum PhotosCropAspectRatioDirection {
 
 #if DEBUG
 
-#Preview("PhotosCrop Checkerboard") {
-  PhotosCropPreviewHost()
-}
+  #Preview("PhotosCrop Checkerboard") {
+    PhotosCropPreviewHost()
+  }
 
-#Preview("Toolbar Groups") {
+  #Preview("Toolbar Groups") {
 
-  NavigationStack {
-    Color.blue
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Hello") {
+    NavigationStack {
+      Color.blue
+        .toolbar {
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("Hello") {
 
+            }
+          }
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("Hello") {
+
+            }
           }
         }
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Hello") {
+    }
 
-          }
-        }
-      }
   }
 
-}
+  private struct PhotosCropPreviewHost: View {
 
-private struct PhotosCropPreviewHost: View {
-
-  private let editingModel = PhotosCropEditingModel(
-    editingStack: PhotosCropPreviewFixtures.makeEditingStack()
-  )
-
-  var body: some View {
-    SwiftUIPhotosCropView(
-      editingModel: editingModel,
-      onDone: {},
-      onCancel: {}
+    private let editingModel = PhotosCropEditingModel(
+      editingStack: PhotosCropPreviewFixtures.makeEditingStack()
     )
-  }
-}
 
-private enum PhotosCropPreviewFixtures {
-
-  static func makeEditingStack() -> EditingStack {
-    EditingStack(
-      imageProvider: .init(image: makeCheckerboardImage())
-    )
-  }
-
-  private static func makeCheckerboardImage() -> UIImage {
-    let size = CGSize(width: 1400, height: 900)
-    let cellSize: CGFloat = 100
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 1
-
-    return UIGraphicsImageRenderer(size: size, format: format).image { context in
-      let cgContext = context.cgContext
-      let canvasRect = CGRect(origin: .zero, size: size)
-      UIColor.systemBackground.setFill()
-      cgContext.fill(canvasRect)
-
-      let columnCount = Int(ceil(size.width / cellSize))
-      let rowCount = Int(ceil(size.height / cellSize))
-
-      for row in 0..<rowCount {
-        for column in 0..<columnCount {
-          let rect = CGRect(
-            x: CGFloat(column) * cellSize,
-            y: CGFloat(row) * cellSize,
-            width: cellSize,
-            height: cellSize
-          )
-          let color = (row + column).isMultiple(of: 2)
-            ? UIColor(white: 0.86, alpha: 1)
-            : UIColor(white: 0.98, alpha: 1)
-          color.setFill()
-          cgContext.fill(rect)
-        }
-      }
-
-      UIColor.black.withAlphaComponent(0.22).setStroke()
-      cgContext.setLineWidth(2)
-
-      for column in 0...columnCount {
-        let x = CGFloat(column) * cellSize
-        cgContext.move(to: CGPoint(x: x, y: 0))
-        cgContext.addLine(to: CGPoint(x: x, y: size.height))
-      }
-
-      for row in 0...rowCount {
-        let y = CGFloat(row) * cellSize
-        cgContext.move(to: CGPoint(x: 0, y: y))
-        cgContext.addLine(to: CGPoint(x: size.width, y: y))
-      }
-
-      cgContext.strokePath()
+    var body: some View {
+      SwiftUIPhotosCropView(
+        editingModel: editingModel,
+        onDone: {},
+        onCancel: {}
+      )
     }
   }
-}
+
+  private enum PhotosCropPreviewFixtures {
+
+    static func makeEditingStack() -> EditingStack {
+      EditingStack(
+        imageProvider: .init(image: makeCheckerboardImage())
+      )
+    }
+
+    private static func makeCheckerboardImage() -> UIImage {
+      let size = CGSize(width: 1400, height: 900)
+      let cellSize: CGFloat = 100
+      let format = UIGraphicsImageRendererFormat()
+      format.scale = 1
+
+      return UIGraphicsImageRenderer(size: size, format: format).image {
+        context in
+        let cgContext = context.cgContext
+        let canvasRect = CGRect(origin: .zero, size: size)
+        UIColor.systemBackground.setFill()
+        cgContext.fill(canvasRect)
+
+        let columnCount = Int(ceil(size.width / cellSize))
+        let rowCount = Int(ceil(size.height / cellSize))
+
+        for row in 0..<rowCount {
+          for column in 0..<columnCount {
+            let rect = CGRect(
+              x: CGFloat(column) * cellSize,
+              y: CGFloat(row) * cellSize,
+              width: cellSize,
+              height: cellSize
+            )
+            let color =
+              (row + column).isMultiple(of: 2)
+              ? UIColor(white: 0.86, alpha: 1)
+              : UIColor(white: 0.98, alpha: 1)
+            color.setFill()
+            cgContext.fill(rect)
+          }
+        }
+
+        UIColor.black.withAlphaComponent(0.22).setStroke()
+        cgContext.setLineWidth(2)
+
+        for column in 0...columnCount {
+          let x = CGFloat(column) * cellSize
+          cgContext.move(to: CGPoint(x: x, y: 0))
+          cgContext.addLine(to: CGPoint(x: x, y: size.height))
+        }
+
+        for row in 0...rowCount {
+          let y = CGFloat(row) * cellSize
+          cgContext.move(to: CGPoint(x: 0, y: y))
+          cgContext.addLine(to: CGPoint(x: size.width, y: y))
+        }
+
+        cgContext.strokePath()
+      }
+    }
+  }
 #endif
