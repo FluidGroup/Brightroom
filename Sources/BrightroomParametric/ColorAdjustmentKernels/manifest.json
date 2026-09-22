@@ -1,0 +1,24 @@
+{
+  "inputs": {
+    "Scripts/build-color-adjustment-kernels.py": "8a294f795e8ea32fefea4f7dfc662adf21e4e5128799fbe714a63d2382050b93",
+    "Sources/BrightroomParametric/ColorMixer/ColorMixerKernels.metal": "db52637558570984412d4f760a0735d281f343fa4df5cf286cbd489483d8d860",
+    "Sources/BrightroomParametric/ToneCurve/ToneCurveKernels.metal": "5cc622b6c73766b1e9c7942f030dfd16d28e4b5092d539c9edfac7d91008536b"
+  },
+  "outputs": {
+    "BrightroomColorAdjustments-catalyst.metallib": "cadd2d5e5d902d36d36c3e7bfae642c2b126cde1a50a739e8a17f803f5061e9b",
+    "BrightroomColorAdjustments-ios.metallib": "6959902ec8f54a011b0bb24e905a0b6d1e79d8ace3643e5cf4d20dbb83112fe7",
+    "BrightroomColorAdjustments-macos.metallib": "9f54a743cbd1034e79d13b03158661f778a18bf3cdcbada2c6afa60fd0a2e454",
+    "BrightroomColorAdjustments-simulator.metallib": "6d376a710009d6178595dcb17231e8dc46418b9f3a36865cb0c1f589454899db"
+  },
+  "schemaVersion": 1,
+  "targets": {
+    "catalyst": "air64-apple-ios17.0-macabi",
+    "ios": "air64-apple-ios17.0",
+    "macos": "air64-apple-macos14.0",
+    "simulator": "air64-apple-ios17.0-simulator"
+  },
+  "toolchain": {
+    "metal": "Apple metal version 32023.921 (metalfe-32023.921.6)\nTarget: air64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /private/var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.266.1.BNtTgB/Metal.xctoolchain/usr/metal/current/bin",
+    "xcode": "Xcode 27.0\nBuild version 27A266a"
+  }
+}

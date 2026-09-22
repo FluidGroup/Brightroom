@@ -22,7 +22,18 @@ let package = Package(
       exclude: [
         // Included by the compiled `.metal` sources; not a standalone package
         // input.
-        "BrushStampFalloff.metalh"
+        "BrushStampFalloff.metalh",
+        // These general Core Image kernels require -fcikernel. Their checked-in
+        // libraries avoid requiring Metal flags from SwiftPM or Tuist clients.
+        "ToneCurve/ToneCurveKernels.metal",
+        "ColorMixer/ColorMixerKernels.metal",
+        "ColorAdjustmentKernels/manifest.json",
+      ],
+      resources: [
+        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-ios.metallib"),
+        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-simulator.metallib"),
+        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-macos.metallib"),
+        .copy("ColorAdjustmentKernels/BrightroomColorAdjustments-catalyst.metallib"),
       ]
     ),
     .target(

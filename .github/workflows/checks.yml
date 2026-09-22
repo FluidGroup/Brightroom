@@ -40,6 +40,8 @@ jobs:
         with:
           xcode-version: "26.5"
       - uses: actions/checkout@v2
+      - name: Verify color adjustment kernel resources
+        run: python3 Scripts/build-color-adjustment-kernels.py --check
       - name: Test BrightroomParametric
         run: |
           set -o pipefail && xcodebuild \
