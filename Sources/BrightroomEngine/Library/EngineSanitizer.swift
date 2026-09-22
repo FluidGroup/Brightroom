@@ -25,7 +25,6 @@ import CoreGraphics
 public enum EngineRuntimeError: Swift.Error, Sendable {
   case failedToCreateResizedCGImage(sourceImage: CGImage, maxPixelSize: CGFloat)
   case failedToCreateCGContext(sourceImage: CGImage)
-  case failedToRenderCGImageForCrop(sourceImage: CGImage)
 }
 
 public struct EngineSanitizer: Sendable {

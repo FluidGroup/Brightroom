@@ -1,0 +1,87 @@
+appId: app.muukii.brightroom.SwiftUIDemo
+name: PixelEditor Composition
+tags:
+  - pixel-editor
+  - pixel-editor-composition
+---
+- launchApp:
+    clearState: true
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- swipe:
+    start: 50%, 82%
+    end: 50%, 24%
+    duration: 500
+- tapOn: "PixelEditor"
+- assertVisible: "Done"
+- assertVisible:
+    id: "swiftui.pixel.preset.normal"
+
+- tapOn:
+    id: "swiftui.pixel.preset.1"
+- tapOn: "Edit"
+- tapOn:
+    id: "swiftui.pixel.menu.adjustment"
+- assertVisible: "Adjust"
+- swipe:
+    start: 99%, 49%
+    end: 70%, 36%
+    duration: 500
+- tapOn: "Done"
+- assertVisible: "Edit"
+
+- tapOn:
+    id: "swiftui.pixel.menu.mask"
+- assertVisible: "Mask"
+- swipe:
+    start: 28%, 42%
+    end: 72%, 51%
+    duration: 600
+- tapOn: "Done"
+- assertVisible: "Edit"
+
+- tapOn:
+    id: "swiftui.pixel.menu.exposure"
+- assertVisible: "Brightness"
+- swipe:
+    start: 50%, 76%
+    end: 15%, 76%
+    duration: 800
+- tapOn: "Done"
+- assertVisible: "Edit"
+
+- tapOn: "Filter"
+- tapOn:
+    id: "swiftui.pixel.preset.2"
+- tapOn: "Edit"
+- tapOn:
+    id: "swiftui.pixel.menu.adjustment"
+- assertVisible: "Adjust"
+- swipe:
+    start: 1%, 49%
+    end: 30%, 36%
+    duration: 500
+- tapOn: "Done"
+- assertVisible: "Edit"
+
+- tapOn:
+    id: "swiftui.pixel.menu.mask"
+- assertVisible: "Mask"
+- swipe:
+    start: 72%, 43%
+    end: 28%, 51%
+    duration: 600
+- tapOn: "Done"
+- assertVisible: "Edit"
+
+- tapOn: "Done"
+- assertVisible: ".*size:.*"
+- assertNotVisible: "size: 5952, 3968"
+- assertVisible: "pixel-edit-preset: 2"
+- assertVisible: "pixel-edit-filters: preset"
+- assertVisible: "pixel-edit-crop: changed"
+- assertVisible: "pixel-edit-local-layers: 1"
+- assertVisible: "pixel-edit-local-strokes: 2"
+- assertVisible: "pixel-edit-local-stamps: [1-9].*"
