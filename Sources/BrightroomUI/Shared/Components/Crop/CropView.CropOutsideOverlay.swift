@@ -23,6 +23,7 @@ extension CropView {
     
   }
   
+  /// Blurs the area outside the crop, fading the blur out during guide or scroll adjustments.
   final class CropOutsideOverlayBlurredView: CropOutsideOverlayBase {
     
     private let effectView: UIVisualEffectView
@@ -50,27 +51,20 @@ extension CropView {
     }
     
     override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
-      
-      if kind == .guide {
-        
-        currentAnimator?.stopAnimation(true)
-        currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-          self?.effectView.alpha = 0
-        }&>.do {
-          $0.startAnimation()
-        }
+      currentAnimator?.stopAnimation(true)
+      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+        self?.effectView.alpha = 0
+      }&>.do {
+        $0.startAnimation()
       }
     }
-    
+
     override func didEndAdjustment(kind: CropView.AdjustmentKind) {
-      
-      if kind == .guide {
-        currentAnimator?.stopAnimation(true)
-        currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-          self?.effectView.alpha = 1
-        }&>.do {
-          $0.startAnimation(afterDelay: 1)
-        }
+      currentAnimator?.stopAnimation(true)
+      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+        self?.effectView.alpha = 1
+      }&>.do {
+        $0.startAnimation(afterDelay: 1)
       }
     }
   }
