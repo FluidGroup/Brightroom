@@ -32,29 +32,15 @@ Buy me a coffee or support me on [GitHub](https://github.com/sponsors/muukii?fre
 <img width=25% alt="yellow-button" src="https://user-images.githubusercontent.com/1888355/146226808-eb2e9ee0-c6bd-44a2-a330-3bbc8a6244cf.png">
 </a>
 
-## 🎉 v2 Now Available!
-There are a few important housekeeping notes for those coming from v1.
-
- - ⚒ Issues are managed in the [v2 Project](https://github.com/muukii/Brightroom/projects/2)
- - 📌 Pixel has been renamed **Brightroom**.
- - 📖 Detailed documentation is available [on Notion](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162).
- - 🎈 **Help Wanted**: CoreImage and Metal professionals!
- - ⭐️ If you're interested in v2, **star the project** to motivate us! 🤠
- - 🪐 Brightroom's state management is now powered by [Verge](https://github.com/VergeGroup/Verge).
-
 ## Installation
 
 **Swift Package Manager**
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/muukii/Brightroom.git", upToNextMajor: "2.2.0")
+    .package(url: "https://github.com/FluidGroup/Brightroom.git", from: "5.0.0")
 ]
 ```
-
-# Documentation
-
-View the [full documentation](https://www.notion.so/muukii/Brightroom-d4c59b37610a49de8a14131d24cd6162) on Notion.
 
 ## Built-In UI
 
