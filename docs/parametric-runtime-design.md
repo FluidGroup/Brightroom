@@ -124,6 +124,71 @@ the compiler retains tree-level validation (duplicate IDs, empty composites),
 local-adjustment compositing, and the mask-tree renderer (GPU brush stamps
 via `ParametricKernelRegistry`).
 
+## Tone Curve and Color Mixer
+
+`ToneCurveFeature` and `ColorMixerFeature` are built-in, extent-preserving
+effects in `BrightroomParametric`. Their editable value types and hashable
+render identities are public; sampled plans, reference processors, caches,
+and Metal evaluation are implementation details. Editors can bind the values
+without owning a renderer or adopting BrightroomUI.
+
+```swift
+var curves = ToneCurveEditorValue.neutral
+curves.y.insertPoint(input: 0.5, output: 0.6)
+
+var mixer = ColorMixerAdjustment.neutral
+mixer.red.hue = 23
+mixer.red.saturation = -24
+
+let document = EditingDocument(mainTree: MainTree(features: [
+  .effect(ToneCurveFeature(value: curves)),
+  .effect(ColorMixerFeature(adjustment: mixer, algorithm: .oklch)),
+]))
+```
+
+The host chooses feature order and interprets the source encoding. Both effects
+expect extended-linear Display-P3 numbers, preserve premultiplied alpha and
+extended-range values, and return the input image exactly when neutral. Tone
+Curve uses the existing scene-linear stop shaper, with normalized 0.5 at 18%
+gray, and independent RGB curves followed by the authored Y luminance result.
+Color Mixer applies eight adjacent hue bands in OKLCh without gamut clipping.
+Changing their order or feeding unmanaged camera values is an explicit host
+policy, not an automatic input conversion performed by the features.
+
+`ColorMixerFeature.Algorithm` names the rendering semantics of the feature.
+Its only current case is `.oklch`; the `algorithm` parameter of
+`ColorMixerFeature(id:adjustment:algorithm:)` defaults to `.oklch`, so existing
+`ColorMixerFeature(adjustment:)` calls keep the same result. The algorithm is
+part of the feature, its compiled plan, feature equality, and render identity.
+`ColorMixerRenderIdentity(activeAdjustment:algorithm:)` has the same default;
+hosts choosing an algorithm must use that choice for both rendering and cache
+identity. This API does not add a second algorithm, change editor controls, or
+claim compatibility with Adobe Lightroom's Color Mixer.
+
+Curve render identities ignore point UUIDs and diagonal-only structure. Mixer
+render identities include the selected algorithm and the same normalized
+Float32 parameters as the kernel.
+The curve's one-entry plan and table caches use `OSAllocatedUnfairLock`, keeping
+iOS 17 / macOS 14 compatibility. Compiled kernels are loaded from the package
+resource bundle, independently of the host application's Metal library. The
+build system compiles the sources in `BrightroomColorAdjustmentKernels`; its
+separate target keeps the general Core Image compiler flags away from the
+existing brush shaders. See [Building the color adjustment kernels](color-adjustment-kernels.md)
+for SwiftPM and Tuist integration.
+
+The default document codec registers both feature types. Persistence stores
+authored parameters and feature identity, validates the payload, and rebuilds
+derived rendering state when decoding; sampled tables and GPU resources are
+not serialized. Default feature IDs are deterministic; a host placing multiple
+instances of the same effect in one tree must supply distinct IDs.
+
+Color Mixer uses feature `schemaVersion` 2, which stores the selected algorithm
+as an identifier (`"oklch"`) alongside the authored adjustment. Version 1
+documents predate algorithm selection and migrate to `.oklch` when decoded.
+Unsupported algorithm identifiers are rejected instead of silently changing
+the document's rendering semantics. Decoding reconstructs the plan from the
+stored adjustment and selected algorithm.
+
 ## What this deletes
 
 - `JSONValue`, `FeatureNode`, `FeatureDocument`, `FeatureRegistry`,

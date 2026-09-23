@@ -171,6 +171,8 @@ public struct ParametricFeatureTypeRegistry: Sendable {
     registry.register(ContrastFeature.self)
     registry.register(SaturationFeature.self)
     registry.register(ExposureFeature.self)
+    registry.register(ToneCurveFeature.self)
+    registry.register(ColorMixerFeature.self)
     registry.register(HighlightsFeature.self)
     registry.register(ShadowsFeature.self)
     registry.register(HighlightShadowTintFeature.self)
