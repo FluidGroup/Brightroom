@@ -7,146 +7,8 @@ import Testing
 
 struct ParametricFeatureTreeTests {
 
-  @Test func documentCodableRoundTrip() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "crop-a"),
-              cropRect: CGRect(x: 4, y: 5, width: 30, height: 20)
-            )
-          ),
-          .localAdjustment(
-            LocalAdjustmentFeature(
-              id: FeatureID(rawValue: "local-a"),
-              maskTree: MaskTree(
-                root: .feather(
-                  MaskFeather(
-                    id: FeatureID(rawValue: "feather-a"),
-                    input: .brush(
-                      BrushMask(
-                        id: FeatureID(rawValue: "mask-a"),
-                        strokes: [
-                          BrushMaskStroke(
-                            stamps: [CGPoint(x: 10, y: 8)],
-                            brush: BrushMaskBrush(diameter: 12, hardness: 0.5, opacity: 0.75)
-                          ),
-                        ]
-                      )
-                    ),
-                    radius: 2
-                  )
-                )
-              ),
-              effectPipeline: EffectPipeline(
-                effects: [
-                  BrightnessFeature(id: FeatureID(rawValue: "brightness-a"), value: 0.1),
-                  GaussianBlurFeature(id: FeatureID(rawValue: "blur-a"), radius: 3),
-                ]
-              )
-            )
-          ),
-          .effect(
-            ExposureFeature(id: FeatureID(rawValue: "exposure-a"), value: 0.25)
-          ),
-          .effect(ContrastFeature(id: FeatureID(rawValue: "contrast-a"), value: 0.08)),
-          .effect(SaturationFeature(id: FeatureID(rawValue: "saturation-a"), value: 0.12)),
-          .effect(HighlightsFeature(id: FeatureID(rawValue: "highlights-a"), value: 0.2)),
-          .effect(ShadowsFeature(id: FeatureID(rawValue: "shadows-a"), value: 0.15)),
-          .effect(
-            HighlightShadowTintFeature(
-              id: FeatureID(rawValue: "highlight-shadow-tint-a"),
-              highlightColor: ParametricRGBAColor(red: 1, green: 0.2, blue: 0.1, alpha: 0.05),
-              shadowColor: ParametricRGBAColor(red: 0.1, green: 0.2, blue: 1, alpha: 0.04)
-            )
-          ),
-          .effect(
-            TemperatureFeature(
-              id: FeatureID(rawValue: "temperature-a"),
-              value: 450,
-              tint: -18
-            )
-          ),
-          .effect(SharpenFeature(id: FeatureID(rawValue: "sharpen-a"), sharpness: 0.2, radius: 4)),
-          .effect(UnsharpMaskFeature(id: FeatureID(rawValue: "unsharp-a"), intensity: 0.1, radius: 0.25)),
-          .effect(VignetteFeature(id: FeatureID(rawValue: "vignette-a"), value: 0.35)),
-          .effect(FadeFeature(id: FeatureID(rawValue: "fade-a"), intensity: 0.05)),
-        ]
-      )
-    )
-
-    let codec = ParametricDocumentCodec()
-    let data = try codec.encode(document)
-    let decoded = try codec.decode(data)
-
-    #expect(decoded == document)
-  }
-
-  @Test func codecRoundTripMatchesOriginalDocumentRendering() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "node-crop"),
-              cropRect: CGRect(x: 4, y: 3, width: 36, height: 24)
-            )
-          ),
-          .localAdjustment(
-            LocalAdjustmentFeature(
-              id: FeatureID(rawValue: "node-local"),
-              maskTree: MaskTree(
-                root: .feather(
-                  MaskFeather(
-                    id: FeatureID(rawValue: "node-feather"),
-                    input: .brush(
-                      BrushMask(
-                        id: FeatureID(rawValue: "node-brush"),
-                        strokes: [
-                          BrushMaskStroke(
-                            stamps: [CGPoint(x: 16, y: 12)],
-                            brush: BrushMaskBrush(diameter: 14, hardness: 0.6, opacity: 0.8)
-                          ),
-                        ]
-                      )
-                    ),
-                    radius: 2
-                  )
-                )
-              ),
-              effectPipeline: EffectPipeline(
-                effects: [
-                  ExposureFeature(id: FeatureID(rawValue: "node-local-exposure"), value: 0.5),
-                ]
-              )
-            )
-          ),
-          .effect(BrightnessFeature(id: FeatureID(rawValue: "node-brightness"), value: 0.05)),
-        ]
-      )
-    )
-    let codec = ParametricDocumentCodec()
-    let data = try codec.encode(document)
-    let decoded = try codec.decode(data)
-    let input = CIImage.parametricColorPatchImage(
-      extent: CGRect(x: 0, y: 0, width: 48, height: 36)
-    )
-
-    let originalOutput = try Self.compiler.makeOutput(from: input, document: document)
-    let decodedOutput = try Self.compiler.makeOutput(from: input, document: decoded)
-
-    #expect(decoded == document)
-    try Self.assertImagesMatch(
-      originalOutput.image,
-      decodedOutput.image,
-      tolerance: 2
-    )
-  }
-
-  @Test func customRegisteredFeatureRendersLikeDefaultFeatures() throws {
-    var codec = ParametricDocumentCodec()
-    codec.register(TestRedBoostFeature.self)
+  @Test func customFeatureRendersLikeDefaultFeatures() throws {
+    // Host features need no registration or Codable conformance to render.
     let document = EditingDocument(
       mainTree: MainTree(
         features: [
@@ -158,7 +20,7 @@ struct ParametricFeatureTreeTests {
           ),
           .effect(
             BrightnessFeature(
-              id: FeatureID(rawValue: "registry-brightness"),
+              id: FeatureID(rawValue: "custom-feature-brightness"),
               value: 0.02
             )
           ),
@@ -186,174 +48,13 @@ struct ParametricFeatureTreeTests {
       )
       .cropped(to: input.extent)
 
-    let data = try codec.encode(document)
-    let decoded = try codec.decode(data)
-    let output = try FeatureGraphCompiler().makeOutput(from: input, document: decoded)
+    let output = try FeatureGraphCompiler().makeOutput(from: input, document: document)
 
     try Self.assertImagesMatch(
       expected,
       output.image,
       tolerance: 2
     )
-  }
-
-  @Test func codecRoundTripPreservesDocumentWithCustomRegisteredFeature() throws {
-    var codec = ParametricDocumentCodec()
-    codec.register(TestRedBoostFeature.self)
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestRedBoostFeature(
-              id: FeatureID(rawValue: "round-trip-red-boost"),
-              amount: 0.4
-            )
-          ),
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "round-trip-brightness"),
-              value: 0.03
-            )
-          ),
-        ]
-      )
-    )
-
-    let data = try codec.encode(document)
-    let decoded = try codec.decode(data)
-
-    #expect(decoded == document)
-  }
-
-  @Test func decodingUnregisteredFeatureTypeThrows() throws {
-    var registeringCodec = ParametricDocumentCodec()
-    registeringCodec.register(TestRedBoostFeature.self)
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestRedBoostFeature(
-              id: FeatureID(rawValue: "unregistered-red-boost"),
-              amount: 0.1
-            )
-          ),
-        ]
-      )
-    )
-    let data = try registeringCodec.encode(document)
-
-    let plainCodec = ParametricDocumentCodec()
-    #expect(
-      throws: ParametricDocumentCodecError.unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
-    ) {
-      try plainCodec.decode(data)
-    }
-  }
-
-  @Test func encodingUnregisteredFeatureTypeThrowsAtSaveTime() throws {
-    // A codec must refuse to write a document it cannot read back.
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestRedBoostFeature(
-              id: FeatureID(rawValue: "save-time-red-boost"),
-              amount: 0.1
-            )
-          ),
-        ]
-      )
-    )
-
-    let plainCodec = ParametricDocumentCodec()
-    #expect(
-      throws: ParametricDocumentCodecError.unregisteredFeatureType(TestRedBoostFeature.featureTypeKey)
-    ) {
-      try plainCodec.encode(document)
-    }
-  }
-
-  @Test func plainJSONCodingWithoutCodecThrowsMissingRegistry() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(BrightnessFeature(id: FeatureID(rawValue: "plain-brightness"), value: 0.1)),
-        ]
-      )
-    )
-
-    #expect(throws: ParametricDocumentCodecError.missingRegistry) {
-      try JSONEncoder().encode(document)
-    }
-
-    let codec = ParametricDocumentCodec()
-    let data = try codec.encode(document)
-    #expect(throws: ParametricDocumentCodecError.missingRegistry) {
-      try JSONDecoder().decode(EditingDocument.self, from: data)
-    }
-  }
-
-  @Test func schemaVersionMigrationDecodesOldPayload() throws {
-    // Write with the v1 shape under the shared key, then decode with the v2
-    // type whose decodeParameters converts the old payload.
-    var writingCodec = ParametricDocumentCodec()
-    writingCodec.register(TestMigratingFeatureV1.self)
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestMigratingFeatureV1(
-              id: FeatureID(rawValue: "migrating-feature"),
-              amount: 0.5
-            )
-          ),
-        ]
-      )
-    )
-    let data = try writingCodec.encode(document)
-
-    var readingCodec = ParametricDocumentCodec()
-    readingCodec.register(TestMigratingFeatureV2.self)
-    let decoded = try readingCodec.decode(data)
-
-    let firstFeature = try #require(decoded.mainTree.features.first)
-    guard case .effect(let effect) = firstFeature else {
-      Issue.record("expected the migrated v2 feature")
-      return
-    }
-    let migrated = try #require(effect as? TestMigratingFeatureV2, "expected the migrated v2 feature")
-    #expect(migrated.id == FeatureID(rawValue: "migrating-feature"))
-    #expect(migrated.strength == 0.5)
-  }
-
-  @Test func temperatureV1PayloadDecodesWithNeutralTint() throws {
-    var writingCodec = ParametricDocumentCodec()
-    writingCodec.register(TestTemperatureFeatureV1.self)
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestTemperatureFeatureV1(
-              id: FeatureID(rawValue: "legacy-temperature"),
-              value: 375
-            )
-          )
-        ]
-      )
-    )
-    let data = try writingCodec.encode(document)
-
-    let decoded = try ParametricDocumentCodec().decode(data)
-
-    let firstFeature = try #require(decoded.mainTree.features.first)
-    guard case .effect(let effect) = firstFeature else {
-      Issue.record("Expected the migrated Temperature feature.")
-      return
-    }
-    let temperature = try #require(effect as? TemperatureFeature)
-    #expect(temperature.id == FeatureID(rawValue: "legacy-temperature"))
-    #expect(temperature.value == 375)
-    #expect(temperature.tint == 0)
   }
 
   @Test func temperatureFeatureEvaluatesTintAxis() throws {
@@ -380,25 +81,6 @@ struct ParametricFeatureTreeTests {
 
     #expect(pixel.red > pixel.green)
     #expect(pixel.blue > pixel.green)
-  }
-
-  @Test func unsupportedDocumentFormatVersionThrows() throws {
-    let codec = ParametricDocumentCodec()
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(BrightnessFeature(id: FeatureID(rawValue: "format-brightness"), value: 0.1)),
-        ]
-      )
-    )
-    let data = try codec.encode(document)
-    let mutated = String(decoding: data, as: UTF8.self)
-      .replacingOccurrences(of: "\"formatVersion\":1", with: "\"formatVersion\":99")
-      .data(using: .utf8)!
-
-    #expect(throws: ParametricDocumentCodecError.unsupportedDocumentFormatVersion(99)) {
-      try codec.decode(mutated)
-    }
   }
 
   @Test func parametricImageRendererMatchesFeatureGraphCompiler() throws {
@@ -1129,9 +811,7 @@ struct ParametricFeatureTreeTests {
     var alpha: UInt8
   }
 
-  private struct TestRedBoostFeature: ImageEffectFeatureType, PersistableFeature {
-
-    static let featureTypeKey: FeatureTypeKey = "test.red-boost"
+  private struct TestRedBoostFeature: ImageEffectFeatureType {
 
     var id: FeatureID = .init()
     var isEnabled: Bool = true
@@ -1191,71 +871,6 @@ struct ParametricFeatureTreeTests {
 
   private enum TestPresentationTimeError: Error {
     case unexpectedTime(expected: CMTime, actual: CMTime)
-  }
-
-  /// The v1 shape of the migrating test feature: field named `amount`.
-  private struct TestMigratingFeatureV1: ImageEffectFeatureType, PersistableFeature {
-
-    static let featureTypeKey: FeatureTypeKey = "test.migrating"
-
-    var id: FeatureID = .init()
-    var isEnabled: Bool = true
-    var amount: Double
-
-    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-      image
-    }
-  }
-
-  /// The persisted shape used by TemperatureFeature before its tint axis was
-  /// added in schema version 2.
-  private struct TestTemperatureFeatureV1: ImageEffectFeatureType, PersistableFeature {
-
-    static let featureTypeKey = TemperatureFeature.featureTypeKey
-
-    var id: FeatureID = .init()
-    var isEnabled: Bool = true
-    var value: Double
-
-    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-      image
-    }
-  }
-
-  /// The v2 shape under the same key: field renamed to `strength`, with a
-  /// typed migration from the v1 payload.
-  private struct TestMigratingFeatureV2: ImageEffectFeatureType, PersistableFeature {
-
-    static let featureTypeKey: FeatureTypeKey = "test.migrating"
-    static let schemaVersion = 2
-
-    var id: FeatureID = .init()
-    var isEnabled: Bool = true
-    var strength: Double
-
-    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-      image
-    }
-
-    static func decodeParameters(from decoder: Decoder, version: Int) throws -> Self {
-      switch version {
-      case 2:
-        return try Self(from: decoder)
-      case 1:
-        struct V1: Decodable {
-          var id: FeatureID
-          var isEnabled: Bool
-          var amount: Double
-        }
-        let old = try V1(from: decoder)
-        return Self(id: old.id, isEnabled: old.isEnabled, strength: old.amount)
-      default:
-        throw ParametricDocumentCodecError.unsupportedSchemaVersion(
-          featureTypeKey,
-          version: version
-        )
-      }
-    }
   }
 
   private enum TestVideoAssetError: Error {

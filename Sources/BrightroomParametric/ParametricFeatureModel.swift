@@ -24,14 +24,14 @@ import Foundation
 
 /// A stable identifier for a parametric editing feature or mask node.
 ///
-/// Feature identifiers are stored in documents so debug views, UI selections,
-/// and future references can survive Codable round trips.
-public struct FeatureID: Codable, Equatable, Hashable, Sendable {
+/// Identifiers let validation, UI selection, mask outputs, and debug views
+/// refer to a node in a document. A host that stores edits keeps `rawValue`.
+public struct FeatureID: Equatable, Hashable, Sendable {
 
-  /// The serialized identifier value.
+  /// The identifier value.
   public var rawValue: String
 
-  /// Creates an identifier with the provided serialized value.
+  /// Creates an identifier with the provided value.
   public init(rawValue: String) {
     self.rawValue = rawValue
   }
@@ -45,9 +45,9 @@ public struct FeatureID: Codable, Equatable, Hashable, Sendable {
 /// A parametric operation that can appear in an editing document.
 ///
 /// Features are pure parameter values. Evaluation behavior is added by
-/// capability protocols (`ImageEffectFeatureType`, `DomainFeatureType`);
-/// persistence is added by `PersistableFeature`. The runtime document is not
-/// Codable by itself — serialization goes through `ParametricDocumentCodec`.
+/// capability protocols (`ImageEffectFeatureType`, `DomainFeatureType`).
+/// Brightroom does not define a storage format for features: a host that saves
+/// edits converts them to and from its own model through the public parameters.
 public protocol Feature: Equatable, Sendable {
 
   /// The stable identity of this feature.
@@ -149,7 +149,7 @@ extension MainFeature: Feature {
 /// Raw values are the signed degrees the engine uses (`EditingCrop.Rotation.angle`),
 /// so the sign convention is identical and host bridges map 1:1. This is a pure
 /// CoreGraphics/Foundation type with no SwiftUI dependency.
-public enum QuarterTurn: Int, Codable, Equatable, Sendable, CaseIterable {
+public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
 
   /// No rotation (0°).
   case zero = 0
@@ -176,7 +176,7 @@ public enum QuarterTurn: Int, Codable, Equatable, Sendable, CaseIterable {
 /// output of the first crop. The crop also carries the quarter-turn rotation and
 /// the free straightening angle, both applied about the crop-rect center, so the
 /// whole crop geometry is expressed as a single parametric feature.
-public struct CropFeature: Feature, Codable {
+public struct CropFeature: Feature {
 
   /// The stable identity of this crop.
   public var id: FeatureID
@@ -265,7 +265,7 @@ public struct PresetFeature: Feature {
 ///
 /// The feature stores cube data directly so rendering can stay in the Core Image
 /// graph without asking an `ImageSource` or bundle resource to materialize.
-public struct ColorCubeFeature: Feature, Codable {
+public struct ColorCubeFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -309,7 +309,7 @@ public struct ColorCubeFeature: Feature, Codable {
 }
 
 /// A brightness adjustment.
-public struct BrightnessFeature: Feature, Codable {
+public struct BrightnessFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -333,7 +333,7 @@ public struct BrightnessFeature: Feature, Codable {
 }
 
 /// A contrast adjustment.
-public struct ContrastFeature: Feature, Codable {
+public struct ContrastFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -357,7 +357,7 @@ public struct ContrastFeature: Feature, Codable {
 }
 
 /// A saturation adjustment.
-public struct SaturationFeature: Feature, Codable {
+public struct SaturationFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -381,7 +381,7 @@ public struct SaturationFeature: Feature, Codable {
 }
 
 /// An exposure adjustment.
-public struct ExposureFeature: Feature, Codable {
+public struct ExposureFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -405,7 +405,7 @@ public struct ExposureFeature: Feature, Codable {
 }
 
 /// A highlight recovery adjustment.
-public struct HighlightsFeature: Feature, Codable {
+public struct HighlightsFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -429,7 +429,7 @@ public struct HighlightsFeature: Feature, Codable {
 }
 
 /// A shadow lift adjustment.
-public struct ShadowsFeature: Feature, Codable {
+public struct ShadowsFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -452,8 +452,8 @@ public struct ShadowsFeature: Feature, Codable {
   }
 }
 
-/// An RGBA color value stored inside a parametric feature document.
-public struct ParametricRGBAColor: Codable, Equatable, Sendable {
+/// An RGBA color value used by parametric feature parameters.
+public struct ParametricRGBAColor: Equatable, Sendable {
 
   /// The red component in the Core Image working range.
   public var red: Double
@@ -489,7 +489,7 @@ public struct ParametricRGBAColor: Codable, Equatable, Sendable {
 ///   the alpha the caller chooses. This reproduces the legacy
 ///   `FilterHighlightShadowTint` exactly and must keep doing so — every stored
 ///   document renders against it.
-public struct HighlightShadowTintFeature: Feature, Codable {
+public struct HighlightShadowTintFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -527,7 +527,7 @@ public struct HighlightShadowTintFeature: Feature, Codable {
 /// point, while `tint` moves the same white point along the green–magenta axis.
 /// Keeping both values in one feature preserves the coupled semantics of
 /// `CITemperatureAndTint` instead of approximating them as sequential filters.
-public struct TemperatureFeature: Feature, Codable {
+public struct TemperatureFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -556,7 +556,7 @@ public struct TemperatureFeature: Feature, Codable {
 }
 
 /// A luminance sharpen adjustment.
-public struct SharpenFeature: Feature, Codable {
+public struct SharpenFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -587,7 +587,7 @@ public struct SharpenFeature: Feature, Codable {
 }
 
 /// A Gaussian blur radius value.
-public enum GaussianBlurRadius: Codable, Equatable, Sendable {
+public enum GaussianBlurRadius: Equatable, Sendable {
 
   /// A Core Image blur radius in image-domain points.
   case absolute(Double)
@@ -600,7 +600,7 @@ public enum GaussianBlurRadius: Codable, Equatable, Sendable {
 }
 
 /// A Gaussian blur that preserves the input extent.
-public struct GaussianBlurFeature: Feature, Codable {
+public struct GaussianBlurFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -635,7 +635,7 @@ public struct GaussianBlurFeature: Feature, Codable {
 }
 
 /// An unsharp mask adjustment.
-public struct UnsharpMaskFeature: Feature, Codable {
+public struct UnsharpMaskFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -666,7 +666,7 @@ public struct UnsharpMaskFeature: Feature, Codable {
 }
 
 /// A vignette adjustment.
-public struct VignetteFeature: Feature, Codable {
+public struct VignetteFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -690,7 +690,7 @@ public struct VignetteFeature: Feature, Codable {
 }
 
 /// A fade adjustment that overlays white.
-public struct FadeFeature: Feature, Codable {
+public struct FadeFeature: Feature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -779,7 +779,7 @@ public struct EffectPipeline: Equatable, Sendable {
 /// node: it keeps the `EffectPipeline` editing vocabulary as a single,
 /// identity-stable feature, while the compiler flattens it through
 /// `childFeatures` exactly like `PresetFeature`.
-public struct EffectPipelineFeature: Feature, Codable {
+public struct EffectPipelineFeature: Feature {
 
   /// The stable identity of this effect node.
   public var id: FeatureID
@@ -841,14 +841,14 @@ public struct LocalAdjustmentFeature: Feature {
 }
 
 /// A blend rule for local adjustment output.
-public enum LocalAdjustmentBlendMode: String, Codable, Equatable, Sendable {
+public enum LocalAdjustmentBlendMode: String, Equatable, Sendable {
 
   /// Uses the mask alpha to blend adjusted output over the base image.
   case alpha
 }
 
 /// A mask graph that produces alpha in the current feature domain.
-public struct MaskTree: Codable, Equatable, Sendable {
+public struct MaskTree: Equatable, Sendable {
 
   /// The root mask node.
   public var root: MaskNode
@@ -860,7 +860,7 @@ public struct MaskTree: Codable, Equatable, Sendable {
 }
 
 /// A node in an alpha-only mask tree.
-public indirect enum MaskNode: Codable, Equatable, Sendable {
+public indirect enum MaskNode: Equatable, Sendable {
 
   /// Produces alpha from brush strokes.
   case brush(BrushMask)
@@ -882,7 +882,7 @@ public indirect enum MaskNode: Codable, Equatable, Sendable {
 }
 
 /// A brush-authored mask.
-public struct BrushMask: Feature, Codable {
+public struct BrushMask: Feature {
 
   /// The stable identity of this mask leaf.
   public var id: FeatureID
@@ -906,7 +906,7 @@ public struct BrushMask: Feature, Codable {
 }
 
 /// A continuous brush stroke represented by sampled stamp centers.
-public struct BrushMaskStroke: Codable, Equatable, Sendable {
+public struct BrushMaskStroke: Equatable, Sendable {
 
   /// The stamp centers in current feature-domain coordinates.
   public var stamps: [CGPoint]
@@ -925,7 +925,7 @@ public struct BrushMaskStroke: Codable, Equatable, Sendable {
 }
 
 /// Brush parameters for a mask stroke.
-public struct BrushMaskBrush: Codable, Equatable, Sendable {
+public struct BrushMaskBrush: Equatable, Sendable {
 
   /// The brush diameter in current feature-domain units.
   public var diameter: Double
@@ -949,7 +949,7 @@ public struct BrushMaskBrush: Codable, Equatable, Sendable {
 }
 
 /// A mask feather operation.
-public struct MaskFeather: Codable, Equatable, Sendable {
+public struct MaskFeather: Equatable, Sendable {
 
   /// The stable identity of this operation.
   public var id: FeatureID
@@ -978,7 +978,7 @@ public struct MaskFeather: Codable, Equatable, Sendable {
 }
 
 /// A mask subtraction operation.
-public struct MaskSubtract: Codable, Equatable, Sendable {
+public struct MaskSubtract: Equatable, Sendable {
 
   /// The stable identity of this operation.
   public var id: FeatureID

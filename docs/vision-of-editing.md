@@ -42,7 +42,10 @@ only inside that mask.
 ## Parametric Stack
 
 The engine should treat editing Features as data. A Feature should be
-serializable, inspectable, reorderable when valid, and re-renderable.
+inspectable, reconstructible from its public parameters, reorderable when
+valid, and re-renderable. Storing Features is the host application's
+responsibility: Brightroom defines the values and their validation, not a file
+format.
 
 In Brightroom's parametric model, "Feature" is the name for each item in the
 stack. Crop, Mask, Adjust, Filter, and Geometry Correction are all Features.

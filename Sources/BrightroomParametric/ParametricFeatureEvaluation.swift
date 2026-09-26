@@ -38,7 +38,7 @@ public struct FeatureEvaluationContext: Sendable {
   /// Video renderers supply the exact AVFoundation composition time for each
   /// frame. Still-image renderers use `.zero` by default, which gives
   /// time-sensitive effects a deterministic sample without adding time to the
-  /// persisted feature parameters.
+  /// authored feature parameters.
   public let presentationTime: CMTime
 
   /// The image extent that diagonal-based radii (Gaussian blur, sharpen,

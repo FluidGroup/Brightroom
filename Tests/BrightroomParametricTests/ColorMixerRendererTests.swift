@@ -250,14 +250,20 @@ struct ColorMixerRendererTests {
   }
 
   @Test
-  func persistedFeatureRebuildsTheSameMetalRecipe() throws {
+  func featureRestoredFromStoredValuesRendersTheSameMetalRecipe() throws {
     let adjustment = ColorMixerAdjustment(
       red: .init(hue: -40, saturation: 35, luminance: 20),
       blue: .init(hue: 15, saturation: -20, luminance: -30)
     )
-    let feature = ColorMixerFeature(adjustment: adjustment, algorithm: .oklch)
-    let restored = try JSONDecoder().decode(
-      ColorMixerFeature.self, from: JSONEncoder().encode(feature)
+    let red = try #require(
+      ColorMixerBandAdjustment(validatingHue: -40, saturation: 35, luminance: 20)
+    )
+    let blue = try #require(
+      ColorMixerBandAdjustment(validatingHue: 15, saturation: -20, luminance: -30)
+    )
+    let restored = ColorMixerFeature(
+      adjustment: ColorMixerAdjustment(red: red, blue: blue),
+      algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: "oklch"))
     )
     let pixels: [SIMD4<Float>] = [SIMD4(0.7, 0.1, 0.05, 1), SIMD4(-0.1, 0.3, 1.2, 1)]
     let image = Self.makeImage(pixels)

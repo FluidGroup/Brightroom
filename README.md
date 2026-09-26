@@ -20,7 +20,7 @@ Build a photo editor with the included Photos-style UI, compose your own editing
 - **A ready-to-use photo editor.** Crop, rotate, straighten, apply filter presets, adjust color, and paint blur masks with `SwiftUIPhotosCropView`.
 - **Composable editing.** Use `SwiftUICropView` for a custom interface, with `EditingStack` managing the editing state, history, and rendering.
 - **Non-destructive processing.** Combine crops, effects, and masked local adjustments in an ordered feature tree.
-- **Custom effects and LUTs.** Add your own Core Image transforms or color-cube LUTs, and save edit parameters with `ParametricDocumentCodec`.
+- **Custom effects and LUTs.** Add your own Core Image transforms or color-cube LUTs. Edits are plain Swift values, so your app decides how to save them.
 - **Metal-backed previews and export.** Work with wide-color images and export to memory or directly to JPEG, HEIF, and PNG files.
 - **Local and remote images.** Load images from `UIImage`, data, file URLs, or remote URLs through `ImageProvider`.
 - **Rendering beyond the editor.** Use the parametric engine independently on iOS and macOS, including applying documents to video frames through AVFoundation compositions.
@@ -33,7 +33,7 @@ Choose the product that matches what you want to build:
 | --- | --- | --- |
 | `BrightroomUI` | Photos-style editor and reusable SwiftUI editing components | iOS 17+ |
 | `BrightroomEngine` | Image loading, editing state and history, and asynchronous rendering | iOS 17+ |
-| `BrightroomParametric` | Typed features, masks, document persistence, and Core Image rendering, with no third-party dependencies | iOS 17+, macOS 14+ |
+| `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies | iOS 17+, macOS 14+ |
 
 The Swift package requires **Swift 6.3 or later** and uses Swift 6 language mode. Use an Xcode toolchain that includes Swift 6.3 or later. The built-in UI uses UIKit internally; UIKit apps can present it through `UIHostingController`.
 
@@ -165,7 +165,7 @@ The returned `CIImage` is a lazy recipe. Use a `CIContext` to materialize it, or
 
 - Conform to `ImageEffectFeatureType` to add a custom effect.
 - Combine an `EffectPipeline` and a `MaskTree` in a `LocalAdjustmentFeature` to apply effects selectively.
-- Use `ParametricDocumentCodec` to save and restore documents. Custom persisted features also conform to `PersistableFeature` and must be registered with the codec.
+- Brightroom does not define a storage format for edits. To save them, convert features to your own `Codable` model and rebuild them through the public initializers; see [Saving parametric edits](docs/parametric-persistence.md).
 - Use `ParametricVideoRenderer` to create an `AVMutableVideoComposition` for playback or export through AVFoundation.
 
 ## Demo Apps
@@ -193,7 +193,8 @@ xcodebuild \
 
 ## Further Reading
 
-- [Parametric runtime design](docs/parametric-runtime-design.md) — the feature model, custom effects, and persistence design.
+- [Parametric runtime design](docs/parametric-runtime-design.md) — the feature model and custom effects.
+- [Saving parametric edits](docs/parametric-persistence.md) — storing edits in your app's own format, and migrating documents written by `ParametricDocumentCodec`.
 - [Editing engine vision](docs/vision-of-editing.md) — the longer-term direction for parametric editing.
 
 ## Support the Project

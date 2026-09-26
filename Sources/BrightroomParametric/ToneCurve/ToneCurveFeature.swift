@@ -13,18 +13,13 @@ import os
 /// RGB curves preserve the input luminance, then the Y curve sets the final
 /// luminance. Callers must evaluate the recipe in an extended-linear Display-P3
 /// working color space with floating-point precision.
-public nonisolated struct ToneCurveFeature: ImageEffectFeatureType, PersistableFeature {
-
-  /// The stable document type key for this effect.
-  public static let featureTypeKey: FeatureTypeKey = "brightroom.effect.tone-curve"
-
-  /// The parameter-envelope schema accepted by this implementation.
-  public static let schemaVersion = 1
+public nonisolated struct ToneCurveFeature: ImageEffectFeatureType {
 
   /// The interpretation of the stop shaper, YRGB composition, and sampled table.
   ///
-  /// Persisted values carry this version so a future interpretation cannot
-  /// silently change the pixels of an existing document.
+  /// The version is part of the render identity. A host that stores authored
+  /// curves can store it too, so a future interpretation cannot silently change
+  /// the pixels of an existing edit.
   public static let semanticVersion = 4
 
   /// Stable identity of the document feature node.
@@ -64,127 +59,6 @@ public nonisolated struct ToneCurveFeature: ImageEffectFeatureType, PersistableF
     lhs.id == rhs.id
       && lhs.isEnabled == rhs.isEnabled
       && lhs.renderPlan?.identity == rhs.renderPlan?.identity
-  }
-
-  /// Restores authored values and reconstructs the derived render plan.
-  public init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    let semanticVersion = try container.decode(Int.self, forKey: .semanticVersion)
-    guard semanticVersion == Self.semanticVersion else {
-      throw DecodingError.dataCorruptedError(
-        forKey: .semanticVersion,
-        in: container,
-        debugDescription: "Unsupported tone curve rendering semantic version: \(semanticVersion)."
-      )
-    }
-    self.init(
-      id: try container.decode(FeatureID.self, forKey: .id),
-      value: try container.decode(ValueParameters.self, forKey: .value).value
-    )
-  }
-
-  /// Saves authored values without persisting sampled tables or cached images.
-  public func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
-    try container.encode(id, forKey: .id)
-    try container.encode(ValueParameters(value), forKey: .value)
-    try container.encode(Self.semanticVersion, forKey: .semanticVersion)
-  }
-
-  /// The on-disk shape is private so serialization does not become a runtime
-  /// requirement of the editor's value model.
-  private struct ValueParameters: Codable {
-    let y: CurveParameters
-    let red: CurveParameters
-    let green: CurveParameters
-    let blue: CurveParameters
-
-    var value: ToneCurveEditorValue {
-      ToneCurveEditorValue(y: y.curve, red: red.curve, green: green.curve, blue: blue.curve)
-    }
-
-    init(_ value: ToneCurveEditorValue) {
-      y = CurveParameters(value.y)
-      red = CurveParameters(value.red)
-      green = CurveParameters(value.green)
-      blue = CurveParameters(value.blue)
-    }
-  }
-
-  /// Validates external coordinates before creating the model used by spline evaluation.
-  private struct CurveParameters: Codable {
-    let curve: ToneCurve
-
-    init(_ curve: ToneCurve) {
-      self.curve = curve
-    }
-
-    init(from decoder: Decoder) throws {
-      let container = try decoder.container(keyedBy: Keys.self)
-      let points = try container.decode([PointParameters].self, forKey: .points)
-      guard let curve = ToneCurve(validating: points.map(\.point)) else {
-        throw DecodingError.dataCorruptedError(
-          forKey: .points,
-          in: container,
-          debugDescription: "Tone curve points violate the authored curve invariants."
-        )
-      }
-      self.curve = curve
-    }
-
-    func encode(to encoder: Encoder) throws {
-      var container = encoder.container(keyedBy: Keys.self)
-      try container.encode(curve.points.map(PointParameters.init), forKey: .points)
-    }
-
-    private enum Keys: String, CodingKey {
-      case points
-    }
-  }
-
-  private struct PointParameters: Codable {
-    /// Mirrors stable editor identity without coupling the runtime enum to Codable.
-    enum Identity: Codable {
-      case blackEndpoint
-      case whiteEndpoint
-      case interior(UUID)
-    }
-
-    let id: Identity
-    let input: Double
-    let output: Double
-
-    var point: ToneCurve.Point {
-      let pointID: ToneCurve.Point.ID
-      switch id {
-      case .blackEndpoint:
-        pointID = .blackEndpoint
-      case .whiteEndpoint:
-        pointID = .whiteEndpoint
-      case .interior(let uuid):
-        pointID = .interior(uuid)
-      }
-      return ToneCurve.Point(id: pointID, input: input, output: output)
-    }
-
-    init(_ point: ToneCurve.Point) {
-      switch point.id {
-      case .blackEndpoint:
-        id = .blackEndpoint
-      case .whiteEndpoint:
-        id = .whiteEndpoint
-      case .interior(let uuid):
-        id = .interior(uuid)
-      }
-      input = point.input
-      output = point.output
-    }
-  }
-
-  private enum CodingKeys: String, CodingKey {
-    case id
-    case value
-    case semanticVersion
   }
 }
 

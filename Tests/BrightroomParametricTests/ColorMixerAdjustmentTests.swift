@@ -80,213 +80,77 @@ struct ColorMixerAdjustmentTests {
   }
 
   @Test
-  func documentRoundTripPreservesAuthoredValuesAndDerivedEnabledState() throws {
+  func validatingInitializerKeepsInRangeValuesExactly() throws {
+    let band = try #require(
+      ColorMixerBandAdjustment(validatingHue: -100, saturation: 100, luminance: 10.0.nextUp)
+    )
+
+    #expect(band.hue == -100)
+    #expect(band.saturation == 100)
+    #expect(band.luminance == 10.0.nextUp)
+  }
+
+  @Test(arguments: ["hue", "saturation", "luminance"], [101.0, (-100.0).nextDown])
+  func validatingInitializerRejectsOutOfRangeAxes(_ axis: String, _ value: Double) {
+    #expect(Self.validatedBand(replacing: axis, with: value) == nil)
+  }
+
+  @Test(arguments: [Double.nan, .infinity, -.infinity])
+  func validatingInitializerRejectsNonfiniteAxes(_ value: Double) {
+    for axis in ["hue", "saturation", "luminance"] {
+      #expect(Self.validatedBand(replacing: axis, with: value) == nil)
+    }
+  }
+
+  @Test
+  func restoredFeatureRebuildsAuthoredValuesAndDerivedEnabledState() throws {
     let active = ColorMixerFeature(
       id: FeatureID(rawValue: "active-mixer"),
       adjustment: .init(red: .init(hue: 10.0.nextUp, saturation: -45, luminance: 20)),
       algorithm: .oklch
     )
     let neutral = ColorMixerFeature(id: FeatureID(rawValue: "neutral-mixer"), adjustment: .neutral)
-    let document = EditingDocument(mainTree: .init(features: [.effect(active), .effect(neutral)]))
-    let codec = ParametricDocumentCodec()
 
-    let data = try codec.encode(document)
-    let restored = try codec.decode(data)
+    let restoredActive = try Self.restore(active)
+    let restoredNeutral = try Self.restore(neutral)
 
-    #expect(restored == document)
-    guard case .effect(let restoredEffect) = restored.mainTree.features[0],
-      case .effect(let restoredNeutralEffect) = restored.mainTree.features[1]
-    else {
-      Issue.record("Expected Color Mixer effects after decoding.")
-      return
-    }
-    let restoredActive = try #require(restoredEffect as? ColorMixerFeature)
-    let restoredNeutral = try #require(restoredNeutralEffect as? ColorMixerFeature)
+    #expect(restoredActive == active)
     #expect(restoredActive.adjustment == active.adjustment)
     #expect(restoredActive.algorithm == .oklch)
     #expect(restoredActive.isEnabled)
+    #expect(restoredNeutral == neutral)
     #expect(restoredNeutral.adjustment == .neutral)
-    #expect(restoredNeutral.algorithm == .oklch)
     #expect(restoredNeutral.isEnabled == false)
-
-    let encoded = String(decoding: data, as: UTF8.self)
-    #expect(encoded.contains("renderPlan") == false)
-    #expect(encoded.contains("isEnabled") == false)
-    #expect(encoded.contains("brightroom.effect.color-mixer"))
-    let envelope = try Self.firstEffectEnvelope(in: data)
-    let parameters = try #require(envelope["params"] as? [String: Any])
-    #expect(envelope["v"] as? Int == 2)
-    #expect(parameters["algorithm"] as? String == "oklch")
   }
 
-  @Test
-  func versionOneMigratesToOKLChAndResavesWithAnExplicitAlgorithm() throws {
-    // This is the old on-disk shape, independent of today's feature encoder.
-    let legacyParameters = Self.versionOneParameters()
-    let data = try Self.documentData(parameters: legacyParameters, version: 1)
-    let codec = ParametricDocumentCodec()
-    let restored = try codec.decode(data)
-    let first = try #require(restored.mainTree.features.first)
-    guard case .effect(let effect) = first else {
-      Issue.record("Expected a migrated Color Mixer effect.")
-      return
-    }
-    let mixer = try #require(effect as? ColorMixerFeature)
-    let expected = ColorMixerFeature(
-      id: .init(rawValue: "legacy-mixer"),
-      adjustment: .init(
-        red: .init(hue: 23, saturation: -24, luminance: 17),
-        magenta: .init(saturation: 5, luminance: -8)
-      ),
-      algorithm: .oklch
+  private static func validatedBand(replacing axis: String, with value: Double)
+    -> ColorMixerBandAdjustment?
+  {
+    ColorMixerBandAdjustment(
+      validatingHue: axis == "hue" ? value : 0,
+      saturation: axis == "saturation" ? value : 0,
+      luminance: axis == "luminance" ? value : 0
     )
-
-    #expect(mixer.id == expected.id)
-    #expect(mixer.adjustment == expected.adjustment)
-    #expect(mixer.algorithm == .oklch)
-    #expect(mixer.isEnabled)
-    #expect(mixer == expected)
-
-    let resaved = try codec.encode(restored)
-    let envelope = try Self.firstEffectEnvelope(in: resaved)
-    let parameters = try #require(envelope["params"] as? [String: Any])
-    #expect(envelope["v"] as? Int == 2)
-    #expect(parameters["algorithm"] as? String == "oklch")
-    #expect(try codec.decode(resaved) == restored)
   }
 
-  @Test(arguments: InvalidAlgorithm.allCases)
-  func versionTwoRequiresAKnownAlgorithm(_ invalid: InvalidAlgorithm) throws {
-    var parameters = Self.versionOneParameters()
-    switch invalid {
-    case .missing:
-      break
-    case .null:
-      parameters["algorithm"] = NSNull()
-    case .unknown:
-      parameters["algorithm"] = "unknown-algorithm"
-    }
-    let document = try Self.documentData(parameters: parameters, version: 2)
-    let feature = try JSONSerialization.data(withJSONObject: parameters)
-
-    #expect(throws: DecodingError.self) {
-      try ParametricDocumentCodec().decode(document)
-    }
-    #expect(throws: DecodingError.self) {
-      try JSONDecoder().decode(ColorMixerFeature.self, from: feature)
-    }
-  }
-
-  @Test(arguments: [3, 999])
-  func futureSchemaVersionsAreRejected(_ version: Int) throws {
-    var parameters = Self.versionOneParameters()
-    parameters["algorithm"] = "oklch"
-    let data = try Self.documentData(parameters: parameters, version: version)
-
-    #expect(
-      throws: ParametricDocumentCodecError.unsupportedSchemaVersion(
-        ColorMixerFeature.featureTypeKey, version: version
+  /// Rebuilds a feature from the scalar values and algorithm identifier a
+  /// host would store.
+  private static func restore(_ feature: ColorMixerFeature) throws -> ColorMixerFeature {
+    var adjustment = ColorMixerAdjustment.neutral
+    for band in ColorMixerBand.allCases {
+      let stored = feature.adjustment[band]
+      adjustment[band] = try #require(
+        ColorMixerBandAdjustment(
+          validatingHue: stored.hue,
+          saturation: stored.saturation,
+          luminance: stored.luminance
+        )
       )
-    ) {
-      try ParametricDocumentCodec().decode(data)
     }
-  }
-
-  @Test(arguments: ["hue", "saturation", "luminance"])
-  func decodingRejectsOutOfRangeAxes(_ axis: String) throws {
-    let data = try Self.encodedFeature(replacingAxis: axis, with: 101.0)
-    #expect(throws: DecodingError.self) {
-      try JSONDecoder().decode(ColorMixerFeature.self, from: data)
-    }
-  }
-
-  @Test(arguments: ["NaN", "Infinity", "-Infinity"])
-  func decodingRejectsNonfiniteAxes(_ value: String) throws {
-    let data = try Self.encodedFeature(replacingAxis: "hue", with: value)
-    let decoder = JSONDecoder()
-    decoder.nonConformingFloatDecodingStrategy = .convertFromString(
-      positiveInfinity: "Infinity", negativeInfinity: "-Infinity", nan: "NaN"
+    return ColorMixerFeature(
+      id: FeatureID(rawValue: feature.id.rawValue),
+      adjustment: adjustment,
+      algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: feature.algorithm.rawValue))
     )
-    #expect(throws: DecodingError.self) {
-      try decoder.decode(ColorMixerFeature.self, from: data)
-    }
   }
-
-  @Test
-  func decodingRequiresEveryNamedBand() throws {
-    let feature = ColorMixerFeature(adjustment: .neutral)
-    let data = try JSONEncoder().encode(feature)
-    var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-    try #require(object["algorithm"] as? String == "oklch")
-    var adjustment = try #require(object["adjustment"] as? [String: Any])
-    adjustment.removeValue(forKey: "magenta")
-    object["adjustment"] = adjustment
-    let incomplete = try JSONSerialization.data(withJSONObject: object)
-    #expect(throws: DecodingError.self) {
-      try JSONDecoder().decode(ColorMixerFeature.self, from: incomplete)
-    }
-  }
-
-  private static func encodedFeature(replacingAxis axis: String, with value: Any) throws -> Data {
-    let feature = ColorMixerFeature(adjustment: .neutral)
-    let data = try JSONEncoder().encode(feature)
-    var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-    try #require(object["algorithm"] as? String == "oklch")
-    var adjustment = try #require(object["adjustment"] as? [String: Any])
-    var red = try #require(adjustment["red"] as? [String: Any])
-    red[axis] = value
-    adjustment["red"] = red
-    object["adjustment"] = adjustment
-    return try JSONSerialization.data(withJSONObject: object)
-  }
-
-  /// The schema-v1 authored-value payload predating algorithm selection.
-  private static func versionOneParameters() -> [String: Any] {
-    [
-      "id": ["rawValue": "legacy-mixer"],
-      "adjustment": [
-        "red": ["hue": 23, "saturation": -24, "luminance": 17],
-        "orange": ["hue": 0, "saturation": 0, "luminance": 0],
-        "yellow": ["hue": 0, "saturation": 0, "luminance": 0],
-        "green": ["hue": 0, "saturation": 0, "luminance": 0],
-        "aqua": ["hue": 0, "saturation": 0, "luminance": 0],
-        "blue": ["hue": 0, "saturation": 0, "luminance": 0],
-        "purple": ["hue": 0, "saturation": 0, "luminance": 0],
-        "magenta": ["hue": 0, "saturation": 5, "luminance": -8],
-      ],
-    ]
-  }
-
-  private static func documentData(parameters: [String: Any], version: Int) throws -> Data {
-    try JSONSerialization.data(withJSONObject: [
-      "formatVersion": 1,
-      "mainTree": [
-        "features": [
-          [
-            "kind": "effect",
-            "feature": [
-              "type": "brightroom.effect.color-mixer",
-              "v": version,
-              "params": parameters,
-            ],
-          ]
-        ]
-      ],
-    ])
-  }
-
-  private static func firstEffectEnvelope(in data: Data) throws -> [String: Any] {
-    let document = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-    let tree = try #require(document["mainTree"] as? [String: Any])
-    let features = try #require(tree["features"] as? [[String: Any]])
-    let first = try #require(features.first)
-    return try #require(first["feature"] as? [String: Any])
-  }
-
-  enum InvalidAlgorithm: CaseIterable {
-    case missing
-    case null
-    case unknown
-  }
-
 }

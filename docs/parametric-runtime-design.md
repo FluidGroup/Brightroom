@@ -5,6 +5,11 @@
 Adopted 2026-06. This document fixes the data-structure design of
 `BrightroomParametric` after the removal of the JSON-backed registry model.
 
+Amended 2026-09: the library no longer owns persistence. `ParametricDocumentCodec`,
+`PersistableFeature`, and the library's `Codable` conformances were removed;
+hosts store edits in their own format (see
+[Saving parametric edits](parametric-persistence.md)).
+
 ## Principles
 
 1. **The runtime document is not a text document.** The in-memory editing
@@ -16,23 +21,18 @@ Adopted 2026-06. This document fixes the data-structure design of
    its evaluation is a protocol requirement (`apply(to:context:)`). Runtime
    dispatch is Swift protocol dispatch — no registry lookup, no string keys in
    the hot path.
-3. **Codable is the persistence boundary only.** Serialization goes through a
-   codec that owns a type registry. Registration follows the
-   `UICollectionView.register(_:forCellWithReuseIdentifier:)` shape: the host
-   registers `(type key → params type)` pairs; decode resolves keys to types
-   once and produces typed values.
-4. **No `JSONValue`.** Two consequences of the codec design make a generic
-   JSON tree representation unnecessary:
-   - *Unknown types are an error, not a payload.* Like an unregistered cell
-     identifier, an unregistered feature key throws — at encode time as well
-     as decode time, so a codec never writes a document it cannot read back.
-     There is no requirement to round-trip features the host cannot
-     evaluate. If that requirement ever appears, the
-     escape hatch is a `Data` blob of the nested encoding — bit-perfect and
-     still JSON-model-free.
-   - *Migration is typed decoding, not tree surgery.* A params type decodes
-     old schema versions by declaring the old shape as a private `Decodable`
-     struct and converting. Migrations are compiler-checked.
+3. **The host owns persistence.** The library defines feature values, their
+   validation, and their evaluation — not a storage format. Every authored
+   parameter is reachable and reconstructible through public API; where a
+   plain initializer clamps or repairs input, a validating initializer
+   rejects values the editor could not have produced. The host decides which
+   feature types it stores, how assets such as LUTs are referenced, and how
+   its own old formats migrate.
+4. **No `JSONValue`.** Nothing in the library represents features as a
+   generic JSON tree or a type-erased payload. A host that stores an open set
+   of features defines its own closed model — for example an enum of the
+   types it supports — so unknown types and migrations are compiler-checked
+   in the host.
 
 ## Runtime model
 
@@ -67,8 +67,7 @@ EditingDocument
 A custom filter is therefore:
 
 ```swift
-struct Posterize: ImageEffectFeatureType, PersistableFeature {
-  static let featureTypeKey: FeatureTypeKey = "myapp.posterize"  // persistence only
+struct Posterize: ImageEffectFeatureType {
   var id: FeatureID = .init()
   var isEnabled: Bool = true
   var levels: Double
@@ -79,41 +78,25 @@ struct Posterize: ImageEffectFeatureType, PersistableFeature {
 }
 ```
 
-No registration is required to *render* it (`PersistableFeature` and
-`featureTypeKey` exist for persistence; a render-only feature can conform to
-`ImageEffectFeatureType` alone). Registration is required only to persist.
+No registration is required to render it, and nothing is required to store
+it: the host that owns `Posterize` also owns its saved form.
 
 ## Persistence
 
-```swift
-public protocol PersistableFeature: Feature, Codable {
-  static var featureTypeKey: FeatureTypeKey { get }
-  static var schemaVersion: Int { get }
-  // Default implementations decode the current version via Codable.
-  static func decodeParameters(from decoder: Decoder, version: Int) throws -> Self
-}
+The host converts the features it supports to its own `Codable` model and
+rebuilds them through public initializers. The library contributes the
+pieces a host cannot write itself:
 
-var codec = ParametricDocumentCodec()
-codec.register(Posterize.self)                  // UICollectionView-style
-let data = try codec.encode(document)
-let document = try codec.decode(data)           // one pass, typed values out
-```
+- public access to every authored parameter;
+- validating reconstruction where the editing API clamps or repairs values
+  (`ToneCurve(validating:)`, `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`);
+- stable raw values for semantic choices (`ColorMixerFeature.Algorithm`) and
+  interpretation versions a host can store (`ToneCurveFeature.semanticVersion`).
 
-- The codec injects its type registry through `Decoder.userInfo`; feature
-  envelopes (`{type, v, params}`) decode their params **directly from the
-  document stream** into typed values via nested containers. There is no
-  intermediate representation.
-- Unregistered key on encode or decode → `unregisteredFeatureType(key)`.
-  Non-persistable feature on encode → `notPersistable(type)`. Coding without
-  a codec → `missingRegistry`.
-- The structural spine (document, tree, local adjustments, mask vocabulary)
-  carries a single `formatVersion`, separate from per-feature `v` values, as
-  the migration hook for everything between the envelopes.
-- Versioning: the envelope stores `v`; `decodeParameters(from:version:)`
-  switches on it. Old versions are private structs + conversions.
-- Large binary parameters (color-cube data) are accepted today via `Data`
-  (base64 in JSON); the planned evolution is codec-level attachment
-  references (manifest + blob store) so documents stay small.
+Derived render state — compiled plans, sampled tables, caches, GPU resources —
+is never part of an authored value. See
+[Saving parametric edits](parametric-persistence.md) for the recipe and for
+reading documents written by the removed `ParametricDocumentCodec`.
 
 ## Evaluation
 
@@ -176,18 +159,20 @@ separate target keeps the general Core Image compiler flags away from the
 existing brush shaders. See [Building the color adjustment kernels](color-adjustment-kernels.md)
 for SwiftPM and Tuist integration.
 
-The default document codec registers both feature types. Persistence stores
-authored parameters and feature identity, validates the payload, and rebuilds
-derived rendering state when decoding; sampled tables and GPU resources are
-not serialized. Default feature IDs are deterministic; a host placing multiple
-instances of the same effect in one tree must supply distinct IDs.
+A host restores both effects from authored values alone: Tone Curve points
+through `ToneCurve.Point(id:input:output:)` and `ToneCurve(validating:)`, which
+keep endpoint moves and interior point identities, and Mixer bands through
+`ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, which rejects
+non-finite and out-of-range values instead of clamping them. Constructing the
+feature rebuilds its plan; sampled tables and GPU resources are never stored.
+Default feature IDs are deterministic; a host placing multiple instances of
+the same effect in one tree must supply distinct IDs.
 
-Color Mixer uses feature `schemaVersion` 2, which stores the selected algorithm
-as an identifier (`"oklch"`) alongside the authored adjustment. Version 1
-documents predate algorithm selection and migrate to `.oklch` when decoded.
-Unsupported algorithm identifiers are rejected instead of silently changing
-the document's rendering semantics. Decoding reconstructs the plan from the
-stored adjustment and selected algorithm.
+`ColorMixerFeature.Algorithm` raw values (`"oklch"`) are stable identifiers a
+host can store. A host should reject an identifier it does not recognize
+instead of silently changing the edit's rendering semantics.
+`ToneCurveFeature.semanticVersion` is part of the curve's render identity; a
+host that stores it can detect a future change in interpretation.
 
 ## What this deletes
 
@@ -200,10 +185,9 @@ stored adjustment and selected algorithm.
 
 ## Known follow-ups
 
-- Open the mask vocabulary with the same protocol + codec pattern.
+- Open the mask vocabulary with the same protocol pattern.
 - Parameter metadata (`range`/neutral descriptors) on conformances for
   slider UIs.
-- Attachment store for large binary payloads.
 - Engine convergence: `EditingStack.Edit`'s features adopt this vocabulary,
   replacing `Filtering`/`AnyFilter`/`Filter*`/`Edit.Filters`; an
   `EditingCrop`-backed `DomainFeatureType` brings rotation/straighten into

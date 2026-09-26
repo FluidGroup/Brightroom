@@ -46,10 +46,24 @@ public nonisolated struct ColorMixerBandAdjustment: Equatable, Sendable {
   }
 
   /// Creates a band adjustment and clamps every axis to `-100...100`.
+  ///
+  /// Clamping does not reject NaN. Use ``init(validatingHue:saturation:luminance:)``
+  /// for values that did not come from an editing control.
   public init(hue: Double = 0, saturation: Double = 0, luminance: Double = 0) {
     self.hue = Self.clamped(hue)
     self.saturation = Self.clamped(saturation)
     self.luminance = Self.clamped(luminance)
+  }
+
+  /// Restores a band adjustment without clamping, for values the host stored.
+  ///
+  /// - Returns: `nil` when any axis is not finite or lies outside `-100...100`.
+  public init?(validatingHue hue: Double, saturation: Double, luminance: Double) {
+    // The finite closed range also excludes NaN and infinities.
+    guard [hue, saturation, luminance].allSatisfy({ Self.supportedRange.contains($0) }) else {
+      return nil
+    }
+    self.init(hue: hue, saturation: saturation, luminance: luminance)
   }
 
   private static func clamped(_ value: Double) -> Double {

@@ -102,7 +102,7 @@ enum ParametricImageGeometry {
   }
 }
 
-/// Creates Core Image color-cube filters from serialized cube data.
+/// Creates Core Image color-cube filters from packed cube data.
 enum ParametricColorCubeHelper {
 
   /// Creates a `CIColorCubeWithColorSpace` filter for a stored RGBA float cube.

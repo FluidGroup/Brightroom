@@ -33,8 +33,9 @@ open Dev/Brightroom.xcodeproj
    - Typed effect/mask/crop features (`ExposureFeature`, `GaussianBlurFeature`,
      `LocalAdjustmentFeature`, `MaskTree`, `EffectPipeline`, ...)
    - `FeatureGraphCompiler` / renderers compile features into Core Image graphs
-   - `ParametricDocumentCodec` is the persistence boundary (runtime stays a
-     Swift value tree; Codable is only for saving)
+   - Runtime stays a Swift value tree. The library owns no storage format:
+     apps convert features to their own `Codable` models and rebuild them
+     through public, validating initializers (`docs/parametric-persistence.md`)
 
 2. **BrightroomEngine** - Core image processing engine (depends on BrightroomParametric)
    - `Sources/BrightroomEngine/Core/` - Core data models (EditingStack, ImageProvider);
@@ -78,8 +79,9 @@ The project uses Verge (swift-state-graph) for state management. When modifying 
    `apply(to:context:)`; `validate()`/`childFeatures` have defaults)
 2. Implement the recipe as a `CIImage -> CIImage` transform (see
    `BuiltInFeatureRecipes.swift`)
-3. Conform to `PersistableFeature` and register it in `ParametricDocumentCodec`
-   if documents should persist it
+3. Keep every authored parameter reconstructible through public API; add a
+   validating initializer when a plain initializer clamps or repairs values.
+   Do not add `Codable` conformances or storage formats to the library
 4. Surface it in UI by upserting into the global-effects `EffectPipeline`
    (PhotosCrop orders effects via `PhotosCropEffectOrder`)
 5. Give programmatically-created features deterministic `FeatureID(rawValue:)`

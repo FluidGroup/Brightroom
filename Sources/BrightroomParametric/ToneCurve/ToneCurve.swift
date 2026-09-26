@@ -67,8 +67,11 @@ public struct ToneCurve: Equatable, Sendable {
       }
     }
 
-    /// Creates a model point for editing or validated persistence reconstruction.
-    init(
+    /// Creates a point for reconstructing a curve with ``ToneCurve/init(validating:)``.
+    ///
+    /// A point alone does not enforce curve invariants; the curve validates
+    /// bounds, identities, and spacing when the points are assembled.
+    public init(
       id: ID,
       input: Double,
       output: Double
@@ -115,10 +118,13 @@ public struct ToneCurve: Equatable, Sendable {
 
   /// Restores authored points without changing their coordinates or identities.
   ///
-  /// Saved data must preserve the same bounds, endpoint identities, and spacing
-  /// enforced by editing operations. Invalid data is rejected before it can
-  /// reach spline evaluation; decoding never repairs or silently clamps it.
-  init?(validating points: [Point]) {
+  /// Use this to rebuild a curve from values the host stored in its own format.
+  /// The points must satisfy the same bounds, endpoint identities, and spacing
+  /// enforced by editing operations. Invalid points are rejected before they
+  /// can reach spline evaluation; they are never repaired or silently clamped.
+  ///
+  /// - Returns: `nil` when the points are not a valid authored curve.
+  public init?(validating points: [Point]) {
     var identities = Set<Point.ID>()
     let hasValidPoints = points.allSatisfy { point in
       point.input.isFinite && point.output.isFinite
@@ -132,9 +138,9 @@ public struct ToneCurve: Equatable, Sendable {
     }
     // Arithmetic in a legal move can round a gap infinitesimally below 0.02.
     // Accept that round-off without altering the authored coordinates.
-    let minimumDecodedSpacing = Self.minimumInputSpacing - 8 * Double.ulpOfOne
+    let minimumRestoredSpacing = Self.minimumInputSpacing - 8 * Double.ulpOfOne
     let hasValidSpacing = zip(points, points.dropFirst()).allSatisfy { lower, upper in
-      upper.input - lower.input >= minimumDecodedSpacing
+      upper.input - lower.input >= minimumRestoredSpacing
     }
     guard (2...Self.maximumPointCount).contains(points.count),
       points.first?.id == .blackEndpoint,
