@@ -82,4 +82,32 @@ public struct ParametricImageRenderer: Sendable {
     )
     .image
   }
+
+  /// Evaluates a statically composed document from a source image.
+  ///
+  /// `sourceImage` is the chain entry: it is normalized to zero origin (per
+  /// the compiler options), and value-form radii resolve against its extent,
+  /// which keeps the radius a fixed fraction of the source regardless of
+  /// where crops sit in the document. Pass `radiusReferenceExtent` only when
+  /// `sourceImage` is NOT the chain entry (e.g. a zoomed viewport slice of a
+  /// larger source).
+  ///
+  /// An optional document is itself a feature and renders as identity when it
+  /// is `nil`; hold a non-optional document to catch a forgotten unwrap.
+  ///
+  /// `presentationTime` defaults to `.zero` for deterministic still-image
+  /// evaluation. Video paths pass the frame's exact presentation time.
+  public func makeImage(
+    from sourceImage: CIImage,
+    document: some Feature,
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
+  ) throws -> CIImage {
+    try compiler.makeImage(
+      from: sourceImage,
+      document: document,
+      radiusReferenceExtent: radiusReferenceExtent,
+      presentationTime: presentationTime
+    )
+  }
 }

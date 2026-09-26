@@ -94,7 +94,7 @@ extension CropFeature: DomainFeatureType {
 
 extension PresetFeature: ImageEffectFeatureType {
 
-  public var childFeatures: [any Feature] { effects }
+  public var childFeatures: [any IdentifiedFeature] { effects }
 
   public func validate() throws {
     for effect in effects {
@@ -113,7 +113,7 @@ extension PresetFeature: ImageEffectFeatureType {
 
 extension EffectPipelineFeature: ImageEffectFeatureType {
 
-  public var childFeatures: [any Feature] { pipeline.effects }
+  public var childFeatures: [any IdentifiedFeature] { pipeline.effects }
 
   public func validate() throws {
     for effect in pipeline.effects {

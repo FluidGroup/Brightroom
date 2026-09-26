@@ -42,13 +42,19 @@ public struct FeatureID: Equatable, Hashable, Sendable {
   }
 }
 
-/// A parametric operation that can appear in an editing document.
+/// A parametric operation that can appear in an identified editing document
+/// (`EditingDocument` / `MainTree`).
 ///
 /// Features are pure parameter values. Evaluation behavior is added by
 /// capability protocols (`ImageEffectFeatureType`, `DomainFeatureType`).
 /// Brightroom does not define a storage format for features: a host that saves
 /// edits converts them to and from its own model through the public parameters.
-public protocol Feature: Equatable, Sendable {
+///
+/// - Important: Transitional. This protocol belongs to the `MainTree` /
+///   `EditingDocument` model, which addresses features by `id` and toggles
+///   them with `isEnabled`. It is removed together with that model once
+///   documents are composed statically through `Feature` and `body`.
+public protocol IdentifiedFeature: Equatable, Sendable {
 
   /// The stable identity of this feature.
   var id: FeatureID { get }
@@ -119,7 +125,7 @@ public enum MainFeature: Equatable, Sendable {
   }
 }
 
-extension MainFeature: Feature {
+extension MainFeature: IdentifiedFeature {
 
   public var id: FeatureID {
     switch self {
@@ -176,7 +182,7 @@ public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
 /// output of the first crop. The crop also carries the quarter-turn rotation and
 /// the free straightening angle, both applied about the crop-rect center, so the
 /// whole crop geometry is expressed as a single parametric feature.
-public struct CropFeature: Feature {
+public struct CropFeature: IdentifiedFeature {
 
   /// The stable identity of this crop.
   public var id: FeatureID
@@ -220,7 +226,7 @@ public struct CropFeature: Feature {
 ///
 /// This is the parametric equivalent of a filter preset. It stores typed
 /// effect values so the document remains inspectable.
-public struct PresetFeature: Feature {
+public struct PresetFeature: IdentifiedFeature {
 
   /// The stable identity of this preset feature.
   public var id: FeatureID
@@ -265,7 +271,7 @@ public struct PresetFeature: Feature {
 ///
 /// The feature stores cube data directly so rendering can stay in the Core Image
 /// graph without asking an `ImageSource` or bundle resource to materialize.
-public struct ColorCubeFeature: Feature {
+public struct ColorCubeFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -309,7 +315,7 @@ public struct ColorCubeFeature: Feature {
 }
 
 /// A brightness adjustment.
-public struct BrightnessFeature: Feature {
+public struct BrightnessFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -333,7 +339,7 @@ public struct BrightnessFeature: Feature {
 }
 
 /// A contrast adjustment.
-public struct ContrastFeature: Feature {
+public struct ContrastFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -357,7 +363,7 @@ public struct ContrastFeature: Feature {
 }
 
 /// A saturation adjustment.
-public struct SaturationFeature: Feature {
+public struct SaturationFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -381,7 +387,7 @@ public struct SaturationFeature: Feature {
 }
 
 /// An exposure adjustment.
-public struct ExposureFeature: Feature {
+public struct ExposureFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -405,7 +411,7 @@ public struct ExposureFeature: Feature {
 }
 
 /// A highlight recovery adjustment.
-public struct HighlightsFeature: Feature {
+public struct HighlightsFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -429,7 +435,7 @@ public struct HighlightsFeature: Feature {
 }
 
 /// A shadow lift adjustment.
-public struct ShadowsFeature: Feature {
+public struct ShadowsFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -489,7 +495,7 @@ public struct ParametricRGBAColor: Equatable, Sendable {
 ///   the alpha the caller chooses. This reproduces the legacy
 ///   `FilterHighlightShadowTint` exactly and must keep doing so — every stored
 ///   document renders against it.
-public struct HighlightShadowTintFeature: Feature {
+public struct HighlightShadowTintFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -527,7 +533,7 @@ public struct HighlightShadowTintFeature: Feature {
 /// point, while `tint` moves the same white point along the green–magenta axis.
 /// Keeping both values in one feature preserves the coupled semantics of
 /// `CITemperatureAndTint` instead of approximating them as sequential filters.
-public struct TemperatureFeature: Feature {
+public struct TemperatureFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -556,7 +562,7 @@ public struct TemperatureFeature: Feature {
 }
 
 /// A luminance sharpen adjustment.
-public struct SharpenFeature: Feature {
+public struct SharpenFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -600,7 +606,7 @@ public enum GaussianBlurRadius: Equatable, Sendable {
 }
 
 /// A Gaussian blur that preserves the input extent.
-public struct GaussianBlurFeature: Feature {
+public struct GaussianBlurFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -635,7 +641,7 @@ public struct GaussianBlurFeature: Feature {
 }
 
 /// An unsharp mask adjustment.
-public struct UnsharpMaskFeature: Feature {
+public struct UnsharpMaskFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -666,7 +672,7 @@ public struct UnsharpMaskFeature: Feature {
 }
 
 /// A vignette adjustment.
-public struct VignetteFeature: Feature {
+public struct VignetteFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -690,7 +696,7 @@ public struct VignetteFeature: Feature {
 }
 
 /// A fade adjustment that overlays white.
-public struct FadeFeature: Feature {
+public struct FadeFeature: IdentifiedFeature {
 
   /// The stable identity of this effect.
   public var id: FeatureID
@@ -779,7 +785,11 @@ public struct EffectPipeline: Equatable, Sendable {
 /// node: it keeps the `EffectPipeline` editing vocabulary as a single,
 /// identity-stable feature, while the compiler flattens it through
 /// `childFeatures` exactly like `PresetFeature`.
-public struct EffectPipelineFeature: Feature {
+///
+/// - Important: Transitional. It belongs to the `MainTree` / `EditingDocument`
+///   model and is removed with it. In a statically composed document, a
+///   pipeline is an array or a composite feature's `body`.
+public struct EffectPipelineFeature: IdentifiedFeature {
 
   /// The stable identity of this effect node.
   public var id: FeatureID
@@ -807,7 +817,11 @@ public struct EffectPipelineFeature: Feature {
 /// The branch evaluates an effect pipeline from the current main image, evaluates
 /// a mask tree in the same current domain, and composites the adjusted image
 /// back over the base image without changing extent.
-public struct LocalAdjustmentFeature: Feature {
+///
+/// - Important: Transitional. It belongs to the `MainTree` / `EditingDocument`
+///   model and is removed with it. Statically composed documents use
+///   `LocalAdjustment`.
+public struct LocalAdjustmentFeature: IdentifiedFeature {
 
   /// The stable identity of this local adjustment.
   public var id: FeatureID
@@ -882,7 +896,7 @@ public indirect enum MaskNode: Equatable, Sendable {
 }
 
 /// A brush-authored mask.
-public struct BrushMask: Feature {
+public struct BrushMask: IdentifiedFeature {
 
   /// The stable identity of this mask leaf.
   public var id: FeatureID

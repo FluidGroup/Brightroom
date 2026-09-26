@@ -290,6 +290,44 @@ public struct ParametricExportRenderer {
     options: Options = .init(),
     device: RenderingDevice = .automatic
   ) throws -> Rendered {
+    try materialize(
+      try imageRenderer.makeImage(from: source, document: document),
+      source: source,
+      options: options,
+      device: device
+    )
+  }
+
+  /**
+   Renders a statically composed document from an already-oriented source image.
+
+   The document compiles to one `CIImage` recipe through
+   `ParametricImageRenderer`, with `source` as the chain entry, and
+   `options.output` decides whether the result is an in-memory bitmap or a
+   file. An optional document renders as identity when it is `nil`.
+   */
+  public func render(
+    source: CIImage,
+    document: some Feature,
+    options: Options = .init(),
+    device: RenderingDevice = .automatic
+  ) throws -> Rendered {
+    try materialize(
+      try imageRenderer.makeImage(from: source, document: document),
+      source: source,
+      options: options,
+      device: device
+    )
+  }
+
+  /// Evaluates the document's output recipe at the requested quality,
+  /// resolution, and output.
+  private func materialize(
+    _ outputCIImage: CIImage,
+    source: CIImage,
+    options: Options,
+    device: RenderingDevice
+  ) throws -> Rendered {
 
     let colorSpace = options.workingColorSpace ?? source.colorSpace
 
@@ -303,11 +341,6 @@ public struct ParametricExportRenderer {
       workingFormat: .RGBAh,
       device: device,
       imageExtent: source.extent
-    )
-
-    let outputCIImage = try imageRenderer.makeImage(
-      from: source,
-      document: document
     )
 
     // `Resolution.resize` is a Core Image scale on the recipe, so the downscale

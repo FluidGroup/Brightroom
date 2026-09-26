@@ -57,7 +57,9 @@ public struct FeatureEvaluationContext: Sendable {
   /// `FeatureGraphCompiler` never relies on that fallback: it resolves the
   /// reference ONCE at chain entry, so a mid-chain crop cannot re-base the
   /// radius. The fallback only applies to direct `apply(to:context:)` calls
-  /// outside the compiler, where the input is expected to be the chain entry.
+  /// outside the compiler, where the input is expected to be the chain entry;
+  /// a composite `Feature` resolves it from its own input before evaluating
+  /// its members. Origin normalization happens only in the renderers.
   public let radiusReferenceExtent: CGRect?
 
   /// Creates an evaluation context.
@@ -105,7 +107,11 @@ public struct FeatureEvaluationContext: Sendable {
 /// `apply` evaluates unconditionally: `isEnabled` is the CALLER's contract.
 /// The evaluator and composite features (preset, local adjustment pipelines)
 /// filter disabled features before calling `apply`.
-public protocol ImageEffectFeatureType: Feature {
+///
+/// - Important: Transitional. This protocol belongs to the `MainTree` /
+///   `EditingDocument` model and is removed with it. A new effect also
+///   conforms to `ImageEffect`, which lets it appear in a feature's `body`.
+public protocol ImageEffectFeatureType: IdentifiedFeature {
 
   /// Evaluates the effect over the input image.
   func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage
@@ -115,14 +121,14 @@ public protocol ImageEffectFeatureType: Feature {
 
   /// Nested features evaluated inside this effect, exposed for tree-level
   /// validation such as duplicate-ID detection.
-  var childFeatures: [any Feature] { get }
+  var childFeatures: [any IdentifiedFeature] { get }
 }
 
 extension ImageEffectFeatureType {
 
   public func validate() throws {}
 
-  public var childFeatures: [any Feature] { [] }
+  public var childFeatures: [any IdentifiedFeature] { [] }
 }
 
 /// A feature that may change the current image domain (extent or coordinate
@@ -130,7 +136,11 @@ extension ImageEffectFeatureType {
 ///
 /// The evaluator treats the returned image's extent as the new current
 /// domain; implementations should reset their output to zero origin.
-public protocol DomainFeatureType: Feature {
+///
+/// - Important: Transitional. This protocol belongs to the `MainTree` /
+///   `EditingDocument` model and is removed with it. A new domain feature also
+///   conforms to `Feature`, which lets it appear in a feature's `body`.
+public protocol DomainFeatureType: IdentifiedFeature {
 
   /// Evaluates the domain change over the input image.
   func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage
@@ -159,12 +169,12 @@ extension EffectPipeline {
   }
 }
 
-extension Feature {
+extension IdentifiedFeature {
 
   /// Compares this feature against another behind an existential.
   ///
   /// Method dispatch opens `Self`; differing dynamic types are never equal.
-  public func isEqualFeature(to other: any Feature) -> Bool {
+  public func isEqualFeature(to other: any IdentifiedFeature) -> Bool {
     guard let other = other as? Self else {
       return false
     }
@@ -173,14 +183,14 @@ extension Feature {
 }
 
 /// Compares two features behind existentials.
-public func parametricFeatureIsEqual(_ lhs: any Feature, _ rhs: any Feature) -> Bool {
+public func parametricFeatureIsEqual(_ lhs: any IdentifiedFeature, _ rhs: any IdentifiedFeature) -> Bool {
   lhs.isEqualFeature(to: rhs)
 }
 
 /// Compares two ordered existential feature arrays.
 public func parametricFeaturesAreEqual(
-  _ lhs: [any Feature],
-  _ rhs: [any Feature]
+  _ lhs: [any IdentifiedFeature],
+  _ rhs: [any IdentifiedFeature]
 ) -> Bool {
   guard lhs.count == rhs.count else {
     return false

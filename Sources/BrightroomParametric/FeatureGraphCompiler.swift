@@ -31,8 +31,8 @@ import Foundation
 ///
 /// Feature evaluation is native protocol dispatch: effects and domain features
 /// implement `apply(to:context:)` themselves. The compiler owns the document
-/// walk, tree-level validation, local-adjustment compositing, and the
-/// mask-tree renderer.
+/// walk, tree-level validation, and local-adjustment compositing; masks render
+/// through the mask-tree renderer shared with `LocalAdjustment`.
 public struct FeatureGraphCompiler: Sendable {
 
   /// Rendering options for the feature graph compiler.
@@ -87,20 +87,13 @@ public struct FeatureGraphCompiler: Sendable {
   ) throws -> FeatureGraphOutput {
     try validate(document)
 
-    var image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
-
-    // Resolve the radius reference ONCE at chain entry. Deriving it lazily
-    // inside each recipe (`?? image.extent`) would re-base the radius on
-    // whatever intermediate the effect happens to receive — a mid-chain crop
-    // would silently change the resolved blur strength, and editing a crop
-    // would retroactively change committed effects. The entry extent is the
-    // declared basis; feature order cannot perturb it.
-    let entryReferenceExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
-    let context = FeatureEvaluationContext(
-      kernelRegistry: kernelRegistry,
-      radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
+    let entry = makeEntry(
+      from: input,
+      radiusReferenceExtent: radiusReferenceExtent,
       presentationTime: presentationTime
     )
+    var image = entry.image
+    let context = entry.context
     var localAdjustmentMasks: [FeatureID: CIImage] = [:]
 
     for feature in document.mainTree.features where feature.isEnabled {
@@ -122,6 +115,53 @@ public struct FeatureGraphCompiler: Sendable {
       image: image,
       localAdjustmentMasks: localAdjustmentMasks
     )
+  }
+
+  /// Evaluates a statically composed document from an input image.
+  ///
+  /// The chain entry is shared with
+  /// `makeOutput(from:document:radiusReferenceExtent:presentationTime:)`, and
+  /// the resulting context is passed down the whole composition.
+  func makeImage(
+    from input: CIImage,
+    document: some Feature,
+    radiusReferenceExtent: CGRect?,
+    presentationTime: CMTime
+  ) throws -> CIImage {
+    let (image, context) = makeEntry(
+      from: input,
+      radiusReferenceExtent: radiusReferenceExtent,
+      presentationTime: presentationTime
+    )
+    return try document.apply(to: image, context: context)
+  }
+
+  /// Prepares the chain entry shared by both document models.
+  ///
+  /// The input is translated to zero origin when
+  /// `options.normalizesInputExtent` is set. An explicit
+  /// `radiusReferenceExtent` wins; otherwise the normalized input extent is
+  /// the basis unless it is infinite.
+  private func makeEntry(
+    from input: CIImage,
+    radiusReferenceExtent: CGRect?,
+    presentationTime: CMTime
+  ) -> (image: CIImage, context: FeatureEvaluationContext) {
+    let image = options.normalizesInputExtent ? ParametricImageGeometry.removingExtentOffset(input) : input
+
+    // Resolve the radius reference ONCE at chain entry. Deriving it lazily
+    // inside each recipe (`?? image.extent`) would re-base the radius on
+    // whatever intermediate the effect happens to receive — a mid-chain crop
+    // would silently change the resolved blur strength, and editing a crop
+    // would retroactively change committed effects. The entry extent is the
+    // declared basis; feature order cannot perturb it.
+    let entryReferenceExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
+    let context = FeatureEvaluationContext(
+      kernelRegistry: kernelRegistry,
+      radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
+      presentationTime: presentationTime
+    )
+    return (image, context)
   }
 
   /// Renders a mask tree to an alpha image covering the given extent.
@@ -211,166 +251,7 @@ private extension FeatureGraphCompiler {
   }
 
   func render(_ maskTree: MaskTree, extent: CGRect) throws -> CIImage {
-    try render(maskTree.root, extent: extent)
-      .cropped(to: extent)
-  }
-
-  func render(_ node: MaskNode, extent: CGRect) throws -> CIImage {
-    switch node {
-    case let .brush(mask):
-      return try render(mask, extent: extent)
-
-    case let .invert(input):
-      let inputImage = try render(input, extent: extent)
-      return inputImage.applyingFilter(
-        "CIColorMatrix",
-        parameters: [
-          "inputRVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-          "inputGVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-          "inputBVector": CIVector(x: 0, y: 0, z: 0, w: 0),
-          "inputAVector": CIVector(x: 0, y: 0, z: 0, w: -1),
-          "inputBiasVector": CIVector(x: 1, y: 1, z: 1, w: 1),
-        ]
-      )
-      .cropped(to: extent)
-
-    case let .feather(feather):
-      let inputImage = try render(feather.input, extent: extent)
-      guard feather.isEnabled, feather.radius > 0.0001 else {
-        return inputImage
-      }
-      return inputImage
-        .clamped(to: extent)
-        .applyingFilter(
-          "CIGaussianBlur",
-          parameters: [kCIInputRadiusKey: feather.radius]
-        )
-        .cropped(to: extent)
-
-    case let .union(nodes):
-      guard nodes.isEmpty == false else {
-        throw FeatureGraphCompilerError.emptyMaskComposite(nil)
-      }
-      return try nodes.reduce(CIImage.parametricTransparent(extent: extent)) { accumulated, node in
-        let next = try render(node, extent: extent)
-        return try blendMask(
-          foreground: next,
-          background: accumulated,
-          kernel: .componentMax,
-          extent: extent
-        )
-      }
-
-    case let .intersect(nodes):
-      guard let first = nodes.first else {
-        throw FeatureGraphCompilerError.emptyMaskComposite(nil)
-      }
-      var accumulated = try render(first, extent: extent)
-      for node in nodes.dropFirst() {
-        let next = try render(node, extent: extent)
-        accumulated = try blendMask(
-          foreground: next,
-          background: accumulated,
-          kernel: .componentMultiply,
-          extent: extent
-        )
-      }
-      return accumulated.cropped(to: extent)
-
-    case let .subtract(subtract):
-      let base = try render(subtract.base, extent: extent)
-      guard subtract.isEnabled else {
-        return base
-      }
-      let removing = try render(subtract.removing, extent: extent)
-      return try kernelRegistry.subtractMask(
-        base: base,
-        removing: removing,
-        extent: extent
-      )
-    }
-  }
-
-  func render(_ mask: BrushMask, extent: CGRect) throws -> CIImage {
-    guard mask.isEnabled else {
-      return CIImage.parametricTransparent(extent: extent)
-    }
-
-    // Each stamp compiles to one CIImage layer. `componentMax` is associative
-    // and commutative, so the stamps reduce in any grouping; folding them in a
-    // balanced tree keeps the Core Image graph depth at O(log n) instead of
-    // O(n). A dense brush (small spacing) emits hundreds–thousands of stamps
-    // per stroke, and a linear fold built a chain that deep — slow to compile
-    // and at risk of stack overflow during render. The tree keeps the same
-    // node count and the same result.
-    var stampImages: [CIImage] = []
-    for stroke in mask.strokes {
-      let radius = max(stroke.brush.diameter / 2, 0)
-      for stamp in stroke.stamps {
-        stampImages.append(
-          try kernelRegistry.makeBrushStamp(
-            extent: extent,
-            center: stamp,
-            radius: radius,
-            hardness: stroke.brush.hardness,
-            opacity: stroke.brush.opacity
-          )
-        )
-      }
-    }
-
-    return try reduceComponentMax(stampImages, extent: extent)
-  }
-
-  /// Reduces mask layers with `componentMax` in a balanced tree so the Core
-  /// Image graph depth stays O(log n). `componentMax` is associative and
-  /// commutative and `componentMax(transparent, x) == x`, so the pairwise
-  /// grouping produces the same alpha field as a linear fold over a transparent
-  /// base.
-  private func reduceComponentMax(_ images: [CIImage], extent: CGRect) throws -> CIImage {
-    guard images.isEmpty == false else {
-      return CIImage.parametricTransparent(extent: extent)
-    }
-
-    var level = images
-    while level.count > 1 {
-      var next: [CIImage] = []
-      next.reserveCapacity((level.count + 1) / 2)
-      var index = 0
-      while index < level.count {
-        if index + 1 < level.count {
-          next.append(
-            try blendMask(
-              foreground: level[index + 1],
-              background: level[index],
-              kernel: .componentMax,
-              extent: extent
-            )
-          )
-        } else {
-          next.append(level[index])
-        }
-        index += 2
-      }
-      level = next
-    }
-
-    return level[0].cropped(to: extent)
-  }
-
-  func blendMask(
-    foreground: CIImage,
-    background: CIImage,
-    kernel: CIBlendKernel,
-    extent: CGRect
-  ) throws -> CIImage {
-    guard let output = kernel.apply(
-      foreground: foreground,
-      background: background
-    ) else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CIBlendKernel")
-    }
-    return output.cropped(to: extent)
+    try MaskTreeRenderer(kernelRegistry: kernelRegistry).render(maskTree, extent: extent)
   }
 }
 
