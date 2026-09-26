@@ -69,11 +69,13 @@ struct PhotosCropDocumentTests {
     var document = PhotosCropDocument(orientedImageSize: size)
     document.setCrop(crop)
 
-    withKnownIssue(
-      "PixelCropRect clamps the crop rect to the unrotated image bounds, so a quarter turn commits a centered square"
-    ) {
-      #expect(document.crop.cropRect.size == CGSize(width: 200, height: 300))
-    }
+    // The snapper clamps the frame's footprint on the source, (0, 0, 300, 200),
+    // not the frame itself, so nothing is cut away.
+    #expect(document.crop.cropRect.size == CGSize(width: 200, height: 300))
+    #expect(
+      document.crop.displayCropRect(imageSize: size)
+        == CGRect(x: 50, y: -50, width: 200, height: 300)
+    )
   }
 
   @Test func `setCrop stores the snapped rect`() {
@@ -94,14 +96,15 @@ struct PhotosCropDocumentTests {
     #expect(document.crop.cropRect == document.crop.cropRect.integral)
     #expect(document.crop.rotation == .quarterCW || document.crop.rotation == .quarterCCW)
 
-    // An integral rect round-trips exactly through the y-up working space.
-    crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
+    // An integral rect whose footprint on the source, (60, 70, 200, 100), lies
+    // inside the image round-trips exactly through the y-up working space.
+    crop.updateCropExtent(CGRect(x: 110, y: 20, width: 100, height: 200))
     document.setCrop(crop)
     #expect(
       document.crop.displayCropRect(imageSize: imageSize)
-        == CGRect(x: 10, y: 20, width: 200, height: 100)
+        == CGRect(x: 110, y: 20, width: 100, height: 200)
     )
-    #expect(document.crop.cropRect == CGRect(x: 10, y: 180, width: 200, height: 100))
+    #expect(document.crop.cropRect == CGRect(x: 110, y: 80, width: 100, height: 200))
   }
 
   @Test func `First stroke seeds the default blur`() throws {

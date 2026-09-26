@@ -146,9 +146,11 @@ struct EditingPreviewExportParityTests {
     // Asymmetric in both axes, so a missing or wrong-signed rotation on either
     // side changes the compared pixels.
     let source = Self.makeRampedCheckerImage(width: 60, height: 40, cell: 2)
+    // The frame's footprint on the source, (15, 0, 30, 40), lies inside the
+    // image, so the snapper keeps the frame as authored.
     let document = Self.makeDocument(
       imageSize: imageSize,
-      cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
+      cropRect: CGRect(x: 10, y: 5, width: 40, height: 30),
       rotation: .angle_90,
       blurMask: Self.makeBlurMask(
         radius: 4,
@@ -176,7 +178,7 @@ struct EditingPreviewExportParityTests {
     let unrotated = try await export(
       Self.makeDocument(
         imageSize: imageSize,
-        cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
+        cropRect: CGRect(x: 10, y: 5, width: 40, height: 30),
         blurMask: document.blurMask
       ),
       source: source
