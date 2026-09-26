@@ -417,7 +417,7 @@ struct DemoPhotosCropView: View {
   @MainActor
   init(
     stack: EditingStack,
-    options: SwiftUIPhotosCropView.Options = .init()
+    options: SwiftUIPhotosCropView.Options = .demo()
   ) {
     self._stack = .init(wrappedValue: stack)
     self.editingModel = PhotosCropEditingModel(editingStack: stack)
@@ -427,7 +427,7 @@ struct DemoPhotosCropView: View {
   @MainActor
   init(
     stack: @escaping () -> EditingStack,
-    options: SwiftUIPhotosCropView.Options = .init()
+    options: SwiftUIPhotosCropView.Options = .demo()
   ) {
     let stack = stack()
     self._stack = .init(wrappedValue: stack)
@@ -476,8 +476,15 @@ struct DemoPhotosCropView: View {
 }
 
 private extension SwiftUIPhotosCropView.Options {
-  static func fixedAspectRatio(_ aspectRatio: PixelAspectRatio?) -> Self {
+  /// Creates demo options with the sample filter catalog explicitly supplied.
+  static func demo() -> Self {
     var options = Self()
+    options.filterPresets = PhotosCropDemoFilterPresets.make()
+    return options
+  }
+
+  static func fixedAspectRatio(_ aspectRatio: PixelAspectRatio?) -> Self {
+    var options = Self.demo()
     options.aspectRatioOptions = .fixed(aspectRatio)
     return options
   }

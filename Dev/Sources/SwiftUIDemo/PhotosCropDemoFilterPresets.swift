@@ -21,15 +21,13 @@
 
 import BrightroomParametric
 
-/// Built-in filter presets offered by PhotosCrop's Filters mode.
+/// Sample filter presets used by the PhotosCrop demo.
 ///
-/// The presets are parameter-based (no lookup-table assets), so they ship with
-/// the library and remain serializable through the FeatureTree's
-/// global-effects node. Hosts replace them via
-/// `SwiftUIPhotosCropView.Options.filterPresets`.
-public enum PhotosCropDefaultFilterPresets {
+/// These simple parameter combinations demonstrate host-provided presets through
+/// `SwiftUIPhotosCropView.Options.filterPresets`; they are not a production catalog.
+enum PhotosCropDemoFilterPresets {
 
-  public static func make() -> [PresetFeature] {
+  static func make() -> [PresetFeature] {
     [
       preset(name: "Vivid", identifier: "brightroom.preset.vivid", effects: [
         SaturationFeature(id: .init(rawValue: "brightroom.preset.vivid.saturation"), value: 0.32),

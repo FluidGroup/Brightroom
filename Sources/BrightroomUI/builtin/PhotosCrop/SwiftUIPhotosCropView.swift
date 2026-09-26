@@ -53,10 +53,11 @@ public struct SwiftUIPhotosCropView: View {
 
     public var aspectRatioOptions: AspectRatioOptions = .selectable
 
-    /// The presets offered by the Filters mode. Presets write into the
-    /// FeatureTree's global-effects node. Pass an empty array to offer no
-    /// presets.
-    public var filterPresets: [PresetFeature] = PhotosCropDefaultFilterPresets.make()
+    /// The host-provided presets offered by the Filters mode.
+    ///
+    /// Defaults to an empty array; only Original is offered until presets are
+    /// supplied. Selected presets write into the FeatureTree's global-effects node.
+    public var filterPresets: [PresetFeature] = []
 
     public init() {
 
