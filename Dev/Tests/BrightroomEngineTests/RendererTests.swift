@@ -420,7 +420,12 @@ struct RenderCropRendererTests {
     let oriented = try source.oriented(.up)
 
     for rotation in QuarterTurn.allCases {
-      let crop = CropFeature.test(imageSize: source.size, rotation: rotation)
+      // The full-image frame in the output orientation, as CropView turns it.
+      let crop = CropFeature.test(
+        imageSize: source.size,
+        cropRect: CropGeometry.rect(CGRect(origin: .zero, size: source.size), turnedBy: rotation),
+        rotation: rotation
+      )
 
       let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
       renderer.edit = .make(crop: crop, orientedImageSize: source.size)

@@ -21,6 +21,8 @@
 
 import CoreGraphics
 
+import BrightroomParametric
+
 /// Pure crop-rect geometry, decoupled from `EditingCrop` so it can be shared by
 /// the engine and by the BrightroomUI crop session (`CropEditingState`).
 ///
@@ -107,6 +109,66 @@ public enum CropGeometry {
     return fixed
   }
 
+  /// Turns a crop rect by a quarter turn about its own center.
+  ///
+  /// A crop rect is authored in the output orientation: the image is rotated
+  /// about the rect's center and the rect keeps what lands inside it. Turned
+  /// back about that center, the rect becomes its footprint on the source image
+  /// — the source pixels it keeps. A sideways turn (90° / 270°) swaps the width
+  /// and height; `.zero` and `.half` return the rect unchanged. The turn is its
+  /// own inverse, so the same call maps a footprint back to the crop rect.
+  public static func rect(_ rect: CGRect, turnedBy rotation: QuarterTurn) -> CGRect {
+    guard rotation.isSideways else {
+      return rect
+    }
+
+    return CGRect(
+      x: rect.midX - rect.height / 2,
+      y: rect.midY - rect.width / 2,
+      width: rect.height,
+      height: rect.width
+    )
+  }
+
+  /// As `fittingRect(rect:in:respectingAspectRatio:)`, for a crop rect authored
+  /// in the output orientation of `rotation`.
+  ///
+  /// The rect's footprint on the source image is what must stay inside the
+  /// image, so the footprint is clamped and turned back. For `.zero` and `.half`
+  /// this is exactly `fittingRect`. `aspectRatio` is in the output orientation.
+  public static func fittingRect(
+    rect: CGRect,
+    in imageSize: CGSize,
+    rotation: QuarterTurn,
+    respectingAspectRatio aspectRatio: PixelAspectRatio?
+  ) -> CGRect {
+    self.rect(
+      fittingRect(
+        rect: self.rect(rect, turnedBy: rotation),
+        in: imageSize,
+        respectingAspectRatio: rotation.isSideways ? aspectRatio?.swapped() : aspectRatio
+      ),
+      turnedBy: rotation
+    )
+  }
+
+  /// As `cropRect(toFitAspectRatio:in:)`, for the output orientation of
+  /// `rotation`: the largest crop rect of `aspectRatio` whose footprint fits
+  /// inside the image, centered on the image.
+  public static func cropRect(
+    toFitAspectRatio aspectRatio: PixelAspectRatio,
+    in imageSize: CGSize,
+    rotation: QuarterTurn
+  ) -> CGRect {
+    rect(
+      cropRect(
+        toFitAspectRatio: rotation.isSideways ? aspectRatio.swapped() : aspectRatio,
+        in: imageSize
+      ),
+      turnedBy: rotation
+    )
+  }
+
   /// The largest centered crop rect of `aspectRatio` that fits inside the image.
   public static func cropRect(
     toFitAspectRatio aspectRatio: PixelAspectRatio,
@@ -161,5 +223,19 @@ public enum CropGeometry {
       in: imageSize,
       respectingAspectRatio: respectingAspectRatio
     )
+  }
+}
+
+extension QuarterTurn {
+
+  /// Whether the turn is 90° or 270°, which swaps the width and height of the
+  /// output.
+  var isSideways: Bool {
+    switch self {
+    case .quarterCW, .quarterCCW:
+      return true
+    case .zero, .half:
+      return false
+    }
   }
 }

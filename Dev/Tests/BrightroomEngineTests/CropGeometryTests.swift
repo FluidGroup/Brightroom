@@ -24,6 +24,7 @@ import Foundation
 import CoreGraphics
 
 @testable import BrightroomEngine
+import BrightroomParametric
 
 /// Direct coverage for the `CropGeometry` helper. `EditingCrop` delegates to it
 /// today, but `EditingCrop` is removed later in the refactor, so these pin the
@@ -76,5 +77,49 @@ struct CropGeometryTests {
       respectingAspectRatio: nil
     )
     #expect(result == .init(x: 0, y: 50, width: 100, height: 50))
+  }
+
+  @Test func `Quarter turn swaps a rect about its center`() {
+    let rect = CGRect(x: 0, y: 0, width: 200, height: 100)
+    #expect(CropGeometry.rect(rect, turnedBy: .quarterCW) == .init(x: 50, y: -50, width: 100, height: 200))
+    #expect(CropGeometry.rect(rect, turnedBy: .quarterCCW) == .init(x: 50, y: -50, width: 100, height: 200))
+    #expect(CropGeometry.rect(rect, turnedBy: .half) == rect)
+    #expect(CropGeometry.rect(rect, turnedBy: .zero) == rect)
+  }
+
+  @Test func `Fitting a quarter-turned rect clamps its footprint`() {
+    // The full image turned a quarter is already inside: nothing clamps.
+    let turnedFull = CGRect(x: 50, y: -50, width: 100, height: 200)
+    #expect(
+      CropGeometry.fittingRect(rect: turnedFull, in: imageSize, rotation: .quarterCW, respectingAspectRatio: nil)
+        == turnedFull
+    )
+    // Past the image: only the footprint's overhang goes.
+    #expect(
+      CropGeometry.fittingRect(
+        rect: .init(x: 50, y: -60, width: 100, height: 220),
+        in: imageSize,
+        rotation: .quarterCW,
+        respectingAspectRatio: nil
+      ) == turnedFull
+    )
+    // Unrotated behavior is unchanged.
+    #expect(
+      CropGeometry.fittingRect(rect: turnedFull, in: imageSize, rotation: .zero, respectingAspectRatio: nil)
+        == CropGeometry.fittingRect(rect: turnedFull, in: imageSize, respectingAspectRatio: nil)
+    )
+  }
+
+  @Test func `Aspect fit after a quarter turn uses the turned image`() {
+    // 1:2 in the output orientation of a quarter-turned 200×100 image is the
+    // whole image.
+    #expect(
+      CropGeometry.cropRect(toFitAspectRatio: .init(width: 1, height: 2), in: imageSize, rotation: .quarterCW)
+        == .init(x: 50, y: -50, width: 100, height: 200)
+    )
+    #expect(
+      CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize, rotation: .quarterCW)
+        == CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize)
+    )
   }
 }

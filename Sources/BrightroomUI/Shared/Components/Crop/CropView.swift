@@ -1764,14 +1764,21 @@ extension CropView {
       return cropExtent
     }
 
+    // Bound the crop's footprint on the source, not the crop rect itself: a
+    // quarter-turned crop rect may extend past the unrotated image bounds.
+    let rotation = currentCrop.rotation.quarterTurn
     let imageBounds = CGRect(origin: .zero, size: currentCrop.imageSize)
-    let boundedCropExtent = imageBounds.intersection(cropExtent)
+    let boundedFootprint = imageBounds.intersection(
+      CropGeometry.rect(cropExtent, turnedBy: rotation)
+    )
 
-    guard boundedCropExtent.isNull == false, boundedCropExtent.isEmpty == false else {
+    guard boundedFootprint.isNull == false, boundedFootprint.isEmpty == false else {
       return cropExtent
     }
 
-    return preferredAspectRatio.rectThatFits(in: boundedCropExtent)
+    return preferredAspectRatio.rectThatFits(
+      in: CropGeometry.rect(boundedFootprint, turnedBy: rotation)
+    )
   }
 
   private func normalizedCropExtentForScrollViewRecording(
@@ -1785,26 +1792,34 @@ extension CropView {
       return cropExtent
     }
 
-    var cropExtent = cropExtent
+    // Compare footprints on the source: a quarter-turned crop rect spans the
+    // full image with its width and height swapped.
+    let rotation = currentCrop.rotation.quarterTurn
+    let baselineFootprint = CropGeometry.rect(
+      adjustmentSession.baselineCrop.cropExtent,
+      turnedBy: adjustmentSession.baselineCrop.rotation.quarterTurn
+    )
+    let currentFootprint = CropGeometry.rect(currentCrop.cropExtent, turnedBy: rotation)
+    var footprint = CropGeometry.rect(cropExtent, turnedBy: rotation)
     let epsilon: CGFloat = 1e-8
 
-    if adjustmentSession.baselineCrop.cropExtent.width
+    if baselineFootprint.width
       >= adjustmentSession.baselineCrop.imageSize.width - epsilon
-      && currentCrop.cropExtent.width >= currentCrop.imageSize.width - epsilon
+      && currentFootprint.width >= currentCrop.imageSize.width - epsilon
     {
-      cropExtent.origin.x = 0
-      cropExtent.size.width = currentCrop.imageSize.width
+      footprint.origin.x = 0
+      footprint.size.width = currentCrop.imageSize.width
     }
 
-    if adjustmentSession.baselineCrop.cropExtent.height
+    if baselineFootprint.height
       >= adjustmentSession.baselineCrop.imageSize.height - epsilon
-      && currentCrop.cropExtent.height >= currentCrop.imageSize.height - epsilon
+      && currentFootprint.height >= currentCrop.imageSize.height - epsilon
     {
-      cropExtent.origin.y = 0
-      cropExtent.size.height = currentCrop.imageSize.height
+      footprint.origin.y = 0
+      footprint.size.height = currentCrop.imageSize.height
     }
 
-    return cropExtent
+    return CropGeometry.rect(footprint, turnedBy: rotation)
   }
 
   private func beginScrollViewAdjustment(_ kind: ScrollViewAdjustmentKind) {

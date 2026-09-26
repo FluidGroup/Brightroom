@@ -136,6 +136,26 @@ internal struct PixelCropRect: Equatable, Sendable {
     )
   }
 
+  /// The rect with its longer side trimmed by one pixel (at its max edge) when
+  /// its width and height differ by an odd number of pixels.
+  ///
+  /// A quarter turn about the rect's center maps the pixel grid onto itself
+  /// only when the width and height differ by an even number of pixels.
+  /// Otherwise the turned rect lies on half pixels, and every output pixel
+  /// would be resampled between two source pixels (Core Image also rounds such
+  /// an extent outward, adding a partially covered border).
+  internal func trimmedForQuarterTurn() -> PixelCropRect {
+    guard (width - height) % 2 != 0 else {
+      return self
+    }
+
+    if width > height {
+      return .init(x: x, y: y, width: width - 1, height: height)
+    } else {
+      return .init(x: x, y: y, width: width, height: height - 1)
+    }
+  }
+
   private static func pixelSpan(
     lower: CGFloat,
     upper: CGFloat,
@@ -183,6 +203,13 @@ internal struct RenderCrop: Equatable, Sendable {
   internal static let pixelEpsilon = RenderGeometry.pixelEpsilon
 
   internal var imageSize: PixelDimensions
+
+  /// The source pixels the crop keeps, snapped inward to the pixel grid and
+  /// clamped to the image.
+  ///
+  /// This is the crop rect's footprint on the source image: the y-down crop rect
+  /// turned back by `rotation` about its center. For `.zero` and `.half` it is
+  /// the crop rect itself; a sideways turn swaps its width and height.
   internal var cropRect: PixelCropRect
 
   /// The quarter-turn rotation, expressed in the parametric vocabulary so the
@@ -192,8 +219,11 @@ internal struct RenderCrop: Equatable, Sendable {
   /// The free straightening angle in radians (the engine's adjustment angle).
   internal var straightenRadians: Double
 
+  /// The y-down crop rect in the output orientation: `cropRect` turned by
+  /// `rotation` about its center. Integral, because a sideways footprint's
+  /// width and height differ by an even number of pixels.
   internal var cropExtent: CGRect {
-    cropRect.cgRect
+    CropGeometry.rect(cropRect.cgRect, turnedBy: rotation)
   }
 
   /// The combined rotation (quarter turn + straighten) in radians, the value the
@@ -205,9 +235,17 @@ internal struct RenderCrop: Equatable, Sendable {
   /// Snaps a y-down display crop rect against the source pixel grid.
   ///
   /// `cropRectYDown` is in the engine's top-left-origin display space (the same
-  /// space as `EditingCrop.cropExtent`). The integer pixel contract lives in
-  /// `PixelCropRect`, so this initializer is the single snapper UI commits and
-  /// engine renders both flow through.
+  /// space as `EditingCrop.cropExtent`), in the output orientation of
+  /// `rotation`. The integer pixel contract lives in `PixelCropRect`, so this
+  /// initializer is the single snapper UI commits and engine renders both flow
+  /// through.
+  ///
+  /// The snap and clamp apply to the rect's footprint on the source image, not
+  /// to the rect itself: a full-image crop turned a quarter is
+  /// `(W/2 - H/2, H/2 - W/2, H, W)`, which extends past the unrotated image
+  /// bounds while keeping every source pixel. Under a sideways turn the
+  /// footprint also keeps an even width-height difference (see
+  /// `PixelCropRect.trimmedForQuarterTurn()`), so an odd one loses one pixel.
   internal init(
     cropRectYDown: CGRect,
     imageSize: CGSize,
@@ -218,11 +256,12 @@ internal struct RenderCrop: Equatable, Sendable {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
 
     self.imageSize = pixelImageSize
-    self.cropRect = PixelCropRect(
-      cropExtent: cropRectYDown,
+    let footprint = PixelCropRect(
+      cropExtent: CropGeometry.rect(cropRectYDown, turnedBy: rotation),
       in: pixelImageSize,
       epsilon: epsilon
     )
+    self.cropRect = rotation.isSideways ? footprint.trimmedForQuarterTurn() : footprint
     self.rotation = rotation
     self.straightenRadians = straightenRadians
   }
@@ -267,17 +306,17 @@ extension CropFeature {
       rotation: rotation,
       straightenRadians: straighten
     )
-    let snapped = renderCrop.cropRect
+    let snapped = renderCrop.cropExtent
     let imageHeight = CGFloat(renderCrop.imageSize.height)
 
     self.init(
       id: id,
       isEnabled: isEnabled,
       cropRect: CGRect(
-        x: CGFloat(snapped.x),
-        y: imageHeight - CGFloat(snapped.y) - CGFloat(snapped.height),
-        width: CGFloat(snapped.width),
-        height: CGFloat(snapped.height)
+        x: snapped.minX,
+        y: imageHeight - snapped.maxY,
+        width: snapped.width,
+        height: snapped.height
       ),
       rotation: rotation,
       straightenRadians: straighten

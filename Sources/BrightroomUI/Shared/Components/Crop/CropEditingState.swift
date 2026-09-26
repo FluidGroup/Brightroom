@@ -75,9 +75,12 @@ public struct CropEditingState: Equatable, Sendable {
   public init(cropFeature: CropFeature, imageSize: CGSize) {
     self.id = cropFeature.id
     self.imageSize = imageSize
+    // A quarter-turned crop rect may extend past the unrotated image bounds;
+    // only its footprint on the source has to stay inside the image.
     self.cropExtent = CropGeometry.fittingRect(
       rect: cropFeature.displayCropRect(imageSize: imageSize),
       in: imageSize,
+      rotation: cropFeature.rotation,
       respectingAspectRatio: nil
     )
     self.rotation = Rotation(cropFeature.rotation)
@@ -112,6 +115,7 @@ public struct CropEditingState: Equatable, Sendable {
     self.cropExtent = CropGeometry.fittingRect(
       rect: cropRect,
       in: imageSize,
+      rotation: rotation.quarterTurn,
       respectingAspectRatio: nil
     )
     self.rotation = rotation
@@ -131,10 +135,14 @@ public struct CropEditingState: Equatable, Sendable {
   // MARK: - Mutations (geometry delegated to the engine's CropGeometry)
 
   /// Set a new aspect ratio, updating the cropping extent to the maximum size
-  /// of that ratio inside the image.
+  /// of that ratio inside the image as currently rotated.
   public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
     self._usedAspectRatio = newAspectRatio
-    self.cropExtent = CropGeometry.cropRect(toFitAspectRatio: newAspectRatio, in: imageSize)
+    self.cropExtent = CropGeometry.cropRect(
+      toFitAspectRatio: newAspectRatio,
+      in: imageSize,
+      rotation: rotation.quarterTurn
+    )
   }
 
   /// As `updateCropExtent(toFitAspectRatio:)`, but a no-op when the ratio is

@@ -130,21 +130,24 @@ extension CGImage {
     to crop: RenderCrop
   ) throws -> CGImage {
     try croppedWithColorspace(
-      to: crop.cropRect,
+      to: crop.cropExtent,
       adjustmentAngleRadians: crop.aggregatedRotationRadians
     )
   }
 
+  /// - Parameter cropExtent: The y-down crop rect in the output orientation
+  ///   (`RenderCrop.cropExtent`). Its size is the output size.
   func croppedWithColorspace(
-    to cropRect: PixelCropRect,
+    to cropExtent: CGRect,
     adjustmentAngleRadians: CGFloat
   ) throws -> CGImage {
 
-    let cropExtent = cropRect.cgRect
-
     let cgImage = try autoreleasepool { () -> CGImage? in
 
-      let context = try CGContext.makeContext(for: self, pixelDimensions: cropRect.size)
+      let context = try CGContext.makeContext(
+        for: self,
+        pixelDimensions: PixelDimensions(cropExtent.size)
+      )
         .perform { context in
 
           context.rotate(
