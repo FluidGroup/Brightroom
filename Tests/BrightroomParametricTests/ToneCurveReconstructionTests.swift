@@ -56,18 +56,19 @@ struct ToneCurveReconstructionTests {
     _ = try #require(diagonalPointID)
 
     let restoredActive = ToneCurveFeature(
-      id: FeatureID(rawValue: "active-curve"),
       value: .init(green: try Self.restore(active.green))
     )
     let restoredDiagonal = ToneCurveFeature(
-      id: FeatureID(rawValue: "identity-curve"),
       value: .init(y: try Self.restore(diagonal.y))
     )
 
     #expect(restoredActive.value == active)
-    #expect(restoredActive.isEnabled)
+    #expect(ToneCurveRenderIdentity(activeValue: restoredActive.value) != nil)
     #expect(restoredDiagonal.value == diagonal)
-    #expect(restoredDiagonal.isEnabled == false)
+    // The render identity, not `ToneCurveEditorValue.isNeutral`, decides the
+    // bypass: a diagonal interior point is authored but renders as identity.
+    #expect(restoredDiagonal.value.isNeutral == false)
+    #expect(ToneCurveRenderIdentity(activeValue: restoredDiagonal.value) == nil)
 
     let source = CIImage(color: .init(red: -0.1, green: 1.5, blue: 0.3, alpha: 0.5))
       .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))

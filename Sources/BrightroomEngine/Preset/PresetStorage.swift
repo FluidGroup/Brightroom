@@ -35,10 +35,9 @@ extension PresetStorage {
     self.presets = cubes
       .map { cube in
         PresetFeature(
-          id: .init(rawValue: cube.identifier),
           name: cube.name,
           identifier: cube.identifier,
-          effects: [cube]
+          effects: [AnyImageEffect(cube)]
         )
       }
   }

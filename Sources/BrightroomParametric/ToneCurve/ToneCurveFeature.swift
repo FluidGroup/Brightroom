@@ -13,7 +13,10 @@ import os
 /// RGB curves preserve the input luminance, then the Y curve sets the final
 /// luminance. Callers must evaluate the recipe in an extended-linear Display-P3
 /// working color space with floating-point precision.
-public nonisolated struct ToneCurveFeature: ImageEffectFeatureType {
+///
+/// Equality compares the rendered result; compare `value` to detect authored
+/// edits that do not change pixels.
+public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
 
   /// The interpretation of the stop shaper, YRGB composition, and sampled table.
   ///
@@ -22,31 +25,22 @@ public nonisolated struct ToneCurveFeature: ImageEffectFeatureType {
   /// the pixels of an existing edit.
   public static let semanticVersion = 4
 
-  /// Stable identity of the document feature node.
-  public let id: FeatureID
-
   /// The four normalized curves authored by the shared editor.
   public let value: ToneCurveEditorValue
-
-  /// Whether at least one channel changes the mathematical identity mapping.
-  public let isEnabled: Bool
 
   private let renderPlan: ToneCurveRenderPlan?
 
   /// Creates a feature and resolves its sampled render plan exactly once.
-  /// Supply a distinct identifier when a document contains multiple curves.
-  public init(
-    id: FeatureID = FeatureID(rawValue: "brightroom.tone-curve"),
-    value: ToneCurveEditorValue
-  ) {
-    let renderPlan = ToneCurveRenderPlanCache.shared.plan(for: value)
-    self.id = id
+  public init(value: ToneCurveEditorValue) {
     self.value = value
-    self.isEnabled = renderPlan != nil
-    self.renderPlan = renderPlan
+    self.renderPlan = ToneCurveRenderPlanCache.shared.plan(for: value)
   }
 
   /// Evaluates the precompiled plan while preserving a neutral exact bypass.
+  ///
+  /// A curve whose render identity is neutral
+  /// (`ToneCurveRenderIdentity(activeValue: value) == nil`) returns `image`
+  /// itself.
   public func apply(
     to image: CIImage,
     context: FeatureEvaluationContext
@@ -55,10 +49,9 @@ public nonisolated struct ToneCurveFeature: ImageEffectFeatureType {
     return try ToneCurveRenderer.apply(to: image, plan: renderPlan)
   }
 
+  /// Compares the rendered result, not the authored points.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.id == rhs.id
-      && lhs.isEnabled == rhs.isEnabled
-      && lhs.renderPlan?.identity == rhs.renderPlan?.identity
+    lhs.renderPlan?.identity == rhs.renderPlan?.identity
   }
 }
 

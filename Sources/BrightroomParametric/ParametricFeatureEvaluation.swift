@@ -30,9 +30,6 @@ import Foundation
 /// evaluation a pure function of (parameters, input, context).
 public struct FeatureEvaluationContext: Sendable {
 
-  /// Custom Core Image kernels shared by mask rendering.
-  public let kernelRegistry: ParametricKernelRegistry
-
   /// The presentation time of the image being evaluated.
   ///
   /// Video renderers supply the exact AVFoundation composition time for each
@@ -54,21 +51,19 @@ public struct FeatureEvaluationContext: Sendable {
   /// path (export, preview, live viewport).
   ///
   /// `nil` falls back to the input image's own extent at the recipe level.
-  /// `FeatureGraphCompiler` never relies on that fallback: it resolves the
+  /// `ParametricImageRenderer` never relies on that fallback: it resolves the
   /// reference ONCE at chain entry, so a mid-chain crop cannot re-base the
   /// radius. The fallback only applies to direct `apply(to:context:)` calls
-  /// outside the compiler, where the input is expected to be the chain entry;
+  /// outside the renderers, where the input is expected to be the chain entry;
   /// a composite `Feature` resolves it from its own input before evaluating
   /// its members. Origin normalization happens only in the renderers.
   public let radiusReferenceExtent: CGRect?
 
   /// Creates an evaluation context.
   public init(
-    kernelRegistry: ParametricKernelRegistry = .init(),
     radiusReferenceExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) {
-    self.kernelRegistry = kernelRegistry
     self.radiusReferenceExtent = radiusReferenceExtent
     self.presentationTime = presentationTime
   }
@@ -90,112 +85,61 @@ public struct FeatureEvaluationContext: Sendable {
   /// (the full source extent in the current render pixel space).
   public func withRadiusReferenceExtent(_ extent: CGRect?) -> Self {
     .init(
-      kernelRegistry: kernelRegistry,
       radiusReferenceExtent: extent,
       presentationTime: presentationTime
     )
   }
 }
 
-/// An extent-preserving image effect.
+/// Errors thrown while evaluating features.
 ///
-/// Conforming types are pure parameter values; `apply` is the feature's
-/// evaluation, dispatched natively through the protocol witness — no registry
-/// participates at runtime. Implementations must return an image cropped to
-/// the input extent.
-///
-/// `apply` evaluates unconditionally: `isEnabled` is the CALLER's contract.
-/// The evaluator and composite features (preset, local adjustment pipelines)
-/// filter disabled features before calling `apply`.
-///
-/// - Important: Transitional. This protocol belongs to the `MainTree` /
-///   `EditingDocument` model and is removed with it. A new effect also
-///   conforms to `ImageEffect`, which lets it appear in a feature's `body`.
-public protocol ImageEffectFeatureType: IdentifiedFeature {
+/// Every failure a built-in feature or renderer raises during evaluation is
+/// one of these cases, including failures of Brightroom's own Metal kernels.
+public enum FeatureEvaluationError: Error, Equatable, Sendable {
 
-  /// Evaluates the effect over the input image.
-  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage
+  /// A crop rectangle cannot produce a valid image extent.
+  case invalidCropRect(CGRect)
 
-  /// Validates the parameters before evaluation.
-  func validate() throws
-
-  /// Nested features evaluated inside this effect, exposed for tree-level
-  /// validation such as duplicate-ID detection.
-  var childFeatures: [any IdentifiedFeature] { get }
-}
-
-extension ImageEffectFeatureType {
-
-  public func validate() throws {}
-
-  public var childFeatures: [any IdentifiedFeature] { [] }
-}
-
-/// A feature that may change the current image domain (extent or coordinate
-/// meaning), such as crop or future geometry correction.
-///
-/// The evaluator treats the returned image's extent as the new current
-/// domain; implementations should reset their output to zero origin.
-///
-/// - Important: Transitional. This protocol belongs to the `MainTree` /
-///   `EditingDocument` model and is removed with it. A new domain feature also
-///   conforms to `Feature`, which lets it appear in a feature's `body`.
-public protocol DomainFeatureType: IdentifiedFeature {
-
-  /// Evaluates the domain change over the input image.
-  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage
-
-  /// Validates the parameters before evaluation.
-  func validate() throws
-}
-
-extension DomainFeatureType {
-
-  public func validate() throws {}
-}
-
-extension EffectPipeline {
-
-  /// Evaluates the enabled effects in order over the input image.
+  /// A color-cube feature's data does not match its dimension.
   ///
-  /// This is the pipeline-level evaluator UIs and renderers use without
-  /// fabricating a whole document.
-  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    try effects
-      .filter(\.isEnabled)
-      .reduce(image) { image, effect in
-        try effect.apply(to: image, context: context)
-      }
-  }
+  /// `identifier` is the feature's lookup-table identifier.
+  case invalidColorCubeData(identifier: String, expectedByteCount: Int, actualByteCount: Int)
+
+  /// A union or intersection mask node has no inputs.
+  case emptyMaskComposite
+
+  /// A Metal kernel bundled with Brightroom could not be loaded.
+  ///
+  /// `name` is the kernel or library name; `reason` describes the underlying
+  /// failure for diagnostics.
+  case kernelUnavailable(name: String, reason: String)
+
+  /// Core Image returned nil while applying the named filter or kernel.
+  case failedToCreateImage(String)
+
+  /// A renderer received a `nil` optional document.
+  ///
+  /// A document that does not exist yet is not a request for the unedited
+  /// image; render `EmptyFeature()` for that.
+  case documentUnavailable
 }
 
-extension IdentifiedFeature {
+extension FeatureEvaluationError: LocalizedError {
 
-  /// Compares this feature against another behind an existential.
-  ///
-  /// Method dispatch opens `Self`; differing dynamic types are never equal.
-  public func isEqualFeature(to other: any IdentifiedFeature) -> Bool {
-    guard let other = other as? Self else {
-      return false
+  public var errorDescription: String? {
+    switch self {
+    case let .invalidCropRect(rect):
+      "The crop rectangle \(rect) cannot produce an image."
+    case let .invalidColorCubeData(identifier, expectedByteCount, actualByteCount):
+      "The color cube \"\(identifier)\" has \(actualByteCount) bytes of data; its dimension needs \(expectedByteCount)."
+    case .emptyMaskComposite:
+      "A mask union or intersection has no inputs."
+    case let .kernelUnavailable(name, reason):
+      "Brightroom couldn't load its \(name) kernel: \(reason)"
+    case let .failedToCreateImage(name):
+      "Core Image couldn't apply \(name)."
+    case .documentUnavailable:
+      "There is no document to render yet."
     }
-    return self == other
-  }
-}
-
-/// Compares two features behind existentials.
-public func parametricFeatureIsEqual(_ lhs: any IdentifiedFeature, _ rhs: any IdentifiedFeature) -> Bool {
-  lhs.isEqualFeature(to: rhs)
-}
-
-/// Compares two ordered existential feature arrays.
-public func parametricFeaturesAreEqual(
-  _ lhs: [any IdentifiedFeature],
-  _ rhs: [any IdentifiedFeature]
-) -> Bool {
-  guard lhs.count == rhs.count else {
-    return false
-  }
-  return zip(lhs, rhs).allSatisfy { pair in
-    pair.0.isEqualFeature(to: pair.1)
   }
 }

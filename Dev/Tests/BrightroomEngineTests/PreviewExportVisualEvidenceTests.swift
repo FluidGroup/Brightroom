@@ -27,30 +27,25 @@ struct PreviewExportVisualEvidenceTests {
     // A realistic edit: a built-in preset, a global exposure lift, and a soft
     // blur painted across a horizontal band, plus a centered crop.
     let preset = PresetFeature(
-      id: .init(rawValue: "evidence.preset.warm-pop"),
       name: "WarmPop",
       identifier: "evidence.preset.warm-pop",
       effects: [
-        SaturationFeature(id: .init(rawValue: "evidence.sat"), value: 0.3),
-        TemperatureFeature(id: .init(rawValue: "evidence.temp"), value: 900),
-        ContrastFeature(id: .init(rawValue: "evidence.contrast"), value: 0.06),
+        AnyImageEffect(SaturationFeature(value: 0.3)),
+        AnyImageEffect(TemperatureFeature(value: 900)),
+        AnyImageEffect(ContrastFeature(value: 0.06)),
       ]
     )
     var document = PhotosCropDocument(orientedImageSize: imageSize)
     document.effects.preset = preset
-    document.effects.exposure = ExposureFeature(
-      id: PhotosCropDocument.MemberID.exposure,
-      value: 0.35
-    )
+    document.effects.exposure = ExposureFeature(value: 0.35)
     // The band is centered vertically, so its working-space stamps equal the
     // display ones.
     document.blurMask = LocalAdjustment(
       maskTree: MaskTree(root: .brush(BrushMask(
-        id: PhotosCropDocument.MemberID.blurMaskBrush,
         strokes: [makeHorizontalBandStroke(imageSize: imageSize)]
       )))
     ) {
-      GaussianBlurFeature(id: PhotosCropDocument.MemberID.blurMaskEffect, value: 60)
+      GaussianBlurFeature(value: 60)
     }
 
     // 1) Original (no edit).

@@ -144,25 +144,30 @@ struct ParametricFeaturePreviewView: View {
   private func makePreviewImage() -> ParametricPreviewImage {
     do {
       let renderer = ParametricImageRenderer()
-      let output = try renderer.makeOutput(
+      let document = makeDocument()
+      let output = try renderer.makeImage(
         from: Self.sourceImage,
-        document: makeDocument()
+        document: document
       )
 
+      // Both local adjustments come after both crops and the brightness keeps
+      // the extent, so the output extent is the domain the masks are authored in.
       switch previewLayer {
       case .source:
         return .image(Self.sourceImage)
       case .output:
-        return .image(output.image)
+        return .image(output)
       case .localExposureMask:
         return .image(
-          output.localAdjustmentMasks[Self.localExposureID]
-            ?? CIImage.parametricPreviewTransparent(extent: output.image.extent)
+          try document.localExposure.map {
+            try renderer.makeMaskImage(for: $0.maskTree, extent: output.extent)
+          } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
       case .localBlurMask:
         return .image(
-          output.localAdjustmentMasks[Self.localBlurID]
-            ?? CIImage.parametricPreviewTransparent(extent: output.image.extent)
+          try document.localBlur.map {
+            try renderer.makeMaskImage(for: $0.maskTree, extent: output.extent)
+          } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
       }
     } catch {
@@ -170,66 +175,24 @@ struct ParametricFeaturePreviewView: View {
     }
   }
 
-  private func makeDocument() -> EditingDocument {
-    var features: [MainFeature] = [
-      .domain(
-        CropFeature(
-          id: Self.firstCropID,
-          isEnabled: isFirstCropEnabled,
-          cropRect: firstCropRect
-        )
-      ),
-      .domain(
-        CropFeature(
-          id: Self.secondCropID,
-          isEnabled: isSecondCropEnabled,
-          cropRect: secondCropRect
-        )
-      ),
-      .localAdjustment(
-        LocalAdjustmentFeature(
-          id: Self.localExposureID,
-          isEnabled: isLocalExposureEnabled,
-          maskTree: MaskTree(root: localExposureMask),
-          effectPipeline: EffectPipeline(
-            effects: [
-              ExposureFeature(
-                id: FeatureID(rawValue: "preview-local-exposure-effect"),
-                value: localExposureValue
-              ),
-            ]
-          )
-        )
-      ),
-      .localAdjustment(
-        LocalAdjustmentFeature(
-          id: Self.localBlurID,
-          isEnabled: isLocalBlurEnabled,
-          maskTree: MaskTree(root: localBlurMask),
-          effectPipeline: EffectPipeline(
-            effects: [
-              GaussianBlurFeature(
-                id: FeatureID(rawValue: "preview-local-blur-effect"),
-                radius: localBlurRadius
-              ),
-            ]
-          )
-        )
-      ),
-    ]
-
-    if abs(globalBrightness) > 0.001 {
-      features.append(
-        .effect(
-          BrightnessFeature(
-            id: FeatureID(rawValue: "preview-global-brightness"),
-            value: globalBrightness
-          )
-        )
-      )
-    }
-
-    return EditingDocument(mainTree: MainTree(features: features))
+  private func makeDocument() -> ParametricPreviewDocument {
+    ParametricPreviewDocument(
+      firstCrop: isFirstCropEnabled ? CropFeature(cropRect: firstCropRect) : nil,
+      secondCrop: isSecondCropEnabled ? CropFeature(cropRect: secondCropRect) : nil,
+      localExposure: isLocalExposureEnabled
+        ? LocalAdjustment(maskTree: MaskTree(root: localExposureMask)) {
+          ExposureFeature(value: localExposureValue)
+        }
+        : nil,
+      localBlur: isLocalBlurEnabled
+        ? LocalAdjustment(maskTree: MaskTree(root: localBlurMask)) {
+          GaussianBlurFeature(radius: localBlurRadius)
+        }
+        : nil,
+      brightness: abs(globalBrightness) > 0.001
+        ? BrightnessFeature(value: globalBrightness)
+        : nil
+    )
   }
 
   private var firstCropRect: CGRect {
@@ -270,7 +233,6 @@ struct ParametricFeaturePreviewView: View {
   private var localExposureMask: MaskNode {
     .brush(
       BrushMask(
-        id: FeatureID(rawValue: "preview-local-exposure-mask"),
         strokes: [
           BrushMaskStroke(
             stamps: [normalizedPoint(x: localExposureX, y: localExposureY)],
@@ -288,10 +250,8 @@ struct ParametricFeaturePreviewView: View {
   private var localBlurMask: MaskNode {
     .feather(
       MaskFeather(
-        id: FeatureID(rawValue: "preview-local-blur-feather"),
         input: .brush(
           BrushMask(
-            id: FeatureID(rawValue: "preview-local-blur-mask"),
             strokes: [
               BrushMaskStroke(
                 stamps: [normalizedPoint(x: localBlurX, y: localBlurY)],
@@ -323,11 +283,6 @@ struct ParametricFeaturePreviewView: View {
   private func formatted(_ value: Double) -> String {
     String(format: "%.2f", value)
   }
-
-  private static let firstCropID = FeatureID(rawValue: "preview-crop-a")
-  private static let secondCropID = FeatureID(rawValue: "preview-crop-b")
-  private static let localExposureID = FeatureID(rawValue: "preview-local-exposure")
-  private static let localBlurID = FeatureID(rawValue: "preview-local-blur")
 
   private static let sourceExtent = CGRect(x: 0, y: 0, width: 512, height: 320)
 
@@ -377,6 +332,26 @@ struct ParametricFeaturePreviewView: View {
     )
     .cropped(to: sourceExtent)
   }()
+}
+
+/// The document the parametric feature preview renders: two crops, two local
+/// adjustments authored in the cropped domain, then a global brightness.
+///
+/// A toggled-off member is `nil`, so it contributes nothing.
+private struct ParametricPreviewDocument: Feature, Equatable {
+  var firstCrop: CropFeature?
+  var secondCrop: CropFeature?
+  var localExposure: LocalAdjustment<ExposureFeature>?
+  var localBlur: LocalAdjustment<GaussianBlurFeature>?
+  var brightness: BrightnessFeature?
+
+  var body: some Feature {
+    firstCrop
+    secondCrop
+    localExposure
+    localBlur
+    brightness
+  }
 }
 
 /// Image evaluation state for the parametric feature preview.

@@ -4,11 +4,12 @@ Near-term, actionable follow-ups for the parametric editing/rendering work. The
 broader direction lives in [`vision-of-editing.md`](./vision-of-editing.md); this
 file tracks concrete engineering items that are not yet done.
 
-Status context (as of the v5 parametric migration):
+Status context (as of Brightroom 6):
 
-- `EditingCrop` / `EditingFeature` are deleted. `EditingStack.Edit` stores an
-  `EditingDocument` directly; crop is a parametric `CropFeature`. BrightroomUI
-  edits crop through `CropEditingState` / `CropRotation`.
+- `EditingStack` holds no edit. PhotosCrop and `SwiftUICropView` edit a
+  `PhotosCropDocument` (a statically composed `Feature`) owned by
+  `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
+  BrightroomUI edits crop through `CropEditingState` / `CropRotation`.
 - Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
   across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
   and the live Metal render shader (`BrushMaskRenderShader.metal`).
@@ -50,8 +51,6 @@ Status context (as of the v5 parametric migration):
     `Rendered.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
     `Rendered.cgImage` (which decodes full).
   `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
-  A private `renderSynchronously(options:)` backs the async API and is used by
-  size-sensitive benchmarks (`measure {}` can't await).
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
     `CIImageStreamingFileWriter.defaultStripHeight`. Confirm custom CIKernels
@@ -69,7 +68,7 @@ Status context (as of the v5 parametric migration):
 
 ## TODO
 
-### 1. Optimize the export brush-mask rasterizer — `FeatureGraphCompiler.render(_:BrushMask)`
+### 1. Optimize the export brush-mask rasterizer — `MaskTreeRenderer.render(_:BrushMask)`
 
 The Core Image path accumulates one full-extent CIImage per stamp via `componentMax`
 (an O(stamps)-deep graph, each stamp evaluated over the whole extent). Slow and
@@ -88,7 +87,7 @@ noted:
   Biggest win for huge masks, but it changes the rasterization geometry, so the
   live Metal shader must be made polyline-based too, or live/export diverge.
 
-Files: `Sources/BrightroomParametric/FeatureGraphCompiler.swift`,
+Files: `Sources/BrightroomParametric/MaskTreeRenderer.swift`,
 `Sources/BrightroomParametric/ParametricKernelRegistry.swift`.
 Guards: `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
 `LocalAdjustmentRenderingTests`.
@@ -104,13 +103,12 @@ one live Metal rasterizer.
 Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`,
 `.../BrushMaskMetalRasterizer.swift`.
 
-### 3. (Optional) Store masks y-up in the document — "E5"
+### 3. Done: Store masks y-up in the document — "E5"
 
-Masks are currently stored y-down and flipped to the compiler's y-up space in the
-bridge (`EditingDocumentBridge.loweredToParametricDocument` / `MaskNode.flippingStampsY`).
-This is behavior-preserving and parity-green. The cleanup would store masks y-up so
-`edit.document` is directly renderable, relocating the single flip to the CPU raster.
-Low priority; only do it if "document is directly renderable" becomes valuable.
+`PhotosCropDocument` stores brush stamps in Core Image's y-up working space, and
+the y-down bridge (`EditingDocumentBridge`) is deleted, so the document is
+directly renderable. The canvas converts gestures to y-up when it commits a
+stroke.
 
 Guards: `LocalAdjustmentMaskOrientationTests`, `EditingPreviewExportParityTests`,
 `PreviewExportVisualEvidenceTests`.
@@ -136,11 +134,11 @@ device memory-watermark crash), so it needs a manual confirmation.
 
 The source-resolution-blur fix covers the **local-adjustment** preview path
 (`.localAdjustment`). The `.preview` / `.renderedEditPreview` paths still apply
-the global `EffectPipeline` to the full-canvas image. That is safe today because
+the global effects (`PhotosCropDocument.Effects`) to the full-canvas image. That is safe today because
 every global effect PhotosCrop exposes is pointwise (exposure/contrast/etc.) —
 Core Image evaluates those lazily at the output/viewport resolution, so no
 full-canvas buffer is materialized. If a global **spatial** effect (blur,
-sharpen, displacement) is ever added to the global pipeline, that path would
+sharpen, displacement) is ever added to the global effects, that path would
 materialize a full-canvas intermediate and could OOM on huge sources; apply the
 same source-resolution-then-upscale treatment there.
 

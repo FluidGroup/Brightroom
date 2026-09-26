@@ -74,7 +74,6 @@ public final class ColorCubeLoader {
         if pathExtension == "cube" {
           let parsedCube = try parser.parse(contentsOf: url)
           return ColorCubeFeature(
-            id: .init(rawValue: path),
             name: parsedCube.title ?? name(from: path, dimension: parsedCube.dimension),
             identifier: path,
             dimension: parsedCube.dimension,
@@ -110,7 +109,6 @@ public final class ColorCubeLoader {
         )
 
         return ColorCubeFeature(
-          id: .init(rawValue: path),
           name: name(from: path, dimension: dimension),
           identifier: path,
           dimension: dimension,

@@ -9,9 +9,8 @@ import CoreMedia
 import Foundation
 import Testing
 
-/// Shared sources, masks, and pixel comparison for the static composition
-/// tests.
-enum StaticCompositionFixtures {
+/// Shared sources, masks, and pixel comparison for the rendering tests.
+enum RenderingFixtures {
 
   /// The source extent. Its origin is not zero, so chain-entry normalization
   /// takes part in every comparison.
@@ -97,6 +96,55 @@ enum StaticCompositionFixtures {
     try renderer.makeImage(from: makeSource(), document: EmptyFeature())
   }
 
+  // MARK: Oracles
+
+  /// Blends `adjusted` over `base` through `mask` with the raw Core Image
+  /// filter, independent of `LocalAdjustment`.
+  static func explicitBlend(adjusted: CIImage, base: CIImage, mask: CIImage) -> CIImage {
+    adjusted.applyingFilter(
+      "CIBlendWithAlphaMask",
+      parameters: [
+        kCIInputBackgroundImageKey: base,
+        kCIInputMaskImageKey: mask,
+      ]
+    )
+    .cropped(to: base.extent)
+  }
+
+  /// A value-form Gaussian blur rebuilt from raw filters: the radius is
+  /// `diagonal(basis) × value / 2000`, and the input is clamped before the
+  /// blur and cropped after it, as the built-in recipe does.
+  static func explicitValueBlur(_ image: CIImage, value: Double, basis: CGRect) -> CIImage {
+    let radius = hypot(basis.width, basis.height) * value / 2_000
+    return image
+      .clamped(to: image.extent)
+      .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius])
+      .cropped(to: image.extent)
+  }
+
+  /// Translates an image so its extent starts at zero.
+  static func removingOffset(_ image: CIImage) -> CIImage {
+    image.transformed(
+      by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY)
+    )
+  }
+
+  /// The alpha channel of a mask image, one float per pixel.
+  static func alpha(of mask: CIImage) -> [Float] {
+    pixels(of: mask).enumerated().compactMap { index, component in
+      index % 4 == 3 ? component : nil
+    }
+  }
+
+  /// The largest per-pixel difference between two alpha fields.
+  static func maximumDifference(_ lhs: [Float], _ rhs: [Float]) -> Float {
+    precondition(lhs.count == rhs.count)
+    return zip(lhs, rhs).reduce(0) { result, pair in
+      let difference = abs(pair.0 - pair.1)
+      return difference.isNaN ? .infinity : max(result, difference)
+    }
+  }
+
   // MARK: Masks
 
   /// A soft stroke in the lower-left of the entry domain (y-up).
@@ -129,7 +177,7 @@ enum StaticCompositionFixtures {
     brush: BrushMaskBrush(diameter: 60, hardness: 0.8, opacity: 1)
   )
 
-  /// A feathered brush united with a hard brush, with fresh node identities.
+  /// A feathered brush united with a hard brush.
   static func featheredBrushMaskTree() -> MaskTree {
     MaskTree(
       root: .union([
@@ -180,7 +228,7 @@ enum StaticCompositionFixtures {
     }
     return ColorCubeFeature(
       name: "Cross Process",
-      identifier: "static-composition-tests.cross-process",
+      identifier: "composition-tests.cross-process",
       amount: 0.85,
       dimension: dimension,
       cubeData: values.withUnsafeBufferPointer { Data(buffer: $0) }
@@ -189,12 +237,13 @@ enum StaticCompositionFixtures {
 
   // MARK: Video
 
-  /// Writes a one-frame H.264 movie of `image`, which must have a zero origin.
-  static func makeVideoAsset(from image: CIImage) async throws -> AVURLAsset {
+  /// Writes an H.264 movie of `image`, which must have a zero origin, with
+  /// one frame per second for `frameCount` seconds.
+  static func makeVideoAsset(from image: CIImage, frameCount: Int = 1) async throws -> AVURLAsset {
     let width = Int(image.extent.width)
     let height = Int(image.extent.height)
     let url = FileManager.default.temporaryDirectory
-      .appendingPathComponent("static-composition-tests-\(UUID().uuidString)")
+      .appendingPathComponent("composition-tests-\(UUID().uuidString)")
       .appendingPathExtension("mov")
     let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
     let input = AVAssetWriterInput(
@@ -231,14 +280,17 @@ enum StaticCompositionFixtures {
       colorSpace: CGColorSpace(name: CGColorSpace.sRGB)
     )
 
-    while input.isReadyForMoreMediaData == false {
-      try await Task.sleep(for: .milliseconds(10))
+    for index in 0..<frameCount {
+      while input.isReadyForMoreMediaData == false {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      try #require(
+        adaptor.append(frame, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: 1)),
+        "\(String(describing: writer.error))"
+      )
     }
-    try #require(
-      adaptor.append(frame, withPresentationTime: .zero),
-      "\(String(describing: writer.error))"
-    )
     input.markAsFinished()
+    writer.endSession(atSourceTime: CMTime(value: CMTimeValue(frameCount), timescale: 1))
     await writer.finishWriting()
     try #require(writer.status == .completed, "\(String(describing: writer.error))")
 
@@ -250,11 +302,20 @@ enum StaticCompositionFixtures {
     of asset: AVAsset,
     composition: AVVideoComposition
   ) async throws -> CGImage {
+    try await frame(of: asset, composition: composition, at: .zero)
+  }
+
+  /// Decodes the frame at `time` through a video composition.
+  static func frame(
+    of asset: AVAsset,
+    composition: AVVideoComposition,
+    at time: CMTime
+  ) async throws -> CGImage {
     let generator = AVAssetImageGenerator(asset: asset)
     generator.videoComposition = composition
     generator.requestedTimeToleranceBefore = .zero
     generator.requestedTimeToleranceAfter = .zero
-    return try await generator.image(at: .zero).image
+    return try await generator.image(at: time).image
   }
 
   // MARK: Pixels
@@ -287,10 +348,11 @@ enum StaticCompositionFixtures {
   }
 
   /// Expects two images to have the same extent and the same pixels within
-  /// `tolerance`.
+  /// `tolerance` (the fixture's same-pipeline tolerance by default).
   static func expectPixelsMatch(
     _ expected: CIImage,
     _ actual: CIImage,
+    tolerance: Float = RenderingFixtures.tolerance,
     sourceLocation: SourceLocation = #_sourceLocation
   ) {
     #expect(expected.extent == actual.extent, sourceLocation: sourceLocation)
@@ -326,5 +388,26 @@ enum StaticCompositionFixtures {
       "expected a visible difference, max channel difference \(difference)",
       sourceLocation: sourceLocation
     )
+  }
+}
+
+/// A test-only primitive that applies its steps in order.
+///
+/// The fold oracle for order tests: it shares no code with `FeatureBuilder`,
+/// `TupleFeature`, `Optional`, `EitherFeature`, `Array`, or composite `body`
+/// evaluation, as long as every step is a primitive leaf. Expand a preset into
+/// `preset.effects.map(\.base)` before listing it.
+struct SequentialFeatures: Feature {
+
+  var steps: [any Feature]
+
+  init(_ steps: [any Feature]) {
+    self.steps = steps
+  }
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try steps.reduce(image) { image, step in
+      try step.apply(to: image, context: context)
+    }
   }
 }

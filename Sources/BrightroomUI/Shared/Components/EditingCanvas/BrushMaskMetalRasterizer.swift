@@ -95,8 +95,9 @@ struct BrushMaskMetalRasterizer {
   /// then applies its OWN vertical flip when wrapping (Metal top-left origin →
   /// Core Image bottom-left origin). Those two flips compose: a stamp passed with
   /// `center = (x, y)` lands at CI-y `y` in the wrapped image — exactly where the
-  /// parametric kernel (`renderMask`, `dest.coord()` y-up) places the same `y`.
-  /// So the wrapped texture is already in `renderMask`'s frame and is directly
+  /// parametric kernel (`MaskTreeRenderer`, `dest.coord()` y-up) places the
+  /// same `y`. So the wrapped texture is already in the frame of
+  /// `MaskTreeRenderer` (`ParametricImageRenderer.makeMaskImage`) and is directly
   /// comparable to the export/preview mask without any added transform.
   /// (The live view's `renderDrawableImage` flip is a separate, drawable-only
   /// presentation step and does not belong here.)
@@ -167,7 +168,7 @@ struct BrushMaskMetalRasterizer {
     // via `1 - y/h*2`, and `CIImage(mtlTexture:)` applies its own vertical flip on
     // wrap; the two compose so the stamp lands at CI y-up = the input y — the
     // SAME coordinate the parametric `brushStamp` kernel uses (`dest.coord()`).
-    // So the wrapped texture is already in `renderMask`'s frame.
+    // So the wrapped texture is already in `MaskTreeRenderer`'s frame.
     return textureImage.cropped(to: extent)
   }
 }

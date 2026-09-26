@@ -45,20 +45,12 @@ public struct ParametricVideoRenderer: Sendable {
     case custom(CGSize)
   }
 
-  /// The image renderer used to evaluate the feature graph for each frame.
-  public var imageRenderer: ParametricImageRenderer
+  private let imageRenderer = ParametricImageRenderer()
 
   /// Creates a video renderer.
-  public init(imageRenderer: ParametricImageRenderer = .init()) {
-    self.imageRenderer = imageRenderer
-  }
+  public init() {}
 
-  /// Creates a video renderer using a specific feature graph compiler.
-  public init(compiler: FeatureGraphCompiler) {
-    self.imageRenderer = ParametricImageRenderer(compiler: compiler)
-  }
-
-  /// Applies a feature document to a single video frame.
+  /// Applies a document to a single video frame.
   ///
   /// - Parameters:
   ///   - sourceImage: The frame image supplied by AVFoundation.
@@ -71,32 +63,6 @@ public struct ParametricVideoRenderer: Sendable {
   /// - Returns: A Core Image recipe for the filtered frame.
   public func makeFrameImage(
     from sourceImage: CIImage,
-    document: EditingDocument,
-    renderExtent: CGRect? = nil,
-    presentationTime: CMTime = .zero
-  ) throws -> CIImage {
-    let output = try imageRenderer.makeImage(
-      from: sourceImage,
-      document: document,
-      presentationTime: presentationTime
-    )
-    return Self.frameImage(output, placedIn: renderExtent)
-  }
-
-  /// Applies a statically composed document to a single video frame.
-  ///
-  /// - Parameters:
-  ///   - sourceImage: The frame image supplied by AVFoundation.
-  ///   - document: The feature document to evaluate. An optional document
-  ///     renders as identity when it is `nil`.
-  ///   - renderExtent: The optional output canvas. When specified, the feature
-  ///     output is placed at the canvas origin and cropped/expanded to that
-  ///     extent using a transparent Core Image background.
-  ///   - presentationTime: The presentation time represented by `sourceImage`.
-  ///     The default keeps direct single-frame evaluation deterministic.
-  /// - Returns: A Core Image recipe for the filtered frame.
-  public func makeFrameImage(
-    from sourceImage: CIImage,
     document: some Feature,
     renderExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
@@ -106,148 +72,21 @@ public struct ParametricVideoRenderer: Sendable {
       document: document,
       presentationTime: presentationTime
     )
-    return Self.frameImage(output, placedIn: renderExtent)
-  }
-
-  /// Resolves the render size for a video composition.
-  ///
-  /// `featureOutput` performs a dry run with a transparent frame so domain
-  /// features such as crop can decide the final canvas size without decoding a
-  /// real video frame.
-  public func resolveRenderSize(
-    sourceRenderSize: CGSize,
-    document: EditingDocument,
-    mode: RenderSizeMode
-  ) throws -> CGSize {
-    try Self.resolveRenderSize(
-      sourceRenderSize: sourceRenderSize,
-      mode: mode
-    ) { dryRunInput in
-      try imageRenderer.makeOutput(
-        from: dryRunInput,
-        document: document
-      )
-      .image
-    }
-  }
-
-  /// Resolves the render size for a video composition of a statically
-  /// composed document.
-  ///
-  /// `featureOutput` performs a dry run with a transparent frame so domain
-  /// features such as crop can decide the final canvas size without decoding a
-  /// real video frame.
-  public func resolveRenderSize(
-    sourceRenderSize: CGSize,
-    document: some Feature,
-    mode: RenderSizeMode
-  ) throws -> CGSize {
-    try Self.resolveRenderSize(
-      sourceRenderSize: sourceRenderSize,
-      mode: mode
-    ) { dryRunInput in
-      try imageRenderer.makeImage(
-        from: dryRunInput,
-        document: document
-      )
-    }
-  }
-
-  /// Creates a Core Image backed video composition that applies the document to
-  /// every frame.
-  ///
-  /// The returned composition can be assigned to `AVPlayerItem.videoComposition`
-  /// or `AVAssetExportSession.videoComposition`.
-  public func makeVideoComposition(
-    for asset: AVAsset,
-    document: EditingDocument,
-    renderSizeMode: RenderSizeMode = .featureOutput,
-    ciContext: CIContext? = nil
-  ) throws -> AVMutableVideoComposition {
-    let imageRenderer = imageRenderer
-    return try Self.makeVideoComposition(
-      for: asset,
-      renderSizeMode: renderSizeMode,
-      ciContext: ciContext
-    ) { image, presentationTime in
-      try imageRenderer.makeImage(from: image, document: document, presentationTime: presentationTime)
-    }
-  }
-
-  /// Creates a Core Image backed video composition that applies a statically
-  /// composed document to every frame.
-  ///
-  /// The returned composition can be assigned to `AVPlayerItem.videoComposition`
-  /// or `AVAssetExportSession.videoComposition`.
-  public func makeVideoComposition(
-    for asset: AVAsset,
-    document: some Feature,
-    renderSizeMode: RenderSizeMode = .featureOutput,
-    ciContext: CIContext? = nil
-  ) throws -> AVMutableVideoComposition {
-    let imageRenderer = imageRenderer
-    return try Self.makeVideoComposition(
-      for: asset,
-      renderSizeMode: renderSizeMode,
-      ciContext: ciContext
-    ) { image, presentationTime in
-      try imageRenderer.makeImage(from: image, document: document, presentationTime: presentationTime)
-    }
-  }
-
-  /// Builds a video composition around `evaluate`, which evaluates the
-  /// document over an image at a presentation time.
-  private static func makeVideoComposition(
-    for asset: AVAsset,
-    renderSizeMode: RenderSizeMode,
-    ciContext: CIContext?,
-    evaluate: @escaping @Sendable (CIImage, CMTime) throws -> CIImage
-  ) throws -> AVMutableVideoComposition {
-    let sizingComposition = AVMutableVideoComposition(asset: asset) { request in
-      request.finish(with: request.sourceImage, context: nil)
-    }
-    let sourceRenderSize = ParametricVideoRenderer.sourceRenderSize(
-      for: asset,
-      sizingComposition: sizingComposition
-    )
-    let renderSize = try resolveRenderSize(
-      sourceRenderSize: sourceRenderSize,
-      mode: renderSizeMode
-    ) { dryRunInput in
-      try evaluate(dryRunInput, .zero)
-    }
-    let renderExtent = CGRect(origin: .zero, size: renderSize)
-
-    let composition = AVMutableVideoComposition(asset: asset) { request in
-      do {
-        let output = frameImage(
-          try evaluate(request.sourceImage, request.compositionTime),
-          placedIn: renderExtent
-        )
-        request.finish(with: output, context: ciContext)
-      } catch {
-        request.finish(with: error)
-      }
-    }
-    composition.renderSize = renderSize
-    guard composition.renderSize.isParametricVideoValidRenderSize else {
-      throw ParametricVideoRendererError.invalidRenderSize(composition.renderSize)
-    }
-    return composition
-  }
-
-  private static func frameImage(_ output: CIImage, placedIn renderExtent: CGRect?) -> CIImage {
     guard let renderExtent else {
       return output
     }
-
     return output.parametricPlaced(in: renderExtent)
   }
 
-  private static func resolveRenderSize(
+  /// Resolves the render size for a video composition of a document.
+  ///
+  /// `featureOutput` performs a dry run with a transparent frame so domain
+  /// features such as crop can decide the final canvas size without decoding a
+  /// real video frame.
+  public func resolveRenderSize(
     sourceRenderSize: CGSize,
-    mode: RenderSizeMode,
-    featureOutput: (CIImage) throws -> CIImage
+    document: some Feature,
+    mode: RenderSizeMode
   ) throws -> CGSize {
     guard sourceRenderSize.isParametricVideoValidRenderSize else {
       throw ParametricVideoRendererError.invalidSourceRenderSize(sourceRenderSize)
@@ -267,13 +106,115 @@ public struct ParametricVideoRenderer: Sendable {
       let sourceExtent = CGRect(origin: .zero, size: sourceRenderSize)
       let dryRunInput = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
         .cropped(to: sourceExtent)
-      let output = try featureOutput(dryRunInput)
+      let output = try imageRenderer.makeImage(from: dryRunInput, document: document)
       let renderSize = output.extent.size
       guard renderSize.isParametricVideoValidRenderSize else {
         throw ParametricVideoRendererError.invalidRenderSize(renderSize)
       }
       return renderSize
     }
+  }
+
+  /// Creates a Core Image backed video composition that applies a document to
+  /// every frame.
+  ///
+  /// Each frame evaluates the document at the frame's composition time. The
+  /// returned composition can be assigned to `AVPlayerItem.videoComposition`
+  /// or `AVAssetExportSession.videoComposition`.
+  public func makeVideoComposition(
+    for asset: AVAsset,
+    document: some Feature,
+    renderSizeMode: RenderSizeMode = .featureOutput,
+    ciContext: CIContext? = nil
+  ) throws -> AVMutableVideoComposition {
+    let sizingComposition = AVMutableVideoComposition(asset: asset) { request in
+      request.finish(with: request.sourceImage, context: nil)
+    }
+    let renderSize = try resolveRenderSize(
+      sourceRenderSize: Self.sourceRenderSize(
+        for: asset,
+        sizingComposition: sizingComposition
+      ),
+      document: document,
+      mode: renderSizeMode
+    )
+    let renderExtent = CGRect(origin: .zero, size: renderSize)
+
+    let composition = AVMutableVideoComposition(asset: asset) { request in
+      do {
+        let output = try makeFrameImage(
+          from: request.sourceImage,
+          document: document,
+          renderExtent: renderExtent,
+          presentationTime: request.compositionTime
+        )
+        request.finish(with: output, context: ciContext)
+      } catch {
+        request.finish(with: error)
+      }
+    }
+    composition.renderSize = renderSize
+    guard composition.renderSize.isParametricVideoValidRenderSize else {
+      throw ParametricVideoRendererError.invalidRenderSize(composition.renderSize)
+    }
+    return composition
+  }
+
+  /// Applies a document that may not exist yet to a single video frame.
+  ///
+  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
+  ///   `nil`; pass `EmptyFeature()` to render the unedited frame.
+  public func makeFrameImage<Document: Feature>(
+    from sourceImage: CIImage,
+    document: Document?,
+    renderExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
+  ) throws -> CIImage {
+    guard let document else {
+      throw FeatureEvaluationError.documentUnavailable
+    }
+    return try makeFrameImage(
+      from: sourceImage,
+      document: document,
+      renderExtent: renderExtent,
+      presentationTime: presentationTime
+    )
+  }
+
+  /// Resolves the render size for a document that may not exist yet.
+  ///
+  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
+  ///   `nil`.
+  public func resolveRenderSize<Document: Feature>(
+    sourceRenderSize: CGSize,
+    document: Document?,
+    mode: RenderSizeMode
+  ) throws -> CGSize {
+    guard let document else {
+      throw FeatureEvaluationError.documentUnavailable
+    }
+    return try resolveRenderSize(sourceRenderSize: sourceRenderSize, document: document, mode: mode)
+  }
+
+  /// Creates a video composition for a document that may not exist yet.
+  ///
+  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
+  ///   `nil`; pass `EmptyFeature()` to render unedited frames.
+  public func makeVideoComposition<Document: Feature>(
+    for asset: AVAsset,
+    document: Document?,
+    renderSizeMode: RenderSizeMode = .featureOutput,
+    ciContext: CIContext? = nil
+  ) throws -> AVMutableVideoComposition {
+    guard let document else {
+      throw FeatureEvaluationError.documentUnavailable
+    }
+    return try makeVideoComposition(
+      for: asset,
+      document: document,
+      renderSizeMode: renderSizeMode,
+      ciContext: ciContext
+    )
   }
 
   private static func sourceRenderSize(

@@ -10,14 +10,12 @@ struct PhotosCropDocumentTests {
 
   private let imageSize = CGSize(width: 400, height: 300)
 
-  private typealias MemberID = PhotosCropDocument.MemberID
-
   private let stroke = BrushMaskStroke(
     stamps: [CGPoint(x: 100, y: 220), CGPoint(x: 140, y: 220)],
     brush: .init(diameter: 60, hardness: 0.7, opacity: 1)
   )
 
-  // MARK: - Identity (D7)
+  // MARK: - Value equality
 
   @Test func `Two default documents are equal`() {
     #expect(
@@ -41,35 +39,80 @@ struct PhotosCropDocumentTests {
     #expect(build() == build())
   }
 
-  @Test func `setCrop keeps the crop identity`() {
+  @Test func `setCrop with an equal state leaves the document equal`() {
     var document = PhotosCropDocument(orientedImageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .angle_90
+    document.setCrop(crop)
+    let edited = document
+
+    // Re-committing the state read back from the document changes nothing.
+    document.setCrop(CropEditingState(cropFeature: document.crop, imageSize: imageSize))
+    #expect(document == edited)
+
+    // Neither does committing the same state again.
+    document.setCrop(crop)
+    #expect(document == edited)
+  }
+
+  @Test func `a quarter turn of the full image keeps the whole image`() {
+    let size = CGSize(width: 300, height: 200)
+    var crop = CropEditingState(imageSize: size, cropRect: CGRect(origin: .zero, size: size))
+    // What `CropView.rotateClockwise()` does: the frame keeps its center in
+    // image coordinates and takes the output orientation, so it extends past
+    // the unrotated image bounds. `CropFeature.apply` rotates the image about
+    // that center, which fills the frame exactly.
+    crop.updateCropExtent(CGRect(x: 50, y: -50, width: 200, height: 300))
+    crop.rotation = .angle_90
+
+    var document = PhotosCropDocument(orientedImageSize: size)
+    document.setCrop(crop)
+
+    withKnownIssue(
+      "PixelCropRect clamps the crop rect to the unrotated image bounds, so a quarter turn commits a centered square"
+    ) {
+      #expect(document.crop.cropRect.size == CGSize(width: 200, height: 300))
+    }
+  }
+
+  @Test func `setCrop stores the snapped rect`() {
+    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    crop.updateCropExtent(CGRect(x: 10.4, y: 20.6, width: 200.3, height: 100.2))
+    crop.rotation = .angle_90
 
     document.setCrop(crop)
 
-    #expect(document.crop.id == MemberID.crop)
+    // Pixel-snapped through the engine snapper, the one CropView commits through.
+    #expect(document.crop == CropFeature(
+      displayCropRect: crop.cropExtent,
+      imageSize: imageSize,
+      rotation: crop.rotation.quarterTurn,
+      straighten: crop.adjustmentAngle.radians
+    ))
+    #expect(document.crop.cropRect == document.crop.cropRect.integral)
     #expect(document.crop.rotation == .quarterCW || document.crop.rotation == .quarterCCW)
+
+    // An integral rect round-trips exactly through the y-up working space.
+    crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
+    document.setCrop(crop)
     #expect(
       document.crop.displayCropRect(imageSize: imageSize)
         == CGRect(x: 10, y: 20, width: 200, height: 100)
     )
+    #expect(document.crop.cropRect == CGRect(x: 10, y: 180, width: 200, height: 100))
   }
 
-  @Test func `First stroke seeds the default blur with fixed identities`() throws {
+  @Test func `First stroke seeds the default blur`() throws {
     var document = PhotosCropDocument(orientedImageSize: imageSize)
 
     document.appendBlurMaskStroke(stroke)
 
     let blurMask = try #require(document.blurMask)
-    #expect(blurMask.content.id == MemberID.blurMaskEffect)
-    #expect(blurMask.content.radius == .editingStackFilterValue(40))
-    guard case let .brush(brush) = blurMask.maskTree.root else {
-      Issue.record("Expected a brush-rooted mask tree.")
-      return
-    }
-    #expect(brush.id == MemberID.blurMaskBrush)
+    #expect(blurMask.content == CropViewMaskingDefaults.blurEffect)
+    #expect(blurMask.content.radius == .proportional(40))
+    #expect(blurMask.maskTree.root == .brush(BrushMask(strokes: [stroke])))
 
     // Later strokes append in place and keep the blur content.
     document.appendBlurMaskStroke(stroke)
@@ -77,117 +120,124 @@ struct PhotosCropDocumentTests {
     #expect(document.blurMask?.content == blurMask.content)
   }
 
-  @Test func `Rebuilding a document normalizes identities and drops disabled members`() {
-    let restored = PhotosCropDocument(
+  /// A host that stores the document's values and rebuilds it gets back the
+  /// document the editor produced (the resume path).
+  @Test func `A document rebuilt from the same values equals the edited one`() {
+    let preset = PresetFeature(
+      name: "P",
+      identifier: "p",
+      effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
+    )
+
+    var edited = PhotosCropDocument(orientedImageSize: imageSize)
+    var crop = CropEditingState(cropFeature: edited.crop, imageSize: imageSize)
+    crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
+    crop.rotation = .angle_90
+    edited.setCrop(crop)
+    edited.appendBlurMaskStroke(stroke)
+    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &edited.effects)
+    PhotosCropAdjustmentParameter.vignette.apply(sliderValue: 60, to: &edited.effects)
+    edited.effects.preset = preset
+
+    let rebuilt = PhotosCropDocument(
       effects: .init(
-        exposure: ExposureFeature(value: 0.9),
-        vignette: VignetteFeature(isEnabled: false, value: 1)
+        preset: PresetFeature(
+          name: "P",
+          identifier: "p",
+          effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
+        ),
+        exposure: ExposureFeature(value: edited.effects.exposure!.value),
+        vignette: VignetteFeature(value: edited.effects.vignette!.value)
       ),
       blurMask: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))) {
         GaussianBlurFeature(value: 40)
       },
-      crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
+      crop: CropFeature(
+        cropRect: edited.crop.cropRect,
+        rotation: edited.crop.rotation,
+        straightenRadians: edited.crop.straightenRadians
+      )
     )
 
-    #expect(restored.effects.exposure?.id == MemberID.exposure)
-    #expect(restored.effects.vignette == nil)
-    #expect(restored.blurMask?.content.id == MemberID.blurMaskEffect)
-    #expect(restored.crop.id == MemberID.crop)
-    #expect(restored.crop == PhotosCropDocument(orientedImageSize: imageSize).crop)
-
-    // A disabled blur content drops the whole blur mask.
-    let disabledBlur = PhotosCropDocument(
-      blurMask: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))) {
-        GaussianBlurFeature(isEnabled: false, value: 40)
-      },
-      crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
-    )
-    #expect(disabledBlur.blurMask == nil)
+    #expect(rebuilt == edited)
+    #expect(rebuilt.effects == edited.effects)
+    #expect(rebuilt.blurMask == edited.blurMask)
+    #expect(rebuilt.crop == edited.crop)
   }
 
-  @Test func `Effects built through the initializer get fixed identities`() {
-    let effects = PhotosCropDocument.Effects(
-      exposure: ExposureFeature(value: 0.5),
-      vignette: VignetteFeature(isEnabled: false, value: 1)
+  /// Members assigned directly compare equal to the ones the sliders create:
+  /// nothing but their values decides equality.
+  @Test func `Members assigned directly equal slider-created members`() {
+    var sliderMade = PhotosCropDocument.Effects()
+    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &sliderMade)
+    PhotosCropAdjustmentParameter.blur.apply(sliderValue: 40, to: &sliderMade)
+
+    var assigned = PhotosCropDocument.Effects()
+    assigned.exposure = ExposureFeature(value: 0.9)
+    assigned.gaussianBlur = GaussianBlurFeature(value: 40)
+
+    #expect(assigned == sliderMade)
+    #expect(
+      PhotosCropDocument.Effects(
+        exposure: ExposureFeature(value: 0.9),
+        gaussianBlur: GaussianBlurFeature(value: 40)
+      ) == sliderMade
     )
 
-    #expect(effects.exposure?.id == MemberID.exposure)
-    #expect(effects.vignette == nil)
-    #expect(effects == PhotosCropDocument.Effects(exposure: ExposureFeature(value: 0.5)))
-  }
-
-  /// Members assigned after construction bypass normalization; a disabled one
-  /// still contributes nothing, as in the identified model.
-  @Test func `Disabled members assigned directly render nothing`() throws {
-    let source = makeSource()
-    let renderer = ParametricImageRenderer()
-    let plain = PhotosCropDocument(orientedImageSize: imageSize)
-
-    var disabled = plain
-    disabled.effects.exposure = ExposureFeature(isEnabled: false, value: 2)
-    disabled.blurMask = LocalAdjustment(
-      maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))
-    ) {
-      GaussianBlurFeature(isEnabled: false, value: 40)
-    }
-
-    let expected = try renderer.makeImage(from: source, document: plain)
-    let rendered = try renderer.makeImage(from: source, document: disabled)
-    #expect(rendered.extent == expected.extent)
-    #expect(maxDifference(rendered, expected) == 0)
-    #expect(disabled.normalized() == plain)
+    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    document.effects = sliderMade
+    var direct = PhotosCropDocument(orientedImageSize: imageSize)
+    direct.effects.exposure = ExposureFeature(value: 0.9)
+    direct.effects.gaussianBlur = GaussianBlurFeature(value: 40)
+    #expect(direct == document)
   }
 
   // MARK: - Evaluation order (D1)
 
-  /// P2-only bridge: the document's `body` order equals the legacy canonical
-  /// document (`[global effects in PhotosCropEffectOrder, local adjustment,
-  /// final crop]`). Deleted with the old model in P3.
-  @Test func `Body order equals the legacy canonical document`() throws {
+  /// The document's `body` evaluates the global effects in `Effects`
+  /// declaration order (the preset's effects first), then the blur mask, then
+  /// the final crop. The oracle folds the leaves by hand, so it shares no
+  /// builder or composite evaluation with the document.
+  @Test func `Body evaluates effects, blur mask, and crop in order`() throws {
     let document = makeFullDocument()
-
     let effects = document.effects
-    let legacyEffects: [any ImageEffectFeatureType] = [
-      effects.preset!,
-      effects.exposure!,
-      effects.brightness!,
-      effects.temperature!,
-      effects.highlights!,
-      effects.shadows!,
-      effects.saturation!,
-      effects.contrast!,
-      effects.sharpen!,
-      effects.unsharpMask!,
-      effects.gaussianBlur!,
-      effects.fade!,
-      effects.vignette!,
+    let blurMask = try #require(document.blurMask)
+    let presetEffects: [any Feature] = try #require(effects.preset).effects.map { $0.base }
+    let globalEffects: [any Feature] = presetEffects + [
+      try #require(effects.exposure),
+      try #require(effects.brightness),
+      try #require(effects.temperature),
+      try #require(effects.highlights),
+      try #require(effects.shadows),
+      try #require(effects.saturation),
+      try #require(effects.contrast),
+      try #require(effects.sharpen),
+      try #require(effects.unsharpMask),
+      try #require(effects.gaussianBlur),
+      try #require(effects.fade),
+      try #require(effects.vignette),
     ]
-    let legacy = EditingDocument(
-      mainTree: MainTree(features: [
-        .effect(
-          EffectPipelineFeature(
-            id: FeatureID(rawValue: "legacy.effects"),
-            pipeline: EffectPipeline(effects: legacyEffects)
-          )
-        ),
-        .localAdjustment(
-          LocalAdjustmentFeature(
-            id: FeatureID(rawValue: "legacy.local-adjustment"),
-            maskTree: document.blurMask!.maskTree,
-            effectPipeline: EffectPipeline(effects: [document.blurMask!.content])
-          )
-        ),
-        .domain(document.crop),
-      ])
-    )
+    #expect(globalEffects.count == 13)
 
     let source = makeSource()
     let renderer = ParametricImageRenderer()
     let actual = try renderer.makeImage(from: source, document: document)
-    let expected = try renderer.makeImage(from: source, document: legacy)
+    let expected = try renderer.makeImage(
+      from: source,
+      document: SequentialFeatures(globalEffects + [blurMask, document.crop])
+    )
 
     #expect(actual.extent == expected.extent)
     #expect(maxDifference(actual, expected) == 0)
+
+    // The blur mask is authored before the crop: evaluating it after the crop
+    // puts the stroke somewhere else.
+    let blurAfterCrop = try renderer.makeImage(
+      from: source,
+      document: SequentialFeatures(globalEffects + [document.crop, blurMask])
+    )
+    #expect(blurAfterCrop.extent == expected.extent)
+    #expect(maxDifference(blurAfterCrop, expected) > 4)
   }
 
   // MARK: - Value substitutions (D5)
@@ -229,7 +279,7 @@ struct PhotosCropDocumentTests {
 
   // MARK: - Helpers
 
-  /// A document with all 13 global effects, a blur mask, and a rotated crop.
+  /// A document with all 13 global effect members, a blur mask, and a rotated crop.
   private func makeFullDocument() -> PhotosCropDocument {
     var document = PhotosCropDocument(orientedImageSize: imageSize)
     for (parameter, value) in [
@@ -246,14 +296,13 @@ struct PhotosCropDocumentTests {
       parameter.apply(sliderValue: value, to: &document.effects)
     }
     document.effects.preset = PresetFeature(
-      id: FeatureID(rawValue: "test.preset"),
       name: "P",
       identifier: "p",
-      effects: [ContrastFeature(id: FeatureID(rawValue: "test.preset.contrast"), value: 0.1)]
+      effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
-    document.effects.sharpen = SharpenFeature(id: MemberID.sharpen, sharpness: 0.4, radius: 1.5)
-    document.effects.unsharpMask = UnsharpMaskFeature(id: MemberID.unsharpMask, intensity: 0.5, radius: 2)
-    document.effects.fade = FadeFeature(id: MemberID.fade, intensity: 0.3)
+    document.effects.sharpen = SharpenFeature(sharpness: 0.4, radius: 1.5)
+    document.effects.unsharpMask = UnsharpMaskFeature(intensity: 0.5, radius: 2)
+    document.effects.fade = FadeFeature(intensity: 0.3)
 
     document.appendBlurMaskStroke(stroke)
 
@@ -275,7 +324,19 @@ struct PhotosCropDocumentTests {
         "inputColor1": CIColor(red: 0.1, green: 0.5, blue: 0.9),
       ]
     )!.outputImage!
-    return gradient.cropped(to: extent)
+    // A checkerboard gives the blur edges to change; a blur leaves a bare
+    // linear gradient almost untouched.
+    let checker = CIFilter(
+      name: "CICheckerboardGenerator",
+      parameters: [
+        "inputCenter": CIVector(x: 0, y: 0),
+        "inputColor0": CIColor(red: 0, green: 0, blue: 0, alpha: 0.5),
+        "inputColor1": CIColor(red: 1, green: 1, blue: 1, alpha: 0),
+        "inputWidth": 16,
+        "inputSharpness": 1,
+      ]
+    )!.outputImage!
+    return checker.composited(over: gradient).cropped(to: extent)
   }
 
   private func maxDifference(_ lhs: CIImage, _ rhs: CIImage) -> Int {

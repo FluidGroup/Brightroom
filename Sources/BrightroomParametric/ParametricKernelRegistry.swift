@@ -22,15 +22,12 @@
 import CoreImage
 import Foundation
 
-/// Provides cached kernels used by the parametric Core Image compiler.
+/// Provides cached kernels used by the mask renderer.
 ///
 /// Documents store semantic feature data only. This registry is renderer
 /// infrastructure and all custom operations are represented as Metal-backed
 /// Core Image kernels loaded from BrightroomParametric's compiled Metal library.
-public struct ParametricKernelRegistry: Sendable {
-
-  /// Creates a registry for Metal-backed parametric kernels.
-  public init() {}
+struct ParametricKernelRegistry: Sendable {
 
   func makeBrushStamp(
     extent: CGRect,
@@ -53,7 +50,7 @@ public struct ParametricKernelRegistry: Sendable {
         opacity,
       ]
     ) else {
-      throw ParametricKernelRegistryError.failedToApplyKernel("brushStamp")
+      throw FeatureEvaluationError.failedToCreateImage("brushStamp")
     }
     return image.cropped(to: extent)
   }
@@ -68,26 +65,10 @@ public struct ParametricKernelRegistry: Sendable {
       extent: extent,
       arguments: [removing, base]
     ) else {
-      throw ParametricKernelRegistryError.failedToApplyKernel("maskSubtract")
+      throw FeatureEvaluationError.failedToCreateImage("maskSubtract")
     }
     return image.cropped(to: extent)
   }
-}
-
-/// Errors thrown while preparing or applying parametric custom kernels.
-public enum ParametricKernelRegistryError: Error, Equatable, Sendable {
-
-  /// A named kernel was not present in the loaded kernel cache.
-  case missingKernel(String)
-
-  /// Core Image returned nil while applying a named kernel.
-  case failedToApplyKernel(String)
-
-  /// A named Core Image kernel could not be loaded from the compiled metallib.
-  case failedToLoadKernel(String, String)
-
-  /// The bundled compiled Metal library is missing or unreadable.
-  case missingKernelLibraryResource(String)
 }
 
 private enum ParametricMetalKernelStore {
@@ -102,7 +83,10 @@ private enum ParametricMetalKernelStore {
     switch loadedKernels {
     case let .success(kernels):
       guard let kernel = kernels[name] else {
-        throw ParametricKernelRegistryError.missingKernel(name)
+        throw FeatureEvaluationError.kernelUnavailable(
+          name: name,
+          reason: "not in the compiled Metal library"
+        )
       }
       return kernel
     case let .failure(error):
@@ -110,31 +94,25 @@ private enum ParametricMetalKernelStore {
     }
   }
 
-  private static let loadedKernels: Result<[String: CIColorKernel], ParametricKernelRegistryError> = {
+  private static let loadedKernels: Result<[String: CIColorKernel], FeatureEvaluationError> = {
+    let data: Data
     do {
-      let kernels = try loadCompiledKernels()
-      return .success(kernels)
-    } catch let error as BrushStampMetalLibraryError {
-      return .failure(.missingKernelLibraryResource(String(describing: error)))
-    } catch let error as ParametricKernelRegistryError {
-      return .failure(error)
+      data = try BrushStampMetalLibrary.data()
     } catch {
-      return .failure(.missingKernelLibraryResource(String(describing: error)))
+      return .failure(
+        .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
+      )
     }
-  }()
-
-  private static func loadCompiledKernels() throws -> [String: CIColorKernel] {
-    let data = try BrushStampMetalLibrary.data()
     var result: [String: CIColorKernel] = [:]
     for name in kernelNames {
       do {
         result[name] = try CIColorKernel(functionName: name, fromMetalLibraryData: data)
       } catch {
-        throw ParametricKernelRegistryError.failedToLoadKernel(name, String(describing: error))
+        return .failure(.kernelUnavailable(name: name, reason: String(describing: error)))
       }
     }
-    return result
-  }
+    return .success(result)
+  }()
 }
 
 extension CIImage {

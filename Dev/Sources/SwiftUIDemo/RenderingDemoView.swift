@@ -427,7 +427,7 @@ private struct LUTImportDemoView: View {
     let preset = PresetFeature(
       name: cube.name,
       identifier: cube.identifier,
-      effects: [cube]
+      effects: [AnyImageEffect(cube)]
     )
     PresetStorage.default.presets.insert(preset, at: 0)
 

@@ -9,14 +9,14 @@ import Foundation
 import Testing
 import os
 
-/// Behavior of statically composed documents that pixel parity alone does not
-/// pin: the static shapes `FeatureBuilder` produces, evaluation order and
+/// Behavior of feature documents that pixel comparisons alone do not pin: the
+/// static shapes `FeatureBuilder` produces, evaluation order and
 /// nesting, the evaluation context passed down from chain entry, and the
 /// errors that invalid parameters throw.
 @Suite(.serialized)
-struct StaticCompositionBehaviorTests {
+struct CompositionBehaviorTests {
 
-  private typealias Fixtures = StaticCompositionFixtures
+  private typealias Fixtures = RenderingFixtures
 
   // MARK: - Builder shapes
 
@@ -144,31 +144,6 @@ struct StaticCompositionBehaviorTests {
     Fixtures.expectVisiblyDifferent(normalized, present)
   }
 
-  @Test func `evaluation ignores isEnabled because the body decides what applies`() throws {
-    let source = try Fixtures.makeSource()
-
-    struct Document: Feature {
-      var exposure: ExposureFeature
-
-      var body: some Feature {
-        exposure
-      }
-    }
-
-    // `Feature` documents that it never consults `isEnabled`: a member written
-    // in a body always applies. Disabling is expressed with `nil` or `if`.
-    let composed = try Fixtures.renderer.makeImage(
-      from: source,
-      document: Document(exposure: ExposureFeature(isEnabled: false, value: 1))
-    )
-    let enabled = try Fixtures.renderer.makeImage(
-      from: source,
-      document: EditingDocument(mainTree: MainTree(features: [.effect(ExposureFeature(value: 1))]))
-    )
-    Fixtures.expectPixelsMatch(enabled, composed)
-    Fixtures.expectVisiblyDifferent(composed, try Fixtures.normalizedSource())
-  }
-
   // MARK: - Local adjustments
 
   @Test func `a composite image effect works inside a local adjustment`() throws {
@@ -187,32 +162,31 @@ struct StaticCompositionBehaviorTests {
       }
     }
 
-    let identified = try Fixtures.renderer.makeImage(
-      from: source,
-      document: EditingDocument(
-        mainTree: MainTree(
-          features: [
-            .localAdjustment(
-              LocalAdjustmentFeature(
-                maskTree: maskTree,
-                effectPipeline: EffectPipeline(effects: [look.exposure, look.saturation, look.preset])
-              )
-            )
-          ]
-        )
-      )
-    )
     let composed = try Fixtures.renderer.makeImage(
       from: source,
       document: Document(maskTree: maskTree, look: look)
     )
 
+    // The look's leaves, blended through the rendered mask with the raw
+    // filter.
+    let normalized = try Fixtures.normalizedSource()
+    let adjusted = try Fixtures.renderer.makeImage(
+      from: normalized,
+      document: SequentialFeatures(
+        [look.exposure, look.saturation] + look.preset.effects.map { $0.base as any Feature }
+      )
+    )
+    let expected = Fixtures.explicitBlend(
+      adjusted: adjusted,
+      base: normalized,
+      mask: try Fixtures.renderer.makeMaskImage(for: maskTree, extent: Fixtures.entryExtent)
+    )
+
     #expect(composed.extent == Fixtures.entryExtent)
-    Fixtures.expectPixelsMatch(identified, composed)
+    Fixtures.expectPixelsMatch(expected, composed)
 
     // The look applies inside the mask; far from the stroke the input is
     // untouched.
-    let normalized = try Fixtures.normalizedSource()
     let insideMask = CGRect(x: 72, y: 48, width: 16, height: 8)
     let outsideMask = CGRect(x: 220, y: 160, width: 80, height: 60)
     Fixtures.expectVisiblyDifferent(
@@ -347,13 +321,13 @@ struct StaticCompositionBehaviorTests {
   // MARK: - Type erasure
 
   @Test func `erased effects are equal only when they wrap the same type`() {
-    let exposure = ExposureFeature(id: FeatureID(rawValue: "exposure"), value: 0.2)
+    let exposure = ExposureFeature(value: 0.2)
 
     #expect(AnyImageEffect(exposure) == AnyImageEffect(exposure))
     #expect(AnyImageEffect(AnyImageEffect(exposure)) == AnyImageEffect(exposure))
     #expect(
       AnyImageEffect(exposure)
-        != AnyImageEffect(ExposureFeature(id: FeatureID(rawValue: "exposure"), value: 0.3))
+        != AnyImageEffect(ExposureFeature(value: 0.3))
     )
 
     // A plain cast would bridge these.
@@ -363,46 +337,51 @@ struct StaticCompositionBehaviorTests {
     #expect(AnyImageEffect(exposure) != AnyImageEffect(Optional(exposure)))
   }
 
+  @Test func `tone curve and mixer equality compare rendered values`() throws {
+    // A diagonal interior point is an authored edit that renders as identity.
+    var diagonal = ToneCurveEditorValue()
+    let diagonalPointID = diagonal.y.insertPoint(input: 0.5, output: 0.5)
+    _ = try #require(diagonalPointID)
+    let neutralCurve = ToneCurveFeature(value: .neutral)
+    let diagonalCurve = ToneCurveFeature(value: diagonal)
+    #expect(diagonalCurve.value != neutralCurve.value)
+    #expect(diagonalCurve == neutralCurve)
+
+    // Mixer values that normalize to the same render parameters.
+    var first = ColorMixerAdjustment.neutral
+    first.red.hue = 10
+    var equivalent = ColorMixerAdjustment.neutral
+    equivalent.red.hue = 10.0.nextUp
+    #expect(first != equivalent)
+    #expect(ColorMixerFeature(adjustment: first) == ColorMixerFeature(adjustment: equivalent))
+  }
+
   // MARK: - Errors
 
-  @Test func `an empty mask composite throws the identified model's error even when disabled`() throws {
+  @Test func `an empty mask composite throws at any depth`() throws {
     let source = try Fixtures.makeSource()
-    let maskTree = MaskTree(
-      root: .subtract(
-        MaskSubtract(
-          isEnabled: false,
-          base: .brush(BrushMask(strokes: [Self.hardStroke])),
-          removing: .union([])
-        )
-      )
-    )
+    let brush = MaskNode.brush(BrushMask(strokes: [Self.hardStroke]))
+    let trees = [
+      MaskTree(root: .subtract(MaskSubtract(base: brush, removing: .union([])))),
+      MaskTree(root: .union([brush, .feather(MaskFeather(input: .intersect([]), radius: 4))])),
+    ]
 
-    let identifiedError = #expect(throws: FeatureGraphCompilerError.self) {
-      try Fixtures.renderer.makeImage(
-        from: source,
-        document: EditingDocument(
-          mainTree: MainTree(features: [
-            .localAdjustment(
-              LocalAdjustmentFeature(
-                maskTree: maskTree,
-                effectPipeline: EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
-              )
-            )
-          ])
+    for maskTree in trees {
+      let error = #expect(throws: FeatureEvaluationError.self) {
+        try Fixtures.renderer.makeImage(
+          from: source,
+          document: LocalAdjustment(maskTree: maskTree) {
+            GaussianBlurFeature(value: 40)
+          }
         )
-      )
-    }
-    #expect(identifiedError == .emptyMaskComposite(nil))
+      }
+      #expect(error == .emptyMaskComposite)
 
-    let composedError = #expect(throws: FeatureGraphCompilerError.self) {
-      try Fixtures.renderer.makeImage(
-        from: source,
-        document: LocalAdjustment(maskTree: maskTree) {
-          GaussianBlurFeature(value: 40)
-        }
-      )
+      // Mask inspection reports the same error.
+      #expect(throws: FeatureEvaluationError.emptyMaskComposite) {
+        try Fixtures.renderer.makeMaskImage(for: maskTree, extent: Fixtures.entryExtent)
+      }
     }
-    #expect(composedError == identifiedError)
   }
 
   @Test(arguments: [
@@ -410,22 +389,9 @@ struct StaticCompositionBehaviorTests {
     CGRect(x: 0, y: 0, width: 10, height: -5),
     CGRect(x: 0, y: 0, width: CGFloat.infinity, height: 10),
   ])
-  func `an invalid crop rect throws the identified model's error`(cropRect: CGRect) throws {
+  func `an invalid crop rect throws the rectangle`(cropRect: CGRect) throws {
     let source = try Fixtures.makeSource()
-    let crop = CropFeature(
-      id: FeatureID(rawValue: "static-composition-tests.invalid-crop"),
-      cropRect: cropRect
-    )
-
-    let identifiedError = #expect(throws: FeatureGraphCompilerError.self) {
-      try Fixtures.renderer.makeImage(
-        from: source,
-        document: EditingDocument(
-          mainTree: MainTree(features: [.effect(ExposureFeature(value: 0.2)), .domain(crop)])
-        )
-      )
-    }
-    #expect(identifiedError == .invalidCropRect(crop.id, cropRect))
+    let crop = CropFeature(cropRect: cropRect)
 
     struct Document: Feature {
       var crop: CropFeature
@@ -436,34 +402,34 @@ struct StaticCompositionBehaviorTests {
       }
     }
 
-    let composedError = #expect(throws: FeatureGraphCompilerError.self) {
+    let error = #expect(throws: FeatureEvaluationError.self) {
       try Fixtures.renderer.makeImage(from: source, document: Document(crop: crop))
     }
-    #expect(composedError == identifiedError)
+    #expect(error == .invalidCropRect(cropRect))
+
+    // Validation is available before rendering.
+    #expect(throws: FeatureEvaluationError.invalidCropRect(cropRect)) {
+      try crop.validate()
+    }
   }
 
-  @Test func `invalid color cube data throws the identified model's error at any depth`() throws {
+  @Test func `invalid color cube data throws at any depth`() throws {
     let source = try Fixtures.makeSource()
     let cube = ColorCubeFeature(
-      id: FeatureID(rawValue: "static-composition-tests.invalid-cube"),
       name: "Invalid",
-      identifier: "static-composition-tests.invalid-cube",
+      identifier: "composition-tests.invalid-cube",
       dimension: 4,
       cubeData: Data(count: 10)
     )
-
-    let identifiedError = #expect(throws: FeatureGraphCompilerError.self) {
-      try Fixtures.renderer.makeImage(
-        from: source,
-        document: EditingDocument(
-          mainTree: MainTree(features: [.effect(ExposureFeature(value: 0.2)), .effect(cube)])
-        )
-      )
-    }
-    #expect(
-      identifiedError
-        == .invalidColorCubeData(cube.id, expectedByteCount: 4 * 4 * 4 * 4 * 4, actualByteCount: 10)
+    let expectedError = FeatureEvaluationError.invalidColorCubeData(
+      identifier: "composition-tests.invalid-cube",
+      expectedByteCount: 4 * 4 * 4 * 4 * 4,
+      actualByteCount: 10
     )
+
+    #expect(throws: expectedError) {
+      try cube.validate()
+    }
 
     struct Root: Feature {
       var cube: ColorCubeFeature
@@ -493,18 +459,102 @@ struct StaticCompositionBehaviorTests {
       }
     }
 
+    let preset = PresetFeature(
+      name: "Broken",
+      identifier: "composition-tests.broken",
+      effects: [AnyImageEffect(ContrastFeature(value: 0.1)), AnyImageEffect(cube)]
+    )
+
     let documents: [any Feature] = [
       Root(cube: cube),
       Composite(cube: cube),
       Masked(cube: cube),
       [AnyImageEffect(cube)],
+      preset,
     ]
     for document in documents {
-      let composedError = #expect(throws: FeatureGraphCompilerError.self) {
+      let error = #expect(throws: FeatureEvaluationError.self) {
         try Fixtures.renderer.makeImage(from: source, document: document)
       }
-      #expect(composedError == identifiedError, "\(type(of: document))")
+      #expect(error == expectedError, "\(type(of: document))")
     }
+  }
+
+  @Test func `a nil optional document throws instead of rendering the source`() async throws {
+    let source = try Fixtures.makeSource()
+    let absent: ExposureFeature? = nil
+    let present: ExposureFeature? = ExposureFeature(value: 0.4)
+
+    #expect(throws: FeatureEvaluationError.documentUnavailable) {
+      try Fixtures.renderer.makeImage(from: source, document: absent)
+    }
+    #expect(throws: FeatureEvaluationError.documentUnavailable) {
+      try ParametricExportRenderer().render(source: source, document: absent)
+    }
+    #expect(throws: FeatureEvaluationError.documentUnavailable) {
+      try ParametricVideoRenderer().makeFrameImage(from: source, document: absent)
+    }
+    #expect(throws: FeatureEvaluationError.documentUnavailable) {
+      try ParametricVideoRenderer().resolveRenderSize(
+        sourceRenderSize: Fixtures.sourceExtent.size,
+        document: absent,
+        mode: .featureOutput
+      )
+    }
+    let asset = try await Fixtures.makeVideoAsset(from: Fixtures.normalizedSource())
+    defer {
+      try? FileManager.default.removeItem(at: asset.url)
+    }
+    #expect(throws: FeatureEvaluationError.documentUnavailable) {
+      try ParametricVideoRenderer().makeVideoComposition(for: asset, document: absent)
+    }
+
+    // A present optional renders its value.
+    Fixtures.expectPixelsMatch(
+      try Fixtures.renderer.makeImage(from: source, document: ExposureFeature(value: 0.4)),
+      try Fixtures.renderer.makeImage(from: source, document: present)
+    )
+    // The unedited image is an explicit request.
+    Fixtures.expectPixelsMatch(
+      Fixtures.removingOffset(source),
+      try Fixtures.renderer.makeImage(from: source, document: EmptyFeature())
+    )
+  }
+
+  @Test func `a local adjustment with empty content returns its input`() throws {
+    let input = try Fixtures.normalizedSource()
+    let context = FeatureEvaluationContext()
+    let maskTree = MaskTree(root: .brush(BrushMask(strokes: [Self.hardStroke])))
+
+    let empty = LocalAdjustment(maskTree: maskTree) {}
+    #expect(try empty.apply(to: input, context: context) === input)
+
+    let emptyArray = LocalAdjustment(maskTree: maskTree) { [AnyImageEffect]() }
+    #expect(try emptyArray.apply(to: input, context: context) === input)
+
+    let absent: ExposureFeature? = nil
+    let absentMember = LocalAdjustment(maskTree: maskTree) { absent }
+    #expect(try absentMember.apply(to: input, context: context) === input)
+
+    // The mask still renders first, so an empty mask composite throws even
+    // when the content applies nothing.
+    let invalidMask = LocalAdjustment(maskTree: MaskTree(root: .union([]))) {}
+    #expect(throws: FeatureEvaluationError.emptyMaskComposite) {
+      try invalidMask.apply(to: input, context: context)
+    }
+
+    // A mask error takes precedence over an error from the content.
+    let invalidCube = ColorCubeFeature(
+      name: "Invalid",
+      identifier: "composition-tests.invalid-cube",
+      dimension: 4,
+      cubeData: Data(count: 10)
+    )
+    let invalidBoth = LocalAdjustment(maskTree: MaskTree(root: .union([]))) { invalidCube }
+    let error = #expect(throws: FeatureEvaluationError.self) {
+      try invalidBoth.apply(to: input, context: context)
+    }
+    #expect(error == .emptyMaskComposite)
   }
 
   // MARK: - Fixtures
@@ -655,8 +705,8 @@ private struct Look: ImageEffect, Equatable {
   var saturation = SaturationFeature(value: -0.8)
   var preset = PresetFeature(
     name: "Punch",
-    identifier: "static-composition-tests.punch",
-    effects: [ContrastFeature(value: 0.2)]
+    identifier: "composition-tests.punch",
+    effects: [AnyImageEffect(ContrastFeature(value: 0.2))]
   )
 
   var body: some ImageEffect {

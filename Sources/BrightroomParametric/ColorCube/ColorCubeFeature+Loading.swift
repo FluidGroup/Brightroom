@@ -75,21 +75,22 @@ extension ColorCubeFeature {
   ///
   /// - Parameters:
   ///   - url: The local URL of a three-dimensional `.cube` file.
-  ///   - id: A stable feature identifier. The file name is used by default.
   ///   - name: A display name. The file's `TITLE` or base name is used by default.
+  ///   - identifier: The lookup-table identifier that selection UIs compare and
+  ///     hosts store. The file name (`url.lastPathComponent`) is used by
+  ///     default; pass a unique value when files from different folders can
+  ///     share a name.
   ///   - amount: The opacity used when compositing the LUT result.
   public init(
     contentsOfCubeFile url: URL,
-    id: FeatureID? = nil,
     name: String? = nil,
+    identifier: String? = nil,
     amount: Double = 1
   ) throws {
     let parsed = try _ColorCubeTextParser().parse(contentsOf: url)
-    let identifier = url.lastPathComponent
     self.init(
-      id: id ?? FeatureID(rawValue: identifier),
       name: name ?? parsed.title ?? url.deletingPathExtension().lastPathComponent,
-      identifier: identifier,
+      identifier: identifier ?? url.lastPathComponent,
       amount: amount,
       dimension: parsed.dimension,
       cubeData: parsed.cubeData
@@ -103,14 +104,17 @@ extension ColorCubeFeature {
   ///
   /// - Parameters:
   ///   - url: The local URL of a square LUT image.
-  ///   - id: A stable feature identifier. The file name is used by default.
   ///   - name: A display name. The file's base name is used by default.
+  ///   - identifier: The lookup-table identifier that selection UIs compare and
+  ///     hosts store. The file name (`url.lastPathComponent`) is used by
+  ///     default; pass a unique value when files from different folders can
+  ///     share a name.
   ///   - amount: The opacity used when compositing the LUT result.
   ///   - dimension: An explicit color-cube dimension, or `nil` to infer it.
   public init(
     cubeImageAt url: URL,
-    id: FeatureID? = nil,
     name: String? = nil,
+    identifier: String? = nil,
     amount: Double = 1,
     dimension: Int? = nil
   ) throws {
@@ -121,12 +125,10 @@ extension ColorCubeFeature {
       throw ColorCubeFeatureLoadingError.failedToCreateImage(url.lastPathComponent)
     }
 
-    let identifier = url.lastPathComponent
     try self.init(
       cubeImage: image,
-      id: id ?? FeatureID(rawValue: identifier),
       name: name ?? url.deletingPathExtension().lastPathComponent,
-      identifier: identifier,
+      identifier: identifier ?? url.lastPathComponent,
       amount: amount,
       dimension: dimension
     )
@@ -138,7 +140,6 @@ extension ColorCubeFeature {
   /// so its original bit depth and alpha layout do not leak into cube data.
   public init(
     cubeImage: CGImage,
-    id: FeatureID = .init(),
     name: String,
     identifier: String,
     amount: Double = 1,
@@ -153,7 +154,6 @@ extension ColorCubeFeature {
     )
 
     self.init(
-      id: id,
       name: name,
       identifier: identifier,
       amount: amount,

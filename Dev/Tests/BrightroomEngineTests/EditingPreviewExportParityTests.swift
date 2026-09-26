@@ -189,10 +189,10 @@ struct EditingPreviewExportParityTests {
     #expect(largestDifference > 40)
   }
 
-  /// A disabled brush leaf must select nothing in BOTH paths: export and
+  /// A brush with no strokes must select nothing in BOTH paths: export and
   /// preview equal the globally-adjusted image with no local blur, matching the
-  /// parametric compiler's transparent disabled-leaf contract.
-  @Test func `Disabled mask leaf is ignored by both paths`() async throws {
+  /// mask renderer's transparent empty-brush contract.
+  @Test func `An empty brush mask is ignored by both paths`() async throws {
     let imageSize = CGSize(width: 60, height: 24)
     let source = Self.makeSplitImage(
       width: 60,
@@ -201,31 +201,28 @@ struct EditingPreviewExportParityTests {
       rightWhite: 0.8
     )
 
-    let disabledDocument = Self.makeDocument(
+    let emptyDocument = Self.makeDocument(
       imageSize: imageSize,
-      blurMask: Self.makeBlurMask(
-        radius: 8,
-        displayCenter: CGPoint(x: 30, y: 12),
-        domainHeight: imageSize.height,
-        isEnabled: false
-      )
+      blurMask: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
+        GaussianBlurFeature(radius: 8)
+      }
     )
-    #expect(CropView.CanvasRenderPlan(blurMask: disabledDocument.blurMask) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(blurMask: emptyDocument.blurMask) == .viewportBase)
 
     // Reference: same document with no blur mask at all.
     let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, blurMask: nil)
 
-    let disabledExport = try await export(disabledDocument, source: source)
+    let emptyExport = try await export(emptyDocument, source: source)
     let globalOnlyExport = try await export(globalOnlyDocument, source: source)
-    let disabledPreview = try CanvasCompositionPreview.render(
-      document: disabledDocument,
+    let emptyPreview = try CanvasCompositionPreview.render(
+      document: emptyDocument,
       source: source
     )
 
-    // The disabled-leaf export must equal the no-adjustment export...
-    assertImagesMatch(disabledExport, globalOnlyExport, tolerance: 2)
-    // ...and the preview must match the export (same disabled-leaf semantics).
-    assertImagesMatch(disabledPreview, disabledExport, tolerance: 4)
+    // The empty-brush export must equal the no-adjustment export...
+    assertImagesMatch(emptyExport, globalOnlyExport, tolerance: 2)
+    // ...and the preview must match the export (same empty-brush semantics).
+    assertImagesMatch(emptyPreview, emptyExport, tolerance: 4)
   }
 
   /// A local-adjustment effect that throws must fail the export, surfaced like
@@ -278,8 +275,8 @@ struct EditingPreviewExportParityTests {
         brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: 1)
       )
     ])))
-    let maskCIImage = try FeatureGraphCompiler().renderMask(
-      tree,
+    let maskCIImage = try ParametricImageRenderer().makeMaskImage(
+      for: tree,
       extent: CGRect(x: 0, y: 0, width: canvas, height: canvas)
     )
     let maskCG = try #require(
@@ -375,14 +372,12 @@ struct EditingPreviewExportParityTests {
   private static func makeBlurMask(
     radius: CGFloat,
     displayCenter: CGPoint,
-    domainHeight: CGFloat,
-    isEnabled: Bool = true
+    domainHeight: CGFloat
   ) -> LocalAdjustment<GaussianBlurFeature> {
     LocalAdjustment(
       maskTree: .test(
         displayStamps: [displayCenter],
         diameter: 18,
-        isEnabled: isEnabled,
         domainHeight: domainHeight
       )
     ) {
@@ -397,7 +392,7 @@ struct EditingPreviewExportParityTests {
     blurMask: LocalAdjustment<GaussianBlurFeature>?
   ) -> PhotosCropDocument {
     var document = PhotosCropDocument(orientedImageSize: imageSize)
-    document.effects.exposure = ExposureFeature(id: PhotosCropDocument.MemberID.exposure, value: 0.4)
+    document.effects.exposure = ExposureFeature(value: 0.4)
     document.blurMask = blurMask
     if cropRect != nil || rotation != .angle_0 {
       var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)

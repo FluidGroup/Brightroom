@@ -3,31 +3,20 @@ import CoreImage
 import Foundation
 import Testing
 
-@testable import BrightroomEngine
 @testable import BrightroomParametric
 
-struct ParametricFeatureTreeTests {
+/// Rendering of built-in and host features through the renderers, checked
+/// against explicit Core Image recipes and invariants.
+struct FeatureRenderingTests {
 
   @Test func customFeatureRendersLikeDefaultFeatures() throws {
     // Host features need no registration or Codable conformance to render.
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            TestRedBoostFeature(
-              id: FeatureID(rawValue: "custom-red-boost"),
-              amount: 0.25
-            )
-          ),
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "custom-feature-brightness"),
-              value: 0.02
-            )
-          ),
-        ]
-      )
-    )
+    struct Document: Feature {
+      var body: some Feature {
+        TestRedBoostFeature(amount: 0.25)
+        BrightnessFeature(value: 0.02)
+      }
+    }
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 32, height: 24)
     )
@@ -49,46 +38,7 @@ struct ParametricFeatureTreeTests {
       )
       .cropped(to: input.extent)
 
-    let output = try FeatureGraphCompiler().makeOutput(from: input, document: document)
-
-    try Self.assertImagesMatch(
-      expected,
-      output.image,
-      tolerance: 2
-    )
-  }
-
-  @Test func parametricImageRendererMatchesFeatureGraphCompiler() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "image-renderer-brightness"),
-              value: 0.05
-            )
-          ),
-          .effect(
-            SaturationFeature(
-              id: FeatureID(rawValue: "image-renderer-saturation"),
-              value: 0.12
-            )
-          ),
-        ]
-      )
-    )
-    let input = CIImage.parametricColorPatchImage(
-      extent: CGRect(x: 0, y: 0, width: 36, height: 24)
-    )
-    let expected = try Self.compiler.makeOutput(
-      from: input,
-      document: document
-    )
-    .image
-    let output = try ParametricImageRenderer().makeImage(
-      from: input,
-      document: document
-    )
+    let output = try Self.renderer.makeImage(from: input, document: Document())
 
     try Self.assertImagesMatch(
       expected,
@@ -97,94 +47,62 @@ struct ParametricFeatureTreeTests {
     )
   }
 
-  /// An `EffectPipelineFeature` (the document's bundled global-effects node)
-  /// must render identically to the same effects scattered as individual
-  /// `.effect` main-tree features. This is the contract that lets the editing
-  /// stack store one identity-stable effects node while the compiler flattens
-  /// it through `childFeatures`.
-  @Test func effectPipelineFeatureMatchesScatteredEffects() throws {
-    let brightness = BrightnessFeature(id: FeatureID(rawValue: "pipeline-brightness"), value: 0.05)
-    let saturation = SaturationFeature(id: FeatureID(rawValue: "pipeline-saturation"), value: 0.12)
-
-    let scattered = EditingDocument(
-      mainTree: MainTree(features: [.effect(brightness), .effect(saturation)])
+  @Test func temperatureFeatureEvaluatesTintAxis() throws {
+    let output = try Self.renderer.makeImage(
+      from: Self.smallInput,
+      document: TemperatureFeature(value: 0, tint: 100)
     )
-    let bundled = EditingDocument(
-      mainTree: MainTree(features: [
-        .effect(
-          EffectPipelineFeature(
-            id: FeatureID(rawValue: "pipeline-node"),
-            pipeline: EffectPipeline(effects: [brightness, saturation])
-          )
-        )
-      ])
-    )
+    let rendered = try Self.render(output)
+    let pixel = Self.rgba(in: rendered, x: 4, y: 4)
 
-    let input = CIImage.parametricColorPatchImage(
-      extent: CGRect(x: 0, y: 0, width: 36, height: 24)
-    )
-    let scatteredOutput = try Self.compiler.makeOutput(from: input, document: scattered).image
-    let bundledOutput = try Self.compiler.makeOutput(from: input, document: bundled).image
-
-    try Self.assertImagesMatch(scatteredOutput, bundledOutput, tolerance: 2)
+    #expect(pixel.red > pixel.green)
+    #expect(pixel.blue > pixel.green)
   }
 
   @Test func videoFrameRendererMatchesDocumentRendering() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            ExposureFeature(
-              id: FeatureID(rawValue: "video-exposure"),
-              value: 0.4
-            )
-          ),
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "video-brightness"),
-              value: 0.04
-            )
-          ),
-        ]
-      )
-    )
+    struct Document: Feature {
+      var body: some Feature {
+        ExposureFeature(value: 0.4)
+        BrightnessFeature(value: 0.04)
+      }
+    }
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 44, height: 30)
     )
-    let expected = try Self.compiler.makeOutput(
-      from: input,
-      document: document
-    )
-    .image
+    let expected = try Self.renderer.makeImage(from: input, document: Document())
     let output = try ParametricVideoRenderer().makeFrameImage(
       from: input,
-      document: document
+      document: Document()
     )
 
     try Self.assertImagesMatch(
       expected,
       output,
       tolerance: 2
+    )
+  }
+
+  @Test func videoFrameRendererPassesPresentationTimeToFeatureEvaluation() throws {
+    let presentationTime = CMTime(value: 17, timescale: 30)
+
+    _ = try ParametricVideoRenderer().makeFrameImage(
+      from: Self.smallInput,
+      document: TestPresentationTimeFeature(expectedPresentationTime: presentationTime),
+      presentationTime: presentationTime
+    )
+  }
+
+  @Test func imageRendererDefaultsPresentationTimeToZero() throws {
+    _ = try ParametricImageRenderer().makeImage(
+      from: Self.smallInput,
+      document: TestPresentationTimeFeature(expectedPresentationTime: .zero)
     )
   }
 
   @Test func videoRendererResolvesCropOutputRenderSize() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "video-crop"),
-              cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)
-            )
-          ),
-        ]
-      )
-    )
-
     let renderSize = try ParametricVideoRenderer().resolveRenderSize(
       sourceRenderSize: CGSize(width: 48, height: 36),
-      document: document,
+      document: CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)),
       mode: .featureOutput
     )
 
@@ -197,22 +115,10 @@ struct ParametricFeatureTreeTests {
     defer {
       try? FileManager.default.removeItem(at: asset.url)
     }
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "video-composition-brightness"),
-              value: 0.03
-            )
-          ),
-        ]
-      )
-    )
 
     let composition = try ParametricVideoRenderer().makeVideoComposition(
       for: asset,
-      document: document,
+      document: BrightnessFeature(value: 0.03),
       renderSizeMode: .source
     )
 
@@ -220,33 +126,17 @@ struct ParametricFeatureTreeTests {
   }
 
   @Test func videoFrameRendererPlacesOutputInsideRenderExtent() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "video-crop-place"),
-              cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)
-            )
-          ),
-          .effect(
-            BrightnessFeature(
-              id: FeatureID(rawValue: "video-crop-brightness"),
-              value: 0.05
-            )
-          ),
-        ]
-      )
-    )
+    struct Document: Feature {
+      var body: some Feature {
+        CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18))
+        BrightnessFeature(value: 0.05)
+      }
+    }
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 48, height: 36)
     )
     let renderExtent = CGRect(x: 0, y: 0, width: 48, height: 36)
-    let featureOutput = try Self.compiler.makeOutput(
-      from: input,
-      document: document
-    )
-    .image
+    let featureOutput = try Self.renderer.makeImage(from: input, document: Document())
     let expected = featureOutput
       .composited(
         over: CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
@@ -255,7 +145,7 @@ struct ParametricFeatureTreeTests {
       .cropped(to: renderExtent)
     let output = try ParametricVideoRenderer().makeFrameImage(
       from: input,
-      document: document,
+      document: Document(),
       renderExtent: renderExtent
     )
 
@@ -268,84 +158,78 @@ struct ParametricFeatureTreeTests {
   }
 
   @Test func multipleCropsEvaluateInCurrentDomain() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "crop-a"),
-              cropRect: CGRect(x: 10, y: 10, width: 80, height: 80)
-            )
-          ),
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "crop-b"),
-              cropRect: CGRect(x: 20, y: 20, width: 25, height: 30)
-            )
-          ),
-        ]
-      )
-    )
-    let input = CIImage.parametricTestImage(
-      white: 1,
+    let first = CGRect(x: 10, y: 10, width: 80, height: 80)
+    let second = CGRect(x: 20, y: 20, width: 25, height: 30)
+    struct Document: Feature {
+      var first: CropFeature
+      var second: CropFeature
+
+      var body: some Feature {
+        first
+        second
+      }
+    }
+    let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 100, height: 100)
     )
 
-    let output = try Self.compiler.makeOutput(from: input, document: document)
+    let output = try Self.renderer.makeImage(
+      from: input,
+      document: Document(first: CropFeature(cropRect: first), second: CropFeature(cropRect: second))
+    )
 
-    #expect(output.image.extent == CGRect(x: 0, y: 0, width: 25, height: 30))
+    #expect(output.extent == CGRect(x: 0, y: 0, width: 25, height: 30))
+
+    // The second rectangle is relative to the first crop's output.
+    let expected = input
+      .cropped(to: first)
+      .transformed(by: CGAffineTransform(translationX: -first.minX, y: -first.minY))
+      .cropped(to: second)
+      .transformed(by: CGAffineTransform(translationX: -second.minX, y: -second.minY))
+    try Self.assertImagesMatch(expected, output, tolerance: 2)
   }
 
   @Test func imageEffectReceivesCurrentExtentAfterCrop() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "extent-probe-crop"),
-              cropRect: CGRect(x: 10, y: 8, width: 40, height: 20)
-            )
-          ),
-          .effect(
-            TestExtentProbeFeature(
-              id: FeatureID(rawValue: "extent-probe-effect")
-            )
-          ),
-        ]
-      )
-    )
+    struct Document: Feature {
+      var body: some Feature {
+        CropFeature(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+        TestExtentProbeFeature()
+      }
+    }
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 80, height: 60)
     )
 
-    let output = try FeatureGraphCompiler().makeOutput(from: input, document: document)
+    let output = try Self.renderer.makeImage(from: input, document: Document())
 
-    #expect(output.image.extent == CGRect(x: 0, y: 0, width: 40, height: 20))
-    let rendered = try Self.render(output.image)
+    #expect(output.extent == CGRect(x: 0, y: 0, width: 40, height: 20))
+    let rendered = try Self.render(output)
     let pixel = Self.rgba(in: rendered, x: 20, y: 10)
     #expect(abs(Int(pixel.red) - 102) <= 2)
     #expect(abs(Int(pixel.green) - 51) <= 2)
   }
 
   @Test func vignetteUsesCurrentExtentAfterCrop() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .domain(
-            CropFeature(
-              id: FeatureID(rawValue: "vignette-crop"),
-              cropRect: CGRect(x: 10, y: 8, width: 40, height: 20)
-            )
-          ),
-          .effect(
-            VignetteFeature(
-              id: FeatureID(rawValue: "vignette-after-crop"),
-              value: 0.5
-            )
-          ),
-        ]
-      )
-    )
+    let crop = CropFeature(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+    let vignette = VignetteFeature(value: 0.5)
+    struct CropThenVignette: Feature {
+      var crop: CropFeature
+      var vignette: VignetteFeature
+
+      var body: some Feature {
+        crop
+        vignette
+      }
+    }
+    struct VignetteThenCrop: Feature {
+      var crop: CropFeature
+      var vignette: VignetteFeature
+
+      var body: some Feature {
+        vignette
+        crop
+      }
+    }
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 80, height: 60)
     )
@@ -354,63 +238,60 @@ struct ParametricFeatureTreeTests {
       .transformed(by: CGAffineTransform(translationX: -10, y: -8))
     let expected = Self.vignetteEffectImage(value: 0.5, image: cropped)
 
-    let output = try Self.compiler.makeOutput(from: input, document: document)
+    let output = try Self.renderer.makeImage(
+      from: input,
+      document: CropThenVignette(crop: crop, vignette: vignette)
+    )
 
-    try Self.assertImagesMatch(expected, output.image, tolerance: 2)
+    try Self.assertImagesMatch(expected, output, tolerance: 2)
+
+    // The vignette centers on the domain it receives, so applying it before
+    // the crop gives a different image.
+    let vignetteBeforeCrop = try Self.renderer.makeImage(
+      from: input,
+      document: VignetteThenCrop(crop: crop, vignette: vignette)
+    )
+    #expect(vignetteBeforeCrop.extent == output.extent)
+    #expect(
+      try Self.maximumChannelDifference(output, vignetteBeforeCrop) > 4,
+      "a vignette before the crop must differ from one after it"
+    )
   }
 
   @Test func localAdjustmentsAndGlobalEffectEvaluateInOrder() throws {
-    let localExposure = LocalAdjustmentFeature(
-      id: FeatureID(rawValue: "local-exposure"),
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            id: FeatureID(rawValue: "exposure-mask"),
-            strokes: [
-              BrushMaskStroke(
-                stamps: [CGPoint(x: 10, y: 10)],
-                brush: BrushMaskBrush(diameter: 16, hardness: 1, opacity: 1)
-              ),
-            ]
+    struct Document: Feature {
+      var body: some Feature {
+        LocalAdjustment(
+          maskTree: MaskTree(
+            root: .brush(
+              BrushMask(strokes: [
+                BrushMaskStroke(
+                  stamps: [CGPoint(x: 10, y: 10)],
+                  brush: BrushMaskBrush(diameter: 16, hardness: 1, opacity: 1)
+                ),
+              ])
+            )
           )
-        )
-      ),
-      effectPipeline: EffectPipeline(
-        effects: [
-          ExposureFeature(id: FeatureID(rawValue: "local-exposure-effect"), value: 1),
-        ]
-      )
-    )
-    let localBlur = LocalAdjustmentFeature(
-      id: FeatureID(rawValue: "local-blur"),
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            id: FeatureID(rawValue: "blur-mask"),
-            strokes: [
-              BrushMaskStroke(
-                stamps: [CGPoint(x: 20, y: 10)],
-                brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-              ),
-            ]
+        ) {
+          ExposureFeature(value: 1)
+        }
+        LocalAdjustment(
+          maskTree: MaskTree(
+            root: .brush(
+              BrushMask(strokes: [
+                BrushMaskStroke(
+                  stamps: [CGPoint(x: 20, y: 10)],
+                  brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
+                ),
+              ])
+            )
           )
-        )
-      ),
-      effectPipeline: EffectPipeline(
-        effects: [
-          GaussianBlurFeature(id: FeatureID(rawValue: "blur-effect"), radius: 5),
-        ]
-      )
-    )
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .localAdjustment(localExposure),
-          .localAdjustment(localBlur),
-          .effect(BrightnessFeature(id: FeatureID(rawValue: "global-brightness"), value: 0.05)),
-        ]
-      )
-    )
+        ) {
+          GaussianBlurFeature(radius: 5)
+        }
+        BrightnessFeature(value: 0.05)
+      }
+    }
     let input = CIImage.parametricVerticalStripeImage(
       extent: CGRect(x: 0, y: 0, width: 40, height: 20),
       backgroundWhite: 0.15,
@@ -418,8 +299,8 @@ struct ParametricFeatureTreeTests {
       stripeRect: CGRect(x: 22, y: 0, width: 2, height: 20)
     )
 
-    let output = try Self.compiler.makeOutput(from: input, document: document)
-    let renderedImage = try Self.render(output.image)
+    let output = try Self.renderer.makeImage(from: input, document: Document())
+    let renderedImage = try Self.render(output)
     let localPixel = Self.rgba(in: renderedImage, x: 10, y: 10)
     let outsidePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
     let blurredNeighborPixel = Self.rgba(in: renderedImage, x: 19, y: 10)
@@ -431,123 +312,33 @@ struct ParametricFeatureTreeTests {
   }
 
   @Test func invertedMaskAppliesOutsideBrush() throws {
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .localAdjustment(
-            LocalAdjustmentFeature(
-              id: FeatureID(rawValue: "local-invert"),
-              maskTree: MaskTree(
-                root: .invert(
-                  .brush(
-                    BrushMask(
-                      id: FeatureID(rawValue: "center-mask"),
-                      strokes: [
-                        BrushMaskStroke(
-                          stamps: [CGPoint(x: 10, y: 10)],
-                          brush: BrushMaskBrush(diameter: 12, hardness: 1, opacity: 1)
-                        ),
-                      ]
-                    )
-                  )
-                )
+    let document = LocalAdjustment(
+      maskTree: MaskTree(
+        root: .invert(
+          .brush(
+            BrushMask(strokes: [
+              BrushMaskStroke(
+                stamps: [CGPoint(x: 10, y: 10)],
+                brush: BrushMaskBrush(diameter: 12, hardness: 1, opacity: 1)
               ),
-              effectPipeline: EffectPipeline(
-                effects: [
-                  ExposureFeature(id: FeatureID(rawValue: "invert-exposure"), value: 1),
-                ]
-              )
-            )
-          ),
-        ]
+            ])
+          )
+        )
       )
-    )
+    ) {
+      ExposureFeature(value: 1)
+    }
     let input = CIImage.parametricTestImage(
       white: 0.2,
       extent: CGRect(x: 0, y: 0, width: 20, height: 20)
     )
 
-    let output = try Self.compiler.makeOutput(from: input, document: document)
-    let renderedImage = try Self.render(output.image)
+    let output = try Self.renderer.makeImage(from: input, document: document)
+    let renderedImage = try Self.render(output)
     let center = Self.rgba(in: renderedImage, x: 10, y: 10)
     let corner = Self.rgba(in: renderedImage, x: 1, y: 1)
 
     #expect(corner.red > center.red)
-  }
-
-  @Test func duplicateIDsThrowValidationError() throws {
-    let id = FeatureID(rawValue: "duplicate")
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .effect(BrightnessFeature(id: id, value: 0.1)),
-          .effect(ExposureFeature(id: id, value: 0.1)),
-        ]
-      )
-    )
-
-    #expect(throws: FeatureGraphCompilerError.duplicateID(id)) {
-      try Self.compiler.makeOutput(from: Self.smallInput, document: document)
-    }
-  }
-
-  @Test func emptyLocalAdjustmentPipelineThrowsValidationError() throws {
-    let id = FeatureID(rawValue: "empty-local")
-    let document = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .localAdjustment(
-            LocalAdjustmentFeature(
-              id: id,
-              maskTree: MaskTree(root: .brush(BrushMask(id: FeatureID(rawValue: "mask")))),
-              effectPipeline: EffectPipeline()
-            )
-          ),
-        ]
-      )
-    )
-
-    #expect(throws: FeatureGraphCompilerError.emptyLocalAdjustmentEffectPipeline(id)) {
-      try Self.compiler.makeOutput(from: Self.smallInput, document: document)
-    }
-  }
-
-  @Test func disabledLocalAdjustmentWithEmptyPipelinePassesValidation() throws {
-    // Evaluation skips disabled features, so validation has to accept them too.
-    // Otherwise toggling a layer off makes the whole document unexportable
-    // while the preview still renders it fine.
-    let brightness = BrightnessFeature(
-      id: FeatureID(rawValue: "kept-brightness"),
-      value: 0.1
-    )
-    let withDisabled = EditingDocument(
-      mainTree: MainTree(
-        features: [
-          .localAdjustment(
-            LocalAdjustmentFeature(
-              id: FeatureID(rawValue: "disabled-local"),
-              isEnabled: false,
-              maskTree: MaskTree(
-                root: .brush(BrushMask(id: FeatureID(rawValue: "disabled-mask")))
-              ),
-              effectPipeline: EffectPipeline()
-            )
-          ),
-          .effect(brightness),
-        ]
-      )
-    )
-    let withoutDisabled = EditingDocument(
-      mainTree: MainTree(features: [.effect(brightness)])
-    )
-    let input = CIImage.parametricColorPatchImage(
-      extent: CGRect(x: 0, y: 0, width: 36, height: 24)
-    )
-
-    let output = try Self.compiler.makeOutput(from: input, document: withDisabled).image
-    let expected = try Self.compiler.makeOutput(from: input, document: withoutDisabled).image
-
-    try Self.assertImagesMatch(output, expected, tolerance: 2)
   }
 
   @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
@@ -564,7 +355,7 @@ struct ParametricFeatureTreeTests {
     #expect(image.extent == CGRect(x: 0, y: 0, width: 12, height: 12))
   }
 
-  private static let compiler = FeatureGraphCompiler()
+  private static let renderer = ParametricImageRenderer()
 
   private static let smallInput = CIImage.parametricTestImage(
     white: 0.5,
@@ -602,6 +393,36 @@ struct ParametricFeatureTreeTests {
       blue: pixels[index + 2],
       alpha: pixels[index + 3]
     )
+  }
+
+  /// The largest 8-bit color channel difference over every pixel of two
+  /// images of the same extent.
+  private static func maximumChannelDifference(_ lhs: CIImage, _ rhs: CIImage) throws -> Int {
+    let lhsBytes = rgbaBytes(of: try render(lhs))
+    let rhsBytes = rgbaBytes(of: try render(rhs))
+    var result = 0
+    for index in lhsBytes.indices where index % 4 != 3 {
+      result = max(result, abs(Int(lhsBytes[index]) - Int(rhsBytes[index])))
+    }
+    return result
+  }
+
+  private static func rgbaBytes(of image: CGImage) -> [UInt8] {
+    let width = image.width
+    let height = image.height
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    let context = CGContext(
+      data: &pixels,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: width * 4,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        | CGBitmapInfo.byteOrder32Big.rawValue
+    )!
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    return pixels
   }
 
   private static func assertImagesMatch(
@@ -782,10 +603,8 @@ struct ParametricFeatureTreeTests {
     var alpha: UInt8
   }
 
-  private struct TestRedBoostFeature: ImageEffectFeatureType {
+  private struct TestRedBoostFeature: ImageEffect, Equatable {
 
-    var id: FeatureID = .init()
-    var isEnabled: Bool = true
     var amount: Double
 
     func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
@@ -803,10 +622,7 @@ struct ParametricFeatureTreeTests {
     }
   }
 
-  private struct TestExtentProbeFeature: ImageEffectFeatureType {
-
-    var id: FeatureID = .init()
-    var isEnabled: Bool = true
+  private struct TestExtentProbeFeature: ImageEffect, Equatable {
 
     func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       CIImage(
@@ -819,6 +635,27 @@ struct ParametricFeatureTreeTests {
       )
       .cropped(to: image.extent)
     }
+  }
+
+  /// Verifies that render-time values reach a host-defined effect without being
+  /// stored as authored feature parameters.
+  private struct TestPresentationTimeFeature: ImageEffect, Equatable {
+
+    var expectedPresentationTime: CMTime
+
+    func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      guard context.presentationTime == expectedPresentationTime else {
+        throw TestPresentationTimeError.unexpectedTime(
+          expected: expectedPresentationTime,
+          actual: context.presentationTime
+        )
+      }
+      return image
+    }
+  }
+
+  private enum TestPresentationTimeError: Error {
+    case unexpectedTime(expected: CMTime, actual: CMTime)
   }
 
   private enum TestVideoAssetError: Error {

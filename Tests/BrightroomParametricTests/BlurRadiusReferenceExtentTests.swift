@@ -74,6 +74,61 @@ struct BlurRadiusReferenceExtentTests {
     )
   }
 
+  /// The renderer-level contract behind the feature-level one: with no
+  /// explicit reference, `ParametricImageRenderer` resolves value-form radii
+  /// against the render pass's CHAIN-ENTRY extent — so a crop placed BEFORE
+  /// the blur in the document does not change the resolved radius, and
+  /// editing a crop can never retroactively change a committed effect.
+  @Test func `mid-chain crop does not re-base value radii`() throws {
+    let side = 800.0
+    let input = Self.stepEdge(side: Int(side))
+    // Keep the step edge (x = 400) centered inside the cropped region.
+    let cropRect = CGRect(x: 200, y: 200, width: 400, height: 400)
+    let crop = CropFeature(cropRect: cropRect)
+
+    struct CropThenBlur: Feature {
+      var crop: CropFeature
+
+      var body: some Feature {
+        crop
+        GaussianBlurFeature(value: 40)
+      }
+    }
+
+    let renderer = ParametricImageRenderer()
+
+    // [crop, blur] with the default (nil) reference.
+    let cropThenBlur = try renderer.makeImage(from: input, document: CropThenBlur(crop: crop))
+
+    // The same crop, then a blur whose absolute radius is resolved by hand
+    // against the ENTRY extent (800×800), applied to the cropped image.
+    let croppedOnly = try renderer.makeImage(from: input, document: crop)
+    let entryRadius = hypot(side, side) / 50.0
+    let expected = croppedOnly
+      .clamped(to: croppedOnly.extent)
+      .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: entryRadius])
+      .cropped(to: croppedOnly.extent)
+
+    let extent = cropThenBlur.extent
+    #expect(extent == croppedOnly.extent, "both paths must share the crop output extent")
+    #expect(
+      Self.areNearlyEqual(cropThenBlur, expected, extent: extent, tolerance: 3),
+      "a mid-chain crop must not change the basis value radii resolve against"
+    )
+
+    // The failure mode this pins down: resolving against the cropped extent
+    // (diagonal/50 of 400×400, half the radius) must NOT match.
+    let croppedExtentRadius = hypot(400.0, 400.0) / 50.0
+    let viaCroppedExtent = try GaussianBlurFeature(radius: croppedExtentRadius).apply(
+      to: croppedOnly,
+      context: FeatureEvaluationContext()
+    )
+    #expect(
+      !Self.areNearlyEqual(cropThenBlur, viaCroppedExtent, extent: extent, tolerance: 3),
+      "value radii must not re-base onto the cropped intermediate"
+    )
+  }
+
   // MARK: - Helpers
 
   /// A vertical black/white step edge, so a Gaussian blur spreads measurably

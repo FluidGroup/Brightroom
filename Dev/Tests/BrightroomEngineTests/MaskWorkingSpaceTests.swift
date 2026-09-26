@@ -57,8 +57,8 @@ struct MaskWorkingSpaceTests {
 
     let stroke = EditingCanvasStrokeRecord(stamps: [authored], brush: brush)
       .workingSpaceStroke(domainHeight: height)
-    let mask = try FeatureGraphCompiler().renderMask(
-      MaskTree(root: .brush(BrushMask(strokes: [stroke]))),
+    let mask = try ParametricImageRenderer().makeMaskImage(
+      for: MaskTree(root: .brush(BrushMask(strokes: [stroke]))),
       extent: CGRect(x: 0, y: 0, width: canvas, height: canvas)
     )
     let image = try #require(

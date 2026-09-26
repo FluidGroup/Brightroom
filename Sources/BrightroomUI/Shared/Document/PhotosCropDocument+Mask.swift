@@ -42,7 +42,7 @@ extension PhotosCropDocument {
     guard blurMask != nil else {
       blurMask = LocalAdjustment(
         maskTree: MaskTree(
-          root: .brush(BrushMask(id: MemberID.blurMaskBrush, strokes: [stroke]))
+          root: .brush(BrushMask(strokes: [stroke]))
         )
       ) {
         CropViewMaskingDefaults.blurEffect
@@ -62,9 +62,9 @@ extension PhotosCropDocument {
 // MARK: - Brush-rooted MaskTree access
 
 /// Canvas tooling authors brush-rooted mask trees only. These accessors keep
-/// that assumption in one place; composite trees (generated masks, future
-/// refinements) pass through untouched and are conservatively treated as
-/// selecting something.
+/// that assumption in one place. Composite trees (generated masks, future
+/// refinements) pass through untouched: they render at export, but the canvas
+/// has no strokes to preview for them.
 extension MaskTree {
 
   /// The strokes of a brush-rooted tree; empty for composite trees.

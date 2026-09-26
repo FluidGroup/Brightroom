@@ -29,12 +29,12 @@ import SwiftUI
 
 /// A read-only, display-oriented snapshot of one node in a feature tree.
 ///
-/// `FeatureTreeNode` is a debug projection of the parametric document model: it
-/// flattens a `MainFeature`, `MaskNode`, or nested pipeline into a title, a set
-/// of scalar parameter fields, and child nodes. It carries no rendering or
+/// `FeatureTreeNode` is a debug projection of a feature document:
+/// it flattens a feature, a `LocalAdjustment`, or a `MaskNode` into a title, a
+/// set of scalar parameter fields, and child nodes. It carries no rendering or
 /// editing capability — it exists purely so a viewer can present the structure
-/// of an `EditingDocument` without each call site re-implementing the type
-/// switch over the parametric vocabulary.
+/// of a document without each call site re-implementing the walk over the
+/// parametric vocabulary.
 public struct FeatureTreeNode: Identifiable, Sendable {
 
   /// A single scalar parameter shown under a node.
@@ -56,11 +56,13 @@ public struct FeatureTreeNode: Identifiable, Sendable {
     }
   }
 
-  /// A stable, tree-position identity used for view diffing.
+  /// A tree-path identity used for view diffing.
   ///
-  /// This is the node's path in the tree (for example `1.0`), not the parametric
-  /// `FeatureID`. Mask combinators such as `union` do not carry a `FeatureID`,
-  /// so a positional path is the only identity guaranteed to be unique.
+  /// Features carry no identity of their own, so the id is the node's path:
+  /// each step is a type name and its occurrence among same-typed siblings
+  /// (for example `PresetFeature#0/TemperatureFeature#0`). A sibling that is
+  /// absent, such as a `nil` member, does not re-key the nodes after it, but
+  /// reordering same-typed siblings does.
   public let id: String
 
   /// The display title (for example `Exposure`, `Crop`, `Local Adjustment`).
@@ -71,9 +73,6 @@ public struct FeatureTreeNode: Identifiable, Sendable {
 
   /// A compact one-line summary shown in the collapsed label, if any.
   public var summary: String?
-
-  /// Whether the underlying feature contributes to rendering.
-  public var isEnabled: Bool
 
   /// An SF Symbol name used as the node's leading icon.
   public var symbolName: String
@@ -90,7 +89,6 @@ public struct FeatureTreeNode: Identifiable, Sendable {
     title: String,
     typeName: String,
     summary: String? = nil,
-    isEnabled: Bool,
     symbolName: String,
     fields: [Field] = [],
     children: [FeatureTreeNode] = []
@@ -99,7 +97,6 @@ public struct FeatureTreeNode: Identifiable, Sendable {
     self.title = title
     self.typeName = typeName
     self.summary = summary
-    self.isEnabled = isEnabled
     self.symbolName = symbolName
     self.fields = fields
     self.children = children
@@ -108,154 +105,149 @@ public struct FeatureTreeNode: Identifiable, Sendable {
 
 // MARK: - Descriptor builder
 
-/// Builds `FeatureTreeNode` snapshots from a parametric document.
+/// Builds `FeatureTreeNode` snapshots from a feature document.
 ///
-/// The builder walks the document with explicit handling for structural
-/// containers (effect pipelines, presets, local adjustments, mask trees) and
-/// falls back to `Mirror` reflection for the scalar parameters of any leaf
-/// feature. New leaf features therefore appear automatically without changes
-/// here; only new structural containers need a dedicated case.
+/// The tree is the document's body structure in evaluation order. Structural
+/// values the builder produces (tuples, branches, optionals, arrays,
+/// `AnyImageEffect`) are flattened into their parent, and a `nil` member or a
+/// branch not taken is left out. A composite feature shows its body members as
+/// children, even when it also implements `apply(to:context:)`; a composite
+/// with no fields and no present members is left out. A `LocalAdjustment`
+/// shows its mask tree and its effects. Scalar parameters come from `Mirror`
+/// reflection of stored properties, so new features appear without changes
+/// here; properties that hold features are shown as children, not as fields.
 public enum FeatureTreeDescriptor {
 
-  /// Builds the top-level nodes for a document's main tree.
-  public static func nodes(for document: EditingDocument) -> [FeatureTreeNode] {
-    document.mainTree.features.enumerated().map { index, feature in
-      node(for: feature, path: "\(index)")
+  /// The nodes of a document in evaluation order.
+  ///
+  /// A document that only groups other features (a composite with no scalar
+  /// fields, such as an editor's document type) lists its body members. Any
+  /// other document, including a preset or a composite with settings, is one
+  /// node, and a structural value such as an array lists its members.
+  public static func nodes(for document: some Feature) -> [FeatureTreeNode] {
+    var root: any Feature = document
+    while let wrapper = root as? any WrappingFeatureReflection {
+      guard let wrapped = wrapper.reflectedWrapped else {
+        return []
+      }
+      root = wrapped
     }
+    if (root is any StructuralFeatureReflection) == false,
+       reflectedFields(of: root).isEmpty,
+       let body = bodyMembers(of: root)
+    {
+      return childNodes(body, parentPath: nil)
+    }
+    return childNodes(members(of: root), parentPath: nil)
   }
 
-  // MARK: Main tree
+  // MARK: Features
 
-  static func node(for feature: MainFeature, path: String) -> FeatureTreeNode {
-    switch feature {
-    case let .domain(domain):
-      return domainNode(domain, path: path)
-    case let .effect(effect):
-      return effectNode(effect, path: path)
-    case let .localAdjustment(adjustment):
+  /// Flattens structural values into the features they contain.
+  fileprivate static func members(of feature: any Feature) -> [any Feature] {
+    if let structural = feature as? any StructuralFeatureReflection {
+      return structural.reflectedMembers.flatMap { members(of: $0) }
+    }
+    return [feature]
+  }
+
+  /// The flattened body members of a composite, or `nil` for a primitive.
+  fileprivate static func bodyMembers<F: Feature>(of feature: F) -> [any Feature]? {
+    guard F.Body.self != Never.self else {
+      return nil
+    }
+    return members(of: feature.body)
+  }
+
+  /// The node for `feature`, or `nil` for a composite with nothing to show.
+  fileprivate static func node(for feature: any Feature, path: String) -> FeatureTreeNode? {
+    if let adjustment = feature as? any LocalAdjustmentReflection {
       return localAdjustmentNode(adjustment, path: path)
     }
-  }
 
-  static func domainNode(_ domain: any DomainFeatureType, path: String) -> FeatureTreeNode {
-    let typeName = String(describing: type(of: domain))
-    let params = reflectedFields(of: domain)
+    let typeName = String(describing: type(of: feature))
+    let fields = reflectedFields(of: feature)
+
+    if let body = bodyMembers(of: feature) {
+      let children = childNodes(body, parentPath: path)
+      guard fields.isEmpty == false || children.isEmpty == false else {
+        return nil
+      }
+      return FeatureTreeNode(
+        id: path,
+        title: humanizeType(typeName),
+        typeName: typeName,
+        summary: summarize(fields) ?? count(children.count, "feature"),
+        symbolName: feature is PresetFeature ? "camera.filters" : "square.stack",
+        fields: fields,
+        children: children
+      )
+    }
+
     return FeatureTreeNode(
       id: path,
       title: humanizeType(typeName),
       typeName: typeName,
-      summary: summarize(params),
-      isEnabled: domain.isEnabled,
-      symbolName: domain is CropFeature ? "crop" : "skew",
-      fields: params + [idField(domain.id)],
-      children: []
+      summary: summarize(fields),
+      symbolName: symbol(for: feature),
+      fields: fields
     )
   }
 
-  static func effectNode(_ effect: any ImageEffectFeatureType, path: String) -> FeatureTreeNode {
-    if let bundle = effect as? EffectPipelineFeature {
-      return pipelineNode(
-        id: path,
-        title: "Effects",
-        typeName: "EffectPipelineFeature",
-        summary: count(bundle.pipeline.effects.count, "effect"),
-        isEnabled: bundle.isEnabled,
-        symbolName: "slider.horizontal.3",
-        idField: idField(bundle.id),
-        effects: bundle.pipeline.effects,
-        path: path
-      )
-    }
-
-    if let preset = effect as? PresetFeature {
-      let params = [
-        FeatureTreeNode.Field(name: "Name", value: preset.name),
-        FeatureTreeNode.Field(name: "Identifier", value: preset.identifier),
-      ]
-      return pipelineNode(
-        id: path,
-        title: "Preset",
-        typeName: "PresetFeature",
-        summary: preset.name,
-        isEnabled: preset.isEnabled,
-        symbolName: "camera.filters",
-        fields: params + [idField(preset.id)],
-        effects: preset.effects,
-        path: path
-      )
-    }
-
-    let typeName = String(describing: type(of: effect))
-    let params = reflectedFields(of: effect)
-    return FeatureTreeNode(
-      id: path,
-      title: humanizeType(typeName),
-      typeName: typeName,
-      summary: summarize(params),
-      isEnabled: effect.isEnabled,
-      symbolName: symbol(forEffectType: typeName),
-      fields: params + [idField(effect.id)],
-      children: []
-    )
-  }
-
-  static func localAdjustmentNode(
-    _ adjustment: LocalAdjustmentFeature,
+  fileprivate static func localAdjustmentNode(
+    _ adjustment: any LocalAdjustmentReflection,
     path: String
   ) -> FeatureTreeNode {
-    let mask = maskTreeNode(adjustment.maskTree, path: "\(path).mask")
-    let effects = pipelineNode(
-      id: "\(path).effects",
+    let mask = maskTreeNode(adjustment.reflectedMaskTree, path: "\(path)/mask")
+    let effectsPath = "\(path)/effects"
+    let effectNodes = childNodes(members(of: adjustment.reflectedContent), parentPath: effectsPath)
+    let effects = FeatureTreeNode(
+      id: effectsPath,
       title: "Effects",
-      typeName: "EffectPipeline",
-      summary: count(adjustment.effectPipeline.effects.count, "effect"),
-      isEnabled: true,
+      typeName: String(describing: type(of: adjustment.reflectedContent)),
+      summary: count(effectNodes.count, "effect"),
       symbolName: "slider.horizontal.3",
-      effects: adjustment.effectPipeline.effects,
-      path: "\(path).effects"
+      children: effectNodes
     )
-    let params = [FeatureTreeNode.Field(name: "Blend Mode", value: adjustment.blendMode.rawValue)]
+    let blendMode = adjustment.reflectedBlendMode.rawValue
+    let maskRoot = mask.children.first
     return FeatureTreeNode(
       id: path,
       title: "Local Adjustment",
-      typeName: "LocalAdjustmentFeature",
-      summary: adjustment.blendMode.rawValue,
-      isEnabled: adjustment.isEnabled,
+      typeName: String(describing: type(of: adjustment)),
+      summary: [maskRoot?.title, maskRoot?.summary].compactMap { $0 }.joined(separator: " · "),
       symbolName: "circle.dashed.inset.filled",
-      fields: params + [idField(adjustment.id)],
+      fields: [FeatureTreeNode.Field(name: "Blend Mode", value: blendMode)],
       children: [mask, effects]
     )
   }
 
   // MARK: Mask tree
 
-  static func maskTreeNode(_ tree: MaskTree, path: String) -> FeatureTreeNode {
+  fileprivate static func maskTreeNode(_ tree: MaskTree, path: String) -> FeatureTreeNode {
     FeatureTreeNode(
       id: path,
       title: "Mask",
       typeName: "MaskTree",
-      isEnabled: true,
       symbolName: "theatermasks",
-      children: [maskNode(tree.root, path: "\(path).0")]
+      children: [maskNode(tree.root, path: "\(path)/0")]
     )
   }
 
-  static func maskNode(_ node: MaskNode, path: String) -> FeatureTreeNode {
+  fileprivate static func maskNode(_ node: MaskNode, path: String) -> FeatureTreeNode {
     switch node {
     case let .brush(brush):
       let stamps = brush.strokes.reduce(0) { $0 + $1.stamps.count }
-      let fields = [
-        FeatureTreeNode.Field(name: "Strokes", value: "\(brush.strokes.count)"),
-        FeatureTreeNode.Field(name: "Stamps", value: "\(stamps)"),
-      ]
       return FeatureTreeNode(
         id: path,
         title: "Brush",
         typeName: "BrushMask",
         summary: count(brush.strokes.count, "stroke"),
-        isEnabled: brush.isEnabled,
         symbolName: "paintbrush.pointed",
-        fields: fields + [idField(brush.id)]
+        fields: [
+          FeatureTreeNode.Field(name: "Strokes", value: "\(brush.strokes.count)"),
+          FeatureTreeNode.Field(name: "Stamps", value: "\(stamps)"),
+        ]
       )
 
     case let .invert(inner):
@@ -263,9 +255,8 @@ public enum FeatureTreeDescriptor {
         id: path,
         title: "Invert",
         typeName: "MaskNode.invert",
-        isEnabled: true,
         symbolName: "circle.lefthalf.filled",
-        children: [maskNode(inner, path: "\(path).0")]
+        children: [maskNode(inner, path: "\(path)/0")]
       )
 
     case let .feather(feather):
@@ -275,10 +266,9 @@ public enum FeatureTreeDescriptor {
         title: "Feather",
         typeName: "MaskFeather",
         summary: "radius \(radius)",
-        isEnabled: feather.isEnabled,
         symbolName: "drop",
-        fields: [FeatureTreeNode.Field(name: "Radius", value: radius), idField(feather.id)],
-        children: [maskNode(feather.input, path: "\(path).0")]
+        fields: [FeatureTreeNode.Field(name: "Radius", value: radius)],
+        children: [maskNode(feather.input, path: "\(path)/0")]
       )
 
     case let .union(nodes):
@@ -287,9 +277,8 @@ public enum FeatureTreeDescriptor {
         title: "Union",
         typeName: "MaskNode.union",
         summary: count(nodes.count, "input"),
-        isEnabled: true,
         symbolName: "plus.circle",
-        children: nodes.enumerated().map { maskNode($1, path: "\(path).\($0)") }
+        children: nodes.enumerated().map { maskNode($1, path: "\(path)/\($0)") }
       )
 
     case let .intersect(nodes):
@@ -298,9 +287,8 @@ public enum FeatureTreeDescriptor {
         title: "Intersect",
         typeName: "MaskNode.intersect",
         summary: count(nodes.count, "input"),
-        isEnabled: true,
         symbolName: "circle.circle",
-        children: nodes.enumerated().map { maskNode($1, path: "\(path).\($0)") }
+        children: nodes.enumerated().map { maskNode($1, path: "\(path)/\($0)") }
       )
 
     case let .subtract(subtract):
@@ -308,12 +296,10 @@ public enum FeatureTreeDescriptor {
         id: path,
         title: "Subtract",
         typeName: "MaskSubtract",
-        isEnabled: subtract.isEnabled,
         symbolName: "minus.circle",
-        fields: [idField(subtract.id)],
         children: [
-          labeledMaskChild("Base", subtract.base, path: "\(path).base"),
-          labeledMaskChild("Removing", subtract.removing, path: "\(path).removing"),
+          labeledMaskChild("Base", subtract.base, path: "\(path)/base"),
+          labeledMaskChild("Removing", subtract.removing, path: "\(path)/removing"),
         ]
       )
     }
@@ -321,32 +307,20 @@ public enum FeatureTreeDescriptor {
 
   // MARK: Helpers
 
-  private static func pipelineNode(
-    id: String,
-    title: String,
-    typeName: String,
-    summary: String?,
-    isEnabled: Bool,
-    symbolName: String,
-    fields: [FeatureTreeNode.Field] = [],
-    idField: FeatureTreeNode.Field? = nil,
-    effects: [any ImageEffectFeatureType],
-    path: String
-  ) -> FeatureTreeNode {
-    var allFields = fields
-    if let idField {
-      allFields.append(idField)
+  /// The nodes of sibling features, each keyed by its type name and its
+  /// occurrence among same-typed siblings.
+  private static func childNodes(
+    _ features: [any Feature],
+    parentPath: String?
+  ) -> [FeatureTreeNode] {
+    var occurrences: [String: Int] = [:]
+    return features.compactMap { feature in
+      let typeName = String(describing: type(of: feature))
+      let occurrence = occurrences[typeName, default: 0]
+      occurrences[typeName] = occurrence + 1
+      let step = "\(typeName)#\(occurrence)"
+      return node(for: feature, path: parentPath.map { "\($0)/\(step)" } ?? step)
     }
-    return FeatureTreeNode(
-      id: id,
-      title: title,
-      typeName: typeName,
-      summary: summary,
-      isEnabled: isEnabled,
-      symbolName: symbolName,
-      fields: allFields,
-      children: effects.enumerated().map { effectNode($1, path: "\(path).\($0)") }
-    )
   }
 
   private static func labeledMaskChild(
@@ -359,18 +333,21 @@ public enum FeatureTreeDescriptor {
     return child
   }
 
-  private static func idField(_ id: FeatureID) -> FeatureTreeNode.Field {
-    .init(name: "ID", value: id.rawValue)
-  }
-
-  /// Reflects the scalar stored properties of a feature, skipping the structural
-  /// `id` / `isEnabled` properties surfaced elsewhere.
-  private static func reflectedFields(
-    of feature: Any,
-    skipping: Set<String> = ["id", "isEnabled"]
-  ) -> [FeatureTreeNode.Field] {
-    Mirror(reflecting: feature).children.compactMap { child in
-      guard let label = child.label, skipping.contains(label) == false else {
+  /// The scalar parameters of a feature.
+  ///
+  /// A feature with curated fields supplies them; otherwise its stored
+  /// properties are reflected, skipping those that hold features or a mask
+  /// tree (they appear as children).
+  private static func reflectedFields(of feature: any Feature) -> [FeatureTreeNode.Field] {
+    if let curated = feature as? any FeatureTreeFieldReflection {
+      return curated.reflectedFields
+    }
+    return Mirror(reflecting: feature).children.compactMap { child in
+      guard
+        let label = child.label,
+        (child.value is any Feature) == false,
+        (child.value is MaskTree) == false
+      else {
         return nil
       }
       return .init(name: humanizeLabel(label), value: FeatureValueFormatter.string(for: child.value))
@@ -388,22 +365,29 @@ public enum FeatureTreeDescriptor {
     "\(value) \(noun)\(value == 1 ? "" : "s")"
   }
 
-  private static func symbol(forEffectType typeName: String) -> String {
-    switch typeName {
-    case "GaussianBlurFeature": return "drop.fill"
-    case "UnsharpMaskFeature", "SharpenFeature": return "triangle"
-    case "ColorCubeFeature": return "swatchpalette"
-    case "VignetteFeature": return "circle.and.line.horizontal"
-    case "TemperatureFeature": return "thermometer.medium"
-    case "FadeFeature": return "sun.haze"
-    case "HighlightShadowTintFeature": return "paintpalette"
-    default: return "dial.medium"
+  private static func symbol(for feature: any Feature) -> String {
+    switch feature {
+    case is CropFeature: "crop"
+    case is GaussianBlurFeature: "drop.fill"
+    case is UnsharpMaskFeature, is SharpenFeature: "triangle"
+    case is ColorCubeFeature: "swatchpalette"
+    case is VignetteFeature: "circle.and.line.horizontal"
+    case is TemperatureFeature: "thermometer.medium"
+    case is FadeFeature: "sun.haze"
+    case is HighlightShadowTintFeature: "paintpalette"
+    case is ToneCurveFeature: "point.bottomleft.forward.to.point.topright.scurvepath"
+    case is ColorMixerFeature: "paintpalette.fill"
+    case is any ImageEffect: "dial.medium"
+    default: "skew"
     }
   }
 
   private static func humanizeType(_ typeName: String) -> String {
     var name = typeName
-    if name.hasSuffix("Feature") {
+    if let genericStart = name.firstIndex(of: "<") {
+      name = String(name[..<genericStart])
+    }
+    if name.hasSuffix("Feature"), name != "Feature" {
       name.removeLast("Feature".count)
     }
     return splitCamelCase(name)
@@ -423,6 +407,107 @@ public enum FeatureTreeDescriptor {
       result.append(character)
     }
     return result
+  }
+}
+
+// MARK: - Reflection
+
+/// A structural value the builder produces. The walk flattens it into its
+/// parent.
+private protocol StructuralFeatureReflection {
+  var reflectedMembers: [any Feature] { get }
+}
+
+extension TupleFeature: StructuralFeatureReflection {
+  var reflectedMembers: [any Feature] {
+    var members: [any Feature] = []
+    for element in repeat each elements {
+      members.append(element)
+    }
+    return members
+  }
+}
+
+extension EitherFeature: StructuralFeatureReflection {
+  var reflectedMembers: [any Feature] {
+    switch self {
+    case let .first(feature):
+      [feature]
+    case let .second(feature):
+      [feature]
+    }
+  }
+}
+
+extension Optional: StructuralFeatureReflection where Wrapped: Feature {
+  var reflectedMembers: [any Feature] {
+    map { [$0] } ?? []
+  }
+}
+
+/// A structural value that holds at most one feature. The document root is
+/// unwrapped through it before deciding whether to list the body members.
+private protocol WrappingFeatureReflection {
+  var reflectedWrapped: (any Feature)? { get }
+}
+
+extension Optional: WrappingFeatureReflection where Wrapped: Feature {
+  var reflectedWrapped: (any Feature)? { self }
+}
+
+extension AnyImageEffect: WrappingFeatureReflection {
+  var reflectedWrapped: (any Feature)? { base }
+}
+
+extension Array: StructuralFeatureReflection where Element: Feature {
+  var reflectedMembers: [any Feature] {
+    map { $0 }
+  }
+}
+
+extension EmptyFeature: StructuralFeatureReflection {
+  var reflectedMembers: [any Feature] { [] }
+}
+
+extension AnyImageEffect: StructuralFeatureReflection {
+  var reflectedMembers: [any Feature] { [base] }
+}
+
+/// Exposes a `LocalAdjustment` without its generic content type.
+private protocol LocalAdjustmentReflection {
+  var reflectedMaskTree: MaskTree { get }
+  var reflectedBlendMode: LocalAdjustmentBlendMode { get }
+  var reflectedContent: any Feature { get }
+}
+
+extension LocalAdjustment: LocalAdjustmentReflection {
+  var reflectedMaskTree: MaskTree { maskTree }
+  var reflectedBlendMode: LocalAdjustmentBlendMode { blendMode }
+  var reflectedContent: any Feature { content }
+}
+
+/// Curated fields that replace `Mirror` reflection for a feature whose stored
+/// properties are derived or too large to show.
+private protocol FeatureTreeFieldReflection {
+  var reflectedFields: [FeatureTreeNode.Field] { get }
+}
+
+extension ToneCurveFeature: FeatureTreeFieldReflection {
+  var reflectedFields: [FeatureTreeNode.Field] {
+    let curvedChannels = ToneCurveChannel.allCases.filter { value[$0].isIdentityMapping == false }
+    return [
+      .init(name: "Neutral", value: ToneCurveRenderIdentity(activeValue: value) == nil ? "yes" : "no"),
+      .init(name: "Curved Channels", value: "\(curvedChannels.count)"),
+    ]
+  }
+}
+
+extension ColorMixerFeature: FeatureTreeFieldReflection {
+  var reflectedFields: [FeatureTreeNode.Field] {
+    [
+      .init(name: "Algorithm", value: algorithm.rawValue),
+      .init(name: "Neutral", value: adjustment.isNeutral ? "yes" : "no"),
+    ]
   }
 }
 
@@ -457,19 +542,27 @@ private enum FeatureValueFormatter {
       return "rgba(\(number(value.red)), \(number(value.green)), \(number(value.blue)), \(number(value.alpha)))"
     case let value as QuarterTurn:
       return "\(value.rawValue)°"
-    case let value as FeatureID:
-      return value.rawValue
     case let value as LocalAdjustmentBlendMode:
       return value.rawValue
     case let value as GaussianBlurRadius:
       switch value {
       case let .absolute(radius):
-        return "absolute(\(number(radius)))"
-      case let .editingStackFilterValue(radius):
-        return "value(\(number(radius)))"
+        return "\(number(radius)) px"
+      case let .proportional(value):
+        return "\(number(value)) (proportional)"
       }
+    case let value as any RawRepresentable:
+      if let rawValue = value.rawValue as? String {
+        return rawValue
+      }
+      return String(describing: type(of: value))
     default:
-      return String(describing: value)
+      if isNilOptional(value) {
+        return "nil"
+      }
+      // Other values print only their type name: `String(describing:)` of a
+      // curve or a large collection can be arbitrarily long.
+      return String(describing: type(of: value))
     }
   }
 
@@ -490,6 +583,11 @@ private enum FeatureValueFormatter {
     return text
   }
 
+  private static func isNilOptional(_ value: Any) -> Bool {
+    let mirror = Mirror(reflecting: value)
+    return mirror.displayStyle == .optional && mirror.children.isEmpty
+  }
+
   private static func unwrap(_ value: Any) -> Any {
     let mirror = Mirror(reflecting: value)
     guard mirror.displayStyle == .optional else {
@@ -503,16 +601,16 @@ private enum FeatureValueFormatter {
 
 /// A standalone, `List`-based viewer for a parametric feature tree.
 ///
-/// This is a debug component: it presents the structure of an `EditingDocument`
-/// as a hierarchy of `DisclosureGroup`s so the features used to produce a render
+/// This is a debug component: it presents the body structure of a feature
+/// document as a hierarchy of `DisclosureGroup`s so the features used to produce a render
 /// can be inspected. To embed the rows inside an existing `List` or `Form`, use
 /// ``FeatureTreeOutline`` instead.
 public struct FeatureTreeView: View {
 
   private let nodes: [FeatureTreeNode]
 
-  /// Creates a viewer for a parametric document.
-  public init(document: EditingDocument) {
+  /// Creates a viewer for a document.
+  public init(document: some Feature) {
     self.nodes = FeatureTreeDescriptor.nodes(for: document)
   }
 
@@ -538,8 +636,8 @@ public struct FeatureTreeOutline: View {
 
   private let nodes: [FeatureTreeNode]
 
-  /// Creates an outline for a parametric document.
-  public init(document: EditingDocument) {
+  /// Creates an outline for a document.
+  public init(document: some Feature) {
     self.nodes = FeatureTreeDescriptor.nodes(for: document)
   }
 
@@ -601,22 +699,11 @@ private struct FeatureTreeNodeLabel: View {
       Image(systemName: node.symbolName)
         .font(.callout)
         .frame(width: 22)
-        .foregroundStyle(node.isEnabled ? Color.accentColor : Color.secondary)
+        .foregroundStyle(Color.accentColor)
 
       VStack(alignment: .leading, spacing: 2) {
-        HStack(spacing: 6) {
-          Text(node.title)
-            .font(.callout.weight(.medium))
-
-          if node.isEnabled == false {
-            Text("disabled")
-              .font(.caption2.weight(.semibold))
-              .padding(.horizontal, 5)
-              .padding(.vertical, 1)
-              .background(Color.secondary.opacity(0.18), in: Capsule())
-              .foregroundStyle(.secondary)
-          }
-        }
+        Text(node.title)
+          .font(.callout.weight(.medium))
 
         if let summary = node.summary, summary.isEmpty == false {
           Text(summary)
@@ -626,7 +713,6 @@ private struct FeatureTreeNodeLabel: View {
         }
       }
     }
-    .opacity(node.isEnabled ? 1 : 0.55)
   }
 }
 

@@ -57,7 +57,7 @@ nonisolated enum ToneCurveRenderer {
         ]
       )
     else {
-      throw ToneCurveRendererError.cannotApplyKernel
+      throw FeatureEvaluationError.failedToCreateImage(ToneCurveKernelStore.name)
     }
     return output.cropped(to: image.extent)
   }
@@ -69,24 +69,6 @@ nonisolated enum ToneCurveRenderer {
       z: CGFloat(value.z),
       w: CGFloat(value.w)
     )
-  }
-}
-
-/// Errors raised while preparing or evaluating the Tone Curve kernel.
-nonisolated enum ToneCurveRendererError: LocalizedError {
-  case missingKernelLibrary
-  case cannotLoadKernel(String)
-  case cannotApplyKernel
-
-  var errorDescription: String? {
-    switch self {
-    case .missingKernelLibrary:
-      "Brightroom couldn't find its compiled Tone Curve Metal library."
-    case .cannotLoadKernel(let underlying):
-      "Brightroom couldn't load its Tone Curve kernel: \(underlying)"
-    case .cannotApplyKernel:
-      "Brightroom couldn't render the Tone Curve."
-    }
   }
 }
 
@@ -131,6 +113,8 @@ private nonisolated final class ToneCurveTableImageCache: Sendable {
 /// Loads the general Core Image kernel from the package's compiled Metal library once.
 private nonisolated enum ToneCurveKernelStore {
 
+  static let name = "brightroomToneCurve"
+
   static func kernel() throws -> CIKernel {
     switch loadedKernel {
     case .success(let kernel):
@@ -140,19 +124,17 @@ private nonisolated enum ToneCurveKernelStore {
     }
   }
 
-  private static let loadedKernel: Result<CIKernel, ToneCurveRendererError> = {
+  private static let loadedKernel: Result<CIKernel, FeatureEvaluationError> = {
     do {
       let data = try ColorAdjustmentMetalLibrary.data()
       return .success(
         try CIKernel(
-          functionName: "brightroomToneCurve",
+          functionName: name,
           fromMetalLibraryData: data
         )
       )
-    } catch is ColorAdjustmentMetalLibraryError {
-      return .failure(.missingKernelLibrary)
     } catch {
-      return .failure(.cannotLoadKernel(String(describing: error)))
+      return .failure(.kernelUnavailable(name: name, reason: String(describing: error)))
     }
   }()
 }

@@ -11,8 +11,7 @@ struct PhotosCropAdjustmentParameterTests {
 
     PhotosCropAdjustmentParameter.blur.apply(sliderValue: 40, to: &effects)
 
-    #expect(effects.gaussianBlur?.radius == .editingStackFilterValue(40))
-    #expect(effects.gaussianBlur?.id == PhotosCropDocument.MemberID.gaussianBlur)
+    #expect(effects.gaussianBlur?.radius == .proportional(40))
     #expect(PhotosCropAdjustmentParameter.blur.sliderValue(in: effects) == 40)
   }
 
@@ -26,15 +25,16 @@ struct PhotosCropAdjustmentParameterTests {
     #expect(effects.gaussianBlur == nil)
   }
 
+  /// A slider write keeps the parameters the slider does not control.
   @Test func `existing effect is changed in place`() {
-    var effects = PhotosCropDocument.Effects()
-    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &effects)
-    let created = effects.exposure
+    var effects = PhotosCropDocument.Effects(
+      temperature: TemperatureFeature(value: 900, tint: 12)
+    )
 
-    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 20, to: &effects)
+    PhotosCropAdjustmentParameter.temperature.apply(sliderValue: 20, to: &effects)
 
-    #expect(effects.exposure?.id == created?.id)
-    #expect(PhotosCropAdjustmentParameter.exposure.sliderValue(in: effects) == 20)
+    #expect(effects.temperature?.tint == 12)
+    #expect(PhotosCropAdjustmentParameter.temperature.sliderValue(in: effects) == 20)
   }
 
   /// The order is the type's `body`, so writing a member cannot move it: a

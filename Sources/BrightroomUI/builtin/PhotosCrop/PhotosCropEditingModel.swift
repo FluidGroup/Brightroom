@@ -89,9 +89,9 @@ public final class PhotosCropEditingModel {
   ///
   /// - Parameters:
   ///   - editingStack: Loads the image; kept for the model's lifetime.
-  ///   - document: The document to resume, the initial document of the
-  ///     history. It must be authored for this image (its domain is
-  ///     `editingStack.loadedState.imageSize`).
+  ///   - document: The document to resume, installed as given as the
+  ///     initial document of the history. It must be authored for this image
+  ///     (its domain is `editingStack.loadedState.imageSize`).
   public convenience init(
     editingStack: EditingStack,
     resuming document: PhotosCropDocument
@@ -303,7 +303,7 @@ public final class PhotosCropEditingModel {
 
     switch pendingInitialDocument {
     case .resume(let document):
-      installInitialDocument(document.normalized())
+      installInitialDocument(document)
 
     case .new(let cropModifier) where cropModifier.isIdentity:
       installInitialDocument(PhotosCropDocument(orientedImageSize: loaded.imageSize))

@@ -17,7 +17,10 @@ import Foundation
 /// Constructing the feature compiles its authored values once. Neutral values
 /// bypass rendering exactly. The authored adjustment and algorithm are all a
 /// host needs to store; constructing the feature again rebuilds the plan.
-public nonisolated struct ColorMixerFeature: ImageEffectFeatureType {
+///
+/// Equality compares the rendered result; compare `adjustment` to detect
+/// authored edits that do not change pixels.
+public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
   /// The color model and correction semantics used to interpret all eight bands.
   ///
@@ -33,43 +36,34 @@ public nonisolated struct ColorMixerFeature: ImageEffectFeatureType {
     case oklch
   }
 
-  /// Stable identity of this Color Mixer node in an editing document.
-  public let id: FeatureID
-
   /// The complete authored eight-band adjustment.
   public let adjustment: ColorMixerAdjustment
 
   /// The implementation that interprets the authored band corrections.
   public let algorithm: Algorithm
 
-  /// Whether at least one authored correction requires a render pass.
-  public let isEnabled: Bool
-
   private let renderPlan: ColorMixerRenderPlan?
 
   /// Creates one Color Mixer node and compiles its authored parameters.
-  ///
-  /// Supply a distinct identifier when a document contains multiple mixers.
   public init(
-    id: FeatureID = FeatureID(rawValue: "brightroom.color-mixer"),
     adjustment: ColorMixerAdjustment,
     algorithm: Algorithm = .oklch
   ) {
-    self.id = id
     self.adjustment = adjustment
     self.algorithm = algorithm
     renderPlan = ColorMixerRenderPlan(adjustment: adjustment, algorithm: algorithm)
-    isEnabled = renderPlan != nil
   }
 
   /// Evaluates one pass, preserving the exact neutral bypass and input extent.
+  ///
+  /// A neutral adjustment (`adjustment.isNeutral`) returns `image` itself.
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard let renderPlan else { return image }
     return try ColorMixerRenderer.apply(to: image, plan: renderPlan)
   }
 
-  /// Compares identity, algorithm, and the normalized values used for rendering.
+  /// Compares the algorithm and the normalized values used for rendering.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.id == rhs.id && lhs.algorithm == rhs.algorithm && lhs.renderPlan == rhs.renderPlan
+    lhs.algorithm == rhs.algorithm && lhs.renderPlan == rhs.renderPlan
   }
 }

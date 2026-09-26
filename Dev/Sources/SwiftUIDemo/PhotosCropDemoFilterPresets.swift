@@ -29,48 +29,32 @@ enum PhotosCropDemoFilterPresets {
 
   static func make() -> [PresetFeature] {
     [
-      preset(name: "Vivid", identifier: "brightroom.preset.vivid", effects: [
-        SaturationFeature(id: .init(rawValue: "brightroom.preset.vivid.saturation"), value: 0.32),
-        ContrastFeature(id: .init(rawValue: "brightroom.preset.vivid.contrast"), value: 0.05),
+      PresetFeature(name: "Vivid", identifier: "brightroom.preset.vivid", effects: [
+        AnyImageEffect(SaturationFeature(value: 0.32)),
+        AnyImageEffect(ContrastFeature(value: 0.05)),
       ]),
-      preset(name: "Dramatic", identifier: "brightroom.preset.dramatic", effects: [
-        ContrastFeature(id: .init(rawValue: "brightroom.preset.dramatic.contrast"), value: 0.1),
-        ShadowsFeature(id: .init(rawValue: "brightroom.preset.dramatic.shadows"), value: -0.3),
-        HighlightsFeature(id: .init(rawValue: "brightroom.preset.dramatic.highlights"), value: 0.25),
+      PresetFeature(name: "Dramatic", identifier: "brightroom.preset.dramatic", effects: [
+        AnyImageEffect(ContrastFeature(value: 0.1)),
+        AnyImageEffect(ShadowsFeature(value: -0.3)),
+        AnyImageEffect(HighlightsFeature(value: 0.25)),
       ]),
-      preset(name: "Warm", identifier: "brightroom.preset.warm", effects: [
-        TemperatureFeature(id: .init(rawValue: "brightroom.preset.warm.temperature"), value: 1200)
+      PresetFeature(name: "Warm", identifier: "brightroom.preset.warm", effects: [
+        AnyImageEffect(TemperatureFeature(value: 1200))
       ]),
-      preset(name: "Cool", identifier: "brightroom.preset.cool", effects: [
-        TemperatureFeature(id: .init(rawValue: "brightroom.preset.cool.temperature"), value: -1200)
+      PresetFeature(name: "Cool", identifier: "brightroom.preset.cool", effects: [
+        AnyImageEffect(TemperatureFeature(value: -1200))
       ]),
-      preset(name: "Fade", identifier: "brightroom.preset.fade", effects: [
-        FadeFeature(id: .init(rawValue: "brightroom.preset.fade.fade"), intensity: 0.3),
-        ContrastFeature(id: .init(rawValue: "brightroom.preset.fade.contrast"), value: -0.04),
+      PresetFeature(name: "Fade", identifier: "brightroom.preset.fade", effects: [
+        AnyImageEffect(FadeFeature(intensity: 0.3)),
+        AnyImageEffect(ContrastFeature(value: -0.04)),
       ]),
-      preset(name: "Mono", identifier: "brightroom.preset.mono", effects: [
-        SaturationFeature(id: .init(rawValue: "brightroom.preset.mono.saturation"), value: -1)
+      PresetFeature(name: "Mono", identifier: "brightroom.preset.mono", effects: [
+        AnyImageEffect(SaturationFeature(value: -1))
       ]),
-      preset(name: "Noir", identifier: "brightroom.preset.noir", effects: [
-        SaturationFeature(id: .init(rawValue: "brightroom.preset.noir.saturation"), value: -1),
-        ContrastFeature(id: .init(rawValue: "brightroom.preset.noir.contrast"), value: 0.14),
+      PresetFeature(name: "Noir", identifier: "brightroom.preset.noir", effects: [
+        AnyImageEffect(SaturationFeature(value: -1)),
+        AnyImageEffect(ContrastFeature(value: 0.14)),
       ]),
     ]
-  }
-
-  private static func preset(
-    name: String,
-    identifier: String,
-    effects: [any ImageEffectFeatureType]
-  ) -> PresetFeature {
-    // Every feature id (preset and nested effects) is derived from the preset
-    // identifier so each make() call — and each session — produces value-equal
-    // presets; fresh FeatureIDs would make re-selection rewrite the document.
-    PresetFeature(
-      id: .init(rawValue: identifier),
-      name: name,
-      identifier: identifier,
-      effects: effects
-    )
   }
 }

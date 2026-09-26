@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Core Image kernels used by the parametric feature graph compiler.
+// Core Image kernels used by the parametric mask renderer.
 //
 // This file is build-compiled into the package target's `default.metallib` and
 // loaded with `CIColorKernel(functionName:fromMetalLibraryData:)`.

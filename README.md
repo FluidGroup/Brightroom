@@ -18,8 +18,8 @@ Build a photo editor with the included Photos-style UI, compose your own editing
 ## Features
 
 - **A ready-to-use photo editor.** Crop, rotate, straighten, apply filter presets, adjust color, and paint blur masks with `SwiftUIPhotosCropView`.
-- **Composable editing.** Use `SwiftUICropView` for a custom interface, with `EditingStack` managing the editing state, history, and rendering.
-- **Non-destructive processing.** Combine crops, effects, and masked local adjustments in an ordered feature tree.
+- **Composable editing.** Use `SwiftUICropView` for a custom interface, with your own document and history, and `EditingStack` loading and rendering the image.
+- **Non-destructive processing.** Combine crops, effects, and masked local adjustments in a document you compose from typed features.
 - **Custom effects and LUTs.** Add your own Core Image transforms or color-cube LUTs. Edits are plain Swift values, so your app decides how to save them.
 - **Metal-backed previews and export.** Work with wide-color images and export to memory or directly to JPEG, HEIF, and PNG files.
 - **Local and remote images.** Load images from `UIImage`, data, file URLs, or remote URLs through `ImageProvider`.
@@ -32,7 +32,7 @@ Choose the product that matches what you want to build:
 | Product | Purpose | Platforms |
 | --- | --- | --- |
 | `BrightroomUI` | Photos-style editor and reusable SwiftUI editing components | iOS 17+ |
-| `BrightroomEngine` | Image loading, editing state and history, and asynchronous rendering | iOS 17+ |
+| `BrightroomEngine` | Image loading and preparation, and asynchronous rendering | iOS 17+ |
 | `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies | iOS 17+, macOS 14+ |
 
 The Swift package requires **Swift 6.3 or later** and uses Swift 6 language mode. Use an Xcode toolchain that includes Swift 6.3 or later. The built-in UI uses UIKit internally; UIKit apps can present it through `UIHostingController`.
@@ -43,7 +43,7 @@ Add `https://github.com/FluidGroup/Brightroom.git` in Xcode's package dependenci
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/FluidGroup/Brightroom.git", from: "5.0.0")
+  .package(url: "https://github.com/FluidGroup/Brightroom.git", from: "6.0.0")
 ]
 ```
 
@@ -63,7 +63,7 @@ For processing without the editor, add `BrightroomParametric` instead.
 
 ## Photos-Style Editor
 
-`EditingStack` owns an editing session. `PhotosCropEditingModel` connects that session to the built-in editor's crop, filter, adjustment, and blur controls. Keep both instances alive for the lifetime of the editor.
+`EditingStack` loads the image. `PhotosCropEditingModel` owns the document being edited and its undo history, and connects them to the built-in editor's crop, filter, adjustment, and blur controls. Keep the model alive for the lifetime of the editor; it keeps its stack as `editingStack`.
 
 ```swift
 import BrightroomEngine
@@ -75,7 +75,6 @@ import UIKit
 @MainActor
 struct PhotoEditor: View {
   @Environment(\.dismiss) private var dismiss
-  @State private var editingStack: EditingStack
   @State private var editingModel: PhotosCropEditingModel
   @State private var isExporting = false
 
@@ -86,7 +85,6 @@ struct PhotoEditor: View {
     onComplete: @escaping (Result<UIImage, Error>) -> Void
   ) {
     let stack = EditingStack(imageProvider: .init(image: image))
-    _editingStack = State(initialValue: stack)
     _editingModel = State(initialValue: PhotosCropEditingModel(editingStack: stack))
     self.onComplete = onComplete
   }
@@ -94,14 +92,16 @@ struct PhotoEditor: View {
   var body: some View {
     SwiftUIPhotosCropView(
       editingModel: editingModel,
-      onDone: {
+      onDone: { document in
         guard !isExporting else { return }
         isExporting = true
 
         Task {
           defer { isExporting = false }
           do {
-            let rendered = try await editingStack.makeRenderer().render()
+            let rendered = try await editingModel.editingStack
+              .makeRenderer(document: document)
+              .render()
             onComplete(.success(try rendered.uiImage))
           } catch {
             onComplete(.failure(error))
@@ -120,38 +120,53 @@ struct PhotoEditor: View {
 }
 ```
 
-The editor starts image preparation automatically. Handle the result and dismiss the editor from `onComplete` when appropriate. Create a new editor session when selecting a different source image.
+The editor starts image preparation automatically. `onDone` receives the edited `PhotosCropDocument`, a plain value that describes the edit. Handle the result and dismiss the editor from `onComplete` when appropriate. Create a new model and stack when selecting a different source image.
 
-Customize aspect ratios and filter presets through `SwiftUIPhotosCropView.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/PhotosCropDemoFilterPresets.swift) are included only in the demo app. For a custom layout and controls, start with [`SwiftUICropView`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift). See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+Customize aspect ratios and filter presets through `SwiftUIPhotosCropView.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/PhotosCropDemoFilterPresets.swift) are included only in the demo app. For a custom layout and controls, start with [`SwiftUICropView`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift), which edits a `PhotosCropDocument` through a binding. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+
+### Saving and Resuming an Edit
+
+To reopen an editor with its undo history, keep the same `PhotosCropEditingModel`. To resume later, store the document's values in your own format and pass the rebuilt document to `PhotosCropEditingModel(editingStack:resuming:)`; see [Saving parametric edits](docs/parametric-persistence.md).
 
 ### Exporting Large Images
 
 To export directly to disk, pass a file output to the renderer. This avoids creating a full-resolution output bitmap in memory:
 
 ```swift
-let rendered = try await editingStack.makeRenderer().render(
-  options: .init(
-    output: .file(url: outputURL, fileType: .heif(quality: 0.9))
+let rendered = try await editingModel.editingStack
+  .makeRenderer(document: document)
+  .render(
+    options: .init(
+      output: .file(url: outputURL, fileType: .heif(quality: 0.9))
+    )
   )
-)
 ```
 
-Choose a writable `outputURL` for the destination file. The result exposes `fileURL` and `thumbnail(maxPixelSize:)`. Requesting `cgImage` or `uiImage` from a file-backed result decodes the full image back into memory.
+`document` is the value `onDone` receives. Choose a writable `outputURL` for the destination file. The result exposes `fileURL` and `thumbnail(maxPixelSize:)`. Requesting `cgImage` or `uiImage` from a file-backed result decodes the full image back into memory.
 
 ## Processing Without UI
 
-`BrightroomParametric` stores edits in a Swift value tree. Features are evaluated in order, and each feature receives the preceding feature's output. The source image stays separate from the document.
+`BrightroomParametric` describes an edit as a document: a Swift value you compose from typed features, the way a SwiftUI view composes its body. Features evaluate in order, and each one receives the preceding feature's output. The source image stays separate from the document.
 
 ```swift
 import BrightroomParametric
 import CoreImage
 
+/// An exposure adjustment followed by an optional crop.
+struct AdjustedCrop: Feature, Equatable {
+  var exposure = ExposureFeature(value: 0.5)
+  var crop: CropFeature?
+
+  var body: some Feature {
+    exposure
+    crop
+  }
+}
+
 /// Builds an exposure-adjusted image recipe without modifying the source.
 func makeAdjustedImage(from source: CIImage) throws -> CIImage {
-  let document = EditingDocument(
-    mainTree: MainTree(features: [
-      .effect(ExposureFeature(value: 0.5))
-    ])
+  let document = AdjustedCrop(
+    crop: CropFeature(cropRect: CGRect(x: 0, y: 0, width: 800, height: 600))
   )
 
   return try ParametricImageRenderer().makeImage(
@@ -163,8 +178,10 @@ func makeAdjustedImage(from source: CIImage) throws -> CIImage {
 
 The returned `CIImage` is a lazy recipe. Use a `CIContext` to materialize it, or use `ParametricExportRenderer` to render a document to an image or file.
 
-- Conform to `ImageEffectFeatureType` to add a custom effect.
-- Combine an `EffectPipeline` and a `MaskTree` in a `LocalAdjustmentFeature` to apply effects selectively.
+- Conform to `ImageEffect` (and `Equatable`) to add a custom effect.
+- Put effects in a `LocalAdjustment` with a `MaskTree` to apply them selectively.
+- Use optional members and `if` to switch features on and off; a `nil` member contributes nothing.
+- Use `AnyImageEffect` for lists of effects decided by data, such as a preset catalog.
 - Brightroom does not define a storage format for edits. To save them, convert features to your own `Codable` model and rebuild them through the public initializers; see [Saving parametric edits](docs/parametric-persistence.md).
 - Use `ParametricVideoRenderer` to create an `AVMutableVideoComposition` for playback or export through AVFoundation.
 
@@ -193,6 +210,7 @@ xcodebuild \
 
 ## Further Reading
 
+- [Migrating to Brightroom 6](docs/MIGRATION_TO_V6.md) — moving from 5.x to documents composed from features.
 - [Parametric runtime design](docs/parametric-runtime-design.md) — the feature model and custom effects.
 - [Saving parametric edits](docs/parametric-persistence.md) — storing edits in your app's own format, and migrating documents written by `ParametricDocumentCodec`.
 - [Editing engine vision](docs/vision-of-editing.md) — the longer-term direction for parametric editing.

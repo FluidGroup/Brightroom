@@ -20,7 +20,7 @@ struct ColorMixerRendererTests {
       ColorMixerFeature(adjustment: .neutral, algorithm: .oklch),
     ] {
       #expect(feature.algorithm == .oklch)
-      #expect(feature.isEnabled == false)
+      #expect(feature.adjustment.isNeutral)
       #expect(try feature.apply(to: image, context: .init()) === image)
     }
   }
@@ -46,7 +46,7 @@ struct ColorMixerRendererTests {
     let explicitPixels = Self.sample(explicitOutput, count: pixels.count)
 
     #expect(implicit.algorithm == .oklch)
-    #expect(implicit.isEnabled)
+    #expect(implicit.adjustment.isNeutral == false)
     #expect(implicit == explicit)
     #expect(implicitOutput.extent == image.extent)
     #expect(explicitOutput.extent == image.extent)

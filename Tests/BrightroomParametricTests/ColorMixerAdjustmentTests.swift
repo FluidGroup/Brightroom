@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import Testing
 
@@ -37,13 +38,16 @@ struct ColorMixerAdjustmentTests {
   }
 
   @Test
-  func neutralHasNoRenderPlanAndFeatureIsDisabled() {
+  func neutralHasNoRenderPlanAndFeatureBypasses() throws {
     #expect(ColorMixerAdjustment.neutral.isNeutral)
     #expect(ColorMixerRenderPlan(adjustment: .neutral) == nil)
+    #expect(ColorMixerRenderIdentity(activeAdjustment: .neutral) == nil)
     let feature = ColorMixerFeature(adjustment: .neutral)
-    #expect(feature.isEnabled == false)
+    #expect(feature.adjustment.isNeutral)
     #expect(feature.algorithm == .oklch)
-    #expect(feature.id.rawValue == "brightroom.color-mixer")
+    let image = CIImage(color: CIColor(red: 0.3, green: 0.5, blue: 0.7))
+      .cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
+    #expect(try feature.apply(to: image, context: .init()) === image)
   }
 
   @Test
@@ -105,11 +109,10 @@ struct ColorMixerAdjustmentTests {
   @Test
   func restoredFeatureRebuildsAuthoredValuesAndDerivedEnabledState() throws {
     let active = ColorMixerFeature(
-      id: FeatureID(rawValue: "active-mixer"),
       adjustment: .init(red: .init(hue: 10.0.nextUp, saturation: -45, luminance: 20)),
       algorithm: .oklch
     )
-    let neutral = ColorMixerFeature(id: FeatureID(rawValue: "neutral-mixer"), adjustment: .neutral)
+    let neutral = ColorMixerFeature(adjustment: .neutral)
 
     let restoredActive = try Self.restore(active)
     let restoredNeutral = try Self.restore(neutral)
@@ -117,10 +120,10 @@ struct ColorMixerAdjustmentTests {
     #expect(restoredActive == active)
     #expect(restoredActive.adjustment == active.adjustment)
     #expect(restoredActive.algorithm == .oklch)
-    #expect(restoredActive.isEnabled)
+    #expect(ColorMixerRenderIdentity(activeAdjustment: restoredActive.adjustment) != nil)
     #expect(restoredNeutral == neutral)
     #expect(restoredNeutral.adjustment == .neutral)
-    #expect(restoredNeutral.isEnabled == false)
+    #expect(restoredNeutral.adjustment.isNeutral)
   }
 
   private static func validatedBand(replacing axis: String, with value: Double)
@@ -148,7 +151,6 @@ struct ColorMixerAdjustmentTests {
       )
     }
     return ColorMixerFeature(
-      id: FeatureID(rawValue: feature.id.rawValue),
       adjustment: adjustment,
       algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: feature.algorithm.rawValue))
     )

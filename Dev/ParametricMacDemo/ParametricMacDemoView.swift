@@ -95,12 +95,12 @@ struct ParametricMacDemoView: View {
         Spacer()
 
         Button {
-          settings.suppressedFeatureIDs.removeAll()
+          settings.suppressedNodes.removeAll()
         } label: {
           Label("Enable All", systemImage: "checkmark.circle")
         }
         .buttonStyle(.borderless)
-        .disabled(settings.suppressedFeatureIDs.isEmpty)
+        .disabled(settings.suppressedNodes.isEmpty)
       }
 
       ScrollView {
@@ -122,7 +122,7 @@ struct ParametricMacDemoView: View {
           ForEach(settings.featureOrder) { feature in
             featureEditorRow(
               feature,
-              summary: output?.treeLine(for: feature.featureID)
+              summary: output?.treeLine(for: feature.node)
             )
           }
         }
@@ -161,8 +161,8 @@ struct ParametricMacDemoView: View {
     _ feature: ParametricMacEditableFeature,
     summary: ParametricMacTreeLine?
   ) -> some View {
-    let featureID = feature.featureID
-    let isSuppressed = settings.suppressedFeatureIDs.contains(featureID)
+    let node = feature.node
+    let isSuppressed = settings.suppressedNodes.contains(node)
     let detail = summary?.detail ?? feature.defaultDetail
 
     return HStack(spacing: 10) {
@@ -176,7 +176,7 @@ struct ParametricMacDemoView: View {
           return NSItemProvider(object: feature.rawValue as NSString)
         }
 
-      Toggle("", isOn: featureEnabledBinding(for: featureID))
+      Toggle("", isOn: featureEnabledBinding(for: node))
         .labelsHidden()
         .toggleStyle(.switch)
         .controlSize(.small)
@@ -248,7 +248,7 @@ struct ParametricMacDemoView: View {
         nestedFeatureToggle(
           title: "Brush Mask",
           detail: "diameter \(Int(settings.brushDiameter))",
-          featureID: ParametricMacPreviewFeatureID.brushMask
+          node: .brushMask
         )
         parameterSlider(
           title: "Brush",
@@ -261,7 +261,7 @@ struct ParametricMacDemoView: View {
         nestedFeatureToggle(
           title: "Feather Mask",
           detail: "radius \(Int(settings.maskFeatherRadius))",
-          featureID: ParametricMacPreviewFeatureID.featherMask
+          node: .featherMask
         )
         parameterSlider(
           title: "Feather",
@@ -276,7 +276,7 @@ struct ParametricMacDemoView: View {
         nestedFeatureToggle(
           title: "Exposure",
           detail: settings.localExposure.formatted(.number.precision(.fractionLength(2))),
-          featureID: ParametricMacPreviewFeatureID.localExposure
+          node: .localExposure
         )
         parameterSlider(
           title: "Exposure",
@@ -289,7 +289,7 @@ struct ParametricMacDemoView: View {
         nestedFeatureToggle(
           title: "Blur",
           detail: "\(Int(settings.localBlurRadius)) px",
-          featureID: ParametricMacPreviewFeatureID.localBlur
+          node: .localBlur
         )
         parameterSlider(
           title: "Blur",
@@ -362,10 +362,10 @@ struct ParametricMacDemoView: View {
   private func nestedFeatureToggle(
     title: String,
     detail: String,
-    featureID: FeatureID
+    node: ParametricMacNode
   ) -> some View {
     HStack(spacing: 8) {
-      Toggle("", isOn: featureEnabledBinding(for: featureID))
+      Toggle("", isOn: featureEnabledBinding(for: node))
         .labelsHidden()
         .toggleStyle(.checkbox)
       Text(title)
@@ -423,16 +423,16 @@ struct ParametricMacDemoView: View {
     }
   }
 
-  private func featureEnabledBinding(for featureID: FeatureID) -> Binding<Bool> {
+  private func featureEnabledBinding(for node: ParametricMacNode) -> Binding<Bool> {
     Binding(
       get: {
-        settings.suppressedFeatureIDs.contains(featureID) == false
+        settings.suppressedNodes.contains(node) == false
       },
       set: { isEnabled in
         if isEnabled {
-          settings.suppressedFeatureIDs.remove(featureID)
+          settings.suppressedNodes.remove(node)
         } else {
-          settings.suppressedFeatureIDs.insert(featureID)
+          settings.suppressedNodes.insert(node)
         }
       }
     )
@@ -453,7 +453,7 @@ struct ParametricMacPreviewSettings {
     globalBrightness: 0.03,
     globalSaturation: 0.22,
     globalVignette: 0.45,
-    suppressedFeatureIDs: []
+    suppressedNodes: []
   )
 
   var featureOrder: [ParametricMacEditableFeature]
@@ -466,10 +466,13 @@ struct ParametricMacPreviewSettings {
   var globalBrightness: Double
   var globalSaturation: Double
   var globalVignette: Double
-  var suppressedFeatureIDs: Set<FeatureID>
+  /// Nodes the user switched off. A suppressed node is left out of the
+  /// document; the document has no per-node enabled flags.
+  var suppressedNodes: Set<ParametricMacNode>
 
-  func isFeatureEnabled(_ featureID: FeatureID) -> Bool {
-    suppressedFeatureIDs.contains(featureID) == false
+  /// Whether the document includes `node`, that is, it is not suppressed.
+  func includes(_ node: ParametricMacNode) -> Bool {
+    suppressedNodes.contains(node) == false
   }
 }
 
@@ -482,8 +485,8 @@ struct ParametricMacPreviewOutput {
   var outputExtent: CGRect
   var treeLines: [ParametricMacTreeLine]
 
-  func treeLine(for featureID: FeatureID) -> ParametricMacTreeLine? {
-    treeLines.first { $0.featureID == featureID }
+  func treeLine(for node: ParametricMacNode) -> ParametricMacTreeLine? {
+    treeLines.first { $0.node == node }
   }
 }
 
@@ -494,7 +497,7 @@ struct ParametricMacTreeLine: Identifiable {
   var kind: ParametricMacTreeKind
   var title: String
   var detail: String
-  var featureID: FeatureID?
+  var node: ParametricMacNode?
 }
 
 /// Display categories used by the macOS feature tree editor.
@@ -525,8 +528,8 @@ enum ParametricMacTreeKind: String {
 
 /// Top-level editable actions in the macOS parametric demo.
 ///
-/// The order of this list is the order used by the generated
-/// `EditingDocument`, so dragging rows in the editor changes the real
+/// The order of this list is the order of the generated
+/// `ParametricMacDocument` steps, so dragging rows in the editor changes the real
 /// evaluation sequence instead of only rearranging display rows.
 enum ParametricMacEditableFeature: String, CaseIterable, Identifiable {
 
@@ -550,20 +553,20 @@ enum ParametricMacEditableFeature: String, CaseIterable, Identifiable {
     rawValue
   }
 
-  var featureID: FeatureID {
+  var node: ParametricMacNode {
     switch self {
     case .crop1:
-      ParametricMacPreviewFeatureID.crop1
+      .crop1
     case .localAdjustment:
-      ParametricMacPreviewFeatureID.localAdjustment
+      .localAdjustment
     case .globalBrightness:
-      ParametricMacPreviewFeatureID.globalBrightness
+      .globalBrightness
     case .globalSaturation:
-      ParametricMacPreviewFeatureID.globalSaturation
+      .globalSaturation
     case .crop2:
-      ParametricMacPreviewFeatureID.crop2
+      .crop2
     case .globalVignette:
-      ParametricMacPreviewFeatureID.globalVignette
+      .globalVignette
     }
   }
 
@@ -641,19 +644,51 @@ struct ParametricMacFeatureDropDelegate: DropDelegate {
   }
 }
 
-/// Stable feature IDs used by the macOS demo document and tree editor.
-enum ParametricMacPreviewFeatureID {
+/// Nodes of the macOS demo document that the tree editor can suppress.
+enum ParametricMacNode: String, Hashable {
 
-  static let crop1 = FeatureID(rawValue: "mac-demo-crop-1")
-  static let localAdjustment = FeatureID(rawValue: "mac-demo-local-adjustment")
-  static let brushMask = FeatureID(rawValue: "mac-demo-brush-mask")
-  static let featherMask = FeatureID(rawValue: "mac-demo-feather-mask")
-  static let localExposure = FeatureID(rawValue: "mac-demo-local-exposure")
-  static let localBlur = FeatureID(rawValue: "mac-demo-local-blur")
-  static let globalBrightness = FeatureID(rawValue: "mac-demo-global-brightness")
-  static let globalSaturation = FeatureID(rawValue: "mac-demo-global-saturation")
-  static let crop2 = FeatureID(rawValue: "mac-demo-crop-2")
-  static let globalVignette = FeatureID(rawValue: "mac-demo-global-vignette")
+  case crop1
+  case localAdjustment
+  case brushMask
+  case featherMask
+  case localExposure
+  case localBlur
+  case globalBrightness
+  case globalSaturation
+  case crop2
+  case globalVignette
+}
+
+/// The macOS demo document: its steps evaluate in the order the editor lists them.
+struct ParametricMacDocument: Feature {
+
+  var steps: [ParametricMacStep]
+
+  var body: [ParametricMacStep] {
+    steps
+  }
+}
+
+/// One reorderable step of the macOS demo document.
+///
+/// The steps are decided at runtime (their order is user data), so a host enum
+/// gives them one type while each case keeps its concrete feature.
+enum ParametricMacStep: Feature {
+
+  case crop(CropFeature)
+  case localAdjustment(LocalAdjustment<[AnyImageEffect]>)
+  case effect(AnyImageEffect)
+
+  var body: some Feature {
+    switch self {
+    case let .crop(crop):
+      crop
+    case let .localAdjustment(localAdjustment):
+      localAdjustment
+    case let .effect(effect):
+      effect
+    }
+  }
 }
 
 /// Builds and renders a value-tree parametric document for the macOS demo.
@@ -682,26 +717,27 @@ struct ParametricMacPreviewRenderer {
 
   private func makeDocument(
     settings: ParametricMacPreviewSettings
-  ) -> (document: EditingDocument, treeLines: [ParametricMacTreeLine]) {
-    var features: [MainFeature] = []
+  ) -> (document: ParametricMacDocument, treeLines: [ParametricMacTreeLine]) {
+    var steps: [ParametricMacStep] = []
     var treeLines: [ParametricMacTreeLine] = []
     var currentSize = Self.sourceSize
 
     for editableFeature in settings.featureOrder {
       switch editableFeature {
-      case .crop1:
+      case .crop1, .crop2:
+        let isFirst = editableFeature == .crop1
         let output = makeCropFeature(
-          featureID: ParametricMacPreviewFeatureID.crop1,
-          title: "Crop 1",
-          inset: settings.firstCropInset,
+          node: editableFeature.node,
+          title: isFirst ? "Crop 1" : "Crop 2",
+          inset: isFirst ? settings.firstCropInset : settings.secondCropInset,
           currentSize: currentSize,
           settings: settings
         )
-        features.append(.domain(output.feature))
-        treeLines.append(output.treeLine)
-        if output.feature.isEnabled {
-          currentSize = output.outputSize
+        if let feature = output.feature {
+          steps.append(.crop(feature))
+          currentSize = feature.cropRect.size
         }
+        treeLines.append(output.treeLine)
 
       case .localAdjustment:
         let output = makeLocalAdjustment(
@@ -709,68 +745,79 @@ struct ParametricMacPreviewRenderer {
           settings: settings
         )
         if let feature = output.feature {
-          features.append(.localAdjustment(feature))
+          steps.append(.localAdjustment(feature))
         }
         treeLines.append(contentsOf: output.treeLines)
 
       case .globalBrightness:
-        let output = makeBrightnessEffect(settings: settings)
-        features.append(.effect(output.feature))
-        treeLines.append(output.treeLine)
+        let node = ParametricMacNode.globalBrightness
+        if settings.includes(node) {
+          steps.append(.effect(AnyImageEffect(BrightnessFeature(value: settings.globalBrightness))))
+        }
+        treeLines.append(
+          .init(
+            id: node.rawValue,
+            kind: .effect,
+            title: "Brightness",
+            detail: settings.globalBrightness.formatted(.number.precision(.fractionLength(2))),
+            node: node
+          )
+        )
 
       case .globalSaturation:
-        let output = makeSaturationEffect(settings: settings)
-        features.append(.effect(output.feature))
-        treeLines.append(output.treeLine)
-
-      case .crop2:
-        let output = makeCropFeature(
-          featureID: ParametricMacPreviewFeatureID.crop2,
-          title: "Crop 2",
-          inset: settings.secondCropInset,
-          currentSize: currentSize,
-          settings: settings
-        )
-        features.append(.domain(output.feature))
-        treeLines.append(output.treeLine)
-        if output.feature.isEnabled {
-          currentSize = output.outputSize
+        let node = ParametricMacNode.globalSaturation
+        if settings.includes(node) {
+          steps.append(.effect(AnyImageEffect(SaturationFeature(value: settings.globalSaturation))))
         }
+        treeLines.append(
+          .init(
+            id: node.rawValue,
+            kind: .effect,
+            title: "Saturation",
+            detail: settings.globalSaturation.formatted(.number.precision(.fractionLength(2))),
+            node: node
+          )
+        )
 
       case .globalVignette:
-        let output = makeVignetteEffect(settings: settings)
-        features.append(.effect(output.feature))
-        treeLines.append(output.treeLine)
+        let node = ParametricMacNode.globalVignette
+        if settings.includes(node) {
+          steps.append(.effect(AnyImageEffect(VignetteFeature(value: settings.globalVignette))))
+        }
+        treeLines.append(
+          .init(
+            id: node.rawValue,
+            kind: .effect,
+            title: "Vignette",
+            detail: settings.globalVignette.formatted(.number.precision(.fractionLength(2))),
+            node: node
+          )
+        )
       }
     }
 
     return (
-      EditingDocument(mainTree: MainTree(features: features)),
+      ParametricMacDocument(steps: steps),
       treeLines
     )
   }
 
   private func makeCropFeature(
-    featureID: FeatureID,
+    node: ParametricMacNode,
     title: String,
     inset: Double,
     currentSize: CGSize,
     settings: ParametricMacPreviewSettings
-  ) -> (feature: CropFeature, outputSize: CGSize, treeLine: ParametricMacTreeLine) {
+  ) -> (feature: CropFeature?, treeLine: ParametricMacTreeLine) {
     let cropRect = insetRect(size: currentSize, inset: inset)
     return (
-      CropFeature(
-        id: featureID,
-        isEnabled: settings.isFeatureEnabled(featureID),
-        cropRect: cropRect
-      ),
-      cropRect.size,
+      settings.includes(node) ? CropFeature(cropRect: cropRect) : nil,
       .init(
-        id: featureID.rawValue,
+        id: node.rawValue,
         kind: .domain,
         title: title,
         detail: "inset \(Int(inset)) -> \(sizeDescription(cropRect.size))",
-        featureID: featureID
+        node: node
       )
     )
   }
@@ -778,47 +825,32 @@ struct ParametricMacPreviewRenderer {
   private func makeLocalAdjustment(
     currentSize: CGSize,
     settings: ParametricMacPreviewSettings
-  ) -> (feature: LocalAdjustmentFeature?, treeLines: [ParametricMacTreeLine]) {
-    let localAdjustmentID = ParametricMacPreviewFeatureID.localAdjustment
-    let brushID = ParametricMacPreviewFeatureID.brushMask
-    let featherID = ParametricMacPreviewFeatureID.featherMask
-    let exposureID = ParametricMacPreviewFeatureID.localExposure
-    let blurID = ParametricMacPreviewFeatureID.localBlur
-    let brush = makeBrushMask(
-      size: currentSize,
-      settings: settings,
-      id: brushID,
-      isEnabled: settings.isFeatureEnabled(brushID)
+  ) -> (feature: LocalAdjustment<[AnyImageEffect]>?, treeLines: [ParametricMacTreeLine]) {
+    // Suppression is structural: a suppressed brush has no strokes, a
+    // suppressed feather leaves the brush as the mask root, and a suppressed
+    // effect is left out of the content.
+    let brush = BrushMask(
+      strokes: settings.includes(.brushMask)
+        ? [makeBrushStroke(size: currentSize, settings: settings)]
+        : []
     )
-    let featheredMask = MaskNode.feather(
-      MaskFeather(
-        id: featherID,
-        isEnabled: settings.isFeatureEnabled(featherID),
-        input: .brush(brush),
-        radius: settings.maskFeatherRadius
-      )
-    )
-    let effects: [any ImageEffectFeatureType] = [
-      ExposureFeature(
-        id: exposureID,
-        isEnabled: settings.isFeatureEnabled(exposureID),
-        value: settings.localExposure
-      ),
-      GaussianBlurFeature(
-        id: blurID,
-        isEnabled: settings.isFeatureEnabled(blurID),
-        radius: settings.localBlurRadius
-      ),
-    ]
+    let maskRoot: MaskNode = settings.includes(.featherMask)
+      ? .feather(MaskFeather(input: .brush(brush), radius: settings.maskFeatherRadius))
+      : .brush(brush)
 
-    let localAdjustment: LocalAdjustmentFeature?
-    if effects.contains(where: { $0.isEnabled }) {
-      localAdjustment = LocalAdjustmentFeature(
-        id: localAdjustmentID,
-        isEnabled: settings.isFeatureEnabled(localAdjustmentID),
-        maskTree: MaskTree(root: featheredMask),
-        effectPipeline: EffectPipeline(effects: effects)
-      )
+    var effects: [AnyImageEffect] = []
+    if settings.includes(.localExposure) {
+      effects.append(AnyImageEffect(ExposureFeature(value: settings.localExposure)))
+    }
+    if settings.includes(.localBlur) {
+      effects.append(AnyImageEffect(GaussianBlurFeature(radius: settings.localBlurRadius)))
+    }
+
+    let localAdjustment: LocalAdjustment<[AnyImageEffect]>?
+    if settings.includes(.localAdjustment), effects.isEmpty == false {
+      localAdjustment = LocalAdjustment(maskTree: MaskTree(root: maskRoot)) {
+        effects
+      }
     } else {
       localAdjustment = nil
     }
@@ -827,111 +859,48 @@ struct ParametricMacPreviewRenderer {
       localAdjustment,
       [
         .init(
-          id: localAdjustmentID.rawValue,
+          id: ParametricMacNode.localAdjustment.rawValue,
           kind: .local,
           title: "Local Adjustment",
           detail: "alpha blend branch",
-          featureID: localAdjustmentID
+          node: .localAdjustment
         ),
         .init(
-          id: brushID.rawValue,
+          id: ParametricMacNode.brushMask.rawValue,
           kind: .mask,
           title: "Brush Mask",
           detail: "diameter \(Int(settings.brushDiameter))",
-          featureID: brushID
+          node: .brushMask
         ),
         .init(
-          id: featherID.rawValue,
+          id: ParametricMacNode.featherMask.rawValue,
           kind: .mask,
           title: "Feather Mask",
           detail: "radius \(Int(settings.maskFeatherRadius))",
-          featureID: featherID
+          node: .featherMask
         ),
         .init(
-          id: exposureID.rawValue,
+          id: ParametricMacNode.localExposure.rawValue,
           kind: .effect,
           title: "Exposure",
           detail: settings.localExposure.formatted(.number.precision(.fractionLength(2))),
-          featureID: exposureID
+          node: .localExposure
         ),
         .init(
-          id: blurID.rawValue,
+          id: ParametricMacNode.localBlur.rawValue,
           kind: .effect,
           title: "Blur",
           detail: "\(Int(settings.localBlurRadius)) px",
-          featureID: blurID
+          node: .localBlur
         ),
       ]
     )
   }
 
-  private func makeBrightnessEffect(
-    settings: ParametricMacPreviewSettings
-  ) -> (feature: BrightnessFeature, treeLine: ParametricMacTreeLine) {
-    let featureID = ParametricMacPreviewFeatureID.globalBrightness
-    return (
-      BrightnessFeature(
-        id: featureID,
-        isEnabled: settings.isFeatureEnabled(featureID),
-        value: settings.globalBrightness
-      ),
-      .init(
-        id: featureID.rawValue,
-        kind: .effect,
-        title: "Brightness",
-        detail: settings.globalBrightness.formatted(.number.precision(.fractionLength(2))),
-        featureID: featureID
-      )
-    )
-  }
-
-  private func makeSaturationEffect(
-    settings: ParametricMacPreviewSettings
-  ) -> (feature: SaturationFeature, treeLine: ParametricMacTreeLine) {
-    let featureID = ParametricMacPreviewFeatureID.globalSaturation
-    return (
-      SaturationFeature(
-        id: featureID,
-        isEnabled: settings.isFeatureEnabled(featureID),
-        value: settings.globalSaturation
-      ),
-      .init(
-        id: featureID.rawValue,
-        kind: .effect,
-        title: "Saturation",
-        detail: settings.globalSaturation.formatted(.number.precision(.fractionLength(2))),
-        featureID: featureID
-      )
-    )
-  }
-
-  private func makeVignetteEffect(
-    settings: ParametricMacPreviewSettings
-  ) -> (feature: VignetteFeature, treeLine: ParametricMacTreeLine) {
-    let featureID = ParametricMacPreviewFeatureID.globalVignette
-
-    return (
-      VignetteFeature(
-        id: featureID,
-        isEnabled: settings.isFeatureEnabled(featureID),
-        value: settings.globalVignette
-      ),
-      .init(
-        id: featureID.rawValue,
-        kind: .effect,
-        title: "Vignette",
-        detail: settings.globalVignette.formatted(.number.precision(.fractionLength(2))),
-        featureID: featureID
-      )
-    )
-  }
-
-  private func makeBrushMask(
+  private func makeBrushStroke(
     size: CGSize,
-    settings: ParametricMacPreviewSettings,
-    id: FeatureID,
-    isEnabled: Bool
-  ) -> BrushMask {
+    settings: ParametricMacPreviewSettings
+  ) -> BrushMaskStroke {
     let centerY = size.height * 0.56
     let stamps = stride(from: 0.18, through: 0.82, by: 0.08).map { progress in
       CGPoint(
@@ -939,18 +908,13 @@ struct ParametricMacPreviewRenderer {
         y: centerY + sin(progress * .pi * 3) * size.height * 0.08
       )
     }
-    let stroke = BrushMaskStroke(
+    return BrushMaskStroke(
       stamps: stamps,
       brush: BrushMaskBrush(
         diameter: settings.brushDiameter,
         hardness: 0.35,
         opacity: 1
       )
-    )
-    return BrushMask(
-      id: id,
-      isEnabled: isEnabled,
-      strokes: [stroke]
     )
   }
 

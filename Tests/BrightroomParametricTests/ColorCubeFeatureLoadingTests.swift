@@ -27,16 +27,18 @@ struct ColorCubeFeatureLoadingTests {
 
     let feature = try ColorCubeFeature(
       contentsOfCubeFile: url,
-      id: FeatureID(rawValue: "test.identity"),
       amount: 0.75
     )
 
-    #expect(feature.id == FeatureID(rawValue: "test.identity"))
     #expect(feature.name == "Identity 2")
     #expect(feature.identifier == "Identity.cube")
     #expect(feature.amount == 0.75)
     #expect(feature.dimension == 2)
     #expect(feature.cubeData.count == 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
+
+    let identified = try ColorCubeFeature(contentsOfCubeFile: url, identifier: "pack-a/identity")
+    #expect(identified.identifier == "pack-a/identity")
+    #expect(identified.cubeData == feature.cubeData)
   }
 
   @Test func `Color cube parser reads CRLF comments and numeric exponents`() throws {
@@ -149,6 +151,7 @@ struct ColorCubeFeatureLoadingTests {
 
       #expect(feature.name == "ImageLUT")
       #expect(feature.identifier == url.lastPathComponent)
+      #expect(try ColorCubeFeature(cubeImageAt: url, identifier: "pack-a/image").identifier == "pack-a/image")
       #expect(feature.dimension == 4)
       #expect(feature.cubeData.count == 4 * 4 * 4 * 4 * MemoryLayout<Float>.size)
     }

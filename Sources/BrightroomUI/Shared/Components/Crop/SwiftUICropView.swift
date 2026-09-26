@@ -186,7 +186,9 @@ public struct SwiftUICropView: View {
   /// (for example an undo) is displayed, and its crop reloads the crop guide.
   ///
   /// A host that sets `document.blurMask` with its own blur before the first
-  /// stroke pays for that blur at export until a stroke lands.
+  /// stroke pays for that blur at export until a stroke lands. The canvas
+  /// previews a blur mask only when its tree is rooted at a brush, which is
+  /// the shape the view authors; another root renders at export only.
   ///
   /// - Parameters:
   ///   - editingStack: Loads the image the document is authored over. Passing

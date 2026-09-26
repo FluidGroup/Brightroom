@@ -82,22 +82,9 @@ public struct CropEditingState: Equatable, Sendable {
   /// reusing the engine's integer pixel-snap (`CropFeature(displayCropRect:…)`)
   /// so the committed crop and the live viewport agree. Authoring an independent
   /// snapper here makes `isRenderingEquivalent` oscillate and the crop jitter.
-  ///
-  /// The feature gets a new identity, so use it only for comparisons. Write
-  /// into a document through `write(to:)`, which keeps the identity.
   func makeCropFeature() -> CropFeature {
     CropFeature(
       displayCropRect: cropExtent,
-      imageSize: imageSize,
-      rotation: rotation.quarterTurn,
-      straighten: adjustmentAngle.radians
-    )
-  }
-
-  /// Writes this state into an existing crop feature, keeping its identity.
-  func write(to feature: inout CropFeature) {
-    feature.setDisplayCropRect(
-      cropExtent,
       imageSize: imageSize,
       rotation: rotation.quarterTurn,
       straighten: adjustmentAngle.radians
@@ -182,32 +169,5 @@ public struct CropEditingState: Equatable, Sendable {
       to: other.makeCropFeature(),
       orientedImageSize: imageSize
     )
-  }
-}
-
-// MARK: - Identity-preserving crop writes
-
-extension CropFeature {
-
-  /// Replaces the geometry from a y-down display rect through the engine
-  /// snapper, keeping `id` and `isEnabled`.
-  ///
-  /// Documents change their crop in place through this, so the crop's
-  /// identity (and with it document equality) is stable across edits.
-  mutating func setDisplayCropRect(
-    _ displayCropRect: CGRect,
-    imageSize: CGSize,
-    rotation: QuarterTurn,
-    straighten: Double
-  ) {
-    let (id, isEnabled) = (self.id, self.isEnabled)
-    self = CropFeature(
-      displayCropRect: displayCropRect,
-      imageSize: imageSize,
-      rotation: rotation,
-      straighten: straighten
-    )
-    self.id = id
-    self.isEnabled = isEnabled
   }
 }

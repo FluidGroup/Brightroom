@@ -77,7 +77,7 @@ struct CropViewCanvasStrokeDomainTests {
     #expect(records.first?.stamps.first == CGPoint(x: 100, y: imageSize.height - 80))
   }
 
-  @Test func `Absent, empty, or disabled brush selects the viewport base`() {
+  @Test func `Absent, empty, or non-brush-rooted mask selects the viewport base`() {
     #expect(CropView.CanvasRenderPlan(blurMask: nil) == .viewportBase)
 
     let empty = LocalAdjustment(maskTree: .init(root: .brush(.init()))) {
@@ -85,12 +85,15 @@ struct CropViewCanvasStrokeDomainTests {
     }
     #expect(CropView.CanvasRenderPlan(blurMask: empty) == .viewportBase)
 
-    var disabled = makeLayer()
-    if case var .brush(brush) = disabled.maskTree.root {
-      brush.isEnabled = false
-      disabled.maskTree.root = .brush(brush)
+    // The canvas composites only the brush-rooted shape PhotosCrop authors.
+    // A feathered empty brush selects nothing, so export changes nothing
+    // either.
+    let featheredEmpty = LocalAdjustment(
+      maskTree: .init(root: .feather(MaskFeather(input: .brush(.init()), radius: 4)))
+    ) {
+      GaussianBlurFeature(radius: 10)
     }
-    #expect(CropView.CanvasRenderPlan(blurMask: disabled) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(blurMask: featheredEmpty) == .viewportBase)
 
     let layer = makeLayer()
     #expect(CropView.CanvasRenderPlan(blurMask: layer) == .blurMask(layer))

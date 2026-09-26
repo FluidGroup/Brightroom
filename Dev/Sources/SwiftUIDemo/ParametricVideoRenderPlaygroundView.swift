@@ -188,55 +188,12 @@ struct ParametricVideoRenderPlaygroundView: View {
     }
   }
 
-  private func makeFeatureDocument() throws -> EditingDocument {
-    var features: [MainFeature] = []
-
-    if isCropEnabled {
-      features.append(
-        .domain(
-          CropFeature(
-            id: Self.cropID,
-            cropRect: cropRect
-          )
-        )
-      )
-    }
-
-    if abs(brightness) > 0.001 {
-      features.append(
-        .effect(
-          BrightnessFeature(
-            id: Self.brightnessID,
-            value: brightness
-          )
-        )
-      )
-    }
-
-    if abs(saturation) > 0.001 {
-      features.append(
-        .effect(
-          SaturationFeature(
-            id: Self.saturationID,
-            value: saturation
-          )
-        )
-      )
-    }
-
-    if blurRadius > 0.1 {
-      features.append(
-        .effect(
-          GaussianBlurFeature(
-            id: Self.blurID,
-            radius: blurRadius
-          )
-        )
-      )
-    }
-
-    return EditingDocument(
-      mainTree: MainTree(features: features)
+  private func makeFeatureDocument() -> ParametricVideoPlaygroundDocument {
+    ParametricVideoPlaygroundDocument(
+      crop: isCropEnabled ? CropFeature(cropRect: cropRect) : nil,
+      brightness: abs(brightness) > 0.001 ? BrightnessFeature(value: brightness) : nil,
+      saturation: abs(saturation) > 0.001 ? SaturationFeature(value: saturation) : nil,
+      blur: blurRadius > 0.1 ? GaussianBlurFeature(radius: blurRadius) : nil
     )
   }
 
@@ -388,10 +345,22 @@ struct ParametricVideoRenderPlaygroundView: View {
   }
 
   nonisolated private static let videoSize = CGSize(width: 320, height: 200)
-  nonisolated private static let cropID = FeatureID(rawValue: "video-playground-crop")
-  nonisolated private static let brightnessID = FeatureID(rawValue: "video-playground-brightness")
-  nonisolated private static let saturationID = FeatureID(rawValue: "video-playground-saturation")
-  nonisolated private static let blurID = FeatureID(rawValue: "video-playground-blur")
+}
+
+/// The document applied to every video frame: an optional crop, then optional
+/// global effects. A member that is `nil` contributes nothing.
+private struct ParametricVideoPlaygroundDocument: Feature, Equatable {
+  var crop: CropFeature?
+  var brightness: BrightnessFeature?
+  var saturation: SaturationFeature?
+  var blur: GaussianBlurFeature?
+
+  var body: some Feature {
+    crop
+    brightness
+    saturation
+    blur
+  }
 }
 
 private struct ParametricVideoPlaygroundSettings: Equatable {

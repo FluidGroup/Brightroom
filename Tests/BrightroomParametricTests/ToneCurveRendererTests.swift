@@ -81,7 +81,7 @@ struct ToneCurveRendererTests {
     #expect(output === source)
 
     let feature = ToneCurveFeature(value: diagonalValue)
-    #expect(feature.isEnabled == false)
+    #expect(ToneCurveRenderIdentity(activeValue: feature.value) == nil)
     let featureOutput = try feature.apply(
       to: source,
       context: FeatureEvaluationContext()

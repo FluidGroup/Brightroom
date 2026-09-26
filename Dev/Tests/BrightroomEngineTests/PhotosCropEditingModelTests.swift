@@ -15,10 +15,9 @@ struct PhotosCropEditingModelTests {
   private let imageSize = CGSize(width: 40, height: 20)
 
   private let preset = PresetFeature(
-    id: FeatureID(rawValue: "test-preset-feature"),
     name: "Test",
     identifier: "test",
-    effects: [BrightnessFeature(value: 0.1)]
+    effects: [AnyImageEffect(BrightnessFeature(value: 0.1))]
   )
 
   // MARK: - Initial document
@@ -71,7 +70,6 @@ struct PhotosCropEditingModelTests {
 
     let rect = document.crop.displayCropRect(imageSize: imageSize)
     #expect(rect.width == rect.height)
-    #expect(document.crop.id == PhotosCropDocument.MemberID.crop)
     #expect(!model.isDirty)
   }
 
@@ -148,22 +146,27 @@ struct PhotosCropEditingModelTests {
     }
   }
 
-  @Test func `A restored document is normalized`() {
-    let restored = PhotosCropDocument(
+  @Test func `A resumed document is installed unchanged`() {
+    var restored = PhotosCropDocument(
       effects: .init(),
       crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
     )
-    var raw = restored
-    // Members assigned after construction bypass the rebuilding init.
-    raw.effects.exposure = ExposureFeature(value: 0.9)
-    raw.effects.vignette = VignetteFeature(isEnabled: false, value: 1)
+    // Members assigned after construction are ordinary values too.
+    restored.effects.exposure = ExposureFeature(value: 0.9)
+    restored.effects.vignette = VignetteFeature(value: 1)
 
-    let model = PhotosCropEditingModel(editingStack: makeStack(), resuming: raw)
+    let model = PhotosCropEditingModel(editingStack: makeStack(), resuming: restored)
 
-    #expect(model.document?.effects.exposure?.id == PhotosCropDocument.MemberID.exposure)
-    #expect(model.document?.effects.vignette == nil)
+    #expect(model.document == restored)
+    #expect(!model.isDirty)
 
+    // A slider write of the same value is not an edit: the resumed member and
+    // the slider-made one are equal.
     model.setAdjustmentValue(50, parameter: .exposure)
+    #expect(!model.hasUncommittedChanges)
+    #expect(model.document == restored)
+
+    // A round trip through neutral returns to the resumed value.
     model.commitIfNeeded()
     model.setAdjustmentValue(0, parameter: .exposure)
     model.setAdjustmentValue(50, parameter: .exposure)

@@ -52,13 +52,8 @@ enum CropViewMaskingDefaults {
   /// `GaussianBlurFeature(value: 40)` resolves to diagonal/20 × 40/100 =
   /// diagonal/50 — the strength the legacy crop-frozen seed produced. Because
   /// the value form is scale-invariant, the default does not depend on the
-  /// current crop and can be a constant. It carries the document's fixed blur
-  /// identity, so the blur a first stroke creates equals this value and the
-  /// canvas keeps its caches across that commit.
-  static let blurEffect = GaussianBlurFeature(
-    id: PhotosCropDocument.MemberID.blurMaskEffect,
-    value: 40
-  )
+  /// current crop and can be a constant.
+  static let blurEffect = GaussianBlurFeature(value: 40)
 
   /// Converts a brush diameter authored in viewport points into the
   /// pre-final-crop image pixels the masking surface expects.

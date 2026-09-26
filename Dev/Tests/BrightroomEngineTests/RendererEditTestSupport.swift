@@ -44,6 +44,27 @@ struct RendererTestDocument: Feature, Equatable {
   }
 }
 
+/// A test-only primitive that applies its steps in order.
+///
+/// The fold oracle for order tests: it shares no code with `FeatureBuilder`,
+/// `TupleFeature`, `Optional`, `EitherFeature`, `Array`, or composite `body`
+/// evaluation, as long as every step is a primitive leaf. Expand a preset into
+/// `preset.effects.map(\.base)` before listing it.
+struct SequentialFeatures: Feature {
+
+  var steps: [any Feature]
+
+  init(_ steps: [any Feature]) {
+    self.steps = steps
+  }
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try steps.reduce(image) { image, step in
+      try step.apply(to: image, context: context)
+    }
+  }
+}
+
 extension MaskTree {
 
   /// A brush tree whose stamps are given in display coordinates (top-left
@@ -58,7 +79,6 @@ extension MaskTree {
     diameter: Double,
     hardness: Double = 1,
     opacity: Double = 1,
-    isEnabled: Bool = true,
     domainHeight: CGFloat
   ) -> MaskTree {
     let record = EditingCanvasStrokeRecord(
@@ -68,7 +88,6 @@ extension MaskTree {
     return MaskTree(
       root: .brush(
         BrushMask(
-          isEnabled: isEnabled,
           strokes: [record.workingSpaceStroke(domainHeight: domainHeight)]
         )
       )

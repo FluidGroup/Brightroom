@@ -178,7 +178,7 @@ final class CropView: UIView {
   /// The prepared image the document is authored over.
   private let source: CropViewSource
 
-  /// The document as CropView last received (normalized) or changed it.
+  /// The document as CropView last received or changed it.
   ///
   /// It is also the echo reference: a document passed back with the same crop
   /// does not reload the crop state.
@@ -572,13 +572,7 @@ final class CropView: UIView {
   /// undo), the crop state reloads, fitted to the active aspect-ratio lock. A
   /// document CropView changed itself comes back equal and only refreshes the
   /// display.
-  ///
-  /// The document is normalized first: members a host assigned directly get
-  /// the document's fixed identities, and disabled members are dropped, so
-  /// equal edits keep the canvas caches.
   func setDocument(_ document: PhotosCropDocument) {
-    let document = document.normalized()
-
     guard document != self.document else {
       updateDisplay()
       return
@@ -932,15 +926,13 @@ extension CropView {
     /// The blur mask is composited over the global effects.
     case blurMask(LocalAdjustment<GaussianBlurFeature>)
 
-    /// `.blurMask` when the mask is present with an enabled blur, rooted at
-    /// an enabled brush, and has at least one stroke. A disabled blur or brush
-    /// changes nothing at export, so the canvas does not composite it either.
+    /// `.blurMask` when the mask is present, rooted at a brush, and has at
+    /// least one stroke. An empty brush changes nothing at export, so the
+    /// canvas does not composite it either.
     init(blurMask: LocalAdjustment<GaussianBlurFeature>?) {
       guard
         let blurMask,
-        blurMask.content.isEnabled,
         case let .brush(brush) = blurMask.maskTree.root,
-        brush.isEnabled,
         brush.strokes.isEmpty == false
       else {
         self = .viewportBase

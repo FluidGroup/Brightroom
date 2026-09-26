@@ -32,14 +32,8 @@ import Foundation
 /// `CropFeature`) may change the image domain; later members work in the new
 /// domain.
 ///
-/// Enablement is part of the composition: an `Optional` member that is `nil`
-/// or a branch that is not taken contributes nothing. Evaluation through this
-/// protocol never consults the top-level `IdentifiedFeature.isEnabled` of a
-/// member; a built-in feature written in a `body` always applies. Until the
-/// identified model is removed, values nested inside a built-in feature keep
-/// their own flags: `PresetFeature` skips its disabled children, and the mask
-/// tree of a `LocalAdjustment` honours `BrushMask`, `MaskFeather`, and
-/// `MaskSubtract` `isEnabled`.
+/// Enablement is part of the composition: a `nil` member, a branch not taken,
+/// or a mask node left out contributes nothing.
 ///
 /// An `any ImageEffect` value cannot be written in a `body`. Store content
 /// decided by data as `AnyImageEffect` (or `[AnyImageEffect]`) instead.

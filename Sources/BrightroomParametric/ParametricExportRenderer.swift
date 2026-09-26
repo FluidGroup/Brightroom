@@ -28,12 +28,13 @@ import UniformTypeIdentifiers
 import UIKit
 #endif
 
-/// Materializes a parametric `EditingDocument` from a source `CIImage` into a
-/// concrete result (`Rendered`), either an in-memory bitmap or a file on disk.
+/// Materializes a feature document from a source
+/// `CIImage` into a concrete result (`Rendered`), either an in-memory bitmap or
+/// a file on disk.
 ///
 /// This is the export/preview evaluation layer of the parametric stack: the
-/// document (effects, local adjustments, and the crop as a domain feature)
-/// compiles to one lazy `CIImage` recipe through `ParametricImageRenderer`,
+/// document (effects, local adjustments, and crops) evaluates to one lazy
+/// `CIImage` recipe through `ParametricImageRenderer`,
 /// which Core Image then evaluates here at the requested quality, resolution,
 /// and output. The source image is expected to be already oriented; callers
 /// holding an unoriented loader should apply orientation before rendering.
@@ -259,20 +260,21 @@ public struct ParametricExportRenderer {
     case resize(maxPixelSize: CGFloat)
   }
 
-  /// The renderer that compiles the document into a lazy `CIImage` recipe.
-  public var imageRenderer: ParametricImageRenderer
+  private let imageRenderer = ParametricImageRenderer()
 
-  public init(imageRenderer: ParametricImageRenderer = .init()) {
-    self.imageRenderer = imageRenderer
-  }
+  /// Creates an export renderer.
+  public init() {}
 
   /**
-   Renders a parametric document from an already-oriented source image.
+   Renders a document from an already-oriented source image.
 
-   Single rendering path: the document (effects, local adjustments, and the crop
-   as a domain feature) compiles to one `CIImage` recipe through
-   `ParametricImageRenderer`, which Core Image evaluates. An unedited image or a
-   pure crop is just an identity/crop-only document on the same path.
+   Single rendering path: the document (effects, local adjustments, and crops)
+   evaluates to one `CIImage` recipe through `ParametricImageRenderer`, with
+   `source` as the chain entry, which Core Image then materializes. An unedited
+   image or a pure crop is just an `EmptyFeature()` or crop-only document on the
+   same path. A `nil` optional document throws
+   `FeatureEvaluationError.documentUnavailable` instead of exporting the
+   unedited image.
 
    The result is returned as a `Rendered`, which hides whether it is backed by an
    in-memory bitmap or a file — controlled by `options.output`:
@@ -286,49 +288,12 @@ public struct ParametricExportRenderer {
    */
   public func render(
     source: CIImage,
-    document: EditingDocument,
-    options: Options = .init(),
-    device: RenderingDevice = .automatic
-  ) throws -> Rendered {
-    try materialize(
-      try imageRenderer.makeImage(from: source, document: document),
-      source: source,
-      options: options,
-      device: device
-    )
-  }
-
-  /**
-   Renders a statically composed document from an already-oriented source image.
-
-   The document compiles to one `CIImage` recipe through
-   `ParametricImageRenderer`, with `source` as the chain entry, and
-   `options.output` decides whether the result is an in-memory bitmap or a
-   file. An optional document renders as identity when it is `nil`.
-   */
-  public func render(
-    source: CIImage,
     document: some Feature,
     options: Options = .init(),
     device: RenderingDevice = .automatic
   ) throws -> Rendered {
-    try materialize(
-      try imageRenderer.makeImage(from: source, document: document),
-      source: source,
-      options: options,
-      device: device
-    )
-  }
 
-  /// Evaluates the document's output recipe at the requested quality,
-  /// resolution, and output.
-  private func materialize(
-    _ outputCIImage: CIImage,
-    source: CIImage,
-    options: Options,
-    device: RenderingDevice
-  ) throws -> Rendered {
-
+    let outputCIImage = try imageRenderer.makeImage(from: source, document: document)
     let colorSpace = options.workingColorSpace ?? source.colorSpace
 
     // Always process through a half-float WORKING buffer so wide-gamut and
@@ -376,6 +341,26 @@ public struct ParametricExportRenderer {
       )
       return .init(fileURL: url, options: options)
     }
+  }
+
+  /// Renders a document that may not exist yet, such as an editor's document
+  /// while the editor prepares it.
+  ///
+  /// A `nil` document is an error rather than a request for the unedited
+  /// image; to export the unedited image, pass `EmptyFeature()`.
+  ///
+  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
+  ///   `nil`, and any error the non-optional `render` throws.
+  public func render<Document: Feature>(
+    source: CIImage,
+    document: Document?,
+    options: Options = .init(),
+    device: RenderingDevice = .automatic
+  ) throws -> Rendered {
+    guard let document else {
+      throw FeatureEvaluationError.documentUnavailable
+    }
+    return try render(source: source, document: document, options: options, device: device)
   }
 
   private static func write(

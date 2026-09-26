@@ -40,7 +40,7 @@ nonisolated enum ColorMixerRenderer {
         ]
       )
     else {
-      throw ColorMixerRendererError.cannotApplyKernel
+      throw FeatureEvaluationError.failedToCreateImage(ColorMixerKernelStore.name)
     }
     return output.cropped(to: image.extent)
   }
@@ -50,20 +50,10 @@ nonisolated enum ColorMixerRenderer {
   }
 }
 
-/// Errors raised while loading or evaluating the Color Mixer kernel.
-nonisolated enum ColorMixerRendererError: LocalizedError {
-  case cannotLoadKernel(String)
-  case cannotApplyKernel
-
-  var errorDescription: String? {
-    switch self {
-    case .cannotLoadKernel(let error): "Brightroom couldn't load its Color Mixer kernel: \(error)"
-    case .cannotApplyKernel: "Brightroom couldn't render the Color Mixer."
-    }
-  }
-}
-
 private nonisolated enum ColorMixerKernelStore {
+
+  static let name = "brightroomColorMixer"
+
   static func kernel() throws -> CIKernel {
     switch loadedKernel {
     case .success(let kernel): kernel
@@ -71,13 +61,12 @@ private nonisolated enum ColorMixerKernelStore {
     }
   }
 
-  private static let loadedKernel: Result<CIKernel, ColorMixerRendererError> = {
+  private static let loadedKernel: Result<CIKernel, FeatureEvaluationError> = {
     do {
       let data = try ColorAdjustmentMetalLibrary.data()
-      return .success(
-        try CIKernel(functionName: "brightroomColorMixer", fromMetalLibraryData: data))
+      return .success(try CIKernel(functionName: name, fromMetalLibraryData: data))
     } catch {
-      return .failure(.cannotLoadKernel(String(describing: error)))
+      return .failure(.kernelUnavailable(name: name, reason: String(describing: error)))
     }
   }()
 }

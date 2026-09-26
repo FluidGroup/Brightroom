@@ -20,7 +20,7 @@ import UIKit
 /// - export render (`BrightRoomImageRenderer.render`)
 /// - preview composition (the document with its crop neutralized, over the
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
-/// - brush-mask raster (`FeatureGraphCompiler.renderMask`, the parametric
+/// - brush-mask raster (`ParametricImageRenderer.makeMaskImage`, the parametric
 ///   `brushStamp` kernel)
 /// - parametric evaluation (`PhotosCropDocument.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
@@ -107,7 +107,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         brush: BrushMaskBrush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
       )
     ])))
-    _ = try? FeatureGraphCompiler().renderMask(tree, extent: CGRect(origin: .zero, size: imageSize))
+    _ = try? ParametricImageRenderer().makeMaskImage(for: tree, extent: CGRect(origin: .zero, size: imageSize))
   }
 
   @inline(never)
@@ -120,7 +120,6 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Fixtures
 
   private static let cachedMaskTree = MaskTree(root: .brush(BrushMask(
-    id: .init(rawValue: "perf.cached.mask"),
     strokes: [
       BrushMaskStroke(
         stamps: [CGPoint(x: 400, y: 300)],
@@ -132,19 +131,18 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private static func makeEffects() -> PhotosCropDocument.Effects {
     PhotosCropDocument.Effects(
       preset: PresetFeature(
-        id: .init(rawValue: "perf.preset"),
         name: "Perf",
         identifier: "perf.preset",
         effects: [
-          SaturationFeature(id: .init(rawValue: "perf.sat"), value: 0.3),
-          TemperatureFeature(id: .init(rawValue: "perf.temp"), value: 900),
-          ContrastFeature(id: .init(rawValue: "perf.contrast"), value: 0.06),
+          AnyImageEffect(SaturationFeature(value: 0.3)),
+          AnyImageEffect(TemperatureFeature(value: 900)),
+          AnyImageEffect(ContrastFeature(value: 0.06)),
         ]
       ),
-      exposure: ExposureFeature(id: .init(rawValue: "perf.exposure"), value: 0.35),
-      highlights: HighlightsFeature(id: .init(rawValue: "perf.highlights"), value: 0.2),
-      shadows: ShadowsFeature(id: .init(rawValue: "perf.shadows"), value: -0.15),
-      vignette: VignetteFeature(id: .init(rawValue: "perf.vignette"), value: 0.5)
+      exposure: ExposureFeature(value: 0.35),
+      highlights: HighlightsFeature(value: 0.2),
+      shadows: ShadowsFeature(value: -0.15),
+      vignette: VignetteFeature(value: 0.5)
     )
   }
 
@@ -152,7 +150,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     var document = PhotosCropDocument(orientedImageSize: imageSize)
     document.effects = makeEffects()
     document.blurMask = LocalAdjustment(maskTree: cachedMaskTree) {
-      GaussianBlurFeature(id: .init(rawValue: "perf.local.blur"), value: 60)
+      GaussianBlurFeature(value: 60)
     }
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(

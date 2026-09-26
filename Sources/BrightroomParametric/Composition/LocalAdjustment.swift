@@ -24,9 +24,10 @@ import Foundation
 /// are Core Image working-space coordinates (bottom-left origin, y-up) of the
 /// image this feature receives.
 ///
-/// Until the identified model is removed, mask nodes keep their own
-/// `isEnabled` flags: a disabled `BrushMask` covers nothing, and a disabled
-/// `MaskFeather` or `MaskSubtract` passes its input through.
+/// An empty mask composite anywhere in the tree throws before the content is
+/// evaluated. Content that returns its input unchanged (for example
+/// `EmptyFeature`, an empty array, or a `nil` member) makes the whole
+/// adjustment return its input.
 public struct LocalAdjustment<Content: ImageEffect>: ImageEffect {
 
   /// The mask tree that produces the alpha used for compositing.
@@ -55,12 +56,18 @@ public struct LocalAdjustment<Content: ImageEffect>: ImageEffect {
   }
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    try MaskTreeRenderer.validate(maskTree)
-
     let base = image
+    // The mask renders first so a malformed mask tree fails before the
+    // content is evaluated.
+    let mask = try MaskTreeRenderer().render(maskTree, extent: base.extent)
     let adjusted = try content.apply(to: base, context: context)
-    let mask = try MaskTreeRenderer(kernelRegistry: context.kernelRegistry)
-      .render(maskTree, extent: base.extent)
+
+    // Content that applied nothing returns its input instance. Blending the
+    // base over itself is only approximately the base in a half-float
+    // context, so return it as is.
+    guard adjusted !== base else {
+      return base
+    }
 
     switch blendMode {
     case .alpha:

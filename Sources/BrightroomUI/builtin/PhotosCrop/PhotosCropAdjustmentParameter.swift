@@ -38,8 +38,6 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   case blur
   case vignette
 
-  private typealias MemberID = PhotosCropDocument.MemberID
-
   var id: Self { self }
 
   var title: String {
@@ -125,7 +123,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
     case .shadows:
       filterValue = effects.shadows?.value ?? 0
     case .blur:
-      filterValue = effects.gaussianBlur?.editingStackFilterValue ?? 0
+      filterValue = effects.gaussianBlur?.proportionalValue ?? 0
     case .vignette:
       filterValue = effects.vignette?.value ?? 0
     }
@@ -139,10 +137,10 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
 
   /// Writes a slider value into the global effects.
   ///
-  /// A neutral value removes the effect, so untouched parameters stay absent.
-  /// An existing effect is updated in place and a new one is created with the
-  /// document's fixed identity, so re-applying a value restores an equal
-  /// document.
+  /// An existing effect is updated in place, so its parameters the slider
+  /// does not control (such as `TemperatureFeature.tint`) are kept. A neutral
+  /// value removes the effect, including those parameters, so untouched
+  /// parameters stay absent.
   func apply(sliderValue: Double, to effects: inout PhotosCropDocument.Effects) {
     let clamped = min(
       max(sliderValue, sliderRange.lowerBound),
@@ -156,70 +154,71 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
       Self.upsert(
         value,
         into: &effects.exposure,
-        make: { ExposureFeature(id: MemberID.exposure, value: $0) },
+        make: { ExposureFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .brightness:
       Self.upsert(
         value,
         into: &effects.brightness,
-        make: { BrightnessFeature(id: MemberID.brightness, value: $0) },
+        make: { BrightnessFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .contrast:
       Self.upsert(
         value,
         into: &effects.contrast,
-        make: { ContrastFeature(id: MemberID.contrast, value: $0) },
+        make: { ContrastFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .saturation:
       Self.upsert(
         value,
         into: &effects.saturation,
-        make: { SaturationFeature(id: MemberID.saturation, value: $0) },
+        make: { SaturationFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .temperature:
       Self.upsert(
         value,
         into: &effects.temperature,
-        make: { TemperatureFeature(id: MemberID.temperature, value: $0) },
+        make: { TemperatureFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .highlights:
       Self.upsert(
         value,
         into: &effects.highlights,
-        make: { HighlightsFeature(id: MemberID.highlights, value: $0) },
+        make: { HighlightsFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .shadows:
       Self.upsert(
         value,
         into: &effects.shadows,
-        make: { ShadowsFeature(id: MemberID.shadows, value: $0) },
+        make: { ShadowsFeature(value: $0) },
         update: { $0.value = $1 }
       )
     case .blur:
       Self.upsert(
         value,
         into: &effects.gaussianBlur,
-        make: { GaussianBlurFeature(id: MemberID.gaussianBlur, value: $0) },
-        update: { $0.radius = .editingStackFilterValue($1) }
+        make: { GaussianBlurFeature(value: $0) },
+        update: { $0.radius = .proportional($1) }
       )
     case .vignette:
       Self.upsert(
         value,
         into: &effects.vignette,
-        make: { VignetteFeature(id: MemberID.vignette, value: $0) },
+        make: { VignetteFeature(value: $0) },
         update: { $0.value = $1 }
       )
     }
   }
 
-  /// Updates an existing effect in place (keeping its identity), creates a
-  /// missing one, or removes it when the slider returns to neutral.
+  /// Updates an existing effect in place (keeping the parameters the slider
+  /// does not control), creates a missing one, or removes it when the slider
+  /// returns to neutral.
   private static func upsert<Member>(
     _ value: Double?,
     into member: inout Member?,
@@ -248,9 +247,9 @@ extension GaussianBlurFeature {
   /// Absolute-radius blurs do not have enough context here to map back onto a
   /// source-relative slider value, so the PhotosCrop control treats them as
   /// neutral and preserves them unless the user edits Blur.
-  fileprivate var editingStackFilterValue: Double? {
+  fileprivate var proportionalValue: Double? {
     switch radius {
-    case .editingStackFilterValue(let value):
+    case .proportional(let value):
       return value
     case .absolute:
       return nil

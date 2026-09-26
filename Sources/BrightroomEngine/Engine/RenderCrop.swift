@@ -249,7 +249,7 @@ extension CropFeature {
   ///
   /// The display rect is snapped to the inward-integer pixel contract
   /// (`RenderCrop`/`PixelCropRect`) and then flipped from the engine's y-down
-  /// display space (top-left origin) into the compiler's y-up working space
+  /// display space (top-left origin) into Core Image's y-up working space
   /// (Core Image bottom-left). UI crop sessions MUST build committed crops
   /// through this initializer; authoring an independent snapper makes
   /// `isRenderingEquivalent` oscillate against the engine and the crop jitters.

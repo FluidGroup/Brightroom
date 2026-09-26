@@ -23,77 +23,27 @@ import CoreImage
 import CoreMedia
 import Foundation
 
-/// Renders parametric feature documents for still images.
+/// Renders feature documents for still images.
 ///
-/// `ParametricImageRenderer` is the public rendering facade for image inputs.
-/// It delegates graph construction to `FeatureGraphCompiler` and returns lazy
-/// Core Image recipes; callers decide when to materialize the result with a
-/// `CIContext`.
+/// `ParametricImageRenderer` is the public evaluation entry point for image
+/// inputs. It prepares the chain entry once and returns lazy Core Image
+/// recipes; callers decide when to materialize the result with a `CIContext`.
 public struct ParametricImageRenderer: Sendable {
 
-  /// The compiler used to evaluate feature graphs.
-  public var compiler: FeatureGraphCompiler
-
   /// Creates an image renderer.
-  public init(compiler: FeatureGraphCompiler = .init()) {
-    self.compiler = compiler
-  }
+  public init() {}
 
-  /// Evaluates an editing document from a source image.
+  /// Evaluates a document from a source image.
   ///
-  /// `radiusReferenceExtent` overrides the basis that value-form radii
-  /// resolve against. `nil` (the default) resolves against the render pass's
-  /// chain-entry extent — `sourceImage`'s extent — which keeps the radius a
+  /// `sourceImage` is the chain entry: it is translated to zero origin, and
+  /// value-form radii resolve against its extent, which keeps the radius a
   /// fixed fraction of the source regardless of where crops sit in the
-  /// feature list. Pass an explicit extent only when `sourceImage` is NOT the
+  /// document. Pass `radiusReferenceExtent` only when `sourceImage` is NOT the
   /// chain entry (e.g. a zoomed viewport slice of a larger source).
   ///
-  /// `presentationTime` defaults to `.zero` for deterministic still-image
-  /// evaluation. Video paths pass the frame's exact presentation time.
-  public func makeOutput(
-    from sourceImage: CIImage,
-    document: EditingDocument,
-    radiusReferenceExtent: CGRect? = nil,
-    presentationTime: CMTime = .zero
-  ) throws -> FeatureGraphOutput {
-    try compiler.makeOutput(
-      from: sourceImage,
-      document: document,
-      radiusReferenceExtent: radiusReferenceExtent,
-      presentationTime: presentationTime
-    )
-  }
-
-  /// Returns only the final image recipe.
-  ///
-  /// `presentationTime` has the same render-time semantics as
-  /// `makeOutput(from:document:radiusReferenceExtent:presentationTime:)`.
-  public func makeImage(
-    from sourceImage: CIImage,
-    document: EditingDocument,
-    radiusReferenceExtent: CGRect? = nil,
-    presentationTime: CMTime = .zero
-  ) throws -> CIImage {
-    try makeOutput(
-      from: sourceImage,
-      document: document,
-      radiusReferenceExtent: radiusReferenceExtent,
-      presentationTime: presentationTime
-    )
-    .image
-  }
-
-  /// Evaluates a statically composed document from a source image.
-  ///
-  /// `sourceImage` is the chain entry: it is normalized to zero origin (per
-  /// the compiler options), and value-form radii resolve against its extent,
-  /// which keeps the radius a fixed fraction of the source regardless of
-  /// where crops sit in the document. Pass `radiusReferenceExtent` only when
-  /// `sourceImage` is NOT the chain entry (e.g. a zoomed viewport slice of a
-  /// larger source).
-  ///
-  /// An optional document is itself a feature and renders as identity when it
-  /// is `nil`; hold a non-optional document to catch a forgotten unwrap.
+  /// A `nil` optional document throws
+  /// `FeatureEvaluationError.documentUnavailable`; pass `EmptyFeature()` to
+  /// render the unedited image.
   ///
   /// `presentationTime` defaults to `.zero` for deterministic still-image
   /// evaluation. Video paths pass the frame's exact presentation time.
@@ -103,11 +53,55 @@ public struct ParametricImageRenderer: Sendable {
     radiusReferenceExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) throws -> CIImage {
-    try compiler.makeImage(
+    let image = ParametricImageGeometry.removingExtentOffset(sourceImage)
+
+    // Resolve the radius reference ONCE at chain entry. Deriving it lazily
+    // inside each recipe (`?? image.extent`) would re-base the radius on
+    // whatever intermediate the effect happens to receive — a mid-chain crop
+    // would silently change the resolved blur strength, and editing a crop
+    // would retroactively change committed effects. The entry extent is the
+    // declared basis; feature order cannot perturb it.
+    let entryReferenceExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
+    let context = FeatureEvaluationContext(
+      radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
+      presentationTime: presentationTime
+    )
+    return try document.apply(to: image, context: context)
+  }
+
+  /// Evaluates a document that may not exist yet, such as an editor's
+  /// document while the editor prepares it.
+  ///
+  /// A `nil` document is an error rather than a request for the unedited
+  /// image; to render the unedited image, pass `EmptyFeature()`.
+  ///
+  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
+  ///   `nil`, and any error the document throws.
+  public func makeImage<Document: Feature>(
+    from sourceImage: CIImage,
+    document: Document?,
+    radiusReferenceExtent: CGRect? = nil,
+    presentationTime: CMTime = .zero
+  ) throws -> CIImage {
+    guard let document else {
+      throw FeatureEvaluationError.documentUnavailable
+    }
+    return try makeImage(
       from: sourceImage,
       document: document,
       radiusReferenceExtent: radiusReferenceExtent,
       presentationTime: presentationTime
     )
+  }
+
+  /// Renders a mask tree to an alpha image covering `extent`.
+  ///
+  /// Brush stamps are Core Image working-space coordinates (bottom-left
+  /// origin, y-up) of the domain the mask is authored in; pass that domain's
+  /// extent. This is the evaluator `LocalAdjustment` composites through, so
+  /// the result is exactly the alpha a local adjustment uses. Callers holding
+  /// masks authored in a y-down display space flip at this boundary.
+  public func makeMaskImage(for maskTree: MaskTree, extent: CGRect) throws -> CIImage {
+    try MaskTreeRenderer().render(maskTree, extent: extent)
   }
 }

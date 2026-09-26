@@ -22,145 +22,16 @@
 import CoreGraphics
 import Foundation
 
-/// A stable identifier for a parametric editing feature or mask node.
-///
-/// Identifiers let validation, UI selection, mask outputs, and debug views
-/// refer to a node in a document. A host that stores edits keeps `rawValue`.
-public struct FeatureID: Equatable, Hashable, Sendable {
-
-  /// The identifier value.
-  public var rawValue: String
-
-  /// Creates an identifier with the provided value.
-  public init(rawValue: String) {
-    self.rawValue = rawValue
-  }
-
-  /// Creates a new unique identifier.
-  public init() {
-    self.rawValue = UUID().uuidString
-  }
-}
-
-/// A parametric operation that can appear in an identified editing document
-/// (`EditingDocument` / `MainTree`).
-///
-/// Features are pure parameter values. Evaluation behavior is added by
-/// capability protocols (`ImageEffectFeatureType`, `DomainFeatureType`).
-/// Brightroom does not define a storage format for features: a host that saves
-/// edits converts them to and from its own model through the public parameters.
-///
-/// - Important: Transitional. This protocol belongs to the `MainTree` /
-///   `EditingDocument` model, which addresses features by `id` and toggles
-///   them with `isEnabled`. It is removed together with that model once
-///   documents are composed statically through `Feature` and `body`.
-public protocol IdentifiedFeature: Equatable, Sendable {
-
-  /// The stable identity of this feature.
-  var id: FeatureID { get }
-
-  /// A Boolean value indicating whether the feature contributes to rendering.
-  var isEnabled: Bool { get }
-}
-
-/// A parametric image editing document.
-///
-/// The document intentionally stores edit parameters only. The source image is
-/// supplied to the compiler so the same document can be evaluated for preview,
-/// export, or debugging without baking pixels into the model.
-public struct EditingDocument: Equatable, Sendable {
-
-  /// The ordered main feature tree evaluated from source image to output image.
-  public var mainTree: MainTree
-
-  /// Creates a document with the provided main tree.
-  public init(mainTree: MainTree = .init()) {
-    self.mainTree = mainTree
-  }
-}
-
-/// The main editing sequence for a document.
-///
-/// Main-tree features are evaluated in array order. Domain-changing features
-/// such as crop are allowed here, while local adjustment subtrees are restricted
-/// to extent-preserving operations.
-public struct MainTree: Equatable, Sendable {
-
-  /// The features evaluated in source-to-output order.
-  public var features: [MainFeature]
-
-  /// Creates a main tree with the provided ordered features.
-  public init(features: [MainFeature] = []) {
-    self.features = features
-  }
-}
-
-/// A feature that can appear in the document's main tree.
-///
-/// The effect and domain vocabularies are open: any type conforming to the
-/// capability protocols can appear here, including host-defined features.
-/// Local adjustments are a structural branch owned by the engine.
-public enum MainFeature: Equatable, Sendable {
-
-  /// A feature that may change image extent or coordinate domain.
-  case domain(any DomainFeatureType)
-
-  /// A global, extent-preserving image effect.
-  case effect(any ImageEffectFeatureType)
-
-  /// A local branch that composites an effect pipeline through a mask tree.
-  case localAdjustment(LocalAdjustmentFeature)
-
-  public static func == (lhs: Self, rhs: Self) -> Bool {
-    switch (lhs, rhs) {
-    case let (.domain(a), .domain(b)):
-      return parametricFeatureIsEqual(a, b)
-    case let (.effect(a), .effect(b)):
-      return parametricFeatureIsEqual(a, b)
-    case let (.localAdjustment(a), .localAdjustment(b)):
-      return a == b
-    default:
-      return false
-    }
-  }
-}
-
-extension MainFeature: IdentifiedFeature {
-
-  public var id: FeatureID {
-    switch self {
-    case let .domain(feature):
-      feature.id
-    case let .effect(feature):
-      feature.id
-    case let .localAdjustment(feature):
-      feature.id
-    }
-  }
-
-  public var isEnabled: Bool {
-    switch self {
-    case let .domain(feature):
-      feature.isEnabled
-    case let .effect(feature):
-      feature.isEnabled
-    case let .localAdjustment(feature):
-      feature.isEnabled
-    }
-  }
-}
-
 /// A quarter-turn rotation step applied by a crop feature.
 ///
-/// Raw values are the signed degrees the engine uses (`EditingCrop.Rotation.angle`),
-/// so the sign convention is identical and host bridges map 1:1. This is a pure
-/// CoreGraphics/Foundation type with no SwiftUI dependency.
+/// Raw values are signed degrees; a negative value turns clockwise. This is a
+/// pure CoreGraphics/Foundation type with no SwiftUI dependency.
 public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
 
   /// No rotation (0°).
   case zero = 0
 
-  /// A quarter turn (-90°), matching `EditingCrop.Rotation.angle_90`.
+  /// A clockwise quarter turn (-90°).
   case quarterCW = -90
 
   /// A half turn (-180°).
@@ -175,20 +46,14 @@ public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
   }
 }
 
-/// A crop in the current main-tree domain.
+/// A crop in the current domain.
 ///
 /// The crop rectangle is interpreted relative to the image produced by the
-/// previous main-tree feature. A second crop therefore crops the already-cropped
+/// previous feature. A second crop therefore crops the already-cropped
 /// output of the first crop. The crop also carries the quarter-turn rotation and
 /// the free straightening angle, both applied about the crop-rect center, so the
 /// whole crop geometry is expressed as a single parametric feature.
-public struct CropFeature: IdentifiedFeature {
-
-  /// The stable identity of this crop.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this crop participates in rendering.
-  public var isEnabled: Bool
+public struct CropFeature: Feature, Equatable {
 
   /// The rectangle to keep, expressed in the current domain (Core Image
   /// bottom-left, y-up).
@@ -208,31 +73,24 @@ public struct CropFeature: IdentifiedFeature {
 
   /// Creates a current-domain crop feature.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     cropRect: CGRect,
     rotation: QuarterTurn = .zero,
     straightenRadians: Double = 0
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.cropRect = cropRect
     self.rotation = rotation
     self.straightenRadians = straightenRadians
   }
 }
 
-/// A named group of extent-preserving effects.
+/// A named group of image effects, such as a filter preset.
 ///
-/// This is the parametric equivalent of a filter preset. It stores typed
-/// effect values so the document remains inspectable.
-public struct PresetFeature: IdentifiedFeature {
-
-  /// The stable identity of this preset feature.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this preset participates in rendering.
-  public var isEnabled: Bool
+/// The effects are decided by data (a catalog), so they are type-erased.
+/// Equal presets compare equal; selection UIs compare `identifier`.
+///
+/// A preset is a composite: its `body` is its effects, evaluated in order.
+/// Nest another preset with `AnyImageEffect(innerPreset)`.
+public struct PresetFeature: ImageEffect, Equatable {
 
   /// The display name associated with the preset.
   public var name: String
@@ -241,29 +99,21 @@ public struct PresetFeature: IdentifiedFeature {
   public var identifier: String
 
   /// The effects evaluated inside the preset, in order.
-  public var effects: [any ImageEffectFeatureType]
+  public var effects: [AnyImageEffect]
 
   /// Creates a preset feature.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     name: String,
     identifier: String,
-    effects: [any ImageEffectFeatureType]
+    effects: [AnyImageEffect]
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.name = name
     self.identifier = identifier
     self.effects = effects
   }
 
-  public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.id == rhs.id
-      && lhs.isEnabled == rhs.isEnabled
-      && lhs.name == rhs.name
-      && lhs.identifier == rhs.identifier
-      && parametricFeaturesAreEqual(lhs.effects, rhs.effects)
+  public var body: [AnyImageEffect] {
+    effects
   }
 }
 
@@ -271,13 +121,7 @@ public struct PresetFeature: IdentifiedFeature {
 ///
 /// The feature stores cube data directly so rendering can stay in the Core Image
 /// graph without asking an `ImageSource` or bundle resource to materialize.
-public struct ColorCubeFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct ColorCubeFeature: ImageEffect, Equatable {
 
   /// The display name associated with the lookup table.
   public var name: String
@@ -296,16 +140,12 @@ public struct ColorCubeFeature: IdentifiedFeature {
 
   /// Creates a color-cube effect.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     name: String,
     identifier: String,
     amount: Double = 1,
     dimension: Int,
     cubeData: Data
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.name = name
     self.identifier = identifier
     self.amount = amount
@@ -315,145 +155,73 @@ public struct ColorCubeFeature: IdentifiedFeature {
 }
 
 /// A brightness adjustment.
-public struct BrightnessFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct BrightnessFeature: ImageEffect, Equatable {
 
   /// The brightness value passed to `CIColorControls`.
   public var value: Double
 
   /// Creates a brightness adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// A contrast adjustment.
-public struct ContrastFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct ContrastFeature: ImageEffect, Equatable {
 
   /// The contrast offset passed to `CIColorControls` as `1 + value`.
   public var value: Double
 
   /// Creates a contrast adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// A saturation adjustment.
-public struct SaturationFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct SaturationFeature: ImageEffect, Equatable {
 
   /// The saturation offset passed to `CIColorControls` as `1 + value`.
   public var value: Double
 
   /// Creates a saturation adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// An exposure adjustment.
-public struct ExposureFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct ExposureFeature: ImageEffect, Equatable {
 
   /// The exposure value passed to `CIExposureAdjust`.
   public var value: Double
 
   /// Creates an exposure adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// A highlight recovery adjustment.
-public struct HighlightsFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct HighlightsFeature: ImageEffect, Equatable {
 
   /// The highlight recovery value. It is applied as `1 - value`.
   public var value: Double
 
   /// Creates a highlight adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// A shadow lift adjustment.
-public struct ShadowsFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct ShadowsFeature: ImageEffect, Equatable {
 
   /// The shadow amount passed to `CIHighlightShadowAdjust`.
   public var value: Double
 
   /// Creates a shadow adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
@@ -492,16 +260,9 @@ public struct ParametricRGBAColor: Equatable, Sendable {
 /// - Important: The names describe the intended *use*, not a masked evaluation.
 ///   The recipe source-over composites both colors across the whole image with
 ///   no luminance or region weighting; the only thing that limits either tint is
-///   the alpha the caller chooses. This reproduces the legacy
-///   `FilterHighlightShadowTint` exactly and must keep doing so — every stored
-///   document renders against it.
-public struct HighlightShadowTintFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+///   the alpha the caller chooses. This behavior is part of the feature's
+///   contract, so a stored edit keeps rendering the same.
+public struct HighlightShadowTintFeature: ImageEffect, Equatable {
 
   /// The tint color composited over the whole image, on top of `shadowColor`.
   ///
@@ -515,13 +276,9 @@ public struct HighlightShadowTintFeature: IdentifiedFeature {
 
   /// Creates a highlight/shadow tint adjustment.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     highlightColor: ParametricRGBAColor,
     shadowColor: ParametricRGBAColor
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.highlightColor = highlightColor
     self.shadowColor = shadowColor
   }
@@ -533,13 +290,7 @@ public struct HighlightShadowTintFeature: IdentifiedFeature {
 /// point, while `tint` moves the same white point along the green–magenta axis.
 /// Keeping both values in one feature preserves the coupled semantics of
 /// `CITemperatureAndTint` instead of approximating them as sequential filters.
-public struct TemperatureFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct TemperatureFeature: ImageEffect, Equatable {
 
   /// The color-temperature offset from Brightroom's neutral value, in Kelvin.
   public var value: Double
@@ -549,26 +300,16 @@ public struct TemperatureFeature: IdentifiedFeature {
 
   /// Creates a white-balance adjustment.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     value: Double,
     tint: Double = 0
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.value = value
     self.tint = tint
   }
 }
 
 /// A luminance sharpen adjustment.
-public struct SharpenFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct SharpenFeature: ImageEffect, Equatable {
 
   /// The sharpness value passed to `CISharpenLuminance`.
   public var sharpness: Double
@@ -580,13 +321,9 @@ public struct SharpenFeature: IdentifiedFeature {
 
   /// Creates a sharpen adjustment.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     sharpness: Double,
     radius: Double
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.sharpness = sharpness
     self.radius = radius
   }
@@ -598,56 +335,32 @@ public enum GaussianBlurRadius: Equatable, Sendable {
   /// A Core Image blur radius in image-domain points.
   case absolute(Double)
 
-  /// A `FilterGaussianBlur.value` slider value, resolved against the render
-  /// pass's chain-entry extent (see
+  /// A slider value where 100 is a radius of one twentieth of the image
+  /// diagonal, scaling linearly. It resolves against the render pass's chain-entry extent (see
   /// `FeatureEvaluationContext.radiusReferenceExtent`), so a mid-chain crop
   /// never re-bases it.
-  case editingStackFilterValue(Double)
+  case proportional(Double)
 }
 
 /// A Gaussian blur that preserves the input extent.
-public struct GaussianBlurFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct GaussianBlurFeature: ImageEffect, Equatable {
 
   /// The blur radius descriptor.
   public var radius: GaussianBlurRadius
 
   /// Creates a Gaussian blur.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    radius: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(radius: Double) {
     self.radius = .absolute(radius)
   }
 
-  /// Creates a Gaussian blur from `FilterGaussianBlur.value`.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
-    self.radius = .editingStackFilterValue(value)
+  /// Creates a Gaussian blur from a proportional slider value.
+  public init(value: Double) {
+    self.radius = .proportional(value)
   }
 }
 
 /// An unsharp mask adjustment.
-public struct UnsharpMaskFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct UnsharpMaskFeature: ImageEffect, Equatable {
 
   /// The intensity passed to `CIUnsharpMask`.
   public var intensity: Double
@@ -659,198 +372,35 @@ public struct UnsharpMaskFeature: IdentifiedFeature {
 
   /// Creates an unsharp mask adjustment.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     intensity: Double,
     radius: Double
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.intensity = intensity
     self.radius = radius
   }
 }
 
 /// A vignette adjustment.
-public struct VignetteFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct VignetteFeature: ImageEffect, Equatable {
 
   /// The Brightroom vignette value used for both intensity and radius scaling.
   public var value: Double
 
   /// Creates a vignette adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    value: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(value: Double) {
     self.value = value
   }
 }
 
 /// A fade adjustment that overlays white.
-public struct FadeFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this effect participates in rendering.
-  public var isEnabled: Bool
+public struct FadeFeature: ImageEffect, Equatable {
 
   /// The opacity of the white overlay.
   public var intensity: Double
 
   /// Creates a fade adjustment.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    intensity: Double
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(intensity: Double) {
     self.intensity = intensity
-  }
-}
-
-/// An ordered chain of extent-preserving effects.
-public struct EffectPipeline: Equatable, Sendable {
-
-  /// The effects applied from first to last.
-  public var effects: [any ImageEffectFeatureType]
-
-  /// Creates an effect pipeline.
-  public init(effects: [any ImageEffectFeatureType] = []) {
-    self.effects = effects
-  }
-
-  public static func == (lhs: Self, rhs: Self) -> Bool {
-    parametricFeaturesAreEqual(lhs.effects, rhs.effects)
-  }
-
-  // MARK: - Typed queries
-
-  /// The first effect of the given type, if present.
-  public func first<T: ImageEffectFeatureType>(of type: T.Type) -> T? {
-    for effect in effects {
-      if let typed = effect as? T {
-        return typed
-      }
-    }
-    return nil
-  }
-
-  /// The index of the first effect of the given type, if present.
-  public func firstIndex<T: ImageEffectFeatureType>(of type: T.Type) -> Int? {
-    effects.firstIndex(where: { $0 is T })
-  }
-
-  /// Replaces the first effect of `T` in place, removes it when `value` is
-  /// nil, or inserts a new value when absent.
-  ///
-  /// Ordering is the caller's decision: `insertionIndex` resolves where a
-  /// NEW effect goes (defaults to appending). An existing effect keeps its
-  /// position.
-  public mutating func set<T: ImageEffectFeatureType>(
-    _ value: T?,
-    insertionIndex: (EffectPipeline) -> Int = { $0.effects.count }
-  ) {
-    if let index = firstIndex(of: T.self) {
-      if let value {
-        effects[index] = value
-      } else {
-        effects.remove(at: index)
-      }
-    } else if let value {
-      let index = min(max(insertionIndex(self), 0), effects.count)
-      effects.insert(value, at: index)
-    }
-  }
-
-  /// Whether the pipeline contains no effects.
-  public var isEmpty: Bool {
-    effects.isEmpty
-  }
-}
-
-/// A main-tree effect node that bundles an ordered `EffectPipeline`.
-///
-/// This is the document representation of the editing stack's global-effects
-/// node: it keeps the `EffectPipeline` editing vocabulary as a single,
-/// identity-stable feature, while the compiler flattens it through
-/// `childFeatures` exactly like `PresetFeature`.
-///
-/// - Important: Transitional. It belongs to the `MainTree` / `EditingDocument`
-///   model and is removed with it. In a statically composed document, a
-///   pipeline is an array or a composite feature's `body`.
-public struct EffectPipelineFeature: IdentifiedFeature {
-
-  /// The stable identity of this effect node.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this node participates in rendering.
-  public var isEnabled: Bool
-
-  /// The ordered effects applied when this node evaluates.
-  public var pipeline: EffectPipeline
-
-  /// Creates an effect-pipeline feature.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    pipeline: EffectPipeline
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
-    self.pipeline = pipeline
-  }
-}
-
-/// A local adjustment branch.
-///
-/// The branch evaluates an effect pipeline from the current main image, evaluates
-/// a mask tree in the same current domain, and composites the adjusted image
-/// back over the base image without changing extent.
-///
-/// - Important: Transitional. It belongs to the `MainTree` / `EditingDocument`
-///   model and is removed with it. Statically composed documents use
-///   `LocalAdjustment`.
-public struct LocalAdjustmentFeature: IdentifiedFeature {
-
-  /// The stable identity of this local adjustment.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this local adjustment participates in rendering.
-  public var isEnabled: Bool
-
-  /// The mask tree that produces the alpha used for compositing.
-  public var maskTree: MaskTree
-
-  /// The extent-preserving effects applied inside the local branch.
-  public var effectPipeline: EffectPipeline
-
-  /// The blend rule used to composite the adjusted branch over the base image.
-  public var blendMode: LocalAdjustmentBlendMode
-
-  /// Creates a local adjustment branch.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    maskTree: MaskTree,
-    effectPipeline: EffectPipeline,
-    blendMode: LocalAdjustmentBlendMode = .alpha
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
-    self.maskTree = maskTree
-    self.effectPipeline = effectPipeline
-    self.blendMode = blendMode
   }
 }
 
@@ -896,25 +446,13 @@ public indirect enum MaskNode: Equatable, Sendable {
 }
 
 /// A brush-authored mask.
-public struct BrushMask: IdentifiedFeature {
-
-  /// The stable identity of this mask leaf.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this mask leaf contributes alpha.
-  public var isEnabled: Bool
+public struct BrushMask: Equatable, Sendable {
 
   /// The brush strokes authored in the current feature domain.
   public var strokes: [BrushMaskStroke]
 
   /// Creates a brush-authored mask.
-  public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
-    strokes: [BrushMaskStroke] = []
-  ) {
-    self.id = id
-    self.isEnabled = isEnabled
+  public init(strokes: [BrushMaskStroke] = []) {
     self.strokes = strokes
   }
 }
@@ -965,12 +503,6 @@ public struct BrushMaskBrush: Equatable, Sendable {
 /// A mask feather operation.
 public struct MaskFeather: Equatable, Sendable {
 
-  /// The stable identity of this operation.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this operation participates in rendering.
-  public var isEnabled: Bool
-
   /// The input mask node to feather.
   public var input: MaskNode
 
@@ -979,13 +511,9 @@ public struct MaskFeather: Equatable, Sendable {
 
   /// Creates a feather operation.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     input: MaskNode,
     radius: Double
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.input = input
     self.radius = radius
   }
@@ -993,12 +521,6 @@ public struct MaskFeather: Equatable, Sendable {
 
 /// A mask subtraction operation.
 public struct MaskSubtract: Equatable, Sendable {
-
-  /// The stable identity of this operation.
-  public var id: FeatureID
-
-  /// A Boolean value indicating whether this operation participates in rendering.
-  public var isEnabled: Bool
 
   /// The mask to subtract from.
   public var base: MaskNode
@@ -1008,13 +530,9 @@ public struct MaskSubtract: Equatable, Sendable {
 
   /// Creates a mask subtraction operation.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     base: MaskNode,
     removing: MaskNode
   ) {
-    self.id = id
-    self.isEnabled = isEnabled
     self.base = base
     self.removing = removing
   }

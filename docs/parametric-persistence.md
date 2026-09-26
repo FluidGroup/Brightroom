@@ -8,52 +8,106 @@ evaluation. It does not define how edits are stored. Your app decides:
 - how large assets such as LUTs are referenced,
 - how its own older formats migrate.
 
-Undo and redo in `EditingStack` use in-memory value snapshots and do not need a
+Undo and redo belong to the document's owner, such as
+`PhotosCropEditingModel`, which keeps in-memory document values and needs no
 storage format.
 
 ## Recipe
 
-1. Define a `Codable` model for the features your app supports — typically an
-   enum with one case per feature type. A closed model makes unsupported types
-   and migrations explicit in your code.
-2. To save, convert the *current* features to that model. Save the edited
+1. Compose your document from the features your app supports. Optional
+   members are features that can be absent; a member that is present is
+   enabled. Features carry no identity, so there are no ids to store.
+2. Define a `Codable` model for that document. For content decided by data,
+   such as a list of `AnyImageEffect`, use an enum with one case per feature
+   type. A closed model makes unsupported types and migrations explicit in
+   your code.
+3. To save, convert the *current* document to that model. Save the edited
    result, not only the values you started from.
-3. To restore, rebuild features through their public initializers. Use the
-   validating initializers below for values that did not come from an editing
-   control, and reject what they reject.
+4. To restore, rebuild features through their public initializers. Use the
+   validating initializers and `validate()` methods below for values that did
+   not come from an editing control, and reject what they reject.
 
 ```swift
-enum StoredEffect: Codable {
-  case exposure(id: String, value: Double)
-  case lut(id: String, assetID: String, amount: Double)
+import BrightroomParametric
 
-  init(_ effect: any ImageEffectFeatureType) throws {
-    switch effect {
-    case let exposure as ExposureFeature:
-      self = .exposure(id: exposure.id.rawValue, value: exposure.value)
-    case let lut as ColorCubeFeature:
-      self = .lut(id: lut.id.rawValue, assetID: lut.identifier, amount: lut.amount)
+/// The app's document: the features it supports, in a fixed order.
+struct Look: ImageEffect, Equatable {
+  var exposure: ExposureFeature?
+  var lut: ColorCubeFeature?
+  var extras: [AnyImageEffect] = []
+
+  var body: some ImageEffect {
+    exposure
+    lut
+    extras
+  }
+}
+
+/// The app's saved form of a look. A present field is a present member.
+struct StoredLook: Codable {
+  struct StoredLUT: Codable {
+    var assetID: String
+    var amount: Double
+  }
+
+  var exposure: Double?
+  var lut: StoredLUT?
+  var extras: [StoredEffect]
+
+  init(_ look: Look) throws {
+    exposure = look.exposure?.value
+    lut = look.lut.map { StoredLUT(assetID: $0.identifier, amount: $0.amount) }
+    extras = try look.extras.map(StoredEffect.init)
+  }
+
+  func makeLook(loadLUT: (String) throws -> ColorCubeFeature) throws -> Look {
+    var look = Look()
+    look.exposure = exposure.map { ExposureFeature(value: $0) }
+    if let lut {
+      var feature = try loadLUT(lut.assetID)  // Cube data stays in your asset catalog.
+      feature.amount = lut.amount
+      try feature.validate()
+      look.lut = feature
+    }
+    look.extras = extras.map { $0.makeEffect() }
+    return look
+  }
+}
+
+/// An effect in the look's data-driven list.
+enum StoredEffect: Codable {
+  case fade(intensity: Double)
+  case vignette(value: Double)
+
+  init(_ effect: AnyImageEffect) throws {
+    switch effect.base {
+    case let fade as FadeFeature:
+      self = .fade(intensity: fade.intensity)
+    case let vignette as VignetteFeature:
+      self = .vignette(value: vignette.value)
     default:
-      throw StorageError.unsupportedFeature
+      throw StorageError.unsupportedFeature(String(describing: type(of: effect.base)))
     }
   }
 
-  func makeFeature(loadLUT: (String) throws -> ColorCubeFeature) throws -> any ImageEffectFeatureType {
+  func makeEffect() -> AnyImageEffect {
     switch self {
-    case .exposure(let id, let value):
-      return ExposureFeature(id: FeatureID(rawValue: id), value: value)
-    case .lut(let id, let assetID, let amount):
-      var lut = try loadLUT(assetID)  // Cube data stays in your asset catalog.
-      lut.id = FeatureID(rawValue: id)
-      lut.amount = amount
-      return lut
+    case .fade(let intensity):
+      AnyImageEffect(FadeFeature(intensity: intensity))
+    case .vignette(let value):
+      AnyImageEffect(VignetteFeature(value: value))
     }
   }
 }
+
+enum StorageError: Error {
+  case unsupportedFeature(String)
+}
 ```
 
-A complete example covering Exposure, Tone Curve, Color Mixer, and LUTs, with
-rejection of invalid stored values, is
+A rebuilt document equals the one that was saved, because features compare by
+value. A complete example covering Exposure, Tone Curve, Color Mixer, and LUTs,
+with rejection of invalid stored values, is
 [`AppOwnedPersistenceExampleTests.swift`](../Tests/BrightroomParametricTests/AppOwnedPersistenceExampleTests.swift).
 It uses only the public API.
 
@@ -61,16 +115,25 @@ It uses only the public API.
 
 | Feature | Store | Rebuild with |
 | --- | --- | --- |
-| Any feature | `id.rawValue`, `isEnabled` | `FeatureID(rawValue:)` |
-| `CropFeature` | `cropRect`, `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)` |
-| `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, then set `id`, `isEnabled`, `amount` |
+| Enablement | whether the member is present | an optional member, `if`, or leaving the feature out |
+| `CropFeature` | `cropRect`, `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(cropRect:rotation:straightenRadians:)`, then call `validate()` |
+| `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, set `amount`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points (`id`, `input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(id:input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
-| `PresetFeature`, `EffectPipelineFeature` | their nested effects, recursively | the same conversion for each effect |
-| `LocalAdjustmentFeature` | the mask tree and effect pipeline | `MaskTree`, `MaskNode`, `BrushMask`, … |
+| `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
+| `LocalAdjustment` | the mask tree and the content | `MaskTree`, `MaskNode`, `BrushMask`, `BrushMaskStroke`, `BrushMaskBrush`, and the content's own conversion |
+| `PhotosCropDocument` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect`, `rotation`, `straightenRadians`) | `PhotosCropDocument(effects:blurMask:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
 
 Notes:
 
+- `CropFeature` and `ColorCubeFeature` initializers accept any value. Their
+  `validate()` methods reject a crop rectangle that is not a finite, non-empty
+  extent and cube data that does not match its dimension; rendering would
+  throw the same errors later.
+- Mask trees have no `validate()`. A union or intersection with no inputs
+  restores without error and throws `FeatureEvaluationError.emptyMaskComposite`
+  when it renders. Reject empty composites while converting if your storage
+  can hold them.
 - `ToneCurve(validating:)` keeps moved endpoints and interior point identities,
   including an identity shared by several channels. It returns `nil` instead of
   repairing invalid points.
@@ -82,8 +145,12 @@ Notes:
   what to do with curves authored under a different interpretation.
 - Reject a Color Mixer algorithm identifier you do not recognize instead of
   substituting another algorithm.
-- Feature equality compares rendered values. Check editing state such as curve
-  point identities directly when testing your conversion.
+- Tone Curve and Color Mixer equality compares rendered values; other features
+  compare every stored parameter. Check editing state such as curve point
+  identities directly when testing your conversion.
+- A `PhotosCropDocument` is authored for one image: its domain is the oriented
+  image size (`EditingStack.Loaded.imageSize`). Store a reference to the
+  source image with it, and resume it only over that image.
 
 ## Migrating from `ParametricDocumentCodec`
 
@@ -159,3 +226,29 @@ and `MaskFeather` is `{ "id", "isEnabled", "input", "radius" }`.
 Tone Curve and Color Mixer payloads have no `isEnabled`; it is derived from the values. The 5.1 codec rejected Tone Curve
 points and Mixer axes that the validating initializers now reject, so running
 restored values through those initializers preserves the old behavior.
+
+### Converting 5.x documents
+
+Features in Brightroom 6 have no `id` and no `isEnabled`. When converting a
+decoded 5.x document:
+
+- Drop every `id`. Duplicate ids no longer matter.
+- A disabled domain feature, effect, or local adjustment: leave it out.
+- A disabled `BrushMask`: `BrushMask(strokes: [])`, because it covered
+  nothing. A disabled `MaskFeather`: its `input`. A disabled `MaskSubtract`:
+  its `base`.
+- A disabled child of a preset or pipeline: leave it out of the list.
+- `brightroom.effect.pipeline` (`EffectPipelineFeature`): its enabled
+  effects, in place in your document or as `[AnyImageEffect]`.
+- A local adjustment with no enabled effect: 5.x threw
+  `emptyLocalAdjustmentEffectPipeline` when it was enabled. Brightroom 6
+  renders an empty adjustment as its input, so leave it out.
+- Tone Curve and Color Mixer payloads never had `isEnabled`. Drop their `id`.
+- Brush stamps in a document taken from 5.x `EditingStack.Edit.document`
+  (for example `loadedState.currentEdit.document`, which PhotosCrop and
+  `SwiftUICropView` authored) are y-down: top-left origin in the oriented
+  image. `PhotosCropDocument.blurMask` and every Brightroom 6 mask are y-up, so
+  flip each stamp to `y = orientedImageSize.height - y` while converting, or
+  the blur mask comes back mirrored vertically. A document from
+  `Edit.makeEditingDocument(orientedImageSize:)` was already y-up. Crop
+  rectangles were stored in the y-up form in both and need no flip.

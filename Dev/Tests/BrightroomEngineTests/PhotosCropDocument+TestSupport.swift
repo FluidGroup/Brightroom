@@ -18,11 +18,9 @@ extension PhotosCropDocument {
   /// whole source: the viewing point of crop editing.
   func withCropNeutralized(orientedImageSize: CGSize) -> Self {
     var copy = self
-    copy.crop.setDisplayCropRect(
-      CGRect(origin: .zero, size: orientedImageSize),
-      imageSize: orientedImageSize,
-      rotation: .zero,
-      straighten: 0
+    copy.crop = CropFeature(
+      displayCropRect: CGRect(origin: .zero, size: orientedImageSize),
+      imageSize: orientedImageSize
     )
     return copy
   }

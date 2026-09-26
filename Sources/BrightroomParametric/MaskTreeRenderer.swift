@@ -24,53 +24,18 @@ import Foundation
 
 /// Renders a `MaskTree` into an alpha image in the current feature domain.
 ///
-/// This is the single mask evaluator shared by `FeatureGraphCompiler` and
-/// `LocalAdjustment`, so both document models composite through identical
-/// alpha. Brush stamps are interpreted in Core Image working-space
+/// This is the single mask evaluator shared by `LocalAdjustment` and
+/// `ParametricImageRenderer.makeMaskImage(for:extent:)`, so mask inspection
+/// shows exactly the alpha a local adjustment composites through. Brush stamps are interpreted in Core Image working-space
 /// coordinates (bottom-left origin, y-up).
 struct MaskTreeRenderer: Sendable {
 
-  /// The kernel registry used for brush stamps and mask subtraction.
-  let kernelRegistry: ParametricKernelRegistry
+  /// The kernels used for brush stamps and mask subtraction.
+  private let kernelRegistry = ParametricKernelRegistry()
 
   func render(_ maskTree: MaskTree, extent: CGRect) throws -> CIImage {
     try render(maskTree.root, extent: extent)
       .cropped(to: extent)
-  }
-
-  /// Rejects structurally invalid trees before rendering.
-  ///
-  /// Rendering skips the subtrees that disabled nodes do not use, so it would
-  /// accept an empty composite in such a subtree. This walk checks every
-  /// node, matching the up-front validation of `FeatureGraphCompiler`, so a
-  /// tree fails the same way whether or not a node is disabled.
-  static func validate(_ maskTree: MaskTree) throws {
-    try validate(maskTree.root)
-  }
-
-  private static func validate(_ node: MaskNode) throws {
-    switch node {
-    case .brush:
-      break
-
-    case let .invert(input):
-      try validate(input)
-
-    case let .feather(feather):
-      try validate(feather.input)
-
-    case let .union(nodes), let .intersect(nodes):
-      guard nodes.isEmpty == false else {
-        throw FeatureGraphCompilerError.emptyMaskComposite(nil)
-      }
-      for node in nodes {
-        try validate(node)
-      }
-
-    case let .subtract(subtract):
-      try validate(subtract.base)
-      try validate(subtract.removing)
-    }
   }
 
   private func render(_ node: MaskNode, extent: CGRect) throws -> CIImage {
@@ -94,7 +59,7 @@ struct MaskTreeRenderer: Sendable {
 
     case let .feather(feather):
       let inputImage = try render(feather.input, extent: extent)
-      guard feather.isEnabled, feather.radius > 0.0001 else {
+      guard feather.radius > 0.0001 else {
         return inputImage
       }
       return inputImage
@@ -107,7 +72,7 @@ struct MaskTreeRenderer: Sendable {
 
     case let .union(nodes):
       guard nodes.isEmpty == false else {
-        throw FeatureGraphCompilerError.emptyMaskComposite(nil)
+        throw FeatureEvaluationError.emptyMaskComposite
       }
       return try nodes.reduce(CIImage.parametricTransparent(extent: extent)) { accumulated, node in
         let next = try render(node, extent: extent)
@@ -121,7 +86,7 @@ struct MaskTreeRenderer: Sendable {
 
     case let .intersect(nodes):
       guard let first = nodes.first else {
-        throw FeatureGraphCompilerError.emptyMaskComposite(nil)
+        throw FeatureEvaluationError.emptyMaskComposite
       }
       var accumulated = try render(first, extent: extent)
       for node in nodes.dropFirst() {
@@ -137,9 +102,6 @@ struct MaskTreeRenderer: Sendable {
 
     case let .subtract(subtract):
       let base = try render(subtract.base, extent: extent)
-      guard subtract.isEnabled else {
-        return base
-      }
       let removing = try render(subtract.removing, extent: extent)
       return try kernelRegistry.subtractMask(
         base: base,
@@ -150,10 +112,6 @@ struct MaskTreeRenderer: Sendable {
   }
 
   private func render(_ mask: BrushMask, extent: CGRect) throws -> CIImage {
-    guard mask.isEnabled else {
-      return CIImage.parametricTransparent(extent: extent)
-    }
-
     // Each stamp compiles to one CIImage layer. `componentMax` is associative
     // and commutative, so the stamps reduce in any grouping; folding them in a
     // balanced tree keeps the Core Image graph depth at O(log n) instead of
@@ -226,7 +184,7 @@ struct MaskTreeRenderer: Sendable {
       foreground: foreground,
       background: background
     ) else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CIBlendKernel")
+      throw FeatureEvaluationError.failedToCreateImage("CIBlendKernel")
     }
     return output.cropped(to: extent)
   }
