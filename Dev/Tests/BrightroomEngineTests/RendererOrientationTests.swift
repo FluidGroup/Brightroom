@@ -12,6 +12,7 @@ import Testing
 import UIKit
 
 @testable import BrightroomEngine
+import BrightroomParametric
 
 struct RendererOrientationTests {
 
@@ -20,7 +21,7 @@ struct RendererOrientationTests {
   {
 
     let imageSource = ImageSource(image: image)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: orientation)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: orientation, document: EmptyFeature())
 
     let rendered = try await renderer.render()
     return rendered

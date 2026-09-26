@@ -1,7 +1,10 @@
 import CoreGraphics
+import CoreImage
+import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 extension CropFeature {
 
@@ -24,60 +27,76 @@ extension CropFeature {
   }
 }
 
-extension EditingStack.Edit {
+/// A general document for renderer tests: ordered global effects, local
+/// adjustments, then a crop.
+///
+/// It replaces the old `BrightRoomImageRenderer.Edit.make(crop:…)`, whose
+/// canonical arrangement was the same `[effects, localAdjustments…, crop]`.
+struct RendererTestDocument: Feature, Equatable {
+  var effects: [AnyImageEffect] = []
+  var localAdjustments: [LocalAdjustment<[AnyImageEffect]>] = []
+  var crop: CropFeature
 
-  /// Test helper: the canonical default edit for an image of `imageSize`,
-  /// optionally with a non-default final crop rect (y-down display space).
-  static func test(imageSize: CGSize, cropRect: CGRect? = nil) -> Self {
-    EditingFeatureTree.canonicalEdit(
-      finalCrop: CropFeature.test(imageSize: imageSize, cropRect: cropRect),
-      orientedImageSize: imageSize
-    )
+  var body: some Feature {
+    effects
+    localAdjustments
+    crop
   }
+}
 
-  /// Test helper for PhotosCrop-style documents: local adjustments are authored
-  /// before the built-in final crop node.
-  mutating func setPhotosCropLocalAdjustmentsForTest(
-    _ localAdjustments: [LocalAdjustmentFeature]
-  ) {
-    EditingFeatureTree.replaceLocalAdjustments(
-      localAdjustments,
-      in: &self,
-      insertingBefore: EditingFeatureTree.finalCropNodeID
+extension MaskTree {
+
+  /// A brush tree whose stamps are given in display coordinates (top-left
+  /// origin, y-down) of a domain `domainHeight` tall.
+  ///
+  /// The stamps are stored in BrightroomParametric's working space through the
+  /// production conversion (`EditingCanvasStrokeRecord.workingSpaceStroke`), so
+  /// a test still states the display position it expects while exercising the
+  /// same flip the editor commits through.
+  static func test(
+    displayStamps: [CGPoint],
+    diameter: Double,
+    hardness: Double = 1,
+    opacity: Double = 1,
+    isEnabled: Bool = true,
+    domainHeight: CGFloat
+  ) -> MaskTree {
+    let record = EditingCanvasStrokeRecord(
+      stamps: displayStamps,
+      brush: .init(size: diameter, hardness: hardness, opacity: opacity, spacing: 0.05)
     )
-  }
-
-  /// Test helper for replacing the built-in final crop node.
-  mutating func setFinalCropForTest(_ crop: CropFeature) {
-    _ = EditingFeatureTree.updateCropFeature(
-      id: EditingFeatureTree.finalCropNodeID,
-      in: &self,
-      with: crop
+    return MaskTree(
+      root: .brush(
+        BrushMask(
+          isEnabled: isEnabled,
+          strokes: [record.workingSpaceStroke(domainHeight: domainHeight)]
+        )
+      )
     )
   }
 }
 
-extension BrightRoomImageRenderer.Edit {
+extension EditingStack {
 
-  /// Test helper mirroring how `EditingStack.makeRenderer` lowers an edit:
-  /// builds the renderer's parametric document from a crop plus ordered global
-  /// effects and local adjustments, through the production bridge.
-  ///
-  /// The resulting document order is `[effects, localAdjustments…, crop]`, which
-  /// matches the canonical arrangement the old `(croppingRect, operations)`
-  /// construction produced.
-  static func make(
-    crop: CropFeature,
-    orientedImageSize: CGSize,
-    effects: EffectPipeline = .init(),
-    localAdjustments: [LocalAdjustmentFeature] = []
-  ) -> Self {
-    var edit = EditingFeatureTree.canonicalEdit(
-      finalCrop: crop,
-      orientedImageSize: orientedImageSize
+  /// A stack whose loaded state is injected synchronously, without running the
+  /// image loader. The editing source is the full-resolution oriented image.
+  static func test(
+    cgImage: CGImage,
+    orientation: CGImagePropertyOrientation = .up
+  ) -> EditingStack {
+    let imageSource = ImageSource(cgImage: cgImage)
+    let stack = EditingStack(imageProvider: .init(image: UIImage(cgImage: cgImage)))
+    let oriented = CIImage(cgImage: cgImage).oriented(orientation)
+    let editingSource = oriented.transformed(
+      by: CGAffineTransform(translationX: -oriented.extent.minX, y: -oriented.extent.minY)
     )
-    edit.effects = effects
-    edit.setPhotosCropLocalAdjustmentsForTest(localAdjustments)
-    return .init(document: edit.makeEditingDocument(orientedImageSize: orientedImageSize))
+    stack.loadedState = .init(
+      imageSource: imageSource,
+      metadata: .init(orientation: orientation, imageSize: editingSource.extent.size),
+      thumbnailCIImage: editingSource,
+      editingSourceCGImage: cgImage,
+      editingSourceCIImage: editingSource
+    )
+    return stack
   }
 }

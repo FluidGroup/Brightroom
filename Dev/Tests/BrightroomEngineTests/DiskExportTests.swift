@@ -112,8 +112,11 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeTopWhiteBottomBlack(side: side)
 
-    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
-    renderer.edit = .make(crop: CropFeature.test(imageSize: size), orientedImageSize: size)
+    let renderer = BrightRoomImageRenderer(
+      source: ImageSource(cgImage: source),
+      orientation: .up,
+      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    )
     _ = try await renderer.render(
       options: .init(
         workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -137,8 +140,11 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeSolidColorImage(side: side, red: 200, green: 100, blue: 30)
 
-    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
-    renderer.edit = .make(crop: CropFeature.test(imageSize: size), orientedImageSize: size)
+    let renderer = BrightRoomImageRenderer(
+      source: ImageSource(cgImage: source),
+      orientation: .up,
+      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    )
     _ = try await renderer.render(
       options: .init(
         workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
@@ -165,7 +171,7 @@ final class DiskExportTests {
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
     let diameter = Double(size.width) / 4
 
-    let layer = LocalAdjustmentFeature(
+    let layer = LocalAdjustment(
       maskTree: MaskTree(
         root: .brush(
           BrushMask(
@@ -177,18 +183,15 @@ final class DiskExportTests {
             ]
           )
         )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)])
-    )
+      )
+    ) {
+      [AnyImageEffect(ExposureFeature(value: 2))]
+    }
 
     let renderer = BrightRoomImageRenderer(
       source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    renderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size,
-      localAdjustments: [layer]
+      orientation: .up,
+      document: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     return renderer
   }

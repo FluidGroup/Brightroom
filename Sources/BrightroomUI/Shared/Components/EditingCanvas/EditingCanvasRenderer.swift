@@ -78,15 +78,14 @@ private enum EditingCanvasViewportRenderPath: String {
 /// The renderer retains these until replacement and places them through its viewport.
 struct EditingCanvasRenderImages {
   let source: CIImage
-  let effects: EffectPipeline
   let base: CIImage
   let adjusted: CIImage
-  let localEffect: EffectPipeline
+  /// Whether `base` applies global effects over `source`. When it does not,
+  /// the renderer may sample the cached source instead of evaluating `base`.
+  let hasGlobalEffects: Bool
+  /// Whether `adjusted` applies a local effect over `base`.
+  let hasLocalEffect: Bool
   let usesPreparedBaseImage: Bool
-
-  var hasLocalEffect: Bool {
-    localEffect.hasEnabledEffects
-  }
 }
 
 /// Owns the image recipes and GPU resources used to render one editing canvas.
@@ -355,7 +354,7 @@ final class EditingCanvasRenderer {
     // the viewport affine, so no pan/zoom/rotation can change their domain.
     // Sampling the source cache is equivalent only when global effects are idle.
     if renderImages.usesPreparedBaseImage == false,
-       renderImages.effects.hasEnabledEffects == false {
+       renderImages.hasGlobalEffects == false {
       let result = renderViewportCachedSource(
         renderImages,
         frame: frame,

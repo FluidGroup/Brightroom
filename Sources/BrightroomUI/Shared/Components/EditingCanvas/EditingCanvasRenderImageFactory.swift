@@ -3,36 +3,24 @@ import BrightroomParametric
 import CoreImage
 import CoreGraphics
 
+/// Builds the content-space image recipes an editing canvas renders.
+///
+/// The document is authored in the full-resolution oriented source domain.
+/// These factories evaluate the downsampled editing source and scale it up to
+/// that domain (or to the crop output), stating the chain-entry extent for
+/// every effect they apply.
 enum EditingCanvasRenderImageFactory {
-  static func makeRenderImages(
-    loadedState: EditingStack.Loaded,
-    canvasSize: CGSize,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
-    makeRenderImages(
-      editingSourceImage: loadedState.editingSourceImage,
-      effects: loadedState.currentEdit.effects,
-      canvasSize: canvasSize,
-      mode: mode
-    )
-  }
 
+  /// Render images for a canvas sized to the oriented source.
+  ///
+  /// - Parameters:
+  ///   - editingSourceImage: The oriented, downsampled editing source.
+  ///   - effects: The global effects, or nil when there are none.
+  ///   - canvasSize: The oriented source size the canvas displays.
+  ///   - mode: Whether a local adjustment is composited.
   static func makeRenderImages(
-    document: CropViewDocumentSnapshot,
-    canvasSize: CGSize,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
-    makeRenderImages(
-      editingSourceImage: document.editingSourceImage,
-      effects: document.effects,
-      canvasSize: canvasSize,
-      mode: mode
-    )
-  }
-
-  private static func makeRenderImages(
     editingSourceImage: CIImage,
-    effects: EffectPipeline,
+    effects: AnyImageEffect?,
     canvasSize: CGSize,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
@@ -45,28 +33,22 @@ enum EditingCanvasRenderImageFactory {
     }
 
     let scaledSourceImage = scaledImage(sourceImage, canvasSize: canvasSize, canvasRect: canvasRect)
-    let scaledPreviewSourceImage = scaledImage(
-      previewSourceImage,
-      canvasSize: canvasSize,
-      canvasRect: canvasRect
-    )
 
     let viewportSourceImage = scaledSourceImage.cropped(to: canvasRect)
 
     let baseImage: CIImage
     let adjustedImage: CIImage
-    let renderEffect: EffectPipeline
+    let hasLocalEffect: Bool
     let usesPreparedBaseImage: Bool
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        effects
-        .applyIgnoringFailure(to: viewportSourceImage, radiusReferenceExtent: canvasRect)
-        .cropped(to: canvasRect),
+        applying(effects, to: viewportSourceImage, radiusReferenceExtent: canvasRect)
+          .cropped(to: canvasRect),
         source: viewportSourceImage
       )
       adjustedImage = baseImage
-      renderEffect = .init()
+      hasLocalEffect = false
       usesPreparedBaseImage = false
 
     case let .localAdjustment(localEffect):
@@ -82,7 +64,7 @@ enum EditingCanvasRenderImageFactory {
       // consistent (modulo the inherent downscale/upscale resampling
       // difference).
       let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        effects.applyIgnoringFailure(to: sourceImage, radiusReferenceExtent: displaySourceExtent),
+        applying(effects, to: sourceImage, radiusReferenceExtent: displaySourceExtent),
         source: sourceImage
       )
       let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
@@ -93,7 +75,7 @@ enum EditingCanvasRenderImageFactory {
         .cropped(to: canvasRect)
       adjustedImage = scaledImage(sourceAdjusted, canvasSize: canvasSize, canvasRect: canvasRect)
         .cropped(to: canvasRect)
-      renderEffect = localEffect
+      hasLocalEffect = true
       // The local effect is baked into `adjustedImage`, so route it through the
       // prepared path — the same source-resolution composite ToolSurface and
       // the export renderer use — instead of the cached-source path, which
@@ -101,58 +83,28 @@ enum EditingCanvasRenderImageFactory {
       // lower-fidelity, foggier blur preview that diverges from the final
       // result.
       usesPreparedBaseImage = true
-
-    case .renderedEditPreview:
-      let previewImage = effects
-        .applyIgnoringFailure(to: scaledPreviewSourceImage, radiusReferenceExtent: canvasRect)
-        .cropped(to: canvasRect)
-      let displayPreviewImage = displayOrientedImage(previewImage, canvasSize: canvasSize)
-        .cropped(to: canvasRect)
-      baseImage = displayPreviewImage
-      adjustedImage = displayPreviewImage
-      renderEffect = .init()
-      usesPreparedBaseImage = true
     }
 
     return .init(
       source: viewportSourceImage,
-      effects: effects,
       base: baseImage,
       adjusted: adjustedImage,
-      localEffect: renderEffect,
+      hasGlobalEffects: effects != nil,
+      hasLocalEffect: hasLocalEffect,
       usesPreparedBaseImage: usesPreparedBaseImage
     )
   }
 
+  /// Render images for a canvas sized to the crop output.
+  ///
+  /// - Parameters:
+  ///   - editingSourceImage: The oriented, downsampled editing source.
+  ///   - effects: The global effects, or nil when there are none.
+  ///   - geometry: Maps the oriented source to the crop output.
+  ///   - mode: Whether a local adjustment is composited.
   static func makeCropOutputRenderImages(
-    loadedState: EditingStack.Loaded,
-    geometry: EditingCanvasCropOutputGeometry,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
-    makeCropOutputRenderImages(
-      editingSourceImage: loadedState.editingSourceImage,
-      effects: loadedState.currentEdit.effects,
-      geometry: geometry,
-      mode: mode
-    )
-  }
-
-  static func makeCropOutputRenderImages(
-    document: CropViewDocumentSnapshot,
-    geometry: EditingCanvasCropOutputGeometry,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
-    makeCropOutputRenderImages(
-      editingSourceImage: document.editingSourceImage,
-      effects: document.effects,
-      geometry: geometry,
-      mode: mode
-    )
-  }
-
-  private static func makeCropOutputRenderImages(
     editingSourceImage: CIImage,
-    effects: EffectPipeline,
+    effects: AnyImageEffect?,
     geometry: EditingCanvasCropOutputGeometry,
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
@@ -175,7 +127,7 @@ enum EditingCanvasRenderImageFactory {
 
     let baseImage: CIImage
     let adjustedImage: CIImage
-    let renderEffect: EffectPipeline
+    let hasLocalEffect: Bool
     switch mode {
     case .viewportBase:
       // The input is the CROPPED output, but the radius basis stays the
@@ -183,12 +135,12 @@ enum EditingCanvasRenderImageFactory {
       // pre-crop, so resolving against the crop rect would diverge from the
       // export the moment a proportional radius appears in `effects`.
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        effects.applyIgnoringFailure(to: cropOutputSourceImage, radiusReferenceExtent: sourceRect)
+        applying(effects, to: cropOutputSourceImage, radiusReferenceExtent: sourceRect)
           .cropped(to: canvasRect),
         source: cropOutputSourceImage
       )
       adjustedImage = baseImage
-      renderEffect = .init()
+      hasLocalEffect = false
 
     case let .localAdjustment(localEffect):
       // Evaluate effects + the local effect at the native (downsampled) source
@@ -199,7 +151,8 @@ enum EditingCanvasRenderImageFactory {
       // (the display source extent), so it upscales to the same fractional
       // blur the full-resolution export produces.
       let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        effects.applyIgnoringFailure(
+        applying(
+          effects,
           to: displaySourceImage,
           radiusReferenceExtent: displaySourceImage.extent
         ),
@@ -227,32 +180,29 @@ enum EditingCanvasRenderImageFactory {
         .cropped(to: canvasRect)
       adjustedImage = cropOutputImage(adjustedSourceImage, geometry: geometry)
         .cropped(to: canvasRect)
-      renderEffect = localEffect
-
-    case .renderedEditPreview:
-      let filteredSourceImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        effects
-          .applyIgnoringFailure(to: sourceImage, radiusReferenceExtent: sourceRect)
-          .cropped(to: sourceExtent),
-        source: sourceImage
-      )
-      let previewImage = filteredSourceImage
-        .cropped(to: sourceExtent)
-      let displayPreviewImage = cropOutputImage(previewImage, geometry: geometry)
-        .cropped(to: canvasRect)
-      baseImage = displayPreviewImage
-      adjustedImage = displayPreviewImage
-      renderEffect = .init()
+      hasLocalEffect = true
     }
 
     return .init(
       source: cropOutputSourceImage,
-      effects: effects,
       base: baseImage,
       adjusted: adjustedImage,
-      localEffect: renderEffect,
+      hasGlobalEffects: effects != nil,
+      hasLocalEffect: hasLocalEffect,
       usesPreparedBaseImage: true
     )
+  }
+
+  /// Applies the global effects, or returns `image` when there are none.
+  private static func applying(
+    _ effects: AnyImageEffect?,
+    to image: CIImage,
+    radiusReferenceExtent: CGRect
+  ) -> CIImage {
+    guard let effects else {
+      return image
+    }
+    return effects.applyIgnoringFailure(to: image, radiusReferenceExtent: radiusReferenceExtent)
   }
 
   private static func scaledImage(

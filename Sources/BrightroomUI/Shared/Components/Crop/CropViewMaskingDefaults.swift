@@ -45,22 +45,19 @@ public struct CropViewMaskingBrush: Equatable {
 /// single definition here so the editors cannot drift apart.
 enum CropViewMaskingDefaults {
 
-  /// Default blur pipeline whose radius resolves against the rendered image
-  /// extent so the apparent strength is comparable across image sizes and
+  /// Default blur whose radius resolves against the render pass's chain-entry
+  /// extent, so the apparent strength is comparable across image sizes and
   /// render resolutions.
   ///
   /// `GaussianBlurFeature(value: 40)` resolves to diagonal/20 × 40/100 =
   /// diagonal/50 — the strength the legacy crop-frozen seed produced. Because
-  /// the value form is scale-invariant, the seed no longer depends on the
-  /// current crop and can be a constant. The deterministic effect id keeps a
-  /// reloaded document's committed layer equal to this seed.
-  static let blurEffectPipeline = EffectPipeline(
-    effects: [
-      GaussianBlurFeature(
-        id: .init(rawValue: "brightroom.crop-view.masking-blur"),
-        value: 40
-      )
-    ]
+  /// the value form is scale-invariant, the default does not depend on the
+  /// current crop and can be a constant. It carries the document's fixed blur
+  /// identity, so the blur a first stroke creates equals this value and the
+  /// canvas keeps its caches across that commit.
+  static let blurEffect = GaussianBlurFeature(
+    id: PhotosCropDocument.MemberID.blurMaskEffect,
+    value: 40
   )
 
   /// Converts a brush diameter authored in viewport points into the

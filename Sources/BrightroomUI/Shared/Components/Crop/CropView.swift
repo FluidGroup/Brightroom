@@ -26,23 +26,55 @@ import MetalKit
 import BrightroomEngine
 import BrightroomParametric
 
-/// A UIKit canvas that previews a point in the document FeatureTree and edits
-/// a feature node that may live at a different point.
+/// The prepared image a `CropView` edits over.
+struct CropViewSource {
+
+  /// The oriented, downsampled, GPU-resident editing source (zero origin).
+  let editingSourceImage: CIImage
+
+  /// The oriented source size at full resolution: the domain the document is
+  /// authored in.
+  let imageSize: CGSize
+
+  init(_ loaded: EditingStack.Loaded) {
+    self.editingSourceImage = loaded.editingSourceImage
+    self.imageSize = loaded.imageSize
+  }
+
+  init(editingSourceImage: CIImage, imageSize: CGSize) {
+    self.editingSourceImage = editingSourceImage
+    self.imageSize = imageSize
+  }
+}
+
+extension PhotosCropDocument.Effects {
+
+  /// The global effects as the canvas factories take them: nil when no effect
+  /// is present, so the canvas can sample its cached source instead of
+  /// evaluating an identity graph.
+  var canvasEffect: AnyImageEffect? {
+    self == Self() ? nil : AnyImageEffect(self)
+  }
+}
+
+/// A UIKit canvas that edits a `PhotosCropDocument`: value in, changes out.
 ///
-/// Based on the editing vision in `docs/vision-of-editing.md`, this view treats
-/// tool edits as Features that happen before the final crop:
+/// Based on the editing vision in `docs/vision-of-editing.md`, the document
+/// evaluates tool edits before the final crop:
 ///
 /// ```text
-/// Source -> Tool Features -> Final Crop -> Output
+/// Source -> Effects -> Blur Mask -> Final Crop -> Output
 /// ```
 ///
-/// The contract with hosts is `CropViewFeatureFocus`: a viewing point in the
-/// FeatureTree plus an optional editing target. Crop editing adjusts the final
-/// crop frame while showing the result of earlier Tool Features. Mask editing,
-/// such as blur masking, inspects the evaluated result at the viewing point
-/// while authoring parameters that still belong to the pre-final-crop image
-/// domain. In practice, this means Tool navigation must not mutate crop
-/// geometry, and Tool strokes cross domains when they are displayed or saved.
+/// The host passes the document with `setDocument(_:)` and receives CropView's
+/// own changes (crop commits, brush strokes) through the document change
+/// handler. `CropViewEditingTarget` picks what canvas gestures edit; the
+/// viewing point is always the document's output. Crop editing adjusts the
+/// final crop while showing the effects and the blur mask over the whole
+/// source. Mask editing inspects the output through the crop while authoring
+/// strokes that belong to the pre-crop domain, so Tool navigation never
+/// mutates the crop, and strokes cross domains when they are displayed or
+/// committed.
 ///
 /// Crop adjustment is available in two ways:
 /// - Scrolling the image.
@@ -54,6 +86,12 @@ final class CropView: UIView {
 
   typealias AdjustmentKind = SwiftUICropView.AdjustmentKind
   typealias StateSnapshot = SwiftUICropView.StateSnapshot
+
+  /// A change CropView made to the document: a crop commit or a brush stroke.
+  ///
+  /// The document's owner applies it to its latest document, so owner-side
+  /// changes CropView has not received yet are kept.
+  typealias DocumentChange = (inout PhotosCropDocument) -> Void
 
   private struct State {
 
@@ -137,7 +175,20 @@ final class CropView: UIView {
     }
   }
 
-  private let document: CropViewDocument
+  /// The prepared image the document is authored over.
+  private let source: CropViewSource
+
+  /// The document as CropView last received (normalized) or changed it.
+  ///
+  /// It is also the echo reference: a document passed back with the same crop
+  /// does not reload the crop state.
+  private var document: PhotosCropDocument
+
+  private var documentChangeHandler: @MainActor (@escaping DocumentChange) -> Void = { _ in }
+
+  /// The committed strokes of `document.blurMask` as canvas records, reused
+  /// while the mask (and, for the tool surface, the crop output) is unchanged.
+  private var committedStrokeRecords = CommittedStrokeRecords()
 
   #if DEBUG
   private let _debug_shapeLayer: CAShapeLayer = {
@@ -154,9 +205,18 @@ final class CropView: UIView {
   private let cropSurface = CropSurface()
   private let toolSurface = ToolSurface()
 
-  /// The FeatureTree focus driving surface activation: which point in the
-  /// tree is previewed and which feature node canvas gestures edit.
-  private var featureFocus: CropViewFeatureFocus = .finalCrop
+  /// What canvas gestures edit; nil views the output only.
+  private var editingTarget: CropViewEditingTarget? = .crop
+
+  /// Whether the crop guide and the crop scroll surface own interaction.
+  private var isCropEditing: Bool {
+    editingTarget == .crop
+  }
+
+  /// Whether brush gestures paint the blur mask.
+  private var isMaskEditing: Bool {
+    editingTarget == .blurMask
+  }
   private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
   /// The image-space brush most recently pushed to the canvas surfaces, used
   /// to skip redundant reconfiguration when neither the brush nor the
@@ -237,12 +297,18 @@ final class CropView: UIView {
 
   // MARK: - Initializers
 
+  /// Creates a canvas over `source` editing `document`.
+  ///
+  /// This only stores the values. Call `loadDocumentState()` once a state
+  /// handler is bound, so the first state snapshot reaches it.
   init(
-    document: CropViewDocument,
+    source: CropViewSource,
+    document: PhotosCropDocument,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
     _pixeleditor_ensureMainThread()
 
+    self.source = source
     self.document = document
     self.contentInset = contentInset
 
@@ -355,7 +421,7 @@ final class CropView: UIView {
 
         self.debounce.on { [weak self] in
           guard let self else { return }
-          guard self.featureFocus.isCropEditing else { return }
+          guard self.isCropEditing else { return }
           // This trailing debounce runs updateCropLayout(), which snaps the
           // scroll view back to the not-yet-recorded proposedCrop via
           // customZoom. It must not fire while the user is still touching the
@@ -385,7 +451,7 @@ final class CropView: UIView {
 
         self.debounce.on { [weak self] in
           guard let self else { return }
-          guard self.featureFocus.isCropEditing else { return }
+          guard self.isCropEditing else { return }
           guard self.cropSurface.scrollView.isTracking == false else { return }
 
           self.updateCropLayout()
@@ -483,39 +549,61 @@ final class CropView: UIView {
     self.stateHandler = handler
   }
 
-  func loadCurrentDocumentState() {
-    let snapshot = document.requireSnapshotForLoadedCropView()
-    guard let crop = displayCropEditingState(in: snapshot) else {
-      return
-    }
-    load(crop: crop)
-    updateDisplay(document: snapshot)
+  /// Sets the handler that receives the changes CropView makes: crop commits
+  /// and brush strokes. The owner applies each one to its latest document.
+  func setDocumentChangeHandler(
+    _ handler: @escaping @MainActor (_ change: @escaping DocumentChange) -> Void
+  ) {
+    self.documentChangeHandler = handler
   }
 
-  func updateCurrentDocumentDisplay() {
-    guard let snapshot = document.snapshot else {
-      return
-    }
-
-    guard let documentCrop = displayCropEditingState(in: snapshot) else {
-      return
-    }
-    if state.proposedCrop == nil || state.proposedCrop?.imageSize != documentCrop.imageSize {
-      load(crop: documentCrop)
-    }
-
-    updateDisplay(document: snapshot)
+  /// Loads the crop state from the document and displays it.
+  ///
+  /// Call it once, after the state handler is bound: loading emits the first
+  /// state snapshot, which seeds the host's rotation and angle inputs.
+  func loadDocumentState() {
+    load(crop: CropEditingState(cropFeature: document.crop, imageSize: source.imageSize))
+    updateDisplay()
   }
 
-  /**
-   Renders an image according to the editing.
+  /// Displays `document`.
+  ///
+  /// When its crop differs from the crop CropView holds (for example after an
+  /// undo), the crop state reloads, fitted to the active aspect-ratio lock. A
+  /// document CropView changed itself comes back equal and only refreshes the
+  /// display.
+  ///
+  /// The document is normalized first: members a host assigned directly get
+  /// the document's fixed identities, and disabled members are dropped, so
+  /// equal edits keep the canvas caches.
+  func setDocument(_ document: PhotosCropDocument) {
+    let document = document.normalized()
 
-   - Attention: The UI crop state is committed on the main actor before the
-     renderer performs its asynchronous work.
-   */
-  func renderImage() async throws -> BrightRoomImageRenderer.Rendered? {
-    applyDocumentChanges()
-    return try await document.renderImage()
+    guard document != self.document else {
+      updateDisplay()
+      return
+    }
+
+    let cropChanged = document.crop.isRenderingEquivalent(
+      to: self.document.crop,
+      orientedImageSize: source.imageSize
+    ) == false
+    let blurMaskChanged = document.blurMask != self.document.blurMask
+    self.document = document
+
+    if cropChanged, state.proposedCrop != nil {
+      var crop = CropEditingState(cropFeature: document.crop, imageSize: source.imageSize)
+      if let ratio = state.preferredAspectRatio {
+        crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      }
+      load(crop: crop)
+    }
+
+    // Effects-only changes (slider ticks, presets) leave the strokes alone.
+    if cropChanged || blurMaskChanged {
+      syncCommittedStrokesFromDocument()
+    }
+    updateDisplay()
   }
 
   /**
@@ -523,7 +611,7 @@ final class CropView: UIView {
    */
   func applyDocumentChanges() {
     guard let crop = record() ?? state.proposedCrop else {
-      EditorLog.error(.cropView, "CropViewDocument has not completed loading.")
+      EditorLog.error(.cropView, "CropView has not loaded the document state.")
       return
     }
     applyCropToDocumentIfRenderingChanged(crop)
@@ -714,7 +802,7 @@ extension CropView {
     }
   }
 
-  private func updateDisplay(document: CropViewDocumentSnapshot) {
+  private func updateDisplay() {
     guard let crop = state.proposedCrop else {
       return
     }
@@ -736,7 +824,8 @@ extension CropView {
       ) != nil
     }
 
-    if featureFocus.isCropEditing {
+    switch editingTarget {
+    case .crop:
       toolSurface.hideCanvasView()
       guard
         cropSurface.ensureCanvasView(
@@ -752,153 +841,143 @@ extension CropView {
         return
       }
 
-      updateCanvasContent(document: document, crop: crop)
-
-    } else if let seedEffect = resolvedMaskSeedEffect {
-      guard
-        let geometry = makeToolOutputGeometry(crop: crop),
-        ensureToolCanvas(geometry: geometry)
-      else {
-        return
-      }
-
-      // The committed layer's effect is frozen at creation; the focus's seed
-      // effect only seeds layers that don't exist yet. Rendering with the
-      // committed effect keeps the preview equal to the exported result even
-      // when the host recomputes the seed effect from a new crop.
-      toolSurface.updateCanvas(
+      cropSurface.updateRenderedEditPreview(
+        source: source,
         document: document,
-        geometry: geometry,
-        mode: .localAdjustment(effect: committedCanvasLocalEffect() ?? seedEffect),
-        committedStrokes: currentToolCommittedStrokes(in: geometry)
-      )
-
-
-    } else {
-      guard
-        let geometry = makeToolOutputGeometry(crop: crop),
-        ensureToolCanvas(geometry: geometry)
-      else {
-        return
-      }
-
-      let renderPlan = CanvasRenderPlan(
-        localAdjustments: document.localAdjustments
-      )
-      toolSurface.updateCanvas(
-        document: document,
-        geometry: geometry,
-        mode: renderPlan.canvasMode,
-        committedStrokes: renderPlan.committedStrokes(in: geometry)
-      )
-
-    }
-  }
-
-  /// Whether the evaluated image at the current viewing point contains the
-  /// final crop. Unknown points fall back to the output behavior.
-  private var viewingPointIncludesFinalCrop: Bool {
-    switch featureFocus.viewingPoint {
-    case .output:
-      return true
-    case .source:
-      return false
-    case .after:
-      guard
-        let tree = document.snapshot?.featureTree,
-        let includes = tree.point(
-          featureFocus.viewingPoint,
-          includes: EditingFeatureTree.finalCropNodeID
+        crop: crop,
+        committedStrokes: committedStrokeRecords.sourceRecords(
+          blurMask: document.blurMask,
+          domainHeight: source.imageSize.height
         )
+      )
+
+    case .blurMask:
+      guard
+        let geometry = EditingCanvasCropOutputGeometry(crop: crop),
+        ensureToolCanvas(geometry: geometry)
       else {
-        return true
+        return
       }
-      return includes
+
+      // Before the first stroke the live stroke previews the default blur.
+      // It equals the content the first stroke creates, so the canvas key and
+      // its bakes survive that commit.
+      toolSurface.updateCanvas(
+        source: source,
+        effects: document.effects,
+        geometry: geometry,
+        mode: .localAdjustment(
+          effect: AnyImageEffect(document.blurMask?.content ?? CropViewMaskingDefaults.blurEffect)
+        ),
+        committedStrokes: committedStrokeRecords.outputRecords(
+          blurMask: document.blurMask,
+          geometry: geometry,
+          domainHeight: source.imageSize.height
+        )
+      )
+
+    case nil:
+      guard
+        let geometry = EditingCanvasCropOutputGeometry(crop: crop),
+        ensureToolCanvas(geometry: geometry)
+      else {
+        return
+      }
+
+      toolSurface.updateCanvas(
+        source: source,
+        effects: document.effects,
+        geometry: geometry,
+        mode: CanvasRenderPlan(blurMask: document.blurMask).canvasMode,
+        committedStrokes: committedStrokeRecords.outputRecords(
+          blurMask: document.blurMask,
+          geometry: geometry,
+          domainHeight: source.imageSize.height
+        )
+      )
     }
   }
 
-  /// The crop describing the tool surface's display domain for the current
-  /// viewing point: the final crop when the viewing point includes it, or the
-  /// identity crop (the full pre-crop image) when previewing an earlier point.
-  private func toolDisplayCrop(from crop: CropEditingState) -> CropEditingState {
-    viewingPointIncludesFinalCrop ? crop : crop.makeInitial()
-  }
-
-  /// The source-to-display geometry the tool surface uses for the current
-  /// viewing point. Strokes committed through this geometry always land in the
-  /// pre-crop feature domain regardless of the viewing point.
-  private func makeToolOutputGeometry(crop: CropEditingState) -> EditingCanvasCropOutputGeometry? {
-    EditingCanvasCropOutputGeometry(crop: toolDisplayCrop(from: crop))
-  }
-
+  /// The inputs that decide the crop surface's render images. Equal keys keep
+  /// the canvas's render images and bakes.
   struct CanvasInputKey: Equatable {
     var imageSize: CGSize
     var sourceImage: ObjectIdentifier
     var sourceExtent: CGRect
-    var effects: EffectPipeline
-    var localAdjustments: [LocalAdjustmentFeature]
+    var effects: PhotosCropDocument.Effects
+    /// The whole blur mask, strokes included: the crop surface rebuilds on a
+    /// stroke commit.
+    var blurMask: LocalAdjustment<GaussianBlurFeature>?
 
-    init(document: CropViewDocumentSnapshot, crop: CropEditingState) {
-      let previewSourceImage = document.editingSourceImage.removingExtentOffset()
+    init(source: CropViewSource, document: PhotosCropDocument, crop: CropEditingState) {
+      let previewSourceImage = source.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
       // editing source is always capped to the same max pixel size).
-      self.sourceImage = ObjectIdentifier(document.editingSourceImage)
+      self.sourceImage = ObjectIdentifier(source.editingSourceImage)
       self.sourceExtent = previewSourceImage.extent
       self.effects = document.effects
-      self.localAdjustments = document.localAdjustments
+      self.blurMask = document.blurMask
     }
   }
 
-  // TODO: Consider to remove this
-  // Internal (not private) so tests can verify the stroke-domain mapping.
+  /// How the canvas composites the document's blur mask.
+  ///
+  /// Internal (not private) so tests can verify the stroke-domain mapping.
   enum CanvasRenderPlan: Equatable {
+
+    /// No blur is composited: the canvas shows the global effects only.
     case viewportBase
-    case singleLocalAdjustment(LocalAdjustmentFeature)
-    case renderedEditPreview
 
-    init(
-      localAdjustments: [LocalAdjustmentFeature]
-    ) {
-      let activeLayers = localAdjustments.filter {
-        $0.isEnabled
-          && $0.effectPipeline.hasEnabledEffects
-          && $0.maskTree.canvasIsEffectivelyEmpty == false
-      }
+    /// The blur mask is composited over the global effects.
+    case blurMask(LocalAdjustment<GaussianBlurFeature>)
 
-      switch activeLayers.count {
-      case 0:
+    /// `.blurMask` when the mask is present with an enabled blur, rooted at
+    /// an enabled brush, and has at least one stroke. A disabled blur or brush
+    /// changes nothing at export, so the canvas does not composite it either.
+    init(blurMask: LocalAdjustment<GaussianBlurFeature>?) {
+      guard
+        let blurMask,
+        blurMask.content.isEnabled,
+        case let .brush(brush) = blurMask.maskTree.root,
+        brush.isEnabled,
+        brush.strokes.isEmpty == false
+      else {
         self = .viewportBase
-      case 1:
-        self = .singleLocalAdjustment(activeLayers[0])
-      default:
-        self = .renderedEditPreview
+        return
       }
+      self = .blurMask(blurMask)
     }
 
     var canvasMode: EditingCanvasMode {
       switch self {
       case .viewportBase:
         return .viewportBase
-      case let .singleLocalAdjustment(layer):
-        return .localAdjustment(effect: layer.effectPipeline)
-      case .renderedEditPreview:
-        return .renderedEditPreview
+      case let .blurMask(layer):
+        return .localAdjustment(effect: AnyImageEffect(layer.content))
       }
     }
 
-    /// Persisted strokes live in the pre-crop source domain. Pass the
-    /// crop-output geometry when the destination canvas displays the crop
-    /// output, or nil when the canvas is sized to the source image.
+    /// The committed strokes as canvas display records (y-down).
+    ///
+    /// The document stores strokes in the working space (y-up) of the
+    /// pre-crop source domain.
+    ///
+    /// - Parameters:
+    ///   - geometry: The crop-output geometry when the destination canvas
+    ///     displays the crop output, or nil when the canvas is sized to the
+    ///     source image.
+    ///   - domainHeight: The oriented source height.
     func committedStrokes(
-      in geometry: EditingCanvasCropOutputGeometry?
+      in geometry: EditingCanvasCropOutputGeometry?,
+      domainHeight: CGFloat
     ) -> [EditingCanvasStrokeRecord] {
       switch self {
-      case .viewportBase, .renderedEditPreview:
+      case .viewportBase:
         return []
-      case let .singleLocalAdjustment(layer):
+      case let .blurMask(layer):
         let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
-          EditingCanvasStrokeRecord(brushMaskStroke: $0)
+          EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: domainHeight)
         }
         guard let geometry else {
           return sourceRecords
@@ -908,22 +987,6 @@ extension CropView {
         }
       }
     }
-  }
-
-  /// The crop state that defines the canvas display domain for the current
-  /// document.
-  ///
-  /// PhotosCrop currently displays the built-in final crop as the viewport even
-  /// when a tool edits an upstream feature. Crop editing writes through
-  /// `featureFocus.cropTargetID`; display resolution stays here so those two
-  /// responsibilities do not collapse back into `Edit.crop`.
-  private func displayCropEditingState(
-    in document: CropViewDocumentSnapshot
-  ) -> CropEditingState? {
-    return CropEditingState(
-      cropFeature: document.displayCrop,
-      imageSize: document.imageSize
-    )
   }
 
   /// The layer coordinates sampled together for one displayed frame.
@@ -1119,21 +1182,37 @@ extension CropView {
   #endif
 
   private func applyCropToDocumentIfRenderingChanged(_ crop: CropEditingState) {
-    let targetID = featureFocus.cropTargetID ?? crop.id
-    var feature = crop.makeCropFeature()
-    feature.id = targetID
-    guard let currentCrop = document.snapshot?.cropFeature(id: targetID) else {
-      document.updateCropFeature(id: targetID, with: feature)
-      return
-    }
-
     guard
-      currentCrop.isRenderingEquivalent(to: feature, orientedImageSize: crop.imageSize) == false
+      document.crop.isRenderingEquivalent(
+        to: crop.makeCropFeature(),
+        orientedImageSize: crop.imageSize
+      ) == false
     else {
       return
     }
 
-    document.updateCropFeature(id: targetID, with: feature)
+    commitDocumentChange { document in
+      document.setCrop(crop)
+    }
+  }
+
+  /// Applies a change to CropView's document and reports it to the owner.
+  /// A change that leaves the document equal is not reported.
+  private func commitDocumentChange(_ change: @escaping DocumentChange) {
+    var next = document
+    change(&next)
+    guard next != document else {
+      return
+    }
+
+    let blurMaskChanged = next.blurMask != document.blurMask
+    document = next
+    documentChangeHandler(change)
+
+    if blurMaskChanged {
+      syncCommittedStrokesFromDocument()
+    }
+    updateDisplay()
   }
 
   private func updateCropLayout(
@@ -1365,7 +1444,7 @@ extension CropView {
           $0.isUserInteractionEnabled = false
           $0.addCompletion { _ in
             UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
-              self.setCropGuideVisibility(isVisible: self.featureFocus.isCropEditing)
+              self.setCropGuideVisibility(isVisible: self.isCropEditing)
             }
             .startAnimation(afterDelay: 0.8)
           }
@@ -1458,8 +1537,7 @@ extension CropView {
     crop: CropEditingState,
     syncsViewportFromCropSurface: Bool = false
   ) {
-    let displayCrop = toolDisplayCrop(from: crop)
-    guard let geometry = EditingCanvasCropOutputGeometry(crop: displayCrop) else {
+    guard let geometry = EditingCanvasCropOutputGeometry(crop: crop) else {
       return
     }
 
@@ -1467,7 +1545,7 @@ extension CropView {
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
     let shouldResetToolSurface = syncsViewportFromCropSurface
       || isContentSizeChanged
-      || toolSurface.lastAppliedDisplayCrop?.isRenderingEquivalent(to: displayCrop) != true
+      || toolSurface.lastAppliedCrop?.isRenderingEquivalent(to: crop) != true
 
     // Resolve and validate the frame BEFORE any write so a degenerate layout
     // pass cannot leave the surface half-configured.
@@ -1508,7 +1586,7 @@ extension CropView {
 
     // Publish the output domain before zoom writes so reentrant UIKit callbacks
     // and the next display frame observe the same geometry.
-    toolSurface.lastAppliedDisplayCrop = displayCrop
+    toolSurface.lastAppliedCrop = crop
     toolSurface.publishOutputGeometry(geometry)
 
     if shouldResetToolSurface {
@@ -1683,10 +1761,10 @@ extension CropView {
   @discardableResult
   private func record() -> CropEditingState? {
 
-    // Crop recording only applies while the focus edits a crop node. In
-    // masking/viewing focuses the scroll view is a free pan/zoom viewport and
-    // must not mutate the crop extent.
-    guard featureFocus.isCropEditing else {
+    // Crop recording only applies while the crop is the editing target. In
+    // the other targets the scroll view is a free pan/zoom viewport and must
+    // not mutate the crop extent.
+    guard isCropEditing else {
       return state.proposedCrop
     }
 
@@ -1900,7 +1978,7 @@ extension CropView {
     }
     guard window != nil, surfaceHost.canvasHostView.bounds.isEmpty == false else { return }
 
-    let surface: CanvasSurface = featureFocus.isCropEditing ? cropSurface : toolSurface
+    let surface: CanvasSurface = isCropEditing ? cropSurface : toolSurface
     let layers = displayLayers(for: surface)
     if clipsToGuide {
       let clipRect = layers.canvas.convert(layers.clip.bounds, from: layers.clip)
@@ -1909,7 +1987,7 @@ extension CropView {
       surfaceHost.updateCanvasClip(nil)
     }
 
-    if featureFocus.isCropEditing {
+    if isCropEditing {
       toolSurface.hideCanvasView()
       guard let crop = state.proposedCrop else { return }
       cropSurface.draw(viewport: makeDisplayViewport(
@@ -2114,40 +2192,25 @@ extension UIScrollView {
 
 extension CropView: UIGestureRecognizerDelegate {
 
-  /// Updates which FeatureTree point is previewed and which feature node
-  /// canvas gestures edit.
-  func setFeatureFocus(_ focus: CropViewFeatureFocus) {
-    guard featureFocus != focus else {
+  /// Sets what canvas gestures edit; nil views the output only.
+  ///
+  /// Leaving crop editing commits the visible crop to the document first.
+  func setEditingTarget(_ target: CropViewEditingTarget?) {
+    guard editingTarget != target else {
       return
     }
 
-    let wasCropEditing = featureFocus.isCropEditing
-    let previousSeedEffect = resolvedMaskSeedEffect(of: featureFocus)
-    let previousViewingIncludedFinalCrop = viewingPointIncludesFinalCrop
-    let leavesCropEditing = wasCropEditing && focus.isCropEditing == false
-    if leavesCropEditing {
+    let leavesCropEditing = isCropEditing && target != .crop
+    if leavesCropEditing, state.proposedCrop != nil {
       // Leaving crop editing commits the currently visible crop viewport before
       // the tool surface derives its display geometry.
       applyDocumentChanges()
     }
 
-    featureFocus = focus
+    editingTarget = target
 
-    if previousSeedEffect?.editingCanvasEffectIdentity != resolvedMaskSeedEffect(of: focus)?.editingCanvasEffectIdentity {
-      document.resetMaskLayerTracking()
-    }
-    if let layerID = focus.maskTargetLayerID {
-      document.adoptMaskLayer(id: layerID)
-    }
-
-    // The tool surface needs a geometry re-sync when entering it from crop
-    // editing, and also when the viewing point crosses the final crop while
-    // staying on the tool surface (output domain <-> pre-crop domain).
-    let crossesFinalCrop = focus.isCropEditing == false
-      && previousViewingIncludedFinalCrop != viewingPointIncludesFinalCrop
-
-    applySurfaceMode(syncsToolViewportFromCrop: leavesCropEditing || crossesFinalCrop)
-    updateCurrentDocumentDisplay()
+    applySurfaceMode(syncsToolViewportFromCrop: leavesCropEditing)
+    updateDisplay()
   }
 
   func setMaskingBrush(_ brush: CropViewMaskingBrush) {
@@ -2170,7 +2233,7 @@ extension CropView: UIGestureRecognizerDelegate {
       imageDiameter = CropViewMaskingDefaults.imageSpaceBrushDiameter(
         pointDiameter: value,
         viewportSize: bounds.size,
-        crop: document.snapshot?.featureTree.finalCrop
+        crop: document.crop
       )
     }
     return .init(
@@ -2210,8 +2273,8 @@ extension CropView: UIGestureRecognizerDelegate {
   ///   Crop mode into a Tool mode so viewport-only crop scroll changes are not
   ///   mistaken for reusable Tool scroll state.
   private func applySurfaceMode(syncsToolViewportFromCrop: Bool = false) {
-    let isCropMode = featureFocus.isCropEditing
-    let isDrawingEnabled = featureFocus.isMaskEditing
+    let isCropMode = isCropEditing
+    let isDrawingEnabled = isMaskEditing
 
     if isDrawingEnabled == false {
       toolSurface.cancelStroke()
@@ -2277,108 +2340,112 @@ extension CropView: UIGestureRecognizerDelegate {
     }
   }
 
-  fileprivate func updateCanvasContent(
-    document: CropViewDocumentSnapshot,
-    crop: CropEditingState
-  ) {
-    guard featureFocus.isCropEditing else {
-      cropSurface.hideCanvasView()
-      return
-    }
-
-    cropSurface.updateRenderedEditPreview(document: document, crop: crop)
-  }
-
-  fileprivate func commitCanvasStroke(
+  /// Commits a finished brush stroke into the blur mask.
+  ///
+  /// The stroke arrives in the tool canvas's crop-output space. It is mapped
+  /// into the pre-crop source space and then, in the one conversion, into the
+  /// document's working space.
+  func commitCanvasStroke(
     record: EditingCanvasStrokeRecord,
     completion: @escaping () -> Void
   ) {
-    let committedRecord: EditingCanvasStrokeRecord
-    if
-      featureFocus.isCropEditing == false,
+    guard
+      isMaskEditing,
       let crop = state.proposedCrop,
-      let geometry = makeToolOutputGeometry(crop: crop)
-    {
-      committedRecord = geometry.sourceRecord(fromOutputRecord: record)
-    } else {
-      committedRecord = record
-    }
-
-    appendRecordToDocument(committedRecord)
-    syncCommittedStrokesFromDocument()
-    completion()
-  }
-
-  /// The seed effect for the given focus, defaulting to the standard blur
-  /// pipeline when mask editing without an explicit seed. The default lives
-  /// here — not in the hosts — because the seed is a document parameter
-  /// (the exported effect strength), frozen into the layer at first stroke.
-  private func resolvedMaskSeedEffect(
-    of focus: CropViewFeatureFocus
-  ) -> EffectPipeline? {
-    guard focus.isMaskEditing else {
-      return nil
-    }
-    if let explicit = focus.maskSeedEffect {
-      return explicit
-    }
-    return CropViewMaskingDefaults.blurEffectPipeline
-  }
-
-  private var resolvedMaskSeedEffect: EffectPipeline? {
-    resolvedMaskSeedEffect(of: featureFocus)
-  }
-
-  private func appendRecordToDocument(_ record: EditingCanvasStrokeRecord) {
-    guard let currentLocalEffect = resolvedMaskSeedEffect else {
+      let geometry = EditingCanvasCropOutputGeometry(crop: crop)
+    else {
+      completion()
       return
     }
 
-    document.appendMaskStroke(
-      record: record,
-      effect: currentLocalEffect
-    )
-  }
+    let sourceRecord = geometry.sourceRecord(fromOutputRecord: record)
+    let stroke = sourceRecord.workingSpaceStroke(domainHeight: source.imageSize.height)
 
-  /// The effect persisted on the committed editing-canvas layer, if one exists.
-  ///
-  /// Document parameters are frozen at layer creation. The focus's seed effect
-  /// may drift afterwards (the default blur seed derives from the current
-  /// crop), so already-painted layers must not be rewritten to match it.
-  private func committedCanvasLocalEffect() -> EffectPipeline? {
-    guard let currentLocalEffect = resolvedMaskSeedEffect else {
-      return nil
+    commitDocumentChange { document in
+      document.appendBlurMaskStroke(stroke)
     }
-
-    return document.committedMaskEffect(matching: currentLocalEffect)
+    completion()
   }
 
+  /// Pushes the committed strokes to both surfaces, including the hidden one.
   private func syncCommittedStrokesFromDocument() {
-    let sourceRecords = currentSourceCommittedStrokes()
-    cropSurface.setCommittedStrokes(sourceRecords)
+    let domainHeight = source.imageSize.height
+
+    cropSurface.setCommittedStrokes(
+      committedStrokeRecords.sourceRecords(
+        blurMask: document.blurMask,
+        domainHeight: domainHeight
+      )
+    )
 
     guard
       let crop = state.proposedCrop,
-      let geometry = makeToolOutputGeometry(crop: crop)
+      let geometry = EditingCanvasCropOutputGeometry(crop: crop)
     else {
-      toolSurface.setCommittedStrokes(sourceRecords)
       return
     }
 
     toolSurface.setCommittedStrokes(
-      sourceRecords.map { geometry.outputRecord(fromSourceRecord: $0) }
+      committedStrokeRecords.outputRecords(
+        blurMask: document.blurMask,
+        geometry: geometry,
+        domainHeight: domainHeight
+      )
     )
   }
+}
 
-  private func currentToolCommittedStrokes(
-    in geometry: EditingCanvasCropOutputGeometry
-  ) -> [EditingCanvasStrokeRecord] {
-    currentSourceCommittedStrokes().map {
-      geometry.outputRecord(fromSourceRecord: $0)
+extension CropView {
+
+  /// Memoized canvas records for the committed blur-mask strokes.
+  ///
+  /// Mapping every stamp (working space to canvas, then into the crop
+  /// output) is linear in the painted stamps, and `updateDisplay()` runs on
+  /// every host update. An unchanged mask compares equal cheaply (its stroke
+  /// arrays are shared), and returning the same record arrays lets the
+  /// canvas renderer's own equality check short-circuit too.
+  struct CommittedStrokeRecords {
+
+    private var source: (
+      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      records: [EditingCanvasStrokeRecord]
+    )?
+
+    private var output: (
+      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      geometry: EditingCanvasCropOutputGeometry,
+      records: [EditingCanvasStrokeRecord]
+    )?
+
+    /// Records in the source domain (y-down), for a canvas sized to the
+    /// source image.
+    mutating func sourceRecords(
+      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      domainHeight: CGFloat
+    ) -> [EditingCanvasStrokeRecord] {
+      if let source, source.blurMask == blurMask {
+        return source.records
+      }
+      let records = CanvasRenderPlan(blurMask: blurMask)
+        .committedStrokes(in: nil, domainHeight: domainHeight)
+      source = (blurMask, records)
+      return records
     }
-  }
 
-  private func currentSourceCommittedStrokes() -> [EditingCanvasStrokeRecord] {
-    document.committedMaskRecords(matching: resolvedMaskSeedEffect)
+    /// Records in the crop-output domain of `geometry`, for the tool canvas.
+    mutating func outputRecords(
+      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      geometry: EditingCanvasCropOutputGeometry,
+      domainHeight: CGFloat
+    ) -> [EditingCanvasStrokeRecord] {
+      if let output, output.blurMask == blurMask, output.geometry == geometry {
+        return output.records
+      }
+      let records = sourceRecords(blurMask: blurMask, domainHeight: domainHeight).map {
+        geometry.outputRecord(fromSourceRecord: $0)
+      }
+      output = (blurMask, geometry, records)
+      return records
+    }
   }
 }

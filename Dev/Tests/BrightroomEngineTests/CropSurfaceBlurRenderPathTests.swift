@@ -18,7 +18,7 @@ import UIKit
 /// like blur.
 struct CropSurfaceBlurRenderPathTests {
 
-  private func makeLoaded(width: Int, height: Int) -> EditingStack.Loaded {
+  private func makeSource(width: Int, height: Int) -> CIImage {
     let size = CGSize(width: width, height: height)
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
@@ -27,25 +27,16 @@ struct CropSurfaceBlurRenderPathTests {
       UIColor(white: 0.5, alpha: 1).setFill()
       UIRectFill(CGRect(origin: .zero, size: size))
     }.cgImage!
-    let ci = CIImage(cgImage: cg)
-    let edit = EditingStack.Edit.test(imageSize: size)
-    return EditingStack.Loaded(
-      imageSource: ImageSource(cgImage: cg),
-      metadata: .init(orientation: .up, imageSize: size),
-      initialEditing: edit,
-      currentEdit: edit,
-      thumbnailCIImage: ci,
-      editingSourceCGImage: cg,
-      editingSourceCIImage: ci
-    )
+    return CIImage(cgImage: cg)
   }
 
   @Test func `Blur local adjustment uses prepared source-resolution path`() throws {
-    let loaded = makeLoaded(width: 64, height: 48)
-    let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
+    let source = makeSource(width: 64, height: 48)
+    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
-        loadedState: loaded,
+        editingSourceImage: source,
+        effects: nil,
         canvasSize: CGSize(width: 64, height: 48),
         mode: .localAdjustment(effect: blur)
       )
@@ -57,11 +48,12 @@ struct CropSurfaceBlurRenderPathTests {
   }
 
   @Test func `Exposure local adjustment also uses prepared path`() throws {
-    let loaded = makeLoaded(width: 64, height: 48)
-    let exposure = EffectPipeline(effects: [ExposureFeature(value: 0.5)])
+    let source = makeSource(width: 64, height: 48)
+    let exposure = AnyImageEffect(ExposureFeature(value: 0.5))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
-        loadedState: loaded,
+        editingSourceImage: source,
+        effects: nil,
         canvasSize: CGSize(width: 64, height: 48),
         mode: .localAdjustment(effect: exposure)
       )
@@ -73,7 +65,7 @@ struct CropSurfaceBlurRenderPathTests {
 
   /// ToolSurface already used the prepared path; this guards that they agree.
   @Test func `Tool surface blur also uses prepared path`() throws {
-    let loaded = makeLoaded(width: 64, height: 48)
+    let source = makeSource(width: 64, height: 48)
     let crop = CropEditingState(
       cropFeature: CropFeature.test(
         imageSize: CGSize(width: 64, height: 48),
@@ -82,10 +74,11 @@ struct CropSurfaceBlurRenderPathTests {
       imageSize: CGSize(width: 64, height: 48)
     )
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
-    let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
+    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-        loadedState: loaded,
+        editingSourceImage: source,
+        effects: nil,
         geometry: geometry,
         mode: .localAdjustment(effect: blur)
       )

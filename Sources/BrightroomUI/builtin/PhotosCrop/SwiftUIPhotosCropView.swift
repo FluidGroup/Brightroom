@@ -26,7 +26,11 @@ import BrightroomParametric
 
 /**
  Apple's Photos app like crop view.
- 
+
+ The view edits the `PhotosCropDocument` owned by its `PhotosCropEditingModel`.
+ On Done it passes the committed document; render it with
+ `EditingStack.makeRenderer(document:)`.
+
  You might use `SwiftUICropView` to create a fully customized user interface.
  */
 @available(iOS 14, *)
@@ -56,7 +60,8 @@ public struct SwiftUIPhotosCropView: View {
     /// The host-provided presets offered by the Filters mode.
     ///
     /// Defaults to an empty array; only Original is offered until presets are
-    /// supplied. Selected presets write into the FeatureTree's global-effects node.
+    /// supplied. A selected preset is written to the document's
+    /// `effects.preset`.
     public var filterPresets: [PresetFeature] = []
 
     public init() {
@@ -67,14 +72,23 @@ public struct SwiftUIPhotosCropView: View {
   private let editingModel: PhotosCropEditingModel
   private let options: Options
   private let localizedStrings: LocalizedStrings
-  private let onDone: @MainActor () -> Void
+  private let onDone: @MainActor (PhotosCropDocument) -> Void
   private let onCancel: @MainActor () -> Void
 
+  /// Creates the editor.
+  ///
+  /// - Parameters:
+  ///   - editingModel: Owns the edited document and its history. Keep it for
+  ///     as long as the editing session lasts.
+  ///   - options: The editor options.
+  ///   - localizedStrings: The button titles.
+  ///   - onDone: Receives the document, committed as an undo checkpoint.
+  ///   - onCancel: Called when the user cancels.
   public init(
     editingModel: PhotosCropEditingModel,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
-    onDone: @escaping @MainActor () -> Void,
+    onDone: @escaping @MainActor (PhotosCropDocument) -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
     self.editingModel = editingModel

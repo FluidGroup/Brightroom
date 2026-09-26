@@ -51,30 +51,27 @@ public final class BrightRoomImageRenderer {
   /// Internal so tests can compare GPU and software rendering output.
   typealias RenderingDevice = ParametricExportRenderer.RenderingDevice
 
-  public struct Edit {
-
-    /// The parametric document evaluated by `ParametricExportRenderer`. Crop is
-    /// a domain feature inside the document, so export and preview share one
-    /// evaluation path.
-    public var document: EditingDocument
-
-    public init(document: EditingDocument = .init()) {
-      self.document = document
-    }
-  }
-
   /// Internal hook for tests to compare GPU and software rendering output.
   var renderingDevice: RenderingDevice = .automatic
 
   public let source: ImageSource
   public let orientation: CGImagePropertyOrientation
 
-  public var edit: Edit
+  /// The document evaluated over the oriented source.
+  ///
+  /// It is authored in the oriented source domain. Crop is a domain feature
+  /// inside the document, so export and preview share one evaluation path.
+  public let document: any Feature
 
-  public init(source: ImageSource, orientation: CGImagePropertyOrientation) {
+  /// Creates a renderer for `document` over `source` in `orientation`.
+  public init(
+    source: ImageSource,
+    orientation: CGImagePropertyOrientation,
+    document: some Feature
+  ) {
     self.source = source
     self.orientation = orientation
-    edit = .init()
+    self.document = document
   }
 
   /**
@@ -90,7 +87,7 @@ public final class BrightRoomImageRenderer {
     
     let source = self.source
     let orientation = self.orientation
-    let document = edit.document
+    let document = self.document
     let device = renderingDevice
 
     return try Self.render(
@@ -111,7 +108,7 @@ public final class BrightRoomImageRenderer {
   static nonisolated func render(
     source: ImageSource,
     orientation: CGImagePropertyOrientation,
-    document: EditingDocument,
+    document: some Feature,
     device: RenderingDevice,
     options: Options
   ) throws -> Rendered {

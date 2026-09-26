@@ -55,15 +55,17 @@ struct RendererTests {
   @Test func cropping() async throws {
     let imageSource = ImageSource(image: Asset.l1000069.image)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
     let size = imageSource.readImageSize()
     let crop = CropFeature.test(
       imageSize: size,
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size)
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(crop: crop)
+    )
 
     let rendered = try await renderer.render()
     print(rendered)
@@ -75,7 +77,7 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -88,7 +90,7 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -101,14 +103,12 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
     let filter = ExposureFeature(value: 0.72)
 
-    renderer.edit = .make(
-      crop: CropFeature.test(imageSize: imageSource.readImageSize()),
-      orientedImageSize: imageSource.readImageSize(),
-      effects: EffectPipeline(effects: [filter])
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.readImageSize()))
     )
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -122,8 +122,6 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
     let filter = ExposureFeature(value: 0.72)
 
     let size = imageSource.readImageSize()
@@ -132,7 +130,11 @@ struct RendererTests {
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size, effects: EffectPipeline(effects: [filter]))
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    )
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -145,8 +147,6 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
     let filter = ExposureFeature(value: 0.72)
 
     let size = imageSource.readImageSize()
@@ -155,7 +155,11 @@ struct RendererTests {
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size, effects: EffectPipeline(effects: [filter]))
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -169,8 +173,6 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
     let size = imageSource.readImageSize()
     let crop = CropFeature.test(
       imageSize: size,
@@ -178,7 +180,11 @@ struct RendererTests {
       rotation: .quarterCW
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size)
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(crop: crop)
+    )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -192,7 +198,7 @@ struct RendererTests {
     let inputCGImage = imageSource.loadOriginalCGImage()
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -362,7 +368,6 @@ struct CropFeatureDisplaySpaceTests {
       // Re-seeding the working model from the stored crop and re-committing must
       // be a fixed point — otherwise document-follow fights the live viewport.
       let reseeded = CropFeature(
-        id: feature.id,
         displayCropRect: feature.displayCropRect(imageSize: imageSize),
         imageSize: imageSize,
         rotation: feature.rotation,
@@ -381,9 +386,11 @@ struct RenderCropRendererTests {
   @Test func `full render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage), orientedImageSize: sourceImage.size)
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
+    )
 
     let renderedImage = try await renderer.render().cgImage
 
@@ -395,9 +402,11 @@ struct RenderCropRendererTests {
   @Test func `Core Image render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage), orientedImageSize: sourceImage.size)
+    let renderer = BrightRoomImageRenderer(
+      source: imageSource,
+      orientation: .up,
+      document: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
+    )
 
     // The crop is evaluated as a domain feature in the single Core Image
     // rendering path; this asserts that path excludes the fractional bright
@@ -422,8 +431,11 @@ struct RenderCropRendererTests {
     for rotation in QuarterTurn.allCases {
       let crop = CropFeature.test(imageSize: source.size, rotation: rotation)
 
-      let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-      renderer.edit = .make(crop: crop, orientedImageSize: source.size)
+      let renderer = BrightRoomImageRenderer(
+        source: imageSource,
+        orientation: .up,
+        document: RendererTestDocument(crop: crop)
+      )
       let parametric = try await renderer.render().cgImage
 
       let oracle = try oriented.croppedWithColorspace(

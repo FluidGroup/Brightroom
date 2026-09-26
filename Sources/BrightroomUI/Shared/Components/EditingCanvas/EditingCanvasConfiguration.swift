@@ -16,16 +16,10 @@ enum EditingCanvasMode: Equatable {
 
   /// Renders and optionally edits one local adjustment layer in the viewport.
   ///
-  /// The mask is kept in the canvas runtime instead of being rasterized through
-  /// CoreGraphics.
-  case localAdjustment(effect: EffectPipeline)
-
-  /// Materializes the global edit stack into a read-only preview image.
-  ///
-  /// Saved local adjustments are intentionally excluded from this UI preview
-  /// path. Use `localAdjustment(effect:)` while editing one local adjustment, and
-  /// use the renderer when the final composed result is required.
-  case renderedEditPreview
+  /// `effect` is the layer's content, applied inside the mask over the
+  /// global-effects base. The mask is kept in the canvas runtime instead of
+  /// being rasterized through CoreGraphics.
+  case localAdjustment(effect: AnyImageEffect)
 }
 
 struct EditingCanvasBrush: Equatable {

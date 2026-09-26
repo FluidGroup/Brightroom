@@ -2,6 +2,8 @@ import CoreGraphics
 import CoreImage
 import Metal
 
+import BrightroomParametric
+
 enum EditingCanvasImageProcessing {
 
   // MARK: - Color contract
@@ -112,6 +114,40 @@ enum EditingCanvasImageProcessing {
         ]
       )
       .cropped(to: extent)
+  }
+}
+
+extension EditingCanvasImageProcessing {
+
+  /// The evaluation context the canvas shares across calls, so the kernel
+  /// registry is not rebuilt for every preview graph.
+  static let evaluationContext = FeatureEvaluationContext()
+}
+
+extension ImageEffect {
+
+  /// Applies the effect for a canvas preview, returning `image` unchanged when
+  /// evaluation fails.
+  ///
+  /// Failures are programmer errors in built-in effects; a custom effect that
+  /// throws degrades to identity rather than poisoning the whole preview.
+  ///
+  /// - Parameter radiusReferenceExtent: The chain-entry extent of the current
+  ///   render pass, so value-form radii (blur, sharpen) stay a fixed fraction
+  ///   of the source regardless of crop or zoom. It is required: every canvas
+  ///   call states its chain entry.
+  func applyIgnoringFailure(
+    to image: CIImage,
+    radiusReferenceExtent: CGRect
+  ) -> CIImage {
+    let context = EditingCanvasImageProcessing.evaluationContext
+      .withRadiusReferenceExtent(radiusReferenceExtent)
+    do {
+      return try apply(to: image, context: context)
+    } catch {
+      assertionFailure("Effect evaluation failed: \(error)")
+      return image
+    }
   }
 }
 

@@ -4,14 +4,16 @@ import SwiftUI
 import StateGraph
 
 struct IsolatedEditinView: View {
-  let editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  @State private var session = DemoPhotosCropSession(
+    stack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+  )
   @State private var fullScreenView: FullscreenIdentifiableView?
 
   var body: some View {
     Form.init {
       Button("Crop") {
         fullScreenView = .init(showsDismissButton: false) {
-          DemoPhotosCropView(stack: editingStack)
+          DemoPhotosCropView(session: session)
         }
       }
     }

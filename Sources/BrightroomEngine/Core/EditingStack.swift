@@ -29,135 +29,20 @@ import BrightroomParametric
 
 public enum EditingStackError: Error, Sendable {
   case unableToCreateRendererInLoading
+  /// The document to render does not exist yet, for example while an editor
+  /// still prepares its initial document.
+  case documentUnavailable
 }
 
-/// A value-type undo/redo journal for document snapshots.
+/// Loads and prepares an image for editing, and renders documents from it.
 ///
-/// `EditingStack` owns this because history is a property of the editable
-/// document, while feature-specific UIs decide when the current edit should
-/// become a checkpoint.
-private struct EditingHistory<State: Equatable>: Equatable {
-
-  /// The edit the stack loaded with.
-  let initial: State
-
-  /// The edit currently being previewed and rendered.
-  var current: State
-
-  /// Committed undo checkpoints.
-  private var checkpoints: [State]
-
-  /// Checkpoints undone from `checkpoints`, available until the next commit.
-  private var redoStack: [State]
-
-  /// Creates a history journal around the loaded edit.
-  init(
-    initial: State,
-    current: State,
-    checkpoints: [State] = [],
-    redoStack: [State] = []
-  ) {
-    self.initial = initial
-    self.current = current
-    self.checkpoints = checkpoints
-    self.redoStack = redoStack
-  }
-
-  /// The current revision index, matching the number of committed checkpoints.
-  var revision: Int {
-    checkpoints.count
-  }
-
-  /// Whether undo can move the current edit to another state.
-  var canUndo: Bool {
-    if checkpoints.last == current {
-      return checkpoints.count > 1 || current != initial
-    }
-    return checkpoints.isEmpty == false || current != initial
-  }
-
-  /// Whether redo can move the current edit to another state.
-  var canRedo: Bool {
-    redoStack.isEmpty == false
-  }
-
-  /// Whether the current edit differs from the loaded edit.
-  var isDirty: Bool {
-    current != initial
-  }
-
-  /// Whether the current edit differs from the latest committed checkpoint.
-  var hasUncommittedChanges: Bool {
-    guard let latestCheckpoint = checkpoints.last else {
-      return current != initial
-    }
-    return latestCheckpoint != current
-  }
-
-  /// Commits the current edit when it differs from the latest checkpoint.
-  mutating func commitCurrentIfNeeded() {
-    guard hasUncommittedChanges else {
-      return
-    }
-    commitCurrent()
-  }
-
-  /// Commits the current edit as a checkpoint and clears redo.
-  mutating func commitCurrent() {
-    checkpoints.append(current)
-    redoStack = []
-  }
-
-  /// Reverts the current edit to the latest checkpoint, or the initial edit.
-  mutating func revertCurrent() {
-    current = checkpoints.last ?? initial
-  }
-
-  /// Reverts to the checkpoint at `revision`, clamping stale revision values.
-  mutating func revert(to revision: Int) {
-    let clamped = min(max(revision, 0), checkpoints.count)
-    checkpoints.removeSubrange(clamped..<checkpoints.count)
-    redoStack = []
-    current = checkpoints.last ?? initial
-  }
-
-  /// Moves the current edit to the previous checkpoint.
-  mutating func undo() {
-    // Commit-style checkpoints may leave `checkpoints.last == current`.
-    // Drop that duplicate first so one undo action changes visible state.
-    if checkpoints.last == current {
-      checkpoints.removeLast()
-    }
-    if let previous = checkpoints.popLast() {
-      redoStack.append(current)
-      current = previous
-    } else if current != initial {
-      redoStack.append(current)
-      current = initial
-    }
-  }
-
-  /// Reapplies the most recently undone checkpoint.
-  mutating func redo() {
-    guard let next = redoStack.popLast() else {
-      return
-    }
-    checkpoints.append(current)
-    current = next
-  }
-
-  /// Removes all committed and redo checkpoints without changing `current`.
-  mutating func removeAllCheckpoints() {
-    checkpoints = []
-    redoStack = []
-  }
-}
-
-/// A stateful object that manages current editing status from original image.
-/// And supports rendering a result image.
+/// The stack holds no edit and no history: the UI that edits an image owns its
+/// document (a `some Feature` value) and hands it to `makeRenderer(document:)`.
+/// The stack owns what every document of this image shares: the image provider,
+/// the metadata and orientation, the thumbnail, and the downsampled,
+/// GPU-resident editing source.
 ///
-/// - Attension: Source text
-/// Please make sure of EditingStack is started state before editing in UI with calling `start()`.
+/// - Attention: Call `start()` before reading `loadedState`.
 open class EditingStack: Hashable {
 
   private static let centralQueue = DispatchQueue.init(
@@ -187,79 +72,41 @@ open class EditingStack: Hashable {
 
   // MARK: - Nested Types
 
+  /// The prepared image, published once loading finishes.
   public struct Loaded: Equatable {
 
     // MARK: - Properties
 
-    fileprivate let imageSource: ImageSource
+    let imageSource: ImageSource
 
     public let metadata: ImageProvider.ImageMetadata
 
-    private var editHistory: EditingHistory<Edit>
-
-    /// The edit currently being previewed and rendered.
-    public var currentEdit: Edit {
-      get {
-        editHistory.current
-      }
-      set {
-        editHistory.current = newValue
-      }
-    }
-
-    /// Won't change from initial state
+    /// The oriented source pixel size: the domain documents of this image are
+    /// authored in.
     public var imageSize: CGSize {
-      editHistory.initial.imageSize
+      metadata.imageSize
     }
 
-    public fileprivate(set) var thumbnailImage: CIImage
+    /// A small oriented thumbnail, used for previews such as filter swatches.
+    public let thumbnailImage: CIImage
 
     public let editingSourceCGImage: CGImage
-    /**
-     An original image
-     Can be used in cropping
-     */
+
+    /// The oriented, downsampled editing source (zero origin). It is
+    /// GPU-resident when a Metal device is available.
     public let editingSourceImage: CIImage
-
-    public var canUndo: Bool {
-      editHistory.canUndo
-    }
-
-    public var canRedo: Bool {
-      editHistory.canRedo
-    }
-
-    /**
-     A boolean value that indicates if EditingStack has updates against the original image.
-     */
-    public var isDirty: Bool {
-      editHistory.isDirty
-    }
-
-    /// Whether the current edit differs from the latest committed checkpoint.
-    public var hasUncommittedChanges: Bool {
-      editHistory.hasUncommittedChanges
-    }
 
     // MARK: - Initializers
 
     init(
       imageSource: ImageSource,
       metadata: ImageProvider.ImageMetadata,
-      initialEditing: EditingStack.Edit,
-      currentEdit: EditingStack.Edit,
-      checkpoints: [EditingStack.Edit] = [],
       thumbnailCIImage: CIImage,
       editingSourceCGImage: CGImage,
       editingSourceCIImage: CIImage
     ) {
       self.imageSource = imageSource
       self.metadata = metadata
-      self.editHistory = EditingHistory(
-        initial: initialEditing,
-        current: currentEdit,
-        checkpoints: checkpoints
-      )
       self.thumbnailImage = thumbnailCIImage
       self.editingSourceCGImage = editingSourceCGImage
       self.editingSourceImage = editingSourceCIImage
@@ -273,39 +120,6 @@ open class EditingStack: Hashable {
         .oriented(metadata.orientation)
         .removingExtentOffset()
     }
-
-    var currentRevision: Revision {
-      editHistory.revision
-    }
-
-    mutating func commitCurrentEditIfNeeded() {
-      editHistory.commitCurrentIfNeeded()
-    }
-
-    mutating func commitCurrentEdit() {
-      editHistory.commitCurrent()
-    }
-
-    mutating func revertCurrentEdit() {
-      editHistory.revertCurrent()
-    }
-
-    mutating func revert(to revision: Revision) {
-      editHistory.revert(to: revision)
-    }
-
-    mutating func undo() {
-      editHistory.undo()
-    }
-
-    mutating func redo() {
-      editHistory.redo()
-    }
-
-    mutating func removeAllHistory() {
-      editHistory.removeAllCheckpoints()
-    }
-
   }
 
   // MARK: - State Properties
@@ -319,7 +133,8 @@ open class EditingStack: Hashable {
     loadedState == nil
   }
 
-  @GraphStored public var loadedState: Loaded? = nil
+  /// The prepared image; nil until loading finishes.
+  @GraphStored public internal(set) var loadedState: Loaded? = nil
 
   // MARK: - Stored Properties
 
@@ -331,8 +146,6 @@ open class EditingStack: Hashable {
   private var imageProviderSubscription: AnyCancellable?
 
   private let startLock = NSLock()
-
-  public var cropModifier: CropModifier
 
   // The editing source is downsampled so that its SHORT side is at most this
   // value; the long side scales with the aspect ratio and is larger for anything
@@ -350,20 +163,13 @@ open class EditingStack: Hashable {
 
   // MARK: - Initializers
 
-  /// Creates an instance
-  /// - Parameters:
-  ///   - source:
-  ///   - previewSize:
-  ///   - modifyCrop: A chance to modify cropping. It runs in background-thread. CIImage is not original image.
+  /// Creates a stack that loads the image of `imageProvider` once `start()` is
+  /// called.
   public init(
     imageProvider: ImageProvider,
-    options: Options = .init(),
-    cropModifier: CropModifier = .init(modify: { _, c, _, completion in completion(c) })
+    options: Options = .init()
   ) {
-
     self.options = options
-    self.cropModifier = cropModifier
-
     self.imageProvider = imageProvider
   }
 
@@ -457,68 +263,52 @@ open class EditingStack: Hashable {
         orientation: metadata.orientation
       )
 
-      self.adjustCropExtent(
-        image: _editingSourceCIImage,
-        imageSize: metadata.imageSize,
-        completion: { [weak self] crop in
-
-          guard let self = self else { return }
-
-          assert(
-            (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
-              == (metadata.imageSize.width > metadata.imageSize.height)
-          )
-
-          let initialEdit = EditingFeatureTree.canonicalEdit(
-            finalCrop: crop,
-            orientedImageSize: metadata.imageSize
-          )
-
-          /**
-           Upload the editing source into a persistent GPU texture off the main
-           thread *before* publishing `loadedState` (which reveals the editing
-           canvas). The canvas re-renders the source into its own viewport texture
-           every frame, and zoom / pan / rotation invalidate that cache every
-           frame; a `CIImage(cgImage:)` source would re-blit its bitmap CPU->GPU
-           on each of those frames. A texture-backed source keeps it GPU-resident,
-           eliminating that per-frame upload. Building the texture also warms Core
-           Image's pipeline, so the first `draw(in:)` no longer pays the upload +
-           one-time pipeline compilation on the main thread.
-           */
-          self.backgroundQueue.async { [weak self] in
-            guard let self else { return }
-
-            // A second provider emission must never rebuild the loaded state over
-            // edits already in flight; the first load wins.
-            guard self.loadedState == nil else { return }
-
-            // Fall back to the CPU-backed source if no Metal device is available
-            // (e.g. unsupported environment); display still works, just without
-            // the GPU-residency win.
-            let editingSource = EditingSourcePreparation.makeGPUResidentSource(
-              cgImage: editingSourceCGImage,
-              orientation: metadata.orientation
-            ) ?? _editingSourceCIImage
-
-            let loaded = Loaded(
-              imageSource: imageSource,
-              metadata: metadata,
-              initialEditing: initialEdit,
-              currentEdit: initialEdit,
-              thumbnailCIImage: _thumbnailImage,
-              editingSourceCGImage: editingSourceCGImage,
-              editingSourceCIImage: editingSource
-            )
-
-            self.loadedState = loaded
-            self.imageProviderSubscription = nil
-
-            DispatchQueue.main.async {
-              onPreparationCompleted()
-            }
-          }
-        }
+      assert(
+        (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
+          == (metadata.imageSize.width > metadata.imageSize.height)
       )
+
+      /**
+       Upload the editing source into a persistent GPU texture off the main
+       thread *before* publishing `loadedState` (which reveals the editing
+       canvas). The canvas re-renders the source into its own viewport texture
+       every frame, and zoom / pan / rotation invalidate that cache every
+       frame; a `CIImage(cgImage:)` source would re-blit its bitmap CPU->GPU
+       on each of those frames. A texture-backed source keeps it GPU-resident,
+       eliminating that per-frame upload. Building the texture also warms Core
+       Image's pipeline, so the first `draw(in:)` no longer pays the upload +
+       one-time pipeline compilation on the main thread.
+       */
+      self.backgroundQueue.async { [weak self] in
+        guard let self else { return }
+
+        // A second provider emission must never rebuild the loaded state that
+        // documents are already authored against; the first load wins.
+        guard self.loadedState == nil else { return }
+
+        // Fall back to the CPU-backed source if no Metal device is available
+        // (e.g. unsupported environment); display still works, just without
+        // the GPU-residency win.
+        let editingSource = EditingSourcePreparation.makeGPUResidentSource(
+          cgImage: editingSourceCGImage,
+          orientation: metadata.orientation
+        ) ?? _editingSourceCIImage
+
+        let loaded = Loaded(
+          imageSource: imageSource,
+          metadata: metadata,
+          thumbnailCIImage: _thumbnailImage,
+          editingSourceCGImage: editingSourceCGImage,
+          editingSourceCIImage: editingSource
+        )
+
+        self.loadedState = loaded
+        self.imageProviderSubscription = nil
+
+        DispatchQueue.main.async {
+          onPreparationCompleted()
+        }
+      }
     }
   }
 
@@ -528,109 +318,47 @@ open class EditingStack: Hashable {
 
   // MARK: - Functions
 
-  /// Commits the current edit as an undo checkpoint when it changed.
-  public func commitCurrentEditIfNeeded() {
-    _pixelengine_ensureMainThread()
-    loadedState?.commitCurrentEditIfNeeded()
-  }
-
-  public typealias Revision = Int
-
-  public var currentRevision: Revision? {
-    loadedState?.currentRevision
-  }
-
-  public func revert(to revision: Revision) {
-    _pixelengine_ensureMainThread()
-    loadedState?.revert(to: revision)
-  }
-
-  /// Reverts the current edit to the latest checkpoint, or the initial edit.
-  public func revertCurrentEdit() {
-    _pixelengine_ensureMainThread()
-    loadedState?.revertCurrentEdit()
-  }
-
-  /// Moves the current edit to the previous checkpoint.
-  public func undo() {
-    _pixelengine_ensureMainThread()
-    loadedState?.undo()
-  }
-
-  /// Reapplies the most recently undone checkpoint.
-  public func redo() {
-    _pixelengine_ensureMainThread()
-    loadedState?.redo()
-  }
-
-  /// Removes all undo and redo checkpoints without changing the current edit.
-  public func removeAllHistory() {
-    _pixelengine_ensureMainThread()
-    loadedState?.removeAllHistory()
-  }
-
+  /// Creates a renderer that evaluates `document` over the full-resolution,
+  /// oriented source.
+  ///
+  /// `document` must be authored in the oriented source domain, whose size is
+  /// `Loaded.imageSize`.
+  ///
+  /// - Throws: `EditingStackError.unableToCreateRendererInLoading` before the
+  ///   image has loaded.
   // `sending`: the renderer is freshly created here and not retained by the
   // stack, so it forms a disconnected region the caller can hand to the
   // off-actor `render()` without a data-race risk.
-  public func makeRenderer() throws -> sending BrightRoomImageRenderer {
+  public func makeRenderer(document: some Feature) throws -> sending BrightRoomImageRenderer {
 
     guard let loaded = loadedState else {
       throw EditingStackError.unableToCreateRendererInLoading
     }
 
-    let imageSource = loaded.imageSource
-
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: loaded.metadata.orientation
-    )
-
-    let edit = loaded.currentEdit
-
-    // Lower the editing document into the parametric document the renderer
-    // evaluates. The renderer applies orientation to the source CIImage; the
-    // document is authored in that oriented space, whose size is
-    // `edit.orientedImageSize`.
-    renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.orientedImageSize)
-    )
-
-    return renderer
-  }
-
-  private func adjustCropExtent(
-    image: CIImage,
-    imageSize: CGSize,
-    completion: @escaping (CropFeature) -> Void
-  ) {
-    let crop = CropFeature(
-      id: EditingFeatureTree.finalCropNodeID,
-      displayCropRect: CGRect(origin: .zero, size: imageSize),
-      imageSize: imageSize
-    )
-
-    let scaled = image.transformed(
-      by: .init(
-        scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
-        y: image.extent.height < imageSize.height ? imageSize.height / image.extent.height : 1
-      )
-    )
-
-    let translated = scaled.transformed(
-      by: .init(
-        translationX: -scaled.extent.origin.x,
-        y: -scaled.extent.origin.y
-      )
-    )
-
-    let actualSizeFromDownsampledImage = translated
-
-    cropModifier.run(
-      actualSizeFromDownsampledImage,
-      crop: crop,
-      imageSize: imageSize,
-      completion: completion
+    // The renderer applies the orientation to the source CIImage, so the
+    // document evaluates in the oriented space it is authored in.
+    return BrightRoomImageRenderer(
+      source: loaded.imageSource,
+      orientation: loaded.metadata.orientation,
+      document: document
     )
   }
 
+  /// Creates a renderer for a document that may not exist yet, such as an
+  /// editor's document while the editor prepares it.
+  ///
+  /// A nil document is an error rather than a request for the unedited
+  /// image; to render the unedited image, pass `EmptyFeature()`.
+  ///
+  /// - Throws: `EditingStackError.documentUnavailable` when `document` is
+  ///   nil, and `EditingStackError.unableToCreateRendererInLoading` before
+  ///   the image has loaded.
+  public func makeRenderer<Document: Feature>(
+    document: Document?
+  ) throws -> sending BrightRoomImageRenderer {
+    guard let document else {
+      throw EditingStackError.documentUnavailable
+    }
+    return try makeRenderer(document: document)
+  }
 }

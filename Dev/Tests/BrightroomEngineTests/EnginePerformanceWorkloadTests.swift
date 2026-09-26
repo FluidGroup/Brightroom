@@ -4,6 +4,7 @@ import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 /// Per-path performance benchmarks for the engine hot paths, with wall-clock
 /// and CPU metrics (CPU Instructions Retired is the device-portable one).
@@ -17,9 +18,11 @@ import UIKit
 ///
 /// Covered hot paths:
 /// - export render (`BrightRoomImageRenderer.render`)
-/// - preview composition (`Edit.makePreviewImage(.editing)`)
-/// - brush-mask raster (`MaskTree.engineMakeMaskImage` via the parametric `brushStamp` kernel)
-/// - parametric evaluation (`EffectPipeline.apply` / feature recipes)
+/// - preview composition (the document with its crop neutralized, over the
+///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
+/// - brush-mask raster (`FeatureGraphCompiler.renderMask`, the parametric
+///   `brushStamp` kernel)
+/// - parametric evaluation (`PhotosCropDocument.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 
   private static let context = CIContext()
@@ -72,21 +75,26 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Hot paths
 
   @inline(never)
-  private func exportRender(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
+  private func exportRender(_ document: PhotosCropDocument, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
     return try BrightRoomImageRenderer.render(
       source: ImageSource(cgImage: source),
       orientation: .up,
-      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize),
+      document: document,
       device: .automatic,
       options: .init(workingColorSpace: Self.sRGB)
     ).cgImage
   }
 
   @inline(never)
-  private func previewComposition(_ edit: EditingStack.Edit, source: CIImage) {
-    let composed = edit.makePreviewImage(from: source, purpose: .editing)
+  private func previewComposition(_ document: PhotosCropDocument, source: CIImage) {
+    // The document is authored in full-resolution coordinates, so the preview
+    // evaluates over the full-size source, with the crop neutralized.
+    let preview = document.withCropNeutralized(orientedImageSize: source.extent.size)
+    guard let composed = try? ParametricImageRenderer().makeImage(from: source, document: preview) else {
+      return
+    }
     _ = Self.context.createCGImage(composed, from: source.extent)
   }
 
@@ -99,13 +107,13 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         brush: BrushMaskBrush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
       )
     ])))
-    _ = tree.engineMakeMaskImage(size: imageSize)
+    _ = try? FeatureGraphCompiler().renderMask(tree, extent: CGRect(origin: .zero, size: imageSize))
   }
 
   @inline(never)
   private func parametricEvaluate(over source: CIImage) {
-    let pipeline = Self.makeEffectPipeline()
-    let evaluated = (try? pipeline.apply(to: source, context: FeatureEvaluationContext())) ?? source
+    let effects = Self.makeEffects()
+    let evaluated = (try? effects.apply(to: source, context: FeatureEvaluationContext())) ?? source
     _ = Self.context.createCGImage(evaluated, from: source.extent)
   }
 
@@ -121,9 +129,9 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     ]
   )))
 
-  private static func makeEffectPipeline() -> EffectPipeline {
-    EffectPipeline(effects: [
-      PresetFeature(
+  private static func makeEffects() -> PhotosCropDocument.Effects {
+    PhotosCropDocument.Effects(
+      preset: PresetFeature(
         id: .init(rawValue: "perf.preset"),
         name: "Perf",
         identifier: "perf.preset",
@@ -133,34 +141,29 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
           ContrastFeature(id: .init(rawValue: "perf.contrast"), value: 0.06),
         ]
       ),
-      ExposureFeature(id: .init(rawValue: "perf.exposure"), value: 0.35),
-      HighlightsFeature(id: .init(rawValue: "perf.highlights"), value: 0.2),
-      ShadowsFeature(id: .init(rawValue: "perf.shadows"), value: -0.15),
-      VignetteFeature(id: .init(rawValue: "perf.vignette"), value: 0.5),
-    ])
+      exposure: ExposureFeature(id: .init(rawValue: "perf.exposure"), value: 0.35),
+      highlights: HighlightsFeature(id: .init(rawValue: "perf.highlights"), value: 0.2),
+      shadows: ShadowsFeature(id: .init(rawValue: "perf.shadows"), value: -0.15),
+      vignette: VignetteFeature(id: .init(rawValue: "perf.vignette"), value: 0.5)
+    )
   }
 
-  private static func makeDocument(imageSize: CGSize) -> EditingStack.Edit {
-    var edit = EditingStack.Edit.test(imageSize: imageSize)
-    edit.effects = makeEffectPipeline()
-    edit.setPhotosCropLocalAdjustmentsForTest([
-      LocalAdjustmentFeature(
-        id: .init(rawValue: "perf.local"),
-        maskTree: cachedMaskTree,
-        effectPipeline: EffectPipeline(effects: [
-          GaussianBlurFeature(id: .init(rawValue: "perf.local.blur"), value: 60)
-        ])
-      )
-    ])
-    edit.setFinalCropForTest(CropFeature.test(
-      imageSize: imageSize,
-      cropRect: CGRect(
+  private static func makeDocument(imageSize: CGSize) -> PhotosCropDocument {
+    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    document.effects = makeEffects()
+    document.blurMask = LocalAdjustment(maskTree: cachedMaskTree) {
+      GaussianBlurFeature(id: .init(rawValue: "perf.local.blur"), value: 60)
+    }
+    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    crop.updateCropExtent(
+      CGRect(
         x: imageSize.width * 0.1,
         y: imageSize.height * 0.1,
         width: imageSize.width * 0.8,
         height: imageSize.height * 0.8
       ).integral
-    ))
-    return edit
+    )
+    document.setCrop(crop)
+    return document
   }
 }

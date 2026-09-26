@@ -22,7 +22,7 @@ struct RendererDeviceEquivalenceTests {
     try await assertDeviceEquivalence(
       image: image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
-      configure: { _ in }
+      makeDocument: { _ in EmptyFeature() }
     )
   }
 
@@ -30,16 +30,16 @@ struct RendererDeviceEquivalenceTests {
     try await assertDeviceEquivalence(
       image: Asset.unsplash2.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
-      configure: { renderer in
-        let effects = EffectPipeline(effects: [ExposureFeature(value: 0.72)])
-
-        let size = renderer.source.readImageSize()
+      makeDocument: { size in
         let crop = CropFeature.test(
           imageSize: size,
           cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
         )
 
-        renderer.edit = .make(crop: crop, orientedImageSize: size, effects: effects)
+        return RendererTestDocument(
+          effects: [AnyImageEffect(ExposureFeature(value: 0.72))],
+          crop: crop
+        )
       }
     )
   }
@@ -48,11 +48,10 @@ struct RendererDeviceEquivalenceTests {
     try await assertDeviceEquivalence(
       image: Asset.instaLogo.image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
-      configure: { renderer in
-        renderer.edit = .make(
-          crop: CropFeature.test(imageSize: renderer.source.readImageSize()),
-          orientedImageSize: renderer.source.readImageSize(),
-          effects: EffectPipeline(effects: [ExposureFeature(value: -0.5)])
+      makeDocument: { size in
+        RendererTestDocument(
+          effects: [AnyImageEffect(ExposureFeature(value: -0.5))],
+          crop: CropFeature.test(imageSize: size)
         )
       }
     )
@@ -63,11 +62,10 @@ struct RendererDeviceEquivalenceTests {
     try await assertDeviceEquivalence(
       image: Asset.unsplash3.image,
       options: .init(),
-      configure: { renderer in
-        renderer.edit = .make(
-          crop: CropFeature.test(imageSize: renderer.source.readImageSize()),
-          orientedImageSize: renderer.source.readImageSize(),
-          effects: EffectPipeline(effects: [ExposureFeature(value: 0.72)])
+      makeDocument: { size in
+        RendererTestDocument(
+          effects: [AnyImageEffect(ExposureFeature(value: 0.72))],
+          crop: CropFeature.test(imageSize: size)
         )
       }
     )
@@ -78,12 +76,12 @@ struct RendererDeviceEquivalenceTests {
   private func assertDeviceEquivalence(
     image: UIImage,
     options: BrightRoomImageRenderer.Options,
-    configure: (BrightRoomImageRenderer) -> Void,
+    makeDocument: (_ orientedImageSize: CGSize) -> any Feature,
     maxChannelDifference: Int = 3,
     sourceLocation: SourceLocation = SourceLocation(fileID: #fileID, filePath: #filePath, line: #line, column: #column)
   ) async throws {
-    let gpuRendered = try await render(image: image, device: .gpu, options: options, configure: configure)
-    let cpuRendered = try await render(image: image, device: .software, options: options, configure: configure)
+    let gpuRendered = try await render(image: image, device: .gpu, options: options, makeDocument: makeDocument)
+    let cpuRendered = try await render(image: image, device: .software, options: options, makeDocument: makeDocument)
 
     let gpuImage = try gpuRendered.cgImage
     let cpuImage = try cpuRendered.cgImage
@@ -121,11 +119,15 @@ struct RendererDeviceEquivalenceTests {
     image: UIImage,
     device: BrightRoomImageRenderer.RenderingDevice,
     options: BrightRoomImageRenderer.Options,
-    configure: (BrightRoomImageRenderer) -> Void
+    makeDocument: (_ orientedImageSize: CGSize) -> any Feature
   ) async throws -> BrightRoomImageRenderer.Rendered {
-    let renderer = BrightRoomImageRenderer(source: ImageSource(image: image), orientation: .up)
+    let source = ImageSource(image: image)
+    let renderer = BrightRoomImageRenderer(
+      source: source,
+      orientation: .up,
+      document: makeDocument(source.readImageSize())
+    )
     renderer.renderingDevice = device
-    configure(renderer)
     return try await renderer.render(options: options)
   }
 

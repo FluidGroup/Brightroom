@@ -33,32 +33,6 @@ struct EditingCanvasStrokeRecord {
       )
     }
   }
-
-  init(brushMaskStroke stroke: BrushMaskStroke) {
-    self.init(
-      stamps: stroke.stamps,
-      brush: .init(
-        size: stroke.brush.diameter,
-        hardness: stroke.brush.hardness,
-        opacity: stroke.brush.opacity,
-        // `BrushMaskStroke` does not persist spacing; committed strokes render
-        // from their stored stamps, so this is a placeholder kept in sync with
-        // the authoring default (CropViewMaskingBrush / EditingCanvasBrush).
-        spacing: 0.05
-      )
-    )
-  }
-
-  var brushMaskStroke: BrushMaskStroke {
-    .init(
-      stamps: stamps,
-      brush: .init(
-        diameter: brush.size,
-        hardness: brush.hardness,
-        opacity: brush.opacity
-      )
-    )
-  }
 }
 
 extension EditingCanvasStrokeRecord: Equatable {}

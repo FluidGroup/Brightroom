@@ -34,7 +34,7 @@ struct LargeMaskedExportTests {
     // center pixel is deep inside the painted region and the corners are far
     // outside it.
     let diameter = Double(side) / 4
-    let layer = LocalAdjustmentFeature(
+    let layer = LocalAdjustment(
       maskTree: MaskTree(
         root: .brush(
           BrushMask(
@@ -46,19 +46,16 @@ struct LargeMaskedExportTests {
             ]
           )
         )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)])
-    )
+      )
+    ) {
+      [AnyImageEffect(ExposureFeature(value: 2))]
+    }
 
     // Export WITH the local adjustment through an identity crop.
     let adjustedRenderer = BrightRoomImageRenderer(
       source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    adjustedRenderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size,
-      localAdjustments: [layer]
+      orientation: .up,
+      document: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     let adjusted = try await adjustedRenderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
@@ -67,11 +64,8 @@ struct LargeMaskedExportTests {
     // Export the SAME edit with NO local adjustment as the baseline.
     let baselineRenderer = BrightRoomImageRenderer(
       source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    baselineRenderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size
+      orientation: .up,
+      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     let baseline = try await baselineRenderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)

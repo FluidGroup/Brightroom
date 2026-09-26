@@ -282,10 +282,8 @@ extension CropView {
   /// adjusting the final Crop Feature.
   ///
   /// The crop surface always shows the rendered edit preview: the crop frame
-  /// is a viewing window over the fully evaluated result, so global filters —
-  /// and, while a single local adjustment layer is active, its mask — stay
-  /// visible while choosing the crop. (With two or more active layers,
-  /// `CanvasRenderPlan` currently falls back to a filters-only preview.)
+  /// is a viewing window over the document with its crop neutralized, so the
+  /// global effects and the blur mask stay visible while choosing the crop.
   final class CropSurface: CanvasSurface {
 
     let imagePlatterView: ImagePlatterView
@@ -303,25 +301,26 @@ extension CropView {
     }
 
     func updateRenderedEditPreview(
-      document: CropViewDocumentSnapshot,
-      crop: CropEditingState
+      source: CropViewSource,
+      document: PhotosCropDocument,
+      crop: CropEditingState,
+      committedStrokes: @autoclosure () -> [EditingCanvasStrokeRecord]
     ) {
       guard crop.imageSize == canvasSize, let canvasView else {
         return
       }
 
-      let key = CanvasInputKey(document: document, crop: crop)
+      let key = CanvasInputKey(source: source, document: document, crop: crop)
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
-      let renderPlan = CanvasRenderPlan(
-        localAdjustments: document.localAdjustments
-      )
+      let renderPlan = CanvasRenderPlan(blurMask: document.blurMask)
       guard
         let images = EditingCanvasRenderImageFactory.makeRenderImages(
-          document: document,
+          editingSourceImage: source.editingSourceImage,
+          effects: document.effects.canvasEffect,
           canvasSize: crop.imageSize,
           mode: renderPlan.canvasMode
         )
@@ -330,9 +329,9 @@ extension CropView {
       }
 
       canvasView.setRenderImages(images)
-      // This canvas is sized to crop.imageSize, so records stay in the
+      // This canvas is sized to crop.imageSize, so the records are in the
       // source domain.
-      canvasView.setCommittedStrokes(renderPlan.committedStrokes(in: nil))
+      canvasView.setCommittedStrokes(committedStrokes())
       canvasView.isHidden = false
       currentCanvasInputKey = key
     }
@@ -445,25 +444,26 @@ extension CropView {
 
     /// Inputs that determine the output of
     /// `EditingCanvasRenderImageFactory.makeCropOutputRenderImages`. The source
-    /// image is compared by identity; `CropViewDocumentSnapshot` stores it as an
+    /// image is compared by identity; `CropViewSource` stores it as an
     /// immutable property, so a new editing source always produces a new
-    /// instance.
+    /// instance. Strokes are not part of the key: committing one keeps the
+    /// render images and their bakes.
     struct CanvasRenderInputKey: Equatable {
       var sourceImage: ObjectIdentifier
-      var effects: EffectPipeline
+      var effects: PhotosCropDocument.Effects
       var geometry: EditingCanvasCropOutputGeometry
       var mode: EditingCanvasMode
     }
 
     let contentView: UIView
     let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
-    /// A memo of the display crop that produced the currently published
+    /// A memo of the crop that produced the currently published
     /// `outputGeometry`.
     ///
     /// This is not the surface's primary state and nothing renders from it: it
-    /// exists so the scroll-geometry pass can detect that the display crop
-    /// changed and reset tool navigation.
-    var lastAppliedDisplayCrop: CropEditingState?
+    /// exists so the scroll-geometry pass can detect that the crop changed and
+    /// reset tool navigation.
+    var lastAppliedCrop: CropEditingState?
 
     /// The geometry that the next render and viewport read use.
     ///
@@ -485,7 +485,7 @@ extension CropView {
 
     override func removeCanvasView() {
       super.removeCanvasView()
-      lastAppliedDisplayCrop = nil
+      lastAppliedCrop = nil
       outputGeometry = nil
       currentCanvasRenderInputKey = nil
     }
@@ -495,8 +495,8 @@ extension CropView {
     /// This is the single publish path for `outputGeometry`. Both writers —
     /// `CropView.updateToolScrollGeometry` and this surface's own
     /// `updateCanvas` — funnel through here, and both derive the value from
-    /// `toolDisplayCrop(from:)`; that shared derivation is what keeps the two
-    /// call sites consistent.
+    /// the proposed crop; that shared derivation is what keeps the two call
+    /// sites consistent.
     ///
     /// Ordering contract: publish BEFORE any zoom write so reentrant UIKit
     /// callbacks and the next display frame observe the same output domain.
@@ -521,7 +521,8 @@ extension CropView {
     }
 
     func updateCanvas(
-      document: CropViewDocumentSnapshot,
+      source: CropViewSource,
+      effects: PhotosCropDocument.Effects,
       geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,
       committedStrokes: [EditingCanvasStrokeRecord]
@@ -532,8 +533,8 @@ extension CropView {
       publishOutputGeometry(geometry)
 
       let inputKey = CanvasRenderInputKey(
-        sourceImage: ObjectIdentifier(document.editingSourceImage),
-        effects: document.effects,
+        sourceImage: ObjectIdentifier(source.editingSourceImage),
+        effects: effects,
         geometry: geometry,
         mode: mode
       )
@@ -544,7 +545,8 @@ extension CropView {
       if currentCanvasRenderInputKey != inputKey || canvasView.hasRenderImages == false {
         guard
           let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-            document: document,
+            editingSourceImage: source.editingSourceImage,
+            effects: effects.canvasEffect,
             geometry: geometry,
             mode: mode
           )

@@ -32,7 +32,7 @@ import simd
 ///   every frame, into the viewport mask texture.
 /// - `BrushMaskMetalRasterizer` draws a stamp list off-screen so
 ///   `BrushMaskRasterizerParityTests` can prove that live rasterization matches
-///   the parametric Core Image kernel (`FeatureGraphCompiler.renderMask`).
+///   the parametric Core Image brush-stamp kernel (`MaskTreeRenderer`).
 ///
 /// Those two paths **must** evolve together. The parity test only means anything
 /// if the pipeline it exercises is the pipeline the live view drives, and
@@ -84,8 +84,8 @@ enum BrushMaskPipeline {
     descriptor.colorAttachments[0].pixelFormat = .rgba8Unorm
     descriptor.colorAttachments[0].isBlendingEnabled = true
     // Overlapping stamps take the per-channel maximum, matching the parametric
-    // mask's `CIBlendKernel.componentMax` accumulation
-    // (`FeatureGraphCompiler.render(_:BrushMask)`). Metal ignores the blend
+    // mask's `CIBlendKernel.componentMax` accumulation (the parametric
+    // brush-stamp kernel, `MaskTreeRenderer`). Metal ignores the blend
     // factors for `.max`, but they are set to `.one` for clarity.
     descriptor.colorAttachments[0].rgbBlendOperation = .max
     descriptor.colorAttachments[0].alphaBlendOperation = .max

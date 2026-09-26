@@ -19,74 +19,191 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+
+import Combine
 import CoreGraphics
 import CoreImage
+import StateGraph
 
 import BrightroomEngine
 import BrightroomParametric
 
-/// PhotosCrop's policy layer over `EditingStack`'s generic FeatureTree.
+/// The document and undo history of a PhotosCrop editing session.
 ///
-/// PhotosCrop views depend on this model rather than talking to `EditingStack`
-/// directly. The stack still owns the document, history, and renderer; this
-/// model owns the Photos-style interpretation of that document: which node is
-/// the final crop, which effect bundle backs filter/adjustment controls, and
-/// how the blur mask layer is found or cleared.
+/// `EditingStack` loads the image; this model owns what is edited over it: a
+/// `PhotosCropDocument` and its history. Once the image has loaded, the model
+/// installs the initial document (a new one adjusted by a `CropModifier`, or
+/// the document the host resumes), and PhotosCrop views change it through the
+/// model's operations.
+///
+/// History is commit style: changes update `document` only, and the editor
+/// decides when the current document becomes an undo checkpoint (when leaving
+/// a tool, and on Done).
+///
+/// After editing, read `document` and render it with
+/// `editingStack.makeRenderer(document:)`.
 @MainActor
 public final class PhotosCropEditingModel {
 
-  /// The stack whose current edit is interpreted as a PhotosCrop document.
-  private let editingStack: EditingStack
+  /// Where the initial document comes from.
+  private enum InitialDocument {
+    /// A new document whose crop the modifier adjusts.
+    case new(CropModifier)
+    /// A document the host resumes.
+    case resume(PhotosCropDocument)
+  }
 
-  /// The stable crop-canvas document for this PhotosCrop editing session.
-  private let cropViewDocumentStore: CropViewDocument
+  /// The stack that loads the image the document is authored over.
+  public let editingStack: EditingStack
 
-  public init(editingStack: EditingStack) {
+  /// The document history; nil until the initial document is installed.
+  @GraphStored private var history: EditingHistory<PhotosCropDocument>? = nil
+
+  /// What installs the initial document; nil once the history exists.
+  private var pendingInitialDocument: InitialDocument?
+
+  /// The crop modifier run that prepares a new document, while in flight.
+  private var initialDocumentTask: Task<Void, Never>?
+
+  /// Observes the stack's load until the initial document is installed.
+  private var loadedStateSubscription: AnyCancellable?
+
+  /// Creates a model that starts a new document over `editingStack`.
+  ///
+  /// The model holds the edit and its history, so keep it for as long as the
+  /// editing session lasts (for example in `@State`); a recreated model starts
+  /// from a new document.
+  ///
+  /// - Parameters:
+  ///   - editingStack: Loads the image; kept for the model's lifetime.
+  ///   - cropModifier: The initial-crop policy for the new document. The
+  ///     document stays nil while it runs.
+  public convenience init(
+    editingStack: EditingStack,
+    cropModifier: CropModifier = .identity
+  ) {
+    self.init(editingStack: editingStack, initialDocument: .new(cropModifier))
+  }
+
+  /// Creates a model that resumes `document` over `editingStack`.
+  ///
+  /// - Parameters:
+  ///   - editingStack: Loads the image; kept for the model's lifetime.
+  ///   - document: The document to resume, the initial document of the
+  ///     history. It must be authored for this image (its domain is
+  ///     `editingStack.loadedState.imageSize`).
+  public convenience init(
+    editingStack: EditingStack,
+    resuming document: PhotosCropDocument
+  ) {
+    self.init(editingStack: editingStack, initialDocument: .resume(document))
+  }
+
+  private init(editingStack: EditingStack, initialDocument: InitialDocument) {
     self.editingStack = editingStack
-    self.cropViewDocumentStore = CropViewDocument(editingStack: editingStack)
+    self.pendingInitialDocument = initialDocument
+
+    prepareInitialDocumentIfNeeded()
+
+    guard history == nil else {
+      return
+    }
+
+    // Prepare the document whoever starts the stack. The stack publishes
+    // `loadedState` on its own queue, so the handler only schedules the work
+    // on the main actor and reads the state again there.
+    loadedStateSubscription = withGraphTracking {
+      withGraphTrackingMap(
+        from: editingStack,
+        map: { @Sendable stack in stack.loadedState != nil },
+        onChange: { @Sendable [weak self] isLoaded in
+          guard isLoaded else {
+            return
+          }
+          Task { @MainActor [weak self] in
+            self?.prepareInitialDocumentIfNeeded()
+          }
+        }
+      )
+    }
   }
 
-  /// The crop-canvas document used at the boundary where PhotosCrop hosts the
-  /// reusable `CropView`.
+  isolated deinit {
+    initialDocumentTask?.cancel()
+  }
+
+  // MARK: - Public
+
+  /// The document being edited; nil until the image is loaded and the initial
+  /// document is prepared.
+  public var document: PhotosCropDocument? {
+    history?.current
+  }
+
+  /// Whether `undo()` changes the document.
+  public var canUndo: Bool {
+    history?.canUndo ?? false
+  }
+
+  /// Whether `redo()` changes the document.
+  public var canRedo: Bool {
+    history?.canRedo ?? false
+  }
+
+  /// Whether the document differs from the initial one.
+  public var isDirty: Bool {
+    history?.isDirty ?? false
+  }
+
+  /// Moves to the previous checkpoint. One call always changes the document
+  /// when undo is possible.
+  public func undo() {
+    guard canUndo else {
+      return
+    }
+    history?.undo()
+  }
+
+  /// Reapplies the most recently undone checkpoint.
+  public func redo() {
+    guard canRedo else {
+      return
+    }
+    history?.redo()
+  }
+
+  /// Discards the changes made since the latest checkpoint, or since the
+  /// initial document when there is none.
   ///
-  /// Keep this access narrow: PhotosCrop-specific feature choices should be
-  /// expressed as model operations, not as ad-hoc stack mutations in views.
-  var cropViewDocument: CropViewDocument {
-    cropViewDocumentStore
+  /// The document can still differ from the initial one afterwards
+  /// (`isDirty`), because committed checkpoints are kept.
+  public func discardUncommittedChanges() {
+    guard hasUncommittedChanges else {
+      return
+    }
+    history?.discardUncommittedChanges()
   }
 
-  /// The current loaded state, if the stack has finished image preparation.
-  var loadedState: EditingStack.Loaded? {
-    editingStack.loadedState
-  }
+  // MARK: - Editor surface
 
-  /// The current FeatureTree projection owned by PhotosCrop's editing policy.
-  ///
-  /// This is projected from the stack at access time so CropView commits, undo,
-  /// redo, and external stack mutations cannot leave the model with a stale
-  /// tree. PhotosCrop still owns *how* the tree is interpreted and edited.
-  var featureTree: EditingFeatureTree? {
-    loadedState.map { EditingFeatureTree(edit: $0.currentEdit) }
-  }
-
-  /// Whether the editor has an image ready for controls and canvas display.
+  /// Whether the editor has a document ready for controls and canvas display.
   var isLoaded: Bool {
-    loadedState != nil
+    history != nil
+  }
+
+  /// Whether the document differs from the latest checkpoint.
+  var hasUncommittedChanges: Bool {
+    history?.hasUncommittedChanges ?? false
   }
 
   /// The original oriented source aspect ratio used by the crop controls.
   var originalAspectRatio: PixelAspectRatio? {
-    loadedState.map { PixelAspectRatio($0.imageSize) }
+    editingStack.loadedState.map { PixelAspectRatio($0.imageSize) }
   }
 
   /// The thumbnail base image used by filter swatches.
   var filterPreviewBaseImage: CIImage? {
-    loadedState?.thumbnailImage
-  }
-
-  /// The global effects node exposed to filter and adjustment controls.
-  var currentEffects: EffectPipeline? {
-    featureTree?.globalEffects ?? loadedState?.currentEdit.effects
+    editingStack.loadedState?.thumbnailImage
   }
 
   /// Starts image preparation.
@@ -94,41 +211,70 @@ public final class PhotosCropEditingModel {
     editingStack.start()
   }
 
-  /// Commits the current PhotosCrop document as an undo checkpoint when needed.
-  func commitCurrentEditIfNeeded() {
-    editingStack.commitCurrentEditIfNeeded()
+  /// Changes the current document. It never makes a checkpoint, and a change
+  /// that leaves the document equal changes nothing.
+  func updateDocument(_ change: (inout PhotosCropDocument) -> Void) {
+    guard var next = document else {
+      return
+    }
+    change(&next)
+    guard next != document else {
+      return
+    }
+    history?.current = next
   }
 
-  /// The `CropView` focus for a PhotosCrop toolbar mode.
-  func featureFocus(for mode: PhotosCropEditingMode) -> CropViewFeatureFocus {
-    switch mode {
-    case .crop:
-      return .init(
-        viewingPoint: .output,
-        editingTarget: .crop(id: EditingFeatureTree.finalCropNodeID)
-      )
-    case .blurMasking:
-      return .init(
-        viewingPoint: .output,
-        editingTarget: .localAdjustmentMask(
-          id: nil,
-          seedEffect: CropViewMaskingDefaults.blurEffectPipeline
-        )
-      )
-    case .filters, .adjustments:
-      return .init(viewingPoint: .output)
+  /// Commits the current document as an undo checkpoint when it changed.
+  func commitIfNeeded() {
+    guard hasUncommittedChanges else {
+      return
+    }
+    history?.commitCurrentIfNeeded()
+  }
+
+  /// Selects a filter preset, or clears it with nil.
+  ///
+  /// Selecting the preset that is already selected changes nothing, so the
+  /// document keeps the selected preset's value.
+  func selectFilterPreset(_ preset: PresetFeature?) {
+    updateDocument { document in
+      guard document.effects.preset?.identifier != preset?.identifier else {
+        return
+      }
+      document.effects.preset = preset
+    }
+  }
+
+  /// Writes an adjustment slider value into the global effects.
+  func setAdjustmentValue(
+    _ sliderValue: Double,
+    parameter: PhotosCropAdjustmentParameter
+  ) {
+    updateDocument { document in
+      parameter.apply(sliderValue: sliderValue, to: &document.effects)
+    }
+  }
+
+  /// Removes the blur mask; the effects and the crop are unchanged.
+  func clearBlurMask() {
+    updateDocument { document in
+      document.blurMask = nil
     }
   }
 
   /// Whether the final crop differs from PhotosCrop's Reset target.
   ///
   /// Reset only restores the crop geometry, so this intentionally ignores
-  /// effects and mask layers.
+  /// effects and the blur mask.
   func hasCropChanges(tolerance: CGFloat = 1) -> Bool {
-    guard let crop = finalCropEditingState else {
+    guard
+      let document,
+      let imageSize = editingStack.loadedState?.imageSize
+    else {
       return false
     }
 
+    let crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     let initial = crop.makeInitial()
     return crop.rotation != initial.rotation
       || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001
@@ -138,152 +284,72 @@ public final class PhotosCropEditingModel {
       || abs(crop.cropExtent.height - initial.cropExtent.height) > tolerance
   }
 
-  /// Writes the selected preset into PhotosCrop's global-effects node.
-  func selectFilterPreset(_ preset: PresetFeature?) {
-    updateGlobalEffects { effects in
-      guard effects.first(of: PresetFeature.self)?.identifier != preset?.identifier else {
-        return
-      }
-      effects.set(
-        preset,
-        insertionIndex: PhotosCropEffectOrder.insertionIndex(for: PresetFeature.self)
-      )
-    }
-  }
+  // MARK: - Private
 
-  /// Writes an adjustment slider value into PhotosCrop's global-effects node.
-  func setAdjustmentValue(
-    _ sliderValue: Double,
-    parameter: PhotosCropAdjustmentParameter
-  ) {
-    updateGlobalEffects { effects in
-      parameter.apply(sliderValue: sliderValue, to: &effects)
-    }
-  }
-
-  /// Removes PhotosCrop's blur-mask local adjustment layer, if one exists.
-  func clearBlurMaskingLayer() {
-    let blurIdentity = CropViewMaskingDefaults.blurEffectPipeline.editingCanvasEffectIdentity
-    let localAdjustments = featureTree?.localAdjustments ?? []
-    let remainingLocalAdjustments = localAdjustments.filter {
-      $0.effectPipeline.editingCanvasEffectIdentity != blurIdentity
-    }
-
-    guard remainingLocalAdjustments != localAdjustments else {
-      return
-    }
-
-    replaceLocalAdjustments(remainingLocalAdjustments)
-  }
-
-  /// Mutates PhotosCrop's global-effects node.
-  private func updateGlobalEffects(
-    _ mutate: (inout EffectPipeline) -> Void
-  ) {
-    guard var edit = loadedState?.currentEdit else {
-      return
-    }
-
-    if edit.updateFeature(id: EditingFeatureTree.globalEffectsNodeID, mutate: { feature in
-      if
-        case let .effect(effect) = feature,
-        var bundle = effect as? EffectPipelineFeature
-      {
-        mutate(&bundle.pipeline)
-        feature = .effect(bundle)
-      }
-    }) {
-      applyEditIfChanged(edit)
-      return
-    }
-
-    var pipeline = EffectPipeline()
-    mutate(&pipeline)
-    guard pipeline.isEmpty == false else {
-      return
-    }
-
-    edit.insertFeature(
-      .effect(
-        EffectPipelineFeature(
-          id: EditingFeatureTree.globalEffectsNodeID,
-          pipeline: pipeline
-        )
-      ),
-      at: globalEffectsInsertionIndex(in: edit)
-    )
-    applyEditIfChanged(edit)
-  }
-
-  /// Rewrites PhotosCrop's local-adjustment layer list in the pre-final-crop
-  /// domain.
-  private func replaceLocalAdjustments(
-    _ localAdjustments: [LocalAdjustmentFeature]
-  ) {
-    guard var edit = loadedState?.currentEdit else {
-      return
-    }
-
-    EditingFeatureTree.replaceLocalAdjustments(
-      localAdjustments,
-      in: &edit,
-      insertingBefore: EditingFeatureTree.finalCropNodeID
-    )
-    applyEditIfChanged(edit)
-  }
-
-  /// PhotosCrop inserts global effects before local adjustments and the final
-  /// crop. This keeps effects global to the pre-final-crop image domain without
-  /// teaching `EditingStack.Edit` where PhotosCrop wants that node to live.
-  private func globalEffectsInsertionIndex(in edit: EditingStack.Edit) -> Int {
-    let features = edit.features
-    let finalCropIndex = features.firstIndex {
-      $0.id == EditingFeatureTree.finalCropNodeID
-    } ?? features.count
-
-    for index in features.indices where index < finalCropIndex {
-      if case .localAdjustment = features[index] {
-        return index
-      }
-    }
-
-    return finalCropIndex
-  }
-
-  private func applyEditIfChanged(_ edit: EditingStack.Edit) {
-    if editingStack.loadedState?.currentEdit != edit {
-      editingStack.loadedState?.currentEdit = edit
-    }
-  }
-
-  private var finalCropEditingState: CropEditingState? {
+  /// Installs the initial document once the image has loaded.
+  ///
+  /// It runs at most once: it does nothing once the document is installed
+  /// or while the crop modifier runs. For a stack that loads while `init`
+  /// runs, both `init` and the load observation call this, so the guard is
+  /// what keeps the modifier from running twice.
+  private func prepareInitialDocumentIfNeeded() {
     guard
-      let loadedState,
-      let crop = featureTree?.finalCrop
+      let pendingInitialDocument,
+      initialDocumentTask == nil,
+      let loaded = editingStack.loadedState
     else {
-      return nil
+      return
     }
 
-    return CropEditingState(
-      cropFeature: crop,
-      imageSize: loadedState.currentEdit.imageSize
-    )
+    switch pendingInitialDocument {
+    case .resume(let document):
+      installInitialDocument(document.normalized())
+
+    case .new(let cropModifier) where cropModifier.isIdentity:
+      installInitialDocument(PhotosCropDocument(orientedImageSize: loaded.imageSize))
+
+    case .new(let cropModifier):
+      initialDocumentTask = Task { [weak self] in
+        let document = await PhotosCropDocument.makeInitial(
+          for: loaded,
+          cropModifier: cropModifier
+        )
+        self?.installInitialDocument(document)
+      }
+    }
+  }
+
+  /// Starts the history and releases the one-shot preparation state.
+  private func installInitialDocument(_ document: PhotosCropDocument) {
+    guard history == nil else {
+      return
+    }
+    history = EditingHistory(initial: document)
+    pendingInitialDocument = nil
+    initialDocumentTask = nil
+    loadedStateSubscription = nil
   }
 }
 
 extension SwiftUICropView {
 
-  /// Creates the reusable crop canvas through PhotosCrop's editing model.
+  /// Creates the reusable crop canvas over PhotosCrop's editing model.
   ///
-  /// This keeps PhotosCrop views depending on `PhotosCropEditingModel`; the
-  /// model is the narrow boundary that maps PhotosCrop policy onto the shared
-  /// crop canvas document.
+  /// The model owns the document and prepares the initial one, so the canvas
+  /// only reads it and applies its changes through the model. This keeps the
+  /// shared canvas unaware of PhotosCrop; the model is the narrow boundary
+  /// that maps PhotosCrop policy onto it.
   init(
     editingModel: PhotosCropEditingModel,
     isGuideInteractionEnabled: Bool
   ) {
     self.init(
-      document: editingModel.cropViewDocument,
+      editingStack: editingModel.editingStack,
+      documentSource: .init(
+        document: { editingModel.document },
+        update: { change in editingModel.updateDocument(change) },
+        createInitialDocument: nil
+      ),
       isGuideInteractionEnabled: isGuideInteractionEnabled
     )
   }

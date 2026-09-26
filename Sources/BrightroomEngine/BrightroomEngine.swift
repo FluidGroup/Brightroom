@@ -20,12 +20,6 @@
 // THE SOFTWARE.
 import UIKit
 
-@inline(__always)
-func _pixelengine_ensureMainThread() {
-  assert(Thread.isMainThread)
-}
-
-
 #if os(macOS)
 import AppKit
 public typealias PlatformImage = NSImage

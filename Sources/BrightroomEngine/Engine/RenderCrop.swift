@@ -254,8 +254,6 @@ extension CropFeature {
   /// through this initializer; authoring an independent snapper makes
   /// `isRenderingEquivalent` oscillate against the engine and the crop jitters.
   public init(
-    id: FeatureID = .init(),
-    isEnabled: Bool = true,
     displayCropRect: CGRect,
     imageSize: CGSize,
     rotation: QuarterTurn = .zero,
@@ -271,8 +269,6 @@ extension CropFeature {
     let imageHeight = CGFloat(renderCrop.imageSize.height)
 
     self.init(
-      id: id,
-      isEnabled: isEnabled,
       cropRect: CGRect(
         x: CGFloat(snapped.x),
         y: imageHeight - CGFloat(snapped.y) - CGFloat(snapped.height),

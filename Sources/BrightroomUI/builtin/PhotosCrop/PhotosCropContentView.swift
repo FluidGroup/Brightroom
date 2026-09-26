@@ -30,7 +30,7 @@ struct PhotosCropContentView: View {
   let editingModel: PhotosCropEditingModel
   let options: SwiftUIPhotosCropView.Options
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let onDone: @MainActor () -> Void
+  let onDone: @MainActor (PhotosCropDocument) -> Void
   let onCancel: @MainActor () -> Void
 
   @State private var rotation: CropEditingState.Rotation?
@@ -51,7 +51,7 @@ struct PhotosCropContentView: View {
     editingModel: PhotosCropEditingModel,
     options: SwiftUIPhotosCropView.Options,
     localizedStrings: SwiftUIPhotosCropView.LocalizedStrings,
-    onDone: @escaping @MainActor () -> Void,
+    onDone: @escaping @MainActor (PhotosCropDocument) -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
     self.editingModel = editingModel
@@ -96,7 +96,7 @@ struct PhotosCropContentView: View {
             rotateAction: rotateAction,
             applyAction: applyAction,
             adjustmentAngleCommitAction: adjustmentAngleCommitAction,
-            featureFocus: model.featureFocus(for: editingMode)
+            editingTarget: editingMode.cropViewEditingTarget
           )
           .layoutPriority(1)
 
@@ -107,7 +107,7 @@ struct PhotosCropContentView: View {
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
             filterPreviewBaseImage: model.filterPreviewBaseImage,
-            currentEffects: model.currentEffects,
+            currentEffects: model.document?.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
@@ -117,7 +117,7 @@ struct PhotosCropContentView: View {
             onSetAdjustmentAngle: setAdjustmentAngle,
             onCommitAdjustmentAngle: commitAdjustmentAngle,
             onSetBrushDiameter: setBlurMaskingBrushDiameter,
-            onClearBlurMask: clearBlurMaskingLayer,
+            onClearBlurMask: clearBlurMask,
             onSelectFilterPreset: selectFilterPreset,
             onSelectAdjustmentParameter: selectAdjustmentParameter,
             onSetAdjustmentValue: setAdjustmentValue
@@ -238,8 +238,8 @@ struct PhotosCropContentView: View {
     }
 
     // Leaving a tool commits its work as a checkpoint, so undo/redo steps at
-    // tool granularity. The stack owns the whole feature-list history.
-    editingModel.commitCurrentEditIfNeeded()
+    // tool granularity. The model owns the document history.
+    editingModel.commitIfNeeded()
 
     editingMode = mode
   }
@@ -261,14 +261,18 @@ struct PhotosCropContentView: View {
     editingModel.setAdjustmentValue(sliderValue, parameter: adjustmentParameter)
   }
 
-  private func clearBlurMaskingLayer() {
-    editingModel.clearBlurMaskingLayer()
+  private func clearBlurMask() {
+    editingModel.clearBlurMask()
   }
 
   private func finish() {
     applyAction()
-    editingModel.commitCurrentEditIfNeeded()
-    onDone()
+    editingModel.commitIfNeeded()
+    // Done is enabled only while the model is loaded, so the document exists.
+    guard let document = editingModel.document else {
+      return
+    }
+    onDone(document)
   }
 
   private func croppingAspectRatioBinding(
@@ -436,6 +440,20 @@ enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
       return true
     }
   }
+
+  /// What `SwiftUICropView` gestures edit in this mode. Filters and
+  /// Adjustments edit through controls below the canvas, so the canvas only
+  /// views the output there.
+  var cropViewEditingTarget: CropViewEditingTarget? {
+    switch self {
+    case .crop:
+      return .crop
+    case .blurMasking:
+      return .blurMask
+    case .filters, .adjustments:
+      return nil
+    }
+  }
 }
 
 /// Mutable state for PhotosCrop's first local-adjustment mode.
@@ -458,7 +476,7 @@ private struct PhotosCropCanvasHost: View {
   let rotateAction: SwiftUICropView.RotateAction
   let applyAction: SwiftUICropView.ApplyAction
   let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction
-  let featureFocus: CropViewFeatureFocus
+  let editingTarget: CropViewEditingTarget?
 
   var body: some View {
     SwiftUICropView(
@@ -468,7 +486,7 @@ private struct PhotosCropCanvasHost: View {
     .rotation(rotation)
     .adjustmentAngle(adjustmentAngle)
     .croppingAspectRatio(croppingAspectRatio)
-    .featureFocus(featureFocus)
+    .editingTarget(editingTarget)
     .maskingBrush(
       .init(diameter: .viewportPoints(blurMaskingState.brushDiameter))
     )
@@ -489,7 +507,7 @@ private struct PhotosCropControlHost: View {
   let blurMaskingState: PhotosCropBlurMaskingState
   let filterPresets: [PresetFeature]
   let filterPreviewBaseImage: CIImage?
-  let currentEffects: EffectPipeline?
+  let currentEffects: PhotosCropDocument.Effects?
   let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let adjustmentAngle: CropEditingState.AdjustmentAngle?
@@ -532,9 +550,7 @@ private struct PhotosCropControlHost: View {
         PhotosCropFilterControl(
           presets: filterPresets,
           baseImage: filterPreviewBaseImage,
-          selectedPresetIdentifier: currentEffects?.first(
-            of: PresetFeature.self
-          )?.identifier,
+          selectedPresetIdentifier: currentEffects?.preset?.identifier,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
           onSelectPreset: onSelectFilterPreset
@@ -835,290 +851,8 @@ private enum PhotosCropBrushSizeMetrics {
   static let stepCount = Int(maximumSize - minimumSize)
 }
 
-/// A global adjustment parameter editable in PhotosCrop's Adjust mode.
-///
-/// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
-/// value onto the corresponding effect feature. The parameters write into the
-/// FeatureTree's global-effects node, which is evaluated before local
-/// adjustments and the final crop.
-enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
-  case exposure
-  case brightness
-  case contrast
-  case saturation
-  case temperature
-  case highlights
-  case shadows
-  case blur
-  case vignette
-
-  var id: Self { self }
-
-  var title: String {
-    switch self {
-    case .exposure: return "Exposure"
-    case .brightness: return "Brightness"
-    case .contrast: return "Contrast"
-    case .saturation: return "Saturation"
-    case .temperature: return "Warmth"
-    case .highlights: return "Highlights"
-    case .shadows: return "Shadows"
-    case .blur: return "Blur"
-    case .vignette: return "Vignette"
-    }
-  }
-
-  var systemImageName: String {
-    switch self {
-    case .exposure: return "plusminus.circle"
-    case .brightness: return "sun.max"
-    case .contrast: return "circle.lefthalf.filled"
-    case .saturation: return "drop"
-    case .temperature: return "thermometer.medium"
-    case .highlights: return "circle.tophalf.filled"
-    case .shadows: return "circle.bottomhalf.filled"
-    case .blur: return "drop.fill"
-    case .vignette: return "circle.dashed.inset.filled"
-    }
-  }
-
-  var accessibilityIdentifier: String {
-    "photos.crop.adjustments.\(String(describing: self))"
-  }
-
-  /// Zero-based parameters only strengthen in one direction.
-  private var isZeroBased: Bool {
-    switch self {
-    case .highlights, .blur, .vignette:
-      return true
-    case .exposure, .brightness, .contrast, .saturation, .temperature, .shadows:
-      return false
-    }
-  }
-
-  var sliderRange: ClosedRange<Double> {
-    isZeroBased ? 0...100 : -100...100
-  }
-
-  /// The maximum effect value the slider's positive end maps to.
-  ///
-  /// These mirror the legacy `ParameterRange` maxima; the parametric features
-  /// carry unbounded values, so the slider scale is a PhotosCrop policy.
-  private var maximumFilterValue: Double {
-    switch self {
-    case .exposure: return 1.8
-    case .brightness: return 0.2
-    case .contrast: return 0.18
-    case .saturation: return 1
-    case .temperature: return 3000
-    case .highlights: return 1
-    case .shadows: return 1
-    case .blur: return 100
-    case .vignette: return 2
-    }
-  }
-
-  /// The current slider value for this parameter.
-  func sliderValue(in effects: EffectPipeline) -> Double {
-    let filterValue: Double
-    switch self {
-    case .exposure:
-      filterValue = effects.first(of: ExposureFeature.self)?.value ?? 0
-    case .brightness:
-      filterValue = effects.first(of: BrightnessFeature.self)?.value ?? 0
-    case .contrast:
-      filterValue = effects.first(of: ContrastFeature.self)?.value ?? 0
-    case .saturation:
-      filterValue = effects.first(of: SaturationFeature.self)?.value ?? 0
-    case .temperature:
-      filterValue = effects.first(of: TemperatureFeature.self)?.value ?? 0
-    case .highlights:
-      filterValue = effects.first(of: HighlightsFeature.self)?.value ?? 0
-    case .shadows:
-      filterValue = effects.first(of: ShadowsFeature.self)?.value ?? 0
-    case .blur:
-      filterValue =
-        effects.first(of: GaussianBlurFeature.self)?.editingStackFilterValue
-        ?? 0
-    case .vignette:
-      filterValue = effects.first(of: VignetteFeature.self)?.value ?? 0
-    }
-
-    guard maximumFilterValue != 0 else {
-      return 0
-    }
-
-    return (filterValue / maximumFilterValue * 100).rounded()
-  }
-
-  /// Whether this parameter currently deviates from its neutral value.
-  func isActive(in effects: EffectPipeline) -> Bool {
-    sliderValue(in: effects) != 0
-  }
-
-  /// Writes a slider value into the global-effects pipeline. A neutral value
-  /// removes the corresponding effect so untouched parameters stay absent
-  /// from the edit.
-  func apply(sliderValue: Double, to effects: inout EffectPipeline) {
-    let clamped = min(
-      max(sliderValue, sliderRange.lowerBound),
-      sliderRange.upperBound
-    )
-    let filterValue = clamped / 100 * maximumFilterValue
-    let value: Double? = abs(clamped) < 0.5 ? nil : filterValue
-
-    switch self {
-    case .exposure:
-      upsert(
-        value,
-        into: &effects,
-        make: { ExposureFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .brightness:
-      upsert(
-        value,
-        into: &effects,
-        make: { BrightnessFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .contrast:
-      upsert(
-        value,
-        into: &effects,
-        make: { ContrastFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .saturation:
-      upsert(
-        value,
-        into: &effects,
-        make: { SaturationFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .temperature:
-      upsert(
-        value,
-        into: &effects,
-        make: { TemperatureFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .highlights:
-      upsert(
-        value,
-        into: &effects,
-        make: { HighlightsFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .shadows:
-      upsert(
-        value,
-        into: &effects,
-        make: { ShadowsFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    case .blur:
-      upsert(
-        value,
-        into: &effects,
-        make: { GaussianBlurFeature(value: $0) },
-        update: { $0.radius = .editingStackFilterValue($1) }
-      )
-    case .vignette:
-      upsert(
-        value,
-        into: &effects,
-        make: { VignetteFeature(value: $0) },
-        update: { $0.value = $1 }
-      )
-    }
-  }
-
-  /// Updates an existing effect in place (keeping its feature identity),
-  /// inserts a new one at PhotosCrop's canonical position, or removes it when
-  /// the slider returns to neutral.
-  private func upsert<T: ImageEffectFeatureType>(
-    _ value: Double?,
-    into effects: inout EffectPipeline,
-    make: (Double) -> T,
-    update: (inout T, Double) -> Void
-  ) {
-    guard let value else {
-      effects.set(nil as T?)
-      return
-    }
-
-    if var existing = effects.first(of: T.self) {
-      update(&existing, value)
-      effects.set(existing)
-    } else {
-      effects.set(
-        make(value),
-        insertionIndex: PhotosCropEffectOrder.insertionIndex(for: T.self)
-      )
-    }
-  }
-}
-
-/// PhotosCrop's canonical evaluation order inside the global-effects node.
-///
-/// Effect ordering is a UI policy — the engine evaluates whatever sequence the
-/// UI assembles — so the table lives here, not in `EditingStack`. Unknown
-/// effect types sort after every known one.
-enum PhotosCropEffectOrder {
-
-  private static let order: [ObjectIdentifier] = [
-    ObjectIdentifier(PresetFeature.self),
-    ObjectIdentifier(ExposureFeature.self),
-    ObjectIdentifier(BrightnessFeature.self),
-    ObjectIdentifier(TemperatureFeature.self),
-    ObjectIdentifier(HighlightsFeature.self),
-    ObjectIdentifier(ShadowsFeature.self),
-    ObjectIdentifier(SaturationFeature.self),
-    ObjectIdentifier(ContrastFeature.self),
-    ObjectIdentifier(SharpenFeature.self),
-    ObjectIdentifier(UnsharpMaskFeature.self),
-    ObjectIdentifier(GaussianBlurFeature.self),
-    ObjectIdentifier(FadeFeature.self),
-    ObjectIdentifier(VignetteFeature.self),
-  ]
-
-  private static func rank(of typeIdentity: ObjectIdentifier) -> Int {
-    order.firstIndex(of: typeIdentity) ?? order.count
-  }
-
-  /// The index where a new effect of `type` keeps the canonical order.
-  static func insertionIndex<T: ImageEffectFeatureType>(
-    for type: T.Type
-  ) -> (EffectPipeline) -> Int {
-    let newRank = rank(of: ObjectIdentifier(type))
-    return { pipeline in
-      pipeline.effects.firstIndex { existing in
-        rank(of: ObjectIdentifier(Swift.type(of: existing))) > newRank
-      } ?? pipeline.effects.count
-    }
-  }
-}
-
-extension GaussianBlurFeature {
-
-  /// The PhotosCrop adjustment-slider value when this blur was authored by the
-  /// global Adjust tool.
-  ///
-  /// Absolute-radius blurs do not have enough context here to map back onto a
-  /// source-relative slider value, so the PhotosCrop control treats them as
-  /// neutral and preserves them unless the user edits Blur.
-  fileprivate var editingStackFilterValue: Double? {
-    switch radius {
-    case .editingStackFilterValue(let value):
-      return value
-    case .absolute:
-      return nil
-    }
-  }
-}
-
-/// Filter preset swatches evaluated inside the global-effects feature node.
+/// Filter preset swatches. The selected preset is written to the document's
+/// `effects.preset`.
 ///
 /// Each chip previews the current image with that preset applied. The strip is
 /// lazy: a chip renders its own swatch only as it first scrolls into view and
@@ -1919,14 +1653,15 @@ private enum PhotosCropAspectRatioDirection {
 
   private struct PhotosCropPreviewHost: View {
 
-    private let editingModel = PhotosCropEditingModel(
+    // The model holds the edit and its history, so it lives with the view.
+    @State private var editingModel = PhotosCropEditingModel(
       editingStack: PhotosCropPreviewFixtures.makeEditingStack()
     )
 
     var body: some View {
       SwiftUIPhotosCropView(
         editingModel: editingModel,
-        onDone: {},
+        onDone: { _ in },
         onCancel: {}
       )
     }

@@ -106,8 +106,8 @@ struct EditingCanvasDisplayInvalidationTests {
   private func images(_ color: CIColor) -> EditingCanvasRenderImages {
     let image = CIImage(color: color).cropped(to: CGRect(x: 0, y: 0, width: 80, height: 60))
     return .init(
-      source: image, effects: .init(), base: image, adjusted: image,
-      localEffect: .init(), usesPreparedBaseImage: false
+      source: image, base: image, adjusted: image,
+      hasGlobalEffects: false, hasLocalEffect: false, usesPreparedBaseImage: false
     )
   }
 }

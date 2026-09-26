@@ -33,7 +33,7 @@ import simd
 /// management, and stroke state. This type extracts only the rasterization
 /// kernel — a single off-screen stamp pass — so the live rasterizer can be
 /// exercised in isolation and proven, by test, to match the parametric Core
-/// Image CIKernel rasterizer (`FeatureGraphCompiler.renderMask`) that the
+/// Image brush-stamp kernel (`MaskTreeRenderer`) that the
 /// shared falloff establishes as the contract.
 ///
 /// The pipeline, the uniform layout, and the per-stamp encoding all come from
@@ -83,8 +83,9 @@ struct BrushMaskMetalRasterizer {
   ///
   /// Coordinates are the **identity (no-viewport)** domain: `center` is in
   /// canvas pixels and the vertex shader maps it to clip space. There is no
-  /// content→view scale here, so this matches `FeatureGraphCompiler.renderMask`
-  /// where the stamp center is given directly in the mask extent.
+  /// content→view scale here, so this matches the parametric brush-stamp
+  /// kernel (`MaskTreeRenderer`), where the stamp center is given directly in
+  /// the mask extent.
   ///
   /// ## Orientation — no extra flip is needed
   ///
