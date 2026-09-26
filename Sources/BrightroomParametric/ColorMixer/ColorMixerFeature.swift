@@ -18,8 +18,10 @@ import Foundation
 /// bypass rendering exactly. The authored adjustment and algorithm are all a
 /// host needs to store; constructing the feature again rebuilds the plan.
 ///
-/// Equality compares the rendered result; compare `adjustment` to detect
-/// authored edits that do not change pixels.
+/// Equality compares the authored `adjustment` and `algorithm` exactly. The
+/// derived render plan, which rounds values to Float32, does not take part. To
+/// ask whether two mixers render the same, compare their
+/// `ColorMixerRenderIdentity(activeAdjustment:algorithm:)`.
 public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
   /// The color model and correction semantics used to interpret all eight bands.
@@ -62,8 +64,8 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
     return try ColorMixerRenderer.apply(to: image, plan: renderPlan)
   }
 
-  /// Compares the algorithm and the normalized values used for rendering.
+  /// Compares the authored members; the derived render plan does not take part.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.algorithm == rhs.algorithm && lhs.renderPlan == rhs.renderPlan
+    lhs.adjustment == rhs.adjustment && lhs.algorithm == rhs.algorithm
   }
 }

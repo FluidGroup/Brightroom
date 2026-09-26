@@ -145,9 +145,11 @@ Notes:
   what to do with curves authored under a different interpretation.
 - Reject a Color Mixer algorithm identifier you do not recognize instead of
   substituting another algorithm.
-- Tone Curve and Color Mixer equality compares rendered values; other features
-  compare every stored parameter. Check editing state such as curve point
-  identities directly when testing your conversion.
+- Feature equality compares every stored, authored parameter, including Tone
+  Curve point identities and diagonal points, and Color Mixer values exactly as
+  Doubles. A conversion that loses any of them produces a document that is not
+  equal to the saved one. To ask whether two values render the same, compare
+  `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity` instead.
 - A `PhotosCropDocument` is authored for one image: its domain is the oriented
   image size (`EditingStack.Loaded.imageSize`). Store a reference to the
   source image with it, and resume it only over that image.

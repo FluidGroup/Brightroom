@@ -283,11 +283,34 @@ func isIdentity(_ mixer: ColorMixerFeature) -> Bool {
 interior points on the diagonal is not `isNeutral`, but it renders as
 identity.
 
-Equality of both features compares the rendered result, as it did in 5.x
-apart from the ids: two curves that differ only in diagonal interior points or
-point ids are equal. An owner that drops equal updates (such as
-`PhotosCropEditingModel`) drops such an edit. Compare `value` (or
-`adjustment`) to detect authored edits that do not change pixels.
+Equality of both features now compares their authored members: `value` for
+a curve, `adjustment` and `algorithm` for a mixer. In 5.x it compared the
+feature `id` and the rendered result, so two curves with the same id that
+differed only in diagonal interior points or point ids were equal, and so were
+mixers whose values rounded to the same Float32 parameters. They are no longer
+equal, so an owner that drops equal updates keeps such an edit, for example
+the first point a curve drag adds on the diagonal.
+
+A curve rebuilt with fresh point ids is now a different value. If you build
+curves on each access, for example a preset catalog in a computed property
+that calls `insertPoint(input:output:)`, build them once or pass stable ids
+through `insertPoint(id:input:output:)`.
+
+Where you need "renders the same", such as a cache key, compare the render
+identities explicitly:
+
+```swift
+import BrightroomParametric
+
+func rendersTheSame(_ a: ToneCurveFeature, _ b: ToneCurveFeature) -> Bool {
+  ToneCurveRenderIdentity(value: a.value) == ToneCurveRenderIdentity(value: b.value)
+}
+
+func rendersTheSame(_ a: ColorMixerFeature, _ b: ColorMixerFeature) -> Bool {
+  ColorMixerRenderIdentity(activeAdjustment: a.adjustment, algorithm: a.algorithm)
+    == ColorMixerRenderIdentity(activeAdjustment: b.adjustment, algorithm: b.algorithm)
+}
+```
 
 ### Errors
 

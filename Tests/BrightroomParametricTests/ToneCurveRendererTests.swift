@@ -109,9 +109,10 @@ struct ToneCurveRendererTests {
     #expect(firstPlan.sampleTable.greenBlue.count == 4_096)
     #expect(firstPlan.sampleTable.combinedData().count == 65_536)
     #expect(firstPlan.activeChannels == SIMD4(0, 1, 0, 0))
+    // The features render the same but differ as authored values.
     #expect(
       ToneCurveFeature(value: firstValue)
-        == ToneCurveFeature(value: secondValue)
+        != ToneCurveFeature(value: secondValue)
     )
   }
 

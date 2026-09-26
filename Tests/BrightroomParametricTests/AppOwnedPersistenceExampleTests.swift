@@ -44,9 +44,9 @@ struct AppOwnedPersistenceExampleTests {
     let restored = try JSONDecoder().decode(StoredLook.self, from: data)
       .makeLook(loadLUT: Self.loadLUT(assetID:))
 
+    // Equality compares every authored value, including Tone Curve point
+    // identities, so the restored look equals the saved one exactly.
     #expect(restored == look)
-    // Tone Curve and Color Mixer equality compares rendered values; editing
-    // state such as point identities must be checked directly.
     #expect(restored.toneCurve?.value == curves)
     #expect(restored.toneCurve?.value.red.point(id: pointID) != nil)
     #expect(restored.colorMixer?.adjustment == mixer)

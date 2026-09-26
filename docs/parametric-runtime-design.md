@@ -81,6 +81,9 @@ maps the old API to the new one.
   the same protocol pattern later.
 - Every built-in value is `Equatable`, so documents compare with `==` and
   owners (undo history, canvas caches) can drop updates that change nothing.
+  Equality compares a value's stored, authored members; derived state such as
+  a compiled render plan never takes part. "Renders the same" is a separate
+  question, answered by the render identity types where a cache needs it.
 
 A document's structure is visible in its type. `PhotosCropDocument` declares
 
@@ -290,11 +293,15 @@ Curve render identities ignore point UUIDs and diagonal-only structure. Mixer
 render identities include the selected algorithm and the same normalized
 Float32 parameters as the kernel.
 
-Equality of both features compares the rendered result, not the authored
-value: two curves that differ only in diagonal interior points or point ids
-are equal. Documents otherwise compare by value, and an owner that drops
-equal updates (such as an undo history) would drop such an edit. Compare
-`value` (or `adjustment`) to detect authored edits that do not change pixels.
+Equality of both features compares their stored, authored members like
+every other feature: `value` for a curve, `adjustment` and `algorithm` for a
+mixer. The compiled plan is derived state and does not take part. Two curves
+that differ only in diagonal interior points or point ids are therefore not
+equal, and neither are mixers whose values differ as Doubles but round to the
+same Float32 parameters. An owner that drops equal updates (such as an undo
+history) keeps such an edit. Code that needs "renders the same", such as a
+preview cache, compares `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity`
+explicitly.
 
 The curve's one-entry plan and table caches use `OSAllocatedUnfairLock`, keeping
 iOS 17 / macOS 14 compatibility. Compiled kernels are loaded from the package

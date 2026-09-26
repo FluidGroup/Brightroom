@@ -337,23 +337,80 @@ struct CompositionBehaviorTests {
     #expect(AnyImageEffect(exposure) != AnyImageEffect(Optional(exposure)))
   }
 
-  @Test func `tone curve and mixer equality compare rendered values`() throws {
-    // A diagonal interior point is an authored edit that renders as identity.
+  // MARK: - Equality
+
+  @Test func `tone curve equality compares authored values rather than render identity`() throws {
+    // A diagonal interior point is an authored edit that renders as identity:
+    // the first point a curve drag adds usually sits on the diagonal.
     var diagonal = ToneCurveEditorValue()
     let diagonalPointID = diagonal.y.insertPoint(input: 0.5, output: 0.5)
     _ = try #require(diagonalPointID)
     let neutralCurve = ToneCurveFeature(value: .neutral)
     let diagonalCurve = ToneCurveFeature(value: diagonal)
-    #expect(diagonalCurve.value != neutralCurve.value)
-    #expect(diagonalCurve == neutralCurve)
+    #expect(diagonalCurve != neutralCurve)
+    #expect(ToneCurveRenderIdentity(value: diagonal) == ToneCurveRenderIdentity(value: .neutral))
+    #expect(ToneCurveRenderIdentity(activeValue: diagonal) == nil)
 
-    // Mixer values that normalize to the same render parameters.
+    // The same coordinates under a different point identity.
+    var first = ToneCurveEditorValue()
+    var second = ToneCurveEditorValue()
+    let firstPointID = first.y.insertPoint(id: .interior(UUID()), input: 0.4, output: 0.55)
+    let secondPointID = second.y.insertPoint(id: .interior(UUID()), input: 0.4, output: 0.55)
+    _ = try #require(firstPointID)
+    _ = try #require(secondPointID)
+    #expect(ToneCurveFeature(value: first) != ToneCurveFeature(value: second))
+    #expect(ToneCurveRenderIdentity(value: first) == ToneCurveRenderIdentity(value: second))
+    #expect(ToneCurveFeature(value: first) == ToneCurveFeature(value: first))
+  }
+
+  @Test func `color mixer equality compares authored values rather than render identity`() throws {
+    // Values that differ as Doubles but normalize to the same Float32 plan.
     var first = ColorMixerAdjustment.neutral
     first.red.hue = 10
     var equivalent = ColorMixerAdjustment.neutral
     equivalent.red.hue = 10.0.nextUp
-    #expect(first != equivalent)
-    #expect(ColorMixerFeature(adjustment: first) == ColorMixerFeature(adjustment: equivalent))
+    #expect(ColorMixerFeature(adjustment: first) != ColorMixerFeature(adjustment: equivalent))
+    #expect(
+      ColorMixerRenderIdentity(activeAdjustment: first)
+        == ColorMixerRenderIdentity(activeAdjustment: equivalent)
+    )
+    #expect(ColorMixerFeature(adjustment: first) == ColorMixerFeature(adjustment: first))
+    #expect(
+      ColorMixerFeature(adjustment: first, algorithm: .oklch)
+        == ColorMixerFeature(adjustment: first)
+    )
+  }
+
+  @Test func `a document compares the authored values of its members`() throws {
+    var diagonal = ToneCurveEditorValue()
+    let diagonalPointID = diagonal.y.insertPoint(input: 0.5, output: 0.5)
+    _ = try #require(diagonalPointID)
+    var mixer = ColorMixerAdjustment.neutral
+    mixer.red.hue = 10
+    var equivalentMixer = ColorMixerAdjustment.neutral
+    equivalentMixer.red.hue = 10.0.nextUp
+
+    let document = ColorDocument(
+      toneCurve: ToneCurveFeature(value: .neutral),
+      colorMixer: ColorMixerFeature(adjustment: mixer)
+    )
+    #expect(document == document)
+
+    // An owner that drops equal updates keeps each of these edits.
+    var curveEdited = document
+    curveEdited.toneCurve = ToneCurveFeature(value: diagonal)
+    #expect(curveEdited != document)
+
+    var mixerEdited = document
+    mixerEdited.colorMixer = ColorMixerFeature(adjustment: equivalentMixer)
+    #expect(mixerEdited != document)
+
+    // A document rebuilt from the same values is equal.
+    let rebuilt = ColorDocument(
+      toneCurve: ToneCurveFeature(value: diagonal),
+      colorMixer: ColorMixerFeature(adjustment: mixer)
+    )
+    #expect(rebuilt == curveEdited)
   }
 
   // MARK: - Errors
@@ -713,5 +770,16 @@ private struct Look: ImageEffect, Equatable {
     exposure
     saturation
     preset
+  }
+}
+
+/// A document whose members compare by their authored values.
+private struct ColorDocument: ImageEffect, Equatable {
+  var toneCurve: ToneCurveFeature?
+  var colorMixer: ColorMixerFeature?
+
+  var body: some ImageEffect {
+    toneCurve
+    colorMixer
   }
 }
