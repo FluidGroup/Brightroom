@@ -37,9 +37,9 @@ extension EditingCanvasView {
     ) {
       
       self.effectView = UIVisualEffectView(effect: blurEffect)
-      self.dimmingView = UIView()&>.do {
-        $0.backgroundColor = dimmingColor
-      }
+      let dimmingView = UIView()
+      dimmingView.backgroundColor = dimmingColor
+      self.dimmingView = dimmingView
       
       super.init(frame: .zero)
       
@@ -52,20 +52,20 @@ extension EditingCanvasView {
     
     override func didBeginInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.effectView.alpha = 0
-      }&>.do {
-        $0.startAnimation()
       }
+      animator.startAnimation()
+      currentAnimator = animator
     }
 
     override func didEndInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.effectView.alpha = 1
-      }&>.do {
-        $0.startAnimation(afterDelay: 1)
       }
+      animator.startAnimation(afterDelay: 1)
+      currentAnimator = animator
     }
   }
   

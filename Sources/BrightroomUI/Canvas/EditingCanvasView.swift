@@ -1403,33 +1403,30 @@ extension EditingCanvasView {
       layoutIfNeeded()
 
       if animatesRotation {
-        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
+        let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) {
           perform()
-        }&>.do {
-          $0.isUserInteractionEnabled = false
-          $0.startAnimation()
         }
+        animator.isUserInteractionEnabled = false
+        animator.startAnimation()
 
-        UIViewPropertyAnimator(duration: 0.12, dampingRatio: 1) {
+        let guideAnimator = UIViewPropertyAnimator(duration: 0.12, dampingRatio: 1) {
           self.guideView.alpha = 0
-        }&>.do {
-          $0.isUserInteractionEnabled = false
-          $0.addCompletion { _ in
-            UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
-              self.setCropGuideVisibility(isVisible: self.isCropEditing)
-            }
-            .startAnimation(afterDelay: 0.8)
-          }
-          $0.startAnimation()
         }
+        guideAnimator.isUserInteractionEnabled = false
+        guideAnimator.addCompletion { _ in
+          UIViewPropertyAnimator(duration: 0.5, dampingRatio: 1) {
+            self.setCropGuideVisibility(isVisible: self.isCropEditing)
+          }
+          .startAnimation(afterDelay: 0.8)
+        }
+        guideAnimator.startAnimation()
 
       } else {
         UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [self] in
           perform()
           layoutIfNeeded()
-        }&>.do {
-          $0.startAnimation()
         }
+        .startAnimation()
       }
 
     } else {

@@ -175,93 +175,61 @@ extension EditingCanvasView {
 
       let length: CGFloat = 1
 
-      topLeftControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.leftAnchor.constraint(equalTo: leftAnchor),
-          $0.topAnchor.constraint(equalTo: topAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-        ])
-      }
+      NSLayoutConstraint.activate([
+        topLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        topLeftControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topLeftControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        topLeftControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
 
-      topRightControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.rightAnchor.constraint(equalTo: rightAnchor),
-          $0.topAnchor.constraint(equalTo: topAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-        ])
-      }
+      NSLayoutConstraint.activate([
+        topRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        topRightControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topRightControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        topRightControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
 
-      bottomLeftControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.leftAnchor.constraint(equalTo: leftAnchor),
-          $0.bottomAnchor.constraint(equalTo: bottomAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-        ])
-      }
+      NSLayoutConstraint.activate([
+        bottomLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        bottomLeftControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomLeftControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        bottomLeftControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
 
-      bottomRightControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.rightAnchor.constraint(equalTo: rightAnchor),
-          $0.bottomAnchor.constraint(equalTo: bottomAnchor),
-          $0.heightAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-          $0.widthAnchor.constraint(equalToConstant: length)&>.do {
-            $0.priority = .defaultHigh
-          },
-        ])
-      }
+      NSLayoutConstraint.activate([
+        bottomRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        bottomRightControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomRightControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        bottomRightControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
 
-      topControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.topAnchor.constraint(equalTo: topAnchor, constant: 0),
-          $0.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor, constant: 16),
-          $0.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor, constant: -16),
-          $0.heightAnchor.constraint(equalToConstant: length),
-        ])
-      }
+      NSLayoutConstraint.activate([
+        topControlPointView.topAnchor.constraint(equalTo: topAnchor, constant: 0),
+        topControlPointView.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor, constant: 16),
+        topControlPointView.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor, constant: -16),
+        topControlPointView.heightAnchor.constraint(equalToConstant: length),
+      ])
 
-      rightControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor, constant: 16),
-          $0.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor, constant: -16),
-          $0.rightAnchor.constraint(equalTo: rightAnchor),
-          $0.widthAnchor.constraint(equalToConstant: length),
-        ])
-      }
+      NSLayoutConstraint.activate([
+        rightControlPointView.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor, constant: 16),
+        rightControlPointView.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor, constant: -16),
+        rightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        rightControlPointView.widthAnchor.constraint(equalToConstant: length),
+      ])
 
-      bottomControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
-          $0.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor, constant: 16),
-          $0.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor, constant: -16),
-          $0.heightAnchor.constraint(equalToConstant: length),
-        ])
-      }
+      NSLayoutConstraint.activate([
+        bottomControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
+        bottomControlPointView.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor, constant: 16),
+        bottomControlPointView.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor, constant: -16),
+        bottomControlPointView.heightAnchor.constraint(equalToConstant: length),
+      ])
 
-      leftControlPointView&>.do {
-        NSLayoutConstraint.activate([
-          $0.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor, constant: 16),
-          $0.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor, constant: -16),
-          $0.leftAnchor.constraint(equalTo: leftAnchor),
-          $0.widthAnchor.constraint(equalToConstant: length),
-        ])
-      }
+      NSLayoutConstraint.activate([
+        leftControlPointView.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor, constant: 16),
+        leftControlPointView.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor, constant: -16),
+        leftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        leftControlPointView.widthAnchor.constraint(equalToConstant: length),
+      ])
     }
 
     // MARK: - Functions
@@ -426,9 +394,7 @@ extension EditingCanvasView {
         rightAnchor.constraint(
           equalTo: superview!.rightAnchor,
           constant: frame.maxX - superview!.bounds.maxX
-        )&>.do {
-          $0.isActive = true
-        }
+        ).activated()
       )
     }
 
@@ -438,9 +404,7 @@ extension EditingCanvasView {
       leftMaxConstraint = leftAnchor.constraint(
         greaterThanOrEqualTo: superview!.leftAnchor,
         constant: maximumRect!.minX
-      )&>.do {
-        $0.isActive = true
-      }
+      ).activated()
 
       activeConstraints.append(
         leftMaxConstraint!
@@ -453,9 +417,7 @@ extension EditingCanvasView {
       rightMaxConstraint = rightAnchor.constraint(
         lessThanOrEqualTo: superview!.rightAnchor,
         constant: maximumRect!.maxX - superview!.bounds.maxX
-      )&>.do {
-        $0.isActive = true
-      }
+      ).activated()
 
       activeConstraints.append(
         rightMaxConstraint!
@@ -468,9 +430,7 @@ extension EditingCanvasView {
       topMaxConstraint = topAnchor.constraint(
         greaterThanOrEqualTo: superview!.topAnchor,
         constant: maximumRect!.minY
-      )&>.do {
-        $0.isActive = true
-      }
+      ).activated()
 
       activeConstraints.append(
         topMaxConstraint!
@@ -483,9 +443,7 @@ extension EditingCanvasView {
       bottomMaxConstraint = bottomAnchor.constraint(
         lessThanOrEqualTo: superview!.bottomAnchor,
         constant: maximumRect!.maxY - superview!.bounds.maxY
-      )&>.do {
-        $0.isActive = true
-      }
+      ).activated()
 
       activeConstraints.append(
         bottomMaxConstraint!
@@ -499,9 +457,7 @@ extension EditingCanvasView {
         leftAnchor.constraint(
           equalTo: superview!.leftAnchor,
           constant: frame.minX - superview!.bounds.minX
-        )&>.do {
-          $0.isActive = true
-        }
+        ).activated()
       )
     }
 
@@ -512,9 +468,7 @@ extension EditingCanvasView {
         bottomAnchor.constraint(
           equalTo: superview!.bottomAnchor,
           constant: frame.maxY - superview!.bounds.maxY
-        )&>.do {
-          $0.isActive = true
-        }
+        ).activated()
       )
     }
 
@@ -525,9 +479,7 @@ extension EditingCanvasView {
         topAnchor.constraint(
           equalTo: superview!.topAnchor,
           constant: frame.minY - superview!.bounds.minY
-        )&>.do {
-          $0.isActive = true
-        }
+        ).activated()
       )
     }
 
@@ -536,10 +488,7 @@ extension EditingCanvasView {
         centerXAnchor.constraint(
           equalTo: superview!.centerXAnchor,
           constant: frame.midX - superview!.bounds.midX
-        )&>.do {
-          $0.priority = .defaultLow
-          $0.isActive = true
-        }
+        ).withPriority(.defaultLow).activated()
       )
     }
 
@@ -548,40 +497,27 @@ extension EditingCanvasView {
         centerYAnchor.constraint(
           equalTo: superview!.centerYAnchor,
           constant: frame.midY - superview!.bounds.midY
-        )&>.do {
-          $0.priority = .defaultLow
-          $0.isActive = true
-        }
+        ).withPriority(.defaultLow).activated()
       )
     }
 
     private func activateWidthConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width)&>.do {
-        $0.priority = .defaultLow
-        $0.isActive = true
-      }
+      widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width).withPriority(.defaultLow).activated()
 
       activeConstraints.append(
-        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)&>.do {
-          $0.isActive = true
-        }
+        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width).activated()
       )
     }
 
     private func activateHeightConstraint() {
       translatesAutoresizingMaskIntoConstraints = false
 
-      heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height)&>.do {
-        $0.priority = .defaultLow
-        $0.isActive = true
-      }
+      heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height).withPriority(.defaultLow).activated()
 
       activeConstraints.append(
-        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)&>.do {
-          $0.isActive = true
-        }
+        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height).activated()
       )
     }
     
@@ -591,9 +527,7 @@ extension EditingCanvasView {
         activeConstraints.append(widthAnchor.constraint(
           equalTo: heightAnchor,
           multiplier: aspectRatio.width / aspectRatio.height
-        )&>.do {
-          $0.isActive = true
-        })
+        ).activated())
       }
     }
 
@@ -1033,3 +967,20 @@ extension UIPanGestureRecognizer {
   
 }
 */
+
+private extension NSLayoutConstraint {
+
+  /// Sets the priority and returns the constraint, for building one inline.
+  /// Set it before activating: a required constraint cannot change priority
+  /// once active.
+  func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
+    self.priority = priority
+    return self
+  }
+
+  /// Activates the constraint and returns it.
+  func activated() -> NSLayoutConstraint {
+    isActive = true
+    return self
+  }
+}

@@ -52,11 +52,9 @@ extension EditingCanvasView {
     override func layoutSubviews() {
       super.layoutSubviews()
 
-      edgeShapeLayer&>.do {
-        $0.frame = bounds.insetBy(dx: -1, dy: -1)
-        $0.layer.borderWidth = 1
-        $0.layer.borderColor = UIColor.white.cgColor
-      }
+      edgeShapeLayer.frame = bounds.insetBy(dx: -1, dy: -1)
+      edgeShapeLayer.layer.borderWidth = 1
+      edgeShapeLayer.layer.borderColor = UIColor.white.cgColor
 
       do {
 
@@ -268,20 +266,20 @@ extension EditingCanvasView {
 
     override func didBeginInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 1
-      }&>.do {
-        $0.startAnimation()
       }
+      animator.startAnimation()
+      currentAnimator = animator
     }
 
     override func didEndInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
-      currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
+      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 0
-      }&>.do {
-        $0.startAnimation()
       }
+      animator.startAnimation()
+      currentAnimator = animator
     }
   }
 }
