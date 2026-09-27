@@ -175,6 +175,25 @@ struct QuarterTurnCropTests {
     )
   }
 
+  /// A malformed stored crop: its rect overlaps the image, but its center, and
+  /// with it the whole sideways footprint, lies outside. Reopening it clamps
+  /// the rect first, as 5.1.0 did, and then the footprint.
+  @Test func `Reopening a turned crop centered outside the image clamps it`() {
+    // Display rect (-40, 0, 60, 10), center (-10, 5). Its footprint,
+    // (-15, -25, 10, 60), misses the image entirely.
+    let stored = CropFeature(
+      cropRect: CGRect(x: -40, y: 190, width: 60, height: 10),
+      rotation: .quarterCW
+    )
+
+    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
+
+    // The rect clamped to the image, (0, 0, 20, 10), has its footprint
+    // (5, -5, 10, 20) partly above the image: that overhang goes, leaving the
+    // footprint (5, 0, 10, 15), turned back about its center (10, 7.5).
+    #expect(reopened.cropExtent == CGRect(x: 2.5, y: 2.5, width: 15, height: 10))
+  }
+
   /// `CropView.rotateClockwise()` swaps a locked aspect ratio and refits the
   /// frame after setting the new rotation. The fit uses the turned image, so a
   /// 3:2 lock on a 3:2 image still keeps the whole image after a quarter turn.
