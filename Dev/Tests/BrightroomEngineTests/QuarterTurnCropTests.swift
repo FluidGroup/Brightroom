@@ -122,11 +122,16 @@ struct QuarterTurnCropTests {
     #expect(feature.displayCropRect(imageSize: size) == committed)
   }
 
-  /// Opening the editor on a turned crop and tapping Done, several times over,
-  /// keeps the stored crop.
-  @Test(arguments: [1, 3])
-  func `Open and Done keeps an odd-parity turned crop`(clockwiseTurns: Int) throws {
-    let size = CGSize(width: 301, height: 200)
+  /// Turning the full image through a real CropView and tapping Done, then
+  /// opening the editor and tapping Done several times over, keeps the whole
+  /// turned image.
+  ///
+  /// On Done CropView re-reads the frame from its views with sub-pixel error,
+  /// so the inward snap can drop a line of an even-parity footprint too; the
+  /// parity step then must not drop a second one.
+  @Test(arguments: [301.0, 300.0], [1, 3])
+  func `Open and Done keeps a turned full-image crop`(imageWidth: Double, clockwiseTurns: Int) throws {
+    let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
 
     let (editor, window) = openCropView(on: stack)
