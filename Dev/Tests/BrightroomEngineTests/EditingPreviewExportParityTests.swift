@@ -146,11 +146,9 @@ struct EditingPreviewExportParityTests {
     // Asymmetric in both axes, so a missing or wrong-signed rotation on either
     // side changes the compared pixels.
     let source = Self.makeRampedCheckerImage(width: 60, height: 40, cell: 2)
-    // The frame's footprint on the source, (15, 0, 30, 40), lies inside the
-    // image, so the snapper keeps the frame as authored.
     let document = Self.makeDocument(
       imageSize: imageSize,
-      cropRect: CGRect(x: 10, y: 5, width: 40, height: 30),
+      cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
       rotation: .angle_90,
       blurMask: Self.makeBlurMask(
         radius: 4,
@@ -166,11 +164,11 @@ struct EditingPreviewExportParityTests {
       throughCrop: true
     )
 
-    // The crop extent is the displayed (already rotated) frame, so the output
-    // keeps its size.
+    // The crop rect is the selection before the output quarter turn, so the
+    // sideways turn exchanges the output's width and height.
     #expect(document.crop.rotation != .zero)
-    #expect(exported.width == 40)
-    #expect(exported.height == 30)
+    #expect(exported.width == 30)
+    #expect(exported.height == 40)
     assertImagesMatch(exported, preview, tolerance: 16)
 
     // The rotation is visible in the compared pixels: without it the export
@@ -178,12 +176,12 @@ struct EditingPreviewExportParityTests {
     let unrotated = try await export(
       Self.makeDocument(
         imageSize: imageSize,
-        cropRect: CGRect(x: 10, y: 5, width: 40, height: 30),
+        cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
         blurMask: document.blurMask
       ),
       source: source
     )
-    let largestDifference = [(4, 4), (20, 8), (35, 25), (8, 26)]
+    let largestDifference = [(4, 4), (20, 8), (25, 15), (8, 26)]
       .map { x, y in
         abs(Int(Self.rgba(in: exported, x: x, y: y).red) - Int(Self.rgba(in: unrotated, x: x, y: y).red))
       }

@@ -8,10 +8,8 @@ import UIKit
 
 extension CropFeature {
 
-  /// Test helper mirroring the old `EditingCrop(imageSize:cropRect:rotation:)`:
-  /// builds a crop from a y-down display rect through the shared engine snapper
-  /// (`CropFeature(displayCropRect:imageSize:…)`), so tests author crops in the
-  /// same top-left-origin space they used before the parametric migration.
+  /// Builds a canonical crop from a y-down source selection. Output rotation
+  /// changes the rendered orientation without changing this selected rectangle.
   static func test(
     imageSize: CGSize,
     cropRect: CGRect? = nil,

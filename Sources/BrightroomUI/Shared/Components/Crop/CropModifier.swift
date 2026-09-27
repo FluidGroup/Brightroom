@@ -63,8 +63,9 @@ public struct CropModifier: Sendable {
   /// - Parameters:
   ///   - paddingBias: The padding around the face box, as a fraction of the
   ///     box size on each side.
-  ///   - aspectRatio: The ratio of the framing crop. When nil, the crop keeps
-  ///     the image's own aspect ratio.
+  ///   - aspectRatio: The ratio of the framing crop in the final output
+  ///     orientation (after the crop's quarter turn). When nil, the selection
+  ///     keeps the image's own aspect ratio.
   ///
   /// When no face is found, or detection fails, the crop is fitted to
   /// `aspectRatio` if one is given and left unchanged otherwise.
@@ -103,10 +104,14 @@ public struct CropModifier: Sendable {
       )
       let boundingBox = VNNormalizedRectForImageRect(paddedRect, width, height)
 
+      // Face bounds select pixels before the output quarter turn. An explicit
+      // ratio describes the output; the image's own ratio describes the
+      // selection, so it is turned into the output orientation first.
       var framed = crop
       framed.updateCropExtent(
         toFitBoundingBox: boundingBox,
-        respectingApectRatio: aspectRatio ?? PixelAspectRatio(imageSize)
+        respectingApectRatio: aspectRatio
+          ?? crop.aspectRatioBeforeOutputRotation(PixelAspectRatio(imageSize))
       )
       return framed
     }

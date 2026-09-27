@@ -130,6 +130,18 @@ preview. **Re-test drawing a mask on the 12000×12000 "Nasa" image** — the OOM
 that motivated the source-resolution-blur change cannot be unit-tested (it is a
 device memory-watermark crash), so it needs a manual confirmation.
 
+### 5a. Crop Done / tool switch before a gesture settles (from #330)
+
+PhotosCrop's Done and a switch from Crop to a tool commit the proposed crop,
+which is the last *recorded* interaction state. Pressing Done or switching
+before a scroll/pinch settles can omit the final unrecorded movement; there is
+no synchronous gesture flush. Quarter-turn crops (straighten → crop → quarter
+turn, `CropFeature.OutputGeometry`) are covered by unit and UI tests on the
+Simulator but have not been verified on a physical device.
+
+Files: `Sources/BrightroomUI/Shared/Components/Crop/CropView.swift`
+(`applyDocumentChanges()`, `record()`).
+
 ### 6. (If global spatial effects land) downsample the global-effect preview too
 
 The source-resolution-blur fix covers the **local-adjustment** preview path

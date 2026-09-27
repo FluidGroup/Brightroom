@@ -159,7 +159,12 @@ struct CompositionRenderingTests {
     // Straightened and quarter-turned crops.
     let document = TwoCropsDocument()
     let composed = try Fixtures.renderer.makeImage(from: source, document: document)
-    #expect(composed.extent == CGRect(origin: .zero, size: document.second.cropRect.size))
+    // The second crop turns a quarter, so its output exchanges the selection's
+    // width and height.
+    #expect(composed.extent == CGRect(
+      origin: .zero,
+      size: CGSize(width: document.second.cropRect.height, height: document.second.cropRect.width)
+    ))
     Fixtures.expectPixelsMatch(
       try Fixtures.renderer.makeImage(from: source, document: SequentialFeatures(document.steps)),
       composed

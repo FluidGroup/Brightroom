@@ -12,6 +12,31 @@ import CoreGraphics
 /// sub-pixel image-space strokes.
 struct CropEditingZoomScaleTests {
 
+  /// The guide uses output-oriented platter coordinates, while viewport
+  /// readback stores a source selection before the output turn.
+  @Test(arguments: QuarterTurn.allCases)
+  func `Viewport readback preserves the pre-turn selection`(rotation: QuarterTurn) {
+    let imageSize = CGSize(width: 400, height: 300)
+    let selection = CGRect(x: 40, y: 30, width: 201, height: 120)
+    let crop = CropEditingState(
+      cropFeature: CropFeature.test(imageSize: imageSize, cropRect: selection, rotation: rotation),
+      imageSize: imageSize
+    )
+    // The 1000-point platter scales image coordinates by 2.5. Sideways output
+    // exchanges dimensions about the unchanged selection center (140.5, 90).
+    let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+    let expectedGuide = isSideways
+      ? CGRect(x: 201.25, y: -26.25, width: 300, height: 502.5)
+      : CGRect(x: 100, y: 75, width: 502.5, height: 300)
+    #expect(crop.cropExtent == selection)
+    #expect(crop.zoomExtent() == expectedGuide)
+    #expect(crop.makeCropExtent(rect: expectedGuide) == selection)
+    #expect(
+      crop.makeCropExtent(rect: expectedGuide.offsetBy(dx: 25, dy: -15))
+        == selection.offsetBy(dx: 10, dy: -6)
+    )
+  }
+
   @Test func `Maximum zoom keeps crop output at the minimum maskable side`() {
     let imageSize = CGSize(width: 4000, height: 3000)
     let crop = CropEditingState(

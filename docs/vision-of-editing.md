@@ -89,7 +89,8 @@ the next Feature.
 The ideal crop Feature should include:
 
 - crop extent
-- rotation
+- straightening rotation
+- output orientation (quarter turn)
 - perspective or geometry parameters, if supported later
 - output aspect ratio policy, if the crop is constrained
 
@@ -407,6 +408,12 @@ currently holds by feature order becomes declared rather than incidental:
   preview and export stay visually consistent. Render paths that evaluate on
   an intermediate that is not the chain entry (for example a zoomed viewport
   slice) must pass the entry extent explicitly.
+- **Crop output orientation is separate from its selection** (decided 2026-09,
+  #330). A crop evaluates straighten → crop → exact quarter turn. `cropRect` is
+  the selection after straightening and before the quarter turn, in the crop's
+  input domain; the quarter turn changes only the output orientation, never
+  the selected pixels. The renderer and the tool surfaces map coordinates
+  through the same `CropFeature.OutputGeometry`.
 
 ## Open Questions
 

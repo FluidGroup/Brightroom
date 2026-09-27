@@ -116,13 +116,13 @@ It uses only the public API.
 | Feature | Store | Rebuild with |
 | --- | --- | --- |
 | Enablement | whether the member is present | an optional member, `if`, or leaving the feature out |
-| `CropFeature` | `cropRect`, `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(cropRect:rotation:straightenRadians:)`, then call `validate()` |
+| `CropFeature` | `cropRect` (the selection after straightening and before the output quarter turn; y-up, relative to the crop's input origin), `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(cropRect:rotation:straightenRadians:)`, then call `validate()` |
 | `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, set `amount`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustment` | the mask tree and the content | `MaskTree`, `MaskNode`, `BrushMask`, `BrushMaskStroke`, `BrushMaskBrush`, and the content's own conversion |
-| `PhotosCropDocument` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect`, `rotation`, `straightenRadians`) | `PhotosCropDocument(effects:blurMask:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
+| `PhotosCropDocument` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect` as the selection before the output quarter turn, `rotation`, `straightenRadians`) | `PhotosCropDocument(effects:blurMask:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
 
 Notes:
 
@@ -130,6 +130,11 @@ Notes:
   `validate()` methods reject a crop rectangle that is not a finite, non-empty
   extent and cube data that does not match its dimension; rendering would
   throw the same errors later.
+- `CropFeature` renders straighten → crop → exact quarter turn. `cropRect` is
+  the selection before the quarter turn, so a sideways `rotation` exchanges
+  only the output's width and height (`outputGeometry(in:).outputBounds`);
+  changing `rotation` never changes the selected pixels. Parts of the
+  requested canvas outside the input are transparent.
 - Mask trees have no `validate()`. A union or intersection with no inputs
   restores without error and throws `FeatureEvaluationError.emptyMaskComposite`
   when it renders. Reject empty composites while converting if your storage
@@ -164,6 +169,11 @@ own decoder and convert them to features, or to your new storage model, once.
 
 The codec wrote JSON with sorted keys. Its authoritative definition is
 [`ParametricDocumentCodec.swift` at 5.1.0](https://github.com/FluidGroup/Brightroom/blob/5.1.0/Sources/BrightroomParametric/ParametricDocumentCodec.swift).
+
+Brightroom 5.x after 5.1.0 (#330) changed the crop rectangle convention and
+raised the crop schema to `3`; that codec writes `3` and rejects crop schemas
+`1` and `2`. 5.1.0 writes `2` and reads `1` and `2`. A store can therefore
+contain all three; see [Crop rectangles](#crop-rectangles).
 
 ### Document
 
@@ -209,7 +219,8 @@ and `MaskFeather` is `{ "id", "isEnabled", "input", "radius" }`.
 
 | `type` | `v` | `params` |
 | --- | --- | --- |
-| `brightroom.domain.crop` | 2 | `id`, `isEnabled`, `cropRect`, `rotation`, `straightenRadians` |
+| `brightroom.domain.crop` | 3 | `id`, `isEnabled`, `cropRect`, `rotation`, `straightenRadians`; `cropRect` is the selection before the quarter turn (Brightroom 6's convention) |
+| | 2 | same keys; `cropRect` is the frame in the **output** orientation (5.0 and 5.1.0) |
 | | 1 | `id`, `isEnabled`, `cropRect`; no rotation and no straightening |
 | `brightroom.effect.preset` | 1 | `id`, `isEnabled`, `name`, `identifier`, `effects` (envelopes) |
 | `brightroom.effect.pipeline` | 1 | `id`, `isEnabled`, `pipeline` (`{ "effects": [envelope, …] }`) |
@@ -261,4 +272,113 @@ decoded 5.x document:
   flip each stamp to `y = orientedImageSize.height - y` while converting, or
   the blur mask comes back mirrored vertically. A document from
   `Edit.makeEditingDocument(orientedImageSize:)` was already y-up. Crop
-  rectangles were stored in the y-up form in both and need no flip.
+  rectangles were stored in the y-up form in both and need no flip, but see
+  [Crop rectangles](#crop-rectangles) for schema 2.
+
+### Crop rectangles
+
+Brightroom 5.x after 5.1.0 (#330) rejects crop schemas `1` and `2` in its
+codec and ships no migration adapter, so that an old quarter-turn crop cannot
+silently select different pixels. Brightroom 6 has no codec; the conversion
+below is an optional host-side recipe for apps that still hold such data and
+want to reproduce what 5.1.0 rendered. Apps that do not need that can treat
+schema `1` and `2` crops as unsupported and have users re-author them.
+
+All three schemas are y-up and relative to the input image's origin.
+`rotation` holds `0`, `-90`, `-180`, or `-270` (`quarterCW` is `-90`,
+`quarterCCW` is `-270`).
+
+- **Schema 1**: `cropRect` only. Convert to `CropFeature(cropRect:)`.
+- **Schema 2 (5.0 and 5.1.0)**: `cropRect` is the output frame. 5.1.0 turned
+  the whole input by `-(rotation + straightenRadians)` about the rectangle's
+  center and cut `cropRect` (w × h) out of it, so the output was w × h at
+  every rotation.
+- **Schema 3 (5.x after 5.1.0) and Brightroom 6**: `cropRect` is the selection
+  before the quarter turn. Rendering straightens about the rectangle's
+  center, cuts `cropRect`, and then turns the w × h canvas by an exact quarter
+  turn, so a sideways turn outputs h × w. Convert with
+  `CropFeature(cropRect:rotation:straightenRadians:)` unchanged.
+
+Turns about the same center commute, so a schema 2 crop equals the Brightroom 6
+crop with the same center and angles and, for a sideways turn, the size
+exchanged:
+
+- `rotation` `0` or `-180`: keep `cropRect`.
+- `rotation` `-90` or `-270`, with a stored `cropRect` of `(x, y, w, h)`: use
+  `(x + (w − h) / 2, y + (h − w) / 2, h, w)`. The center stays at
+  `(x + w/2, y + h/2)`, and the output is still w × h, as in 5.1.0.
+  BrightroomEngine's `CropGeometry.rect(_:turnedBy:)` computes the same
+  rectangle.
+- Example: on a 300 × 200 image, a schema 2 frame `(50, −50, 200, 300)` with
+  `rotation` `-90` becomes `(0, 0, 300, 200)` with `.quarterCW`: the whole
+  image, rendered 200 × 300.
+- When `w − h` is odd, the converted origin lies on a half pixel. That
+  reproduces 5.1.0's geometry, which resampled such crops by the same half
+  pixel. PhotosCrop keeps an untouched crop exactly, so reopening it and
+  pressing Done leaves the half pixel in place. A host that wants integer
+  edges must canonicalize while converting, with BrightroomEngine's
+  `CropFeature(displayCropRect:imageSize:rotation:straighten:)` (y-down
+  input). Without straightening it snaps the edges inward, which drops the
+  half-pixel row and column, so the output becomes (w − 1) × (h − 1) instead
+  of 5.1.0's w × h. With straightening it keeps a fractional origin, and the
+  crop is resampled anyway.
+- The crop editor in 5.1.0 fitted a turned frame to the unturned image before
+  storing it, so a whole 300 × 200 image turned by `-90` could be stored as
+  the square `(50, 0, 200, 200)`. Converting keeps that square, which is what
+  5.1.0 rendered; the rest of the image is not in the stored data.
+- A disabled crop: leave it out. `PhotosCropDocument` requires a crop, so use
+  one that covers the whole image instead.
+
+```swift
+import BrightroomParametric
+import CoreGraphics
+
+/// The `params` of a 5.x `brightroom.domain.crop` envelope.
+struct Stored5xCrop: Decodable {
+  var isEnabled: Bool
+  var cropRect: CGRect  // [[x, y], [width, height]]
+  var rotation: Int?  // absent in schema 1
+  var straightenRadians: Double?
+}
+
+enum CropConversionError: Error {
+  case unsupportedSchema(Int)
+  case unknownRotation(Int)
+}
+
+/// Converts a stored 5.x crop; `nil` means the crop was disabled.
+func makeCrop(schema: Int, stored: Stored5xCrop) throws -> CropFeature? {
+  guard stored.isEnabled else { return nil }
+  let rotation: QuarterTurn
+  if let raw = stored.rotation {
+    guard let turn = QuarterTurn(rawValue: raw) else { throw CropConversionError.unknownRotation(raw) }
+    rotation = turn
+  } else {
+    rotation = .zero
+  }
+  let r = stored.cropRect
+  let selection: CGRect
+  switch schema {
+  case 1, 3:
+    selection = r
+  case 2 where rotation.isSideways:
+    // Schema 2 stored the output frame. Keep its center and exchange its size.
+    selection = CGRect(x: r.midX - r.height / 2, y: r.midY - r.width / 2, width: r.height, height: r.width)
+  case 2:
+    selection = r
+  default:
+    throw CropConversionError.unsupportedSchema(schema)
+  }
+  let crop = CropFeature(
+    cropRect: selection,
+    rotation: rotation,
+    straightenRadians: stored.straightenRadians ?? 0
+  )
+  try crop.validate()
+  return crop
+}
+```
+
+[`StoredCropConversionExampleTests.swift`](../Tests/BrightroomParametricTests/StoredCropConversionExampleTests.swift)
+runs this function and compares converted schema 2 crops with a reimplementation of
+5.1.0's rendering.

@@ -59,22 +59,18 @@ struct PhotosCropDocumentTests {
   @Test func `a quarter turn of the full image keeps the whole image`() {
     let size = CGSize(width: 300, height: 200)
     var crop = CropEditingState(imageSize: size, cropRect: CGRect(origin: .zero, size: size))
-    // What `CropView.rotateClockwise()` does: the frame keeps its center in
-    // image coordinates and takes the output orientation, so it extends past
-    // the unrotated image bounds. `CropFeature.apply` rotates the image about
-    // that center, which fills the frame exactly.
-    crop.updateCropExtent(CGRect(x: 50, y: -50, width: 200, height: 300))
+    // What `CropView.rotateClockwise()` does: the output orientation changes
+    // and the selection before the turn stays the whole image.
     crop.rotation = .angle_90
 
     var document = PhotosCropDocument(orientedImageSize: size)
     document.setCrop(crop)
 
-    // The snapper clamps the frame's footprint on the source, (0, 0, 300, 200),
-    // not the frame itself, so nothing is cut away.
-    #expect(document.crop.cropRect.size == CGSize(width: 200, height: 300))
+    #expect(document.crop.cropRect == CGRect(origin: .zero, size: size))
+    #expect(document.crop.rotation == .quarterCW || document.crop.rotation == .quarterCCW)
     #expect(
-      document.crop.displayCropRect(imageSize: size)
-        == CGRect(x: 50, y: -50, width: 200, height: 300)
+      document.crop.outputGeometry(in: CGRect(origin: .zero, size: size)).outputBounds.size
+        == CGSize(width: 200, height: 300)
     )
   }
 
@@ -96,15 +92,14 @@ struct PhotosCropDocumentTests {
     #expect(document.crop.cropRect == document.crop.cropRect.integral)
     #expect(document.crop.rotation == .quarterCW || document.crop.rotation == .quarterCCW)
 
-    // An integral rect whose footprint on the source, (60, 70, 200, 100), lies
-    // inside the image round-trips exactly through the y-up working space.
-    crop.updateCropExtent(CGRect(x: 110, y: 20, width: 100, height: 200))
+    // An integral rect round-trips exactly through the y-up working space.
+    crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     document.setCrop(crop)
     #expect(
       document.crop.displayCropRect(imageSize: imageSize)
-        == CGRect(x: 110, y: 20, width: 100, height: 200)
+        == CGRect(x: 10, y: 20, width: 200, height: 100)
     )
-    #expect(document.crop.cropRect == CGRect(x: 110, y: 80, width: 100, height: 200))
+    #expect(document.crop.cropRect == CGRect(x: 10, y: 180, width: 200, height: 100))
   }
 
   @Test func `First stroke seeds the default blur`() throws {

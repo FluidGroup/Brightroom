@@ -32,7 +32,10 @@ The most common migration path is:
 6. Give `SwiftUICropView` a document binding, and replace `featureFocus(_:)`
    with `editingTarget(_:)`.
 7. Move `CropModifier` from `EditingStack` to `PhotosCropEditingModel`.
-8. Re-run image loading, crop, filter, adjustment, blur mask, undo, and final
+8. Author crop rectangles as the selection before the quarter turn, and
+   convert rectangles saved by 5.1.0
+   ([Crop Rectangles and Output Rotation](#crop-rectangles-and-output-rotation)).
+9. Re-run image loading, crop, filter, adjustment, blur mask, undo, and final
    rendering flows.
 
 ## Package and Platform Changes
@@ -763,6 +766,9 @@ A rebuilt document equals the one you saved. The model does not check that
 the document was authored for the loaded image; resume it only over the same
 image.
 
+`cropRect` is the selection before the quarter turn. Convert rectangles saved
+by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
+
 ## SwiftUICropView
 
 `SwiftUICropView` edits a `PhotosCropDocument` through a binding instead of
@@ -827,7 +833,8 @@ to your own queue, as `faceDetection` does. `.identity` and
 `.faceDetection(paddingBias:aspectRatio:)` are provided. Pass it to
 `PhotosCropEditingModel(editingStack:cropModifier:)` or to
 `PhotosCropDocument.makeInitial(for:cropModifier:)`. It runs only for a new
-document, never for a resumed one.
+document, never for a resumed one. The `aspectRatio` of `.faceDetection`
+describes the final output, after the crop's quarter turn.
 
 Before:
 
@@ -860,6 +867,72 @@ let squareCrop = CropModifier { _, crop in
   return crop
 }
 ```
+
+## Crop Rectangles and Output Rotation
+
+`CropFeature` evaluates straighten → crop → exact quarter turn. `cropRect`,
+`displayCropRect(imageSize:)`,
+`CropFeature(displayCropRect:imageSize:rotation:straighten:)`, and
+`CropEditingState.cropExtent` describe the selection after straightening and
+before the quarter turn. In 5.1.0 they described the frame in the output
+orientation, turned about its center.
+
+Changing `rotation` changes only the output orientation; a sideways turn
+exchanges the output's width and height. Code that turned a rectangle about
+its center when it set a sideways rotation must stop doing so.
+
+Before:
+
+```swift
+// Brightroom 5.x: the frame of a 300 × 200 image turned by -90.
+let crop = CropFeature(
+  cropRect: CGRect(x: 50, y: -50, width: 200, height: 300),
+  rotation: .quarterCW
+)
+```
+
+After:
+
+```swift
+import BrightroomParametric
+import CoreGraphics
+
+// The whole 300 × 200 image; it renders 200 × 300.
+let crop = CropFeature(
+  cropRect: CGRect(x: 0, y: 0, width: 300, height: 200),
+  rotation: .quarterCW
+)
+```
+
+Unlike most 5.x samples, the Before code still compiles against Brightroom 6.
+There it selects a 200 × 300 area that extends past the 200-pixel-high image
+and renders 300 × 200 with transparent bands, so convert such rectangles
+rather than relying on the compiler to find them.
+
+- Aspect ratios describe the final output:
+  `CropEditingState.updateCropExtent(toFitAspectRatio:)`, the crop view's
+  aspect lock, and `CropModifier.faceDetection(aspectRatio:)`. A locked ratio
+  turns with the output without refitting the selection.
+- Crops keep the requested canvas at every rotation; parts outside the input
+  are transparent. Quarter turns no longer trim a row or column to even out
+  the dimensions, so odd sizes keep every pixel.
+- New API: `CropFeature.outputGeometry(in:)`, which returns
+  `CropFeature.OutputGeometry` (`outputBounds`, `sourceToOutputTransform`);
+  `QuarterTurn.isSideways`; `CropGeometry.rect(_:turnedBy:)`;
+  `CropGeometry.fittingRect(rect:in:straightenRadians:respectingAspectRatio:)`;
+  and a `straightenRadians:` parameter on
+  `CropGeometry.cropRect(toFitAspectRatio:in:)` and
+  `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)`.
+- `CropFeature(displayCropRect:imageSize:rotation:straighten:)` with a
+  non-zero `straighten` now fits the selection so its straightened footprint
+  lies inside the input, shrinking it uniformly and moving it only if needed,
+  and then snaps its dimensions inward; the origin can stay fractional. 5.1.0
+  snapped every selection inward to the unrotated bounds and left uncovered
+  corners transparent. Without straightening, edges still snap inward.
+- PhotosCrop's Done commits the proposed crop directly, so reopening and
+  confirming an untouched crop keeps it exactly.
+- Rectangles saved by 5.1.0: see
+  [Crop rectangles](parametric-persistence.md#crop-rectangles).
 
 ## CropEditingState
 
@@ -905,5 +978,7 @@ func squareDocument(orientedImageSize: CGSize) -> PhotosCropDocument {
 - [ ] `CropModifier` is passed to `PhotosCropEditingModel` or
       `PhotosCropDocument.makeInitial(for:cropModifier:)`.
 - [ ] Filter presets are supplied through `options.filterPresets`.
+- [ ] Crop rectangles are selections before the quarter turn; rectangles
+      saved by 5.1.0 with a sideways rotation are converted.
 - [ ] Loading, crop, filters, adjustments, blur mask, undo, reopening, and
       final rendering are tested again.

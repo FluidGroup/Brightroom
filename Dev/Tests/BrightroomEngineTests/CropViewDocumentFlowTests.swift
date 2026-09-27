@@ -179,6 +179,36 @@ struct CropViewDocumentFlowTests {
     #expect(abs(reloaded.cropExtent.width - reloaded.cropExtent.height) <= 1)
   }
 
+  /// A lock describes the output, so an undo across a sideways turn turns it
+  /// back with the output instead of refitting the undone crop to the turned
+  /// lock; Done then keeps the undone crop.
+  @Test func `A reloaded crop across a sideways turn turns the aspect-ratio lock`() throws {
+    let initial = PhotosCropDocument(orientedImageSize: imageSize)
+    let harness = makeLoadedCropView(document: initial, target: .crop)
+    let landscape = PixelAspectRatio(width: 4, height: 3)
+
+    harness.cropView.setCroppingAspectRatio(landscape)
+    harness.cropView.applyDocumentChanges()
+    harness.cropView.rotateClockwise()
+    harness.cropView.applyDocumentChanges()
+    let turned = try #require(harness.emitted.last)
+    #expect(turned.crop.rotation.isSideways)
+    #expect(harness.snapshots.last?.preferredAspectRatio == landscape.swapped())
+
+    // What an undo of the turn produces.
+    harness.cropView.setDocument(initial)
+
+    let snapshot = try #require(harness.snapshots.last)
+    #expect(snapshot.preferredAspectRatio == landscape)
+    let reloaded = try #require(snapshot.proposedCrop)
+    #expect(reloaded.rotation.quarterTurn.isSideways == false)
+    #expect(reloaded.cropExtent == CGRect(origin: .zero, size: imageSize))
+
+    let emittedCount = harness.emitted.count
+    harness.cropView.applyDocumentChanges()
+    #expect(harness.emitted.count == emittedCount)
+  }
+
   @Test func `Switching between tool targets commits nothing`() {
     let harness = makeLoadedCropView(document: PhotosCropDocument(orientedImageSize: imageSize))
 
