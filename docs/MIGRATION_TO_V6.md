@@ -90,7 +90,7 @@ of the body evaluate in order, and each receives the previous member's output.
 - `Feature` is the base protocol. A *primitive* implements
   `apply(to:context:)`; a *composite* declares `body`.
 - `ImageEffect` marks features that keep the extent and domain of their
-  input. `LocalAdjustmentFeature` content and `PresetFeature` effects must be
+  input. `LocalAdjustmentFeature` content and `FilterFeature` effects must be
   image effects, so a crop cannot appear inside them.
 - `FeatureBuilder` builds bodies. It supports `if`/`else`, `switch`, `for`,
   optional members, and `if #available`.
@@ -234,8 +234,8 @@ for example
 | `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(value:)`, `ColorMixerFeature(adjustment:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
 | `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
-| `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `PresetFeature(name:identifier:effects:)` with `[AnyImageEffect]` |
-| `ColorCubeFeature` loaders' `id:` parameter | The same loaders without `id:`. They take an optional `identifier:` instead, which defaults to the file name as before. |
+| `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `FilterFeature(name:id:effects:)` with `[AnyImageEffect]` |
+| `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking an optional `id: String`, which defaults to the file name as before. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | The same APIs taking `some Feature` |
@@ -280,7 +280,7 @@ func brighten(_ document: inout PortraitDocument, by amount: Double) {
 ```
 
 The debug views (`FeatureTreeView(document:)`) identify nodes by their type
-path in the body, such as `PresetFeature#0/WhiteBalanceFeature#0`.
+path in the body, such as `FilterFeature#0/WhiteBalanceFeature#0`.
 
 ### Tone Curve and Color Mixer
 
@@ -397,7 +397,7 @@ throws, including failures of Brightroom's own kernels, and it conforms to
 | `emptyLocalAdjustmentEffectPipeline(FeatureID)` | Removed. A `LocalAdjustmentFeature` whose content applies nothing (`EmptyFeature`, `[]`, a `nil` member, a neutral tone curve) returns its input. Check `content` yourself if you relied on the error. |
 | `emptyMaskComposite(FeatureID?)` | `emptyMaskComposite` |
 | `invalidCropRect(FeatureID, CGRect)` | `invalidCropRect(CGRect)` |
-| `invalidColorCubeData(FeatureID, expectedByteCount:actualByteCount:)` | `invalidColorCubeData(identifier:expectedByteCount:actualByteCount:)`, where `identifier` is the cube's `identifier` |
+| `invalidColorCubeData(FeatureID, expectedByteCount:actualByteCount:)` | `invalidColorCubeData(id:expectedByteCount:actualByteCount:)`, where `id` is the cube's `id` |
 | `failedToCreateImage(String)` | `imageCreationFailed(String)` |
 | `ParametricKernelRegistryError.failedToApplyKernel(String)` | `imageCreationFailed(String)` |
 | `ParametricKernelRegistryError.missingKernel`, `failedToLoadKernel`, `missingKernelLibraryResource` | `kernelUnavailable(name:reason:)` |
@@ -484,7 +484,7 @@ struct Inset: Feature, Equatable {
 ```
 
 - An effect conforms to `ImageEffect` and `Equatable`. `AnyImageEffect` and
-  `PresetFeature` accept only `Equatable` effects, so documents stay
+  `FilterFeature` accept only `Equatable` effects, so documents stay
   comparable.
 - A domain feature conforms to `Feature`. Only the source is translated to
   zero origin, so return your output with a zero origin, as `CropFeature`
@@ -526,18 +526,20 @@ struct StepDocument: Feature, Equatable {
 }
 ```
 
-### PresetFeature
+### PresetFeature Is FilterFeature
 
-`PresetFeature.effects` is `[AnyImageEffect]`, and the initializer has no
-`id:` or `isEnabled:`. A nested preset is `AnyImageEffect(innerPreset)`.
-Selection UIs compare `identifier`.
+`PresetFeature` is `FilterFeature`, and it is `Identifiable`: its
+`identifier` is `id`, a `String` (5.x's `id: FeatureID` is gone).
+`FilterFeature.effects` is `[AnyImageEffect]`, and the initializer has no
+`isEnabled:`. A nested filter is `AnyImageEffect(innerFilter)`. Selection UIs
+compare `id`; `==` still compares the name and the effects too.
 
 ```swift
 import BrightroomParametric
 
-let film = PresetFeature(
+let film = FilterFeature(
   name: "Film",
-  identifier: "film",
+  id: "film",
   effects: [
     AnyImageEffect(SaturationFeature(value: -0.2)),
     AnyImageEffect(FadeFeature(intensity: 0.1)),
@@ -547,18 +549,20 @@ let film = PresetFeature(
 
 ### ColorCubeFeature Loaders
 
-`ColorCubeFeature(contentsOfCubeFile:name:amount:)`,
-`ColorCubeFeature(cubeImageAt:name:amount:dimension:)`, and
-`ColorCubeFeature(cubeImage:name:identifier:amount:dimension:)` no longer take
-`id:`. `PresetStorage.loadLUTs(fromBundle:)` builds presets whose `effects`
-hold the cube as `AnyImageEffect`.
+`ColorCubeFeature(contentsOfCubeFile:name:id:intensity:)`,
+`ColorCubeFeature(contentsOfCubeImage:name:id:intensity:dimension:)`, and
+`ColorCubeFeature(cubeImage:name:id:intensity:dimension:)` take the
+lookup-table identifier as an optional `id: String` instead of a
+`FeatureID`, and the opacity as `intensity` (5.x `amount`).
+`PresetStorage.loadLUTs(fromBundle:)` builds filters whose `effects` hold the
+cube as `AnyImageEffect`.
 
 ```swift
 import BrightroomParametric
 import Foundation
 
 func loadLUT(at url: URL) throws -> ColorCubeFeature {
-  try ColorCubeFeature(contentsOfCubeFile: url, amount: 0.8)
+  try ColorCubeFeature(contentsOfCubeFile: url, intensity: 0.8)
 }
 ```
 
@@ -733,7 +737,7 @@ struct Editor: View {
 }
 ```
 
-`ImageEditor.Options.filterPresets` defaults to an empty list, and
+`ImageEditor.Options.filters` defaults to an empty list, and
 `PhotosCropDefaultFilterPresets` was removed. Supply your own presets; the
 former samples live in the demo app
 ([`DemoFilters.swift`](../Dev/Sources/SwiftUIDemo/DemoFilters.swift)).
@@ -1075,6 +1079,18 @@ features (`Mask`, `BrushMask`, `QuarterTurn`) have no suffix, and a value type
 used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 `BrushMask.Stroke`).
 
+### Filters and Color Cubes
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `PresetFeature(name:identifier:effects:)`, `.identifier` | `FilterFeature(name:id:effects:)`, `.id` (`Identifiable`) |
+| `ColorCubeFeature.identifier`, `.amount` | `ColorCubeFeature.id`, `.intensity` |
+| `ColorCubeFeature(cubeImageAt:…)` | `ColorCubeFeature(contentsOfCubeImage:…)` |
+| `ColorCubeFeatureLoadingError` | `ColorCubeLoadingError` |
+| `.failedToCreateImage(_:)`, `.missingLUT3DSize`, `.invalidLUT3DSize(_:line:)` | `.unreadableImage(_:)`, `.missingCubeSize`, `.invalidCubeSize(_:line:)` |
+| `FeatureEvaluationError.invalidColorCubeData(identifier:…)` | `FeatureEvaluationError.invalidColorCubeData(id:…)` |
+| `SwiftUIPhotosCropView.Options.filterPresets` | `ImageEditor.Options.filters` |
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.
@@ -1100,7 +1116,7 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
   document binding and uses `editingTarget(_:)`.
 - [ ] `CropModifier` is passed to `PhotosCropEditingModel` or
       `ImageEditorFeature.makeInitial(for:cropModifier:)`.
-- [ ] Filter presets are supplied through `options.filterPresets`.
+- [ ] Filters are supplied through `options.filters`.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles
       saved by 5.1.0 with a sideways rotation are converted.
 - [ ] Loading, crop, filters, adjustments, blur mask, undo, reopening, and

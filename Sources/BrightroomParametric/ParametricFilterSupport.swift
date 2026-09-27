@@ -107,11 +107,11 @@ enum ParametricColorCubeHelper {
 
   /// Creates a `CIColorCubeWithColorSpace` filter for a stored RGBA float cube.
   ///
-  /// `identifier` only names the cube; the cache key also carries the cube's
-  /// shape so a reused name (file-loaded features default their identifier to
+  /// `id` only names the cube; the cache key also carries the cube's shape so
+  /// a reused name (file-loaded features default their id to
   /// `url.lastPathComponent`) cannot hand back a filter built from different
-  /// cube data. A caller that reuses one identifier for two cubes of the same
-  /// shape must pass distinct identifiers itself — the cube bytes are far too
+  /// cube data. A caller that reuses one id for two cubes of the same shape
+  /// must pass distinct ids itself — the cube bytes are far too
   /// large to hash on this path, which runs per frame.
   ///
   /// The returned filter is always a fresh copy: the caller sets an input image
@@ -120,9 +120,9 @@ enum ParametricColorCubeHelper {
   static func makeColorCubeFilter(
     cubeData: Data,
     dimension: Int,
-    identifier: String?
+    id: String?
   ) -> CIFilter {
-    let cacheKey = identifier.map { "\($0)|\(dimension)|\(cubeData.count)" }
+    let cacheKey = id.map { "\($0)|\(dimension)|\(cubeData.count)" }
 
     if let cacheKey,
        let cached = parametricColorCubeFilterCache.object(forKey: cacheKey as NSString)

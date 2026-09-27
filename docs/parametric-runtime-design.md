@@ -57,7 +57,7 @@ maps the old API to the new one.
   - A *primitive* implements `apply(to: CIImage, context: FeatureEvaluationContext) throws -> CIImage`
     and leaves `Body` as `Never` (`ExposureFeature`, `CropFeature`, …).
   - A *composite* declares `body`; the default `apply` evaluates it
-    (`PresetFeature`, `ImageEditorFeature`, a host's document).
+    (`FilterFeature`, `ImageEditorFeature`, a host's document).
 - `ImageEffect: Feature` marks features that preserve the extent and
   coordinate domain of their input. A composite is an `ImageEffect` only when
   its body is one. Features that are not image effects, such as `CropFeature`,
@@ -214,7 +214,7 @@ materialization, and callers own the `CIContext`.
   `ColorCubeFeature` call their public `validate()` from `apply`.
 - Evaluation errors are `FeatureEvaluationError` (a `LocalizedError`):
   `invalidCropRect(CGRect)`,
-  `invalidColorCubeData(identifier:expectedByteCount:actualByteCount:)`,
+  `invalidColorCubeData(id:expectedByteCount:actualByteCount:)`,
   `emptyMaskComposite`, `kernelUnavailable(name:reason:)`,
   `imageCreationFailed(String)`, and `documentUnavailable`. Built-in features
   and the renderers throw no other error type while evaluating.
@@ -224,7 +224,7 @@ materialization, and callers own the `CIContext`.
   accident; pass `EmptyFeature()` for that.
 - `FeatureTreeView(document:)` and `FeatureTreeOutline(document:)` show a
   document's body structure for debugging, in evaluation order. Node ids are
-  type paths (`PresetFeature#0/WhiteBalanceFeature#0`), so an absent member
+  type paths (`FilterFeature#0/WhiteBalanceFeature#0`), so an absent member
   does not re-key the nodes after it.
 
 ## Tone Curve and Color Mixer

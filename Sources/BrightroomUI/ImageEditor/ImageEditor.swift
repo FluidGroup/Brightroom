@@ -81,7 +81,7 @@ public struct ImageEditor: View {
     /// Defaults to an empty array; only Original is offered until presets are
     /// supplied. A selected preset is written to the feature's
     /// `effects.preset`.
-    public var filterPresets: [PresetFeature] = []
+    public var filters: [FilterFeature] = []
 
     public init() {
 

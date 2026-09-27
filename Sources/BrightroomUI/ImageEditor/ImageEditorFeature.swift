@@ -41,7 +41,7 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// Global, extent-preserving effects, evaluated in declaration order.
   public struct Effects: ImageEffect, Equatable {
 
-    public var preset: PresetFeature?
+    public var preset: FilterFeature?
     public var exposure: ExposureFeature?
     public var brightness: BrightnessFeature?
     public var whiteBalance: WhiteBalanceFeature?
@@ -57,7 +57,7 @@ public struct ImageEditorFeature: Feature, Equatable {
 
     /// Creates global effects. Omitted effects are absent.
     public init(
-      preset: PresetFeature? = nil,
+      preset: FilterFeature? = nil,
       exposure: ExposureFeature? = nil,
       brightness: BrightnessFeature? = nil,
       whiteBalance: WhiteBalanceFeature? = nil,

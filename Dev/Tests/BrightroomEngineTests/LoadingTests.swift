@@ -125,7 +125,7 @@ struct ColorCubeTextParserTests {
 
     #expect(filters.count == 1)
     #expect(filters[0].name == "Bundle Look")
-    #expect(filters[0].identifier == "BundleLook.cube")
+    #expect(filters[0].id == "BundleLook.cube")
     #expect(filters[0].dimension == 2)
     #expect(filters[0].cubeData.count == 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
   }
@@ -134,7 +134,7 @@ struct ColorCubeTextParserTests {
     let parsedCube = try ColorCubeTextParser().parse(Self.identityCube(size: 2, title: "Identity 2"))
     let filter = ColorCubeFeature(
       name: "Identity 2",
-      identifier: "Identity2.cube",
+      id: "Identity2.cube",
       dimension: parsedCube.dimension,
       cubeData: parsedCube.cubeData
     )

@@ -420,13 +420,13 @@ private struct LUTImportDemoView: View {
 
     let cube = ColorCubeFeature(
       name: identifier,
-      identifier: identifier,
+      id: identifier,
       dimension: 64,
       cubeData: cubeData
     )
-    let preset = PresetFeature(
+    let preset = FilterFeature(
       name: cube.name,
-      identifier: cube.identifier,
+      id: cube.id,
       effects: [AnyImageEffect(cube)]
     )
     PresetStorage.default.presets.insert(preset, at: 0)

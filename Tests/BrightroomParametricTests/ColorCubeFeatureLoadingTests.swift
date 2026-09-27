@@ -27,17 +27,17 @@ struct ColorCubeFeatureLoadingTests {
 
     let feature = try ColorCubeFeature(
       contentsOfCubeFile: url,
-      amount: 0.75
+      intensity: 0.75
     )
 
     #expect(feature.name == "Identity 2")
-    #expect(feature.identifier == "Identity.cube")
-    #expect(feature.amount == 0.75)
+    #expect(feature.id == "Identity.cube")
+    #expect(feature.intensity == 0.75)
     #expect(feature.dimension == 2)
     #expect(feature.cubeData.count == 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
 
-    let identified = try ColorCubeFeature(contentsOfCubeFile: url, identifier: "pack-a/identity")
-    #expect(identified.identifier == "pack-a/identity")
+    let identified = try ColorCubeFeature(contentsOfCubeFile: url, id: "pack-a/identity")
+    #expect(identified.id == "pack-a/identity")
     #expect(identified.cubeData == feature.cubeData)
   }
 
@@ -100,7 +100,7 @@ struct ColorCubeFeatureLoadingTests {
     ].joined(separator: "\n")
 
     #expect(
-      throws: ColorCubeFeatureLoadingError.invalidDataLine(
+      throws: ColorCubeLoadingError.invalidDataLine(
         "0 0",
         line: 3
       )
@@ -114,7 +114,7 @@ struct ColorCubeFeatureLoadingTests {
     let feature = try ColorCubeFeature(
       cubeImage: image,
       name: "Image LUT",
-      identifier: "image-lut"
+      id: "image-lut"
     )
 
     #expect(feature.dimension == 4)
@@ -147,11 +147,11 @@ struct ColorCubeFeatureLoadingTests {
         .appendingPathExtension(format.fileExtension)
       try Self.write(image, to: url, type: format.type)
 
-      let feature = try ColorCubeFeature(cubeImageAt: url)
+      let feature = try ColorCubeFeature(contentsOfCubeImage: url)
 
       #expect(feature.name == "ImageLUT")
-      #expect(feature.identifier == url.lastPathComponent)
-      #expect(try ColorCubeFeature(cubeImageAt: url, identifier: "pack-a/image").identifier == "pack-a/image")
+      #expect(feature.id == url.lastPathComponent)
+      #expect(try ColorCubeFeature(contentsOfCubeImage: url, id: "pack-a/image").id == "pack-a/image")
       #expect(feature.dimension == 4)
       #expect(feature.cubeData.count == 4 * 4 * 4 * 4 * MemoryLayout<Float>.size)
     }
@@ -171,7 +171,7 @@ struct ColorCubeFeatureLoadingTests {
     )
 
     #expect(
-      throws: ColorCubeFeatureLoadingError.invalidLUT3DSize(
+      throws: ColorCubeLoadingError.invalidCubeSize(
         String(Int.max),
         line: 1
       )
@@ -181,7 +181,7 @@ struct ColorCubeFeatureLoadingTests {
 
     let image = try Self.makeCubeImage()
     #expect(
-      throws: ColorCubeFeatureLoadingError.unableToInferCubeDimension(
+      throws: ColorCubeLoadingError.unableToInferCubeDimension(
         width: image.width,
         height: image.height
       )
@@ -189,7 +189,7 @@ struct ColorCubeFeatureLoadingTests {
       try ColorCubeFeature(
         cubeImage: image,
         name: "Overflow",
-        identifier: "overflow",
+        id: "overflow",
         dimension: Int.max
       )
     }

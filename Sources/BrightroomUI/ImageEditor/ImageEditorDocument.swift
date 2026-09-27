@@ -57,8 +57,8 @@ extension EditingDocument where Content == ImageEditorFeature {
   ///
   /// Selecting the preset that is already selected changes nothing, so the
   /// feature keeps the selected preset's value.
-  mutating func selectFilterPreset(_ preset: PresetFeature?) {
-    guard feature.effects.preset?.identifier != preset?.identifier else {
+  mutating func selectFilterPreset(_ preset: FilterFeature?) {
+    guard feature.effects.preset?.id != preset?.id else {
       return
     }
     feature.effects.preset = preset

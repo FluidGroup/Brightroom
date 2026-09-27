@@ -196,7 +196,7 @@ struct _ColorCubeTextParser {
 
     return try utf8.withUnsafeBufferPointer { buffer in
       guard let baseAddress = buffer.baseAddress else {
-        throw ColorCubeFeatureLoadingError.missingLUT3DSize
+        throw ColorCubeLoadingError.missingCubeSize
       }
       let source = _ColorCubeUTF8Source(
         bytes: UnsafeBufferPointer(
@@ -245,7 +245,7 @@ struct _ColorCubeTextParser {
           let parsedDimension = Int(source.string(in: valueTokens[0])),
           let pixelCount = Self.cubePixelCount(dimension: parsedDimension)
         else {
-          throw ColorCubeFeatureLoadingError.invalidLUT3DSize(
+          throw ColorCubeLoadingError.invalidCubeSize(
             value,
             line: line.number
           )
@@ -256,7 +256,7 @@ struct _ColorCubeTextParser {
       }
 
       if source.token(in: keyword, equalsASCII: "LUT_1D_SIZE") {
-        throw ColorCubeFeatureLoadingError.unsupportedLUT1DSize(
+        throw ColorCubeLoadingError.unsupportedLUT1DSize(
           line: line.number
         )
       }
@@ -297,7 +297,7 @@ struct _ColorCubeTextParser {
       }
 
       guard let red = source.float(in: keyword) else {
-        throw ColorCubeFeatureLoadingError.invalidDirective(
+        throw ColorCubeLoadingError.invalidDirective(
           source.string(in: keyword),
           line: line.number
         )
@@ -312,7 +312,7 @@ struct _ColorCubeTextParser {
         let blue = source.float(in: blueToken),
         blue.isFinite
       else {
-        throw ColorCubeFeatureLoadingError.invalidDataLine(
+        throw ColorCubeLoadingError.invalidDataLine(
           source.string(in: line.range),
           line: line.number
         )
@@ -325,11 +325,11 @@ struct _ColorCubeTextParser {
     }
 
     guard let dimension else {
-      throw ColorCubeFeatureLoadingError.missingLUT3DSize
+      throw ColorCubeLoadingError.missingCubeSize
     }
 
     guard isDefaultDomain(domainMin: domainMin, domainMax: domainMax) else {
-      throw ColorCubeFeatureLoadingError.unsupportedDomain(
+      throw ColorCubeLoadingError.unsupportedDomain(
         domainMin: domainMin,
         domainMax: domainMax
       )
@@ -338,7 +338,7 @@ struct _ColorCubeTextParser {
     let expectedRowCount = dimension * dimension * dimension
     let actualRowCount = rgbaValues.count / 4
     guard actualRowCount == expectedRowCount else {
-      throw ColorCubeFeatureLoadingError.mismatchedDataCount(
+      throw ColorCubeLoadingError.mismatchedDataCount(
         expected: expectedRowCount,
         actual: actualRowCount
       )
@@ -424,7 +424,7 @@ struct _ColorCubeTextParser {
     directive: String,
     line: String,
     lineNumber: Int
-  ) -> ColorCubeFeatureLoadingError {
+  ) -> ColorCubeLoadingError {
     let uppercasedDirective = directive.uppercased()
     if
       uppercasedDirective.hasPrefix("DOMAIN")

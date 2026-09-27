@@ -75,7 +75,7 @@ public final class ColorCubeLoader {
           let parsedCube = try parser.parse(contentsOf: url)
           return ColorCubeFeature(
             name: parsedCube.title ?? name(from: path, dimension: parsedCube.dimension),
-            identifier: path,
+            id: path,
             dimension: parsedCube.dimension,
             cubeData: parsedCube.cubeData
           )
@@ -110,7 +110,7 @@ public final class ColorCubeLoader {
 
         return ColorCubeFeature(
           name: name(from: path, dimension: dimension),
-          identifier: path,
+          id: path,
           dimension: dimension,
           cubeData: cubeData
         )

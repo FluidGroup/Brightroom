@@ -18,9 +18,9 @@ struct ImageEditorFeatureEditingTests {
 
   private let imageSize = CGSize(width: 40, height: 20)
 
-  private let preset = PresetFeature(
+  private let preset = FilterFeature(
     name: "Test",
-    identifier: "test",
+    id: "test",
     effects: [AnyImageEffect(BrightnessFeature(value: 0.1))]
   )
 
@@ -121,7 +121,7 @@ struct ImageEditorFeatureEditingTests {
     document.selectFilterPreset(preset)
     document.setAdjustmentValue(50, parameter: .exposure)
 
-    #expect(document.feature.effects.preset?.identifier == "test")
+    #expect(document.feature.effects.preset?.id == "test")
     #expect(document.feature.effects.exposure?.ev == 0.9)
     #expect(document.hasUncommittedChanges)
   }
@@ -173,14 +173,14 @@ struct ImageEditorFeatureEditingTests {
 
     document.undo()
     #expect(document.feature.effects.exposure == nil)
-    #expect(document.feature.effects.preset?.identifier == "test")
+    #expect(document.feature.effects.preset?.id == "test")
 
     document.undo()
     #expect(document.feature.effects.preset == nil)
     #expect(document.canRedo)
 
     document.redo()
-    #expect(document.feature.effects.preset?.identifier == "test")
+    #expect(document.feature.effects.preset?.id == "test")
   }
 
   @Test func `Discarding uncommitted changes returns to the latest commit`() {
@@ -192,7 +192,7 @@ struct ImageEditorFeatureEditingTests {
 
     document.discardUncommittedChanges()
 
-    #expect(document.feature.effects.preset?.identifier == "test")
+    #expect(document.feature.effects.preset?.id == "test")
     #expect(document.feature.effects.exposure == nil)
   }
 

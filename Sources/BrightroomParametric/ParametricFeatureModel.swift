@@ -97,32 +97,33 @@ public struct CropFeature: Feature, Equatable {
   }
 }
 
-/// A named group of image effects, such as a filter preset.
+/// A named group of image effects: a filter, such as a film look.
 ///
 /// The effects are decided by data (a catalog), so they are type-erased.
-/// Equal presets compare equal; selection UIs compare `identifier`.
+/// Equal filters compare equal (name, id, and effects); selection UIs compare
+/// `id`.
 ///
-/// A preset is a composite: its `body` is its effects, evaluated in order.
-/// Nest another preset with `AnyImageEffect(innerPreset)`.
-public struct PresetFeature: ImageEffect, Equatable {
+/// A filter is a composite: its `body` is its effects, evaluated in order.
+/// Nest another filter with `AnyImageEffect(innerFilter)`.
+public struct FilterFeature: ImageEffect, Equatable, Identifiable {
 
-  /// The display name associated with the preset.
+  /// The display name associated with the filter.
   public var name: String
 
-  /// The stable preset identifier.
-  public var identifier: String
+  /// The stable filter identifier.
+  public var id: String
 
-  /// The effects evaluated inside the preset, in order.
+  /// The effects evaluated inside the filter, in order.
   public var effects: [AnyImageEffect]
 
-  /// Creates a preset feature.
+  /// Creates a filter feature.
   public init(
     name: String,
-    identifier: String,
+    id: String,
     effects: [AnyImageEffect]
   ) {
     self.name = name
-    self.identifier = identifier
+    self.id = id
     self.effects = effects
   }
 
@@ -141,10 +142,11 @@ public struct ColorCubeFeature: ImageEffect, Equatable {
   public var name: String
 
   /// The stable lookup-table identifier.
-  public var identifier: String
+  public var id: String
 
   /// The opacity used when compositing the color-cube result over its input.
-  public var amount: Double
+  /// `1` applies the lookup table fully, `0` leaves the input unchanged.
+  public var intensity: Double
 
   /// The color-cube dimension.
   public var dimension: Int
@@ -155,14 +157,14 @@ public struct ColorCubeFeature: ImageEffect, Equatable {
   /// Creates a color-cube effect.
   public init(
     name: String,
-    identifier: String,
-    amount: Double = 1,
+    id: String,
+    intensity: Double = 1,
     dimension: Int,
     cubeData: Data
   ) {
     self.name = name
-    self.identifier = identifier
-    self.amount = amount
+    self.id = id
+    self.intensity = intensity
     self.dimension = dimension
     self.cubeData = cubeData
   }

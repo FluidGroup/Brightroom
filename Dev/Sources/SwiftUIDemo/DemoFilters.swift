@@ -24,34 +24,34 @@ import BrightroomParametric
 /// Sample filter presets used by the ImageEditor demo.
 ///
 /// These simple parameter combinations demonstrate host-provided presets through
-/// `ImageEditor.Options.filterPresets`; they are not a production catalog.
+/// `ImageEditor.Options.filters`; they are not a production catalog.
 enum DemoFilters {
 
-  static func make() -> [PresetFeature] {
+  static func make() -> [FilterFeature] {
     [
-      PresetFeature(name: "Vivid", identifier: "brightroom.preset.vivid", effects: [
+      FilterFeature(name: "Vivid", id: "brightroom.preset.vivid", effects: [
         AnyImageEffect(SaturationFeature(value: 0.32)),
         AnyImageEffect(ContrastFeature(value: 0.05)),
       ]),
-      PresetFeature(name: "Dramatic", identifier: "brightroom.preset.dramatic", effects: [
+      FilterFeature(name: "Dramatic", id: "brightroom.preset.dramatic", effects: [
         AnyImageEffect(ContrastFeature(value: 0.1)),
         AnyImageEffect(ShadowsFeature(value: -0.3)),
         AnyImageEffect(HighlightsFeature(value: 0.25)),
       ]),
-      PresetFeature(name: "Warm", identifier: "brightroom.preset.warm", effects: [
+      FilterFeature(name: "Warm", id: "brightroom.preset.warm", effects: [
         AnyImageEffect(WhiteBalanceFeature(temperature: 1200))
       ]),
-      PresetFeature(name: "Cool", identifier: "brightroom.preset.cool", effects: [
+      FilterFeature(name: "Cool", id: "brightroom.preset.cool", effects: [
         AnyImageEffect(WhiteBalanceFeature(temperature: -1200))
       ]),
-      PresetFeature(name: "Fade", identifier: "brightroom.preset.fade", effects: [
+      FilterFeature(name: "Fade", id: "brightroom.preset.fade", effects: [
         AnyImageEffect(FadeFeature(intensity: 0.3)),
         AnyImageEffect(ContrastFeature(value: -0.04)),
       ]),
-      PresetFeature(name: "Mono", identifier: "brightroom.preset.mono", effects: [
+      FilterFeature(name: "Mono", id: "brightroom.preset.mono", effects: [
         AnyImageEffect(SaturationFeature(value: -1))
       ]),
-      PresetFeature(name: "Noir", identifier: "brightroom.preset.noir", effects: [
+      FilterFeature(name: "Noir", id: "brightroom.preset.noir", effects: [
         AnyImageEffect(SaturationFeature(value: -1)),
         AnyImageEffect(ContrastFeature(value: 0.14)),
       ]),

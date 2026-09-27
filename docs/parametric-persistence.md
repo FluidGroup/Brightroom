@@ -56,7 +56,7 @@ struct StoredLook: Codable {
 
   init(_ look: Look) throws {
     exposure = look.exposure?.ev
-    lut = look.lut.map { StoredLUT(assetID: $0.identifier, amount: $0.amount) }
+    lut = look.lut.map { StoredLUT(assetID: $0.id, amount: $0.intensity) }
     extras = try look.extras.map(StoredEffect.init)
   }
 
@@ -65,7 +65,7 @@ struct StoredLook: Codable {
     look.exposure = exposure.map { ExposureFeature(ev: $0) }
     if let lut {
       var feature = try loadLUT(lut.assetID)  // Cube data stays in your asset catalog.
-      feature.amount = lut.amount
+      feature.intensity = lut.amount
       try feature.validate()
       look.lut = feature
     }
@@ -117,10 +117,10 @@ It uses only the public API.
 | --- | --- | --- |
 | Enablement | whether the member is present | an optional member, `if`, or leaving the feature out |
 | `CropFeature` | `rect` (the selection after straightening and before the output quarter turn; y-up, relative to the crop's input origin), `quarterTurn.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(rect:quarterTurn:straightenRadians:)`, then call `validate()` |
-| `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, set `amount`, then call `validate()` |
+| `ColorCubeFeature` | a reference to your asset, `intensity` | load the cube, set `intensity`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
-| `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
+| `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
 | `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
 

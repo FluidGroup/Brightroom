@@ -102,8 +102,8 @@ public enum FeatureEvaluationError: Error, Equatable, Sendable {
 
   /// A color-cube feature's data does not match its dimension.
   ///
-  /// `identifier` is the feature's lookup-table identifier.
-  case invalidColorCubeData(identifier: String, expectedByteCount: Int, actualByteCount: Int)
+  /// `id` is the feature's lookup-table identifier.
+  case invalidColorCubeData(id: String, expectedByteCount: Int, actualByteCount: Int)
 
   /// A union or intersection mask node has no inputs.
   case emptyMaskComposite
@@ -124,8 +124,8 @@ extension FeatureEvaluationError: LocalizedError {
     switch self {
     case let .invalidCropRect(rect):
       "The crop rectangle \(rect) cannot produce an image."
-    case let .invalidColorCubeData(identifier, expectedByteCount, actualByteCount):
-      "The color cube \"\(identifier)\" has \(actualByteCount) bytes of data; its dimension needs \(expectedByteCount)."
+    case let .invalidColorCubeData(id, expectedByteCount, actualByteCount):
+      "The color cube \"\(id)\" has \(actualByteCount) bytes of data; its dimension needs \(expectedByteCount)."
     case .emptyMaskComposite:
       "A mask union or intersection has no inputs."
     case let .kernelUnavailable(name, reason):

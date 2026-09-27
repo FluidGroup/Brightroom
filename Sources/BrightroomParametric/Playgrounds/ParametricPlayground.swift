@@ -138,7 +138,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
   // A 512×512 CLUT image holds a 64³ color cube; the dimension is inferred.
   // The result is `nil` when the file is missing.
-  let lut = try? ColorCubeFeature(cubeImageAt: Sample.lutURL, amount: 0.8)
+  let lut = try? ColorCubeFeature(contentsOfCubeImage: Sample.lutURL, intensity: 0.8)
   try Sample.render(Document(lut: lut))
 }
 

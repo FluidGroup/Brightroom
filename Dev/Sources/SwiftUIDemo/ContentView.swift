@@ -547,7 +547,7 @@ private extension ImageEditor.Options {
   /// Creates demo options with the sample filter catalog explicitly supplied.
   static func demo() -> Self {
     var options = Self()
-    options.filterPresets = DemoFilters.make()
+    options.filters = DemoFilters.make()
     return options
   }
 

@@ -26,9 +26,9 @@ struct PreviewExportVisualEvidenceTests {
 
     // A realistic edit: a built-in preset, a global exposure lift, and a soft
     // blur painted across a horizontal band, plus a centered crop.
-    let preset = PresetFeature(
+    let preset = FilterFeature(
       name: "WarmPop",
-      identifier: "evidence.preset.warm-pop",
+      id: "evidence.preset.warm-pop",
       effects: [
         AnyImageEffect(SaturationFeature(value: 0.3)),
         AnyImageEffect(WhiteBalanceFeature(temperature: 900)),

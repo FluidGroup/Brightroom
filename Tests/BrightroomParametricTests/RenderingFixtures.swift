@@ -224,8 +224,8 @@ enum RenderingFixtures {
     }
     return ColorCubeFeature(
       name: "Cross Process",
-      identifier: "composition-tests.cross-process",
-      amount: 0.85,
+      id: "composition-tests.cross-process",
+      intensity: 0.85,
       dimension: dimension,
       cubeData: values.withUnsafeBufferPointer { Data(buffer: $0) }
     )

@@ -30,7 +30,7 @@ struct AppOwnedPersistenceExampleTests {
     mixer.magenta.luminance = -8
 
     var lut = try Self.loadLUT(assetID: "film-01")
-    lut.amount = 0.6
+    lut.intensity = 0.6
 
     let look = Look(
       exposure: ExposureFeature(ev: 0.2),
@@ -51,7 +51,7 @@ struct AppOwnedPersistenceExampleTests {
     #expect(restored.toneCurve?.value.red.points[1] == ToneCurve.Point(input: 0.45, output: 0.65))
     #expect(restored.colorMixer?.adjustment == mixer)
     #expect(restored.colorMixer?.algorithm == .oklch)
-    #expect(restored.lut?.amount == 0.6)
+    #expect(restored.lut?.intensity == 0.6)
     #expect(restored.lut?.cubeData == lut.cubeData)
 
     // The restored look renders the same pixels.
@@ -136,7 +136,7 @@ struct AppOwnedPersistenceExampleTests {
     }
     let lut = ColorCubeFeature(
       name: "Film 01",
-      identifier: assetID,
+      id: assetID,
       dimension: dimension,
       cubeData: values.withUnsafeBufferPointer { Data(buffer: $0) }
     )
@@ -234,7 +234,7 @@ private struct StoredLook: Codable, Equatable {
         bands: ColorMixerBand.allCases.map { StoredBand(band: $0, value: mixer.adjustment[$0]) }
       )
     }
-    lut = look.lut.map { StoredLUT(assetID: $0.identifier, amount: $0.amount) }
+    lut = look.lut.map { StoredLUT(assetID: $0.id, amount: $0.intensity) }
     extras = try look.extras.map { try StoredEffect($0.base) }
   }
 
@@ -254,7 +254,7 @@ private struct StoredLook: Codable, Equatable {
     }
     if let lut {
       var feature = try loadLUT(lut.assetID)
-      feature.amount = lut.amount
+      feature.intensity = lut.amount
       look.lut = feature
     }
     look.extras = extras.map { $0.makeEffect() }

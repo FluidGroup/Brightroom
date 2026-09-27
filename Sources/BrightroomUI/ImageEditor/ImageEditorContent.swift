@@ -120,7 +120,7 @@ struct ImageEditorContent: View {
             originalAspectRatio: originalAspectRatio,
             aspectRatioSelection: aspectRatioSelection,
             localBlurState: localBlurState,
-            filterPresets: options.filterPresets,
+            filters: options.filters,
             filterPreviewBaseImage: editingStack.loadedState?.thumbnailImage,
             currentEffects: displayedFeature.effects,
             adjustmentParameter: adjustmentParameter,
@@ -277,7 +277,7 @@ struct ImageEditorContent: View {
     editingMode = mode
   }
 
-  private func selectFilterPreset(_ preset: PresetFeature?) {
+  private func selectFilterPreset(_ preset: FilterFeature?) {
     write { $0.selectFilterPreset(preset) }
   }
 
@@ -581,7 +581,7 @@ private struct ControlHost: View {
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localBlurState: LocalBlurState
-  let filterPresets: [PresetFeature]
+  let filters: [FilterFeature]
   let filterPreviewBaseImage: CIImage?
   let currentEffects: ImageEditorFeature.Effects?
   let adjustmentParameter: ImageEditor.Adjustment
@@ -594,7 +594,7 @@ private struct ControlHost: View {
   let onCommitStraightenAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearLocalBlur: () -> Void
-  let onSelectFilterPreset: (PresetFeature?) -> Void
+  let onSelectFilterPreset: (FilterFeature?) -> Void
   let onSelectAdjustmentParameter: (ImageEditor.Adjustment) -> Void
   let onSetAdjustmentValue: (Double) -> Void
   let onEndAdjustmentValue: (Double) -> Void
@@ -625,9 +625,9 @@ private struct ControlHost: View {
 
       case .filters:
         FilterControl(
-          presets: filterPresets,
+          presets: filters,
           baseImage: filterPreviewBaseImage,
-          selectedPresetIdentifier: currentEffects?.preset?.identifier,
+          selectedPresetIdentifier: currentEffects?.preset?.id,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
           onSelectPreset: onSelectFilterPreset
@@ -947,12 +947,12 @@ private struct FilterControl: View {
   /// Scroll identity for the Original chip (preset chips use their identifier).
   private static let originalScrollID = "brightroom.filters.original"
 
-  let presets: [PresetFeature]
+  let presets: [FilterFeature]
   let baseImage: CIImage?
   let selectedPresetIdentifier: String?
   let localizedStrings: ImageEditor.LocalizedStrings
   let isLoaded: Bool
-  let onSelectPreset: (PresetFeature?) -> Void
+  let onSelectPreset: (FilterFeature?) -> Void
 
   /// The chip centered by `.scrollPosition` (also written back as the user
   /// scrolls). Driven to the selected chip whenever the selection changes.
@@ -972,17 +972,17 @@ private struct FilterControl: View {
         .id(Self.originalScrollID)
         .accessibilityIdentifier("image-editor.filters.original")
 
-        ForEach(presets, id: \.identifier) { preset in
+        ForEach(presets) { preset in
           FilterChip(
             title: preset.name,
             preset: preset,
             baseImage: baseImage,
             pointSize: Self.thumbnailPointSize,
-            isSelected: selectedPresetIdentifier == preset.identifier,
+            isSelected: selectedPresetIdentifier == preset.id,
             action: { onSelectPreset(preset) }
           )
-          .id(preset.identifier)
-          .accessibilityIdentifier("image-editor.filters.\(preset.identifier)")
+          .id(preset.id)
+          .accessibilityIdentifier("image-editor.filters.\(preset.id)")
         }
       }
       .scrollTargetLayout()
@@ -1013,7 +1013,7 @@ private struct FilterControl: View {
 private struct FilterChip: View {
 
   let title: String
-  let preset: PresetFeature?
+  let preset: FilterFeature?
   let baseImage: CIImage?
   let pointSize: CGFloat
   let isSelected: Bool
@@ -1080,7 +1080,7 @@ private struct FilterChip: View {
   private var renderKey: RenderKey {
     RenderKey(
       baseImageID: baseImage.map(ObjectIdentifier.init),
-      presetIdentifier: preset?.identifier,
+      presetIdentifier: preset?.id,
       scale: displayScale
     )
   }

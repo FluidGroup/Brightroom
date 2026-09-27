@@ -57,7 +57,7 @@ enum FilterSwatch {
   ///
   /// `@concurrent` runs the body on the concurrent executor, so a chip's
   /// MainActor `.task` offloads the Core Image work off the main thread just by
-  /// awaiting it — no queue hop, no box. `CIImage`, `PresetFeature` and `UIImage`
+  /// awaiting it — no queue hop, no box. `CIImage`, `FilterFeature` and `UIImage`
   /// are all `Sendable`, so the values cross the isolation boundary directly.
   ///
   /// - Parameters:
@@ -67,7 +67,7 @@ enum FilterSwatch {
   @concurrent
   static func render(
     base: CIImage,
-    preset: PresetFeature?,
+    preset: FilterFeature?,
     pointSize: CGFloat,
     scale: CGFloat
   ) async -> UIImage? {
@@ -136,7 +136,7 @@ enum FilterSwatch {
 
   private static func makeImage(
     from prepared: Prepared,
-    preset: PresetFeature?,
+    preset: FilterFeature?,
     scale: CGFloat
   ) -> UIImage? {
     let source: CIImage

@@ -8,19 +8,19 @@ import Foundation
 import ImageIO
 
 /// Errors raised while materializing a color-cube feature from a LUT file.
-public enum ColorCubeFeatureLoadingError: Error, Equatable, LocalizedError, Sendable {
+public enum ColorCubeLoadingError: Error, Equatable, LocalizedError, Sendable {
 
-  /// ImageIO could not decode the LUT image.
-  case failedToCreateImage(String)
+  /// ImageIO could not decode the lookup-table image.
+  case unreadableImage(String)
 
   /// The image dimensions do not describe a complete three-dimensional cube.
   case unableToInferCubeDimension(width: Int, height: Int)
 
   /// The `.cube` file does not contain a `LUT_3D_SIZE` directive.
-  case missingLUT3DSize
+  case missingCubeSize
 
   /// The `LUT_3D_SIZE` value is malformed.
-  case invalidLUT3DSize(String, line: Int)
+  case invalidCubeSize(String, line: Int)
 
   /// One-dimensional LUTs are not supported by `ColorCubeFeature`.
   case unsupportedLUT1DSize(line: Int)
@@ -42,13 +42,13 @@ public enum ColorCubeFeatureLoadingError: Error, Equatable, LocalizedError, Send
 
   public var errorDescription: String? {
     switch self {
-    case .failedToCreateImage(let name):
+    case .unreadableImage(let name):
       return "Could not decode LUT image '\(name)'."
     case .unableToInferCubeDimension(let width, let height):
       return "The \(width)×\(height) LUT image does not contain a complete color cube."
-    case .missingLUT3DSize:
+    case .missingCubeSize:
       return "The LUT is missing a LUT_3D_SIZE directive."
-    case .invalidLUT3DSize(let value, let line):
+    case .invalidCubeSize(let value, let line):
       return "Invalid LUT_3D_SIZE '\(value)' at line \(line)."
     case .unsupportedLUT1DSize(let line):
       return "LUT_1D_SIZE is not supported at line \(line)."
@@ -76,22 +76,22 @@ extension ColorCubeFeature {
   /// - Parameters:
   ///   - url: The local URL of a three-dimensional `.cube` file.
   ///   - name: A display name. The file's `TITLE` or base name is used by default.
-  ///   - identifier: The lookup-table identifier that selection UIs compare and
+  ///   - id: The lookup-table identifier that selection UIs compare and
   ///     hosts store. The file name (`url.lastPathComponent`) is used by
   ///     default; pass a unique value when files from different folders can
   ///     share a name.
-  ///   - amount: The opacity used when compositing the LUT result.
+  ///   - intensity: The opacity used when compositing the LUT result.
   public init(
     contentsOfCubeFile url: URL,
     name: String? = nil,
-    identifier: String? = nil,
-    amount: Double = 1
+    id: String? = nil,
+    intensity: Double = 1
   ) throws {
     let parsed = try _ColorCubeTextParser().parse(contentsOf: url)
     self.init(
       name: name ?? parsed.title ?? url.deletingPathExtension().lastPathComponent,
-      identifier: identifier ?? url.lastPathComponent,
-      amount: amount,
+      id: id ?? url.lastPathComponent,
+      intensity: intensity,
       dimension: parsed.dimension,
       cubeData: parsed.cubeData
     )
@@ -105,31 +105,31 @@ extension ColorCubeFeature {
   /// - Parameters:
   ///   - url: The local URL of a square LUT image.
   ///   - name: A display name. The file's base name is used by default.
-  ///   - identifier: The lookup-table identifier that selection UIs compare and
+  ///   - id: The lookup-table identifier that selection UIs compare and
   ///     hosts store. The file name (`url.lastPathComponent`) is used by
   ///     default; pass a unique value when files from different folders can
   ///     share a name.
-  ///   - amount: The opacity used when compositing the LUT result.
+  ///   - intensity: The opacity used when compositing the LUT result.
   ///   - dimension: An explicit color-cube dimension, or `nil` to infer it.
   public init(
-    cubeImageAt url: URL,
+    contentsOfCubeImage url: URL,
     name: String? = nil,
-    identifier: String? = nil,
-    amount: Double = 1,
+    id: String? = nil,
+    intensity: Double = 1,
     dimension: Int? = nil
   ) throws {
     guard
       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
       let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
     else {
-      throw ColorCubeFeatureLoadingError.failedToCreateImage(url.lastPathComponent)
+      throw ColorCubeLoadingError.unreadableImage(url.lastPathComponent)
     }
 
     try self.init(
       cubeImage: image,
       name: name ?? url.deletingPathExtension().lastPathComponent,
-      identifier: identifier ?? url.lastPathComponent,
-      amount: amount,
+      id: id ?? url.lastPathComponent,
+      intensity: intensity,
       dimension: dimension
     )
   }
@@ -141,8 +141,8 @@ extension ColorCubeFeature {
   public init(
     cubeImage: CGImage,
     name: String,
-    identifier: String,
-    amount: Double = 1,
+    id: String,
+    intensity: Double = 1,
     dimension: Int? = nil
   ) throws {
     let resolvedDimension =
@@ -155,8 +155,8 @@ extension ColorCubeFeature {
 
     self.init(
       name: name,
-      identifier: identifier,
-      amount: amount,
+      id: id,
+      intensity: intensity,
       dimension: resolvedDimension,
       cubeData: cubeData
     )
@@ -166,7 +166,7 @@ extension ColorCubeFeature {
   public static func inferCubeDimension(width: Int, height: Int) throws -> Int {
     let (pixelCount, overflowed) = width.multipliedReportingOverflow(by: height)
     guard overflowed == false, pixelCount > 0 else {
-      throw ColorCubeFeatureLoadingError.unableToInferCubeDimension(
+      throw ColorCubeLoadingError.unableToInferCubeDimension(
         width: width,
         height: height
       )
@@ -180,7 +180,7 @@ extension ColorCubeFeature {
       }
     }
 
-    throw ColorCubeFeatureLoadingError.unableToInferCubeDimension(
+    throw ColorCubeLoadingError.unableToInferCubeDimension(
       width: width,
       height: height
     )
@@ -193,7 +193,7 @@ extension ColorCubeFeature {
     let width = image.width
     let height = image.height
     guard let expectedPixelCount = Self.cubePixelCount(dimension: dimension) else {
-      throw ColorCubeFeatureLoadingError.unableToInferCubeDimension(
+      throw ColorCubeLoadingError.unableToInferCubeDimension(
         width: width,
         height: height
       )
@@ -205,7 +205,7 @@ extension ColorCubeFeature {
       imagePixelCountOverflowed == false,
       imagePixelCount == expectedPixelCount
     else {
-      throw ColorCubeFeatureLoadingError.unableToInferCubeDimension(
+      throw ColorCubeLoadingError.unableToInferCubeDimension(
         width: width,
         height: height
       )
@@ -236,7 +236,7 @@ extension ColorCubeFeature {
     }
 
     guard didRender else {
-      throw ColorCubeFeatureLoadingError.failedToCreateImage("CGImage")
+      throw ColorCubeLoadingError.unreadableImage("CGImage")
     }
 
     var floatComponents = [Float](repeating: 0, count: componentCount)

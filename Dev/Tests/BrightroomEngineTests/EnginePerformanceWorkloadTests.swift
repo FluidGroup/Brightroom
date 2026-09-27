@@ -126,9 +126,9 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
 
   private static func makeEffects() -> ImageEditorFeature.Effects {
     ImageEditorFeature.Effects(
-      preset: PresetFeature(
+      preset: FilterFeature(
         name: "Perf",
-        identifier: "perf.preset",
+        id: "perf.preset",
         effects: [
           AnyImageEffect(SaturationFeature(value: 0.3)),
           AnyImageEffect(WhiteBalanceFeature(temperature: 900)),

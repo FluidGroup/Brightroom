@@ -14,27 +14,27 @@ struct FeatureTreeDescriptorTests {
   @Test func `a nil member is left out and order follows the body`() {
     var document = TreeDocument()
     let nodes = FeatureTreeDescriptor.nodes(for: document)
-    #expect(nodes.map(\.typeName) == ["ExposureFeature", "PresetFeature", "FilmLook", "CropFeature"])
+    #expect(nodes.map(\.typeName) == ["ExposureFeature", "FilterFeature", "FilmLook", "CropFeature"])
 
     document.exposure = nil
     document.vignette = VignetteFeature(value: 0.3)
     #expect(
       FeatureTreeDescriptor.nodes(for: document).map(\.typeName)
-        == ["PresetFeature", "FilmLook", "VignetteFeature", "CropFeature"]
+        == ["FilterFeature", "FilmLook", "VignetteFeature", "CropFeature"]
     )
   }
 
   @Test func `a preset shows its fields and its effects, including a nested preset`() throws {
     let preset = try #require(
-      FeatureTreeDescriptor.nodes(for: TreeDocument()).first { $0.typeName == "PresetFeature" }
+      FeatureTreeDescriptor.nodes(for: TreeDocument()).first { $0.typeName == "FilterFeature" }
     )
 
-    #expect(preset.title == "Preset")
+    #expect(preset.title == "Filter")
     #expect(preset.symbolName == "camera.filters")
     #expect(Self.value(of: "Name", in: preset) == "Warm")
-    #expect(Self.value(of: "Identifier", in: preset) == "tests.warm")
+    #expect(Self.value(of: "Id", in: preset) == "tests.warm")
     #expect(preset.fields.map(\.name).contains("Effects") == false)
-    #expect(preset.children.map(\.typeName) == ["WhiteBalanceFeature", "PresetFeature"])
+    #expect(preset.children.map(\.typeName) == ["WhiteBalanceFeature", "FilterFeature"])
 
     let inner = preset.children[1]
     #expect(Self.value(of: "Name", in: inner) == "Inner")
@@ -105,17 +105,17 @@ struct FeatureTreeDescriptorTests {
     let ids = Self.allNodes(nodes).map(\.id)
     #expect(Set(ids).count == ids.count)
     #expect(Self.allNodes(FeatureTreeDescriptor.nodes(for: TreeDocument())).map(\.id) == ids)
-    #expect(nodes.map(\.id) == ["ExposureFeature#0", "PresetFeature#0", "FilmLook#0", "CropFeature#0"])
+    #expect(nodes.map(\.id) == ["ExposureFeature#0", "FilterFeature#0", "FilmLook#0", "CropFeature#0"])
     #expect(
       nodes[1].children.map(\.id)
-        == ["PresetFeature#0/WhiteBalanceFeature#0", "PresetFeature#0/PresetFeature#0"]
+        == ["FilterFeature#0/WhiteBalanceFeature#0", "FilterFeature#0/FilterFeature#0"]
     )
 
     // An absent member does not re-key the nodes after it.
     var withoutExposure = TreeDocument()
     withoutExposure.exposure = nil
     let shifted = FeatureTreeDescriptor.nodes(for: withoutExposure)
-    #expect(shifted.map(\.id) == ["PresetFeature#0", "FilmLook#0", "CropFeature#0"])
+    #expect(shifted.map(\.id) == ["FilterFeature#0", "FilmLook#0", "CropFeature#0"])
 
     // Same-typed siblings are told apart by occurrence.
     let twice = [AnyImageEffect(FadeFeature(intensity: 0.1)), AnyImageEffect(FadeFeature(intensity: 0.2))]
@@ -126,12 +126,12 @@ struct FeatureTreeDescriptorTests {
     let preset = TreeDocument().preset
     let fade = AnyImageEffect(FadeFeature(intensity: 0.1))
 
-    #expect(FeatureTreeDescriptor.nodes(for: preset).map(\.typeName) == ["PresetFeature"])
-    #expect(FeatureTreeDescriptor.nodes(for: preset).first?.fields.map(\.name) == ["Name", "Identifier"])
-    #expect(FeatureTreeDescriptor.nodes(for: [AnyImageEffect(preset)]).map(\.typeName) == ["PresetFeature"])
+    #expect(FeatureTreeDescriptor.nodes(for: preset).map(\.typeName) == ["FilterFeature"])
+    #expect(FeatureTreeDescriptor.nodes(for: preset).first?.fields.map(\.name) == ["Name", "Id"])
+    #expect(FeatureTreeDescriptor.nodes(for: [AnyImageEffect(preset)]).map(\.typeName) == ["FilterFeature"])
     #expect(
       FeatureTreeDescriptor.nodes(for: [AnyImageEffect(preset), fade]).map(\.typeName)
-        == ["PresetFeature", "FadeFeature"]
+        == ["FilterFeature", "FadeFeature"]
     )
 
     let look = FeatureTreeDescriptor.nodes(for: FilmLook())
@@ -237,15 +237,15 @@ private struct FilmLook: ImageEffect, Equatable {
 private struct TreeDocument: Feature {
 
   var exposure: ExposureFeature? = ExposureFeature(ev: 0.2)
-  var preset = PresetFeature(
+  var preset = FilterFeature(
     name: "Warm",
-    identifier: "tests.warm",
+    id: "tests.warm",
     effects: [
       AnyImageEffect(WhiteBalanceFeature(temperature: 400)),
       AnyImageEffect(
-        PresetFeature(
+        FilterFeature(
           name: "Inner",
-          identifier: "tests.inner",
+          id: "tests.inner",
           effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
         )
       ),

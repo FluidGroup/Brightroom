@@ -364,7 +364,7 @@ struct CompositionRenderingTests {
 
     // The inner preset contributes.
     var withoutInner = document
-    withoutInner.look.preset.effects.removeAll { $0.base is PresetFeature }
+    withoutInner.look.preset.effects.removeAll { $0.base is FilterFeature }
     Fixtures.expectVisiblyDifferent(
       composed,
       try Fixtures.renderer.makeImage(from: source, feature: withoutInner)
@@ -773,7 +773,7 @@ private struct NestedPresetDocument: Feature {
   struct Look: ImageEffect {
 
     var brightness = BrightnessFeature(value: 0.03)
-    var preset: PresetFeature
+    var preset: FilterFeature
 
     var body: some ImageEffect {
       brightness
@@ -789,7 +789,7 @@ private struct NestedPresetDocument: Feature {
     vignette
   }
 
-  static func makeOuterPreset(includesInnerFade: Bool) -> PresetFeature {
+  static func makeOuterPreset(includesInnerFade: Bool) -> FilterFeature {
     var innerEffects = [
       AnyImageEffect(ContrastFeature(value: 0.25)),
       AnyImageEffect(SaturationFeature(value: -0.4)),
@@ -797,14 +797,14 @@ private struct NestedPresetDocument: Feature {
     if includesInnerFade {
       innerEffects.append(AnyImageEffect(FadeFeature(intensity: 0.5)))
     }
-    let inner = PresetFeature(
+    let inner = FilterFeature(
       name: "Inner",
-      identifier: "composition-tests.inner",
+      id: "composition-tests.inner",
       effects: innerEffects
     )
-    return PresetFeature(
+    return FilterFeature(
       name: "Outer",
-      identifier: "composition-tests.outer",
+      id: "composition-tests.outer",
       effects: [
         AnyImageEffect(ExposureFeature(ev: 0.2)),
         AnyImageEffect(inner),
@@ -884,9 +884,9 @@ enum CompositionVariant: String, CaseIterable, Sendable {
         catalog: [
           AnyImageEffect(SaturationFeature(value: 0.4)),
           AnyImageEffect(
-            PresetFeature(
+            FilterFeature(
               name: "Catalog",
-              identifier: "composition-tests.catalog",
+              id: "composition-tests.catalog",
               effects: [
                 AnyImageEffect(ContrastFeature(value: -0.1)),
                 AnyImageEffect(BrightnessFeature(value: 0.05)),
@@ -943,9 +943,9 @@ private struct ImageEditorLikeFeature: Feature {
 
   var exposure = ExposureFeature(ev: 0.25)
   var saturation = SaturationFeature(value: 0.2)
-  var preset: PresetFeature? = PresetFeature(
+  var preset: FilterFeature? = FilterFeature(
     name: "Film",
-    identifier: "composition-tests.film",
+    id: "composition-tests.film",
     effects: [
       AnyImageEffect(ContrastFeature(value: 0.15)),
       AnyImageEffect(FadeFeature(intensity: 0.06)),

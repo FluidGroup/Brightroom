@@ -475,12 +475,12 @@ struct CompositionBehaviorTests {
     let source = try Fixtures.makeSource()
     let cube = ColorCubeFeature(
       name: "Invalid",
-      identifier: "composition-tests.invalid-cube",
+      id: "composition-tests.invalid-cube",
       dimension: 4,
       cubeData: Data(count: 10)
     )
     let expectedError = FeatureEvaluationError.invalidColorCubeData(
-      identifier: "composition-tests.invalid-cube",
+      id: "composition-tests.invalid-cube",
       expectedByteCount: 4 * 4 * 4 * 4 * 4,
       actualByteCount: 10
     )
@@ -517,9 +517,9 @@ struct CompositionBehaviorTests {
       }
     }
 
-    let preset = PresetFeature(
+    let preset = FilterFeature(
       name: "Broken",
-      identifier: "composition-tests.broken",
+      id: "composition-tests.broken",
       effects: [AnyImageEffect(ContrastFeature(value: 0.1)), AnyImageEffect(cube)]
     )
 
@@ -580,7 +580,7 @@ struct CompositionBehaviorTests {
     // A mask error takes precedence over an error from the content.
     let invalidCube = ColorCubeFeature(
       name: "Invalid",
-      identifier: "composition-tests.invalid-cube",
+      id: "composition-tests.invalid-cube",
       dimension: 4,
       cubeData: Data(count: 10)
     )
@@ -737,9 +737,9 @@ private struct Look: ImageEffect, Equatable {
 
   var exposure = ExposureFeature(ev: 0.6)
   var saturation = SaturationFeature(value: -0.8)
-  var preset = PresetFeature(
+  var preset = FilterFeature(
     name: "Punch",
-    identifier: "composition-tests.punch",
+    id: "composition-tests.punch",
     effects: [AnyImageEffect(ContrastFeature(value: 0.2))]
   )
 

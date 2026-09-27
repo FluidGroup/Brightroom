@@ -60,7 +60,7 @@ public struct FeatureTreeNode: Identifiable, Sendable {
   ///
   /// Features carry no identity of their own, so the id is the node's path:
   /// each step is a type name and its occurrence among same-typed siblings
-  /// (for example `PresetFeature#0/WhiteBalanceFeature#0`). A sibling that is
+  /// (for example `FilterFeature#0/WhiteBalanceFeature#0`). A sibling that is
   /// absent, such as a `nil` member, does not re-key the nodes after it, but
   /// reordering same-typed siblings does.
   public let id: String
@@ -178,7 +178,7 @@ public enum FeatureTreeDescriptor {
         title: humanizeType(typeName),
         typeName: typeName,
         summary: summarize(fields) ?? count(children.count, "feature"),
-        symbolName: feature is PresetFeature ? "camera.filters" : "square.stack",
+        symbolName: feature is FilterFeature ? "camera.filters" : "square.stack",
         fields: fields,
         children: children
       )

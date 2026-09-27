@@ -15,10 +15,10 @@ open class PresetStorage {
 
   public static let `default` = PresetStorage(presets: [])
 
-  public var presets: [PresetFeature] = []
+  public var presets: [FilterFeature] = []
 
   public init(
-    presets: [PresetFeature]
+    presets: [FilterFeature]
   ) {
     self.presets = presets
   }
@@ -34,9 +34,9 @@ extension PresetStorage {
 
     self.presets = cubes
       .map { cube in
-        PresetFeature(
+        FilterFeature(
           name: cube.name,
-          identifier: cube.identifier,
+          id: cube.id,
           effects: [AnyImageEffect(cube)]
         )
       }

@@ -122,9 +122,9 @@ struct ImageEditorFeatureTests {
   /// A host that stores the document's values and rebuilds it gets back the
   /// document the editor produced (the resume path).
   @Test func `A document rebuilt from the same values equals the edited one`() {
-    let preset = PresetFeature(
+    let preset = FilterFeature(
       name: "P",
-      identifier: "p",
+      id: "p",
       effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
 
@@ -140,9 +140,9 @@ struct ImageEditorFeatureTests {
 
     let rebuilt = ImageEditorFeature(
       effects: .init(
-        preset: PresetFeature(
+        preset: FilterFeature(
           name: "P",
-          identifier: "p",
+          id: "p",
           effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
         ),
         exposure: ExposureFeature(ev: edited.effects.exposure!.ev),
@@ -294,9 +294,9 @@ struct ImageEditorFeatureTests {
     ] {
       parameter.apply(sliderValue: value, to: &document.effects)
     }
-    document.effects.preset = PresetFeature(
+    document.effects.preset = FilterFeature(
       name: "P",
-      identifier: "p",
+      id: "p",
       effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
     document.effects.sharpen = SharpenFeature(intensity: 0.4, radius: 1.5)

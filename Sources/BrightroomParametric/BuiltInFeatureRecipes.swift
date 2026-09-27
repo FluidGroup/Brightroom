@@ -83,7 +83,7 @@ extension ColorCubeFeature {
   public func validate() throws {
     guard cubeData.count == expectedByteCount else {
       throw FeatureEvaluationError.invalidColorCubeData(
-        identifier: identifier,
+        id: id,
         expectedByteCount: expectedByteCount,
         actualByteCount: cubeData.count
       )
@@ -96,7 +96,7 @@ extension ColorCubeFeature {
     let filter = ParametricColorCubeHelper.makeColorCubeFilter(
       cubeData: cubeData,
       dimension: dimension,
-      identifier: identifier
+      id: id
     )
     filter.setValue(image, forKeyPath: kCIInputImageKey)
 
@@ -110,7 +110,7 @@ extension ColorCubeFeature {
         "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
         "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
         "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
-        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount)),
+        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(intensity)),
         "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
       ]
     )
