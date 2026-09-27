@@ -190,10 +190,10 @@ struct ParametricVideoRenderPlaygroundView: View {
 
   private func makeFeatureDocument() -> ParametricVideoPlaygroundDocument {
     ParametricVideoPlaygroundDocument(
-      crop: isCropEnabled ? CropFeature(cropRect: cropRect) : nil,
+      crop: isCropEnabled ? CropFeature(rect: cropRect) : nil,
       brightness: abs(brightness) > 0.001 ? BrightnessFeature(value: brightness) : nil,
       saturation: abs(saturation) > 0.001 ? SaturationFeature(value: saturation) : nil,
-      blur: blurRadius > 0.1 ? GaussianBlurFeature(radius: blurRadius) : nil
+      blur: blurRadius > 0.1 ? GaussianBlurFeature(radius: .absolute(blurRadius)) : nil
     )
   }
 

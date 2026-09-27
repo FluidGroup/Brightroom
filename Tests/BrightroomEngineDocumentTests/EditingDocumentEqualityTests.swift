@@ -78,10 +78,10 @@ struct EditingDocumentEqualityTests {
 
   @Test func `Features built from the same values are equal`() throws {
     var built = ImageEditorFeature(imageSize: Fixtures.rotatedJPEGSize)
-    built.effects.exposure = ExposureFeature(value: 1)
+    built.effects.exposure = ExposureFeature(ev: 1)
 
     let rebuilt = ImageEditorFeature(
-      effects: .init(exposure: ExposureFeature(value: 1)),
+      effects: .init(exposure: ExposureFeature(ev: 1)),
       crop: CropFeature(
         displayCropRect: CGRect(origin: .zero, size: Fixtures.rotatedJPEGSize),
         imageSize: Fixtures.rotatedJPEGSize

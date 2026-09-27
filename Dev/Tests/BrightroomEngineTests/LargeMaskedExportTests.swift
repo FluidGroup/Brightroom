@@ -46,7 +46,7 @@ struct LargeMaskedExportTests {
         )
       )
     ) {
-      [AnyImageEffect(ExposureFeature(value: 2))]
+      [AnyImageEffect(ExposureFeature(ev: 2))]
     }
 
     // Export WITH the local adjustment through an identity crop.

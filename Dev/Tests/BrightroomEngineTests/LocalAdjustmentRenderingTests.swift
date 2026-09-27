@@ -93,7 +93,7 @@ struct LocalAdjustmentRenderingTests {
       rightWhite: 0.625
     )
     let imageSource = SourceImage(cgImage: sourceImage)
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(ExposureFeature(value: 0.5))], localAdjustments: [
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(ExposureFeature(ev: 0.5))], localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ], crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
@@ -119,7 +119,7 @@ struct LocalAdjustmentRenderingTests {
     center: CGPoint
   ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
     LocalAdjustmentFeature(mask: makeMask(center: center)) {
-      [AnyImageEffect(GaussianBlurFeature(radius: Double(radius)))]
+      [AnyImageEffect(GaussianBlurFeature(radius: .absolute(Double(radius))))]
     }
   }
 
@@ -128,7 +128,7 @@ struct LocalAdjustmentRenderingTests {
     center: CGPoint
   ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
     LocalAdjustmentFeature(mask: makeMask(center: center)) {
-      [AnyImageEffect(ExposureFeature(value: value))]
+      [AnyImageEffect(ExposureFeature(ev: value))]
     }
   }
 

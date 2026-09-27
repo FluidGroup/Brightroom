@@ -192,7 +192,7 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.rotateCounterclockwise()
     harness.canvasView.applyPendingCrop()
     let turned = try #require(harness.emitted.last)
-    #expect(turned.crop.rotation.isSideways)
+    #expect(turned.crop.quarterTurn.isSideways)
     #expect(harness.snapshots.last?.preferredAspectRatio == landscape.swapped())
 
     // What an undo of the turn produces.

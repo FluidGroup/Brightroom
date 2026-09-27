@@ -96,7 +96,7 @@ struct DocumentCreationTests {
     let document = EditingDocument(image: image)
     #expect(document.image == image)
     #expect(document.feature == ImageEditorFeature(imageSize: image.pixelSize))
-    #expect(document.feature.crop.cropRect == CGRect(origin: .zero, size: image.pixelSize))
+    #expect(document.feature.crop.rect == CGRect(origin: .zero, size: image.pixelSize))
     #expect(document.feature.effects == .init())
     #expect(document.feature.localBlur == nil)
     #expect(!document.canUndo)
@@ -106,7 +106,7 @@ struct DocumentCreationTests {
     let image = try Fixtures.makeImage()
     let document = await EditingDocument(image: image, cropModifier: .identity)
     #expect(document == EditingDocument(image: image, history: document.history))
-    #expect(document.feature.crop.cropRect == CGRect(origin: .zero, size: image.pixelSize))
+    #expect(document.feature.crop.rect == CGRect(origin: .zero, size: image.pixelSize))
   }
 
   @Test func `A crop modifier decides the committed initial crop`() async throws {
@@ -122,7 +122,7 @@ struct DocumentCreationTests {
         return crop
       }
     )
-    let cropRect = document.feature.crop.cropRect
+    let cropRect = document.feature.crop.rect
     #expect(cropRect.width == cropRect.height)
     #expect(!document.canUndo, "The modifier's crop is the starting point, not an undo step.")
     #expect(!document.hasUncommittedChanges)
@@ -141,7 +141,7 @@ struct DocumentCreationTests {
   @Test func `An edit moves to another image only explicitly`() throws {
     let data = try Fixtures.makeRotatedJPEG()
     var original = EditingDocument(image: try SourceImage(data: data))
-    original.feature.effects.exposure = ExposureFeature(value: 1)
+    original.feature.effects.exposure = ExposureFeature(ev: 1)
     original.commit()
 
     let other = try SourceImage(data: data)
@@ -155,7 +155,7 @@ struct DocumentCreationTests {
 
   @Test func `Rendering a document renders its feature over its image`() async throws {
     var document = EditingDocument(image: try Fixtures.makeImage())
-    document.feature.crop = CropFeature(cropRect: CGRect(x: 0, y: 0, width: 20, height: 10))
+    document.feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 20, height: 10))
     let rendered = try await document.render()
     let cgImage = try rendered.cgImage
     #expect(cgImage.width == 20)

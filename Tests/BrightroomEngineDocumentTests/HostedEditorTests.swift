@@ -80,7 +80,7 @@ struct HostedEditorTests {
     apply()
 
     #expect(host.writes == 1)
-    #expect(host.document.feature.crop.rotation != .zero)
+    #expect(host.document.feature.crop.quarterTurn != .zero)
     #expect(host.document.hasUncommittedChanges, "ImageEditorCanvas never commits.")
     #expect(host.document.image == image)
   }
@@ -134,7 +134,7 @@ struct HostedEditorTests {
     }
     #expect(host.document.history.undoStack.count == 1)
     #expect(host.document.hasUncommittedChanges == false, "Leaving .crop must not write a crop after the commit.")
-    #expect(host.document.feature.crop.rotation != .zero)
+    #expect(host.document.feature.crop.quarterTurn != .zero)
   }
 
   @Test func `ImageEditor writes nothing on mount`() async throws {

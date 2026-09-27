@@ -28,7 +28,7 @@ internal import Playgrounds
 
 #Playground("Adjustments") {
   struct Document: Feature {
-    var exposure = ExposureFeature(value: -0.1)
+    var exposure = ExposureFeature(ev: -0.1)
     var contrast = ContrastFeature(value: 0.1)
     var highlights = HighlightsFeature(value: 0.6)
     var shadows = ShadowsFeature(value: 0.2)
@@ -65,7 +65,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
       SaturationFeature(value: -1)
       ContrastFeature(value: 0.15)
     } else {
-      TemperatureFeature(value: warmth)
+      WhiteBalanceFeature(temperature: warmth)
       SaturationFeature(value: 0.1)
     }
     FadeFeature(intensity: 0.05)
@@ -75,7 +75,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
 #Playground("Reusable look") {
   struct Document: Feature {
-    var exposure = ExposureFeature(value: -0.1)
+    var exposure = ExposureFeature(ev: -0.1)
     var look = FilmLook()
 
     var body: some Feature {
@@ -126,7 +126,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
 #Playground("LUT") {
   struct Document: Feature {
-    var exposure = ExposureFeature(value: 0.1)
+    var exposure = ExposureFeature(ev: 0.1)
     var lut: ColorCubeFeature?
 
     var body: some Feature {
@@ -146,9 +146,9 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
 #Playground("Crop in the middle") {
   struct Document: Feature {
-    var exposure = ExposureFeature(value: -0.1)
+    var exposure = ExposureFeature(ev: -0.1)
     // Core Image coordinates of the incoming image: bottom-left origin, y-up.
-    var crop = CropFeature(cropRect: CGRect(x: 0, y: 270, width: 820, height: 524))
+    var crop = CropFeature(rect: CGRect(x: 0, y: 270, width: 820, height: 524))
     var vignette = VignetteFeature(value: 1)
 
     var body: some Feature {
@@ -187,7 +187,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   document.localBlur = LocalAdjustmentFeature(
     mask: .brush(BrushMask(strokes: [stroke]))
   ) {
-    GaussianBlurFeature(value: 40)
+    GaussianBlurFeature(radius: .proportional(40))
   }
   try Sample.render(document)
 }
@@ -228,7 +228,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   /// exist, keeps the history of this value, and renders views of it by
   /// substituting values.
   struct PhotoDocument: Feature, Equatable {
-    var exposure = ExposureFeature(value: 0)
+    var exposure = ExposureFeature(ev: 0)
     var look: FilmLook?
     var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
     var crop: CropFeature
@@ -243,8 +243,8 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
   let fullFrame = CGRect(origin: .zero, size: Sample.photo.extent.size)
 
-  var document = PhotoDocument(crop: CropFeature(cropRect: fullFrame))
-  document.exposure.value = -0.1
+  var document = PhotoDocument(crop: CropFeature(rect: fullFrame))
+  document.exposure.ev = -0.1
   document.look = FilmLook(warmth: 500)
   document.localBlur = LocalAdjustmentFeature(
     mask: .brush(
@@ -256,9 +256,9 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
       ])
     )
   ) {
-    GaussianBlurFeature(value: 30)
+    GaussianBlurFeature(radius: .proportional(30))
   }
-  document.crop.cropRect = CGRect(x: 400, y: 40, width: 680, height: 720)
+  document.crop.rect = CGRect(x: 400, y: 40, width: 680, height: 720)
   document.crop.straightenRadians = 0.05
 
   // The exported image.
@@ -267,7 +267,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   // The view a crop tool shows: every edit before the crop, on the whole
   // image. Substituting the crop value is all it takes.
   var uncropped = document
-  uncropped.crop = CropFeature(cropRect: fullFrame)
+  uncropped.crop = CropFeature(rect: fullFrame)
   try Sample.render(uncropped)
 }
 

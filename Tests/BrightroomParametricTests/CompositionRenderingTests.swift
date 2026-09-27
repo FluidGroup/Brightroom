@@ -77,16 +77,16 @@ struct CompositionRenderingTests {
   @Test func `a value-form blur after a mid-chain crop resolves against the chain entry`() throws {
     let source = try Fixtures.makeSource()
     var document = MidChainCropBlurDocument()
-    let croppedExtent = CGRect(origin: .zero, size: document.crop.cropRect.size)
+    let croppedExtent = CGRect(origin: .zero, size: document.crop.rect.size)
 
     // Explicit recipe for exposure, crop, and blur: the blur radius is the
     // entry diagonal / 50, although the blur receives the cropped image.
     document.sharpen = nil
     let blurOnly = try Fixtures.renderer.makeImage(from: source, feature: document)
     let exposed = try Fixtures.normalizedSource()
-      .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: document.exposure.value])
+      .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: document.exposure.ev])
       .cropped(to: Fixtures.entryExtent)
-    let cropped = Fixtures.removingOffset(exposed.cropped(to: document.crop.cropRect))
+    let cropped = Fixtures.removingOffset(exposed.cropped(to: document.crop.rect))
     let recipe = Fixtures.explicitValueBlur(cropped, value: 40, basis: Fixtures.entryExtent)
     #expect(blurOnly.extent == croppedExtent)
     Fixtures.expectPixelsMatch(recipe, blurOnly, tolerance: Self.recipeTolerance)
@@ -141,8 +141,8 @@ struct CompositionRenderingTests {
     let axisAligned = try Fixtures.renderer.makeImage(
       from: source,
       feature: TwoCropsDocument(
-        first: CropFeature(cropRect: first),
-        second: CropFeature(cropRect: second)
+        first: CropFeature(rect: first),
+        second: CropFeature(rect: second)
       )
     )
     let recipe = Fixtures.removingOffset(
@@ -163,7 +163,7 @@ struct CompositionRenderingTests {
     // width and height.
     #expect(composed.extent == CGRect(
       origin: .zero,
-      size: CGSize(width: document.second.cropRect.height, height: document.second.cropRect.width)
+      size: CGSize(width: document.second.rect.height, height: document.second.rect.width)
     ))
     Fixtures.expectPixelsMatch(
       try Fixtures.renderer.makeImage(from: source, feature: SequentialFeatures(document.steps)),
@@ -433,8 +433,8 @@ struct CompositionRenderingTests {
       )
     )
 
-    #expect(exported.width == Int(document.crop.cropRect.width))
-    #expect(exported.height == Int(document.crop.cropRect.height))
+    #expect(exported.width == Int(document.crop.rect.width))
+    #expect(exported.height == Int(document.crop.rect.height))
     Fixtures.expectPixelsMatch(CIImage(cgImage: expected), CIImage(cgImage: exported))
   }
 
@@ -469,7 +469,7 @@ struct CompositionRenderingTests {
         sourceRenderSize: sourceRenderSize,
         feature: document,
         mode: .featureOutput
-      ) == document.crop.cropRect.size
+      ) == document.crop.rect.size
     )
     #expect(
       try videoRenderer.resolveRenderSize(
@@ -502,7 +502,7 @@ struct CompositionRenderingTests {
       feature: SequentialFeatures(document.steps)
     )
 
-    #expect(composition.renderSize == document.crop.cropRect.size)
+    #expect(composition.renderSize == document.crop.rect.size)
     #expect(foldedComposition.renderSize == composition.renderSize)
 
     // Decode the first frame through each composition, so the frame handler
@@ -510,8 +510,8 @@ struct CompositionRenderingTests {
     let composed = try await Fixtures.firstFrame(of: asset, composition: composition)
     let folded = try await Fixtures.firstFrame(of: asset, composition: foldedComposition)
 
-    #expect(composed.width == Int(document.crop.cropRect.width))
-    #expect(composed.height == Int(document.crop.cropRect.height))
+    #expect(composed.width == Int(document.crop.rect.width))
+    #expect(composed.height == Int(document.crop.rect.height))
     Fixtures.expectPixelsMatch(CIImage(cgImage: folded), CIImage(cgImage: composed))
 
     // Both compositions share the frame handler, so the match above would
@@ -567,20 +567,20 @@ private struct PresentationTimeLevel: ImageEffect {
 /// Every built-in global effect, in one chain.
 private struct GlobalChainDocument: Feature {
 
-  var exposure = ExposureFeature(value: 0.35)
+  var exposure = ExposureFeature(ev: 0.35)
   var brightness = BrightnessFeature(value: 0.04)
   var contrast = ContrastFeature(value: 0.18)
   var saturation = SaturationFeature(value: -0.25)
   var highlights = HighlightsFeature(value: 0.3)
   var shadows = ShadowsFeature(value: 0.4)
-  var temperature = TemperatureFeature(value: 700, tint: 12)
+  var temperature = WhiteBalanceFeature(temperature: 700, tint: 12)
   var tint = HighlightShadowTintFeature(
-    highlightColor: ParametricRGBAColor(red: 1, green: 0.85, blue: 0.6, alpha: 0.08),
-    shadowColor: ParametricRGBAColor(red: 0.1, green: 0.2, blue: 0.45, alpha: 0.1)
+    highlightColor: HighlightShadowTintFeature.Color(red: 1, green: 0.85, blue: 0.6, alpha: 0.08),
+    shadowColor: HighlightShadowTintFeature.Color(red: 0.1, green: 0.2, blue: 0.45, alpha: 0.1)
   )
-  var sharpen = SharpenFeature(sharpness: 0.5, radius: 30)
+  var sharpen = SharpenFeature(intensity: 0.5, radius: 30)
   var unsharpMask = UnsharpMaskFeature(intensity: 0.6, radius: 0.4)
-  var blur = GaussianBlurFeature(radius: 1.5)
+  var blur = GaussianBlurFeature(radius: .absolute(1.5))
   var fade = FadeFeature(intensity: 0.08)
   var vignette = VignetteFeature(value: 0.7)
 
@@ -613,10 +613,10 @@ private struct GlobalChainDocument: Feature {
 /// proportional to the image.
 private struct MidChainCropBlurDocument: Feature {
 
-  var exposure = ExposureFeature(value: 0.2)
-  var crop = CropFeature(cropRect: CGRect(x: 40, y: 30, width: 160, height: 120))
-  var blur = GaussianBlurFeature(value: 40)
-  var sharpen: SharpenFeature? = SharpenFeature(sharpness: 0.4, radius: 20)
+  var exposure = ExposureFeature(ev: 0.2)
+  var crop = CropFeature(rect: CGRect(x: 40, y: 30, width: 160, height: 120))
+  var blur = GaussianBlurFeature(radius: .proportional(40))
+  var sharpen: SharpenFeature? = SharpenFeature(intensity: 0.4, radius: 20)
 
   var body: some Feature {
     exposure
@@ -641,15 +641,15 @@ private struct TwoCropsDocument: Feature {
   /// By default the first crop straightens and the second one rotates by a
   /// quarter turn inside the straightened domain.
   var first: CropFeature? = CropFeature(
-    cropRect: CGRect(x: 30, y: 20, width: 260, height: 200),
+    rect: CGRect(x: 30, y: 20, width: 260, height: 200),
     straightenRadians: 0.08
   )
   var saturation = SaturationFeature(value: 0.3)
   var second = CropFeature(
-    cropRect: CGRect(x: 20, y: 30, width: 180, height: 120),
-    rotation: .counterclockwise
+    rect: CGRect(x: 20, y: 30, width: 180, height: 120),
+    quarterTurn: .counterclockwise
   )
-  var exposure = ExposureFeature(value: 0.1)
+  var exposure = ExposureFeature(ev: 0.1)
 
   var body: some Feature {
     first
@@ -723,13 +723,13 @@ enum MaskShape: String, CaseIterable, Sendable {
 /// ImageEditor-like editor stores its local blur.
 private struct MaskedBlurDocument: Feature {
 
-  var exposure = ExposureFeature(value: 0.15)
+  var exposure = ExposureFeature(ev: 0.15)
   var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
   var contrast = ContrastFeature(value: 0.1)
 
   init(mask: Mask) {
     localBlur = LocalAdjustmentFeature(mask: mask) {
-      GaussianBlurFeature(value: 40)
+      GaussianBlurFeature(radius: .proportional(40))
     }
   }
 
@@ -806,9 +806,9 @@ private struct NestedPresetDocument: Feature {
       name: "Outer",
       identifier: "composition-tests.outer",
       effects: [
-        AnyImageEffect(ExposureFeature(value: 0.2)),
+        AnyImageEffect(ExposureFeature(ev: 0.2)),
         AnyImageEffect(inner),
-        AnyImageEffect(TemperatureFeature(value: -600)),
+        AnyImageEffect(WhiteBalanceFeature(temperature: -600)),
       ]
     )
   }
@@ -819,10 +819,10 @@ private struct FlattenedPresetDocument: Feature {
 
   var body: some Feature {
     BrightnessFeature(value: 0.03)
-    ExposureFeature(value: 0.2)
+    ExposureFeature(ev: 0.2)
     ContrastFeature(value: 0.25)
     SaturationFeature(value: -0.4)
-    TemperatureFeature(value: -600)
+    WhiteBalanceFeature(temperature: -600)
     VignetteFeature(value: 0.4)
   }
 }
@@ -841,9 +841,9 @@ private struct ComposedDocument: Feature {
     exposure
     fade
     if usesWarmBalance {
-      TemperatureFeature(value: 900, tint: 10)
+      WhiteBalanceFeature(temperature: 900, tint: 10)
     } else {
-      TemperatureFeature(value: -900, tint: -10)
+      WhiteBalanceFeature(temperature: -900, tint: -10)
       ContrastFeature(value: 0.2)
     }
     for pass in sharpenPasses {
@@ -874,12 +874,12 @@ enum CompositionVariant: String, CaseIterable, Sendable {
     switch self {
     case .everyMemberPresent:
       ComposedDocument(
-        exposure: ExposureFeature(value: 0.3),
+        exposure: ExposureFeature(ev: 0.3),
         fade: FadeFeature(intensity: 0.1),
         usesWarmBalance: true,
         sharpenPasses: [
-          SharpenFeature(sharpness: 0.3, radius: 10),
-          SharpenFeature(sharpness: 0.2, radius: 25),
+          SharpenFeature(intensity: 0.3, radius: 10),
+          SharpenFeature(intensity: 0.2, radius: 25),
         ],
         catalog: [
           AnyImageEffect(SaturationFeature(value: 0.4)),
@@ -894,7 +894,7 @@ enum CompositionVariant: String, CaseIterable, Sendable {
             )
           ),
         ],
-        crop: CropFeature(cropRect: CGRect(x: 16, y: 12, width: 240, height: 200))
+        crop: CropFeature(rect: CGRect(x: 16, y: 12, width: 240, height: 200))
       )
     case .optionalMembersAbsent:
       ComposedDocument(
@@ -914,19 +914,19 @@ enum CompositionVariant: String, CaseIterable, Sendable {
     switch self {
     case .everyMemberPresent:
       steps = [
-        ExposureFeature(value: 0.3),
+        ExposureFeature(ev: 0.3),
         FadeFeature(intensity: 0.1),
-        TemperatureFeature(value: 900, tint: 10),
-        SharpenFeature(sharpness: 0.3, radius: 10),
-        SharpenFeature(sharpness: 0.2, radius: 25),
+        WhiteBalanceFeature(temperature: 900, tint: 10),
+        SharpenFeature(intensity: 0.3, radius: 10),
+        SharpenFeature(intensity: 0.2, radius: 25),
         SaturationFeature(value: 0.4),
         ContrastFeature(value: -0.1),
         BrightnessFeature(value: 0.05),
-        CropFeature(cropRect: CGRect(x: 16, y: 12, width: 240, height: 200)),
+        CropFeature(rect: CGRect(x: 16, y: 12, width: 240, height: 200)),
       ]
     case .optionalMembersAbsent:
       steps = [
-        TemperatureFeature(value: -900, tint: -10),
+        WhiteBalanceFeature(temperature: -900, tint: -10),
         ContrastFeature(value: 0.2),
       ]
     }
@@ -941,7 +941,7 @@ enum CompositionVariant: String, CaseIterable, Sendable {
 /// preset, an optional local blur, and the final crop.
 private struct ImageEditorLikeFeature: Feature {
 
-  var exposure = ExposureFeature(value: 0.25)
+  var exposure = ExposureFeature(ev: 0.25)
   var saturation = SaturationFeature(value: 0.2)
   var preset: PresetFeature? = PresetFeature(
     name: "Film",
@@ -954,10 +954,10 @@ private struct ImageEditorLikeFeature: Feature {
   var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = LocalAdjustmentFeature(
     mask: RenderingFixtures.featheredBrushMask()
   ) {
-    GaussianBlurFeature(value: 40)
+    GaussianBlurFeature(radius: .proportional(40))
   }
   var crop = CropFeature(
-    cropRect: CGRect(x: 24, y: 18, width: 250, height: 190),
+    rect: CGRect(x: 24, y: 18, width: 250, height: 190),
     straightenRadians: 0.05
   )
 

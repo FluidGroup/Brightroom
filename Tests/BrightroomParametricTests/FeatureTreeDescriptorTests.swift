@@ -34,7 +34,7 @@ struct FeatureTreeDescriptorTests {
     #expect(Self.value(of: "Name", in: preset) == "Warm")
     #expect(Self.value(of: "Identifier", in: preset) == "tests.warm")
     #expect(preset.fields.map(\.name).contains("Effects") == false)
-    #expect(preset.children.map(\.typeName) == ["TemperatureFeature", "PresetFeature"])
+    #expect(preset.children.map(\.typeName) == ["WhiteBalanceFeature", "PresetFeature"])
 
     let inner = preset.children[1]
     #expect(Self.value(of: "Name", in: inner) == "Inner")
@@ -82,7 +82,7 @@ struct FeatureTreeDescriptorTests {
       for: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: [
         BrushMask.Stroke(stampCenters: [CGPoint(x: 1, y: 1)], brush: BrushMask.Brush(diameter: 4, hardness: 1, opacity: 1)),
       ]))) {
-        GaussianBlurFeature(radius: 3)
+        GaussianBlurFeature(radius: .absolute(3))
       }
     )
     #expect(brushOnly.first?.summary == "Brush · 1 stroke")
@@ -97,8 +97,8 @@ struct FeatureTreeDescriptorTests {
 
     #expect(crop.title == "Crop")
     #expect(crop.symbolName == "crop")
-    #expect(Self.value(of: "Crop Rect", in: crop) == "(4, 6, 80, 60)")
-    #expect(Self.value(of: "Rotation", in: crop) == "-90°")
+    #expect(Self.value(of: "Rect", in: crop) == "(4, 6, 80, 60)")
+    #expect(Self.value(of: "Quarter Turn", in: crop) == "-90°")
     #expect(Self.value(of: "Straighten Radians", in: crop) == "0.05")
 
     // Ids are type paths: unique and the same on every walk.
@@ -108,7 +108,7 @@ struct FeatureTreeDescriptorTests {
     #expect(nodes.map(\.id) == ["ExposureFeature#0", "PresetFeature#0", "FilmLook#0", "CropFeature#0"])
     #expect(
       nodes[1].children.map(\.id)
-        == ["PresetFeature#0/TemperatureFeature#0", "PresetFeature#0/PresetFeature#0"]
+        == ["PresetFeature#0/WhiteBalanceFeature#0", "PresetFeature#0/PresetFeature#0"]
     )
 
     // An absent member does not re-key the nodes after it.
@@ -144,7 +144,7 @@ struct FeatureTreeDescriptorTests {
     #expect(nodes.map(\.typeName) == ["CropFeature"])
 
     var edited = GroupedDocument()
-    edited.effects.exposure = ExposureFeature(value: 0.1)
+    edited.effects.exposure = ExposureFeature(ev: 0.1)
     let editedNodes = FeatureTreeDescriptor.nodes(for: edited)
     #expect(editedNodes.map(\.typeName) == ["Effects", "CropFeature"])
     #expect(editedNodes.first?.summary == "1 feature")
@@ -182,7 +182,7 @@ struct FeatureTreeDescriptorTests {
 
   @Test func `structural documents list their members`() {
     let array = [
-      AnyImageEffect(ExposureFeature(value: 0.1)),
+      AnyImageEffect(ExposureFeature(ev: 0.1)),
       AnyImageEffect(FadeFeature(intensity: 0.2)),
     ]
     #expect(
@@ -195,13 +195,13 @@ struct FeatureTreeDescriptorTests {
     let absent: TreeDocument? = nil
     #expect(FeatureTreeDescriptor.nodes(for: absent).isEmpty)
 
-    let tuple = TupleFeature(ExposureFeature(value: 0.1), CropFeature(cropRect: CGRect(x: 0, y: 0, width: 4, height: 4)))
+    let tuple = TupleFeature(ExposureFeature(ev: 0.1), CropFeature(rect: CGRect(x: 0, y: 0, width: 4, height: 4)))
     #expect(
       FeatureTreeDescriptor.nodes(for: tuple).map(\.typeName) == ["ExposureFeature", "CropFeature"]
     )
 
     #expect(FeatureTreeDescriptor.nodes(for: EmptyFeature()).isEmpty)
-    #expect(FeatureTreeDescriptor.nodes(for: ExposureFeature(value: 0.1)).map(\.title) == ["Exposure"])
+    #expect(FeatureTreeDescriptor.nodes(for: ExposureFeature(ev: 0.1)).map(\.title) == ["Exposure"])
   }
 
   // MARK: - Helpers
@@ -236,12 +236,12 @@ private struct FilmLook: ImageEffect, Equatable {
 
 private struct TreeDocument: Feature {
 
-  var exposure: ExposureFeature? = ExposureFeature(value: 0.2)
+  var exposure: ExposureFeature? = ExposureFeature(ev: 0.2)
   var preset = PresetFeature(
     name: "Warm",
     identifier: "tests.warm",
     effects: [
-      AnyImageEffect(TemperatureFeature(value: 400)),
+      AnyImageEffect(WhiteBalanceFeature(temperature: 400)),
       AnyImageEffect(
         PresetFeature(
           name: "Inner",
@@ -254,8 +254,8 @@ private struct TreeDocument: Feature {
   var look = FilmLook()
   var vignette: VignetteFeature?
   var crop = CropFeature(
-    cropRect: CGRect(x: 4, y: 6, width: 80, height: 60),
-    rotation: .counterclockwise,
+    rect: CGRect(x: 4, y: 6, width: 80, height: 60),
+    quarterTurn: .counterclockwise,
     straightenRadians: 0.05
   )
 
@@ -288,8 +288,8 @@ private struct MaskedDocument: Feature {
         radius: 4
       )
     ) {
-      GaussianBlurFeature(value: 40)
-      ExposureFeature(value: 0.3)
+      GaussianBlurFeature(radius: .proportional(40))
+      ExposureFeature(ev: 0.3)
     }
   }
 }
@@ -307,7 +307,7 @@ private struct GroupedDocument: Feature {
   }
 
   var effects = Effects()
-  var crop = CropFeature(cropRect: CGRect(x: 0, y: 0, width: 8, height: 8))
+  var crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 8, height: 8))
 
   var body: some Feature {
     effects

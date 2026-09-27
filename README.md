@@ -154,7 +154,7 @@ import CoreImage
 
 /// An exposure adjustment followed by an optional crop.
 struct AdjustedCrop: Feature, Equatable {
-  var exposure = ExposureFeature(value: 0.5)
+  var exposure = ExposureFeature(ev: 0.5)
   var crop: CropFeature?
 
   var body: some Feature {
@@ -166,7 +166,7 @@ struct AdjustedCrop: Feature, Equatable {
 /// Builds an exposure-adjusted image recipe without modifying the source.
 func makeAdjustedImage(from source: CIImage) throws -> CIImage {
   let document = AdjustedCrop(
-    crop: CropFeature(cropRect: CGRect(x: 0, y: 0, width: 800, height: 600))
+    crop: CropFeature(rect: CGRect(x: 0, y: 0, width: 800, height: 600))
   )
 
   return try FeatureRenderer().makeImage(

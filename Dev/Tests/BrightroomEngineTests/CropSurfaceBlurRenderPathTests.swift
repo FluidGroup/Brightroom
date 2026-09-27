@@ -32,7 +32,7 @@ struct CropSurfaceBlurRenderPathTests {
 
   @Test func `Blur local adjustment uses prepared source-resolution path`() throws {
     let source = makeSource(width: 64, height: 48)
-    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: source,
@@ -49,7 +49,7 @@ struct CropSurfaceBlurRenderPathTests {
 
   @Test func `Exposure local adjustment also uses prepared path`() throws {
     let source = makeSource(width: 64, height: 48)
-    let exposure = AnyImageEffect(ExposureFeature(value: 0.5))
+    let exposure = AnyImageEffect(ExposureFeature(ev: 0.5))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: source,
@@ -74,7 +74,7 @@ struct CropSurfaceBlurRenderPathTests {
       imageSize: CGSize(width: 64, height: 48)
     )
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
-    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     let images = try #require(
       EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
         editingSourceImage: source,

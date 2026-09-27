@@ -47,7 +47,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // source, large canvas).
     let sourceEdgeCI = CIImage(cgImage: sourceEdgeCG)
 
-    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
 
     // PREVIEW: the factory's local-adjustment `adjusted` layer is the blur
     // applied to the whole image (the mask selects it later in compositing), so
@@ -131,7 +131,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     let sourceEdgeCG = Self.makeVerticalEdge(side: Self.sourceSide)
     let sourceEdgeCI = CIImage(cgImage: sourceEdgeCG)
 
-    let blur = AnyImageEffect(GaussianBlurFeature(value: 40))
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     // The factory renders the FULL 12000² canvas (the not-zoomed case that
     // crashed): the adjusted image carries a 12000² extent.
     let images = try #require(

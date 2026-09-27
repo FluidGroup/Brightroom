@@ -89,16 +89,16 @@ extension ImageEditorCanvas.Brush {
       let crop,
       viewportSize.width > 0,
       viewportSize.height > 0,
-      crop.cropRect.width > 0,
-      crop.cropRect.height > 0
+      crop.rect.width > 0,
+      crop.rect.height > 0
     else {
       return pointDiameter
     }
 
     // Brush sizing follows the canvas after the final output quarter turn.
-    let outputSize = crop.rotation.isSideways
-      ? CGSize(width: crop.cropRect.height, height: crop.cropRect.width)
-      : crop.cropRect.size
+    let outputSize = crop.quarterTurn.isSideways
+      ? CGSize(width: crop.rect.height, height: crop.rect.width)
+      : crop.rect.size
     let fitScale = min(
       viewportSize.width / outputSize.width,
       viewportSize.height / outputSize.height

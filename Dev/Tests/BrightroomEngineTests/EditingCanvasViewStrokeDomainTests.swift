@@ -28,7 +28,7 @@ struct EditingCanvasViewStrokeDomainTests {
         )
       ]))
     ) {
-      GaussianBlurFeature(radius: 10)
+      GaussianBlurFeature(radius: .absolute(10))
     }
   }
 
@@ -88,7 +88,7 @@ struct EditingCanvasViewStrokeDomainTests {
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: nil) == .viewportBase)
 
     let empty = LocalAdjustmentFeature(mask: .brush(.init())) {
-      GaussianBlurFeature(radius: 10)
+      GaussianBlurFeature(radius: .absolute(10))
     }
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: empty) == .viewportBase)
 
@@ -98,7 +98,7 @@ struct EditingCanvasViewStrokeDomainTests {
     let featheredEmpty = LocalAdjustmentFeature(
       mask: .feathered(.brush(.init()), radius: 4)
     ) {
-      GaussianBlurFeature(radius: 10)
+      GaussianBlurFeature(radius: .absolute(10))
     }
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: featheredEmpty) == .viewportBase)
 

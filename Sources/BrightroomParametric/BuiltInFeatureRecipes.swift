@@ -32,15 +32,15 @@ import Foundation
 
 extension CropFeature {
 
-  /// Checks that `cropRect` describes a finite, non-empty extent.
+  /// Checks that `rect` describes a finite, non-empty extent.
   ///
   /// `apply(to:context:)` calls this before evaluating. A host that rebuilds
   /// stored crops can call it to reject an invalid rectangle at load time.
   ///
   /// - Throws: `FeatureEvaluationError.invalidCropRect`.
   public func validate() throws {
-    guard cropRect.isParametricValidExtent else {
-      throw FeatureEvaluationError.invalidCropRect(cropRect)
+    guard rect.isParametricValidExtent else {
+      throw FeatureEvaluationError.invalidCropRect(rect)
     }
   }
 
@@ -55,7 +55,7 @@ extension CropFeature {
     let canvas = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
       .cropped(to: geometry.cropBounds)
     let cropped = image
-      .transformed(by: geometry.sourceToCropTransform)
+      .transformed(by: geometry.inputToCropTransform)
       .cropped(to: geometry.cropBounds)
       .composited(over: canvas)
 
@@ -165,12 +165,12 @@ extension SaturationFeature {
 extension ExposureFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    guard abs(value) > 0.0001 else {
+    guard abs(ev) > 0.0001 else {
       return image
     }
     return image.applyingFilter(
       "CIExposureAdjust",
-      parameters: [kCIInputEVKey: value]
+      parameters: [kCIInputEVKey: ev]
     )
     .cropped(to: image.extent)
   }
@@ -229,13 +229,13 @@ extension HighlightShadowTintFeature {
   }
 }
 
-extension TemperatureFeature {
+extension WhiteBalanceFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
       "CITemperatureAndTint",
       parameters: [
-        "inputNeutral": CIVector(x: CGFloat(value) + 6500, y: CGFloat(tint)),
+        "inputNeutral": CIVector(x: CGFloat(temperature) + 6500, y: CGFloat(tint)),
         "inputTargetNeutral": CIVector(x: 6500, y: 0),
       ]
     )
@@ -255,7 +255,7 @@ extension SharpenFeature {
       "CISharpenLuminance",
       parameters: [
         "inputRadius": radius,
-        "inputSharpness": sharpness,
+        "inputSharpness": intensity,
       ]
     )
     .cropped(to: image.extent)
@@ -345,7 +345,7 @@ extension FadeFeature {
 
 // MARK: - Helpers
 
-extension ParametricRGBAColor {
+extension HighlightShadowTintFeature.Color {
 
   var parametricCIColor: CIColor {
     CIColor(

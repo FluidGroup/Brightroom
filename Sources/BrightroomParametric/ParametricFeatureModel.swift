@@ -64,35 +64,35 @@ public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
 /// The crop rectangle is interpreted relative to the image produced by the
 /// previous feature. A second crop therefore crops the already-cropped
 /// output of the first crop. Evaluation straightens the source, extracts the
-/// crop, and then applies its quarter-turn rotation to the cropped output.
+/// crop, and then applies its quarter turn to the cropped output.
 /// The stored rectangle describes the selection before that final turn;
-/// changing `rotation` does not change the selected source area.
+/// changing `quarterTurn` does not change the selected source area.
 public struct CropFeature: Feature, Equatable {
 
   /// The rectangle to keep after straightening and before the output quarter
   /// turn, relative to the current input image's origin (bottom-left, y-up).
   ///
-  /// Its size is the crop size. A sideways `rotation` exchanges only the final
-  /// output dimensions; the selection rectangle remains unchanged.
+  /// Its size is the crop size. A sideways `quarterTurn` exchanges only the
+  /// final output dimensions; the selection rectangle remains unchanged.
   /// Regions outside the input are transparent. Pixel fitting is the caller's
   /// responsibility; evaluation does not shrink the requested canvas.
-  public var cropRect: CGRect
+  public var rect: CGRect
 
-  /// The quarter-turn rotation applied to the cropped output.
-  public var rotation: QuarterTurn
+  /// The quarter turn applied to the cropped output.
+  public var quarterTurn: QuarterTurn
 
-  /// A free straightening angle in radians, applied about the crop-rect center
-  /// before extracting the crop and applying `rotation`.
+  /// A free straightening angle in radians, applied about the center of `rect`
+  /// before extracting the crop and applying `quarterTurn`.
   public var straightenRadians: Double
 
   /// Creates a current-domain crop feature.
   public init(
-    cropRect: CGRect,
-    rotation: QuarterTurn = .zero,
+    rect: CGRect,
+    quarterTurn: QuarterTurn = .zero,
     straightenRadians: Double = 0
   ) {
-    self.cropRect = cropRect
-    self.rotation = rotation
+    self.rect = rect
+    self.quarterTurn = quarterTurn
     self.straightenRadians = straightenRadians
   }
 }
@@ -171,7 +171,7 @@ public struct ColorCubeFeature: ImageEffect, Equatable {
 /// A brightness adjustment.
 public struct BrightnessFeature: ImageEffect, Equatable {
 
-  /// The brightness value passed to `CIColorControls`.
+  /// The brightness offset passed to `CIColorControls`. `0` is neutral.
   public var value: Double
 
   /// Creates a brightness adjustment.
@@ -183,7 +183,8 @@ public struct BrightnessFeature: ImageEffect, Equatable {
 /// A contrast adjustment.
 public struct ContrastFeature: ImageEffect, Equatable {
 
-  /// The contrast offset passed to `CIColorControls` as `1 + value`.
+  /// The contrast offset passed to `CIColorControls` as `1 + value`. `0` is
+  /// neutral.
   public var value: Double
 
   /// Creates a contrast adjustment.
@@ -195,7 +196,8 @@ public struct ContrastFeature: ImageEffect, Equatable {
 /// A saturation adjustment.
 public struct SaturationFeature: ImageEffect, Equatable {
 
-  /// The saturation offset passed to `CIColorControls` as `1 + value`.
+  /// The saturation offset passed to `CIColorControls` as `1 + value`. `0` is
+  /// neutral, `-1` removes all color.
   public var value: Double
 
   /// Creates a saturation adjustment.
@@ -207,19 +209,21 @@ public struct SaturationFeature: ImageEffect, Equatable {
 /// An exposure adjustment.
 public struct ExposureFeature: ImageEffect, Equatable {
 
-  /// The exposure value passed to `CIExposureAdjust`.
-  public var value: Double
+  /// The exposure change in stops (EV), passed to `CIExposureAdjust`. `0` is
+  /// neutral.
+  public var ev: Double
 
   /// Creates an exposure adjustment.
-  public init(value: Double) {
-    self.value = value
+  public init(ev: Double) {
+    self.ev = ev
   }
 }
 
 /// A highlight recovery adjustment.
 public struct HighlightsFeature: ImageEffect, Equatable {
 
-  /// The highlight recovery value. It is applied as `1 - value`.
+  /// The highlight recovery value. It is applied as `1 - value`. `0` is
+  /// neutral.
   public var value: Double
 
   /// Creates a highlight adjustment.
@@ -231,41 +235,12 @@ public struct HighlightsFeature: ImageEffect, Equatable {
 /// A shadow lift adjustment.
 public struct ShadowsFeature: ImageEffect, Equatable {
 
-  /// The shadow amount passed to `CIHighlightShadowAdjust`.
+  /// The shadow amount passed to `CIHighlightShadowAdjust`. `0` is neutral.
   public var value: Double
 
   /// Creates a shadow adjustment.
   public init(value: Double) {
     self.value = value
-  }
-}
-
-/// An RGBA color value used by parametric feature parameters.
-public struct ParametricRGBAColor: Equatable, Sendable {
-
-  /// The red component in the Core Image working range.
-  public var red: Double
-
-  /// The green component in the Core Image working range.
-  public var green: Double
-
-  /// The blue component in the Core Image working range.
-  public var blue: Double
-
-  /// The alpha component in the Core Image working range.
-  public var alpha: Double
-
-  /// Creates an RGBA color value.
-  public init(
-    red: Double,
-    green: Double,
-    blue: Double,
-    alpha: Double
-  ) {
-    self.red = red
-    self.green = green
-    self.blue = blue
-    self.alpha = alpha
   }
 }
 
@@ -278,20 +253,49 @@ public struct ParametricRGBAColor: Equatable, Sendable {
 ///   contract, so a stored edit keeps rendering the same.
 public struct HighlightShadowTintFeature: ImageEffect, Equatable {
 
+  /// An RGBA tint color in the Core Image working range.
+  public struct Color: Equatable, Sendable {
+
+    /// The red component.
+    public var red: Double
+
+    /// The green component.
+    public var green: Double
+
+    /// The blue component.
+    public var blue: Double
+
+    /// The alpha component. It is the only thing that limits the tint.
+    public var alpha: Double
+
+    /// Creates an RGBA color value.
+    public init(
+      red: Double,
+      green: Double,
+      blue: Double,
+      alpha: Double
+    ) {
+      self.red = red
+      self.green = green
+      self.blue = blue
+      self.alpha = alpha
+    }
+  }
+
   /// The tint color composited over the whole image, on top of `shadowColor`.
   ///
   /// Not restricted to highlight regions; see the type's discussion.
-  public var highlightColor: ParametricRGBAColor
+  public var highlightColor: Color
 
   /// The tint color composited over the whole image, beneath `highlightColor`.
   ///
   /// Not restricted to shadow regions; see the type's discussion.
-  public var shadowColor: ParametricRGBAColor
+  public var shadowColor: Color
 
   /// Creates a highlight/shadow tint adjustment.
   public init(
-    highlightColor: ParametricRGBAColor,
-    shadowColor: ParametricRGBAColor
+    highlightColor: Color,
+    shadowColor: Color
   ) {
     self.highlightColor = highlightColor
     self.shadowColor = shadowColor
@@ -300,24 +304,27 @@ public struct HighlightShadowTintFeature: ImageEffect, Equatable {
 
 /// A two-axis white-balance adjustment evaluated by Core Image.
 ///
-/// `value` shifts color temperature relative to Brightroom's neutral white
-/// point, while `tint` moves the same white point along the green–magenta axis.
-/// Keeping both values in one feature preserves the coupled semantics of
-/// `CITemperatureAndTint` instead of approximating them as sequential filters.
-public struct TemperatureFeature: ImageEffect, Equatable {
+/// `temperature` shifts color temperature relative to Brightroom's neutral
+/// white point, while `tint` moves the same white point along the
+/// green–magenta axis. Keeping both values in one feature preserves the coupled
+/// semantics of `CITemperatureAndTint` instead of approximating them as
+/// sequential filters.
+public struct WhiteBalanceFeature: ImageEffect, Equatable {
 
   /// The color-temperature offset from Brightroom's neutral value, in Kelvin.
-  public var value: Double
+  /// `0` is neutral.
+  public var temperature: Double
 
-  /// The green–magenta tint offset from Brightroom's neutral value.
+  /// The green–magenta tint offset from Brightroom's neutral value. `0` is
+  /// neutral.
   public var tint: Double
 
   /// Creates a white-balance adjustment.
   public init(
-    value: Double,
+    temperature: Double,
     tint: Double = 0
   ) {
-    self.value = value
+    self.temperature = temperature
     self.tint = tint
   }
 }
@@ -325,8 +332,8 @@ public struct TemperatureFeature: ImageEffect, Equatable {
 /// A luminance sharpen adjustment.
 public struct SharpenFeature: ImageEffect, Equatable {
 
-  /// The sharpness value passed to `CISharpenLuminance`.
-  public var sharpness: Double
+  /// The sharpness passed to `CISharpenLuminance`. `0` is neutral.
+  public var intensity: Double
 
   /// The Brightroom filter radius value, resolved against the render pass's
   /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
@@ -335,41 +342,39 @@ public struct SharpenFeature: ImageEffect, Equatable {
 
   /// Creates a sharpen adjustment.
   public init(
-    sharpness: Double,
+    intensity: Double,
     radius: Double
   ) {
-    self.sharpness = sharpness
+    self.intensity = intensity
     self.radius = radius
   }
-}
-
-/// A Gaussian blur radius value.
-public enum GaussianBlurRadius: Equatable, Sendable {
-
-  /// A Core Image blur radius in image-domain points.
-  case absolute(Double)
-
-  /// A slider value where 100 is a radius of one twentieth of the image
-  /// diagonal, scaling linearly. It resolves against the render pass's chain-entry extent (see
-  /// `FeatureEvaluationContext.chainEntryExtent`), so a mid-chain crop
-  /// never re-bases it.
-  case proportional(Double)
 }
 
 /// A Gaussian blur that preserves the input extent.
 public struct GaussianBlurFeature: ImageEffect, Equatable {
 
-  /// The blur radius descriptor.
-  public var radius: GaussianBlurRadius
+  /// A Gaussian blur radius and its unit.
+  public enum Radius: Equatable, Sendable {
 
-  /// Creates a Gaussian blur.
-  public init(radius: Double) {
-    self.radius = .absolute(radius)
+    /// A Core Image blur radius in image-domain points.
+    case absolute(Double)
+
+    /// A slider value where 100 is a radius of one twentieth of the image
+    /// diagonal, scaling linearly. It resolves against the render pass's
+    /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
+    /// so a mid-chain crop never re-bases it.
+    case proportional(Double)
   }
 
-  /// Creates a Gaussian blur from a proportional slider value.
-  public init(value: Double) {
-    self.radius = .proportional(value)
+  /// The blur radius.
+  public var radius: Radius
+
+  /// Creates a Gaussian blur.
+  ///
+  /// Pass `.absolute(_:)` for a radius in image points, or
+  /// `.proportional(_:)` for a fraction of the chain-entry diagonal.
+  public init(radius: Radius) {
+    self.radius = radius
   }
 }
 
@@ -398,6 +403,7 @@ public struct UnsharpMaskFeature: ImageEffect, Equatable {
 public struct VignetteFeature: ImageEffect, Equatable {
 
   /// The Brightroom vignette value used for both intensity and radius scaling.
+  /// `0` is neutral.
   public var value: Double
 
   /// Creates a vignette adjustment.

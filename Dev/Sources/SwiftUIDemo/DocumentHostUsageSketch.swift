@@ -122,8 +122,8 @@ struct SketchCustomCropEditor: View {
 
       Slider(
         value: Binding(
-          get: { document.feature.effects.exposure?.value ?? 0 },
-          set: { document.feature.effects.exposure = ExposureFeature(value: $0) }
+          get: { document.feature.effects.exposure?.ev ?? 0 },
+          set: { document.feature.effects.exposure = ExposureFeature(ev: $0) }
         ),
         in: -1...1,
         onEditingChanged: { isEditing in
@@ -184,18 +184,18 @@ struct SketchSavedEdit: Codable {
 extension SketchSavedEdit.Step {
 
   init(_ feature: ImageEditorFeature) {
-    self.exposure = feature.effects.exposure?.value
-    self.cropRect = feature.crop.cropRect
-    self.rotation = feature.crop.rotation.rawValue
+    self.exposure = feature.effects.exposure?.ev
+    self.cropRect = feature.crop.rect
+    self.rotation = feature.crop.quarterTurn.rawValue
     self.straightenRadians = feature.crop.straightenRadians
   }
 
   func makeFeature() -> ImageEditorFeature {
     ImageEditorFeature(
-      effects: .init(exposure: exposure.map { ExposureFeature(value: $0) }),
+      effects: .init(exposure: exposure.map { ExposureFeature(ev: $0) }),
       crop: CropFeature(
-        cropRect: cropRect,
-        rotation: QuarterTurn(rawValue: rotation) ?? .zero,
+        rect: cropRect,
+        quarterTurn: QuarterTurn(rawValue: rotation) ?? .zero,
         straightenRadians: straightenRadians
       )
     )

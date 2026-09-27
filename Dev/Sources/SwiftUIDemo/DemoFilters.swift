@@ -39,10 +39,10 @@ enum DemoFilters {
         AnyImageEffect(HighlightsFeature(value: 0.25)),
       ]),
       PresetFeature(name: "Warm", identifier: "brightroom.preset.warm", effects: [
-        AnyImageEffect(TemperatureFeature(value: 1200))
+        AnyImageEffect(WhiteBalanceFeature(temperature: 1200))
       ]),
       PresetFeature(name: "Cool", identifier: "brightroom.preset.cool", effects: [
-        AnyImageEffect(TemperatureFeature(value: -1200))
+        AnyImageEffect(WhiteBalanceFeature(temperature: -1200))
       ]),
       PresetFeature(name: "Fade", identifier: "brightroom.preset.fade", effects: [
         AnyImageEffect(FadeFeature(intensity: 0.3)),

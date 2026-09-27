@@ -15,7 +15,7 @@ import Foundation
 ///
 /// ```swift
 /// struct PhotoEdit: Feature, Equatable {
-///   var exposure = ExposureFeature(value: 0)
+///   var exposure = ExposureFeature(ev: 0)
 ///   var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = nil
 ///   var crop: CropFeature
 ///

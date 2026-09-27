@@ -124,7 +124,7 @@ import CoreImage
 
 struct RetouchDocument: Feature, Equatable {
   var crop: CropFeature
-  var exposure: ExposureFeature? = ExposureFeature(value: 0.5)
+  var exposure: ExposureFeature? = ExposureFeature(ev: 0.5)
   var blur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
   var body: some Feature {
@@ -140,9 +140,9 @@ func makeRetouchedImage(
   strokes: [BrushMask.Stroke]
 ) throws -> CIImage {
   let document = RetouchDocument(
-    crop: CropFeature(cropRect: rect),
+    crop: CropFeature(rect: rect),
     blur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: strokes))) {
-      GaussianBlurFeature(value: 40)
+      GaussianBlurFeature(radius: .proportional(40))
     }
   )
   return try FeatureRenderer().makeImage(from: source, feature: document)
@@ -175,9 +175,9 @@ struct Look: ImageEffect, Equatable {
   var body: some ImageEffect {
     switch tone {
     case .warm:
-      TemperatureFeature(value: 800)
+      WhiteBalanceFeature(temperature: 800)
     case .cool:
-      TemperatureFeature(value: -800)
+      WhiteBalanceFeature(temperature: -800)
     case .neutral:
       EmptyFeature()
     }
@@ -185,7 +185,7 @@ struct Look: ImageEffect, Equatable {
       FadeFeature(intensity: 0.2)
     }
     for _ in 0..<sharpenPasses {
-      SharpenFeature(sharpness: 0.4, radius: 1)
+      SharpenFeature(intensity: 0.4, radius: 1)
     }
   }
 }
@@ -208,7 +208,8 @@ every built-in value: `BrightnessFeature`, `ContrastFeature`,
 `MaskFeather`, and `MaskSubtract` (the last two are now `Mask` cases).
 Their initializers take the same parameters without `id:` and `isEnabled:`,
 for example
-`ExposureFeature(value:)` and `CropFeature(cropRect:rotation:straightenRadians:)`.
+`ExposureFeature(ev:)` and `CropFeature(rect:quarterTurn:straightenRadians:)`
+(both renamed in 6.0; see [Renamed Parametric API](#renamed-parametric-api)).
 
 | Removed | Replacement |
 | --- | --- |
@@ -235,7 +236,7 @@ for example
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `PresetFeature(name:identifier:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter | The same loaders without `id:`. They take an optional `identifier:` instead, which defaults to the file name as before. |
-| `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurRadius.proportional(_:)`; `GaussianBlurFeature(value:)` is unchanged |
+| `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | The same APIs taking `some Feature` |
 
@@ -273,13 +274,13 @@ struct PortraitDocument: Feature, Equatable {
 }
 
 func brighten(_ document: inout PortraitDocument, by amount: Double) {
-  let current = document.exposure?.value ?? 0
-  document.exposure = ExposureFeature(value: current + amount)
+  let current = document.exposure?.ev ?? 0
+  document.exposure = ExposureFeature(ev: current + amount)
 }
 ```
 
 The debug views (`FeatureTreeView(document:)`) identify nodes by their type
-path in the body, such as `PresetFeature#0/TemperatureFeature#0`.
+path in the body, such as `PresetFeature#0/WhiteBalanceFeature#0`.
 
 ### Tone Curve and Color Mixer
 
@@ -599,7 +600,7 @@ over it. It no longer holds an edit or a history.
 | The public setter of `loadedState` | None; `loadedState` is read-only |
 | `EffectPipeline.applyIgnoringFailure(to:radiusReferenceExtent:)`, `EffectPipeline.hasEnabledEffects` | Render the effects with `FeatureRenderer` |
 | `BrightRoomImageRenderer(source:orientation:)`, `BrightRoomImageRenderer.edit`, `BrightRoomImageRenderer.Edit` | `BrightRoomImageRenderer(source:orientation:document:)`, `BrightRoomImageRenderer.document` |
-| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(displayCropRect:imageSize:rotation:straighten:)` |
+| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` |
 
 `makeRenderer(document:)` has an overload for an optional document, which
 throws the new `EditingStackError.documentUnavailable` when the document is
@@ -765,10 +766,10 @@ func resumeEdit(
   straightenRadians: Double
 ) -> PhotosCropEditingModel {
   let document = ImageEditorFeature(
-    effects: .init(exposure: exposure.map { ExposureFeature(value: $0) }),
+    effects: .init(exposure: exposure.map { ExposureFeature(ev: $0) }),
     crop: CropFeature(
-      cropRect: cropRect,
-      rotation: rotation,
+      rect: cropRect,
+      quarterTurn: rotation,
       straightenRadians: straightenRadians
     )
   )
@@ -783,7 +784,7 @@ A rebuilt document equals the one you saved. The model does not check that
 the document was authored for the loaded image; resume it only over the same
 image.
 
-`cropRect` is the selection before the quarter turn. Convert rectangles saved
+`rect` is the selection before the quarter turn. Convert rectangles saved
 by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 
 ## QuarterTurn Case Names
@@ -925,14 +926,14 @@ let squareCrop = CropModifier { _, crop in
 
 ## Crop Rectangles and Output Rotation
 
-`CropFeature` evaluates straighten → crop → exact quarter turn. `cropRect`,
-`displayCropRect(imageSize:)`,
-`CropFeature(displayCropRect:imageSize:rotation:straighten:)`, and
+`CropFeature` evaluates straighten → crop → exact quarter turn. `rect`
+(5.x `cropRect`), `displayCropRect(imageSize:)`,
+`CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)`, and
 `CropEditingState.cropExtent` describe the selection after straightening and
 before the quarter turn. In 5.1.0 they described the frame in the output
 orientation, turned about its center.
 
-Changing `rotation` changes only the output orientation; a sideways turn
+Changing `quarterTurn` (5.x `rotation`) changes only the output orientation; a sideways turn
 exchanges the output's width and height. Code that turned a rectangle about
 its center when it set a sideways rotation must stop doing so.
 
@@ -954,13 +955,14 @@ import CoreGraphics
 
 // The whole 300 × 200 image; it renders 200 × 300.
 let crop = CropFeature(
-  cropRect: CGRect(x: 0, y: 0, width: 300, height: 200),
-  rotation: .counterclockwise
+  rect: CGRect(x: 0, y: 0, width: 300, height: 200),
+  quarterTurn: .counterclockwise
 )
 ```
 
 Unlike most 5.x samples, the Before code still compiles against Brightroom 6
-once `.quarterCW` is renamed `.counterclockwise`
+once `cropRect:` is renamed `rect:`, `rotation:` is renamed `quarterTurn:`,
+and `.quarterCW` is renamed `.counterclockwise`
 ([QuarterTurn Case Names](#quarterturn-case-names)). There it selects a
 200 × 300 area that extends past the 200-pixel-high image and renders
 300 × 200 with transparent bands, so convert such rectangles rather than
@@ -974,13 +976,13 @@ relying on the compiler to find them.
   are transparent. Quarter turns no longer trim a row or column to even out
   the dimensions, so odd sizes keep every pixel.
 - New API: `CropFeature.outputGeometry(in:)`, which returns
-  `CropFeature.OutputGeometry` (`outputBounds`, `sourceToOutputTransform`);
+  `CropFeature.OutputGeometry` (`outputBounds`, `inputToOutputTransform`);
   `QuarterTurn.isSideways`; `CropGeometry.rect(_:turnedBy:)`;
   `CropGeometry.fittingRect(rect:in:straightenRadians:respectingAspectRatio:)`;
   and a `straightenRadians:` parameter on
   `CropGeometry.cropRect(toFitAspectRatio:in:)` and
   `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)`.
-- `CropFeature(displayCropRect:imageSize:rotation:straighten:)` with a
+- `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` with a
   non-zero `straighten` now fits the selection so its straightened footprint
   lies inside the input, shrinking it uniformly and moving it only if needed,
   and then snaps its dimensions inward; the origin can stay fractional. 5.1.0
@@ -1054,6 +1056,24 @@ a `RenderedImage`.
 | `BrushMaskStroke(stamps:brush:)`, `.stamps` | `BrushMask.Stroke(stampCenters:brush:)`, `.stampCenters` |
 | `BrushMaskBrush` | `BrushMask.Brush` |
 | `FeatureRenderer.makeMaskImage(for: MaskTree, extent:)` | `FeatureRenderer.makeMaskImage(for: Mask, extent:)` |
+
+### Feature Members
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `CropFeature(cropRect:rotation:straightenRadians:)`, `.cropRect`, `.rotation` | `CropFeature(rect:quarterTurn:straightenRadians:)`, `.rect`, `.quarterTurn` |
+| `CropFeature.OutputGeometry.sourceToOutputTransform` | `CropFeature.OutputGeometry.inputToOutputTransform` |
+| `GaussianBlurRadius` | `GaussianBlurFeature.Radius` |
+| `GaussianBlurFeature(radius: Double)`, `GaussianBlurFeature(value:)` | `GaussianBlurFeature(radius: .absolute(_:))`, `GaussianBlurFeature(radius: .proportional(_:))` |
+| `TemperatureFeature(value:tint:)`, `.value` | `WhiteBalanceFeature(temperature:tint:)`, `.temperature` |
+| `ExposureFeature(value:)`, `.value` | `ExposureFeature(ev:)`, `.ev` |
+| `SharpenFeature(sharpness:radius:)`, `.sharpness` | `SharpenFeature(intensity:radius:)`, `.intensity` |
+| `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` |
+
+Library types that conform to `Feature` end in `Feature`. Values that are not
+features (`Mask`, `BrushMask`, `QuarterTurn`) have no suffix, and a value type
+used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
+`BrushMask.Stroke`).
 
 ## Migration Checklist
 

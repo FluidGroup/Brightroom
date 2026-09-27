@@ -55,14 +55,14 @@ struct StoredLook: Codable {
   var extras: [StoredEffect]
 
   init(_ look: Look) throws {
-    exposure = look.exposure?.value
+    exposure = look.exposure?.ev
     lut = look.lut.map { StoredLUT(assetID: $0.identifier, amount: $0.amount) }
     extras = try look.extras.map(StoredEffect.init)
   }
 
   func makeLook(loadLUT: (String) throws -> ColorCubeFeature) throws -> Look {
     var look = Look()
-    look.exposure = exposure.map { ExposureFeature(value: $0) }
+    look.exposure = exposure.map { ExposureFeature(ev: $0) }
     if let lut {
       var feature = try loadLUT(lut.assetID)  // Cube data stays in your asset catalog.
       feature.amount = lut.amount
@@ -116,13 +116,13 @@ It uses only the public API.
 | Feature | Store | Rebuild with |
 | --- | --- | --- |
 | Enablement | whether the member is present | an optional member, `if`, or leaving the feature out |
-| `CropFeature` | `cropRect` (the selection after straightening and before the output quarter turn; y-up, relative to the crop's input origin), `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(cropRect:rotation:straightenRadians:)`, then call `validate()` |
+| `CropFeature` | `rect` (the selection after straightening and before the output quarter turn; y-up, relative to the crop's input origin), `quarterTurn.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(rect:quarterTurn:straightenRadians:)`, then call `validate()` |
 | `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, set `amount`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
-| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect` as the selection before the output quarter turn, `rotation`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
+| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
 
 Notes:
 
@@ -130,12 +130,12 @@ Notes:
   `validate()` methods reject a crop rectangle that is not a finite, non-empty
   extent and cube data that does not match its dimension; rendering would
   throw the same errors later.
-- `CropFeature` renders straighten → crop → exact quarter turn. `cropRect` is
-  the selection before the quarter turn, so a sideways `rotation` exchanges
+- `CropFeature` renders straighten → crop → exact quarter turn. `rect` is
+  the selection before the quarter turn, so a sideways `quarterTurn` exchanges
   only the output's width and height (`outputGeometry(in:).outputBounds`);
-  changing `rotation` never changes the selected pixels. Parts of the
+  changing `quarterTurn` never changes the selected pixels. Parts of the
   requested canvas outside the input are transparent.
-- Mask trees have no `validate()`. A union or intersection with no inputs
+- Masks have no `validate()`. A union or intersection with no inputs
   restores without error and throws `FeatureEvaluationError.emptyMaskComposite`
   when it renders. Reject empty composites while converting if your storage
   can hold them.
@@ -288,7 +288,7 @@ All three schemas are y-up and relative to the input image's origin.
 `rotation` holds `0`, `-90`, `-180`, or `-270` (`counterclockwise` is `-90`,
 `clockwise` is `-270`).
 
-- **Schema 1**: `cropRect` only. Convert to `CropFeature(cropRect:)`.
+- **Schema 1**: `cropRect` only. Convert to `CropFeature(rect:)`.
 - **Schema 2 (5.0 and 5.1.0)**: `cropRect` is the output frame. 5.1.0 turned
   the whole input by `-(rotation + straightenRadians)` about the rectangle's
   center and cut `cropRect` (w × h) out of it, so the output was w × h at
@@ -297,7 +297,7 @@ All three schemas are y-up and relative to the input image's origin.
   before the quarter turn. Rendering straightens about the rectangle's
   center, cuts `cropRect`, and then turns the w × h canvas by an exact quarter
   turn, so a sideways turn outputs h × w. Convert with
-  `CropFeature(cropRect:rotation:straightenRadians:)` unchanged.
+  `CropFeature(rect:quarterTurn:straightenRadians:)` unchanged.
 
 Turns about the same center commute, so a schema 2 crop equals the Brightroom 6
 crop with the same center and angles and, for a sideways turn, the size
@@ -317,7 +317,7 @@ exchanged:
   pixel. ImageEditor keeps an untouched crop exactly, so reopening it and
   pressing Done leaves the half pixel in place. A host that wants integer
   edges must canonicalize while converting, with BrightroomEngine's
-  `CropFeature(displayCropRect:imageSize:rotation:straighten:)` (y-down
+  `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` (y-down
   input). Without straightening it snaps the edges inward, which drops the
   half-pixel row and column, so the output becomes (w − 1) × (h − 1) instead
   of 5.1.0's w × h. With straightening it keeps a fractional origin, and the
@@ -370,8 +370,8 @@ func makeCrop(schema: Int, stored: Stored5xCrop) throws -> CropFeature? {
     throw CropConversionError.unsupportedSchema(schema)
   }
   let crop = CropFeature(
-    cropRect: selection,
-    rotation: rotation,
+    rect: selection,
+    quarterTurn: rotation,
     straightenRadians: stored.straightenRadians ?? 0
   )
   try crop.validate()

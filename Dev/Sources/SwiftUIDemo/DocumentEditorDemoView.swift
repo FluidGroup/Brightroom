@@ -105,7 +105,7 @@ struct DocumentEditorDemoView: View {
   private func documentSections(_ document: ImageEditorDocument) -> some View {
     Section("Document") {
       LabeledContent("Image", value: "\(Int(document.image.pixelSize.width)) x \(Int(document.image.pixelSize.height)) px")
-      LabeledContent("Crop", value: Self.describe(document.feature.crop.cropRect))
+      LabeledContent("Crop", value: Self.describe(document.feature.crop.rect))
       LabeledContent("Undo steps", value: "\(document.history.undoStack.count)")
       LabeledContent("Redo steps", value: "\(document.history.redoStack.count)")
       LabeledContent("Uncommitted changes", value: document.hasUncommittedChanges ? "Yes" : "No")

@@ -46,8 +46,8 @@ private func makeCrop(schema: Int, stored: Stored5xCrop) throws -> CropFeature? 
     throw CropConversionError.unsupportedSchema(schema)
   }
   let crop = CropFeature(
-    cropRect: selection,
-    rotation: rotation,
+    rect: selection,
+    quarterTurn: rotation,
     straightenRadians: stored.straightenRadians ?? 0
   )
   try crop.validate()
@@ -69,7 +69,7 @@ struct StoredCropConversionExampleTests {
 
     let crop = try #require(try makeCrop(schema: 2, stored: stored))
 
-    #expect(crop == CropFeature(cropRect: CGRect(x: 0, y: 0, width: 300, height: 200), rotation: .counterclockwise))
+    #expect(crop == CropFeature(rect: CGRect(x: 0, y: 0, width: 300, height: 200), quarterTurn: .counterclockwise))
   }
 
   @Test(arguments: [
@@ -108,8 +108,8 @@ struct StoredCropConversionExampleTests {
     let v1 = Stored5xCrop(isEnabled: true, cropRect: rect, rotation: nil, straightenRadians: nil)
     let v3 = Stored5xCrop(isEnabled: true, cropRect: rect, rotation: -90, straightenRadians: 0)
 
-    #expect(try makeCrop(schema: 1, stored: v1) == CropFeature(cropRect: rect))
-    #expect(try makeCrop(schema: 3, stored: v3) == CropFeature(cropRect: rect, rotation: .counterclockwise))
+    #expect(try makeCrop(schema: 1, stored: v1) == CropFeature(rect: rect))
+    #expect(try makeCrop(schema: 3, stored: v3) == CropFeature(rect: rect, quarterTurn: .counterclockwise))
   }
 
   @Test

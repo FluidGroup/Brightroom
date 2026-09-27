@@ -35,7 +35,7 @@ struct ImageEditorSessionTests {
     var session = ImageEditorSession(documentAtStart: document)
 
     document = try #require(session.document(after: document) {
-      $0.feature.effects.exposure = ExposureFeature(value: 2)
+      $0.feature.effects.exposure = ExposureFeature(ev: 2)
     })
     #expect(document.hasUncommittedChanges)
     #expect(document.history.undoStack.isEmpty)
@@ -56,7 +56,7 @@ struct ImageEditorSessionTests {
     var session = ImageEditorSession(documentAtStart: document)
     for value in 1...3 {
       document = try #require(session.document(after: document) {
-        $0.feature.effects.exposure = ExposureFeature(value: Double(value))
+        $0.feature.effects.exposure = ExposureFeature(ev: Double(value))
       })
     }
     #expect(document.history.undoStack.isEmpty)
@@ -96,17 +96,17 @@ struct ImageEditorSessionTests {
     var document = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: document)
     let first = try #require(session.document(after: document) {
-      $0.feature.effects.exposure = ExposureFeature(value: 1)
+      $0.feature.effects.exposure = ExposureFeature(ev: 1)
     })
     let second = try #require(session.document(after: first) {
-      $0.feature.effects.exposure = ExposureFeature(value: 2)
+      $0.feature.effects.exposure = ExposureFeature(ev: 2)
     })
     _ = second
 
     // The host's UndoManager restores the value before the second write.
     session.noteDocument(first)
     document = try #require(session.document(after: first) {
-      $0.feature.effects.exposure = ExposureFeature(value: 3)
+      $0.feature.effects.exposure = ExposureFeature(ev: 3)
     })
     #expect(document.history.undoStack.isEmpty, "Still one visit: no commit.")
   }
@@ -133,7 +133,7 @@ struct ImageEditorSessionTests {
     var session = ImageEditorSession(documentAtStart: host.document)
 
     // Filters: one tap. Leave. Adjust: one drag. Leave. Done.
-    if let next = session.document(after: host.document, change: { $0.feature.effects.exposure = ExposureFeature(value: 1) }) {
+    if let next = session.document(after: host.document, change: { $0.feature.effects.exposure = ExposureFeature(ev: 1) }) {
       host.binding.wrappedValue = next
     }
     if let next = session.endToolVisit(of: host.document) {
@@ -166,7 +166,7 @@ struct ImageEditorSessionTests {
     #expect(host.writes == 0)
     let shown = session.displayedFeature(of: host.document)
     #expect(shown.effects.exposure != nil)
-    #expect(host.document.feature.effects.exposure == ExposureFeature(value: 0))
+    #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 0))
 
     if let next = session.document(after: host.document) {
       host.binding.wrappedValue = next
@@ -224,12 +224,12 @@ struct ImageEditorSessionTests {
     var session = ImageEditorSession(documentAtStart: opened)
 
     let written = session.document(after: document) {
-      $0.feature.effects.exposure = ExposureFeature(value: 5)
+      $0.feature.effects.exposure = ExposureFeature(ev: 5)
     }
     document = try #require(written)
     _ = session.endToolVisit(of: document)
     document = try #require(session.document(after: document) {
-      $0.feature.effects.exposure = ExposureFeature(value: 6)
+      $0.feature.effects.exposure = ExposureFeature(ev: 6)
     })
 
     #expect(session.documentForCancel(replacing: document) == opened)
@@ -276,10 +276,10 @@ struct ImageEditorSessionTests {
     let opened = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: opened)
     let first = try #require(session.document(after: opened) {
-      $0.feature.effects.exposure = ExposureFeature(value: 1)
+      $0.feature.effects.exposure = ExposureFeature(ev: 1)
     })
     let second = try #require(session.document(after: first) {
-      $0.feature.effects.exposure = ExposureFeature(value: 2)
+      $0.feature.effects.exposure = ExposureFeature(ev: 2)
     })
 
     // Undo and redo by the host's UndoManager.
@@ -304,7 +304,7 @@ struct ImageEditorSessionTests {
     var document = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: document)
     document = try #require(session.document(after: document) {
-      $0.feature.effects.exposure = ExposureFeature(value: 1)
+      $0.feature.effects.exposure = ExposureFeature(ev: 1)
     })
     _ = session.endToolVisit(of: document)
 
@@ -324,13 +324,13 @@ struct ImageEditorSessionTests {
     let host = Host(EditingDocument(image: try SourceImage(data: data)))
 
     // A change queued by the canvas that showed `shown`.
-    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: shown, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: shown, to: host.binding)
     #expect(host.writes == 0)
     #expect(host.document.feature.effects.exposure == nil)
 
-    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.image, to: host.binding)
     #expect(host.writes == 1)
-    #expect(host.document.feature.effects.exposure == ExposureFeature(value: 1))
+    #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 1))
   }
 
   @Test func `A canvas change that changes nothing is not written`() throws {
@@ -344,8 +344,8 @@ struct ImageEditorSessionTests {
     let host = Host(try Fixtures.makeDocument())
     // The host changed the document after the canvas queued its change.
     host.document.feature.effects.saturation = SaturationFeature(value: 0.5)
-    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.image, to: host.binding)
     #expect(host.document.feature.effects.saturation == SaturationFeature(value: 0.5))
-    #expect(host.document.feature.effects.exposure == ExposureFeature(value: 1))
+    #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 1))
   }
 }

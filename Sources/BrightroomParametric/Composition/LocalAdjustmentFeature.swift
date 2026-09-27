@@ -16,7 +16,7 @@ import Foundation
 ///
 /// ```swift
 /// LocalAdjustmentFeature(mask: .brush(strokes)) {
-///   GaussianBlurFeature(value: 40)
+///   GaussianBlurFeature(radius: .proportional(40))
 /// }
 /// ```
 ///

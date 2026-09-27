@@ -177,16 +177,16 @@ struct ParametricFeaturePreviewView: View {
 
   private func makeDocument() -> ParametricPreviewDocument {
     ParametricPreviewDocument(
-      firstCrop: isFirstCropEnabled ? CropFeature(cropRect: firstCropRect) : nil,
-      secondCrop: isSecondCropEnabled ? CropFeature(cropRect: secondCropRect) : nil,
+      firstCrop: isFirstCropEnabled ? CropFeature(rect: firstCropRect) : nil,
+      secondCrop: isSecondCropEnabled ? CropFeature(rect: secondCropRect) : nil,
       localExposure: isLocalExposureEnabled
         ? LocalAdjustmentFeature(mask: localExposureMask) {
-          ExposureFeature(value: localExposureValue)
+          ExposureFeature(ev: localExposureValue)
         }
         : nil,
       localBlur: isLocalBlurEnabled
         ? LocalAdjustmentFeature(mask: localBlurMask) {
-          GaussianBlurFeature(radius: localBlurRadius)
+          GaussianBlurFeature(radius: .absolute(localBlurRadius))
         }
         : nil,
       brightness: abs(globalBrightness) > 0.001

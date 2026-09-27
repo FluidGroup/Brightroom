@@ -44,7 +44,7 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var preset: PresetFeature?
     public var exposure: ExposureFeature?
     public var brightness: BrightnessFeature?
-    public var temperature: TemperatureFeature?
+    public var whiteBalance: WhiteBalanceFeature?
     public var highlights: HighlightsFeature?
     public var shadows: ShadowsFeature?
     public var saturation: SaturationFeature?
@@ -60,7 +60,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       preset: PresetFeature? = nil,
       exposure: ExposureFeature? = nil,
       brightness: BrightnessFeature? = nil,
-      temperature: TemperatureFeature? = nil,
+      whiteBalance: WhiteBalanceFeature? = nil,
       highlights: HighlightsFeature? = nil,
       shadows: ShadowsFeature? = nil,
       saturation: SaturationFeature? = nil,
@@ -74,7 +74,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.preset = preset
       self.exposure = exposure
       self.brightness = brightness
-      self.temperature = temperature
+      self.whiteBalance = whiteBalance
       self.highlights = highlights
       self.shadows = shadows
       self.saturation = saturation
@@ -90,7 +90,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       preset
       exposure
       brightness
-      temperature
+      whiteBalance
       highlights
       shadows
       saturation

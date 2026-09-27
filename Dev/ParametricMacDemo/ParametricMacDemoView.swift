@@ -735,7 +735,7 @@ struct ParametricMacPreviewRenderer {
         )
         if let feature = output.feature {
           steps.append(.crop(feature))
-          currentSize = feature.cropRect.size
+          currentSize = feature.rect.size
         }
         treeLines.append(output.treeLine)
 
@@ -811,7 +811,7 @@ struct ParametricMacPreviewRenderer {
   ) -> (feature: CropFeature?, treeLine: ParametricMacTreeLine) {
     let cropRect = insetRect(size: currentSize, inset: inset)
     return (
-      settings.includes(node) ? CropFeature(cropRect: cropRect) : nil,
+      settings.includes(node) ? CropFeature(rect: cropRect) : nil,
       .init(
         id: node.rawValue,
         kind: .domain,
@@ -840,10 +840,10 @@ struct ParametricMacPreviewRenderer {
 
     var effects: [AnyImageEffect] = []
     if settings.includes(.localExposure) {
-      effects.append(AnyImageEffect(ExposureFeature(value: settings.localExposure)))
+      effects.append(AnyImageEffect(ExposureFeature(ev: settings.localExposure)))
     }
     if settings.includes(.localBlur) {
-      effects.append(AnyImageEffect(GaussianBlurFeature(radius: settings.localBlurRadius)))
+      effects.append(AnyImageEffect(GaussianBlurFeature(radius: .absolute(settings.localBlurRadius))))
     }
 
     let localAdjustment: LocalAdjustmentFeature<[AnyImageEffect]>?

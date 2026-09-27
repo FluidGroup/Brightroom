@@ -50,7 +50,7 @@ struct FeatureRenderingTests {
   @Test func temperatureFeatureEvaluatesTintAxis() throws {
     let output = try Self.renderer.makeImage(
       from: Self.smallInput,
-      feature: TemperatureFeature(value: 0, tint: 100)
+      feature: WhiteBalanceFeature(temperature: 0, tint: 100)
     )
     let rendered = try Self.render(output)
     let pixel = Self.rgba(in: rendered, x: 4, y: 4)
@@ -62,7 +62,7 @@ struct FeatureRenderingTests {
   @Test func videoFrameRendererMatchesDocumentRendering() throws {
     struct Document: Feature {
       var body: some Feature {
-        ExposureFeature(value: 0.4)
+        ExposureFeature(ev: 0.4)
         BrightnessFeature(value: 0.04)
       }
     }
@@ -102,7 +102,7 @@ struct FeatureRenderingTests {
   @Test func videoRendererResolvesCropOutputRenderSize() throws {
     let renderSize = try VideoRenderer().resolveRenderSize(
       sourceRenderSize: CGSize(width: 48, height: 36),
-      feature: CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)),
+      feature: CropFeature(rect: CGRect(x: 8, y: 6, width: 24, height: 18)),
       mode: .featureOutput
     )
 
@@ -128,7 +128,7 @@ struct FeatureRenderingTests {
   @Test func videoFrameRendererPlacesOutputInsideRenderExtent() throws {
     struct Document: Feature {
       var body: some Feature {
-        CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18))
+        CropFeature(rect: CGRect(x: 8, y: 6, width: 24, height: 18))
         BrightnessFeature(value: 0.05)
       }
     }
@@ -175,7 +175,7 @@ struct FeatureRenderingTests {
 
     let output = try Self.renderer.makeImage(
       from: input,
-      feature: Document(first: CropFeature(cropRect: first), second: CropFeature(cropRect: second))
+      feature: Document(first: CropFeature(rect: first), second: CropFeature(rect: second))
     )
 
     #expect(output.extent == CGRect(x: 0, y: 0, width: 25, height: 30))
@@ -192,7 +192,7 @@ struct FeatureRenderingTests {
   @Test func imageEffectReceivesCurrentExtentAfterCrop() throws {
     struct Document: Feature {
       var body: some Feature {
-        CropFeature(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+        CropFeature(rect: CGRect(x: 10, y: 8, width: 40, height: 20))
         TestExtentProbeFeature()
       }
     }
@@ -210,7 +210,7 @@ struct FeatureRenderingTests {
   }
 
   @Test func vignetteUsesCurrentExtentAfterCrop() throws {
-    let crop = CropFeature(cropRect: CGRect(x: 10, y: 8, width: 40, height: 20))
+    let crop = CropFeature(rect: CGRect(x: 10, y: 8, width: 40, height: 20))
     let vignette = VignetteFeature(value: 0.5)
     struct CropThenVignette: Feature {
       var crop: CropFeature
@@ -271,7 +271,7 @@ struct FeatureRenderingTests {
             ])
           )
         ) {
-          ExposureFeature(value: 1)
+          ExposureFeature(ev: 1)
         }
         LocalAdjustmentFeature(
           mask: .brush(
@@ -283,7 +283,7 @@ struct FeatureRenderingTests {
             ])
           )
         ) {
-          GaussianBlurFeature(radius: 5)
+          GaussianBlurFeature(radius: .absolute(5))
         }
         BrightnessFeature(value: 0.05)
       }
@@ -320,7 +320,7 @@ struct FeatureRenderingTests {
         )
       )
     ) {
-      ExposureFeature(value: 1)
+      ExposureFeature(ev: 1)
     }
     let input = CIImage.parametricTestImage(
       white: 0.2,

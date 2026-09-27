@@ -32,7 +32,7 @@ struct ImageEditorFeatureEditingTests {
       crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
     )
     // Members assigned after construction are ordinary values too.
-    restored.effects.exposure = ExposureFeature(value: 0.9)
+    restored.effects.exposure = ExposureFeature(ev: 0.9)
     restored.effects.vignette = VignetteFeature(value: 1)
 
     var document = EditingDocument(image: makeImage(), feature: restored)
@@ -93,7 +93,7 @@ struct ImageEditorFeatureEditingTests {
     )
     // Copies, commits, and undo never run it again.
     var copy = document
-    copy.feature.effects.exposure = ExposureFeature(value: 1)
+    copy.feature.effects.exposure = ExposureFeature(ev: 1)
     copy.commit()
     copy.undo()
 
@@ -122,7 +122,7 @@ struct ImageEditorFeatureEditingTests {
     document.setAdjustmentValue(50, parameter: .exposure)
 
     #expect(document.feature.effects.preset?.identifier == "test")
-    #expect(document.feature.effects.exposure?.value == 0.9)
+    #expect(document.feature.effects.exposure?.ev == 0.9)
     #expect(document.hasUncommittedChanges)
   }
 

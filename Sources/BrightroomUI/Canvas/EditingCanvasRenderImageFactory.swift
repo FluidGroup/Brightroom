@@ -232,7 +232,7 @@ enum EditingCanvasRenderImageFactory {
     geometry: EditingCanvasCropOutputGeometry
   ) -> CIImage {
     image
-      .transformed(by: geometry.sourceToOutputTransform)
+      .transformed(by: geometry.inputToOutputTransform)
       .cropped(to: geometry.outputBounds)
   }
 

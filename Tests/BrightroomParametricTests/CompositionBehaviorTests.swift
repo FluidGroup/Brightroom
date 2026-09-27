@@ -136,8 +136,8 @@ struct CompositionBehaviorTests {
     let present = try Fixtures.renderer.makeImage(
       from: source,
       feature: Document(
-        exposure: ExposureFeature(value: 0.5),
-        passes: [SharpenFeature(sharpness: 0.4, radius: 20)],
+        exposure: ExposureFeature(ev: 0.5),
+        passes: [SharpenFeature(intensity: 0.4, radius: 20)],
         appliesFade: true
       )
     )
@@ -200,7 +200,7 @@ struct CompositionBehaviorTests {
 
     // A local adjustment with composite content keeps value semantics.
     var changedLook = look
-    changedLook.exposure.value = 0
+    changedLook.exposure.ev = 0
     let adjustment = LocalAdjustmentFeature(mask: mask) { look }
     let sameAdjustment = LocalAdjustmentFeature(mask: mask) { look }
     let changedAdjustment = LocalAdjustmentFeature(mask: mask) { changedLook }
@@ -212,8 +212,8 @@ struct CompositionBehaviorTests {
 
   @Test func `presentation time and the chain-entry context reach every nested feature`() throws {
     let source = try Fixtures.makeSource()
-    let crop = CropFeature(cropRect: CGRect(x: 40, y: 30, width: 200, height: 150))
-    let croppedExtent = CGRect(origin: .zero, size: crop.cropRect.size)
+    let crop = CropFeature(rect: CGRect(x: 40, y: 30, width: 200, height: 150))
+    let croppedExtent = CGRect(origin: .zero, size: crop.rect.size)
     let presentationTime = CMTime(value: 1_234, timescale: 600)
 
     func expectedEntries(
@@ -289,14 +289,14 @@ struct CompositionBehaviorTests {
 
   @Test func `a direct apply with the default context treats its input as the chain entry`() throws {
     let source = try Fixtures.normalizedSource()
-    let crop = CropFeature(cropRect: CGRect(x: 40, y: 30, width: 120, height: 90))
+    let crop = CropFeature(rect: CGRect(x: 40, y: 30, width: 120, height: 90))
 
     struct Document: Feature {
       var crop: CropFeature
 
       var body: some Feature {
         crop
-        GaussianBlurFeature(value: 40)
+        GaussianBlurFeature(radius: .proportional(40))
       }
     }
     let document = Document(crop: crop)
@@ -305,7 +305,7 @@ struct CompositionBehaviorTests {
     let applied = try document.apply(to: source, context: FeatureEvaluationContext())
     Fixtures.expectPixelsMatch(rendered, applied)
 
-    let tupleApplied = try TupleFeature(crop, GaussianBlurFeature(value: 40))
+    let tupleApplied = try TupleFeature(crop, GaussianBlurFeature(radius: .proportional(40)))
       .apply(to: source, context: FeatureEvaluationContext())
     Fixtures.expectPixelsMatch(rendered, tupleApplied)
 
@@ -313,7 +313,7 @@ struct CompositionBehaviorTests {
     let rebased = try Fixtures.renderer.makeImage(
       from: source,
       feature: document,
-      chainEntryExtent: CGRect(origin: .zero, size: crop.cropRect.size)
+      chainEntryExtent: CGRect(origin: .zero, size: crop.rect.size)
     )
     Fixtures.expectVisiblyDifferent(rendered, rebased)
   }
@@ -321,13 +321,13 @@ struct CompositionBehaviorTests {
   // MARK: - Type erasure
 
   @Test func `erased effects are equal only when they wrap the same type`() {
-    let exposure = ExposureFeature(value: 0.2)
+    let exposure = ExposureFeature(ev: 0.2)
 
     #expect(AnyImageEffect(exposure) == AnyImageEffect(exposure))
     #expect(AnyImageEffect(AnyImageEffect(exposure)) == AnyImageEffect(exposure))
     #expect(
       AnyImageEffect(exposure)
-        != AnyImageEffect(ExposureFeature(value: 0.3))
+        != AnyImageEffect(ExposureFeature(ev: 0.3))
     )
 
     // A plain cast would bridge these.
@@ -429,7 +429,7 @@ struct CompositionBehaviorTests {
         try Fixtures.renderer.makeImage(
           from: source,
           feature: LocalAdjustmentFeature(mask: mask) {
-            GaussianBlurFeature(value: 40)
+            GaussianBlurFeature(radius: .proportional(40))
           }
         )
       }
@@ -449,13 +449,13 @@ struct CompositionBehaviorTests {
   ])
   func `an invalid crop rect throws the rectangle`(cropRect: CGRect) throws {
     let source = try Fixtures.makeSource()
-    let crop = CropFeature(cropRect: cropRect)
+    let crop = CropFeature(rect: cropRect)
 
     struct Document: Feature {
       var crop: CropFeature
 
       var body: some Feature {
-        ExposureFeature(value: 0.2)
+        ExposureFeature(ev: 0.2)
         crop
       }
     }
@@ -493,7 +493,7 @@ struct CompositionBehaviorTests {
       var cube: ColorCubeFeature
 
       var body: some Feature {
-        ExposureFeature(value: 0.2)
+        ExposureFeature(ev: 0.2)
         cube
       }
     }
@@ -541,7 +541,7 @@ struct CompositionBehaviorTests {
   @Test func `a nil optional feature renders as identity`() throws {
     let source = try Fixtures.makeSource()
     let absent: ExposureFeature? = nil
-    let present: ExposureFeature? = ExposureFeature(value: 0.4)
+    let present: ExposureFeature? = ExposureFeature(ev: 0.4)
 
     // An optional feature follows the composition rule: nil contributes
     // nothing. A document that does not exist yet is no longer representable.
@@ -550,7 +550,7 @@ struct CompositionBehaviorTests {
       try Fixtures.renderer.makeImage(from: source, feature: absent)
     )
     Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: source, feature: ExposureFeature(value: 0.4)),
+      try Fixtures.renderer.makeImage(from: source, feature: ExposureFeature(ev: 0.4)),
       try Fixtures.renderer.makeImage(from: source, feature: present)
     )
   }
@@ -715,7 +715,7 @@ private struct ContextProbeDocument: Feature {
 private struct SingleMemberDocument: Feature {
 
   var body: some Feature {
-    ExposureFeature(value: 0.1)
+    ExposureFeature(ev: 0.1)
   }
 }
 
@@ -727,15 +727,15 @@ private struct EmptyDocument: Feature {
 private struct CropThenEffectDocument: Feature {
 
   var body: some Feature {
-    CropFeature(cropRect: CGRect(x: 0, y: 0, width: 10, height: 10))
-    ExposureFeature(value: 0.1)
+    CropFeature(rect: CGRect(x: 0, y: 0, width: 10, height: 10))
+    ExposureFeature(ev: 0.1)
   }
 }
 
 /// A host composite look: global adjustments and a preset.
 private struct Look: ImageEffect, Equatable {
 
-  var exposure = ExposureFeature(value: 0.6)
+  var exposure = ExposureFeature(ev: 0.6)
   var saturation = SaturationFeature(value: -0.8)
   var preset = PresetFeature(
     name: "Punch",

@@ -181,7 +181,7 @@ final class DiskExportTests {
         )
       )
     ) {
-      [AnyImageEffect(ExposureFeature(value: 2))]
+      [AnyImageEffect(ExposureFeature(ev: 2))]
     }
 
     let renderer = EditingDocument(

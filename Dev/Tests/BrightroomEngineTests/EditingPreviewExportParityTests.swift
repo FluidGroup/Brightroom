@@ -165,7 +165,7 @@ struct EditingPreviewExportParityTests {
 
     // The crop rect is the selection before the output quarter turn, so the
     // sideways turn exchanges the output's width and height.
-    #expect(document.crop.rotation != .zero)
+    #expect(document.crop.quarterTurn != .zero)
     #expect(exported.width == 30)
     #expect(exported.height == 40)
     assertImagesMatch(exported, preview, tolerance: 16)
@@ -203,7 +203,7 @@ struct EditingPreviewExportParityTests {
     let emptyDocument = Self.makeDocument(
       imageSize: imageSize,
       localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: []))) {
-        GaussianBlurFeature(radius: 8)
+        GaussianBlurFeature(radius: .absolute(8))
       }
     )
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
@@ -380,7 +380,7 @@ struct EditingPreviewExportParityTests {
         domainHeight: domainHeight
       )
     ) {
-      GaussianBlurFeature(radius: Double(radius))
+      GaussianBlurFeature(radius: .absolute(Double(radius)))
     }
   }
 
@@ -391,7 +391,7 @@ struct EditingPreviewExportParityTests {
     localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
   ) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
-    document.effects.exposure = ExposureFeature(value: 0.4)
+    document.effects.exposure = ExposureFeature(ev: 0.4)
     document.localBlur = localBlur
     if cropRect != nil || rotation != .zero {
       var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)

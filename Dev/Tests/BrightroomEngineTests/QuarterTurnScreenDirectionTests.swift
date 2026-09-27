@@ -132,7 +132,7 @@ struct QuarterTurnScreenDirectionTests {
     let source = try makeFixture(width: Int(size.width), height: Int(size.height))
     let document = EditingDocument(
       image: SourceImage(cgImage: source, orientation: .up),
-      feature: CropFeature(cropRect: CGRect(origin: .zero, size: size), rotation: turn)
+      feature: CropFeature(rect: CGRect(origin: .zero, size: size), quarterTurn: turn)
     )
     let rendered = try await document.render().cgImage
     let pixels = try rgbaPixels(of: rendered)

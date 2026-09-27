@@ -258,7 +258,7 @@ extension CropFeature {
   /// integer pixel snap so UI commits and engine renders agree exactly.
   ///
   /// `displayCropRect` is the selection after straightening and before the
-  /// output quarter turn. Canonicalization does not depend on `rotation`.
+  /// output quarter turn. Canonicalization does not depend on `quarterTurn`.
   /// Source edges snap inward without straightening. Straightened crops are
   /// fitted so their straightened footprint lies inside the source (shrinking
   /// uniformly and moving only if needed), then their dimensions snap inward
@@ -269,26 +269,26 @@ extension CropFeature {
   public init(
     displayCropRect: CGRect,
     imageSize: CGSize,
-    rotation: QuarterTurn = .zero,
+    quarterTurn: QuarterTurn = .zero,
     straighten: Double = 0
   ) {
     let renderCrop = RenderCrop(
       cropRectYDown: displayCropRect,
       imageSize: imageSize,
-      rotation: rotation,
+      rotation: quarterTurn,
       straightenRadians: straighten
     )
     let snapped = renderCrop.cropExtent
     let imageHeight = CGFloat(renderCrop.imageSize.height)
 
     self.init(
-      cropRect: CGRect(
+      rect: CGRect(
         x: snapped.minX,
         y: imageHeight - snapped.maxY,
         width: snapped.width,
         height: snapped.height
       ),
-      rotation: rotation,
+      quarterTurn: quarterTurn,
       straightenRadians: straighten
     )
   }
@@ -297,13 +297,13 @@ extension CropFeature {
   ///
   /// This conversion changes only the y-axis convention. Features authored
   /// through `init(displayCropRect:…)` have already been pixel-canonicalized;
-  /// this method does not snap raw `cropRect` values.
+  /// this method does not snap raw `rect` values.
   public func displayCropRect(imageSize: CGSize) -> CGRect {
     CGRect(
-      x: cropRect.minX,
-      y: imageSize.height - cropRect.maxY,
-      width: cropRect.width,
-      height: cropRect.height
+      x: rect.minX,
+      y: imageSize.height - rect.maxY,
+      width: rect.width,
+      height: rect.height
     )
   }
 
@@ -313,13 +313,13 @@ extension CropFeature {
     RenderCrop(
       cropRectYDown: displayCropRect(imageSize: orientedImageSize),
       imageSize: orientedImageSize,
-      rotation: rotation,
+      rotation: quarterTurn,
       straightenRadians: straightenRadians
     )
   }
 
   /// Whether two crops produce the same canonical crop (plus the same
-  /// rotation and straighten) against an oriented source size.
+  /// quarter turn and straighten) against an oriented source size.
   ///
   /// This is the engine's pixel-snap equivalence the UI uses to decide whether a
   /// crop change is renderable — sub-pixel differences that snap to the same

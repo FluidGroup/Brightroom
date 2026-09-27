@@ -19,7 +19,7 @@ extension CropFeature {
     CropFeature(
       displayCropRect: cropRect ?? CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straighten: straighten
     )
   }

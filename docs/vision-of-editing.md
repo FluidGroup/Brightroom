@@ -399,17 +399,18 @@ currently holds by feature order becomes declared rather than incidental:
   `LocalAdjustmentFeature` rasterizing its mask into its input extent is the
   correct implementation, not a limitation.
 - **Proportional (value-form) radii resolve against the render pass's
-  chain-entry extent.** A value like `GaussianBlurFeature(value: 40)` means a
-  fixed fraction of the image as it entered the parametric chain for the
-  current render, regardless of where crops sit in the feature list. Editing
-  or moving a crop can therefore never retroactively change the strength of a
-  committed effect. The basis is per-render-pass (the downsampled preview and
+  chain-entry extent.** A value like
+  `GaussianBlurFeature(radius: .proportional(40))` means a fixed fraction of
+  the image as it entered the parametric chain for the current render,
+  regardless of where crops sit in the feature list. Editing or moving a crop
+  can therefore never retroactively change the strength of a committed
+  effect. The basis is per-render-pass (the downsampled preview and
   the full-resolution export each resolve against their own entry scale), so
   preview and export stay visually consistent. Render paths that evaluate on
   an intermediate that is not the chain entry (for example a zoomed viewport
   slice) must pass the entry extent explicitly.
 - **Crop output orientation is separate from its selection** (decided 2026-09,
-  #330). A crop evaluates straighten → crop → exact quarter turn. `cropRect` is
+  #330). A crop evaluates straighten → crop → exact quarter turn. `rect` is
   the selection after straightening and before the quarter turn, in the crop's
   input domain; the quarter turn changes only the output orientation, never
   the selected pixels. The renderer and the tool surfaces map coordinates

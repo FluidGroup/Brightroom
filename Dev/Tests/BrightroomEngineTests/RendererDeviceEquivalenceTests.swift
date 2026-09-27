@@ -37,7 +37,7 @@ struct RendererDeviceEquivalenceTests {
         )
 
         return RendererTestDocument(
-          effects: [AnyImageEffect(ExposureFeature(value: 0.72))],
+          effects: [AnyImageEffect(ExposureFeature(ev: 0.72))],
           crop: crop
         )
       }
@@ -50,7 +50,7 @@ struct RendererDeviceEquivalenceTests {
       options: .init(outputColorSpace: ColorSpaces.displayP3),
       makeDocument: { size in
         RendererTestDocument(
-          effects: [AnyImageEffect(ExposureFeature(value: -0.5))],
+          effects: [AnyImageEffect(ExposureFeature(ev: -0.5))],
           crop: CropFeature.test(imageSize: size)
         )
       }
@@ -64,7 +64,7 @@ struct RendererDeviceEquivalenceTests {
       options: .init(),
       makeDocument: { size in
         RendererTestDocument(
-          effects: [AnyImageEffect(ExposureFeature(value: 0.72))],
+          effects: [AnyImageEffect(ExposureFeature(ev: 0.72))],
           crop: CropFeature.test(imageSize: size)
         )
       }

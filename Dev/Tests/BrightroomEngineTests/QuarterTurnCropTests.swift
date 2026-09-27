@@ -45,7 +45,7 @@ struct QuarterTurnCropTests {
     document.setCrop(crop)
     let committed = document.crop
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
-    #expect(committed.rotation == rotation)
+    #expect(committed.quarterTurn == rotation)
 
     let rendered = try await EditingDocument(image: stack.image, feature: document).render().cgImage
     try Self.expectPixels(rendered, from: source, sourceRect: sourceRect, rotation: rotation)
@@ -54,8 +54,8 @@ struct QuarterTurnCropTests {
     // the source rows and columns preserved when the model is reopened.
     let reseeded = CropEditingState(cropFeature: committed, imageSize: size)
     #expect(reseeded.cropExtent == expectedExtent)
-    #expect(reseeded.makeCropFeature().cropRect == committed.cropRect)
-    #expect(reseeded.makeCropFeature().rotation == committed.rotation)
+    #expect(reseeded.makeCropFeature().rect == committed.rect)
+    #expect(reseeded.makeCropFeature().quarterTurn == committed.quarterTurn)
   }
 
   @Test(
@@ -87,7 +87,7 @@ struct QuarterTurnCropTests {
 
     let reopened = CropEditingState(cropFeature: committed, imageSize: size)
     #expect(reopened.cropExtent == expectedExtent)
-    #expect(reopened.makeCropFeature().cropRect == committed.cropRect)
+    #expect(reopened.makeCropFeature().rect == committed.rect)
   }
 
   /// Rotation leaves the selected rectangle unchanged, and Done commits that
@@ -114,8 +114,8 @@ struct QuarterTurnCropTests {
 
       editor.applyPendingCrop()
       let committed = owner.document.crop
-      #expect(committed.cropRect == proposed.cropRect)
-      #expect(committed.rotation == rotation)
+      #expect(committed.rect == proposed.rect)
+      #expect(committed.quarterTurn == rotation)
       #expect(committed.straightenRadians == proposed.straightenRadians)
     }
     withExtendedLifetime(window) {}
@@ -145,8 +145,8 @@ struct QuarterTurnCropTests {
       let (editor, window) = try openCanvasView(on: stack, owner: owner)
       editor.applyPendingCrop()
       let recorded = owner.document.crop
-      #expect(recorded.rotation == rotation)
-      #expect(recorded.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+      #expect(recorded.quarterTurn == rotation)
+      #expect(recorded.rect == committed.rect, "after open and Done #\(cycle)")
       window.isHidden = true
       withExtendedLifetime(window) {}
     }
@@ -175,9 +175,9 @@ struct QuarterTurnCropTests {
       let (editor, window) = try openCanvasView(on: stack, owner: owner)
       editor.applyPendingCrop()
       let recorded = owner.document.crop
-      #expect(recorded.rotation == committed.rotation)
+      #expect(recorded.quarterTurn == committed.quarterTurn)
       #expect(recorded.straightenRadians == committed.straightenRadians)
-      #expect(recorded.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+      #expect(recorded.rect == committed.rect, "after open and Done #\(cycle)")
       window.isHidden = true
       withExtendedLifetime(window) {}
     }
@@ -206,7 +206,7 @@ struct QuarterTurnCropTests {
     let turnedCrop = CropFeature(
       displayCropRect: expectedExtent,
       imageSize: size,
-      rotation: rotation,
+      quarterTurn: rotation,
       straighten: straighten
     )
     #expect(turnedCrop.displayCropRect(imageSize: size) == expectedExtent)
@@ -221,7 +221,7 @@ struct QuarterTurnCropTests {
 
     let reopened = CropEditingState(cropFeature: turnedCrop, imageSize: size)
     #expect(reopened.cropExtent == expectedExtent)
-    #expect(reopened.makeCropFeature().cropRect == turnedCrop.cropRect)
+    #expect(reopened.makeCropFeature().rect == turnedCrop.rect)
     #expect(reopened.makeCropFeature().straightenRadians == straighten)
   }
 
@@ -259,14 +259,14 @@ struct QuarterTurnCropTests {
     let feature = CropFeature(
       displayCropRect: extent,
       imageSize: imageSize,
-      rotation: .counterclockwise,
+      quarterTurn: .counterclockwise,
       straighten: 30 * .pi / 180
     )
 
     #expect(feature.displayCropRect(imageSize: imageSize) == extent)
     let reopened = CropEditingState(cropFeature: feature, imageSize: imageSize)
     #expect(reopened.cropExtent == extent)
-    #expect(reopened.makeCropFeature().cropRect == feature.cropRect)
+    #expect(reopened.makeCropFeature().rect == feature.rect)
   }
 
   // MARK: - Bounds and aspect ratio
@@ -283,19 +283,19 @@ struct QuarterTurnCropTests {
       let feature = CropFeature(
         displayCropRect: fixture.requested,
         imageSize: imageSize,
-        rotation: rotation
+        quarterTurn: rotation
       )
       #expect(feature.displayCropRect(imageSize: imageSize) == fixture.expected)
 
       // A raw stored crop is normalized the same way when its editor opens.
       let stored = CropFeature(
-        cropRect: CGRect(
+        rect: CGRect(
           x: fixture.requested.minX,
           y: imageSize.height - fixture.requested.maxY,
           width: fixture.requested.width,
           height: fixture.requested.height
         ),
-        rotation: rotation
+        quarterTurn: rotation
       )
       let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
       #expect(reopened.cropExtent == fixture.expected)

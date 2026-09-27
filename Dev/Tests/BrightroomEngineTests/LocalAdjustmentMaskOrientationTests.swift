@@ -45,7 +45,7 @@ struct LocalAdjustmentMaskOrientationTests {
         domainHeight: imageSize.height
       )
     ) {
-      [AnyImageEffect(ExposureFeature(value: 2))]
+      [AnyImageEffect(ExposureFeature(ev: 2))]
     }
 
     func render(

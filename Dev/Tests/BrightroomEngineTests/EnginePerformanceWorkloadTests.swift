@@ -131,11 +131,11 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         identifier: "perf.preset",
         effects: [
           AnyImageEffect(SaturationFeature(value: 0.3)),
-          AnyImageEffect(TemperatureFeature(value: 900)),
+          AnyImageEffect(WhiteBalanceFeature(temperature: 900)),
           AnyImageEffect(ContrastFeature(value: 0.06)),
         ]
       ),
-      exposure: ExposureFeature(value: 0.35),
+      exposure: ExposureFeature(ev: 0.35),
       highlights: HighlightsFeature(value: 0.2),
       shadows: ShadowsFeature(value: -0.15),
       vignette: VignetteFeature(value: 0.5)
@@ -146,7 +146,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects = makeEffects()
     document.localBlur = LocalAdjustmentFeature(mask: cachedMask) {
-      GaussianBlurFeature(value: 60)
+      GaussianBlurFeature(radius: .proportional(60))
     }
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(

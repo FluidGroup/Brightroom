@@ -56,7 +56,7 @@ enum DocumentTestFixtures {
   /// A full-image `ImageEditorFeature` of `makeImage()` with an exposure.
   static func exposure(_ value: Double) -> ImageEditorFeature {
     var feature = ImageEditorFeature(imageSize: rotatedJPEGSize)
-    feature.effects.exposure = ExposureFeature(value: value)
+    feature.effects.exposure = ExposureFeature(ev: value)
     return feature
   }
 

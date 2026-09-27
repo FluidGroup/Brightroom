@@ -26,14 +26,14 @@ struct BlurChainEntryExtentTests {
     let input = Self.stepEdge(side: 80)
     let sourceReference = CGRect(x: 0, y: 0, width: 800, height: 800)
 
-    let viaValue = try GaussianBlurFeature(value: 40).apply(
+    let viaValue = try GaussianBlurFeature(radius: .proportional(40)).apply(
       to: input,
       context: FeatureEvaluationContext(chainEntryExtent: sourceReference)
     )
 
     // The equivalent absolute radius (diagonal/50) applied to the same input.
     let referenceRadius = hypot(800.0, 800.0) / 50.0
-    let viaAbsolute = try GaussianBlurFeature(radius: referenceRadius).apply(
+    let viaAbsolute = try GaussianBlurFeature(radius: .absolute(referenceRadius)).apply(
       to: input,
       context: FeatureEvaluationContext()
     )
@@ -45,7 +45,7 @@ struct BlurChainEntryExtentTests {
     // The bug it prevents: resolving against the input's own (small) extent
     // gives a ~10× smaller radius and a visibly sharper edge.
     let inputExtentRadius = hypot(80.0, 80.0) / 50.0
-    let viaInputExtent = try GaussianBlurFeature(radius: inputExtentRadius).apply(
+    let viaInputExtent = try GaussianBlurFeature(radius: .absolute(inputExtentRadius)).apply(
       to: input,
       context: FeatureEvaluationContext()
     )
@@ -60,11 +60,11 @@ struct BlurChainEntryExtentTests {
   /// where the input IS the full source at render scale.
   @Test func `nil reference falls back to input extent`() throws {
     let input = Self.stepEdge(side: 200)
-    let viaNil = try GaussianBlurFeature(value: 40).apply(
+    let viaNil = try GaussianBlurFeature(radius: .proportional(40)).apply(
       to: input,
       context: FeatureEvaluationContext()
     )
-    let viaInputExtent = try GaussianBlurFeature(radius: hypot(200.0, 200.0) / 50.0).apply(
+    let viaInputExtent = try GaussianBlurFeature(radius: .absolute(hypot(200.0, 200.0) / 50.0)).apply(
       to: input,
       context: FeatureEvaluationContext()
     )
@@ -84,14 +84,14 @@ struct BlurChainEntryExtentTests {
     let input = Self.stepEdge(side: Int(side))
     // Keep the step edge (x = 400) centered inside the cropped region.
     let cropRect = CGRect(x: 200, y: 200, width: 400, height: 400)
-    let crop = CropFeature(cropRect: cropRect)
+    let crop = CropFeature(rect: cropRect)
 
     struct CropThenBlur: Feature {
       var crop: CropFeature
 
       var body: some Feature {
         crop
-        GaussianBlurFeature(value: 40)
+        GaussianBlurFeature(radius: .proportional(40))
       }
     }
 
@@ -119,7 +119,7 @@ struct BlurChainEntryExtentTests {
     // The failure mode this pins down: resolving against the cropped extent
     // (diagonal/50 of 400×400, half the radius) must NOT match.
     let croppedExtentRadius = hypot(400.0, 400.0) / 50.0
-    let viaCroppedExtent = try GaussianBlurFeature(radius: croppedExtentRadius).apply(
+    let viaCroppedExtent = try GaussianBlurFeature(radius: .absolute(croppedExtentRadius)).apply(
       to: croppedOnly,
       context: FeatureEvaluationContext()
     )

@@ -67,8 +67,8 @@ struct ImageEditorFeatureTests {
     var document = ImageEditorFeature(imageSize: size)
     document.setCrop(crop)
 
-    #expect(document.crop.cropRect == CGRect(origin: .zero, size: size))
-    #expect(document.crop.rotation == .counterclockwise || document.crop.rotation == .clockwise)
+    #expect(document.crop.rect == CGRect(origin: .zero, size: size))
+    #expect(document.crop.quarterTurn == .counterclockwise || document.crop.quarterTurn == .clockwise)
     #expect(
       document.crop.outputGeometry(in: CGRect(origin: .zero, size: size)).outputBounds.size
         == CGSize(width: 200, height: 300)
@@ -87,11 +87,11 @@ struct ImageEditorFeatureTests {
     #expect(document.crop == CropFeature(
       displayCropRect: crop.cropExtent,
       imageSize: imageSize,
-      rotation: crop.rotation,
+      quarterTurn: crop.rotation,
       straighten: crop.adjustmentAngle.radians
     ))
-    #expect(document.crop.cropRect == document.crop.cropRect.integral)
-    #expect(document.crop.rotation == .counterclockwise || document.crop.rotation == .clockwise)
+    #expect(document.crop.rect == document.crop.rect.integral)
+    #expect(document.crop.quarterTurn == .counterclockwise || document.crop.quarterTurn == .clockwise)
 
     // An integral rect round-trips exactly through the y-up working space.
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
@@ -100,7 +100,7 @@ struct ImageEditorFeatureTests {
       document.crop.displayCropRect(imageSize: imageSize)
         == CGRect(x: 10, y: 20, width: 200, height: 100)
     )
-    #expect(document.crop.cropRect == CGRect(x: 10, y: 180, width: 200, height: 100))
+    #expect(document.crop.rect == CGRect(x: 10, y: 180, width: 200, height: 100))
   }
 
   @Test func `First stroke seeds the default blur`() throws {
@@ -145,15 +145,15 @@ struct ImageEditorFeatureTests {
           identifier: "p",
           effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
         ),
-        exposure: ExposureFeature(value: edited.effects.exposure!.value),
+        exposure: ExposureFeature(ev: edited.effects.exposure!.ev),
         vignette: VignetteFeature(value: edited.effects.vignette!.value)
       ),
       localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: [stroke]))) {
-        GaussianBlurFeature(value: 40)
+        GaussianBlurFeature(radius: .proportional(40))
       },
       crop: CropFeature(
-        cropRect: edited.crop.cropRect,
-        rotation: edited.crop.rotation,
+        rect: edited.crop.rect,
+        quarterTurn: edited.crop.quarterTurn,
         straightenRadians: edited.crop.straightenRadians
       )
     )
@@ -172,22 +172,22 @@ struct ImageEditorFeatureTests {
     ImageEditor.Adjustment.gaussianBlur.apply(sliderValue: 40, to: &sliderMade)
 
     var assigned = ImageEditorFeature.Effects()
-    assigned.exposure = ExposureFeature(value: 0.9)
-    assigned.gaussianBlur = GaussianBlurFeature(value: 40)
+    assigned.exposure = ExposureFeature(ev: 0.9)
+    assigned.gaussianBlur = GaussianBlurFeature(radius: .proportional(40))
 
     #expect(assigned == sliderMade)
     #expect(
       ImageEditorFeature.Effects(
-        exposure: ExposureFeature(value: 0.9),
-        gaussianBlur: GaussianBlurFeature(value: 40)
+        exposure: ExposureFeature(ev: 0.9),
+        gaussianBlur: GaussianBlurFeature(radius: .proportional(40))
       ) == sliderMade
     )
 
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects = sliderMade
     var direct = ImageEditorFeature(imageSize: imageSize)
-    direct.effects.exposure = ExposureFeature(value: 0.9)
-    direct.effects.gaussianBlur = GaussianBlurFeature(value: 40)
+    direct.effects.exposure = ExposureFeature(ev: 0.9)
+    direct.effects.gaussianBlur = GaussianBlurFeature(radius: .proportional(40))
     #expect(direct == document)
   }
 
@@ -205,7 +205,7 @@ struct ImageEditorFeatureTests {
     let globalEffects: [any Feature] = presetEffects + [
       try #require(effects.exposure),
       try #require(effects.brightness),
-      try #require(effects.temperature),
+      try #require(effects.whiteBalance),
       try #require(effects.highlights),
       try #require(effects.shadows),
       try #require(effects.saturation),
@@ -299,7 +299,7 @@ struct ImageEditorFeatureTests {
       identifier: "p",
       effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
-    document.effects.sharpen = SharpenFeature(sharpness: 0.4, radius: 1.5)
+    document.effects.sharpen = SharpenFeature(intensity: 0.4, radius: 1.5)
     document.effects.unsharpMask = UnsharpMaskFeature(intensity: 0.5, radius: 2)
     document.effects.fade = FadeFeature(intensity: 0.3)
 

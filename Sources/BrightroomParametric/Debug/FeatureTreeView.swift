@@ -60,7 +60,7 @@ public struct FeatureTreeNode: Identifiable, Sendable {
   ///
   /// Features carry no identity of their own, so the id is the node's path:
   /// each step is a type name and its occurrence among same-typed siblings
-  /// (for example `PresetFeature#0/TemperatureFeature#0`). A sibling that is
+  /// (for example `PresetFeature#0/WhiteBalanceFeature#0`). A sibling that is
   /// absent, such as a `nil` member, does not re-key the nodes after it, but
   /// reordering same-typed siblings does.
   public let id: String
@@ -370,7 +370,7 @@ public enum FeatureTreeDescriptor {
     case is UnsharpMaskFeature, is SharpenFeature: "triangle"
     case is ColorCubeFeature: "swatchpalette"
     case is VignetteFeature: "circle.and.line.horizontal"
-    case is TemperatureFeature: "thermometer.medium"
+    case is WhiteBalanceFeature: "thermometer.medium"
     case is FadeFeature: "sun.haze"
     case is HighlightShadowTintFeature: "paintpalette"
     case is ToneCurveFeature: "point.bottomleft.forward.to.point.topright.scurvepath"
@@ -534,11 +534,11 @@ private enum FeatureValueFormatter {
       return "\(number(value.width)) × \(number(value.height))"
     case let value as Data:
       return ByteCountFormatter.string(fromByteCount: Int64(value.count), countStyle: .memory)
-    case let value as ParametricRGBAColor:
+    case let value as HighlightShadowTintFeature.Color:
       return "rgba(\(number(value.red)), \(number(value.green)), \(number(value.blue)), \(number(value.alpha)))"
     case let value as QuarterTurn:
       return "\(value.rawValue)°"
-    case let value as GaussianBlurRadius:
+    case let value as GaussianBlurFeature.Radius:
       switch value {
       case let .absolute(radius):
         return "\(number(radius)) px"

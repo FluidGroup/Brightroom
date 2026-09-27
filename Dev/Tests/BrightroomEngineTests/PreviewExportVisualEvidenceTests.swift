@@ -31,13 +31,13 @@ struct PreviewExportVisualEvidenceTests {
       identifier: "evidence.preset.warm-pop",
       effects: [
         AnyImageEffect(SaturationFeature(value: 0.3)),
-        AnyImageEffect(TemperatureFeature(value: 900)),
+        AnyImageEffect(WhiteBalanceFeature(temperature: 900)),
         AnyImageEffect(ContrastFeature(value: 0.06)),
       ]
     )
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.preset = preset
-    document.effects.exposure = ExposureFeature(value: 0.35)
+    document.effects.exposure = ExposureFeature(ev: 0.35)
     // The band is centered vertically, so its working-space stamps equal the
     // display ones.
     document.localBlur = LocalAdjustmentFeature(
@@ -45,7 +45,7 @@ struct PreviewExportVisualEvidenceTests {
         strokes: [makeHorizontalBandStroke(imageSize: imageSize)]
       ))
     ) {
-      GaussianBlurFeature(value: 60)
+      GaussianBlurFeature(radius: .proportional(60))
     }
 
     // 1) Original (no edit).

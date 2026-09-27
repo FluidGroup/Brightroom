@@ -52,7 +52,7 @@ struct CropOutputGeometryTests {
   @Test(arguments: QuarterTurn.allCases)
   func laterCropUsesPreviousOutputDomain(rotation: QuarterTurn) throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let first = CropFeature(cropRect: source.extent, rotation: .counterclockwise)
+    let first = CropFeature(rect: source.extent, quarterTurn: .counterclockwise)
     let intermediate = try first.apply(to: source, context: .init())
     try Self.expectExactQuarterTurn(
       source: intermediate,
@@ -64,8 +64,8 @@ struct CropOutputGeometryTests {
   @Test func straightenKeepsAValidThinFrame() throws {
     let source = Self.makeSource(size: CGSize(width: 300, height: 200))
     let feature = CropFeature(
-      cropRect: CGRect(x: 132, y: -5, width: 36, height: 210),
-      rotation: .counterclockwise,
+      rect: CGRect(x: 132, y: -5, width: 36, height: 210),
+      quarterTurn: .counterclockwise,
       straightenRadians: .pi / 6
     )
     let output = try feature.apply(to: source, context: .init())
@@ -77,7 +77,7 @@ struct CropOutputGeometryTests {
 
   @Test func uncoveredCornersRetainTheRequestedCanvas() throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let feature = CropFeature(cropRect: source.extent, straightenRadians: .pi / 6)
+    let feature = CropFeature(rect: source.extent, straightenRadians: .pi / 6)
     let output = try feature.apply(to: source, context: .init())
 
     #expect(output.extent == source.extent)
@@ -108,7 +108,7 @@ struct CropOutputGeometryTests {
     ]
 
     for fixture in cases {
-      let crop = CropFeature(cropRect: fixture.footprint, rotation: rotation)
+      let crop = CropFeature(rect: fixture.footprint, quarterTurn: rotation)
       let output = try crop.apply(to: source, context: .init())
       let isSideways = rotation == .counterclockwise || rotation == .clockwise
       let expectedSize = isSideways
@@ -138,7 +138,7 @@ struct CropOutputGeometryTests {
     case .counterclockwise, .clockwise:
       (width, height) = (fh, fw)
     }
-    let crop = CropFeature(cropRect: footprint, rotation: rotation)
+    let crop = CropFeature(rect: footprint, quarterTurn: rotation)
     let output = try crop.apply(to: source, context: .init())
     let expectedBounds = CGRect(x: 0, y: 0, width: width, height: height)
     try #require(output.extent == expectedBounds, sourceLocation: sourceLocation)

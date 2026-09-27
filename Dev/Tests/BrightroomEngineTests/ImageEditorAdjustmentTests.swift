@@ -17,7 +17,7 @@ struct ImageEditorAdjustmentTests {
 
   @Test func `blur adjustment removes gaussian blur at neutral value`() {
     var effects = ImageEditorFeature.Effects(
-      gaussianBlur: GaussianBlurFeature(value: 40)
+      gaussianBlur: GaussianBlurFeature(radius: .proportional(40))
     )
 
     ImageEditor.Adjustment.gaussianBlur.apply(sliderValue: 0, to: &effects)
@@ -28,12 +28,12 @@ struct ImageEditorAdjustmentTests {
   /// A slider write keeps the parameters the slider does not control.
   @Test func `existing effect is changed in place`() {
     var effects = ImageEditorFeature.Effects(
-      temperature: TemperatureFeature(value: 900, tint: 12)
+      whiteBalance: WhiteBalanceFeature(temperature: 900, tint: 12)
     )
 
     ImageEditor.Adjustment.warmth.apply(sliderValue: 20, to: &effects)
 
-    #expect(effects.temperature?.tint == 12)
+    #expect(effects.whiteBalance?.tint == 12)
     #expect(ImageEditor.Adjustment.warmth.sliderValue(in: effects) == 20)
   }
 

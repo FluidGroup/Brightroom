@@ -100,7 +100,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let filter = ExposureFeature(value: 0.72)
+    let filter = ExposureFeature(ev: 0.72)
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
     )
@@ -116,7 +116,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let filter = ExposureFeature(value: 0.72)
+    let filter = ExposureFeature(ev: 0.72)
 
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
@@ -138,7 +138,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let filter = ExposureFeature(value: 0.72)
+    let filter = ExposureFeature(ev: 0.72)
 
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
@@ -399,7 +399,7 @@ struct CropFeatureDisplaySpaceTests {
     )
     // Stored (y-up) rect: top edge (display y=20) becomes the far edge from the
     // bottom: maxY = 100 - 20 = 80, so minY = 80 - 30 = 50.
-    #expect(feature.cropRect == .init(x: 10, y: 50, width: 80, height: 30))
+    #expect(feature.rect == .init(x: 10, y: 50, width: 80, height: 30))
   }
 
   @Test func `display rect round trip is stable`() {
@@ -415,7 +415,7 @@ struct CropFeatureDisplaySpaceTests {
       let feature = CropFeature(
         displayCropRect: displayRect,
         imageSize: imageSize,
-        rotation: rotation,
+        quarterTurn: rotation,
         straighten: straighten
       )
       // Re-seeding the working model from the stored crop and re-committing must
@@ -423,11 +423,11 @@ struct CropFeatureDisplaySpaceTests {
       let reseeded = CropFeature(
         displayCropRect: feature.displayCropRect(imageSize: imageSize),
         imageSize: imageSize,
-        rotation: feature.rotation,
+        quarterTurn: feature.quarterTurn,
         straighten: feature.straightenRadians
       )
-      #expect(reseeded.cropRect == feature.cropRect, "rect @ \(rotation)")
-      #expect(reseeded.rotation == feature.rotation, "rotation @ \(rotation)")
+      #expect(reseeded.rect == feature.rect, "rect @ \(rotation)")
+      #expect(reseeded.quarterTurn == feature.quarterTurn, "rotation @ \(rotation)")
       #expect(reseeded.straightenRadians == feature.straightenRadians, "straighten @ \(rotation)")
     }
   }

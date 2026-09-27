@@ -33,7 +33,7 @@ struct AppOwnedPersistenceExampleTests {
     lut.amount = 0.6
 
     let look = Look(
-      exposure: ExposureFeature(value: 0.2),
+      exposure: ExposureFeature(ev: 0.2),
       toneCurve: ToneCurveFeature(value: curves),
       colorMixer: ColorMixerFeature(adjustment: mixer),
       lut: lut,
@@ -224,7 +224,7 @@ private struct StoredLook: Codable, Equatable {
   var extras: [StoredEffect]
 
   init(_ look: Look) throws {
-    exposure = look.exposure?.value
+    exposure = look.exposure?.ev
     toneCurve = look.toneCurve.map {
       StoredCurve(semanticVersion: ToneCurveFeature.semanticVersion, channels: StoredToneCurve($0.value))
     }
@@ -242,7 +242,7 @@ private struct StoredLook: Codable, Equatable {
     loadLUT: (_ assetID: String) throws -> ColorCubeFeature
   ) throws -> Look {
     var look = Look()
-    look.exposure = exposure.map { ExposureFeature(value: $0) }
+    look.exposure = exposure.map { ExposureFeature(ev: $0) }
     if let toneCurve {
       guard toneCurve.semanticVersion == ToneCurveFeature.semanticVersion else {
         throw Error.unsupportedToneCurveSemantics(toneCurve.semanticVersion)

@@ -78,7 +78,7 @@ public struct CropEditingState: Equatable, Sendable {
       straightenRadians: cropFeature.straightenRadians,
       respectingAspectRatio: nil
     )
-    self.rotation = cropFeature.rotation
+    self.rotation = cropFeature.quarterTurn
     self.adjustmentAngle = .radians(cropFeature.straightenRadians)
   }
 
@@ -88,7 +88,7 @@ public struct CropEditingState: Equatable, Sendable {
     CropFeature(
       displayCropRect: cropExtent,
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straighten: adjustmentAngle.radians
     )
   }
