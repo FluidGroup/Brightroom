@@ -104,6 +104,59 @@ struct QuarterTurnCropTests {
     try Self.expectEveryPixelIsACellColor(rendered)
   }
 
+  // MARK: - Open and Done without edits
+
+  /// CropView re-reads the frame from its views on Done, which carries
+  /// sub-pixel error. For an odd `W - H`, a frame nudged by a fraction of a
+  /// pixel must still snap to the same source pixels, not lose a column to
+  /// the inward snap and then another to keep the width-height difference even.
+  @Test(arguments: [0.07, -0.07, 0.45])
+  func `Sub-pixel drift in an odd-parity turned crop snaps back`(drift: Double) {
+    let size = CGSize(width: 301, height: 200)
+    let committed = CGRect(x: 50, y: -50, width: 200, height: 300)
+
+    let feature = CropFeature(
+      displayCropRect: committed.offsetBy(dx: drift, dy: 0),
+      imageSize: size,
+      rotation: .quarterCW
+    )
+
+    #expect(feature.displayCropRect(imageSize: size) == committed)
+  }
+
+  /// Turning the full image through a real CropView and tapping Done, then
+  /// opening the editor and tapping Done several times over, keeps the whole
+  /// turned image.
+  ///
+  /// On Done CropView re-reads the frame from its views with sub-pixel error,
+  /// so the inward snap can drop a line of an even-parity footprint too; the
+  /// parity step then must not drop a second one.
+  @Test(arguments: [301.0, 300.0], [1, 3])
+  func `Open and Done keeps a turned full-image crop`(imageWidth: Double, clockwiseTurns: Int) throws {
+    let size = CGSize(width: imageWidth, height: 200)
+    let stack = try makeStack(size: size)
+    let owner = DocumentOwner(PhotosCropDocument(orientedImageSize: size))
+
+    let (editor, window) = try openCropView(on: stack, owner: owner)
+    for _ in 0..<clockwiseTurns {
+      editor.rotateClockwise()
+      editor.layoutIfNeeded()
+    }
+    editor.applyDocumentChanges()
+    let committed = owner.document.crop
+    #expect(committed.cropRect.width == 200)
+    #expect(committed.cropRect.height == 300)
+
+    var windows = [window]
+    for cycle in 1...4 {
+      let (reopened, window) = try openCropView(on: stack, owner: owner)
+      windows.append(window)
+      reopened.applyDocumentChanges()
+      #expect(owner.document.crop.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+    }
+    withExtendedLifetime(windows) {}
+  }
+
   // MARK: - Quarter turn + straighten
 
   @Test func `Quarter turn with straighten keeps the frame`() async throws {
@@ -132,6 +185,68 @@ struct QuarterTurnCropTests {
       rotationRadians: committed.aggregatedRotationRadians
     )
     #expect(checked > 0)
+  }
+
+  /// CropView fits a straightened frame so that the area it samples, the frame
+  /// turned back by the whole angle, touches the image edge. When the snapper
+  /// evens the footprint's width-height difference, it must not take a partly
+  /// covered pixel line that pulls that area past the edge: the export would
+  /// get semi-transparent corners.
+  @Test(arguments: [(301.0, 2.0), (300.0, 5.0)])
+  func `A straightened quarter turn exports no transparent pixels`(
+    imageWidth: Double,
+    straightenDegrees: Double
+  ) async throws {
+    let size = CGSize(width: imageWidth, height: 200)
+    let stack = try makeStack(size: size)
+    let owner = DocumentOwner(PhotosCropDocument(orientedImageSize: size))
+
+    let (editor, window) = try openCropView(on: stack, owner: owner)
+    editor.rotateClockwise()
+    editor.layoutIfNeeded()
+    editor.setAdjustmentAngle(.degrees(straightenDegrees))
+    editor.layoutIfNeeded()
+    editor.applyDocumentChanges()
+    withExtendedLifetime(window) {}
+
+    let rendered = try await stack.makeRenderer(document: owner.document).render().cgImage
+    let pixels = try Self.rgbaPixels(of: rendered)
+    let notOpaque = stride(from: 3, to: pixels.count, by: 4).filter { pixels[$0] < 255 }
+    #expect(
+      notOpaque.isEmpty,
+      "\(notOpaque.count) pixels, min alpha \(notOpaque.map { pixels[$0] }.min() ?? 255)"
+    )
+  }
+
+  /// A thin frame turned 90° clockwise and straightened by 30°, −60° in total
+  /// (`.quarterCW` is −90°): the area it samples, the frame turned back by
+  /// that angle about its center, lies inside the 300×200 source (it reaches
+  /// 99.9 px above and below the center), so nothing needs
+  /// clamping. Its 90° footprint, 36×210, is taller than the image.
+  ///
+  /// Known issue: the clamp checks the 90° footprint, not the straightened
+  /// area, so the frame is stored as 200×36 (5.1.0 clamped the frame itself
+  /// and kept 210×36). The export stays inside the frame and inside the image.
+  /// Checking the straightened area would need a footprint that may extend
+  /// past the image in the snapper, the reopen clamp and CropView's aspect
+  /// ratio bounding, which is left for a separate change.
+  @Test func `A straightened thin turned crop keeps its frame`() {
+    let extent = CGRect(x: 45, y: 82, width: 210, height: 36)
+
+    let feature = CropFeature(
+      displayCropRect: extent,
+      imageSize: imageSize,
+      rotation: .quarterCW,
+      straighten: 30 * .pi / 180
+    )
+
+    #expect(
+      feature.displayCropRect(imageSize: imageSize).height == extent.height,
+      "The short side is unaffected"
+    )
+    withKnownIssue("The clamp ignores the straighten angle") {
+      #expect(feature.displayCropRect(imageSize: imageSize) == extent)
+    }
   }
 
   // MARK: - Non-full crop after a quarter turn
@@ -179,6 +294,47 @@ struct QuarterTurnCropTests {
     )
   }
 
+  /// A malformed stored crop: its rect overlaps the image, but its center, and
+  /// with it the whole sideways footprint, lies outside. Reopening it clamps
+  /// the rect first, as 5.1.0 did, and then the footprint.
+  @Test func `Reopening a turned crop centered outside the image clamps it`() {
+    // Display rect (-40, 0, 60, 10), center (-10, 5). Its footprint,
+    // (-15, -25, 10, 60), misses the image entirely.
+    let stored = CropFeature(
+      cropRect: CGRect(x: -40, y: 190, width: 60, height: 10),
+      rotation: .quarterCW
+    )
+
+    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
+
+    // The rect clamped to the image, (0, 0, 20, 10), has its footprint
+    // (5, -5, 10, 20) partly above the image: that overhang goes, leaving the
+    // footprint (5, 0, 10, 15), turned back about its center (10, 7.5).
+    #expect(reopened.cropExtent == CGRect(x: 2.5, y: 2.5, width: 15, height: 10))
+  }
+
+  /// As above, but the footprint grazes the image instead of missing it: it
+  /// overlaps the image by 0.01 px. Clamping the footprint alone would leave a
+  /// sliver; clamping the rect first, as 5.1.0 did, keeps a usable frame.
+  @Test func `Reopening a turned crop whose footprint grazes the image clamps it`() {
+    // Display rect (-34.99, 20, 60, 10), center (-4.99, 25). Its footprint,
+    // (-9.99, -5, 10, 60), overlaps the image by 0.01 px.
+    let stored = CropFeature(
+      cropRect: CGRect(x: -34.99, y: 170, width: 60, height: 10),
+      rotation: .quarterCW
+    )
+
+    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
+
+    // The rect clamped to the image, (0, 20, 25.01, 10), has its footprint
+    // inside the image, so that is the frame.
+    let expected = CGRect(x: 0, y: 20, width: 25.01, height: 10)
+    #expect(abs(reopened.cropExtent.minX - expected.minX) < 1e-9)
+    #expect(abs(reopened.cropExtent.minY - expected.minY) < 1e-9)
+    #expect(abs(reopened.cropExtent.width - expected.width) < 1e-9)
+    #expect(abs(reopened.cropExtent.height - expected.height) < 1e-9)
+  }
+
   /// `CropView.rotateClockwise()` swaps a locked aspect ratio and refits the
   /// frame after setting the new rotation. The fit uses the turned image, so a
   /// 3:2 lock on a 3:2 image still keeps the whole image after a quarter turn.
@@ -209,6 +365,37 @@ struct QuarterTurnCropTests {
   }
 
   // MARK: - Helpers
+
+  /// Plays the document's owner: applies each change CropView reports.
+  private final class DocumentOwner {
+    var document: PhotosCropDocument
+
+    init(_ document: PhotosCropDocument) {
+      self.document = document
+    }
+  }
+
+  /// Opens a CropView on the owner's current document over the stack's
+  /// source, laid out in a window the caller keeps alive.
+  private func openCropView(
+    on stack: EditingStack,
+    owner: DocumentOwner
+  ) throws -> (CropView, UIWindow) {
+    let loaded = try #require(stack.loadedState)
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+    let view = CropView(source: CropViewSource(loaded), document: owner.document)
+    view.setDocumentChangeHandler { change in
+      change(&owner.document)
+    }
+    view.areAnimationsEnabled = false
+    view.frame = window.bounds
+    window.addSubview(view)
+    window.isHidden = false
+    view.layoutIfNeeded()
+    view.loadDocumentState()
+    view.layoutIfNeeded()
+    return (view, window)
+  }
 
   /// Mirrors `CropView`'s `CGRect.rotated(_:)`: the rect turned about its own
   /// center.

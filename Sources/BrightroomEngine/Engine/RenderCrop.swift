@@ -136,17 +136,84 @@ internal struct PixelCropRect: Equatable, Sendable {
     )
   }
 
-  /// The rect with its longer side trimmed by one pixel (at its max edge) when
-  /// its width and height differ by an odd number of pixels.
+  /// The rect adjusted by one pixel so that its width and height differ by an
+  /// even number of pixels, staying as close as it can to `requested`, the
+  /// unsnapped rect it was snapped inward from.
   ///
   /// A quarter turn about the rect's center maps the pixel grid onto itself
   /// only when the width and height differ by an even number of pixels.
   /// Otherwise the turned rect lies on half pixels, and every output pixel
   /// would be resampled between two source pixels (Core Image also rounds such
   /// an extent outward, adding a partially covered border).
-  internal func trimmedForQuarterTurn() -> PixelCropRect {
+  ///
+  /// Every pixel of the inward-snapped rect is fully inside `requested`, so
+  /// dropping a line of them misses `requested` by a whole pixel. When
+  /// `requested` partly covers the pixel line just outside an edge, taking
+  /// that line misses it by less, so the rect grows by the most-covered one.
+  /// This also snaps sub-pixel error back to the same pixels: CropView
+  /// re-reads an unchanged frame from its views on Done, a fraction of a pixel
+  /// off.
+  ///
+  /// A taken line lies inside the image, but with a straighten angle the crop
+  /// samples the footprint turned by that angle, which reaches further out.
+  /// CropView fits a straightened frame so that this area touches the image
+  /// edge, so a line is taken only while the turned footprint stays inside
+  /// the image (see `samplesInsideImage(_:straightenRadians:epsilon:)`).
+  /// Without straighten this always holds.
+  ///
+  /// When no line can be taken, the longer side loses one pixel at its max
+  /// edge.
+  internal func evenedForQuarterTurn(
+    requested: CGRect,
+    in imageSize: PixelDimensions,
+    straightenRadians: Double = 0,
+    epsilon: CGFloat = RenderGeometry.pixelEpsilon
+  ) -> PixelCropRect {
     guard (width - height) % 2 != 0 else {
       return self
+    }
+
+    // How much of the pixel line just outside each edge `requested` covers,
+    // with `requested` clamped to the image as the inward snap did.
+    let requested = requested.standardized
+    if
+      requested.minX.isFinite, requested.minY.isFinite,
+      requested.maxX.isFinite, requested.maxY.isFinite
+    {
+      let minX = Self.clamp(requested.minX, lower: 0, upper: CGFloat(imageSize.width))
+      let maxX = Self.clamp(requested.maxX, lower: 0, upper: CGFloat(imageSize.width))
+      let minY = Self.clamp(requested.minY, lower: 0, upper: CGFloat(imageSize.height))
+      let maxY = Self.clamp(requested.maxY, lower: 0, upper: CGFloat(imageSize.height))
+
+      let left = CGFloat(x) - minX
+      let right = maxX - CGFloat(x + width)
+      let top = CGFloat(y) - minY
+      let bottom = maxY - CGFloat(y + height)
+
+      // The rect grown by each partly covered line, with its coverage.
+      let isPartlyCovered = { (coverage: CGFloat) in coverage > epsilon && coverage < 1 }
+      var grownRects: [(coverage: CGFloat, rect: PixelCropRect)] = []
+      if isPartlyCovered(left) {
+        grownRects.append((left, .init(x: x - 1, y: y, width: width + 1, height: height)))
+      }
+      if isPartlyCovered(right) {
+        grownRects.append((right, .init(x: x, y: y, width: width + 1, height: height)))
+      }
+      if isPartlyCovered(top) {
+        grownRects.append((top, .init(x: x, y: y - 1, width: width, height: height + 1)))
+      }
+      if isPartlyCovered(bottom) {
+        grownRects.append((bottom, .init(x: x, y: y, width: width, height: height + 1)))
+      }
+
+      let mostCovered = grownRects
+        .filter {
+          $0.rect.samplesInsideImage(imageSize, straightenRadians: straightenRadians, epsilon: epsilon)
+        }
+        .max { $0.coverage < $1.coverage }
+      if let mostCovered {
+        return mostCovered.rect
+      }
     }
 
     if width > height {
@@ -154,6 +221,28 @@ internal struct PixelCropRect: Equatable, Sendable {
     } else {
       return .init(x: x, y: y, width: width, height: height - 1)
     }
+  }
+
+  /// Whether a crop with this footprint samples only image pixels under a
+  /// straighten angle: the footprint turned by `straightenRadians` about its
+  /// center must lie inside the image.
+  private func samplesInsideImage(
+    _ imageSize: PixelDimensions,
+    straightenRadians: Double,
+    epsilon: CGFloat
+  ) -> Bool {
+    let angle = straightenRadians.isFinite ? straightenRadians : 0
+    let cosine = abs(CGFloat(cos(angle)))
+    let sine = abs(CGFloat(sin(angle)))
+    let halfWidth = (cosine * CGFloat(width) + sine * CGFloat(height)) / 2
+    let halfHeight = (sine * CGFloat(width) + cosine * CGFloat(height)) / 2
+    let midX = CGFloat(x) + CGFloat(width) / 2
+    let midY = CGFloat(y) + CGFloat(height) / 2
+
+    return midX - halfWidth >= -epsilon
+      && midX + halfWidth <= CGFloat(imageSize.width) + epsilon
+      && midY - halfHeight >= -epsilon
+      && midY + halfHeight <= CGFloat(imageSize.height) + epsilon
   }
 
   private static func pixelSpan(
@@ -210,6 +299,10 @@ internal struct RenderCrop: Equatable, Sendable {
   /// This is the crop rect's footprint on the source image: the y-down crop rect
   /// turned back by `rotation` about its center. For `.zero` and `.half` it is
   /// the crop rect itself; a sideways turn swaps its width and height.
+  ///
+  /// Under a sideways turn the footprint may instead take one partly covered
+  /// pixel line to keep an even width-height difference (see
+  /// `PixelCropRect.evenedForQuarterTurn(requested:in:straightenRadians:epsilon:)`).
   internal var cropRect: PixelCropRect
 
   /// The quarter-turn rotation, expressed in the parametric vocabulary so the
@@ -245,7 +338,8 @@ internal struct RenderCrop: Equatable, Sendable {
   /// `(W/2 - H/2, H/2 - W/2, H, W)`, which extends past the unrotated image
   /// bounds while keeping every source pixel. Under a sideways turn the
   /// footprint also keeps an even width-height difference (see
-  /// `PixelCropRect.trimmedForQuarterTurn()`), so an odd one loses one pixel.
+  /// `PixelCropRect.evenedForQuarterTurn(requested:in:straightenRadians:epsilon:)`),
+  /// so an odd one gains a partly covered pixel line or loses one pixel.
   internal init(
     cropRectYDown: CGRect,
     imageSize: CGSize,
@@ -256,12 +350,20 @@ internal struct RenderCrop: Equatable, Sendable {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
 
     self.imageSize = pixelImageSize
+    let requestedFootprint = CropGeometry.rect(cropRectYDown, turnedBy: rotation)
     let footprint = PixelCropRect(
-      cropExtent: CropGeometry.rect(cropRectYDown, turnedBy: rotation),
+      cropExtent: requestedFootprint,
       in: pixelImageSize,
       epsilon: epsilon
     )
-    self.cropRect = rotation.isSideways ? footprint.trimmedForQuarterTurn() : footprint
+    self.cropRect = rotation.isSideways
+      ? footprint.evenedForQuarterTurn(
+        requested: requestedFootprint,
+        in: pixelImageSize,
+        straightenRadians: straightenRadians,
+        epsilon: epsilon
+      )
+      : footprint
     self.rotation = rotation
     self.straightenRadians = straightenRadians
   }
@@ -287,11 +389,13 @@ extension CropFeature {
   /// integer pixel snap so UI commits and engine renders agree exactly.
   ///
   /// The display rect is snapped to the inward-integer pixel contract
-  /// (`RenderCrop`/`PixelCropRect`) and then flipped from the engine's y-down
-  /// display space (top-left origin) into Core Image's y-up working space
-  /// (Core Image bottom-left). UI crop sessions MUST build committed crops
-  /// through this initializer; authoring an independent snapper makes
-  /// `isRenderingEquivalent` oscillate against the engine and the crop jitters.
+  /// (`RenderCrop`/`PixelCropRect`; a sideways crop may take one partly
+  /// covered pixel line to keep its turn on the pixel grid) and then flipped
+  /// from the engine's y-down display space (top-left origin) into Core
+  /// Image's y-up working space (Core Image bottom-left). UI crop sessions
+  /// MUST build committed crops through this initializer; authoring an
+  /// independent snapper makes `isRenderingEquivalent` oscillate against the
+  /// engine and the crop jitters.
   public init(
     displayCropRect: CGRect,
     imageSize: CGSize,

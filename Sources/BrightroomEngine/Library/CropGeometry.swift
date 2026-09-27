@@ -136,13 +136,27 @@ public enum CropGeometry {
   /// The rect's footprint on the source image is what must stay inside the
   /// image, so the footprint is clamped and turned back. For `.zero` and `.half`
   /// this is exactly `fittingRect`. `aspectRatio` is in the output orientation.
+  ///
+  /// A malformed rect whose center lies outside the image can overlap the
+  /// image while its sideways footprint, which shares that center, misses it
+  /// entirely (there is then nothing to clamp the footprint to) or only grazes
+  /// it (clamping would leave a sliver). Such a rect is first clamped to the
+  /// image itself, as unrotated rects are, which brings its center inside, and
+  /// then its footprint is clamped. A well-formed crop always has its center
+  /// inside the image, so it never takes this step.
   public static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
     rotation: QuarterTurn,
     respectingAspectRatio aspectRatio: PixelAspectRatio?
   ) -> CGRect {
-    self.rect(
+    let imageBounds = CGRect(origin: .zero, size: imageSize)
+    var rect = rect
+    if rotation.isSideways, imageBounds.contains(CGPoint(x: rect.midX, y: rect.midY)) == false {
+      rect = imageBounds.intersection(rect)
+    }
+
+    return self.rect(
       fittingRect(
         rect: self.rect(rect, turnedBy: rotation),
         in: imageSize,
