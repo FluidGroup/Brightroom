@@ -178,6 +178,36 @@ struct QuarterTurnCropTests {
     #expect(checked > 0)
   }
 
+  /// A thin frame turned 90° and straightened by 30°: the area it samples, the
+  /// frame turned back by 120° about its center, lies inside the 300×200
+  /// source (it reaches 99.9 px above and below the center), so nothing needs
+  /// clamping. Its 90° footprint, 36×210, is taller than the image.
+  ///
+  /// Known issue: the clamp checks the 90° footprint, not the straightened
+  /// area, so the frame is stored as 200×36 (5.1.0 clamped the frame itself
+  /// and kept 210×36). The export stays inside the frame and inside the image.
+  /// Checking the straightened area would need a footprint that may extend
+  /// past the image in the snapper, the reopen clamp and CropView's aspect
+  /// ratio bounding, which is left for a separate change.
+  @Test func `A straightened thin turned crop keeps its frame`() {
+    let extent = CGRect(x: 45, y: 82, width: 210, height: 36)
+
+    let feature = CropFeature(
+      displayCropRect: extent,
+      imageSize: imageSize,
+      rotation: .quarterCW,
+      straighten: 30 * .pi / 180
+    )
+
+    #expect(
+      feature.displayCropRect(imageSize: imageSize).height == extent.height,
+      "The short side is unaffected"
+    )
+    withKnownIssue("The clamp ignores the straighten angle") {
+      #expect(feature.displayCropRect(imageSize: imageSize) == extent)
+    }
+  }
+
   // MARK: - Non-full crop after a quarter turn
 
   @Test func `A partial crop after a quarter turn keeps its frame`() async throws {
