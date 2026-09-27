@@ -37,9 +37,6 @@ public enum SourceImageError: Error {
   /// determined.
   case unreadableImage
 
-  /// Downloading a remote image failed.
-  case downloadFailed(underlyingError: any Error)
-
   /// The Photos library could not provide the asset's image data.
   case assetUnavailable(underlyingError: (any Error)?)
 }
@@ -47,9 +44,9 @@ public enum SourceImageError: Error {
 /// The image a document is authored over.
 ///
 /// A source image is a lightweight value: it references encoded data, a
-/// local file, a decoded bitmap, or a RAW recipe, and knows its orientation
-/// and oriented pixel size from the moment it is created. Pixels are decoded
-/// only when something renders or prepares the image.
+/// local file, or a decoded bitmap, and knows its orientation and oriented
+/// pixel size from the moment it is created. Encoded data and files are
+/// decoded only when something renders or prepares the image.
 ///
 /// Features of a document are authored in the image's oriented pixel
 /// coordinates, whose extent is `CGRect(origin: .zero, size: pixelSize)`.
@@ -108,7 +105,7 @@ extension SourceImage {
   ///
   /// The file must stay in place and unchanged for as long as a document
   /// renders from this image.
-  public init(fileURL: URL) throws {
+  public init(contentsOf fileURL: URL) throws {
     guard fileURL.isFileURL else {
       throw SourceImageError.notFileURL(fileURL)
     }
@@ -127,7 +124,7 @@ extension SourceImage {
   /// `imageOrientation`.
   ///
   /// The decoded pixels stay in memory for as long as the value lives.
-  /// Prefer `init(fileURL:)` or `init(data:)` for large images.
+  /// Prefer `init(contentsOf:)` or `init(data:)` for large images.
   ///
   /// - Precondition: `image.cgImage` is not nil.
   public init(image: UIImage) {
@@ -136,41 +133,43 @@ extension SourceImage {
     self.init(cgImage: decoded, orientation: CGImagePropertyOrientation(image.imageOrientation))
   }
 
-  /// Creates an image that develops RAW data with Core Image's RAW filter
-  /// when needed. The filter's default orientation and settings apply.
-  public init(rawData: Data) throws {
-    try self.init(storage: Storage(raw: .data(rawData)))
-  }
-
-  /// Creates an image that develops a local RAW file with Core Image's RAW
-  /// filter when needed.
-  public init(rawFileURL: URL) throws {
-    guard rawFileURL.isFileURL else {
-      throw SourceImageError.notFileURL(rawFileURL)
-    }
-    try self.init(storage: Storage(raw: .file(rawFileURL)))
-  }
-
-  /// Downloads a remote image and keeps its encoded data.
-  public init(remoteURL: URL, session: URLSession = .shared) async throws {
-    try await self.init(remoteURLRequest: URLRequest(url: remoteURL), session: session)
-  }
-
-  /// Downloads a remote image and keeps its encoded data.
+  /// Creates an image by developing RAW data with Core Image's default RAW
+  /// settings.
   ///
-  /// Cancelling the calling task cancels the download.
-  public init(remoteURLRequest: URLRequest, session: URLSession = .shared) async throws {
-    let data: Data
-    do {
-      let (body, response) = try await session.data(for: remoteURLRequest)
-      if let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) == false {
-        throw URLError(.badServerResponse)
-      }
-      data = body
-    } catch {
-      throw SourceImageError.downloadFailed(underlyingError: error)
+  /// The RAW data is developed here, once; the value keeps the developed
+  /// pixels, already oriented.
+  public init(rawData: Data) throws {
+    guard let filter = CIFilter(imageData: rawData, options: [:]) else {
+      throw SourceImageError.unreadableImage
     }
-    try self.init(data: data)
+    try self.init(developing: filter)
+  }
+
+  /// Creates an image by developing a local RAW file with Core Image's
+  /// default RAW settings.
+  ///
+  /// The file is developed here, once; the value keeps the developed pixels,
+  /// already oriented, and does not read the file again.
+  public init(rawContentsOf fileURL: URL) throws {
+    guard fileURL.isFileURL else {
+      throw SourceImageError.notFileURL(fileURL)
+    }
+    guard let filter = CIFilter(imageURL: fileURL, options: [:]) else {
+      throw SourceImageError.unreadableImage
+    }
+    try self.init(developing: filter)
+  }
+
+  private init(developing rawFilter: CIFilter) throws {
+    guard
+      let output = rawFilter.outputImage,
+      output.extent.isInfinite == false,
+      output.extent.isEmpty == false,
+      let developed = CIContext().createCGImage(output, from: output.extent)
+    else {
+      throw SourceImageError.unreadableImage
+    }
+    self.init(cgImage: developed, orientation: .up)
   }
 
   private init(imageSource: CGImageSource) throws {
@@ -223,18 +222,6 @@ extension SourceImage {
     }
     try self.init(data: data)
   }
-
-  /// Creates an image that reads the full-size image file of a content
-  /// editing input.
-  ///
-  /// The file belongs to the input; keep the input alive while documents
-  /// render from this image.
-  public init(contentEditingInput: PHContentEditingInput) throws {
-    guard let url = contentEditingInput.fullSizeImageURL else {
-      throw SourceImageError.unreadableImage
-    }
-    try self.init(fileURL: url)
-  }
 }
 
 /// The in-flight Photos request, cancelled from the cancellation handler.
@@ -263,27 +250,19 @@ extension SourceImage {
   ///
   /// `@unchecked Sendable`: every stored property is immutable after init, and
   /// the Core Graphics and ImageIO objects it holds are thread-safe for
-  /// reading. RAW filters are created per use and never shared.
+  /// reading.
   final class Storage: @unchecked Sendable {
-
-    enum RAWInput {
-      case data(Data)
-      case file(URL)
-    }
 
     enum Backing {
       /// Encoded data or a file, read through ImageIO.
       case imageSource(CGImageSource)
-      /// Decoded pixels.
+      /// Decoded pixels, including developed RAW images.
       case bitmap(CGImage)
-      /// A RAW recipe developed by Core Image. Its output is already oriented.
-      case raw(RAWInput)
     }
 
     let backing: Backing
 
-    /// The orientation applied to the unoriented pixels; `.up` for RAW,
-    /// whose developed output is oriented.
+    /// The orientation applied to the unoriented pixels.
     let orientation: CGImagePropertyOrientation
 
     let pixelSize: CGSize
@@ -301,15 +280,6 @@ extension SourceImage {
         .applying(cgOrientation: orientation)
     }
 
-    init(raw: RAWInput) throws {
-      guard let output = Self.makeRAWFilter(raw)?.outputImage, output.extent.isInfinite == false else {
-        throw SourceImageError.unreadableImage
-      }
-      self.backing = .raw(raw)
-      self.orientation = .up
-      self.pixelSize = output.extent.size
-    }
-
     /// The unoriented, full-resolution pixels as a lazy Core Image recipe.
     func makeUnorientedCIImage() -> CIImage {
       switch backing {
@@ -317,8 +287,6 @@ extension SourceImage {
         return CIImage(cgImageSource: imageSource, index: 0, options: [:])
       case .bitmap(let cgImage):
         return CIImage(cgImage: cgImage)
-      case .raw(let input):
-        return Self.makeRAWFilter(input)?.outputImage ?? CIImage.empty()
       }
     }
 
@@ -335,16 +303,6 @@ extension SourceImage {
         )
       case .bitmap(let cgImage):
         return ImageTool.makeResizedCGImage(from: cgImage, maxPixelSizeHint: shortSideHint)
-      case .raw(let input):
-        guard let filter = Self.makeRAWFilter(input) else {
-          return nil
-        }
-        let shortSide = min(pixelSize.width, pixelSize.height)
-        filter.scaleFactor = Float(min(1, shortSideHint / shortSide))
-        guard let output = filter.outputImage else {
-          return nil
-        }
-        return CIContext().createCGImage(output, from: output.extent)
       }
     }
 
@@ -372,13 +330,6 @@ extension SourceImage {
         if let thumbnail = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
           return CIImage(cgImage: thumbnail).oriented(orientation)
         }
-      case .raw(let input):
-        if let filter = Self.makeRAWFilter(input) {
-          filter.scaleFactor = Float(maxPixelSize / max(pixelSize.width, pixelSize.height))
-          if let output = filter.outputImage {
-            return output
-          }
-        }
       case .bitmap:
         break
       }
@@ -386,15 +337,6 @@ extension SourceImage {
       return makeUnorientedCIImage()
         .oriented(orientation)
         .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-    }
-
-    private static func makeRAWFilter(_ input: RAWInput) -> CIRAWFilter? {
-      switch input {
-      case .data(let data):
-        return CIRAWFilter(imageData: data, identifierHint: nil)
-      case .file(let url):
-        return CIRAWFilter(imageURL: url)
-      }
     }
   }
 }

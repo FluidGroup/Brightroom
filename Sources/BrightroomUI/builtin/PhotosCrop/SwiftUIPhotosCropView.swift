@@ -27,10 +27,18 @@ import BrightroomParametric
 /**
  Apple's Photos app like crop view.
 
- The view edits a `EditingDocument<PhotosCropFeature>` the host owns. Changes are
- written to the binding as they happen, and the view commits them to the
- document's history when the user leaves a tool and on Done. Render the
- document with `EditingDocument.render(options:)`.
+ The view edits an `EditingDocument<PhotosCropFeature>` the host owns.
+
+ - Each completed operation (a filter tap, a slider drag, a brush stroke, a
+   crop applied) is written to the binding once; values in progress, such
+   as a slider being dragged or a crop being adjusted, are not.
+ - The view commits to the document's history when the user leaves a tool
+   and on Done. Undo and redo are operations on the document value, so the
+   host can drive them from its own buttons.
+ - The view never registers anything with an `UndoManager`, and never
+   changes the document's image.
+
+ Render the document with `EditingDocument.render(options:)`.
 
  You might use `SwiftUICropView` to create a fully customized user interface.
  */
@@ -74,7 +82,7 @@ public struct SwiftUIPhotosCropView: View {
   private let options: Options
   private let localizedStrings: LocalizedStrings
   private let onDone: @MainActor () -> Void
-  private let onCancel: @MainActor () -> Void
+  private let onCancel: (@MainActor () -> Void)?
 
   /// Creates the editor.
   ///
@@ -86,15 +94,16 @@ public struct SwiftUIPhotosCropView: View {
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.
   ///   - onDone: Called after the binding received the committed document.
-  ///   - onCancel: Called when the user cancels. The binding keeps the
-  ///     changes made so far; restore a copy taken before showing the editor
-  ///     to discard them.
+  ///   - onCancel: Called when the user cancels, after the binding received
+  ///     the document as it was when the editor opened (history included).
+  ///     nil hides the Cancel button, for example in a document window where
+  ///     every change is kept.
   public init(
     document: Binding<EditingDocument<PhotosCropFeature>>,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
     onDone: @escaping @MainActor () -> Void,
-    onCancel: @escaping @MainActor () -> Void
+    onCancel: (@MainActor () -> Void)? = nil
   ) {
     self._document = document
     self.options = options

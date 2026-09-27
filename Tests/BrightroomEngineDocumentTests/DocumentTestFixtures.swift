@@ -1,0 +1,69 @@
+import CoreGraphics
+import Foundation
+import ImageIO
+import Testing
+import UIKit
+import UniformTypeIdentifiers
+
+@testable import BrightroomEngine
+import BrightroomParametric
+@testable import BrightroomUI
+
+/// Small images and features shared by the document tests.
+enum DocumentTestFixtures {
+
+  /// A bitmap filled with `color`, 40 x 20 by default.
+  static func makeCGImage(width: Int = 40, height: Int = 20, color: UIColor = .red) throws -> CGImage {
+    let context = try #require(
+      CGContext(
+        data: nil,
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+      )
+    )
+    context.setFillColor(color.cgColor)
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    return try #require(context.makeImage())
+  }
+
+  /// A 40 x 20 JPEG whose EXIF orientation turns it sideways (`.right`), so
+  /// its oriented size is 20 x 40.
+  static func makeRotatedJPEG() throws -> Data {
+    let data = NSMutableData()
+    let destination = try #require(
+      CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)
+    )
+    CGImageDestinationAddImage(
+      destination,
+      try makeCGImage(),
+      [kCGImagePropertyOrientation: CGImagePropertyOrientation.right.rawValue] as CFDictionary
+    )
+    #expect(CGImageDestinationFinalize(destination))
+    return data as Data
+  }
+
+  /// The oriented size of `makeRotatedJPEG()`.
+  static let rotatedJPEGSize = CGSize(width: 20, height: 40)
+
+  static func makeImage() throws -> SourceImage {
+    try SourceImage(data: makeRotatedJPEG())
+  }
+
+  /// A full-image PhotosCrop feature of `makeImage()` with an exposure.
+  static func exposure(_ value: Double) -> PhotosCropFeature {
+    var feature = PhotosCropFeature(imageSize: rotatedJPEGSize)
+    feature.effects.exposure = ExposureFeature(value: value)
+    return feature
+  }
+
+  static func makeDocument(
+    feature: PhotosCropFeature = exposure(0),
+    history: EditingDocument<PhotosCropFeature>.History = .init()
+  ) throws -> EditingDocument<PhotosCropFeature> {
+    EditingDocument(image: try makeImage(), feature: feature, history: history)
+  }
+}

@@ -22,7 +22,7 @@ struct ContentView: View {
   )
   @State private var photosCropNasa = DemoPhotosCropSession(
     image: Mocks.makeSourceImage(
-      fileURL: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
+      contentsOf: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
         URL(fileURLWithPath: $0)
       }!
     )
@@ -35,8 +35,8 @@ struct ContentView: View {
   )
   @State private var photosCropRemote = DemoPhotosCropSession(
     loading: {
-      try await SourceImage(
-        remoteURL: URL(
+      try await DemoRemoteImage.load(
+        URL(
           string:
             "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
         )!
@@ -45,8 +45,8 @@ struct ContentView: View {
   )
   @State private var photosCropRemotePreview = DemoPhotosCropSession(
     loading: {
-      try await SourceImage(
-        remoteURL: URL(
+      try await DemoRemoteImage.load(
+        URL(
           string:
             "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
         )!
@@ -61,6 +61,10 @@ struct ContentView: View {
         Form {
 
           NavigationLink("Isolated", destination: IsolatedEditinView())
+
+          NavigationLink("Document Editor") {
+            DocumentEditorDemoView()
+          }
 
           if #available(iOS 16, *) {
             NavigationLink("Pick image") {
@@ -458,9 +462,6 @@ struct DemoPhotosCropView: View {
 
   @State var resultImage: ResultImage?
 
-  /// The document as the editor received it, restored on Cancel.
-  @State private var documentBeforeEditing: EditingDocument<PhotosCropFeature>?
-
   private let options: SwiftUIPhotosCropView.Options
 
   /// Edits a long-lived session; reopening shows its previous edit.
@@ -500,15 +501,10 @@ struct DemoPhotosCropView: View {
             export(document.wrappedValue)
           },
           onCancel: {
-            if let documentBeforeEditing {
-              document.wrappedValue = documentBeforeEditing
-            }
+            // The editor already restored the document it opened with.
             dismiss()
           }
         )
-        .onAppear {
-          documentBeforeEditing = document.wrappedValue
-        }
       } else if let loadingError = session.loadingError {
         Text(loadingError)
       } else {

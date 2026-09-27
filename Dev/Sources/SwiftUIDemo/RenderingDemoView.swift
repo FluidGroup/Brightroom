@@ -240,7 +240,7 @@ private struct RawRenderingDemoView: View {
   @State private var photosCropSession = DemoPhotosCropSession(
     loading: {
       try SourceImage(
-        rawFileURL: DemoResource.url(forResource: "AppleRAW_1", ofType: "DNG")
+        rawContentsOf: DemoResource.url(forResource: "AppleRAW_1", ofType: "DNG")
       )
     }
   )

@@ -32,8 +32,11 @@ struct PhotosCropContentView: View {
   let options: SwiftUIPhotosCropView.Options
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let onDone: @MainActor () -> Void
-  let onCancel: @MainActor () -> Void
+  let onCancel: (@MainActor () -> Void)?
 
+  /// Created once per editor identity (one per image), so it keeps the
+  /// document as it was when the editor opened.
+  @State private var session: PhotosCropEditorSession
   @State private var rotation: CropEditingState.Rotation?
   @State private var adjustmentAngle: CropEditingState.AdjustmentAngle?
   @State private var aspectRatioSelection: PhotosCropAspectRatioSelection
@@ -54,7 +57,7 @@ struct PhotosCropContentView: View {
     options: SwiftUIPhotosCropView.Options,
     localizedStrings: SwiftUIPhotosCropView.LocalizedStrings,
     onDone: @escaping @MainActor () -> Void,
-    onCancel: @escaping @MainActor () -> Void
+    onCancel: (@MainActor () -> Void)?
   ) {
     self._document = document
     self.editingStack = editingStack
@@ -62,6 +65,9 @@ struct PhotosCropContentView: View {
     self.localizedStrings = localizedStrings
     self.onDone = onDone
     self.onCancel = onCancel
+    self._session = State(
+      initialValue: PhotosCropEditorSession(documentAtStart: document.wrappedValue)
+    )
 
     switch options.aspectRatioOptions {
     case .fixed(let aspectRatio):
@@ -77,6 +83,9 @@ struct PhotosCropContentView: View {
     // Known from the image itself, before the editing source is prepared.
     let originalAspectRatio = PixelAspectRatio(document.image.pixelSize)
     let isLoaded = editingStack.loadedState != nil
+    // Includes a slider value that is shown but not yet written.
+    let displayedFeature = session.displayedFeature(of: document)
+    let cancelAction: (() -> Void)? = onCancel == nil ? nil : { cancel() }
     let bottomControlHeight: CGFloat = 120
     let bottomControlMaxWidth: CGFloat = 560
 
@@ -88,6 +97,7 @@ struct PhotosCropContentView: View {
         VStack(spacing: 0) {
           PhotosCropCanvasHost(
             document: $document,
+            displayedFeature: displayedFeature,
             editingStack: editingStack,
             mode: editingMode,
             blurMaskingState: blurMaskingState,
@@ -111,7 +121,7 @@ struct PhotosCropContentView: View {
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
             filterPreviewBaseImage: editingStack.loadedState?.thumbnailImage,
-            currentEffects: document.feature.effects,
+            currentEffects: displayedFeature.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
@@ -124,7 +134,8 @@ struct PhotosCropContentView: View {
             onClearBlurMask: clearBlurMask,
             onSelectFilterPreset: selectFilterPreset,
             onSelectAdjustmentParameter: selectAdjustmentParameter,
-            onSetAdjustmentValue: setAdjustmentValue
+            onSetAdjustmentValue: previewAdjustmentValue,
+            onEndAdjustmentValue: endAdjustmentValue
           )
           .frame(maxWidth: bottomControlMaxWidth)
           .frame(maxWidth: .infinity)
@@ -155,7 +166,7 @@ struct PhotosCropContentView: View {
           onReset: reset,
           onToggleAspectRatio: toggleAspectRatioControl,
           onSelectMode: selectMode,
-          onCancel: onCancel,
+          onCancel: cancelAction,
           onDone: finish
         )
       }
@@ -172,6 +183,12 @@ struct PhotosCropContentView: View {
         if mode != .crop {
           isSelectingAspectRatio = false
         }
+      }
+      .onChange(of: document.feature) { _, _ in
+        // The editor's own writes consume the live value first, so a change
+        // here while a value is live came from outside (for example an undo
+        // by the host). The document wins.
+        session.discardLiveFeature()
       }
       .accessibilityIdentifier("photos.crop")
     }
@@ -238,18 +255,19 @@ struct PhotosCropContentView: View {
     }
 
     if editingMode == .crop {
+      // Writes the crop guide's pending crop to the binding synchronously.
       applyAction()
     }
 
     // Leaving a tool commits its work, so undo/redo steps at tool
     // granularity. The history lives in the document.
-    updateDocument { $0.commit() }
+    write(committing: true)
 
     editingMode = mode
   }
 
   private func selectFilterPreset(_ preset: PresetFeature?) {
-    updateDocument { $0.selectFilterPreset(preset) }
+    write { $0.selectFilterPreset(preset) }
   }
 
   private func selectAdjustmentParameter(
@@ -261,29 +279,51 @@ struct PhotosCropContentView: View {
     adjustmentParameter = parameter
   }
 
-  private func setAdjustmentValue(_ sliderValue: Double) {
-    let parameter = adjustmentParameter
-    updateDocument { $0.setAdjustmentValue(sliderValue, parameter: parameter) }
+  /// Shows a slider value while dragging; the document is written when the
+  /// drag ends.
+  private func previewAdjustmentValue(_ sliderValue: Double) {
+    session.previewAdjustmentValue(
+      sliderValue,
+      parameter: adjustmentParameter,
+      over: document
+    )
+  }
+
+  /// Writes the slider value once, when the drag (or a reset) ends.
+  private func endAdjustmentValue(_ sliderValue: Double) {
+    previewAdjustmentValue(sliderValue)
+    write()
   }
 
   private func clearBlurMask() {
-    updateDocument { $0.clearBlurMask() }
+    write { $0.clearBlurMask() }
   }
 
   private func finish() {
     // The crop guide's pending crop reaches the binding synchronously, so the
     // commit below includes it.
     applyAction()
-    updateDocument { $0.commit() }
+    write(committing: true)
     onDone()
   }
 
-  /// Changes the document through the binding, writing only when the
-  /// document changed: an equal write would still invalidate the host.
-  private func updateDocument(_ change: (inout EditingDocument<PhotosCropFeature>) -> Void) {
-    var next = document
-    change(&next)
-    if next != document {
+  private func cancel() {
+    // One write back to the document the editor opened with, history
+    // included, then the host dismisses.
+    if let restored = session.documentForCancel(replacing: document) {
+      document = restored
+    }
+    onCancel?()
+  }
+
+  /// Writes a completed operation to the binding: a live slider value, then
+  /// `change`, then a commit when `committing` is true, as one write. Equal
+  /// values are not written.
+  private func write(
+    committing: Bool = false,
+    _ change: (inout EditingDocument<PhotosCropFeature>) -> Void = { _ in }
+  ) {
+    if let next = session.document(after: document, committing: committing, change: change) {
       document = next
     }
   }
@@ -480,6 +520,7 @@ private struct PhotosCropBlurMaskingState: Equatable {
 private struct PhotosCropCanvasHost: View {
 
   @Binding var document: EditingDocument<PhotosCropFeature>
+  let displayedFeature: PhotosCropFeature
   let editingStack: EditingStack
   let mode: PhotosCropEditingMode
   let blurMaskingState: PhotosCropBlurMaskingState
@@ -495,6 +536,7 @@ private struct PhotosCropCanvasHost: View {
   var body: some View {
     SwiftUICropView(
       document: $document,
+      displayedFeature: displayedFeature,
       editingStack: editingStack,
       isGuideInteractionEnabled: mode == .crop
     )
@@ -536,6 +578,7 @@ private struct PhotosCropControlHost: View {
   let onSelectFilterPreset: (PresetFeature?) -> Void
   let onSelectAdjustmentParameter: (PhotosCropAdjustmentParameter) -> Void
   let onSetAdjustmentValue: (Double) -> Void
+  let onEndAdjustmentValue: (Double) -> Void
 
   var body: some View {
     Group {
@@ -579,7 +622,8 @@ private struct PhotosCropControlHost: View {
           } ?? 0,
           isLoaded: isLoaded,
           onSelectParameter: onSelectAdjustmentParameter,
-          onSetValue: onSetAdjustmentValue
+          onSetValue: onSetAdjustmentValue,
+          onEndValue: onEndAdjustmentValue
         )
       }
     }
@@ -601,23 +645,26 @@ private struct PhotosCropToolbar: ToolbarContent {
   let onReset: () -> Void
   let onToggleAspectRatio: () -> Void
   let onSelectMode: (PhotosCropEditingMode) -> Void
-  let onCancel: () -> Void
+  /// nil hides the Cancel button.
+  let onCancel: (() -> Void)?
   let onDone: () -> Void
 
   var body: some ToolbarContent {
-    ToolbarItem(placement: .topBarLeading) {
-      PhotosCropToolbarTextButton(
-        title: cancelTitle,
-        accessibilityIdentifier: "photos.crop.cancel",
-        isEnabled: true,
-        role: .normal,
-        minWidth: nil,
-        action: onCancel
-      )
-    }
+    if let onCancel {
+      ToolbarItem(placement: .topBarLeading) {
+        PhotosCropToolbarTextButton(
+          title: cancelTitle,
+          accessibilityIdentifier: "photos.crop.cancel",
+          isEnabled: true,
+          role: .normal,
+          minWidth: nil,
+          action: onCancel
+        )
+      }
 
-    if #available(iOS 26.0, *) {
-      ToolbarSpacer(.fixed, placement: .topBarLeading)
+      if #available(iOS 26.0, *) {
+        ToolbarSpacer(.fixed, placement: .topBarLeading)
+      }
     }
 
     ToolbarItem(placement: .topBarLeading) {
@@ -1033,7 +1080,10 @@ private struct PhotosCropAdjustmentsControl: View {
   let sliderValue: Double
   let isLoaded: Bool
   let onSelectParameter: (PhotosCropAdjustmentParameter) -> Void
+  /// Called for each value while dragging.
   let onSetValue: (Double) -> Void
+  /// Called once when a drag, an accessibility step, or a reset ends.
+  let onEndValue: (Double) -> Void
 
   var body: some View {
     VStack(spacing: 4) {
@@ -1070,6 +1120,9 @@ private struct PhotosCropAdjustmentsControl: View {
           UIImpactFeedbackGenerator(style: .light).impactOccurred(
             intensity: 0.35
           )
+        },
+        onEditingEnded: { value in
+          onEndValue(value.rounded())
         },
         topMarker: { context in
           Circle()

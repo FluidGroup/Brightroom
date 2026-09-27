@@ -1,5 +1,6 @@
-// Host usage sketch for the engine-centric document design. It only has to
-// type-check against the prototype; it is not wired into the demo UI.
+// Host usage sketch for the document design. It only has to type-check; it
+// is not wired into the demo UI. `DocumentEditorDemoView` is the runnable
+// counterpart.
 
 import BrightroomEngine
 import BrightroomParametric
@@ -17,15 +18,23 @@ enum SketchImageLoading {
   }
 
   static func load(remote url: URL) async throws -> EditingDocument<PhotosCropFeature> {
-    EditingDocument(image: try await SourceImage(remoteURL: url))
+    // The app owns networking; the library reads the bytes.
+    EditingDocument(image: try await DemoRemoteImage.load(url))
   }
 
   static func load(file url: URL) throws -> EditingDocument<PhotosCropFeature> {
-    EditingDocument(image: try SourceImage(fileURL: url))
+    EditingDocument(image: try SourceImage(contentsOf: url))
   }
 
   static func load(raw url: URL) throws -> EditingDocument<PhotosCropFeature> {
-    EditingDocument(image: try SourceImage(rawFileURL: url))
+    EditingDocument(image: try SourceImage(rawContentsOf: url))
+  }
+
+  static func load(contentEditingInput input: PHContentEditingInput) throws -> EditingDocument<PhotosCropFeature> {
+    guard let url = input.fullSizeImageURL else {
+      throw CocoaError(.fileNoSuchFile)
+    }
+    return EditingDocument(image: try SourceImage(contentsOf: url))
   }
 
   static func load(uiImage: UIImage) -> EditingDocument<PhotosCropFeature> {
@@ -55,8 +64,11 @@ struct SketchEditorScreen: View {
       Button("Export") {
         let document = document
         Task {
-          let rendered = try await document.render()
-          exported = try rendered.cgImage
+          do {
+            exported = try await document.render().cgImage
+          } catch {
+            exported = nil
+          }
         }
       }
     }
@@ -66,23 +78,19 @@ struct SketchEditorScreen: View {
   }
 }
 
-/// Restores the document on Cancel: the editor writes changes live.
+/// The editor restores the document it opened with on Cancel, so the host
+/// only dismisses.
 private struct SketchPresentedEditor: View {
 
   @Binding var document: EditingDocument<PhotosCropFeature>
   @Binding var isPresented: Bool
-  @State private var original: EditingDocument<PhotosCropFeature>?
 
   var body: some View {
     SwiftUIPhotosCropView(
       document: $document,
       onDone: { isPresented = false },
-      onCancel: {
-        if let original { document = original }
-        isPresented = false
-      }
+      onCancel: { isPresented = false }
     )
-    .onAppear { original = document }
   }
 }
 
@@ -152,7 +160,7 @@ struct SketchSavedEdit: Codable {
   }
 
   func makeDocument(imageDirectory: URL) throws -> EditingDocument<PhotosCropFeature> {
-    let image = try SourceImage(fileURL: imageDirectory.appendingPathComponent(imageFileName))
+    let image = try SourceImage(contentsOf: imageDirectory.appendingPathComponent(imageFileName))
     return EditingDocument(
       image: image,
       feature: current.makeFeature(),

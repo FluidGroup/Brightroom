@@ -150,6 +150,10 @@ public struct SwiftUICropView: View {
   /// view prepares the document's image itself.
   private let editingStack: EditingStack?
 
+  /// A feature a built-in editor shows in place of `document.feature`, such
+  /// as a slider value not yet written; nil shows the document.
+  private let displayedFeature: PhotosCropFeature?
+
   private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
   private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
   private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
@@ -210,6 +214,7 @@ public struct SwiftUICropView: View {
   ) {
     self.document = document
     self.editingStack = nil
+    self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
@@ -245,6 +250,7 @@ public struct SwiftUICropView: View {
     self.cropOutsideOverlay = nil
     self.document = document
     self.editingStack = nil
+    self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
@@ -253,14 +259,21 @@ public struct SwiftUICropView: View {
 
   /// Creates a crop canvas with the built-in overlays over a stack a
   /// built-in editor already prepares for `document`'s image.
+  ///
+  /// - Parameter displayedFeature: Shown in place of `document.feature` while
+  ///   non-nil. It must differ from the document only in what the editor has
+  ///   not written yet (slider values); canvas changes still apply to the
+  ///   document.
   init(
     document: Binding<EditingDocument<PhotosCropFeature>>,
+    displayedFeature: PhotosCropFeature?,
     editingStack: EditingStack,
     isGuideInteractionEnabled: Bool
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
+    self.displayedFeature = displayedFeature
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = true
@@ -287,7 +300,7 @@ public struct SwiftUICropView: View {
       if let loadedState = editingStack.loadedState {
         LoadedCropViewRepresentable(
           source: CropViewSource(loadedState),
-          document: document.wrappedValue.feature,
+          document: displayedFeature ?? document.wrappedValue.feature,
           onDocumentChange: { [document] change in
             Self.apply(change, preparedFor: loadedState.image, to: document)
           },

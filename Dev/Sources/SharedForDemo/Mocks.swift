@@ -36,8 +36,8 @@ enum Mocks {
     SourceImage(image: image)
   }
 
-  static func makeSourceImage(fileURL: URL) -> SourceImage {
-    try! SourceImage(fileURL: fileURL)
+  static func makeSourceImage(contentsOf fileURL: URL) -> SourceImage {
+    try! SourceImage(contentsOf: fileURL)
   }
   
 }

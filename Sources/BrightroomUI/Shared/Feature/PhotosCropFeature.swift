@@ -125,7 +125,7 @@ public struct PhotosCropFeature: Feature, Equatable {
   ///
   /// - Parameter imageSize: The oriented pixel size of the image,
   ///   `SourceImage.pixelSize`.
-  public init(imageSize: CGSize) {
+  init(imageSize: CGSize) {
     self.effects = .init()
     self.blurMask = nil
     self.crop = CropFeature(

@@ -52,9 +52,10 @@ let package = Package(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
     ),
-    // Prototype only: runtime checks of the engine-centric document design.
+    // EditingDocument, SourceImage, and the PhotosCrop document flows. Hosts
+    // BrightroomUI views, so it depends on the whole stack.
     .testTarget(
-      name: "BrightroomDocumentPrototypeTests",
+      name: "BrightroomEngineDocumentTests",
       dependencies: ["BrightroomEngine", "BrightroomUI", "BrightroomParametric"]
     ),
     .plugin(
