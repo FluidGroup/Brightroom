@@ -7,7 +7,7 @@ import Testing
 
 /// Pins the brush-mask rasterizer unification: the live canvas committed mask,
 /// the engine preview mask, and the export mask all rasterize through the shared
-/// parametric `brushStamp` kernel (`FeatureGraphCompiler.renderMask`).
+/// brush rasterizer (`FeatureGraphCompiler.renderMask` → `BrushStampPipeline`).
 ///
 /// The live canvas (`_EditingCanvasMTKView.committedMaskContentImage`) feeds the
 /// compiler stamps **pre-flipped** by the canvas height (mirroring the export

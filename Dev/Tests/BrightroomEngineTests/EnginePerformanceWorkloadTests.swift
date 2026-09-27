@@ -18,7 +18,7 @@ import UIKit
 /// Covered hot paths:
 /// - export render (`BrightRoomImageRenderer.render`)
 /// - preview composition (`Edit.makePreviewImage(.editing)`)
-/// - brush-mask raster (`MaskTree.engineMakeMaskImage` via the parametric `brushStamp` kernel)
+/// - brush-mask raster (`MaskTree.engineMakeMaskImage` via `BrushMaskImageProcessor`)
 /// - parametric evaluation (`EffectPipeline.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 

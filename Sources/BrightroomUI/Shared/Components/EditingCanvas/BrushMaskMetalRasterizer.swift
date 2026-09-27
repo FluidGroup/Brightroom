@@ -25,21 +25,17 @@ import BrightroomParametric
 import Metal
 import simd
 
-/// A standalone, testable wrapper around the **live** Metal brush-mask render
-/// pipeline used by `EditingCanvasRenderer`.
+/// A standalone, testable wrapper around the **live** canvas's way of drawing a
+/// brush mask: one off-screen `BrushStampPipeline` pass into an 8-bit texture,
+/// wrapped with `CIImage(mtlTexture:)`.
 ///
-/// `EditingCanvasRenderer` builds and drives the same pipeline inline for live
-/// painting, where the encoding is interleaved with viewport math, drawable
-/// management, and stroke state. This type extracts only the rasterization
-/// kernel — a single off-screen stamp pass — so the live rasterizer can be
-/// exercised in isolation and proven, by test, to match the parametric Core
-/// Image CIKernel rasterizer (`FeatureGraphCompiler.renderMask`) that the
-/// shared falloff establishes as the contract.
-///
-/// The pipeline, the uniform layout, and the per-stamp encoding all come from
-/// `BrushMaskPipeline`, the same construction the live view uses — so this is
-/// not a replica of the live pipeline, it *is* the live pipeline, and the parity
-/// test covers the live path's construction by construction.
+/// `EditingCanvasRenderer` drives the same pipeline inline for live painting,
+/// where the encoding is interleaved with viewport math, drawable management,
+/// and stroke state. This type keeps only the texture pass, so tests can prove
+/// that a mask drawn the canvas way lands exactly where the export draws it
+/// through Core Image tiles (`FeatureGraphCompiler.renderMask`). Both use
+/// `BrushStampPipeline`; what the test pins is the coordinate mapping and
+/// orientation of the two targets.
 struct BrushMaskMetalRasterizer {
 
   /// One soft circular stamp to rasterize. `center` and `pixelRadius` are in
@@ -69,7 +65,10 @@ struct BrushMaskMetalRasterizer {
       return nil
     }
     do {
-      let pipeline = try BrushMaskPipeline.make(device: device)
+      let pipeline = try BrushStampPipeline.renderPipelineState(
+        device: device,
+        pixelFormat: .rgba8Unorm
+      )
       self.device = device
       self.commandQueue = commandQueue
       self.pipeline = pipeline
@@ -89,12 +88,13 @@ struct BrushMaskMetalRasterizer {
   /// ## Orientation — no extra flip is needed
   ///
   /// `brushStampVertex` maps the center to clip space with
-  /// `clip.y = 1 - center.y / canvasSize.y * 2` (so `center.y = 0` → clip `+1` →
-  /// top texture row: the stamp is stored y-down in the texture). `CIImage(mtlTexture:)`
-  /// then applies its OWN vertical flip when wrapping (Metal top-left origin →
-  /// Core Image bottom-left origin). Those two flips compose: a stamp passed with
-  /// `center = (x, y)` lands at CI-y `y` in the wrapped image — exactly where the
-  /// parametric kernel (`renderMask`, `dest.coord()` y-up) places the same `y`.
+  /// `clip.y = 1 - center.y / targetSize.y * 2` (so `center.y = 0` → clip `+1` →
+  /// texture row 0). `CIImage(mtlTexture:)` then treats row 0 as the bottom of
+  /// the image (Metal top-left origin → Core Image bottom-left origin). Those
+  /// two flips compose: a stamp passed with `center = (x, y)` lands at CI-y `y`
+  /// in the wrapped image — exactly where the export's Core Image tiles
+  /// (`BrushMaskImageProcessor`, which flips into a tile whose row 0 is
+  /// `region.maxY`) place the same `y`.
   /// So the wrapped texture is already in `renderMask`'s frame and is directly
   /// comparable to the export/preview mask without any added transform.
   /// (The live view's `renderDrawableImage` flip is a separate, drawable-only
@@ -134,19 +134,18 @@ struct BrushMaskMetalRasterizer {
 
     encoder.setRenderPipelineState(pipeline)
 
-    let canvasSize = SIMD2(Float(width), Float(height))
-    for stamp in stamps {
-      BrushMaskPipeline.encodeStamp(
-        .init(
-          canvasSize: canvasSize,
-          center: SIMD2(Float(stamp.center.x), Float(stamp.center.y)),
-          radius: Float(stamp.pixelRadius),
-          hardness: stamp.hardness,
-          opacity: stamp.opacity
-        ),
-        into: encoder
-      )
-    }
+    BrushStampPipeline.encode(
+      stamps.map {
+        BrushStampPipeline.Stamp(
+          center: SIMD2(Float($0.center.x), Float($0.center.y)),
+          radius: Float($0.pixelRadius),
+          hardness: $0.hardness,
+          opacity: $0.opacity
+        )
+      },
+      targetSize: SIMD2(Float(width), Float(height)),
+      into: encoder
+    )
 
     encoder.endEncoding()
     commandBuffer.commit()
@@ -162,11 +161,11 @@ struct BrushMaskMetalRasterizer {
       return nil
     }
 
-    // No extra flip: `brushStampVertex` maps a y-down canvas stamp to clip space
-    // via `1 - y/h*2`, and `CIImage(mtlTexture:)` applies its own vertical flip on
-    // wrap; the two compose so the stamp lands at CI y-up = the input y — the
-    // SAME coordinate the parametric `brushStamp` kernel uses (`dest.coord()`).
-    // So the wrapped texture is already in `renderMask`'s frame.
+    // No extra flip: `brushStampVertex` puts `center.y` on texture row `y`, and
+    // `CIImage(mtlTexture:)` treats row 0 as the bottom of the image, so the
+    // stamp lands at Core Image y = the input y — the coordinate
+    // `renderMask` uses. So the wrapped texture is already in `renderMask`'s
+    // frame.
     return textureImage.cropped(to: extent)
   }
 }

@@ -159,8 +159,6 @@ final class EditingCanvasRenderer {
     let preferredFramesPerSecond: Int
   }
 
-  private typealias BrushStampUniforms = BrushMaskPipeline.StampUniforms
-
   /// Retained image inputs and their dependent caches. Content bakes survive
   /// viewport changes; viewport bakes and mask allocations have shorter lifetimes.
   private struct ViewportState: ~Copyable {
@@ -213,7 +211,10 @@ final class EditingCanvasRenderer {
     self.commandQueue = device.makeCommandQueue()!
     self.viewportState = ViewportState(canvasSize: canvasSize)
     do {
-      self.brushMaskPipeline = try BrushMaskPipeline.make(device: device)
+      self.brushMaskPipeline = try BrushStampPipeline.renderPipelineState(
+        device: device,
+        pixelFormat: .rgba8Unorm
+      )
     } catch {
       fatalError("Failed to create Editing Canvas pipeline: \(error)")
     }
@@ -696,12 +697,11 @@ final class EditingCanvasRenderer {
     let baseImage = preparedLayers.baseImage
     let adjustedImage = preparedLayers.adjustedImage
 
-    // Committed AND in-flight strokes rasterize through the SAME Metal stamp
-    // shader every frame — no cache, no intermediate full-canvas texture. The
-    // shared `brushStampAlpha` falloff matches the parametric export kernel, and
-    // the pipeline's `.max` blend mirrors the export's `componentMax`
-    // accumulation, so the live mask agrees with export by construction. Memory
-    // is bounded by the viewport-sized mask texture.
+    // Committed AND in-flight strokes rasterize through `BrushStampPipeline`
+    // every frame — no cache, no intermediate full-canvas texture. Export draws
+    // its Core Image tiles with the same pipeline, so the live mask agrees with
+    // export by construction. Memory is bounded by the viewport-sized mask
+    // texture.
     guard
       hasRenderableStroke(frame, in: viewportState.viewport.visibleContentRect),
       let textures = viewportTextures(pixelWidth: pixelWidth, pixelHeight: pixelHeight)
@@ -920,11 +920,10 @@ final class EditingCanvasRenderer {
 
   /// Rasterizes the committed strokes AND the in-flight (active) stroke into the
   /// viewport mask texture, live every frame — no cache, no intermediate
-  /// full-canvas texture. Stamps accumulate with `max` (`brushMaskPipeline`) and
-  /// use the shared `brushStampAlpha` falloff, so the result matches the
-  /// parametric export kernel's `componentMax` rasterization by construction.
-  /// Cost is O(visible stamp coverage); only stamps intersecting the viewport
-  /// are drawn.
+  /// full-canvas texture. The stamps go through `BrushStampPipeline`, the same
+  /// instanced `.max` pass the parametric export draws into Core Image tiles
+  /// (`BrushMaskImageProcessor`), so preview and export share one rasterizer.
+  /// Cost is O(visible stamp coverage); stamps outside the viewport are skipped.
   private func encodeStrokeMaskForViewport(
     into texture: MTLTexture,
     frame: Frame,
@@ -945,7 +944,40 @@ final class EditingCanvasRenderer {
       canvasSize: frame.viewportSize,
       textureSize: textureSize
     )
-    let targetSize = SIMD2(Float(texture.width), Float(texture.height))
+    var stamps: [BrushStampPipeline.Stamp] = []
+
+    func append(_ points: [CGPoint], brush: EditingCanvasBrush) {
+      let pixelRadius = Float(viewport.textureRadius(
+        forContentRadius: CGFloat(brush.size / 2),
+        canvasSize: frame.viewportSize,
+        textureSize: textureSize
+      ))
+      let hardness = Float(brush.hardness)
+      let opacity = Float(brush.opacity)
+
+      for point in points {
+        let center = point.applying(contentToTextureTransform)
+        stamps.append(
+          BrushStampPipeline.Stamp(
+            center: SIMD2(Float(center.x), Float(center.y)),
+            radius: pixelRadius,
+            hardness: hardness,
+            opacity: opacity
+          )
+        )
+      }
+    }
+
+    // Committed strokes share the active stroke's canvas-content coordinate
+    // space, so they draw in the same pass.
+    for record in committedRecords
+    where record.stamps.isEmpty == false && record.bounds.intersects(visible) {
+      append(record.stamps, brush: record.brush)
+    }
+
+    if let activeStroke = frame.activeStroke {
+      append(activeStroke.stamps, brush: activeStroke.brush)
+    }
 
     let descriptor = MTLRenderPassDescriptor()
     descriptor.colorAttachments[0].texture = texture
@@ -957,45 +989,11 @@ final class EditingCanvasRenderer {
     }
 
     encoder.setRenderPipelineState(brushMaskPipeline)
-
-    func encode(stamps: [CGPoint], brush: EditingCanvasBrush) {
-      let radius = CGFloat(brush.size / 2)
-      let pixelRadius = Float(viewport.textureRadius(
-        forContentRadius: radius,
-        canvasSize: frame.viewportSize,
-        textureSize: textureSize
-      ))
-      let hardness = Float(brush.hardness)
-      let opacity = Float(brush.opacity)
-
-      for stamp in stamps where stampIntersectsVisibleRect(stamp, radius: radius, visible: visible) {
-        let center = stamp.applying(contentToTextureTransform)
-        BrushMaskPipeline.encodeStamp(
-          BrushStampUniforms(
-            canvasSize: targetSize,
-            center: SIMD2(
-              Float(center.x),
-              Float(center.y)
-            ),
-            radius: pixelRadius,
-            hardness: hardness,
-            opacity: opacity
-          ),
-          into: encoder
-        )
-      }
-    }
-
-    // Committed strokes share the active stroke's canvas-content coordinate space
-    // and the same shader, so they render in the same pass with `.max` blend.
-    for record in committedRecords where record.stamps.isEmpty == false {
-      encode(stamps: record.stamps, brush: record.brush)
-    }
-
-    if let activeStroke = frame.activeStroke {
-      encode(stamps: activeStroke.stamps, brush: activeStroke.brush)
-    }
-
+    BrushStampPipeline.encode(
+      stamps,
+      targetSize: SIMD2(Float(texture.width), Float(texture.height)),
+      into: encoder
+    )
     encoder.endEncoding()
   }
 

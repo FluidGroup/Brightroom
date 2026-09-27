@@ -28,20 +28,18 @@ import Testing
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// Proves the **live** Metal brush rasterizer (`BrushMaskMetalRasterizer`, the
-/// pipeline `EditingCanvasRenderer` drives for low-latency painting) matches the
-/// **parametric** Core Image CIKernel rasterizer
-/// (`FeatureGraphCompiler.renderMask`, the export/preview path) for the same
+/// Proves a mask drawn the **live** canvas way (`BrushMaskMetalRasterizer`: one
+/// `BrushStampPipeline` pass into a texture wrapped by `CIImage(mtlTexture:)`)
+/// matches the mask the **export** draws through Core Image tiles
+/// (`FeatureGraphCompiler.renderMask` → `BrushMaskImageProcessor`) for the same
 /// stamps and canvas.
 ///
-/// Both rasterizers compile with the shared `BrushStampFalloff.metalh`
-/// (`brushStampAlpha`) and accumulate stamps with a `max` blend
-/// (`MTLBlendOperation.max` / `CIBlendKernel.componentMax`), so they should
-/// agree by construction. This test pins that they actually do — including
-/// orientation, which is the historically fragile part: the live shader places
-/// stamps y-down while the kernel works y-up, and `BrushMaskMetalRasterizer`
-/// bakes in a compensating vertical flip so identical stamp coordinates land in
-/// the same place. A flip regression would move alpha by the full canvas
+/// Both draw with the same `BrushStampPipeline` (shader, `brushStampAlpha`
+/// falloff, `.max` blend), so the falloff agrees by construction. What this
+/// test pins is placement and orientation, the historically fragile part: the
+/// texture path relies on `CIImage(mtlTexture:)` treating row 0 as the bottom,
+/// while the processor flips into tiles whose row 0 is the top, so identical
+/// stamp coordinates must still land in the same place. A flip regression would move alpha by the full canvas
 /// height — tens to hundreds of levels at the sampled points — far outside the
 /// anti-aliasing tolerance.
 struct BrushMaskRasterizerParityTests {
@@ -91,7 +89,7 @@ struct BrushMaskRasterizerParityTests {
       "Live rasterizer returned no image."
     )
 
-    // Path B — parametric Core Image CIKernel rasterizer (export/preview path).
+    // Path B — Core Image processor tiles (export/preview path).
     let maskB = try FeatureGraphCompiler().renderMask(
       MaskTree(
         root: .brush(
