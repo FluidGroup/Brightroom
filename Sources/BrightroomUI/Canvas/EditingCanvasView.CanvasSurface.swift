@@ -174,7 +174,7 @@ extension EditingCanvasView {
       in hostView: UIView,
       canvasSize: CGSize,
       brush: EditingCanvasBrush,
-      smoothing: EditingCanvasStrokeSmoothingConfiguration,
+      smoothing: ImageEditorCanvas.Brush.Smoothing,
       onStrokeCommit: @escaping CanvasStrokeCommitHandler
     ) -> EditingCanvasMTKView? {
       if let canvasView, self.canvasSize == canvasSize {
@@ -216,7 +216,7 @@ extension EditingCanvasView {
 
     func configureCanvas(
       brush: EditingCanvasBrush,
-      smoothing: EditingCanvasStrokeSmoothingConfiguration
+      smoothing: ImageEditorCanvas.Brush.Smoothing
     ) {
       canvasView?.configure(brush: brush, smoothing: smoothing)
     }

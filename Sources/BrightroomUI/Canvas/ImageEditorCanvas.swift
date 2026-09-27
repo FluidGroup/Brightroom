@@ -156,8 +156,7 @@ public struct ImageEditorCanvas: View {
   /// Fixed at creation. See the initializer documentation.
   private let contentInset: UIEdgeInsets?
   private var editingTarget: ImageEditorCanvas.Target? = .crop
-  private var maskingBrush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
-  private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
+  private var brush: Brush = .init(diameter: .viewportPoints(30))
 
   /// Creates a crop canvas that edits `document`, with custom overlays.
   ///
@@ -307,8 +306,7 @@ public struct ImageEditorCanvas: View {
           clipsToGuide: clipsToGuide,
           contentInset: contentInset,
           editingTarget: editingTarget,
-          maskingBrush: maskingBrush,
-          strokeSmoothing: strokeSmoothing
+          brush: brush
         )
         // `EditingCanvasView` binds its source once, at creation. Tying the
         // representable's identity to the image makes an image swap rebuild
@@ -396,15 +394,11 @@ public struct ImageEditorCanvas: View {
     return self
   }
 
-  /// Sets the masking brush. The diameter may be authored in viewport points
-  /// or image pixels; EditingCanvasView resolves it against its own geometry.
-  public consuming func maskingBrush(_ brush: ImageEditorCanvas.Brush) -> Self {
-    self.maskingBrush = brush
-    return self
-  }
-
-  public consuming func strokeSmoothing(_ smoothing: EditingCanvasStrokeSmoothingConfiguration) -> Self {
-    self.strokeSmoothing = smoothing
+  /// Sets the brush that paints `localBlur`, including how its strokes are
+  /// smoothed. The diameter may be authored in viewport points or image
+  /// pixels; the canvas resolves it against its own geometry.
+  public consuming func brush(_ brush: Brush) -> Self {
+    self.brush = brush
     return self
   }
 
@@ -454,8 +448,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let clipsToGuide: Bool
   let contentInset: UIEdgeInsets?
   let editingTarget: ImageEditorCanvas.Target?
-  let maskingBrush: ImageEditorCanvas.Brush
-  let strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration
+  let brush: ImageEditorCanvas.Brush
 
   func makeCoordinator() -> Coordinator {
     Coordinator()
@@ -472,8 +465,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
     view.areAnimationsEnabled = areAnimationsEnabled
     view.clipsToGuide = clipsToGuide
-    view.setMaskingBrush(maskingBrush)
-    view.setCanvasStrokeSmoothing(strokeSmoothing)
+    view.setBrush(brush)
     // The target is set before loading, so loading never runs the "leave
     // crop editing" commit against an unloaded view.
     view.setEditingTarget(editingTarget)
@@ -518,9 +510,9 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     // guard. `setFeature` and `setEditingTarget` can emit a state snapshot
     // or a feature change synchronously, and an unguarded one writes the
     // host's bindings from inside `updateUIView` — a state mutation during
-    // view update. The coordinator defers both. `setMaskingBrush` and
-    // `setCanvasStrokeSmoothing` cannot emit today; they are inside for a
-    // uniform contract, so a future emitting setter is safe by default.
+    // view update. The coordinator defers both. `setBrush` cannot emit
+    // today; it is inside for a uniform contract, so a future emitting setter
+    // is safe by default.
     //
     // Order matters:
     // - The rotation and angle inputs run before `setFeature`. They mirror
@@ -550,8 +542,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
 
       canvasView.setLockedAspectRatio(lockedAspectRatioInput.wrappedValue)
 
-      canvasView.setMaskingBrush(maskingBrush)
-      canvasView.setCanvasStrokeSmoothing(strokeSmoothing)
+      canvasView.setBrush(brush)
 
       // Also refreshes the display for the inputs above.
       canvasView.setFeature(context.coordinator.applyingPendingFeatureChanges(to: feature))

@@ -56,7 +56,7 @@ struct EditingCanvasDisplayInvalidationTests {
     ))
     canvas.setRenderImages(images(.gray))
     let brush = EditingCanvasBrush(size: 12)
-    canvas.configure(brush: brush, smoothing: .init(algorithm: .raw, strength: 0))
+    canvas.configure(brush: brush, smoothing: .off)
     try #require(canvas.drawIfNeeded())
 
     canvas.beginStroke(at: CGPoint(x: 20, y: 20))

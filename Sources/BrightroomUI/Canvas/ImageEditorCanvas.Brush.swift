@@ -12,9 +12,9 @@ extension ImageEditorCanvas {
   /// surface paints with, using its own viewport geometry. This keeps the
   /// conversion math — and therefore the persisted stroke geometry — out of the
   /// UI layers.
-  public struct Brush: Equatable {
+  public struct Brush: Equatable, Sendable {
 
-    public enum Diameter: Equatable {
+    public enum Diameter: Equatable, Sendable {
       /// Diameter in viewport points. The canvas converts it with the tool
       /// surface's minimum-zoom fit so the painted width matches what the user
       /// sees on screen.
@@ -23,21 +23,50 @@ extension ImageEditorCanvas {
       case imagePixels(CGFloat)
     }
 
+    /// How a stroke's touch samples are smoothed before they are stamped.
+    ///
+    /// Every curve first runs the samples through a stabilizer whose
+    /// `strength` (0...1) sets how far the stroke lags behind the finger: 0
+    /// follows it exactly, 1 lags the most.
+    public enum Smoothing: Equatable, Sendable {
+      /// Stamps the raw touch samples.
+      case off
+      /// Joins the stabilized samples with Bézier curves.
+      case bezier(strength: Double)
+      /// Joins the stabilized samples with a Catmull-Rom spline.
+      case catmullRom(strength: Double)
+      /// Averages neighboring stabilized samples.
+      case movingAverage(strength: Double)
+
+      /// The stabilizer strength; 0 for `.off`.
+      var strength: Double {
+        switch self {
+        case .off:
+          return 0
+        case .bezier(let strength), .catmullRom(let strength), .movingAverage(let strength):
+          return strength
+        }
+      }
+    }
+
     public var diameter: Diameter
     public var hardness: Double
     public var opacity: Double
     public var spacing: Double
+    public var smoothing: Smoothing
 
     public init(
       diameter: Diameter,
       hardness: Double = 0.72,
       opacity: Double = 1.0,
-      spacing: Double = 0.05
+      spacing: Double = 0.05,
+      smoothing: Smoothing = .bezier(strength: 0.85)
     ) {
       self.diameter = diameter
       self.hardness = hardness
       self.opacity = opacity
       self.spacing = spacing
+      self.smoothing = smoothing
     }
   }
 }

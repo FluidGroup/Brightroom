@@ -808,6 +808,11 @@ by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
   `SwiftUICropView.AdjustmentKind` is `CropInteraction` (`.scrollView` is
   `.movingImage`, `.guide` is `.resizingGuide`), and
   `StateSnapshot.adjustmentKind` is `StateSnapshot.interaction`.
+- `maskingBrush(_:)` and `strokeSmoothing(_:)` are one `brush(_:)`.
+  `CropViewMaskingBrush` is `ImageEditorCanvas.Brush`, and the smoothing
+  configuration is its `smoothing` member: `.off`, `.bezier(strength:)`,
+  `.catmullRom(strength:)`, or `.movingAverage(strength:)` (the default is
+  `.bezier(strength: 0.85)`).
 
 Before:
 

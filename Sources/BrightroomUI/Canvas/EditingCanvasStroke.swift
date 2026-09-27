@@ -39,21 +39,18 @@ extension EditingCanvasStrokeRecord: Equatable {}
 
 struct EditingCanvasStrokeSmoother {
 
-  private var configuration = EditingCanvasStrokeSmoothingConfiguration(
-    algorithm: .bezier,
-    strength: 0.85
-  )
+  private var smoothing: ImageEditorCanvas.Brush.Smoothing = .bezier(strength: 0.85)
   private var stabilizer = StrokeStabilizer()
   private var bezier = BezierStrokeSmoother()
   private var catmullRom = CatmullRomStrokeSmoother()
   private var movingAverage = MovingAverageStrokeSmoother()
 
-  mutating func configure(_ configuration: EditingCanvasStrokeSmoothingConfiguration) {
-    guard self.configuration != configuration else {
+  mutating func configure(_ smoothing: ImageEditorCanvas.Brush.Smoothing) {
+    guard self.smoothing != smoothing else {
       return
     }
 
-    self.configuration = configuration
+    self.smoothing = smoothing
     reset()
   }
 
@@ -61,8 +58,8 @@ struct EditingCanvasStrokeSmoother {
     reset()
     stabilizer.begin(at: point)
 
-    switch configuration.algorithm {
-    case .raw:
+    switch smoothing {
+    case .off:
       break
     case .bezier:
       bezier.begin(at: point)
@@ -79,7 +76,7 @@ struct EditingCanvasStrokeSmoother {
   ) -> [CGPoint] {
     let preparedPoints = stabilizer.append(
       inputPoints,
-      strength: configuration.strength,
+      strength: smoothing.strength,
       sampleDistance: sampleDistance
     )
     return appendPrepared(preparedPoints, sampleDistance: sampleDistance)
@@ -91,7 +88,7 @@ struct EditingCanvasStrokeSmoother {
   ) -> [CGPoint] {
     let preparedPoints = stabilizer.finish(
       at: point,
-      strength: configuration.strength,
+      strength: smoothing.strength,
       sampleDistance: sampleDistance
     )
     guard let endPoint = preparedPoints.last else {
@@ -116,8 +113,8 @@ struct EditingCanvasStrokeSmoother {
     _ points: [CGPoint],
     sampleDistance: CGFloat
   ) -> [CGPoint] {
-    switch configuration.algorithm {
-    case .raw:
+    switch smoothing {
+    case .off:
       return points
     case .bezier:
       return bezier.append(points, sampleDistance: sampleDistance)
@@ -132,8 +129,8 @@ struct EditingCanvasStrokeSmoother {
     at point: CGPoint,
     sampleDistance: CGFloat
   ) -> [CGPoint] {
-    switch configuration.algorithm {
-    case .raw:
+    switch smoothing {
+    case .off:
       return [point]
     case .bezier:
       return bezier.finish(at: point, sampleDistance: sampleDistance)

@@ -12,7 +12,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   private struct StrokeState: ~Copyable {
     var configuredBrush: EditingCanvasBrush?
     var activeBrush: EditingCanvasBrush?
-    var smoothing = EditingCanvasStrokeSmoothingConfiguration()
+    var smoothing: ImageEditorCanvas.Brush.Smoothing = .bezier(strength: 0.85)
     var smoother = EditingCanvasStrokeSmoother()
     var lastStampPoint: CGPoint?
     var activeStamps: [CGPoint] = []
@@ -102,7 +102,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func configure(
     brush: EditingCanvasBrush,
-    smoothing: EditingCanvasStrokeSmoothingConfiguration
+    smoothing: ImageEditorCanvas.Brush.Smoothing
   ) {
     strokeState.configuredBrush = brush
 

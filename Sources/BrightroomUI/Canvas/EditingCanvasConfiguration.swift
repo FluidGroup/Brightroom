@@ -40,23 +40,3 @@ struct EditingCanvasBrush: Equatable {
     self.spacing = spacing
   }
 }
-
-public struct EditingCanvasStrokeSmoothingConfiguration: Equatable {
-  public var algorithm: EditingCanvasStrokeSmoothingAlgorithm
-  public var strength: Double
-
-  public init(
-    algorithm: EditingCanvasStrokeSmoothingAlgorithm = .bezier,
-    strength: Double = 0.85
-  ) {
-    self.algorithm = algorithm
-    self.strength = strength
-  }
-}
-
-public enum EditingCanvasStrokeSmoothingAlgorithm: String {
-  case raw
-  case bezier
-  case catmullRom
-  case movingAverage
-}

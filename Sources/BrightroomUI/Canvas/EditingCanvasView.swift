@@ -216,12 +216,11 @@ final class EditingCanvasView: UIView {
   private var isMaskEditing: Bool {
     editingTarget == .localBlur
   }
-  private var maskingBrush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
+  private var brush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
   /// The image-space brush most recently pushed to the canvas surfaces, used
   /// to skip redundant reconfiguration when neither the brush nor the
   /// geometry it resolves against has changed.
   private var appliedCanvasBrush: EditingCanvasBrush?
-  private var canvasStrokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
   /// True while an external control streams straighten angle changes before
   /// committing the resulting crop extent.
   ///
@@ -809,7 +808,7 @@ extension EditingCanvasView {
         in: surfaceHost.canvasHostView,
         canvasSize: geometry.outputSize,
         brush: canvasBrush,
-        smoothing: canvasStrokeSmoothing,
+        smoothing: brush.smoothing,
         onStrokeCommit: { [weak self] record, completion in
           self?.commitCanvasStroke(record: record, completion: completion)
         }
@@ -824,7 +823,7 @@ extension EditingCanvasView {
           in: surfaceHost.canvasHostView,
           canvasSize: crop.imageSize,
           brush: canvasBrush,
-          smoothing: canvasStrokeSmoothing,
+          smoothing: brush.smoothing,
           onStrokeCommit: { [weak self] record, completion in
             self?.commitCanvasStroke(record: record, completion: completion)
           }
@@ -2209,12 +2208,22 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
     updateDisplay()
   }
 
-  func setMaskingBrush(_ brush: ImageEditorCanvas.Brush) {
-    guard maskingBrush != brush else {
+  func setBrush(_ brush: ImageEditorCanvas.Brush) {
+    guard self.brush != brush else {
       return
     }
-    maskingBrush = brush
-    refreshCanvasBrushIfNeeded()
+    let smoothingChanged = self.brush.smoothing != brush.smoothing
+    self.brush = brush
+    guard smoothingChanged else {
+      refreshCanvasBrushIfNeeded()
+      return
+    }
+    // A smoothing change must reach the surfaces even when the resolved
+    // image-space brush is unchanged.
+    let resolved = canvasBrush
+    appliedCanvasBrush = resolved
+    cropSurface.configureCanvas(brush: resolved, smoothing: brush.smoothing)
+    toolSurface.configureCanvas(brush: resolved, smoothing: brush.smoothing)
   }
 
   /// The masking brush resolved into pre-final-crop image pixels using the
@@ -2222,7 +2231,7 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
   /// `contentInset` does not participate there.
   private var canvasBrush: EditingCanvasBrush {
     let imageDiameter: CGFloat
-    switch maskingBrush.diameter {
+    switch brush.diameter {
     case .imagePixels(let value):
       imageDiameter = value
     case .viewportPoints(let value):
@@ -2234,9 +2243,9 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
     }
     return .init(
       size: Double(imageDiameter),
-      hardness: maskingBrush.hardness,
-      opacity: maskingBrush.opacity,
-      spacing: maskingBrush.spacing
+      hardness: brush.hardness,
+      opacity: brush.opacity,
+      spacing: brush.spacing
     )
   }
 
@@ -2248,19 +2257,8 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
       return
     }
     appliedCanvasBrush = resolved
-    cropSurface.configureCanvas(brush: resolved, smoothing: canvasStrokeSmoothing)
-    toolSurface.configureCanvas(brush: resolved, smoothing: canvasStrokeSmoothing)
-  }
-
-  func setCanvasStrokeSmoothing(_ smoothing: EditingCanvasStrokeSmoothingConfiguration) {
-    guard canvasStrokeSmoothing != smoothing else {
-      return
-    }
-    canvasStrokeSmoothing = smoothing
-    let resolved = canvasBrush
-    appliedCanvasBrush = resolved
-    cropSurface.configureCanvas(brush: resolved, smoothing: smoothing)
-    toolSurface.configureCanvas(brush: resolved, smoothing: smoothing)
+    cropSurface.configureCanvas(brush: resolved, smoothing: brush.smoothing)
+    toolSurface.configureCanvas(brush: resolved, smoothing: brush.smoothing)
   }
 
   /// Applies the active surface's visibility, interaction, and viewport wiring.

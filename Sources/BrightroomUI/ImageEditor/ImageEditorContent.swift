@@ -564,10 +564,9 @@ private struct CanvasHost: View {
     .straightenAngle(straightenAngle)
     .lockedAspectRatio(lockedAspectRatio)
     .editingTarget(editingTarget)
-    .maskingBrush(
+    .brush(
       .init(diameter: .viewportPoints(localBlurState.brushDiameter))
     )
-    .strokeSmoothing(.init())
     .registerResetAction(resetAction)
     .registerRotateAction(rotateAction)
     .registerApplyAction(applyAction)
