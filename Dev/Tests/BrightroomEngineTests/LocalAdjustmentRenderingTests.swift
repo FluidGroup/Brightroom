@@ -75,7 +75,7 @@ struct LocalAdjustmentRenderingTests {
     )
 
     let renderedImage = try await renderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 19, y: 10)
@@ -102,7 +102,7 @@ struct LocalAdjustmentRenderingTests {
     )
 
     let renderedImage = try await renderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 20, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 35, y: 10)

@@ -8,7 +8,7 @@ import UIKit
 
 /// Verifies the GPU-backed CIContext path produces output equivalent to the
 /// software renderer that exports historically used (#105, #169), so that
-/// `RenderingDevice.automatic` can safely default to GPU rendering.
+/// `ExportRenderer.Device.automatic` can safely default to GPU rendering.
 struct RendererDeviceEquivalenceTests {
 
   private enum ColorSpaces {
@@ -21,7 +21,7 @@ struct RendererDeviceEquivalenceTests {
 
     try await assertDeviceEquivalence(
       image: image,
-      options: .init(workingColorSpace: ColorSpaces.displayP3),
+      options: .init(outputColorSpace: ColorSpaces.displayP3),
       makeDocument: { size in RendererTestDocument(crop: CropFeature.test(imageSize: size)) }
     )
   }
@@ -29,7 +29,7 @@ struct RendererDeviceEquivalenceTests {
   @Test func `Equivalence sRGB input effects crop`() async throws {
     try await assertDeviceEquivalence(
       image: Asset.unsplash2.image,
-      options: .init(workingColorSpace: ColorSpaces.displayP3),
+      options: .init(outputColorSpace: ColorSpaces.displayP3),
       makeDocument: { size in
         let crop = CropFeature.test(
           imageSize: size,
@@ -47,7 +47,7 @@ struct RendererDeviceEquivalenceTests {
   @Test func `Equivalence display P3 input effects`() async throws {
     try await assertDeviceEquivalence(
       image: Asset.instaLogo.image,
-      options: .init(workingColorSpace: ColorSpaces.displayP3),
+      options: .init(outputColorSpace: ColorSpaces.displayP3),
       makeDocument: { size in
         RendererTestDocument(
           effects: [AnyImageEffect(ExposureFeature(value: -0.5))],
@@ -58,7 +58,7 @@ struct RendererDeviceEquivalenceTests {
   }
 
   @Test func `Equivalence sRGB input intrinsic color space effects`() async throws {
-    // workingColorSpace nil: rendering uses the source's intrinsic color space.
+    // outputColorSpace nil: rendering uses the source's intrinsic color space.
     try await assertDeviceEquivalence(
       image: Asset.unsplash3.image,
       options: .init(),
@@ -75,7 +75,7 @@ struct RendererDeviceEquivalenceTests {
 
   private func assertDeviceEquivalence(
     image: UIImage,
-    options: ParametricExportRenderer.Options,
+    options: ExportRenderer.Options,
     makeDocument: (_ imageSize: CGSize) -> RendererTestDocument,
     maxChannelDifference: Int = 3,
     sourceLocation: SourceLocation = SourceLocation(fileID: #fileID, filePath: #filePath, line: #line, column: #column)
@@ -117,10 +117,10 @@ struct RendererDeviceEquivalenceTests {
 
   private func render(
     image: UIImage,
-    device: ParametricExportRenderer.RenderingDevice,
-    options: ParametricExportRenderer.Options,
+    device: ExportRenderer.Device,
+    options: ExportRenderer.Options,
     makeDocument: (_ imageSize: CGSize) -> RendererTestDocument
-  ) async throws -> ParametricExportRenderer.Rendered {
+  ) async throws -> RenderedImage {
     let source = SourceImage.test(image)
     return try EditingDocument(image: source, feature: makeDocument(source.pixelSize))
       .renderForTesting(options: options, device: device)

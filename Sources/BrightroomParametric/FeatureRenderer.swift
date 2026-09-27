@@ -25,12 +25,13 @@ import Foundation
 
 /// Renders features over still images.
 ///
-/// `ParametricImageRenderer` is the public evaluation entry point for image
+/// `FeatureRenderer` is the public evaluation entry point for image
 /// inputs. It prepares the chain entry once and returns lazy Core Image
-/// recipes; callers decide when to materialize the result with a `CIContext`.
-public struct ParametricImageRenderer: Sendable {
+/// recipes (`makeImage`); callers decide when to materialize the result with a
+/// `CIContext`, or use `ExportRenderer` to render pixels.
+public struct FeatureRenderer: Sendable {
 
-  /// Creates an image renderer.
+  /// Creates a feature renderer.
   public init() {}
 
   /// Evaluates a feature over a source image.
@@ -38,7 +39,7 @@ public struct ParametricImageRenderer: Sendable {
   /// `sourceImage` is the chain entry: it is translated to zero origin, and
   /// value-form radii resolve against its extent, which keeps the radius a
   /// fixed fraction of the source regardless of where crops sit in the
-  /// document. Pass `radiusReferenceExtent` only when `sourceImage` is NOT the
+  /// feature. Pass `chainEntryExtent` only when `sourceImage` is NOT the
   /// chain entry (e.g. a zoomed viewport slice of a larger source).
   ///
   /// `presentationTime` defaults to `.zero` for deterministic still-image
@@ -46,20 +47,20 @@ public struct ParametricImageRenderer: Sendable {
   public func makeImage(
     from sourceImage: CIImage,
     feature: some Feature,
-    radiusReferenceExtent: CGRect? = nil,
+    chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) throws -> CIImage {
     let image = ParametricImageGeometry.removingExtentOffset(sourceImage)
 
-    // Resolve the radius reference ONCE at chain entry. Deriving it lazily
+    // Resolve the chain-entry extent ONCE. Deriving it lazily
     // inside each recipe (`?? image.extent`) would re-base the radius on
     // whatever intermediate the effect happens to receive — a mid-chain crop
     // would silently change the resolved blur strength, and editing a crop
     // would retroactively change committed effects. The entry extent is the
     // declared basis; feature order cannot perturb it.
-    let entryReferenceExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
+    let entryExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
     let context = FeatureEvaluationContext(
-      radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
+      chainEntryExtent: chainEntryExtent ?? entryExtent,
       presentationTime: presentationTime
     )
     return try feature.apply(to: image, context: context)

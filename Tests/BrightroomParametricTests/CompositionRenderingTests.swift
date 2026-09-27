@@ -102,7 +102,7 @@ struct CompositionRenderingTests {
       try Fixtures.renderer.makeImage(
         from: source,
         feature: document,
-        radiusReferenceExtent: Fixtures.entryExtent
+        chainEntryExtent: Fixtures.entryExtent
       )
     )
     Fixtures.expectVisiblyDifferent(
@@ -110,7 +110,7 @@ struct CompositionRenderingTests {
       try Fixtures.renderer.makeImage(
         from: source,
         feature: document,
-        radiusReferenceExtent: croppedExtent
+        chainEntryExtent: croppedExtent
       )
     )
 
@@ -120,12 +120,12 @@ struct CompositionRenderingTests {
       try Fixtures.renderer.makeImage(
         from: source,
         feature: SequentialFeatures(document.steps),
-        radiusReferenceExtent: viewportReference
+        chainEntryExtent: viewportReference
       ),
       try Fixtures.renderer.makeImage(
         from: source,
         feature: document,
-        radiusReferenceExtent: viewportReference
+        chainEntryExtent: viewportReference
       )
     )
   }
@@ -404,13 +404,13 @@ struct CompositionRenderingTests {
   @Test func `export renders the image recipe`() throws {
     let source = try Fixtures.makeSource()
     let document = ImageEditorLikeFeature()
-    let options = ParametricExportRenderer.Options(
-      workingFormat: .RGBAh,
-      workingColorSpace: Fixtures.workingColorSpace
+    let options = ExportRenderer.Options(
+      outputFormat: .RGBAh,
+      outputColorSpace: Fixtures.workingColorSpace
     )
 
-    let exported = try ParametricExportRenderer().render(
-      source: source,
+    let exported = try ExportRenderer().render(
+      from: source,
       feature: document,
       options: options
     )
@@ -443,11 +443,11 @@ struct CompositionRenderingTests {
   @Test func `video frames are the image recipe placed in the render extent`() throws {
     let source = try Fixtures.makeSource()
     let document = ImageEditorLikeFeature()
-    let videoRenderer = ParametricVideoRenderer()
+    let videoRenderer = VideoRenderer()
     let renderExtent = CGRect(x: 0, y: 0, width: 280, height: 200)
     let presentationTime = CMTime(value: 7, timescale: 30)
 
-    let frame = try videoRenderer.makeFrameImage(
+    let frame = try videoRenderer.makeImage(
       from: source,
       feature: document,
       renderExtent: renderExtent,
@@ -496,7 +496,7 @@ struct CompositionRenderingTests {
       try? FileManager.default.removeItem(at: asset.url)
     }
     let document = ImageEditorLikeFeature()
-    let videoRenderer = ParametricVideoRenderer()
+    let videoRenderer = VideoRenderer()
 
     let composition = try videoRenderer.makeVideoComposition(for: asset, feature: document)
     let foldedComposition = try videoRenderer.makeVideoComposition(
@@ -531,7 +531,7 @@ struct CompositionRenderingTests {
     defer {
       try? FileManager.default.removeItem(at: asset.url)
     }
-    let composition = try ParametricVideoRenderer().makeVideoComposition(
+    let composition = try VideoRenderer().makeVideoComposition(
       for: asset,
       feature: PresentationTimeLevel()
     )

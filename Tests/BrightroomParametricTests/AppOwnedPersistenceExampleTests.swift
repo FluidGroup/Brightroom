@@ -57,7 +57,7 @@ struct AppOwnedPersistenceExampleTests {
     // The restored look renders the same pixels.
     let source = CIImage(color: CIColor(red: 0.62, green: 0.34, blue: 0.21))
       .cropped(to: CGRect(x: 0, y: 0, width: 8, height: 8))
-    let renderer = ParametricImageRenderer()
+    let renderer = FeatureRenderer()
     #expect(
       try Self.bitmap(renderer.makeImage(from: source, feature: restored))
         == Self.bitmap(renderer.makeImage(from: source, feature: look))

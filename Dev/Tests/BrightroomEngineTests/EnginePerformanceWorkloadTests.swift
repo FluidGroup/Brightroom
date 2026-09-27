@@ -20,7 +20,7 @@ import UIKit
 /// - export render (`EditingDocument.render`)
 /// - preview composition (the document with its crop neutralized, over the
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
-/// - brush-mask raster (`ParametricImageRenderer.makeMaskImage`, the parametric
+/// - brush-mask raster (`FeatureRenderer.makeMaskImage`, the parametric
 ///   `brushStamp` kernel)
 /// - parametric evaluation (`ImageEditorFeature.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
@@ -79,7 +79,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
     return try EditingDocument(image: SourceImage(cgImage: source), feature: document)
-      .renderForTesting(options: .init(workingColorSpace: Self.sRGB), device: .automatic)
+      .renderForTesting(options: .init(outputColorSpace: Self.sRGB), device: .automatic)
       .cgImage
   }
 
@@ -88,7 +88,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     // The document is authored in full-resolution coordinates, so the preview
     // evaluates over the full-size source, with the crop neutralized.
     let preview = document.withCropNeutralized(imageSize: source.extent.size)
-    guard let composed = try? ParametricImageRenderer().makeImage(from: source, feature: preview) else {
+    guard let composed = try? FeatureRenderer().makeImage(from: source, feature: preview) else {
       return
     }
     _ = Self.context.createCGImage(composed, from: source.extent)
@@ -103,7 +103,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         brush: BrushMaskBrush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
       )
     ])))
-    _ = try? ParametricImageRenderer().makeMaskImage(for: tree, extent: CGRect(origin: .zero, size: imageSize))
+    _ = try? FeatureRenderer().makeMaskImage(for: tree, extent: CGRect(origin: .zero, size: imageSize))
   }
 
   @inline(never)

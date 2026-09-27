@@ -196,19 +196,19 @@ reading documents written by the removed `ParametricDocumentCodec`.
 Evaluation keeps its lazy-`CIImage` contract: no intermediate
 materialization, and callers own the `CIContext`.
 
-- `ParametricImageRenderer().makeImage(from:document:)` prepares the chain
-  entry once: it translates the source to zero origin, fixes the radius basis
+- `FeatureRenderer().makeImage(from:feature:)` prepares the chain
+  entry once: it translates the source to zero origin, fixes the chain-entry extent
   (value-form radii resolve against the entry extent, or against
-  `radiusReferenceExtent` for a viewport slice), and sets the presentation
+  `chainEntryExtent` for a viewport slice), and sets the presentation
   time. The `FeatureEvaluationContext` then flows down through every `body`.
-  `ParametricExportRenderer` and `ParametricVideoRenderer` evaluate through
+  `ExportRenderer` and `VideoRenderer` evaluate through
   the same path.
 - `LocalAdjustment` renders its mask tree over its input extent (GPU brush
   stamps and mask combinators through internal Metal kernels), evaluates its
   content, and composites the result through the mask alpha. An empty
   union or intersection throws before the content is evaluated. Content that
   returns its input unchanged makes the whole adjustment return its input.
-  `ParametricImageRenderer().makeMaskImage(for:extent:)` renders the same
+  `FeatureRenderer().makeMaskImage(for:extent:)` renders the same
   alpha for inspection.
 - Validation happens where a value is applied: `CropFeature` and
   `ColorCubeFeature` call their public `validate()` from `apply`.
@@ -216,7 +216,7 @@ materialization, and callers own the `CIContext`.
   `invalidCropRect(CGRect)`,
   `invalidColorCubeData(identifier:expectedByteCount:actualByteCount:)`,
   `emptyMaskComposite`, `kernelUnavailable(name:reason:)`,
-  `failedToCreateImage(String)`, and `documentUnavailable`. Built-in features
+  `imageCreationFailed(String)`, and `documentUnavailable`. Built-in features
   and the renderers throw no other error type while evaluating.
 - The renderers take `some Feature`. A `nil` optional document throws
   `documentUnavailable`, as `EditingStack.makeRenderer(document:)` does, so a

@@ -101,7 +101,7 @@ extension ColorCubeFeature {
     filter.setValue(image, forKeyPath: kCIInputImageKey)
 
     guard let filtered = filter.outputImage else {
-      throw FeatureEvaluationError.failedToCreateImage("CIColorCubeWithColorSpace")
+      throw FeatureEvaluationError.imageCreationFailed("CIColorCubeWithColorSpace")
     }
 
     let foreground = filtered.applyingFilter(
@@ -122,7 +122,7 @@ extension ColorCubeFeature {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureEvaluationError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return output.cropped(to: image.extent)
@@ -210,7 +210,7 @@ extension HighlightShadowTintFeature {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureEvaluationError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     let highlight = CIImage(color: highlightColor.parametricCIColor)
@@ -222,7 +222,7 @@ extension HighlightShadowTintFeature {
         kCIInputBackgroundImageKey: shadowOutput,
       ]
     )?.outputImage else {
-      throw FeatureEvaluationError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return highlightOutput.cropped(to: image.extent)
@@ -249,7 +249,7 @@ extension SharpenFeature {
     let radius = ParametricRadiusCalculator.radius(
       value: radius,
       max: ParametricFilterConstants.gaussianBlurSliderMax,
-      imageExtent: context.radiusBasis(for: image)
+      imageExtent: context.chainEntryExtent(for: image)
     )
     return image.applyingFilter(
       "CISharpenLuminance",
@@ -273,7 +273,7 @@ extension GaussianBlurFeature {
       radius = ParametricRadiusCalculator.radius(
         value: value,
         max: ParametricFilterConstants.gaussianBlurSliderMax,
-        imageExtent: context.radiusBasis(for: image)
+        imageExtent: context.chainEntryExtent(for: image)
       )
     }
 
@@ -296,7 +296,7 @@ extension UnsharpMaskFeature {
     let radius = ParametricRadiusCalculator.radius(
       value: radius,
       max: ParametricFilterConstants.unsharpMaskRadiusSliderMax,
-      imageExtent: context.radiusBasis(for: image)
+      imageExtent: context.chainEntryExtent(for: image)
     )
     return image.applyingFilter(
       "CIUnsharpMask",
@@ -336,7 +336,7 @@ extension FadeFeature {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureEvaluationError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return output.cropped(to: image.extent)

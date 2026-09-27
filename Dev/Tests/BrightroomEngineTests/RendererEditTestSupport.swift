@@ -120,9 +120,9 @@ extension EditingDocument {
   /// Renders synchronously on a chosen device, through the same core as
   /// `render(options:)`.
   func renderForTesting(
-    options: ParametricExportRenderer.Options = .init(),
-    device: ParametricExportRenderer.RenderingDevice = .automatic
-  ) throws -> ParametricExportRenderer.Rendered {
+    options: ExportRenderer.Options = .init(),
+    device: ExportRenderer.Device = .automatic
+  ) throws -> RenderedImage {
     try render(options: options, device: device)
   }
 }

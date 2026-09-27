@@ -163,7 +163,7 @@ struct ParametricVideoRenderPlaygroundView: View {
     }
 
     do {
-      item.videoComposition = try ParametricVideoRenderer().makeVideoComposition(
+      item.videoComposition = try VideoRenderer().makeVideoComposition(
         for: asset,
         feature: makeFeatureDocument(),
         renderSizeMode: renderSizeMode.rendererMode
@@ -387,7 +387,7 @@ private enum ParametricVideoPlaygroundRenderSizeMode: String, CaseIterable, Iden
     }
   }
 
-  var rendererMode: ParametricVideoRenderer.RenderSizeMode {
+  var rendererMode: VideoRenderer.RenderSizeMode {
     switch self {
     case .source:
       .source

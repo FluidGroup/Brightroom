@@ -132,8 +132,8 @@ struct EditingCanvasRendererTests {
     effects: AnyImageEffect? = nil,
     localEffect: AnyImageEffect? = nil
   ) -> EditingCanvasRenderImages {
-    let base = effects?.applyIgnoringFailure(to: source, radiusReferenceExtent: contentBounds) ?? source
-    let adjusted = localEffect?.applyIgnoringFailure(to: base, radiusReferenceExtent: contentBounds) ?? base
+    let base = effects?.applyIgnoringFailure(to: source, chainEntryExtent: contentBounds) ?? source
+    let adjusted = localEffect?.applyIgnoringFailure(to: base, chainEntryExtent: contentBounds) ?? base
     return .init(
       source: source,
       base: base,

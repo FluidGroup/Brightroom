@@ -14,7 +14,7 @@ import UIKit
 /// crop changes and viewport zoom, so the EditingCanvasView preview matches the
 /// exported result. Before the fix, the live viewport re-resolved `value=40`
 /// against the zoomed drawable extent, so zooming changed the visible blur.
-struct BlurRadiusReferenceExtentTests {
+struct BlurChainEntryExtentTests {
 
   private static let context = CIContext()
 
@@ -28,7 +28,7 @@ struct BlurRadiusReferenceExtentTests {
 
     let viaValue = try GaussianBlurFeature(value: 40).apply(
       to: input,
-      context: FeatureEvaluationContext(radiusReferenceExtent: sourceReference)
+      context: FeatureEvaluationContext(chainEntryExtent: sourceReference)
     )
 
     // The equivalent absolute radius (diagonal/50) applied to the same input.
@@ -55,7 +55,7 @@ struct BlurRadiusReferenceExtentTests {
     )
   }
 
-  /// With `radiusReferenceExtent` nil, the radius falls back to the input
+  /// With `chainEntryExtent` nil, the radius falls back to the input
   /// extent — the contract the export and preview-composition paths rely on,
   /// where the input IS the full source at render scale.
   @Test func `nil reference falls back to input extent`() throws {
@@ -75,7 +75,7 @@ struct BlurRadiusReferenceExtentTests {
   }
 
   /// The renderer-level contract behind the feature-level one: with no
-  /// explicit reference, `ParametricImageRenderer` resolves value-form radii
+  /// explicit reference, `FeatureRenderer` resolves value-form radii
   /// against the render pass's CHAIN-ENTRY extent — so a crop placed BEFORE
   /// the blur in the document does not change the resolved radius, and
   /// editing a crop can never retroactively change a committed effect.
@@ -95,7 +95,7 @@ struct BlurRadiusReferenceExtentTests {
       }
     }
 
-    let renderer = ParametricImageRenderer()
+    let renderer = FeatureRenderer()
 
     // [crop, blur] with the default (nil) reference.
     let cropThenBlur = try renderer.makeImage(from: input, feature: CropThenBlur(crop: crop))

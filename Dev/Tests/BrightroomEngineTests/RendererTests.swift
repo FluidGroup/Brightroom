@@ -76,7 +76,7 @@ struct RendererTests {
 
     let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
@@ -89,7 +89,7 @@ struct RendererTests {
 
     let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
@@ -105,7 +105,7 @@ struct RendererTests {
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
     )
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
@@ -127,7 +127,7 @@ struct RendererTests {
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
@@ -149,7 +149,7 @@ struct RendererTests {
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
-    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.width == 300 || image.height == 300)
     #expect(image.colorSpace == ColorSpaces.displayP3)
@@ -171,7 +171,7 @@ struct RendererTests {
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
     )
 
-    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.width == 300 || image.height == 300)
     #expect(image.colorSpace == ColorSpaces.displayP3)
@@ -185,7 +185,7 @@ struct RendererTests {
 
     let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
 

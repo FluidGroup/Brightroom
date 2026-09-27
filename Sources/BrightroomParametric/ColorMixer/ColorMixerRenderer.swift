@@ -40,7 +40,7 @@ nonisolated enum ColorMixerRenderer {
         ]
       )
     else {
-      throw FeatureEvaluationError.failedToCreateImage(ColorMixerKernelStore.name)
+      throw FeatureEvaluationError.imageCreationFailed(ColorMixerKernelStore.name)
     }
     return output.cropped(to: image.extent)
   }

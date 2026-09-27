@@ -17,7 +17,7 @@ import BrightroomParametric
 struct RendererOrientationTests {
 
   private func run(image: UIImage, orientation: CGImagePropertyOrientation) async throws
-    -> ParametricExportRenderer.Rendered
+    -> RenderedImage
   {
 
     let imageSource = SourceImage.test(image, orientation: orientation)

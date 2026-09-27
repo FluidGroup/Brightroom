@@ -17,7 +17,7 @@ import UIKit
 /// export blurs the full-size source directly.
 ///
 /// Those two evaluations land on the same visual result *because the blur radius
-/// is a fraction of the image extent* (`radiusReferenceExtent == nil` →
+/// is a fraction of the image extent* (`chainEntryExtent == nil` →
 /// `image.extent`): a fraction of 256 upscaled 4× equals the same fraction of
 /// 1024. This test renders both and asserts they agree within a loose tolerance
 /// — "loose" because the preview starts from a downsampled source, so a small
@@ -68,7 +68,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // chain-entry extent).
     let exportImage = blur.applyIgnoringFailure(
       to: fullEdgeCI,
-      radiusReferenceExtent: fullEdgeCI.extent
+      chainEntryExtent: fullEdgeCI.extent
     )
     let exportRow = try centerRow(of: exportImage, side: Self.fullSide)
 

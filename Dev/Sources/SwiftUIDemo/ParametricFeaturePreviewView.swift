@@ -143,7 +143,7 @@ struct ParametricFeaturePreviewView: View {
 
   private func makePreviewImage() -> ParametricPreviewImage {
     do {
-      let renderer = ParametricImageRenderer()
+      let renderer = FeatureRenderer()
       let document = makeDocument()
       let output = try renderer.makeImage(
         from: Self.sourceImage,

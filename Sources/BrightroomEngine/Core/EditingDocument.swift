@@ -210,24 +210,24 @@ extension EditingDocument {
   /// Renders the feature over the full-resolution image.
   ///
   /// The Core Image work runs off the calling actor. See
-  /// `ParametricExportRenderer.render(source:feature:options:device:)` for the
+  /// `ExportRenderer.render(from:feature:options:device:)` for the
   /// output options.
   @concurrent
   public func render(
-    options: ParametricExportRenderer.Options = .init()
-  ) async throws -> ParametricExportRenderer.Rendered {
+    options: ExportRenderer.Options = .init()
+  ) async throws -> RenderedImage {
     try render(options: options, device: .automatic)
   }
 
   /// The synchronous render core, internal so tests can compare devices and
   /// benchmarks can skip the executor hop.
   func render(
-    options: ParametricExportRenderer.Options,
-    device: ParametricExportRenderer.RenderingDevice
-  ) throws -> ParametricExportRenderer.Rendered {
+    options: ExportRenderer.Options,
+    device: ExportRenderer.Device
+  ) throws -> RenderedImage {
     let startTime = CACurrentMediaTime()
-    let rendered = try ParametricExportRenderer().render(
-      source: image.makeCIImage(),
+    let rendered = try ExportRenderer().render(
+      from: image.makeCIImage(),
       feature: feature,
       options: options,
       device: device

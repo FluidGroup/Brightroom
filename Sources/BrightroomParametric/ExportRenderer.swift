@@ -28,20 +28,19 @@ import UniformTypeIdentifiers
 import UIKit
 #endif
 
-/// Materializes a feature document from a source
-/// `CIImage` into a concrete result (`Rendered`), either an in-memory bitmap or
-/// a file on disk.
+/// Materializes a feature from a source `CIImage` into a concrete result
+/// (`RenderedImage`), either an in-memory bitmap or a file on disk.
 ///
 /// This is the export/preview evaluation layer of the parametric stack: the
-/// document (effects, local adjustments, and crops) evaluates to one lazy
-/// `CIImage` recipe through `ParametricImageRenderer`,
+/// root feature (effects, local adjustments, and crops) evaluates to one lazy
+/// `CIImage` recipe through `FeatureRenderer`,
 /// which Core Image then evaluates here at the requested quality, resolution,
 /// and output. The source image is expected to be already oriented; callers
 /// holding an unoriented loader should apply orientation before rendering.
-public struct ParametricExportRenderer {
+public struct ExportRenderer {
 
   /// An encoded file format for `Output.file`.
-  public enum ExportFileType: Sendable {
+  public enum FileType: Sendable {
     /// Lossy JPEG. `quality` is 0...1 (1 = best).
     case jpeg(quality: CGFloat)
     /// HEIF (HEIC). `quality` is 0...1 (1 = best).
@@ -58,18 +57,23 @@ public struct ParametricExportRenderer {
     /// Stream the render straight to a file via Core Image's tiled writer — no
     /// full-resolution `CGImage`, peak memory bounded to ~a tile plus encoder
     /// state. The right choice for very large images.
-    case file(url: URL, fileType: ExportFileType)
+    case file(url: URL, fileType: FileType)
   }
 
   public struct Options: Sendable {
 
     public var resolution: Resolution
-    public var workingFormat: CIFormat
 
-    /// An colorspace that uses on rendering.
-    /// Result image would use this colorspace.
-    /// Nil means letting the renderer use the intrinsic colorspace of the working image.
-    public var workingColorSpace: CGColorSpace?
+    /// The pixel format of the delivered result (the `CGImage` or the file).
+    ///
+    /// Processing always runs in a half-float working buffer; this is only the
+    /// output format.
+    public var outputFormat: CIFormat
+
+    /// The color space the result is tagged with.
+    ///
+    /// `nil` uses the source image's own color space.
+    public var outputColorSpace: CGColorSpace?
 
     /// Where the result is stored (in-memory bitmap or a file on disk).
     public var output: Output
@@ -77,175 +81,25 @@ public struct ParametricExportRenderer {
     ///
     /// - Parameters:
     ///   - resolution:
-    ///   - workingFormat:
-    ///   - workingColorSpace:
+    ///   - outputFormat:
+    ///   - outputColorSpace:
     ///   - output: In-memory bitmap (`.memory`, default) or a tiled write to a
-    ///     file (`.file`). Either way the result is returned as a `Rendered`.
+    ///     file (`.file`). Either way the result is returned as a `RenderedImage`.
     public init(
       resolution: Resolution = .full,
-      workingFormat: CIFormat = .BGRA8,
-      workingColorSpace: CGColorSpace? = nil,
+      outputFormat: CIFormat = .BGRA8,
+      outputColorSpace: CGColorSpace? = nil,
       output: Output = .memory
     ) {
       self.resolution = resolution
-      self.workingFormat = workingFormat
-      self.workingColorSpace = workingColorSpace
+      self.outputFormat = outputFormat
+      self.outputColorSpace = outputColorSpace
       self.output = output
     }
 
   }
 
-  public enum RenderingError: Swift.Error {
-    /// A file-backed render could not be decoded back into a `CGImage`.
-    case failedToDecodeRenderedFile(URL)
-
-    /// A memory-backed render could not allocate a `CGImage` for the extent.
-    ///
-    /// Most likely at the sizes `Output.file` exists to avoid.
-    case failedToCreateCGImage(extent: CGRect)
-  }
-
-  /**
-   A result of rendering.
-
-   `Rendered` hides whether the result lives in memory or on disk: the same type
-   is returned for `Output.memory` and `Output.file`. Ask it for whatever you
-   need (`cgImage`, `uiImage`, `fileURL`, `thumbnail`) and it resolves the
-   backing for you.
-   */
-  public struct Rendered: Sendable {
-
-    public enum DataType: Sendable {
-      case jpeg(quality: CGFloat)
-      case png
-    }
-
-    enum Storage: Sendable {
-      case memory(CGImage)
-      case file(URL)
-    }
-
-    /// An Options instance that used in redering.
-    public let options: Options
-
-    private let storage: Storage
-
-    init(cgImage: CGImage, options: Options) {
-      self.storage = .memory(cgImage)
-      self.options = options
-    }
-
-    init(fileURL: URL, options: Options) {
-      self.storage = .file(fileURL)
-      self.options = options
-    }
-
-    /// The on-disk location when the render targeted `Output.file`; `nil` for an
-    /// in-memory render.
-    public var fileURL: URL? {
-      if case .file(let url) = storage { return url }
-      return nil
-    }
-
-    /// The result as a `CGImage`, orientation fixed and tagged with the working
-    /// color space. An in-memory render returns immediately; a file-backed
-    /// render decodes the file (which loads the full image into memory — avoid
-    /// it on the large exports `Output.file` exists to keep bounded).
-    public var cgImage: CGImage {
-      get throws {
-        switch storage {
-        case .memory(let image):
-          return image
-        case .file(let url):
-          guard
-            let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-            let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
-          else {
-            throw RenderingError.failedToDecodeRenderedFile(url)
-          }
-          return image
-        }
-      }
-    }
-
-    #if canImport(UIKit)
-    public var uiImage: UIImage {
-      get throws {
-        UIImage(cgImage: try cgImage, scale: 1, orientation: .up)
-          .withRenderingMode(.alwaysOriginal)
-      }
-    }
-    #endif
-
-    public var swiftUIImage: SwiftUI.Image {
-      get throws {
-        .init(decorative: try cgImage, scale: 1, orientation: .up)
-      }
-    }
-
-    /// A downsampled decode of the result, capped to `maxPixelSize` on the long
-    /// side — preview a large export WITHOUT the full-resolution decode spike.
-    /// A file result decodes a thumbnail via Image I/O (bounded memory); an
-    /// in-memory result returns the already-resident image unchanged.
-    public func thumbnail(maxPixelSize: CGFloat) throws -> CGImage {
-      switch storage {
-      case .memory(let image):
-        return image
-      case .file(let url):
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
-          throw RenderingError.failedToDecodeRenderedFile(url)
-        }
-        let options: [CFString: Any] = [
-          kCGImageSourceCreateThumbnailFromImageAlways: true,
-          kCGImageSourceCreateThumbnailWithTransform: true,
-          kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-          kCGImageSourceShouldCacheImmediately: true,
-        ]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-          throw RenderingError.failedToDecodeRenderedFile(url)
-        }
-        return image
-      }
-    }
-
-    /**
-     Makes a data of the image that optimized for sharing.
-
-     Since the rendered image is working on DisplayP3 profile, that data might display wrong color on other platform devices.
-     To avoid those issues, use this method to create data to send instead of creating data from `cgImageDisplayP3`.
-     */
-    public func makeOptimizedForSharingData(dataType: DataType) throws -> Data {
-      let image = try cgImage
-      let data = NSMutableData()
-
-      let utType: UTType
-      var properties: [CFString: Any] = [kCGImageDestinationOptimizeColorForSharing: true]
-      switch dataType {
-      case .jpeg(let quality):
-        utType = .jpeg
-        properties[kCGImageDestinationLossyCompressionQuality] = quality
-      case .png:
-        utType = .png
-      }
-
-      guard
-        let destination = CGImageDestinationCreateWithData(
-          data,
-          utType.identifier as CFString,
-          1,
-          nil
-        )
-      else {
-        return data as Data
-      }
-      CGImageDestinationAddImage(destination, image, properties as CFDictionary)
-      CGImageDestinationFinalize(destination)
-      return data as Data
-    }
-
-  }
-
-  public enum RenderingDevice: Sendable {
+  public enum Device: Sendable {
     /// GPU rendering, falling back to software rendering when the image
     /// exceeds the GPU context's maximum input or output size.
     case automatic
@@ -260,21 +114,21 @@ public struct ParametricExportRenderer {
     case resize(maxPixelSize: CGFloat)
   }
 
-  private let imageRenderer = ParametricImageRenderer()
+  private let featureRenderer = FeatureRenderer()
 
   /// Creates an export renderer.
   public init() {}
 
   /**
-   Renders a document from an already-oriented source image.
+   Renders a feature over an already-oriented source image.
 
-   Single rendering path: the document (effects, local adjustments, and crops)
-   evaluates to one `CIImage` recipe through `ParametricImageRenderer`, with
-   `source` as the chain entry, which Core Image then materializes. An unedited
-   image or a pure crop is just an `EmptyFeature()` or crop-only feature on the
-   same path.
+   Single rendering path: the root feature (effects, local adjustments, and
+   crops) evaluates to one `CIImage` recipe through `FeatureRenderer`, with
+   `sourceImage` as the chain entry, which Core Image then materializes. An
+   unedited image or a pure crop is just an `EmptyFeature()` or crop-only
+   feature on the same path.
 
-   The result is returned as a `Rendered`, which hides whether it is backed by an
+   The result is returned as a `RenderedImage`, which hides whether it is backed by an
    in-memory bitmap or a file — controlled by `options.output`:
 
    - `.memory` materializes a full-resolution `CGImage` (`createCGImage`).
@@ -285,25 +139,25 @@ public struct ParametricExportRenderer {
    to their own queue first.
    */
   public func render(
-    source: CIImage,
+    from sourceImage: CIImage,
     feature: some Feature,
     options: Options = .init(),
-    device: RenderingDevice = .automatic
-  ) throws -> Rendered {
+    device: Device = .automatic
+  ) throws -> RenderedImage {
 
-    let outputCIImage = try imageRenderer.makeImage(from: source, feature: feature)
-    let colorSpace = options.workingColorSpace ?? source.colorSpace
+    let outputCIImage = try featureRenderer.makeImage(from: sourceImage, feature: feature)
+    let colorSpace = options.outputColorSpace ?? sourceImage.colorSpace
 
     // Always process through a half-float WORKING buffer so wide-gamut and
     // out-of-range (>1 / <0) values survive the multi-filter chain — an 8-bit
     // working format would clamp/band them mid-chain. This is the processing
     // precision only; it is independent of the OUTPUT format below, which stays
-    // `options.workingFormat` (the caller's delivery format — 8-bit Display-P3
+    // `options.outputFormat` (the caller's delivery format — 8-bit Display-P3
     // is fine for SDR; bumping the output to float is a per-call delivery choice).
     let ciContext = Self.makeCIContext(
       workingFormat: .RGBAh,
       device: device,
-      imageExtent: source.extent
+      imageExtent: sourceImage.extent
     )
 
     // `Resolution.resize` is a Core Image scale on the recipe, so the downscale
@@ -316,11 +170,11 @@ public struct ParametricExportRenderer {
       guard let cgImage = ciContext.createCGImage(
         image,
         from: image.extent,
-        format: options.workingFormat,
+        format: options.outputFormat,
         colorSpace: colorSpace,
         deferred: false
       ) else {
-        throw RenderingError.failedToCreateCGImage(extent: image.extent)
+        throw ExportRendererError.failedToCreateCGImage(extent: image.extent)
       }
       return .init(cgImage: cgImage, options: options)
 
@@ -344,7 +198,7 @@ public struct ParametricExportRenderer {
   private static func write(
     _ image: CIImage,
     to url: URL,
-    fileType: ExportFileType,
+    fileType: FileType,
     context: CIContext,
     colorSpace: CGColorSpace
   ) throws {
@@ -406,7 +260,7 @@ public struct ParametricExportRenderer {
   /// wide-gamut sources (Display-P3, Adobe RGB, ...) export faithfully instead
   /// of being gamut-clipped into the default sRGB-primary working space. It
   /// matches the editing canvas working space so canvas and export agree.
-  /// (Distinct from `Options.workingColorSpace`, which is the OUTPUT tag.)
+  /// (Distinct from `Options.outputColorSpace`, which is the OUTPUT tag.)
   private static let processingColorSpace =
     CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3) ?? CGColorSpaceCreateDeviceRGB()
 
@@ -444,7 +298,7 @@ public struct ParametricExportRenderer {
 
   private static func makeCIContext(
     workingFormat: CIFormat,
-    device: RenderingDevice,
+    device: Device,
     imageExtent: CGRect
   ) -> CIContext {
 
@@ -474,4 +328,155 @@ public struct ParametricExportRenderer {
       #endif
     }
   }
+}
+
+/// Errors thrown by `ExportRenderer` and by reading its `RenderedImage`.
+public enum ExportRendererError: Swift.Error {
+  /// A file-backed render could not be decoded back into a `CGImage`.
+  case failedToDecodeRenderedFile(URL)
+
+  /// A memory-backed render could not allocate a `CGImage` for the extent.
+  ///
+  /// Most likely at the sizes `ExportRenderer.Output.file` exists to avoid.
+  case failedToCreateCGImage(extent: CGRect)
+}
+
+/**
+ The result of `ExportRenderer.render(from:feature:options:device:)`.
+
+ `RenderedImage` hides whether the result lives in memory or on disk: the same type
+ is returned for `ExportRenderer.Output.memory` and `ExportRenderer.Output.file`. Ask it for whatever you
+ need (`cgImage`, `uiImage`, `fileURL`, `thumbnail`) and it resolves the
+ backing for you.
+ */
+public struct RenderedImage: Sendable {
+
+  public enum DataType: Sendable {
+    case jpeg(quality: CGFloat)
+    case png
+  }
+
+  enum Storage: Sendable {
+    case memory(CGImage)
+    case file(URL)
+  }
+
+  /// The options the result was rendered with.
+  public let options: ExportRenderer.Options
+
+  private let storage: Storage
+
+  init(cgImage: CGImage, options: ExportRenderer.Options) {
+    self.storage = .memory(cgImage)
+    self.options = options
+  }
+
+  init(fileURL: URL, options: ExportRenderer.Options) {
+    self.storage = .file(fileURL)
+    self.options = options
+  }
+
+  /// The on-disk location when the render targeted `ExportRenderer.Output.file`; `nil` for an
+  /// in-memory render.
+  public var fileURL: URL? {
+    if case .file(let url) = storage { return url }
+    return nil
+  }
+
+  /// The result as a `CGImage`, orientation fixed and tagged with the working
+  /// color space. An in-memory render returns immediately; a file-backed
+  /// render decodes the file (which loads the full image into memory — avoid
+  /// it on the large exports `ExportRenderer.Output.file` exists to keep bounded).
+  public var cgImage: CGImage {
+    get throws {
+      switch storage {
+      case .memory(let image):
+        return image
+      case .file(let url):
+        guard
+          let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        else {
+          throw ExportRendererError.failedToDecodeRenderedFile(url)
+        }
+        return image
+      }
+    }
+  }
+
+  #if canImport(UIKit)
+  public var uiImage: UIImage {
+    get throws {
+      UIImage(cgImage: try cgImage, scale: 1, orientation: .up)
+        .withRenderingMode(.alwaysOriginal)
+    }
+  }
+  #endif
+
+  public var swiftUIImage: SwiftUI.Image {
+    get throws {
+      .init(decorative: try cgImage, scale: 1, orientation: .up)
+    }
+  }
+
+  /// A downsampled decode of the result, capped to `maxPixelSize` on the long
+  /// side — preview a large export WITHOUT the full-resolution decode spike.
+  /// A file result decodes a thumbnail via Image I/O (bounded memory); an
+  /// in-memory result returns the already-resident image unchanged.
+  public func thumbnail(maxPixelSize: CGFloat) throws -> CGImage {
+    switch storage {
+    case .memory(let image):
+      return image
+    case .file(let url):
+      guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+        throw ExportRendererError.failedToDecodeRenderedFile(url)
+      }
+      let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        kCGImageSourceShouldCacheImmediately: true,
+      ]
+      guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+        throw ExportRendererError.failedToDecodeRenderedFile(url)
+      }
+      return image
+    }
+  }
+
+  /**
+   Makes a data of the image that optimized for sharing.
+
+   Since the rendered image is working on DisplayP3 profile, that data might display wrong color on other platform devices.
+   To avoid those issues, use this method to create data to send instead of creating data from `cgImageDisplayP3`.
+   */
+  public func makeOptimizedForSharingData(dataType: DataType) throws -> Data {
+    let image = try cgImage
+    let data = NSMutableData()
+
+    let utType: UTType
+    var properties: [CFString: Any] = [kCGImageDestinationOptimizeColorForSharing: true]
+    switch dataType {
+    case .jpeg(let quality):
+      utType = .jpeg
+      properties[kCGImageDestinationLossyCompressionQuality] = quality
+    case .png:
+      utType = .png
+    }
+
+    guard
+      let destination = CGImageDestinationCreateWithData(
+        data,
+        utType.identifier as CFString,
+        1,
+        nil
+      )
+    else {
+      return data as Data
+    }
+    CGImageDestinationAddImage(destination, image, properties as CFDictionary)
+    CGImageDestinationFinalize(destination)
+    return data as Data
+  }
+
 }

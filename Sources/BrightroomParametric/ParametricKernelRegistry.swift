@@ -24,7 +24,7 @@ import Foundation
 
 /// Provides cached kernels used by the mask renderer.
 ///
-/// Documents store semantic feature data only. This registry is renderer
+/// Features store semantic parameters only. This registry is renderer
 /// infrastructure and all custom operations are represented as Metal-backed
 /// Core Image kernels loaded from BrightroomParametric's compiled Metal library.
 struct ParametricKernelRegistry: Sendable {
@@ -50,7 +50,7 @@ struct ParametricKernelRegistry: Sendable {
         opacity,
       ]
     ) else {
-      throw FeatureEvaluationError.failedToCreateImage("brushStamp")
+      throw FeatureEvaluationError.imageCreationFailed("brushStamp")
     }
     return image.cropped(to: extent)
   }
@@ -65,7 +65,7 @@ struct ParametricKernelRegistry: Sendable {
       extent: extent,
       arguments: [removing, base]
     ) else {
-      throw FeatureEvaluationError.failedToCreateImage("maskSubtract")
+      throw FeatureEvaluationError.imageCreationFailed("maskSubtract")
     }
     return image.cropped(to: extent)
   }

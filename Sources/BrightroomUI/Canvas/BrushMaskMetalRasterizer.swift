@@ -97,7 +97,7 @@ struct BrushMaskMetalRasterizer {
   /// `center = (x, y)` lands at CI-y `y` in the wrapped image — exactly where the
   /// parametric kernel (`MaskTreeRenderer`, `dest.coord()` y-up) places the
   /// same `y`. So the wrapped texture is already in the frame of
-  /// `MaskTreeRenderer` (`ParametricImageRenderer.makeMaskImage`) and is directly
+  /// `MaskTreeRenderer` (`FeatureRenderer.makeMaskImage`) and is directly
   /// comparable to the export/preview mask without any added transform.
   /// (The live view's `renderDrawableImage` flip is a separate, drawable-only
   /// presentation step and does not belong here.)

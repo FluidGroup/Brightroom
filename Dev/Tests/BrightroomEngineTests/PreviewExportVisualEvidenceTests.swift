@@ -82,7 +82,7 @@ struct PreviewExportVisualEvidenceTests {
 
   private func renderExport(_ document: ImageEditorFeature, source: CGImage) async throws -> CGImage {
     try await EditingDocument(image: SourceImage(cgImage: source), feature: document)
-      .render(options: .init(workingColorSpace: Self.sRGB))
+      .render(options: .init(outputColorSpace: Self.sRGB))
       .cgImage
   }
 

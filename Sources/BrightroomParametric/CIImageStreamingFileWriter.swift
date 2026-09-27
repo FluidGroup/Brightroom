@@ -73,7 +73,7 @@ enum CIImageStreamingFileWriter {
   static func write(
     _ image: CIImage,
     to url: URL,
-    fileType: ParametricExportRenderer.ExportFileType,
+    fileType: ExportRenderer.FileType,
     context: CIContext,
     colorSpace: CGColorSpace,
     stripHeight: Int = defaultStripHeight

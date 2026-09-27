@@ -5,7 +5,7 @@
 import CoreImage
 import Foundation
 
-/// A step of a parametric editing document, composed statically.
+/// A step of a parametric edit, composed statically.
 ///
 /// A feature is a plain value: it has no identity, history, or editing
 /// session. It either evaluates itself (a *primitive*, which implements
@@ -14,7 +14,7 @@ import Foundation
 /// default implementation that evaluates `body`).
 ///
 /// ```swift
-/// struct PhotoDocument: Feature, Equatable {
+/// struct PhotoEdit: Feature, Equatable {
 ///   var exposure = ExposureFeature(value: 0)
 ///   var localBlur: LocalAdjustment<GaussianBlurFeature>? = nil
 ///   var crop: CropFeature
@@ -38,12 +38,12 @@ import Foundation
 /// An `any ImageEffect` value cannot be written in a `body`. Store content
 /// decided by data as `AnyImageEffect` (or `[AnyImageEffect]`) instead.
 ///
-/// Use `ParametricImageRenderer.makeImage(from:document:radiusReferenceExtent:presentationTime:)`
-/// to evaluate a document from a source image. It prepares the chain entry
+/// Use `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)`
+/// to evaluate a root feature from a source image. It prepares the chain entry
 /// once: the source is translated to zero origin and value-form radii resolve
 /// against its extent. Calling `apply(to:context:)` directly skips the origin
 /// normalization; a composite called with a context that has no
-/// `radiusReferenceExtent` treats its input as the chain entry.
+/// `chainEntryExtent` treats its input as the chain entry.
 public protocol Feature: Sendable {
 
   /// The type of the feature's content.
@@ -112,19 +112,19 @@ extension Feature {
 
 extension FeatureEvaluationContext {
 
-  /// Returns a context whose radius basis is set, using `image` as the chain
-  /// entry when no basis has been resolved yet.
+  /// Returns a context whose chain-entry extent is set, using `image` as the
+  /// chain entry when none has been resolved yet.
   ///
   /// Composites call this before evaluating their members, so a direct
-  /// `apply(to:context:)` on a document with the default context resolves
-  /// value-form radii against the document's input rather than against
-  /// whatever a mid-chain crop produces. Renderers always resolve the basis
+  /// `apply(to:context:)` on a root feature with the default context resolves
+  /// value-form radii against the root feature's input rather than against
+  /// whatever a mid-chain crop produces. Renderers always resolve the extent
   /// at chain entry, so this never changes their result.
   func resolvingChainEntry(for image: CIImage) -> FeatureEvaluationContext {
-    guard radiusReferenceExtent == nil, image.extent.isInfinite == false else {
+    guard chainEntryExtent == nil, image.extent.isInfinite == false else {
       return self
     }
-    return withRadiusReferenceExtent(image.extent)
+    return withChainEntryExtent(image.extent)
   }
 }
 

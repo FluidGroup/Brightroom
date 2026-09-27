@@ -244,7 +244,7 @@ struct EditingCanvasViewFeatureFlowTests {
     ) {}
     let painted = try #require(emitted.last)
 
-    let renderer = ParametricImageRenderer()
+    let renderer = FeatureRenderer()
     let exported = try pixels(renderer.makeImage(from: source, feature: painted), size: size)
     let reference = try pixels(renderer.makeImage(from: source, feature: plain), size: size)
 

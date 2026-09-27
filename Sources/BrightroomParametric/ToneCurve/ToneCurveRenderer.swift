@@ -57,7 +57,7 @@ nonisolated enum ToneCurveRenderer {
         ]
       )
     else {
-      throw FeatureEvaluationError.failedToCreateImage(ToneCurveKernelStore.name)
+      throw FeatureEvaluationError.imageCreationFailed(ToneCurveKernelStore.name)
     }
     return output.cropped(to: image.extent)
   }

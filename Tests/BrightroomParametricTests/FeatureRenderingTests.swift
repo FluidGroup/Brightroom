@@ -70,7 +70,7 @@ struct FeatureRenderingTests {
       extent: CGRect(x: 0, y: 0, width: 44, height: 30)
     )
     let expected = try Self.renderer.makeImage(from: input, feature: Document())
-    let output = try ParametricVideoRenderer().makeFrameImage(
+    let output = try VideoRenderer().makeImage(
       from: input,
       feature: Document()
     )
@@ -85,7 +85,7 @@ struct FeatureRenderingTests {
   @Test func videoFrameRendererPassesPresentationTimeToFeatureEvaluation() throws {
     let presentationTime = CMTime(value: 17, timescale: 30)
 
-    _ = try ParametricVideoRenderer().makeFrameImage(
+    _ = try VideoRenderer().makeImage(
       from: Self.smallInput,
       feature: TestPresentationTimeFeature(expectedPresentationTime: presentationTime),
       presentationTime: presentationTime
@@ -93,14 +93,14 @@ struct FeatureRenderingTests {
   }
 
   @Test func imageRendererDefaultsPresentationTimeToZero() throws {
-    _ = try ParametricImageRenderer().makeImage(
+    _ = try FeatureRenderer().makeImage(
       from: Self.smallInput,
       feature: TestPresentationTimeFeature(expectedPresentationTime: .zero)
     )
   }
 
   @Test func videoRendererResolvesCropOutputRenderSize() throws {
-    let renderSize = try ParametricVideoRenderer().resolveRenderSize(
+    let renderSize = try VideoRenderer().resolveRenderSize(
       sourceRenderSize: CGSize(width: 48, height: 36),
       feature: CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)),
       mode: .featureOutput
@@ -116,7 +116,7 @@ struct FeatureRenderingTests {
       try? FileManager.default.removeItem(at: asset.url)
     }
 
-    let composition = try ParametricVideoRenderer().makeVideoComposition(
+    let composition = try VideoRenderer().makeVideoComposition(
       for: asset,
       feature: BrightnessFeature(value: 0.03),
       renderSizeMode: .source
@@ -143,7 +143,7 @@ struct FeatureRenderingTests {
           .cropped(to: renderExtent)
       )
       .cropped(to: renderExtent)
-    let output = try ParametricVideoRenderer().makeFrameImage(
+    let output = try VideoRenderer().makeImage(
       from: input,
       feature: Document(),
       renderExtent: renderExtent
@@ -355,7 +355,7 @@ struct FeatureRenderingTests {
     #expect(image.extent == CGRect(x: 0, y: 0, width: 12, height: 12))
   }
 
-  private static let renderer = ParametricImageRenderer()
+  private static let renderer = FeatureRenderer()
 
   private static let smallInput = CIImage.parametricTestImage(
     white: 0.5,

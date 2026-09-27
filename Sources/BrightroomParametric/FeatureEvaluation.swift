@@ -38,9 +38,9 @@ public struct FeatureEvaluationContext: Sendable {
   /// authored feature parameters.
   public let presentationTime: CMTime
 
-  /// The image extent that diagonal-based radii (Gaussian blur, sharpen,
-  /// unsharp mask) resolve against, expressed in the **current render pixel
-  /// space**.
+  /// The chain-entry extent: the image extent that diagonal-based radii
+  /// (Gaussian blur, sharpen, unsharp mask) resolve against, expressed in the
+  /// **current render pixel space**.
   ///
   /// A radius like "value 40" means "diagonal / 50 of the image". The basis
   /// must be the **source** image, not the cropped/zoomed/intermediate extent
@@ -51,20 +51,20 @@ public struct FeatureEvaluationContext: Sendable {
   /// path (export, preview, live viewport).
   ///
   /// `nil` falls back to the input image's own extent at the recipe level.
-  /// `ParametricImageRenderer` never relies on that fallback: it resolves the
-  /// reference ONCE at chain entry, so a mid-chain crop cannot re-base the
+  /// `FeatureRenderer` never relies on that fallback: it resolves the
+  /// extent ONCE at chain entry, so a mid-chain crop cannot re-base the
   /// radius. The fallback only applies to direct `apply(to:context:)` calls
   /// outside the renderers, where the input is expected to be the chain entry;
   /// a composite `Feature` resolves it from its own input before evaluating
   /// its members. Origin normalization happens only in the renderers.
-  public let radiusReferenceExtent: CGRect?
+  public let chainEntryExtent: CGRect?
 
   /// Creates an evaluation context.
   public init(
-    radiusReferenceExtent: CGRect? = nil,
+    chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) {
-    self.radiusReferenceExtent = radiusReferenceExtent
+    self.chainEntryExtent = chainEntryExtent
     self.presentationTime = presentationTime
   }
 
@@ -72,20 +72,20 @@ public struct FeatureEvaluationContext: Sendable {
   /// the recipe is evaluating `image`.
   ///
   /// Every recipe with a proportional radius goes through this accessor rather
-  /// than reading `radiusReferenceExtent` and writing its own fallback: the
+  /// than reading `chainEntryExtent` and writing its own fallback: the
   /// fallback to `image.extent` is correct ONLY when `image` is the chain entry.
   /// Applied to any mid-chain input — a cropped result, a zoomed viewport slice,
   /// an intermediate — it re-bases the radius and silently changes the strength
   /// of a committed effect, which is exactly what the pinned semantics forbid.
-  public func radiusBasis(for image: CIImage) -> CGRect {
-    radiusReferenceExtent ?? image.extent
+  public func chainEntryExtent(for image: CIImage) -> CGRect {
+    chainEntryExtent ?? image.extent
   }
 
   /// Returns a copy that resolves diagonal-based radii against `extent`
   /// (the full source extent in the current render pixel space).
-  public func withRadiusReferenceExtent(_ extent: CGRect?) -> Self {
+  public func withChainEntryExtent(_ extent: CGRect?) -> Self {
     .init(
-      radiusReferenceExtent: extent,
+      chainEntryExtent: extent,
       presentationTime: presentationTime
     )
   }
@@ -115,7 +115,7 @@ public enum FeatureEvaluationError: Error, Equatable, Sendable {
   case kernelUnavailable(name: String, reason: String)
 
   /// Core Image returned nil while applying the named filter or kernel.
-  case failedToCreateImage(String)
+  case imageCreationFailed(String)
 }
 
 extension FeatureEvaluationError: LocalizedError {
@@ -130,7 +130,7 @@ extension FeatureEvaluationError: LocalizedError {
       "A mask union or intersection has no inputs."
     case let .kernelUnavailable(name, reason):
       "Brightroom couldn't load its \(name) kernel: \(reason)"
-    case let .failedToCreateImage(name):
+    case let .imageCreationFailed(name):
       "Core Image couldn't apply \(name)."
     }
   }

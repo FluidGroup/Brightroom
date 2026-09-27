@@ -42,7 +42,7 @@ struct ImageEditorAdjustmentTests {
   @Test func `evaluation order is Effects body`() throws {
     let source = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.8))
       .cropped(to: CGRect(x: 0, y: 0, width: 64, height: 48))
-    let context = FeatureEvaluationContext().withRadiusReferenceExtent(source.extent)
+    let context = FeatureEvaluationContext().withChainEntryExtent(source.extent)
 
     var effects = ImageEditorFeature.Effects(vignette: VignetteFeature(value: 1))
     ImageEditor.Adjustment.gaussianBlur.apply(sliderValue: 40, to: &effects)

@@ -57,7 +57,7 @@ struct LargeMaskedExportTests {
       feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     let adjusted = try await adjustedRenderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
     ).cgImage
 
     // Export the SAME edit with NO local adjustment as the baseline.
@@ -66,7 +66,7 @@ struct LargeMaskedExportTests {
       feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     let baseline = try await baselineRenderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
     ).cgImage
 
     // Identity crop preserves the source dimensions at full scale.

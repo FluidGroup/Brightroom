@@ -207,7 +207,7 @@ extension SketchSavedEdit.Step {
 enum SketchFeatureRendering {
 
   static func preview(of document: ImageEditorDocument) throws -> CIImage {
-    try ParametricImageRenderer().makeImage(
+    try FeatureRenderer().makeImage(
       from: document.image.makeCIImage(maxPixelSize: 1024),
       feature: document.feature
     )

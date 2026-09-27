@@ -30,7 +30,7 @@ struct EditingPreviewExportParityTests {
     source: CGImage
   ) async throws -> CGImage {
     try await EditingDocument(image: SourceImage(cgImage: source), feature: document).render(
-      options: .init(workingColorSpace: Self.sRGB)
+      options: .init(outputColorSpace: Self.sRGB)
     ).cgImage
   }
 
@@ -274,7 +274,7 @@ struct EditingPreviewExportParityTests {
         brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: 1)
       )
     ])))
-    let maskCIImage = try ParametricImageRenderer().makeMaskImage(
+    let maskCIImage = try FeatureRenderer().makeMaskImage(
       for: tree,
       extent: CGRect(x: 0, y: 0, width: canvas, height: canvas)
     )

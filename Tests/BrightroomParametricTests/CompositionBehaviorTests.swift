@@ -217,7 +217,7 @@ struct CompositionBehaviorTests {
     let presentationTime = CMTime(value: 1_234, timescale: 600)
 
     func expectedEntries(
-      radiusReferenceExtent: CGRect,
+      chainEntryExtent: CGRect,
       presentationTime: CMTime
     ) -> [EvaluationLog.Entry] {
       [
@@ -231,7 +231,7 @@ struct CompositionBehaviorTests {
         EvaluationLog.Entry(
           label: label,
           inputExtent: inputExtent,
-          radiusReferenceExtent: radiusReferenceExtent,
+          chainEntryExtent: chainEntryExtent,
           presentationTime: presentationTime
         )
       }
@@ -247,7 +247,7 @@ struct CompositionBehaviorTests {
     #expect(
       imageLog.entries
         == expectedEntries(
-          radiusReferenceExtent: Fixtures.entryExtent,
+          chainEntryExtent: Fixtures.entryExtent,
           presentationTime: presentationTime
         )
     )
@@ -258,13 +258,13 @@ struct CompositionBehaviorTests {
     _ = try Fixtures.renderer.makeImage(
       from: source,
       feature: ContextProbeDocument(log: explicitLog, crop: crop),
-      radiusReferenceExtent: viewportReference,
+      chainEntryExtent: viewportReference,
       presentationTime: presentationTime
     )
     #expect(
       explicitLog.entries
         == expectedEntries(
-          radiusReferenceExtent: viewportReference,
+          chainEntryExtent: viewportReference,
           presentationTime: presentationTime
         )
     )
@@ -272,7 +272,7 @@ struct CompositionBehaviorTests {
     // Video frame.
     let frameTime = CMTime(value: 42, timescale: 30)
     let videoLog = EvaluationLog()
-    _ = try ParametricVideoRenderer().makeFrameImage(
+    _ = try VideoRenderer().makeImage(
       from: source,
       feature: ContextProbeDocument(log: videoLog, crop: crop),
       renderExtent: croppedExtent,
@@ -281,7 +281,7 @@ struct CompositionBehaviorTests {
     #expect(
       videoLog.entries
         == expectedEntries(
-          radiusReferenceExtent: Fixtures.entryExtent,
+          chainEntryExtent: Fixtures.entryExtent,
           presentationTime: frameTime
         )
     )
@@ -313,7 +313,7 @@ struct CompositionBehaviorTests {
     let rebased = try Fixtures.renderer.makeImage(
       from: source,
       feature: document,
-      radiusReferenceExtent: CGRect(origin: .zero, size: crop.cropRect.size)
+      chainEntryExtent: CGRect(origin: .zero, size: crop.cropRect.size)
     )
     Fixtures.expectVisiblyDifferent(rendered, rebased)
   }
@@ -613,7 +613,7 @@ private final class EvaluationLog: Equatable, Sendable {
   struct Entry: Equatable, Sendable {
     var label: String
     var inputExtent: CGRect
-    var radiusReferenceExtent: CGRect?
+    var chainEntryExtent: CGRect?
     var presentationTime: CMTime
   }
 
@@ -648,7 +648,7 @@ private struct EvaluationProbe: ImageEffect, Equatable {
       EvaluationLog.Entry(
         label: label,
         inputExtent: image.extent,
-        radiusReferenceExtent: context.radiusReferenceExtent,
+        chainEntryExtent: context.chainEntryExtent,
         presentationTime: context.presentationTime
       )
     )

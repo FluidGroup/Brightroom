@@ -88,7 +88,7 @@ enum FilterSwatch {
     /// based radii (blur/sharpen/unsharp) must resolve against the source, not
     /// the square crop, so a blur stays the source-relative fraction the canvas
     /// shows instead of weakening with the crop's tighter diagonal.
-    let radiusReferenceExtent: CGRect
+    let chainEntryExtent: CGRect
   }
 
   private static func normalizedSquare(
@@ -127,7 +127,7 @@ enum FilterSwatch {
     return Prepared(
       image: normalized,
       outputRect: CGRect(x: 0, y: 0, width: targetPixels, height: targetPixels),
-      radiusReferenceExtent: CGRect(
+      chainEntryExtent: CGRect(
         origin: .zero,
         size: CGSize(width: extent.width * renderScale, height: extent.height * renderScale)
       )
@@ -144,7 +144,7 @@ enum FilterSwatch {
       do {
         source = try preset.apply(
           to: prepared.image,
-          context: .init(radiusReferenceExtent: prepared.radiusReferenceExtent)
+          context: .init(chainEntryExtent: prepared.chainEntryExtent)
         )
       } catch {
         source = prepared.image

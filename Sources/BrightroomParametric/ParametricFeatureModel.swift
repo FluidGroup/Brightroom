@@ -329,7 +329,7 @@ public struct SharpenFeature: ImageEffect, Equatable {
   public var sharpness: Double
 
   /// The Brightroom filter radius value, resolved against the render pass's
-  /// chain-entry extent (see `FeatureEvaluationContext.radiusReferenceExtent`),
+  /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
   /// so a mid-chain crop never re-bases it.
   public var radius: Double
 
@@ -351,7 +351,7 @@ public enum GaussianBlurRadius: Equatable, Sendable {
 
   /// A slider value where 100 is a radius of one twentieth of the image
   /// diagonal, scaling linearly. It resolves against the render pass's chain-entry extent (see
-  /// `FeatureEvaluationContext.radiusReferenceExtent`), so a mid-chain crop
+  /// `FeatureEvaluationContext.chainEntryExtent`), so a mid-chain crop
   /// never re-bases it.
   case proportional(Double)
 }
@@ -380,7 +380,7 @@ public struct UnsharpMaskFeature: ImageEffect, Equatable {
   public var intensity: Double
 
   /// The Brightroom filter radius value, resolved against the render pass's
-  /// chain-entry extent (see `FeatureEvaluationContext.radiusReferenceExtent`),
+  /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
   /// so a mid-chain crop never re-bases it.
   public var radius: Double
 

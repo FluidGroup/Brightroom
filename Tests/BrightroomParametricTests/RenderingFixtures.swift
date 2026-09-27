@@ -31,7 +31,7 @@ enum RenderingFixtures {
   /// The smallest channel difference that counts as a visible edit.
   static let visibleDifference: Float = 0.01
 
-  static let renderer = ParametricImageRenderer()
+  static let renderer = FeatureRenderer()
 
   static let context = CIContext(options: [
     .workingFormat: CIFormat.RGBAf,

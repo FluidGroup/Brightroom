@@ -25,7 +25,7 @@ import Foundation
 /// Renders a `MaskTree` into an alpha image in the current feature domain.
 ///
 /// This is the single mask evaluator shared by `LocalAdjustment` and
-/// `ParametricImageRenderer.makeMaskImage(for:extent:)`, so mask inspection
+/// `FeatureRenderer.makeMaskImage(for:extent:)`, so mask inspection
 /// shows exactly the alpha a local adjustment composites through. Brush stamps are interpreted in Core Image working-space
 /// coordinates (bottom-left origin, y-up).
 struct MaskTreeRenderer: Sendable {
@@ -184,7 +184,7 @@ struct MaskTreeRenderer: Sendable {
       foreground: foreground,
       background: background
     ) else {
-      throw FeatureEvaluationError.failedToCreateImage("CIBlendKernel")
+      throw FeatureEvaluationError.imageCreationFailed("CIBlendKernel")
     }
     return output.cropped(to: extent)
   }

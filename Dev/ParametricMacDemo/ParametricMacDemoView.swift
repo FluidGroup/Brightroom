@@ -701,7 +701,7 @@ struct ParametricMacPreviewRenderer {
   func render(settings: ParametricMacPreviewSettings) throws -> ParametricMacPreviewOutput {
     let sourceImage = makeSourceImage()
     let document = makeDocument(settings: settings)
-    let outputImage = try ParametricImageRenderer().makeImage(
+    let outputImage = try FeatureRenderer().makeImage(
       from: sourceImage,
       feature: document.document
     )

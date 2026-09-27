@@ -31,7 +31,7 @@ import Testing
 /// Proves the **live** Metal brush rasterizer (`BrushMaskMetalRasterizer`, the
 /// pipeline `EditingCanvasRenderer` drives for low-latency painting) matches the
 /// **parametric** Core Image CIKernel rasterizer
-/// (`ParametricImageRenderer.makeMaskImage`, the export/preview path) for the same
+/// (`FeatureRenderer.makeMaskImage`, the export/preview path) for the same
 /// stamps and canvas.
 ///
 /// Both rasterizers compile with the shared `BrushStampFalloff.metalh`
@@ -92,7 +92,7 @@ struct BrushMaskRasterizerParityTests {
     )
 
     // Path B — parametric Core Image CIKernel rasterizer (export/preview path).
-    let maskB = try ParametricImageRenderer().makeMaskImage(
+    let maskB = try FeatureRenderer().makeMaskImage(
       for: MaskTree(
         root: .brush(
           BrushMask(

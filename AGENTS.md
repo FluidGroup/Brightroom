@@ -37,8 +37,8 @@ open Dev/Brightroom.xcodeproj
      `CropFeature`, `ToneCurveFeature`, `ColorMixerFeature`, ...),
      `PresetFeature`, `LocalAdjustment` with a `MaskTree`, and
      `AnyImageEffect` for content decided by data
-   - `ParametricImageRenderer`, `ParametricExportRenderer`, and
-     `ParametricVideoRenderer` evaluate any `some Feature` document into a
+   - `FeatureRenderer`, `ExportRenderer`, and
+     `VideoRenderer` evaluate any `some Feature` root feature into a
      Core Image graph
    - Features are plain values with no identity: no `id`, no `isEnabled`.
      The library owns no storage format: apps convert features to their own
@@ -104,7 +104,7 @@ The project uses swift-state-graph for observable state. When modifying state-re
    (see `BuiltInFeatureRecipes.swift`). A composite effect declares `body`
    instead.
 2. Resolve proportional (value-form) radii through
-   `context.radiusBasis(for:)`, so they resolve against the chain entry.
+   `context.chainEntryExtent(for:)`, so they resolve against the chain entry.
 3. Keep every authored parameter reconstructible through public API; add a
    validating initializer when a plain initializer clamps or repairs values.
    Do not add `Codable` conformances or storage formats to the library

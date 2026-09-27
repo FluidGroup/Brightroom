@@ -35,7 +35,7 @@ final class DiskExportTests {
 
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .jpeg(quality: 0.9))
       )
     )
@@ -67,7 +67,7 @@ final class DiskExportTests {
 
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )
@@ -90,7 +90,7 @@ final class DiskExportTests {
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
         resolution: .resize(maxPixelSize: cap),
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .jpeg(quality: 0.9))
       )
     )
@@ -118,7 +118,7 @@ final class DiskExportTests {
     )
     _ = try await renderer.render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )
@@ -145,7 +145,7 @@ final class DiskExportTests {
     )
     _ = try await renderer.render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )

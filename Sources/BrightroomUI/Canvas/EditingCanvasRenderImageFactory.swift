@@ -43,7 +43,7 @@ enum EditingCanvasRenderImageFactory {
     switch mode {
     case .viewportBase:
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: viewportSourceImage, radiusReferenceExtent: canvasRect)
+        applying(effects, to: viewportSourceImage, chainEntryExtent: canvasRect)
           .cropped(to: canvasRect),
         source: viewportSourceImage
       )
@@ -58,17 +58,17 @@ enum EditingCanvasRenderImageFactory {
       // full-canvas blur intermediate exhausts memory (a 12000×12000 blur ROI
       // OOM-crashes); evaluating at the ~2560 editing source bounds it. The
       // blur radius is a fraction of the chain-entry extent
-      // (radiusReferenceExtent = displaySourceExtent here), so applying it at
+      // (chainEntryExtent = displaySourceExtent here), so applying it at
       // source resolution and upscaling reproduces the same fractional blur
       // the full-resolution export produces — preview and export stay
       // consistent (modulo the inherent downscale/upscale resampling
       // difference).
       let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: sourceImage, radiusReferenceExtent: displaySourceExtent),
+        applying(effects, to: sourceImage, chainEntryExtent: displaySourceExtent),
         source: sourceImage
       )
       let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(to: sourceBase, radiusReferenceExtent: displaySourceExtent),
+        localEffect.applyIgnoringFailure(to: sourceBase, chainEntryExtent: displaySourceExtent),
         source: sourceImage
       )
       baseImage = scaledImage(sourceBase, canvasSize: canvasSize, canvasRect: canvasRect)
@@ -135,7 +135,7 @@ enum EditingCanvasRenderImageFactory {
       // pre-crop, so resolving against the crop rect would diverge from the
       // export the moment a proportional radius appears in `effects`.
       baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: cropOutputSourceImage, radiusReferenceExtent: sourceRect)
+        applying(effects, to: cropOutputSourceImage, chainEntryExtent: sourceRect)
           .cropped(to: canvasRect),
         source: cropOutputSourceImage
       )
@@ -154,14 +154,14 @@ enum EditingCanvasRenderImageFactory {
         applying(
           effects,
           to: displaySourceImage,
-          radiusReferenceExtent: displaySourceImage.extent
+          chainEntryExtent: displaySourceImage.extent
         ),
         source: displaySourceImage
       )
       let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
         localEffect.applyIgnoringFailure(
           to: displayFiltered,
-          radiusReferenceExtent: displaySourceImage.extent
+          chainEntryExtent: displaySourceImage.extent
         ),
         source: displaySourceImage
       )
@@ -197,12 +197,12 @@ enum EditingCanvasRenderImageFactory {
   private static func applying(
     _ effects: AnyImageEffect?,
     to image: CIImage,
-    radiusReferenceExtent: CGRect
+    chainEntryExtent: CGRect
   ) -> CIImage {
     guard let effects else {
       return image
     }
-    return effects.applyIgnoringFailure(to: image, radiusReferenceExtent: radiusReferenceExtent)
+    return effects.applyIgnoringFailure(to: image, chainEntryExtent: chainEntryExtent)
   }
 
   private static func scaledImage(

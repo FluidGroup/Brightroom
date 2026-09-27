@@ -219,7 +219,7 @@ struct ImageEditorFeatureTests {
     #expect(globalEffects.count == 13)
 
     let source = makeSource()
-    let renderer = ParametricImageRenderer()
+    let renderer = FeatureRenderer()
     let actual = try renderer.makeImage(from: source, feature: document)
     let expected = try renderer.makeImage(
       from: source,
@@ -244,7 +244,7 @@ struct ImageEditorFeatureTests {
   @Test func `Value substitutions render the viewing positions`() throws {
     let document = makeFullDocument()
     let source = makeSource()
-    let renderer = ParametricImageRenderer()
+    let renderer = FeatureRenderer()
 
     // The canvas base: global effects only, over the whole source.
     let base = try renderer.makeImage(

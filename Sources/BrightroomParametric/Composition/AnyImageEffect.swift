@@ -13,7 +13,7 @@ import Foundation
 /// unavailable at the deployment target. Two erased effects are equal when
 /// they wrap values of exactly the same type that compare equal.
 ///
-/// Only `Equatable` effects can be wrapped, so documents stay comparable. A
+/// Only `Equatable` effects can be wrapped, so features stay comparable. A
 /// host that keeps effects behind an existential stores `AnyImageEffect` or
 /// `any ImageEffect & Equatable`, not `any ImageEffect`.
 public struct AnyImageEffect: ImageEffect, Equatable {
@@ -44,7 +44,7 @@ public struct AnyImageEffect: ImageEffect, Equatable {
   @available(
     *,
     unavailable,
-    message: "AnyImageEffect wraps only Equatable effects, so documents stay comparable. Make the effect Equatable, or store 'any ImageEffect & Equatable' instead of 'any ImageEffect'."
+    message: "AnyImageEffect wraps only Equatable effects, so features stay comparable. Make the effect Equatable, or store 'any ImageEffect & Equatable' instead of 'any ImageEffect'."
   )
   public init(_ effect: any ImageEffect) {
     fatalError()

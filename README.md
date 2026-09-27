@@ -169,21 +169,21 @@ func makeAdjustedImage(from source: CIImage) throws -> CIImage {
     crop: CropFeature(cropRect: CGRect(x: 0, y: 0, width: 800, height: 600))
   )
 
-  return try ParametricImageRenderer().makeImage(
+  return try FeatureRenderer().makeImage(
     from: source,
     document: document
   )
 }
 ```
 
-The returned `CIImage` is a lazy recipe. Use a `CIContext` to materialize it, or use `ParametricExportRenderer` to render a document to an image or file.
+The returned `CIImage` is a lazy recipe. Use a `CIContext` to materialize it, or use `ExportRenderer` to render a feature to an image or file.
 
 - Conform to `ImageEffect` (and `Equatable`) to add a custom effect.
 - Put effects in a `LocalAdjustment` with a `MaskTree` to apply them selectively.
 - Use optional members and `if` to switch features on and off; a `nil` member contributes nothing.
 - Use `AnyImageEffect` for lists of effects decided by data, such as a preset catalog.
 - Brightroom does not define a storage format for edits. To save them, convert features to your own `Codable` model and rebuild them through the public initializers; see [Saving parametric edits](docs/parametric-persistence.md).
-- Use `ParametricVideoRenderer` to create an `AVMutableVideoComposition` for playback or export through AVFoundation.
+- Use `VideoRenderer` to create an `AVMutableVideoComposition` for playback or export through AVFoundation.
 
 ## Demo Apps
 

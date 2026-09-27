@@ -25,14 +25,14 @@ Status context (as of Brightroom 6):
   A small preview↔export resampling discrepancy is inherent and accepted (any
   editor downsamples its preview).
 - `BrightRoomImageRenderer` has a SINGLE rendering path AND a single public
-  entry point: `func render(options:) async throws -> Rendered`. The render
+  entry point: `func render(options:) async throws -> RenderedImage`. The render
   compiles the edit (effects, local adjustments, crop-as-domain-feature) to one
-  `CIImage` recipe via `ParametricImageRenderer` and evaluates it on the
+  `CIImage` recipe via `FeatureRenderer` and evaluates it on the
   renderer's private serial queue (off the calling actor). The old CoreGraphics
   fast path (`renderOnlyCropping` / `axisAlignedCropOnlyFeature` /
   `pixelCropRect` / `Rendered.Engine`), the completion-handler `render`, and the
   separate `renderToFile` are all deleted.
-- Output is chosen via `Options.output`, and `Rendered` HIDES the disk/memory
+- Output is chosen via `Options.output`, and `RenderedImage` HIDES the disk/memory
   backing (`cgImage` / `uiImage` are `get throws`; `fileURL` is non-nil only for
   file output):
   - `.memory` → in-memory `CGImage` via `CIContext.createCGImage(from: fullExtent)`,
@@ -48,8 +48,8 @@ Status context (as of Brightroom 6):
     `CIContext.write{JPEG,HEIF}Representation`, which renders the whole bitmap
     into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG. To preview
     a large file result WITHOUT a full-resolution decode spike, use
-    `Rendered.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
-    `Rendered.cgImage` (which decodes full).
+    `RenderedImage.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
+    `RenderedImage.cgImage` (which decodes full).
   `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune

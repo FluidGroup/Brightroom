@@ -145,13 +145,13 @@ func makeRetouchedImage(
       GaussianBlurFeature(value: 40)
     }
   )
-  return try ParametricImageRenderer().makeImage(from: source, document: document)
+  return try FeatureRenderer().makeImage(from: source, feature: document)
 }
 ```
 
-The renderers take any `some Feature`: `ParametricImageRenderer().makeImage(from:document:)`,
-`ParametricExportRenderer().render(source:document:)`, and the
-`ParametricVideoRenderer()` methods. Like `EditingStack.makeRenderer(document:)`,
+The renderers take any `some Feature`: `FeatureRenderer().makeImage(from:feature:)`,
+`ExportRenderer().render(from:feature:)`, and the
+`VideoRenderer()` methods. Like `EditingStack.makeRenderer(document:)`,
 they throw `FeatureEvaluationError.documentUnavailable` for a `nil` optional
 document instead of rendering the unedited image; pass `EmptyFeature()` for
 that.
@@ -223,19 +223,19 @@ parameters without `id:` and `isEnabled:`, for example
 | `validate()` as a protocol requirement | Removed as a requirement. `CropFeature.validate()` and `ColorCubeFeature.validate()` stay public; `apply` calls them. |
 | `PresetFeature.validate()` | Removed. Call `validate()` on each `ColorCubeFeature` you rebuild; rendering validates anyway. |
 | `Feature.isEqualFeature(to:)`, `parametricFeatureIsEqual(_:_:)`, `parametricFeaturesAreEqual(_:_:)` | `==` on documents; `AnyImageEffect` compares the wrapped values |
-| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `ParametricImageRenderer().makeImage(from:document:)`. To skip origin normalization, call `document.apply(to:context:)` |
-| `FeatureGraphCompiler.renderMask(_:extent:)`, `FeatureGraphOutput`, `localAdjustmentMasks` | `ParametricImageRenderer().makeMaskImage(for:extent:)` |
+| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `FeatureRenderer().makeImage(from:feature:)`. To skip origin normalization, call `document.apply(to:context:)` |
+| `FeatureGraphCompiler.renderMask(_:extent:)`, `FeatureGraphOutput`, `localAdjustmentMasks` | `FeatureRenderer().makeMaskImage(for:extent:)` |
 | `FeatureGraphCompilerError` | `FeatureEvaluationError`. See [Errors](#errors). |
-| `ParametricImageRenderer(compiler:)`, `ParametricImageRenderer.compiler`, `ParametricImageRenderer.makeOutput` | `ParametricImageRenderer()` |
-| `ParametricVideoRenderer(compiler:)`, `ParametricVideoRenderer(imageRenderer:)`, `ParametricVideoRenderer.imageRenderer` | `ParametricVideoRenderer()` |
-| `ParametricExportRenderer(imageRenderer:)`, `ParametricExportRenderer.imageRenderer` | `ParametricExportRenderer()` |
+| `ParametricImageRenderer(compiler:)`, `ParametricImageRenderer.compiler`, `ParametricImageRenderer.makeOutput` | `FeatureRenderer()` |
+| `ParametricVideoRenderer(compiler:)`, `ParametricVideoRenderer(imageRenderer:)`, `ParametricVideoRenderer.imageRenderer` | `VideoRenderer()` |
+| `ParametricExportRenderer(imageRenderer:)`, `ParametricExportRenderer.imageRenderer` | `ExportRenderer()` |
 | `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(value:)`, `ColorMixerFeature(adjustment:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
 | `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `MaskFeather(input:radius:)`, `MaskSubtract(base:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `PresetFeature(name:identifier:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter | The same loaders without `id:`. They take an optional `identifier:` instead, which defaults to the file name as before. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurRadius.proportional(_:)`; `GaussianBlurFeature(value:)` is unchanged |
-| `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)` |
+| `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | The same APIs taking `some Feature` |
 
 ### Enablement
@@ -396,8 +396,8 @@ throws, including failures of Brightroom's own kernels, and it conforms to
 | `emptyMaskComposite(FeatureID?)` | `emptyMaskComposite` |
 | `invalidCropRect(FeatureID, CGRect)` | `invalidCropRect(CGRect)` |
 | `invalidColorCubeData(FeatureID, expectedByteCount:actualByteCount:)` | `invalidColorCubeData(identifier:expectedByteCount:actualByteCount:)`, where `identifier` is the cube's `identifier` |
-| `failedToCreateImage(String)` | `failedToCreateImage(String)` |
-| `ParametricKernelRegistryError.failedToApplyKernel(String)` | `failedToCreateImage(String)` |
+| `failedToCreateImage(String)` | `imageCreationFailed(String)` |
+| `ParametricKernelRegistryError.failedToApplyKernel(String)` | `imageCreationFailed(String)` |
 | `ParametricKernelRegistryError.missingKernel`, `failedToLoadKernel`, `missingKernelLibraryResource` | `kernelUnavailable(name:reason:)` |
 | (new) | `documentUnavailable`: a renderer received a `nil` optional document |
 
@@ -419,7 +419,7 @@ func blurMaskImage(
   of adjustment: LocalAdjustment<GaussianBlurFeature>,
   over extent: CGRect
 ) throws -> CIImage {
-  try ParametricImageRenderer().makeMaskImage(for: adjustment.maskTree, extent: extent)
+  try FeatureRenderer().makeMaskImage(for: adjustment.maskTree, extent: extent)
 }
 ```
 
@@ -596,7 +596,7 @@ over it. It no longer holds an edit or a history.
 | `cropModifier` and `init(imageProvider:options:cropModifier:)` | `init(imageProvider:options:)`; pass the modifier to `PhotosCropEditingModel`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
 | `makeRenderer()` | `makeRenderer(document:)` |
 | The public setter of `loadedState` | None; `loadedState` is read-only |
-| `EffectPipeline.applyIgnoringFailure(to:radiusReferenceExtent:)`, `EffectPipeline.hasEnabledEffects` | Render the effects with `ParametricImageRenderer` |
+| `EffectPipeline.applyIgnoringFailure(to:radiusReferenceExtent:)`, `EffectPipeline.hasEnabledEffects` | Render the effects with `FeatureRenderer` |
 | `BrightRoomImageRenderer(source:orientation:)`, `BrightRoomImageRenderer.edit`, `BrightRoomImageRenderer.Edit` | `BrightRoomImageRenderer(source:orientation:document:)`, `BrightRoomImageRenderer.document` |
 | `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(displayCropRect:imageSize:rotation:straighten:)` |
 
@@ -1008,6 +1008,35 @@ func squareDocument(orientedImageSize: CGSize) -> ImageEditorFeature {
   return document
 }
 ```
+
+## Renamed Parametric API
+
+BrightroomParametric uses one word per concept. A renderer is named after
+what it renders, `makeImage` returns a lazy `CIImage` recipe and `render`
+produces pixels, and the extent that proportional radii resolve against is
+the chain-entry extent everywhere.
+
+### Renderers
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `ParametricImageRenderer` | `FeatureRenderer` |
+| `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)` |
+| `ParametricExportRenderer` | `ExportRenderer` |
+| `ParametricExportRenderer.render(source:feature:options:device:)` | `ExportRenderer.render(from:feature:options:device:)` |
+| `ParametricExportRenderer.Options(workingFormat:workingColorSpace:)`, `.workingFormat`, `.workingColorSpace` | `ExportRenderer.Options(outputFormat:outputColorSpace:)`, `.outputFormat`, `.outputColorSpace`. They were always the output format and the output color-space tag; processing runs in a half-float working space either way. |
+| `ParametricExportRenderer.ExportFileType` | `ExportRenderer.FileType` |
+| `ParametricExportRenderer.RenderingDevice` | `ExportRenderer.Device` |
+| `ParametricExportRenderer.RenderingError` | `ExportRendererError` |
+| `ParametricExportRenderer.Rendered` | `RenderedImage` |
+| `ParametricVideoRenderer` | `VideoRenderer` |
+| `ParametricVideoRenderer.makeFrameImage(from:feature:renderExtent:presentationTime:)` | `VideoRenderer.makeImage(from:feature:renderExtent:presentationTime:)` |
+| `ParametricVideoRendererError` | `VideoRendererError` |
+| `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)`, `.radiusReferenceExtent`, `radiusBasis(for:)`, `withRadiusReferenceExtent(_:)` | `FeatureEvaluationContext(chainEntryExtent:presentationTime:)`, `.chainEntryExtent`, `chainEntryExtent(for:)`, `withChainEntryExtent(_:)` |
+| `FeatureEvaluationError.failedToCreateImage(_:)` | `FeatureEvaluationError.imageCreationFailed(_:)` |
+
+`EditingDocument.render(options:)` takes `ExportRenderer.Options` and returns
+a `RenderedImage`.
 
 ## Migration Checklist
 

@@ -26,7 +26,7 @@ import Testing
 @testable import BrightroomParametric
 
 /// Pins the canonical brush-stamp falloff produced by the parametric CIKernel
-/// rasterizer (`ParametricImageRenderer.makeMaskImage`, the export/preview path).
+/// rasterizer (`FeatureRenderer.makeMaskImage`, the export/preview path).
 ///
 /// The falloff is `BrushStampFalloff.metalh`'s `brushStampAlpha`:
 /// `alpha = (normalizedDistance > 1) ? 0
@@ -120,7 +120,7 @@ struct BrushStampFalloffTests {
       )
     )
 
-    let ciImage = try ParametricImageRenderer().makeMaskImage(for: maskTree, extent: extent)
+    let ciImage = try FeatureRenderer().makeMaskImage(for: maskTree, extent: extent)
     return try #require(context.createCGImage(ciImage, from: extent))
   }
 
