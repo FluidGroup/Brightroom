@@ -90,11 +90,11 @@ of the body evaluate in order, and each receives the previous member's output.
 - `Feature` is the base protocol. A *primitive* implements
   `apply(to:context:)`; a *composite* declares `body`.
 - `ImageEffect` marks features that keep the extent and domain of their
-  input. `LocalAdjustment` content and `PresetFeature` effects must be image
-  effects, so a crop cannot appear inside them.
+  input. `LocalAdjustmentFeature` content and `PresetFeature` effects must be
+  image effects, so a crop cannot appear inside them.
 - `FeatureBuilder` builds bodies. It supports `if`/`else`, `switch`, `for`,
   optional members, and `if #available`.
-- `LocalAdjustment<Content>` replaces `LocalAdjustmentFeature`, and its
+- `LocalAdjustmentFeature<Content>` is generic over its content, and its
   content is a builder instead of an `EffectPipeline`.
 - `AnyImageEffect` erases an `Equatable` image effect for content decided by
   data, such as a preset catalog. `[AnyImageEffect]` is itself an image
@@ -125,7 +125,7 @@ import CoreImage
 struct RetouchDocument: Feature, Equatable {
   var crop: CropFeature
   var exposure: ExposureFeature? = ExposureFeature(value: 0.5)
-  var blur: LocalAdjustment<GaussianBlurFeature>?
+  var blur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
   var body: some Feature {
     crop
@@ -137,11 +137,11 @@ struct RetouchDocument: Feature, Equatable {
 func makeRetouchedImage(
   from source: CIImage,
   rect: CGRect,
-  strokes: [BrushMaskStroke]
+  strokes: [BrushMask.Stroke]
 ) throws -> CIImage {
   let document = RetouchDocument(
     crop: CropFeature(cropRect: rect),
-    blur: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: strokes)))) {
+    blur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: strokes))) {
       GaussianBlurFeature(value: 40)
     }
   )
@@ -205,8 +205,9 @@ every built-in value: `BrightnessFeature`, `ContrastFeature`,
 `SharpenFeature`, `GaussianBlurFeature`, `UnsharpMaskFeature`,
 `VignetteFeature`, `FadeFeature`, `CropFeature`, `PresetFeature`,
 `ColorCubeFeature`, `ToneCurveFeature`, `ColorMixerFeature`, `BrushMask`,
-`MaskFeather`, and `MaskSubtract`. Their initializers take the same
-parameters without `id:` and `isEnabled:`, for example
+`MaskFeather`, and `MaskSubtract` (the last two are now `Mask` cases).
+Their initializers take the same parameters without `id:` and `isEnabled:`,
+for example
 `ExposureFeature(value:)` and `CropFeature(cropRect:rotation:straightenRadians:)`.
 
 | Removed | Replacement |
@@ -216,7 +217,7 @@ parameters without `id:` and `isEnabled:`, for example
 | `Feature` as the base protocol with `id`, `isEnabled`, and `Equatable` | `Feature` is now the composition protocol (`body`, `apply(to:context:)`). Built-in features are `Equatable` themselves. |
 | `EditingDocument`, `MainTree`, `MainFeature` | A struct (or enum) that conforms to `Feature` |
 | `EffectPipeline`, `EffectPipelineFeature` | Effects listed in a body, or `[AnyImageEffect]` |
-| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustment(maskTree:content:)` |
+| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustmentFeature(mask:content:)` |
 | `ImageEffectFeatureType` | `ImageEffect` (and `Equatable`) |
 | `DomainFeatureType` | `Feature` |
 | `childFeatures` | `body` |
@@ -231,7 +232,7 @@ parameters without `id:` and `isEnabled:`, for example
 | `ParametricExportRenderer(imageRenderer:)`, `ParametricExportRenderer.imageRenderer` | `ExportRenderer()` |
 | `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(value:)`, `ColorMixerFeature(adjustment:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
 | `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
-| `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `MaskFeather(input:radius:)`, `MaskSubtract(base:removing:)` |
+| `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `PresetFeature(name:identifier:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter | The same loaders without `id:`. They take an optional `identifier:` instead, which defaults to the file name as before. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurRadius.proportional(_:)`; `GaussianBlurFeature(value:)` is unchanged |
@@ -244,10 +245,10 @@ A feature that is off is not part of the document:
 
 - An optional member that is `nil` contributes nothing.
 - A branch that is not taken (`if`, `switch`) contributes nothing.
-- A mask node you do not want is left out of the tree: instead of a disabled
+- A mask node you do not want is left out of the mask: instead of a disabled
   `BrushMask`, use `BrushMask(strokes: [])`; instead of a disabled
-  `MaskFeather`, use its `input`; instead of a disabled `MaskSubtract`, use
-  its `base`.
+  `MaskFeather`, use its input mask; instead of a disabled `MaskSubtract`, use
+  its base mask.
 
 Every mask node is rendered now, because no disabled node skips a subtree. A
 union or intersection with no inputs throws wherever it is in the tree.
@@ -392,7 +393,7 @@ throws, including failures of Brightroom's own kernels, and it conforms to
 | 5.x case | Brightroom 6 |
 | --- | --- |
 | `duplicateID(FeatureID)` | Removed; there are no ids. |
-| `emptyLocalAdjustmentEffectPipeline(FeatureID)` | Removed. A `LocalAdjustment` whose content applies nothing (`EmptyFeature`, `[]`, a `nil` member, a neutral tone curve) returns its input. Check `content` yourself if you relied on the error. |
+| `emptyLocalAdjustmentEffectPipeline(FeatureID)` | Removed. A `LocalAdjustmentFeature` whose content applies nothing (`EmptyFeature`, `[]`, a `nil` member, a neutral tone curve) returns its input. Check `content` yourself if you relied on the error. |
 | `emptyMaskComposite(FeatureID?)` | `emptyMaskComposite` |
 | `invalidCropRect(FeatureID, CGRect)` | `invalidCropRect(CGRect)` |
 | `invalidColorCubeData(FeatureID, expectedByteCount:actualByteCount:)` | `invalidColorCubeData(identifier:expectedByteCount:actualByteCount:)`, where `identifier` is the cube's `identifier` |
@@ -416,10 +417,10 @@ import BrightroomParametric
 import CoreImage
 
 func blurMaskImage(
-  of adjustment: LocalAdjustment<GaussianBlurFeature>,
+  of adjustment: LocalAdjustmentFeature<GaussianBlurFeature>,
   over extent: CGRect
 ) throws -> CIImage {
-  try FeatureRenderer().makeMaskImage(for: adjustment.maskTree, extent: extent)
+  try FeatureRenderer().makeMaskImage(for: adjustment.mask, extent: extent)
 }
 ```
 
@@ -488,7 +489,7 @@ struct Inset: Feature, Equatable {
   zero origin, so return your output with a zero origin, as `CropFeature`
   does.
 - An effect with nothing to do can return its input image itself; a
-  `LocalAdjustment` then returns its input unchanged.
+  `LocalAdjustmentFeature` then returns its input unchanged.
 
 ### Reorderable Steps
 
@@ -501,7 +502,7 @@ import BrightroomParametric
 enum Step: Feature, Equatable {
   case crop(CropFeature)
   case effect(AnyImageEffect)
-  case localAdjustment(LocalAdjustment<[AnyImageEffect]>)
+  case localAdjustment(LocalAdjustmentFeature<[AnyImageEffect]>)
 
   var body: some Feature {
     switch self {
@@ -628,7 +629,7 @@ source domain, whose size is `EditingStack.Loaded.imageSize`.
 
 - `effects: ImageEditorFeature.Effects` — the filter preset and twelve
   adjustments, each an optional member, evaluated in declaration order;
-- `localBlur: LocalAdjustment<GaussianBlurFeature>?` — the painted blur;
+- `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
 - `crop: CropFeature` — the final crop.
 
 It is authored in the oriented, pre-crop source domain at full resolution
@@ -1037,6 +1038,22 @@ the chain-entry extent everywhere.
 
 `EditingDocument.render(options:)` takes `ExportRenderer.Options` and returns
 a `RenderedImage`.
+
+### Masks and Local Adjustments
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)`, `.maskTree` | `LocalAdjustmentFeature(mask:content:)`, `.mask` |
+| `MaskTree(root:)` and `MaskTree.root` | The `Mask` value itself; a local adjustment holds a `Mask` directly |
+| `MaskNode` | `Mask` (an indirect enum) |
+| `MaskNode.invert(_:)` | `Mask.inverted(_:)` |
+| `MaskNode.feather(MaskFeather(input:radius:))` | `Mask.feathered(_:radius:)` |
+| `MaskNode.union(_:)` | `Mask.union(_:)` |
+| `MaskNode.intersect(_:)` | `Mask.intersection(_:)` |
+| `MaskNode.subtract(MaskSubtract(base:removing:))` | `Mask.subtraction(_:removing:)` |
+| `BrushMaskStroke(stamps:brush:)`, `.stamps` | `BrushMask.Stroke(stampCenters:brush:)`, `.stampCenters` |
+| `BrushMaskBrush` | `BrushMask.Brush` |
+| `FeatureRenderer.makeMaskImage(for: MaskTree, extent:)` | `FeatureRenderer.makeMaskImage(for: Mask, extent:)` |
 
 ## Migration Checklist
 

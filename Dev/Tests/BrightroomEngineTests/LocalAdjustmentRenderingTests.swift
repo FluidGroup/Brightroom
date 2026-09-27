@@ -117,8 +117,8 @@ struct LocalAdjustmentRenderingTests {
   private static func makeBlurLayer(
     radius: CGFloat,
     center: CGPoint
-  ) -> LocalAdjustment<[AnyImageEffect]> {
-    LocalAdjustment(maskTree: makeMask(center: center)) {
+  ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
+    LocalAdjustmentFeature(mask: makeMask(center: center)) {
       [AnyImageEffect(GaussianBlurFeature(radius: Double(radius)))]
     }
   }
@@ -126,24 +126,22 @@ struct LocalAdjustmentRenderingTests {
   private static func makeExposureLayer(
     value: Double,
     center: CGPoint
-  ) -> LocalAdjustment<[AnyImageEffect]> {
-    LocalAdjustment(maskTree: makeMask(center: center)) {
+  ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
+    LocalAdjustmentFeature(mask: makeMask(center: center)) {
       [AnyImageEffect(ExposureFeature(value: value))]
     }
   }
 
   /// A hard 18 px stamp at `center`, in working space (y-up).
-  private static func makeMask(center: CGPoint) -> MaskTree {
-    MaskTree(
-      root: .brush(
-        BrushMask(
-          strokes: [
-            BrushMaskStroke(
-              stamps: [center],
-              brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-            ),
-          ]
-        )
+  private static func makeMask(center: CGPoint) -> Mask {
+    .brush(
+      BrushMask(
+        strokes: [
+          BrushMask.Stroke(
+            stampCenters: [center],
+            brush: BrushMask.Brush(diameter: 18, hardness: 1, opacity: 1)
+          ),
+        ]
       )
     )
   }

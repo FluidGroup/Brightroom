@@ -97,13 +97,13 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   @inline(never)
   private func maskRasterCacheMiss(imageSize: CGSize, salt: Int) {
     // A fresh stamp position each call forces a new BrushMask ⇒ cache miss.
-    let tree = MaskTree(root: .brush(BrushMask(strokes: [
-      BrushMaskStroke(
-        stamps: [CGPoint(x: 100 + (salt % 50), y: 100 + (salt % 50))],
-        brush: BrushMaskBrush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
+    let mask = Mask.brush(BrushMask(strokes: [
+      BrushMask.Stroke(
+        stampCenters: [CGPoint(x: 100 + (salt % 50), y: 100 + (salt % 50))],
+        brush: BrushMask.Brush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
       )
-    ])))
-    _ = try? FeatureRenderer().makeMaskImage(for: tree, extent: CGRect(origin: .zero, size: imageSize))
+    ]))
+    _ = try? FeatureRenderer().makeMaskImage(for: mask, extent: CGRect(origin: .zero, size: imageSize))
   }
 
   @inline(never)
@@ -115,14 +115,14 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
 
   // MARK: - Fixtures
 
-  private static let cachedMaskTree = MaskTree(root: .brush(BrushMask(
+  private static let cachedMask = Mask.brush(BrushMask(
     strokes: [
-      BrushMaskStroke(
-        stamps: [CGPoint(x: 400, y: 300)],
-        brush: BrushMaskBrush(diameter: 500, hardness: 0.6, opacity: 1)
+      BrushMask.Stroke(
+        stampCenters: [CGPoint(x: 400, y: 300)],
+        brush: BrushMask.Brush(diameter: 500, hardness: 0.6, opacity: 1)
       )
     ]
-  )))
+  ))
 
   private static func makeEffects() -> ImageEditorFeature.Effects {
     ImageEditorFeature.Effects(
@@ -145,7 +145,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private static func makeDocument(imageSize: CGSize) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects = makeEffects()
-    document.localBlur = LocalAdjustment(maskTree: cachedMaskTree) {
+    document.localBlur = LocalAdjustmentFeature(mask: cachedMask) {
       GaussianBlurFeature(value: 60)
     }
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)

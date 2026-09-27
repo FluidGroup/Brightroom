@@ -39,9 +39,9 @@ extension EditingCanvasStrokeRecord {
   ///
   /// - Parameter domainHeight: The height of the domain, the oriented source
   ///   height `EditingStack.Loaded.imageSize.height`.
-  func workingSpaceStroke(domainHeight: CGFloat) -> BrushMaskStroke {
-    BrushMaskStroke(
-      stamps: stamps.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },
+  func workingSpaceStroke(domainHeight: CGFloat) -> BrushMask.Stroke {
+    BrushMask.Stroke(
+      stampCenters: stamps.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },
       brush: .init(
         diameter: brush.size,
         hardness: brush.hardness,
@@ -55,14 +55,14 @@ extension EditingCanvasStrokeRecord {
   ///
   /// - Parameter domainHeight: The height of the domain, the oriented source
   ///   height `EditingStack.Loaded.imageSize.height`.
-  init(workingSpaceStroke stroke: BrushMaskStroke, domainHeight: CGFloat) {
+  init(workingSpaceStroke stroke: BrushMask.Stroke, domainHeight: CGFloat) {
     self.init(
-      stamps: stroke.stamps.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },
+      stamps: stroke.stampCenters.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },
       brush: .init(
         size: stroke.brush.diameter,
         hardness: stroke.brush.hardness,
         opacity: stroke.brush.opacity,
-        // `BrushMaskStroke` does not store spacing; committed strokes render
+        // `BrushMask.Stroke` does not store spacing; committed strokes render
         // from their stored stamps, so this is a placeholder kept in sync with
         // the authoring default (ImageEditorCanvas.Brush / EditingCanvasBrush).
         spacing: 0.05

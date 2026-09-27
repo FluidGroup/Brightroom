@@ -160,13 +160,13 @@ struct ParametricFeaturePreviewView: View {
       case .localExposureMask:
         return .image(
           try document.localExposure.map {
-            try renderer.makeMaskImage(for: $0.maskTree, extent: output.extent)
+            try renderer.makeMaskImage(for: $0.mask, extent: output.extent)
           } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
       case .localBlurMask:
         return .image(
           try document.localBlur.map {
-            try renderer.makeMaskImage(for: $0.maskTree, extent: output.extent)
+            try renderer.makeMaskImage(for: $0.mask, extent: output.extent)
           } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
       }
@@ -180,12 +180,12 @@ struct ParametricFeaturePreviewView: View {
       firstCrop: isFirstCropEnabled ? CropFeature(cropRect: firstCropRect) : nil,
       secondCrop: isSecondCropEnabled ? CropFeature(cropRect: secondCropRect) : nil,
       localExposure: isLocalExposureEnabled
-        ? LocalAdjustment(maskTree: MaskTree(root: localExposureMask)) {
+        ? LocalAdjustmentFeature(mask: localExposureMask) {
           ExposureFeature(value: localExposureValue)
         }
         : nil,
       localBlur: isLocalBlurEnabled
-        ? LocalAdjustment(maskTree: MaskTree(root: localBlurMask)) {
+        ? LocalAdjustmentFeature(mask: localBlurMask) {
           GaussianBlurFeature(radius: localBlurRadius)
         }
         : nil,
@@ -230,13 +230,13 @@ struct ParametricFeaturePreviewView: View {
     return secondCropRect.size
   }
 
-  private var localExposureMask: MaskNode {
+  private var localExposureMask: Mask {
     .brush(
       BrushMask(
         strokes: [
-          BrushMaskStroke(
-            stamps: [normalizedPoint(x: localExposureX, y: localExposureY)],
-            brush: BrushMaskBrush(
+          BrushMask.Stroke(
+            stampCenters: [normalizedPoint(x: localExposureX, y: localExposureY)],
+            brush: BrushMask.Brush(
               diameter: normalizedDiameter(localExposureDiameter),
               hardness: 0.55,
               opacity: 1
@@ -247,25 +247,23 @@ struct ParametricFeaturePreviewView: View {
     )
   }
 
-  private var localBlurMask: MaskNode {
-    .feather(
-      MaskFeather(
-        input: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [normalizedPoint(x: localBlurX, y: localBlurY)],
-                brush: BrushMaskBrush(
-                  diameter: normalizedDiameter(localBlurDiameter),
-                  hardness: 0.45,
-                  opacity: 1
-                )
-              ),
-            ]
-          )
-        ),
-        radius: 6
-      )
+  private var localBlurMask: Mask {
+    .feathered(
+      .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: [normalizedPoint(x: localBlurX, y: localBlurY)],
+              brush: BrushMask.Brush(
+                diameter: normalizedDiameter(localBlurDiameter),
+                hardness: 0.45,
+                opacity: 1
+              )
+            ),
+          ]
+        )
+      ),
+      radius: 6
     )
   }
 
@@ -341,8 +339,8 @@ struct ParametricFeaturePreviewView: View {
 private struct ParametricPreviewDocument: Feature, Equatable {
   var firstCrop: CropFeature?
   var secondCrop: CropFeature?
-  var localExposure: LocalAdjustment<ExposureFeature>?
-  var localBlur: LocalAdjustment<GaussianBlurFeature>?
+  var localExposure: LocalAdjustmentFeature<ExposureFeature>?
+  var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
   var brightness: BrightnessFeature?
 
   var body: some Feature {

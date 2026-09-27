@@ -316,8 +316,8 @@ struct EditingCanvasRepresentableCoordinatorTests {
       ),
       feature: feature
     )
-    let stroke = BrushMaskStroke(
-      stamps: [CGPoint(x: 10, y: 10)],
+    let stroke = BrushMask.Stroke(
+      stampCenters: [CGPoint(x: 10, y: 10)],
       brush: .init(diameter: 4, hardness: 1, opacity: 1)
     )
     var changed = feature

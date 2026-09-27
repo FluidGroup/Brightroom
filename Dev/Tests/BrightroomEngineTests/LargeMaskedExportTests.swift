@@ -34,17 +34,15 @@ struct LargeMaskedExportTests {
     // center pixel is deep inside the painted region and the corners are far
     // outside it.
     let diameter = Double(side) / 4
-    let layer = LocalAdjustment(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: diameter, hardness: 1, opacity: 1)
-              ),
-            ]
-          )
+    let layer = LocalAdjustmentFeature(
+      mask: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: [center],
+              brush: BrushMask.Brush(diameter: diameter, hardness: 1, opacity: 1)
+            ),
+          ]
         )
       )
     ) {

@@ -79,9 +79,9 @@ struct FeatureTreeDescriptorTests {
     #expect(Self.value(of: "Radius", in: effects.children[0]) == "40 (proportional)")
 
     let brushOnly = FeatureTreeDescriptor.nodes(
-      for: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [
-        BrushMaskStroke(stamps: [CGPoint(x: 1, y: 1)], brush: BrushMaskBrush(diameter: 4, hardness: 1, opacity: 1)),
-      ])))) {
+      for: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: [
+        BrushMask.Stroke(stampCenters: [CGPoint(x: 1, y: 1)], brush: BrushMask.Brush(diameter: 4, hardness: 1, opacity: 1)),
+      ]))) {
         GaussianBlurFeature(radius: 3)
       }
     )
@@ -271,25 +271,21 @@ private struct TreeDocument: Feature {
 private struct MaskedDocument: Feature {
 
   var body: some Feature {
-    LocalAdjustment(
-      maskTree: MaskTree(
-        root: .feather(
-          MaskFeather(
-            input: .brush(
-              BrushMask(strokes: [
-                BrushMaskStroke(
-                  stamps: [CGPoint(x: 1, y: 1), CGPoint(x: 2, y: 2)],
-                  brush: BrushMaskBrush(diameter: 4, hardness: 1, opacity: 1)
-                ),
-                BrushMaskStroke(
-                  stamps: [CGPoint(x: 3, y: 3)],
-                  brush: BrushMaskBrush(diameter: 4, hardness: 1, opacity: 1)
-                ),
-              ])
+    LocalAdjustmentFeature(
+      mask: .feathered(
+        .brush(
+          BrushMask(strokes: [
+            BrushMask.Stroke(
+              stampCenters: [CGPoint(x: 1, y: 1), CGPoint(x: 2, y: 2)],
+              brush: BrushMask.Brush(diameter: 4, hardness: 1, opacity: 1)
             ),
-            radius: 4
-          )
-        )
+            BrushMask.Stroke(
+              stampCenters: [CGPoint(x: 3, y: 3)],
+              brush: BrushMask.Brush(diameter: 4, hardness: 1, opacity: 1)
+            ),
+          ])
+        ),
+        radius: 4
       )
     ) {
       GaussianBlurFeature(value: 40)

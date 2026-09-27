@@ -184,8 +184,8 @@ struct CompositionRenderingTests {
   @Test(arguments: MaskShape.allCases)
   func `a masked blur composites through its mask`(shape: MaskShape) throws {
     let source = try Fixtures.makeSource()
-    let maskTree = shape.makeMaskTree()
-    let document = MaskedBlurDocument(maskTree: maskTree)
+    let mask = shape.makeMask()
+    let document = MaskedBlurDocument(mask: mask)
 
     let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     #expect(composed.extent == Fixtures.entryExtent)
@@ -198,7 +198,7 @@ struct CompositionRenderingTests {
     let blended = Fixtures.explicitBlend(
       adjusted: Fixtures.explicitValueBlur(base, value: 40, basis: Fixtures.entryExtent),
       base: base,
-      mask: try Fixtures.renderer.makeMaskImage(for: maskTree, extent: Fixtures.entryExtent)
+      mask: try Fixtures.renderer.makeMaskImage(for: mask, extent: Fixtures.entryExtent)
     )
     let recipe = blended
       .applyingFilter("CIColorControls", parameters: [kCIInputContrastKey: 1.1])
@@ -217,14 +217,14 @@ struct CompositionRenderingTests {
   }
 
   @Test(arguments: MaskShape.allCases)
-  func `mask trees follow alpha algebra`(shape: MaskShape) throws {
+  func `masks follow alpha algebra`(shape: MaskShape) throws {
     let extent = Fixtures.entryExtent
-    func alpha(_ node: MaskNode) throws -> [Float] {
-      Fixtures.alpha(of: try Fixtures.renderer.makeMaskImage(for: MaskTree(root: node), extent: extent))
+    func alpha(_ node: Mask) throws -> [Float] {
+      Fixtures.alpha(of: try Fixtures.renderer.makeMaskImage(for: node, extent: extent))
     }
-    func featheredAlpha(_ stroke: BrushMaskStroke, radius: Double) throws -> [Float] {
+    func featheredAlpha(_ stroke: BrushMask.Stroke, radius: Double) throws -> [Float] {
       let leaf = try Fixtures.renderer.makeMaskImage(
-        for: MaskTree(root: .brush(BrushMask(strokes: [stroke]))),
+        for: .brush(BrushMask(strokes: [stroke])),
         extent: extent
       )
       return Fixtures.alpha(
@@ -253,7 +253,7 @@ struct CompositionRenderingTests {
     }
 
     let actual = Fixtures.alpha(
-      of: try Fixtures.renderer.makeMaskImage(for: shape.makeMaskTree(), extent: extent)
+      of: try Fixtures.renderer.makeMaskImage(for: shape.makeMask(), extent: extent)
     )
     let difference = Fixtures.maximumDifference(expected, actual)
     #expect(difference <= 0.001, "max alpha difference \(difference)")
@@ -267,15 +267,13 @@ struct CompositionRenderingTests {
     let extent = CGRect(x: 0, y: 0, width: 40, height: 50)
     let stamp = CGPoint(x: 20, y: extent.height * 0.2)
     let mask = try Fixtures.renderer.makeMaskImage(
-      for: MaskTree(
-        root: .brush(
-          BrushMask(strokes: [
-            BrushMaskStroke(
-              stamps: [stamp],
-              brush: BrushMaskBrush(diameter: 12, hardness: 1, opacity: 1)
-            ),
-          ])
-        )
+      for: .brush(
+        BrushMask(strokes: [
+          BrushMask.Stroke(
+            stampCenters: [stamp],
+            brush: BrushMask.Brush(diameter: 12, hardness: 1, opacity: 1)
+          ),
+        ])
       ),
       extent: extent
     )
@@ -671,7 +669,7 @@ private struct TwoCropsDocument: Feature {
   }
 }
 
-/// The mask trees exercised by the local adjustment tests.
+/// The masks exercised by the local adjustment tests.
 enum MaskShape: String, CaseIterable, Sendable {
 
   /// A feathered brush united with a hard brush.
@@ -686,34 +684,26 @@ enum MaskShape: String, CaseIterable, Sendable {
   /// The overlap of two brushes.
   case intersectedBrushes
 
-  func makeMaskTree() -> MaskTree {
+  func makeMask() -> Mask {
     typealias Fixtures = RenderingFixtures
     switch self {
     case .featheredBrush:
-      return Fixtures.featheredBrushMaskTree()
+      return Fixtures.featheredBrushMask()
     case .invertedBrush:
-      return MaskTree(root: .invert(.brush(BrushMask(strokes: [Fixtures.lowerLeftStroke]))))
+      return .inverted(.brush(BrushMask(strokes: [Fixtures.lowerLeftStroke])))
     case .subtractedBrush:
-      return MaskTree(
-        root: .subtract(
-          MaskSubtract(
-            base: .brush(BrushMask(strokes: [Fixtures.lowerLeftStroke])),
-            removing: .brush(BrushMask(strokes: [Fixtures.crossingStroke]))
-          )
-        )
+      return .subtraction(
+        .brush(BrushMask(strokes: [Fixtures.lowerLeftStroke])),
+        removing: .brush(BrushMask(strokes: [Fixtures.crossingStroke]))
       )
     case .intersectedBrushes:
-      return MaskTree(
-        root: .intersect([
-          .brush(BrushMask(strokes: [Fixtures.lowerLeftStroke])),
-          .feather(
-            MaskFeather(
-              input: .brush(BrushMask(strokes: [Fixtures.crossingStroke])),
-              radius: 3
-            )
-          ),
-        ])
-      )
+      return .intersection([
+        .brush(BrushMask(strokes: [Fixtures.lowerLeftStroke])),
+        .feathered(
+          .brush(BrushMask(strokes: [Fixtures.crossingStroke])),
+          radius: 3
+        ),
+      ])
     }
   }
 
@@ -734,11 +724,11 @@ enum MaskShape: String, CaseIterable, Sendable {
 private struct MaskedBlurDocument: Feature {
 
   var exposure = ExposureFeature(value: 0.15)
-  var localBlur: LocalAdjustment<GaussianBlurFeature>?
+  var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
   var contrast = ContrastFeature(value: 0.1)
 
-  init(maskTree: MaskTree) {
-    localBlur = LocalAdjustment(maskTree: maskTree) {
+  init(mask: Mask) {
+    localBlur = LocalAdjustmentFeature(mask: mask) {
       GaussianBlurFeature(value: 40)
     }
   }
@@ -961,8 +951,8 @@ private struct ImageEditorLikeFeature: Feature {
       AnyImageEffect(FadeFeature(intensity: 0.06)),
     ]
   )
-  var localBlur: LocalAdjustment<GaussianBlurFeature>? = LocalAdjustment(
-    maskTree: RenderingFixtures.featheredBrushMaskTree()
+  var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = LocalAdjustmentFeature(
+    mask: RenderingFixtures.featheredBrushMask()
   ) {
     GaussianBlurFeature(value: 40)
   }

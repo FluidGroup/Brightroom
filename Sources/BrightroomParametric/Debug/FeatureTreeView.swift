@@ -30,7 +30,7 @@ import SwiftUI
 /// A read-only, display-oriented snapshot of one node in a feature tree.
 ///
 /// `FeatureTreeNode` is a debug projection of a feature document:
-/// it flattens a feature, a `LocalAdjustment`, or a `MaskNode` into a title, a
+/// it flattens a feature, a `LocalAdjustmentFeature`, or a `Mask` into a title, a
 /// set of scalar parameter fields, and child nodes. It carries no rendering or
 /// editing capability — it exists purely so a viewer can present the structure
 /// of a document without each call site re-implementing the walk over the
@@ -112,8 +112,8 @@ public struct FeatureTreeNode: Identifiable, Sendable {
 /// `AnyImageEffect`) are flattened into their parent, and a `nil` member or a
 /// branch not taken is left out. A composite feature shows its body members as
 /// children, even when it also implements `apply(to:context:)`; a composite
-/// with no fields and no present members is left out. A `LocalAdjustment`
-/// shows its mask tree and its effects. Scalar parameters come from `Mirror`
+/// with no fields and no present members is left out. A `LocalAdjustmentFeature`
+/// shows its mask and its effects. Scalar parameters come from `Mirror`
 /// reflection of stored properties, so new features appear without changes
 /// here; properties that hold features are shown as children, not as fields.
 public enum FeatureTreeDescriptor {
@@ -198,7 +198,7 @@ public enum FeatureTreeDescriptor {
     _ adjustment: any LocalAdjustmentReflection,
     path: String
   ) -> FeatureTreeNode {
-    let mask = maskTreeNode(adjustment.reflectedMaskTree, path: "\(path)/mask")
+    let mask = maskRootNode(adjustment.reflectedMask, path: "\(path)/mask")
     let effectsPath = "\(path)/effects"
     let effectNodes = childNodes(members(of: adjustment.reflectedContent), parentPath: effectsPath)
     let effects = FeatureTreeNode(
@@ -220,22 +220,22 @@ public enum FeatureTreeDescriptor {
     )
   }
 
-  // MARK: Mask tree
+  // MARK: Mask
 
-  fileprivate static func maskTreeNode(_ tree: MaskTree, path: String) -> FeatureTreeNode {
+  fileprivate static func maskRootNode(_ mask: Mask, path: String) -> FeatureTreeNode {
     FeatureTreeNode(
       id: path,
       title: "Mask",
-      typeName: "MaskTree",
+      typeName: "Mask",
       symbolName: "theatermasks",
-      children: [maskNode(tree.root, path: "\(path)/0")]
+      children: [maskNode(mask, path: "\(path)/0")]
     )
   }
 
-  fileprivate static func maskNode(_ node: MaskNode, path: String) -> FeatureTreeNode {
-    switch node {
+  fileprivate static func maskNode(_ mask: Mask, path: String) -> FeatureTreeNode {
+    switch mask {
     case let .brush(brush):
-      let stamps = brush.strokes.reduce(0) { $0 + $1.stamps.count }
+      let stamps = brush.strokes.reduce(0) { $0 + $1.stampCenters.count }
       return FeatureTreeNode(
         id: path,
         title: "Brush",
@@ -248,56 +248,56 @@ public enum FeatureTreeDescriptor {
         ]
       )
 
-    case let .invert(inner):
+    case let .inverted(inner):
       return FeatureTreeNode(
         id: path,
         title: "Invert",
-        typeName: "MaskNode.invert",
+        typeName: "Mask.inverted",
         symbolName: "circle.lefthalf.filled",
         children: [maskNode(inner, path: "\(path)/0")]
       )
 
-    case let .feather(feather):
-      let radius = FeatureValueFormatter.number(feather.radius)
+    case let .feathered(inner, radius):
+      let radius = FeatureValueFormatter.number(radius)
       return FeatureTreeNode(
         id: path,
         title: "Feather",
-        typeName: "MaskFeather",
+        typeName: "Mask.feathered",
         summary: "radius \(radius)",
         symbolName: "drop",
         fields: [FeatureTreeNode.Field(name: "Radius", value: radius)],
-        children: [maskNode(feather.input, path: "\(path)/0")]
+        children: [maskNode(inner, path: "\(path)/0")]
       )
 
     case let .union(nodes):
       return FeatureTreeNode(
         id: path,
         title: "Union",
-        typeName: "MaskNode.union",
+        typeName: "Mask.union",
         summary: count(nodes.count, "input"),
         symbolName: "plus.circle",
         children: nodes.enumerated().map { maskNode($1, path: "\(path)/\($0)") }
       )
 
-    case let .intersect(nodes):
+    case let .intersection(nodes):
       return FeatureTreeNode(
         id: path,
         title: "Intersect",
-        typeName: "MaskNode.intersect",
+        typeName: "Mask.intersection",
         summary: count(nodes.count, "input"),
         symbolName: "circle.circle",
         children: nodes.enumerated().map { maskNode($1, path: "\(path)/\($0)") }
       )
 
-    case let .subtract(subtract):
+    case let .subtraction(base, removing):
       return FeatureTreeNode(
         id: path,
         title: "Subtract",
-        typeName: "MaskSubtract",
+        typeName: "Mask.subtraction",
         symbolName: "minus.circle",
         children: [
-          labeledMaskChild("Base", subtract.base, path: "\(path)/base"),
-          labeledMaskChild("Removing", subtract.removing, path: "\(path)/removing"),
+          labeledMaskChild("Base", base, path: "\(path)/base"),
+          labeledMaskChild("Removing", removing, path: "\(path)/removing"),
         ]
       )
     }
@@ -323,7 +323,7 @@ public enum FeatureTreeDescriptor {
 
   private static func labeledMaskChild(
     _ label: String,
-    _ node: MaskNode,
+    _ node: Mask,
     path: String
   ) -> FeatureTreeNode {
     var child = maskNode(node, path: path)
@@ -335,7 +335,7 @@ public enum FeatureTreeDescriptor {
   ///
   /// A feature with curated fields supplies them; otherwise its stored
   /// properties are reflected, skipping those that hold features or a mask
-  /// tree (they appear as children).
+  /// (they appear as children).
   private static func reflectedFields(of feature: any Feature) -> [FeatureTreeNode.Field] {
     if let curated = feature as? any FeatureTreeFieldReflection {
       return curated.reflectedFields
@@ -344,7 +344,7 @@ public enum FeatureTreeDescriptor {
       guard
         let label = child.label,
         (child.value is any Feature) == false,
-        (child.value is MaskTree) == false
+        (child.value is Mask) == false
       else {
         return nil
       }
@@ -471,14 +471,14 @@ extension AnyImageEffect: StructuralFeatureReflection {
   var reflectedMembers: [any Feature] { [base] }
 }
 
-/// Exposes a `LocalAdjustment` without its generic content type.
+/// Exposes a `LocalAdjustmentFeature` without its generic content type.
 private protocol LocalAdjustmentReflection {
-  var reflectedMaskTree: MaskTree { get }
+  var reflectedMask: Mask { get }
   var reflectedContent: any Feature { get }
 }
 
-extension LocalAdjustment: LocalAdjustmentReflection {
-  var reflectedMaskTree: MaskTree { maskTree }
+extension LocalAdjustmentFeature: LocalAdjustmentReflection {
+  var reflectedMask: Mask { mask }
   var reflectedContent: any Feature { content }
 }
 

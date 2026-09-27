@@ -19,14 +19,14 @@ struct EditingCanvasViewStrokeDomainTests {
 
   private let imageSize = CGSize(width: 400, height: 300)
 
-  private func makeLayer() -> LocalAdjustment<GaussianBlurFeature> {
-    LocalAdjustment(
-      maskTree: .init(root: .brush(.init(strokes: [
+  private func makeLayer() -> LocalAdjustmentFeature<GaussianBlurFeature> {
+    LocalAdjustmentFeature(
+      mask: .brush(.init(strokes: [
         .init(
-          stamps: [CGPoint(x: 100, y: 80), CGPoint(x: 140, y: 120)],
+          stampCenters: [CGPoint(x: 100, y: 80), CGPoint(x: 140, y: 120)],
           brush: .init(diameter: 40, hardness: 1, opacity: 1)
         )
-      ])))
+      ]))
     ) {
       GaussianBlurFeature(radius: 10)
     }
@@ -34,8 +34,8 @@ struct EditingCanvasViewStrokeDomainTests {
 
   /// The layer's strokes as canvas-source records (y-down), through the
   /// production inverse conversion.
-  private func sourceRecords(of layer: LocalAdjustment<GaussianBlurFeature>) -> [EditingCanvasStrokeRecord] {
-    layer.maskTree.canvasBrushStrokes.map {
+  private func sourceRecords(of layer: LocalAdjustmentFeature<GaussianBlurFeature>) -> [EditingCanvasStrokeRecord] {
+    layer.mask.canvasBrushStrokes.map {
       EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: imageSize.height)
     }
   }
@@ -87,7 +87,7 @@ struct EditingCanvasViewStrokeDomainTests {
   @Test func `Absent, empty, or non-brush-rooted mask selects the viewport base`() {
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: nil) == .viewportBase)
 
-    let empty = LocalAdjustment(maskTree: .init(root: .brush(.init()))) {
+    let empty = LocalAdjustmentFeature(mask: .brush(.init())) {
       GaussianBlurFeature(radius: 10)
     }
     #expect(EditingCanvasView.CanvasRenderPlan(localBlur: empty) == .viewportBase)
@@ -95,8 +95,8 @@ struct EditingCanvasViewStrokeDomainTests {
     // The canvas composites only the brush-rooted shape ImageEditor authors.
     // A feathered empty brush selects nothing, so export changes nothing
     // either.
-    let featheredEmpty = LocalAdjustment(
-      maskTree: .init(root: .feather(MaskFeather(input: .brush(.init()), radius: 4)))
+    let featheredEmpty = LocalAdjustmentFeature(
+      mask: .feathered(.brush(.init()), radius: 4)
     ) {
       GaussianBlurFeature(radius: 10)
     }

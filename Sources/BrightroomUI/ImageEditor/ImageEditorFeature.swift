@@ -112,11 +112,11 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// Its stamps are in BrightroomParametric's working space (bottom-left
   /// origin, y-up) of the oriented, pre-crop source at full resolution.
   ///
-  /// The editor authors a mask tree rooted at a brush, and the editing canvas
-  /// previews only that shape. A mask tree with another root (for example an
-  /// inverted or feathered brush) renders at export, but the canvas shows the
+  /// The editor authors a brush mask, and the editing canvas previews only
+  /// that shape. Any other mask (for example an inverted or feathered brush)
+  /// renders at export, but the canvas shows the
   /// image without it.
-  public var localBlur: LocalAdjustment<GaussianBlurFeature>?
+  public var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
   /// The final crop: the framing and clipping Feature of this feature.
   public var crop: CropFeature
@@ -141,7 +141,7 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// crop that covers the whole image.
   public init(
     effects: Effects = .init(),
-    localBlur: LocalAdjustment<GaussianBlurFeature>? = nil,
+    localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = nil,
     crop: CropFeature
   ) {
     self.effects = effects

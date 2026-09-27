@@ -22,9 +22,9 @@
 import CoreImage
 import Foundation
 
-/// Renders a `MaskTree` into an alpha image in the current feature domain.
+/// Renders a `Mask` into an alpha image in the current feature domain.
 ///
-/// This is the single mask evaluator shared by `LocalAdjustment` and
+/// This is the single mask evaluator shared by `LocalAdjustmentFeature` and
 /// `FeatureRenderer.makeMaskImage(for:extent:)`, so mask inspection
 /// shows exactly the alpha a local adjustment composites through. Brush stamps are interpreted in Core Image working-space
 /// coordinates (bottom-left origin, y-up).
@@ -33,18 +33,18 @@ struct MaskTreeRenderer: Sendable {
   /// The kernels used for brush stamps and mask subtraction.
   private let kernelRegistry = ParametricKernelRegistry()
 
-  func render(_ maskTree: MaskTree, extent: CGRect) throws -> CIImage {
-    try render(maskTree.root, extent: extent)
+  func render(_ mask: Mask, extent: CGRect) throws -> CIImage {
+    try renderNode(mask, extent: extent)
       .cropped(to: extent)
   }
 
-  private func render(_ node: MaskNode, extent: CGRect) throws -> CIImage {
-    switch node {
-    case let .brush(mask):
-      return try render(mask, extent: extent)
+  private func renderNode(_ mask: Mask, extent: CGRect) throws -> CIImage {
+    switch mask {
+    case let .brush(brushMask):
+      return try render(brushMask, extent: extent)
 
-    case let .invert(input):
-      let inputImage = try render(input, extent: extent)
+    case let .inverted(input):
+      let inputImage = try renderNode(input, extent: extent)
       return inputImage.applyingFilter(
         "CIColorMatrix",
         parameters: [
@@ -57,25 +57,25 @@ struct MaskTreeRenderer: Sendable {
       )
       .cropped(to: extent)
 
-    case let .feather(feather):
-      let inputImage = try render(feather.input, extent: extent)
-      guard feather.radius > 0.0001 else {
+    case let .feathered(input, radius):
+      let inputImage = try renderNode(input, extent: extent)
+      guard radius > 0.0001 else {
         return inputImage
       }
       return inputImage
         .clamped(to: extent)
         .applyingFilter(
           "CIGaussianBlur",
-          parameters: [kCIInputRadiusKey: feather.radius]
+          parameters: [kCIInputRadiusKey: radius]
         )
         .cropped(to: extent)
 
-    case let .union(nodes):
-      guard nodes.isEmpty == false else {
+    case let .union(masks):
+      guard masks.isEmpty == false else {
         throw FeatureEvaluationError.emptyMaskComposite
       }
-      return try nodes.reduce(CIImage.parametricTransparent(extent: extent)) { accumulated, node in
-        let next = try render(node, extent: extent)
+      return try masks.reduce(CIImage.parametricTransparent(extent: extent)) { accumulated, mask in
+        let next = try renderNode(mask, extent: extent)
         return try blendMask(
           foreground: next,
           background: accumulated,
@@ -84,13 +84,13 @@ struct MaskTreeRenderer: Sendable {
         )
       }
 
-    case let .intersect(nodes):
-      guard let first = nodes.first else {
+    case let .intersection(masks):
+      guard let first = masks.first else {
         throw FeatureEvaluationError.emptyMaskComposite
       }
-      var accumulated = try render(first, extent: extent)
-      for node in nodes.dropFirst() {
-        let next = try render(node, extent: extent)
+      var accumulated = try renderNode(first, extent: extent)
+      for mask in masks.dropFirst() {
+        let next = try renderNode(mask, extent: extent)
         accumulated = try blendMask(
           foreground: next,
           background: accumulated,
@@ -100,12 +100,12 @@ struct MaskTreeRenderer: Sendable {
       }
       return accumulated.cropped(to: extent)
 
-    case let .subtract(subtract):
-      let base = try render(subtract.base, extent: extent)
-      let removing = try render(subtract.removing, extent: extent)
+    case let .subtraction(base, removing):
+      let baseImage = try renderNode(base, extent: extent)
+      let removingImage = try renderNode(removing, extent: extent)
       return try kernelRegistry.subtractMask(
-        base: base,
-        removing: removing,
+        base: baseImage,
+        removing: removingImage,
         extent: extent
       )
     }
@@ -122,7 +122,7 @@ struct MaskTreeRenderer: Sendable {
     var stampImages: [CIImage] = []
     for stroke in mask.strokes {
       let radius = max(stroke.brush.diameter / 2, 0)
-      for stamp in stroke.stamps {
+      for stamp in stroke.stampCenters {
         stampImages.append(
           try kernelRegistry.makeBrushStamp(
             extent: extent,

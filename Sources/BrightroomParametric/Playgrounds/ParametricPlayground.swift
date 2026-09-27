@@ -54,7 +54,7 @@ internal import Playgrounds
 /// A look made only of image effects.
 ///
 /// The body is `some ImageEffect`, so the look is an `ImageEffect` as well:
-/// any document can reuse it, it can go inside a `LocalAdjustment`, and a
+/// any document can reuse it, it can go inside a `LocalAdjustmentFeature`, and a
 /// crop in its body does not compile.
 fileprivate struct FilmLook: ImageEffect, Equatable {
   var warmth = 900.0
@@ -168,15 +168,15 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 #Playground("Brush mask blur") {
   // A soft stroke over the bowl. Stamps are Core Image coordinates of the
   // image the local adjustment receives: bottom-left origin, y-up.
-  let stroke = BrushMaskStroke(
-    stamps: stride(from: 120.0, through: 460.0, by: 10).map { x in
+  let stroke = BrushMask.Stroke(
+    stampCenters: stride(from: 120.0, through: 460.0, by: 10).map { x in
       CGPoint(x: x, y: 600 + 40 * sin(x / 60))
     },
-    brush: BrushMaskBrush(diameter: 260, hardness: 0.3, opacity: 1)
+    brush: BrushMask.Brush(diameter: 260, hardness: 0.3, opacity: 1)
   )
 
   struct Document: Feature {
-    var localBlur: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
     var body: some Feature {
       localBlur
@@ -184,8 +184,8 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   }
 
   var document = Document()
-  document.localBlur = LocalAdjustment(
-    maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))
+  document.localBlur = LocalAdjustmentFeature(
+    mask: .brush(BrushMask(strokes: [stroke]))
   ) {
     GaussianBlurFeature(value: 40)
   }
@@ -230,7 +230,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   struct PhotoDocument: Feature, Equatable {
     var exposure = ExposureFeature(value: 0)
     var look: FilmLook?
-    var localBlur: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
     var crop: CropFeature
 
     var body: some Feature {
@@ -246,16 +246,14 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   var document = PhotoDocument(crop: CropFeature(cropRect: fullFrame))
   document.exposure.value = -0.1
   document.look = FilmLook(warmth: 500)
-  document.localBlur = LocalAdjustment(
-    maskTree: MaskTree(
-      root: .brush(
-        BrushMask(strokes: [
-          BrushMaskStroke(
-            stamps: [CGPoint(x: 260, y: 600)],
-            brush: BrushMaskBrush(diameter: 520, hardness: 0.2, opacity: 1)
-          )
-        ])
-      )
+  document.localBlur = LocalAdjustmentFeature(
+    mask: .brush(
+      BrushMask(strokes: [
+        BrushMask.Stroke(
+          stampCenters: [CGPoint(x: 260, y: 600)],
+          brush: BrushMask.Brush(diameter: 520, hardness: 0.2, opacity: 1)
+        )
+      ])
     )
   ) {
     GaussianBlurFeature(value: 30)

@@ -10,8 +10,8 @@ struct ImageEditorFeatureTests {
 
   private let imageSize = CGSize(width: 400, height: 300)
 
-  private let stroke = BrushMaskStroke(
-    stamps: [CGPoint(x: 100, y: 220), CGPoint(x: 140, y: 220)],
+  private let stroke = BrushMask.Stroke(
+    stampCenters: [CGPoint(x: 100, y: 220), CGPoint(x: 140, y: 220)],
     brush: .init(diameter: 60, hardness: 0.7, opacity: 1)
   )
 
@@ -111,7 +111,7 @@ struct ImageEditorFeatureTests {
     let localBlur = try #require(document.localBlur)
     #expect(localBlur.content == ImageEditorFeature.defaultLocalBlurContent)
     #expect(localBlur.content.radius == .proportional(40))
-    #expect(localBlur.maskTree.root == .brush(BrushMask(strokes: [stroke])))
+    #expect(localBlur.mask == .brush(BrushMask(strokes: [stroke])))
 
     // Later strokes append in place and keep the blur content.
     document.appendLocalBlurStroke(stroke)
@@ -148,7 +148,7 @@ struct ImageEditorFeatureTests {
         exposure: ExposureFeature(value: edited.effects.exposure!.value),
         vignette: VignetteFeature(value: edited.effects.vignette!.value)
       ),
-      localBlur: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))) {
+      localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: [stroke]))) {
         GaussianBlurFeature(value: 40)
       },
       crop: CropFeature(
@@ -258,7 +258,7 @@ struct ImageEditorFeatureTests {
     // Crop editing views the effects and the blur mask, without the crop.
     struct EffectsAndLocalBlur: Feature {
       var effects: ImageEditorFeature.Effects
-      var localBlur: LocalAdjustment<GaussianBlurFeature>?
+      var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
       var body: some Feature {
         effects
         localBlur

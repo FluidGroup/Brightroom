@@ -59,7 +59,7 @@ a mask, and crops again is:
 ```swift
 struct PhotoDocument: Feature, Equatable {
   var crop: CropFeature
-  var localExposure: LocalAdjustment<ExposureFeature>?
+  var localExposure: LocalAdjustmentFeature<ExposureFeature>?
   var finalCrop: CropFeature
 
   var body: some Feature {
@@ -135,8 +135,8 @@ The ideal mask Feature should support:
 - generated masks, such as subject, sky, depth, or luminance masks
 - mask refinements, such as blur, feather, invert, add, subtract, and intersect
 
-In the static model a mask is not a Feature of its own: it is the `MaskTree`
-parameter of the `LocalAdjustment` that uses it. A stand-alone mask Feature
+In the static model a mask is not a Feature of its own: it is the `Mask`
+parameter of the `LocalAdjustmentFeature` that uses it. A stand-alone mask Feature
 that later adjustments reference is still an open question (see "Feature
 references" below).
 
@@ -396,7 +396,7 @@ currently holds by feature order becomes declared rather than incidental:
   crop changes, the content under the mask shifts accordingly, and no
   restoration to the original pixels is attempted. This is the parametric
   reading — each Feature is a function of its input — and it means that
-  `LocalAdjustment` rasterizing its mask into its input extent is the
+  `LocalAdjustmentFeature` rasterizing its mask into its input extent is the
   correct implementation, not a limitation.
 - **Proportional (value-form) radii resolve against the render pass's
   chain-entry extent.** A value like `GaussianBlurFeature(value: 40)` means a

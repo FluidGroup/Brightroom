@@ -169,17 +169,15 @@ final class DiskExportTests {
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
     let diameter = Double(size.width) / 4
 
-    let layer = LocalAdjustment(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: diameter, hardness: 1, opacity: 1)
-              )
-            ]
-          )
+    let layer = LocalAdjustmentFeature(
+      mask: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: [center],
+              brush: BrushMask.Brush(diameter: diameter, hardness: 1, opacity: 1)
+            )
+          ]
         )
       )
     ) {

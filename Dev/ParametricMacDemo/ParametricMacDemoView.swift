@@ -676,7 +676,7 @@ struct ParametricMacDocument: Feature {
 enum ParametricMacStep: Feature {
 
   case crop(CropFeature)
-  case localAdjustment(LocalAdjustment<[AnyImageEffect]>)
+  case localAdjustment(LocalAdjustmentFeature<[AnyImageEffect]>)
   case effect(AnyImageEffect)
 
   var body: some Feature {
@@ -825,7 +825,7 @@ struct ParametricMacPreviewRenderer {
   private func makeLocalAdjustment(
     currentSize: CGSize,
     settings: ParametricMacPreviewSettings
-  ) -> (feature: LocalAdjustment<[AnyImageEffect]>?, treeLines: [ParametricMacTreeLine]) {
+  ) -> (feature: LocalAdjustmentFeature<[AnyImageEffect]>?, treeLines: [ParametricMacTreeLine]) {
     // Suppression is structural: a suppressed brush has no strokes, a
     // suppressed feather leaves the brush as the mask root, and a suppressed
     // effect is left out of the content.
@@ -834,8 +834,8 @@ struct ParametricMacPreviewRenderer {
         ? [makeBrushStroke(size: currentSize, settings: settings)]
         : []
     )
-    let maskRoot: MaskNode = settings.includes(.featherMask)
-      ? .feather(MaskFeather(input: .brush(brush), radius: settings.maskFeatherRadius))
+    let maskRoot: Mask = settings.includes(.featherMask)
+      ? .feathered(.brush(brush), radius: settings.maskFeatherRadius)
       : .brush(brush)
 
     var effects: [AnyImageEffect] = []
@@ -846,9 +846,9 @@ struct ParametricMacPreviewRenderer {
       effects.append(AnyImageEffect(GaussianBlurFeature(radius: settings.localBlurRadius)))
     }
 
-    let localAdjustment: LocalAdjustment<[AnyImageEffect]>?
+    let localAdjustment: LocalAdjustmentFeature<[AnyImageEffect]>?
     if settings.includes(.localAdjustment), effects.isEmpty == false {
-      localAdjustment = LocalAdjustment(maskTree: MaskTree(root: maskRoot)) {
+      localAdjustment = LocalAdjustmentFeature(mask: maskRoot) {
         effects
       }
     } else {
@@ -900,7 +900,7 @@ struct ParametricMacPreviewRenderer {
   private func makeBrushStroke(
     size: CGSize,
     settings: ParametricMacPreviewSettings
-  ) -> BrushMaskStroke {
+  ) -> BrushMask.Stroke {
     let centerY = size.height * 0.56
     let stamps = stride(from: 0.18, through: 0.82, by: 0.08).map { progress in
       CGPoint(
@@ -908,9 +908,9 @@ struct ParametricMacPreviewRenderer {
         y: centerY + sin(progress * .pi * 3) * size.height * 0.08
       )
     }
-    return BrushMaskStroke(
-      stamps: stamps,
-      brush: BrushMaskBrush(
+    return BrushMask.Stroke(
+      stampCenters: stamps,
+      brush: BrushMask.Brush(
         diameter: settings.brushDiameter,
         hardness: 0.35,
         opacity: 1

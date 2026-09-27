@@ -38,8 +38,8 @@ struct LocalAdjustmentMaskOrientationTests {
     // The vertically mirrored position must remain untouched.
     let mirroredCenter = CGPoint(x: imageSize.width * 0.25, y: imageSize.height * 0.75)
 
-    let adjustment = LocalAdjustment(
-      maskTree: .test(
+    let adjustment = LocalAdjustmentFeature(
+      mask: .test(
         displayStamps: [stampCenter],
         diameter: imageSize.width * 0.2,
         domainHeight: imageSize.height
@@ -49,7 +49,7 @@ struct LocalAdjustmentMaskOrientationTests {
     }
 
     func render(
-      localAdjustments: [LocalAdjustment<[AnyImageEffect]>]
+      localAdjustments: [LocalAdjustmentFeature<[AnyImageEffect]>]
     ) async throws -> CGImage {
       let renderer = EditingDocument(
         image: imageSource,

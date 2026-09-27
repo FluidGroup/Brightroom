@@ -202,7 +202,7 @@ struct EditingPreviewExportParityTests {
 
     let emptyDocument = Self.makeDocument(
       imageSize: imageSize,
-      localBlur: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
+      localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: []))) {
         GaussianBlurFeature(radius: 8)
       }
     )
@@ -235,8 +235,8 @@ struct EditingPreviewExportParityTests {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
     let imageSize = CGSize(width: 32, height: 32)
 
-    let throwingLayer = LocalAdjustment(
-      maskTree: .test(
+    let throwingLayer = LocalAdjustmentFeature(
+      mask: .test(
         displayStamps: [CGPoint(x: 16, y: 16)],
         diameter: 12,
         domainHeight: imageSize.height
@@ -268,14 +268,14 @@ struct EditingPreviewExportParityTests {
     let radius = diameter / 2
     let hardness = 0.5
 
-    let tree = MaskTree(root: .brush(BrushMask(strokes: [
-      BrushMaskStroke(
-        stamps: [center],
-        brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: 1)
+    let mask = Mask.brush(BrushMask(strokes: [
+      BrushMask.Stroke(
+        stampCenters: [center],
+        brush: BrushMask.Brush(diameter: diameter, hardness: hardness, opacity: 1)
       )
-    ])))
+    ]))
     let maskCIImage = try FeatureRenderer().makeMaskImage(
-      for: tree,
+      for: mask,
       extent: CGRect(x: 0, y: 0, width: canvas, height: canvas)
     )
     let maskCG = try #require(
@@ -372,9 +372,9 @@ struct EditingPreviewExportParityTests {
     radius: CGFloat,
     displayCenter: CGPoint,
     domainHeight: CGFloat
-  ) -> LocalAdjustment<GaussianBlurFeature> {
-    LocalAdjustment(
-      maskTree: .test(
+  ) -> LocalAdjustmentFeature<GaussianBlurFeature> {
+    LocalAdjustmentFeature(
+      mask: .test(
         displayStamps: [displayCenter],
         diameter: 18,
         domainHeight: domainHeight
@@ -388,7 +388,7 @@ struct EditingPreviewExportParityTests {
     imageSize: CGSize,
     cropRect: CGRect? = nil,
     rotation: QuarterTurn = .zero,
-    localBlur: LocalAdjustment<GaussianBlurFeature>?
+    localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
   ) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.exposure = ExposureFeature(value: 0.4)

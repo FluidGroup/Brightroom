@@ -418,129 +418,84 @@ public struct FadeFeature: ImageEffect, Equatable {
   }
 }
 
-/// A mask graph that produces alpha in the current feature domain.
-public struct MaskTree: Equatable, Sendable {
-
-  /// The root mask node.
-  public var root: MaskNode
-
-  /// Creates a mask tree.
-  public init(root: MaskNode) {
-    self.root = root
-  }
-}
-
-/// A node in an alpha-only mask tree.
-public indirect enum MaskNode: Equatable, Sendable {
+/// An alpha-only mask in the current feature domain.
+///
+/// A mask is a value tree: leaves produce alpha (`brush`), and the other
+/// cases refine or combine their inputs. It is evaluated against the input
+/// extent of the feature that owns it.
+public indirect enum Mask: Equatable, Sendable {
 
   /// Produces alpha from brush strokes.
   case brush(BrushMask)
 
   /// Inverts the input alpha.
-  case invert(MaskNode)
+  case inverted(Mask)
 
-  /// Blurs the input alpha while preserving extent.
-  case feather(MaskFeather)
+  /// Blurs the input alpha by `radius` while preserving extent.
+  case feathered(Mask, radius: Double)
 
-  /// Combines child masks using alpha union.
-  case union([MaskNode])
+  /// Combines masks using alpha union. An empty list throws when evaluated.
+  case union([Mask])
 
-  /// Combines child masks using alpha intersection.
-  case intersect([MaskNode])
+  /// Combines masks using alpha intersection. An empty list throws when
+  /// evaluated.
+  case intersection([Mask])
 
-  /// Removes one mask from another.
-  case subtract(MaskSubtract)
+  /// Removes the alpha of `removing` from the first mask.
+  case subtraction(Mask, removing: Mask)
 }
 
 /// A brush-authored mask.
 public struct BrushMask: Equatable, Sendable {
 
+  /// A continuous brush stroke represented by sampled stamp centers.
+  public struct Stroke: Equatable, Sendable {
+
+    /// The stamp centers in current feature-domain coordinates.
+    public var stampCenters: [CGPoint]
+
+    /// The brush used to render each stamp.
+    public var brush: Brush
+
+    /// Creates a brush stroke.
+    public init(
+      stampCenters: [CGPoint],
+      brush: Brush
+    ) {
+      self.stampCenters = stampCenters
+      self.brush = brush
+    }
+  }
+
+  /// Brush parameters for a mask stroke.
+  public struct Brush: Equatable, Sendable {
+
+    /// The brush diameter in current feature-domain units.
+    public var diameter: Double
+
+    /// The hard inner alpha region, from `0` for soft to `1` for hard.
+    public var hardness: Double
+
+    /// The stamp opacity, from `0` to `1`.
+    public var opacity: Double
+
+    /// Creates brush parameters.
+    public init(
+      diameter: Double,
+      hardness: Double,
+      opacity: Double
+    ) {
+      self.diameter = diameter
+      self.hardness = hardness
+      self.opacity = opacity
+    }
+  }
+
   /// The brush strokes authored in the current feature domain.
-  public var strokes: [BrushMaskStroke]
+  public var strokes: [Stroke]
 
   /// Creates a brush-authored mask.
-  public init(strokes: [BrushMaskStroke] = []) {
+  public init(strokes: [Stroke] = []) {
     self.strokes = strokes
-  }
-}
-
-/// A continuous brush stroke represented by sampled stamp centers.
-public struct BrushMaskStroke: Equatable, Sendable {
-
-  /// The stamp centers in current feature-domain coordinates.
-  public var stamps: [CGPoint]
-
-  /// The brush used to render each stamp.
-  public var brush: BrushMaskBrush
-
-  /// Creates a brush stroke.
-  public init(
-    stamps: [CGPoint],
-    brush: BrushMaskBrush
-  ) {
-    self.stamps = stamps
-    self.brush = brush
-  }
-}
-
-/// Brush parameters for a mask stroke.
-public struct BrushMaskBrush: Equatable, Sendable {
-
-  /// The brush diameter in current feature-domain units.
-  public var diameter: Double
-
-  /// The hard inner alpha region, from `0` for soft to `1` for hard.
-  public var hardness: Double
-
-  /// The stamp opacity, from `0` to `1`.
-  public var opacity: Double
-
-  /// Creates brush parameters.
-  public init(
-    diameter: Double,
-    hardness: Double,
-    opacity: Double
-  ) {
-    self.diameter = diameter
-    self.hardness = hardness
-    self.opacity = opacity
-  }
-}
-
-/// A mask feather operation.
-public struct MaskFeather: Equatable, Sendable {
-
-  /// The input mask node to feather.
-  public var input: MaskNode
-
-  /// The blur radius used to feather alpha.
-  public var radius: Double
-
-  /// Creates a feather operation.
-  public init(
-    input: MaskNode,
-    radius: Double
-  ) {
-    self.input = input
-    self.radius = radius
-  }
-}
-
-/// A mask subtraction operation.
-public struct MaskSubtract: Equatable, Sendable {
-
-  /// The mask to subtract from.
-  public var base: MaskNode
-
-  /// The mask removed from the base alpha.
-  public var removing: MaskNode
-
-  /// Creates a mask subtraction operation.
-  public init(
-    base: MaskNode,
-    removing: MaskNode
-  ) {
-    self.base = base
-    self.removing = removing
   }
 }

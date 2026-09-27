@@ -35,7 +35,7 @@ open Dev/Brightroom.xcodeproj
      `switch`, `for`, optional members, `#available`)
    - Built-in features (`ExposureFeature`, `GaussianBlurFeature`,
      `CropFeature`, `ToneCurveFeature`, `ColorMixerFeature`, ...),
-     `PresetFeature`, `LocalAdjustment` with a `MaskTree`, and
+     `PresetFeature`, `LocalAdjustmentFeature` with a `Mask`, and
      `AnyImageEffect` for content decided by data
    - `FeatureRenderer`, `ExportRenderer`, and
      `VideoRenderer` evaluate any `some Feature` root feature into a

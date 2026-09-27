@@ -99,7 +99,7 @@ enum RenderingFixtures {
   // MARK: Oracles
 
   /// Blends `adjusted` over `base` through `mask` with the raw Core Image
-  /// filter, independent of `LocalAdjustment`.
+  /// filter, independent of `LocalAdjustmentFeature`.
   static func explicitBlend(adjusted: CIImage, base: CIImage, mask: CIImage) -> CIImage {
     adjusted.applyingFilter(
       "CIBlendWithAlphaMask",
@@ -148,48 +148,44 @@ enum RenderingFixtures {
   // MARK: Masks
 
   /// A soft stroke in the lower-left of the entry domain (y-up).
-  static let lowerLeftStroke = BrushMaskStroke(
-    stamps: [
+  static let lowerLeftStroke = BrushMask.Stroke(
+    stampCenters: [
       CGPoint(x: 50, y: 50),
       CGPoint(x: 70, y: 56),
       CGPoint(x: 90, y: 62),
       CGPoint(x: 110, y: 66),
     ],
-    brush: BrushMaskBrush(diameter: 44, hardness: 0.4, opacity: 0.9)
+    brush: BrushMask.Brush(diameter: 44, hardness: 0.4, opacity: 0.9)
   )
 
   /// A hard stroke that crosses `lowerLeftStroke`.
-  static let crossingStroke = BrushMaskStroke(
-    stamps: [
+  static let crossingStroke = BrushMask.Stroke(
+    stampCenters: [
       CGPoint(x: 80, y: 36),
       CGPoint(x: 84, y: 60),
       CGPoint(x: 88, y: 84),
     ],
-    brush: BrushMaskBrush(diameter: 30, hardness: 1, opacity: 1)
+    brush: BrushMask.Brush(diameter: 30, hardness: 1, opacity: 1)
   )
 
   /// A hard stroke in the upper-right of the entry domain.
-  static let upperRightStroke = BrushMaskStroke(
-    stamps: [
+  static let upperRightStroke = BrushMask.Stroke(
+    stampCenters: [
       CGPoint(x: 230, y: 170),
       CGPoint(x: 250, y: 180),
     ],
-    brush: BrushMaskBrush(diameter: 60, hardness: 0.8, opacity: 1)
+    brush: BrushMask.Brush(diameter: 60, hardness: 0.8, opacity: 1)
   )
 
   /// A feathered brush united with a hard brush.
-  static func featheredBrushMaskTree() -> MaskTree {
-    MaskTree(
-      root: .union([
-        .feather(
-          MaskFeather(
-            input: .brush(BrushMask(strokes: [lowerLeftStroke])),
-            radius: 6
-          )
-        ),
-        .brush(BrushMask(strokes: [upperRightStroke])),
-      ])
-    )
+  static func featheredBrushMask() -> Mask {
+    .union([
+      .feathered(
+        .brush(BrushMask(strokes: [lowerLeftStroke])),
+        radius: 6
+      ),
+      .brush(BrushMask(strokes: [upperRightStroke])),
+    ])
   }
 
   // MARK: Color features

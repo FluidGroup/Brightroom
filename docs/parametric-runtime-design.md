@@ -70,14 +70,14 @@ maps the old API to the new one.
   features themselves. An `if #available` branch of equatable image effects is
   erased to `AnyImageEffect`, so a body's type never names an unavailable
   type.
-- `LocalAdjustment<Content: ImageEffect>` applies its content where its
-  `MaskTree` allows. The content cannot contain a domain feature; the compiler
+- `LocalAdjustmentFeature<Content: ImageEffect>` applies its content where
+  its `Mask` allows. The content cannot contain a domain feature; the compiler
   rejects it.
 - `AnyImageEffect` wraps an `ImageEffect & Equatable` value whose type is
   decided at run time. `[AnyImageEffect]` is itself an image effect that
   evaluates in order.
-- The mask tree stays a closed enum (brush, invert, feather, union,
-  intersect, subtract); opening it for generated masks (subject/sky) follows
+- `Mask` stays a closed indirect enum (brush, inverted, feathered, union,
+  intersection, subtraction); opening it for generated masks (subject/sky) follows
   the same protocol pattern later.
 - Every built-in value is `Equatable`, so documents compare with `==` and
   owners (undo history, canvas caches) can drop updates that change nothing.
@@ -100,7 +100,7 @@ and its body's type is
 ```text
 TupleFeature<
   ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 12 optional effects
-  Optional<LocalAdjustment<GaussianBlurFeature>>,
+  Optional<LocalAdjustmentFeature<GaussianBlurFeature>>,
   CropFeature                                    // domain feature: the final crop
 >
 ```
@@ -203,7 +203,7 @@ materialization, and callers own the `CIContext`.
   time. The `FeatureEvaluationContext` then flows down through every `body`.
   `ExportRenderer` and `VideoRenderer` evaluate through
   the same path.
-- `LocalAdjustment` renders its mask tree over its input extent (GPU brush
+- `LocalAdjustmentFeature` renders its mask over its input extent (GPU brush
   stamps and mask combinators through internal Metal kernels), evaluates its
   content, and composites the result through the mask alpha. An empty
   union or intersection throws before the content is evaluated. Content that

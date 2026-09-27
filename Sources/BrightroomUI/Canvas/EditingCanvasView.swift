@@ -883,7 +883,7 @@ extension EditingCanvasView {
     var effects: ImageEditorFeature.Effects
     /// The whole blur mask, strokes included: the crop surface rebuilds on a
     /// stroke commit.
-    var localBlur: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
     init(source: EditingCanvasSource, feature: ImageEditorFeature, crop: CropEditingState) {
       let previewSourceImage = source.editingSourceImage.removingExtentOffset()
@@ -906,15 +906,15 @@ extension EditingCanvasView {
     case viewportBase
 
     /// The blur mask is composited over the global effects.
-    case localBlur(LocalAdjustment<GaussianBlurFeature>)
+    case localBlur(LocalAdjustmentFeature<GaussianBlurFeature>)
 
     /// `.localBlur` when the mask is present, rooted at a brush, and has at
     /// least one stroke. An empty brush changes nothing at export, so the
     /// canvas does not composite it either.
-    init(localBlur: LocalAdjustment<GaussianBlurFeature>?) {
+    init(localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?) {
       guard
         let localBlur,
-        case let .brush(brush) = localBlur.maskTree.root,
+        case let .brush(brush) = localBlur.mask,
         brush.strokes.isEmpty == false
       else {
         self = .viewportBase
@@ -950,7 +950,7 @@ extension EditingCanvasView {
       case .viewportBase:
         return []
       case let .localBlur(layer):
-        let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
+        let sourceRecords = layer.mask.canvasBrushStrokes.map {
           EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: domainHeight)
         }
         guard let geometry else {
@@ -2383,12 +2383,12 @@ extension EditingCanvasView {
   struct CommittedStrokeRecords {
 
     private var source: (
-      localBlur: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
       records: [EditingCanvasStrokeRecord]
     )?
 
     private var output: (
-      localBlur: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
       geometry: EditingCanvasCropOutputGeometry,
       records: [EditingCanvasStrokeRecord]
     )?
@@ -2396,7 +2396,7 @@ extension EditingCanvasView {
     /// Records in the source domain (y-down), for a canvas sized to the
     /// source image.
     mutating func sourceRecords(
-      localBlur: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
       domainHeight: CGFloat
     ) -> [EditingCanvasStrokeRecord] {
       if let source, source.localBlur == localBlur {
@@ -2410,7 +2410,7 @@ extension EditingCanvasView {
 
     /// Records in the crop-output domain of `geometry`, for the tool canvas.
     mutating func outputRecords(
-      localBlur: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
       geometry: EditingCanvasCropOutputGeometry,
       domainHeight: CGFloat
     ) -> [EditingCanvasStrokeRecord] {

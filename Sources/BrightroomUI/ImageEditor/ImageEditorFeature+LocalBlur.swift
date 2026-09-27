@@ -40,7 +40,7 @@ extension ImageEditorFeature {
   ///
   /// When there is no local blur yet, one is created with the default blur
   /// (`defaultLocalBlurContent`, diagonal / 50 of the chain entry)
-  /// and a brush-rooted mask tree. An existing blur keeps the content it was
+  /// and a brush mask. An existing blur keeps the content it was
   /// created with.
   ///
   /// - Parameter stroke: A stroke in BrightroomParametric's working space
@@ -48,51 +48,49 @@ extension ImageEditorFeature {
   ///   resolution: x ∈ [0, W], y ∈ [0, H] for (W, H) =
   ///   `EditingStack.Loaded.imageSize`. The brush diameter is in the same
   ///   pixels.
-  mutating func appendLocalBlurStroke(_ stroke: BrushMaskStroke) {
+  mutating func appendLocalBlurStroke(_ stroke: BrushMask.Stroke) {
     guard localBlur != nil else {
-      localBlur = LocalAdjustment(
-        maskTree: MaskTree(
-          root: .brush(BrushMask(strokes: [stroke]))
-        )
+      localBlur = LocalAdjustmentFeature(
+        mask: .brush(BrushMask(strokes: [stroke]))
       ) {
         Self.defaultLocalBlurContent
       }
       return
     }
-    localBlur?.maskTree.appendCanvasBrushStroke(stroke)
+    localBlur?.mask.appendCanvasBrushStroke(stroke)
   }
 
   /// The local blur's strokes in working space. Empty when there is no local
-  /// blur or its mask tree is not rooted at a brush.
-  var localBlurStrokes: [BrushMaskStroke] {
-    localBlur?.maskTree.canvasBrushStrokes ?? []
+  /// blur or its mask is not a brush mask.
+  var localBlurStrokes: [BrushMask.Stroke] {
+    localBlur?.mask.canvasBrushStrokes ?? []
   }
 }
 
-// MARK: - Brush-rooted MaskTree access
+// MARK: - Brush-rooted Mask access
 
-/// Canvas tooling authors brush-rooted mask trees only. These accessors keep
-/// that assumption in one place. Composite trees (generated masks, future
+/// Canvas tooling authors brush masks only. These accessors keep that
+/// assumption in one place. Composite masks (generated masks, future
 /// refinements) pass through untouched: they render at export, but the canvas
 /// has no strokes to preview for them.
-extension MaskTree {
+extension Mask {
 
-  /// The strokes of a brush-rooted tree; empty for composite trees.
-  var canvasBrushStrokes: [BrushMaskStroke] {
-    guard case let .brush(mask) = root else {
+  /// The strokes of a brush mask; empty for composite masks.
+  var canvasBrushStrokes: [BrushMask.Stroke] {
+    guard case let .brush(mask) = self else {
       return []
     }
     return mask.strokes
   }
 
-  /// Appends a stroke to a brush-rooted tree. Composite trees are not
-  /// editable by the canvas; appending to one is a programmer error.
-  mutating func appendCanvasBrushStroke(_ stroke: BrushMaskStroke) {
-    guard case var .brush(mask) = root else {
-      assertionFailure("The canvas can only append strokes to a brush-rooted mask tree.")
+  /// Appends a stroke to a brush mask. Composite masks are not editable by
+  /// the canvas; appending to one is a programmer error.
+  mutating func appendCanvasBrushStroke(_ stroke: BrushMask.Stroke) {
+    guard case var .brush(mask) = self else {
+      assertionFailure("The canvas can only append strokes to a brush mask.")
       return
     }
     mask.strokes.append(stroke)
-    root = .brush(mask)
+    self = .brush(mask)
   }
 }

@@ -40,10 +40,10 @@ struct PreviewExportVisualEvidenceTests {
     document.effects.exposure = ExposureFeature(value: 0.35)
     // The band is centered vertically, so its working-space stamps equal the
     // display ones.
-    document.localBlur = LocalAdjustment(
-      maskTree: MaskTree(root: .brush(BrushMask(
+    document.localBlur = LocalAdjustmentFeature(
+      mask: .brush(BrushMask(
         strokes: [makeHorizontalBandStroke(imageSize: imageSize)]
-      )))
+      ))
     ) {
       GaussianBlurFeature(value: 60)
     }
@@ -86,14 +86,14 @@ struct PreviewExportVisualEvidenceTests {
       .cgImage
   }
 
-  private func makeHorizontalBandStroke(imageSize: CGSize) -> BrushMaskStroke {
+  private func makeHorizontalBandStroke(imageSize: CGSize) -> BrushMask.Stroke {
     let y = imageSize.height * 0.5
     let diameter = imageSize.height * 0.28
     let stamps = stride(from: imageSize.width * 0.05, through: imageSize.width * 0.95, by: diameter * 0.25)
       .map { CGPoint(x: $0, y: y) }
-    return BrushMaskStroke(
-      stamps: stamps,
-      brush: BrushMaskBrush(diameter: Double(diameter), hardness: 0.6, opacity: 1)
+    return BrushMask.Stroke(
+      stampCenters: stamps,
+      brush: BrushMask.Brush(diameter: Double(diameter), hardness: 0.6, opacity: 1)
     )
   }
 

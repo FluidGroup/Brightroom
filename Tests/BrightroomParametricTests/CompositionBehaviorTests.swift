@@ -148,15 +148,15 @@ struct CompositionBehaviorTests {
 
   @Test func `a composite image effect works inside a local adjustment`() throws {
     let source = try Fixtures.makeSource()
-    let maskTree = MaskTree(root: .brush(BrushMask(strokes: [Self.hardStroke])))
+    let mask = Mask.brush(BrushMask(strokes: [Self.hardStroke]))
     let look = Look()
 
     struct Document: Feature {
-      var maskTree: MaskTree
+      var mask: Mask
       var look: Look
 
       var body: some Feature {
-        LocalAdjustment(maskTree: maskTree) {
+        LocalAdjustmentFeature(mask: mask) {
           look
         }
       }
@@ -164,7 +164,7 @@ struct CompositionBehaviorTests {
 
     let composed = try Fixtures.renderer.makeImage(
       from: source,
-      feature: Document(maskTree: maskTree, look: look)
+      feature: Document(mask: mask, look: look)
     )
 
     // The look's leaves, blended through the rendered mask with the raw
@@ -179,7 +179,7 @@ struct CompositionBehaviorTests {
     let expected = Fixtures.explicitBlend(
       adjusted: adjusted,
       base: normalized,
-      mask: try Fixtures.renderer.makeMaskImage(for: maskTree, extent: Fixtures.entryExtent)
+      mask: try Fixtures.renderer.makeMaskImage(for: mask, extent: Fixtures.entryExtent)
     )
 
     #expect(composed.extent == Fixtures.entryExtent)
@@ -201,9 +201,9 @@ struct CompositionBehaviorTests {
     // A local adjustment with composite content keeps value semantics.
     var changedLook = look
     changedLook.exposure.value = 0
-    let adjustment = LocalAdjustment(maskTree: maskTree) { look }
-    let sameAdjustment = LocalAdjustment(maskTree: maskTree) { look }
-    let changedAdjustment = LocalAdjustment(maskTree: maskTree) { changedLook }
+    let adjustment = LocalAdjustmentFeature(mask: mask) { look }
+    let sameAdjustment = LocalAdjustmentFeature(mask: mask) { look }
+    let changedAdjustment = LocalAdjustmentFeature(mask: mask) { changedLook }
     #expect(adjustment == sameAdjustment)
     #expect(adjustment != changedAdjustment)
   }
@@ -418,17 +418,17 @@ struct CompositionBehaviorTests {
 
   @Test func `an empty mask composite throws at any depth`() throws {
     let source = try Fixtures.makeSource()
-    let brush = MaskNode.brush(BrushMask(strokes: [Self.hardStroke]))
-    let trees = [
-      MaskTree(root: .subtract(MaskSubtract(base: brush, removing: .union([])))),
-      MaskTree(root: .union([brush, .feather(MaskFeather(input: .intersect([]), radius: 4))])),
+    let brush = Mask.brush(BrushMask(strokes: [Self.hardStroke]))
+    let masks: [Mask] = [
+      .subtraction(brush, removing: .union([])),
+      .union([brush, .feathered(.intersection([]), radius: 4)]),
     ]
 
-    for maskTree in trees {
+    for mask in masks {
       let error = #expect(throws: FeatureEvaluationError.self) {
         try Fixtures.renderer.makeImage(
           from: source,
-          feature: LocalAdjustment(maskTree: maskTree) {
+          feature: LocalAdjustmentFeature(mask: mask) {
             GaussianBlurFeature(value: 40)
           }
         )
@@ -437,7 +437,7 @@ struct CompositionBehaviorTests {
 
       // Mask inspection reports the same error.
       #expect(throws: FeatureEvaluationError.emptyMaskComposite) {
-        try Fixtures.renderer.makeMaskImage(for: maskTree, extent: Fixtures.entryExtent)
+        try Fixtures.renderer.makeMaskImage(for: mask, extent: Fixtures.entryExtent)
       }
     }
   }
@@ -511,7 +511,7 @@ struct CompositionBehaviorTests {
       var cube: ColorCubeFeature
 
       var body: some Feature {
-        LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
+        LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: []))) {
           Composite(cube: cube)
         }
       }
@@ -558,21 +558,21 @@ struct CompositionBehaviorTests {
   @Test func `a local adjustment with empty content returns its input`() throws {
     let input = try Fixtures.normalizedSource()
     let context = FeatureEvaluationContext()
-    let maskTree = MaskTree(root: .brush(BrushMask(strokes: [Self.hardStroke])))
+    let mask = Mask.brush(BrushMask(strokes: [Self.hardStroke]))
 
-    let empty = LocalAdjustment(maskTree: maskTree) {}
+    let empty = LocalAdjustmentFeature(mask: mask) {}
     #expect(try empty.apply(to: input, context: context) === input)
 
-    let emptyArray = LocalAdjustment(maskTree: maskTree) { [AnyImageEffect]() }
+    let emptyArray = LocalAdjustmentFeature(mask: mask) { [AnyImageEffect]() }
     #expect(try emptyArray.apply(to: input, context: context) === input)
 
     let absent: ExposureFeature? = nil
-    let absentMember = LocalAdjustment(maskTree: maskTree) { absent }
+    let absentMember = LocalAdjustmentFeature(mask: mask) { absent }
     #expect(try absentMember.apply(to: input, context: context) === input)
 
     // The mask still renders first, so an empty mask composite throws even
     // when the content applies nothing.
-    let invalidMask = LocalAdjustment(maskTree: MaskTree(root: .union([]))) {}
+    let invalidMask = LocalAdjustmentFeature(mask: .union([])) {}
     #expect(throws: FeatureEvaluationError.emptyMaskComposite) {
       try invalidMask.apply(to: input, context: context)
     }
@@ -584,7 +584,7 @@ struct CompositionBehaviorTests {
       dimension: 4,
       cubeData: Data(count: 10)
     )
-    let invalidBoth = LocalAdjustment(maskTree: MaskTree(root: .union([]))) { invalidCube }
+    let invalidBoth = LocalAdjustmentFeature(mask: .union([])) { invalidCube }
     let error = #expect(throws: FeatureEvaluationError.self) {
       try invalidBoth.apply(to: input, context: context)
     }
@@ -594,13 +594,13 @@ struct CompositionBehaviorTests {
   // MARK: - Fixtures
 
   /// A hard stroke in the lower-left of the entry domain (y-up).
-  private static let hardStroke = BrushMaskStroke(
-    stamps: [
+  private static let hardStroke = BrushMask.Stroke(
+    stampCenters: [
       CGPoint(x: 60, y: 50),
       CGPoint(x: 80, y: 55),
       CGPoint(x: 100, y: 60),
     ],
-    brush: BrushMaskBrush(diameter: 50, hardness: 1, opacity: 1)
+    brush: BrushMask.Brush(diameter: 50, hardness: 1, opacity: 1)
   )
 }
 
@@ -705,7 +705,7 @@ private struct ContextProbeDocument: Feature {
     EvaluationProbe(label: "entry", log: log)
     crop
     EvaluationProbe(label: "after crop", log: log)
-    LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
+    LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: []))) {
       EvaluationProbe(label: "inside local adjustment", log: log)
     }
     NestedProbes(log: log)

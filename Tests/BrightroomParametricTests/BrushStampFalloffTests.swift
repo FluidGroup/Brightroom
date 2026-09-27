@@ -107,20 +107,18 @@ struct BrushStampFalloffTests {
 
   private static func renderSingleStamp(hardness: Double, opacity: Double) throws -> CGImage {
     let extent = CGRect(x: 0, y: 0, width: extentSize, height: extentSize)
-    let maskTree = MaskTree(
-      root: .brush(
-        BrushMask(
-          strokes: [
-            BrushMaskStroke(
-              stamps: [center],
-              brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: opacity)
-            )
-          ]
-        )
+    let mask = Mask.brush(
+      BrushMask(
+        strokes: [
+          BrushMask.Stroke(
+            stampCenters: [center],
+            brush: BrushMask.Brush(diameter: diameter, hardness: hardness, opacity: opacity)
+          )
+        ]
       )
     )
 
-    let ciImage = try FeatureRenderer().makeMaskImage(for: maskTree, extent: extent)
+    let ciImage = try FeatureRenderer().makeMaskImage(for: mask, extent: extent)
     return try #require(context.createCGImage(ciImage, from: extent))
   }
 

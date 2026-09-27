@@ -179,7 +179,7 @@ func makeAdjustedImage(from source: CIImage) throws -> CIImage {
 The returned `CIImage` is a lazy recipe. Use a `CIContext` to materialize it, or use `ExportRenderer` to render a feature to an image or file.
 
 - Conform to `ImageEffect` (and `Equatable`) to add a custom effect.
-- Put effects in a `LocalAdjustment` with a `MaskTree` to apply them selectively.
+- Put effects in a `LocalAdjustmentFeature` with a `Mask` to apply them selectively.
 - Use optional members and `if` to switch features on and off; a `nil` member contributes nothing.
 - Use `AnyImageEffect` for lists of effects decided by data, such as a preset catalog.
 - Brightroom does not define a storage format for edits. To save them, convert features to your own `Codable` model and rebuild them through the public initializers; see [Saving parametric edits](docs/parametric-persistence.md).

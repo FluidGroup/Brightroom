@@ -261,30 +261,26 @@ struct FeatureRenderingTests {
   @Test func localAdjustmentsAndGlobalEffectEvaluateInOrder() throws {
     struct Document: Feature {
       var body: some Feature {
-        LocalAdjustment(
-          maskTree: MaskTree(
-            root: .brush(
-              BrushMask(strokes: [
-                BrushMaskStroke(
-                  stamps: [CGPoint(x: 10, y: 10)],
-                  brush: BrushMaskBrush(diameter: 16, hardness: 1, opacity: 1)
-                ),
-              ])
-            )
+        LocalAdjustmentFeature(
+          mask: .brush(
+            BrushMask(strokes: [
+              BrushMask.Stroke(
+                stampCenters: [CGPoint(x: 10, y: 10)],
+                brush: BrushMask.Brush(diameter: 16, hardness: 1, opacity: 1)
+              ),
+            ])
           )
         ) {
           ExposureFeature(value: 1)
         }
-        LocalAdjustment(
-          maskTree: MaskTree(
-            root: .brush(
-              BrushMask(strokes: [
-                BrushMaskStroke(
-                  stamps: [CGPoint(x: 20, y: 10)],
-                  brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-                ),
-              ])
-            )
+        LocalAdjustmentFeature(
+          mask: .brush(
+            BrushMask(strokes: [
+              BrushMask.Stroke(
+                stampCenters: [CGPoint(x: 20, y: 10)],
+                brush: BrushMask.Brush(diameter: 18, hardness: 1, opacity: 1)
+              ),
+            ])
           )
         ) {
           GaussianBlurFeature(radius: 5)
@@ -312,17 +308,15 @@ struct FeatureRenderingTests {
   }
 
   @Test func invertedMaskAppliesOutsideBrush() throws {
-    let document = LocalAdjustment(
-      maskTree: MaskTree(
-        root: .invert(
-          .brush(
-            BrushMask(strokes: [
-              BrushMaskStroke(
-                stamps: [CGPoint(x: 10, y: 10)],
-                brush: BrushMaskBrush(diameter: 12, hardness: 1, opacity: 1)
-              ),
-            ])
-          )
+    let document = LocalAdjustmentFeature(
+      mask: .inverted(
+        .brush(
+          BrushMask(strokes: [
+            BrushMask.Stroke(
+              stampCenters: [CGPoint(x: 10, y: 10)],
+              brush: BrushMask.Brush(diameter: 12, hardness: 1, opacity: 1)
+            ),
+          ])
         )
       )
     ) {

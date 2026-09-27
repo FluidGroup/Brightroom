@@ -200,7 +200,7 @@ struct ImageEditorFeatureEditingTests {
     var document = EditingDocument(image: makeImage())
     ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.feature.effects)
     document.feature.appendLocalBlurStroke(
-      BrushMaskStroke(stamps: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
+      BrushMask.Stroke(stampCenters: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
     )
     var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 0, y: 0, width: 20, height: 20))

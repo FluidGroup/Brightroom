@@ -32,7 +32,7 @@ extension CropFeature {
 /// canonical arrangement was the same `[effects, localAdjustments…, crop]`.
 struct RendererTestDocument: Feature, Equatable {
   var effects: [AnyImageEffect] = []
-  var localAdjustments: [LocalAdjustment<[AnyImageEffect]>] = []
+  var localAdjustments: [LocalAdjustmentFeature<[AnyImageEffect]>] = []
   var crop: CropFeature
 
   var body: some Feature {
@@ -63,9 +63,9 @@ struct SequentialFeatures: Feature {
   }
 }
 
-extension MaskTree {
+extension Mask {
 
-  /// A brush tree whose stamps are given in display coordinates (top-left
+  /// A brush mask whose stamps are given in display coordinates (top-left
   /// origin, y-down) of a domain `domainHeight` tall.
   ///
   /// The stamps are stored in BrightroomParametric's working space through the
@@ -78,16 +78,14 @@ extension MaskTree {
     hardness: Double = 1,
     opacity: Double = 1,
     domainHeight: CGFloat
-  ) -> MaskTree {
+  ) -> Mask {
     let record = EditingCanvasStrokeRecord(
       stamps: displayStamps,
       brush: .init(size: diameter, hardness: hardness, opacity: opacity, spacing: 0.05)
     )
-    return MaskTree(
-      root: .brush(
-        BrushMask(
-          strokes: [record.workingSpaceStroke(domainHeight: domainHeight)]
-        )
+    return .brush(
+      BrushMask(
+        strokes: [record.workingSpaceStroke(domainHeight: domainHeight)]
       )
     )
   }

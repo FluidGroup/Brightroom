@@ -66,14 +66,14 @@ public struct FeatureRenderer: Sendable {
     return try feature.apply(to: image, context: context)
   }
 
-  /// Renders a mask tree to an alpha image covering `extent`.
+  /// Renders a mask to an alpha image covering `extent`.
   ///
   /// Brush stamps are Core Image working-space coordinates (bottom-left
   /// origin, y-up) of the domain the mask is authored in; pass that domain's
-  /// extent. This is the evaluator `LocalAdjustment` composites through, so
+  /// extent. This is the evaluator `LocalAdjustmentFeature` composites through, so
   /// the result is exactly the alpha a local adjustment uses. Callers holding
   /// masks authored in a y-down display space flip at this boundary.
-  public func makeMaskImage(for maskTree: MaskTree, extent: CGRect) throws -> CIImage {
-    try MaskTreeRenderer().render(maskTree, extent: extent)
+  public func makeMaskImage(for mask: Mask, extent: CGRect) throws -> CIImage {
+    try MaskTreeRenderer().render(mask, extent: extent)
   }
 }

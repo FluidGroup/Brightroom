@@ -16,7 +16,7 @@ import Foundation
 /// ```swift
 /// struct PhotoEdit: Feature, Equatable {
 ///   var exposure = ExposureFeature(value: 0)
-///   var localBlur: LocalAdjustment<GaussianBlurFeature>? = nil
+///   var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = nil
 ///   var crop: CropFeature
 ///
 ///   var body: some Feature {
@@ -71,7 +71,7 @@ public protocol Feature: Sendable {
 /// A feature that preserves the extent and coordinate domain of its input.
 ///
 /// Places that only accept image effects, such as the content of
-/// `LocalAdjustment` or a `some ImageEffect` body, reject domain features
+/// `LocalAdjustmentFeature` or a `some ImageEffect` body, reject domain features
 /// like `CropFeature` at compile time. A composite is an image effect only
 /// when its body is one.
 public protocol ImageEffect: Feature where Body: ImageEffect {}

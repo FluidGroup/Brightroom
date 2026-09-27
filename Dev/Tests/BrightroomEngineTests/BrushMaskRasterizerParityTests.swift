@@ -93,20 +93,18 @@ struct BrushMaskRasterizerParityTests {
 
     // Path B — parametric Core Image CIKernel rasterizer (export/preview path).
     let maskB = try FeatureRenderer().makeMaskImage(
-      for: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: stampCenters,
-                brush: BrushMaskBrush(
-                  diameter: Double(2 * radius),
-                  hardness: Double(hardness),
-                  opacity: Double(opacity)
-                )
+      for: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: stampCenters,
+              brush: BrushMask.Brush(
+                diameter: Double(2 * radius),
+                hardness: Double(hardness),
+                opacity: Double(opacity)
               )
-            ]
-          )
+            )
+          ]
         )
       ),
       extent: extent
