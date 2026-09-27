@@ -853,7 +853,7 @@ private struct LocalBlurControl: View {
         }
         .accessibilityHidden(true)
 
-      BrightroomSteppedSlider(
+      SteppedSlider(
         value: valueBinding,
         range: BrushSizeMetrics.sizeRange,
         stepCount: BrushSizeMetrics.stepCount,
@@ -1120,7 +1120,7 @@ private struct AdjustmentsControl: View {
       }
       .frame(height: 56)
 
-      BrightroomSteppedSlider(
+      SteppedSlider(
         value: valueBinding,
         range: selection.sliderRange,
         stepCount: Int(
@@ -1259,7 +1259,7 @@ private struct StraightenSlider: View {
   let onEditingEnded: (Double) -> Void
 
   var body: some View {
-    BrightroomSteppedSlider(
+    SteppedSlider(
       value: valueBinding,
       range: -45...45,
       stepCount: 90,
@@ -1323,9 +1323,9 @@ private enum StraightenSliderMetrics {
   static let neutralDeadZoneDegrees: Double = 0.5
 }
 
-extension BrightroomSteppedSliderStyle {
+extension SteppedSliderStyle {
   fileprivate static let imageEditorRotationSlider =
-    BrightroomSteppedSliderStyle(
+    SteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
       tickHeight: 10,
@@ -1335,7 +1335,7 @@ extension BrightroomSteppedSliderStyle {
     )
 
   fileprivate static let imageEditorAdjustmentSlider =
-    BrightroomSteppedSliderStyle(
+    SteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
       tickHeight: 10,
@@ -1345,7 +1345,7 @@ extension BrightroomSteppedSliderStyle {
     )
 
   fileprivate static let imageEditorBrushSizeSlider =
-    BrightroomSteppedSliderStyle(
+    SteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
       tickHeight: 10,
@@ -1355,7 +1355,7 @@ extension BrightroomSteppedSliderStyle {
     )
 }
 
-extension BrightroomSteppedSliderTickContext {
+extension SteppedSliderTickContext {
   fileprivate var isZero: Bool {
     abs(value) < 0.000_001
   }

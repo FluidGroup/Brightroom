@@ -836,6 +836,8 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   configuration is its `smoothing` member: `.off`, `.bezier(strength:)`,
   `.catmullRom(strength:)`, or `.movingAverage(strength:)` (the default is
   `.bezier(strength: 0.85)`).
+- `CropEditingState.updateCropExtent(toFitBoundingBox:respectingApectRatio:)`
+  is spelled `respectingAspectRatio:`.
 
 Before:
 

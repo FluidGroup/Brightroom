@@ -304,8 +304,6 @@ final class EditingCanvasView: UIView {
     feature: ImageEditorFeature,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
-    _pixeleditor_ensureMainThread()
-
     self.source = source
     self.feature = feature
     self.contentInset = contentInset
@@ -621,8 +619,6 @@ final class EditingCanvasView: UIView {
   }
 
   func resetCrop() {
-    _pixeleditor_ensureMainThread()
-
     debounce.cancel()
     scrollViewSettleDebounce.cancel()
     scrollViewAdjustmentSession = nil
@@ -639,8 +635,6 @@ final class EditingCanvasView: UIView {
   }
 
   func setQuarterTurn(_ rotation: QuarterTurn) {
-    _pixeleditor_ensureMainThread()
-
     guard var crop = state.proposedCrop, crop.rotation != rotation else {
       return
     }
@@ -655,8 +649,6 @@ final class EditingCanvasView: UIView {
 
   /// Turns the output a further quarter counterclockwise on screen.
   func rotateCounterclockwise() {
-    _pixeleditor_ensureMainThread()
-
     guard let crop = state.proposedCrop else {
       return
     }
@@ -689,8 +681,6 @@ final class EditingCanvasView: UIView {
   }
 
   func setCrop(_ crop: CropEditingState) {
-    _pixeleditor_ensureMainThread()
-
     var crop = crop
     if let ratio = state.preferredAspectRatio {
       crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
@@ -699,8 +689,6 @@ final class EditingCanvasView: UIView {
   }
 
   func setLockedAspectRatio(_ ratio: PixelAspectRatio?) {
-    _pixeleditor_ensureMainThread()
-
     guard state.preferredAspectRatio != ratio else {
       return
     }
@@ -730,8 +718,6 @@ final class EditingCanvasView: UIView {
    - view: In case of no needs to display overlay, pass nil.
    */
   func setCropInsideOverlay(_ view: CropInsideOverlayBase?) {
-    _pixeleditor_ensureMainThread()
-
     guideView.setCropInsideOverlay(view)
   }
 
@@ -755,8 +741,6 @@ final class EditingCanvasView: UIView {
    - view: In case of no needs to display overlay, pass nil.
    */
   func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
-    _pixeleditor_ensureMainThread()
-
     cropOutsideOverlay?.removeFromSuperview()
 
     guard let view = view else {
@@ -1462,7 +1446,7 @@ extension EditingCanvasView {
     debounce.on { /* for debounce */  }
   }
 
-  private func makeScrollViewInset(aggregatedRotaion: CGFloat) -> UIEdgeInsets {
+  private func makeScrollViewInset(aggregatedRotation: CGFloat) -> UIEdgeInsets {
 
     let o: CGPoint = {
 
@@ -1497,7 +1481,7 @@ extension EditingCanvasView {
       .convert(
         guideView.bounds.applying(
           CGAffineTransform(translationX: -anchorOffset.x, y: -anchorOffset.y)
-            .concatenating(.init(rotationAngle: -aggregatedRotaion))
+            .concatenating(.init(rotationAngle: -aggregatedRotation))
             .concatenating(.init(translationX: anchorOffset.x, y: anchorOffset.y))
         ),
         to: surfaceHost.backdropView
@@ -1517,7 +1501,7 @@ extension EditingCanvasView {
 
   private func updateScrollViewInset(crop: CropEditingState) {
     cropSurface.scrollView.contentInset = makeScrollViewInset(
-      aggregatedRotaion: crop.aggregatedRotation.radians
+      aggregatedRotation: crop.aggregatedRotation.radians
     )
   }
 

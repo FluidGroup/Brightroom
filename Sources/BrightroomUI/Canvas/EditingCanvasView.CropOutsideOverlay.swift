@@ -11,7 +11,7 @@ import SwiftUI
 
 extension EditingCanvasView {
 
-  class CropOutsideOverlayBase: _PixelEditorCodeBasedView {
+  class CropOutsideOverlayBase: CodeBasedView {
 
     func didBeginInteraction(_ interaction: CropInteraction) {
       

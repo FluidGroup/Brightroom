@@ -166,15 +166,15 @@ public struct CropEditingState: Equatable, Sendable {
   /// to the image origin. The optional aspect ratio describes the final output.
   public mutating func updateCropExtent(
     toFitBoundingBox boundingBox: CGRect,
-    respectingApectRatio: PixelAspectRatio?
+    respectingAspectRatio: PixelAspectRatio?
   ) {
-    self._usedAspectRatio = respectingApectRatio
+    self._usedAspectRatio = respectingAspectRatio
     self.cropExtent = CropGeometry.cropRect(
       toFitBoundingBox: boundingBox,
       within: cropExtent,
       in: imageSize,
       straightenRadians: adjustmentAngle.radians,
-      respectingAspectRatio: respectingApectRatio.map(aspectRatioBeforeOutputRotation)
+      respectingAspectRatio: respectingAspectRatio.map(aspectRatioBeforeOutputRotation)
     )
   }
 

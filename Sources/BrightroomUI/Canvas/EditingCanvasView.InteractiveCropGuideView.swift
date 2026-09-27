@@ -24,7 +24,7 @@ import BrightroomEngine
 
 extension EditingCanvasView {
   
-  private final class TapExpandedView: _PixelEditorCodeBasedView {
+  private final class TapExpandedView: CodeBasedView {
     
     let horizontal: CGFloat
     let vertical: CGFloat
@@ -40,7 +40,7 @@ extension EditingCanvasView {
     }
   }
   
-  final class InteractiveCropGuideView: _PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
+  final class InteractiveCropGuideView: CodeBasedView, UIGestureRecognizerDelegate {
 
     var willChange: () -> Void = {}
     var updating: () -> Void = {}
@@ -970,7 +970,7 @@ extension EditingCanvasView {
 
 }
 
-private final class MaskView: _PixelEditorCodeBasedView {
+private final class MaskView: CodeBasedView {
   private let topView = UIView()
   private let rightView = UIView()
   private let leftView = UIView()

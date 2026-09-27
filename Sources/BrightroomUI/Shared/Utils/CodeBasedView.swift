@@ -9,9 +9,9 @@
 import UIKit
 
 /**
- A view that can be initializde only from code. (No supports to init from Nib)
+ A view that can only be created from code, not from a nib.
  */
-class _PixelEditorCodeBasedView : UIView {
+class CodeBasedView : UIView {
   
   override init(frame: CGRect) {
     super.init(frame: frame)

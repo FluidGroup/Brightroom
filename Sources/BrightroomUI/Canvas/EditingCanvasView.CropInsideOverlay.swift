@@ -11,7 +11,7 @@ import UIKit
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/
 extension EditingCanvasView {
-  final class CropOverlayHandlesView: _PixelEditorCodeBasedView {
+  final class CropOverlayHandlesView: CodeBasedView {
 
     let edgeShapeLayer = UIView()
 
@@ -112,7 +112,7 @@ extension EditingCanvasView {
     }
   }
 
-  class CropInsideOverlayBase: _PixelEditorCodeBasedView {
+  class CropInsideOverlayBase: CodeBasedView {
 
     init() {
       super.init(frame: .zero)
@@ -181,7 +181,7 @@ extension EditingCanvasView {
 
   }
 
-  final class RuleOfThirdsView: _PixelEditorCodeBasedView {
+  final class RuleOfThirdsView: CodeBasedView {
 
     private let verticalLine1 = UIView()
     private let verticalLine2 = UIView()

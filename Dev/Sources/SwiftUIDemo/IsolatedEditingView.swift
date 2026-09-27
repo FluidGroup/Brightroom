@@ -3,7 +3,7 @@ import BrightroomUI
 import SwiftUI
 import StateGraph
 
-struct IsolatedEditinView: View {
+struct IsolatedEditingView: View {
   @State private var store = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Mocks.imageHorizontal())
   )

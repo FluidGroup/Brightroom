@@ -60,7 +60,7 @@ struct ContentView: View {
 
         Form {
 
-          NavigationLink("Isolated", destination: IsolatedEditinView())
+          NavigationLink("Isolated", destination: IsolatedEditingView())
 
           NavigationLink("Document Editor") {
             DocumentEditorDemoView()

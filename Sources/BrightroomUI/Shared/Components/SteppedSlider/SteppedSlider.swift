@@ -22,14 +22,14 @@
 import SwiftUI
 import UIKit
 
-struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable {
+struct SteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable {
 
   @Environment(\.isEnabled) private var isEnabled
   @Binding var value: Double
 
   let range: ClosedRange<Double>
   let stepCount: Int
-  let style: BrightroomSteppedSliderStyle
+  let style: SteppedSliderStyle
   let resetValue: Double?
   /// Whether user-driven editing settles on the nearest visual tick.
   let snapsToTicksOnEditingEnd: Bool
@@ -38,22 +38,22 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
   let onHaptic: () -> Void
   /// Called with the settled value after user-driven slider editing finishes.
   let onEditingEnded: (Double) -> Void
-  let topMarker: (BrightroomSteppedSliderTickContext) -> TopMarker
-  let tick: (BrightroomSteppedSliderTickContext) -> Tick
+  let topMarker: (SteppedSliderTickContext) -> TopMarker
+  let tick: (SteppedSliderTickContext) -> Tick
 
   init(
     value: Binding<Double>,
     range: ClosedRange<Double>,
     stepCount: Int,
-    style: BrightroomSteppedSliderStyle,
+    style: SteppedSliderStyle,
     resetValue: Double? = nil,
     snapsToTicksOnEditingEnd: Bool = true,
     transform: @escaping (Double) -> Double,
     hapticIdentity: @escaping (Double) -> AnyHashable?,
     onHaptic: @escaping () -> Void,
     onEditingEnded: @escaping (Double) -> Void = { _ in },
-    @ViewBuilder topMarker: @escaping (BrightroomSteppedSliderTickContext) -> TopMarker,
-    @ViewBuilder tick: @escaping (BrightroomSteppedSliderTickContext) -> Tick
+    @ViewBuilder topMarker: @escaping (SteppedSliderTickContext) -> TopMarker,
+    @ViewBuilder tick: @escaping (SteppedSliderTickContext) -> Tick
   ) {
     self._value = value
     self.range = range
@@ -69,8 +69,8 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     self.tick = tick
   }
 
-  func makeUIView(context: Context) -> BrightroomSteppedSliderControl<TopMarker, Tick> {
-    let uiView = BrightroomSteppedSliderControl(
+  func makeUIView(context: Context) -> SteppedSliderControl<TopMarker, Tick> {
+    let uiView = SteppedSliderControl(
       configuration: configuration,
       value: value
     )
@@ -90,7 +90,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     return uiView
   }
 
-  func updateUIView(_ uiView: BrightroomSteppedSliderControl<TopMarker, Tick>, context: Context) {
+  func updateUIView(_ uiView: SteppedSliderControl<TopMarker, Tick>, context: Context) {
     uiView.onValueChanged = { newValue in
       Task { @MainActor in
         self.value = newValue
@@ -109,7 +109,7 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
     )
   }
 
-  private var configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick> {
+  private var configuration: SteppedSliderConfiguration<TopMarker, Tick> {
     .init(
       range: range,
       stepCount: stepCount,
@@ -125,19 +125,19 @@ struct BrightroomSteppedSlider<TopMarker: View, Tick: View>: UIViewRepresentable
   }
 }
 
-struct BrightroomSteppedSliderConfiguration<TopMarker: View, Tick: View> {
+struct SteppedSliderConfiguration<TopMarker: View, Tick: View> {
 
   let range: ClosedRange<Double>
   let stepCount: Int
-  let style: BrightroomSteppedSliderStyle
+  let style: SteppedSliderStyle
   let resetValue: Double?
   /// Whether user-driven editing settles on the nearest visual tick.
   let snapsToTicksOnEditingEnd: Bool
   let transform: (Double) -> Double
   let hapticIdentity: (Double) -> AnyHashable?
   let onHaptic: () -> Void
-  let topMarker: (BrightroomSteppedSliderTickContext) -> TopMarker
-  let tick: (BrightroomSteppedSliderTickContext) -> Tick
+  let topMarker: (SteppedSliderTickContext) -> TopMarker
+  let tick: (SteppedSliderTickContext) -> Tick
 
   var normalizedStepCount: Int {
     max(0, stepCount)
@@ -151,7 +151,7 @@ struct BrightroomSteppedSliderConfiguration<TopMarker: View, Tick: View> {
     style.contentHeight
   }
 
-  func tickContext(for index: Int) -> BrightroomSteppedSliderTickContext {
+  func tickContext(for index: Int) -> SteppedSliderTickContext {
     .init(
       index: index,
       value: rawValue(for: index),
@@ -190,27 +190,27 @@ struct BrightroomSteppedSliderConfiguration<TopMarker: View, Tick: View> {
   }
 }
 
-private final class BrightroomSteppedSliderRenderProxy: ObservableObject {
+private final class SteppedSliderRenderProxy: ObservableObject {
   @Published var viewportWidth: CGFloat = 0
   @Published var contentOffsetX: CGFloat = 0
 }
 
-private struct BrightroomSteppedSliderLayoutGeometry: Equatable {
+private struct SteppedSliderLayoutGeometry: Equatable {
   let boundsWidth: CGFloat
   let contentWidth: CGFloat
   let horizontalContentInset: CGFloat
 }
 
-final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIControl, UIScrollViewDelegate {
+final class SteppedSliderControl<TopMarker: View, Tick: View>: UIControl, UIScrollViewDelegate {
 
   var onValueChanged: (Double) -> Void = { _ in }
   var onEditingEnded: (Double) -> Void = { _ in }
 
-  private var configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick>
-  private let proxy = BrightroomSteppedSliderRenderProxy()
+  private var configuration: SteppedSliderConfiguration<TopMarker, Tick>
+  private let proxy = SteppedSliderRenderProxy()
   private let scrollView = UIScrollView()
   private let contentView = UIView()
-  private let hostingController: UIHostingController<BrightroomSteppedSliderTrackView<TopMarker, Tick>>
+  private let hostingController: UIHostingController<SteppedSliderTrackView<TopMarker, Tick>>
   private let maskGradientLayer: CAGradientLayer = {
     let gradientLayer = CAGradientLayer()
     gradientLayer.colors = [
@@ -229,17 +229,17 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
   private var lastHapticIdentity: AnyHashable?
   private var isAnimatingUserSnap = false
   private var isAnimatingProgrammaticScroll = false
-  private var lastLayoutGeometry: BrightroomSteppedSliderLayoutGeometry?
+  private var lastLayoutGeometry: SteppedSliderLayoutGeometry?
   private var hasLaidOut = false
 
   init(
-    configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick>,
+    configuration: SteppedSliderConfiguration<TopMarker, Tick>,
     value: Double
   ) {
     self.configuration = configuration
     self.value = value.clamped(to: configuration.range)
     self.hostingController = UIHostingController(
-      rootView: BrightroomSteppedSliderTrackView(
+      rootView: SteppedSliderTrackView(
         configuration: configuration,
         proxy: proxy
       )
@@ -326,7 +326,7 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
       bottom: 0,
       right: horizontalContentInset
     )
-    let layoutGeometry = BrightroomSteppedSliderLayoutGeometry(
+    let layoutGeometry = SteppedSliderLayoutGeometry(
       boundsWidth: bounds.width,
       contentWidth: contentSize.width,
       horizontalContentInset: contentInset.left
@@ -366,11 +366,11 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
   }
 
   func update(
-    configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick>,
+    configuration: SteppedSliderConfiguration<TopMarker, Tick>,
     value: Double
   ) {
     self.configuration = configuration
-    hostingController.rootView = BrightroomSteppedSliderTrackView(
+    hostingController.rootView = SteppedSliderTrackView(
       configuration: configuration,
       proxy: proxy
     )
@@ -630,17 +630,17 @@ final class BrightroomSteppedSliderControl<TopMarker: View, Tick: View>: UIContr
   }
 }
 
-private struct BrightroomSteppedSliderTrackView<TopMarker: View, Tick: View>: View {
+private struct SteppedSliderTrackView<TopMarker: View, Tick: View>: View {
 
-  let configuration: BrightroomSteppedSliderConfiguration<TopMarker, Tick>
-  @ObservedObject var proxy: BrightroomSteppedSliderRenderProxy
+  let configuration: SteppedSliderConfiguration<TopMarker, Tick>
+  @ObservedObject var proxy: SteppedSliderRenderProxy
 
   var body: some View {
     HStack(spacing: configuration.style.tickSpacing) {
       ForEach(0...configuration.normalizedStepCount, id: \.self) { index in
         let context = configuration.tickContext(for: index)
 
-        BrightroomSteppedSliderTickItem(
+        SteppedSliderTickItem(
           context: context,
           style: configuration.style,
           activeProgress: activeProgress(for: index),
@@ -669,13 +669,13 @@ private struct BrightroomSteppedSliderTrackView<TopMarker: View, Tick: View>: Vi
   }
 }
 
-private struct BrightroomSteppedSliderTickItem<TopMarker: View, Tick: View>: View {
+private struct SteppedSliderTickItem<TopMarker: View, Tick: View>: View {
 
-  let context: BrightroomSteppedSliderTickContext
-  let style: BrightroomSteppedSliderStyle
+  let context: SteppedSliderTickContext
+  let style: SteppedSliderStyle
   let activeProgress: CGFloat
-  let topMarker: (BrightroomSteppedSliderTickContext) -> TopMarker
-  let tick: (BrightroomSteppedSliderTickContext) -> Tick
+  let topMarker: (SteppedSliderTickContext) -> TopMarker
+  let tick: (SteppedSliderTickContext) -> Tick
 
   var body: some View {
     VStack(spacing: 3) {
@@ -700,7 +700,7 @@ private struct BrightroomSteppedSliderTickItem<TopMarker: View, Tick: View>: Vie
 
   nonisolated private static func scaleWidth(
     activeProgress: CGFloat,
-    style: BrightroomSteppedSliderStyle
+    style: SteppedSliderStyle
   ) -> CGFloat {
     scale(
       activeProgress: activeProgress,
@@ -711,7 +711,7 @@ private struct BrightroomSteppedSliderTickItem<TopMarker: View, Tick: View>: Vie
 
   nonisolated private static func scaleHeight(
     activeProgress: CGFloat,
-    style: BrightroomSteppedSliderStyle
+    style: SteppedSliderStyle
   ) -> CGFloat {
     scale(
       activeProgress: activeProgress,
@@ -732,7 +732,7 @@ private struct BrightroomSteppedSliderTickItem<TopMarker: View, Tick: View>: Vie
   }
 }
 
-struct BrightroomSteppedSliderStyle {
+struct SteppedSliderStyle {
   var tickWidth: CGFloat
   var tickSpacing: CGFloat
   var tickHeight: CGFloat
@@ -765,7 +765,7 @@ struct BrightroomSteppedSliderStyle {
   }
 }
 
-struct BrightroomSteppedSliderTickContext {
+struct SteppedSliderTickContext {
   let index: Int
   let value: Double
   let isMajor: Bool
@@ -791,10 +791,10 @@ private extension Int {
 
 #if DEBUG
 #Preview("Brightroom Stepped Slider") {
-  BrightroomSteppedSliderPreview()
+  SteppedSliderPreview()
 }
 
-private struct BrightroomSteppedSliderPreview: View {
+private struct SteppedSliderPreview: View {
 
   @State private var exposureValue: Double = 0
   @State private var rotationValue: Double = 0
@@ -844,7 +844,7 @@ private struct BrightroomSteppedSliderPreview: View {
     value: Binding<Double>,
     range: ClosedRange<Double>,
     stepCount: Int,
-    style: BrightroomSteppedSliderStyle,
+    style: SteppedSliderStyle,
     accent: Color,
     markerValue: Double
   ) -> some View {
@@ -861,7 +861,7 @@ private struct BrightroomSteppedSliderPreview: View {
           .foregroundStyle(.secondary)
       }
 
-      BrightroomSteppedSlider(
+      SteppedSlider(
         value: value,
         range: range,
         stepCount: stepCount,
@@ -886,8 +886,8 @@ private struct BrightroomSteppedSliderPreview: View {
   }
 }
 
-private extension BrightroomSteppedSliderStyle {
-  static let previewDense = BrightroomSteppedSliderStyle(
+private extension SteppedSliderStyle {
+  static let previewDense = SteppedSliderStyle(
     tickWidth: 2,
     tickSpacing: 4,
     tickHeight: 16,
@@ -896,7 +896,7 @@ private extension BrightroomSteppedSliderStyle {
     majorTickInterval: 10
   )
 
-  static let previewRotation = BrightroomSteppedSliderStyle(
+  static let previewRotation = SteppedSliderStyle(
     tickWidth: 1,
     tickSpacing: 4,
     tickHeight: 16,
@@ -906,7 +906,7 @@ private extension BrightroomSteppedSliderStyle {
   )
 }
 
-private extension BrightroomSteppedSliderTickContext {
+private extension SteppedSliderTickContext {
   func isMarker(_ markerValue: Double) -> Bool {
     abs(value - markerValue) < 0.000_001
   }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct BookGeometryPlaygroud: View, PreviewProvider {
+struct BookGeometryPlayground: View, PreviewProvider {
   var body: some View {
     ContentView()
   }

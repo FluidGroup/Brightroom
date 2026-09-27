@@ -110,7 +110,7 @@ public struct CropModifier: Sendable {
       var framed = crop
       framed.updateCropExtent(
         toFitBoundingBox: boundingBox,
-        respectingApectRatio: aspectRatio
+        respectingAspectRatio: aspectRatio
           ?? crop.aspectRatioBeforeOutputRotation(PixelAspectRatio(imageSize))
       )
       return framed
