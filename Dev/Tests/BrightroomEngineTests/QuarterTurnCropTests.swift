@@ -213,9 +213,10 @@ struct QuarterTurnCropTests {
     )
   }
 
-  /// A thin frame turned 90° and straightened by 30°: the area it samples, the
-  /// frame turned back by 120° about its center, lies inside the 300×200
-  /// source (it reaches 99.9 px above and below the center), so nothing needs
+  /// A thin frame turned 90° clockwise and straightened by 30°, −60° in total
+  /// (`.quarterCW` is −90°): the area it samples, the frame turned back by
+  /// that angle about its center, lies inside the 300×200 source (it reaches
+  /// 99.9 px above and below the center), so nothing needs
   /// clamping. Its 90° footprint, 36×210, is taller than the image.
   ///
   /// Known issue: the clamp checks the 90° footprint, not the straightened
