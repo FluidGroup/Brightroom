@@ -85,11 +85,13 @@ enum CropViewMaskingDefaults {
       return pointDiameter
     }
 
-    // The crop's pixel dimensions are rotation-independent, so the y-up
-    // `cropRect` size matches the y-down display crop size used for the fit.
+    // Brush sizing follows the canvas after the final output quarter turn.
+    let outputSize = crop.rotation.isSideways
+      ? CGSize(width: crop.cropRect.height, height: crop.cropRect.width)
+      : crop.cropRect.size
     let fitScale = min(
-      viewportSize.width / crop.cropRect.width,
-      viewportSize.height / crop.cropRect.height
+      viewportSize.width / outputSize.width,
+      viewportSize.height / outputSize.height
     )
     return pointDiameter / max(fitScale, 0.0001)
   }

@@ -208,6 +208,75 @@ struct RendererTests {
 
 struct RenderCropTests {
 
+  @Test(arguments: [
+    CGRect(x: 0.05, y: 0.05, width: 0.2, height: 0.2),
+    CGRect(x: 149.5, y: -400, width: 1, height: 1000),
+  ], QuarterTurn.allCases)
+  func `Unrepresentable straightened crops use a stable single pixel`(input: CGRect, rotation: QuarterTurn) {
+    let imageSize = CGSize(width: 300, height: 200)
+    let first = RenderCrop(
+      cropRectYDown: input,
+      imageSize: imageSize,
+      rotation: rotation,
+      straightenRadians: .pi / 4
+    )
+    let crop = first.cropExtent
+    #expect(crop.size == CGSize(width: 1, height: 1))
+    let halfFootprint = sqrt(CGFloat(2)) / 2
+    #expect(crop.midX - halfFootprint >= -1e-8)
+    #expect(crop.midY - halfFootprint >= -1e-8)
+    #expect(crop.midX + halfFootprint <= imageSize.width + 1e-8)
+    #expect(crop.midY + halfFootprint <= imageSize.height + 1e-8)
+    let second = RenderCrop(
+      cropRectYDown: first.cropExtent,
+      imageSize: imageSize,
+      rotation: rotation,
+      straightenRadians: .pi / 4
+    )
+    #expect(second == first)
+  }
+
+  @Test func `A tiny straightened source retains a stable minimum canvas`() {
+    let size = CGSize(width: 1, height: 1)
+    let first = RenderCrop(
+      cropRectYDown: CGRect(origin: .zero, size: size),
+      imageSize: size,
+      straightenRadians: .pi / 4
+    )
+    #expect(first.cropExtent == CGRect(origin: .zero, size: size))
+    #expect(RenderCrop(
+      cropRectYDown: first.cropExtent,
+      imageSize: size,
+      straightenRadians: .pi / 4
+    ) == first)
+  }
+
+  @Test func `Straightened crop canonicalization does not depend on output rotation`() {
+    let imageSize = CGSize(width: 300, height: 200)
+    let requested = CGRect(x: 80.3, y: 60.2, width: 121.8, height: 70.4)
+    let expected = CGRect(x: requested.midX - 60.5, y: requested.midY - 35, width: 121, height: 70)
+
+    for rotation in QuarterTurn.allCases {
+      let first = RenderCrop(
+        cropRectYDown: requested,
+        imageSize: imageSize,
+        rotation: rotation,
+        straightenRadians: .pi / 6
+      )
+      #expect(abs(first.cropExtent.minX - expected.minX) < 1e-8)
+      #expect(abs(first.cropExtent.minY - expected.minY) < 1e-8)
+      #expect(first.cropExtent.size == expected.size)
+
+      let second = RenderCrop(
+        cropRectYDown: first.cropExtent,
+        imageSize: imageSize,
+        rotation: rotation,
+        straightenRadians: .pi / 6
+      )
+      #expect(second == first)
+    }
+  }
+
   @Test func `canonicalizes image size to pixel dimensions`() {
     let crop = RenderCrop(
       cropRectYDown: .init(x: 0, y: 0, width: 100, height: 100),
@@ -223,7 +292,6 @@ struct RenderCropTests {
       imageSize: .init(width: 100, height: 100)
     )
 
-    #expect(crop.cropRect == .init(x: 1, y: 4, width: 20, height: 30))
     #expect(crop.cropExtent == .init(x: 1, y: 4, width: 20, height: 30))
   }
 
@@ -288,8 +356,8 @@ struct RenderCropTests {
       imageSize: .init(width: 100, height: 100)
     )
     let second = RenderCrop(
-      imageSize: first.imageSize,
-      cropRect: first.cropRect,
+      cropRectYDown: first.cropExtent,
+      imageSize: first.imageSize.cgSize,
       rotation: first.rotation,
       straightenRadians: first.straightenRadians
     )
@@ -303,8 +371,8 @@ struct RenderCropTests {
 
     let first = RenderCrop(cropRectYDown: cropRect, imageSize: imageSize)
     let second = RenderCrop(
-      imageSize: first.imageSize,
-      cropRect: first.cropRect,
+      cropRectYDown: first.cropExtent,
+      imageSize: first.imageSize.cgSize,
       rotation: first.rotation,
       straightenRadians: first.straightenRadians
     )
@@ -378,7 +446,7 @@ struct CropFeatureDisplaySpaceTests {
 
 struct RenderCropRendererTests {
 
-  @Test func `full render crop excludes fractional bright edges`() async throws {
+  @Test func `render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = ImageSource(cgImage: sourceImage)
     let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
@@ -392,60 +460,6 @@ struct RenderCropRendererTests {
     try Self.assertEdgesAreDark(renderedImage)
   }
 
-  @Test func `Core Image render crop excludes fractional bright edges`() async throws {
-    let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage), orientedImageSize: sourceImage.size)
-
-    // The crop is evaluated as a domain feature in the single Core Image
-    // rendering path; this asserts that path excludes the fractional bright
-    // border (the crop snaps to integer pixels).
-    let renderedImage = try await renderer.render(
-      options: .init(workingColorSpace: CGColorSpaceCreateDeviceRGB())
-    ).cgImage
-
-    #expect(renderedImage.width == 14)
-    #expect(renderedImage.height == 14)
-    try Self.assertEdgesAreDark(renderedImage)
-  }
-
-  /// The parametric crop path must reproduce the engine's `croppedWithColorspace`
-  /// rotation — the pre-unification behavior. This pins the rotation SIGN, which
-  /// the dimension-only rotation test cannot catch (both signs share dimensions).
-  @Test func `parametric crop rotation matches engine oracle`() async throws {
-    let source = try Self.makeAsymmetricMarkerImage(width: 8, height: 12)
-    let imageSource = ImageSource(cgImage: source)
-    let oriented = try source.oriented(.up)
-
-    for rotation in QuarterTurn.allCases {
-      let crop = CropFeature.test(imageSize: source.size, rotation: rotation)
-
-      let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-      renderer.edit = .make(crop: crop, orientedImageSize: source.size)
-      let parametric = try await renderer.render().cgImage
-
-      let oracle = try oriented.croppedWithColorspace(
-        to: crop.renderCrop(orientedImageSize: oriented.size)
-      )
-
-      #expect(parametric.width == oracle.width, "width @ \(rotation)")
-      #expect(parametric.height == oracle.height, "height @ \(rotation)")
-
-      for x in stride(from: 0, to: min(parametric.width, oracle.width), by: 2) {
-        for y in stride(from: 0, to: min(parametric.height, oracle.height), by: 2) {
-          let a = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: parametric)
-          let b = try Self.rgbaPixel(at: CGPoint(x: x, y: y), in: oracle)
-          #expect(
-            abs(Int(a.red) - Int(b.red)) <= 24,
-            "luma (\(x),\(y)) @ \(rotation): parametric \(a.red) vs oracle \(b.red)"
-          )
-        }
-      }
-    }
-  }
-
   private static func fractionalCrop(for image: CGImage) -> CropFeature {
     CropFeature.test(
       imageSize: image.size,
@@ -456,29 +470,6 @@ struct RenderCropRendererTests {
         height: CGFloat(image.height) - 0.4
       )
     )
-  }
-
-  private static func makeAsymmetricMarkerImage(width: Int, height: Int) throws -> CGImage {
-    let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
-      | CGImageAlphaInfo.premultipliedLast.rawValue
-    let context = try #require(
-      CGContext(
-        data: nil,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: width * 4,
-        space: CGColorSpaceCreateDeviceRGB(),
-        bitmapInfo: bitmapInfo
-      )
-    )
-    context.setFillColor(red: 0, green: 0, blue: 0, alpha: 1)
-    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-    // A single bright quadrant — asymmetric in both axes, so a wrong rotation
-    // sign (90° vs 270°) moves it to a different corner and the test fails.
-    context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
-    context.fill(CGRect(x: 0, y: height / 2, width: width / 2, height: height - height / 2))
-    return try #require(context.makeImage())
   }
 
   private static func makeImageWithBrightBorder(size: Int) throws -> CGImage {

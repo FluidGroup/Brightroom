@@ -44,6 +44,7 @@ struct CropViewCanvasStrokeDomainTests {
       imageSize: CGSize(width: 400, height: 300)
     )
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
+    #expect(geometry.outputSize == CGSize(width: 150, height: 200))
 
     let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
       EditingCanvasStrokeRecord(brushMaskStroke: $0)
@@ -54,6 +55,10 @@ struct CropViewCanvasStrokeDomainTests {
 
     let viewingRecords = plan.committedStrokes(in: geometry)
     #expect(viewingRecords == expected)
+    // The source rectangle remains (60, 40, 200, 150). In the established
+    // quarterCW display convention, (x, y) maps to (y - 40, 260 - x).
+    let viewingRecord = try #require(viewingRecords.first)
+    #expect(viewingRecord.stamps == [CGPoint(x: 40, y: 160), CGPoint(x: 80, y: 120)])
     // The original bug shape: raw source records on the crop-output canvas.
     #expect(viewingRecords != sourceRecords)
   }

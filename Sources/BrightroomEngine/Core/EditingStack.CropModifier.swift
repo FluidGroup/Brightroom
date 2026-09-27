@@ -53,6 +53,10 @@ extension EditingStack {
     public static func faceDetection(paddingBias: CGFloat = 1.3, aspectRatio: PixelAspectRatio? = nil) -> Self {
       return .init { image, crop, imageSize, completion in
 
+        // Aspect locks describe the final output; face bounds select pixels
+        // before the output turn.
+        let selectionAspectRatio = crop.rotation.isSideways ? aspectRatio?.swapped() : aspectRatio
+
         // Rebuild a crop from a y-down display rect, sharing the engine's
         // pixel-snap and preserving the crop's identity / rotation / straighten.
         func makeCrop(displayRect: CGRect) -> CropFeature {
@@ -66,11 +70,15 @@ extension EditingStack {
         }
 
         var fallbackCrop: CropFeature {
-          guard let aspectRatio = aspectRatio else {
+          guard let aspectRatio = selectionAspectRatio else {
             return crop
           }
           return makeCrop(
-            displayRect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: imageSize)
+            displayRect: CropGeometry.cropRect(
+              toFitAspectRatio: aspectRatio,
+              in: imageSize,
+              straightenRadians: crop.straightenRadians
+            )
           )
         }
 
@@ -104,7 +112,8 @@ extension EditingStack {
             toFitBoundingBox: normalizedRect,
             within: crop.displayCropRect(imageSize: imageSize),
             in: imageSize,
-            respectingAspectRatio: aspectRatio ?? PixelAspectRatio(imageSize)
+            straightenRadians: crop.straightenRadians,
+            respectingAspectRatio: selectionAspectRatio ?? PixelAspectRatio(imageSize)
           )
           completion(makeCrop(displayRect: displayRect))
         }

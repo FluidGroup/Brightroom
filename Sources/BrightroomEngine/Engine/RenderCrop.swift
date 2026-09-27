@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import CoreGraphics
-import SwiftUI
 
 import BrightroomParametric
 
@@ -60,18 +59,15 @@ internal struct PixelDimensions: Equatable, Sendable {
   }
 }
 
-internal struct PixelCropRect: Equatable, Sendable {
+/// An inward pixel-aligned rectangle for crops without straightening.
+private struct PixelCropRect {
 
-  internal var x: Int
-  internal var y: Int
-  internal var width: Int
-  internal var height: Int
+  let x: Int
+  let y: Int
+  let width: Int
+  let height: Int
 
-  internal var size: PixelDimensions {
-    .init(width: width, height: height)
-  }
-
-  internal var cgRect: CGRect {
+  var cgRect: CGRect {
     .init(
       x: CGFloat(x),
       y: CGFloat(y),
@@ -80,7 +76,7 @@ internal struct PixelCropRect: Equatable, Sendable {
     )
   }
 
-  internal init(
+  init(
     x: Int,
     y: Int,
     width: Int,
@@ -97,7 +93,7 @@ internal struct PixelCropRect: Equatable, Sendable {
     self.height = height
   }
 
-  internal init(
+  init(
     cropExtent: CGRect,
     in imageSize: PixelDimensions,
     epsilon: CGFloat = RenderGeometry.pixelEpsilon
@@ -178,36 +174,32 @@ internal struct PixelCropRect: Equatable, Sendable {
   }
 }
 
+/// A pixel-sized crop after straightening, followed by an independent output turn.
+///
+/// The rectangle uses y-down image coordinates before the quarter turn. Its
+/// origin may be fractional under straightening; only its dimensions determine
+/// the raster size. Output orientation never changes the selected source area.
 internal struct RenderCrop: Equatable, Sendable {
 
   internal static let pixelEpsilon = RenderGeometry.pixelEpsilon
 
   internal var imageSize: PixelDimensions
-  internal var cropRect: PixelCropRect
 
-  /// The quarter-turn rotation, expressed in the parametric vocabulary so the
-  /// render crop no longer depends on `EditingCrop`.
+  /// The y-down selection after straightening and before the output turn.
+  internal var cropExtent: CGRect
+
+  /// The orientation applied to the already-cropped output.
   internal var rotation: QuarterTurn
 
-  /// The free straightening angle in radians (the engine's adjustment angle).
+  /// The free angle applied to the source before extracting the crop.
   internal var straightenRadians: Double
 
-  internal var cropExtent: CGRect {
-    cropRect.cgRect
-  }
-
-  /// The combined rotation (quarter turn + straighten) in radians, the value the
-  /// CoreGraphics crop rotates by.
-  internal var aggregatedRotationRadians: Double {
-    rotation.radians + (straightenRadians.isFinite ? straightenRadians : 0)
-  }
-
-  /// Snaps a y-down display crop rect against the source pixel grid.
+  /// Canonicalizes a y-down selection before its output quarter turn.
   ///
-  /// `cropRectYDown` is in the engine's top-left-origin display space (the same
-  /// space as `EditingCrop.cropExtent`). The integer pixel contract lives in
-  /// `PixelCropRect`, so this initializer is the single snapper UI commits and
-  /// engine renders both flow through.
+  /// Without straightening, source edges snap inward to the source pixel grid.
+  /// With straightening, the center stays fixed while the output dimensions
+  /// snap inward. The quarter turn is retained separately and does not change
+  /// the selection rectangle.
   internal init(
     cropRectYDown: CGRect,
     imageSize: CGSize,
@@ -216,27 +208,43 @@ internal struct RenderCrop: Equatable, Sendable {
     epsilon: CGFloat = Self.pixelEpsilon
   ) {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
+    let straighten = straightenRadians.isFinite ? straightenRadians : 0
 
     self.imageSize = pixelImageSize
-    self.cropRect = PixelCropRect(
-      cropExtent: cropRectYDown,
-      in: pixelImageSize,
-      epsilon: epsilon
-    )
     self.rotation = rotation
-    self.straightenRadians = straightenRadians
-  }
+    self.straightenRadians = straighten
 
-  internal init(
-    imageSize: PixelDimensions,
-    cropRect: PixelCropRect,
-    rotation: QuarterTurn = .zero,
-    straightenRadians: Double = 0
-  ) {
-    self.imageSize = imageSize
-    self.cropRect = cropRect
-    self.rotation = rotation
-    self.straightenRadians = straightenRadians
+    if straighten == 0 {
+      self.cropExtent = PixelCropRect(
+        cropExtent: cropRectYDown,
+        in: pixelImageSize,
+        epsilon: epsilon
+      ).cgRect
+    } else {
+      var fitted = CropGeometry.fittingStraightenedRect(
+        rect: cropRectYDown,
+        in: pixelImageSize.cgSize,
+        straightenRadians: straighten
+      )
+      if fitted.width < 1 - epsilon || fitted.height < 1 - epsilon {
+        // An inward integer crop is impossible. Use the nearest fitting 1x1
+        // canvas instead of expanding a thin crop beyond the source bounds.
+        fitted = CropGeometry.fittingStraightenedRect(
+          rect: CGRect(x: fitted.midX - 0.5, y: fitted.midY - 0.5, width: 1, height: 1),
+          in: pixelImageSize.cgSize,
+          straightenRadians: straighten
+        )
+      }
+      let size = PixelDimensions(fitted.size, epsilon: epsilon).cgSize
+      // A source too small to contain a rotated 1x1 pixel retains that minimum
+      // canvas at the fitted center; uncovered corners remain transparent.
+      self.cropExtent = size == fitted.size ? fitted : CGRect(
+        x: fitted.midX - size.width / 2,
+        y: fitted.midY - size.height / 2,
+        width: size.width,
+        height: size.height
+      )
+    }
   }
 }
 
@@ -247,12 +255,13 @@ extension CropFeature {
   /// Creates a crop feature from a y-down display crop rect, reusing the engine's
   /// integer pixel snap so UI commits and engine renders agree exactly.
   ///
-  /// The display rect is snapped to the inward-integer pixel contract
-  /// (`RenderCrop`/`PixelCropRect`) and then flipped from the engine's y-down
-  /// display space (top-left origin) into the compiler's y-up working space
-  /// (Core Image bottom-left). UI crop sessions MUST build committed crops
-  /// through this initializer; authoring an independent snapper makes
-  /// `isRenderingEquivalent` oscillate against the engine and the crop jitters.
+  /// `displayCropRect` is the selection after straightening and before the
+  /// output quarter turn. Canonicalization does not depend on `rotation`.
+  /// Source edges snap inward without straightening; straightened crops keep
+  /// their center and snap only their dimensions.
+  ///
+  /// This initializer also flips the display rectangle from y-down (top-left)
+  /// to the parametric feature's y-up coordinates (Core Image bottom-left).
   public init(
     id: FeatureID = .init(),
     isEnabled: Bool = true,
@@ -267,28 +276,28 @@ extension CropFeature {
       rotation: rotation,
       straightenRadians: straighten
     )
-    let snapped = renderCrop.cropRect
+    let snapped = renderCrop.cropExtent
     let imageHeight = CGFloat(renderCrop.imageSize.height)
 
     self.init(
       id: id,
       isEnabled: isEnabled,
       cropRect: CGRect(
-        x: CGFloat(snapped.x),
-        y: imageHeight - CGFloat(snapped.y) - CGFloat(snapped.height),
-        width: CGFloat(snapped.width),
-        height: CGFloat(snapped.height)
+        x: snapped.minX,
+        y: imageHeight - snapped.maxY,
+        width: snapped.width,
+        height: snapped.height
       ),
       rotation: rotation,
       straightenRadians: straighten
     )
   }
 
-  /// The stored crop rect mapped back into the engine's y-down display space.
+  /// The pre-quarter-turn selection mapped into the engine's y-down space.
   ///
-  /// The inverse of `init(displayCropRect:…)`. UI crop sessions seed their y-down
-  /// working model from this. The stored rect is already pixel-snapped, so the
-  /// round trip through `init(displayCropRect:…)` is stable.
+  /// This conversion changes only the y-axis convention. Features authored
+  /// through `init(displayCropRect:…)` have already been pixel-canonicalized;
+  /// this method does not snap raw `cropRect` values.
   public func displayCropRect(imageSize: CGSize) -> CGRect {
     CGRect(
       x: cropRect.minX,
@@ -309,7 +318,7 @@ extension CropFeature {
     )
   }
 
-  /// Whether two crops snap to the same integer render rect (plus the same
+  /// Whether two crops produce the same canonical crop (plus the same
   /// rotation and straighten) against an oriented source size.
   ///
   /// This is the engine's pixel-snap equivalence the UI uses to decide whether a
@@ -321,4 +330,3 @@ extension CropFeature {
       == other.renderCrop(orientedImageSize: orientedImageSize)
   }
 }
-
