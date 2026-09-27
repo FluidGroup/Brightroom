@@ -178,6 +178,36 @@ struct QuarterTurnCropTests {
     #expect(checked > 0)
   }
 
+  /// CropView fits a straightened frame so that the area it samples, the frame
+  /// turned back by the whole angle, touches the image edge. When the snapper
+  /// evens the footprint's width-height difference, it must not take a partly
+  /// covered pixel line that pulls that area past the edge: the export would
+  /// get semi-transparent corners.
+  @Test(arguments: [(301.0, 2.0), (300.0, 5.0)])
+  func `A straightened quarter turn exports no transparent pixels`(
+    imageWidth: Double,
+    straightenDegrees: Double
+  ) async throws {
+    let size = CGSize(width: imageWidth, height: 200)
+    let stack = try makeStack(size: size)
+
+    let (editor, window) = openCropView(on: stack)
+    editor.rotateClockwise()
+    editor.layoutIfNeeded()
+    editor.setAdjustmentAngle(.degrees(straightenDegrees))
+    editor.layoutIfNeeded()
+    editor.applyDocumentChanges()
+    withExtendedLifetime(window) {}
+
+    let rendered = try await stack.makeRenderer().render().cgImage
+    let pixels = try Self.rgbaPixels(of: rendered)
+    let notOpaque = stride(from: 3, to: pixels.count, by: 4).filter { pixels[$0] < 255 }
+    #expect(
+      notOpaque.isEmpty,
+      "\(notOpaque.count) pixels, min alpha \(notOpaque.map { pixels[$0] }.min() ?? 255)"
+    )
+  }
+
   /// A thin frame turned 90° and straightened by 30°: the area it samples, the
   /// frame turned back by 120° about its center, lies inside the 300×200
   /// source (it reaches 99.9 px above and below the center), so nothing needs
