@@ -14,7 +14,6 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/VergeGroup/swift-state-graph", exact: "0.17.0"),
-    .package(url: "https://github.com/FluidGroup/TransitionPatch", from: "1.0.3"),
   ],
   targets: [
     .target(
@@ -47,7 +46,6 @@ let package = Package(
         "BrightroomEngine",
         "BrightroomParametric",
         .product(name: "StateGraph", package: "swift-state-graph"),
-        "TransitionPatch",
       ]
     ),
     .testTarget(
