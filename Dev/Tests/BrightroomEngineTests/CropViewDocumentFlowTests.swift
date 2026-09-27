@@ -245,8 +245,8 @@ struct CropViewDocumentFlowTests {
     let painted = try #require(emitted.last)
 
     let renderer = ParametricImageRenderer()
-    let exported = try pixels(renderer.makeImage(from: source, document: painted), size: size)
-    let reference = try pixels(renderer.makeImage(from: source, document: plain), size: size)
+    let exported = try pixels(renderer.makeImage(from: source, feature: painted), size: size)
+    let reference = try pixels(renderer.makeImage(from: source, feature: plain), size: size)
 
     let mirror = CGPoint(x: display.x, y: size.height - display.y)
     #expect(meanDifference(exported, reference, width: Int(size.width), at: display) > 20)

@@ -25,12 +25,13 @@ struct LocalAdjustmentMaskOrientationTests {
   func `Mask applies at authored display position`(
     orientation: CGImagePropertyOrientation
   ) async throws {
-    let imageSource = ImageSource(image: Asset.l1000069.image)
-    let pixelSize = imageSource.readImageSize()
+    let pixelSize = SourceImage.test(Asset.l1000069.image).pixelSize
     let imageSize = orientation == .up
       ? pixelSize
       : CGSize(width: pixelSize.height, height: pixelSize.width)
     #expect(imageSize.width != imageSize.height)
+    let imageSource = SourceImage.test(Asset.l1000069.image, orientation: orientation)
+    #expect(imageSource.pixelSize == imageSize)
 
     // A single hard stamp in the top-left quadrant.
     let stampCenter = CGPoint(x: imageSize.width * 0.25, y: imageSize.height * 0.25)
@@ -50,10 +51,9 @@ struct LocalAdjustmentMaskOrientationTests {
     func render(
       localAdjustments: [LocalAdjustment<[AnyImageEffect]>]
     ) async throws -> CGImage {
-      let renderer = BrightRoomImageRenderer(
-        source: imageSource,
-        orientation: orientation,
-        document: RendererTestDocument(
+      let renderer = EditingDocument(
+        image: imageSource,
+        feature: RendererTestDocument(
           localAdjustments: localAdjustments,
           crop: CropFeature.test(imageSize: imageSize)
         )

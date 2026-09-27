@@ -13,7 +13,7 @@ import UIKit
 /// Every local adjustment bakes its effect into the `adjusted` layer at source
 /// resolution and uses the **prepared** path (`usesPreparedBaseImage == true`),
 /// the same source-resolution composite ToolSurface (`makeCropOutputRenderImages`)
-/// and `BrightRoomImageRenderer` use. The cached-source path re-applies the
+/// and `EditingDocument.render` use. The cached-source path re-applies the
 /// effect at drawable/screen resolution and visibly diverges for spatial effects
 /// like blur.
 struct CropSurfaceBlurRenderPathTests {

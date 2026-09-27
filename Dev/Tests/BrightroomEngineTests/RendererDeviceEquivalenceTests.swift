@@ -17,12 +17,12 @@ struct RendererDeviceEquivalenceTests {
 
   @Test func `Equivalence display P3 input no effects`() async throws {
     let image = Asset.instaLogo.image
-    #expect(ImageSource(image: image).loadOriginalCGImage().colorSpace == ColorSpaces.displayP3)
+    #expect(image.decodedCGImageForTesting.colorSpace == ColorSpaces.displayP3)
 
     try await assertDeviceEquivalence(
       image: image,
       options: .init(workingColorSpace: ColorSpaces.displayP3),
-      makeDocument: { _ in EmptyFeature() }
+      makeDocument: { size in RendererTestDocument(crop: CropFeature.test(imageSize: size)) }
     )
   }
 
@@ -75,8 +75,8 @@ struct RendererDeviceEquivalenceTests {
 
   private func assertDeviceEquivalence(
     image: UIImage,
-    options: BrightRoomImageRenderer.Options,
-    makeDocument: (_ imageSize: CGSize) -> any Feature,
+    options: ParametricExportRenderer.Options,
+    makeDocument: (_ imageSize: CGSize) -> RendererTestDocument,
     maxChannelDifference: Int = 3,
     sourceLocation: SourceLocation = SourceLocation(fileID: #fileID, filePath: #filePath, line: #line, column: #column)
   ) async throws {
@@ -117,18 +117,13 @@ struct RendererDeviceEquivalenceTests {
 
   private func render(
     image: UIImage,
-    device: BrightRoomImageRenderer.RenderingDevice,
-    options: BrightRoomImageRenderer.Options,
-    makeDocument: (_ imageSize: CGSize) -> any Feature
-  ) async throws -> BrightRoomImageRenderer.Rendered {
-    let source = ImageSource(image: image)
-    let renderer = BrightRoomImageRenderer(
-      source: source,
-      orientation: .up,
-      document: makeDocument(source.readImageSize())
-    )
-    renderer.renderingDevice = device
-    return try await renderer.render(options: options)
+    device: ParametricExportRenderer.RenderingDevice,
+    options: ParametricExportRenderer.Options,
+    makeDocument: (_ imageSize: CGSize) -> RendererTestDocument
+  ) async throws -> ParametricExportRenderer.Rendered {
+    let source = SourceImage.test(image)
+    return try EditingDocument(image: source, feature: makeDocument(source.pixelSize))
+      .renderForTesting(options: options, device: device)
   }
 
   private func rgba8Data(of image: CGImage) throws -> [UInt8] {

@@ -17,7 +17,7 @@ import UIKit
 /// `-only-testing:BrightroomEngineTests/EnginePerformanceWorkloadTests`.
 ///
 /// Covered hot paths:
-/// - export render (`BrightRoomImageRenderer.render`)
+/// - export render (`EditingDocument.render`)
 /// - preview composition (the document with its crop neutralized, over the
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
 /// - brush-mask raster (`ParametricImageRenderer.makeMaskImage`, the parametric
@@ -38,7 +38,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Benchmarks
 
   func testMeasureExportRender() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let document = Self.makeDocument(imageSize: CGSize(width: source.width, height: source.height))
     measure(metrics: benchMetrics, options: benchOptions) {
       _ = try? exportRender(document, source: source)
@@ -46,7 +46,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasurePreviewComposition() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let ci = CIImage(cgImage: source)
     let document = Self.makeDocument(imageSize: CGSize(width: source.width, height: source.height))
     measure(metrics: benchMetrics, options: benchOptions) {
@@ -55,7 +55,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasureMaskRasterCacheMiss() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let imageSize = CGSize(width: source.width, height: source.height)
     var salt = 0
     measure(metrics: benchMetrics, options: benchOptions) {
@@ -65,7 +65,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasureParametricEval() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let ci = CIImage(cgImage: source)
     measure(metrics: benchMetrics, options: benchOptions) {
       parametricEvaluate(over: ci)
@@ -78,13 +78,9 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private func exportRender(_ document: PhotosCropFeature, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
-    return try BrightRoomImageRenderer.render(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: document,
-      device: .automatic,
-      options: .init(workingColorSpace: Self.sRGB)
-    ).cgImage
+    return try EditingDocument(image: SourceImage(cgImage: source), feature: document)
+      .renderForTesting(options: .init(workingColorSpace: Self.sRGB), device: .automatic)
+      .cgImage
   }
 
   @inline(never)
@@ -92,7 +88,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     // The document is authored in full-resolution coordinates, so the preview
     // evaluates over the full-size source, with the crop neutralized.
     let preview = document.withCropNeutralized(imageSize: source.extent.size)
-    guard let composed = try? ParametricImageRenderer().makeImage(from: source, document: preview) else {
+    guard let composed = try? ParametricImageRenderer().makeImage(from: source, feature: preview) else {
       return
     }
     _ = Self.context.createCGImage(composed, from: source.extent)

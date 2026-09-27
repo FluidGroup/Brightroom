@@ -21,7 +21,7 @@ struct PreviewExportVisualEvidenceTests {
   private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
   @Test func `Render preview and export evidence`() async throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let imageSize = CGSize(width: source.width, height: source.height)
 
     // A realistic edit: a built-in preset, a global exposure lift, and a soft
@@ -81,8 +81,7 @@ struct PreviewExportVisualEvidenceTests {
   // MARK: - Rendering
 
   private func renderExport(_ document: PhotosCropFeature, source: CGImage) async throws -> CGImage {
-    try await EditingStack.test(cgImage: source)
-      .makeRenderer(document: document)
+    try await EditingDocument(image: SourceImage(cgImage: source), feature: document)
       .render(options: .init(workingColorSpace: Self.sRGB))
       .cgImage
   }

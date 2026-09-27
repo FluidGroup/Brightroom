@@ -52,20 +52,18 @@ struct LargeMaskedExportTests {
     }
 
     // Export WITH the local adjustment through an identity crop.
-    let adjustedRenderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
+    let adjustedRenderer = EditingDocument(
+      image: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     let adjusted = try await adjustedRenderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
     ).cgImage
 
     // Export the SAME edit with NO local adjustment as the baseline.
-    let baselineRenderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    let baselineRenderer = EditingDocument(
+      image: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     let baseline = try await baselineRenderer.render(
       options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)

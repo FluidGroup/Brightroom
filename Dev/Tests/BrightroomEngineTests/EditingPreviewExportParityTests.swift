@@ -11,7 +11,7 @@ import UIKit
 /// Pins the locked invariant that the interactive preview and the exported
 /// result are the *same composition*: the canvas composition `CropView`
 /// renders for a `PhotosCropFeature` (`CanvasCompositionPreview`) and the
-/// export of the same document through `EditingStack.makeRenderer(document:)`
+/// export of the same feature through `EditingDocument.render(options:)`
 /// must produce matching pixels.
 ///
 /// These run at a single resolution (small images, the editing source is the
@@ -26,11 +26,10 @@ struct EditingPreviewExportParityTests {
   // MARK: - Helpers
 
   private func export(
-    _ document: some Feature,
+    _ document: some Feature & Equatable,
     source: CGImage
   ) async throws -> CGImage {
-    let stack = EditingStack.test(cgImage: source)
-    return try await stack.makeRenderer(document: document).render(
+    try await EditingDocument(image: SourceImage(cgImage: source), feature: document).render(
       options: .init(workingColorSpace: Self.sRGB)
     ).cgImage
   }

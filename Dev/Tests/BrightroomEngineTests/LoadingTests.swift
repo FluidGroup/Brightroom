@@ -21,70 +21,48 @@
 
 import CoreImage
 import Foundation
-import StateGraph
 import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
 
-// Kept on the main actor: the original `testOrientation` ran as a synchronous
-// XCTest method (implicitly main-actor isolated) and observes the reactive
-// `ImageProvider.orientation` through StateGraph on that actor.
-@MainActor
+/// A `SourceImage` reads its orientation and oriented size when it is
+/// created, before any pixels are decoded.
 struct LoadingTests {
 
-  @Test(.timeLimit(.minutes(2)))
-  func orientation() async throws {
+  @Test(arguments: [
+    ("orientation_right", CGImagePropertyOrientation.right),
+    ("orientation_down", .down),
+    ("orientation_left", .left),
+    ("orientation_up", .up),
+    ("orientation_left_mirrored", .leftMirrored),
+    ("orientation_down_mirrored", .downMirrored),
+    ("orientation_right_mirrored", .rightMirrored),
+    ("orientation_up_mirrored", .upMirrored),
+  ])
+  func orientation(resource: String, expected: CGImagePropertyOrientation) throws {
+    let url = _url(forResource: resource, ofType: "HEIC")
+    let image = try SourceImage(contentsOf: url)
+    #expect(image.storage.orientation == expected)
 
-    var subscriptions: [Any] = []
-
-    // Resolve `ImageProvider.orientation` reactively, but bound the wait with a
-    // hard, cancellation-aware timeout. A `withCheckedContinuation` that never
-    // resumes cannot be interrupted by `.timeLimit` (task cancellation does not
-    // resume a suspended continuation), so a value that never arrives would hang
-    // the run indefinitely. The original XCTest used `wait(for:timeout:10)`;
-    // this polls a captured flag with `Task.sleep`, which is cancellable.
-    func fetch(image: ImageProvider) async throws -> CGImagePropertyOrientation {
-
-      image.start()
-
-      var resolved: CGImagePropertyOrientation?
-      let subscription = withGraphTracking {
-        withGraphTrackingGroup {
-          let orientation = image.orientation
-          if resolved == nil, let orientation = orientation {
-            resolved = orientation
-          }
-        }
-      }
-      subscriptions.append(subscription)
-
-      let deadline = ContinuousClock.now + .seconds(10)
-      while resolved == nil, ContinuousClock.now < deadline {
-        try await Task.sleep(for: .milliseconds(20))
-      }
-      return try #require(resolved, "orientation did not resolve within 10s")
-    }
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.right.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.down.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.left.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.up.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.leftMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.downMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.rightMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.upMirrored.rawValue)
-
-    withExtendedLifetime(subscriptions) {}
+    // The oriented size swaps the stored width and height for the quarter
+    // turns, and the full-resolution image starts at zero with that size.
+    let imageSource = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+    let stored = try #require(ImageTool.readImageSize(from: imageSource))
+    let swapsAxes = [.left, .right, .leftMirrored, .rightMirrored].contains(expected)
+    let expectedSize = swapsAxes ? CGSize(width: stored.height, height: stored.width) : stored
+    #expect(image.pixelSize == expectedSize)
+    #expect(image.makeCIImage().extent == CGRect(origin: .zero, size: expectedSize))
   }
 
+  @Test func `Data and the same file read the same`() throws {
+    let url = _url(forResource: "orientation_right", ofType: "HEIC")
+    let fromFile = try SourceImage(contentsOf: url)
+    let fromData = try SourceImage(data: Data(contentsOf: url))
+    #expect(fromFile.pixelSize == fromData.pixelSize)
+    #expect(fromFile.storage.orientation == fromData.storage.orientation)
+    #expect(fromFile != fromData, "Two loads are two images.")
+  }
 }
 
 struct ColorCubeTextParserTests {

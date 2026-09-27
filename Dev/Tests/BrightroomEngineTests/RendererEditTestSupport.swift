@@ -96,24 +96,61 @@ extension MaskTree {
 extension EditingStack {
 
   /// A stack whose loaded state is injected synchronously, without running the
-  /// image loader. The editing source is the full-resolution oriented image.
+  /// image preparation. The editing source is the full-resolution oriented
+  /// image.
   static func test(
     cgImage: CGImage,
     orientation: CGImagePropertyOrientation = .up
   ) -> EditingStack {
-    let imageSource = ImageSource(cgImage: cgImage)
-    let stack = EditingStack(imageProvider: .init(image: UIImage(cgImage: cgImage)))
-    let oriented = CIImage(cgImage: cgImage).oriented(orientation)
-    let editingSource = oriented.transformed(
-      by: CGAffineTransform(translationX: -oriented.extent.minX, y: -oriented.extent.minY)
-    )
+    let image = SourceImage(cgImage: cgImage, orientation: orientation)
+    let stack = EditingStack(image: image)
+    let editingSource = image.makeCIImage()
     stack.loadedState = .init(
-      imageSource: imageSource,
-      metadata: .init(orientation: orientation, imageSize: editingSource.extent.size),
-      thumbnailCIImage: editingSource,
+      image: image,
+      thumbnailImage: editingSource,
       editingSourceCGImage: cgImage,
-      editingSourceCIImage: editingSource
+      editingSourceImage: editingSource
     )
     return stack
+  }
+}
+
+extension EditingDocument {
+
+  /// Renders synchronously on a chosen device, through the same core as
+  /// `render(options:)`.
+  func renderForTesting(
+    options: ParametricExportRenderer.Options = .init(),
+    device: ParametricExportRenderer.RenderingDevice = .automatic
+  ) throws -> ParametricExportRenderer.Rendered {
+    try render(options: options, device: device)
+  }
+}
+
+extension UIImage {
+
+  /// The decoded, unoriented full-resolution pixels (what the removed
+  /// `ImageSource(image:).loadOriginalCGImage()` returned).
+  var decodedCGImageForTesting: CGImage {
+    ImageTool.makeDecodedCGImage(from: cgImage!) ?? cgImage!
+  }
+}
+
+extension SourceImage {
+
+  /// The pixels of `image` under an explicit orientation, ignoring the
+  /// `UIImage`'s own `imageOrientation` (what the removed
+  /// `BrightRoomImageRenderer(source: ImageSource(image:), orientation:…)`
+  /// rendered).
+  static func test(_ image: UIImage, orientation: CGImagePropertyOrientation = .up) -> SourceImage {
+    SourceImage(cgImage: image.decodedCGImageForTesting, orientation: orientation)
+  }
+
+  /// The unoriented decoded pixels of a bitmap-backed image.
+  var bitmapForTesting: CGImage {
+    guard case .bitmap(let cgImage) = storage.backing else {
+      preconditionFailure("Not a bitmap-backed source image.")
+    }
+    return cgImage
   }
 }

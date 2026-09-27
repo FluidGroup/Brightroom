@@ -112,10 +112,9 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeTopWhiteBottomBlack(side: side)
 
-    let renderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    let renderer = EditingDocument(
+      image: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     _ = try await renderer.render(
       options: .init(
@@ -140,10 +139,9 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeSolidColorImage(side: side, red: 200, green: 100, blue: 30)
 
-    let renderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    let renderer = EditingDocument(
+      image: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     _ = try await renderer.render(
       options: .init(
@@ -165,7 +163,7 @@ final class DiskExportTests {
   /// A renderer over a solid mid-grey source with a strong, fully-opaque,
   /// hard-edged exposure lift painted across the central quarter (mirrors
   /// `LargeMaskedExportTests`).
-  private func makeMaskedRenderer(size: CGSize) -> BrightRoomImageRenderer {
+  private func makeMaskedRenderer(size: CGSize) -> EditingDocument<RendererTestDocument> {
     let side = Int(size.width)
     let source = Self.makeSolidImage(width: side, height: Int(size.height), white: 0.25)
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -188,10 +186,9 @@ final class DiskExportTests {
       [AnyImageEffect(ExposureFeature(value: 2))]
     }
 
-    let renderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
+    let renderer = EditingDocument(
+      image: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     return renderer
   }

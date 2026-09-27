@@ -219,10 +219,10 @@ struct PhotosCropFeatureTests {
 
     let source = makeSource()
     let renderer = ParametricImageRenderer()
-    let actual = try renderer.makeImage(from: source, document: document)
+    let actual = try renderer.makeImage(from: source, feature: document)
     let expected = try renderer.makeImage(
       from: source,
-      document: SequentialFeatures(globalEffects + [blurMask, document.crop])
+      feature: SequentialFeatures(globalEffects + [blurMask, document.crop])
     )
 
     #expect(actual.extent == expected.extent)
@@ -232,7 +232,7 @@ struct PhotosCropFeatureTests {
     // puts the stroke somewhere else.
     let blurAfterCrop = try renderer.makeImage(
       from: source,
-      document: SequentialFeatures(globalEffects + [document.crop, blurMask])
+      feature: SequentialFeatures(globalEffects + [document.crop, blurMask])
     )
     #expect(blurAfterCrop.extent == expected.extent)
     #expect(maxDifference(blurAfterCrop, expected) > 4)
@@ -248,9 +248,9 @@ struct PhotosCropFeatureTests {
     // The canvas base: global effects only, over the whole source.
     let base = try renderer.makeImage(
       from: source,
-      document: document.withoutBlurMask().withCropNeutralized(imageSize: imageSize)
+      feature: document.withoutBlurMask().withCropNeutralized(imageSize: imageSize)
     )
-    let effectsOnly = try renderer.makeImage(from: source, document: document.effects)
+    let effectsOnly = try renderer.makeImage(from: source, feature: document.effects)
     #expect(base.extent == effectsOnly.extent)
     #expect(maxDifference(base, effectsOnly) == 0)
 
@@ -265,11 +265,11 @@ struct PhotosCropFeatureTests {
     }
     let cropViewing = try renderer.makeImage(
       from: source,
-      document: document.withCropNeutralized(imageSize: imageSize)
+      feature: document.withCropNeutralized(imageSize: imageSize)
     )
     let uncropped = try renderer.makeImage(
       from: source,
-      document: EffectsAndBlurMask(effects: document.effects, blurMask: document.blurMask)
+      feature: EffectsAndBlurMask(effects: document.effects, blurMask: document.blurMask)
     )
     #expect(cropViewing.extent == uncropped.extent)
     #expect(maxDifference(cropViewing, uncropped) == 0)

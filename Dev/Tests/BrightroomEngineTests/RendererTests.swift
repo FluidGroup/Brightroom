@@ -53,18 +53,15 @@ struct RendererTests {
   }
 
   @Test func cropping() async throws {
-    let imageSource = ImageSource(image: Asset.l1000069.image)
+    let imageSource = SourceImage.test(Asset.l1000069.image)
 
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(crop: crop)
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
     )
 
     let rendered = try await renderer.render()
@@ -72,12 +69,12 @@ struct RendererTests {
   }
 
   @Test func `V2 input display P3 no effects`() async throws {
-    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    let imageSource = SourceImage.test(Asset.instaLogo.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
+    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -85,12 +82,12 @@ struct RendererTests {
   }
 
   @Test func `V2 input sRGB no effects`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
+    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -98,17 +95,14 @@ struct RendererTests {
   }
 
   @Test func `V2 input sRGB effects`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash3.image)
+    let imageSource = SourceImage.test(Asset.unsplash3.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let filter = ExposureFeature(value: 0.72)
 
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.readImageSize()))
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
     )
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -117,23 +111,20 @@ struct RendererTests {
   }
 
   @Test func `V2 input sRGB effects crop`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let filter = ExposureFeature(value: 0.72)
 
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -142,23 +133,20 @@ struct RendererTests {
   }
 
   @Test func `V2 input sRGB effects crop resizing`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
     let filter = ExposureFeature(value: 0.72)
 
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -168,22 +156,19 @@ struct RendererTests {
   }
 
   @Test func `V2 input sRGB rotation resizing`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash1.image)
+    let imageSource = SourceImage.test(Asset.unsplash1.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
       cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
       rotation: .quarterCW
     )
 
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(crop: crop)
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
     )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
@@ -193,12 +178,12 @@ struct RendererTests {
   }
 
   @Test func `V2 display P3 to sRGB`() async throws {
-    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    let imageSource = SourceImage.test(Asset.instaLogo.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up, document: EmptyFeature())
+    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
     let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -453,11 +438,8 @@ struct RenderCropRendererTests {
 
   @Test func `render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(
-      source: imageSource,
-      orientation: .up,
-      document: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
+    let imageSource = SourceImage(cgImage: sourceImage)
+    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
     )
 
     let renderedImage = try await renderer.render().cgImage
