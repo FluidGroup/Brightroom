@@ -102,6 +102,53 @@ struct QuarterTurnCropTests {
     try Self.expectEveryPixelIsACellColor(rendered)
   }
 
+  // MARK: - Open and Done without edits
+
+  /// CropView re-reads the frame from its views on Done, which carries
+  /// sub-pixel error. For an odd `W - H`, a frame nudged by a fraction of a
+  /// pixel must still snap to the same source pixels, not lose a column to
+  /// the inward snap and then another to keep the width-height difference even.
+  @Test(arguments: [0.07, -0.07, 0.45])
+  func `Sub-pixel drift in an odd-parity turned crop snaps back`(drift: Double) {
+    let size = CGSize(width: 301, height: 200)
+    let committed = CGRect(x: 50, y: -50, width: 200, height: 300)
+
+    let feature = CropFeature(
+      displayCropRect: committed.offsetBy(dx: drift, dy: 0),
+      imageSize: size,
+      rotation: .quarterCW
+    )
+
+    #expect(feature.displayCropRect(imageSize: size) == committed)
+  }
+
+  /// Opening the editor on a turned crop and tapping Done, several times over,
+  /// keeps the stored crop.
+  @Test(arguments: [1, 3])
+  func `Open and Done keeps an odd-parity turned crop`(clockwiseTurns: Int) throws {
+    let size = CGSize(width: 301, height: 200)
+    let stack = try makeStack(size: size)
+
+    let (editor, window) = openCropView(on: stack)
+    for _ in 0..<clockwiseTurns {
+      editor.rotateClockwise()
+      editor.layoutIfNeeded()
+    }
+    editor.applyDocumentChanges()
+    let committed = try #require(stack.featureTree?.finalCrop)
+    #expect(committed.cropRect.width == 200)
+    #expect(committed.cropRect.height == 300)
+
+    var windows = [window]
+    for cycle in 1...4 {
+      let (reopened, window) = openCropView(on: stack)
+      windows.append(window)
+      reopened.applyDocumentChanges()
+      #expect(stack.featureTree?.finalCrop?.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+    }
+    withExtendedLifetime(windows) {}
+  }
+
   // MARK: - Quarter turn + straighten
 
   @Test func `Quarter turn with straighten keeps the frame`() async throws {
@@ -236,6 +283,21 @@ struct QuarterTurnCropTests {
       }
     )
     return try #require(stack.featureTree?.finalCrop)
+  }
+
+  /// Opens a CropView on the stack's current crop, laid out in a window the
+  /// caller keeps alive.
+  private func openCropView(on stack: EditingStack) -> (CropView, UIWindow) {
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+    let view = CropView(document: CropViewDocument(editingStack: stack))
+    view.areAnimationsEnabled = false
+    view.frame = window.bounds
+    window.addSubview(view)
+    window.isHidden = false
+    view.layoutIfNeeded()
+    view.loadCurrentDocumentState()
+    view.layoutIfNeeded()
+    return (view, window)
   }
 
   /// Mirrors `CropView`'s `CGRect.rotated(_:)`: the rect turned about its own

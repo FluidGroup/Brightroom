@@ -136,17 +136,63 @@ internal struct PixelCropRect: Equatable, Sendable {
     )
   }
 
-  /// The rect with its longer side trimmed by one pixel (at its max edge) when
-  /// its width and height differ by an odd number of pixels.
+  /// The rect adjusted by one pixel so that its width and height differ by an
+  /// even number of pixels, staying as close as it can to `requested`, the
+  /// unsnapped rect it was snapped inward from.
   ///
   /// A quarter turn about the rect's center maps the pixel grid onto itself
   /// only when the width and height differ by an even number of pixels.
   /// Otherwise the turned rect lies on half pixels, and every output pixel
   /// would be resampled between two source pixels (Core Image also rounds such
   /// an extent outward, adding a partially covered border).
-  internal func trimmedForQuarterTurn() -> PixelCropRect {
+  ///
+  /// Every pixel of the inward-snapped rect is fully inside `requested`, so
+  /// dropping a line of them misses `requested` by a whole pixel. When
+  /// `requested` partly covers the pixel line just outside an edge, taking
+  /// that line misses it by less, so the rect grows by the most-covered one.
+  /// This also snaps sub-pixel error back to the same pixels: CropView
+  /// re-reads an unchanged frame from its views on Done, a fraction of a pixel
+  /// off. Only when no such line exists does the longer side lose one pixel at
+  /// its max edge.
+  internal func evenedForQuarterTurn(
+    requested: CGRect,
+    in imageSize: PixelDimensions,
+    epsilon: CGFloat = RenderGeometry.pixelEpsilon
+  ) -> PixelCropRect {
     guard (width - height) % 2 != 0 else {
       return self
+    }
+
+    // How much of the pixel line just outside each edge `requested` covers,
+    // with `requested` clamped to the image as the inward snap did.
+    let requested = requested.standardized
+    if
+      requested.minX.isFinite, requested.minY.isFinite,
+      requested.maxX.isFinite, requested.maxY.isFinite
+    {
+      let minX = Self.clamp(requested.minX, lower: 0, upper: CGFloat(imageSize.width))
+      let maxX = Self.clamp(requested.maxX, lower: 0, upper: CGFloat(imageSize.width))
+      let minY = Self.clamp(requested.minY, lower: 0, upper: CGFloat(imageSize.height))
+      let maxY = Self.clamp(requested.maxY, lower: 0, upper: CGFloat(imageSize.height))
+
+      let left = CGFloat(x) - minX
+      let right = maxX - CGFloat(x + width)
+      let top = CGFloat(y) - minY
+      let bottom = maxY - CGFloat(y + height)
+      let mostCovered = max(left, right, top, bottom)
+
+      if mostCovered > epsilon, mostCovered < 1 {
+        switch mostCovered {
+        case left:
+          return .init(x: x - 1, y: y, width: width + 1, height: height)
+        case right:
+          return .init(x: x, y: y, width: width + 1, height: height)
+        case top:
+          return .init(x: x, y: y - 1, width: width, height: height + 1)
+        default:
+          return .init(x: x, y: y, width: width, height: height + 1)
+        }
+      }
     }
 
     if width > height {
@@ -245,7 +291,8 @@ internal struct RenderCrop: Equatable, Sendable {
   /// `(W/2 - H/2, H/2 - W/2, H, W)`, which extends past the unrotated image
   /// bounds while keeping every source pixel. Under a sideways turn the
   /// footprint also keeps an even width-height difference (see
-  /// `PixelCropRect.trimmedForQuarterTurn()`), so an odd one loses one pixel.
+  /// `PixelCropRect.evenedForQuarterTurn(requested:in:epsilon:)`), so an odd
+  /// one gains a partly covered pixel line or loses one pixel.
   internal init(
     cropRectYDown: CGRect,
     imageSize: CGSize,
@@ -256,12 +303,19 @@ internal struct RenderCrop: Equatable, Sendable {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
 
     self.imageSize = pixelImageSize
+    let requestedFootprint = CropGeometry.rect(cropRectYDown, turnedBy: rotation)
     let footprint = PixelCropRect(
-      cropExtent: CropGeometry.rect(cropRectYDown, turnedBy: rotation),
+      cropExtent: requestedFootprint,
       in: pixelImageSize,
       epsilon: epsilon
     )
-    self.cropRect = rotation.isSideways ? footprint.trimmedForQuarterTurn() : footprint
+    self.cropRect = rotation.isSideways
+      ? footprint.evenedForQuarterTurn(
+        requested: requestedFootprint,
+        in: pixelImageSize,
+        epsilon: epsilon
+      )
+      : footprint
     self.rotation = rotation
     self.straightenRadians = straightenRadians
   }
