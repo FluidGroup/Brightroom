@@ -73,14 +73,14 @@ struct QuarterTurnScreenDirectionTests {
     }
   }
 
-  /// What each turn does on screen today. `.quarterCW` (-90) turns the picture
-  /// counterclockwise and `.quarterCCW` (-270) turns it clockwise: those names
-  /// read the sign in y-up math, not what the user sees.
+  /// What each turn does on screen. The case names were `.quarterCW` (-90)
+  /// and `.quarterCCW` (-270), which read the sign in y-up math and said the
+  /// opposite of what the user sees.
   nonisolated static let pinned: [(QuarterTurn, ScreenTurn)] = [
     (.zero, .noTurn),
-    (.quarterCW, .counterclockwise),
-    (.half, .halfTurn),
-    (.quarterCCW, .clockwise),
+    (.counterclockwise, .counterclockwise),
+    (.halfTurn, .halfTurn),
+    (.clockwise, .clockwise),
   ]
 
   @Test(arguments: pinned)
@@ -101,18 +101,18 @@ struct QuarterTurnScreenDirectionTests {
     let crop = CropEditingState(
       imageSize: CGSize(width: 4, height: 2),
       cropRect: CGRect(x: 0, y: 0, width: 4, height: 2),
-      rotation: CropRotation(turn)
+      rotation: turn
     )
     #expect(Self.screenTurn(of: CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians)) == expected)
   }
 
   /// The built-in editor's rotate button shows the `rotate.left` symbol.
   @Test func `The rotate button turns the picture counterclockwise`() async throws {
-    var rotation = CropRotation(QuarterTurn.zero)
+    var rotation = QuarterTurn.zero
     var turns: [ScreenTurn?] = []
     for _ in 0..<4 {
-      rotation = rotation.next()
-      turns.append(try await Self.exportedScreenTurn(rotation.quarterTurn))
+      rotation = rotation.turnedCounterclockwise()
+      turns.append(try await Self.exportedScreenTurn(rotation))
     }
     #expect(turns == [.counterclockwise, .halfTurn, .clockwise, .noTurn])
   }

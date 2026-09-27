@@ -47,7 +47,7 @@ struct EditingCanvasCropOutputGeometry: Equatable {
         width: cropRect.width,
         height: cropRect.height
       ),
-      rotation: crop.rotation.quarterTurn,
+      rotation: crop.rotation,
       straightenRadians: crop.adjustmentAngle.radians
     )
     let geometry = feature.outputGeometry(in: CGRect(origin: .zero, size: crop.imageSize))

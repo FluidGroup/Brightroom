@@ -9,7 +9,7 @@ Status context (as of Brightroom 6):
 - `EditingStack` holds no edit. ImageEditor and `ImageEditorCanvas` edit an
   `ImageEditorFeature` (a statically composed `Feature`) owned by
   `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
-  BrightroomUI edits crop through `CropEditingState` / `CropRotation`.
+  BrightroomUI edits crop through `CropEditingState`.
 - Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
   across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
   and the live Metal render shader (`BrushMaskRenderShader.metal`).

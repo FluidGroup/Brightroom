@@ -24,23 +24,26 @@ import Foundation
 
 /// A quarter-turn rotation step applied by a crop feature.
 ///
-/// Raw values are signed degrees; a negative value turns clockwise. This is a
-/// pure CoreGraphics/Foundation type with no SwiftUI dependency.
+/// Case names say which way the picture turns on screen. Raw values are
+/// signed degrees in the y-down (UIKit) convention, where a negative angle
+/// turns counterclockwise; they are stable, so hosts can store them. This is
+/// a pure CoreGraphics/Foundation type with no SwiftUI dependency.
 public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
 
   /// No rotation (0°).
   case zero = 0
 
-  /// A clockwise quarter turn (-90°).
-  case quarterCW = -90
+  /// A quarter turn counterclockwise on screen (-90°).
+  case counterclockwise = -90
 
   /// A half turn (-180°).
-  case half = -180
+  case halfTurn = -180
 
-  /// A three-quarter turn (-270°).
-  case quarterCCW = -270
+  /// A quarter turn clockwise on screen (-270°, three quarters
+  /// counterclockwise).
+  case clockwise = -270
 
-  /// The rotation expressed in radians.
+  /// The rotation in radians, in the same y-down convention as the raw value.
   public var radians: Double {
     Double(rawValue) * .pi / 180
   }
@@ -48,9 +51,9 @@ public enum QuarterTurn: Int, Equatable, Sendable, CaseIterable {
   /// Whether the turn exchanges the output's horizontal and vertical axes.
   public var isSideways: Bool {
     switch self {
-    case .quarterCW, .quarterCCW:
+    case .counterclockwise, .clockwise:
       return true
-    case .zero, .half:
+    case .zero, .halfTurn:
       return false
     }
   }

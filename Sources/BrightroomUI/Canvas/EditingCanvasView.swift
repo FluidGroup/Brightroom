@@ -588,8 +588,8 @@ final class EditingCanvasView: UIView {
       var crop = CropEditingState(cropFeature: feature.crop, imageSize: source.imageSize)
       if var ratio = state.preferredAspectRatio {
         // The lock describes the output, so it turns with the reloaded crop's
-        // output orientation, as it does in `setRotation(_:)`.
-        if crop.rotation.quarterTurn.isSideways != current.rotation.quarterTurn.isSideways {
+        // output orientation, as it does in `setQuarterTurn(_:)`.
+        if crop.rotation.isSideways != current.rotation.isSideways {
           ratio = ratio.swapped()
           state.preferredAspectRatio = ratio
           guideView.setLockedAspectRatio(ratio)
@@ -638,7 +638,7 @@ final class EditingCanvasView: UIView {
     emitStateSnapshot()
   }
 
-  func setRotation(_ rotation: CropEditingState.Rotation) {
+  func setQuarterTurn(_ rotation: QuarterTurn) {
     _pixeleditor_ensureMainThread()
 
     guard var crop = state.proposedCrop, crop.rotation != rotation else {
@@ -653,13 +653,14 @@ final class EditingCanvasView: UIView {
     setProposedCrop(crop, forcesLayout: true)
   }
 
-  func rotateClockwise() {
+  /// Turns the output a further quarter counterclockwise on screen.
+  func rotateCounterclockwise() {
     _pixeleditor_ensureMainThread()
 
     guard let crop = state.proposedCrop else {
       return
     }
-    setRotation(crop.rotation.next())
+    setQuarterTurn(crop.rotation.turnedCounterclockwise())
   }
 
   func setStraightenAngle(

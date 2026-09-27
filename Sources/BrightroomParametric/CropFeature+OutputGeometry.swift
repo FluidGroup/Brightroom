@@ -58,17 +58,17 @@ extension CropFeature {
     .rotated(by: -straighten)
     .translatedBy(x: -center.x, y: -center.y)
 
-    // QuarterTurn retains the engine's signed angle convention. The image
-    // transform in y-up coordinates uses its opposite sign.
+    // QuarterTurn's raw value is a y-down angle, so the image transform in
+    // y-up coordinates uses its opposite sign.
     let cropToOutput: CGAffineTransform
     switch rotation {
     case .zero:
       cropToOutput = .identity
-    case .quarterCW:
+    case .counterclockwise:
       cropToOutput = .init(a: 0, b: 1, c: -1, d: 0, tx: cropSize.height, ty: 0)
-    case .half:
+    case .halfTurn:
       cropToOutput = .init(a: -1, b: 0, c: 0, d: -1, tx: cropSize.width, ty: cropSize.height)
-    case .quarterCCW:
+    case .clockwise:
       cropToOutput = .init(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: cropSize.width)
     }
 

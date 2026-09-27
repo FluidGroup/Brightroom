@@ -785,6 +785,28 @@ image.
 `cropRect` is the selection before the quarter turn. Convert rectangles saved
 by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 
+## QuarterTurn Case Names
+
+`QuarterTurn`'s cases now say which way the picture turns on screen. The raw
+values, which your app may store, are unchanged:
+
+| 5.x | 6 | Raw value |
+| --- | --- | --- |
+| `.zero` | `.zero` | `0` |
+| `.quarterCW` | `.counterclockwise` | `-90` |
+| `.half` | `.halfTurn` | `-180` |
+| `.quarterCCW` | `.clockwise` | `-270` |
+
+The 5.x names read the raw value's sign as y-up math, but the raw value is a
+y-down (UIKit) angle: `-90` has always turned the output counterclockwise on
+screen, like the built-in rotate button. Rendering is unchanged.
+
+`CropRotation` (`.angle_0`, `.angle_90`, `.angle_180`, `.angle_270`) was a
+second name for the same four values and is removed. Use `QuarterTurn`:
+`CropEditingState.rotation` is a `QuarterTurn`, `.angle_90` is
+`.counterclockwise`, and `ImageEditorCanvas`'s `rotation(_:)` is
+`quarterTurn(_:)`.
+
 ## SwiftUICropView → ImageEditorCanvas
 
 `SwiftUICropView` is now `ImageEditorCanvas`. It edits an
@@ -803,7 +825,8 @@ by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 - To start from a `CropModifier`, create the document with
   `ImageEditorFeature.makeInitial(for:cropModifier:)` and show the view once
   it exists.
-- Renamed members: `adjustmentAngle(_:)` is `straightenAngle(_:)`,
+- Renamed members: `rotation(_:)` is `quarterTurn(_:)` (taking a
+  `QuarterTurn`), `adjustmentAngle(_:)` is `straightenAngle(_:)`,
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)`,
   `SwiftUICropView.AdjustmentKind` is `CropInteraction` (`.scrollView` is
   `.movingImage`, `.guide` is `.resizingGuide`), and
@@ -926,14 +949,16 @@ import CoreGraphics
 // The whole 300 × 200 image; it renders 200 × 300.
 let crop = CropFeature(
   cropRect: CGRect(x: 0, y: 0, width: 300, height: 200),
-  rotation: .quarterCW
+  rotation: .counterclockwise
 )
 ```
 
-Unlike most 5.x samples, the Before code still compiles against Brightroom 6.
-There it selects a 200 × 300 area that extends past the 200-pixel-high image
-and renders 300 × 200 with transparent bands, so convert such rectangles
-rather than relying on the compiler to find them.
+Unlike most 5.x samples, the Before code still compiles against Brightroom 6
+once `.quarterCW` is renamed `.counterclockwise`
+([QuarterTurn Case Names](#quarterturn-case-names)). There it selects a
+200 × 300 area that extends past the 200-pixel-high image and renders
+300 × 200 with transparent bands, so convert such rectangles rather than
+relying on the compiler to find them.
 
 - Aspect ratios describe the final output:
   `CropEditingState.updateCropExtent(toFitAspectRatio:)`, the crop view's

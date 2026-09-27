@@ -189,7 +189,7 @@ struct EditingCanvasViewFeatureFlowTests {
 
     harness.canvasView.setLockedAspectRatio(landscape)
     harness.canvasView.applyPendingCrop()
-    harness.canvasView.rotateClockwise()
+    harness.canvasView.rotateCounterclockwise()
     harness.canvasView.applyPendingCrop()
     let turned = try #require(harness.emitted.last)
     #expect(turned.crop.rotation.isSideways)
@@ -201,7 +201,7 @@ struct EditingCanvasViewFeatureFlowTests {
     let snapshot = try #require(harness.snapshots.last)
     #expect(snapshot.preferredAspectRatio == landscape)
     let reloaded = try #require(snapshot.proposedCrop)
-    #expect(reloaded.rotation.quarterTurn.isSideways == false)
+    #expect(reloaded.rotation.isSideways == false)
     #expect(reloaded.cropExtent == CGRect(origin: .zero, size: imageSize))
 
     let emittedCount = harness.emitted.count

@@ -148,7 +148,7 @@ struct EditingPreviewExportParityTests {
     let document = Self.makeDocument(
       imageSize: imageSize,
       cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
-      rotation: .angle_90,
+      rotation: .counterclockwise,
       localBlur: Self.makeLocalBlur(
         radius: 4,
         displayCenter: CGPoint(x: 20, y: 10),
@@ -387,13 +387,13 @@ struct EditingPreviewExportParityTests {
   private static func makeDocument(
     imageSize: CGSize,
     cropRect: CGRect? = nil,
-    rotation: CropEditingState.Rotation = .angle_0,
+    rotation: QuarterTurn = .zero,
     localBlur: LocalAdjustment<GaussianBlurFeature>?
   ) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.exposure = ExposureFeature(value: 0.4)
     document.localBlur = localBlur
-    if cropRect != nil || rotation != .angle_0 {
+    if cropRect != nil || rotation != .zero {
       var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
       if let cropRect {
         crop.updateCropExtent(cropRect)

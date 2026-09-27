@@ -24,7 +24,7 @@ struct CropEditingZoomScaleTests {
     )
     // The 1000-point platter scales image coordinates by 2.5. Sideways output
     // exchanges dimensions about the unchanged selection center (140.5, 90).
-    let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+    let isSideways = rotation == .counterclockwise || rotation == .clockwise
     let expectedGuide = isSideways
       ? CGRect(x: 201.25, y: -26.25, width: 300, height: 502.5)
       : CGRect(x: 100, y: 75, width: 502.5, height: 300)

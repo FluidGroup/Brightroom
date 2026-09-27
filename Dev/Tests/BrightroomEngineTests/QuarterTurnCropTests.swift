@@ -39,7 +39,7 @@ struct QuarterTurnCropTests {
 
     var crop = CropEditingState(cropFeature: document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
-    crop.rotation = CropRotation(rotation)
+    crop.rotation = rotation
 
     // Done: EditingCanvasView commits through `ImageEditorFeature.setCrop(_:)`.
     document.setCrop(crop)
@@ -77,7 +77,7 @@ struct QuarterTurnCropTests {
 
     var crop = CropEditingState(cropFeature: document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
-    crop.rotation = CropRotation(rotation)
+    crop.rotation = rotation
 
     document.setCrop(crop)
     let committed = document.crop
@@ -101,12 +101,12 @@ struct QuarterTurnCropTests {
     var latestCrop: CropEditingState?
     editor.setStateHandler { latestCrop = $0.proposedCrop }
 
-    for rotation in [QuarterTurn.quarterCW, .half, .quarterCCW, .zero] {
-      editor.rotateClockwise()
+    for rotation in [QuarterTurn.counterclockwise, .halfTurn, .clockwise, .zero] {
+      editor.rotateCounterclockwise()
       editor.layoutIfNeeded()
       let crop = try #require(latestCrop)
       let expectedExtent = CGRect(origin: .zero, size: size)
-      #expect(crop.rotation.quarterTurn == rotation)
+      #expect(crop.rotation == rotation)
       #expect(crop.cropExtent == expectedExtent)
       #expect(crop.outputCropExtent == Self.outputFrame(for: expectedExtent, rotation: rotation))
       let proposed = crop.makeCropFeature()
@@ -125,7 +125,7 @@ struct QuarterTurnCropTests {
 
   /// Starts with an exact persisted crop. Opening the view and pressing Done
   /// preserves that crop without measuring a replacement frame from UIKit.
-  @Test(arguments: [301.0, 300.0], [QuarterTurn.quarterCW, .quarterCCW])
+  @Test(arguments: [301.0, 300.0], [QuarterTurn.counterclockwise, .clockwise])
   func `Open and Done keeps a turned full-image crop`(
     imageWidth: Double,
     rotation: QuarterTurn
@@ -136,7 +136,7 @@ struct QuarterTurnCropTests {
     let expectedExtent = CGRect(origin: .zero, size: size)
     var crop = CropEditingState(cropFeature: owner.document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
-    crop.rotation = CropRotation(rotation)
+    crop.rotation = rotation
     owner.document.setCrop(crop)
     let committed = owner.document.crop
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
@@ -154,7 +154,7 @@ struct QuarterTurnCropTests {
 
   /// Preserving proposed state also applies to offset selections with a free
   /// straighten angle, where measuring the viewport could change both axes.
-  @Test(arguments: [(QuarterTurn.quarterCW, -11.0), (.quarterCCW, 7.0)])
+  @Test(arguments: [(QuarterTurn.counterclockwise, -11.0), (.clockwise, 7.0)])
   func `Open and Done keeps a straightened partial crop`(
     rotation: QuarterTurn,
     straightenDegrees: Double
@@ -165,7 +165,7 @@ struct QuarterTurnCropTests {
     let expectedExtent = CGRect(x: 10, y: 8, width: 29, height: 20)
     var crop = CropEditingState(cropFeature: owner.document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
-    crop.rotation = CropRotation(rotation)
+    crop.rotation = rotation
     crop.adjustmentAngle = .degrees(straightenDegrees)
     owner.document.setCrop(crop)
     let committed = owner.document.crop
@@ -187,7 +187,7 @@ struct QuarterTurnCropTests {
 
   /// Rotating an already straightened crop is a pixel permutation of its
   /// unturned output, including mixed-parity dimensions and an offset center.
-  @Test(arguments: [-11.0, 7.0], [QuarterTurn.quarterCW, .half, .quarterCCW])
+  @Test(arguments: [-11.0, 7.0], [QuarterTurn.counterclockwise, .halfTurn, .clockwise])
   func `Quarter turn rotates the same straightened crop`(
     straightenDegrees: Double,
     rotation: QuarterTurn
@@ -235,7 +235,7 @@ struct QuarterTurnCropTests {
     let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
 
     let (editor, window) = try openCanvasView(on: stack, owner: owner)
-    editor.rotateClockwise()
+    editor.rotateCounterclockwise()
     editor.layoutIfNeeded()
     editor.setStraightenAngle(.degrees(straightenDegrees))
     editor.layoutIfNeeded()
@@ -259,7 +259,7 @@ struct QuarterTurnCropTests {
     let feature = CropFeature(
       displayCropRect: extent,
       imageSize: imageSize,
-      rotation: .quarterCW,
+      rotation: .counterclockwise,
       straighten: 30 * .pi / 180
     )
 
@@ -322,17 +322,17 @@ struct QuarterTurnCropTests {
     let selected = try #require(latest?.proposedCrop)
     #expect(selected.cropExtent == sourceRect)
 
-    for rotation in [QuarterTurn.quarterCW, .half, .quarterCCW, .zero] {
-      editor.rotateClockwise()
+    for rotation in [QuarterTurn.counterclockwise, .halfTurn, .clockwise, .zero] {
+      editor.rotateCounterclockwise()
       editor.layoutIfNeeded()
       let snapshot = try #require(latest)
       let rotated = try #require(snapshot.proposedCrop)
-      let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+      let isSideways = rotation == .counterclockwise || rotation == .clockwise
       let expectedRatio = isSideways ? sourceRatio.swapped() : sourceRatio
       let expectedExtent = sourceRect
       #expect(snapshot.preferredAspectRatio == expectedRatio)
       #expect(rotated._usedAspectRatio == expectedRatio)
-      #expect(rotated.rotation.quarterTurn == rotation)
+      #expect(rotated.rotation == rotation)
       #expect(rotated.cropExtent == expectedExtent)
       #expect(rotated.outputCropExtent == Self.outputFrame(for: sourceRect, rotation: rotation))
       #expect(rotated.makeCropFeature().displayCropRect(imageSize: imageSize) == expectedExtent)
@@ -377,9 +377,9 @@ struct QuarterTurnCropTests {
   /// This expectation uses no engine geometry helpers or trigonometry.
   private static func outputFrame(for sourceRect: CGRect, rotation: QuarterTurn) -> CGRect {
     switch rotation {
-    case .zero, .half:
+    case .zero, .halfTurn:
       return sourceRect
-    case .quarterCW, .quarterCCW:
+    case .counterclockwise, .clockwise:
       return CGRect(
         x: sourceRect.midX - sourceRect.height / 2,
         y: sourceRect.midY - sourceRect.width / 2,
@@ -443,7 +443,7 @@ struct QuarterTurnCropTests {
   ) throws {
     let width = Int(sourceRect.width)
     let height = Int(sourceRect.height)
-    let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+    let isSideways = rotation == .counterclockwise || rotation == .clockwise
     let outputWidth = isSideways ? height : width
     let outputHeight = isSideways ? width : height
     try #require(rendered.width == outputWidth, sourceLocation: sourceLocation)
@@ -460,11 +460,11 @@ struct QuarterTurnCropTests {
         switch rotation {
         case .zero:
           (sourceX, sourceY) = (x, y)
-        case .quarterCW:
+        case .counterclockwise:
           (sourceX, sourceY) = (width - 1 - y, x)
-        case .half:
+        case .halfTurn:
           (sourceX, sourceY) = (width - 1 - x, height - 1 - y)
-        case .quarterCCW:
+        case .clockwise:
           (sourceX, sourceY) = (y, height - 1 - x)
         }
         let actualOffset = (y * outputWidth + x) * 4

@@ -23,7 +23,7 @@ extension CropEditingState {
   /// selection center. This derived rectangle is only used to lay out the guide
   /// and read back viewport interactions; `cropExtent` stays before output rotation.
   var outputCropExtent: CGRect {
-    CropGeometry.rect(cropExtent, turnedBy: rotation.quarterTurn)
+    CropGeometry.rect(cropExtent, turnedBy: rotation)
   }
 
   /// The smallest crop-output side the crop surface may author, in image pixels.
@@ -97,6 +97,6 @@ extension CropEditingState {
 
   /// Converts an output-oriented platter rect into the stored pre-turn extent.
   func makeCropExtent(rect: CGRect) -> CGRect {
-    CropGeometry.rect(imageRect(fromPlatterRect: rect), turnedBy: rotation.quarterTurn)
+    CropGeometry.rect(imageRect(fromPlatterRect: rect), turnedBy: rotation)
   }
 }

@@ -52,7 +52,7 @@ struct CropOutputGeometryTests {
   @Test(arguments: QuarterTurn.allCases)
   func laterCropUsesPreviousOutputDomain(rotation: QuarterTurn) throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let first = CropFeature(cropRect: source.extent, rotation: .quarterCW)
+    let first = CropFeature(cropRect: source.extent, rotation: .counterclockwise)
     let intermediate = try first.apply(to: source, context: .init())
     try Self.expectExactQuarterTurn(
       source: intermediate,
@@ -65,7 +65,7 @@ struct CropOutputGeometryTests {
     let source = Self.makeSource(size: CGSize(width: 300, height: 200))
     let feature = CropFeature(
       cropRect: CGRect(x: 132, y: -5, width: 36, height: 210),
-      rotation: .quarterCW,
+      rotation: .counterclockwise,
       straightenRadians: .pi / 6
     )
     let output = try feature.apply(to: source, context: .init())
@@ -110,7 +110,7 @@ struct CropOutputGeometryTests {
     for fixture in cases {
       let crop = CropFeature(cropRect: fixture.footprint, rotation: rotation)
       let output = try crop.apply(to: source, context: .init())
-      let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+      let isSideways = rotation == .counterclockwise || rotation == .clockwise
       let expectedSize = isSideways
         ? CGSize(width: fixture.rasterSize.height, height: fixture.rasterSize.width)
         : fixture.rasterSize
@@ -133,9 +133,9 @@ struct CropOutputGeometryTests {
     let width: Int
     let height: Int
     switch rotation {
-    case .zero, .half:
+    case .zero, .halfTurn:
       (width, height) = (fw, fh)
-    case .quarterCW, .quarterCCW:
+    case .counterclockwise, .clockwise:
       (width, height) = (fh, fw)
     }
     let crop = CropFeature(cropRect: footprint, rotation: rotation)
@@ -156,13 +156,13 @@ struct CropOutputGeometryTests {
         case .zero:
           sourceX = fx + x
           sourceY = fy + y
-        case .quarterCW:
+        case .counterclockwise:
           sourceX = fx + y
           sourceY = fy + fh - 1 - x
-        case .half:
+        case .halfTurn:
           sourceX = fx + fw - 1 - x
           sourceY = fy + fh - 1 - y
-        case .quarterCCW:
+        case .clockwise:
           sourceX = fx + fw - 1 - y
           sourceY = fy + x
         }

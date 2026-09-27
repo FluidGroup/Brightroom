@@ -37,11 +37,10 @@ import BrightroomParametric
 /// coordinates remain continuous until then.
 ///
 /// This is the home for the UI-authoring richness the engine no longer carries:
-/// the y-down selection, the active aspect-ratio session, and the rotation
-/// in `CropRotation`.
+/// the y-down selection, the active aspect-ratio session, and the output
+/// quarter turn.
 public struct CropEditingState: Equatable, Sendable {
 
-  public typealias Rotation = CropRotation
   public typealias AdjustmentAngle = SwiftUI.Angle
 
   /// The oriented image pixel size, from the loaded state.
@@ -53,7 +52,7 @@ public struct CropEditingState: Equatable, Sendable {
   public private(set) var cropExtent: CGRect
 
   /// The quarter-turn rotation applied to the cropped output.
-  public var rotation: Rotation = .angle_0
+  public var rotation: QuarterTurn = .zero
 
   /// The active aspect-ratio session in the final output orientation.
   public private(set) var _usedAspectRatio: PixelAspectRatio?
@@ -79,7 +78,7 @@ public struct CropEditingState: Equatable, Sendable {
       straightenRadians: cropFeature.straightenRadians,
       respectingAspectRatio: nil
     )
-    self.rotation = Rotation(cropFeature.rotation)
+    self.rotation = cropFeature.rotation
     self.adjustmentAngle = .radians(cropFeature.straightenRadians)
   }
 
@@ -89,7 +88,7 @@ public struct CropEditingState: Equatable, Sendable {
     CropFeature(
       displayCropRect: cropExtent,
       imageSize: imageSize,
-      rotation: rotation.quarterTurn,
+      rotation: rotation,
       straighten: adjustmentAngle.radians
     )
   }
@@ -99,7 +98,7 @@ public struct CropEditingState: Equatable, Sendable {
   init(
     imageSize: CGSize,
     cropRect: CGRect,
-    rotation: Rotation = .angle_0,
+    rotation: QuarterTurn = .zero,
     adjustmentAngle: AdjustmentAngle = .zero
   ) {
     self.imageSize = imageSize
@@ -128,8 +127,8 @@ public struct CropEditingState: Equatable, Sendable {
   ///
   /// Returns whether the output axes exchanged places. The active aspect ratio
   /// follows that exchange without fitting a new, larger selection.
-  mutating func updateRotation(to newRotation: Rotation) -> Bool {
-    let swapsDimensions = rotation.quarterTurn.isSideways != newRotation.quarterTurn.isSideways
+  mutating func updateRotation(to newRotation: QuarterTurn) -> Bool {
+    let swapsDimensions = rotation.isSideways != newRotation.isSideways
     if swapsDimensions {
       _usedAspectRatio = _usedAspectRatio?.swapped()
     }
@@ -186,7 +185,7 @@ public struct CropEditingState: Equatable, Sendable {
 
   /// Converts an output aspect ratio into the stored selection's orientation.
   func aspectRatioBeforeOutputRotation(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
-    rotation.quarterTurn.isSideways ? aspectRatio.swapped() : aspectRatio
+    rotation.isSideways ? aspectRatio.swapped() : aspectRatio
   }
 
   // MARK: - Rendering equivalence

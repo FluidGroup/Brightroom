@@ -141,7 +141,7 @@ public struct ImageEditorCanvas: View {
   /// as a slider value not yet written; nil shows the document.
   private let displayedFeature: ImageEditorFeature?
 
-  private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
+  private var quarterTurnInput: Binding<QuarterTurn?> = .constant(nil)
   private var straightenAngleInput: Binding<Angle?> = .constant(nil)
   private var lockedAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
@@ -293,7 +293,7 @@ public struct ImageEditorCanvas: View {
           },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
-          rotationInput: rotationInput,
+          quarterTurnInput: quarterTurnInput,
           straightenAngleInput: straightenAngleInput,
           lockedAspectRatioInput: lockedAspectRatioInput,
           resetAction: _resetAction,
@@ -341,14 +341,16 @@ public struct ImageEditorCanvas: View {
     return self
   }
 
-  public consuming func rotation(_ rotation: CropEditingState.Rotation?) -> Self {
-    self.rotationInput = .constant(rotation)
+  /// Sets the output's quarter turn; nil leaves the canvas's turn as it is.
+  public consuming func quarterTurn(_ turn: QuarterTurn?) -> Self {
+    self.quarterTurnInput = .constant(turn)
     return self
   }
 
-  public consuming func rotation(_ rotation: Binding<CropEditingState.Rotation?>) -> Self {
-
-    self.rotationInput = rotation
+  /// Sets the output's quarter turn, and writes the canvas's turn back to the
+  /// binding when the rotate action or a reloaded crop changes it.
+  public consuming func quarterTurn(_ turn: Binding<QuarterTurn?>) -> Self {
+    self.quarterTurnInput = turn
     return self
   }
 
@@ -435,7 +437,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
   let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
   let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
-  let rotationInput: Binding<CropEditingState.Rotation?>
+  let quarterTurnInput: Binding<QuarterTurn?>
   let straightenAngleInput: Binding<Angle?>
   let lockedAspectRatioInput: Binding<PixelAspectRatio?>
   let resetAction: ImageEditorCanvas.ResetAction?
@@ -515,7 +517,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     // is safe by default.
     //
     // Order matters:
-    // - The rotation and angle inputs run before `setFeature`. They mirror
+    // - The quarter-turn and angle inputs run before `setFeature`. They mirror
     //   the proposed crop through deferred snapshots, so when `setFeature`
     //   reloads the crop (an undo), they still hold the previous values and
     //   would otherwise rotate the reloaded crop back.
@@ -529,8 +531,8 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
         canvasView.clipsToGuide = clipsToGuide
       }
 
-      if let rotation = rotationInput.wrappedValue {
-        canvasView.setRotation(rotation)
+      if let quarterTurn = quarterTurnInput.wrappedValue {
+        canvasView.setQuarterTurn(quarterTurn)
       }
 
       if let straightenAngle = straightenAngleInput.wrappedValue {
@@ -582,7 +584,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     rotateAction?.onCall = { [weak canvasView] in
       guard let canvasView else { return }
 
-      canvasView.rotateClockwise()
+      canvasView.rotateCounterclockwise()
     }
 
     applyAction?.onCall = { [weak canvasView] in
@@ -597,7 +599,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   @MainActor
   private func syncInputs(with snapshot: ImageEditorCanvas.StateSnapshot) {
     if let crop = snapshot.proposedCrop {
-      rotationInput.setIfChanged(crop.rotation)
+      quarterTurnInput.setIfChanged(crop.rotation)
       straightenAngleInput.setIfChanged(crop.adjustmentAngle)
     }
     lockedAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)

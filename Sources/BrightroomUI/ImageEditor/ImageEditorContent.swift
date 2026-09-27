@@ -38,7 +38,7 @@ struct ImageEditorContent: View {
   /// document as it was when the editor opened. It restarts itself when the
   /// binding shows a document it does not know.
   @State private var session: ImageEditorSession
-  @State private var rotation: CropEditingState.Rotation?
+  @State private var quarterTurn: QuarterTurn?
   @State private var straightenAngle: CropEditingState.AdjustmentAngle?
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
@@ -102,7 +102,7 @@ struct ImageEditorContent: View {
             editingStack: editingStack,
             mode: editingMode,
             localBlurState: localBlurState,
-            rotation: $rotation,
+            quarterTurn: $quarterTurn,
             straightenAngle: $straightenAngle,
             lockedAspectRatio: lockedAspectRatioBinding(
               originalAspectRatio: originalAspectRatio
@@ -544,7 +544,7 @@ private struct CanvasHost: View {
   let editingStack: EditingStack
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
-  let rotation: Binding<CropEditingState.Rotation?>
+  let quarterTurn: Binding<QuarterTurn?>
   let straightenAngle: Binding<CropEditingState.AdjustmentAngle?>
   let lockedAspectRatio: Binding<PixelAspectRatio?>
   let resetAction: ImageEditorCanvas.ResetAction
@@ -560,7 +560,7 @@ private struct CanvasHost: View {
       editingStack: editingStack,
       isGuideInteractionEnabled: mode == .crop
     )
-    .rotation(rotation)
+    .quarterTurn(quarterTurn)
     .straightenAngle(straightenAngle)
     .lockedAspectRatio(lockedAspectRatio)
     .editingTarget(editingTarget)

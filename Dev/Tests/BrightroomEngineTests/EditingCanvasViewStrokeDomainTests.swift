@@ -49,7 +49,7 @@ struct EditingCanvasViewStrokeDomainTests {
       cropFeature: CropFeature.test(
         imageSize: imageSize,
         cropRect: CGRect(x: 60, y: 40, width: 200, height: 150),
-        rotation: .quarterCW
+        rotation: .counterclockwise
       ),
       imageSize: imageSize
     )
@@ -63,8 +63,8 @@ struct EditingCanvasViewStrokeDomainTests {
 
     let viewingRecords = plan.committedStrokes(in: geometry, domainHeight: imageSize.height)
     #expect(viewingRecords == expected)
-    // The source rectangle remains (60, 40, 200, 150). In the established
-    // quarterCW display convention, (x, y) maps to (y - 40, 260 - x). The
+    // The source rectangle remains (60, 40, 200, 150). Under the
+    // counterclockwise turn, (x, y) maps to (y - 40, 260 - x). The
     // layer's y-up stamps (100, 80) and (140, 120) are (100, 220) and
     // (140, 180) in the y-down source records.
     let viewingRecord = try #require(viewingRecords.first)
