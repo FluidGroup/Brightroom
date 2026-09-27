@@ -27,7 +27,7 @@ import Foundation
 /// Features store semantic parameters only. This registry is renderer
 /// infrastructure and all custom operations are represented as Metal-backed
 /// Core Image kernels loaded from BrightroomParametric's compiled Metal library.
-struct ParametricKernelRegistry: Sendable {
+struct MaskKernels: Sendable {
 
   func makeBrushStamp(
     extent: CGRect,
@@ -37,10 +37,10 @@ struct ParametricKernelRegistry: Sendable {
     opacity: Double
   ) throws -> CIImage {
     guard radius > 0, opacity > 0 else {
-      return CIImage.parametricTransparent(extent: extent)
+      return CIImage.transparentImage(extent: extent)
     }
 
-    let kernel = try ParametricMetalKernelStore.colorKernel(named: "brushStamp")
+    let kernel = try MetalKernelStore.colorKernel(named: "brushStamp")
     guard let image = kernel.apply(
       extent: extent,
       arguments: [
@@ -60,7 +60,7 @@ struct ParametricKernelRegistry: Sendable {
     removing: CIImage,
     extent: CGRect
   ) throws -> CIImage {
-    let kernel = try ParametricMetalKernelStore.colorKernel(named: "maskSubtract")
+    let kernel = try MetalKernelStore.colorKernel(named: "maskSubtract")
     guard let image = kernel.apply(
       extent: extent,
       arguments: [removing, base]
@@ -71,7 +71,7 @@ struct ParametricKernelRegistry: Sendable {
   }
 }
 
-private enum ParametricMetalKernelStore {
+private enum MetalKernelStore {
 
   /// Loads the bundled compiled Metal library for the parametric kernels.
   ///
@@ -97,7 +97,7 @@ private enum ParametricMetalKernelStore {
   private static let loadedKernels: Result<[String: CIColorKernel], FeatureEvaluationError> = {
     let data: Data
     do {
-      data = try BrushStampMetalLibrary.data()
+      data = try BrightroomMetalLibrary.data()
     } catch {
       return .failure(
         .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
@@ -117,11 +117,11 @@ private enum ParametricMetalKernelStore {
 
 extension CIImage {
 
-  static func parametricTransparent(extent: CGRect) -> CIImage {
+  static func transparentImage(extent: CGRect) -> CIImage {
     CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0)).cropped(to: extent)
   }
 
-  static func parametricOpaqueWhite(extent: CGRect) -> CIImage {
+  static func opaqueWhiteImage(extent: CGRect) -> CIImage {
     CIImage(color: CIColor(red: 1, green: 1, blue: 1, alpha: 1)).cropped(to: extent)
   }
 }

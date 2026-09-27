@@ -13,7 +13,7 @@ import os
 /// Y/Red and its second 4,096 pixels store Green/Blue. Keeping all four curves
 /// in one row avoids both Core Image alpha semantics and vertical interpolation
 /// between logically independent channels.
-nonisolated enum ToneCurveRenderer {
+nonisolated enum ToneCurveRecipe {
 
   /// Returns the original image exactly when the authored value is an identity.
   static func apply(

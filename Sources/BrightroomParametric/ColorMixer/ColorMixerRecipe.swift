@@ -7,7 +7,7 @@ import CoreImage
 import Foundation
 
 /// Evaluates a Color Mixer using the selected algorithm's Metal kernel.
-nonisolated enum ColorMixerRenderer {
+nonisolated enum ColorMixerRecipe {
 
   /// Returns the same image instance when all eight bands are neutral.
   static func apply(

@@ -24,7 +24,7 @@ import Foundation
 
 // Core Image recipes for the built-in features.
 //
-// The parameter structs stay pure data in ParametricFeatureModel.swift; their
+// The parameter structs stay pure data in BuiltInFeatures.swift; their
 // evaluation (`apply(to:context:)`) lives here. Every effect is
 // extent-preserving (`cropped(to: image.extent)`).
 
@@ -39,7 +39,7 @@ extension CropFeature {
   ///
   /// - Throws: `FeatureEvaluationError.invalidCropRect`.
   public func validate() throws {
-    guard rect.isParametricValidExtent else {
+    guard rect.isValidExtent else {
       throw FeatureEvaluationError.invalidCropRect(rect)
     }
   }
@@ -93,7 +93,7 @@ extension ColorCubeFeature {
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     try validate()
 
-    let filter = ParametricColorCubeHelper.makeColorCubeFilter(
+    let filter = ColorCubeFilterFactory.makeColorCubeFilter(
       cubeData: cubeData,
       dimension: dimension,
       id: id
@@ -201,7 +201,7 @@ extension ShadowsFeature {
 extension HighlightShadowTintFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let shadow = CIImage(color: shadowColor.parametricCIColor)
+    let shadow = CIImage(color: shadowColor.ciColor)
       .cropped(to: image.extent)
     guard let shadowOutput = CIFilter(
       name: "CISourceOverCompositing",
@@ -213,7 +213,7 @@ extension HighlightShadowTintFeature {
       throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
-    let highlight = CIImage(color: highlightColor.parametricCIColor)
+    let highlight = CIImage(color: highlightColor.ciColor)
       .cropped(to: image.extent)
     guard let highlightOutput = CIFilter(
       name: "CISourceOverCompositing",
@@ -246,9 +246,9 @@ extension WhiteBalanceFeature {
 extension SharpenFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = ParametricRadiusCalculator.radius(
+    let radius = RadiusCalculator.radius(
       value: radius,
-      max: ParametricFilterConstants.gaussianBlurSliderMax,
+      max: FilterConstants.gaussianBlurSliderMax,
       imageExtent: context.chainEntryExtent(for: image)
     )
     return image.applyingFilter(
@@ -270,9 +270,9 @@ extension GaussianBlurFeature {
     case let .absolute(value):
       radius = value
     case let .proportional(value):
-      radius = ParametricRadiusCalculator.radius(
+      radius = RadiusCalculator.radius(
         value: value,
-        max: ParametricFilterConstants.gaussianBlurSliderMax,
+        max: FilterConstants.gaussianBlurSliderMax,
         imageExtent: context.chainEntryExtent(for: image)
       )
     }
@@ -293,9 +293,9 @@ extension GaussianBlurFeature {
 extension UnsharpMaskFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = ParametricRadiusCalculator.radius(
+    let radius = RadiusCalculator.radius(
       value: radius,
-      max: ParametricFilterConstants.unsharpMaskRadiusSliderMax,
+      max: FilterConstants.unsharpMaskRadiusSliderMax,
       imageExtent: context.chainEntryExtent(for: image)
     )
     return image.applyingFilter(
@@ -312,7 +312,7 @@ extension UnsharpMaskFeature {
 extension VignetteFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    ParametricVignetteRenderer.apply(value: value, to: image)
+    VignetteRecipe.apply(value: value, to: image)
   }
 }
 
@@ -347,7 +347,7 @@ extension FadeFeature {
 
 extension HighlightShadowTintFeature.Color {
 
-  var parametricCIColor: CIColor {
+  var ciColor: CIColor {
     CIColor(
       red: CGFloat(red),
       green: CGFloat(green),
@@ -359,7 +359,7 @@ extension HighlightShadowTintFeature.Color {
 
 extension CGRect {
 
-  var isParametricValidExtent: Bool {
+  var isValidExtent: Bool {
     origin.x.isFinite
       && origin.y.isFinite
       && size.width.isFinite

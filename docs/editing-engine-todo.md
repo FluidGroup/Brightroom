@@ -68,7 +68,7 @@ Status context (as of Brightroom 6):
 
 ## TODO
 
-### 1. Optimize the export brush-mask rasterizer — `MaskTreeRenderer.render(_:BrushMask)`
+### 1. Optimize the export brush-mask rasterizer — `MaskRasterizer.render(_:BrushMask)`
 
 The Core Image path accumulates one full-extent CIImage per stamp via `componentMax`
 (an O(stamps)-deep graph, each stamp evaluated over the whole extent). Slow and
@@ -87,8 +87,8 @@ noted:
   Biggest win for huge masks, but it changes the rasterization geometry, so the
   live Metal shader must be made polyline-based too, or live/export diverge.
 
-Files: `Sources/BrightroomParametric/MaskTreeRenderer.swift`,
-`Sources/BrightroomParametric/ParametricKernelRegistry.swift`.
+Files: `Sources/BrightroomParametric/MaskRasterizer.swift`,
+`Sources/BrightroomParametric/MaskKernels.swift`.
 Guards: `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
 `LocalAdjustmentRenderingTests`.
 

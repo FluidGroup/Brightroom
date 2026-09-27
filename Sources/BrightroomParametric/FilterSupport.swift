@@ -28,7 +28,7 @@ import Foundation
 /// The parametric renderer keeps these values local so the rendering graph can
 /// be compiled by a macOS app without importing the UIKit-backed legacy filter
 /// types.
-enum ParametricFilterConstants {
+enum FilterConstants {
 
   /// The maximum legacy slider value for Gaussian blur.
   static let gaussianBlurSliderMax = 100.0
@@ -41,7 +41,7 @@ enum ParametricFilterConstants {
 }
 
 /// Converts Brightroom-style normalized radius values into image-domain radii.
-enum ParametricRadiusCalculator {
+enum RadiusCalculator {
 
   /// Resolves a slider value against the diagonal length of the current image.
   static func radius(
@@ -61,7 +61,7 @@ enum ParametricRadiusCalculator {
 /// which makes repeated crop operations hard to reason about. The parametric
 /// renderer uses `CIVignetteEffect` so the vignette is explicitly evaluated
 /// against the current feature output extent.
-enum ParametricVignetteRenderer {
+enum VignetteRecipe {
 
   /// Applies a vignette to the supplied image while preserving its extent.
   static func apply(
@@ -89,7 +89,7 @@ enum ParametricVignetteRenderer {
 
 /// Geometry helpers kept inside the Parametric layer so the renderer can be
 /// compiled without BrightroomEngine's UIKit-backed support files.
-enum ParametricImageGeometry {
+enum ImageGeometry {
 
   /// Translates the image so its extent starts at zero while preserving pixels.
   static func removingExtentOffset(_ image: CIImage) -> CIImage {
@@ -103,7 +103,7 @@ enum ParametricImageGeometry {
 }
 
 /// Creates Core Image color-cube filters from packed cube data.
-enum ParametricColorCubeHelper {
+enum ColorCubeFilterFactory {
 
   /// Creates a `CIColorCubeWithColorSpace` filter for a stored RGBA float cube.
   ///
@@ -125,7 +125,7 @@ enum ParametricColorCubeHelper {
     let cacheKey = id.map { "\($0)|\(dimension)|\(cubeData.count)" }
 
     if let cacheKey,
-       let cached = parametricColorCubeFilterCache.object(forKey: cacheKey as NSString)
+       let cached = colorCubeFilterCache.object(forKey: cacheKey as NSString)
     {
       return cached.copy() as! CIFilter
     }
@@ -146,11 +146,11 @@ enum ParametricColorCubeHelper {
     )!
 
     if let cacheKey {
-      parametricColorCubeFilterCache.setObject(filter, forKey: cacheKey as NSString)
+      colorCubeFilterCache.setObject(filter, forKey: cacheKey as NSString)
     }
 
     return filter.copy() as! CIFilter
   }
 }
 
-nonisolated(unsafe) private let parametricColorCubeFilterCache = NSCache<NSString, CIFilter>()
+nonisolated(unsafe) private let colorCubeFilterCache = NSCache<NSString, CIFilter>()

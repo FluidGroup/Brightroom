@@ -336,7 +336,7 @@ struct FeatureRenderingTests {
   }
 
   @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
-    let registry = ParametricKernelRegistry()
+    let registry = MaskKernels()
 
     let image = try registry.makeBrushStamp(
       extent: CGRect(x: 0, y: 0, width: 12, height: 12),

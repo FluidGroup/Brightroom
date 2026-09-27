@@ -13,7 +13,7 @@ struct _ParsedColorCube {
 }
 
 /// A trimmed, comment-free line in a color-cube text source.
-private struct _ColorCubeTextLine {
+private struct ColorCubeTextLine {
   let range: Range<Int>
   let number: Int
 }
@@ -26,7 +26,7 @@ private struct _ColorCubeUTF8Source {
   let bytes: UnsafeBufferPointer<UInt8>
 
   func nextToken(
-    in line: _ColorCubeTextLine,
+    in line: ColorCubeTextLine,
     cursor: inout Int
   ) -> Range<Int>? {
     while cursor < line.range.upperBound, Self.isWhitespace(bytes[cursor]) {
@@ -113,7 +113,7 @@ private struct _ColorCubeUTF8Source {
 }
 
 /// Iterates logical lines without first splitting the complete source string.
-private struct _ColorCubeTextLineIterator: IteratorProtocol {
+private struct ColorCubeTextLineIterator: IteratorProtocol {
 
   private let source: _ColorCubeUTF8Source
   private var cursor = 0
@@ -123,7 +123,7 @@ private struct _ColorCubeTextLineIterator: IteratorProtocol {
     self.source = source
   }
 
-  mutating func next() -> _ColorCubeTextLine? {
+  mutating func next() -> ColorCubeTextLine? {
     while cursor < source.bytes.count {
       lineNumber += 1
       let lineStart = cursor
@@ -172,7 +172,7 @@ private struct _ColorCubeTextLineIterator: IteratorProtocol {
       guard trimmedStart < trimmedEnd else {
         continue
       }
-      return _ColorCubeTextLine(
+      return ColorCubeTextLine(
         range: trimmedStart..<trimmedEnd,
         number: lineNumber
       )
@@ -183,7 +183,7 @@ private struct _ColorCubeTextLineIterator: IteratorProtocol {
 
 /// Parses three-dimensional `.cube` text without exposing parser mechanics as
 /// part of BrightroomParametric's public surface.
-struct _ColorCubeTextParser {
+struct ColorCubeTextFileParser {
 
   func parse(contentsOf url: URL) throws -> _ParsedColorCube {
     try parse(String(contentsOf: url, encoding: .utf8))
@@ -214,7 +214,7 @@ struct _ColorCubeTextParser {
     var domainMin: [Float] = [0, 0, 0]
     var domainMax: [Float] = [1, 1, 1]
     var rgbaValues: [Float] = []
-    var lines = _ColorCubeTextLineIterator(source: source)
+    var lines = ColorCubeTextLineIterator(source: source)
 
     while let line = lines.next() {
       var cursor = line.range.lowerBound
@@ -352,7 +352,7 @@ struct _ColorCubeTextParser {
   }
 
   private func parseTitle(
-    from line: _ColorCubeTextLine,
+    from line: ColorCubeTextLine,
     after keyword: Range<Int>,
     source: _ColorCubeUTF8Source
   ) -> String? {
@@ -379,7 +379,7 @@ struct _ColorCubeTextParser {
   }
 
   private func remainingTokens(
-    in line: _ColorCubeTextLine,
+    in line: ColorCubeTextLine,
     cursor: inout Int,
     source: _ColorCubeUTF8Source
   ) -> [Range<Int>] {
@@ -391,7 +391,7 @@ struct _ColorCubeTextParser {
   }
 
   private func parseFloatValues(
-    in line: _ColorCubeTextLine,
+    in line: ColorCubeTextLine,
     cursor: inout Int,
     expectedCount: Int,
     directive: String,

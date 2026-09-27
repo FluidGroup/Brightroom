@@ -61,7 +61,7 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
   /// Identity bands (`bands.isIdentity`) return `image` itself.
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard let renderPlan else { return image }
-    return try ColorMixerRenderer.apply(to: image, plan: renderPlan)
+    return try ColorMixerRecipe.apply(to: image, plan: renderPlan)
   }
 
   /// Compares the authored members; the derived render plan does not take part.

@@ -28,10 +28,10 @@ import Foundation
 /// `FeatureRenderer.makeMaskImage(for:extent:)`, so mask inspection
 /// shows exactly the alpha a local adjustment composites through. Brush stamps are interpreted in Core Image working-space
 /// coordinates (bottom-left origin, y-up).
-struct MaskTreeRenderer: Sendable {
+struct MaskRasterizer: Sendable {
 
   /// The kernels used for brush stamps and mask subtraction.
-  private let kernelRegistry = ParametricKernelRegistry()
+  private let kernelRegistry = MaskKernels()
 
   func render(_ mask: Mask, extent: CGRect) throws -> CIImage {
     try renderNode(mask, extent: extent)
@@ -74,7 +74,7 @@ struct MaskTreeRenderer: Sendable {
       guard masks.isEmpty == false else {
         throw FeatureEvaluationError.emptyMaskComposite
       }
-      return try masks.reduce(CIImage.parametricTransparent(extent: extent)) { accumulated, mask in
+      return try masks.reduce(CIImage.transparentImage(extent: extent)) { accumulated, mask in
         let next = try renderNode(mask, extent: extent)
         return try blendMask(
           foreground: next,
@@ -145,7 +145,7 @@ struct MaskTreeRenderer: Sendable {
   /// base.
   private func reduceComponentMax(_ images: [CIImage], extent: CGRect) throws -> CIImage {
     guard images.isEmpty == false else {
-      return CIImage.parametricTransparent(extent: extent)
+      return CIImage.transparentImage(extent: extent)
     }
 
     var level = images

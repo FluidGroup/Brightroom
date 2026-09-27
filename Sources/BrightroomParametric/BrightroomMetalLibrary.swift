@@ -27,12 +27,12 @@ import Foundation
 /// the package/Xcode Metal build step into `default.metallib`. The parametric
 /// renderer loads Core Image kernels from this library, and BrightroomUI loads
 /// the live brush-mask vertex/fragment functions from the same library.
-public enum BrushStampMetalLibrary {
+public enum BrightroomMetalLibrary {
 
   /// Returns the URL for the bundled `default.metallib`.
   public static func url() throws -> URL {
     guard let url = Bundle.module.url(forResource: "default", withExtension: "metallib") else {
-      throw BrushStampMetalLibraryError.missingResource("default.metallib")
+      throw BrightroomMetalLibraryError.missingResource("default.metallib")
     }
     return url
   }
@@ -43,7 +43,7 @@ public enum BrushStampMetalLibrary {
     do {
       return try Data(contentsOf: url)
     } catch {
-      throw BrushStampMetalLibraryError.unreadableResource(
+      throw BrightroomMetalLibraryError.unreadableResource(
         "default.metallib: \(String(describing: error))"
       )
     }
@@ -51,7 +51,7 @@ public enum BrushStampMetalLibrary {
 }
 
 /// Errors thrown while loading BrightroomParametric's compiled Metal library.
-public enum BrushStampMetalLibraryError: Error, Equatable, Sendable {
+public enum BrightroomMetalLibraryError: Error, Equatable, Sendable {
 
   /// The package resource bundle does not contain `default.metallib`.
   case missingResource(String)

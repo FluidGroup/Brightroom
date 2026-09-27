@@ -53,7 +53,7 @@ public struct LocalAdjustmentFeature<Content: ImageEffect>: ImageEffect {
     let base = image
     // The mask renders first so a malformed mask fails before the content is
     // evaluated.
-    let maskImage = try MaskTreeRenderer().render(mask, extent: base.extent)
+    let maskImage = try MaskRasterizer().render(mask, extent: base.extent)
     let adjusted = try content.apply(to: base, context: context)
 
     // Content that applied nothing returns its input instance. Blending the

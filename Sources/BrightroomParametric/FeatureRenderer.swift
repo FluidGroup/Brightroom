@@ -50,7 +50,7 @@ public struct FeatureRenderer: Sendable {
     chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) throws -> CIImage {
-    let image = ParametricImageGeometry.removingExtentOffset(sourceImage)
+    let image = ImageGeometry.removingExtentOffset(sourceImage)
 
     // Resolve the chain-entry extent ONCE. Deriving it lazily
     // inside each recipe (`?? image.extent`) would re-base the radius on
@@ -74,6 +74,6 @@ public struct FeatureRenderer: Sendable {
   /// the result is exactly the alpha a local adjustment uses. Callers holding
   /// masks authored in a y-down display space flip at this boundary.
   public func makeMaskImage(for mask: Mask, extent: CGRect) throws -> CIImage {
-    try MaskTreeRenderer().render(mask, extent: extent)
+    try MaskRasterizer().render(mask, extent: extent)
   }
 }

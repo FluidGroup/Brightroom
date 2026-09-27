@@ -58,7 +58,7 @@ struct ColorCubeFeatureLoadingTests {
       "1 1 1 # final value",
     ].joined(separator: "\r\n")
 
-    let parsed = try _ColorCubeTextParser().parse(cube)
+    let parsed = try ColorCubeTextFileParser().parse(cube)
     let values = parsed.cubeData.withUnsafeBytes {
       Array($0.bindMemory(to: Float.self))
     }
@@ -80,7 +80,7 @@ struct ColorCubeFeatureLoadingTests {
   }
 
   @Test func `Color cube parser materializes a production-sized cube`() throws {
-    let parsed = try _ColorCubeTextParser().parse(
+    let parsed = try ColorCubeTextFileParser().parse(
       Self.identityCube(size: 64, title: "Identity 64")
     )
 
@@ -105,7 +105,7 @@ struct ColorCubeFeatureLoadingTests {
         line: 3
       )
     ) {
-      try _ColorCubeTextParser().parse(cube)
+      try ColorCubeTextFileParser().parse(cube)
     }
   }
 

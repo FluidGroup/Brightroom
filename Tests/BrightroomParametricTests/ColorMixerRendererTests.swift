@@ -13,7 +13,7 @@ struct ColorMixerRendererTests {
     let pixel = SIMD4<Double>(-0.2, 1.4, 0.3, 0.6)
     let image = Self.makeImage([SIMD4(-0.12, 0.84, 0.18, 0.6)])
     #expect(ColorMixerRenderPlan(bands: .neutral) == nil)
-    #expect(try ColorMixerRenderer.apply(to: image, bands: .neutral) === image)
+    #expect(try ColorMixerRecipe.apply(to: image, bands: .neutral) === image)
     #expect(ColorMixerReferenceProcessor.processPremultiplied(pixel, bands: .neutral) == pixel)
     for feature in [
       ColorMixerFeature(bands: .neutral),
@@ -166,7 +166,7 @@ struct ColorMixerRendererTests {
     expectClose(result.chroma, original.chroma * 0.76, tolerance: 0.000_000_1)
     expectClose(result.lightness, original.lightness, tolerance: 0.000_000_1)
 
-    let rendered = try ColorMixerRenderer.apply(
+    let rendered = try ColorMixerRecipe.apply(
       to: Self.makeImage([SIMD4<Float>(1, 0, 0, 1)]),
       plan: plan
     )
@@ -234,7 +234,7 @@ struct ColorMixerRendererTests {
       SIMD4(0.45, 0.05, 0.35, 0.5),
       SIMD4(0.18, 0.18, 0.18, 1),
     ]
-    let output = try ColorMixerRenderer.apply(to: Self.makeImage(source), plan: plan)
+    let output = try ColorMixerRecipe.apply(to: Self.makeImage(source), plan: plan)
     let actual = Self.sample(output, count: source.count)
     for index in source.indices {
       let sourcePixel = source[index]

@@ -33,7 +33,7 @@ import simd
 /// management, and stroke state. This type extracts only the rasterization
 /// kernel — a single off-screen stamp pass — so the live rasterizer can be
 /// exercised in isolation and proven, by test, to match the parametric Core
-/// Image brush-stamp kernel (`MaskTreeRenderer`) that the
+/// Image brush-stamp kernel (`MaskRasterizer`) that the
 /// shared falloff establishes as the contract.
 ///
 /// The pipeline, the uniform layout, and the per-stamp encoding all come from
@@ -84,7 +84,7 @@ struct BrushMaskMetalRasterizer {
   /// Coordinates are the **identity (no-viewport)** domain: `center` is in
   /// canvas pixels and the vertex shader maps it to clip space. There is no
   /// content→view scale here, so this matches the parametric brush-stamp
-  /// kernel (`MaskTreeRenderer`), where the stamp center is given directly in
+  /// kernel (`MaskRasterizer`), where the stamp center is given directly in
   /// the mask extent.
   ///
   /// ## Orientation — no extra flip is needed
@@ -95,9 +95,9 @@ struct BrushMaskMetalRasterizer {
   /// then applies its OWN vertical flip when wrapping (Metal top-left origin →
   /// Core Image bottom-left origin). Those two flips compose: a stamp passed with
   /// `center = (x, y)` lands at CI-y `y` in the wrapped image — exactly where the
-  /// parametric kernel (`MaskTreeRenderer`, `dest.coord()` y-up) places the
+  /// parametric kernel (`MaskRasterizer`, `dest.coord()` y-up) places the
   /// same `y`. So the wrapped texture is already in the frame of
-  /// `MaskTreeRenderer` (`FeatureRenderer.makeMaskImage`) and is directly
+  /// `MaskRasterizer` (`FeatureRenderer.makeMaskImage`) and is directly
   /// comparable to the export/preview mask without any added transform.
   /// (The live view's `renderDrawableImage` flip is a separate, drawable-only
   /// presentation step and does not belong here.)
@@ -168,7 +168,7 @@ struct BrushMaskMetalRasterizer {
     // via `1 - y/h*2`, and `CIImage(mtlTexture:)` applies its own vertical flip on
     // wrap; the two compose so the stamp lands at CI y-up = the input y — the
     // SAME coordinate the parametric `brushStamp` kernel uses (`dest.coord()`).
-    // So the wrapped texture is already in `MaskTreeRenderer`'s frame.
+    // So the wrapped texture is already in `MaskRasterizer`'s frame.
     return textureImage.cropped(to: extent)
   }
 }

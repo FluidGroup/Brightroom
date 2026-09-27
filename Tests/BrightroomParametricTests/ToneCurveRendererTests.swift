@@ -77,7 +77,7 @@ struct ToneCurveRendererTests {
     let source = Self.makeImage([
       SIMD4(0.2, 0.1, 0.05, 1)
     ])
-    let output = try ToneCurveRenderer.apply(to: source, curves: diagonalValue)
+    let output = try ToneCurveRecipe.apply(to: source, curves: diagonalValue)
     #expect(output === source)
 
     let feature = ToneCurveFeature(curves: diagonalValue)
@@ -206,7 +206,7 @@ struct ToneCurveRendererTests {
     }
     let source = Self.makeImage(sourcePixels)
 
-    let output = try ToneCurveRenderer.apply(to: source, plan: plan)
+    let output = try ToneCurveRecipe.apply(to: source, plan: plan)
     let actual = Self.sample(
       output,
       pixelCount: sourcePixels.count,
@@ -400,7 +400,7 @@ struct ToneCurveRendererTests {
       translatedBy: CGPoint(x: 7, y: 11)
     )
 
-    let output = try ToneCurveRenderer.apply(to: source, plan: plan)
+    let output = try ToneCurveRecipe.apply(to: source, plan: plan)
     #expect(output.extent == source.extent)
     let floatActual = Self.sample(
       output,

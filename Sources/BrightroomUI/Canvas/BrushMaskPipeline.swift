@@ -32,7 +32,7 @@ import simd
 ///   every frame, into the viewport mask texture.
 /// - `BrushMaskMetalRasterizer` draws a stamp list off-screen so
 ///   `BrushMaskRasterizerParityTests` can prove that live rasterization matches
-///   the parametric Core Image brush-stamp kernel (`MaskTreeRenderer`).
+///   the parametric Core Image brush-stamp kernel (`MaskRasterizer`).
 ///
 /// Those two paths **must** evolve together. The parity test only means anything
 /// if the pipeline it exercises is the pipeline the live view drives, and
@@ -70,7 +70,7 @@ enum BrushMaskPipeline {
   /// the parametric export kernel are built as one brush-mask rasterization
   /// family.
   static func makeLibrary(device: MTLDevice) throws -> MTLLibrary {
-    return try device.makeLibrary(URL: BrushStampMetalLibrary.url())
+    return try device.makeLibrary(URL: BrightroomMetalLibrary.url())
   }
 
   /// Builds the brush-stamp render pipeline state on `device`.
@@ -85,7 +85,7 @@ enum BrushMaskPipeline {
     descriptor.colorAttachments[0].isBlendingEnabled = true
     // Overlapping stamps take the per-channel maximum, matching the parametric
     // mask's `CIBlendKernel.componentMax` accumulation (the parametric
-    // brush-stamp kernel, `MaskTreeRenderer`). Metal ignores the blend
+    // brush-stamp kernel, `MaskRasterizer`). Metal ignores the blend
     // factors for `.max`, but they are set to `.one` for clarity.
     descriptor.colorAttachments[0].rgbBlendOperation = .max
     descriptor.colorAttachments[0].alphaBlendOperation = .max

@@ -87,7 +87,7 @@ extension ColorCubeFeature {
     id: String? = nil,
     intensity: Double = 1
   ) throws {
-    let parsed = try _ColorCubeTextParser().parse(contentsOf: url)
+    let parsed = try ColorCubeTextFileParser().parse(contentsOf: url)
     self.init(
       name: name ?? parsed.title ?? url.deletingPathExtension().lastPathComponent,
       id: id ?? url.lastPathComponent,

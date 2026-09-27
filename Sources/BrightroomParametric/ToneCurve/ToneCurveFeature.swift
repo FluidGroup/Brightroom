@@ -48,7 +48,7 @@ public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
     context: FeatureEvaluationContext
   ) throws -> CIImage {
     guard let renderPlan else { return image }
-    return try ToneCurveRenderer.apply(to: image, plan: renderPlan)
+    return try ToneCurveRecipe.apply(to: image, plan: renderPlan)
   }
 
   /// Compares the authored curves; the derived render plan does not take part.

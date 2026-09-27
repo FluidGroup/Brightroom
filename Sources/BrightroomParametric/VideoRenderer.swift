@@ -75,7 +75,7 @@ public struct VideoRenderer: Sendable {
     guard let renderExtent else {
       return output
     }
-    return output.parametricPlaced(in: renderExtent)
+    return output.placed(in: renderExtent)
   }
 
   /// Resolves the render size for a video composition of a feature.
@@ -88,7 +88,7 @@ public struct VideoRenderer: Sendable {
     feature: some Feature,
     mode: RenderSizeMode
   ) throws -> CGSize {
-    guard sourceRenderSize.isParametricVideoValidRenderSize else {
+    guard sourceRenderSize.isValidRenderSize else {
       throw VideoRendererError.invalidSourceRenderSize(sourceRenderSize)
     }
 
@@ -97,7 +97,7 @@ public struct VideoRenderer: Sendable {
       return sourceRenderSize
 
     case let .custom(renderSize):
-      guard renderSize.isParametricVideoValidRenderSize else {
+      guard renderSize.isValidRenderSize else {
         throw VideoRendererError.invalidRenderSize(renderSize)
       }
       return renderSize
@@ -108,7 +108,7 @@ public struct VideoRenderer: Sendable {
         .cropped(to: sourceExtent)
       let output = try featureRenderer.makeImage(from: dryRunInput, feature: feature)
       let renderSize = output.extent.size
-      guard renderSize.isParametricVideoValidRenderSize else {
+      guard renderSize.isValidRenderSize else {
         throw VideoRendererError.invalidRenderSize(renderSize)
       }
       return renderSize
@@ -154,7 +154,7 @@ public struct VideoRenderer: Sendable {
       }
     }
     composition.renderSize = renderSize
-    guard composition.renderSize.isParametricVideoValidRenderSize else {
+    guard composition.renderSize.isValidRenderSize else {
       throw VideoRendererError.invalidRenderSize(composition.renderSize)
     }
     return composition
@@ -164,12 +164,12 @@ public struct VideoRenderer: Sendable {
     for asset: AVAsset,
     sizingComposition: AVMutableVideoComposition
   ) -> CGSize {
-    if sizingComposition.renderSize.isParametricVideoValidRenderSize {
+    if sizingComposition.renderSize.isValidRenderSize {
       return sizingComposition.renderSize
     }
 
     if let composition = asset as? AVComposition,
-       composition.naturalSize.isParametricVideoValidRenderSize
+       composition.naturalSize.isValidRenderSize
     {
       return composition.naturalSize
     }
@@ -190,7 +190,7 @@ public enum VideoRendererError: Error, Equatable, Sendable {
 
 private extension CIImage {
 
-  func parametricPlaced(in renderExtent: CGRect) -> CIImage {
+  func placed(in renderExtent: CGRect) -> CIImage {
     let placed = transformed(
       by: CGAffineTransform(
         translationX: renderExtent.minX - extent.minX,
@@ -207,7 +207,7 @@ private extension CIImage {
 
 private extension CGSize {
 
-  var isParametricVideoValidRenderSize: Bool {
+  var isValidRenderSize: Bool {
     width.isFinite
       && height.isFinite
       && width > 0

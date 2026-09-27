@@ -1108,6 +1108,12 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | `ColorMixerAdjustment.isNeutral`, `ColorMixerBandAdjustment.isNeutral` | `ColorMixerFeature.Bands.isIdentity`, `ColorMixerFeature.BandCorrection.isIdentity` |
 | `ColorMixerRenderIdentity(activeAdjustment:algorithm:)` | `ColorMixerFeature.RenderKey(activeBands:algorithm:)` |
 
+### Metal Library
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | `BrightroomMetalLibrary`, `BrightroomMetalLibraryError`. The library holds more than the brush stamp. |
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.
