@@ -333,6 +333,7 @@ private extension FeatureGraphCompiler {
     }
 
     var level = images
+    var levelsSinceIntermediate = 0
     while level.count > 1 {
       var next: [CIImage] = []
       next.reserveCapacity((level.count + 1) / 2)
@@ -352,7 +353,18 @@ private extension FeatureGraphCompiler {
         }
         index += 2
       }
-      level = next
+      levelsSinceIntermediate += 1
+      if levelsSinceIntermediate == 6 {
+        // Balancing limits graph depth, but Core Image can still fuse all
+        // stamps into one Metal function. Bound each fused mask segment to
+        // 64 inputs and 63 maximum operations, retaining every stamp. Dense
+        // masks can otherwise fail during Metal library creation.
+        // `cache: false` respects the context's intermediate-cache policy.
+        level = next.map { $0.insertingIntermediate(cache: false) }
+        levelsSinceIntermediate = 0
+      } else {
+        level = next
+      }
     }
 
     return level[0].cropped(to: extent)
