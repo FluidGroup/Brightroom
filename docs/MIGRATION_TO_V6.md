@@ -211,6 +211,7 @@ parameters without `id:` and `isEnabled:`, for example
 | `ParametricVideoRenderer(compiler:)`, `ParametricVideoRenderer(imageRenderer:)`, `ParametricVideoRenderer.imageRenderer` | `ParametricVideoRenderer()` |
 | `ParametricExportRenderer(imageRenderer:)`, `ParametricExportRenderer.imageRenderer` | `ParametricExportRenderer()` |
 | `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(value:)`, `ColorMixerFeature(adjustment:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
+| `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `MaskFeather(input:radius:)`, `MaskSubtract(base:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `PresetFeature(name:identifier:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter | The same loaders without `id:`. They take an optional `identifier:` instead, which defaults to the file name as before. |
@@ -286,15 +287,11 @@ identity.
 Equality of both features now compares their authored members: `value` for
 a curve, `adjustment` and `algorithm` for a mixer. In 5.x it compared the
 feature `id` and the rendered result, so two curves with the same id that
-differed only in diagonal interior points or point ids were equal, and so were
-mixers whose values rounded to the same Float32 parameters. They are no longer
-equal, so an owner that drops equal updates keeps such an edit, for example
-the first point a curve drag adds on the diagonal.
-
-A curve rebuilt with fresh point ids is now a different value. If you build
-curves on each access, for example a preset catalog in a computed property
-that calls `insertPoint(input:output:)`, build them once or pass stable ids
-through `insertPoint(id:input:output:)`.
+differed only in diagonal interior points were equal, and so were mixers whose
+values rounded to the same Float32 parameters. They are no longer equal, so an
+owner that drops equal updates keeps such an edit, for example the first point
+a curve drag adds on the diagonal. Curve points no longer have ids, so two 5.x
+curves that differed only in point ids convert to the same value.
 
 Where you need "renders the same", such as a cache key, compare the render
 identities explicitly:
@@ -311,6 +308,60 @@ func rendersTheSame(_ a: ColorMixerFeature, _ b: ColorMixerFeature) -> Bool {
     == ColorMixerRenderIdentity(activeAdjustment: b.adjustment, algorithm: b.algorithm)
 }
 ```
+
+### Tone Curve points
+
+A `ToneCurve` is plain data: its points are coordinate pairs with no identity.
+`ToneCurve.Point.ID` (`.blackEndpoint`, `.whiteEndpoint`, `.interior(UUID)`),
+`Point.id`, the `Identifiable` conformance, and `Point.isEndpoint` were
+removed. The endpoints are the first and last points, and the editing methods
+take the point's index in `points`.
+
+| Brightroom 5.1 | Brightroom 6 |
+| --- | --- |
+| `insertPoint(input:output:) -> Point.ID?` | `insertPoint(input:output:) -> Int?`, the index of the new point |
+| `insertPointInLargestGap() -> Point.ID?` | `insertPointInLargestGap() -> Int?` |
+| `insertPoint(id:input:output:)` | `insertPoint(input:output:)` on each curve. Points in different channels are not linked. |
+| `point(id:)` | `points[index]` |
+| `movePoint(id:input:output:)` | `movePoint(at:input:output:)` |
+| `offsetPoint(id:inputDelta:outputDelta:)` | `offsetPoint(at:inputDelta:outputDelta:)` |
+| `removePoint(id:)` | `removePoint(at:)`. It returns `false` for the first and last point, as before for the endpoints. |
+| `.blackEndpoint`, `.whiteEndpoint` | Index `0` and `points.count - 1` |
+| `point.isEndpoint` | `index == 0 \|\| index == curve.points.count - 1` |
+
+```swift
+import BrightroomParametric
+
+var curve = ToneCurve()
+if let index = curve.insertPoint(input: 0.25, output: 0.2) {
+  // A move never passes a neighbor, so `index` addresses the same point
+  // for the whole drag.
+  curve.movePoint(at: index, input: 0.3, output: 0.22)
+}
+// Lift the black endpoint.
+curve.movePoint(at: 0, input: 0, output: 0.05)
+```
+
+Only a move keeps every index valid. Insertion and removal shift the
+indices after them, so update a stored selection with the index
+`insertPoint` returns, or after `removePoint(at:)`. Resetting a curve or a
+channel, and replacing the curve (undo, redo, or opening another document),
+replace the points altogether, so clear or re-derive the selection then too.
+An index that is still inside `points` after such a change addresses
+whichever point now sits there, possibly an endpoint, without any error. An
+index outside `points` is a programming error and traps, like an array
+subscript; 5.1 ignored an unknown id.
+
+Two curves with the same coordinates are now equal however they were built,
+so a preset catalog that builds its curves on each access produces equal
+values. If your editor needs to tell points apart by more than their position,
+for example to keep one point linked across channels, keep that in the
+editor's own state, or compose your own `Feature` that carries it next to the
+curve.
+
+When you convert curves saved by 5.x, keep the points in their stored order
+and drop their ids. See the
+[5.x conversion notes](parametric-persistence.md#converting-5x-documents).
 
 ### Errors
 

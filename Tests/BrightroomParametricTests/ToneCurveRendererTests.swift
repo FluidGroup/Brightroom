@@ -55,15 +55,15 @@ struct ToneCurveRendererTests {
     #expect(ToneCurveRenderPlan(value: .neutral) == nil)
 
     var diagonal = ToneCurve()
-    let diagonalPointID = diagonal.insertPoint(input: 0.4, output: 0.4)
-    _ = try #require(diagonalPointID)
+    let diagonalIndex = diagonal.insertPoint(input: 0.4, output: 0.4)
+    _ = try #require(diagonalIndex)
     let diagonalValue = ToneCurveEditorValue(red: diagonal)
     #expect(diagonalValue.isNeutral == false)
     #expect(ToneCurveRenderPlan(value: diagonalValue) == nil)
 
     var inwardDiagonalEndpoint = ToneCurve()
     inwardDiagonalEndpoint.movePoint(
-      id: .blackEndpoint,
+      at: 0,
       input: 0.2,
       output: 0.2
     )
@@ -90,17 +90,15 @@ struct ToneCurveRendererTests {
   }
 
   @Test
-  func renderPlanUsesOneUUIDIndependentSixtyFourKiBTable() throws {
-    let firstCurve = try Self.makeCurve(
+  func renderPlanIgnoresIdentityChannelsAndUsesOneSixtyFourKiBTable() throws {
+    let curve = try Self.makeCurve(
       interiors: [(0.25, 0.45), (0.8, 0.7)]
     )
-    let secondCurve = try Self.makeCurve(
-      interiors: [(0.25, 0.45), (0.8, 0.7)]
-    )
-    #expect(firstCurve != secondCurve)
+    let diagonal = try Self.makeCurve(interiors: [(0.5, 0.5)])
+    #expect(diagonal.isIdentityMapping)
 
-    let firstValue = ToneCurveEditorValue(red: firstCurve)
-    let secondValue = ToneCurveEditorValue(red: secondCurve)
+    let firstValue = ToneCurveEditorValue(red: curve)
+    let secondValue = ToneCurveEditorValue(red: curve, green: diagonal)
     let firstPlan = try #require(ToneCurveRenderPlan(value: firstValue))
     let secondPlan = try #require(ToneCurveRenderPlan(value: secondValue))
 
@@ -143,8 +141,8 @@ struct ToneCurveRendererTests {
     throws
   {
     var curve = ToneCurve()
-    curve.movePoint(id: .blackEndpoint, input: 0.15, output: 0.04)
-    curve.movePoint(id: .whiteEndpoint, input: 0.86, output: 0.97)
+    curve.movePoint(at: 0, input: 0.15, output: 0.04)
+    curve.movePoint(at: 1, input: 0.86, output: 0.97)
     let value = ToneCurveEditorValue(red: curve)
     let plan = try #require(ToneCurveRenderPlan(value: value))
     let evaluator = ToneCurveEvaluator(curve: curve)
@@ -189,8 +187,8 @@ struct ToneCurveRendererTests {
   @Test
   func compiledMetalKernelMatchesFlatMovedEndpointExtensions() throws {
     var curve = ToneCurve()
-    curve.movePoint(id: .blackEndpoint, input: 0.15, output: 0.04)
-    curve.movePoint(id: .whiteEndpoint, input: 0.86, output: 0.97)
+    curve.movePoint(at: 0, input: 0.15, output: 0.04)
+    curve.movePoint(at: 1, input: 0.86, output: 0.97)
     let value = ToneCurveEditorValue(red: curve)
     let plan = try #require(ToneCurveRenderPlan(value: value))
     let normalizedInputs = [-0.2, 0, 0.1, 0.15, 0.5, 0.86, 1, 1.2]
@@ -435,11 +433,11 @@ struct ToneCurveRendererTests {
   func maximumPointCurveProducesFiniteExtendedOutputs() throws {
     var curve = ToneCurve()
     for index in 1...10 {
-      let pointID = curve.insertPoint(
+      let insertedIndex = curve.insertPoint(
         input: Double(index) / 11,
         output: index.isMultiple(of: 2) ? 0.95 : 0.05
       )
-      _ = try #require(pointID)
+      _ = try #require(insertedIndex)
     }
     #expect(curve.points.count == ToneCurve.maximumPointCount)
 
@@ -497,12 +495,12 @@ struct ToneCurveRendererTests {
     interiors: [(Double, Double)]
   ) throws -> ToneCurve {
     var curve = ToneCurve()
-    curve.movePoint(id: .blackEndpoint, input: 0, output: black)
-    curve.movePoint(id: .whiteEndpoint, input: 1, output: white)
+    curve.movePoint(at: 0, input: 0, output: black)
+    curve.movePoint(at: 1, input: 1, output: white)
     for (input, output) in interiors {
-      let pointID = curve.insertPoint(input: input, output: output)
+      let insertedIndex = curve.insertPoint(input: input, output: output)
       _ = try #require(
-        pointID,
+        insertedIndex,
         "Expected a legal Tone Curve test point at \(input)"
       )
     }

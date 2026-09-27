@@ -14,10 +14,10 @@ import os
 /// luminance. Callers must evaluate the recipe in an extended-linear Display-P3
 /// working color space with floating-point precision.
 ///
-/// Equality compares the authored `value`, including point identities and
-/// interior points on the diagonal that do not change pixels. The derived
-/// render plan does not take part. To ask whether two curves render the same,
-/// compare their `ToneCurveRenderIdentity(value:)`.
+/// Equality compares the authored `value`, including interior points on the
+/// diagonal that do not change pixels. The derived render plan does not take
+/// part. To ask whether two curves render the same, compare their
+/// `ToneCurveRenderIdentity(value:)`.
 public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
 
   /// The interpretation of the stop shaper, YRGB composition, and sampled table.

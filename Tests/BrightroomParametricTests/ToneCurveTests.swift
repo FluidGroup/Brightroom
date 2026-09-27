@@ -10,24 +10,23 @@ struct ToneCurveTests {
     let curve = ToneCurve()
 
     #expect(curve.isNeutral)
-    #expect(curve.points.count == 2)
-    #expect(curve.points[0].id == .blackEndpoint)
-    #expect(curve.points[0].input == 0)
-    #expect(curve.points[0].output == 0)
-    #expect(curve.points[1].id == .whiteEndpoint)
-    #expect(curve.points[1].input == 1)
-    #expect(curve.points[1].output == 1)
+    #expect(
+      curve.points == [
+        ToneCurve.Point(input: 0, output: 0),
+        ToneCurve.Point(input: 1, output: 1),
+      ]
+    )
     #expect(curve.isIdentityMapping)
   }
 
   @Test
   func diagonalInteriorPointsAreIdentityButInwardEndpointsAreNot() throws {
     var curve = ToneCurve()
-    let diagonalPointID = curve.insertPoint(input: 0.4, output: 0.4)
-    _ = try #require(diagonalPointID)
+    let diagonalIndex = curve.insertPoint(input: 0.4, output: 0.4)
+    _ = try #require(diagonalIndex)
     #expect(curve.isIdentityMapping)
 
-    curve.movePoint(id: .blackEndpoint, input: 0.2, output: 0.2)
+    curve.movePoint(at: 0, input: 0.2, output: 0.2)
     #expect(curve.isIdentityMapping == false)
   }
 
@@ -35,29 +34,54 @@ struct ToneCurveTests {
   func insertingPointsKeepsTheirInputCoordinatesOrdered() throws {
     var curve = ToneCurve()
 
-    let insertedHighlightID = curve.insertPoint(input: 0.8, output: 0.7)
-    let highlightID = try #require(insertedHighlightID)
-    let insertedShadowID = curve.insertPoint(input: 0.2, output: 0.3)
-    let shadowID = try #require(insertedShadowID)
+    let highlightIndex = curve.insertPoint(input: 0.8, output: 0.7)
+    #expect(highlightIndex == 1)
+    let shadowIndex = curve.insertPoint(input: 0.2, output: 0.3)
+    #expect(shadowIndex == 1)
 
     #expect(curve.points.map(\.input) == [0, 0.2, 0.8, 1])
-    #expect(curve.point(id: shadowID)?.output == 0.3)
-    #expect(curve.point(id: highlightID)?.output == 0.7)
+    #expect(curve.points[1].output == 0.3)
+    #expect(curve.points[2].output == 0.7)
     #expect(curve.isNeutral == false)
+  }
+
+  @Test
+  func curvesWithTheSameCoordinatesAreEqual() throws {
+    var first = ToneCurve()
+    var second = ToneCurve()
+    for (input, output) in [(0.3, 0.4), (0.7, 0.8)] {
+      let index = first.insertPoint(input: input, output: output)
+      _ = try #require(index)
+    }
+    for (input, output) in [(0.7, 0.8), (0.3, 0.4)] {
+      let index = second.insertPoint(input: input, output: output)
+      _ = try #require(index)
+    }
+
+    #expect(first == second)
+
+    let removed = second.removePoint(at: 1)
+    #expect(removed)
+    let reinsertedIndex = second.insertPoint(input: 0.3, output: 0.4)
+    #expect(reinsertedIndex == 1)
+
+    #expect(first == second)
   }
 
   @Test
   func movingInteriorPointCannotCrossItsNeighbors() throws {
     var curve = ToneCurve()
-    let insertedLowerID = curve.insertPoint(input: 0.25, output: 0.25)
-    let lowerID = try #require(insertedLowerID)
-    let insertedUpperID = curve.insertPoint(input: 0.75, output: 0.75)
-    let upperID = try #require(insertedUpperID)
+    let insertedLowerIndex = curve.insertPoint(input: 0.25, output: 0.25)
+    let lowerIndex = try #require(insertedLowerIndex)
+    let insertedUpperIndex = curve.insertPoint(input: 0.75, output: 0.75)
+    let upperIndex = try #require(insertedUpperIndex)
+    #expect(lowerIndex == 1)
+    #expect(upperIndex == 2)
 
-    curve.movePoint(id: lowerID, input: 1, output: 2)
+    curve.movePoint(at: lowerIndex, input: 1, output: 2)
 
-    let movedPoint = try #require(curve.point(id: lowerID))
-    let upperPoint = try #require(curve.point(id: upperID))
+    let movedPoint = curve.points[lowerIndex]
+    let upperPoint = curve.points[upperIndex]
     #expect(
       movedPoint.input
         == upperPoint.input - ToneCurve.minimumInputSpacing
@@ -67,55 +91,137 @@ struct ToneCurveTests {
   }
 
   @Test
+  func indexKeepsAddressingTheSamePointDuringADrag() throws {
+    var curve = ToneCurve()
+    let shadowIndex = curve.insertPoint(input: 0.3, output: 0.3)
+    _ = try #require(shadowIndex)
+    let insertedIndex = curve.insertPoint(input: 0.6, output: 0.6)
+    let index = try #require(insertedIndex)
+
+    for input in stride(from: 0.6, through: 0, by: -0.05) {
+      curve.movePoint(at: index, input: input, output: 0.5)
+    }
+    curve.offsetPoint(at: index, inputDelta: -0.5, outputDelta: 0.1)
+
+    #expect(curve.points.count == 4)
+    #expect(curve.points[index].input == 0.3 + ToneCurve.minimumInputSpacing)
+    #expect(curve.points[index].output == 0.6)
+    #expect(curve.points[1] == ToneCurve.Point(input: 0.3, output: 0.3))
+  }
+
+  @Test
   func endpointsMoveOnBothAxesWithoutCrossingTheirNeighbors() throws {
     var curve = ToneCurve()
-    let lowerPointID = curve.insertPoint(input: 0.4, output: 0.4)
-    _ = try #require(lowerPointID)
-    let upperPointID = curve.insertPoint(input: 0.6, output: 0.6)
-    _ = try #require(upperPointID)
+    let lowerIndex = curve.insertPoint(input: 0.4, output: 0.4)
+    _ = try #require(lowerIndex)
+    let upperIndex = curve.insertPoint(input: 0.6, output: 0.6)
+    _ = try #require(upperIndex)
+    let whiteIndex = curve.points.count - 1
 
-    curve.movePoint(id: .blackEndpoint, input: 0.25, output: 0.1)
-    curve.movePoint(id: .whiteEndpoint, input: 0.75, output: 0.9)
+    curve.movePoint(at: 0, input: 0.25, output: 0.1)
+    curve.movePoint(at: whiteIndex, input: 0.75, output: 0.9)
 
-    #expect(curve.point(id: .blackEndpoint)?.input == 0.25)
-    #expect(curve.point(id: .blackEndpoint)?.output == 0.1)
-    #expect(curve.point(id: .whiteEndpoint)?.input == 0.75)
-    #expect(curve.point(id: .whiteEndpoint)?.output == 0.9)
+    #expect(curve.points[0] == ToneCurve.Point(input: 0.25, output: 0.1))
+    #expect(curve.points[whiteIndex] == ToneCurve.Point(input: 0.75, output: 0.9))
 
-    curve.movePoint(id: .blackEndpoint, input: 1, output: 0.1)
-    curve.movePoint(id: .whiteEndpoint, input: 0, output: 0.9)
+    curve.movePoint(at: 0, input: 1, output: 0.1)
+    curve.movePoint(at: whiteIndex, input: 0, output: 0.9)
 
-    #expect(curve.point(id: .blackEndpoint)?.input == 0.38)
-    #expect(curve.point(id: .whiteEndpoint)?.input == 0.62)
+    #expect(curve.points[0].input == 0.38)
+    #expect(curve.points[whiteIndex].input == 0.62)
     #expect(curve.isNeutral == false)
+  }
+
+  @Test
+  func pointsPackedAgainstAnEndpointStayRestorable() throws {
+    var curve = ToneCurve()
+    for input in [0.5, 0.53, 0.56] {
+      let index = curve.insertPoint(input: input, output: 0.5)
+      _ = try #require(index)
+    }
+    let moves: [(index: Int, input: Double, output: Double)] = [
+      (1, 0, 0.5), (2, 0, 0.5), (3, 0, 0.5),
+      // `0.06 - 0.02` rounds just below `0.04`, so these moves find no
+      // horizontal room. Snapping to the interval's bound used to creep the
+      // points toward the black endpoint until its own bound fell below 0.
+      (2, 1, 0.5), (1, 1, 0.5),
+      (0, 1, 0),
+    ]
+
+    for move in moves {
+      curve.movePoint(at: move.index, input: move.input, output: move.output)
+      #expect(ToneCurve(validating: curve.points) != nil)
+    }
+    #expect(curve.points[0] == ToneCurve.Point(input: 0, output: 0))
+  }
+
+  @Test
+  func pointWithNoHorizontalRoomKeepsItsInput() throws {
+    // Both gaps sit at the round-off tolerance that restoration accepts.
+    let gap = ToneCurve.minimumInputSpacing - 8 * Double.ulpOfOne
+    var curve = try #require(
+      ToneCurve(validating: [
+        ToneCurve.Point(input: 0, output: 0),
+        ToneCurve.Point(input: gap, output: gap),
+        ToneCurve.Point(input: 2 * gap, output: 2 * gap),
+        ToneCurve.Point(input: 1, output: 1),
+      ])
+    )
+
+    curve.movePoint(at: 1, input: 0.5, output: 0.3)
+
+    #expect(curve.points[1] == ToneCurve.Point(input: gap, output: 0.3))
+    #expect(ToneCurve(validating: curve.points) != nil)
+  }
+
+  @Test
+  func editsWithNaNCoordinatesAreIgnored() throws {
+    var curve = ToneCurve()
+    let insertedIndex = curve.insertPoint(input: 0.5, output: 0.5)
+    let index = try #require(insertedIndex)
+    let edited = curve
+
+    curve.movePoint(at: index, input: .nan, output: 0.2)
+    curve.movePoint(at: index, input: 0.4, output: .nan)
+    curve.offsetPoint(at: 0, inputDelta: .nan)
+    #expect(curve.insertPoint(input: 0.3, output: .nan) == nil)
+    #expect(curve.insertPoint(input: .nan, output: 0.3) == nil)
+
+    #expect(curve == edited)
+
+    // A white endpoint move is still limited by its neighbor afterwards.
+    curve.movePoint(at: 2, input: 0.1, output: 1)
+    #expect(curve.points[2].input == 0.5 + ToneCurve.minimumInputSpacing)
   }
 
   @Test
   func onlyInteriorPointsCanBeRemoved() throws {
     var curve = ToneCurve()
-    let insertedPointID = curve.insertPoint(input: 0.5, output: 0.6)
-    let pointID = try #require(insertedPointID)
+    let insertedIndex = curve.insertPoint(input: 0.5, output: 0.6)
+    let index = try #require(insertedIndex)
 
-    let didRemoveBlackEndpoint = curve.removePoint(id: .blackEndpoint)
-    let didRemoveWhiteEndpoint = curve.removePoint(id: .whiteEndpoint)
-    let didRemoveInteriorPoint = curve.removePoint(id: pointID)
+    let didRemoveBlackEndpoint = curve.removePoint(at: 0)
+    let didRemoveWhiteEndpoint = curve.removePoint(at: curve.points.count - 1)
+    #expect(curve.points.count == 3)
+    let didRemoveInteriorPoint = curve.removePoint(at: index)
 
     #expect(didRemoveBlackEndpoint == false)
     #expect(didRemoveWhiteEndpoint == false)
     #expect(didRemoveInteriorPoint)
-    #expect(curve.points.count == 2)
+    #expect(curve == .neutral)
   }
 
   @Test
   func accessibleInsertionUsesTheLargestAvailableInterval() throws {
     var curve = ToneCurve()
-    let firstPointID = curve.insertPoint(input: 0.25, output: 0.4)
-    _ = try #require(firstPointID)
+    let firstIndex = curve.insertPoint(input: 0.25, output: 0.4)
+    _ = try #require(firstIndex)
 
-    let largestGapPointID = curve.insertPointInLargestGap()
-    let insertedID = try #require(largestGapPointID)
-    let insertedPoint = try #require(curve.point(id: insertedID))
+    let largestGapIndex = curve.insertPointInLargestGap()
+    let insertedIndex = try #require(largestGapIndex)
+    let insertedPoint = curve.points[insertedIndex]
 
+    #expect(insertedIndex == 2)
     #expect(insertedPoint.input == 0.625)
     #expect(insertedPoint.output == 0.7)
   }
@@ -123,8 +229,8 @@ struct ToneCurveTests {
   @Test
   func yRGBChannelsRetainIndependentCurves() throws {
     var value = ToneCurveEditorValue()
-    let redPointID = value.red.insertPoint(input: 0.4, output: 0.7)
-    _ = try #require(redPointID)
+    let redIndex = value.red.insertPoint(input: 0.4, output: 0.7)
+    _ = try #require(redIndex)
 
     #expect(value.isNeutral == false)
     #expect(value.y.isNeutral)
@@ -135,36 +241,6 @@ struct ToneCurveTests {
     value.reset(channel: .red)
 
     #expect(value == .neutral)
-  }
-
-  @Test
-  func callerSuppliedInteriorIdentityCanLinkIndependentCurves() throws {
-    var y = ToneCurve()
-    let insertedPointID = y.insertPoint(input: 0.4, output: 0.6)
-    let pointID = try #require(insertedPointID)
-    var red = ToneCurve()
-
-    let linkedPointID = red.insertPoint(
-      id: pointID,
-      input: 0.4,
-      output: 0.7
-    )
-    let duplicatePointID = red.insertPoint(
-      id: pointID,
-      input: 0.6,
-      output: 0.5
-    )
-    let endpointIdentity = red.insertPoint(
-      id: .blackEndpoint,
-      input: 0.6,
-      output: 0.5
-    )
-
-    #expect(linkedPointID == pointID)
-    #expect(red.point(id: pointID)?.output == 0.7)
-    #expect(duplicatePointID == nil)
-    #expect(endpointIdentity == nil)
-    #expect(red.points.count == 3)
   }
 }
 
@@ -183,10 +259,10 @@ struct ToneCurveEvaluatorTests {
   @Test
   func evaluatorPassesThroughEveryAuthoredPoint() throws {
     var curve = ToneCurve()
-    let shadowPointID = curve.insertPoint(input: 0.2, output: 0.65)
-    _ = try #require(shadowPointID)
-    let highlightPointID = curve.insertPoint(input: 0.75, output: 0.4)
-    _ = try #require(highlightPointID)
+    let shadowIndex = curve.insertPoint(input: 0.2, output: 0.65)
+    _ = try #require(shadowIndex)
+    let highlightIndex = curve.insertPoint(input: 0.75, output: 0.4)
+    _ = try #require(highlightIndex)
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     for point in curve.points {
@@ -197,10 +273,10 @@ struct ToneCurveEvaluatorTests {
   @Test
   func everyIntervalStaysWithinItsAuthoredOutputBounds() throws {
     var curve = ToneCurve()
-    let firstPointID = curve.insertPoint(input: 0.25, output: 0.8)
-    _ = try #require(firstPointID)
-    let secondPointID = curve.insertPoint(input: 0.6, output: 0.2)
-    _ = try #require(secondPointID)
+    let firstIndex = curve.insertPoint(input: 0.25, output: 0.8)
+    _ = try #require(firstIndex)
+    let secondIndex = curve.insertPoint(input: 0.6, output: 0.2)
+    _ = try #require(secondIndex)
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     for segment in evaluator.segments {
@@ -222,10 +298,10 @@ struct ToneCurveEvaluatorTests {
   @Test
   func adjacentSegmentsHaveContinuousEndpointTangents() throws {
     var curve = ToneCurve()
-    let firstPointID = curve.insertPoint(input: 0.2, output: 0.3)
-    _ = try #require(firstPointID)
-    let secondPointID = curve.insertPoint(input: 0.65, output: 0.75)
-    _ = try #require(secondPointID)
+    let firstIndex = curve.insertPoint(input: 0.2, output: 0.3)
+    _ = try #require(firstIndex)
+    let secondIndex = curve.insertPoint(input: 0.65, output: 0.75)
+    _ = try #require(secondIndex)
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     for index in evaluator.segments.indices.dropLast() {
@@ -247,8 +323,8 @@ struct ToneCurveEvaluatorTests {
   @Test
   func movedEndpointsFlattenInputsOutsideTheAuthoredInterval() {
     var curve = ToneCurve()
-    curve.movePoint(id: .blackEndpoint, input: 0.2, output: 0.1)
-    curve.movePoint(id: .whiteEndpoint, input: 0.8, output: 0.9)
+    curve.movePoint(at: 0, input: 0.2, output: 0.1)
+    curve.movePoint(at: 1, input: 0.8, output: 0.9)
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     #expect(evaluator.lowerExtrapolationTangent == 0)
@@ -264,8 +340,8 @@ struct ToneCurveEvaluatorTests {
   @Test
   func endpointsAtNormalizedBoundsRetainTheirSplineTangents() throws {
     var curve = ToneCurve()
-    let insertedPointID = curve.insertPoint(input: 0.4, output: 0.7)
-    _ = try #require(insertedPointID)
+    let insertedIndex = curve.insertPoint(input: 0.4, output: 0.7)
+    _ = try #require(insertedIndex)
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     #expect(

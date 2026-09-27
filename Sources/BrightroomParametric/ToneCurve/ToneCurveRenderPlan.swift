@@ -15,7 +15,7 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   /// The number of uniformly spaced samples compiled for every channel.
   static let sampleCount = 4_096
 
-  /// Coordinates whose equality describes render output, excluding UI point IDs.
+  /// Points whose equality describes render output, excluding identity channels.
   let identity: ToneCurveRenderIdentity
 
   /// Two interleaved float tables: Y/Red and Green/Blue.
@@ -128,33 +128,31 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   }
 }
 
-/// Render-significant curve coordinates with UI identity deliberately removed.
+/// Render-significant curve points, with channels that cannot change pixels
+/// removed.
+///
+/// Two values whose only difference is an identity-mapping channel, such as
+/// a channel with diagonal interior points, have the same render identity.
 public nonisolated struct ToneCurveRenderIdentity: Hashable, Sendable {
-
-  /// One normalized input/output pair whose point UUID has been discarded.
-  struct Coordinate: Hashable, Sendable {
-    let input: Double
-    let output: Double
-  }
 
   /// Increment when the shaper, channel composition, or table interpretation changes.
   let semanticVersion = ToneCurveFeature.semanticVersion
-  let y: [Coordinate]
-  let red: [Coordinate]
-  let green: [Coordinate]
-  let blue: [Coordinate]
+  let y: [ToneCurve.Point]
+  let red: [ToneCurve.Point]
+  let green: [ToneCurve.Point]
+  let blue: [ToneCurve.Point]
 
-  /// Creates a cache identity from pixel-affecting coordinates only.
+  /// Creates a cache identity from pixel-affecting points only.
   public init(value: ToneCurveEditorValue) {
-    y = Self.activeCoordinates(value.y)
-    red = Self.activeCoordinates(value.red)
-    green = Self.activeCoordinates(value.green)
-    blue = Self.activeCoordinates(value.blue)
+    y = Self.activePoints(value.y)
+    red = Self.activePoints(value.red)
+    green = Self.activePoints(value.green)
+    blue = Self.activePoints(value.blue)
   }
 
   /// Creates an identity only when at least one channel changes rendered pixels.
   ///
-  /// This check copies only authored coordinates. Cache and lifecycle code can
+  /// This check copies only authored points. Cache and lifecycle code can
   /// therefore identify neutral work without compiling the 4,096-sample table.
   public init?(activeValue value: ToneCurveEditorValue) {
     self.init(value: value)
@@ -163,15 +161,9 @@ public nonisolated struct ToneCurveRenderIdentity: Hashable, Sendable {
     }
   }
 
-  private static func coordinates(_ curve: ToneCurve) -> [Coordinate] {
-    curve.points.map { point in
-      Coordinate(input: point.input, output: point.output)
-    }
-  }
-
   /// Omits authored structure that cannot change this channel's pixels.
-  private static func activeCoordinates(_ curve: ToneCurve) -> [Coordinate] {
-    curve.isIdentityMapping ? [] : coordinates(curve)
+  private static func activePoints(_ curve: ToneCurve) -> [ToneCurve.Point] {
+    curve.isIdentityMapping ? [] : curve.points
   }
 }
 

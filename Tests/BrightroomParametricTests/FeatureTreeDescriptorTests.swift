@@ -152,8 +152,8 @@ struct FeatureTreeDescriptorTests {
 
   @Test func `fields hold parameters only, with curated tone curve and mixer fields`() throws {
     var curve = ToneCurveEditorValue()
-    let pointID = curve.y.insertPoint(input: 0.3, output: 0.4)
-    _ = try #require(pointID)
+    let insertedIndex = curve.y.insertPoint(input: 0.3, output: 0.4)
+    _ = try #require(insertedIndex)
     let document = ColorDocument(
       toneCurve: ToneCurveFeature(value: curve),
       colorMixer: ColorMixerFeature(adjustment: .init(red: .init(hue: 12)))

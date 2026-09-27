@@ -19,11 +19,11 @@ struct AppOwnedPersistenceExampleTests {
   @Test
   func currentEditRoundTripsThroughAppStorage() throws {
     var curves = ToneCurveEditorValue()
-    let insertedPointID = curves.y.insertPoint(input: 0.4, output: 0.55)
-    let pointID = try #require(insertedPointID)
-    let linkedPointID = curves.red.insertPoint(id: pointID, input: 0.45, output: 0.65)
-    _ = try #require(linkedPointID)
-    curves.y.movePoint(id: .blackEndpoint, input: 0.12, output: 0.08)
+    let yIndex = curves.y.insertPoint(input: 0.4, output: 0.55)
+    _ = try #require(yIndex)
+    let redIndex = curves.red.insertPoint(input: 0.45, output: 0.65)
+    _ = try #require(redIndex)
+    curves.y.movePoint(at: 0, input: 0.12, output: 0.08)
 
     var mixer = ColorMixerAdjustment.neutral
     mixer.red.hue = 23
@@ -44,11 +44,11 @@ struct AppOwnedPersistenceExampleTests {
     let restored = try JSONDecoder().decode(StoredLook.self, from: data)
       .makeLook(loadLUT: Self.loadLUT(assetID:))
 
-    // Equality compares every authored value, including Tone Curve point
-    // identities, so the restored look equals the saved one exactly.
+    // Equality compares every authored value, so the restored look equals
+    // the saved one exactly.
     #expect(restored == look)
     #expect(restored.toneCurve?.value == curves)
-    #expect(restored.toneCurve?.value.red.point(id: pointID) != nil)
+    #expect(restored.toneCurve?.value.red.points[1] == ToneCurve.Point(input: 0.45, output: 0.65))
     #expect(restored.colorMixer?.adjustment == mixer)
     #expect(restored.colorMixer?.algorithm == .oklch)
     #expect(restored.lut?.amount == 0.6)
@@ -83,8 +83,8 @@ struct AppOwnedPersistenceExampleTests {
   @Test
   func invalidStoredValuesAreRejectedWhenRestoring() throws {
     var curves = ToneCurveEditorValue()
-    let insertedPointID = curves.y.insertPoint(input: 0.4, output: 0.55)
-    _ = try #require(insertedPointID)
+    let insertedIndex = curves.y.insertPoint(input: 0.4, output: 0.55)
+    _ = try #require(insertedIndex)
     let stored = try StoredLook(
       Look(
         toneCurve: ToneCurveFeature(value: curves),
@@ -312,14 +312,8 @@ private enum StoredEffect: Codable, Equatable {
 
 private struct StoredToneCurve: Codable, Equatable {
 
+  /// Points in order; the first and last are the curve's endpoints.
   struct Point: Codable, Equatable {
-    enum Identity: Codable, Equatable {
-      case blackEndpoint
-      case whiteEndpoint
-      case interior(UUID)
-    }
-
-    var id: Identity
     var input: Double
     var output: Double
   }
@@ -346,27 +340,11 @@ private struct StoredToneCurve: Codable, Equatable {
   }
 
   private static func points(_ curve: ToneCurve) -> [Point] {
-    curve.points.map { point in
-      let id: Point.Identity
-      switch point.id {
-      case .blackEndpoint: id = .blackEndpoint
-      case .whiteEndpoint: id = .whiteEndpoint
-      case .interior(let uuid): id = .interior(uuid)
-      }
-      return Point(id: id, input: point.input, output: point.output)
-    }
+    curve.points.map { Point(input: $0.input, output: $0.output) }
   }
 
   private static func curve(_ points: [Point]) throws -> ToneCurve {
-    let restored = points.map { point in
-      let id: ToneCurve.Point.ID
-      switch point.id {
-      case .blackEndpoint: id = .blackEndpoint
-      case .whiteEndpoint: id = .whiteEndpoint
-      case .interior(let uuid): id = .interior(uuid)
-      }
-      return ToneCurve.Point(id: id, input: point.input, output: point.output)
-    }
+    let restored = points.map { ToneCurve.Point(input: $0.input, output: $0.output) }
     // The validating initializer rejects anything the editor could not have
     // produced, instead of repairing it.
     guard let curve = ToneCurve(validating: restored) else {

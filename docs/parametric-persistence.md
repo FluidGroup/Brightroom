@@ -118,7 +118,7 @@ It uses only the public API.
 | Enablement | whether the member is present | an optional member, `if`, or leaving the feature out |
 | `CropFeature` | `cropRect`, `rotation.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(cropRect:rotation:straightenRadians:)`, then call `validate()` |
 | `ColorCubeFeature` | a reference to your asset, `amount` | load the cube, set `amount`, then call `validate()` |
-| `ToneCurveFeature` | each channel's points (`id`, `input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(id:input:output:)`, `ToneCurve(validating:)` |
+| `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustment` | the mask tree and the content | `MaskTree`, `MaskNode`, `BrushMask`, `BrushMaskStroke`, `BrushMaskBrush`, and the content's own conversion |
@@ -134,9 +134,10 @@ Notes:
   restores without error and throws `FeatureEvaluationError.emptyMaskComposite`
   when it renders. Reject empty composites while converting if your storage
   can hold them.
-- `ToneCurve(validating:)` keeps moved endpoints and interior point identities,
-  including an identity shared by several channels. It returns `nil` instead of
-  repairing invalid points.
+- Tone Curve points are plain coordinates with no identity. Store them in
+  order: `ToneCurve(validating:)` makes the first and last points the
+  endpoints, wherever they were moved. It returns `nil` instead of repairing
+  or reordering invalid points.
 - `ColorMixerBandAdjustment(hue:saturation:luminance:)` clamps and is meant for
   editing controls; clamping does not reject NaN. Restore stored values with
   the validating initializer, which returns `nil` for non-finite or
@@ -146,9 +147,9 @@ Notes:
 - Reject a Color Mixer algorithm identifier you do not recognize instead of
   substituting another algorithm.
 - Feature equality compares every stored, authored parameter, including Tone
-  Curve point identities and diagonal points, and Color Mixer values exactly as
-  Doubles. A conversion that loses any of them produces a document that is not
-  equal to the saved one. To ask whether two values render the same, compare
+  Curve diagonal points and Color Mixer values exactly as Doubles. A
+  conversion that loses any of them produces a document that is not equal to
+  the saved one. To ask whether two values render the same, compare
   `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity` instead.
 - A `PhotosCropDocument` is authored for one image: its domain is the oriented
   image size (`EditingStack.Loaded.imageSize`). Store a reference to the
@@ -225,9 +226,11 @@ and `MaskFeather` is `{ "id", "isEnabled", "input", "radius" }`.
 | `brightroom.effect.color-mixer` | 2 | `id`, `algorithm` (`"oklch"`), `adjustment`: eight bands `red` … `magenta`, each `{ "hue", "saturation", "luminance" }` |
 | | 1 | `id`, `adjustment`; the algorithm is `.oklch` |
 
-Tone Curve and Color Mixer payloads have no `isEnabled`; it is derived from the values. The 5.1 codec rejected Tone Curve
-points and Mixer axes that the validating initializers now reject, so running
-restored values through those initializers preserves the old behavior.
+Tone Curve and Color Mixer payloads have no `isEnabled`; it is derived from
+the values. The validating initializers apply the range, finiteness, count, and
+spacing checks the 5.1 codec applied to Tone Curve points and Mixer axes. The
+5.1 codec also checked point ids (endpoint and duplicate ids); Brightroom 6
+points have no ids, so drop them when converting.
 
 ### Converting 5.x documents
 
@@ -246,6 +249,11 @@ decoded 5.x document:
   `emptyLocalAdjustmentEffectPipeline` when it was enabled. Brightroom 6
   renders an empty adjustment as its input, so leave it out.
 - Tone Curve and Color Mixer payloads never had `isEnabled`. Drop their `id`.
+- Drop each Tone Curve point's `id` as well, and keep the points in their
+  stored order. The 5.1 codec required the first point to be
+  `blackEndpoint` and the last `whiteEndpoint`; in Brightroom 6 their position
+  alone makes them the endpoints. Points that shared an interior id across
+  channels become independent points in each channel.
 - Brush stamps in a document taken from 5.x `EditingStack.Edit.document`
   (for example `loadedState.currentEdit.document`, which PhotosCrop and
   `SwiftUICropView` authored) are y-down: top-left origin in the oriented

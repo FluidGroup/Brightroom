@@ -289,16 +289,19 @@ hosts choosing an algorithm must use that choice for both rendering and cache
 identity. This API does not add a second algorithm, change editor controls, or
 claim compatibility with Adobe Lightroom's Color Mixer.
 
-Curve render identities ignore point UUIDs and diagonal-only structure. Mixer
-render identities include the selected algorithm and the same normalized
-Float32 parameters as the kernel.
+Tone Curve points are plain `(input, output)` coordinates with no identity of
+their own: the first and last points are the endpoints, and editing addresses
+a point by its index, which a move never changes. Curve render identities
+drop channels that render as identity, such as a channel whose only interior
+points lie on the diagonal. Mixer render identities include the selected
+algorithm and the same normalized Float32 parameters as the kernel.
 
 Equality of both features compares their stored, authored members like
 every other feature: `value` for a curve, `adjustment` and `algorithm` for a
 mixer. The compiled plan is derived state and does not take part. Two curves
-that differ only in diagonal interior points or point ids are therefore not
-equal, and neither are mixers whose values differ as Doubles but round to the
-same Float32 parameters. An owner that drops equal updates (such as an undo
+that differ only in diagonal interior points are therefore not equal, and
+neither are mixers whose values differ as Doubles but round to the same
+Float32 parameters. An owner that drops equal updates (such as an undo
 history) keeps such an edit. Code that needs "renders the same", such as a
 preview cache, compares `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity`
 explicitly.
@@ -312,8 +315,9 @@ existing brush shaders. See [Building the color adjustment kernels](color-adjust
 for SwiftPM and Tuist integration.
 
 A host restores both effects from authored values alone: Tone Curve points
-through `ToneCurve.Point(id:input:output:)` and `ToneCurve(validating:)`, which
-keep endpoint moves and interior point identities, and Mixer bands through
+through `ToneCurve.Point(input:output:)` and `ToneCurve(validating:)`, which
+keeps endpoint moves and rejects points that are out of range, out of order,
+or too close together, and Mixer bands through
 `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, which rejects
 non-finite and out-of-range values instead of clamping them. Constructing the
 feature rebuilds its plan; sampled tables and GPU resources are never stored.

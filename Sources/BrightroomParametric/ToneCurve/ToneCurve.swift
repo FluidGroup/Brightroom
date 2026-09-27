@@ -6,9 +6,18 @@ import Foundation
 
 /// A normalized tone curve described by ordered control points.
 ///
-/// Input and output coordinates use the closed range `0...1`. The lower and
-/// upper endpoints are non-removable, but every point can move on both axes.
-/// Horizontal movement preserves a minimum distance between neighboring points.
+/// Input and output coordinates use the closed range `0...1`. The first and
+/// last points are the curve's endpoints: they cannot be removed, but every
+/// point can move on both axes. Horizontal movement preserves a minimum
+/// distance between neighboring points, so points never change order.
+///
+/// A curve is plain data. Its points are coordinate pairs without an identity
+/// of their own, so two curves with the same coordinates are equal. Editing
+/// operations address a point by its index in ``points``. Moves keep the
+/// horizontal order, so an index stays valid for the whole of a drag. Any
+/// other change can invalidate a stored index: insertion and removal shift
+/// the indices after them, and ``reset()`` or assigning another curve (for
+/// example on undo) replaces the points altogether.
 ///
 /// This value stores authored control points without prescribing color-space
 /// semantics. Use ``ToneCurveEvaluator`` when evaluating the curve between and
@@ -33,56 +42,29 @@ public struct ToneCurve: Equatable, Sendable {
   /// The two-point identity mapping used by a new channel.
   public static let neutral = ToneCurve()
 
-  /// One stable control point in the normalized curve domain.
-  public struct Point: Equatable, Identifiable, Sendable {
-
-    /// Semantic identity that remains stable while coordinates and ordinals change.
-    public enum ID: Equatable, Hashable, Sendable {
-      /// The non-removable lower endpoint of the authored curve interval.
-      case blackEndpoint
-
-      /// The non-removable upper endpoint of the authored curve interval.
-      case whiteEndpoint
-
-      /// A removable authored point identified independently of its coordinates.
-      case interior(UUID)
-    }
-
-    /// Stable identity used for selection and collection diffing.
-    public let id: ID
+  /// One control point in the normalized curve domain.
+  ///
+  /// A point is a plain coordinate pair. It does not enforce curve invariants
+  /// on its own; ``ToneCurve/init(validating:)`` checks bounds, order, and
+  /// spacing when points are assembled into a curve.
+  public struct Point: Hashable, Sendable {
 
     /// The normalized source value on the horizontal axis.
-    public fileprivate(set) var input: Double
+    public var input: Double
 
     /// The normalized result value on the vertical axis.
-    public fileprivate(set) var output: Double
+    public var output: Double
 
-    /// Whether this point is one of the two non-removable curve endpoints.
-    public var isEndpoint: Bool {
-      switch id {
-      case .blackEndpoint, .whiteEndpoint:
-        true
-      case .interior:
-        false
-      }
-    }
-
-    /// Creates a point for reconstructing a curve with ``ToneCurve/init(validating:)``.
-    ///
-    /// A point alone does not enforce curve invariants; the curve validates
-    /// bounds, identities, and spacing when the points are assembled.
-    public init(
-      id: ID,
-      input: Double,
-      output: Double
-    ) {
-      self.id = id
+    /// Creates a point from normalized coordinates.
+    public init(input: Double, output: Double) {
       self.input = input
       self.output = output
     }
   }
 
-  /// Ordered control points from the lower endpoint to the upper endpoint.
+  /// Control points ordered by strictly increasing input.
+  ///
+  /// The first and last points are the lower and upper endpoints.
   public private(set) var points: [Point]
 
   /// Whether the curve is the two-point identity mapping.
@@ -116,37 +98,32 @@ public struct ToneCurve: Equatable, Sendable {
     points = Self.neutralPoints
   }
 
-  /// Restores authored points without changing their coordinates or identities.
+  /// Restores authored points without changing their coordinates.
   ///
   /// Use this to rebuild a curve from values the host stored in its own format.
-  /// The points must satisfy the same bounds, endpoint identities, and spacing
-  /// enforced by editing operations. Invalid points are rejected before they
-  /// can reach spline evaluation; they are never repaired or silently clamped.
+  /// The points must satisfy the invariants that editing operations keep:
+  /// between 2 and ``maximumPointCount`` points, finite coordinates inside
+  /// ``normalizedRange``, and inputs that increase by at least
+  /// ``minimumInputSpacing``. The first and last points become the endpoints.
+  /// Invalid points are rejected before they can reach spline evaluation; they
+  /// are never repaired, reordered, or silently clamped.
   ///
   /// - Returns: `nil` when the points are not a valid authored curve.
   public init?(validating points: [Point]) {
-    var identities = Set<Point.ID>()
     let hasValidPoints = points.allSatisfy { point in
       point.input.isFinite && point.output.isFinite
         && Self.normalizedRange.contains(point.input)
         && Self.normalizedRange.contains(point.output)
-        && identities.insert(point.id).inserted
-    }
-    let hasInteriorIdentities = points.dropFirst().dropLast().allSatisfy { point in
-      if case .interior = point.id { return true }
-      return false
     }
     // Arithmetic in a legal move can round a gap infinitesimally below 0.02.
-    // Accept that round-off without altering the authored coordinates.
+    // Accept that round-off without altering the authored coordinates. The
+    // positive spacing also rejects points out of order.
     let minimumRestoredSpacing = Self.minimumInputSpacing - 8 * Double.ulpOfOne
     let hasValidSpacing = zip(points, points.dropFirst()).allSatisfy { lower, upper in
       upper.input - lower.input >= minimumRestoredSpacing
     }
     guard (2...Self.maximumPointCount).contains(points.count),
-      points.first?.id == .blackEndpoint,
-      points.last?.id == .whiteEndpoint,
       hasValidPoints,
-      hasInteriorIdentities,
       hasValidSpacing
     else {
       return nil
@@ -154,44 +131,25 @@ public struct ToneCurve: Equatable, Sendable {
     self.points = points
   }
 
-  /// Returns a point by stable identity.
-  public func point(id: Point.ID) -> Point? {
-    points.first { $0.id == id }
-  }
-
   /// Inserts an interior point while preserving horizontal ordering.
   ///
-  /// - Returns: The point's stable identity, or `nil` when no legal interval
-  ///   remains or the point-count limit has been reached.
+  /// The input is clamped into the interval between the neighboring points,
+  /// keeping ``minimumInputSpacing`` on both sides, and the output is clamped
+  /// to ``normalizedRange``.
+  ///
+  /// - Returns: The index of the new point in ``points``, or `nil` when either
+  ///   coordinate is NaN, no legal interval remains, or the point-count limit
+  ///   has been reached.
   @discardableResult
   public mutating func insertPoint(
     input: Double,
     output: Double
-  ) -> Point.ID? {
-    insertPoint(
-      id: .interior(UUID()),
-      input: input,
-      output: output
-    )
-  }
-
-  /// Inserts an interior point with a caller-supplied stable identity.
-  ///
-  /// Editors use this overload when one logical point is shared by multiple
-  /// independently stored curves. Endpoint identities and duplicate interior
-  /// identities are rejected.
-  ///
-  /// - Returns: The supplied identity, or `nil` when it is not a new interior
-  ///   identity, no legal interval remains, or the point-count limit has been
-  ///   reached.
-  @discardableResult
-  public mutating func insertPoint(
-    id: Point.ID,
-    input: Double,
-    output: Double
-  ) -> Point.ID? {
-    guard case .interior = id, point(id: id) == nil else { return nil }
-    guard points.count < Self.maximumPointCount else { return nil }
+  ) -> Int? {
+    guard !input.isNaN, !output.isNaN,
+      points.count < Self.maximumPointCount
+    else {
+      return nil
+    }
 
     let requestedInput = Self.clamped(input)
     let insertionIndex =
@@ -210,19 +168,21 @@ public struct ToneCurve: Equatable, Sendable {
 
     points.insert(
       Point(
-        id: id,
         input: min(max(requestedInput, lowerInput), upperInput),
         output: Self.clamped(output)
       ),
       at: insertionIndex
     )
-    return id
+    return insertionIndex
   }
 
   /// Adds a point to the widest horizontal interval without changing its
   /// existing straight-line mapping at that location.
+  ///
+  /// - Returns: The index of the new point in ``points``, or `nil` when no
+  ///   interval is wide enough or the point-count limit has been reached.
   @discardableResult
-  public mutating func insertPointInLargestGap() -> Point.ID? {
+  public mutating func insertPointInLargestGap() -> Int? {
     guard let lowerIndex = largestGapIndex() else { return nil }
     let lowerPoint = points[lowerIndex]
     let upperPoint = points[lowerIndex + 1]
@@ -236,14 +196,21 @@ public struct ToneCurve: Equatable, Sendable {
   }
 
   /// Moves one point and clamps it to the legal curve domain.
+  ///
+  /// The input is clamped between the neighboring points, keeping
+  /// ``minimumInputSpacing``, so the point never passes a neighbor and `index`
+  /// keeps addressing it. When rounding leaves the point no room to move
+  /// horizontally, it keeps its current input. A move whose input or output
+  /// is NaN is ignored.
+  ///
+  /// - Precondition: `index` is a valid index of ``points``.
   public mutating func movePoint(
-    id: Point.ID,
+    at index: Int,
     input: Double,
     output: Double
   ) {
-    guard let index = points.firstIndex(where: { $0.id == id }) else {
-      return
-    }
+    precondition(points.indices.contains(index), "Tone Curve point index out of range")
+    guard !input.isNaN, !output.isNaN else { return }
 
     let lowerInput =
       index == points.startIndex
@@ -253,30 +220,48 @@ public struct ToneCurve: Equatable, Sendable {
       index == points.index(before: points.endIndex)
       ? Self.normalizedRange.upperBound
       : points[index + 1].input - Self.minimumInputSpacing
-    points[index].input = min(max(input, lowerInput), upperInput)
+    // A neighbor can sit a few ulps closer than `minimumInputSpacing`, either
+    // from rounding in an earlier move or in a restored curve. The interval
+    // is then empty, and snapping to one of its bounds could push the point
+    // out of the normalized range or too close to its other neighbor. The
+    // current input already satisfies ``init(validating:)``, so keep it.
+    if lowerInput <= upperInput {
+      points[index].input = min(max(input, lowerInput), upperInput)
+    }
 
     points[index].output = Self.clamped(output)
   }
 
-  /// Offsets one point from its current coordinates.
+  /// Offsets one point from its current coordinates, clamping like
+  /// ``movePoint(at:input:output:)``.
+  ///
+  /// - Precondition: `index` is a valid index of ``points``.
   public mutating func offsetPoint(
-    id: Point.ID,
+    at index: Int,
     inputDelta: Double = 0,
     outputDelta: Double = 0
   ) {
-    guard let point = point(id: id) else { return }
+    precondition(points.indices.contains(index), "Tone Curve point index out of range")
+    let point = points[index]
     movePoint(
-      id: id,
+      at: index,
       input: point.input + inputDelta,
       output: point.output + outputDelta
     )
   }
 
   /// Removes an interior point and preserves both curve endpoints.
+  ///
+  /// The points after `index` move down by one position.
+  ///
+  /// - Precondition: `index` is a valid index of ``points``.
+  /// - Returns: `false`, leaving the curve unchanged, when `index` is the
+  ///   first or last point.
   @discardableResult
-  public mutating func removePoint(id: Point.ID) -> Bool {
-    guard case .interior = id,
-      let index = points.firstIndex(where: { $0.id == id })
+  public mutating func removePoint(at index: Int) -> Bool {
+    precondition(points.indices.contains(index), "Tone Curve point index out of range")
+    guard index != points.startIndex,
+      index != points.index(before: points.endIndex)
     else {
       return false
     }
@@ -290,8 +275,8 @@ public struct ToneCurve: Equatable, Sendable {
   }
 
   private static let neutralPoints = [
-    Point(id: .blackEndpoint, input: 0, output: 0),
-    Point(id: .whiteEndpoint, input: 1, output: 1),
+    Point(input: 0, output: 0),
+    Point(input: 1, output: 1),
   ]
 
   private func largestGapIndex() -> Int? {

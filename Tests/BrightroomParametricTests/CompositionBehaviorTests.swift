@@ -343,24 +343,25 @@ struct CompositionBehaviorTests {
     // A diagonal interior point is an authored edit that renders as identity:
     // the first point a curve drag adds usually sits on the diagonal.
     var diagonal = ToneCurveEditorValue()
-    let diagonalPointID = diagonal.y.insertPoint(input: 0.5, output: 0.5)
-    _ = try #require(diagonalPointID)
+    let diagonalIndex = diagonal.y.insertPoint(input: 0.5, output: 0.5)
+    _ = try #require(diagonalIndex)
     let neutralCurve = ToneCurveFeature(value: .neutral)
     let diagonalCurve = ToneCurveFeature(value: diagonal)
     #expect(diagonalCurve != neutralCurve)
     #expect(ToneCurveRenderIdentity(value: diagonal) == ToneCurveRenderIdentity(value: .neutral))
     #expect(ToneCurveRenderIdentity(activeValue: diagonal) == nil)
 
-    // The same coordinates under a different point identity.
+    // Points are plain coordinates: the same curve reached through different
+    // edits is the same value.
     var first = ToneCurveEditorValue()
     var second = ToneCurveEditorValue()
-    let firstPointID = first.y.insertPoint(id: .interior(UUID()), input: 0.4, output: 0.55)
-    let secondPointID = second.y.insertPoint(id: .interior(UUID()), input: 0.4, output: 0.55)
-    _ = try #require(firstPointID)
-    _ = try #require(secondPointID)
-    #expect(ToneCurveFeature(value: first) != ToneCurveFeature(value: second))
+    let firstIndex = first.y.insertPoint(input: 0.4, output: 0.55)
+    let secondIndex = second.y.insertPoint(input: 0.6, output: 0.3)
+    _ = try #require(firstIndex)
+    let movedIndex = try #require(secondIndex)
+    second.y.movePoint(at: movedIndex, input: 0.4, output: 0.55)
+    #expect(ToneCurveFeature(value: first) == ToneCurveFeature(value: second))
     #expect(ToneCurveRenderIdentity(value: first) == ToneCurveRenderIdentity(value: second))
-    #expect(ToneCurveFeature(value: first) == ToneCurveFeature(value: first))
   }
 
   @Test func `color mixer equality compares authored values rather than render identity`() throws {
@@ -383,8 +384,8 @@ struct CompositionBehaviorTests {
 
   @Test func `a document compares the authored values of its members`() throws {
     var diagonal = ToneCurveEditorValue()
-    let diagonalPointID = diagonal.y.insertPoint(input: 0.5, output: 0.5)
-    _ = try #require(diagonalPointID)
+    let diagonalIndex = diagonal.y.insertPoint(input: 0.5, output: 0.5)
+    _ = try #require(diagonalIndex)
     var mixer = ColorMixerAdjustment.neutral
     mixer.red.hue = 10
     var equivalentMixer = ColorMixerAdjustment.neutral

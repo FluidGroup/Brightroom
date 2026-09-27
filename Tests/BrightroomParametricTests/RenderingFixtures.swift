@@ -197,7 +197,7 @@ enum RenderingFixtures {
   /// A non-neutral curve on the luminance and red channels.
   static func makeToneCurve() -> ToneCurveFeature {
     var y = ToneCurve()
-    y.movePoint(id: .blackEndpoint, input: 0, output: 0.03)
+    y.movePoint(at: 0, input: 0, output: 0.03)
     y.insertPoint(input: 0.3, output: 0.22)
     y.insertPoint(input: 0.72, output: 0.84)
     var red = ToneCurve()
