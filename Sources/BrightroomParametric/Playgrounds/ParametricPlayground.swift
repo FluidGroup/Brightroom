@@ -289,7 +289,7 @@ fileprivate enum Sample {
   /// A colorful 1123×794 photo, or a generated image of the same size when
   /// the file is missing.
   static let photo =
-    CIImage(contentsOf: bundleDirectory.appending(path: "Images/d22db5be7594c17a18a047ca9264ea0a.jpg"))
+    CIImage(contentsOf: bundleDirectory.appending(path: "Images/gaku.jpeg"))
     ?? generatedPhoto()
 
   /// A 512×512 CLUT image.
