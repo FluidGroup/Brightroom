@@ -24,31 +24,13 @@
 // This file is build-compiled into the package target's `default.metallib` and
 // loaded with `CIColorKernel(functionName:fromMetalLibraryData:)`.
 //
-// This `brushStamp` kernel is one of the brush-mask rasterizers; the live
-// in-flight-stroke render shader (`BrushMaskRenderShader.metal`) is the other.
-// Both share ONE falloff from `BrushStampFalloff.metalh`, so preview/live and
-// committed/export masks cannot drift.
+// Brush stamps are not a Core Image kernel: `BrushMaskImageProcessor` draws them
+// with the render shader in `BrushMaskRenderShader.metal`, the same one the live
+// canvas uses.
 
 #include <CoreImage/CoreImage.h>
-#include "BrushStampFalloff.metalh"
 
 extern "C" { namespace coreimage {
-  [[ stitchable ]] float4 brushStamp(
-    float2 center,
-    float radius,
-    float hardness,
-    float opacity,
-    destination dest
-  ) {
-    if (radius <= 0.0) {
-      return float4(0.0);
-    }
-
-    float normalizedDistance = length(dest.coord() - center) / radius;
-    float alpha = brushStampAlpha(normalizedDistance, hardness, opacity);
-    return float4(alpha, alpha, alpha, alpha);
-  }
-
   [[ stitchable ]] float4 maskSubtract(sample_t removing, sample_t base) {
     float alpha = max(base.a - removing.a, 0.0);
     return float4(alpha, alpha, alpha, alpha);

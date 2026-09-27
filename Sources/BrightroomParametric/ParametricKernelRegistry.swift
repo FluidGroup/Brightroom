@@ -32,32 +32,6 @@ public struct ParametricKernelRegistry: Sendable {
   /// Creates a registry for Metal-backed parametric kernels.
   public init() {}
 
-  func makeBrushStamp(
-    extent: CGRect,
-    center: CGPoint,
-    radius: Double,
-    hardness: Double,
-    opacity: Double
-  ) throws -> CIImage {
-    guard radius > 0, opacity > 0 else {
-      return CIImage.parametricTransparent(extent: extent)
-    }
-
-    let kernel = try ParametricMetalKernelStore.colorKernel(named: "brushStamp")
-    guard let image = kernel.apply(
-      extent: extent,
-      arguments: [
-        CIVector(x: center.x, y: center.y),
-        radius,
-        hardness,
-        opacity,
-      ]
-    ) else {
-      throw ParametricKernelRegistryError.failedToApplyKernel("brushStamp")
-    }
-    return image.cropped(to: extent)
-  }
-
   func subtractMask(
     base: CIImage,
     removing: CIImage,
@@ -96,7 +70,7 @@ private enum ParametricMetalKernelStore {
   ///
   /// `ParametricKernels.metal` is build-compiled into `default.metallib`, then
   /// loaded by function name through `CIColorKernel(functionName:fromMetalLibraryData:)`.
-  private static let kernelNames = ["brushStamp", "maskSubtract"]
+  private static let kernelNames = ["maskSubtract"]
 
   static func colorKernel(named name: String) throws -> CIColorKernel {
     switch loadedKernels {

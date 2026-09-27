@@ -221,10 +221,10 @@ extension MaskTree {
     return false
   }
 
-  /// Rasterizes the mask for the engine render path through the shared
-  /// parametric `brushStamp` kernel (`FeatureGraphCompiler.renderMask`) — the
-  /// identical rasterizer the export renderer (`ParametricImageRenderer`) uses —
-  /// so the preview and the exported result agree by construction.
+  /// Rasterizes the mask for the engine render path through
+  /// `FeatureGraphCompiler.renderMask` — the identical rasterizer the export
+  /// renderer (`ParametricImageRenderer`) uses — so the preview and the
+  /// exported result agree by construction.
   ///
   /// Stamps are authored y-down (display, top-left origin); the parametric
   /// compiler evaluates y-up, so the rendered alpha is flipped back into the

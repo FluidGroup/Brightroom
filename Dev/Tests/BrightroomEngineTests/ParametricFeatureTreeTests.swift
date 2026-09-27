@@ -832,18 +832,22 @@ struct ParametricFeatureTreeTests {
     try Self.assertImagesMatch(output, expected, tolerance: 2)
   }
 
-  @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
-    let registry = ParametricKernelRegistry()
-
-    let image = try registry.makeBrushStamp(
-      extent: CGRect(x: 0, y: 0, width: 12, height: 12),
-      center: CGPoint(x: 6, y: 6),
-      radius: 4,
-      hardness: 0.5,
-      opacity: 1
+  @Test func brushMaskRecipeIsBoundedByItsStamps() throws {
+    let image = try Self.compiler.renderMask(
+      MaskTree(root: .brush(BrushMask(strokes: [
+        BrushMaskStroke(
+          stamps: [CGPoint(x: 6, y: 6)],
+          brush: BrushMaskBrush(diameter: 8, hardness: 0.5, opacity: 1)
+        ),
+      ]))),
+      extent: CGRect(x: 0, y: 0, width: 12, height: 12)
     )
 
-    #expect(image.extent == CGRect(x: 0, y: 0, width: 12, height: 12))
+    // The falloff is zero beyond the radius, so the recipe covers only the stamp.
+    #expect(image.extent == CGRect(x: 2, y: 2, width: 8, height: 8))
+    let rendered = try Self.render(image)
+    #expect(Self.rgba(in: rendered, x: 4, y: 4).alpha > 250)
+    #expect(Self.rgba(in: rendered, x: 0, y: 0).alpha < 5)
   }
 
   private static let compiler = FeatureGraphCompiler()

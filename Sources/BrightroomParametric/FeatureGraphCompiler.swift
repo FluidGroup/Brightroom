@@ -296,78 +296,14 @@ private extension FeatureGraphCompiler {
       return CIImage.parametricTransparent(extent: extent)
     }
 
-    // Each stamp compiles to one CIImage layer. `componentMax` is associative
-    // and commutative, so the stamps reduce in any grouping; folding them in a
-    // balanced tree keeps the Core Image graph depth at O(log n) instead of
-    // O(n). A dense brush (small spacing) emits hundreds–thousands of stamps
-    // per stroke, and a linear fold built a chain that deep — slow to compile
-    // and at risk of stack overflow during render. The tree keeps the same
-    // node count and the same result.
-    var stampImages: [CIImage] = []
-    for stroke in mask.strokes {
-      let radius = max(stroke.brush.diameter / 2, 0)
-      for stamp in stroke.stamps {
-        stampImages.append(
-          try kernelRegistry.makeBrushStamp(
-            extent: extent,
-            center: stamp,
-            radius: radius,
-            hardness: stroke.brush.hardness,
-            opacity: stroke.brush.opacity
-          )
-        )
-      }
-    }
-
-    return try reduceComponentMax(stampImages, extent: extent)
-  }
-
-  /// Reduces mask layers with `componentMax` in a balanced tree so the Core
-  /// Image graph depth stays O(log n). `componentMax` is associative and
-  /// commutative and `componentMax(transparent, x) == x`, so the pairwise
-  /// grouping produces the same alpha field as a linear fold over a transparent
-  /// base.
-  private func reduceComponentMax(_ images: [CIImage], extent: CGRect) throws -> CIImage {
-    guard images.isEmpty == false else {
-      return CIImage.parametricTransparent(extent: extent)
-    }
-
-    var level = images
-    var levelsSinceIntermediate = 0
-    while level.count > 1 {
-      var next: [CIImage] = []
-      next.reserveCapacity((level.count + 1) / 2)
-      var index = 0
-      while index < level.count {
-        if index + 1 < level.count {
-          next.append(
-            try blendMask(
-              foreground: level[index + 1],
-              background: level[index],
-              kernel: .componentMax,
-              extent: extent
-            )
-          )
-        } else {
-          next.append(level[index])
-        }
-        index += 2
-      }
-      levelsSinceIntermediate += 1
-      if levelsSinceIntermediate == 6 {
-        // Balancing limits graph depth, but Core Image can still fuse all
-        // stamps into one Metal function. Bound each fused mask segment to
-        // 64 inputs and 63 maximum operations, retaining every stamp. Dense
-        // masks can otherwise fail during Metal library creation.
-        // `cache: false` respects the context's intermediate-cache policy.
-        level = next.map { $0.insertingIntermediate(cache: false) }
-        levelsSinceIntermediate = 0
-      } else {
-        level = next
-      }
-    }
-
-    return level[0].cropped(to: extent)
+    // The whole mask is one Core Image node. `BrushMaskImageProcessor` draws
+    // every stamp with `BrushStampPipeline`, the same instanced `.max` pass the
+    // live canvas uses, into whichever tile Core Image renders. A graph with a
+    // node per stamp grew with the stamp count until Core Image could no longer
+    // fuse it into a working Metal function, and evaluated every stamp at every
+    // pixel.
+    return try BrushMaskImageProcessor.makeImage(mask, extent: extent)
+      .cropped(to: extent)
   }
 
   func blendMask(

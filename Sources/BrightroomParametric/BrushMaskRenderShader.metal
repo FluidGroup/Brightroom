@@ -19,14 +19,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Metal render source for the in-flight brush stroke, rasterized into a mask
-// texture for low-latency live painting feedback. This source and the Core Image
-// brush-stamp kernel share brushStampAlpha from BrushStampFalloff.metalh.
+// The brush-mask rasterizer. The live editing canvas (its viewport mask texture)
+// and the parametric export (a Core Image processor tile) both draw stamps with
+// these functions through `BrushStampPipeline`, so preview and export share the
+// shader, the `.max` accumulation, and the stamp encoding.
+//
+// Each instance is one soft circular stamp. `center` and `radius` are in target
+// pixels with row 0 at the first texture row. The vertex function expands the
+// stamp's bounding square, so only pixels the stamp can touch are shaded.
 
 #include "BrushStampFalloff.metalh"
 
-struct BrushStampUniforms {
-  float2 canvasSize;
+struct BrushStampInstance {
   float2 center;
   float radius;
   float hardness;
@@ -37,11 +41,15 @@ struct BrushStampUniforms {
 struct BrushStampVertexOut {
   float4 position [[position]];
   float2 local;
+  float hardness [[flat]];
+  float opacity [[flat]];
 };
 
 vertex BrushStampVertexOut brushStampVertex(
   uint vertexID [[vertex_id]],
-  constant BrushStampUniforms& brush [[buffer(0)]]
+  uint instanceID [[instance_id]],
+  constant BrushStampInstance* stamps [[buffer(0)]],
+  constant float2& targetSize [[buffer(1)]]
 ) {
   constexpr float2 corners[4] = {
     float2(-1.0, -1.0),
@@ -50,26 +58,26 @@ vertex BrushStampVertexOut brushStampVertex(
     float2( 1.0,  1.0)
   };
 
+  BrushStampInstance stamp = stamps[instanceID];
   float2 local = corners[vertexID];
-  float2 pixel = brush.center + local * brush.radius;
+  float2 pixel = stamp.center + local * stamp.radius;
   float2 position = float2(
-    pixel.x / brush.canvasSize.x * 2.0 - 1.0,
-    1.0 - pixel.y / brush.canvasSize.y * 2.0
+    pixel.x / targetSize.x * 2.0 - 1.0,
+    1.0 - pixel.y / targetSize.y * 2.0
   );
 
   BrushStampVertexOut out;
   out.position = float4(position, 0.0, 1.0);
   out.local = local;
+  out.hardness = stamp.hardness;
+  out.opacity = stamp.opacity;
   return out;
 }
 
-fragment float4 brushStampFragment(
-  BrushStampVertexOut in [[stage_in]],
-  constant BrushStampUniforms& brush [[buffer(0)]]
-) {
+fragment float4 brushStampFragment(BrushStampVertexOut in [[stage_in]]) {
   // `in.local` is the [-1, 1] quad coordinate, so its length is already the
   // normalized distance the shared falloff expects.
   float normalizedDistance = length(in.local);
-  float alpha = brushStampAlpha(normalizedDistance, brush.hardness, brush.opacity);
+  float alpha = brushStampAlpha(normalizedDistance, in.hardness, in.opacity);
   return float4(alpha, alpha, alpha, alpha);
 }

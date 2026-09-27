@@ -79,8 +79,8 @@ struct EditingPreviewExportParityTests {
 
     #expect(exported.width == preview.width)
     #expect(exported.height == preview.height)
-    // Both paths now rasterize the brush mask through the same parametric
-    // `brushStamp` kernel (preview via `engineMakeMaskImage`, export via the
+    // Both paths now rasterize the brush mask through the same
+    // `BrushStampPipeline` (preview via `engineMakeMaskImage`, export via the
     // compiler), so they agree closely; the small tolerance only absorbs
     // resampling/rounding at the blur-gradient edge. A real composition bug
     // (wrong order, missing/unmasked adjustment, a y-flip) still diverges by
@@ -193,7 +193,7 @@ struct EditingPreviewExportParityTests {
     #expect(error is ThrowingEffectFeature.EvaluationError)
   }
 
-  /// The shared parametric `brushStamp` kernel (used by the engine preview and
+  /// The shared brush rasterizer (`BrushStampPipeline`, used by the engine preview and
   /// the export renderer via `engineMakeMaskImage` / `renderMask`) must produce
   /// the falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
   /// shader also draws. If it used a hard disc or a linear ramp, painted blur
