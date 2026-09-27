@@ -55,6 +55,9 @@ struct PixelAspectRatioTests {
     #expect(Set(ratios + ratios.map { $0.swapped() }).count == 2)
   }
 
+  /// Looks up many scaled ratios, not just one: with a hash that disagrees
+  /// with `==`, a single lookup can still land on the equal key by chance
+  /// under the per-process hash seed.
   @Test func `A dictionary finds a value through an equal ratio`() {
     let titles: [PixelAspectRatio: String] = [
       .init(width: 4, height: 3): "4:3",
@@ -64,6 +67,29 @@ struct PixelAspectRatioTests {
     #expect(titles[.init(width: 4032, height: 3024)] == "4:3")
     #expect(titles[.init(width: 1920, height: 1080)] == "16:9")
     #expect(titles[.init(width: 3, height: 4)] == nil)
+
+    for scale in 1...100 {
+      let k = CGFloat(scale)
+      #expect(titles[.init(width: 4 * k, height: 3 * k)] == "4:3", "scale \(scale)")
+      #expect(titles[.init(width: 16 * k, height: 9 * k)] == "16:9", "scale \(scale)")
+    }
+  }
+
+  /// Equality is exact, with no tolerance: a tolerance would not be
+  /// transitive, so no hash could agree with it. The proportion is
+  /// `height / width`, which gives these edge cases.
+  @Test func `Zero sides compare by their exact proportion`() {
+    // 0 / 4 and 0 / -4 are +0 and -0, which are equal and hash equally.
+    #expect(PixelAspectRatio(width: 4, height: 0) == PixelAspectRatio(width: -4, height: 0))
+    #expect(PixelAspectRatio(width: 4, height: 0).hashValue == PixelAspectRatio(width: -4, height: 0).hashValue)
+
+    // A zero width gives an infinite proportion, whatever the height.
+    #expect(PixelAspectRatio(width: 0, height: 3) == PixelAspectRatio(width: 0, height: 7))
+    #expect(PixelAspectRatio(width: 0, height: 3).hashValue == PixelAspectRatio(width: 0, height: 7).hashValue)
+    #expect(PixelAspectRatio(width: -0.0, height: 3) != PixelAspectRatio(width: 0, height: 3))
+
+    // Zero by zero is NaN, which is not equal to itself.
+    #expect(PixelAspectRatio(width: 0, height: 0) != PixelAspectRatio(width: 0, height: 0))
   }
 
   /// `id` identifies the exact width and height pair, not the ratio, so a
