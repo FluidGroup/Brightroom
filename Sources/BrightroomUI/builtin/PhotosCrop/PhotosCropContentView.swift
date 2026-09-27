@@ -35,7 +35,8 @@ struct PhotosCropContentView: View {
   let onCancel: (@MainActor () -> Void)?
 
   /// Created once per editor identity (one per image), so it keeps the
-  /// document as it was when the editor opened.
+  /// document as it was when the editor opened. It restarts itself when the
+  /// binding shows a document it does not know.
   @State private var session: PhotosCropEditorSession
   @State private var rotation: CropEditingState.Rotation?
   @State private var adjustmentAngle: CropEditingState.AdjustmentAngle?
@@ -96,7 +97,7 @@ struct PhotosCropContentView: View {
 
         VStack(spacing: 0) {
           PhotosCropCanvasHost(
-            document: $document,
+            document: canvasDocumentBinding,
             displayedFeature: displayedFeature,
             editingStack: editingStack,
             mode: editingMode,
@@ -159,7 +160,9 @@ struct PhotosCropContentView: View {
           doneTitle: localizedStrings.button_done_title,
           isLoaded: isLoaded,
           hasCropChanges: document.hasCropChanges(),
-          isDoneEnabled: isLoaded,
+          // A failed preparation leaves nothing to edit; Done stays the
+          // way out even when the host hides Cancel.
+          isDoneEnabled: isLoaded || editingStack.didFailToPrepare,
           mode: editingMode,
           isSelectingAspectRatio: isSelectingAspectRatio,
           onRotate: rotate,
@@ -189,6 +192,12 @@ struct PhotosCropContentView: View {
         // here while a value is live came from outside (for example an undo
         // by the host). The document wins.
         session.discardLiveFeature()
+      }
+      .onChange(of: document) { _, document in
+        // A document the session did not write (for example another
+        // document of the same image) restarts it, so Cancel never writes
+        // one document's start over another.
+        session.noteDocument(document)
       }
       .accessibilityIdentifier("photos.crop")
     }
@@ -259,9 +268,11 @@ struct PhotosCropContentView: View {
       applyAction()
     }
 
-    // Leaving a tool commits its work, so undo/redo steps at tool
-    // granularity. The history lives in the document.
-    write(committing: true)
+    // The next write commits this visit's work, so undo/redo steps at tool
+    // granularity without a write that changes only the history.
+    if let next = session.endToolVisit(of: document) {
+      document = next
+    }
 
     editingMode = mode
   }
@@ -300,10 +311,11 @@ struct PhotosCropContentView: View {
   }
 
   private func finish() {
-    // The crop guide's pending crop reaches the binding synchronously, so the
-    // commit below includes it.
+    // The crop guide's pending crop reaches the binding synchronously. The
+    // last tool visit stays uncommitted: a commit alone would be a write
+    // that changes nothing visible. The next edit commits it.
     applyAction()
-    write(committing: true)
+    write()
     onDone()
   }
 
@@ -316,15 +328,27 @@ struct PhotosCropContentView: View {
     onCancel?()
   }
 
-  /// Writes a completed operation to the binding: a live slider value, then
-  /// `change`, then a commit when `committing` is true, as one write. Equal
-  /// values are not written.
+  /// Writes a completed operation to the binding as one write: a live
+  /// slider value, then `change`, with the previous tool visit committed
+  /// first when this is the visit's first write. Nothing is written when
+  /// the feature is unchanged.
   private func write(
-    committing: Bool = false,
     _ change: (inout EditingDocument<PhotosCropFeature>) -> Void = { _ in }
   ) {
-    if let next = session.document(after: document, committing: committing, change: change) {
+    if let next = session.document(after: document, change: change) {
       document = next
+    }
+  }
+
+  /// The binding the canvas writes through: its changes go through the
+  /// session like the controls' writes.
+  private var canvasDocumentBinding: Binding<EditingDocument<PhotosCropFeature>> {
+    Binding {
+      document
+    } set: { changed in
+      if let next = session.document(afterCanvasChange: changed, over: document) {
+        document = next
+      }
     }
   }
 

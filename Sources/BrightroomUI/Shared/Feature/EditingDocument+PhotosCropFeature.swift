@@ -45,8 +45,8 @@ extension EditingDocument where Content == PhotosCropFeature {
 
 /// The document operations of PhotosCrop's controls.
 ///
-/// They change `feature` only; the editor commits at tool boundaries and on
-/// Done.
+/// They change `feature` only; the editor commits once per tool visit (see
+/// `PhotosCropEditorSession`).
 extension EditingDocument where Content == PhotosCropFeature {
 
   /// Selects a filter preset, or clears it with nil.

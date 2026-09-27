@@ -136,8 +136,10 @@ extension SourceImage {
   /// Creates an image by developing RAW data with Core Image's default RAW
   /// settings.
   ///
-  /// The RAW data is developed here, once; the value keeps the developed
-  /// pixels, already oriented.
+  /// The RAW data is developed here, once and synchronously; the value keeps
+  /// the developed pixels, already oriented. Developing takes hundreds of
+  /// milliseconds for a 12 MP RAW and more for larger ones, so call this off
+  /// the main actor.
   public init(rawData: Data) throws {
     guard let filter = CIFilter(imageData: rawData, options: [:]) else {
       throw SourceImageError.unreadableImage
@@ -148,8 +150,9 @@ extension SourceImage {
   /// Creates an image by developing a local RAW file with Core Image's
   /// default RAW settings.
   ///
-  /// The file is developed here, once; the value keeps the developed pixels,
-  /// already oriented, and does not read the file again.
+  /// The file is developed here, once and synchronously; the value keeps the
+  /// developed pixels, already oriented, and does not read the file again.
+  /// Like `init(rawData:)`, call this off the main actor.
   public init(rawContentsOf fileURL: URL) throws {
     guard fileURL.isFileURL else {
       throw SourceImageError.notFileURL(fileURL)
@@ -160,12 +163,16 @@ extension SourceImage {
     try self.init(developing: filter)
   }
 
+  /// Shared by every RAW development: creating a context is costly, and a
+  /// context is safe to use from several threads.
+  private static let rawDevelopmentContext = CIContext()
+
   private init(developing rawFilter: CIFilter) throws {
     guard
       let output = rawFilter.outputImage,
       output.extent.isInfinite == false,
       output.extent.isEmpty == false,
-      let developed = CIContext().createCGImage(output, from: output.extent)
+      let developed = Self.rawDevelopmentContext.createCGImage(output, from: output.extent)
     else {
       throw SourceImageError.unreadableImage
     }

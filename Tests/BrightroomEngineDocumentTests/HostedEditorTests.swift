@@ -85,6 +85,58 @@ struct HostedEditorTests {
     #expect(host.document.image == image)
   }
 
+  /// A custom editor's host state: the document and the tool.
+  @MainActor
+  @Observable
+  final class ToolHost {
+    var document: EditingDocument<PhotosCropFeature>
+    var target: CropViewEditingTarget? = .crop
+
+    init(_ document: EditingDocument<PhotosCropFeature>) {
+      self.document = document
+    }
+  }
+
+  private struct ToolHostView: View {
+    let host: ToolHost
+    let rotate: SwiftUICropView.RotateAction
+    let apply: SwiftUICropView.ApplyAction
+
+    var body: some View {
+      SwiftUICropView(document: Binding(get: { host.document }, set: { host.document = $0 }))
+        .editingTarget(host.target)
+        .registerRotateAction(rotate)
+        .registerApplyAction(apply)
+    }
+  }
+
+  /// The custom-editor recipe: in the tool button, apply the crop, switch
+  /// the tool, then commit. Committing in `onChange(of: target)` instead
+  /// would run before the crop the canvas writes when leaving `.crop`.
+  @Test func `Applying before switching tools puts the crop in the commit`() async throws {
+    let host = ToolHost(EditingDocument(image: try DocumentTestFixtures.makeImage()))
+    let rotate = SwiftUICropView.RotateAction()
+    let apply = SwiftUICropView.ApplyAction()
+
+    let mounted = try await mount(ToolHostView(host: host, rotate: rotate, apply: apply))
+    defer { mounted.window.isHidden = true }
+
+    rotate()
+    // The tool button.
+    apply()
+    host.target = .blurMask
+    host.document.commit()
+
+    // Let the view update and any deferred canvas write run.
+    for _ in 0..<10 {
+      mounted.host.view.layoutIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(host.document.history.undoStack.count == 1)
+    #expect(host.document.hasUncommittedChanges == false, "Leaving .crop must not write a crop after the commit.")
+    #expect(host.document.feature.crop.rotation != .zero)
+  }
+
   @Test func `The PhotosCrop editor writes nothing on mount`() async throws {
     var document = try DocumentTestFixtures.makeDocument()
     document.feature = DocumentTestFixtures.exposure(1)

@@ -30,29 +30,130 @@ struct PhotosCropEditorSessionTests {
 
   // MARK: - Session
 
-  @Test func `A change and its commit are one value`() throws {
-    let document = try Fixtures.makeDocument()
+  @Test func `A tool visit's first write commits the previous visit in the same value`() throws {
+    var document = try Fixtures.makeDocument()
     var session = PhotosCropEditorSession(documentAtStart: document)
 
-    let written = session.document(after: document, committing: true) {
+    document = try #require(session.document(after: document) {
       $0.feature.effects.exposure = ExposureFeature(value: 2)
-    }
-    let next = try #require(written)
-    #expect(next.feature == Fixtures.exposure(2))
-    #expect(!next.hasUncommittedChanges)
-    #expect(next.history.undoStack == [Fixtures.exposure(0)])
+    })
+    #expect(document.hasUncommittedChanges)
+    #expect(document.history.undoStack.isEmpty)
+
+    let left = session.endToolVisit(of: document)
+    #expect(left == nil, "Leaving a tool writes nothing by itself.")
+
+    let next = try #require(session.document(after: document) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+    #expect(next.history.undoStack == [Fixtures.exposure(0)], "The previous visit is one step.")
+    #expect(next.hasUncommittedChanges)
+    #expect(next.feature.effects.saturation == SaturationFeature(value: 0.5))
   }
 
-  @Test func `An operation that changes nothing produces no write`() throws {
-    let document = try Fixtures.makeDocument()
+  @Test func `Writes of one tool visit are one step`() throws {
+    var document = try Fixtures.makeDocument()
+    var session = PhotosCropEditorSession(documentAtStart: document)
+    for value in 1...3 {
+      document = try #require(session.document(after: document) {
+        $0.feature.effects.exposure = ExposureFeature(value: Double(value))
+      })
+    }
+    #expect(document.history.undoStack.isEmpty)
+
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(0))
+  }
+
+  @Test func `Uncommitted changes the editor opens with are committed by its first write`() throws {
+    var document = try Fixtures.makeDocument()
+    // The last visit of a previous session.
+    document.feature = Fixtures.exposure(1)
+    var session = PhotosCropEditorSession(documentAtStart: document)
+
+    let next = try #require(session.document(after: document) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+    #expect(next.history.undoStack == [Fixtures.exposure(0)])
+    #expect(next.hasUncommittedChanges)
+  }
+
+  @Test func `An operation that changes nothing produces no write, not even a commit`() throws {
+    var document = try Fixtures.makeDocument()
+    document.feature = Fixtures.exposure(1)
     var session = PhotosCropEditorSession(documentAtStart: document)
 
     let unchanged = session.document(after: document)
-    let committedUnchanged = session.document(after: document, committing: true)
     #expect(unchanged == nil)
-    #expect(committedUnchanged == nil)
+    let left = session.endToolVisit(of: document)
+    #expect(left == nil)
     let presetCleared = session.document(after: document) { $0.selectFilterPreset(nil) }
     #expect(presetCleared == nil)
+    #expect(document.hasUncommittedChanges, "A commit alone is never written.")
+  }
+
+  @Test func `An undo by the host back into the visit continues the visit`() throws {
+    var document = try Fixtures.makeDocument()
+    var session = PhotosCropEditorSession(documentAtStart: document)
+    let first = try #require(session.document(after: document) {
+      $0.feature.effects.exposure = ExposureFeature(value: 1)
+    })
+    let second = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(value: 2)
+    })
+    _ = second
+
+    // The host's UndoManager restores the value before the second write.
+    session.noteDocument(first)
+    document = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(value: 3)
+    })
+    #expect(document.history.undoStack.isEmpty, "Still one visit: no commit.")
+  }
+
+  @Test func `An undo by the host out of the visit starts a new step on the next write`() throws {
+    var document = try Fixtures.makeDocument()
+    document.feature = Fixtures.exposure(1)
+    let opened = document
+    var session = PhotosCropEditorSession(documentAtStart: opened)
+    _ = try #require(session.document(after: opened) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The host's UndoManager restores the document the editor opened with.
+    session.noteDocument(opened)
+    document = try #require(session.document(after: opened) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(document.history.undoStack == [Fixtures.exposure(0)])
+  }
+
+  @Test func `Every write is recorded by a host that counts writes as undo steps`() throws {
+    let host = Host(try Fixtures.makeDocument())
+    var session = PhotosCropEditorSession(documentAtStart: host.document)
+
+    // Filters: one tap. Leave. Adjust: one drag. Leave. Done.
+    if let next = session.document(after: host.document, change: { $0.feature.effects.exposure = ExposureFeature(value: 1) }) {
+      host.binding.wrappedValue = next
+    }
+    if let next = session.endToolVisit(of: host.document) {
+      host.binding.wrappedValue = next
+    }
+    session.previewAdjustmentValue(30, parameter: .saturation, over: host.document)
+    if let next = session.endToolVisit(of: host.document) {
+      host.binding.wrappedValue = next
+    }
+    if let next = session.document(after: host.document) {
+      host.binding.wrappedValue = next
+    }
+
+    #expect(host.writes == 2, "Two visible changes, two writes: no commit-only write.")
+    #expect(host.document.history.undoStack.count == 1)
+    #expect(host.document.hasUncommittedChanges)
+    var undone = host.document
+    undone.undo()
+    undone.undo()
+    #expect(undone.feature == Fixtures.exposure(0))
   }
 
   @Test func `A slider value is shown while dragging and written once at the end`() throws {
@@ -89,16 +190,17 @@ struct PhotosCropEditorSessionTests {
     #expect(written == nil)
   }
 
-  @Test func `Leaving a tool writes the live value with the commit`() throws {
+  @Test func `Leaving a tool writes a live value as part of the visit`() throws {
     let document = try Fixtures.makeDocument()
     var session = PhotosCropEditorSession(documentAtStart: document)
     session.previewAdjustmentValue(30, parameter: .saturation, over: document)
 
-    let written = session.document(after: document, committing: true)
+    let written = session.endToolVisit(of: document)
     let next = try #require(written)
     #expect(next.feature.effects.saturation != nil)
-    #expect(!next.hasUncommittedChanges)
+    #expect(next.hasUncommittedChanges)
     #expect(next.canUndo)
+    #expect(session.liveFeature == nil)
   }
 
   @Test func `An outside change drops the live value`() throws {
@@ -121,14 +223,71 @@ struct PhotosCropEditorSessionTests {
     let opened = document
     var session = PhotosCropEditorSession(documentAtStart: opened)
 
-    let written = session.document(after: document, committing: true) {
+    let written = session.document(after: document) {
       $0.feature.effects.exposure = ExposureFeature(value: 5)
     }
     document = try #require(written)
-    document.feature = Fixtures.exposure(6)
+    _ = session.endToolVisit(of: document)
+    document = try #require(session.document(after: document) {
+      $0.feature.effects.exposure = ExposureFeature(value: 6)
+    })
 
     #expect(session.documentForCancel(replacing: document) == opened)
     #expect(session.documentForCancel(replacing: opened) == nil, "Nothing changed: no write.")
+  }
+
+  @Test func `Another document of the same image restarts the session`() throws {
+    var opened = try Fixtures.makeDocument()
+    opened.feature = Fixtures.exposure(1)
+    opened.commit()
+    var session = PhotosCropEditorSession(documentAtStart: opened)
+    _ = try #require(session.document(after: opened) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The host rebinds the editor to a duplicate with its own edit.
+    var duplicate = EditingDocument(image: opened.image, feature: Fixtures.exposure(-1))
+    session.noteDocument(duplicate)
+    #expect(session.documentForCancel(replacing: duplicate) == nil, "Cancel must not write the first document over the duplicate.")
+
+    duplicate = try #require(session.document(after: duplicate) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.2)
+    })
+    #expect(session.documentForCancel(replacing: duplicate)?.feature == Fixtures.exposure(-1))
+  }
+
+  @Test func `A write over an unknown document restarts the session first`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = PhotosCropEditorSession(documentAtStart: opened)
+    _ = try #require(session.document(after: opened) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The rebinding and the next write arrive before any onChange.
+    let duplicate = EditingDocument(image: opened.image, feature: Fixtures.exposure(-1))
+    let written = try #require(session.document(after: duplicate) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(session.documentAtStart == duplicate)
+    #expect(session.documentForCancel(replacing: written) == duplicate)
+  }
+
+  @Test func `A value the session wrote keeps the session`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = PhotosCropEditorSession(documentAtStart: opened)
+    let first = try #require(session.document(after: opened) {
+      $0.feature.effects.exposure = ExposureFeature(value: 1)
+    })
+    let second = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(value: 2)
+    })
+
+    // Undo and redo by the host's UndoManager.
+    session.noteDocument(first)
+    session.noteDocument(opened)
+    session.noteDocument(second)
+    #expect(session.documentAtStart == opened)
+    #expect(session.documentForCancel(replacing: second) == opened)
   }
 
   @Test func `Cancel never replaces a document of another image`() throws {
@@ -140,6 +299,24 @@ struct PhotosCropEditorSessionTests {
   }
 
   // MARK: - Canvas writes
+
+  @Test func `A canvas change commits the previous visit and keeps a live value`() throws {
+    var document = try Fixtures.makeDocument()
+    var session = PhotosCropEditorSession(documentAtStart: document)
+    document = try #require(session.document(after: document) {
+      $0.feature.effects.exposure = ExposureFeature(value: 1)
+    })
+    _ = session.endToolVisit(of: document)
+
+    var changed = document
+    changed.feature.effects.saturation = SaturationFeature(value: 0.5)
+    let written = session.document(afterCanvasChange: changed, over: document)
+    let next = try #require(written)
+    #expect(next.history.undoStack == [Fixtures.exposure(0)])
+    #expect(next.feature.effects.saturation == SaturationFeature(value: 0.5))
+    let unchanged = session.document(afterCanvasChange: next, over: next)
+    #expect(unchanged == nil)
+  }
 
   @Test func `A canvas change of another image is dropped`() throws {
     let data = try Fixtures.makeRotatedJPEG()

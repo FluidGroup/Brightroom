@@ -31,12 +31,22 @@ import BrightroomParametric
 
  - Each completed operation (a filter tap, a slider drag, a brush stroke, a
    crop applied) is written to the binding once; values in progress, such
-   as a slider being dragged or a crop being adjusted, are not.
- - The view commits to the document's history when the user leaves a tool
-   and on Done. Undo and redo are operations on the document value, so the
-   host can drive them from its own buttons.
+   as a slider being dragged or a crop being adjusted, are not. Every write
+   changes the feature, so a host that registers one undo step per write
+   gets one step per visible change.
+ - The work of one tool visit is one step of the document's history. The
+   commit rides on the next visit's first write, so after Done the last
+   visit's work may still be uncommitted (`hasUncommittedChanges`);
+   `undo()` treats it as a step. Commit a copy before saving the history.
+   Undo and redo are operations on the document value, so the host can
+   drive them from its own buttons.
  - The view never registers anything with an `UndoManager`, and never
    changes the document's image.
+ - The editor's state follows the document's image. To switch the editor
+   to another document of the same image (a duplicate or a variant), give
+   it a new identity with `.id`; the editor restarts its Cancel point
+   itself when it sees a document it did not write, but its tool and crop
+   guide state carry over otherwise.
 
  Render the document with `EditingDocument.render(options:)`.
 
@@ -93,11 +103,15 @@ public struct SwiftUIPhotosCropView: View {
   ///     restarts the editor.
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.
-  ///   - onDone: Called after the binding received the committed document.
+  ///   - onDone: Called after the binding received the last change.
   ///   - onCancel: Called when the user cancels, after the binding received
   ///     the document as it was when the editor opened (history included).
   ///     nil hides the Cancel button, for example in a document window where
-  ///     every change is kept.
+  ///     every change is kept. That restoring write is a write like any
+  ///     other: a host that registers an undo step per write (FileDocument,
+  ///     `UndoManager`) would let the user undo the Cancel. Such a host
+  ///     either hides Cancel, or binds the editor to a copy and assigns the
+  ///     copy to its document on Done.
   public init(
     document: Binding<EditingDocument<PhotosCropFeature>>,
     options: Options = .init(),

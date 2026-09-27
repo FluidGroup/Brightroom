@@ -26,7 +26,10 @@ enum SketchImageLoading {
     EditingDocument(image: try SourceImage(contentsOf: url))
   }
 
-  static func load(raw url: URL) throws -> EditingDocument<PhotosCropFeature> {
+  /// RAW is developed when the image is created, which takes hundreds of
+  /// milliseconds, so it runs off the main actor.
+  @concurrent
+  static func load(raw url: URL) async throws -> EditingDocument<PhotosCropFeature> {
     EditingDocument(image: try SourceImage(rawContentsOf: url))
   }
 
@@ -112,14 +115,9 @@ struct SketchCustomCropEditor: View {
       .editingTarget(target)
       .registerApplyAction(applyAction)
 
-      Picker("Tool", selection: $target) {
-        Text("Crop").tag(CropViewEditingTarget?.some(.crop))
-        Text("Blur").tag(CropViewEditingTarget?.some(.blurMask))
-      }
-      .onChange(of: target) {
-        // SwiftUICropView never commits; this editor makes each tool visit
-        // one undo step.
-        document.commit()
+      HStack {
+        Button("Crop") { select(.crop) }
+        Button("Blur") { select(.blurMask) }
       }
 
       Slider(
@@ -133,6 +131,20 @@ struct SketchCustomCropEditor: View {
         }
       )
     }
+  }
+
+  /// SwiftUICropView never commits; this editor makes each tool visit one
+  /// undo step. The order matters: `applyAction()` writes the crop guide's
+  /// pending crop synchronously, so the commit includes it. Committing in
+  /// `onChange(of: target)` would run before the crop the canvas writes,
+  /// later, when it leaves `.crop`.
+  private func select(_ newTarget: CropViewEditingTarget) {
+    guard newTarget != target else { return }
+    if target == .crop {
+      applyAction()
+    }
+    target = newTarget
+    document.commit()
   }
 }
 

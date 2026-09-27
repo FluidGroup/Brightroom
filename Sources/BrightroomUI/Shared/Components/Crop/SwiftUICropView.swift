@@ -175,7 +175,8 @@ public struct SwiftUICropView: View {
   /// Creates a crop canvas that edits `document`, with custom overlays.
   ///
   /// The view prepares the document's image for display and shows a
-  /// progress indicator until it is ready. Changes made on the canvas (crop
+  /// progress indicator until it is ready, or a failure message when the
+  /// image's pixels cannot be decoded (the document is left untouched). Changes made on the canvas (crop
   /// commits through `ApplyAction` or when leaving crop editing, and brush
   /// strokes) are applied to the binding's latest document's `feature`; the
   /// view never commits them to the history, so call `commit()` when a change
@@ -326,6 +327,14 @@ public struct SwiftUICropView: View {
         // representable's identity to the image makes an image swap rebuild
         // the canvas instead of leaving it bound to the old image.
         .id(loadedState.image)
+        .transition(.opacity.animation(.smooth))
+      } else if editingStack.didFailToPrepare {
+        // Nothing to edit; the host's own controls stay the way out.
+        ContentUnavailableView(
+          "The image could not be loaded",
+          systemImage: "exclamationmark.triangle"
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(.opacity.animation(.smooth))
       } else {
         ProgressView()

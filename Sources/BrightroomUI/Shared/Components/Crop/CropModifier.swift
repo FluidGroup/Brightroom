@@ -175,12 +175,10 @@ extension EditingDocument where Content == PhotosCropFeature {
 
     if cropModifier.isIdentity == false {
       let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)
+      // The input is built off the calling actor: downsampling decodes the
+      // full image, which would otherwise hitch the caller (often main).
       feature.setCrop(
-        await Self.runCropModifier(
-          cropModifier,
-          image: Self.makeCropModifierInput(image),
-          crop: crop
-        )
+        await Self.runCropModifier(cropModifier, image: image, crop: crop)
       )
     }
 
@@ -211,12 +209,14 @@ extension EditingDocument where Content == PhotosCropFeature {
     )
   }
 
+  /// Builds the modifier's input and runs the modifier, both off the
+  /// calling actor.
   @concurrent
   private static func runCropModifier(
     _ cropModifier: CropModifier,
-    image: CIImage,
+    image: SourceImage,
     crop: CropEditingState
   ) async -> CropEditingState {
-    await cropModifier.modify(image, crop)
+    await cropModifier.modify(makeCropModifierInput(image), crop)
   }
 }

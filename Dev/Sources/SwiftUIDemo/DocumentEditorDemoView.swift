@@ -8,21 +8,28 @@ import SwiftUI
 ///
 /// - The document exists only once there is an image: bundled data or a
 ///   picked photo becomes a `SourceImage`, then a document.
-/// - The editor edits the document through a non-optional binding; closing
-///   and reopening it continues the same edit.
-/// - Undo and Redo buttons drive the document's own history. Each write is
-///   also registered with the window's `UndoManager`, as a document-based app
-///   would, so "System Undo" (or shake) walks the writes.
+/// - Undo and Redo buttons drive the document's own history. Every write to
+///   the document is also registered with the window's `UndoManager`, as a
+///   document-based app would, so "System Undo" (or shake) walks the writes.
+///   The reverse step is registered inside the undo, so it becomes the redo.
+/// - With Cancel shown, the editor edits a copy: Done writes the copy to the
+///   document (one system undo step for the session) and Cancel drops it, so
+///   a cancelled session leaves nothing to undo. With Cancel hidden, the
+///   editor edits the document itself, as in a document window, and each of
+///   its writes is one system undo step.
 /// - The history limit is configurable and the history can be dropped, as an
 ///   app that does not save history would do before saving.
 struct DocumentEditorDemoView: View {
 
   @State private var document: EditingDocument<PhotosCropFeature>?
+  /// The copy the editor edits while Cancel is shown.
+  @State private var draft: EditingDocument<PhotosCropFeature>?
   @State private var isEditing = false
   @State private var showsCancel = true
   @State private var pickerItem: PhotosPickerItem?
   @State private var loadingMessage: String?
   @State private var rendered: ResultImage?
+  @State private var renderTask: Task<Void, Never>?
   /// The target the `UndoManager` registrations are grouped under.
   @State private var undoTarget = UndoTarget()
 
@@ -50,19 +57,7 @@ struct DocumentEditorDemoView: View {
     }
     .navigationTitle("Document Editor")
     .fullScreenCover(isPresented: $isEditing) {
-      // The cover is shown only while a document exists, and the document is
-      // never set back to nil while it is shown.
-      if let binding = Binding($document) {
-        SwiftUIPhotosCropView(
-          document: binding,
-          options: .documentEditorDemo(),
-          onDone: {
-            isEditing = false
-            render(binding.wrappedValue)
-          },
-          onCancel: showsCancel ? { isEditing = false } : nil
-        )
-      }
+      editor
     }
     .sheet(item: $rendered) {
       RenderedResultView(result: $0)
@@ -78,8 +73,31 @@ struct DocumentEditorDemoView: View {
         }, cropModifier: .identity)
       }
     }
-    .onChange(of: document) { old, new in
-      registerSystemUndo(from: old, to: new)
+  }
+
+  /// The cover is shown only while a document exists, and neither the
+  /// document nor the draft is set back to nil while it is shown.
+  @ViewBuilder
+  private var editor: some View {
+    if showsCancel {
+      if let binding = Binding($draft) {
+        SwiftUIPhotosCropView(
+          document: binding,
+          options: .documentEditorDemo(),
+          onDone: {
+            write(binding.wrappedValue)
+            isEditing = false
+          },
+          onCancel: { isEditing = false }
+        )
+      }
+    } else if let document {
+      SwiftUIPhotosCropView(
+        // Reads the latest value: the editor can write twice in one event.
+        document: Binding(get: { self.document ?? document }, set: { write($0) }),
+        options: .documentEditorDemo(),
+        onDone: { isEditing = false }
+      )
     }
   }
 
@@ -95,32 +113,39 @@ struct DocumentEditorDemoView: View {
       Toggle("Show Cancel in the editor", isOn: $showsCancel)
 
       Button(document.canUndo || document.canRedo ? "Reopen editor" : "Open editor") {
-        isEditing = true
+        startEditing()
       }
       .accessibilityIdentifier("document-editor.open")
 
       HStack {
-        Button("Undo") { self.document?.undo() }
+        Button("Undo") { update { $0.undo() } }
           .disabled(!document.canUndo)
           .accessibilityIdentifier("document-editor.undo")
         Spacer()
-        Button("Redo") { self.document?.redo() }
+        Button("Redo") { update { $0.redo() } }
           .disabled(!document.canRedo)
           .accessibilityIdentifier("document-editor.redo")
       }
       .buttonStyle(.borderless)
 
-      Button("Render") { render(document) }
+      HStack {
+        Button("Render") { render(document) }
+          .disabled(renderTask != nil)
+        if renderTask != nil {
+          Spacer()
+          ProgressView()
+        }
+      }
     }
 
     Section {
       Stepper(
         "History limit: \(document.history.limit.map(String.init) ?? "none")",
-        onIncrement: { self.document?.history.limit = (document.history.limit ?? 0) + 1 },
-        onDecrement: { self.document?.history.limit = max(0, (document.history.limit ?? 1) - 1) }
+        onIncrement: { update { $0.history.limit = (document.history.limit ?? 0) + 1 } },
+        onDecrement: { update { $0.history.limit = max(0, (document.history.limit ?? 1) - 1) } }
       )
-      Button("Unlimited history") { self.document?.history.limit = nil }
-      Button("Drop history", role: .destructive) { self.document?.history.removeAll() }
+      Button("Unlimited history") { update { $0.history.limit = nil } }
+      Button("Drop history", role: .destructive) { update { $0.history.removeAll() } }
         .disabled(document.history.undoStack.isEmpty && document.history.redoStack.isEmpty)
     } header: {
       Text("History")
@@ -136,7 +161,7 @@ struct DocumentEditorDemoView: View {
     } header: {
       Text("UndoManager")
     } footer: {
-      Text("Every write to the document is registered as one system undo step. The library registers nothing itself.")
+      Text("Every write to the document is registered as one system undo step: one editor session with Cancel shown, one editor operation with Cancel hidden. The library registers nothing itself.")
     }
   }
 
@@ -155,31 +180,67 @@ struct DocumentEditorDemoView: View {
       undoManager?.removeAllActions(withTarget: undoTarget)
       document = newDocument
       loadingMessage = nil
-      isEditing = true
+      startEditing()
     } catch {
       loadingMessage = "Failed to load the image: \(error)"
     }
   }
 
-  private func registerSystemUndo(
-    from old: EditingDocument<PhotosCropFeature>?,
-    to new: EditingDocument<PhotosCropFeature>?
+  private func startEditing() {
+    // A result arriving over the editor would collide with it.
+    cancelRendering()
+    draft = document
+    isEditing = true
+  }
+
+  /// Writes `new` to the document and registers the write with the
+  /// `UndoManager`.
+  ///
+  /// The reverse step is registered right here: inside an undo, the
+  /// `UndoManager` records it as the redo. Registering from
+  /// `onChange(of:)` would run after the undo returned and record a new
+  /// undo step instead.
+  private func write(_ new: EditingDocument<PhotosCropFeature>) {
+    Self.write(new, to: $document, undoManager: undoManager, target: undoTarget)
+  }
+
+  private static func write(
+    _ new: EditingDocument<PhotosCropFeature>,
+    to document: Binding<EditingDocument<PhotosCropFeature>?>,
+    undoManager: UndoManager?,
+    target: UndoTarget
   ) {
-    // Replacing the photo is not an edit.
-    guard let old, let new, old.image == new.image, let undoManager else {
+    guard let old = document.wrappedValue, old != new else {
       return
     }
-    let binding = $document
-    undoManager.registerUndo(withTarget: undoTarget) { _ in
-      // Writing the old value fires onChange again, which registers the redo.
-      binding.wrappedValue = old
+    document.wrappedValue = new
+    // Replacing the photo is not an edit.
+    guard old.image == new.image else {
+      return
+    }
+    undoManager?.registerUndo(withTarget: target) { _ in
+      write(old, to: document, undoManager: undoManager, target: target)
     }
   }
 
+  /// Changes the document through `write(_:)`, so the change is undoable.
+  private func update(_ change: (inout EditingDocument<PhotosCropFeature>) -> Void) {
+    guard var next = document else {
+      return
+    }
+    change(&next)
+    write(next)
+  }
+
   private func render(_ document: EditingDocument<PhotosCropFeature>) {
-    Task {
+    renderTask = Task {
+      defer {
+        // A cancelled task's slot may already hold a newer task.
+        if !Task.isCancelled { renderTask = nil }
+      }
       do {
         let rendered = try await document.render()
+        guard !Task.isCancelled else { return }
         self.rendered = ResultImage(
           cgImage: try rendered.cgImage,
           metadata: [
@@ -189,9 +250,15 @@ struct DocumentEditorDemoView: View {
           feature: document.feature
         )
       } catch {
+        guard !Task.isCancelled else { return }
         loadingMessage = "Failed to render: \(error)"
       }
     }
+  }
+
+  private func cancelRendering() {
+    renderTask?.cancel()
+    renderTask = nil
   }
 
   // MARK: - Helpers

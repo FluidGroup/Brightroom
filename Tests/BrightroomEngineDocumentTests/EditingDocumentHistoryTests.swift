@@ -91,6 +91,54 @@ struct EditingDocumentHistoryTests {
     #expect(!document.hasUncommittedChanges)
   }
 
+  @Test func `Undoing uncommitted changes at the limit keeps every undo step`() throws {
+    var document = try Fixtures.makeDocument(history: .init(limit: 2))
+    for value in 1...3 {
+      document.feature = Fixtures.exposure(Double(value))
+      document.commit()
+    }
+    document.feature = Fixtures.exposure(4)
+    #expect(document.history.undoStack == [Fixtures.exposure(1), Fixtures.exposure(2)])
+
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(3))
+    #expect(document.history.undoStack == [Fixtures.exposure(1), Fixtures.exposure(2)])
+    #expect(document.history.redoStack == [Fixtures.exposure(4)])
+
+    document.undo()
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(1), "The oldest step must survive undoing the uncommitted changes.")
+  }
+
+  @Test func `With a limit of 0, uncommitted changes can still be undone`() throws {
+    var document = try Fixtures.makeDocument(history: .init(limit: 0))
+    document.feature = Fixtures.exposure(1)
+    #expect(document.canUndo)
+
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(0))
+    #expect(!document.canUndo)
+    #expect(document.canRedo)
+
+    document.redo()
+    #expect(document.feature == Fixtures.exposure(1))
+    #expect(!document.canUndo, "A limit of 0 keeps no undo step.")
+  }
+
+  @Test func `Undoing uncommitted changes replaces the earlier redo steps`() throws {
+    var document = try Fixtures.makeDocument()
+    document.feature = Fixtures.exposure(1)
+    document.commit()
+    document.undo()
+    #expect(document.history.redoStack == [Fixtures.exposure(1)])
+
+    document.feature = Fixtures.exposure(5)
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(0))
+    #expect(document.history.redoStack == [Fixtures.exposure(5)])
+    #expect(document.history.undoStack.isEmpty)
+  }
+
   @Test func `Uncommitted changes hide redo and discarding them shows it again`() throws {
     var document = try Fixtures.makeDocument()
     document.feature = Fixtures.exposure(1)

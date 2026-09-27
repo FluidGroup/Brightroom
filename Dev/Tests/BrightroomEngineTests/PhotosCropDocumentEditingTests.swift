@@ -155,7 +155,7 @@ struct PhotosCropDocumentEditingTests {
     #expect(!document.hasUncommittedChanges)
   }
 
-  @Test func `Leaving a tool commits one step`() {
+  @Test func `A tool visit is one step`() {
     let opened = EditingDocument(image: makeImage())
     var session = PhotosCropEditorSession(documentAtStart: opened)
 
@@ -164,11 +164,16 @@ struct PhotosCropDocumentEditingTests {
     var document = tapped!
     #expect(document.hasUncommittedChanges)
 
-    // Leaving the tool commits in one write.
-    let left = session.document(after: document, committing: true)
-    document = left!
-    #expect(!document.hasUncommittedChanges)
+    // Leaving the tool writes nothing; the next visit's first write commits.
+    let left = session.endToolVisit(of: document)
+    #expect(left == nil)
+    document = session.document(after: document) { $0.setAdjustmentValue(50, parameter: .exposure) }!
+    #expect(document.history.undoStack.count == 1)
     #expect(document.canUndo)
+
+    document.undo()
+    #expect(document.feature.effects.exposure == nil)
+    #expect(document.feature.effects.preset?.identifier == "test")
 
     document.undo()
     #expect(document.feature.effects.preset == nil)

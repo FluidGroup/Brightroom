@@ -90,11 +90,18 @@ package final class EditingStack: Hashable {
 
   /// Whether the image is still being prepared.
   package var isLoading: Bool {
-    loadedState == nil
+    loadedState == nil && didFailToPrepare == false
   }
 
-  /// The prepared image; nil until preparation finishes.
+  /// The prepared image; nil until preparation finishes, and for good when
+  /// it fails.
   @GraphStored package internal(set) var loadedState: Loaded? = nil
+
+  /// Whether preparation failed, for example because the image's pixels
+  /// cannot be decoded although its header was readable, or because the
+  /// file behind the image changed. Editors show the failure and keep an
+  /// exit available instead of waiting for `loadedState`.
+  @GraphStored package internal(set) var didFailToPrepare: Bool = false
 
   // MARK: - Stored Properties
 
@@ -125,6 +132,9 @@ package final class EditingStack: Hashable {
   }
 
   /// Starts preparing the image. Calling it again does nothing.
+  ///
+  /// `onPreparationCompleted` is called when preparation ends, whether it
+  /// published `loadedState` or failed (`didFailToPrepare`).
   ///
   /// - Calling from background-thread supported.
   package func start(onPreparationCompleted: @escaping @MainActor () -> Void = {}) {
@@ -163,6 +173,10 @@ package final class EditingStack: Hashable {
       let editingSourceCGImage = storage.makeResizedCGImage(shortSideHint: editingImageMaxPixelSize)
     else {
       EngineLog.error(.stack, "Failed to prepare the editing source.")
+      didFailToPrepare = true
+      DispatchQueue.main.async {
+        onPreparationCompleted()
+      }
       return
     }
 

@@ -97,11 +97,22 @@ public struct EditingDocument<Content: Feature & Equatable>: Equatable, Sendable
     committedFeature = feature
   }
 
-  /// Returns to the previous committed feature.
+  /// Returns to the previous state.
   ///
-  /// Uncommitted changes are committed first, so `redo()` brings them back.
+  /// With uncommitted changes, the previous state is the latest commit: the
+  /// changes become the only redo step (they started a new branch, so the
+  /// earlier redo steps are gone) and the undo steps are untouched.
+  /// Otherwise the previous state is the latest undo step. Either way
+  /// `redo()` brings the current feature back.
   public mutating func undo() {
-    commit()
+    if hasUncommittedChanges {
+      // Not `commit()` then pop: at the history limit, the commit would
+      // push out the oldest undo step for nothing, and with a limit of 0 it
+      // would drop the changes instead of undoing them.
+      history.redoStack = [feature]
+      feature = committedFeature
+      return
+    }
     guard let previous = history.undoStack.popLast() else {
       return
     }
