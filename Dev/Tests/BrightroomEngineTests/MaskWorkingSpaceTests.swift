@@ -79,7 +79,7 @@ struct MaskWorkingSpaceTests {
       EditingCanvasStrokeRecord(stamps: [CGPoint(x: 200, y: 280)], brush: brush),
     ]
 
-    var document = PhotosCropDocument(orientedImageSize: CGSize(width: 400, height: height))
+    var document = PhotosCropFeature(imageSize: CGSize(width: 400, height: height))
     for record in records {
       document.appendBlurMaskStroke(record.workingSpaceStroke(domainHeight: height))
     }

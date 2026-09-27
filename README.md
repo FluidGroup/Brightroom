@@ -120,9 +120,9 @@ struct PhotoEditor: View {
 }
 ```
 
-The editor starts image preparation automatically. `onDone` receives the edited `PhotosCropDocument`, a plain value that describes the edit. Handle the result and dismiss the editor from `onComplete` when appropriate. Create a new model and stack when selecting a different source image.
+The editor starts image preparation automatically. `onDone` receives the edited `PhotosCropFeature`, a plain value that describes the edit. Handle the result and dismiss the editor from `onComplete` when appropriate. Create a new model and stack when selecting a different source image.
 
-Customize aspect ratios and filter presets through `SwiftUIPhotosCropView.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/PhotosCropDemoFilterPresets.swift) are included only in the demo app. For a custom layout and controls, start with [`SwiftUICropView`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift), which edits a `PhotosCropDocument` through a binding. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+Customize aspect ratios and filter presets through `SwiftUIPhotosCropView.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/PhotosCropDemoFilterPresets.swift) are included only in the demo app. For a custom layout and controls, start with [`SwiftUICropView`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift), which edits a `PhotosCropFeature` through a binding. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
 
 ### Saving and Resuming an Edit
 

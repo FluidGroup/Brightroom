@@ -6,7 +6,7 @@ import Testing
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-struct PhotosCropDocumentTests {
+struct PhotosCropFeatureTests {
 
   private let imageSize = CGSize(width: 400, height: 300)
 
@@ -19,15 +19,15 @@ struct PhotosCropDocumentTests {
 
   @Test func `Two default documents are equal`() {
     #expect(
-      PhotosCropDocument(orientedImageSize: imageSize)
-        == PhotosCropDocument(orientedImageSize: imageSize)
+      PhotosCropFeature(imageSize: imageSize)
+        == PhotosCropFeature(imageSize: imageSize)
     )
-    #expect(PhotosCropDocument.Effects() == PhotosCropDocument.Effects())
+    #expect(PhotosCropFeature.Effects() == PhotosCropFeature.Effects())
   }
 
   @Test func `Documents built through the same operations are equal`() {
-    func build() -> PhotosCropDocument {
-      var document = PhotosCropDocument(orientedImageSize: imageSize)
+    func build() -> PhotosCropFeature {
+      var document = PhotosCropFeature(imageSize: imageSize)
       var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
       crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
       document.setCrop(crop)
@@ -40,7 +40,7 @@ struct PhotosCropDocumentTests {
   }
 
   @Test func `setCrop with an equal state leaves the document equal`() {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var document = PhotosCropFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .angle_90
@@ -63,7 +63,7 @@ struct PhotosCropDocumentTests {
     // and the selection before the turn stays the whole image.
     crop.rotation = .angle_90
 
-    var document = PhotosCropDocument(orientedImageSize: size)
+    var document = PhotosCropFeature(imageSize: size)
     document.setCrop(crop)
 
     #expect(document.crop.cropRect == CGRect(origin: .zero, size: size))
@@ -75,7 +75,7 @@ struct PhotosCropDocumentTests {
   }
 
   @Test func `setCrop stores the snapped rect`() {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var document = PhotosCropFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10.4, y: 20.6, width: 200.3, height: 100.2))
     crop.rotation = .angle_90
@@ -103,7 +103,7 @@ struct PhotosCropDocumentTests {
   }
 
   @Test func `First stroke seeds the default blur`() throws {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var document = PhotosCropFeature(imageSize: imageSize)
 
     document.appendBlurMaskStroke(stroke)
 
@@ -127,7 +127,7 @@ struct PhotosCropDocumentTests {
       effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
 
-    var edited = PhotosCropDocument(orientedImageSize: imageSize)
+    var edited = PhotosCropFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: edited.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .angle_90
@@ -137,7 +137,7 @@ struct PhotosCropDocumentTests {
     PhotosCropAdjustmentParameter.vignette.apply(sliderValue: 60, to: &edited.effects)
     edited.effects.preset = preset
 
-    let rebuilt = PhotosCropDocument(
+    let rebuilt = PhotosCropFeature(
       effects: .init(
         preset: PresetFeature(
           name: "P",
@@ -166,25 +166,25 @@ struct PhotosCropDocumentTests {
   /// Members assigned directly compare equal to the ones the sliders create:
   /// nothing but their values decides equality.
   @Test func `Members assigned directly equal slider-created members`() {
-    var sliderMade = PhotosCropDocument.Effects()
+    var sliderMade = PhotosCropFeature.Effects()
     PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &sliderMade)
     PhotosCropAdjustmentParameter.blur.apply(sliderValue: 40, to: &sliderMade)
 
-    var assigned = PhotosCropDocument.Effects()
+    var assigned = PhotosCropFeature.Effects()
     assigned.exposure = ExposureFeature(value: 0.9)
     assigned.gaussianBlur = GaussianBlurFeature(value: 40)
 
     #expect(assigned == sliderMade)
     #expect(
-      PhotosCropDocument.Effects(
+      PhotosCropFeature.Effects(
         exposure: ExposureFeature(value: 0.9),
         gaussianBlur: GaussianBlurFeature(value: 40)
       ) == sliderMade
     )
 
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var document = PhotosCropFeature(imageSize: imageSize)
     document.effects = sliderMade
-    var direct = PhotosCropDocument(orientedImageSize: imageSize)
+    var direct = PhotosCropFeature(imageSize: imageSize)
     direct.effects.exposure = ExposureFeature(value: 0.9)
     direct.effects.gaussianBlur = GaussianBlurFeature(value: 40)
     #expect(direct == document)
@@ -248,7 +248,7 @@ struct PhotosCropDocumentTests {
     // The canvas base: global effects only, over the whole source.
     let base = try renderer.makeImage(
       from: source,
-      document: document.withoutBlurMask().withCropNeutralized(orientedImageSize: imageSize)
+      document: document.withoutBlurMask().withCropNeutralized(imageSize: imageSize)
     )
     let effectsOnly = try renderer.makeImage(from: source, document: document.effects)
     #expect(base.extent == effectsOnly.extent)
@@ -256,7 +256,7 @@ struct PhotosCropDocumentTests {
 
     // Crop editing views the effects and the blur mask, without the crop.
     struct EffectsAndBlurMask: Feature {
-      var effects: PhotosCropDocument.Effects
+      var effects: PhotosCropFeature.Effects
       var blurMask: LocalAdjustment<GaussianBlurFeature>?
       var body: some Feature {
         effects
@@ -265,7 +265,7 @@ struct PhotosCropDocumentTests {
     }
     let cropViewing = try renderer.makeImage(
       from: source,
-      document: document.withCropNeutralized(orientedImageSize: imageSize)
+      document: document.withCropNeutralized(imageSize: imageSize)
     )
     let uncropped = try renderer.makeImage(
       from: source,
@@ -278,8 +278,8 @@ struct PhotosCropDocumentTests {
   // MARK: - Helpers
 
   /// A document with all 13 global effect members, a blur mask, and a rotated crop.
-  private func makeFullDocument() -> PhotosCropDocument {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+  private func makeFullDocument() -> PhotosCropFeature {
+    var document = PhotosCropFeature(imageSize: imageSize)
     for (parameter, value) in [
       (PhotosCropAdjustmentParameter.exposure, 40.0),
       (.brightness, 20),

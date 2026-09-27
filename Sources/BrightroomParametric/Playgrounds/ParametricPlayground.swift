@@ -303,7 +303,7 @@ fileprivate enum Sample {
   /// named constant would warn about an unused value in ordinary builds.
   @discardableResult
   static func render(_ document: some Feature, from source: CIImage = photo) throws -> CGImage {
-    let output = try ParametricImageRenderer().makeImage(from: source, document: document)
+    let output = try ParametricImageRenderer().makeImage(from: source, feature: document)
     guard
       let image = context.createCGImage(
         output,

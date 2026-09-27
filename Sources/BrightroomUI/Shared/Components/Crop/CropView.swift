@@ -47,7 +47,7 @@ struct CropViewSource {
   }
 }
 
-extension PhotosCropDocument.Effects {
+extension PhotosCropFeature.Effects {
 
   /// The global effects as the canvas factories take them: nil when no effect
   /// is present, so the canvas can sample its cached source instead of
@@ -57,7 +57,7 @@ extension PhotosCropDocument.Effects {
   }
 }
 
-/// A UIKit canvas that edits a `PhotosCropDocument`: value in, changes out.
+/// A UIKit canvas that edits a `PhotosCropFeature`: value in, changes out.
 ///
 /// Based on the editing vision in `docs/vision-of-editing.md`, the document
 /// evaluates tool edits before the final crop:
@@ -91,7 +91,7 @@ final class CropView: UIView {
   ///
   /// The document's owner applies it to its latest document, so owner-side
   /// changes CropView has not received yet are kept.
-  typealias DocumentChange = (inout PhotosCropDocument) -> Void
+  typealias DocumentChange = (inout PhotosCropFeature) -> Void
 
   private struct State {
 
@@ -182,7 +182,7 @@ final class CropView: UIView {
   ///
   /// It is also the echo reference: a document passed back with the same crop
   /// does not reload the crop state.
-  private var document: PhotosCropDocument
+  private var document: PhotosCropFeature
 
   private var documentChangeHandler: @MainActor (@escaping DocumentChange) -> Void = { _ in }
 
@@ -303,7 +303,7 @@ final class CropView: UIView {
   /// handler is bound, so the first state snapshot reaches it.
   init(
     source: CropViewSource,
-    document: PhotosCropDocument,
+    document: PhotosCropFeature,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
     _pixeleditor_ensureMainThread()
@@ -573,7 +573,7 @@ final class CropView: UIView {
   /// which first turns with the reloaded crop's output orientation. A
   /// document CropView changed itself comes back equal and only refreshes the
   /// display.
-  func setDocument(_ document: PhotosCropDocument) {
+  func setDocument(_ document: PhotosCropFeature) {
     guard document != self.document else {
       updateDisplay()
       return
@@ -897,12 +897,12 @@ extension CropView {
     var imageSize: CGSize
     var sourceImage: ObjectIdentifier
     var sourceExtent: CGRect
-    var effects: PhotosCropDocument.Effects
+    var effects: PhotosCropFeature.Effects
     /// The whole blur mask, strokes included: the crop surface rebuilds on a
     /// stroke commit.
     var blurMask: LocalAdjustment<GaussianBlurFeature>?
 
-    init(source: CropViewSource, document: PhotosCropDocument, crop: CropEditingState) {
+    init(source: CropViewSource, document: PhotosCropFeature, crop: CropEditingState) {
       let previewSourceImage = source.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the

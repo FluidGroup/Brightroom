@@ -75,7 +75,7 @@ authored in the domain `crop` produces, and `finalCrop` clips the adjusted
 result.
 
 The engine can express any such order; the UI decides how much freedom a
-document gives. `PhotosCropDocument` fixes one shape for a simple Photos-like
+document gives. `PhotosCropFeature` fixes one shape for a simple Photos-like
 editor, and another editor can define a deeper sequence with the same
 Features.
 

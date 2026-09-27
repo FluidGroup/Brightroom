@@ -10,7 +10,7 @@ import UIKit
 
 /// Pins the locked invariant that the interactive preview and the exported
 /// result are the *same composition*: the canvas composition `CropView`
-/// renders for a `PhotosCropDocument` (`CanvasCompositionPreview`) and the
+/// renders for a `PhotosCropFeature` (`CanvasCompositionPreview`) and the
 /// export of the same document through `EditingStack.makeRenderer(document:)`
 /// must produce matching pixels.
 ///
@@ -390,8 +390,8 @@ struct EditingPreviewExportParityTests {
     cropRect: CGRect? = nil,
     rotation: CropEditingState.Rotation = .angle_0,
     blurMask: LocalAdjustment<GaussianBlurFeature>?
-  ) -> PhotosCropDocument {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+  ) -> PhotosCropFeature {
+    var document = PhotosCropFeature(imageSize: imageSize)
     document.effects.exposure = ExposureFeature(value: 0.4)
     document.blurMask = blurMask
     if cropRect != nil || rotation != .angle_0 {

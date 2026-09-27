@@ -165,7 +165,7 @@ struct ParametricVideoRenderPlaygroundView: View {
     do {
       item.videoComposition = try ParametricVideoRenderer().makeVideoComposition(
         for: asset,
-        document: makeFeatureDocument(),
+        feature: makeFeatureDocument(),
         renderSizeMode: renderSizeMode.rendererMode
       )
       errorMessage = nil

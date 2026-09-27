@@ -98,11 +98,11 @@ struct BlurRadiusReferenceExtentTests {
     let renderer = ParametricImageRenderer()
 
     // [crop, blur] with the default (nil) reference.
-    let cropThenBlur = try renderer.makeImage(from: input, document: CropThenBlur(crop: crop))
+    let cropThenBlur = try renderer.makeImage(from: input, feature: CropThenBlur(crop: crop))
 
     // The same crop, then a blur whose absolute radius is resolved by hand
     // against the ENTRY extent (800×800), applied to the cropped image.
-    let croppedOnly = try renderer.makeImage(from: input, document: crop)
+    let croppedOnly = try renderer.makeImage(from: input, feature: crop)
     let entryRadius = hypot(side, side) / 50.0
     let expected = croppedOnly
       .clamped(to: croppedOnly.extent)

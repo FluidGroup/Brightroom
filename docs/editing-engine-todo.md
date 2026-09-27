@@ -7,7 +7,7 @@ file tracks concrete engineering items that are not yet done.
 Status context (as of Brightroom 6):
 
 - `EditingStack` holds no edit. PhotosCrop and `SwiftUICropView` edit a
-  `PhotosCropDocument` (a statically composed `Feature`) owned by
+  `PhotosCropFeature` (a statically composed `Feature`) owned by
   `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
   BrightroomUI edits crop through `CropEditingState` / `CropRotation`.
 - Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
@@ -105,7 +105,7 @@ Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKVie
 
 ### 3. Done: Store masks y-up in the document — "E5"
 
-`PhotosCropDocument` stores brush stamps in Core Image's y-up working space, and
+`PhotosCropFeature` stores brush stamps in Core Image's y-up working space, and
 the y-down bridge (`EditingDocumentBridge`) is deleted, so the document is
 directly renderable. The canvas converts gestures to y-up when it commits a
 stroke.
@@ -146,7 +146,7 @@ Files: `Sources/BrightroomUI/Shared/Components/Crop/CropView.swift`
 
 The source-resolution-blur fix covers the **local-adjustment** preview path
 (`.localAdjustment`). The `.preview` / `.renderedEditPreview` paths still apply
-the global effects (`PhotosCropDocument.Effects`) to the full-canvas image. That is safe today because
+the global effects (`PhotosCropFeature.Effects`) to the full-canvas image. That is safe today because
 every global effect PhotosCrop exposes is pointwise (exposure/contrast/etc.) —
 Core Image evaluates those lazily at the output/viewport resolution, so no
 full-canvas buffer is materialized. If a global **spatial** effect (blur,

@@ -27,9 +27,10 @@ import BrightroomParametric
 /**
  Apple's Photos app like crop view.
 
- The view edits the `PhotosCropDocument` owned by its `PhotosCropEditingModel`.
- On Done it passes the committed document; render it with
- `EditingStack.makeRenderer(document:)`.
+ The view edits a `EditingDocument<PhotosCropFeature>` the host owns. Changes are
+ written to the binding as they happen, and the view commits them to the
+ document's history when the user leaves a tool and on Done. Render the
+ document with `EditingDocument.render(options:)`.
 
  You might use `SwiftUICropView` to create a fully customized user interface.
  */
@@ -60,7 +61,7 @@ public struct SwiftUIPhotosCropView: View {
     /// The host-provided presets offered by the Filters mode.
     ///
     /// Defaults to an empty array; only Original is offered until presets are
-    /// supplied. A selected preset is written to the document's
+    /// supplied. A selected preset is written to the feature's
     /// `effects.preset`.
     public var filterPresets: [PresetFeature] = []
 
@@ -69,29 +70,33 @@ public struct SwiftUIPhotosCropView: View {
     }
   }
 
-  private let editingModel: PhotosCropEditingModel
+  @Binding private var document: EditingDocument<PhotosCropFeature>
   private let options: Options
   private let localizedStrings: LocalizedStrings
-  private let onDone: @MainActor (PhotosCropDocument) -> Void
+  private let onDone: @MainActor () -> Void
   private let onCancel: @MainActor () -> Void
 
   /// Creates the editor.
   ///
   /// - Parameters:
-  ///   - editingModel: Owns the edited document and its history. Keep it for
-  ///     as long as the editing session lasts.
+  ///   - document: The edited document. Create it before showing the editor,
+  ///     with `EditingDocument(image:)` or, for a policy-decided initial crop,
+  ///     `EditingDocument(image:cropModifier:)`. A document of another image
+  ///     restarts the editor.
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.
-  ///   - onDone: Receives the document, committed as an undo checkpoint.
-  ///   - onCancel: Called when the user cancels.
+  ///   - onDone: Called after the binding received the committed document.
+  ///   - onCancel: Called when the user cancels. The binding keeps the
+  ///     changes made so far; restore a copy taken before showing the editor
+  ///     to discard them.
   public init(
-    editingModel: PhotosCropEditingModel,
+    document: Binding<EditingDocument<PhotosCropFeature>>,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
-    onDone: @escaping @MainActor (PhotosCropDocument) -> Void,
+    onDone: @escaping @MainActor () -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
-    self.editingModel = editingModel
+    self._document = document
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -99,13 +104,18 @@ public struct SwiftUIPhotosCropView: View {
   }
 
   public var body: some View {
-    PhotosCropContentView(
-      editingModel: editingModel,
-      options: options,
-      localizedStrings: localizedStrings,
-      onDone: onDone,
-      onCancel: onCancel
-    )
+    // One stack per image, shared by the canvas and the filter swatches.
+    OwnedEditingStack(image: document.image) { editingStack in
+      PhotosCropContentView(
+        document: $document,
+        editingStack: editingStack,
+        options: options,
+        localizedStrings: localizedStrings,
+        onDone: onDone,
+        onCancel: onCancel
+      )
+    }
+    .id(document.image)
   }
 }
 

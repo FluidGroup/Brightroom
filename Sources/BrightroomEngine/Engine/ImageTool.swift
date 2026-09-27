@@ -27,9 +27,16 @@ import UIKit
 /// A set of functions that handle image and manipulations.
 public enum ImageTool: Sendable {
 
-  public static func makeImageMetadata(
+  /// The orientation and oriented pixel size read from image properties.
+  struct ImageMetadata: Equatable {
+    var orientation: CGImagePropertyOrientation
+    /// The pixel size with the orientation applied.
+    var imageSize: CGSize
+  }
+
+  static func makeImageMetadata(
     from imageSource: CGImageSource
-  ) -> ImageProvider.ImageMetadata? {
+  ) -> ImageMetadata? {
     let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
     guard
       let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)

@@ -93,7 +93,7 @@ enum RenderingFixtures {
 
   /// The source as every document receives it at chain entry.
   static func normalizedSource() throws -> CIImage {
-    try renderer.makeImage(from: makeSource(), document: EmptyFeature())
+    try renderer.makeImage(from: makeSource(), feature: EmptyFeature())
   }
 
   // MARK: Oracles

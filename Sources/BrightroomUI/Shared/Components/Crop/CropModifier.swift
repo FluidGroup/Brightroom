@@ -29,12 +29,12 @@ import BrightroomParametric
 /// Decides the initial crop of a newly loaded image.
 ///
 /// It runs once, when a new document is created with
-/// `PhotosCropDocument.makeInitial(for:cropModifier:)`; `PhotosCropEditingModel`
-/// does this for a new session. A resumed document is not modified.
+/// `EditingDocument(image:cropModifier:history:)`. An existing document is never
+/// modified.
 public struct CropModifier: Sendable {
 
-  /// Receives the downsampled editing source (scaled up to the oriented image
-  /// size, zero origin) and a crop covering the whole image, and returns the
+  /// Receives a downsampled image (scaled up to the oriented image size, zero
+  /// origin) and a crop covering the whole image, and returns the
   /// crop to start from. It runs off the main actor, on Swift concurrency's
   /// shared executor: move blocking work (such as a synchronous Vision
   /// request) to a queue of its own, as `faceDetection` does.
@@ -42,8 +42,8 @@ public struct CropModifier: Sendable {
 
   let modify: Modify
 
-  /// Whether this is `identity`, so the editor can create the document
-  /// synchronously instead of preparing the modifier's input image.
+  /// Whether this is `identity`, so a new document is created without
+  /// preparing the modifier's input image.
   let isIdentity: Bool
 
   public init(modify: @escaping Modify) {
@@ -151,48 +151,55 @@ public struct CropModifier: Sendable {
   }
 }
 
-extension PhotosCropDocument {
+extension EditingDocument where Content == PhotosCropFeature {
 
-  /// The document a new edit of a loaded image starts from: no effects, no
-  /// blur mask, and a crop covering the whole image adjusted by
-  /// `cropModifier`.
+  /// Creates a document with no effects and a crop that covers the whole
+  /// image, adjusted by `cropModifier`.
   ///
-  /// `PhotosCropEditingModel` uses this for a new session. A host that edits
-  /// through `SwiftUICropView`'s document binding can use it to apply a crop
-  /// modifier, and show the view once the document exists.
+  /// Create the document before showing an editor; the editor then edits a
+  /// document that already exists. The modifier's crop is the committed
+  /// state, so undo does not return to the full-image crop.
   ///
   /// - Parameters:
-  ///   - loadedState: The loaded image the document is authored over.
+  ///   - image: The image to edit.
   ///   - cropModifier: The initial-crop policy. `.identity` returns without
   ///     suspending work.
+  ///   - history: The history of the new document. Empty by default.
   nonisolated(nonsending)
-  public static func makeInitial(
-    for loadedState: EditingStack.Loaded,
-    cropModifier: CropModifier = .identity
-  ) async -> PhotosCropDocument {
-    var document = PhotosCropDocument(orientedImageSize: loadedState.imageSize)
+  public init(
+    image: SourceImage,
+    cropModifier: CropModifier,
+    history: History = History()
+  ) async {
+    var feature = PhotosCropFeature(imageSize: image.pixelSize)
 
-    guard cropModifier.isIdentity == false else {
-      return document
+    if cropModifier.isIdentity == false {
+      let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)
+      feature.setCrop(
+        await Self.runCropModifier(
+          cropModifier,
+          image: Self.makeCropModifierInput(image),
+          crop: crop
+        )
+      )
     }
 
-    let image = makeCropModifierInput(loadedState)
-    let crop = CropEditingState(cropFeature: document.crop, imageSize: loadedState.imageSize)
-    document.setCrop(await runCropModifier(cropModifier, image: image, crop: crop))
-    return document
+    self.init(image: image, feature: feature, history: history)
   }
 
-  /// The downsampled editing source, oriented and scaled up to the oriented
-  /// image size with a zero origin: the domain the crop is authored in.
-  private static func makeCropModifierInput(_ loaded: EditingStack.Loaded) -> CIImage {
-    let image = CIImage(cgImage: loaded.editingSourceCGImage)
-      .oriented(loaded.metadata.orientation)
-    let imageSize = loaded.imageSize
+  /// The largest side of the image a crop modifier inspects.
+  private static var cropModifierInputMaxPixelSize: CGFloat { 2560 }
 
-    let scaled = image.transformed(
+  /// A downsampled, oriented image scaled up to the oriented pixel size with
+  /// a zero origin: the domain the crop is authored in.
+  private static func makeCropModifierInput(_ image: SourceImage) -> CIImage {
+    let downsampled = image.makeCIImage(maxPixelSize: cropModifierInputMaxPixelSize)
+    let imageSize = image.pixelSize
+
+    let scaled = downsampled.transformed(
       by: .init(
-        scaleX: image.extent.width < imageSize.width ? imageSize.width / image.extent.width : 1,
-        y: image.extent.height < imageSize.height ? imageSize.height / image.extent.height : 1
+        scaleX: downsampled.extent.width < imageSize.width ? imageSize.width / downsampled.extent.width : 1,
+        y: downsampled.extent.height < imageSize.height ? imageSize.height / downsampled.extent.height : 1
       )
     )
 

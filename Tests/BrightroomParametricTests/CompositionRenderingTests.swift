@@ -35,7 +35,7 @@ struct CompositionRenderingTests {
     let translated = Fixtures.removingOffset(source)
 
     // The empty document shows the chain entry itself.
-    let entry = try Fixtures.renderer.makeImage(from: source, document: EmptyFeature())
+    let entry = try Fixtures.renderer.makeImage(from: source, feature: EmptyFeature())
     #expect(entry.extent == Fixtures.entryExtent)
     Fixtures.expectPixelsMatch(translated, entry)
 
@@ -43,8 +43,8 @@ struct CompositionRenderingTests {
     // either source.
     let document = MidChainCropBlurDocument()
     Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: translated, document: document),
-      try Fixtures.renderer.makeImage(from: source, document: document)
+      try Fixtures.renderer.makeImage(from: translated, feature: document),
+      try Fixtures.renderer.makeImage(from: source, feature: document)
     )
   }
 
@@ -54,10 +54,10 @@ struct CompositionRenderingTests {
     let source = try Fixtures.makeSource()
     let document = GlobalChainDocument()
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     let folded = try Fixtures.renderer.makeImage(
       from: source,
-      document: SequentialFeatures(document.steps)
+      feature: SequentialFeatures(document.steps)
     )
 
     #expect(composed.extent == Fixtures.entryExtent)
@@ -67,7 +67,7 @@ struct CompositionRenderingTests {
     // Order is part of the edit: the same members reversed must not match.
     let reversed = try Fixtures.renderer.makeImage(
       from: source,
-      document: SequentialFeatures(document.steps.reversed())
+      feature: SequentialFeatures(document.steps.reversed())
     )
     Fixtures.expectVisiblyDifferent(composed, reversed)
   }
@@ -82,7 +82,7 @@ struct CompositionRenderingTests {
     // Explicit recipe for exposure, crop, and blur: the blur radius is the
     // entry diagonal / 50, although the blur receives the cropped image.
     document.sharpen = nil
-    let blurOnly = try Fixtures.renderer.makeImage(from: source, document: document)
+    let blurOnly = try Fixtures.renderer.makeImage(from: source, feature: document)
     let exposed = try Fixtures.normalizedSource()
       .applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: document.exposure.value])
       .cropped(to: Fixtures.entryExtent)
@@ -95,13 +95,13 @@ struct CompositionRenderingTests {
     // The default basis is the chain entry, not the cropped domain the blur
     // receives.
     document = MidChainCropBlurDocument()
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     #expect(composed.extent == croppedExtent)
     Fixtures.expectPixelsMatch(
       composed,
       try Fixtures.renderer.makeImage(
         from: source,
-        document: document,
+        feature: document,
         radiusReferenceExtent: Fixtures.entryExtent
       )
     )
@@ -109,7 +109,7 @@ struct CompositionRenderingTests {
       composed,
       try Fixtures.renderer.makeImage(
         from: source,
-        document: document,
+        feature: document,
         radiusReferenceExtent: croppedExtent
       )
     )
@@ -119,12 +119,12 @@ struct CompositionRenderingTests {
     Fixtures.expectPixelsMatch(
       try Fixtures.renderer.makeImage(
         from: source,
-        document: SequentialFeatures(document.steps),
+        feature: SequentialFeatures(document.steps),
         radiusReferenceExtent: viewportReference
       ),
       try Fixtures.renderer.makeImage(
         from: source,
-        document: document,
+        feature: document,
         radiusReferenceExtent: viewportReference
       )
     )
@@ -140,7 +140,7 @@ struct CompositionRenderingTests {
     let second = CGRect(x: 20, y: 30, width: 180, height: 120)
     let axisAligned = try Fixtures.renderer.makeImage(
       from: source,
-      document: TwoCropsDocument(
+      feature: TwoCropsDocument(
         first: CropFeature(cropRect: first),
         second: CropFeature(cropRect: second)
       )
@@ -158,7 +158,7 @@ struct CompositionRenderingTests {
 
     // Straightened and quarter-turned crops.
     let document = TwoCropsDocument()
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     // The second crop turns a quarter, so its output exchanges the selection's
     // width and height.
     #expect(composed.extent == CGRect(
@@ -166,7 +166,7 @@ struct CompositionRenderingTests {
       size: CGSize(width: document.second.cropRect.height, height: document.second.cropRect.width)
     ))
     Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: source, document: SequentialFeatures(document.steps)),
+      try Fixtures.renderer.makeImage(from: source, feature: SequentialFeatures(document.steps)),
       composed
     )
 
@@ -175,7 +175,7 @@ struct CompositionRenderingTests {
     secondCropOnly.first = nil
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: secondCropOnly)
+      try Fixtures.renderer.makeImage(from: source, feature: secondCropOnly)
     )
   }
 
@@ -187,7 +187,7 @@ struct CompositionRenderingTests {
     let maskTree = shape.makeMaskTree()
     let document = MaskedBlurDocument(maskTree: maskTree)
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     #expect(composed.extent == Fixtures.entryExtent)
 
     // Explicit recipe: exposure, a raw blend of a raw blur through the
@@ -207,7 +207,7 @@ struct CompositionRenderingTests {
 
     var withoutMask = document
     withoutMask.blurMask = nil
-    let unmasked = try Fixtures.renderer.makeImage(from: source, document: withoutMask)
+    let unmasked = try Fixtures.renderer.makeImage(from: source, feature: withoutMask)
     Fixtures.expectVisiblyDifferent(composed, unmasked)
 
     // Locality: where the mask covers nothing, the blur changes nothing.
@@ -314,10 +314,10 @@ struct CompositionRenderingTests {
     let source = try Fixtures.makeSource()
     let document = ColorGradingDocument()
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     #expect(composed.extent == Fixtures.entryExtent)
     Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: source, document: SequentialFeatures(document.steps)),
+      try Fixtures.renderer.makeImage(from: source, feature: SequentialFeatures(document.steps)),
       composed
     )
 
@@ -326,19 +326,19 @@ struct CompositionRenderingTests {
     withoutCurve.toneCurve = nil
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: withoutCurve)
+      try Fixtures.renderer.makeImage(from: source, feature: withoutCurve)
     )
     var withoutMixer = document
     withoutMixer.colorMixer = nil
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: withoutMixer)
+      try Fixtures.renderer.makeImage(from: source, feature: withoutMixer)
     )
     var withoutCube = document
     withoutCube.colorCube = nil
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: withoutCube)
+      try Fixtures.renderer.makeImage(from: source, feature: withoutCube)
     )
 
     // Order matters.
@@ -346,7 +346,7 @@ struct CompositionRenderingTests {
       composed,
       try Fixtures.renderer.makeImage(
         from: source,
-        document: SequentialFeatures(document.steps.reversed())
+        feature: SequentialFeatures(document.steps.reversed())
       )
     )
   }
@@ -357,10 +357,10 @@ struct CompositionRenderingTests {
     let source = try Fixtures.makeSource()
     let document = NestedPresetDocument()
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     #expect(composed.extent == Fixtures.entryExtent)
     Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: source, document: FlattenedPresetDocument()),
+      try Fixtures.renderer.makeImage(from: source, feature: FlattenedPresetDocument()),
       composed
     )
 
@@ -369,7 +369,7 @@ struct CompositionRenderingTests {
     withoutInner.look.preset.effects.removeAll { $0.base is PresetFeature }
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: withoutInner)
+      try Fixtures.renderer.makeImage(from: source, feature: withoutInner)
     )
 
     // A fade added to the inner preset is visible.
@@ -377,7 +377,7 @@ struct CompositionRenderingTests {
     withFade.look.preset = NestedPresetDocument.makeOuterPreset(includesInnerFade: true)
     Fixtures.expectVisiblyDifferent(
       composed,
-      try Fixtures.renderer.makeImage(from: source, document: withFade)
+      try Fixtures.renderer.makeImage(from: source, feature: withFade)
     )
   }
 
@@ -388,10 +388,10 @@ struct CompositionRenderingTests {
     let source = try Fixtures.makeSource()
     let document = variant.document
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: document)
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: document)
     let folded = try Fixtures.renderer.makeImage(
       from: source,
-      document: SequentialFeatures(variant.flattenedSteps)
+      feature: SequentialFeatures(variant.flattenedSteps)
     )
 
     #expect(folded.extent == composed.extent)
@@ -411,14 +411,14 @@ struct CompositionRenderingTests {
 
     let exported = try ParametricExportRenderer().render(
       source: source,
-      document: document,
+      feature: document,
       options: options
     )
     .cgImage
 
     // The same recipe, materialized with the export's working format and
     // working color space.
-    let recipe = try Fixtures.renderer.makeImage(from: source, document: document)
+    let recipe = try Fixtures.renderer.makeImage(from: source, feature: document)
     let exportContext = CIContext(options: [
       .workingFormat: CIFormat.RGBAh,
       .workingColorSpace: Fixtures.workingColorSpace,
@@ -449,13 +449,13 @@ struct CompositionRenderingTests {
 
     let frame = try videoRenderer.makeFrameImage(
       from: source,
-      document: document,
+      feature: document,
       renderExtent: renderExtent,
       presentationTime: presentationTime
     )
     let recipe = try Fixtures.renderer.makeImage(
       from: source,
-      document: document,
+      feature: document,
       presentationTime: presentationTime
     )
     let placed = recipe
@@ -469,14 +469,14 @@ struct CompositionRenderingTests {
     #expect(
       try videoRenderer.resolveRenderSize(
         sourceRenderSize: sourceRenderSize,
-        document: document,
+        feature: document,
         mode: .featureOutput
       ) == document.crop.cropRect.size
     )
     #expect(
       try videoRenderer.resolveRenderSize(
         sourceRenderSize: sourceRenderSize,
-        document: document,
+        feature: document,
         mode: .source
       ) == sourceRenderSize
     )
@@ -484,7 +484,7 @@ struct CompositionRenderingTests {
     #expect(
       try videoRenderer.resolveRenderSize(
         sourceRenderSize: sourceRenderSize,
-        document: document,
+        feature: document,
         mode: .custom(custom)
       ) == custom
     )
@@ -498,10 +498,10 @@ struct CompositionRenderingTests {
     let document = PhotosCropLikeDocument()
     let videoRenderer = ParametricVideoRenderer()
 
-    let composition = try videoRenderer.makeVideoComposition(for: asset, document: document)
+    let composition = try videoRenderer.makeVideoComposition(for: asset, feature: document)
     let foldedComposition = try videoRenderer.makeVideoComposition(
       for: asset,
-      document: SequentialFeatures(document.steps)
+      feature: SequentialFeatures(document.steps)
     )
 
     #expect(composition.renderSize == document.crop.cropRect.size)
@@ -521,7 +521,7 @@ struct CompositionRenderingTests {
     // effects must be visible against the same crop alone.
     let cropOnly = try await Fixtures.firstFrame(
       of: asset,
-      composition: videoRenderer.makeVideoComposition(for: asset, document: document.crop)
+      composition: videoRenderer.makeVideoComposition(for: asset, feature: document.crop)
     )
     Fixtures.expectVisiblyDifferent(CIImage(cgImage: cropOnly), CIImage(cgImage: composed))
   }
@@ -533,7 +533,7 @@ struct CompositionRenderingTests {
     }
     let composition = try ParametricVideoRenderer().makeVideoComposition(
       for: asset,
-      document: PresentationTimeLevel()
+      feature: PresentationTimeLevel()
     )
 
     // The probe renders its presentation time in seconds as a gray level, so

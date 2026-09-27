@@ -22,7 +22,7 @@ import UIKit
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
 /// - brush-mask raster (`ParametricImageRenderer.makeMaskImage`, the parametric
 ///   `brushStamp` kernel)
-/// - parametric evaluation (`PhotosCropDocument.Effects.apply` / feature recipes)
+/// - parametric evaluation (`PhotosCropFeature.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 
   private static let context = CIContext()
@@ -75,7 +75,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Hot paths
 
   @inline(never)
-  private func exportRender(_ document: PhotosCropDocument, source: CGImage) throws -> CGImage {
+  private func exportRender(_ document: PhotosCropFeature, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
     return try BrightRoomImageRenderer.render(
@@ -88,10 +88,10 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   @inline(never)
-  private func previewComposition(_ document: PhotosCropDocument, source: CIImage) {
+  private func previewComposition(_ document: PhotosCropFeature, source: CIImage) {
     // The document is authored in full-resolution coordinates, so the preview
     // evaluates over the full-size source, with the crop neutralized.
-    let preview = document.withCropNeutralized(orientedImageSize: source.extent.size)
+    let preview = document.withCropNeutralized(imageSize: source.extent.size)
     guard let composed = try? ParametricImageRenderer().makeImage(from: source, document: preview) else {
       return
     }
@@ -128,8 +128,8 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     ]
   )))
 
-  private static func makeEffects() -> PhotosCropDocument.Effects {
-    PhotosCropDocument.Effects(
+  private static func makeEffects() -> PhotosCropFeature.Effects {
+    PhotosCropFeature.Effects(
       preset: PresetFeature(
         name: "Perf",
         identifier: "perf.preset",
@@ -146,8 +146,8 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     )
   }
 
-  private static func makeDocument(imageSize: CGSize) -> PhotosCropDocument {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+  private static func makeDocument(imageSize: CGSize) -> PhotosCropFeature {
+    var document = PhotosCropFeature(imageSize: imageSize)
     document.effects = makeEffects()
     document.blurMask = LocalAdjustment(maskTree: cachedMaskTree) {
       GaussianBlurFeature(value: 60)

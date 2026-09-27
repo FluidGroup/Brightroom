@@ -38,7 +38,7 @@ struct FeatureRenderingTests {
       )
       .cropped(to: input.extent)
 
-    let output = try Self.renderer.makeImage(from: input, document: Document())
+    let output = try Self.renderer.makeImage(from: input, feature: Document())
 
     try Self.assertImagesMatch(
       expected,
@@ -50,7 +50,7 @@ struct FeatureRenderingTests {
   @Test func temperatureFeatureEvaluatesTintAxis() throws {
     let output = try Self.renderer.makeImage(
       from: Self.smallInput,
-      document: TemperatureFeature(value: 0, tint: 100)
+      feature: TemperatureFeature(value: 0, tint: 100)
     )
     let rendered = try Self.render(output)
     let pixel = Self.rgba(in: rendered, x: 4, y: 4)
@@ -69,10 +69,10 @@ struct FeatureRenderingTests {
     let input = CIImage.parametricColorPatchImage(
       extent: CGRect(x: 0, y: 0, width: 44, height: 30)
     )
-    let expected = try Self.renderer.makeImage(from: input, document: Document())
+    let expected = try Self.renderer.makeImage(from: input, feature: Document())
     let output = try ParametricVideoRenderer().makeFrameImage(
       from: input,
-      document: Document()
+      feature: Document()
     )
 
     try Self.assertImagesMatch(
@@ -87,7 +87,7 @@ struct FeatureRenderingTests {
 
     _ = try ParametricVideoRenderer().makeFrameImage(
       from: Self.smallInput,
-      document: TestPresentationTimeFeature(expectedPresentationTime: presentationTime),
+      feature: TestPresentationTimeFeature(expectedPresentationTime: presentationTime),
       presentationTime: presentationTime
     )
   }
@@ -95,14 +95,14 @@ struct FeatureRenderingTests {
   @Test func imageRendererDefaultsPresentationTimeToZero() throws {
     _ = try ParametricImageRenderer().makeImage(
       from: Self.smallInput,
-      document: TestPresentationTimeFeature(expectedPresentationTime: .zero)
+      feature: TestPresentationTimeFeature(expectedPresentationTime: .zero)
     )
   }
 
   @Test func videoRendererResolvesCropOutputRenderSize() throws {
     let renderSize = try ParametricVideoRenderer().resolveRenderSize(
       sourceRenderSize: CGSize(width: 48, height: 36),
-      document: CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)),
+      feature: CropFeature(cropRect: CGRect(x: 8, y: 6, width: 24, height: 18)),
       mode: .featureOutput
     )
 
@@ -118,7 +118,7 @@ struct FeatureRenderingTests {
 
     let composition = try ParametricVideoRenderer().makeVideoComposition(
       for: asset,
-      document: BrightnessFeature(value: 0.03),
+      feature: BrightnessFeature(value: 0.03),
       renderSizeMode: .source
     )
 
@@ -136,7 +136,7 @@ struct FeatureRenderingTests {
       extent: CGRect(x: 0, y: 0, width: 48, height: 36)
     )
     let renderExtent = CGRect(x: 0, y: 0, width: 48, height: 36)
-    let featureOutput = try Self.renderer.makeImage(from: input, document: Document())
+    let featureOutput = try Self.renderer.makeImage(from: input, feature: Document())
     let expected = featureOutput
       .composited(
         over: CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
@@ -145,7 +145,7 @@ struct FeatureRenderingTests {
       .cropped(to: renderExtent)
     let output = try ParametricVideoRenderer().makeFrameImage(
       from: input,
-      document: Document(),
+      feature: Document(),
       renderExtent: renderExtent
     )
 
@@ -175,7 +175,7 @@ struct FeatureRenderingTests {
 
     let output = try Self.renderer.makeImage(
       from: input,
-      document: Document(first: CropFeature(cropRect: first), second: CropFeature(cropRect: second))
+      feature: Document(first: CropFeature(cropRect: first), second: CropFeature(cropRect: second))
     )
 
     #expect(output.extent == CGRect(x: 0, y: 0, width: 25, height: 30))
@@ -200,7 +200,7 @@ struct FeatureRenderingTests {
       extent: CGRect(x: 0, y: 0, width: 80, height: 60)
     )
 
-    let output = try Self.renderer.makeImage(from: input, document: Document())
+    let output = try Self.renderer.makeImage(from: input, feature: Document())
 
     #expect(output.extent == CGRect(x: 0, y: 0, width: 40, height: 20))
     let rendered = try Self.render(output)
@@ -240,7 +240,7 @@ struct FeatureRenderingTests {
 
     let output = try Self.renderer.makeImage(
       from: input,
-      document: CropThenVignette(crop: crop, vignette: vignette)
+      feature: CropThenVignette(crop: crop, vignette: vignette)
     )
 
     try Self.assertImagesMatch(expected, output, tolerance: 2)
@@ -249,7 +249,7 @@ struct FeatureRenderingTests {
     // the crop gives a different image.
     let vignetteBeforeCrop = try Self.renderer.makeImage(
       from: input,
-      document: VignetteThenCrop(crop: crop, vignette: vignette)
+      feature: VignetteThenCrop(crop: crop, vignette: vignette)
     )
     #expect(vignetteBeforeCrop.extent == output.extent)
     #expect(
@@ -299,7 +299,7 @@ struct FeatureRenderingTests {
       stripeRect: CGRect(x: 22, y: 0, width: 2, height: 20)
     )
 
-    let output = try Self.renderer.makeImage(from: input, document: Document())
+    let output = try Self.renderer.makeImage(from: input, feature: Document())
     let renderedImage = try Self.render(output)
     let localPixel = Self.rgba(in: renderedImage, x: 10, y: 10)
     let outsidePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
@@ -333,7 +333,7 @@ struct FeatureRenderingTests {
       extent: CGRect(x: 0, y: 0, width: 20, height: 20)
     )
 
-    let output = try Self.renderer.makeImage(from: input, document: document)
+    let output = try Self.renderer.makeImage(from: input, feature: document)
     let renderedImage = try Self.render(output)
     let center = Self.rgba(in: renderedImage, x: 10, y: 10)
     let corner = Self.rgba(in: renderedImage, x: 1, y: 1)

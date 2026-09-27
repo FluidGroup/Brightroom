@@ -147,7 +147,7 @@ struct ParametricFeaturePreviewView: View {
       let document = makeDocument()
       let output = try renderer.makeImage(
         from: Self.sourceImage,
-        document: document
+        feature: document
       )
 
       // Both local adjustments come after both crops and the brightness keeps

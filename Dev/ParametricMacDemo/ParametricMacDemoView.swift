@@ -703,7 +703,7 @@ struct ParametricMacPreviewRenderer {
     let document = makeDocument(settings: settings)
     let outputImage = try ParametricImageRenderer().makeImage(
       from: sourceImage,
-      document: document.document
+      feature: document.document
     )
 
     return ParametricMacPreviewOutput(

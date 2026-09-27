@@ -27,10 +27,11 @@ import UIKit
 
 struct PhotosCropContentView: View {
 
-  let editingModel: PhotosCropEditingModel
+  @Binding var document: EditingDocument<PhotosCropFeature>
+  let editingStack: EditingStack
   let options: SwiftUIPhotosCropView.Options
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let onDone: @MainActor (PhotosCropDocument) -> Void
+  let onDone: @MainActor () -> Void
   let onCancel: @MainActor () -> Void
 
   @State private var rotation: CropEditingState.Rotation?
@@ -48,13 +49,15 @@ struct PhotosCropContentView: View {
     SwiftUICropView.AdjustmentAngleCommitAction()
 
   init(
-    editingModel: PhotosCropEditingModel,
+    document: Binding<EditingDocument<PhotosCropFeature>>,
+    editingStack: EditingStack,
     options: SwiftUIPhotosCropView.Options,
     localizedStrings: SwiftUIPhotosCropView.LocalizedStrings,
-    onDone: @escaping @MainActor (PhotosCropDocument) -> Void,
+    onDone: @escaping @MainActor () -> Void,
     onCancel: @escaping @MainActor () -> Void
   ) {
-    self.editingModel = editingModel
+    self._document = document
+    self.editingStack = editingStack
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -71,9 +74,9 @@ struct PhotosCropContentView: View {
   }
 
   var body: some View {
-    let model = editingModel
-    let originalAspectRatio = model.originalAspectRatio
-    let isLoaded = model.isLoaded
+    // Known from the image itself, before the editing source is prepared.
+    let originalAspectRatio = PixelAspectRatio(document.image.pixelSize)
+    let isLoaded = editingStack.loadedState != nil
     let bottomControlHeight: CGFloat = 120
     let bottomControlMaxWidth: CGFloat = 560
 
@@ -84,7 +87,8 @@ struct PhotosCropContentView: View {
 
         VStack(spacing: 0) {
           PhotosCropCanvasHost(
-            editingModel: model,
+            document: $document,
+            editingStack: editingStack,
             mode: editingMode,
             blurMaskingState: blurMaskingState,
             rotation: $rotation,
@@ -106,8 +110,8 @@ struct PhotosCropContentView: View {
             aspectRatioSelection: aspectRatioSelection,
             blurMaskingState: blurMaskingState,
             filterPresets: options.filterPresets,
-            filterPreviewBaseImage: model.filterPreviewBaseImage,
-            currentEffects: model.document?.effects,
+            filterPreviewBaseImage: editingStack.loadedState?.thumbnailImage,
+            currentEffects: document.feature.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
             adjustmentAngle: adjustmentAngle,
@@ -143,7 +147,7 @@ struct PhotosCropContentView: View {
           cancelTitle: localizedStrings.button_cancel_title,
           doneTitle: localizedStrings.button_done_title,
           isLoaded: isLoaded,
-          hasCropChanges: model.hasCropChanges(),
+          hasCropChanges: document.hasCropChanges(),
           isDoneEnabled: isLoaded,
           mode: editingMode,
           isSelectingAspectRatio: isSelectingAspectRatio,
@@ -157,7 +161,7 @@ struct PhotosCropContentView: View {
       }
       .foregroundStyle(.white)
       .task {
-        model.start()
+        editingStack.start()
       }
       .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
         if isAvailable == false {
@@ -237,15 +241,15 @@ struct PhotosCropContentView: View {
       applyAction()
     }
 
-    // Leaving a tool commits its work as a checkpoint, so undo/redo steps at
-    // tool granularity. The model owns the document history.
-    editingModel.commitIfNeeded()
+    // Leaving a tool commits its work, so undo/redo steps at tool
+    // granularity. The history lives in the document.
+    updateDocument { $0.commit() }
 
     editingMode = mode
   }
 
   private func selectFilterPreset(_ preset: PresetFeature?) {
-    editingModel.selectFilterPreset(preset)
+    updateDocument { $0.selectFilterPreset(preset) }
   }
 
   private func selectAdjustmentParameter(
@@ -258,21 +262,30 @@ struct PhotosCropContentView: View {
   }
 
   private func setAdjustmentValue(_ sliderValue: Double) {
-    editingModel.setAdjustmentValue(sliderValue, parameter: adjustmentParameter)
+    let parameter = adjustmentParameter
+    updateDocument { $0.setAdjustmentValue(sliderValue, parameter: parameter) }
   }
 
   private func clearBlurMask() {
-    editingModel.clearBlurMask()
+    updateDocument { $0.clearBlurMask() }
   }
 
   private func finish() {
+    // The crop guide's pending crop reaches the binding synchronously, so the
+    // commit below includes it.
     applyAction()
-    editingModel.commitIfNeeded()
-    // Done is enabled only while the model is loaded, so the document exists.
-    guard let document = editingModel.document else {
-      return
+    updateDocument { $0.commit() }
+    onDone()
+  }
+
+  /// Changes the document through the binding, writing only when the
+  /// document changed: an equal write would still invalidate the host.
+  private func updateDocument(_ change: (inout EditingDocument<PhotosCropFeature>) -> Void) {
+    var next = document
+    change(&next)
+    if next != document {
+      document = next
     }
-    onDone(document)
   }
 
   private func croppingAspectRatioBinding(
@@ -466,7 +479,8 @@ private struct PhotosCropBlurMaskingState: Equatable {
 
 private struct PhotosCropCanvasHost: View {
 
-  let editingModel: PhotosCropEditingModel
+  @Binding var document: EditingDocument<PhotosCropFeature>
+  let editingStack: EditingStack
   let mode: PhotosCropEditingMode
   let blurMaskingState: PhotosCropBlurMaskingState
   let rotation: Binding<CropEditingState.Rotation?>
@@ -480,7 +494,8 @@ private struct PhotosCropCanvasHost: View {
 
   var body: some View {
     SwiftUICropView(
-      editingModel: editingModel,
+      document: $document,
+      editingStack: editingStack,
       isGuideInteractionEnabled: mode == .crop
     )
     .rotation(rotation)
@@ -507,7 +522,7 @@ private struct PhotosCropControlHost: View {
   let blurMaskingState: PhotosCropBlurMaskingState
   let filterPresets: [PresetFeature]
   let filterPreviewBaseImage: CIImage?
-  let currentEffects: PhotosCropDocument.Effects?
+  let currentEffects: PhotosCropFeature.Effects?
   let adjustmentParameter: PhotosCropAdjustmentParameter
   let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
   let adjustmentAngle: CropEditingState.AdjustmentAngle?
@@ -1653,15 +1668,15 @@ private enum PhotosCropAspectRatioDirection {
 
   private struct PhotosCropPreviewHost: View {
 
-    // The model holds the edit and its history, so it lives with the view.
-    @State private var editingModel = PhotosCropEditingModel(
-      editingStack: PhotosCropPreviewFixtures.makeEditingStack()
+    // The document holds the edit and its history, so it lives with the view.
+    @State private var document = EditingDocument<PhotosCropFeature>(
+      image: SourceImage(image: PhotosCropPreviewFixtures.makeCheckerboardImage())
     )
 
     var body: some View {
       SwiftUIPhotosCropView(
-        editingModel: editingModel,
-        onDone: { _ in },
+        document: $document,
+        onDone: {},
         onCancel: {}
       )
     }
@@ -1669,13 +1684,7 @@ private enum PhotosCropAspectRatioDirection {
 
   private enum PhotosCropPreviewFixtures {
 
-    static func makeEditingStack() -> EditingStack {
-      EditingStack(
-        imageProvider: .init(image: makeCheckerboardImage())
-      )
-    }
-
-    private static func makeCheckerboardImage() -> UIImage {
+    static func makeCheckerboardImage() -> UIImage {
       let size = CGSize(width: 1400, height: 900)
       let cellSize: CGFloat = 100
       let format = UIGraphicsImageRendererFormat()

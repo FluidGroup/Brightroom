@@ -76,7 +76,7 @@ struct RendererDeviceEquivalenceTests {
   private func assertDeviceEquivalence(
     image: UIImage,
     options: BrightRoomImageRenderer.Options,
-    makeDocument: (_ orientedImageSize: CGSize) -> any Feature,
+    makeDocument: (_ imageSize: CGSize) -> any Feature,
     maxChannelDifference: Int = 3,
     sourceLocation: SourceLocation = SourceLocation(fileID: #fileID, filePath: #filePath, line: #line, column: #column)
   ) async throws {
@@ -119,7 +119,7 @@ struct RendererDeviceEquivalenceTests {
     image: UIImage,
     device: BrightRoomImageRenderer.RenderingDevice,
     options: BrightRoomImageRenderer.Options,
-    makeDocument: (_ orientedImageSize: CGSize) -> any Feature
+    makeDocument: (_ imageSize: CGSize) -> any Feature
   ) async throws -> BrightRoomImageRenderer.Rendered {
     let source = ImageSource(image: image)
     let renderer = BrightRoomImageRenderer(

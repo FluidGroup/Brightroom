@@ -5,7 +5,7 @@ import StateGraph
 
 struct IsolatedEditinView: View {
   @State private var session = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+    image: Mocks.makeSourceImage(image: Mocks.imageHorizontal())
   )
   @State private var fullScreenView: FullscreenIdentifiableView?
 

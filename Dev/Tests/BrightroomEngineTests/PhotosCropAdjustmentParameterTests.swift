@@ -7,7 +7,7 @@ import Testing
 struct PhotosCropAdjustmentParameterTests {
 
   @Test func `blur adjustment writes value-form gaussian blur`() {
-    var effects = PhotosCropDocument.Effects()
+    var effects = PhotosCropFeature.Effects()
 
     PhotosCropAdjustmentParameter.blur.apply(sliderValue: 40, to: &effects)
 
@@ -16,7 +16,7 @@ struct PhotosCropAdjustmentParameterTests {
   }
 
   @Test func `blur adjustment removes gaussian blur at neutral value`() {
-    var effects = PhotosCropDocument.Effects(
+    var effects = PhotosCropFeature.Effects(
       gaussianBlur: GaussianBlurFeature(value: 40)
     )
 
@@ -27,7 +27,7 @@ struct PhotosCropAdjustmentParameterTests {
 
   /// A slider write keeps the parameters the slider does not control.
   @Test func `existing effect is changed in place`() {
-    var effects = PhotosCropDocument.Effects(
+    var effects = PhotosCropFeature.Effects(
       temperature: TemperatureFeature(value: 900, tint: 12)
     )
 
@@ -44,7 +44,7 @@ struct PhotosCropAdjustmentParameterTests {
       .cropped(to: CGRect(x: 0, y: 0, width: 64, height: 48))
     let context = FeatureEvaluationContext().withRadiusReferenceExtent(source.extent)
 
-    var effects = PhotosCropDocument.Effects(vignette: VignetteFeature(value: 1))
+    var effects = PhotosCropFeature.Effects(vignette: VignetteFeature(value: 1))
     PhotosCropAdjustmentParameter.blur.apply(sliderValue: 40, to: &effects)
 
     let blur = try #require(effects.gaussianBlur)

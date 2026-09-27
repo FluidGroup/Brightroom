@@ -116,12 +116,6 @@ public enum FeatureEvaluationError: Error, Equatable, Sendable {
 
   /// Core Image returned nil while applying the named filter or kernel.
   case failedToCreateImage(String)
-
-  /// A renderer received a `nil` optional document.
-  ///
-  /// A document that does not exist yet is not a request for the unedited
-  /// image; render `EmptyFeature()` for that.
-  case documentUnavailable
 }
 
 extension FeatureEvaluationError: LocalizedError {
@@ -138,8 +132,6 @@ extension FeatureEvaluationError: LocalizedError {
       "Brightroom couldn't load its \(name) kernel: \(reason)"
     case let .failedToCreateImage(name):
       "Core Image couldn't apply \(name)."
-    case .documentUnavailable:
-      "There is no document to render yet."
     }
   }
 }

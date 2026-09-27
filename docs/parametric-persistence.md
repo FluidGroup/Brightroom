@@ -122,7 +122,7 @@ It uses only the public API.
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `PresetFeature` | `name`, `identifier`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustment` | the mask tree and the content | `MaskTree`, `MaskNode`, `BrushMask`, `BrushMaskStroke`, `BrushMaskBrush`, and the content's own conversion |
-| `PhotosCropDocument` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect` as the selection before the output quarter turn, `rotation`, `straightenRadians`) | `PhotosCropDocument(effects:blurMask:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
+| `PhotosCropFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`cropRect` as the selection before the output quarter turn, `rotation`, `straightenRadians`) | `PhotosCropFeature(effects:blurMask:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
 
 Notes:
 
@@ -156,7 +156,7 @@ Notes:
   conversion that loses any of them produces a document that is not equal to
   the saved one. To ask whether two values render the same, compare
   `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity` instead.
-- A `PhotosCropDocument` is authored for one image: its domain is the oriented
+- A `PhotosCropFeature` is authored for one image: its domain is the oriented
   image size (`EditingStack.Loaded.imageSize`). Store a reference to the
   source image with it, and resume it only over that image.
 
@@ -268,7 +268,7 @@ decoded 5.x document:
 - Brush stamps in a document taken from 5.x `EditingStack.Edit.document`
   (for example `loadedState.currentEdit.document`, which PhotosCrop and
   `SwiftUICropView` authored) are y-down: top-left origin in the oriented
-  image. `PhotosCropDocument.blurMask` and every Brightroom 6 mask are y-up, so
+  image. `PhotosCropFeature.blurMask` and every Brightroom 6 mask are y-up, so
   flip each stamp to `y = orientedImageSize.height - y` while converting, or
   the blur mask comes back mirrored vertically. A document from
   `Edit.makeEditingDocument(orientedImageSize:)` was already y-up. Crop
@@ -326,7 +326,7 @@ exchanged:
   storing it, so a whole 300 × 200 image turned by `-90` could be stored as
   the square `(50, 0, 200, 200)`. Converting keeps that square, which is what
   5.1.0 rendered; the rest of the image is not in the stored data.
-- A disabled crop: leave it out. `PhotosCropDocument` requires a crop, so use
+- A disabled crop: leave it out. `PhotosCropFeature` requires a crop, so use
   one that covers the whole image instead.
 
 ```swift

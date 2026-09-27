@@ -25,7 +25,7 @@ import BrightroomParametric
 /// A global adjustment parameter editable in PhotosCrop's Adjust mode.
 ///
 /// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
-/// value onto the corresponding member of `PhotosCropDocument.Effects`, which
+/// value onto the corresponding member of `PhotosCropFeature.Effects`, which
 /// is evaluated before the blur mask and the final crop.
 enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   case exposure
@@ -105,7 +105,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   }
 
   /// The current slider value for this parameter.
-  func sliderValue(in effects: PhotosCropDocument.Effects) -> Double {
+  func sliderValue(in effects: PhotosCropFeature.Effects) -> Double {
     let filterValue: Double
     switch self {
     case .exposure:
@@ -141,7 +141,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
   /// does not control (such as `TemperatureFeature.tint`) are kept. A neutral
   /// value removes the effect, including those parameters, so untouched
   /// parameters stay absent.
-  func apply(sliderValue: Double, to effects: inout PhotosCropDocument.Effects) {
+  func apply(sliderValue: Double, to effects: inout PhotosCropFeature.Effects) {
     let clamped = min(
       max(sliderValue, sliderRange.lowerBound),
       sliderRange.upperBound

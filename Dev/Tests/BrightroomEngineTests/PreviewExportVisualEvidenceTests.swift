@@ -35,7 +35,7 @@ struct PreviewExportVisualEvidenceTests {
         AnyImageEffect(ContrastFeature(value: 0.06)),
       ]
     )
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+    var document = PhotosCropFeature(imageSize: imageSize)
     document.effects.preset = preset
     document.effects.exposure = ExposureFeature(value: 0.35)
     // The band is centered vertically, so its working-space stamps equal the
@@ -80,7 +80,7 @@ struct PreviewExportVisualEvidenceTests {
 
   // MARK: - Rendering
 
-  private func renderExport(_ document: PhotosCropDocument, source: CGImage) async throws -> CGImage {
+  private func renderExport(_ document: PhotosCropFeature, source: CGImage) async throws -> CGImage {
     try await EditingStack.test(cgImage: source)
       .makeRenderer(document: document)
       .render(options: .init(workingColorSpace: Self.sRGB))

@@ -23,7 +23,7 @@ import CoreImage
 import CoreMedia
 import Foundation
 
-/// Renders feature documents for still images.
+/// Renders features over still images.
 ///
 /// `ParametricImageRenderer` is the public evaluation entry point for image
 /// inputs. It prepares the chain entry once and returns lazy Core Image
@@ -33,7 +33,7 @@ public struct ParametricImageRenderer: Sendable {
   /// Creates an image renderer.
   public init() {}
 
-  /// Evaluates a document from a source image.
+  /// Evaluates a feature over a source image.
   ///
   /// `sourceImage` is the chain entry: it is translated to zero origin, and
   /// value-form radii resolve against its extent, which keeps the radius a
@@ -41,15 +41,11 @@ public struct ParametricImageRenderer: Sendable {
   /// document. Pass `radiusReferenceExtent` only when `sourceImage` is NOT the
   /// chain entry (e.g. a zoomed viewport slice of a larger source).
   ///
-  /// A `nil` optional document throws
-  /// `FeatureEvaluationError.documentUnavailable`; pass `EmptyFeature()` to
-  /// render the unedited image.
-  ///
   /// `presentationTime` defaults to `.zero` for deterministic still-image
   /// evaluation. Video paths pass the frame's exact presentation time.
   public func makeImage(
     from sourceImage: CIImage,
-    document: some Feature,
+    feature: some Feature,
     radiusReferenceExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) throws -> CIImage {
@@ -66,32 +62,7 @@ public struct ParametricImageRenderer: Sendable {
       radiusReferenceExtent: radiusReferenceExtent ?? entryReferenceExtent,
       presentationTime: presentationTime
     )
-    return try document.apply(to: image, context: context)
-  }
-
-  /// Evaluates a document that may not exist yet, such as an editor's
-  /// document while the editor prepares it.
-  ///
-  /// A `nil` document is an error rather than a request for the unedited
-  /// image; to render the unedited image, pass `EmptyFeature()`.
-  ///
-  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
-  ///   `nil`, and any error the document throws.
-  public func makeImage<Document: Feature>(
-    from sourceImage: CIImage,
-    document: Document?,
-    radiusReferenceExtent: CGRect? = nil,
-    presentationTime: CMTime = .zero
-  ) throws -> CIImage {
-    guard let document else {
-      throw FeatureEvaluationError.documentUnavailable
-    }
-    return try makeImage(
-      from: sourceImage,
-      document: document,
-      radiusReferenceExtent: radiusReferenceExtent,
-      presentationTime: presentationTime
-    )
+    return try feature.apply(to: image, context: context)
   }
 
   /// Renders a mask tree to an alpha image covering `extent`.

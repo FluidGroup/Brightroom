@@ -33,17 +33,17 @@ struct CropViewDocumentFlowTests {
     let cropView: CropView
     var snapshots: [SwiftUICropView.StateSnapshot] { box.snapshots }
     /// The owner's document after each change CropView reported.
-    var emitted: [PhotosCropDocument] { box.emitted }
+    var emitted: [PhotosCropFeature] { box.emitted }
     let box: Box
 
     /// Plays the document's owner: applies each change to its own latest
     /// document.
     final class Box {
       var snapshots: [SwiftUICropView.StateSnapshot] = []
-      var emitted: [PhotosCropDocument] = []
-      var owned: PhotosCropDocument
+      var emitted: [PhotosCropFeature] = []
+      var owned: PhotosCropFeature
 
-      init(owned: PhotosCropDocument) {
+      init(owned: PhotosCropFeature) {
         self.owned = owned
       }
     }
@@ -52,7 +52,7 @@ struct CropViewDocumentFlowTests {
   /// A CropView over a checkerboard, with the handlers bound and the target
   /// set before loading, as `makeUIView` does.
   private func makeLoadedCropView(
-    document: PhotosCropDocument,
+    document: PhotosCropFeature,
     target: CropViewEditingTarget? = .blurMask
   ) -> Harness {
     let cropView = CropView(
@@ -70,8 +70,8 @@ struct CropViewDocumentFlowTests {
     return Harness(cropView: cropView, box: box)
   }
 
-  private func makeAngledDocument(degrees: Double) -> PhotosCropDocument {
-    var document = PhotosCropDocument(orientedImageSize: imageSize)
+  private func makeAngledDocument(degrees: Double) -> PhotosCropFeature {
+    var document = PhotosCropFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.adjustmentAngle = .init(degrees: degrees)
     document.setCrop(crop)
@@ -146,7 +146,7 @@ struct CropViewDocumentFlowTests {
   /// same turn as a crop commit) survives the commit.
   @Test func `A crop commit keeps owner changes CropView has not received`() throws {
     let harness = makeLoadedCropView(
-      document: PhotosCropDocument(orientedImageSize: imageSize),
+      document: PhotosCropFeature(imageSize: imageSize),
       target: .crop
     )
     PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &harness.box.owned.effects)
@@ -164,7 +164,7 @@ struct CropViewDocumentFlowTests {
   /// A crop reloaded from outside (an undo) keeps the active aspect-ratio
   /// lock, so Done cannot commit a crop that breaks it.
   @Test func `A reloaded crop keeps the aspect-ratio lock`() throws {
-    let initial = PhotosCropDocument(orientedImageSize: imageSize)
+    let initial = PhotosCropFeature(imageSize: imageSize)
     let harness = makeLoadedCropView(document: initial, target: .crop)
 
     harness.cropView.setCroppingAspectRatio(.square)
@@ -183,7 +183,7 @@ struct CropViewDocumentFlowTests {
   /// back with the output instead of refitting the undone crop to the turned
   /// lock; Done then keeps the undone crop.
   @Test func `A reloaded crop across a sideways turn turns the aspect-ratio lock`() throws {
-    let initial = PhotosCropDocument(orientedImageSize: imageSize)
+    let initial = PhotosCropFeature(imageSize: imageSize)
     let harness = makeLoadedCropView(document: initial, target: .crop)
     let landscape = PixelAspectRatio(width: 4, height: 3)
 
@@ -210,7 +210,7 @@ struct CropViewDocumentFlowTests {
   }
 
   @Test func `Switching between tool targets commits nothing`() {
-    let harness = makeLoadedCropView(document: PhotosCropDocument(orientedImageSize: imageSize))
+    let harness = makeLoadedCropView(document: PhotosCropFeature(imageSize: imageSize))
 
     harness.cropView.setEditingTarget(nil)
     harness.cropView.setEditingTarget(.blurMask)
@@ -224,13 +224,13 @@ struct CropViewDocumentFlowTests {
   @Test func `A painted stroke exports at the painted display point`() throws {
     let size = CGSize(width: 240, height: 180)
     let source = makeSource(size: size)
-    let plain = PhotosCropDocument(orientedImageSize: size)
+    let plain = PhotosCropFeature(imageSize: size)
     let cropView = CropView(
       source: CropViewSource(editingSourceImage: source, imageSize: size),
       document: plain
     )
     var owned = plain
-    var emitted: [PhotosCropDocument] = []
+    var emitted: [PhotosCropFeature] = []
     cropView.setDocumentChangeHandler { change in
       change(&owned)
       emitted.append(owned)
@@ -308,7 +308,7 @@ struct LoadedCropViewCoordinatorTests {
 
   @Test func `A change emitted while applying inputs is delivered later`() async throws {
     let size = CGSize(width: 80, height: 60)
-    let document = PhotosCropDocument(orientedImageSize: size)
+    let document = PhotosCropFeature(imageSize: size)
     let cropView = CropView(
       source: CropViewSource(
         editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),

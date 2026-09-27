@@ -59,8 +59,8 @@ struct AppOwnedPersistenceExampleTests {
       .cropped(to: CGRect(x: 0, y: 0, width: 8, height: 8))
     let renderer = ParametricImageRenderer()
     #expect(
-      try Self.bitmap(renderer.makeImage(from: source, document: restored))
-        == Self.bitmap(renderer.makeImage(from: source, document: look))
+      try Self.bitmap(renderer.makeImage(from: source, feature: restored))
+        == Self.bitmap(renderer.makeImage(from: source, feature: look))
     )
 
     // An absent member stays absent.

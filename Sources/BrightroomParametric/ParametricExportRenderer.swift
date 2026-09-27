@@ -271,10 +271,8 @@ public struct ParametricExportRenderer {
    Single rendering path: the document (effects, local adjustments, and crops)
    evaluates to one `CIImage` recipe through `ParametricImageRenderer`, with
    `source` as the chain entry, which Core Image then materializes. An unedited
-   image or a pure crop is just an `EmptyFeature()` or crop-only document on the
-   same path. A `nil` optional document throws
-   `FeatureEvaluationError.documentUnavailable` instead of exporting the
-   unedited image.
+   image or a pure crop is just an `EmptyFeature()` or crop-only feature on the
+   same path.
 
    The result is returned as a `Rendered`, which hides whether it is backed by an
    in-memory bitmap or a file — controlled by `options.output`:
@@ -288,12 +286,12 @@ public struct ParametricExportRenderer {
    */
   public func render(
     source: CIImage,
-    document: some Feature,
+    feature: some Feature,
     options: Options = .init(),
     device: RenderingDevice = .automatic
   ) throws -> Rendered {
 
-    let outputCIImage = try imageRenderer.makeImage(from: source, document: document)
+    let outputCIImage = try imageRenderer.makeImage(from: source, feature: feature)
     let colorSpace = options.workingColorSpace ?? source.colorSpace
 
     // Always process through a half-float WORKING buffer so wide-gamut and
@@ -341,26 +339,6 @@ public struct ParametricExportRenderer {
       )
       return .init(fileURL: url, options: options)
     }
-  }
-
-  /// Renders a document that may not exist yet, such as an editor's document
-  /// while the editor prepares it.
-  ///
-  /// A `nil` document is an error rather than a request for the unedited
-  /// image; to export the unedited image, pass `EmptyFeature()`.
-  ///
-  /// - Throws: `FeatureEvaluationError.documentUnavailable` when `document` is
-  ///   `nil`, and any error the non-optional `render` throws.
-  public func render<Document: Feature>(
-    source: CIImage,
-    document: Document?,
-    options: Options = .init(),
-    device: RenderingDevice = .automatic
-  ) throws -> Rendered {
-    guard let document else {
-      throw FeatureEvaluationError.documentUnavailable
-    }
-    return try render(source: source, document: document, options: options, device: device)
   }
 
   private static func write(

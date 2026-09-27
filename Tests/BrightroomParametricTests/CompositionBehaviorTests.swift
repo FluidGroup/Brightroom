@@ -61,7 +61,7 @@ struct CompositionBehaviorTests {
     let firstLog = EvaluationLog()
     _ = try Fixtures.renderer.makeImage(
       from: source,
-      document: OrderedDocument(
+      feature: OrderedDocument(
         log: firstLog,
         includesOptional: true,
         takesFirstBranch: true,
@@ -84,7 +84,7 @@ struct CompositionBehaviorTests {
     let secondLog = EvaluationLog()
     _ = try Fixtures.renderer.makeImage(
       from: source,
-      document: OrderedDocument(
+      feature: OrderedDocument(
         log: secondLog,
         includesOptional: false,
         takesFirstBranch: false,
@@ -128,14 +128,14 @@ struct CompositionBehaviorTests {
       }
     }
 
-    let composed = try Fixtures.renderer.makeImage(from: source, document: Document())
+    let composed = try Fixtures.renderer.makeImage(from: source, feature: Document())
     #expect(composed.extent == Fixtures.entryExtent)
     Fixtures.expectPixelsMatch(normalized, composed)
 
     // The same members, present, do change the image.
     let present = try Fixtures.renderer.makeImage(
       from: source,
-      document: Document(
+      feature: Document(
         exposure: ExposureFeature(value: 0.5),
         passes: [SharpenFeature(sharpness: 0.4, radius: 20)],
         appliesFade: true
@@ -164,7 +164,7 @@ struct CompositionBehaviorTests {
 
     let composed = try Fixtures.renderer.makeImage(
       from: source,
-      document: Document(maskTree: maskTree, look: look)
+      feature: Document(maskTree: maskTree, look: look)
     )
 
     // The look's leaves, blended through the rendered mask with the raw
@@ -172,7 +172,7 @@ struct CompositionBehaviorTests {
     let normalized = try Fixtures.normalizedSource()
     let adjusted = try Fixtures.renderer.makeImage(
       from: normalized,
-      document: SequentialFeatures(
+      feature: SequentialFeatures(
         [look.exposure, look.saturation] + look.preset.effects.map { $0.base as any Feature }
       )
     )
@@ -241,7 +241,7 @@ struct CompositionBehaviorTests {
     let imageLog = EvaluationLog()
     _ = try Fixtures.renderer.makeImage(
       from: source,
-      document: ContextProbeDocument(log: imageLog, crop: crop),
+      feature: ContextProbeDocument(log: imageLog, crop: crop),
       presentationTime: presentationTime
     )
     #expect(
@@ -257,7 +257,7 @@ struct CompositionBehaviorTests {
     let explicitLog = EvaluationLog()
     _ = try Fixtures.renderer.makeImage(
       from: source,
-      document: ContextProbeDocument(log: explicitLog, crop: crop),
+      feature: ContextProbeDocument(log: explicitLog, crop: crop),
       radiusReferenceExtent: viewportReference,
       presentationTime: presentationTime
     )
@@ -274,7 +274,7 @@ struct CompositionBehaviorTests {
     let videoLog = EvaluationLog()
     _ = try ParametricVideoRenderer().makeFrameImage(
       from: source,
-      document: ContextProbeDocument(log: videoLog, crop: crop),
+      feature: ContextProbeDocument(log: videoLog, crop: crop),
       renderExtent: croppedExtent,
       presentationTime: frameTime
     )
@@ -301,7 +301,7 @@ struct CompositionBehaviorTests {
     }
     let document = Document(crop: crop)
 
-    let rendered = try Fixtures.renderer.makeImage(from: source, document: document)
+    let rendered = try Fixtures.renderer.makeImage(from: source, feature: document)
     let applied = try document.apply(to: source, context: FeatureEvaluationContext())
     Fixtures.expectPixelsMatch(rendered, applied)
 
@@ -312,7 +312,7 @@ struct CompositionBehaviorTests {
     // The basis matters: re-basing the radius on the crop changes the blur.
     let rebased = try Fixtures.renderer.makeImage(
       from: source,
-      document: document,
+      feature: document,
       radiusReferenceExtent: CGRect(origin: .zero, size: crop.cropRect.size)
     )
     Fixtures.expectVisiblyDifferent(rendered, rebased)
@@ -428,7 +428,7 @@ struct CompositionBehaviorTests {
       let error = #expect(throws: FeatureEvaluationError.self) {
         try Fixtures.renderer.makeImage(
           from: source,
-          document: LocalAdjustment(maskTree: maskTree) {
+          feature: LocalAdjustment(maskTree: maskTree) {
             GaussianBlurFeature(value: 40)
           }
         )
@@ -461,7 +461,7 @@ struct CompositionBehaviorTests {
     }
 
     let error = #expect(throws: FeatureEvaluationError.self) {
-      try Fixtures.renderer.makeImage(from: source, document: Document(crop: crop))
+      try Fixtures.renderer.makeImage(from: source, feature: Document(crop: crop))
     }
     #expect(error == .invalidCropRect(cropRect))
 
@@ -532,50 +532,26 @@ struct CompositionBehaviorTests {
     ]
     for document in documents {
       let error = #expect(throws: FeatureEvaluationError.self) {
-        try Fixtures.renderer.makeImage(from: source, document: document)
+        try Fixtures.renderer.makeImage(from: source, feature: document)
       }
       #expect(error == expectedError, "\(type(of: document))")
     }
   }
 
-  @Test func `a nil optional document throws instead of rendering the source`() async throws {
+  @Test func `a nil optional feature renders as identity`() throws {
     let source = try Fixtures.makeSource()
     let absent: ExposureFeature? = nil
     let present: ExposureFeature? = ExposureFeature(value: 0.4)
 
-    #expect(throws: FeatureEvaluationError.documentUnavailable) {
-      try Fixtures.renderer.makeImage(from: source, document: absent)
-    }
-    #expect(throws: FeatureEvaluationError.documentUnavailable) {
-      try ParametricExportRenderer().render(source: source, document: absent)
-    }
-    #expect(throws: FeatureEvaluationError.documentUnavailable) {
-      try ParametricVideoRenderer().makeFrameImage(from: source, document: absent)
-    }
-    #expect(throws: FeatureEvaluationError.documentUnavailable) {
-      try ParametricVideoRenderer().resolveRenderSize(
-        sourceRenderSize: Fixtures.sourceExtent.size,
-        document: absent,
-        mode: .featureOutput
-      )
-    }
-    let asset = try await Fixtures.makeVideoAsset(from: Fixtures.normalizedSource())
-    defer {
-      try? FileManager.default.removeItem(at: asset.url)
-    }
-    #expect(throws: FeatureEvaluationError.documentUnavailable) {
-      try ParametricVideoRenderer().makeVideoComposition(for: asset, document: absent)
-    }
-
-    // A present optional renders its value.
-    Fixtures.expectPixelsMatch(
-      try Fixtures.renderer.makeImage(from: source, document: ExposureFeature(value: 0.4)),
-      try Fixtures.renderer.makeImage(from: source, document: present)
-    )
-    // The unedited image is an explicit request.
+    // An optional feature follows the composition rule: nil contributes
+    // nothing. A document that does not exist yet is no longer representable.
     Fixtures.expectPixelsMatch(
       Fixtures.removingOffset(source),
-      try Fixtures.renderer.makeImage(from: source, document: EmptyFeature())
+      try Fixtures.renderer.makeImage(from: source, feature: absent)
+    )
+    Fixtures.expectPixelsMatch(
+      try Fixtures.renderer.makeImage(from: source, feature: ExposureFeature(value: 0.4)),
+      try Fixtures.renderer.makeImage(from: source, feature: present)
     )
   }
 

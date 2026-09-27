@@ -52,6 +52,11 @@ let package = Package(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
     ),
+    // Prototype only: runtime checks of the engine-centric document design.
+    .testTarget(
+      name: "BrightroomDocumentPrototypeTests",
+      dependencies: ["BrightroomEngine", "BrightroomUI", "BrightroomParametric"]
+    ),
     .plugin(
       name: "BuildColorAdjustmentKernels",
       capability: .buildTool()

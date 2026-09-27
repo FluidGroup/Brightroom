@@ -24,7 +24,7 @@ import CoreGraphics
 
 import BrightroomParametric
 
-extension PhotosCropDocument {
+extension PhotosCropFeature {
 
   /// Appends a stroke to the blur mask.
   ///

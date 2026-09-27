@@ -54,19 +54,19 @@ open Dev/Brightroom.xcodeproj
    - Uses swift-state-graph for observable state
 
 3. **BrightroomUI** - UI components for image editing
-   - `Sources/BrightroomUI/Shared/Document/` - `PhotosCropDocument`, the
+   - `Sources/BrightroomUI/Shared/Document/` - `PhotosCropFeature`, the
      document PhotosCrop and `SwiftUICropView` edit
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
      (CropView, EditingCanvas Metal surface)
    - `Sources/BrightroomUI/builtin/PhotosCrop/` - iOS Photos app-style editor;
      `PhotosCropEditingModel` owns the document and its undo history
-   - `SwiftUICropView` edits a `PhotosCropDocument` through a binding
+   - `SwiftUICropView` edits a `PhotosCropFeature` through a binding
    - Provides both UIKit and SwiftUI interfaces
 
 ### Key Concepts
 
 - **Document**: a `Feature` value that describes an edit, such as
-  `PhotosCropDocument`. The UI that edits an image defines and owns its
+  `PhotosCropFeature`. The UI that edits an image defines and owns its
   document; the document's owner keeps its history (`PhotosCropEditingModel`).
 - **EditingStack**: loads an image (metadata, orientation, thumbnail, and the
   downsampled editing source) and renders documents over it. It holds no edit.
@@ -109,7 +109,7 @@ The project uses swift-state-graph for observable state. When modifying state-re
    member, `if`, or leaving a node out). An exact neutral bypass (returning
    the input image itself) belongs inside `apply(to:context:)`.
 5. To surface it in PhotosCrop, add an optional member to
-   `PhotosCropDocument.Effects` (its `body` order is the evaluation order) and
+   `PhotosCropFeature.Effects` (its `body` order is the evaluation order) and
    a `PhotosCropAdjustmentParameter` case.
 6. Test it against an explicit Core Image recipe in
    `Tests/BrightroomParametricTests`.

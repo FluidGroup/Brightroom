@@ -23,7 +23,7 @@ struct PhotosCropEditingModelTests {
   // MARK: - Initial document
 
   @Test func `A model resuming a document over a loaded stack is loaded synchronously`() {
-    var initial = PhotosCropDocument(orientedImageSize: imageSize)
+    var initial = PhotosCropFeature(imageSize: imageSize)
     PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 30, to: &initial.effects)
 
     let model = PhotosCropEditingModel(editingStack: makeStack(), resuming: initial)
@@ -38,7 +38,7 @@ struct PhotosCropEditingModelTests {
     let model = PhotosCropEditingModel(editingStack: makeStack())
 
     #expect(model.isLoaded)
-    #expect(model.document == PhotosCropDocument(orientedImageSize: imageSize))
+    #expect(model.document == PhotosCropFeature(imageSize: imageSize))
     #expect(!model.isDirty)
   }
 
@@ -118,10 +118,10 @@ struct PhotosCropEditingModelTests {
     let stack = makeStack()
     let loaded = try #require(stack.loadedState)
 
-    let identity = await PhotosCropDocument.makeInitial(for: loaded)
-    #expect(identity == PhotosCropDocument(orientedImageSize: imageSize))
+    let identity = await PhotosCropFeature.makeInitial(for: loaded)
+    #expect(identity == PhotosCropFeature(imageSize: imageSize))
 
-    let squared = await PhotosCropDocument.makeInitial(
+    let squared = await PhotosCropFeature.makeInitial(
       for: loaded,
       cropModifier: CropModifier { _, crop in
         var crop = crop
@@ -139,7 +139,7 @@ struct PhotosCropEditingModelTests {
   /// error, not the unedited image.
   @Test func `Rendering a document that is not prepared yet throws`() {
     let stack = makeStack()
-    let pending: PhotosCropDocument? = nil
+    let pending: PhotosCropFeature? = nil
 
     #expect(throws: EditingStackError.documentUnavailable) {
       _ = try stack.makeRenderer(document: pending)
@@ -147,7 +147,7 @@ struct PhotosCropEditingModelTests {
   }
 
   @Test func `A resumed document is installed unchanged`() {
-    var restored = PhotosCropDocument(
+    var restored = PhotosCropFeature(
       effects: .init(),
       crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
     )
@@ -326,7 +326,7 @@ struct PhotosCropEditingModelTests {
   private func waitForDocument(
     _ model: PhotosCropEditingModel,
     timeout: Duration = .seconds(10)
-  ) async throws -> PhotosCropDocument {
+  ) async throws -> PhotosCropFeature {
     let deadline = ContinuousClock.now + timeout
     while model.document == nil, ContinuousClock.now < deadline {
       try await Task.sleep(for: .milliseconds(10))

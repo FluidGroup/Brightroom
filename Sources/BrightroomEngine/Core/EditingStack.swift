@@ -20,30 +20,25 @@
 // THE SOFTWARE.
 
 import CoreImage
-import SwiftUI
 import UIKit
-import Combine
 import StateGraph
 
 import BrightroomParametric
 
-public enum EditingStackError: Error, Sendable {
-  case unableToCreateRendererInLoading
-  /// The document to render does not exist yet, for example while an editor
-  /// still prepares its initial document.
-  case documentUnavailable
-}
-
-/// Loads and prepares an image for editing, and renders documents from it.
+/// Prepares one image for interactive editing.
 ///
-/// The stack holds no edit and no history: the UI that edits an image owns its
-/// document (a `some Feature` value) and hands it to `makeRenderer(document:)`.
-/// The stack owns what every document of this image shares: the image provider,
-/// the metadata and orientation, the thumbnail, and the downsampled,
-/// GPU-resident editing source.
+/// Package access: editors in BrightroomUI (`SwiftUICropView`,
+/// `SwiftUIPhotosCropView`) create a stack for their document's image and
+/// keep it while they are shown. Apps never create one; a custom editor
+/// displays `SourceImage.makeCIImage(maxPixelSize:)`.
+///
+/// The stack holds no edit and no history: the document does. It holds what
+/// editing views of the image share: a small thumbnail and the downsampled,
+/// GPU-resident editing source. Release it when the editor goes away; the
+/// document keeps only the lightweight `SourceImage`.
 ///
 /// - Attention: Call `start()` before reading `loadedState`.
-open class EditingStack: Hashable {
+package final class EditingStack: Hashable {
 
   private static let centralQueue = DispatchQueue.init(
     label: "app.muukii.Brightroom.EditingStack.central",
@@ -57,93 +52,54 @@ open class EditingStack: Hashable {
     target: centralQueue
   )
 
-  public struct Options {
-
-    public init() {}
-  }
-
-  public static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
+  package static func == (lhs: EditingStack, rhs: EditingStack) -> Bool {
     lhs === rhs
   }
 
-  public func hash(into hasher: inout Hasher) {
+  package func hash(into hasher: inout Hasher) {
     ObjectIdentifier(self).hash(into: &hasher)
   }
 
   // MARK: - Nested Types
 
-  /// The prepared image, published once loading finishes.
-  public struct Loaded: Equatable {
+  /// The prepared image, published once preparation finishes.
+  package struct Loaded: Equatable {
 
-    // MARK: - Properties
-
-    let imageSource: ImageSource
-
-    public let metadata: ImageProvider.ImageMetadata
+    /// The image this state was prepared from.
+    package let image: SourceImage
 
     /// The oriented source pixel size: the domain documents of this image are
     /// authored in.
-    public var imageSize: CGSize {
-      metadata.imageSize
+    package var imageSize: CGSize {
+      image.pixelSize
     }
 
     /// A small oriented thumbnail, used for previews such as filter swatches.
-    public let thumbnailImage: CIImage
+    package let thumbnailImage: CIImage
 
-    public let editingSourceCGImage: CGImage
+    let editingSourceCGImage: CGImage
 
     /// The oriented, downsampled editing source (zero origin). It is
     /// GPU-resident when a Metal device is available.
-    public let editingSourceImage: CIImage
-
-    // MARK: - Initializers
-
-    init(
-      imageSource: ImageSource,
-      metadata: ImageProvider.ImageMetadata,
-      thumbnailCIImage: CIImage,
-      editingSourceCGImage: CGImage,
-      editingSourceCIImage: CIImage
-    ) {
-      self.imageSource = imageSource
-      self.metadata = metadata
-      self.thumbnailImage = thumbnailCIImage
-      self.editingSourceCGImage = editingSourceCGImage
-      self.editingSourceImage = editingSourceCIImage
-    }
-
-    // MARK: - Functions
-
-    public func makeOriginalCIImage() -> CIImage {
-      imageSource
-        .makeOriginalCIImage()
-        .oriented(metadata.orientation)
-        .removingExtentOffset()
-    }
+    package let editingSourceImage: CIImage
   }
 
   // MARK: - State Properties
 
-  @GraphStored public var hasStartedEditing: Bool = false
+  @GraphStored var hasStarted: Bool = false
 
-  /**
-   A Boolean value that indicates whether the image is currently loading for editing.
-   */
-  public var isLoading: Bool {
+  /// Whether the image is still being prepared.
+  package var isLoading: Bool {
     loadedState == nil
   }
 
-  /// The prepared image; nil until loading finishes.
-  @GraphStored public internal(set) var loadedState: Loaded? = nil
+  /// The prepared image; nil until preparation finishes.
+  @GraphStored package internal(set) var loadedState: Loaded? = nil
 
   // MARK: - Stored Properties
 
-  public let options: Options
-
-  public let imageProvider: ImageProvider
-
-  private var subscriptions: Set<AnyCancellable> = .init()
-  private var imageProviderSubscription: AnyCancellable?
+  /// The image this stack prepares.
+  package let image: SourceImage
 
   private let startLock = NSLock()
 
@@ -163,26 +119,15 @@ open class EditingStack: Hashable {
 
   // MARK: - Initializers
 
-  /// Creates a stack that loads the image of `imageProvider` once `start()` is
-  /// called.
-  public init(
-    imageProvider: ImageProvider,
-    options: Options = .init()
-  ) {
-    self.options = options
-    self.imageProvider = imageProvider
+  /// Creates a stack that prepares `image` once `start()` is called.
+  package init(image: SourceImage) {
+    self.image = image
   }
 
-  /**
-   EditingStack awakes from cold state.
-
-   - Calling from background-thread supported.
-   */
-  public func start(onPreparationCompleted: @escaping @MainActor () -> Void = {}) {
-
-    /**
-     Mutual exclusion
-     */
+  /// Starts preparing the image. Calling it again does nothing.
+  ///
+  /// - Calling from background-thread supported.
+  package func start(onPreparationCompleted: @escaping @MainActor () -> Void = {}) {
     guard markStartedIfNeeded() else {
       DispatchQueue.main.async {
         onPreparationCompleted()
@@ -190,35 +135,8 @@ open class EditingStack: Hashable {
       return
     }
 
-    /**
-     Start downloading image
-     */
-
-    backgroundQueue.async {
-      self.imageProvider.start()
-    }
-
-    // Observe image provider's loaded image
-    let imageProviderSub = withGraphTracking {
-      withGraphTrackingMap(from: self, map: { $0.imageProvider.loadedImage }, onChange: { [weak self] image in
-        guard let self, let image else { return }
-        self.backgroundQueue.async {
-          self.handleImageLoaded(image: image, onPreparationCompleted: onPreparationCompleted)
-        }
-      })
-    }
-    /**
-     `backgroundQueue` owns the lifecycle of `imageProviderSubscription`.
-
-     `start()` may be called from any thread, while the load completion nils this
-     out on `backgroundQueue`. For an already-loaded provider the `onChange` above
-     fires synchronously inside `withGraphTracking`, so the load is already
-     enqueued by the time we get here — assigning directly would race with that
-     nil-out. Hopping through the serial queue orders the install before the
-     nil-out, so the subscription is always released rather than re-installed.
-     */
     backgroundQueue.async { [weak self] in
-      self?.imageProviderSubscription = imageProviderSub
+      self?.prepare(onPreparationCompleted: onPreparationCompleted)
     }
   }
 
@@ -228,137 +146,54 @@ open class EditingStack: Hashable {
       startLock.unlock()
     }
 
-    guard hasStartedEditing == false else {
+    guard hasStarted == false else {
       return false
     }
 
-    hasStartedEditing = true
+    hasStarted = true
     return true
   }
 
-  private func handleImageLoaded(
-    image: ImageProvider.LoadedImage,
-    onPreparationCompleted: @escaping @MainActor () -> Void
-  ) {
-    switch image {
-    case let .editable(imageSource, metadata):
+  private func prepare(onPreparationCompleted: @escaping @MainActor () -> Void) {
+    let storage = image.storage
+    let orientation = storage.orientation
 
-      let thumbnailCGImage = imageSource.loadThumbnailCGImage(maxPixelSize: 180)
+    guard
+      let thumbnailCGImage = storage.makeResizedCGImage(shortSideHint: 180),
+      let editingSourceCGImage = storage.makeResizedCGImage(shortSideHint: editingImageMaxPixelSize)
+    else {
+      EngineLog.error(.stack, "Failed to prepare the editing source.")
+      return
+    }
 
-      /**
-       An image resised from original image
-       */
-      let editingSourceCGImage = imageSource.loadThumbnailCGImage(
-        maxPixelSize: self.editingImageMaxPixelSize
-      )
+    assert(editingSourceCGImage.colorSpace != nil)
 
-      assert(editingSourceCGImage.colorSpace != nil)
+    let cpuEditingSource = editingSourceCGImage._makeCIImage(orientation: orientation)
+    let thumbnailImage = thumbnailCGImage._makeCIImage(orientation: orientation)
 
-      /// resized
-      let _editingSourceCIImage: CIImage = editingSourceCGImage._makeCIImage(
-        orientation: metadata.orientation
-      )
+    /**
+     Upload the editing source into a persistent GPU texture off the main
+     thread *before* publishing `loadedState` (which reveals the editing
+     canvas). See `EditingSourcePreparation`.
+     */
+    let editingSource = EditingSourcePreparation.makeGPUResidentSource(
+      cgImage: editingSourceCGImage,
+      orientation: orientation
+    ) ?? cpuEditingSource
 
-      let _thumbnailImage: CIImage = thumbnailCGImage._makeCIImage(
-        orientation: metadata.orientation
-      )
+    loadedState = Loaded(
+      image: image,
+      thumbnailImage: thumbnailImage,
+      editingSourceCGImage: editingSourceCGImage,
+      editingSourceImage: editingSource
+    )
 
-      assert(
-        (_editingSourceCIImage.extent.width > _editingSourceCIImage.extent.height)
-          == (metadata.imageSize.width > metadata.imageSize.height)
-      )
-
-      /**
-       Upload the editing source into a persistent GPU texture off the main
-       thread *before* publishing `loadedState` (which reveals the editing
-       canvas). The canvas re-renders the source into its own viewport texture
-       every frame, and zoom / pan / rotation invalidate that cache every
-       frame; a `CIImage(cgImage:)` source would re-blit its bitmap CPU->GPU
-       on each of those frames. A texture-backed source keeps it GPU-resident,
-       eliminating that per-frame upload. Building the texture also warms Core
-       Image's pipeline, so the first `draw(in:)` no longer pays the upload +
-       one-time pipeline compilation on the main thread.
-       */
-      self.backgroundQueue.async { [weak self] in
-        guard let self else { return }
-
-        // A second provider emission must never rebuild the loaded state that
-        // documents are already authored against; the first load wins.
-        guard self.loadedState == nil else { return }
-
-        // Fall back to the CPU-backed source if no Metal device is available
-        // (e.g. unsupported environment); display still works, just without
-        // the GPU-residency win.
-        let editingSource = EditingSourcePreparation.makeGPUResidentSource(
-          cgImage: editingSourceCGImage,
-          orientation: metadata.orientation
-        ) ?? _editingSourceCIImage
-
-        let loaded = Loaded(
-          imageSource: imageSource,
-          metadata: metadata,
-          thumbnailCIImage: _thumbnailImage,
-          editingSourceCGImage: editingSourceCGImage,
-          editingSourceCIImage: editingSource
-        )
-
-        self.loadedState = loaded
-        self.imageProviderSubscription = nil
-
-        DispatchQueue.main.async {
-          onPreparationCompleted()
-        }
-      }
+    DispatchQueue.main.async {
+      onPreparationCompleted()
     }
   }
 
   deinit {
     EngineLog.debug("[EditingStack] deinit")
-  }
-
-  // MARK: - Functions
-
-  /// Creates a renderer that evaluates `document` over the full-resolution,
-  /// oriented source.
-  ///
-  /// `document` must be authored in the oriented source domain, whose size is
-  /// `Loaded.imageSize`.
-  ///
-  /// - Throws: `EditingStackError.unableToCreateRendererInLoading` before the
-  ///   image has loaded.
-  // `sending`: the renderer is freshly created here and not retained by the
-  // stack, so it forms a disconnected region the caller can hand to the
-  // off-actor `render()` without a data-race risk.
-  public func makeRenderer(document: some Feature) throws -> sending BrightRoomImageRenderer {
-
-    guard let loaded = loadedState else {
-      throw EditingStackError.unableToCreateRendererInLoading
-    }
-
-    // The renderer applies the orientation to the source CIImage, so the
-    // document evaluates in the oriented space it is authored in.
-    return BrightRoomImageRenderer(
-      source: loaded.imageSource,
-      orientation: loaded.metadata.orientation,
-      document: document
-    )
-  }
-
-  /// Creates a renderer for a document that may not exist yet, such as an
-  /// editor's document while the editor prepares it.
-  ///
-  /// A nil document is an error rather than a request for the unedited
-  /// image; to render the unedited image, pass `EmptyFeature()`.
-  ///
-  /// - Throws: `EditingStackError.documentUnavailable` when `document` is
-  ///   nil, and `EditingStackError.unableToCreateRendererInLoading` before
-  ///   the image has loaded.
-  public func makeRenderer<Document: Feature>(
-    document: Document?
-  ) throws -> sending BrightRoomImageRenderer {
-    guard let document else {
-      throw EditingStackError.documentUnavailable
-    }
-    return try makeRenderer(document: document)
   }
 }

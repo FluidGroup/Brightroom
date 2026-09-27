@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 
 
-/// The part of a `PhotosCropDocument` that `SwiftUICropView` gestures edit.
+/// The part of a `PhotosCropFeature` that `SwiftUICropView` gestures edit.
 public enum CropViewEditingTarget: Equatable, Sendable {
 
   /// Edit `crop` with the guide and the scroll surface. The canvas shows the

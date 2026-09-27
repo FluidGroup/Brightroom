@@ -4,23 +4,23 @@ import Testing
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// Commit-style history over `PhotosCropDocument` states (the semantics the
+/// Commit-style history over `PhotosCropFeature` states (the semantics the
 /// Engine's `EditingHistory` had before the UI took over the document).
 struct EditingHistoryTests {
 
   private let imageSize = CGSize(width: 40, height: 20)
 
-  private var v0: PhotosCropDocument {
-    PhotosCropDocument(orientedImageSize: imageSize)
+  private var v0: PhotosCropFeature {
+    PhotosCropFeature(imageSize: imageSize)
   }
 
-  private var v1: PhotosCropDocument {
+  private var v1: PhotosCropFeature {
     var document = v0
     PhotosCropAdjustmentParameter.brightness.apply(sliderValue: 50, to: &document.effects)
     return document
   }
 
-  private var v2: PhotosCropDocument {
+  private var v2: PhotosCropFeature {
     var document = v1
     document.appendBlurMaskStroke(
       BrushMaskStroke(stamps: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))

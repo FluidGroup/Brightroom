@@ -7,18 +7,18 @@ struct ResultImage: Identifiable {
   let cgImage: CGImage
   let image: Image
   let metadata: [String]
-  let document: PhotosCropDocument?
+  let feature: PhotosCropFeature?
 
   init(
     cgImage: CGImage,
     metadata: [String] = [],
-    document: PhotosCropDocument? = nil
+    feature: PhotosCropFeature? = nil
   ) {
     self.id = UUID().uuidString
     self.cgImage = cgImage
     self.image = .init(decorative: cgImage, scale: 1, orientation: .up)
     self.metadata = metadata
-    self.document = document
+    self.feature = feature
   }
 }
 
@@ -53,11 +53,11 @@ struct RenderedResultView: View {
         Text("Result")
       }
 
-      if let document = result.document {
+      if let feature = result.feature {
         Section {
           // Reusable debug viewer from BrightroomParametric: it walks the
-          // body of the document used to produce this render.
-          FeatureTreeOutline(document: document)
+          // body of the feature used to produce this render.
+          FeatureTreeOutline(feature: feature)
         } header: {
           Text("Feature Tree")
         }

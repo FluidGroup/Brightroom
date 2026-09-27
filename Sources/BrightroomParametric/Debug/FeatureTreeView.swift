@@ -124,8 +124,8 @@ public enum FeatureTreeDescriptor {
   /// fields, such as an editor's document type) lists its body members. Any
   /// other document, including a preset or a composite with settings, is one
   /// node, and a structural value such as an array lists its members.
-  public static func nodes(for document: some Feature) -> [FeatureTreeNode] {
-    var root: any Feature = document
+  public static func nodes(for feature: some Feature) -> [FeatureTreeNode] {
+    var root: any Feature = feature
     while let wrapper = root as? any WrappingFeatureReflection {
       guard let wrapped = wrapper.reflectedWrapped else {
         return []
@@ -610,8 +610,8 @@ public struct FeatureTreeView: View {
   private let nodes: [FeatureTreeNode]
 
   /// Creates a viewer for a document.
-  public init(document: some Feature) {
-    self.nodes = FeatureTreeDescriptor.nodes(for: document)
+  public init(feature: some Feature) {
+    self.nodes = FeatureTreeDescriptor.nodes(for: feature)
   }
 
   /// Creates a viewer for pre-built nodes.
@@ -637,8 +637,8 @@ public struct FeatureTreeOutline: View {
   private let nodes: [FeatureTreeNode]
 
   /// Creates an outline for a document.
-  public init(document: some Feature) {
-    self.nodes = FeatureTreeDescriptor.nodes(for: document)
+  public init(feature: some Feature) {
+    self.nodes = FeatureTreeDescriptor.nodes(for: feature)
   }
 
   /// Creates an outline for pre-built nodes.

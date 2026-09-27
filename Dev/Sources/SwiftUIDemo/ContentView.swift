@@ -9,51 +9,49 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
-
-  // Each editor keeps its stack and its editing model together, so reopening
-  // an editor shows the previous edit.
+  // Each editor keeps its document in a session, so reopening an editor shows
+  // the previous edit and keeps its undo history.
   @State private var photosCropHorizontal = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Asset.horizontalRect.image)
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image)
   )
   @State private var photosCropVertical = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Asset.verticalRect.image)
+    image: Mocks.makeSourceImage(image: Asset.verticalRect.image)
   )
   @State private var photosCropSquare = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Asset.squareRect.image)
+    image: Mocks.makeSourceImage(image: Asset.squareRect.image)
   )
   @State private var photosCropNasa = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(
+    image: Mocks.makeSourceImage(
       fileURL: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
         URL(fileURLWithPath: $0)
       }!
     )
   )
   @State private var photosCropSuperSmall = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Asset.superSmall.image)
+    image: Mocks.makeSourceImage(image: Asset.superSmall.image)
   )
   @State private var photosCropInstaLogo = DemoPhotosCropSession(
-    stack: Mocks.makeEditingStack(image: Asset.instaLogo.image)
+    image: Mocks.makeSourceImage(image: Asset.instaLogo.image)
   )
   @State private var photosCropRemote = DemoPhotosCropSession(
-    stack: EditingStack(
-      imageProvider: .init(
-        editableRemoteURL: URL(
+    loading: {
+      try await SourceImage(
+        remoteURL: URL(
           string:
             "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
         )!
       )
-    )
+    }
   )
   @State private var photosCropRemotePreview = DemoPhotosCropSession(
-    stack: EditingStack(
-      imageProvider: .init(
-        editableRemoteURL: URL(
+    loading: {
+      try await SourceImage(
+        remoteURL: URL(
           string:
             "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
         )!
       )
-    )
+    }
   )
 
   var body: some View {
@@ -91,8 +89,8 @@ struct ContentView: View {
               Button("Horizontal 1") {
                 fullScreenView = .init(showsDismissButton: false) {
                   DemoPhotosCropView(
-                    stack: {
-                      Mocks.makeEditingStack(image: Asset.horizontalRect.image)
+                    image: {
+                      Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
                     cropModifier: .faceDetection(aspectRatio: .square)
                   )
@@ -102,8 +100,8 @@ struct ContentView: View {
               Button("Horizontal 2") {
                 fullScreenView = .init(showsDismissButton: false) {
                   DemoPhotosCropView(
-                    stack: {
-                      Mocks.makeEditingStack(image: Asset.horizontalRect.image)
+                    image: {
+                      Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
                     cropModifier: .faceDetection(aspectRatio: .square),
                     options: .fixedAspectRatio(.square)
@@ -173,10 +171,8 @@ struct ContentView: View {
             Button("PhotosCrop Square (modifier)") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
-                    )
+                  image: {
+                    SourceImage(image: Asset.l1000316.image)
                   },
                   cropModifier: CropModifier { _, crop in
                     var crop = crop
@@ -191,10 +187,8 @@ struct ContentView: View {
             Button("PhotosCrop 4:5") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
-                    )
+                  image: {
+                    SourceImage(image: Asset.l1000316.image)
                   },
                   options: .fixedAspectRatio(.init(width: 4, height: 5))
                 )
@@ -204,10 +198,8 @@ struct ContentView: View {
             Button("PhotosCrop 5:4") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
-                    )
+                  image: {
+                    SourceImage(image: Asset.l1000316.image)
                   },
                   options: .fixedAspectRatio(.init(width: 5, height: 4))
                 )
@@ -217,10 +209,8 @@ struct ContentView: View {
             Button("PhotosCrop left") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Mocks.imageOrientationLeft())
-                    )
+                  image: {
+                    SourceImage(image: Mocks.imageOrientationLeft())
                   }
                 )
               }
@@ -279,16 +269,16 @@ struct WorkingOnPicked: View {
 
           Button("PhotosCrop Square") {
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(stack: {
-                selectedImage.makeEditingStack()
+              DemoPhotosCropView(image: {
+                selectedImage.makeSourceImage()
               }, options: .fixedAspectRatio(.square))
             }
           }
 
           Button("PhotosCrop 4:5") {
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(stack: {
-                selectedImage.makeEditingStack()
+              DemoPhotosCropView(image: {
+                selectedImage.makeSourceImage()
               }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
             }
           }
@@ -362,7 +352,7 @@ struct WorkingOnPicked: View {
       return selectedPhotosCropSession
     }
 
-    let session = DemoPhotosCropSession(stack: image.makeEditingStack())
+    let session = DemoPhotosCropSession(image: image.makeSourceImage())
     selectedPhotosCropSession = session
     return session
   }
@@ -379,8 +369,8 @@ private struct PickedDemoImage: Identifiable {
     previewImage.size.applying(.init(scaleX: previewImage.scale, y: previewImage.scale))
   }
 
-  func makeEditingStack() -> EditingStack {
-    EditingStack(imageProvider: try! .init(data: data))
+  func makeSourceImage() -> SourceImage {
+    try! SourceImage(data: data)
   }
 }
 
@@ -409,19 +399,55 @@ private struct PickedImageSummary: View {
   }
 }
 
-/// The model that owns an editing stack's document and history.
+/// A long-lived edit of one image.
 ///
-/// The model is stateful, so a demo that reopens an editor on the same image
-/// keeps the session (not just the stack) to show the previous edit.
-struct DemoPhotosCropSession {
-  let editingModel: PhotosCropEditingModel
+/// The session keeps the document, so reopening the editor shows the previous
+/// edit and keeps its undo history. The document exists only once the image
+/// is loaded: an edit never exists without its image.
+@MainActor
+@Observable
+final class DemoPhotosCropSession {
 
-  @MainActor
-  init(stack: EditingStack, cropModifier: CropModifier = .identity) {
-    self.editingModel = PhotosCropEditingModel(
-      editingStack: stack,
-      cropModifier: cropModifier
-    )
+  /// The edited document; nil until the image is loaded.
+  var document: EditingDocument<PhotosCropFeature>?
+
+  private(set) var loadingError: String?
+
+  @ObservationIgnored
+  private let loadImage: @Sendable () async throws -> SourceImage
+
+  @ObservationIgnored
+  private let cropModifier: CropModifier
+
+  /// A session over an image that loads asynchronously, such as a download.
+  init(
+    loading loadImage: @escaping @Sendable () async throws -> SourceImage,
+    cropModifier: CropModifier = .identity
+  ) {
+    self.loadImage = loadImage
+    self.cropModifier = cropModifier
+  }
+
+  /// A session over an image that is already available.
+  convenience init(image: SourceImage, cropModifier: CropModifier = .identity) {
+    self.init(loading: { image }, cropModifier: cropModifier)
+  }
+
+  /// Loads the image and creates the document, once.
+  func prepareDocument() async {
+    guard document == nil else {
+      return
+    }
+    do {
+      let image = try await loadImage()
+      let document = await EditingDocument(image: image, cropModifier: cropModifier)
+      // Another call may have finished first while this one was suspended.
+      if self.document == nil {
+        self.document = document
+      }
+    } catch {
+      loadingError = "\(error)"
+    }
   }
 }
 
@@ -431,6 +457,10 @@ struct DemoPhotosCropView: View {
   @Environment(\.dismiss) private var dismiss
 
   @State var resultImage: ResultImage?
+
+  /// The document as the editor received it, restored on Cancel.
+  @State private var documentBeforeEditing: EditingDocument<PhotosCropFeature>?
+
   private let options: SwiftUIPhotosCropView.Options
 
   /// Edits a long-lived session; reopening shows its previous edit.
@@ -443,55 +473,76 @@ struct DemoPhotosCropView: View {
     self.options = options
   }
 
-  /// Edits a new stack from scratch, created once for the view's identity.
+  /// Edits a new document from scratch, created once for the view's identity.
   @MainActor
   init(
-    stack: @escaping () -> EditingStack,
+    image: @escaping () -> SourceImage,
     cropModifier: CropModifier = .identity,
     options: SwiftUIPhotosCropView.Options = .demo()
   ) {
     self._session = .init(
-      wrappedValue: DemoPhotosCropSession(stack: stack(), cropModifier: cropModifier)
+      wrappedValue: DemoPhotosCropSession(image: image(), cropModifier: cropModifier)
     )
     self.options = options
   }
 
   var body: some View {
+    @Bindable var session = session
 
-    SwiftUIPhotosCropView(
-      editingModel: session.editingModel,
-      options: options,
-      onDone: { document in
-        // Export straight to disk with bounded memory (strip render into an
-        // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
-        // then preview from a DOWNSAMPLED decode so the read-back doesn't
-        // re-spike to the full resolution.
-        let url = FileManager.default.temporaryDirectory
-          .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
-          .appendingPathExtension("heic")
-        let stack = session.editingModel.editingStack
-        Task {
-          do {
-            let rendered = try await stack.makeRenderer(document: document).render(
-              options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
-            )
-            let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
-            await MainActor.run {
-              // Keep the document that produced this render so the result
-              // screen can show its features.
-              self.resultImage = .init(cgImage: cgImage, document: document)
+    Group {
+      // The editor takes a non-optional binding: show it once the document
+      // exists. The session never sets it back to nil.
+      if let document = Binding($session.document) {
+        SwiftUIPhotosCropView(
+          document: document,
+          options: options,
+          onDone: {
+            export(document.wrappedValue)
+          },
+          onCancel: {
+            if let documentBeforeEditing {
+              document.wrappedValue = documentBeforeEditing
             }
-          } catch {
-            assertionFailure("\(error)")
+            dismiss()
           }
+        )
+        .onAppear {
+          documentBeforeEditing = document.wrappedValue
         }
-      },
-      onCancel: {
-        dismiss()
+      } else if let loadingError = session.loadingError {
+        Text(loadingError)
+      } else {
+        ProgressView()
       }
-    )
+    }
+    .task {
+      await session.prepareDocument()
+    }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
+    }
+  }
+
+  private func export(_ document: EditingDocument<PhotosCropFeature>) {
+    // Export straight to disk with bounded memory (strip render into an
+    // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
+    // then preview from a DOWNSAMPLED decode so the read-back doesn't
+    // re-spike to the full resolution.
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
+      .appendingPathExtension("heic")
+    Task {
+      do {
+        let rendered = try await document.render(
+          options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
+        )
+        let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
+        // Keep the feature that produced this render so the result screen
+        // can show its tree.
+        self.resultImage = .init(cgImage: cgImage, feature: document.feature)
+      } catch {
+        assertionFailure("\(error)")
+      }
     }
   }
 }

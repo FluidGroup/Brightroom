@@ -115,34 +115,26 @@ public struct SwiftUICropView: View {
     }
   }
 
-  /// Where the edited document comes from and where changes go.
-  struct DocumentSource {
-
-    /// The owner's current document; nil until it is created.
-    let document: @MainActor () -> PhotosCropDocument?
-
-    /// Applies a change the canvas made to the owner's latest document.
-    let update: @MainActor (_ change: CropView.DocumentChange) -> Void
-
-    /// Installs a full-image document once the image has loaded and the
-    /// owner has none; nil when the owner prepares its own.
-    let createInitialDocument: (@MainActor (PhotosCropDocument) -> Void)?
-
-    /// A document the host owns through a binding.
-    static func binding(_ binding: Binding<PhotosCropDocument?>) -> Self {
-      .init(
-        document: { binding.wrappedValue },
-        update: { change in
-          guard var document = binding.wrappedValue else {
-            return
-          }
-          change(&document)
-          if document != binding.wrappedValue {
-            binding.wrappedValue = document
-          }
-        },
-        createInitialDocument: { binding.wrappedValue = $0 }
-      )
+  /// Applies a canvas change to the binding's latest document.
+  ///
+  /// A change from a canvas prepared for another image is dropped: its crop
+  /// and strokes are pixel coordinates of that image, so applying them to
+  /// this document would corrupt it. That happens when the host replaces the
+  /// document with one of another image while a change is still queued.
+  @MainActor
+  static func apply(
+    _ change: CropView.DocumentChange,
+    preparedFor image: SourceImage,
+    to document: Binding<EditingDocument<PhotosCropFeature>>
+  ) {
+    var next = document.wrappedValue
+    guard next.image == image else {
+      return
+    }
+    change(&next.feature)
+    // Writing an equal value would still invalidate the host's views.
+    if next != document.wrappedValue {
+      document.wrappedValue = next
     }
   }
 
@@ -152,8 +144,11 @@ public struct SwiftUICropView: View {
   /// Fixed at creation. See the initializer documentation.
   private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
 
-  private let editingStack: EditingStack
-  private let documentSource: DocumentSource
+  private let document: Binding<EditingDocument<PhotosCropFeature>>
+
+  /// The stack a built-in editor shares with its other views; nil when the
+  /// view prepares the document's image itself.
+  private let editingStack: EditingStack?
 
   private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
   private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
@@ -173,17 +168,16 @@ public struct SwiftUICropView: View {
   private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
   private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
 
-  /// Creates a crop canvas over `editingStack` that edits `document`, with
-  /// custom overlays.
+  /// Creates a crop canvas that edits `document`, with custom overlays.
   ///
-  /// When `document` is nil once the image has loaded, the view writes a
-  /// full-image `PhotosCropDocument` into the binding. To start from a
-  /// `CropModifier` instead, create the document with
-  /// `PhotosCropDocument.makeInitial(for:cropModifier:)` and show this view
-  /// once it exists. Changes made on the canvas (crop commits through
-  /// `ApplyAction` or when leaving crop editing, and brush strokes) are
-  /// applied to the binding's latest document. A document set from outside
-  /// (for example an undo) is displayed, and its crop reloads the crop guide.
+  /// The view prepares the document's image for display and shows a
+  /// progress indicator until it is ready. Changes made on the canvas (crop
+  /// commits through `ApplyAction` or when leaving crop editing, and brush
+  /// strokes) are applied to the binding's latest document's `feature`; the
+  /// view never commits them to the history, so call `commit()` when a change
+  /// should become an undo step. A document set from outside (for example an
+  /// undo) is displayed, and its crop reloads the crop guide. A document of
+  /// another image rebuilds the canvas.
   ///
   /// A host that sets `document.blurMask` with its own blur before the first
   /// stroke pays for that blur at export until a stroke lands. The canvas
@@ -191,10 +185,7 @@ public struct SwiftUICropView: View {
   /// the shape the view authors; another root renders at export only.
   ///
   /// - Parameters:
-  ///   - editingStack: Loads the image the document is authored over. Passing
-  ///     a different stack rebuilds the canvas.
-  ///   - document: The edited document, authored in the oriented source
-  ///     domain of `editingStack`.
+  ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
   ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
@@ -209,8 +200,7 @@ public struct SwiftUICropView: View {
   ///     `cropInsideOverlay`.
   ///   - stateHandler: Re-bound on every update.
   public init<InsideOverlay: View, OutsideOverlay: View>(
-    editingStack: EditingStack,
-    document: Binding<PhotosCropDocument?>,
+    document: Binding<EditingDocument<PhotosCropFeature>>,
     isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
@@ -218,8 +208,8 @@ public struct SwiftUICropView: View {
     @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
-    self.editingStack = editingStack
-    self.documentSource = .binding(document)
+    self.document = document
+    self.editingStack = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
@@ -228,17 +218,14 @@ public struct SwiftUICropView: View {
     self.stateHandler = stateHandler
   }
 
-  /// Creates a crop canvas over `editingStack` that edits `document`, with
-  /// the built-in overlays.
+  /// Creates a crop canvas that edits `document`, with the built-in
+  /// overlays.
   ///
-  /// See `init(editingStack:document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:cropInsideOverlay:cropOutsideOverlay:stateHandler:)`
-  /// for how the document is created, written back, and displayed.
+  /// See `init(document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:cropInsideOverlay:cropOutsideOverlay:stateHandler:)`
+  /// for how the document is written back and displayed.
   ///
   /// - Parameters:
-  ///   - editingStack: Loads the image the document is authored over. Passing
-  ///     a different stack rebuilds the canvas.
-  ///   - document: The edited document, authored in the oriented source
-  ///     domain of `editingStack`.
+  ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
   ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
@@ -248,8 +235,7 @@ public struct SwiftUICropView: View {
   ///     take effect.
   ///   - stateHandler: Re-bound on every update.
   public init(
-    editingStack: EditingStack,
-    document: Binding<PhotosCropDocument?>,
+    document: Binding<EditingDocument<PhotosCropFeature>>,
     isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
@@ -257,25 +243,25 @@ public struct SwiftUICropView: View {
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
-    self.editingStack = editingStack
-    self.documentSource = .binding(document)
+    self.document = document
+    self.editingStack = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInset = contentInset
     self.stateHandler = stateHandler
   }
 
-  /// Creates a crop canvas with the built-in overlays over a document owned
-  /// elsewhere, for built-in editors that keep the document in a model.
+  /// Creates a crop canvas with the built-in overlays over a stack a
+  /// built-in editor already prepares for `document`'s image.
   init(
+    document: Binding<EditingDocument<PhotosCropFeature>>,
     editingStack: EditingStack,
-    documentSource: DocumentSource,
     isGuideInteractionEnabled: Bool
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
+    self.document = document
     self.editingStack = editingStack
-    self.documentSource = documentSource
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = true
     self.contentInset = nil
@@ -283,12 +269,28 @@ public struct SwiftUICropView: View {
   }
 
   public var body: some View {
+    let image = document.wrappedValue.image
+    if let editingStack, editingStack.image == image {
+      canvas(editingStack: editingStack)
+    } else {
+      // A new identity per image: the owned stack, and the canvas bound to it,
+      // are rebuilt when the host switches to a document of another image.
+      OwnedEditingStack(image: image) { stack in
+        canvas(editingStack: stack)
+      }
+      .id(image)
+    }
+  }
+
+  private func canvas(editingStack: EditingStack) -> some View {
     ZStack {
-      if let loadedState = editingStack.loadedState, let document = documentSource.document() {
+      if let loadedState = editingStack.loadedState {
         LoadedCropViewRepresentable(
           source: CropViewSource(loadedState),
-          document: document,
-          onDocumentChange: documentSource.update,
+          document: document.wrappedValue.feature,
+          onDocumentChange: { [document] change in
+            Self.apply(change, preparedFor: loadedState.image, to: document)
+          },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
@@ -308,9 +310,9 @@ public struct SwiftUICropView: View {
           strokeSmoothing: strokeSmoothing
         )
         // `CropView` binds its source once, at creation. Tying the
-        // representable's identity to the stack makes a stack swap rebuild
+        // representable's identity to the image makes an image swap rebuild
         // the canvas instead of leaving it bound to the old image.
-        .id(ObjectIdentifier(editingStack))
+        .id(loadedState.image)
         .transition(.opacity.animation(.smooth))
       } else {
         ProgressView()
@@ -321,24 +323,6 @@ public struct SwiftUICropView: View {
     .onAppear {
       editingStack.start()
     }
-    .onChange(of: editingStack.loadedState != nil, initial: true) { _, isLoaded in
-      createInitialDocumentIfNeeded(isLoaded: isLoaded)
-    }
-  }
-
-  /// Installs a full-image document once the image has loaded, when the
-  /// owner has none and does not prepare its own.
-  @MainActor
-  private func createInitialDocumentIfNeeded(isLoaded: Bool) {
-    guard
-      isLoaded,
-      let createInitialDocument = documentSource.createInitialDocument,
-      documentSource.document() == nil,
-      let loadedState = editingStack.loadedState
-    else {
-      return
-    }
-    createInitialDocument(PhotosCropDocument(orientedImageSize: loadedState.imageSize))
   }
 
   /// Sets whether the image canvas is clipped to the crop guide.
@@ -443,7 +427,7 @@ public struct SwiftUICropView: View {
 struct LoadedCropViewRepresentable: UIViewRepresentable {
 
   let source: CropViewSource
-  let document: PhotosCropDocument
+  let document: PhotosCropFeature
   let onDocumentChange: @MainActor (_ change: CropView.DocumentChange) -> Void
   let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
   let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
@@ -662,7 +646,7 @@ struct LoadedCropViewRepresentable: UIViewRepresentable {
     }
 
     /// `document` with the undelivered changes applied.
-    func applyingPendingDocumentChanges(to document: PhotosCropDocument) -> PhotosCropDocument {
+    func applyingPendingDocumentChanges(to document: PhotosCropFeature) -> PhotosCropFeature {
       var document = document
       for change in pendingDocumentChanges {
         change(&document)

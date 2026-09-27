@@ -74,7 +74,7 @@ performance is already good.
 1. **Resolved in Brightroom 6: existential-cast churn in the effect pipeline
    (was CPU ~12%).** The global effects were an `EffectPipeline` of
    `[any ImageEffectFeatureType]` searched with `as?` / `is T` on every slider
-   tick and compared through dynamic type checks. `PhotosCropDocument.Effects`
+   tick and compared through dynamic type checks. `PhotosCropFeature.Effects`
    now stores each effect as a typed optional member with synthesized
    equality, so the type lookups are gone and the adjustments compare
    statically. A filter preset's effects still compare through

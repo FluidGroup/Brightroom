@@ -6,7 +6,7 @@ import Testing
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// The canvas preview of a `PhotosCropDocument`, composed from the same pieces
+/// The canvas preview of a `PhotosCropFeature`, composed from the same pieces
 /// `CropView` renders with: the render plan, the canvas image factory, the
 /// Metal brush rasterizer, and the alpha blend of the viewport composite.
 ///
@@ -25,7 +25,7 @@ enum CanvasCompositionPreview {
   ///   (the crop surface's source-domain canvas) and the crop is not applied.
   ///   When true, the canvas displays the crop output (the tool surface).
   static func render(
-    document: PhotosCropDocument,
+    document: PhotosCropFeature,
     source: CGImage,
     throughCrop: Bool = false
   ) throws -> CGImage {

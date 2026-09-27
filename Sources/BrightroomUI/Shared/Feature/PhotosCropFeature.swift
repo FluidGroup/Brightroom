@@ -24,18 +24,19 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-/// The parametric document edited by PhotosCrop and `SwiftUICropView`.
+/// The feature edited by PhotosCrop and `SwiftUICropView`.
 ///
 /// Evaluation order is the order of `body`: global effects, then the brush
 /// painted blur, then the final crop. Absent features are `nil` and contribute
-/// nothing. The document is authored in the oriented, pre-crop source domain
-/// whose size is `EditingStack.Loaded.imageSize`, at full resolution: evaluate
-/// it over a source of that size (the export source, or the editing source
+/// nothing. The feature is authored in the oriented pixel coordinates of its
+/// document's image (`SourceImage.pixelSize`), at full resolution: evaluate it
+/// over a source of that size (the export source, or the editing source
 /// scaled up to it), never over the downsampled editing source directly.
 ///
-/// Documents compare by value: two documents built from the same values are
-/// equal, whichever way they were built.
-public struct PhotosCropDocument: Feature, Equatable {
+/// Features compare by value: two features built from the same values are
+/// equal, whichever way they were built. Edit one inside a
+/// `EditingDocument<PhotosCropFeature>`, which keeps it with its image.
+public struct PhotosCropFeature: Feature, Equatable {
 
   /// Global, extent-preserving effects, evaluated in declaration order.
   public struct Effects: ImageEffect, Equatable {
@@ -117,25 +118,25 @@ public struct PhotosCropDocument: Feature, Equatable {
   /// image without it.
   public var blurMask: LocalAdjustment<GaussianBlurFeature>?
 
-  /// The final crop: the framing and clipping Feature of this document.
+  /// The final crop: the framing and clipping Feature of this feature.
   public var crop: CropFeature
 
-  /// A document with no effects and a crop that covers the whole image.
+  /// A feature with no effects and a crop that covers the whole image.
   ///
-  /// - Parameter orientedImageSize: The oriented source pixel size,
-  ///   `EditingStack.Loaded.imageSize`.
-  public init(orientedImageSize: CGSize) {
+  /// - Parameter imageSize: The oriented pixel size of the image,
+  ///   `SourceImage.pixelSize`.
+  public init(imageSize: CGSize) {
     self.effects = .init()
     self.blurMask = nil
     self.crop = CropFeature(
-      displayCropRect: CGRect(origin: .zero, size: orientedImageSize),
-      imageSize: orientedImageSize
+      displayCropRect: CGRect(origin: .zero, size: imageSize),
+      imageSize: imageSize
     )
   }
 
-  /// Rebuilds a document, for example one restored by the host.
+  /// Rebuilds a feature, for example one restored by the host.
   ///
-  /// A document rebuilt from the same values compares and renders the same as
+  /// A feature rebuilt from the same values compares and renders the same as
   /// the one built in the editor. To restore an edit without a crop, pass a
   /// crop that covers the whole image.
   public init(
@@ -155,7 +156,7 @@ public struct PhotosCropDocument: Feature, Equatable {
   }
 }
 
-extension PhotosCropDocument {
+extension PhotosCropFeature {
 
   /// Replaces the crop geometry with a crop-editing state.
   ///
