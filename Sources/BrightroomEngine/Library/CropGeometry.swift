@@ -139,9 +139,11 @@ public enum CropGeometry {
   ///
   /// A malformed rect whose center lies outside the image can overlap the
   /// image while its sideways footprint, which shares that center, misses it
-  /// entirely; there is then nothing to clamp the footprint to. Such a rect is
-  /// first clamped to the image itself, as unrotated rects are, which brings
-  /// its center inside, and then its footprint is clamped.
+  /// entirely (there is then nothing to clamp the footprint to) or only grazes
+  /// it (clamping would leave a sliver). Such a rect is first clamped to the
+  /// image itself, as unrotated rects are, which brings its center inside, and
+  /// then its footprint is clamped. A well-formed crop always has its center
+  /// inside the image, so it never takes this step.
   public static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
@@ -150,7 +152,7 @@ public enum CropGeometry {
   ) -> CGRect {
     let imageBounds = CGRect(origin: .zero, size: imageSize)
     var rect = rect
-    if imageBounds.intersects(self.rect(rect, turnedBy: rotation)) == false {
+    if rotation.isSideways, imageBounds.contains(CGPoint(x: rect.midX, y: rect.midY)) == false {
       rect = imageBounds.intersection(rect)
     }
 

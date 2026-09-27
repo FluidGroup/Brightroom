@@ -301,6 +301,28 @@ struct QuarterTurnCropTests {
     #expect(reopened.cropExtent == CGRect(x: 2.5, y: 2.5, width: 15, height: 10))
   }
 
+  /// As above, but the footprint grazes the image instead of missing it: it
+  /// overlaps the image by 0.01 px. Clamping the footprint alone would leave a
+  /// sliver; clamping the rect first, as 5.1.0 did, keeps a usable frame.
+  @Test func `Reopening a turned crop whose footprint grazes the image clamps it`() {
+    // Display rect (-34.99, 20, 60, 10), center (-4.99, 25). Its footprint,
+    // (-9.99, -5, 10, 60), overlaps the image by 0.01 px.
+    let stored = CropFeature(
+      cropRect: CGRect(x: -34.99, y: 170, width: 60, height: 10),
+      rotation: .quarterCW
+    )
+
+    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
+
+    // The rect clamped to the image, (0, 20, 25.01, 10), has its footprint
+    // inside the image, so that is the frame.
+    let expected = CGRect(x: 0, y: 20, width: 25.01, height: 10)
+    #expect(abs(reopened.cropExtent.minX - expected.minX) < 1e-9)
+    #expect(abs(reopened.cropExtent.minY - expected.minY) < 1e-9)
+    #expect(abs(reopened.cropExtent.width - expected.width) < 1e-9)
+    #expect(abs(reopened.cropExtent.height - expected.height) < 1e-9)
+  }
+
   /// `CropView.rotateClockwise()` swaps a locked aspect ratio and refits the
   /// frame after setting the new rotation. The fit uses the turned image, so a
   /// 3:2 lock on a 3:2 image still keeps the whole image after a quarter turn.
