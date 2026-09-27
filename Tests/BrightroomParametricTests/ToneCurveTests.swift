@@ -9,14 +9,14 @@ struct ToneCurveTests {
   func newCurveIsTheNeutralIdentityMapping() {
     let curve = ToneCurve()
 
-    #expect(curve.isNeutral)
+    #expect(curve.isDefault)
     #expect(
       curve.points == [
         ToneCurve.Point(input: 0, output: 0),
         ToneCurve.Point(input: 1, output: 1),
       ]
     )
-    #expect(curve.isIdentityMapping)
+    #expect(curve.isIdentity)
   }
 
   @Test
@@ -24,10 +24,10 @@ struct ToneCurveTests {
     var curve = ToneCurve()
     let diagonalIndex = curve.insertPoint(input: 0.4, output: 0.4)
     _ = try #require(diagonalIndex)
-    #expect(curve.isIdentityMapping)
+    #expect(curve.isIdentity)
 
     curve.movePoint(at: 0, input: 0.2, output: 0.2)
-    #expect(curve.isIdentityMapping == false)
+    #expect(curve.isIdentity == false)
   }
 
   @Test
@@ -42,7 +42,7 @@ struct ToneCurveTests {
     #expect(curve.points.map(\.input) == [0, 0.2, 0.8, 1])
     #expect(curve.points[1].output == 0.3)
     #expect(curve.points[2].output == 0.7)
-    #expect(curve.isNeutral == false)
+    #expect(curve.isDefault == false)
   }
 
   @Test
@@ -129,7 +129,7 @@ struct ToneCurveTests {
 
     #expect(curve.points[0].input == 0.38)
     #expect(curve.points[whiteIndex].input == 0.62)
-    #expect(curve.isNeutral == false)
+    #expect(curve.isDefault == false)
   }
 
   @Test
@@ -228,15 +228,15 @@ struct ToneCurveTests {
 
   @Test
   func yRGBChannelsRetainIndependentCurves() throws {
-    var value = ToneCurveEditorValue()
+    var value = ToneCurveFeature.Curves()
     let redIndex = value.red.insertPoint(input: 0.4, output: 0.7)
     _ = try #require(redIndex)
 
-    #expect(value.isNeutral == false)
-    #expect(value.y.isNeutral)
-    #expect(value.red.isNeutral == false)
-    #expect(value.green.isNeutral)
-    #expect(value.blue.isNeutral)
+    #expect(value.isDefault == false)
+    #expect(value.y.isDefault)
+    #expect(value.red.isDefault == false)
+    #expect(value.green.isDefault)
+    #expect(value.blue.isDefault)
 
     value.reset(channel: .red)
 

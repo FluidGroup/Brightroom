@@ -67,8 +67,11 @@ public struct ToneCurve: Equatable, Sendable {
   /// The first and last points are the lower and upper endpoints.
   public private(set) var points: [Point]
 
-  /// Whether the curve is the two-point identity mapping.
-  public var isNeutral: Bool {
+  /// Whether the curve is the default two-point identity mapping.
+  ///
+  /// A curve with diagonal interior points is not the default, although it
+  /// renders as the identity (`isIdentity`).
+  public var isDefault: Bool {
     points == Self.neutralPoints
   }
 
@@ -78,7 +81,7 @@ public struct ToneCurve: Equatable, Sendable {
   /// remain at normalized Input 0 and 1. An inward endpoint is never an
   /// identity, even when its own Input equals Output, because its exterior
   /// interval becomes a horizontal clipping plateau.
-  public var isIdentityMapping: Bool {
+  public var isIdentity: Bool {
     guard points.first?.input == Self.normalizedRange.lowerBound,
       points.last?.input == Self.normalizedRange.upperBound
     else {

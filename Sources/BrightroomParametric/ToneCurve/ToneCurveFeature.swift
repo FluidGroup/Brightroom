@@ -17,7 +17,7 @@ import os
 /// Equality compares the authored `value`, including interior points on the
 /// diagonal that do not change pixels. The derived render plan does not take
 /// part. To ask whether two curves render the same, compare their
-/// `ToneCurveRenderIdentity(value:)`.
+/// `ToneCurveFeature.RenderKey(curves:)`.
 public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
 
   /// The interpretation of the stop shaper, YRGB composition, and sampled table.
@@ -28,20 +28,20 @@ public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
   public static let semanticVersion = 4
 
   /// The four normalized curves authored by the shared editor.
-  public let value: ToneCurveEditorValue
+  public let curves: Curves
 
   private let renderPlan: ToneCurveRenderPlan?
 
   /// Creates a feature and resolves its sampled render plan exactly once.
-  public init(value: ToneCurveEditorValue) {
-    self.value = value
-    self.renderPlan = ToneCurveRenderPlanCache.shared.plan(for: value)
+  public init(curves: Curves) {
+    self.curves = curves
+    self.renderPlan = ToneCurveRenderPlanCache.shared.plan(for: curves)
   }
 
   /// Evaluates the precompiled plan while preserving a neutral exact bypass.
   ///
   /// A curve whose render identity is neutral
-  /// (`ToneCurveRenderIdentity(activeValue: value) == nil`) returns `image`
+  /// (`ToneCurveFeature.RenderKey(activeCurves: value) == nil`) returns `image`
   /// itself.
   public func apply(
     to image: CIImage,
@@ -53,7 +53,7 @@ public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
 
   /// Compares the authored curves; the derived render plan does not take part.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.value == rhs.value
+    lhs.curves == rhs.curves
   }
 }
 
@@ -65,7 +65,7 @@ public nonisolated struct ToneCurveFeature: ImageEffect, Equatable {
 private nonisolated final class ToneCurveRenderPlanCache: Sendable {
 
   struct Entry: Sendable {
-    let identity: ToneCurveRenderIdentity
+    let identity: ToneCurveFeature.RenderKey
     let plan: ToneCurveRenderPlan
   }
 
@@ -73,8 +73,8 @@ private nonisolated final class ToneCurveRenderPlanCache: Sendable {
 
   private let storage = OSAllocatedUnfairLock<Entry?>(initialState: nil)
 
-  func plan(for value: ToneCurveEditorValue) -> ToneCurveRenderPlan? {
-    guard let identity = ToneCurveRenderIdentity(activeValue: value) else {
+  func plan(for curves: ToneCurveFeature.Curves) -> ToneCurveRenderPlan? {
+    guard let identity = ToneCurveFeature.RenderKey(activeCurves: curves) else {
       return nil
     }
 
@@ -82,7 +82,7 @@ private nonisolated final class ToneCurveRenderPlanCache: Sendable {
       if let entry, entry.identity == identity {
         return entry.plan
       }
-      guard let plan = ToneCurveRenderPlan(value: value) else { return nil }
+      guard let plan = ToneCurveRenderPlan(curves: curves) else { return nil }
       entry = Entry(identity: identity, plan: plan)
       return plan
     }

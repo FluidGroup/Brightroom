@@ -745,7 +745,7 @@ private struct ColorGradingDocument: Feature {
 
   var toneCurve: ToneCurveFeature? = RenderingFixtures.makeToneCurve()
   var colorMixer: ColorMixerFeature? = ColorMixerFeature(
-    adjustment: ColorMixerAdjustment(
+    bands: ColorMixerFeature.Bands(
       red: .init(hue: 20, saturation: -30, luminance: 10),
       green: .init(hue: -25, saturation: 35, luminance: -15),
       magenta: .init(hue: 15, saturation: 20)

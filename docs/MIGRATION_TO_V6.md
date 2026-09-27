@@ -231,7 +231,7 @@ for example
 | `ParametricImageRenderer(compiler:)`, `ParametricImageRenderer.compiler`, `ParametricImageRenderer.makeOutput` | `FeatureRenderer()` |
 | `ParametricVideoRenderer(compiler:)`, `ParametricVideoRenderer(imageRenderer:)`, `ParametricVideoRenderer.imageRenderer` | `VideoRenderer()` |
 | `ParametricExportRenderer(imageRenderer:)`, `ParametricExportRenderer.imageRenderer` | `ExportRenderer()` |
-| `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(value:)`, `ColorMixerFeature(adjustment:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
+| `ToneCurveFeature(id:value:)`, `ColorMixerFeature(id:adjustment:algorithm:)`, and their `id` and `isEnabled` | `ToneCurveFeature(curves:)`, `ColorMixerFeature(bands:algorithm:)`. See [Tone Curve and Color Mixer](#tone-curve-and-color-mixer). |
 | `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `FilterFeature(name:id:effects:)` with `[AnyImageEffect]` |
@@ -293,20 +293,20 @@ condition the bypass uses:
 import BrightroomParametric
 
 func isIdentity(_ curve: ToneCurveFeature) -> Bool {
-  ToneCurveRenderIdentity(activeValue: curve.value) == nil
+  ToneCurveFeature.RenderKey(activeCurves: curve.curves) == nil
 }
 
 func isIdentity(_ mixer: ColorMixerFeature) -> Bool {
-  mixer.adjustment.isNeutral
+  mixer.bands.isIdentity
 }
 ```
 
-`ToneCurveEditorValue.isNeutral` is not the same condition: a curve with
-interior points on the diagonal is not `isNeutral`, but it renders as
-identity.
+`ToneCurveFeature.Curves.isDefault` (5.x `ToneCurveEditorValue.isNeutral`) is
+not the same condition: a curve with interior points on the diagonal is not
+the default, but it renders as identity.
 
-Equality of both features now compares their authored members: `value` for
-a curve, `adjustment` and `algorithm` for a mixer. In 5.x it compared the
+Equality of both features now compares their authored members: `curves` for
+a curve, `bands` and `algorithm` for a mixer. In 5.x it compared the
 feature `id` and the rendered result, so two curves with the same id that
 differed only in diagonal interior points were equal, and so were mixers whose
 values rounded to the same Float32 parameters. They are no longer equal, so an
@@ -321,12 +321,12 @@ identities explicitly:
 import BrightroomParametric
 
 func rendersTheSame(_ a: ToneCurveFeature, _ b: ToneCurveFeature) -> Bool {
-  ToneCurveRenderIdentity(value: a.value) == ToneCurveRenderIdentity(value: b.value)
+  ToneCurveFeature.RenderKey(curves: a.curves) == ToneCurveFeature.RenderKey(curves: b.curves)
 }
 
 func rendersTheSame(_ a: ColorMixerFeature, _ b: ColorMixerFeature) -> Bool {
-  ColorMixerRenderIdentity(activeAdjustment: a.adjustment, algorithm: a.algorithm)
-    == ColorMixerRenderIdentity(activeAdjustment: b.adjustment, algorithm: b.algorithm)
+  ColorMixerFeature.RenderKey(activeBands: a.bands, algorithm: a.algorithm)
+    == ColorMixerFeature.RenderKey(activeBands: b.bands, algorithm: b.algorithm)
 }
 ```
 
@@ -1090,6 +1090,23 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | `.failedToCreateImage(_:)`, `.missingLUT3DSize`, `.invalidLUT3DSize(_:line:)` | `.unreadableImage(_:)`, `.missingCubeSize`, `.invalidCubeSize(_:line:)` |
 | `FeatureEvaluationError.invalidColorCubeData(identifier:…)` | `FeatureEvaluationError.invalidColorCubeData(id:…)` |
 | `SwiftUIPhotosCropView.Options.filterPresets` | `ImageEditor.Options.filters` |
+
+### Tone Curve and Color Mixer Values
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `ToneCurveEditorValue` | `ToneCurveFeature.Curves` |
+| `ToneCurveChannel` | `ToneCurveFeature.Channel` |
+| `ToneCurveFeature(value:)`, `.value` | `ToneCurveFeature(curves:)`, `.curves` |
+| `ToneCurveRenderIdentity(value:)`, `ToneCurveRenderIdentity(activeValue:)` | `ToneCurveFeature.RenderKey(curves:)`, `ToneCurveFeature.RenderKey(activeCurves:)` |
+| `ToneCurve.isNeutral`, `ToneCurveEditorValue.isNeutral` | `ToneCurve.isDefault`, `ToneCurveFeature.Curves.isDefault` |
+| `ToneCurve.isIdentityMapping` | `ToneCurve.isIdentity` |
+| `ColorMixerAdjustment` | `ColorMixerFeature.Bands` |
+| `ColorMixerBandAdjustment` | `ColorMixerFeature.BandCorrection` |
+| `ColorMixerBand` | `ColorMixerFeature.Band` |
+| `ColorMixerFeature(adjustment:algorithm:)`, `.adjustment` | `ColorMixerFeature(bands:algorithm:)`, `.bands` |
+| `ColorMixerAdjustment.isNeutral`, `ColorMixerBandAdjustment.isNeutral` | `ColorMixerFeature.Bands.isIdentity`, `ColorMixerFeature.BandCorrection.isIdentity` |
+| `ColorMixerRenderIdentity(activeAdjustment:algorithm:)` | `ColorMixerFeature.RenderKey(activeBands:algorithm:)` |
 
 ## Migration Checklist
 

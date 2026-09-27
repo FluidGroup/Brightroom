@@ -100,10 +100,10 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   curve.insertPoint(input: 0.7, output: 0.76)
 
   // Richer reds, greens toward aqua, and the yellow mat toward orange.
-  var mix = ColorMixerAdjustment()
-  mix.red = ColorMixerBandAdjustment(saturation: 40)
-  mix.green = ColorMixerBandAdjustment(hue: 40, saturation: 20, luminance: -20)
-  mix.yellow = ColorMixerBandAdjustment(hue: -30, saturation: 20)
+  var mix = ColorMixerFeature.Bands()
+  mix.red = ColorMixerFeature.BandCorrection(saturation: 40)
+  mix.green = ColorMixerFeature.BandCorrection(hue: 40, saturation: 20, luminance: -20)
+  mix.yellow = ColorMixerFeature.BandCorrection(hue: -30, saturation: 20)
 
   struct Document: Feature {
     var toneCurve: ToneCurveFeature
@@ -116,8 +116,8 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   }
 
   let document = Document(
-    toneCurve: ToneCurveFeature(value: ToneCurveEditorValue(y: curve)),
-    colorMixer: ColorMixerFeature(adjustment: mix)
+    toneCurve: ToneCurveFeature(curves: ToneCurveFeature.Curves(y: curve)),
+    colorMixer: ColorMixerFeature(bands: mix)
   )
   try Sample.render(document)
 }

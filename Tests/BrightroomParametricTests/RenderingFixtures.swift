@@ -198,7 +198,7 @@ enum RenderingFixtures {
     y.insertPoint(input: 0.72, output: 0.84)
     var red = ToneCurve()
     red.insertPoint(input: 0.5, output: 0.58)
-    return ToneCurveFeature(value: ToneCurveEditorValue(y: y, red: red))
+    return ToneCurveFeature(curves: ToneCurveFeature.Curves(y: y, red: red))
   }
 
   /// A small cross-processing lookup table.

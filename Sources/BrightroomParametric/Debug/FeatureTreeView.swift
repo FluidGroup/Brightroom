@@ -490,9 +490,9 @@ private protocol FeatureTreeFieldReflection {
 
 extension ToneCurveFeature: FeatureTreeFieldReflection {
   var reflectedFields: [FeatureTreeNode.Field] {
-    let curvedChannels = ToneCurveChannel.allCases.filter { value[$0].isIdentityMapping == false }
+    let curvedChannels = ToneCurveFeature.Channel.allCases.filter { curves[$0].isIdentity == false }
     return [
-      .init(name: "Neutral", value: ToneCurveRenderIdentity(activeValue: value) == nil ? "yes" : "no"),
+      .init(name: "Neutral", value: ToneCurveFeature.RenderKey(activeCurves: curves) == nil ? "yes" : "no"),
       .init(name: "Curved Channels", value: "\(curvedChannels.count)"),
     ]
   }
@@ -502,7 +502,7 @@ extension ColorMixerFeature: FeatureTreeFieldReflection {
   var reflectedFields: [FeatureTreeNode.Field] {
     [
       .init(name: "Algorithm", value: algorithm.rawValue),
-      .init(name: "Neutral", value: adjustment.isNeutral ? "yes" : "no"),
+      .init(name: "Neutral", value: bands.isIdentity ? "yes" : "no"),
     ]
   }
 }

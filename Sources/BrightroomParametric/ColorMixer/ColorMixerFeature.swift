@@ -5,7 +5,7 @@
 import CoreImage
 import Foundation
 
-/// An eight-band color adjustment evaluated by the selected algorithm.
+/// An eight-band color correction evaluated by the selected algorithm.
 ///
 /// The OKLCh algorithm evaluates extended-linear Display-P3 components. Render the
 /// resulting image with a `CIContext` whose working color space is
@@ -15,13 +15,13 @@ import Foundation
 /// relative to other features; the containing pipeline owns that order.
 ///
 /// Constructing the feature compiles its authored values once. Neutral values
-/// bypass rendering exactly. The authored adjustment and algorithm are all a
+/// bypass rendering exactly. The authored bands and algorithm are all a
 /// host needs to store; constructing the feature again rebuilds the plan.
 ///
-/// Equality compares the authored `adjustment` and `algorithm` exactly. The
+/// Equality compares the authored `bands` and `algorithm` exactly. The
 /// derived render plan, which rounds values to Float32, does not take part. To
 /// ask whether two mixers render the same, compare their
-/// `ColorMixerRenderIdentity(activeAdjustment:algorithm:)`.
+/// `ColorMixerFeature.RenderKey(activeBands:algorithm:)`.
 public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
   /// The color model and correction semantics used to interpret all eight bands.
@@ -38,8 +38,8 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
     case oklch
   }
 
-  /// The complete authored eight-band adjustment.
-  public let adjustment: ColorMixerAdjustment
+  /// The complete authored eight-band correction.
+  public let bands: Bands
 
   /// The implementation that interprets the authored band corrections.
   public let algorithm: Algorithm
@@ -48,17 +48,17 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
   /// Creates one Color Mixer node and compiles its authored parameters.
   public init(
-    adjustment: ColorMixerAdjustment,
+    bands: Bands,
     algorithm: Algorithm = .oklch
   ) {
-    self.adjustment = adjustment
+    self.bands = bands
     self.algorithm = algorithm
-    renderPlan = ColorMixerRenderPlan(adjustment: adjustment, algorithm: algorithm)
+    renderPlan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm)
   }
 
   /// Evaluates one pass, preserving the exact neutral bypass and input extent.
   ///
-  /// A neutral adjustment (`adjustment.isNeutral`) returns `image` itself.
+  /// Identity bands (`bands.isIdentity`) return `image` itself.
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard let renderPlan else { return image }
     return try ColorMixerRenderer.apply(to: image, plan: renderPlan)
@@ -66,6 +66,6 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
   /// Compares the authored members; the derived render plan does not take part.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.adjustment == rhs.adjustment && lhs.algorithm == rhs.algorithm
+    lhs.bands == rhs.bands && lhs.algorithm == rhs.algorithm
   }
 }

@@ -22,12 +22,12 @@ nonisolated struct ColorMixerRenderPlan: Equatable, Sendable {
 
   /// Compiles normalized corrections, or returns `nil` for an exact bypass.
   init?(
-    adjustment: ColorMixerAdjustment,
+    bands: ColorMixerFeature.Bands,
     algorithm: ColorMixerFeature.Algorithm = .oklch
   ) {
-    guard adjustment.isNeutral == false else { return nil }
+    guard bands.isIdentity == false else { return nil }
     self.algorithm = algorithm
-    let values = ColorMixerBand.allCases.map { adjustment[$0] }
+    let values = ColorMixerFeature.Band.allCases.map { bands[$0] }
     hue0 = Self.pack(values[0].hue, values[1].hue, values[2].hue, values[3].hue)
     hue1 = Self.pack(values[4].hue, values[5].hue, values[6].hue, values[7].hue)
     saturation0 = Self.pack(
@@ -53,41 +53,44 @@ nonisolated struct ColorMixerRenderPlan: Equatable, Sendable {
   }
 }
 
-/// Render-significant Float32 Mixer parameters with authored storage removed.
-///
-/// Preview caches use the same normalized values that reach Metal. The
-/// semantic version also invalidates retained results when anchors,
-/// interpolation, or color transforms change without an authored-value change.
-public nonisolated struct ColorMixerRenderIdentity: Hashable, Sendable {
+extension ColorMixerFeature {
 
-  /// The rendering implementation represented by this identity.
-  public let algorithm: ColorMixerFeature.Algorithm
+  /// Render-significant Float32 Mixer parameters with authored storage removed.
+  ///
+  /// Preview caches use the same normalized values that reach Metal. The
+  /// semantic version also invalidates retained results when anchors,
+  /// interpolation, or color transforms change without an authored-value change.
+  public nonisolated struct RenderKey: Hashable, Sendable {
 
-  /// The color-transform semantics represented by this identity.
-  public let semanticVersion = ColorMixerRenderPlan.semanticVersion
-  private let values: [Float]
+    /// The rendering implementation represented by this identity.
+    public let algorithm: ColorMixerFeature.Algorithm
 
-  /// Creates an identity only when the Mixer changes rendered pixels.
-  public init?(
-    activeAdjustment adjustment: ColorMixerAdjustment,
-    algorithm: ColorMixerFeature.Algorithm = .oklch
-  ) {
-    guard let plan = ColorMixerRenderPlan(adjustment: adjustment, algorithm: algorithm) else {
-      return nil
+    /// The color-transform semantics represented by this identity.
+    public let semanticVersion = ColorMixerRenderPlan.semanticVersion
+    private let values: [Float]
+
+    /// Creates an identity only when the Mixer changes rendered pixels.
+    public init?(
+      activeBands bands: Bands,
+      algorithm: ColorMixerFeature.Algorithm = .oklch
+    ) {
+      guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
+        return nil
+      }
+      self.algorithm = plan.algorithm
+      values = [
+        plan.hue0.x, plan.hue0.y, plan.hue0.z, plan.hue0.w,
+        plan.hue1.x, plan.hue1.y, plan.hue1.z, plan.hue1.w,
+        plan.saturation0.x, plan.saturation0.y,
+        plan.saturation0.z, plan.saturation0.w,
+        plan.saturation1.x, plan.saturation1.y,
+        plan.saturation1.z, plan.saturation1.w,
+        plan.luminance0.x, plan.luminance0.y,
+        plan.luminance0.z, plan.luminance0.w,
+        plan.luminance1.x, plan.luminance1.y,
+        plan.luminance1.z, plan.luminance1.w,
+      ]
     }
-    self.algorithm = plan.algorithm
-    values = [
-      plan.hue0.x, plan.hue0.y, plan.hue0.z, plan.hue0.w,
-      plan.hue1.x, plan.hue1.y, plan.hue1.z, plan.hue1.w,
-      plan.saturation0.x, plan.saturation0.y,
-      plan.saturation0.z, plan.saturation0.w,
-      plan.saturation1.x, plan.saturation1.y,
-      plan.saturation1.z, plan.saturation1.w,
-      plan.luminance0.x, plan.luminance0.y,
-      plan.luminance0.z, plan.luminance0.w,
-      plan.luminance1.x, plan.luminance1.y,
-      plan.luminance1.z, plan.luminance1.w,
-    ]
   }
 }
 
@@ -131,10 +134,10 @@ nonisolated enum ColorMixerReferenceProcessor {
   /// Applies an authored value while preserving an exact neutral identity.
   static func processPremultiplied(
     _ pixel: SIMD4<Double>,
-    adjustment: ColorMixerAdjustment,
+    bands: ColorMixerFeature.Bands,
     algorithm: ColorMixerFeature.Algorithm = .oklch
   ) -> SIMD4<Double> {
-    guard let plan = ColorMixerRenderPlan(adjustment: adjustment, algorithm: algorithm) else {
+    guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
       return pixel
     }
     return processPremultiplied(pixel, plan: plan)

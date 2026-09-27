@@ -18,9 +18,9 @@ nonisolated enum ToneCurveRenderer {
   /// Returns the original image exactly when the authored value is an identity.
   static func apply(
     to image: CIImage,
-    value: ToneCurveEditorValue
+    curves: ToneCurveFeature.Curves
   ) throws -> CIImage {
-    guard let plan = ToneCurveRenderPlan(value: value) else {
+    guard let plan = ToneCurveRenderPlan(curves: curves) else {
       return image
     }
     return try apply(to: image, plan: plan)
@@ -81,7 +81,7 @@ nonisolated enum ToneCurveRenderer {
 private nonisolated final class ToneCurveTableImageCache: Sendable {
 
   struct Entry: @unchecked Sendable {
-    let identity: ToneCurveRenderIdentity
+    let identity: ToneCurveFeature.RenderKey
     let image: CIImage
   }
 

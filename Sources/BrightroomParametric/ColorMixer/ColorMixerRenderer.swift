@@ -12,10 +12,10 @@ nonisolated enum ColorMixerRenderer {
   /// Returns the same image instance when all eight bands are neutral.
   static func apply(
     to image: CIImage,
-    adjustment: ColorMixerAdjustment,
+    bands: ColorMixerFeature.Bands,
     algorithm: ColorMixerFeature.Algorithm = .oklch
   ) throws -> CIImage {
-    guard let plan = ColorMixerRenderPlan(adjustment: adjustment, algorithm: algorithm) else {
+    guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
       return image
     }
     return try apply(to: image, plan: plan)

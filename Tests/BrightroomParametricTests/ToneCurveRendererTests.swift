@@ -52,14 +52,14 @@ struct ToneCurveRendererTests {
 
   @Test
   func neutralAndDiagonalAuthoredCurvesUseTheExactBypass() throws {
-    #expect(ToneCurveRenderPlan(value: .neutral) == nil)
+    #expect(ToneCurveRenderPlan(curves: .neutral) == nil)
 
     var diagonal = ToneCurve()
     let diagonalIndex = diagonal.insertPoint(input: 0.4, output: 0.4)
     _ = try #require(diagonalIndex)
-    let diagonalValue = ToneCurveEditorValue(red: diagonal)
-    #expect(diagonalValue.isNeutral == false)
-    #expect(ToneCurveRenderPlan(value: diagonalValue) == nil)
+    let diagonalValue = ToneCurveFeature.Curves(red: diagonal)
+    #expect(diagonalValue.isDefault == false)
+    #expect(ToneCurveRenderPlan(curves: diagonalValue) == nil)
 
     var inwardDiagonalEndpoint = ToneCurve()
     inwardDiagonalEndpoint.movePoint(
@@ -67,21 +67,21 @@ struct ToneCurveRendererTests {
       input: 0.2,
       output: 0.2
     )
-    #expect(inwardDiagonalEndpoint.isIdentityMapping == false)
+    #expect(inwardDiagonalEndpoint.isIdentity == false)
     #expect(
       ToneCurveRenderPlan(
-        value: ToneCurveEditorValue(red: inwardDiagonalEndpoint)
+        curves: ToneCurveFeature.Curves(red: inwardDiagonalEndpoint)
       ) != nil
     )
 
     let source = Self.makeImage([
       SIMD4(0.2, 0.1, 0.05, 1)
     ])
-    let output = try ToneCurveRenderer.apply(to: source, value: diagonalValue)
+    let output = try ToneCurveRenderer.apply(to: source, curves: diagonalValue)
     #expect(output === source)
 
-    let feature = ToneCurveFeature(value: diagonalValue)
-    #expect(ToneCurveRenderIdentity(activeValue: feature.value) == nil)
+    let feature = ToneCurveFeature(curves: diagonalValue)
+    #expect(ToneCurveFeature.RenderKey(activeCurves: feature.curves) == nil)
     let featureOutput = try feature.apply(
       to: source,
       context: FeatureEvaluationContext()
@@ -95,12 +95,12 @@ struct ToneCurveRendererTests {
       interiors: [(0.25, 0.45), (0.8, 0.7)]
     )
     let diagonal = try Self.makeCurve(interiors: [(0.5, 0.5)])
-    #expect(diagonal.isIdentityMapping)
+    #expect(diagonal.isIdentity)
 
-    let firstValue = ToneCurveEditorValue(red: curve)
-    let secondValue = ToneCurveEditorValue(red: curve, green: diagonal)
-    let firstPlan = try #require(ToneCurveRenderPlan(value: firstValue))
-    let secondPlan = try #require(ToneCurveRenderPlan(value: secondValue))
+    let firstValue = ToneCurveFeature.Curves(red: curve)
+    let secondValue = ToneCurveFeature.Curves(red: curve, green: diagonal)
+    let firstPlan = try #require(ToneCurveRenderPlan(curves: firstValue))
+    let secondPlan = try #require(ToneCurveRenderPlan(curves: secondValue))
 
     #expect(firstPlan.identity == secondPlan.identity)
     #expect(firstPlan.sampleTable.yRed.count == 4_096)
@@ -109,8 +109,8 @@ struct ToneCurveRendererTests {
     #expect(firstPlan.activeChannels == SIMD4(0, 1, 0, 0))
     // The features render the same but differ as authored values.
     #expect(
-      ToneCurveFeature(value: firstValue)
-        != ToneCurveFeature(value: secondValue)
+      ToneCurveFeature(curves: firstValue)
+        != ToneCurveFeature(curves: secondValue)
     )
   }
 
@@ -119,12 +119,12 @@ struct ToneCurveRendererTests {
     throws
   {
     let value = try Self.representativeValue()
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     let normalizedInputs = [
       -0.2, 0, 0.000_1, 0.137, 0.25, 0.499_9, 0.7, 0.913, 1, 1.2,
     ]
 
-    for channel in ToneCurveChannel.allCases {
+    for channel in ToneCurveFeature.Channel.allCases {
       let evaluator = ToneCurveEvaluator(curve: value[channel])
       for input in normalizedInputs {
         expectToneCurveClose(
@@ -143,8 +143,8 @@ struct ToneCurveRendererTests {
     var curve = ToneCurve()
     curve.movePoint(at: 0, input: 0.15, output: 0.04)
     curve.movePoint(at: 1, input: 0.86, output: 0.97)
-    let value = ToneCurveEditorValue(red: curve)
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let value = ToneCurveFeature.Curves(red: curve)
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     let evaluator = ToneCurveEvaluator(curve: curve)
 
     #expect(plan.lowerTangents.y == 0)
@@ -189,8 +189,8 @@ struct ToneCurveRendererTests {
     var curve = ToneCurve()
     curve.movePoint(at: 0, input: 0.15, output: 0.04)
     curve.movePoint(at: 1, input: 0.86, output: 0.97)
-    let value = ToneCurveEditorValue(red: curve)
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let value = ToneCurveFeature.Curves(red: curve)
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     let normalizedInputs = [-0.2, 0, 0.1, 0.15, 0.5, 0.86, 1, 1.2]
     let sourcePixels = normalizedInputs.map { normalizedInput in
       SIMD4<Float>(
@@ -231,7 +231,7 @@ struct ToneCurveRendererTests {
   @Test
   func cpuTableProcessorTracksTheIndependentAnalyticReference() throws {
     let value = try Self.representativeValue()
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     let pixels = [
       SIMD4(-0.02, 0.01, 0.04, 1.0),
       SIMD4(0.0, 0.18, 0.35, 1.0),
@@ -256,7 +256,7 @@ struct ToneCurveRendererTests {
 
   @Test
   func rgbCurvesPreserveInputLuminanceBeforeYDefinesTheFinalLuminance() throws {
-    let rgbValue = ToneCurveEditorValue(
+    let rgbValue = ToneCurveFeature.Curves(
       red: try Self.makeCurve(interiors: [(0.32, 0.52)]),
       green: try Self.makeCurve(interiors: [(0.55, 0.38)]),
       blue: try Self.makeCurve(interiors: [(0.7, 0.84)])
@@ -266,8 +266,8 @@ struct ToneCurveRendererTests {
       white: 0.94,
       interiors: [(0.4, 0.28), (0.72, 0.82)]
     )
-    let yValue = ToneCurveEditorValue(y: yCurve)
-    let combinedValue = ToneCurveEditorValue(
+    let yValue = ToneCurveFeature.Curves(y: yCurve)
+    let combinedValue = ToneCurveFeature.Curves(
       y: yCurve,
       red: rgbValue.red,
       green: rgbValue.green,
@@ -314,15 +314,15 @@ struct ToneCurveRendererTests {
     let source = SIMD4(0.18, 0.18, 0.18, 1.0)
     let yOnly = ToneCurveReferenceProcessor.processPremultiplied(
       source,
-      value: ToneCurveEditorValue(y: curve)
+      value: ToneCurveFeature.Curves(y: curve)
     )
     let rgbOnly = ToneCurveReferenceProcessor.processPremultiplied(
       source,
-      value: ToneCurveEditorValue(red: curve, green: curve, blue: curve)
+      value: ToneCurveFeature.Curves(red: curve, green: curve, blue: curve)
     )
     let ganged = ToneCurveReferenceProcessor.processPremultiplied(
       source,
-      value: ToneCurveEditorValue(
+      value: ToneCurveFeature.Curves(
         y: curve,
         red: curve,
         green: curve,
@@ -332,7 +332,7 @@ struct ToneCurveRendererTests {
     let serialDoubleApplication =
       ToneCurveReferenceProcessor.processPremultiplied(
         yOnly,
-        value: ToneCurveEditorValue(y: curve)
+        value: ToneCurveFeature.Curves(y: curve)
       )
 
     expectToneCurveClose(rgbOnly, source)
@@ -342,7 +342,7 @@ struct ToneCurveRendererTests {
 
   @Test
   func referenceProcessorPreservesPremultiplicationAndExtendedRange() throws {
-    let value = ToneCurveEditorValue(
+    let value = ToneCurveFeature.Curves(
       green: try Self.makeCurve(interiors: [(0.5, 0.7)])
     )
     let transparent = SIMD4(0.3, -0.2, 4.0, 0.0)
@@ -386,7 +386,7 @@ struct ToneCurveRendererTests {
   @Test
   func compiledMetalKernelMatchesTheSampledCPUPlanAndPreservesExtent() throws {
     let value = try Self.representativeValue()
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     let sourcePixels: [SIMD4<Float>] = [
       SIMD4(-0.02, 0.01, 0.04, 1),
       SIMD4(0, 0.18, 0.35, 1),
@@ -441,8 +441,8 @@ struct ToneCurveRendererTests {
     }
     #expect(curve.points.count == ToneCurve.maximumPointCount)
 
-    let value = ToneCurveEditorValue(red: curve)
-    let plan = try #require(ToneCurveRenderPlan(value: value))
+    let value = ToneCurveFeature.Curves(red: curve)
+    let plan = try #require(ToneCurveRenderPlan(curves: value))
     for linear in [-0.1, 0, 0.18, 1, 4, 24] {
       let output = ToneCurveReferenceProcessor.processPremultiplied(
         SIMD4(linear, 0.18, 0.18, 1),
@@ -472,8 +472,8 @@ struct ToneCurveRendererTests {
     .cacheIntermediates: false,
   ])
 
-  private static func representativeValue() throws -> ToneCurveEditorValue {
-    ToneCurveEditorValue(
+  private static func representativeValue() throws -> ToneCurveFeature.Curves {
+    ToneCurveFeature.Curves(
       y: try makeCurve(
         black: 0.02,
         white: 0.96,

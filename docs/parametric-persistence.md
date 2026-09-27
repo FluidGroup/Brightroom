@@ -119,7 +119,7 @@ It uses only the public API.
 | `CropFeature` | `rect` (the selection after straightening and before the output quarter turn; y-up, relative to the crop's input origin), `quarterTurn.rawValue`, `straightenRadians` | `QuarterTurn(rawValue:)`, `CropFeature(rect:quarterTurn:straightenRadians:)`, then call `validate()` |
 | `ColorCubeFeature` | a reference to your asset, `intensity` | load the cube, set `intensity`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
-| `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
+| `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
 | `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
@@ -143,7 +143,7 @@ Notes:
   order: `ToneCurve(validating:)` makes the first and last points the
   endpoints, wherever they were moved. It returns `nil` instead of repairing
   or reordering invalid points.
-- `ColorMixerBandAdjustment(hue:saturation:luminance:)` clamps and is meant for
+- `ColorMixerFeature.BandCorrection(hue:saturation:luminance:)` clamps and is meant for
   editing controls; clamping does not reject NaN. Restore stored values with
   the validating initializer, which returns `nil` for non-finite or
   out-of-range values.
@@ -155,7 +155,7 @@ Notes:
   Curve diagonal points and Color Mixer values exactly as Doubles. A
   conversion that loses any of them produces a document that is not equal to
   the saved one. To ask whether two values render the same, compare
-  `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity` instead.
+  `ToneCurveFeature.RenderKey` or `ColorMixerFeature.RenderKey` instead.
 - An `ImageEditorFeature` is authored for one image: its domain is the oriented
   image size (`EditingStack.Loaded.imageSize`). Store a reference to the
   source image with it, and resume it only over that image.

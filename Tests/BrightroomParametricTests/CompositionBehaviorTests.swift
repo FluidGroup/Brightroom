@@ -342,74 +342,74 @@ struct CompositionBehaviorTests {
   @Test func `tone curve equality compares authored values rather than render identity`() throws {
     // A diagonal interior point is an authored edit that renders as identity:
     // the first point a curve drag adds usually sits on the diagonal.
-    var diagonal = ToneCurveEditorValue()
+    var diagonal = ToneCurveFeature.Curves()
     let diagonalIndex = diagonal.y.insertPoint(input: 0.5, output: 0.5)
     _ = try #require(diagonalIndex)
-    let neutralCurve = ToneCurveFeature(value: .neutral)
-    let diagonalCurve = ToneCurveFeature(value: diagonal)
+    let neutralCurve = ToneCurveFeature(curves: .neutral)
+    let diagonalCurve = ToneCurveFeature(curves: diagonal)
     #expect(diagonalCurve != neutralCurve)
-    #expect(ToneCurveRenderIdentity(value: diagonal) == ToneCurveRenderIdentity(value: .neutral))
-    #expect(ToneCurveRenderIdentity(activeValue: diagonal) == nil)
+    #expect(ToneCurveFeature.RenderKey(curves: diagonal) == ToneCurveFeature.RenderKey(curves: .neutral))
+    #expect(ToneCurveFeature.RenderKey(activeCurves: diagonal) == nil)
 
     // Points are plain coordinates: the same curve reached through different
     // edits is the same value.
-    var first = ToneCurveEditorValue()
-    var second = ToneCurveEditorValue()
+    var first = ToneCurveFeature.Curves()
+    var second = ToneCurveFeature.Curves()
     let firstIndex = first.y.insertPoint(input: 0.4, output: 0.55)
     let secondIndex = second.y.insertPoint(input: 0.6, output: 0.3)
     _ = try #require(firstIndex)
     let movedIndex = try #require(secondIndex)
     second.y.movePoint(at: movedIndex, input: 0.4, output: 0.55)
-    #expect(ToneCurveFeature(value: first) == ToneCurveFeature(value: second))
-    #expect(ToneCurveRenderIdentity(value: first) == ToneCurveRenderIdentity(value: second))
+    #expect(ToneCurveFeature(curves: first) == ToneCurveFeature(curves: second))
+    #expect(ToneCurveFeature.RenderKey(curves: first) == ToneCurveFeature.RenderKey(curves: second))
   }
 
   @Test func `color mixer equality compares authored values rather than render identity`() throws {
     // Values that differ as Doubles but normalize to the same Float32 plan.
-    var first = ColorMixerAdjustment.neutral
+    var first = ColorMixerFeature.Bands.neutral
     first.red.hue = 10
-    var equivalent = ColorMixerAdjustment.neutral
+    var equivalent = ColorMixerFeature.Bands.neutral
     equivalent.red.hue = 10.0.nextUp
-    #expect(ColorMixerFeature(adjustment: first) != ColorMixerFeature(adjustment: equivalent))
+    #expect(ColorMixerFeature(bands: first) != ColorMixerFeature(bands: equivalent))
     #expect(
-      ColorMixerRenderIdentity(activeAdjustment: first)
-        == ColorMixerRenderIdentity(activeAdjustment: equivalent)
+      ColorMixerFeature.RenderKey(activeBands: first)
+        == ColorMixerFeature.RenderKey(activeBands: equivalent)
     )
-    #expect(ColorMixerFeature(adjustment: first) == ColorMixerFeature(adjustment: first))
+    #expect(ColorMixerFeature(bands: first) == ColorMixerFeature(bands: first))
     #expect(
-      ColorMixerFeature(adjustment: first, algorithm: .oklch)
-        == ColorMixerFeature(adjustment: first)
+      ColorMixerFeature(bands: first, algorithm: .oklch)
+        == ColorMixerFeature(bands: first)
     )
   }
 
   @Test func `a document compares the authored values of its members`() throws {
-    var diagonal = ToneCurveEditorValue()
+    var diagonal = ToneCurveFeature.Curves()
     let diagonalIndex = diagonal.y.insertPoint(input: 0.5, output: 0.5)
     _ = try #require(diagonalIndex)
-    var mixer = ColorMixerAdjustment.neutral
+    var mixer = ColorMixerFeature.Bands.neutral
     mixer.red.hue = 10
-    var equivalentMixer = ColorMixerAdjustment.neutral
+    var equivalentMixer = ColorMixerFeature.Bands.neutral
     equivalentMixer.red.hue = 10.0.nextUp
 
     let document = ColorDocument(
-      toneCurve: ToneCurveFeature(value: .neutral),
-      colorMixer: ColorMixerFeature(adjustment: mixer)
+      toneCurve: ToneCurveFeature(curves: .neutral),
+      colorMixer: ColorMixerFeature(bands: mixer)
     )
     #expect(document == document)
 
     // An owner that drops equal updates keeps each of these edits.
     var curveEdited = document
-    curveEdited.toneCurve = ToneCurveFeature(value: diagonal)
+    curveEdited.toneCurve = ToneCurveFeature(curves: diagonal)
     #expect(curveEdited != document)
 
     var mixerEdited = document
-    mixerEdited.colorMixer = ColorMixerFeature(adjustment: equivalentMixer)
+    mixerEdited.colorMixer = ColorMixerFeature(bands: equivalentMixer)
     #expect(mixerEdited != document)
 
     // A document rebuilt from the same values is equal.
     let rebuilt = ColorDocument(
-      toneCurve: ToneCurveFeature(value: diagonal),
-      colorMixer: ColorMixerFeature(adjustment: mixer)
+      toneCurve: ToneCurveFeature(curves: diagonal),
+      colorMixer: ColorMixerFeature(bands: mixer)
     )
     #expect(rebuilt == curveEdited)
   }

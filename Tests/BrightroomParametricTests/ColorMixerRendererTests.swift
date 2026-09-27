@@ -12,27 +12,27 @@ struct ColorMixerRendererTests {
   func neutralUsesExactCPUAndCoreImageBypass() throws {
     let pixel = SIMD4<Double>(-0.2, 1.4, 0.3, 0.6)
     let image = Self.makeImage([SIMD4(-0.12, 0.84, 0.18, 0.6)])
-    #expect(ColorMixerRenderPlan(adjustment: .neutral) == nil)
-    #expect(try ColorMixerRenderer.apply(to: image, adjustment: .neutral) === image)
-    #expect(ColorMixerReferenceProcessor.processPremultiplied(pixel, adjustment: .neutral) == pixel)
+    #expect(ColorMixerRenderPlan(bands: .neutral) == nil)
+    #expect(try ColorMixerRenderer.apply(to: image, bands: .neutral) === image)
+    #expect(ColorMixerReferenceProcessor.processPremultiplied(pixel, bands: .neutral) == pixel)
     for feature in [
-      ColorMixerFeature(adjustment: .neutral),
-      ColorMixerFeature(adjustment: .neutral, algorithm: .oklch),
+      ColorMixerFeature(bands: .neutral),
+      ColorMixerFeature(bands: .neutral, algorithm: .oklch),
     ] {
       #expect(feature.algorithm == .oklch)
-      #expect(feature.adjustment.isNeutral)
+      #expect(feature.bands.isIdentity)
       #expect(try feature.apply(to: image, context: .init()) === image)
     }
   }
 
   @Test
   func defaultAndExplicitOKLChProduceExactlyTheSameNonneutralPixels() throws {
-    let adjustment = ColorMixerAdjustment(
+    let adjustment = ColorMixerFeature.Bands(
       red: .init(hue: 23, saturation: -24, luminance: 17),
       blue: .init(hue: -35, saturation: 40, luminance: -20)
     )
-    let implicit = ColorMixerFeature(adjustment: adjustment)
-    let explicit = ColorMixerFeature(adjustment: adjustment, algorithm: .oklch)
+    let implicit = ColorMixerFeature(bands: adjustment)
+    let explicit = ColorMixerFeature(bands: adjustment, algorithm: .oklch)
     let pixels: [SIMD4<Float>] = [
       SIMD4(0.7, 0.1, 0.05, 1),
       SIMD4(-0.1, 0.3, 1.2, 1),
@@ -46,7 +46,7 @@ struct ColorMixerRendererTests {
     let explicitPixels = Self.sample(explicitOutput, count: pixels.count)
 
     #expect(implicit.algorithm == .oklch)
-    #expect(implicit.adjustment.isNeutral == false)
+    #expect(implicit.bands.isIdentity == false)
     #expect(implicit == explicit)
     #expect(implicitOutput.extent == image.extent)
     #expect(explicitOutput.extent == image.extent)
@@ -75,10 +75,10 @@ struct ColorMixerRendererTests {
   @Test
   func onlyAdjacentBandsInfluenceEveryAnchorAndBoundariesAreContinuous() throws {
     for index in 0..<8 {
-      let band = ColorMixerBand.allCases[index]
-      var value = ColorMixerAdjustment.neutral
+      let band = ColorMixerFeature.Band.allCases[index]
+      var value = ColorMixerFeature.Bands.neutral
       value[band] = .init(saturation: 100)
-      let plan = try #require(ColorMixerRenderPlan(adjustment: value))
+      let plan = try #require(ColorMixerRenderPlan(bands: value))
       let anchor = ColorMixerReferenceProcessor.OKLCh(
         lightness: 0.7,
         chroma: 0.15,
@@ -109,7 +109,7 @@ struct ColorMixerRendererTests {
       .init(
         lightness: 0.65,
         chroma: 0.14,
-        hue: ColorMixerReferenceProcessor.bandAnchorHues[ColorMixerBand.red.rawValue]
+        hue: ColorMixerReferenceProcessor.bandAnchorHues[ColorMixerFeature.Band.red.rawValue]
       ))
 
     let output = ColorMixerReferenceProcessor.processStraight(input, plan: plan)
@@ -136,7 +136,7 @@ struct ColorMixerRendererTests {
 
   @Test
   func hueEndpointsReachPreviousAndNextBandCenters() throws {
-    let index = ColorMixerBand.green.rawValue
+    let index = ColorMixerFeature.Band.green.rawValue
     let inputLCh = ColorMixerReferenceProcessor.OKLCh(
       lightness: 0.7,
       chroma: 0.18,
@@ -160,7 +160,7 @@ struct ColorMixerRendererTests {
     let output = ColorMixerReferenceProcessor.processStraight(input, plan: plan)
     let result = ColorMixerReferenceProcessor.okLCh(forLinearDisplayP3: output)
 
-    let orangeHue = ColorMixerReferenceProcessor.bandAnchorHues[ColorMixerBand.orange.rawValue]
+    let orangeHue = ColorMixerReferenceProcessor.bandAnchorHues[ColorMixerFeature.Band.orange.rawValue]
     let expectedHue = original.hue + 0.23 * (orangeHue - original.hue)
     expectAngleClose(result.hue, expectedHue)
     expectClose(result.chroma, original.chroma * 0.76, tolerance: 0.000_000_1)
@@ -251,18 +251,18 @@ struct ColorMixerRendererTests {
 
   @Test
   func featureRestoredFromStoredValuesRendersTheSameMetalRecipe() throws {
-    let adjustment = ColorMixerAdjustment(
+    let adjustment = ColorMixerFeature.Bands(
       red: .init(hue: -40, saturation: 35, luminance: 20),
       blue: .init(hue: 15, saturation: -20, luminance: -30)
     )
     let red = try #require(
-      ColorMixerBandAdjustment(validatingHue: -40, saturation: 35, luminance: 20)
+      ColorMixerFeature.BandCorrection(validatingHue: -40, saturation: 35, luminance: 20)
     )
     let blue = try #require(
-      ColorMixerBandAdjustment(validatingHue: 15, saturation: -20, luminance: -30)
+      ColorMixerFeature.BandCorrection(validatingHue: 15, saturation: -20, luminance: -30)
     )
     let restored = ColorMixerFeature(
-      adjustment: ColorMixerAdjustment(red: red, blue: blue),
+      bands: ColorMixerFeature.Bands(red: red, blue: blue),
       algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: "oklch"))
     )
     let pixels: [SIMD4<Float>] = [SIMD4(0.7, 0.1, 0.05, 1), SIMD4(-0.1, 0.3, 1.2, 1)]
@@ -275,7 +275,7 @@ struct ColorMixerRendererTests {
       let pixel = pixels[index]
       let expected = ColorMixerReferenceProcessor.processPremultiplied(
         SIMD4(Double(pixel.x), Double(pixel.y), Double(pixel.z), Double(pixel.w)),
-        adjustment: adjustment
+        bands: adjustment
       )
       expectClose(actual[index], expected, tolerance: 0.002)
     }
@@ -288,17 +288,17 @@ struct ColorMixerRendererTests {
   ])
 
   private static func plan(
-    red: ColorMixerBandAdjustment = .init(),
-    orange: ColorMixerBandAdjustment = .init(),
-    yellow: ColorMixerBandAdjustment = .init(),
-    green: ColorMixerBandAdjustment = .init(),
-    aqua: ColorMixerBandAdjustment = .init(),
-    blue: ColorMixerBandAdjustment = .init(),
-    purple: ColorMixerBandAdjustment = .init(),
-    magenta: ColorMixerBandAdjustment = .init()
+    red: ColorMixerFeature.BandCorrection = .init(),
+    orange: ColorMixerFeature.BandCorrection = .init(),
+    yellow: ColorMixerFeature.BandCorrection = .init(),
+    green: ColorMixerFeature.BandCorrection = .init(),
+    aqua: ColorMixerFeature.BandCorrection = .init(),
+    blue: ColorMixerFeature.BandCorrection = .init(),
+    purple: ColorMixerFeature.BandCorrection = .init(),
+    magenta: ColorMixerFeature.BandCorrection = .init()
   ) -> ColorMixerRenderPlan? {
     ColorMixerRenderPlan(
-      adjustment: .init(
+      bands: .init(
         red: red, orange: orange, yellow: yellow, green: green,
         aqua: aqua, blue: blue, purple: purple, magenta: magenta
       ))

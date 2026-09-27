@@ -151,12 +151,12 @@ struct FeatureTreeDescriptorTests {
   }
 
   @Test func `fields hold parameters only, with curated tone curve and mixer fields`() throws {
-    var curve = ToneCurveEditorValue()
+    var curve = ToneCurveFeature.Curves()
     let insertedIndex = curve.y.insertPoint(input: 0.3, output: 0.4)
     _ = try #require(insertedIndex)
     let document = ColorDocument(
-      toneCurve: ToneCurveFeature(value: curve),
-      colorMixer: ColorMixerFeature(adjustment: .init(red: .init(hue: 12)))
+      toneCurve: ToneCurveFeature(curves: curve),
+      colorMixer: ColorMixerFeature(bands: .init(red: .init(hue: 12)))
     )
     let nodes = FeatureTreeDescriptor.nodes(for: document)
     #expect(nodes.count == 2)
@@ -175,7 +175,7 @@ struct FeatureTreeDescriptorTests {
     #expect(Self.value(of: "Algorithm", in: mixer) == "oklch")
     #expect(Self.value(of: "Neutral", in: mixer) == "no")
 
-    let neutral = FeatureTreeDescriptor.nodes(for: ToneCurveFeature(value: .neutral))
+    let neutral = FeatureTreeDescriptor.nodes(for: ToneCurveFeature(curves: .neutral))
     #expect(neutral.count == 1)
     #expect(neutral.first.flatMap { Self.value(of: "Neutral", in: $0) } == "yes")
   }

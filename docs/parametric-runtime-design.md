@@ -180,7 +180,7 @@ a host cannot write itself:
 
 - public access to every authored parameter;
 - validating reconstruction where the editing API clamps or repairs values
-  (`ToneCurve(validating:)`, `ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`),
+  (`ToneCurve(validating:)`, `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`),
   and `validate()` on `CropFeature` and `ColorCubeFeature`, whose initializers
   accept any value;
 - stable raw values for semantic choices (`ColorMixerFeature.Algorithm`) and
@@ -249,16 +249,16 @@ struct ColorGrade: ImageEffect, Equatable {
 }
 
 func makeGrade() -> ColorGrade {
-  var curves = ToneCurveEditorValue.neutral
+  var curves = ToneCurveFeature.Curves.neutral
   curves.y.insertPoint(input: 0.5, output: 0.6)
 
-  var mixer = ColorMixerAdjustment.neutral
+  var mixer = ColorMixerFeature.Bands.neutral
   mixer.red.hue = 23
   mixer.red.saturation = -24
 
   return ColorGrade(
-    curves: ToneCurveFeature(value: curves),
-    mixer: ColorMixerFeature(adjustment: mixer, algorithm: .oklch)
+    curves: ToneCurveFeature(curves: curves),
+    mixer: ColorMixerFeature(bands: mixer, algorithm: .oklch)
   )
 }
 ```
@@ -274,17 +274,18 @@ policy, not an automatic input conversion performed by the features.
 
 Neither effect has an `isEnabled` flag. To leave one out, make its member
 `nil`. To ask whether a value renders as identity, use the same condition as
-the neutral bypass: `ToneCurveRenderIdentity(activeValue:) == nil` for a
-curve, and `ColorMixerAdjustment.isNeutral` for a mixer.
-`ToneCurveEditorValue.isNeutral` is not that condition: a curve with interior
-points on the diagonal is not `isNeutral`, but it still renders as identity.
+the neutral bypass: `ToneCurveFeature.RenderKey(activeCurves:) == nil` for a
+curve, and `ColorMixerFeature.Bands.isIdentity` for a mixer.
+`ToneCurveFeature.Curves.isDefault` is not that condition: a curve with
+interior points on the diagonal is not the default, but it still renders as
+identity.
 
 `ColorMixerFeature.Algorithm` names the rendering semantics of the feature.
 Its only current case is `.oklch`; the `algorithm` parameter of
-`ColorMixerFeature(adjustment:algorithm:)` defaults to `.oklch`, so existing
-`ColorMixerFeature(adjustment:)` calls keep the same result. The algorithm is
+`ColorMixerFeature(bands:algorithm:)` defaults to `.oklch`, so existing
+`ColorMixerFeature(bands:)` calls keep the same result. The algorithm is
 part of the feature, its compiled plan, feature equality, and render identity.
-`ColorMixerRenderIdentity(activeAdjustment:algorithm:)` has the same default;
+`ColorMixerFeature.RenderKey(activeBands:algorithm:)` has the same default;
 hosts choosing an algorithm must use that choice for both rendering and cache
 identity. This API does not add a second algorithm, change editor controls, or
 claim compatibility with Adobe Lightroom's Color Mixer.
@@ -303,7 +304,7 @@ that differ only in diagonal interior points are therefore not equal, and
 neither are mixers whose values differ as Doubles but round to the same
 Float32 parameters. An owner that drops equal updates (such as an undo
 history) keeps such an edit. Code that needs "renders the same", such as a
-preview cache, compares `ToneCurveRenderIdentity` or `ColorMixerRenderIdentity`
+preview cache, compares `ToneCurveFeature.RenderKey` or `ColorMixerFeature.RenderKey`
 explicitly.
 
 The curve's one-entry plan and table caches use `OSAllocatedUnfairLock`, keeping
@@ -318,7 +319,7 @@ A host restores both effects from authored values alone: Tone Curve points
 through `ToneCurve.Point(input:output:)` and `ToneCurve(validating:)`, which
 keeps endpoint moves and rejects points that are out of range, out of order,
 or too close together, and Mixer bands through
-`ColorMixerBandAdjustment(validatingHue:saturation:luminance:)`, which rejects
+`ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, which rejects
 non-finite and out-of-range values instead of clamping them. Constructing the
 feature rebuilds its plan; sampled tables and GPU resources are never stored.
 

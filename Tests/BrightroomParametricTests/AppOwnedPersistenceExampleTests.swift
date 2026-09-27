@@ -18,14 +18,14 @@ struct AppOwnedPersistenceExampleTests {
 
   @Test
   func currentEditRoundTripsThroughAppStorage() throws {
-    var curves = ToneCurveEditorValue()
+    var curves = ToneCurveFeature.Curves()
     let yIndex = curves.y.insertPoint(input: 0.4, output: 0.55)
     _ = try #require(yIndex)
     let redIndex = curves.red.insertPoint(input: 0.45, output: 0.65)
     _ = try #require(redIndex)
     curves.y.movePoint(at: 0, input: 0.12, output: 0.08)
 
-    var mixer = ColorMixerAdjustment.neutral
+    var mixer = ColorMixerFeature.Bands.neutral
     mixer.red.hue = 23
     mixer.magenta.luminance = -8
 
@@ -34,8 +34,8 @@ struct AppOwnedPersistenceExampleTests {
 
     let look = Look(
       exposure: ExposureFeature(ev: 0.2),
-      toneCurve: ToneCurveFeature(value: curves),
-      colorMixer: ColorMixerFeature(adjustment: mixer),
+      toneCurve: ToneCurveFeature(curves: curves),
+      colorMixer: ColorMixerFeature(bands: mixer),
       lut: lut,
       extras: [AnyImageEffect(FadeFeature(intensity: 0.1))]
     )
@@ -47,9 +47,9 @@ struct AppOwnedPersistenceExampleTests {
     // Equality compares every authored value, so the restored look equals
     // the saved one exactly.
     #expect(restored == look)
-    #expect(restored.toneCurve?.value == curves)
-    #expect(restored.toneCurve?.value.red.points[1] == ToneCurve.Point(input: 0.45, output: 0.65))
-    #expect(restored.colorMixer?.adjustment == mixer)
+    #expect(restored.toneCurve?.curves == curves)
+    #expect(restored.toneCurve?.curves.red.points[1] == ToneCurve.Point(input: 0.45, output: 0.65))
+    #expect(restored.colorMixer?.bands == mixer)
     #expect(restored.colorMixer?.algorithm == .oklch)
     #expect(restored.lut?.intensity == 0.6)
     #expect(restored.lut?.cubeData == lut.cubeData)
@@ -82,13 +82,13 @@ struct AppOwnedPersistenceExampleTests {
 
   @Test
   func invalidStoredValuesAreRejectedWhenRestoring() throws {
-    var curves = ToneCurveEditorValue()
+    var curves = ToneCurveFeature.Curves()
     let insertedIndex = curves.y.insertPoint(input: 0.4, output: 0.55)
     _ = try #require(insertedIndex)
     let stored = try StoredLook(
       Look(
-        toneCurve: ToneCurveFeature(value: curves),
-        colorMixer: ColorMixerFeature(adjustment: .init(red: .init(hue: 10)))
+        toneCurve: ToneCurveFeature(curves: curves),
+        colorMixer: ColorMixerFeature(bands: .init(red: .init(hue: 10)))
       )
     )
     let storedCurve = try #require(stored.toneCurve)
@@ -226,12 +226,12 @@ private struct StoredLook: Codable, Equatable {
   init(_ look: Look) throws {
     exposure = look.exposure?.ev
     toneCurve = look.toneCurve.map {
-      StoredCurve(semanticVersion: ToneCurveFeature.semanticVersion, channels: StoredToneCurve($0.value))
+      StoredCurve(semanticVersion: ToneCurveFeature.semanticVersion, channels: StoredToneCurve($0.curves))
     }
     colorMixer = look.colorMixer.map { mixer in
       StoredMixer(
         algorithm: mixer.algorithm.rawValue,
-        bands: ColorMixerBand.allCases.map { StoredBand(band: $0, value: mixer.adjustment[$0]) }
+        bands: ColorMixerFeature.Band.allCases.map { StoredBand(band: $0, value: mixer.bands[$0]) }
       )
     }
     lut = look.lut.map { StoredLUT(assetID: $0.id, amount: $0.intensity) }
@@ -247,7 +247,7 @@ private struct StoredLook: Codable, Equatable {
       guard toneCurve.semanticVersion == ToneCurveFeature.semanticVersion else {
         throw Error.unsupportedToneCurveSemantics(toneCurve.semanticVersion)
       }
-      look.toneCurve = ToneCurveFeature(value: try toneCurve.channels.makeValue())
+      look.toneCurve = ToneCurveFeature(curves: try toneCurve.channels.makeValue())
     }
     if let colorMixer {
       look.colorMixer = try colorMixer.makeFeature()
@@ -268,18 +268,18 @@ extension StoredLook.StoredMixer {
     guard let algorithm = ColorMixerFeature.Algorithm(rawValue: algorithm) else {
       throw StoredLook.Error.unknownColorMixerAlgorithm(algorithm)
     }
-    var adjustment = ColorMixerAdjustment.neutral
-    var restoredBands = Set<ColorMixerBand>()
+    var adjustment = ColorMixerFeature.Bands.neutral
+    var restoredBands = Set<ColorMixerFeature.Band>()
     for stored in bands {
       let (band, value) = try stored.makeAdjustment()
       adjustment[band] = value
       restoredBands.insert(band)
     }
-    guard restoredBands.count == ColorMixerBand.allCases.count, bands.count == restoredBands.count
+    guard restoredBands.count == ColorMixerFeature.Band.allCases.count, bands.count == restoredBands.count
     else {
       throw StoredLook.Error.missingColorMixerBands
     }
-    return ColorMixerFeature(adjustment: adjustment, algorithm: algorithm)
+    return ColorMixerFeature(bands: adjustment, algorithm: algorithm)
   }
 }
 
@@ -323,15 +323,15 @@ private struct StoredToneCurve: Codable, Equatable {
   var green: [Point]
   var blue: [Point]
 
-  init(_ value: ToneCurveEditorValue) {
+  init(_ value: ToneCurveFeature.Curves) {
     y = Self.points(value.y)
     red = Self.points(value.red)
     green = Self.points(value.green)
     blue = Self.points(value.blue)
   }
 
-  func makeValue() throws -> ToneCurveEditorValue {
-    ToneCurveEditorValue(
+  func makeValue() throws -> ToneCurveFeature.Curves {
+    ToneCurveFeature.Curves(
       y: try Self.curve(y),
       red: try Self.curve(red),
       green: try Self.curve(green),
@@ -361,16 +361,16 @@ private struct StoredBand: Codable, Equatable {
   var saturation: Double
   var luminance: Double
 
-  init(band: ColorMixerBand, value: ColorMixerBandAdjustment) {
+  init(band: ColorMixerFeature.Band, value: ColorMixerFeature.BandCorrection) {
     self.band = Self.name(of: band)
     hue = value.hue
     saturation = value.saturation
     luminance = value.luminance
   }
 
-  func makeAdjustment() throws -> (ColorMixerBand, ColorMixerBandAdjustment) {
-    guard let band = ColorMixerBand.allCases.first(where: { Self.name(of: $0) == self.band }),
-      let value = ColorMixerBandAdjustment(
+  func makeAdjustment() throws -> (ColorMixerFeature.Band, ColorMixerFeature.BandCorrection) {
+    guard let band = ColorMixerFeature.Band.allCases.first(where: { Self.name(of: $0) == self.band }),
+      let value = ColorMixerFeature.BandCorrection(
         validatingHue: hue,
         saturation: saturation,
         luminance: luminance
@@ -381,7 +381,7 @@ private struct StoredBand: Codable, Equatable {
     return (band, value)
   }
 
-  private static func name(of band: ColorMixerBand) -> String {
+  private static func name(of band: ColorMixerFeature.Band) -> String {
     switch band {
     case .red: "red"
     case .orange: "orange"

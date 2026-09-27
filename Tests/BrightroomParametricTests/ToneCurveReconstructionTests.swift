@@ -12,7 +12,7 @@ struct ToneCurveReconstructionTests {
 
   @Test
   func restoredCurvesPreserveMovedEndpointsAndInteriorPoints() throws {
-    var value = ToneCurveEditorValue()
+    var value = ToneCurveFeature.Curves()
     let yIndex = value.y.insertPoint(input: 0.4, output: 0.55)
     _ = try #require(yIndex)
     let redIndex = value.red.insertPoint(input: 0.45, output: 0.65)
@@ -20,7 +20,7 @@ struct ToneCurveReconstructionTests {
     value.y.movePoint(at: 0, input: 0.12, output: 0.08)
     value.red.movePoint(at: 2, input: 0.88, output: 0.95)
 
-    let restored = ToneCurveEditorValue(
+    let restored = ToneCurveFeature.Curves(
       y: try Self.restore(value.y),
       red: try Self.restore(value.red),
       green: try Self.restore(value.green),
@@ -32,7 +32,7 @@ struct ToneCurveReconstructionTests {
     #expect(restored.red.points[1].input == 0.45)
     #expect(restored.y.points[0].input == 0.12)
     #expect(restored.red.points[2].output == 0.95)
-    #expect(ToneCurveRenderIdentity(value: restored) == ToneCurveRenderIdentity(value: value))
+    #expect(ToneCurveFeature.RenderKey(curves: restored) == ToneCurveFeature.RenderKey(curves: value))
   }
 
   @Test
@@ -48,27 +48,27 @@ struct ToneCurveReconstructionTests {
 
   @Test
   func restoredFeaturesRebuildEnabledStateAndNeutralBypass() throws {
-    var active = ToneCurveEditorValue()
+    var active = ToneCurveFeature.Curves()
     let activeIndex = active.green.insertPoint(input: 0.45, output: 0.6)
     _ = try #require(activeIndex)
-    var diagonal = ToneCurveEditorValue()
+    var diagonal = ToneCurveFeature.Curves()
     let diagonalIndex = diagonal.y.insertPoint(input: 0.5, output: 0.5)
     _ = try #require(diagonalIndex)
 
     let restoredActive = ToneCurveFeature(
-      value: .init(green: try Self.restore(active.green))
+      curves: .init(green: try Self.restore(active.green))
     )
     let restoredDiagonal = ToneCurveFeature(
-      value: .init(y: try Self.restore(diagonal.y))
+      curves: .init(y: try Self.restore(diagonal.y))
     )
 
-    #expect(restoredActive.value == active)
-    #expect(ToneCurveRenderIdentity(activeValue: restoredActive.value) != nil)
-    #expect(restoredDiagonal.value == diagonal)
-    // The render identity, not `ToneCurveEditorValue.isNeutral`, decides the
+    #expect(restoredActive.curves == active)
+    #expect(ToneCurveFeature.RenderKey(activeCurves: restoredActive.curves) != nil)
+    #expect(restoredDiagonal.curves == diagonal)
+    // The render identity, not `ToneCurveFeature.Curves.isNeutral`, decides the
     // bypass: a diagonal interior point is authored but renders as identity.
-    #expect(restoredDiagonal.value.isNeutral == false)
-    #expect(ToneCurveRenderIdentity(activeValue: restoredDiagonal.value) == nil)
+    #expect(restoredDiagonal.curves.isDefault == false)
+    #expect(ToneCurveFeature.RenderKey(activeCurves: restoredDiagonal.curves) == nil)
 
     let source = CIImage(color: .init(red: -0.1, green: 1.5, blue: 0.3, alpha: 0.5))
       .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
@@ -127,7 +127,7 @@ struct ToneCurveReconstructionTests {
     let curve = try #require(ToneCurve(validating: points))
 
     #expect(curve.points == points)
-    #expect(curve.isIdentityMapping == false)
+    #expect(curve.isIdentity == false)
   }
 
   enum InvalidCurve: CaseIterable {
