@@ -14,7 +14,9 @@ struct ParametricFeatureTreeTests {
           .domain(
             CropFeature(
               id: FeatureID(rawValue: "crop-a"),
-              cropRect: CGRect(x: 4, y: 5, width: 30, height: 20)
+              cropRect: CGRect(x: 4, y: 5, width: 30, height: 20),
+              rotation: .quarterCW,
+              straightenRadians: 0.1
             )
           ),
           .localAdjustment(
@@ -90,7 +92,8 @@ struct ParametricFeatureTreeTests {
           .domain(
             CropFeature(
               id: FeatureID(rawValue: "node-crop"),
-              cropRect: CGRect(x: 4, y: 3, width: 36, height: 24)
+              cropRect: CGRect(x: 4, y: 3, width: 36, height: 24),
+              rotation: .quarterCW
             )
           ),
           .localAdjustment(
@@ -142,6 +145,25 @@ struct ParametricFeatureTreeTests {
       decodedOutput.image,
       tolerance: 2
     )
+  }
+
+  /// Old crop schemas used a different rectangle convention. Rejecting them
+  /// prevents an old quarter-turn crop from silently selecting different pixels.
+  @Test(arguments: [1, 2])
+  func oldCropRectangleSchemasAreRejected(version: Int) throws {
+    let data = try JSONSerialization.data(withJSONObject: [
+      "formatVersion": 1,
+      "mainTree": ["features": [[
+        "kind": "domain",
+        "feature": ["type": "brightroom.domain.crop", "v": version, "params": [:]],
+      ]]],
+    ])
+
+    #expect(throws: ParametricDocumentCodecError.unsupportedSchemaVersion(
+      CropFeature.featureTypeKey, version: version
+    )) {
+      try ParametricDocumentCodec().decode(data)
+    }
   }
 
   @Test func customRegisteredFeatureRendersLikeDefaultFeatures() throws {

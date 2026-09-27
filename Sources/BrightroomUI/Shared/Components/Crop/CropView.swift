@@ -63,7 +63,7 @@ final class CropView: UIView {
 
     var adjustmentKind: AdjustmentKind = []
 
-    /// Returns aspect ratio. Would not be affected by rotation.
+    /// The locked aspect ratio in the final output orientation.
     var preferredAspectRatio: PixelAspectRatio?
 
     var snapshot: StateSnapshot {
@@ -519,10 +519,13 @@ final class CropView: UIView {
   }
 
   /**
-   Applies the current crop state to the document.
+   Applies the proposed crop to the document.
+
+   Interaction callbacks record view geometry into the proposed crop. Committing
+   uses that value directly so layout rounding cannot change an untouched crop.
    */
   func applyDocumentChanges() {
-    guard let crop = record() ?? state.proposedCrop else {
+    guard let crop = state.proposedCrop else {
       EditorLog.error(.cropView, "CropViewDocument has not completed loading.")
       return
     }
@@ -554,33 +557,21 @@ final class CropView: UIView {
       return
     }
 
-    crop.updateCropExtent(
-      crop.cropExtent.rotated((crop.rotation.angle - rotation.angle).radians)
-    )
-    crop.rotation = rotation
-    setProposedCrop(crop)
+    let swapsDimensions = crop.updateRotation(to: rotation)
+    if swapsDimensions, let preferredAspectRatio = state.preferredAspectRatio?.swapped() {
+      state.preferredAspectRatio = preferredAspectRatio
+      guideView.setLockedAspectRatio(preferredAspectRatio)
+    }
+    setProposedCrop(crop, forcesLayout: true)
   }
 
   func rotateClockwise() {
     _pixeleditor_ensureMainThread()
 
-    guard var crop = state.proposedCrop else {
+    guard let crop = state.proposedCrop else {
       return
     }
-
-    let nextRotation = crop.rotation.next()
-    crop.updateCropExtent(
-      crop.cropExtent.rotated((crop.rotation.angle - nextRotation.angle).radians)
-    )
-    crop.rotation = nextRotation
-
-    if let preferredAspectRatio = state.preferredAspectRatio?.swapped() {
-      state.preferredAspectRatio = preferredAspectRatio
-      guideView.setLockedAspectRatio(preferredAspectRatio)
-      crop.updateCropExtentIfNeeded(toFitAspectRatio: preferredAspectRatio)
-    }
-
-    setProposedCrop(crop, forcesLayout: true)
+    setRotation(crop.rotation.next())
   }
 
   func setAdjustmentAngle(
@@ -661,7 +652,7 @@ final class CropView: UIView {
     }
 
     crop.updateCropExtentIfNeeded(
-      toFitAspectRatio: PixelAspectRatio(crop.cropExtent.size).swapped()
+      toFitAspectRatio: PixelAspectRatio(crop.outputCropExtent.size).swapped()
     )
     setProposedCrop(crop, forcesLayout: true)
   }
@@ -1174,7 +1165,6 @@ extension CropView {
     let animationSourceCrop = previousCrop ?? lastLaidOutCrop
     updateScrollContainerView(
       by: crop,
-      preferredAspectRatio: state.preferredAspectRatio,
       animated: animatesLayout
         && areAnimationsEnabled
         && animationSourceCrop != nil /* whether first time load */,
@@ -1231,7 +1221,6 @@ extension CropView {
 
   private func updateScrollContainerView(
     by crop: CropEditingState,
-    preferredAspectRatio: PixelAspectRatio?,
     animated: Bool,
     animatesRotation: Bool
   ) {
@@ -1243,7 +1232,7 @@ extension CropView {
 
           let bounds = self.bounds.inset(by: contentInset)
 
-          let size = PixelAspectRatio(crop.cropExtent.size)
+          let size = PixelAspectRatio(crop.outputCropExtent.size)
             .sizeThatFits(in: bounds.size)
 
           return .init(
@@ -1290,7 +1279,7 @@ extension CropView {
 
           let bounds = self.bounds.inset(by: contentInset)
 
-          let size = PixelAspectRatio(crop.cropExtent.size)
+          let size = PixelAspectRatio(crop.outputCropExtent.size)
             .sizeThatFits(in: bounds.size)
 
           return .init(
@@ -1730,8 +1719,8 @@ extension CropView {
       cropSurface.scrollView.transform = current
     }
 
-    // make crop extent for image
-    // converts rectangle for display into image's geometry.
+    // The untransformed guide has the output's orientation. Convert it once
+    // into the stored selection before the quarter turn.
     let convertedCropExtent = crop.makeCropExtent(
       rect: guideRectInImageView
     )
@@ -1764,21 +1753,16 @@ extension CropView {
       return cropExtent
     }
 
-    // Bound the crop's footprint on the source, not the crop rect itself: a
-    // quarter-turned crop rect may extend past the unrotated image bounds.
-    let rotation = currentCrop.rotation.quarterTurn
-    let imageBounds = CGRect(origin: .zero, size: currentCrop.imageSize)
-    let boundedFootprint = imageBounds.intersection(
-      CropGeometry.rect(cropExtent, turnedBy: rotation)
+    let boundedCropExtent = CropGeometry.fittingRect(
+      rect: cropExtent,
+      in: currentCrop.imageSize,
+      straightenRadians: currentCrop.adjustmentAngle.radians,
+      respectingAspectRatio: currentCrop.aspectRatioBeforeOutputRotation(preferredAspectRatio)
     )
-
-    guard boundedFootprint.isNull == false, boundedFootprint.isEmpty == false else {
+    guard boundedCropExtent.isNull == false, boundedCropExtent.isEmpty == false else {
       return cropExtent
     }
-
-    return preferredAspectRatio.rectThatFits(
-      in: CropGeometry.rect(boundedFootprint, turnedBy: rotation)
-    )
+    return boundedCropExtent
   }
 
   private func normalizedCropExtentForScrollViewRecording(
@@ -1787,20 +1771,18 @@ extension CropView {
   ) -> CGRect {
     guard
       let adjustmentSession = scrollViewAdjustmentSession,
-      adjustmentSession.kind == .drag
+      adjustmentSession.kind == .drag,
+      adjustmentSession.baselineCrop.adjustmentAngle == .zero,
+      currentCrop.adjustmentAngle == .zero
     else {
       return cropExtent
     }
 
-    // Compare footprints on the source: a quarter-turned crop rect spans the
-    // full image with its width and height swapped.
-    let rotation = currentCrop.rotation.quarterTurn
-    let baselineFootprint = CropGeometry.rect(
-      adjustmentSession.baselineCrop.cropExtent,
-      turnedBy: adjustmentSession.baselineCrop.rotation.quarterTurn
-    )
-    let currentFootprint = CropGeometry.rect(currentCrop.cropExtent, turnedBy: rotation)
-    var footprint = CropGeometry.rect(cropExtent, turnedBy: rotation)
+    // Without straighten, the selection before the quarter turn is also its
+    // source footprint. Only then does a full side prevent panning on that axis.
+    let baselineFootprint = adjustmentSession.baselineCrop.cropExtent
+    let currentFootprint = currentCrop.cropExtent
+    var footprint = cropExtent
     let epsilon: CGFloat = 1e-8
 
     if baselineFootprint.width
@@ -1819,7 +1801,7 @@ extension CropView {
       footprint.size.height = currentCrop.imageSize.height
     }
 
-    return CropGeometry.rect(footprint, turnedBy: rotation)
+    return footprint
   }
 
   private func beginScrollViewAdjustment(_ kind: ScrollViewAdjustmentKind) {
@@ -2141,7 +2123,7 @@ extension CropView: UIGestureRecognizerDelegate {
     let previousViewingIncludedFinalCrop = viewingPointIncludesFinalCrop
     let leavesCropEditing = wasCropEditing && focus.isCropEditing == false
     if leavesCropEditing {
-      // Leaving crop editing commits the currently visible crop viewport before
+      // Leaving crop editing commits the proposed crop before
       // the tool surface derives its display geometry.
       applyDocumentChanges()
     }

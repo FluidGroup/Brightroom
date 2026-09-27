@@ -23,8 +23,7 @@ import CoreGraphics
 
 import BrightroomParametric
 
-/// Pure crop-rect geometry, decoupled from `EditingCrop` so it can be shared by
-/// the engine and by the BrightroomUI crop session (`CropEditingState`).
+/// Crop fitting and coordinate conversions shared by the engine and UI.
 ///
 /// The math is coordinate-convention-agnostic for clamping and aspect fitting:
 /// pass the crop rect and image size in the SAME space (the engine and UI use
@@ -37,8 +36,7 @@ public enum CropGeometry {
   /// fits the largest centered-in-place rectangle of that ratio inside the
   /// clamped bounds.
   ///
-  /// This is the canonical normalizer every crop mutation funnels through, so a
-  /// stored crop extent is always inside the image and respects the active ratio.
+  /// Use the overload with `straightenRadians` for a straightened selection.
   public static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
@@ -109,14 +107,12 @@ public enum CropGeometry {
     return fixed
   }
 
-  /// Turns a crop rect by a quarter turn about its own center.
+  /// Exchanges a crop's display dimensions for a quarter-turned viewport.
   ///
-  /// A crop rect is authored in the output orientation: the image is rotated
-  /// about the rect's center and the rect keeps what lands inside it. Turned
-  /// back about that center, the rect becomes its footprint on the source image
-  /// — the source pixels it keeps. A sideways turn (90° / 270°) swaps the width
-  /// and height; `.zero` and `.half` return the rect unchanged. The turn is its
-  /// own inverse, so the same call maps a footprint back to the crop rect.
+  /// A sideways turn swaps width and height about the same center. `.zero` and
+  /// `.half` leave the rectangle unchanged. The size exchange is its own inverse.
+  /// This is a presentation conversion; stored selections and fitting use the
+  /// rectangle before its output turn.
   public static func rect(_ rect: CGRect, turnedBy rotation: QuarterTurn) -> CGRect {
     guard rotation.isSideways else {
       return rect
@@ -130,63 +126,91 @@ public enum CropGeometry {
     )
   }
 
-  /// As `fittingRect(rect:in:respectingAspectRatio:)`, for a crop rect authored
-  /// in the output orientation of `rotation`.
+  /// Fits a selection after straightening and before any output quarter turn.
   ///
-  /// The rect's footprint on the source image is what must stay inside the
-  /// image, so the footprint is clamped and turned back. For `.zero` and `.half`
-  /// this is exactly `fittingRect`. `aspectRatio` is in the output orientation.
-  ///
-  /// A malformed rect whose center lies outside the image can overlap the
-  /// image while its sideways footprint, which shares that center, misses it
-  /// entirely (there is then nothing to clamp the footprint to) or only grazes
-  /// it (clamping would leave a sliver). Such a rect is first clamped to the
-  /// image itself, as unrotated rects are, which brings its center inside, and
-  /// then its footprint is clamped. A well-formed crop always has its center
-  /// inside the image, so it never takes this step.
+  /// `rect` and `aspectRatio` use that same selection orientation. Straightening
+  /// determines the sampled source area; output rotation has no role in fitting.
   public static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
-    rotation: QuarterTurn,
+    straightenRadians: Double,
     respectingAspectRatio aspectRatio: PixelAspectRatio?
   ) -> CGRect {
-    let imageBounds = CGRect(origin: .zero, size: imageSize)
-    var rect = rect
-    if rotation.isSideways, imageBounds.contains(CGPoint(x: rect.midX, y: rect.midY)) == false {
-      rect = imageBounds.intersection(rect)
+    if straightenRadians.isFinite, straightenRadians != 0 {
+      return fittingStraightenedRect(
+        rect: aspectRatio?.rectThatFits(in: rect) ?? rect,
+        in: imageSize,
+        straightenRadians: straightenRadians
+      )
     }
 
-    return self.rect(
-      fittingRect(
-        rect: self.rect(rect, turnedBy: rotation),
-        in: imageSize,
-        respectingAspectRatio: rotation.isSideways ? aspectRatio?.swapped() : aspectRatio
-      ),
-      turnedBy: rotation
+    let imageBounds = CGRect(origin: .zero, size: imageSize)
+    guard imageBounds.intersects(rect), rect.isEmpty == false else {
+      return .null
+    }
+
+    return fittingRect(
+      rect: rect,
+      in: imageSize,
+      respectingAspectRatio: aspectRatio
     )
   }
 
-  /// As `cropRect(toFitAspectRatio:in:)`, for the output orientation of
-  /// `rotation`: the largest crop rect of `aspectRatio` whose footprint fits
-  /// inside the image, centered on the image.
+  /// Fits the crop before output rotation using only the free straighten angle.
+  ///
+  /// Valid rectangles are retained, including ones that extend outside the
+  /// unrotated bounds while sampling entirely inside the source. Invalid
+  /// rectangles shrink uniformly if needed, then move just far enough to fit.
+  /// No output-quarter-turn policy participates in this calculation.
+  static func fittingStraightenedRect(
+    rect: CGRect,
+    in imageSize: CGSize,
+    straightenRadians: Double
+  ) -> CGRect {
+    guard
+      rect.minX.isFinite, rect.minY.isFinite,
+      rect.width.isFinite, rect.height.isFinite,
+      rect.width > 0, rect.height > 0
+    else {
+      return CGRect(x: 0, y: 0, width: 1, height: 1)
+    }
+
+    let cosine = abs(CGFloat(cos(straightenRadians)))
+    let sine = abs(CGFloat(sin(straightenRadians)))
+    let sourceWidth = cosine * rect.width + sine * rect.height
+    let sourceHeight = sine * rect.width + cosine * rect.height
+    let epsilon = RenderGeometry.pixelEpsilon
+    if rect.midX - sourceWidth / 2 >= -epsilon,
+      rect.midX + sourceWidth / 2 <= imageSize.width + epsilon,
+      rect.midY - sourceHeight / 2 >= -epsilon,
+      rect.midY + sourceHeight / 2 <= imageSize.height + epsilon
+    {
+      return rect
+    }
+
+    let scale = min(1, imageSize.width / sourceWidth, imageSize.height / sourceHeight)
+    let size = CGSize(width: rect.width * scale, height: rect.height * scale)
+    let halfWidth = sourceWidth * scale / 2
+    let halfHeight = sourceHeight * scale / 2
+    let center = CGPoint(
+      x: min(max(rect.midX, halfWidth), imageSize.width - halfWidth),
+      y: min(max(rect.midY, halfHeight), imageSize.height - halfHeight)
+    )
+
+    return CGRect(
+      x: center.x - size.width / 2,
+      y: center.y - size.height / 2,
+      width: size.width,
+      height: size.height
+    )
+  }
+
+  /// A centered selection of `aspectRatio` that fits inside the image
+  /// after straightening and before any output quarter turn.
   public static func cropRect(
     toFitAspectRatio aspectRatio: PixelAspectRatio,
     in imageSize: CGSize,
-    rotation: QuarterTurn
-  ) -> CGRect {
-    rect(
-      cropRect(
-        toFitAspectRatio: rotation.isSideways ? aspectRatio.swapped() : aspectRatio,
-        in: imageSize
-      ),
-      turnedBy: rotation
-    )
-  }
-
-  /// The largest centered crop rect of `aspectRatio` that fits inside the image.
-  public static func cropRect(
-    toFitAspectRatio aspectRatio: PixelAspectRatio,
-    in imageSize: CGSize
+    straightenRadians: Double = 0
   ) -> CGRect {
 
     let maxSize = aspectRatio.sizeThatFits(in: imageSize)
@@ -202,6 +226,7 @@ public enum CropGeometry {
     return fittingRect(
       rect: proposed,
       in: imageSize,
+      straightenRadians: straightenRadians,
       respectingAspectRatio: aspectRatio
     )
   }
@@ -211,13 +236,14 @@ public enum CropGeometry {
   ///
   /// The box is scaled by the current crop extent's size and flipped from the
   /// detection's y-up normalized space into the engine's y-down display space,
-  /// then clamped and aspect-fitted via `fittingRect`. `cropExtent` supplies only
-  /// the scale of the box; the result is anchored against the image origin (the
-  /// pre-existing engine behavior).
+  /// then fitted against the straightened source. Both the crop and aspect ratio
+  /// are expressed before output rotation. `cropExtent` supplies only the scale
+  /// of the box; the result is anchored against the image origin.
   public static func cropRect(
     toFitBoundingBox boundingBox: CGRect,
     within cropExtent: CGRect,
     in imageSize: CGSize,
+    straightenRadians: Double = 0,
     respectingAspectRatio: PixelAspectRatio?
   ) -> CGRect {
 
@@ -235,21 +261,8 @@ public enum CropGeometry {
     return fittingRect(
       rect: proposed,
       in: imageSize,
+      straightenRadians: straightenRadians,
       respectingAspectRatio: respectingAspectRatio
     )
-  }
-}
-
-extension QuarterTurn {
-
-  /// Whether the turn is 90° or 270°, which swaps the width and height of the
-  /// output.
-  var isSideways: Bool {
-    switch self {
-    case .quarterCW, .quarterCCW:
-      return true
-    case .zero, .half:
-      return false
-    }
   }
 }

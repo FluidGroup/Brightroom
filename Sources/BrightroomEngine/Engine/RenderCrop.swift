@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import CoreGraphics
-import SwiftUI
 
 import BrightroomParametric
 
@@ -60,18 +59,15 @@ internal struct PixelDimensions: Equatable, Sendable {
   }
 }
 
-internal struct PixelCropRect: Equatable, Sendable {
+/// An inward pixel-aligned rectangle for crops without straightening.
+private struct PixelCropRect {
 
-  internal var x: Int
-  internal var y: Int
-  internal var width: Int
-  internal var height: Int
+  let x: Int
+  let y: Int
+  let width: Int
+  let height: Int
 
-  internal var size: PixelDimensions {
-    .init(width: width, height: height)
-  }
-
-  internal var cgRect: CGRect {
+  var cgRect: CGRect {
     .init(
       x: CGFloat(x),
       y: CGFloat(y),
@@ -80,7 +76,7 @@ internal struct PixelCropRect: Equatable, Sendable {
     )
   }
 
-  internal init(
+  init(
     x: Int,
     y: Int,
     width: Int,
@@ -97,7 +93,7 @@ internal struct PixelCropRect: Equatable, Sendable {
     self.height = height
   }
 
-  internal init(
+  init(
     cropExtent: CGRect,
     in imageSize: PixelDimensions,
     epsilon: CGFloat = RenderGeometry.pixelEpsilon
@@ -134,115 +130,6 @@ internal struct PixelCropRect: Equatable, Sendable {
       width: xSpan.upper - xSpan.lower,
       height: ySpan.upper - ySpan.lower
     )
-  }
-
-  /// The rect adjusted by one pixel so that its width and height differ by an
-  /// even number of pixels, staying as close as it can to `requested`, the
-  /// unsnapped rect it was snapped inward from.
-  ///
-  /// A quarter turn about the rect's center maps the pixel grid onto itself
-  /// only when the width and height differ by an even number of pixels.
-  /// Otherwise the turned rect lies on half pixels, and every output pixel
-  /// would be resampled between two source pixels (Core Image also rounds such
-  /// an extent outward, adding a partially covered border).
-  ///
-  /// Every pixel of the inward-snapped rect is fully inside `requested`, so
-  /// dropping a line of them misses `requested` by a whole pixel. When
-  /// `requested` partly covers the pixel line just outside an edge, taking
-  /// that line misses it by less, so the rect grows by the most-covered one.
-  /// This also snaps sub-pixel error back to the same pixels: CropView
-  /// re-reads an unchanged frame from its views on Done, a fraction of a pixel
-  /// off.
-  ///
-  /// A taken line lies inside the image, but with a straighten angle the crop
-  /// samples the footprint turned by that angle, which reaches further out.
-  /// CropView fits a straightened frame so that this area touches the image
-  /// edge, so a line is taken only while the turned footprint stays inside
-  /// the image (see `samplesInsideImage(_:straightenRadians:epsilon:)`).
-  /// Without straighten this always holds.
-  ///
-  /// When no line can be taken, the longer side loses one pixel at its max
-  /// edge.
-  internal func evenedForQuarterTurn(
-    requested: CGRect,
-    in imageSize: PixelDimensions,
-    straightenRadians: Double = 0,
-    epsilon: CGFloat = RenderGeometry.pixelEpsilon
-  ) -> PixelCropRect {
-    guard (width - height) % 2 != 0 else {
-      return self
-    }
-
-    // How much of the pixel line just outside each edge `requested` covers,
-    // with `requested` clamped to the image as the inward snap did.
-    let requested = requested.standardized
-    if
-      requested.minX.isFinite, requested.minY.isFinite,
-      requested.maxX.isFinite, requested.maxY.isFinite
-    {
-      let minX = Self.clamp(requested.minX, lower: 0, upper: CGFloat(imageSize.width))
-      let maxX = Self.clamp(requested.maxX, lower: 0, upper: CGFloat(imageSize.width))
-      let minY = Self.clamp(requested.minY, lower: 0, upper: CGFloat(imageSize.height))
-      let maxY = Self.clamp(requested.maxY, lower: 0, upper: CGFloat(imageSize.height))
-
-      let left = CGFloat(x) - minX
-      let right = maxX - CGFloat(x + width)
-      let top = CGFloat(y) - minY
-      let bottom = maxY - CGFloat(y + height)
-
-      // The rect grown by each partly covered line, with its coverage.
-      let isPartlyCovered = { (coverage: CGFloat) in coverage > epsilon && coverage < 1 }
-      var grownRects: [(coverage: CGFloat, rect: PixelCropRect)] = []
-      if isPartlyCovered(left) {
-        grownRects.append((left, .init(x: x - 1, y: y, width: width + 1, height: height)))
-      }
-      if isPartlyCovered(right) {
-        grownRects.append((right, .init(x: x, y: y, width: width + 1, height: height)))
-      }
-      if isPartlyCovered(top) {
-        grownRects.append((top, .init(x: x, y: y - 1, width: width, height: height + 1)))
-      }
-      if isPartlyCovered(bottom) {
-        grownRects.append((bottom, .init(x: x, y: y, width: width, height: height + 1)))
-      }
-
-      let mostCovered = grownRects
-        .filter {
-          $0.rect.samplesInsideImage(imageSize, straightenRadians: straightenRadians, epsilon: epsilon)
-        }
-        .max { $0.coverage < $1.coverage }
-      if let mostCovered {
-        return mostCovered.rect
-      }
-    }
-
-    if width > height {
-      return .init(x: x, y: y, width: width - 1, height: height)
-    } else {
-      return .init(x: x, y: y, width: width, height: height - 1)
-    }
-  }
-
-  /// Whether a crop with this footprint samples only image pixels under a
-  /// straighten angle: the footprint turned by `straightenRadians` about its
-  /// center must lie inside the image.
-  private func samplesInsideImage(
-    _ imageSize: PixelDimensions,
-    straightenRadians: Double,
-    epsilon: CGFloat
-  ) -> Bool {
-    let angle = straightenRadians.isFinite ? straightenRadians : 0
-    let cosine = abs(CGFloat(cos(angle)))
-    let sine = abs(CGFloat(sin(angle)))
-    let halfWidth = (cosine * CGFloat(width) + sine * CGFloat(height)) / 2
-    let halfHeight = (sine * CGFloat(width) + cosine * CGFloat(height)) / 2
-    let midX = CGFloat(x) + CGFloat(width) / 2
-    let midY = CGFloat(y) + CGFloat(height) / 2
-
-    return midX - halfWidth >= -epsilon
-      && midX + halfWidth <= CGFloat(imageSize.width) + epsilon
-      && midY - halfHeight >= -epsilon
-      && midY + halfHeight <= CGFloat(imageSize.height) + epsilon
   }
 
   private static func pixelSpan(
@@ -287,59 +174,32 @@ internal struct PixelCropRect: Equatable, Sendable {
   }
 }
 
+/// A pixel-sized crop after straightening, followed by an independent output turn.
+///
+/// The rectangle uses y-down image coordinates before the quarter turn. Its
+/// origin may be fractional under straightening; only its dimensions determine
+/// the raster size. Output orientation never changes the selected source area.
 internal struct RenderCrop: Equatable, Sendable {
 
   internal static let pixelEpsilon = RenderGeometry.pixelEpsilon
 
   internal var imageSize: PixelDimensions
 
-  /// The source pixels the crop keeps, snapped inward to the pixel grid and
-  /// clamped to the image.
-  ///
-  /// This is the crop rect's footprint on the source image: the y-down crop rect
-  /// turned back by `rotation` about its center. For `.zero` and `.half` it is
-  /// the crop rect itself; a sideways turn swaps its width and height.
-  ///
-  /// Under a sideways turn the footprint may instead take one partly covered
-  /// pixel line to keep an even width-height difference (see
-  /// `PixelCropRect.evenedForQuarterTurn(requested:in:straightenRadians:epsilon:)`).
-  internal var cropRect: PixelCropRect
+  /// The y-down selection after straightening and before the output turn.
+  internal var cropExtent: CGRect
 
-  /// The quarter-turn rotation, expressed in the parametric vocabulary so the
-  /// render crop no longer depends on `EditingCrop`.
+  /// The orientation applied to the already-cropped output.
   internal var rotation: QuarterTurn
 
-  /// The free straightening angle in radians (the engine's adjustment angle).
+  /// The free angle applied to the source before extracting the crop.
   internal var straightenRadians: Double
 
-  /// The y-down crop rect in the output orientation: `cropRect` turned by
-  /// `rotation` about its center. Integral, because a sideways footprint's
-  /// width and height differ by an even number of pixels.
-  internal var cropExtent: CGRect {
-    CropGeometry.rect(cropRect.cgRect, turnedBy: rotation)
-  }
-
-  /// The combined rotation (quarter turn + straighten) in radians, the value the
-  /// CoreGraphics crop rotates by.
-  internal var aggregatedRotationRadians: Double {
-    rotation.radians + (straightenRadians.isFinite ? straightenRadians : 0)
-  }
-
-  /// Snaps a y-down display crop rect against the source pixel grid.
+  /// Canonicalizes a y-down selection before its output quarter turn.
   ///
-  /// `cropRectYDown` is in the engine's top-left-origin display space (the same
-  /// space as `EditingCrop.cropExtent`), in the output orientation of
-  /// `rotation`. The integer pixel contract lives in `PixelCropRect`, so this
-  /// initializer is the single snapper UI commits and engine renders both flow
-  /// through.
-  ///
-  /// The snap and clamp apply to the rect's footprint on the source image, not
-  /// to the rect itself: a full-image crop turned a quarter is
-  /// `(W/2 - H/2, H/2 - W/2, H, W)`, which extends past the unrotated image
-  /// bounds while keeping every source pixel. Under a sideways turn the
-  /// footprint also keeps an even width-height difference (see
-  /// `PixelCropRect.evenedForQuarterTurn(requested:in:straightenRadians:epsilon:)`),
-  /// so an odd one gains a partly covered pixel line or loses one pixel.
+  /// Without straightening, source edges snap inward to the source pixel grid.
+  /// With straightening, the center stays fixed while the output dimensions
+  /// snap inward. The quarter turn is retained separately and does not change
+  /// the selection rectangle.
   internal init(
     cropRectYDown: CGRect,
     imageSize: CGSize,
@@ -348,36 +208,43 @@ internal struct RenderCrop: Equatable, Sendable {
     epsilon: CGFloat = Self.pixelEpsilon
   ) {
     let pixelImageSize = PixelDimensions(imageSize, epsilon: epsilon)
+    let straighten = straightenRadians.isFinite ? straightenRadians : 0
 
     self.imageSize = pixelImageSize
-    let requestedFootprint = CropGeometry.rect(cropRectYDown, turnedBy: rotation)
-    let footprint = PixelCropRect(
-      cropExtent: requestedFootprint,
-      in: pixelImageSize,
-      epsilon: epsilon
-    )
-    self.cropRect = rotation.isSideways
-      ? footprint.evenedForQuarterTurn(
-        requested: requestedFootprint,
-        in: pixelImageSize,
-        straightenRadians: straightenRadians,
-        epsilon: epsilon
-      )
-      : footprint
     self.rotation = rotation
-    self.straightenRadians = straightenRadians
-  }
+    self.straightenRadians = straighten
 
-  internal init(
-    imageSize: PixelDimensions,
-    cropRect: PixelCropRect,
-    rotation: QuarterTurn = .zero,
-    straightenRadians: Double = 0
-  ) {
-    self.imageSize = imageSize
-    self.cropRect = cropRect
-    self.rotation = rotation
-    self.straightenRadians = straightenRadians
+    if straighten == 0 {
+      self.cropExtent = PixelCropRect(
+        cropExtent: cropRectYDown,
+        in: pixelImageSize,
+        epsilon: epsilon
+      ).cgRect
+    } else {
+      var fitted = CropGeometry.fittingStraightenedRect(
+        rect: cropRectYDown,
+        in: pixelImageSize.cgSize,
+        straightenRadians: straighten
+      )
+      if fitted.width < 1 - epsilon || fitted.height < 1 - epsilon {
+        // An inward integer crop is impossible. Use the nearest fitting 1x1
+        // canvas instead of expanding a thin crop beyond the source bounds.
+        fitted = CropGeometry.fittingStraightenedRect(
+          rect: CGRect(x: fitted.midX - 0.5, y: fitted.midY - 0.5, width: 1, height: 1),
+          in: pixelImageSize.cgSize,
+          straightenRadians: straighten
+        )
+      }
+      let size = PixelDimensions(fitted.size, epsilon: epsilon).cgSize
+      // A source too small to contain a rotated 1x1 pixel retains that minimum
+      // canvas at the fitted center; uncovered corners remain transparent.
+      self.cropExtent = size == fitted.size ? fitted : CGRect(
+        x: fitted.midX - size.width / 2,
+        y: fitted.midY - size.height / 2,
+        width: size.width,
+        height: size.height
+      )
+    }
   }
 }
 
@@ -388,14 +255,13 @@ extension CropFeature {
   /// Creates a crop feature from a y-down display crop rect, reusing the engine's
   /// integer pixel snap so UI commits and engine renders agree exactly.
   ///
-  /// The display rect is snapped to the inward-integer pixel contract
-  /// (`RenderCrop`/`PixelCropRect`; a sideways crop may take one partly
-  /// covered pixel line to keep its turn on the pixel grid) and then flipped
-  /// from the engine's y-down display space (top-left origin) into the
-  /// compiler's y-up working space (Core Image bottom-left). UI crop sessions
-  /// MUST build committed crops through this initializer; authoring an
-  /// independent snapper makes `isRenderingEquivalent` oscillate against the
-  /// engine and the crop jitters.
+  /// `displayCropRect` is the selection after straightening and before the
+  /// output quarter turn. Canonicalization does not depend on `rotation`.
+  /// Source edges snap inward without straightening; straightened crops keep
+  /// their center and snap only their dimensions.
+  ///
+  /// This initializer also flips the display rectangle from y-down (top-left)
+  /// to the parametric feature's y-up coordinates (Core Image bottom-left).
   public init(
     id: FeatureID = .init(),
     isEnabled: Bool = true,
@@ -427,11 +293,11 @@ extension CropFeature {
     )
   }
 
-  /// The stored crop rect mapped back into the engine's y-down display space.
+  /// The pre-quarter-turn selection mapped into the engine's y-down space.
   ///
-  /// The inverse of `init(displayCropRect:…)`. UI crop sessions seed their y-down
-  /// working model from this. The stored rect is already pixel-snapped, so the
-  /// round trip through `init(displayCropRect:…)` is stable.
+  /// This conversion changes only the y-axis convention. Features authored
+  /// through `init(displayCropRect:…)` have already been pixel-canonicalized;
+  /// this method does not snap raw `cropRect` values.
   public func displayCropRect(imageSize: CGSize) -> CGRect {
     CGRect(
       x: cropRect.minX,
@@ -452,7 +318,7 @@ extension CropFeature {
     )
   }
 
-  /// Whether two crops snap to the same integer render rect (plus the same
+  /// Whether two crops produce the same canonical crop (plus the same
   /// rotation and straighten) against an oriented source size.
   ///
   /// This is the engine's pixel-snap equivalence the UI uses to decide whether a
@@ -464,4 +330,3 @@ extension CropFeature {
       == other.renderCrop(orientedImageSize: orientedImageSize)
   }
 }
-

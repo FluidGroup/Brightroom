@@ -14,11 +14,17 @@ import BrightroomEngine
 /// Image <-> platter conversions for the crop scroll view.
 ///
 /// The "platter" is the normalized content the scroll view hosts: width fixed
-/// at 1000pt, height preserving the image aspect ratio exactly. Every
-/// conversion below derives from the single `imageToPlatterScale()` scalar so
-/// recorded crop extents and rendered viewports can never disagree about the
-/// mapping.
+/// at 1000pt, height preserving the image aspect ratio exactly. Pixel-to-point
+/// conversions use the single `imageToPlatterScale()` scalar. Guide layout and
+/// gesture readback also account for the crop's output orientation.
 extension CropEditingState {
+
+  /// The viewport crop rectangle, with the output's size about the image-space
+  /// selection center. This derived rectangle is only used to lay out the guide
+  /// and read back viewport interactions; `cropExtent` stays before output rotation.
+  var outputCropExtent: CGRect {
+    CropGeometry.rect(cropExtent, turnedBy: rotation.quarterTurn)
+  }
 
   /// The smallest crop-output side the crop surface may author, in image pixels.
   ///
@@ -84,13 +90,13 @@ extension CropEditingState {
     return rect.applying(.init(scaleX: scale, y: scale))
   }
 
-  /// The crop extent expressed in platter coordinates.
+  /// The output-oriented crop extent expressed in platter coordinates.
   func zoomExtent() -> CGRect {
-    platterRect(fromImageRect: cropExtent)
+    platterRect(fromImageRect: outputCropExtent)
   }
 
-  /// Converts a platter-coordinate rect into an image-coordinate crop extent.
+  /// Converts an output-oriented platter rect into the stored pre-turn extent.
   func makeCropExtent(rect: CGRect) -> CGRect {
-    imageRect(fromPlatterRect: rect)
+    CropGeometry.rect(imageRect(fromPlatterRect: rect), turnedBy: rotation.quarterTurn)
   }
 }

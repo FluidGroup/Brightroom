@@ -26,12 +26,43 @@ import CoreGraphics
 @testable import BrightroomEngine
 import BrightroomParametric
 
-/// Direct coverage for the `CropGeometry` helper. `EditingCrop` delegates to it
-/// today, but `EditingCrop` is removed later in the refactor, so these pin the
-/// clamp / aspect-fit / bounding-box math independently of it.
+/// Verifies the crop geometry shared by engine canonicalization and UI editing,
+/// including bounds, aspect fitting, and display-coordinate conversion.
 struct CropGeometryTests {
 
   private let imageSize = CGSize(width: 200, height: 100)
+
+  @Test func `Straightened crop fitting preserves a valid thin selection`() {
+    let sourceSize = CGSize(width: 300, height: 200)
+    // Its sampled source area fits even though the selected rectangle extends
+    // above and below the image before applying the straighten angle.
+    let selectedRect = CGRect(x: 132, y: -5, width: 36, height: 210)
+    let fitted = CropGeometry.fittingRect(
+      rect: selectedRect,
+      in: sourceSize,
+      straightenRadians: .pi / 6,
+      respectingAspectRatio: nil
+    )
+    #expect(fitted == selectedRect)
+  }
+
+  @Test func `Straightened fitting constrains the sampled source area`() {
+    let fitted = CropGeometry.fittingStraightenedRect(
+      rect: CGRect(x: -20, y: 10, width: 300, height: 200),
+      in: CGSize(width: 300, height: 200),
+      straightenRadians: .pi / 6
+    )
+    let sampledBounds = fitted
+      .offsetBy(dx: -fitted.midX, dy: -fitted.midY)
+      .applying(CGAffineTransform(rotationAngle: .pi / 6))
+      .offsetBy(dx: fitted.midX, dy: fitted.midY)
+
+    #expect(sampledBounds.minX >= -1e-8)
+    #expect(sampledBounds.minY >= -1e-8)
+    #expect(sampledBounds.maxX <= 300 + 1e-8)
+    #expect(sampledBounds.maxY <= 200 + 1e-8)
+    #expect(abs(fitted.width / fitted.height - 1.5) < 1e-8)
+  }
 
   @Test func `Fitting rect clamps to image bounds`() {
     let result = CropGeometry.fittingRect(
@@ -87,39 +118,15 @@ struct CropGeometryTests {
     #expect(CropGeometry.rect(rect, turnedBy: .zero) == rect)
   }
 
-  @Test func `Fitting a quarter-turned rect clamps its footprint`() {
-    // The full image turned a quarter is already inside: nothing clamps.
-    let turnedFull = CGRect(x: 50, y: -50, width: 100, height: 200)
-    #expect(
-      CropGeometry.fittingRect(rect: turnedFull, in: imageSize, rotation: .quarterCW, respectingAspectRatio: nil)
-        == turnedFull
-    )
-    // Past the image: only the footprint's overhang goes.
+  @Test func `Zero straighten uses the source rectangle clamp`() {
+    let requested = CGRect(x: -10, y: -10, width: 250, height: 150)
     #expect(
       CropGeometry.fittingRect(
-        rect: .init(x: 50, y: -60, width: 100, height: 220),
+        rect: requested,
         in: imageSize,
-        rotation: .quarterCW,
+        straightenRadians: 0,
         respectingAspectRatio: nil
-      ) == turnedFull
-    )
-    // Unrotated behavior is unchanged.
-    #expect(
-      CropGeometry.fittingRect(rect: turnedFull, in: imageSize, rotation: .zero, respectingAspectRatio: nil)
-        == CropGeometry.fittingRect(rect: turnedFull, in: imageSize, respectingAspectRatio: nil)
-    )
-  }
-
-  @Test func `Aspect fit after a quarter turn uses the turned image`() {
-    // 1:2 in the output orientation of a quarter-turned 200×100 image is the
-    // whole image.
-    #expect(
-      CropGeometry.cropRect(toFitAspectRatio: .init(width: 1, height: 2), in: imageSize, rotation: .quarterCW)
-        == .init(x: 50, y: -50, width: 100, height: 200)
-    )
-    #expect(
-      CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize, rotation: .quarterCW)
-        == CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize)
+      ) == CGRect(origin: .zero, size: imageSize)
     )
   }
 }

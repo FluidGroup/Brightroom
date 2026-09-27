@@ -7,187 +7,220 @@ import UIKit
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// Pins that a quarter-turned crop commits and exports the frame CropView shows.
-///
-/// `CropView.rotateClockwise()` keeps the crop frame's center in image
-/// coordinates and takes the output orientation, so the frame of a full-image
-/// crop turned a quarter extends past the unrotated image bounds: it is
-/// `(W/2 - H/2, H/2 - W/2, H, W)` in y-down display space. `CropFeature.apply`
-/// rotates the image about that center, which fills the frame exactly.
-///
-/// The regression these guard: the engine snapper clamped that rect to the
-/// UNROTATED image bounds, so Done committed and exported a centered H×H square
-/// instead of the whole rotated image.
+/// Verifies source pixels, crop geometry, and model round trips independently
+/// of the engine's rotation transform and pixel snapper.
 @MainActor
 struct QuarterTurnCropTests {
 
-  /// A landscape source of 50 px cells (6×4 here), each a distinct color.
   private let imageSize = CGSize(width: 300, height: 200)
 
-  private static let cellSize: CGFloat = 50
+  // MARK: - Quarter turns without resampling
 
-  // MARK: - Full-image crop
-
-  @Test(arguments: [QuarterTurn.quarterCW, .half, .quarterCCW])
-  func `Turning the full image exports the whole rotated image`(rotation: QuarterTurn) async throws {
-    let stack = try makeStack(size: imageSize)
+  @Test(
+    arguments: [
+      CGSize(width: 6, height: 4),
+      CGSize(width: 7, height: 4),
+      CGSize(width: 4, height: 7),
+      CGSize(width: 7, height: 5),
+      CGSize(width: 1, height: 2),
+      CGSize(width: 301, height: 200),
+    ],
+    QuarterTurn.allCases
+  )
+  func `Turning the full image preserves every source pixel`(
+    size: CGSize,
+    rotation: QuarterTurn
+  ) async throws {
+    let source = try Self.makePixelImage(size: size)
+    let stack = makeStack(source: source)
     let initial = try #require(stack.featureTree?.finalCrop)
-
-    // What CropView does: turn the frame about its center.
-    var crop = CropEditingState(cropFeature: initial, imageSize: imageSize)
-    crop.updateCropExtent(Self.turnedAboutCenter(crop.cropExtent, from: crop.rotation, to: CropRotation(rotation)))
-    crop.rotation = CropRotation(rotation)
-
-    let isSideways = rotation == .quarterCW || rotation == .quarterCCW
-    let expectedExtent = isSideways
-      ? CGRect(x: 50, y: -50, width: 200, height: 300)
-      : CGRect(origin: .zero, size: imageSize)
-
-    // Done: CropView commits through `makeCropFeature()`.
-    let committed = try commit(crop, to: stack)
-    #expect(committed.displayCropRect(imageSize: imageSize) == expectedExtent)
-    #expect(committed.rotation == rotation)
-
-    // Export.
-    let rendered = try await stack.makeRenderer().render().cgImage
-    #expect(rendered.width == Int(expectedExtent.width))
-    #expect(rendered.height == Int(expectedExtent.height))
-    let checked = try Self.expectRendered(
-      rendered,
-      showsSourceOfSize: imageSize,
-      croppedTo: expectedExtent,
-      rotationRadians: rotation.radians
-    )
-    // Every source cell is in the output: nothing was cut away.
-    #expect(checked == Self.cellCount(in: imageSize))
-    try Self.expectEveryPixelIsACellColor(rendered)
-
-    // Reopening the editor seeds the same frame, not a clamped one.
-    let reseeded = CropEditingState(cropFeature: committed, imageSize: imageSize)
-    #expect(reseeded.cropExtent == expectedExtent)
-    #expect(reseeded.isRenderingEquivalent(to: crop))
-  }
-
-  /// When `W - H` is odd, the turned frame would sit on half pixels, where a
-  /// quarter turn resamples every pixel between two source pixels. The snapper
-  /// trims one source column instead, so the export stays pixel-exact.
-  @Test func `Turning an odd-parity image stays pixel-exact`() async throws {
-    let size = CGSize(width: 301, height: 200)
-    let stack = try makeStack(size: size)
-    let initial = try #require(stack.featureTree?.finalCrop)
+    let sourceRect = CGRect(origin: .zero, size: size)
+    let expectedExtent = sourceRect
 
     var crop = CropEditingState(cropFeature: initial, imageSize: size)
-    crop.updateCropExtent(Self.turnedAboutCenter(crop.cropExtent, from: .angle_0, to: .angle_90))
-    crop.rotation = .angle_90
+    crop.updateCropExtent(expectedExtent)
+    crop.rotation = CropRotation(rotation)
 
     let committed = try commit(crop, to: stack)
-    let expectedExtent = CGRect(x: 50, y: -50, width: 200, height: 300)
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
-
-    // Re-committing the stored crop is a fixed point.
-    let reseeded = CropEditingState(cropFeature: committed, imageSize: size)
-    #expect(reseeded.makeCropFeature().cropRect == committed.cropRect)
+    #expect(committed.rotation == rotation)
 
     let rendered = try await stack.makeRenderer().render().cgImage
-    #expect(rendered.width == 200)
-    #expect(rendered.height == 300)
-    let checked = try Self.expectRendered(
-      rendered,
-      showsSourceOfSize: size,
-      croppedTo: expectedExtent,
-      rotationRadians: QuarterTurn.quarterCW.radians
-    )
-    // Only the trimmed 1 px column of cells is missing.
-    #expect(checked == Self.cellCount(in: CGSize(width: 300, height: 200)))
-    try Self.expectEveryPixelIsACellColor(rendered)
+    try Self.expectPixels(rendered, from: source, sourceRect: sourceRect, rotation: rotation)
+
+    // Output orientation changes neither the selected source rectangle nor
+    // the source rows and columns preserved when the model is reopened.
+    let reseeded = CropEditingState(cropFeature: committed, imageSize: size)
+    #expect(reseeded.cropExtent == expectedExtent)
+    #expect(reseeded.makeCropFeature().cropRect == committed.cropRect)
+    #expect(reseeded.makeCropFeature().rotation == committed.rotation)
+  }
+
+  @Test(
+    arguments: [
+      CGRect(x: 2, y: 1, width: 5, height: 4),
+      CGRect(x: 1, y: 2, width: 6, height: 4),
+    ],
+    QuarterTurn.allCases
+  )
+  func `Turning an off-center partial crop preserves its source pixels`(
+    sourceRect: CGRect,
+    rotation: QuarterTurn
+  ) async throws {
+    let size = CGSize(width: 9, height: 8)
+    let source = try Self.makePixelImage(size: size)
+    let stack = makeStack(source: source)
+    let initial = try #require(stack.featureTree?.finalCrop)
+    let expectedExtent = sourceRect
+
+    var crop = CropEditingState(cropFeature: initial, imageSize: size)
+    crop.updateCropExtent(expectedExtent)
+    crop.rotation = CropRotation(rotation)
+
+    let committed = try commit(crop, to: stack)
+    #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
+    let rendered = try await stack.makeRenderer().render().cgImage
+    try Self.expectPixels(rendered, from: source, sourceRect: sourceRect, rotation: rotation)
+
+    let reopened = CropEditingState(cropFeature: committed, imageSize: size)
+    #expect(reopened.cropExtent == expectedExtent)
+    #expect(reopened.makeCropFeature().cropRect == committed.cropRect)
+  }
+
+  /// Rotation leaves the selected rectangle unchanged, and Done commits that
+  /// same rectangle with the newly selected output orientation.
+  @Test(arguments: [300.0, 301.0])
+  func `Rotation button and Done preserve the full source through four turns`(imageWidth: Double) throws {
+    let size = CGSize(width: imageWidth, height: 200)
+    let stack = try makeStack(size: size)
+    let (editor, window) = openCropView(on: stack)
+    var latestCrop: CropEditingState?
+    editor.setStateHandler { latestCrop = $0.proposedCrop }
+
+    for rotation in [QuarterTurn.quarterCW, .half, .quarterCCW, .zero] {
+      editor.rotateClockwise()
+      editor.layoutIfNeeded()
+      let crop = try #require(latestCrop)
+      let expectedExtent = CGRect(origin: .zero, size: size)
+      #expect(crop.rotation.quarterTurn == rotation)
+      #expect(crop.cropExtent == expectedExtent)
+      #expect(crop.outputCropExtent == Self.outputFrame(for: expectedExtent, rotation: rotation))
+      let proposed = crop.makeCropFeature()
+      #expect(proposed.displayCropRect(imageSize: size) == expectedExtent)
+
+      editor.applyDocumentChanges()
+      let committed = try #require(stack.featureTree?.finalCrop)
+      #expect(committed.cropRect == proposed.cropRect)
+      #expect(committed.rotation == rotation)
+      #expect(committed.straightenRadians == proposed.straightenRadians)
+    }
+    withExtendedLifetime(window) {}
   }
 
   // MARK: - Open and Done without edits
 
-  /// CropView re-reads the frame from its views on Done, which carries
-  /// sub-pixel error. For an odd `W - H`, a frame nudged by a fraction of a
-  /// pixel must still snap to the same source pixels, not lose a column to
-  /// the inward snap and then another to keep the width-height difference even.
-  @Test(arguments: [0.07, -0.07, 0.45])
-  func `Sub-pixel drift in an odd-parity turned crop snaps back`(drift: Double) {
-    let size = CGSize(width: 301, height: 200)
-    let committed = CGRect(x: 50, y: -50, width: 200, height: 300)
-
-    let feature = CropFeature(
-      displayCropRect: committed.offsetBy(dx: drift, dy: 0),
-      imageSize: size,
-      rotation: .quarterCW
-    )
-
-    #expect(feature.displayCropRect(imageSize: size) == committed)
-  }
-
-  /// Turning the full image through a real CropView and tapping Done, then
-  /// opening the editor and tapping Done several times over, keeps the whole
-  /// turned image.
-  ///
-  /// On Done CropView re-reads the frame from its views with sub-pixel error,
-  /// so the inward snap can drop a line of an even-parity footprint too; the
-  /// parity step then must not drop a second one.
-  @Test(arguments: [301.0, 300.0], [1, 3])
-  func `Open and Done keeps a turned full-image crop`(imageWidth: Double, clockwiseTurns: Int) throws {
+  /// Starts with an exact persisted crop. Opening the view and pressing Done
+  /// preserves that crop without measuring a replacement frame from UIKit.
+  @Test(arguments: [301.0, 300.0], [QuarterTurn.quarterCW, .quarterCCW])
+  func `Open and Done keeps a turned full-image crop`(
+    imageWidth: Double,
+    rotation: QuarterTurn
+  ) throws {
     let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
+    let initial = try #require(stack.featureTree?.finalCrop)
+    let expectedExtent = CGRect(origin: .zero, size: size)
+    var crop = CropEditingState(cropFeature: initial, imageSize: size)
+    crop.updateCropExtent(expectedExtent)
+    crop.rotation = CropRotation(rotation)
+    let committed = try commit(crop, to: stack)
+    #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
 
-    let (editor, window) = openCropView(on: stack)
-    for _ in 0..<clockwiseTurns {
-      editor.rotateClockwise()
-      editor.layoutIfNeeded()
-    }
-    editor.applyDocumentChanges()
-    let committed = try #require(stack.featureTree?.finalCrop)
-    #expect(committed.cropRect.width == 200)
-    #expect(committed.cropRect.height == 300)
-
-    var windows = [window]
     for cycle in 1...4 {
-      let (reopened, window) = openCropView(on: stack)
-      windows.append(window)
-      reopened.applyDocumentChanges()
-      #expect(stack.featureTree?.finalCrop?.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+      let (editor, window) = openCropView(on: stack)
+      editor.applyDocumentChanges()
+      let recorded = try #require(stack.featureTree?.finalCrop)
+      #expect(recorded.id == committed.id)
+      #expect(recorded.rotation == rotation)
+      #expect(recorded.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+      window.isHidden = true
+      withExtendedLifetime(window) {}
     }
-    withExtendedLifetime(windows) {}
+  }
+
+  /// Preserving proposed state also applies to offset selections with a free
+  /// straighten angle, where measuring the viewport could change both axes.
+  @Test(arguments: [(QuarterTurn.quarterCW, -11.0), (.quarterCCW, 7.0)])
+  func `Open and Done keeps a straightened partial crop`(
+    rotation: QuarterTurn,
+    straightenDegrees: Double
+  ) throws {
+    let size = CGSize(width: 53, height: 40)
+    let stack = try makeStack(size: size)
+    let initial = try #require(stack.featureTree?.finalCrop)
+    let expectedExtent = CGRect(x: 10, y: 8, width: 29, height: 20)
+    var crop = CropEditingState(cropFeature: initial, imageSize: size)
+    crop.updateCropExtent(expectedExtent)
+    crop.rotation = CropRotation(rotation)
+    crop.adjustmentAngle = .degrees(straightenDegrees)
+    let committed = try commit(crop, to: stack)
+    #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
+
+    for cycle in 1...3 {
+      let (editor, window) = openCropView(on: stack)
+      editor.applyDocumentChanges()
+      let recorded = try #require(stack.featureTree?.finalCrop)
+      #expect(recorded.id == committed.id)
+      #expect(recorded.rotation == committed.rotation)
+      #expect(recorded.straightenRadians == committed.straightenRadians)
+      #expect(recorded.cropRect == committed.cropRect, "after open and Done #\(cycle)")
+      window.isHidden = true
+      withExtendedLifetime(window) {}
+    }
   }
 
   // MARK: - Quarter turn + straighten
 
-  @Test func `Quarter turn with straighten keeps the frame`() async throws {
-    let stack = try makeStack(size: imageSize)
-    let initial = try #require(stack.featureTree?.finalCrop)
-
-    // A 180×280 frame about the image center: turned back by 90° + 2° its
-    // footprint (≈286×190) still lies inside the 300×200 source.
-    let extent = CGRect(x: 60, y: -40, width: 180, height: 280)
-    var crop = CropEditingState(cropFeature: initial, imageSize: imageSize)
-    crop.rotation = .angle_90
-    crop.adjustmentAngle = .degrees(2)
-    crop.updateCropExtent(extent)
-
-    let committed = try commit(crop, to: stack)
-    #expect(committed.displayCropRect(imageSize: imageSize) == extent)
-
-    let rendered = try await stack.makeRenderer().render().cgImage
-    #expect(rendered.width == 180)
-    #expect(rendered.height == 280)
-    let checked = try Self.expectRendered(
-      rendered,
-      showsSourceOfSize: imageSize,
-      croppedTo: extent,
-      rotationRadians: committed.aggregatedRotationRadians
+  /// Rotating an already straightened crop is a pixel permutation of its
+  /// unturned output, including mixed-parity dimensions and an offset center.
+  @Test(arguments: [-11.0, 7.0], [QuarterTurn.quarterCW, .half, .quarterCCW])
+  func `Quarter turn rotates the same straightened crop`(
+    straightenDegrees: Double,
+    rotation: QuarterTurn
+  ) async throws {
+    let size = CGSize(width: 53, height: 40)
+    let source = try Self.makePixelImage(size: size)
+    let sourceRect = CGRect(x: 10, y: 8, width: 29, height: 20)
+    let straighten = straightenDegrees * .pi / 180
+    let baselineCrop = CropFeature(
+      displayCropRect: sourceRect,
+      imageSize: size,
+      straighten: straighten
     )
-    #expect(checked > 0)
+    let baseline = try await Self.render(source, crop: baselineCrop)
+    let expectedExtent = sourceRect
+    let turnedCrop = CropFeature(
+      displayCropRect: expectedExtent,
+      imageSize: size,
+      rotation: rotation,
+      straighten: straighten
+    )
+    #expect(turnedCrop.displayCropRect(imageSize: size) == expectedExtent)
+
+    let rendered = try await Self.render(source, crop: turnedCrop)
+    try Self.expectPixels(
+      rendered,
+      from: baseline,
+      sourceRect: CGRect(origin: .zero, size: sourceRect.size),
+      rotation: rotation
+    )
+
+    let reopened = CropEditingState(cropFeature: turnedCrop, imageSize: size)
+    #expect(reopened.cropExtent == expectedExtent)
+    #expect(reopened.makeCropFeature().cropRect == turnedCrop.cropRect)
+    #expect(reopened.makeCropFeature().straightenRadians == straighten)
   }
 
-  /// CropView fits a straightened frame so that the area it samples, the frame
-  /// turned back by the whole angle, touches the image edge. When the snapper
-  /// evens the footprint's width-height difference, it must not take a partly
-  /// covered pixel line that pulls that area past the edge: the export would
-  /// get semi-transparent corners.
   @Test(arguments: [(301.0, 2.0), (300.0, 5.0)])
   func `A straightened quarter turn exports no transparent pixels`(
     imageWidth: Double,
@@ -213,21 +246,11 @@ struct QuarterTurnCropTests {
     )
   }
 
-  /// A thin frame turned 90° clockwise and straightened by 30°, −60° in total
-  /// (`.quarterCW` is −90°): the area it samples, the frame turned back by
-  /// that angle about its center, lies inside the 300×200 source (it reaches
-  /// 99.9 px above and below the center), so nothing needs
-  /// clamping. Its 90° footprint, 36×210, is taller than the image.
-  ///
-  /// Known issue: the clamp checks the 90° footprint, not the straightened
-  /// area, so the frame is stored as 200×36 (5.1.0 clamped the frame itself
-  /// and kept 210×36). The export stays inside the frame and inside the image.
-  /// Checking the straightened area would need a footprint that may extend
-  /// past the image in the snapper, the reopen clamp and CropView's aspect
-  /// ratio bounding, which is left for a separate change.
+  /// Its 36×210 pre-turn frame extends beyond the source, but straightening
+  /// rotates the sampled area fully inside the 300×200 image. A quarter-turn
+  /// bounding-box clamp would incorrectly cut ten pixels from the long side.
   @Test func `A straightened thin turned crop keeps its frame`() {
-    let extent = CGRect(x: 45, y: 82, width: 210, height: 36)
-
+    let extent = CGRect(x: 132, y: -5, width: 36, height: 210)
     let feature = CropFeature(
       displayCropRect: extent,
       imageSize: imageSize,
@@ -235,127 +258,80 @@ struct QuarterTurnCropTests {
       straighten: 30 * .pi / 180
     )
 
-    #expect(
-      feature.displayCropRect(imageSize: imageSize).height == extent.height,
-      "The short side is unaffected"
-    )
-    withKnownIssue("The clamp ignores the straighten angle") {
-      #expect(feature.displayCropRect(imageSize: imageSize) == extent)
+    #expect(feature.displayCropRect(imageSize: imageSize) == extent)
+    let reopened = CropEditingState(cropFeature: feature, imageSize: imageSize)
+    #expect(reopened.cropExtent == extent)
+    #expect(reopened.makeCropFeature().cropRect == feature.cropRect)
+  }
+
+  // MARK: - Bounds and aspect ratio
+
+  @Test(arguments: QuarterTurn.allCases)
+  func `Crop selection clamps identically for every output rotation`(rotation: QuarterTurn) {
+    let cases: [(requested: CGRect, expected: CGRect)] = [
+      (CGRect(x: 50, y: -60, width: 240, height: 120), CGRect(x: 50, y: 0, width: 240, height: 60)),
+      (CGRect(x: -40, y: 0, width: 60, height: 10), CGRect(x: 0, y: 0, width: 20, height: 10)),
+      (CGRect(x: 50, y: -50, width: 200, height: 300), CGRect(x: 50, y: 0, width: 200, height: 200)),
+    ]
+
+    for fixture in cases {
+      let feature = CropFeature(
+        displayCropRect: fixture.requested,
+        imageSize: imageSize,
+        rotation: rotation
+      )
+      #expect(feature.displayCropRect(imageSize: imageSize) == fixture.expected)
+
+      // A raw stored crop is normalized the same way when its editor opens.
+      let stored = CropFeature(
+        cropRect: CGRect(
+          x: fixture.requested.minX,
+          y: imageSize.height - fixture.requested.maxY,
+          width: fixture.requested.width,
+          height: fixture.requested.height
+        ),
+        rotation: rotation
+      )
+      let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
+      #expect(reopened.cropExtent == fixture.expected)
+      #expect(reopened.makeCropFeature().displayCropRect(imageSize: imageSize) == fixture.expected)
     }
   }
 
-  // MARK: - Non-full crop after a quarter turn
-
-  @Test func `A partial crop after a quarter turn keeps its frame`() async throws {
+  /// A locked ratio rotates with a partial selection. It must not refit the
+  /// selection to the maximum rectangle of that ratio in the source image.
+  @Test func `Four rotation button presses preserve a partial crop and its aspect lock`() throws {
     let stack = try makeStack(size: imageSize)
-    let initial = try #require(stack.featureTree?.finalCrop)
+    let (editor, window) = openCropView(on: stack)
+    var latest: CropView.StateSnapshot?
+    editor.setStateHandler { latest = $0 }
+    let sourceRatio = PixelAspectRatio(width: 3, height: 2)
+    editor.setCroppingAspectRatio(sourceRatio)
 
-    // Off-center and taller than the unrotated image. Its footprint on the
-    // source, (50, 40, 240, 120), is inside the image, so nothing clamps.
-    let extent = CGRect(x: 110, y: -20, width: 120, height: 240)
-    var crop = CropEditingState(cropFeature: initial, imageSize: imageSize)
-    crop.rotation = .angle_90
-    crop.updateCropExtent(extent)
+    let sourceRect = CGRect(x: 50, y: 40, width: 153, height: 102)
+    var crop = try #require(latest?.proposedCrop)
+    crop.updateCropExtent(sourceRect)
+    editor.setCrop(crop)
+    editor.layoutIfNeeded()
+    let selected = try #require(latest?.proposedCrop)
+    #expect(selected.cropExtent == sourceRect)
 
-    let committed = try commit(crop, to: stack)
-    #expect(committed.displayCropRect(imageSize: imageSize) == extent)
-    #expect(CropEditingState(cropFeature: committed, imageSize: imageSize).cropExtent == extent)
-
-    let rendered = try await stack.makeRenderer().render().cgImage
-    #expect(rendered.width == 120)
-    #expect(rendered.height == 240)
-    let checked = try Self.expectRendered(
-      rendered,
-      showsSourceOfSize: imageSize,
-      croppedTo: extent,
-      rotationRadians: QuarterTurn.quarterCW.radians
-    )
-    #expect(checked > 0)
-  }
-
-  @Test func `A quarter-turned crop past the image clamps its footprint`() {
-    // Footprint of this frame on the source: (50, -60, 240, 120), 60 px above
-    // the image. Only that overhang goes, in the source orientation:
-    // (50, 0, 240, 60), turned back about its center (170, 30).
-    let feature = CropFeature(
-      displayCropRect: CGRect(x: 110, y: -120, width: 120, height: 240),
-      imageSize: imageSize,
-      rotation: .quarterCW
-    )
-    #expect(
-      feature.displayCropRect(imageSize: imageSize)
-        == CGRect(x: 140, y: -90, width: 60, height: 240)
-    )
-  }
-
-  /// A malformed stored crop: its rect overlaps the image, but its center, and
-  /// with it the whole sideways footprint, lies outside. Reopening it clamps
-  /// the rect first, as 5.1.0 did, and then the footprint.
-  @Test func `Reopening a turned crop centered outside the image clamps it`() {
-    // Display rect (-40, 0, 60, 10), center (-10, 5). Its footprint,
-    // (-15, -25, 10, 60), misses the image entirely.
-    let stored = CropFeature(
-      cropRect: CGRect(x: -40, y: 190, width: 60, height: 10),
-      rotation: .quarterCW
-    )
-
-    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
-
-    // The rect clamped to the image, (0, 0, 20, 10), has its footprint
-    // (5, -5, 10, 20) partly above the image: that overhang goes, leaving the
-    // footprint (5, 0, 10, 15), turned back about its center (10, 7.5).
-    #expect(reopened.cropExtent == CGRect(x: 2.5, y: 2.5, width: 15, height: 10))
-  }
-
-  /// As above, but the footprint grazes the image instead of missing it: it
-  /// overlaps the image by 0.01 px. Clamping the footprint alone would leave a
-  /// sliver; clamping the rect first, as 5.1.0 did, keeps a usable frame.
-  @Test func `Reopening a turned crop whose footprint grazes the image clamps it`() {
-    // Display rect (-34.99, 20, 60, 10), center (-4.99, 25). Its footprint,
-    // (-9.99, -5, 10, 60), overlaps the image by 0.01 px.
-    let stored = CropFeature(
-      cropRect: CGRect(x: -34.99, y: 170, width: 60, height: 10),
-      rotation: .quarterCW
-    )
-
-    let reopened = CropEditingState(cropFeature: stored, imageSize: imageSize)
-
-    // The rect clamped to the image, (0, 20, 25.01, 10), has its footprint
-    // inside the image, so that is the frame.
-    let expected = CGRect(x: 0, y: 20, width: 25.01, height: 10)
-    #expect(abs(reopened.cropExtent.minX - expected.minX) < 1e-9)
-    #expect(abs(reopened.cropExtent.minY - expected.minY) < 1e-9)
-    #expect(abs(reopened.cropExtent.width - expected.width) < 1e-9)
-    #expect(abs(reopened.cropExtent.height - expected.height) < 1e-9)
-  }
-
-  /// `CropView.rotateClockwise()` swaps a locked aspect ratio and refits the
-  /// frame after setting the new rotation. The fit uses the turned image, so a
-  /// 3:2 lock on a 3:2 image still keeps the whole image after a quarter turn.
-  @Test func `A locked aspect ratio refits against the turned image`() {
-    var crop = CropEditingState(
-      cropFeature: CropFeature.test(imageSize: imageSize),
-      imageSize: imageSize
-    )
-    crop.rotation = .angle_90
-    crop.updateCropExtent(toFitAspectRatio: .init(width: 2, height: 3))
-
-    #expect(crop.cropExtent == CGRect(x: 50, y: -50, width: 200, height: 300))
-    #expect(
-      crop.makeCropFeature().displayCropRect(imageSize: imageSize)
-        == CGRect(x: 50, y: -50, width: 200, height: 300)
-    )
-  }
-
-  @Test func `An unrotated crop still clamps to the image`() {
-    let feature = CropFeature(
-      displayCropRect: CGRect(x: 50, y: -50, width: 200, height: 300),
-      imageSize: imageSize
-    )
-    #expect(
-      feature.displayCropRect(imageSize: imageSize)
-        == CGRect(x: 50, y: 0, width: 200, height: 200)
-    )
+    for rotation in [QuarterTurn.quarterCW, .half, .quarterCCW, .zero] {
+      editor.rotateClockwise()
+      editor.layoutIfNeeded()
+      let snapshot = try #require(latest)
+      let rotated = try #require(snapshot.proposedCrop)
+      let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+      let expectedRatio = isSideways ? sourceRatio.swapped() : sourceRatio
+      let expectedExtent = sourceRect
+      #expect(snapshot.preferredAspectRatio == expectedRatio)
+      #expect(rotated._usedAspectRatio == expectedRatio)
+      #expect(rotated.rotation.quarterTurn == rotation)
+      #expect(rotated.cropExtent == expectedExtent)
+      #expect(rotated.outputCropExtent == Self.outputFrame(for: sourceRect, rotation: rotation))
+      #expect(rotated.makeCropFeature().displayCropRect(imageSize: imageSize) == expectedExtent)
+    }
+    withExtendedLifetime(window) {}
   }
 
   // MARK: - Helpers
@@ -388,175 +364,143 @@ struct QuarterTurnCropTests {
     return (view, window)
   }
 
-  /// Mirrors `CropView`'s `CGRect.rotated(_:)`: the rect turned about its own
-  /// center.
-  private static func turnedAboutCenter(
-    _ rect: CGRect,
-    from current: CropRotation,
-    to next: CropRotation
-  ) -> CGRect {
-    let turned = rect.applying(.init(rotationAngle: current.angle.radians - next.angle.radians))
-    return CGRect(
-      x: rect.minX - (turned.width - rect.width) / 2,
-      y: rect.minY - (turned.height - rect.height) / 2,
-      width: turned.width,
-      height: turned.height
-    )
+  /// The viewport frame has the source crop's center and the turned size.
+  /// This expectation uses no engine geometry helpers or trigonometry.
+  private static func outputFrame(for sourceRect: CGRect, rotation: QuarterTurn) -> CGRect {
+    switch rotation {
+    case .zero, .half:
+      return sourceRect
+    case .quarterCW, .quarterCCW:
+      return CGRect(
+        x: sourceRect.midX - sourceRect.height / 2,
+        y: sourceRect.midY - sourceRect.width / 2,
+        width: sourceRect.height,
+        height: sourceRect.width
+      )
+    }
   }
 
   private func makeStack(size: CGSize) throws -> EditingStack {
-    let cgImage = try Self.makeCellImage(size: size)
-    let sourceCIImage = CIImage(cgImage: cgImage)
+    makeStack(source: try Self.makePixelImage(size: size))
+  }
+
+  private func makeStack(source: CGImage) -> EditingStack {
+    let size = CGSize(width: source.width, height: source.height)
+    let sourceCIImage = CIImage(cgImage: source)
     let initialEdit = EditingStack.Edit.test(imageSize: size)
     let loaded = EditingStack.Loaded(
-      imageSource: ImageSource(cgImage: cgImage),
+      imageSource: ImageSource(cgImage: source),
       metadata: .init(orientation: .up, imageSize: size),
       initialEditing: initialEdit,
       currentEdit: initialEdit,
       thumbnailCIImage: sourceCIImage,
-      editingSourceCGImage: cgImage,
+      editingSourceCGImage: source,
       editingSourceCIImage: sourceCIImage
     )
-    let stack = EditingStack(imageProvider: .init(image: UIImage(cgImage: cgImage)))
+    let stack = EditingStack(imageProvider: .init(image: UIImage(cgImage: source)))
     stack.loadedState = loaded
     return stack
   }
 
-  private static func cellCount(in size: CGSize) -> Int {
-    Int((size.width / cellSize).rounded(.up)) * Int((size.height / cellSize).rounded(.up))
+  private static func render(_ source: CGImage, crop: CropFeature) async throws -> CGImage {
+    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
+    renderer.edit = .make(
+      crop: crop,
+      orientedImageSize: CGSize(width: source.width, height: source.height)
+    )
+    return try await renderer.render().cgImage
   }
 
-  private static func cellColor(column: Int, row: Int) -> (red: UInt8, green: UInt8, blue: UInt8) {
-    (UInt8(30 + 37 * column), UInt8(40 + 60 * row), 90)
-  }
-
-  /// A source whose 50 px cells each have a distinct color (y-down rows).
-  private static func makeCellImage(size: CGSize) throws -> CGImage {
+  /// Gives every pixel a distinct, sharply changing color. A one-pixel shift
+  /// cannot hide inside a large uniform cell or a smooth gradient.
+  private static func makePixelImage(size: CGSize) throws -> CGImage {
     let width = Int(size.width)
     let height = Int(size.height)
-    let context = try #require(
-      CGContext(
-        data: nil,
-        width: width,
-        height: height,
-        bitsPerComponent: 8,
-        bytesPerRow: width * 4,
-        space: CGColorSpace(name: CGColorSpace.sRGB)!,
-        bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue
-          | CGImageAlphaInfo.premultipliedLast.rawValue
-      )
-    )
-    // Flip to y-down so cell row 0 is the top of the image.
-    context.translateBy(x: 0, y: size.height)
-    context.scaleBy(x: 1, y: -1)
-    for column in 0..<Int((size.width / cellSize).rounded(.up)) {
-      for row in 0..<Int((size.height / cellSize).rounded(.up)) {
-        let color = cellColor(column: column, row: row)
-        context.setFillColor(
-          red: CGFloat(color.red) / 255,
-          green: CGFloat(color.green) / 255,
-          blue: CGFloat(color.blue) / 255,
-          alpha: 1
-        )
-        context.fill(CGRect(
-          x: CGFloat(column) * cellSize,
-          y: CGFloat(row) * cellSize,
-          width: cellSize,
-          height: cellSize
-        ))
-      }
+    var pixels = [UInt8](repeating: 255, count: width * height * 4)
+    for index in 0..<(width * height) {
+      // Multiplication by an odd value permutes the 24-bit color space.
+      let color = (index * 0x9E3779) & 0xFFFFFF
+      pixels[index * 4] = UInt8((color >> 16) & 255)
+      pixels[index * 4 + 1] = UInt8((color >> 8) & 255)
+      pixels[index * 4 + 2] = UInt8(color & 255)
     }
-    return try #require(context.makeImage())
+    let provider = try #require(CGDataProvider(data: Data(pixels) as CFData))
+    return try #require(CGImage(
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bitsPerPixel: 32,
+      bytesPerRow: width * 4,
+      space: CGColorSpace(name: CGColorSpace.sRGB)!,
+      bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Big.rawValue
+        | CGImageAlphaInfo.premultipliedLast.rawValue),
+      provider: provider,
+      decode: nil,
+      shouldInterpolate: false,
+      intent: .defaultIntent
+    ))
   }
 
-  /// Checks the rendered crop against the source, independently of the
-  /// engine's crop snapper.
-  ///
-  /// Each source cell center is mapped forward through the crop geometry the
-  /// compiler evaluates (in y-up space: rotate by `-rotationRadians` about the
-  /// crop-rect center, then translate the crop origin to zero). Where it lands
-  /// inside the render, the pixel must be that cell's color.
-  ///
-  /// - Returns: The number of cell centers that landed inside the render.
-  @discardableResult
-  private static func expectRendered(
+  /// Compares every output pixel with an integer-index permutation of the
+  /// selected source rectangle. The established rotation sign is expressed
+  /// explicitly here, independently of the rendering affine transform.
+  private static func expectPixels(
     _ rendered: CGImage,
-    showsSourceOfSize size: CGSize,
-    croppedTo displayRect: CGRect,
-    rotationRadians: Double,
-    sourceLocation: SourceLocation = #_sourceLocation
-  ) throws -> Int {
-    let pixels = try rgbaPixels(of: rendered)
-    let cropRectYUp = CGRect(
-      x: displayRect.minX,
-      y: size.height - displayRect.maxY,
-      width: displayRect.width,
-      height: displayRect.height
-    )
-    let center = CGPoint(x: cropRectYUp.midX, y: cropRectYUp.midY)
-    let transform = CGAffineTransform(translationX: center.x, y: center.y)
-      .rotated(by: -rotationRadians)
-      .translatedBy(x: -center.x, y: -center.y)
-      .concatenating(.init(translationX: -cropRectYUp.minX, y: -cropRectYUp.minY))
-
-    var checked = 0
-    for column in 0..<Int((size.width / cellSize).rounded(.up)) {
-      for row in 0..<Int((size.height / cellSize).rounded(.up)) {
-        let cellMaxX = min(CGFloat(column + 1) * cellSize, size.width)
-        let cellMaxY = min(CGFloat(row + 1) * cellSize, size.height)
-        let sourceYDown = CGPoint(
-          x: (CGFloat(column) * cellSize + cellMaxX) / 2,
-          y: (CGFloat(row) * cellSize + cellMaxY) / 2
-        )
-        let output = CGPoint(x: sourceYDown.x, y: size.height - sourceYDown.y)
-          .applying(transform)
-        let x = Int(output.x.rounded(.down))
-        let y = rendered.height - 1 - Int(output.y.rounded(.down))
-        guard (1..<(rendered.width - 1)).contains(x), (1..<(rendered.height - 1)).contains(y) else {
-          continue
-        }
-        checked += 1
-
-        let expected = cellColor(column: column, row: row)
-        let offset = (y * rendered.width + x) * 4
-        let actual = (pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3])
-        #expect(
-          abs(Int(actual.0) - Int(expected.red)) <= 12
-            && abs(Int(actual.1) - Int(expected.green)) <= 12
-            && abs(Int(actual.2) - Int(expected.blue)) <= 12
-            && actual.3 == 255,
-          "cell (\(column), \(row)) at (\(x), \(y)): got \(actual), expected \(expected)",
-          sourceLocation: sourceLocation
-        )
-      }
-    }
-    return checked
-  }
-
-  /// Every rendered pixel is one of the source cell colors: a turn that
-  /// resampled between source pixels would blend colors along cell edges, and
-  /// a transparent band would show as alpha below 255.
-  private static func expectEveryPixelIsACellColor(
-    _ rendered: CGImage,
+    from source: CGImage,
+    sourceRect: CGRect,
+    rotation: QuarterTurn,
     sourceLocation: SourceLocation = #_sourceLocation
   ) throws {
-    let pixels = try rgbaPixels(of: rendered)
+    let width = Int(sourceRect.width)
+    let height = Int(sourceRect.height)
+    let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+    let outputWidth = isSideways ? height : width
+    let outputHeight = isSideways ? width : height
+    try #require(rendered.width == outputWidth, sourceLocation: sourceLocation)
+    try #require(rendered.height == outputHeight, sourceLocation: sourceLocation)
+    let actual = try rgbaPixels(of: rendered)
+    let expected = try rgbaPixels(of: source)
     var mismatches = 0
-    for offset in stride(from: 0, to: pixels.count, by: 4) {
-      let isCellColor = (0..<7).contains { column in
-        (0..<4).contains { row in
-          let color = cellColor(column: column, row: row)
-          return abs(Int(pixels[offset]) - Int(color.red)) <= 3
-            && abs(Int(pixels[offset + 1]) - Int(color.green)) <= 3
-            && abs(Int(pixels[offset + 2]) - Int(color.blue)) <= 3
-            && pixels[offset + 3] == 255
+    var firstMismatch: String?
+
+    for y in 0..<outputHeight {
+      for x in 0..<outputWidth {
+        let sourceX: Int
+        let sourceY: Int
+        switch rotation {
+        case .zero:
+          (sourceX, sourceY) = (x, y)
+        case .quarterCW:
+          (sourceX, sourceY) = (width - 1 - y, x)
+        case .half:
+          (sourceX, sourceY) = (width - 1 - x, height - 1 - y)
+        case .quarterCCW:
+          (sourceX, sourceY) = (y, height - 1 - x)
+        }
+        let actualOffset = (y * outputWidth + x) * 4
+        let expectedOffset = (
+          (Int(sourceRect.minY) + sourceY) * source.width + Int(sourceRect.minX) + sourceX
+        ) * 4
+        // One code value permits color-space conversion rounding; the fixture's
+        // adjacent source pixels differ enough to expose any displaced sample.
+        let rgbMatches = (0..<3).allSatisfy {
+          abs(Int(actual[actualOffset + $0]) - Int(expected[expectedOffset + $0])) <= 1
+        }
+        if !rgbMatches || actual[actualOffset + 3] != expected[expectedOffset + 3] {
+          mismatches += 1
+          if firstMismatch == nil {
+            firstMismatch = "output (\(x), \(y)), source (\(sourceX), \(sourceY)): "
+              + "\(Array(actual[actualOffset..<(actualOffset + 4)])) != "
+              + "\(Array(expected[expectedOffset..<(expectedOffset + 4)]))"
+          }
         }
       }
-      if isCellColor == false {
-        mismatches += 1
-      }
     }
-    #expect(mismatches == 0, "\(mismatches) pixels are not a source cell color", sourceLocation: sourceLocation)
+    #expect(
+      mismatches == 0,
+      "\(mismatches) pixel mismatches; \(firstMismatch ?? "none")",
+      sourceLocation: sourceLocation
+    )
   }
 
   private static func rgbaPixels(of image: CGImage) throws -> [UInt8] {

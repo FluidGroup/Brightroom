@@ -167,15 +167,26 @@ public enum QuarterTurn: Int, Codable, Equatable, Sendable, CaseIterable {
   public var radians: Double {
     Double(rawValue) * .pi / 180
   }
+
+  /// Whether the turn exchanges the output's horizontal and vertical axes.
+  public var isSideways: Bool {
+    switch self {
+    case .quarterCW, .quarterCCW:
+      return true
+    case .zero, .half:
+      return false
+    }
+  }
 }
 
 /// A crop in the current main-tree domain.
 ///
 /// The crop rectangle is interpreted relative to the image produced by the
 /// previous main-tree feature. A second crop therefore crops the already-cropped
-/// output of the first crop. The crop also carries the quarter-turn rotation and
-/// the free straightening angle, both applied about the crop-rect center, so the
-/// whole crop geometry is expressed as a single parametric feature.
+/// output of the first crop. Evaluation straightens the source, extracts the
+/// crop, and then applies its quarter-turn rotation to the cropped output.
+/// The stored rectangle describes the selection before that final turn;
+/// changing `rotation` does not change the selected source area.
 public struct CropFeature: Feature, Codable {
 
   /// The stable identity of this crop.
@@ -184,15 +195,20 @@ public struct CropFeature: Feature, Codable {
   /// A Boolean value indicating whether this crop participates in rendering.
   public var isEnabled: Bool
 
-  /// The rectangle to keep, expressed in the current domain (Core Image
-  /// bottom-left, y-up).
+  /// The rectangle to keep after straightening and before the output quarter
+  /// turn, relative to the current input image's origin (bottom-left, y-up).
+  ///
+  /// Its size is the crop size. A sideways `rotation` exchanges only the final
+  /// output dimensions; the selection rectangle remains unchanged.
+  /// Regions outside the input are transparent. Pixel fitting is the caller's
+  /// responsibility; evaluation does not shrink the requested canvas.
   public var cropRect: CGRect
 
-  /// The quarter-turn rotation applied about the crop-rect center.
+  /// The quarter-turn rotation applied to the cropped output.
   public var rotation: QuarterTurn
 
   /// A free straightening angle in radians, applied about the crop-rect center
-  /// in addition to `rotation`.
+  /// before extracting the crop and applying `rotation`.
   public var straightenRadians: Double
 
   /// The combined rotation (quarter turn + straighten) in radians.

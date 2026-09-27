@@ -26,18 +26,18 @@ import BrightroomEngine
 import BrightroomParametric
 
 /// BrightroomUI's mutable crop-editing working model, expressed in y-down
-/// display (gesture) space.
+/// image space after straightening and before output rotation.
 ///
 /// The stored crop (`CropFeature`) is dependency-free and authored in y-up Core
-/// Image space; this is its gesture-space counterpart. It carries the oriented
+/// Image space; this is its UI working counterpart. It carries the oriented
 /// image pixel size (sourced from the loaded state, since `CropFeature` has
-/// none) so clamping and aspect-fitting work, and converts to and from
-/// `CropFeature` through the engine's shared integer-snap helper at load and
-/// commit — so the live viewport and the stored document never disagree about
-/// the crop rect.
+/// none) so clamping and aspect-fitting work. Loading converts coordinates and
+/// fits the selection to the source. Committing uses the engine's shared pixel
+/// canonicalization before converting back to `CropFeature`; live gesture
+/// coordinates remain continuous until then.
 ///
 /// This is the home for the UI-authoring richness the engine no longer carries:
-/// the y-down gesture extent, the active aspect-ratio session, and the rotation
+/// the y-down selection, the active aspect-ratio session, and the rotation
 /// in `CropRotation`.
 public struct CropEditingState: Equatable, Sendable {
 
@@ -52,45 +52,45 @@ public struct CropEditingState: Equatable, Sendable {
   /// The oriented image pixel size, from the loaded state.
   public var imageSize: CGSize
 
-  /// The crop extent in y-down display space (top-left origin).
+  /// The selection in y-down image pixels after straightening and before the
+  /// output quarter turn. Changing `rotation` leaves this rectangle unchanged.
+  /// Under straightening, this is not an axis-aligned source sampling footprint.
   public private(set) var cropExtent: CGRect
 
-  /// The quarter-turn rotation applied to the crop.
+  /// The quarter-turn rotation applied to the cropped output.
   public var rotation: Rotation = .angle_0
 
-  /// The active aspect-ratio session, if a ratio is locked.
+  /// The active aspect-ratio session in the final output orientation.
   public private(set) var _usedAspectRatio: PixelAspectRatio?
 
-  /// A free straightening angle applied in addition to `rotation`.
+  /// A free straightening angle applied before cropping and output rotation.
   public var adjustmentAngle: AdjustmentAngle = .zero
 
-  /// The combined rotation (quarter turn + straighten).
+  /// The equivalent combined angle used by the live viewport.
   public var aggregatedRotation: AdjustmentAngle {
     rotation.angle + adjustmentAngle
   }
 
-  // MARK: - CropFeature adapters (the single y-flip boundary)
+  // MARK: - CropFeature coordinate adapters
 
   /// Builds the working model from a stored crop feature (y-up → y-down).
   public init(cropFeature: CropFeature, imageSize: CGSize) {
     self.id = cropFeature.id
     self.imageSize = imageSize
-    // A quarter-turned crop rect may extend past the unrotated image bounds;
-    // only its footprint on the source has to stay inside the image.
+    // Containment uses the straightened selection, which may extend past the
+    // unrotated image bounds while still sampling entirely inside the source.
     self.cropExtent = CropGeometry.fittingRect(
       rect: cropFeature.displayCropRect(imageSize: imageSize),
       in: imageSize,
-      rotation: cropFeature.rotation,
+      straightenRadians: cropFeature.straightenRadians,
       respectingAspectRatio: nil
     )
     self.rotation = Rotation(cropFeature.rotation)
     self.adjustmentAngle = .radians(cropFeature.straightenRadians)
   }
 
-  /// Lowers the working model into a stored crop feature (y-down → y-up),
-  /// reusing the engine's integer pixel-snap (`CropFeature(displayCropRect:…)`)
-  /// so the committed crop and the live viewport agree. Authoring an independent
-  /// snapper here makes `isRenderingEquivalent` oscillate and the crop jitter.
+  /// Creates a stored crop feature (y-down → y-up), using the engine's pixel
+  /// canonicalization for the selection before its output quarter turn.
   public func makeCropFeature() -> CropFeature {
     CropFeature(
       id: id,
@@ -115,7 +115,7 @@ public struct CropEditingState: Equatable, Sendable {
     self.cropExtent = CropGeometry.fittingRect(
       rect: cropRect,
       in: imageSize,
-      rotation: rotation.quarterTurn,
+      straightenRadians: adjustmentAngle.radians,
       respectingAspectRatio: nil
     )
     self.rotation = rotation
@@ -134,14 +134,28 @@ public struct CropEditingState: Equatable, Sendable {
 
   // MARK: - Mutations (geometry delegated to the engine's CropGeometry)
 
-  /// Set a new aspect ratio, updating the cropping extent to the maximum size
-  /// of that ratio inside the image as currently rotated.
+  /// Changes the output orientation while preserving the selected image area.
+  ///
+  /// Returns whether the output axes exchanged places. The active aspect ratio
+  /// follows that exchange without fitting a new, larger selection.
+  mutating func updateRotation(to newRotation: Rotation) -> Bool {
+    let swapsDimensions = rotation.quarterTurn.isSideways != newRotation.quarterTurn.isSideways
+    if swapsDimensions {
+      _usedAspectRatio = _usedAspectRatio?.swapped()
+    }
+    rotation = newRotation
+    return swapsDimensions
+  }
+
+  /// Sets an output aspect ratio and fits a centered selection inside the image.
+  /// The stored extent remains in the orientation before the output quarter turn.
   public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
     self._usedAspectRatio = newAspectRatio
+    let aspectRatio = aspectRatioBeforeOutputRotation(newAspectRatio)
     self.cropExtent = CropGeometry.cropRect(
-      toFitAspectRatio: newAspectRatio,
+      toFitAspectRatio: aspectRatio,
       in: imageSize,
-      rotation: rotation.quarterTurn
+      straightenRadians: adjustmentAngle.radians
     )
   }
 
@@ -159,7 +173,8 @@ public struct CropEditingState: Equatable, Sendable {
   }
 
   /// Updates the crop extent to fit a normalized bounding box (e.g. from
-  /// Vision), optionally constrained to an aspect ratio.
+  /// Vision), scaled by the selection's size before output rotation and anchored
+  /// to the image origin. The optional aspect ratio describes the final output.
   public mutating func updateCropExtent(
     toFitBoundingBox boundingBox: CGRect,
     respectingApectRatio: PixelAspectRatio?
@@ -169,12 +184,19 @@ public struct CropEditingState: Equatable, Sendable {
       toFitBoundingBox: boundingBox,
       within: cropExtent,
       in: imageSize,
-      respectingAspectRatio: respectingApectRatio
+      straightenRadians: adjustmentAngle.radians,
+      respectingAspectRatio: respectingApectRatio.map(aspectRatioBeforeOutputRotation)
     )
   }
 
+  /// Replaces the selection in y-down pixels before output rotation.
   public mutating func updateCropExtent(_ cropExtent: CGRect) {
     self.cropExtent = cropExtent
+  }
+
+  /// Converts an output aspect ratio into the stored selection's orientation.
+  func aspectRatioBeforeOutputRotation(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
+    rotation.quarterTurn.isSideways ? aspectRatio.swapped() : aspectRatio
   }
 
   // MARK: - Rendering equivalence

@@ -36,7 +36,7 @@ extension CGContext {
     return try makeContext(for: image, pixelDimensions: pixelDimensions)
   }
 
-  static func makeContext(for image: CGImage, pixelDimensions: PixelDimensions) throws -> CGContext {
+  private static func makeContext(for image: CGImage, pixelDimensions: PixelDimensions) throws -> CGContext {
 
     var bitmapInfo = image.bitmapInfo
 
@@ -98,80 +98,12 @@ extension CGContext {
         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
       ).unwrap()
   }
-
-  fileprivate func detached(_ perform: () -> Void) {
-    saveGState()
-    perform()
-    restoreGState()
-  }
-}
-
-extension CGContext {
-
-  /**
-   around center: use center of boundingBoxOfClipPath
-   */
-  func rotate(radians: CGFloat, anchor: CGPoint) {
-
-    translateBy(x: anchor.x, y: anchor.y)
-    rotate(by: radians)
-    translateBy(x: -anchor.x, y: -anchor.y)
-
-  }
 }
 
 extension CGImage {
 
   var size: CGSize {
     return .init(width: width, height: height)
-  }
-
-  func croppedWithColorspace(
-    to crop: RenderCrop
-  ) throws -> CGImage {
-    try croppedWithColorspace(
-      to: crop.cropExtent,
-      adjustmentAngleRadians: crop.aggregatedRotationRadians
-    )
-  }
-
-  /// - Parameter cropExtent: The y-down crop rect in the output orientation
-  ///   (`RenderCrop.cropExtent`). Its size is the output size.
-  func croppedWithColorspace(
-    to cropExtent: CGRect,
-    adjustmentAngleRadians: CGFloat
-  ) throws -> CGImage {
-
-    let cgImage = try autoreleasepool { () -> CGImage? in
-
-      let context = try CGContext.makeContext(
-        for: self,
-        pixelDimensions: PixelDimensions(cropExtent.size)
-      )
-        .perform { context in
-
-          context.rotate(
-            radians: -adjustmentAngleRadians,
-            anchor: .init(x: context.boundingBoxOfClipPath.midX, y: context.boundingBoxOfClipPath.midY)
-          )
-
-          context.draw(
-            self,
-            in: CGRect(
-              origin: .init(
-                x: -cropExtent.origin.x,
-                y: -(size.height - cropExtent.maxY)
-              ),
-              size: size
-            )
-          )
-
-        }
-      return context.makeImage()
-    }
-
-    return try cgImage.unwrap()
-
   }
 
   func resized(maxPixelSize: CGFloat) throws -> CGImage {

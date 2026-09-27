@@ -1,4 +1,4 @@
-import BrightroomEngine
+import BrightroomParametric
 import CoreGraphics
 
 /// Describes the coordinate relationship between the pre-final-crop source
@@ -11,9 +11,6 @@ import CoreGraphics
 struct EditingCanvasCropOutputGeometry: Equatable {
   /// The size of the image domain before the final Crop Feature is applied.
   let sourceImageSize: CGSize
-
-  /// The final crop rectangle in pre-final-crop source coordinates.
-  let cropRectInSource: CGRect
 
   /// The zero-origin canvas size displayed by Tool surfaces.
   let outputSize: CGSize
@@ -40,37 +37,30 @@ struct EditingCanvasCropOutputGeometry: Equatable {
       return nil
     }
 
-    let outputSize = CGSize(
-      width: max(cropRect.width, 1),
-      height: max(cropRect.height, 1)
+    // Both crop models store the selection before output rotation; only y is
+    // flipped here. Building a feature directly keeps Tool gesture geometry
+    // continuous instead of applying export's pixel snapping.
+    let feature = CropFeature(
+      id: crop.id,
+      cropRect: CGRect(
+        x: cropRect.minX,
+        y: crop.imageSize.height - cropRect.maxY,
+        width: cropRect.width,
+        height: cropRect.height
+      ),
+      rotation: crop.rotation.quarterTurn,
+      straightenRadians: crop.adjustmentAngle.radians
     )
-    let outputCenter = CGPoint(x: outputSize.width / 2, y: outputSize.height / 2)
-    let displayToCoreGraphicsTransform = CGAffineTransform(scaleX: 1, y: -1)
+    let geometry = feature.outputGeometry(in: CGRect(origin: .zero, size: crop.imageSize))
+    let outputSize = geometry.outputBounds.size
+    let displayToCoreImageTransform = CGAffineTransform(scaleX: 1, y: -1)
       .concatenating(.init(translationX: 0, y: crop.imageSize.height))
-    let cropTranslation = CGAffineTransform(
-      translationX: -cropRect.minX,
-      y: -(crop.imageSize.height - cropRect.maxY)
-    )
-    // Match CGImage.croppedWithColorspace while keeping persisted strokes in
-    // EditingCanvas' display-oriented source coordinate space.
-    let outputRotation = CGAffineTransform(
-      translationX: outputCenter.x,
-      y: outputCenter.y
-    )
-    .rotated(by: -crop.aggregatedRotation.radians)
-    .translatedBy(x: -outputCenter.x, y: -outputCenter.y)
     let outputDisplayTransform = CGAffineTransform(scaleX: 1, y: -1)
       .concatenating(.init(translationX: 0, y: outputSize.height))
-    let sourceToOutputTransform = displayToCoreGraphicsTransform
-      .concatenating(cropTranslation)
-      .concatenating(outputRotation)
+    let sourceToOutputTransform = displayToCoreImageTransform
+      .concatenating(geometry.sourceToOutputTransform)
       .concatenating(outputDisplayTransform)
-    guard Self.isInvertible(sourceToOutputTransform) else {
-      return nil
-    }
-
     self.sourceImageSize = crop.imageSize
-    self.cropRectInSource = cropRect
     self.outputSize = outputSize
     self.sourceToOutputTransform = sourceToOutputTransform
     self.outputToSourceTransform = sourceToOutputTransform.inverted()
@@ -82,10 +72,6 @@ struct EditingCanvasCropOutputGeometry: Equatable {
 
   func outputRecord(fromSourceRecord record: EditingCanvasStrokeRecord) -> EditingCanvasStrokeRecord {
     record.applying(sourceToOutputTransform)
-  }
-
-  private static func isInvertible(_ transform: CGAffineTransform) -> Bool {
-    abs(transform.a * transform.d - transform.b * transform.c) > 0.000001
   }
 }
 
