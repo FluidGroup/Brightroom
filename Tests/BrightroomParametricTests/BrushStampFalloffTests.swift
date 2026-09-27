@@ -25,7 +25,7 @@ import Testing
 
 @testable import BrightroomParametric
 
-/// Pins the canonical brush-stamp falloff produced by the parametric CIKernel
+/// Pins the canonical brush-stamp falloff produced by the shared brush
 /// rasterizer (`FeatureGraphCompiler.renderMask`, the export/preview path).
 ///
 /// The falloff is `BrushStampFalloff.metalh`'s `brushStampAlpha`:
@@ -34,7 +34,7 @@ import Testing
 ///          * clamp(opacity, 0, 1)`
 /// where `normalizedDistance = distance / radius` and `radius = diameter / 2`.
 ///
-/// The kernel returns `float4(a, a, a, a)`, so alpha == red == any channel; the
+/// The rasterizer writes `float4(a, a, a, a)`, so alpha == red == any channel; the
 /// tests read the red channel. A single stamp is rendered centered so the y-up
 /// (Core Image working space) vs y-down (CGImage) origin distinction is
 /// symmetric and does not affect the asserted points.
@@ -124,7 +124,7 @@ struct BrushStampFalloffTests {
     return try #require(context.createCGImage(ciImage, from: extent))
   }
 
-  /// Reads the red channel at the given pixel. The brush kernel writes
+  /// Reads the red channel at the given pixel. The brush rasterizer writes
   /// `float4(a, a, a, a)`, so red equals the mask alpha.
   private static func red(in image: CGImage, x: Int, y: Int) -> UInt8 {
     let width = image.width
