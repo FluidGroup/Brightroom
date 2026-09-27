@@ -9,31 +9,31 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  // Each editor keeps its document in a session, so reopening an editor shows
+  // Each editor keeps its document in a store, so reopening an editor shows
   // the previous edit and keeps its undo history.
-  @State private var photosCropHorizontal = DemoPhotosCropSession(
+  @State private var horizontalStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Asset.horizontalRect.image)
   )
-  @State private var photosCropVertical = DemoPhotosCropSession(
+  @State private var verticalStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Asset.verticalRect.image)
   )
-  @State private var photosCropSquare = DemoPhotosCropSession(
+  @State private var squareStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Asset.squareRect.image)
   )
-  @State private var photosCropNasa = DemoPhotosCropSession(
+  @State private var nasaStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(
       contentsOf: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
         URL(fileURLWithPath: $0)
       }!
     )
   )
-  @State private var photosCropSuperSmall = DemoPhotosCropSession(
+  @State private var superSmallStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Asset.superSmall.image)
   )
-  @State private var photosCropInstaLogo = DemoPhotosCropSession(
+  @State private var instaLogoStore = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Asset.instaLogo.image)
   )
-  @State private var photosCropRemote = DemoPhotosCropSession(
+  @State private var remoteStore = DemoDocumentStore(
     loading: {
       try await DemoRemoteImage.load(
         URL(
@@ -43,7 +43,7 @@ struct ContentView: View {
       )
     }
   )
-  @State private var photosCropRemotePreview = DemoPhotosCropSession(
+  @State private var remotePreviewStore = DemoDocumentStore(
     loading: {
       try await DemoRemoteImage.load(
         URL(
@@ -88,11 +88,11 @@ struct ContentView: View {
           }
 
           Section(
-            "PhotosCrop FaceDetection",
+            "ImageEditor FaceDetection",
             content: {
               Button("Horizontal 1") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(
+                  DemoImageEditor(
                     image: {
                       Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
@@ -103,7 +103,7 @@ struct ContentView: View {
 
               Button("Horizontal 2") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(
+                  DemoImageEditor(
                     image: {
                       Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
@@ -117,64 +117,64 @@ struct ContentView: View {
           )
 
           Section(
-            "PhotosCrop",
+            "ImageEditor",
             content: {
               Button("Horizontal") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropHorizontal)
+                  DemoImageEditor(store: horizontalStore)
                 }
               }
 
               Button("Vertical") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropVertical)
+                  DemoImageEditor(store: verticalStore)
                 }
               }
 
               Button("Square") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropSquare)
+                  DemoImageEditor(store: squareStore)
                 }
               }
 
               Button("Nasa") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropNasa)
+                  DemoImageEditor(store: nasaStore)
                 }
               }
 
               Button("Super small") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropSuperSmall)
+                  DemoImageEditor(store: superSmallStore)
                 }
               }
 
               Button("Insta Logo") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropInstaLogo)
+                  DemoImageEditor(store: instaLogoStore)
                 }
               }
 
               Button("Remote") {
 
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropRemote)
+                  DemoImageEditor(store: remoteStore)
                 }
               }
 
               Button("Remote - preview") {
 
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(session: photosCropRemotePreview)
+                  DemoImageEditor(store: remotePreviewStore)
                 }
               }
             }
           )
 
           Section(content: {
-            Button("PhotosCrop Square (modifier)") {
+            Button("ImageEditor Square (modifier)") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
+                DemoImageEditor(
                   image: {
                     SourceImage(image: Asset.l1000316.image)
                   },
@@ -188,9 +188,9 @@ struct ContentView: View {
               }
             }
 
-            Button("PhotosCrop 4:5") {
+            Button("ImageEditor 4:5") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
+                DemoImageEditor(
                   image: {
                     SourceImage(image: Asset.l1000316.image)
                   },
@@ -199,9 +199,9 @@ struct ContentView: View {
               }
             }
 
-            Button("PhotosCrop 5:4") {
+            Button("ImageEditor 5:4") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
+                DemoImageEditor(
                   image: {
                     SourceImage(image: Asset.l1000316.image)
                   },
@@ -210,9 +210,9 @@ struct ContentView: View {
               }
             }
 
-            Button("PhotosCrop left") {
+            Button("ImageEditor left") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
+                DemoImageEditor(
                   image: {
                     SourceImage(image: Mocks.imageOrientationLeft())
                   }
@@ -249,7 +249,7 @@ struct WorkingOnPicked: View {
 
   @State private var item: PhotosPickerItem?
   @State private var selectedImage: PickedDemoImage?
-  @State private var selectedPhotosCropSession: DemoPhotosCropSession?
+  @State private var selectedDocumentStore: DemoDocumentStore?
   @State private var loadingMessage: String?
   @State private var fullScreenView: FullscreenIdentifiableView?
 
@@ -264,24 +264,24 @@ struct WorkingOnPicked: View {
         }
 
         Section("BuiltIn") {
-          Button("PhotosCrop") {
-            let session = photosCropSession(for: selectedImage)
+          Button("ImageEditor") {
+            let store = documentStore(for: selectedImage)
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(session: session)
+              DemoImageEditor(store: store)
             }
           }
 
-          Button("PhotosCrop Square") {
+          Button("ImageEditor Square") {
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(image: {
+              DemoImageEditor(image: {
                 selectedImage.makeSourceImage()
               }, options: .fixedAspectRatio(.square))
             }
           }
 
-          Button("PhotosCrop 4:5") {
+          Button("ImageEditor 4:5") {
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(image: {
+              DemoImageEditor(image: {
                 selectedImage.makeSourceImage()
               }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
             }
@@ -307,7 +307,7 @@ struct WorkingOnPicked: View {
     )
     .onChange(of: item, perform: { value in
       selectedImage = nil
-      selectedPhotosCropSession = nil
+      selectedDocumentStore = nil
       loadingMessage = "Loading selected image..."
 
       guard let value else {
@@ -351,14 +351,14 @@ struct WorkingOnPicked: View {
 
   }
 
-  private func photosCropSession(for image: PickedDemoImage) -> DemoPhotosCropSession {
-    if let selectedPhotosCropSession {
-      return selectedPhotosCropSession
+  private func documentStore(for image: PickedDemoImage) -> DemoDocumentStore {
+    if let selectedDocumentStore {
+      return selectedDocumentStore
     }
 
-    let session = DemoPhotosCropSession(image: image.makeSourceImage())
-    selectedPhotosCropSession = session
-    return session
+    let store = DemoDocumentStore(image: image.makeSourceImage())
+    selectedDocumentStore = store
+    return store
   }
 
 }
@@ -405,15 +405,15 @@ private struct PickedImageSummary: View {
 
 /// A long-lived edit of one image.
 ///
-/// The session keeps the document, so reopening the editor shows the previous
+/// The store keeps the document, so reopening the editor shows the previous
 /// edit and keeps its undo history. The document exists only once the image
 /// is loaded: an edit never exists without its image.
 @MainActor
 @Observable
-final class DemoPhotosCropSession {
+final class DemoDocumentStore {
 
   /// The edited document; nil until the image is loaded.
-  var document: EditingDocument<PhotosCropFeature>?
+  var document: ImageEditorDocument?
 
   private(set) var loadingError: String?
 
@@ -423,7 +423,7 @@ final class DemoPhotosCropSession {
   @ObservationIgnored
   private let cropModifier: CropModifier
 
-  /// A session over an image that loads asynchronously, such as a download.
+  /// A store over an image that loads asynchronously, such as a download.
   init(
     loading loadImage: @escaping @Sendable () async throws -> SourceImage,
     cropModifier: CropModifier = .identity
@@ -432,7 +432,7 @@ final class DemoPhotosCropSession {
     self.cropModifier = cropModifier
   }
 
-  /// A session over an image that is already available.
+  /// A store over an image that is already available.
   convenience init(image: SourceImage, cropModifier: CropModifier = .identity) {
     self.init(loading: { image }, cropModifier: cropModifier)
   }
@@ -455,22 +455,22 @@ final class DemoPhotosCropSession {
   }
 }
 
-struct DemoPhotosCropView: View {
+struct DemoImageEditor: View {
 
-  @ObjectEdge private var session: DemoPhotosCropSession
+  @ObjectEdge private var store: DemoDocumentStore
   @Environment(\.dismiss) private var dismiss
 
   @State var resultImage: ResultImage?
 
-  private let options: SwiftUIPhotosCropView.Options
+  private let options: ImageEditor.Options
 
-  /// Edits a long-lived session; reopening shows its previous edit.
+  /// Edits a long-lived store; reopening shows its previous edit.
   @MainActor
   init(
-    session: DemoPhotosCropSession,
-    options: SwiftUIPhotosCropView.Options = .demo()
+    store: DemoDocumentStore,
+    options: ImageEditor.Options = .demo()
   ) {
-    self._session = .init(wrappedValue: session)
+    self._store = .init(wrappedValue: store)
     self.options = options
   }
 
@@ -479,22 +479,22 @@ struct DemoPhotosCropView: View {
   init(
     image: @escaping () -> SourceImage,
     cropModifier: CropModifier = .identity,
-    options: SwiftUIPhotosCropView.Options = .demo()
+    options: ImageEditor.Options = .demo()
   ) {
-    self._session = .init(
-      wrappedValue: DemoPhotosCropSession(image: image(), cropModifier: cropModifier)
+    self._store = .init(
+      wrappedValue: DemoDocumentStore(image: image(), cropModifier: cropModifier)
     )
     self.options = options
   }
 
   var body: some View {
-    @Bindable var session = session
+    @Bindable var store = store
 
     Group {
       // The editor takes a non-optional binding: show it once the document
-      // exists. The session never sets it back to nil.
-      if let document = Binding($session.document) {
-        SwiftUIPhotosCropView(
+      // exists. The store never sets it back to nil.
+      if let document = Binding($store.document) {
+        ImageEditor(
           document: document,
           options: options,
           onDone: {
@@ -505,21 +505,21 @@ struct DemoPhotosCropView: View {
             dismiss()
           }
         )
-      } else if let loadingError = session.loadingError {
+      } else if let loadingError = store.loadingError {
         Text(loadingError)
       } else {
         ProgressView()
       }
     }
     .task {
-      await session.prepareDocument()
+      await store.prepareDocument()
     }
     .sheet(item: $resultImage) {
       RenderedResultView(result: $0)
     }
   }
 
-  private func export(_ document: EditingDocument<PhotosCropFeature>) {
+  private func export(_ document: ImageEditorDocument) {
     // Export straight to disk with bounded memory (strip render into an
     // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
     // then preview from a DOWNSAMPLED decode so the read-back doesn't
@@ -543,11 +543,11 @@ struct DemoPhotosCropView: View {
   }
 }
 
-private extension SwiftUIPhotosCropView.Options {
+private extension ImageEditor.Options {
   /// Creates demo options with the sample filter catalog explicitly supplied.
   static func demo() -> Self {
     var options = Self()
-    options.filterPresets = PhotosCropDemoFilterPresets.make()
+    options.filterPresets = DemoFilters.make()
     return options
   }
 

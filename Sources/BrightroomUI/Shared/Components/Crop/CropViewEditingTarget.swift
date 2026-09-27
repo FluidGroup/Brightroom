@@ -20,13 +20,13 @@
 // THE SOFTWARE.
 
 
-/// The part of a `PhotosCropFeature` that `SwiftUICropView` gestures edit.
+/// The part of an `ImageEditorFeature` that `SwiftUICropView` gestures edit.
 public enum CropViewEditingTarget: Equatable, Sendable {
 
   /// Edit `crop` with the guide and the scroll surface. The canvas shows the
   /// document with the crop neutralized.
   case crop
 
-  /// Paint `blurMask`. The canvas shows the whole document through the crop.
-  case blurMask
+  /// Paint `localBlur`. The canvas shows the whole document through the crop.
+  case localBlur
 }

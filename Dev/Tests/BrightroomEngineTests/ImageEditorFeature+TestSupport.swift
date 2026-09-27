@@ -5,9 +5,9 @@ import BrightroomParametric
 
 // The viewing and editing positions as value substitutions on the document
 // (docs/vision-of-editing.md, "Viewing Point and Adjustment Point"). The
-// canvas reads `effects`, `blurMask`, and `crop` directly, which is equivalent
+// canvas reads `effects`, `localBlur`, and `crop` directly, which is equivalent
 // because of the body order; these state that equivalence for the tests.
-extension PhotosCropFeature {
+extension ImageEditorFeature {
 
   /// Whether any global effect is present.
   var hasGlobalEffects: Bool {
@@ -27,9 +27,9 @@ extension PhotosCropFeature {
 
   /// The document without the blur mask: the base the canvas composites the
   /// blur over.
-  func withoutBlurMask() -> Self {
+  func withoutLocalBlur() -> Self {
     var copy = self
-    copy.blurMask = nil
+    copy.localBlur = nil
     return copy
   }
 }

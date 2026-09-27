@@ -151,7 +151,7 @@ public struct CropModifier: Sendable {
   }
 }
 
-extension EditingDocument where Content == PhotosCropFeature {
+extension EditingDocument where Content == ImageEditorFeature {
 
   /// Creates a document with no effects and a crop that covers the whole
   /// image, adjusted by `cropModifier`.
@@ -171,7 +171,7 @@ extension EditingDocument where Content == PhotosCropFeature {
     cropModifier: CropModifier,
     history: History = History()
   ) async {
-    var feature = PhotosCropFeature(imageSize: image.pixelSize)
+    var feature = ImageEditorFeature(imageSize: image.pixelSize)
 
     if cropModifier.isIdentity == false {
       let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)

@@ -79,12 +79,12 @@ struct MaskWorkingSpaceTests {
       EditingCanvasStrokeRecord(stamps: [CGPoint(x: 200, y: 280)], brush: brush),
     ]
 
-    var document = PhotosCropFeature(imageSize: CGSize(width: 400, height: height))
+    var document = ImageEditorFeature(imageSize: CGSize(width: 400, height: height))
     for record in records {
-      document.appendBlurMaskStroke(record.workingSpaceStroke(domainHeight: height))
+      document.appendLocalBlurStroke(record.workingSpaceStroke(domainHeight: height))
     }
 
-    let plan = CropView.CanvasRenderPlan(blurMask: document.blurMask)
+    let plan = CropView.CanvasRenderPlan(localBlur: document.localBlur)
     #expect(plan.committedStrokes(in: nil, domainHeight: height) == records)
   }
 

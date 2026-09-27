@@ -302,7 +302,7 @@ extension CropView {
 
     func updateRenderedEditPreview(
       source: CropViewSource,
-      document: PhotosCropFeature,
+      document: ImageEditorFeature,
       crop: CropEditingState,
       committedStrokes: @autoclosure () -> [EditingCanvasStrokeRecord]
     ) {
@@ -316,7 +316,7 @@ extension CropView {
         return
       }
 
-      let renderPlan = CanvasRenderPlan(blurMask: document.blurMask)
+      let renderPlan = CanvasRenderPlan(localBlur: document.localBlur)
       guard
         let images = EditingCanvasRenderImageFactory.makeRenderImages(
           editingSourceImage: source.editingSourceImage,
@@ -450,7 +450,7 @@ extension CropView {
     /// render images and their bakes.
     struct CanvasRenderInputKey: Equatable {
       var sourceImage: ObjectIdentifier
-      var effects: PhotosCropFeature.Effects
+      var effects: ImageEditorFeature.Effects
       var geometry: EditingCanvasCropOutputGeometry
       var mode: EditingCanvasMode
     }
@@ -522,7 +522,7 @@ extension CropView {
 
     func updateCanvas(
       source: CropViewSource,
-      effects: PhotosCropFeature.Effects,
+      effects: ImageEditorFeature.Effects,
       geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,
       committedStrokes: [EditingCanvasStrokeRecord]

@@ -61,7 +61,7 @@ struct EditingDocumentEqualityTests {
     // invalidated by a commit, which changes the document but no pixel.
     struct RenderKey: Equatable {
       let image: SourceImage
-      let feature: PhotosCropFeature
+      let feature: ImageEditorFeature
     }
     var document = try Fixtures.makeDocument()
     document.feature = Fixtures.exposure(1)
@@ -77,10 +77,10 @@ struct EditingDocumentEqualityTests {
   }
 
   @Test func `Features built from the same values are equal`() throws {
-    var built = PhotosCropFeature(imageSize: Fixtures.rotatedJPEGSize)
+    var built = ImageEditorFeature(imageSize: Fixtures.rotatedJPEGSize)
     built.effects.exposure = ExposureFeature(value: 1)
 
-    let rebuilt = PhotosCropFeature(
+    let rebuilt = ImageEditorFeature(
       effects: .init(exposure: ExposureFeature(value: 1)),
       crop: CropFeature(
         displayCropRect: CGRect(origin: .zero, size: Fixtures.rotatedJPEGSize),

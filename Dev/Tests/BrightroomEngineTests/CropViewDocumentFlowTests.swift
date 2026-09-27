@@ -33,17 +33,17 @@ struct CropViewDocumentFlowTests {
     let cropView: CropView
     var snapshots: [SwiftUICropView.StateSnapshot] { box.snapshots }
     /// The owner's document after each change CropView reported.
-    var emitted: [PhotosCropFeature] { box.emitted }
+    var emitted: [ImageEditorFeature] { box.emitted }
     let box: Box
 
     /// Plays the document's owner: applies each change to its own latest
     /// document.
     final class Box {
       var snapshots: [SwiftUICropView.StateSnapshot] = []
-      var emitted: [PhotosCropFeature] = []
-      var owned: PhotosCropFeature
+      var emitted: [ImageEditorFeature] = []
+      var owned: ImageEditorFeature
 
-      init(owned: PhotosCropFeature) {
+      init(owned: ImageEditorFeature) {
         self.owned = owned
       }
     }
@@ -52,8 +52,8 @@ struct CropViewDocumentFlowTests {
   /// A CropView over a checkerboard, with the handlers bound and the target
   /// set before loading, as `makeUIView` does.
   private func makeLoadedCropView(
-    document: PhotosCropFeature,
-    target: CropViewEditingTarget? = .blurMask
+    document: ImageEditorFeature,
+    target: CropViewEditingTarget? = .localBlur
   ) -> Harness {
     let cropView = CropView(
       source: CropViewSource(editingSourceImage: makeSource(size: imageSize), imageSize: imageSize),
@@ -70,8 +70,8 @@ struct CropViewDocumentFlowTests {
     return Harness(cropView: cropView, box: box)
   }
 
-  private func makeAngledDocument(degrees: Double) -> PhotosCropFeature {
-    var document = PhotosCropFeature(imageSize: imageSize)
+  private func makeAngledDocument(degrees: Double) -> ImageEditorFeature {
+    var document = ImageEditorFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.adjustmentAngle = .init(degrees: degrees)
     document.setCrop(crop)
@@ -103,8 +103,8 @@ struct CropViewDocumentFlowTests {
     #expect(harness.emitted.count == 1)
     let expected = geometry.sourceRecord(fromOutputRecord: record)
       .workingSpaceStroke(domainHeight: imageSize.height)
-    #expect(harness.emitted.last?.blurMaskStrokes == [expected])
-    #expect(harness.emitted.last?.blurMask?.content == CropViewMaskingDefaults.blurEffect)
+    #expect(harness.emitted.last?.localBlurStrokes == [expected])
+    #expect(harness.emitted.last?.localBlur?.content == CropViewMaskingDefaults.blurEffect)
   }
 
   @Test func `Echo does not reload the crop`() throws {
@@ -146,10 +146,10 @@ struct CropViewDocumentFlowTests {
   /// same turn as a crop commit) survives the commit.
   @Test func `A crop commit keeps owner changes CropView has not received`() throws {
     let harness = makeLoadedCropView(
-      document: PhotosCropFeature(imageSize: imageSize),
+      document: ImageEditorFeature(imageSize: imageSize),
       target: .crop
     )
-    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &harness.box.owned.effects)
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &harness.box.owned.effects)
     let exposure = harness.box.owned.effects.exposure
 
     harness.cropView.setCroppingAspectRatio(.square)
@@ -164,7 +164,7 @@ struct CropViewDocumentFlowTests {
   /// A crop reloaded from outside (an undo) keeps the active aspect-ratio
   /// lock, so Done cannot commit a crop that breaks it.
   @Test func `A reloaded crop keeps the aspect-ratio lock`() throws {
-    let initial = PhotosCropFeature(imageSize: imageSize)
+    let initial = ImageEditorFeature(imageSize: imageSize)
     let harness = makeLoadedCropView(document: initial, target: .crop)
 
     harness.cropView.setCroppingAspectRatio(.square)
@@ -183,7 +183,7 @@ struct CropViewDocumentFlowTests {
   /// back with the output instead of refitting the undone crop to the turned
   /// lock; Done then keeps the undone crop.
   @Test func `A reloaded crop across a sideways turn turns the aspect-ratio lock`() throws {
-    let initial = PhotosCropFeature(imageSize: imageSize)
+    let initial = ImageEditorFeature(imageSize: imageSize)
     let harness = makeLoadedCropView(document: initial, target: .crop)
     let landscape = PixelAspectRatio(width: 4, height: 3)
 
@@ -210,10 +210,10 @@ struct CropViewDocumentFlowTests {
   }
 
   @Test func `Switching between tool targets commits nothing`() {
-    let harness = makeLoadedCropView(document: PhotosCropFeature(imageSize: imageSize))
+    let harness = makeLoadedCropView(document: ImageEditorFeature(imageSize: imageSize))
 
     harness.cropView.setEditingTarget(nil)
-    harness.cropView.setEditingTarget(.blurMask)
+    harness.cropView.setEditingTarget(.localBlur)
 
     #expect(harness.emitted.isEmpty)
   }
@@ -224,18 +224,18 @@ struct CropViewDocumentFlowTests {
   @Test func `A painted stroke exports at the painted display point`() throws {
     let size = CGSize(width: 240, height: 180)
     let source = makeSource(size: size)
-    let plain = PhotosCropFeature(imageSize: size)
+    let plain = ImageEditorFeature(imageSize: size)
     let cropView = CropView(
       source: CropViewSource(editingSourceImage: source, imageSize: size),
       document: plain
     )
     var owned = plain
-    var emitted: [PhotosCropFeature] = []
+    var emitted: [ImageEditorFeature] = []
     cropView.setDocumentChangeHandler { change in
       change(&owned)
       emitted.append(owned)
     }
-    cropView.setEditingTarget(.blurMask)
+    cropView.setEditingTarget(.localBlur)
     cropView.loadDocumentState()
 
     let display = CGPoint(x: 50, y: 40)
@@ -308,7 +308,7 @@ struct LoadedCropViewCoordinatorTests {
 
   @Test func `A change emitted while applying inputs is delivered later`() async throws {
     let size = CGSize(width: 80, height: 60)
-    let document = PhotosCropFeature(imageSize: size)
+    let document = ImageEditorFeature(imageSize: size)
     let cropView = CropView(
       source: CropViewSource(
         editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),
@@ -321,7 +321,7 @@ struct LoadedCropViewCoordinatorTests {
       brush: .init(diameter: 4, hardness: 1, opacity: 1)
     )
     var changed = document
-    changed.appendBlurMaskStroke(stroke)
+    changed.appendLocalBlurStroke(stroke)
 
     let coordinator = LoadedCropViewRepresentable.Coordinator()
     var owned = document
@@ -332,7 +332,7 @@ struct LoadedCropViewCoordinatorTests {
     }
 
     coordinator.applySwiftUIInputs {
-      coordinator.deliverDocumentChange { $0.appendBlurMaskStroke(stroke) }
+      coordinator.deliverDocumentChange { $0.appendLocalBlurStroke(stroke) }
     }
 
     #expect(deliveries == 0, "not delivered during the view update")
@@ -349,7 +349,7 @@ struct LoadedCropViewCoordinatorTests {
     #expect(coordinator.applyingPendingDocumentChanges(to: document) == document)
 
     // Outside input application a change is delivered at once.
-    coordinator.deliverDocumentChange { $0.blurMask = nil }
+    coordinator.deliverDocumentChange { $0.localBlur = nil }
     #expect(deliveries == 2)
     #expect(owned == document)
   }

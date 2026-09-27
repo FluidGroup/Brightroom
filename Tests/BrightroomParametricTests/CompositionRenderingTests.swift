@@ -206,7 +206,7 @@ struct CompositionRenderingTests {
     Fixtures.expectPixelsMatch(recipe, composed, tolerance: Self.recipeTolerance)
 
     var withoutMask = document
-    withoutMask.blurMask = nil
+    withoutMask.localBlur = nil
     let unmasked = try Fixtures.renderer.makeImage(from: source, feature: withoutMask)
     Fixtures.expectVisiblyDifferent(composed, unmasked)
 
@@ -403,7 +403,7 @@ struct CompositionRenderingTests {
 
   @Test func `export renders the image recipe`() throws {
     let source = try Fixtures.makeSource()
-    let document = PhotosCropLikeDocument()
+    let document = ImageEditorLikeFeature()
     let options = ParametricExportRenderer.Options(
       workingFormat: .RGBAh,
       workingColorSpace: Fixtures.workingColorSpace
@@ -442,7 +442,7 @@ struct CompositionRenderingTests {
 
   @Test func `video frames are the image recipe placed in the render extent`() throws {
     let source = try Fixtures.makeSource()
-    let document = PhotosCropLikeDocument()
+    let document = ImageEditorLikeFeature()
     let videoRenderer = ParametricVideoRenderer()
     let renderExtent = CGRect(x: 0, y: 0, width: 280, height: 200)
     let presentationTime = CMTime(value: 7, timescale: 30)
@@ -495,7 +495,7 @@ struct CompositionRenderingTests {
     defer {
       try? FileManager.default.removeItem(at: asset.url)
     }
-    let document = PhotosCropLikeDocument()
+    let document = ImageEditorLikeFeature()
     let videoRenderer = ParametricVideoRenderer()
 
     let composition = try videoRenderer.makeVideoComposition(for: asset, feature: document)
@@ -729,23 +729,23 @@ enum MaskShape: String, CaseIterable, Sendable {
   }
 }
 
-/// A global exposure, a masked blur, and a trailing contrast, in the shape a
-/// PhotosCrop-like editor stores its blur mask.
+/// A global exposure, a masked blur, and a trailing contrast, in the shape an
+/// ImageEditor-like editor stores its local blur.
 private struct MaskedBlurDocument: Feature {
 
   var exposure = ExposureFeature(value: 0.15)
-  var blurMask: LocalAdjustment<GaussianBlurFeature>?
+  var localBlur: LocalAdjustment<GaussianBlurFeature>?
   var contrast = ContrastFeature(value: 0.1)
 
   init(maskTree: MaskTree) {
-    blurMask = LocalAdjustment(maskTree: maskTree) {
+    localBlur = LocalAdjustment(maskTree: maskTree) {
       GaussianBlurFeature(value: 40)
     }
   }
 
   var body: some Feature {
     exposure
-    blurMask
+    localBlur
     contrast
   }
 }
@@ -947,9 +947,9 @@ enum CompositionVariant: String, CaseIterable, Sendable {
   }
 }
 
-/// The shape a PhotosCrop-like editor stores: global adjustments, an optional
-/// preset, an optional blur mask, and the final crop.
-private struct PhotosCropLikeDocument: Feature {
+/// The shape an ImageEditor-like editor stores: global adjustments, an optional
+/// preset, an optional local blur, and the final crop.
+private struct ImageEditorLikeFeature: Feature {
 
   var exposure = ExposureFeature(value: 0.25)
   var saturation = SaturationFeature(value: 0.2)
@@ -961,7 +961,7 @@ private struct PhotosCropLikeDocument: Feature {
       AnyImageEffect(FadeFeature(intensity: 0.06)),
     ]
   )
-  var blurMask: LocalAdjustment<GaussianBlurFeature>? = LocalAdjustment(
+  var localBlur: LocalAdjustment<GaussianBlurFeature>? = LocalAdjustment(
     maskTree: RenderingFixtures.featheredBrushMaskTree()
   ) {
     GaussianBlurFeature(value: 40)
@@ -975,7 +975,7 @@ private struct PhotosCropLikeDocument: Feature {
     exposure
     saturation
     preset
-    blurMask
+    localBlur
     crop
   }
 
@@ -984,8 +984,8 @@ private struct PhotosCropLikeDocument: Feature {
   var steps: [any Feature] {
     var steps: [any Feature] = [exposure, saturation]
     steps += (preset?.effects ?? []).map { $0.base as any Feature }
-    if let blurMask {
-      steps.append(blurMask)
+    if let localBlur {
+      steps.append(localBlur)
     }
     steps.append(crop)
     return steps

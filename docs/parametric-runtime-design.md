@@ -57,7 +57,7 @@ maps the old API to the new one.
   - A *primitive* implements `apply(to: CIImage, context: FeatureEvaluationContext) throws -> CIImage`
     and leaves `Body` as `Never` (`ExposureFeature`, `CropFeature`, …).
   - A *composite* declares `body`; the default `apply` evaluates it
-    (`PresetFeature`, `PhotosCropFeature`, a host's document).
+    (`PresetFeature`, `ImageEditorFeature`, a host's document).
 - `ImageEffect: Feature` marks features that preserve the extent and
   coordinate domain of their input. A composite is an `ImageEffect` only when
   its body is one. Features that are not image effects, such as `CropFeature`,
@@ -85,12 +85,12 @@ maps the old API to the new one.
   a compiled render plan never takes part. "Renders the same" is a separate
   question, answered by the render identity types where a cache needs it.
 
-A document's structure is visible in its type. `PhotosCropFeature` declares
+A document's structure is visible in its type. `ImageEditorFeature` declares
 
 ```swift
 var body: some Feature {
   effects
-  blurMask
+  localBlur
   crop
 }
 ```
@@ -99,7 +99,7 @@ and its body's type is
 
 ```text
 TupleFeature<
-  PhotosCropFeature.Effects,                    // composite ImageEffect: preset + 12 optional effects
+  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 12 optional effects
   Optional<LocalAdjustment<GaussianBlurFeature>>,
   CropFeature                                    // domain feature: the final crop
 >

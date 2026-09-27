@@ -4,8 +4,8 @@ import BrightroomParametric
 
 /// A shared collection of filter presets expressed as parametric features.
 ///
-/// UI layers (e.g. PhotosCrop's Filters mode) read presets from here and write
-/// the selected one into their document (PhotosCrop: `effects.preset`).
+/// UI layers (e.g. ImageEditor's Filters mode) read presets from here and write
+/// the selected one into their document (ImageEditor: `effects.preset`).
 ///
 /// Main-actor isolated: it is a UI-facing shared store, configured once
 /// (`loadLUTs`) and read while building the editor UI. The isolation makes the

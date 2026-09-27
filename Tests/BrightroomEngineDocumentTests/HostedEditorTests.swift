@@ -15,14 +15,14 @@ struct HostedEditorTests {
 
   @MainActor
   final class Host {
-    var document: EditingDocument<PhotosCropFeature>
+    var document: ImageEditorDocument
     private(set) var writes = 0
 
-    init(_ document: EditingDocument<PhotosCropFeature>) {
+    init(_ document: ImageEditorDocument) {
       self.document = document
     }
 
-    var binding: Binding<EditingDocument<PhotosCropFeature>> {
+    var binding: Binding<ImageEditorDocument> {
       Binding(get: { self.document }, set: { self.document = $0; self.writes += 1 })
     }
   }
@@ -89,10 +89,10 @@ struct HostedEditorTests {
   @MainActor
   @Observable
   final class ToolHost {
-    var document: EditingDocument<PhotosCropFeature>
+    var document: ImageEditorDocument
     var target: CropViewEditingTarget? = .crop
 
-    init(_ document: EditingDocument<PhotosCropFeature>) {
+    init(_ document: ImageEditorDocument) {
       self.document = document
     }
   }
@@ -124,7 +124,7 @@ struct HostedEditorTests {
     rotate()
     // The tool button.
     apply()
-    host.target = .blurMask
+    host.target = .localBlur
     host.document.commit()
 
     // Let the view update and any deferred canvas write run.
@@ -137,14 +137,14 @@ struct HostedEditorTests {
     #expect(host.document.feature.crop.rotation != .zero)
   }
 
-  @Test func `The PhotosCrop editor writes nothing on mount`() async throws {
+  @Test func `ImageEditor writes nothing on mount`() async throws {
     var document = try DocumentTestFixtures.makeDocument()
     document.feature = DocumentTestFixtures.exposure(1)
     document.commit()
     let host = Host(document)
 
     let mounted = try await mount(
-      SwiftUIPhotosCropView(document: host.binding, onDone: {}, onCancel: {})
+      ImageEditor(document: host.binding, onDone: {}, onCancel: {})
     )
     defer { mounted.window.isHidden = true }
 

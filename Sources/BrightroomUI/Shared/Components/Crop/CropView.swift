@@ -47,7 +47,7 @@ struct CropViewSource {
   }
 }
 
-extension PhotosCropFeature.Effects {
+extension ImageEditorFeature.Effects {
 
   /// The global effects as the canvas factories take them: nil when no effect
   /// is present, so the canvas can sample its cached source instead of
@@ -57,7 +57,7 @@ extension PhotosCropFeature.Effects {
   }
 }
 
-/// A UIKit canvas that edits a `PhotosCropFeature`: value in, changes out.
+/// A UIKit canvas that edits an `ImageEditorFeature`: value in, changes out.
 ///
 /// Based on the editing vision in `docs/vision-of-editing.md`, the document
 /// evaluates tool edits before the final crop:
@@ -91,7 +91,7 @@ final class CropView: UIView {
   ///
   /// The document's owner applies it to its latest document, so owner-side
   /// changes CropView has not received yet are kept.
-  typealias DocumentChange = (inout PhotosCropFeature) -> Void
+  typealias DocumentChange = (inout ImageEditorFeature) -> Void
 
   private struct State {
 
@@ -182,11 +182,11 @@ final class CropView: UIView {
   ///
   /// It is also the echo reference: a document passed back with the same crop
   /// does not reload the crop state.
-  private var document: PhotosCropFeature
+  private var document: ImageEditorFeature
 
   private var documentChangeHandler: @MainActor (@escaping DocumentChange) -> Void = { _ in }
 
-  /// The committed strokes of `document.blurMask` as canvas records, reused
+  /// The committed strokes of `document.localBlur` as canvas records, reused
   /// while the mask (and, for the tool surface, the crop output) is unchanged.
   private var committedStrokeRecords = CommittedStrokeRecords()
 
@@ -215,7 +215,7 @@ final class CropView: UIView {
 
   /// Whether brush gestures paint the blur mask.
   private var isMaskEditing: Bool {
-    editingTarget == .blurMask
+    editingTarget == .localBlur
   }
   private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
   /// The image-space brush most recently pushed to the canvas surfaces, used
@@ -303,7 +303,7 @@ final class CropView: UIView {
   /// handler is bound, so the first state snapshot reaches it.
   init(
     source: CropViewSource,
-    document: PhotosCropFeature,
+    document: ImageEditorFeature,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
     _pixeleditor_ensureMainThread()
@@ -573,7 +573,7 @@ final class CropView: UIView {
   /// which first turns with the reloaded crop's output orientation. A
   /// document CropView changed itself comes back equal and only refreshes the
   /// display.
-  func setDocument(_ document: PhotosCropFeature) {
+  func setDocument(_ document: ImageEditorFeature) {
     guard document != self.document else {
       updateDisplay()
       return
@@ -583,7 +583,7 @@ final class CropView: UIView {
       to: self.document.crop,
       orientedImageSize: source.imageSize
     ) == false
-    let blurMaskChanged = document.blurMask != self.document.blurMask
+    let localBlurChanged = document.localBlur != self.document.localBlur
     self.document = document
 
     if cropChanged, let current = state.proposedCrop {
@@ -602,7 +602,7 @@ final class CropView: UIView {
     }
 
     // Effects-only changes (slider ticks, presets) leave the strokes alone.
-    if cropChanged || blurMaskChanged {
+    if cropChanged || localBlurChanged {
       syncCommittedStrokesFromDocument()
     }
     updateDisplay()
@@ -839,12 +839,12 @@ extension CropView {
         document: document,
         crop: crop,
         committedStrokes: committedStrokeRecords.sourceRecords(
-          blurMask: document.blurMask,
+          localBlur: document.localBlur,
           domainHeight: source.imageSize.height
         )
       )
 
-    case .blurMask:
+    case .localBlur:
       guard
         let geometry = EditingCanvasCropOutputGeometry(crop: crop),
         ensureToolCanvas(geometry: geometry)
@@ -860,10 +860,10 @@ extension CropView {
         effects: document.effects,
         geometry: geometry,
         mode: .localAdjustment(
-          effect: AnyImageEffect(document.blurMask?.content ?? CropViewMaskingDefaults.blurEffect)
+          effect: AnyImageEffect(document.localBlur?.content ?? CropViewMaskingDefaults.blurEffect)
         ),
         committedStrokes: committedStrokeRecords.outputRecords(
-          blurMask: document.blurMask,
+          localBlur: document.localBlur,
           geometry: geometry,
           domainHeight: source.imageSize.height
         )
@@ -881,9 +881,9 @@ extension CropView {
         source: source,
         effects: document.effects,
         geometry: geometry,
-        mode: CanvasRenderPlan(blurMask: document.blurMask).canvasMode,
+        mode: CanvasRenderPlan(localBlur: document.localBlur).canvasMode,
         committedStrokes: committedStrokeRecords.outputRecords(
-          blurMask: document.blurMask,
+          localBlur: document.localBlur,
           geometry: geometry,
           domainHeight: source.imageSize.height
         )
@@ -897,12 +897,12 @@ extension CropView {
     var imageSize: CGSize
     var sourceImage: ObjectIdentifier
     var sourceExtent: CGRect
-    var effects: PhotosCropFeature.Effects
+    var effects: ImageEditorFeature.Effects
     /// The whole blur mask, strokes included: the crop surface rebuilds on a
     /// stroke commit.
-    var blurMask: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustment<GaussianBlurFeature>?
 
-    init(source: CropViewSource, document: PhotosCropFeature, crop: CropEditingState) {
+    init(source: CropViewSource, document: ImageEditorFeature, crop: CropEditingState) {
       let previewSourceImage = source.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
@@ -910,7 +910,7 @@ extension CropView {
       self.sourceImage = ObjectIdentifier(source.editingSourceImage)
       self.sourceExtent = previewSourceImage.extent
       self.effects = document.effects
-      self.blurMask = document.blurMask
+      self.localBlur = document.localBlur
     }
   }
 
@@ -923,28 +923,28 @@ extension CropView {
     case viewportBase
 
     /// The blur mask is composited over the global effects.
-    case blurMask(LocalAdjustment<GaussianBlurFeature>)
+    case localBlur(LocalAdjustment<GaussianBlurFeature>)
 
-    /// `.blurMask` when the mask is present, rooted at a brush, and has at
+    /// `.localBlur` when the mask is present, rooted at a brush, and has at
     /// least one stroke. An empty brush changes nothing at export, so the
     /// canvas does not composite it either.
-    init(blurMask: LocalAdjustment<GaussianBlurFeature>?) {
+    init(localBlur: LocalAdjustment<GaussianBlurFeature>?) {
       guard
-        let blurMask,
-        case let .brush(brush) = blurMask.maskTree.root,
+        let localBlur,
+        case let .brush(brush) = localBlur.maskTree.root,
         brush.strokes.isEmpty == false
       else {
         self = .viewportBase
         return
       }
-      self = .blurMask(blurMask)
+      self = .localBlur(localBlur)
     }
 
     var canvasMode: EditingCanvasMode {
       switch self {
       case .viewportBase:
         return .viewportBase
-      case let .blurMask(layer):
+      case let .localBlur(layer):
         return .localAdjustment(effect: AnyImageEffect(layer.content))
       }
     }
@@ -966,7 +966,7 @@ extension CropView {
       switch self {
       case .viewportBase:
         return []
-      case let .blurMask(layer):
+      case let .localBlur(layer):
         let sourceRecords = layer.maskTree.canvasBrushStrokes.map {
           EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: domainHeight)
         }
@@ -1196,11 +1196,11 @@ extension CropView {
       return
     }
 
-    let blurMaskChanged = next.blurMask != document.blurMask
+    let localBlurChanged = next.localBlur != document.localBlur
     document = next
     documentChangeHandler(change)
 
-    if blurMaskChanged {
+    if localBlurChanged {
       syncCommittedStrokesFromDocument()
     }
     updateDisplay()
@@ -2359,7 +2359,7 @@ extension CropView: UIGestureRecognizerDelegate {
     let stroke = sourceRecord.workingSpaceStroke(domainHeight: source.imageSize.height)
 
     commitDocumentChange { document in
-      document.appendBlurMaskStroke(stroke)
+      document.appendLocalBlurStroke(stroke)
     }
     completion()
   }
@@ -2370,7 +2370,7 @@ extension CropView: UIGestureRecognizerDelegate {
 
     cropSurface.setCommittedStrokes(
       committedStrokeRecords.sourceRecords(
-        blurMask: document.blurMask,
+        localBlur: document.localBlur,
         domainHeight: domainHeight
       )
     )
@@ -2384,7 +2384,7 @@ extension CropView: UIGestureRecognizerDelegate {
 
     toolSurface.setCommittedStrokes(
       committedStrokeRecords.outputRecords(
-        blurMask: document.blurMask,
+        localBlur: document.localBlur,
         geometry: geometry,
         domainHeight: domainHeight
       )
@@ -2404,12 +2404,12 @@ extension CropView {
   struct CommittedStrokeRecords {
 
     private var source: (
-      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustment<GaussianBlurFeature>?,
       records: [EditingCanvasStrokeRecord]
     )?
 
     private var output: (
-      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustment<GaussianBlurFeature>?,
       geometry: EditingCanvasCropOutputGeometry,
       records: [EditingCanvasStrokeRecord]
     )?
@@ -2417,31 +2417,31 @@ extension CropView {
     /// Records in the source domain (y-down), for a canvas sized to the
     /// source image.
     mutating func sourceRecords(
-      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustment<GaussianBlurFeature>?,
       domainHeight: CGFloat
     ) -> [EditingCanvasStrokeRecord] {
-      if let source, source.blurMask == blurMask {
+      if let source, source.localBlur == localBlur {
         return source.records
       }
-      let records = CanvasRenderPlan(blurMask: blurMask)
+      let records = CanvasRenderPlan(localBlur: localBlur)
         .committedStrokes(in: nil, domainHeight: domainHeight)
-      source = (blurMask, records)
+      source = (localBlur, records)
       return records
     }
 
     /// Records in the crop-output domain of `geometry`, for the tool canvas.
     mutating func outputRecords(
-      blurMask: LocalAdjustment<GaussianBlurFeature>?,
+      localBlur: LocalAdjustment<GaussianBlurFeature>?,
       geometry: EditingCanvasCropOutputGeometry,
       domainHeight: CGFloat
     ) -> [EditingCanvasStrokeRecord] {
-      if let output, output.blurMask == blurMask, output.geometry == geometry {
+      if let output, output.localBlur == localBlur, output.geometry == geometry {
         return output.records
       }
-      let records = sourceRecords(blurMask: blurMask, domainHeight: domainHeight).map {
+      let records = sourceRecords(localBlur: localBlur, domainHeight: domainHeight).map {
         geometry.outputRecord(fromSourceRecord: $0)
       }
-      output = (blurMask, geometry, records)
+      output = (localBlur, geometry, records)
       return records
     }
   }

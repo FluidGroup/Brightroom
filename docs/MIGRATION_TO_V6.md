@@ -28,7 +28,7 @@ The most common migration path is:
 4. Remove every `id:`, `isEnabled:`, and `FeatureID`, and express enablement
    with optional members.
 5. Keep the edit in `PhotosCropEditingModel` (or in your own state), and
-   render the document that `SwiftUIPhotosCropView` passes to `onDone`.
+   render the document that `ImageEditor` passes to `onDone`.
 6. Give `SwiftUICropView` a document binding, and replace `featureFocus(_:)`
    with `editingTarget(_:)`.
 7. Move `CropModifier` from `EditingStack` to `PhotosCropEditingModel`.
@@ -590,7 +590,7 @@ over it. It no longer holds an edit or a history.
 | --- | --- |
 | `EditingStack.Edit`, `Loaded.currentEdit`, `featureTree`, `EditingFeatureTree`, `FeatureTreePoint`, `updateFeature(id:mutate:)` | Your own document value, or the read-only `PhotosCropEditingModel.document`. See [Editing in Code](#editing-in-code). |
 | `undo()`, `redo()`, `revertCurrentEdit()` | The document owner's history: `PhotosCropEditingModel.undo()`, `redo()`, `discardUncommittedChanges()` |
-| `commitCurrentEditIfNeeded()`, `revert(to:)`, `removeAllHistory()`, `currentRevision`, `Revision` | None. PhotosCrop commits on Done and on tool changes; a new model starts a new history. |
+| `commitCurrentEditIfNeeded()`, `revert(to:)`, `removeAllHistory()`, `currentRevision`, `Revision` | None. ImageEditor commits on Done and on tool changes; a new model starts a new history. |
 | `Loaded.canUndo`, `canRedo`, `isDirty` | `PhotosCropEditingModel.canUndo`, `canRedo`, `isDirty` |
 | `Loaded.hasUncommittedChanges` | None |
 | `cropModifier` and `init(imageProvider:options:cropModifier:)` | `init(imageProvider:options:)`; pass the modifier to `PhotosCropEditingModel`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
@@ -619,16 +619,16 @@ func renderOriginal(of stack: EditingStack) async throws -> UIImage {
 A document passed to `makeRenderer(document:)` is authored in the oriented
 source domain, whose size is `EditingStack.Loaded.imageSize`.
 
-## PhotosCrop
+## ImageEditor
 
-### PhotosCropFeature
+### ImageEditorFeature
 
-`PhotosCropFeature` (BrightroomUI) is the document PhotosCrop and
+`ImageEditorFeature` (BrightroomUI) is the document ImageEditor and
 `SwiftUICropView` edit. It is a `Feature` and `Equatable`:
 
-- `effects: PhotosCropFeature.Effects` — the filter preset and twelve
+- `effects: ImageEditorFeature.Effects` — the filter preset and twelve
   adjustments, each an optional member, evaluated in declaration order;
-- `blurMask: LocalAdjustment<GaussianBlurFeature>?` — the painted blur;
+- `localBlur: LocalAdjustment<GaussianBlurFeature>?` — the painted blur;
 - `crop: CropFeature` — the final crop.
 
 It is authored in the oriented, pre-crop source domain at full resolution
@@ -637,9 +637,9 @@ points (bottom-left origin, y-up). A 5.x `EditingStack.Edit.document` stored
 them y-down, so flip them when you convert a saved 5.x edit (see
 [Converting 5.x documents](parametric-persistence.md#converting-5x-documents)).
 Create one with
-`PhotosCropFeature(orientedImageSize:)`,
-`PhotosCropFeature(effects:blurMask:crop:)`, or
-`PhotosCropFeature.makeInitial(for:cropModifier:)`, and set the crop from a
+`ImageEditorFeature(orientedImageSize:)`,
+`ImageEditorFeature(effects:localBlur:crop:)`, or
+`ImageEditorFeature.makeInitial(for:cropModifier:)`, and set the crop from a
 `CropEditingState` with `setCrop(_:)`.
 
 ### PhotosCropEditingModel
@@ -665,28 +665,28 @@ changes it. In 5.x you could change the stack's edit with
 `updateFeature(id:mutate:)` and `commitCurrentEditIfNeeded()`. In Brightroom
 6:
 
-- To open PhotosCrop on an edit built in code, build a `PhotosCropFeature`
-  (with `PhotosCropFeature(orientedImageSize:)` or `makeInitial(for:cropModifier:)`,
-  then set `effects`, `blurMask`, and `crop`) and create the model with
+- To open ImageEditor on an edit built in code, build an `ImageEditorFeature`
+  (with `ImageEditorFeature(orientedImageSize:)` or `makeInitial(for:cropModifier:)`,
+  then set `effects`, `localBlur`, and `crop`) and create the model with
   `init(editingStack:resuming:)`. See [Reopening an Edit](#reopening-an-edit).
 - To edit a document freely in code, own it yourself, for example as
-  `@State var document: PhotosCropFeature?`, show it with `SwiftUICropView`
+  `@State var document: ImageEditorFeature?`, show it with `SwiftUICropView`
   through a binding, and keep your own history if you need one.
 
 `commitCurrentEditIfNeeded()`, `hasUncommittedChanges`, `revert(to:)`,
 `removeAllHistory()`, and `currentRevision` have no replacement: Done
 commits, and a new model starts a new history.
 
-### SwiftUIPhotosCropView
+### ImageEditor
 
-`onDone` now receives the edited `PhotosCropFeature`. Render it with the
+`onDone` now receives the edited `ImageEditorFeature`. Render it with the
 model's stack:
 
 Before:
 
 ```swift
 // Brightroom 5.x
-SwiftUIPhotosCropView(
+ImageEditor(
   editingModel: editingModel,
   onDone: {
     Task {
@@ -711,7 +711,7 @@ struct Editor: View {
   var onExport: @MainActor (Result<UIImage, Error>) -> Void
 
   var body: some View {
-    SwiftUIPhotosCropView(
+    ImageEditor(
       editingModel: editingModel,
       onDone: { document in
         Task {
@@ -731,10 +731,10 @@ struct Editor: View {
 }
 ```
 
-`SwiftUIPhotosCropView.Options.filterPresets` defaults to an empty list, and
+`ImageEditor.Options.filterPresets` defaults to an empty list, and
 `PhotosCropDefaultFilterPresets` was removed. Supply your own presets; the
 former samples live in the demo app
-([`PhotosCropDemoFilterPresets.swift`](../Dev/Sources/SwiftUIDemo/PhotosCropDemoFilterPresets.swift)).
+([`DemoFilters.swift`](../Dev/Sources/SwiftUIDemo/DemoFilters.swift)).
 
 ### Reopening an Edit
 
@@ -743,7 +743,7 @@ reopened the editor where the user left it. In Brightroom 6 there are two
 ways to reopen:
 
 - **Keep the session.** Keep the same `PhotosCropEditingModel` and pass it to
-  a new `SwiftUIPhotosCropView`. The document and its undo history are kept.
+  a new `ImageEditor`. The document and its undo history are kept.
 - **Resume a document.** Store the document's values in your own format (see
   [Saving parametric edits](parametric-persistence.md)), rebuild the document,
   and create a model with `init(editingStack:resuming:)`. The undo history
@@ -763,7 +763,7 @@ func resumeEdit(
   rotation: QuarterTurn,
   straightenRadians: Double
 ) -> PhotosCropEditingModel {
-  let document = PhotosCropFeature(
+  let document = ImageEditorFeature(
     effects: .init(exposure: exposure.map { ExposureFeature(value: $0) }),
     crop: CropFeature(
       cropRect: cropRect,
@@ -787,21 +787,21 @@ by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 
 ## SwiftUICropView
 
-`SwiftUICropView` edits a `PhotosCropFeature` through a binding instead of
+`SwiftUICropView` edits an `ImageEditorFeature` through a binding instead of
 the stack's edit:
 
 - `init(editingStack:document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:stateHandler:)`
   and the variant with `cropInsideOverlay`/`cropOutsideOverlay` take
-  `document: Binding<PhotosCropFeature?>`. When the binding is `nil` once the
+  `document: Binding<ImageEditorFeature?>`. When the binding is `nil` once the
   image has loaded, the view writes a full-image document into it.
-- `editingTarget(_:)` with `CropViewEditingTarget` (`.crop`, `.blurMask`, or
+- `editingTarget(_:)` with `CropViewEditingTarget` (`.crop`, `.localBlur`, or
   `nil` to only view) replaces `featureFocus(_:)` and `CropViewFeatureFocus`.
   The seed effect of `CropViewFeatureFocus.masking(_:id:)` is gone: the
-  first stroke creates `blurMask` with the default blur. To use another blur,
-  set `document.blurMask` yourself.
+  first stroke creates `localBlur` with the default blur. To use another blur,
+  set `document.localBlur` yourself.
 - Your app keeps the document's history, if it needs one.
 - To start from a `CropModifier`, create the document with
-  `PhotosCropFeature.makeInitial(for:cropModifier:)` and show the view once
+  `ImageEditorFeature.makeInitial(for:cropModifier:)` and show the view once
   it exists.
 
 Before:
@@ -821,8 +821,8 @@ import SwiftUI
 
 struct BlurEditor: View {
   let editingStack: EditingStack
-  @State private var document: PhotosCropFeature?
-  @State private var target: CropViewEditingTarget? = .blurMask
+  @State private var document: ImageEditorFeature?
+  @State private var target: CropViewEditingTarget? = .localBlur
 
   var body: some View {
     SwiftUICropView(editingStack: editingStack, document: $document)
@@ -830,8 +830,8 @@ struct BlurEditor: View {
   }
 }
 
-func makeFramedDocument(for loadedState: EditingStack.Loaded) async -> PhotosCropFeature {
-  await PhotosCropFeature.makeInitial(
+func makeFramedDocument(for loadedState: EditingStack.Loaded) async -> ImageEditorFeature {
+  await ImageEditorFeature.makeInitial(
     for: loadedState,
     cropModifier: .faceDetection(aspectRatio: .square)
   )
@@ -848,7 +848,7 @@ the main actor, so the state it captures must be `Sendable`; move blocking work
 to your own queue, as `faceDetection` does. `.identity` and
 `.faceDetection(paddingBias:aspectRatio:)` are provided. Pass it to
 `PhotosCropEditingModel(editingStack:cropModifier:)` or to
-`PhotosCropFeature.makeInitial(for:cropModifier:)`. It runs only for a new
+`ImageEditorFeature.makeInitial(for:cropModifier:)`. It runs only for a new
 document, never for a resumed one. The `aspectRatio` of `.faceDetection`
 describes the final output, after the crop's quarter turn.
 
@@ -945,7 +945,7 @@ rather than relying on the compiler to find them.
   and then snaps its dimensions inward; the origin can stay fractional. 5.1.0
   snapped every selection inward to the unrotated bounds and left uncovered
   corners transparent. Without straightening, edges still snap inward.
-- PhotosCrop's Done commits the proposed crop directly, so reopening and
+- ImageEditor's Done commits the proposed crop directly, so reopening and
   confirming an untouched crop keeps it exactly.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
@@ -953,15 +953,15 @@ rather than relying on the compiler to find them.
 ## CropEditingState
 
 `CropEditingState.id` was removed, and `makeCropFeature()` is internal. Write
-a crop state into a document with `PhotosCropFeature.setCrop(_:)`, which
+a crop state into a document with `ImageEditorFeature.setCrop(_:)`, which
 snaps the rectangle the same way `CropView` does:
 
 ```swift
 import BrightroomUI
 import CoreGraphics
 
-func squareDocument(orientedImageSize: CGSize) -> PhotosCropFeature {
-  var document = PhotosCropFeature(orientedImageSize: orientedImageSize)
+func squareDocument(orientedImageSize: CGSize) -> ImageEditorFeature {
+  var document = ImageEditorFeature(orientedImageSize: orientedImageSize)
   var crop = CropEditingState(cropFeature: document.crop, imageSize: orientedImageSize)
   crop.updateCropExtent(toFitAspectRatio: .square)
   document.setCrop(crop)
@@ -989,10 +989,10 @@ func squareDocument(orientedImageSize: CGSize) -> PhotosCropFeature {
 - [ ] The edit and its history live in `PhotosCropEditingModel` or your own
       state; `EditingStack` is only asked for `loadedState` and
       `makeRenderer(document:)`.
-- [ ] `SwiftUIPhotosCropView`'s `onDone` renders the document it receives.
+- [ ] `ImageEditor`'s `onDone` renders the document it receives.
 - [ ] `SwiftUICropView` has a document binding and uses `editingTarget(_:)`.
 - [ ] `CropModifier` is passed to `PhotosCropEditingModel` or
-      `PhotosCropFeature.makeInitial(for:cropModifier:)`.
+      `ImageEditorFeature.makeInitial(for:cropModifier:)`.
 - [ ] Filter presets are supplied through `options.filterPresets`.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles
       saved by 5.1.0 with a sideways rotation are converted.

@@ -23,7 +23,7 @@
 import BrightroomEngine
 import BrightroomParametric
 
-/// The document logic of one PhotosCrop editing session, kept apart from the
+/// The document logic of one ImageEditor editing session, kept apart from the
 /// views so it can be tested without a window.
 ///
 /// It decides what the editor writes to the host's binding:
@@ -48,35 +48,35 @@ import BrightroomParametric
 /// Cancel then restores that document, never the previous one. An undo by
 /// the host's `UndoManager` brings back a value the session knows, so it
 /// keeps the session.
-struct PhotosCropEditorSession {
+struct ImageEditorSession {
 
   /// The document when the session started; Cancel restores it.
-  private(set) var documentAtStart: EditingDocument<PhotosCropFeature>
+  private(set) var documentAtStart: ImageEditorDocument
 
   /// The feature a control shows while it is being dragged, not yet written
   /// to the document. nil when nothing is in progress.
-  private(set) var liveFeature: PhotosCropFeature?
+  private(set) var liveFeature: ImageEditorFeature?
 
   /// Every document this session wrote, oldest first.
-  private var writes: [EditingDocument<PhotosCropFeature>] = []
+  private var writes: [ImageEditorDocument] = []
 
   /// The index in `writes` of the current tool visit's first write.
   private var toolVisitStart = 0
 
-  init(documentAtStart: EditingDocument<PhotosCropFeature>) {
+  init(documentAtStart: ImageEditorDocument) {
     self.documentAtStart = documentAtStart
   }
 
   /// The feature the canvas and the controls show.
-  func displayedFeature(of document: EditingDocument<PhotosCropFeature>) -> PhotosCropFeature {
+  func displayedFeature(of document: ImageEditorDocument) -> ImageEditorFeature {
     liveFeature ?? document.feature
   }
 
   /// Shows an adjustment slider value without writing it.
   mutating func previewAdjustmentValue(
     _ sliderValue: Double,
-    parameter: PhotosCropAdjustmentParameter,
-    over document: EditingDocument<PhotosCropFeature>
+    parameter: ImageEditor.Adjustment,
+    over document: ImageEditorDocument
   ) {
     var feature = displayedFeature(of: document)
     parameter.apply(sliderValue: sliderValue, to: &feature.effects)
@@ -97,9 +97,9 @@ struct PhotosCropEditorSession {
   /// The value shown by a control in progress is applied, then `change`,
   /// which changes the feature only. The live value is consumed.
   mutating func document(
-    after document: EditingDocument<PhotosCropFeature>,
-    change: (inout EditingDocument<PhotosCropFeature>) -> Void = { _ in }
-  ) -> EditingDocument<PhotosCropFeature>? {
+    after document: ImageEditorDocument,
+    change: (inout ImageEditorDocument) -> Void = { _ in }
+  ) -> ImageEditorDocument? {
     let liveFeature = self.liveFeature
     self.liveFeature = nil
     return write(over: document) { next in
@@ -117,9 +117,9 @@ struct PhotosCropEditorSession {
   ///   applied; only its feature is taken. A value in progress on a control
   ///   is kept for the control.
   mutating func document(
-    afterCanvasChange changed: EditingDocument<PhotosCropFeature>,
-    over document: EditingDocument<PhotosCropFeature>
-  ) -> EditingDocument<PhotosCropFeature>? {
+    afterCanvasChange changed: ImageEditorDocument,
+    over document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
     write(over: document) { $0.feature = changed.feature }
   }
 
@@ -128,8 +128,8 @@ struct PhotosCropEditorSession {
   /// Returns the document to write when a control still shows a value in
   /// progress, which is part of the visit that ends.
   mutating func endToolVisit(
-    of document: EditingDocument<PhotosCropFeature>
-  ) -> EditingDocument<PhotosCropFeature>? {
+    of document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
     let written = self.document(after: document)
     toolVisitStart = writes.count
     return written
@@ -139,11 +139,11 @@ struct PhotosCropEditorSession {
   /// other, which the editor now edits from its current state.
   ///
   /// Call it whenever the binding's document changes.
-  mutating func noteDocument(_ document: EditingDocument<PhotosCropFeature>) {
+  mutating func noteDocument(_ document: ImageEditorDocument) {
     guard document != documentAtStart, writes.contains(document) == false else {
       return
     }
-    self = PhotosCropEditorSession(documentAtStart: document)
+    self = ImageEditorSession(documentAtStart: document)
   }
 
   /// The document Cancel writes, or nil when `document` already equals the
@@ -152,8 +152,8 @@ struct PhotosCropEditorSession {
   /// A document of another image is never replaced: the session belongs to
   /// the image it started with.
   func documentForCancel(
-    replacing document: EditingDocument<PhotosCropFeature>
-  ) -> EditingDocument<PhotosCropFeature>? {
+    replacing document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
     guard document.image == documentAtStart.image, document != documentAtStart else {
       return nil
     }
@@ -166,9 +166,9 @@ struct PhotosCropEditorSession {
   /// step. After an undo by the host back into the visit, the visit goes on
   /// without a commit.
   private mutating func write(
-    over document: EditingDocument<PhotosCropFeature>,
-    change: (inout EditingDocument<PhotosCropFeature>) -> Void
-  ) -> EditingDocument<PhotosCropFeature>? {
+    over document: ImageEditorDocument,
+    change: (inout ImageEditorDocument) -> Void
+  ) -> ImageEditorDocument? {
     // A rebinding can reach a write before `onChange` reports it.
     noteDocument(document)
     var next = document

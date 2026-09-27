@@ -89,16 +89,16 @@ struct DocumentCreationTests {
     #expect(abs(smallBitmap.extent.width - 5) < 0.5)
   }
 
-  // MARK: - EditingDocument<PhotosCropFeature>
+  // MARK: - ImageEditorDocument
 
-  @Test func `A new PhotosCrop document crops the whole image`() throws {
+  @Test func `A new image editor document crops the whole image`() throws {
     let image = try Fixtures.makeImage()
     let document = EditingDocument(image: image)
     #expect(document.image == image)
-    #expect(document.feature == PhotosCropFeature(imageSize: image.pixelSize))
+    #expect(document.feature == ImageEditorFeature(imageSize: image.pixelSize))
     #expect(document.feature.crop.cropRect == CGRect(origin: .zero, size: image.pixelSize))
     #expect(document.feature.effects == .init())
-    #expect(document.feature.blurMask == nil)
+    #expect(document.feature.localBlur == nil)
     #expect(!document.canUndo)
   }
 

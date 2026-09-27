@@ -26,7 +26,7 @@ import UIKit
 import BrightroomEngine
 import BrightroomParametric
 
-/// Renders a single filter-preview swatch for PhotosCrop's Filters strip.
+/// Renders a single filter-preview swatch for ImageEditor's Filters strip.
 ///
 /// A swatch is the session thumbnail — the uncropped, already-oriented ~180px
 /// preview the EditingStack decoded at load — center-cropped to a square and run
@@ -35,14 +35,14 @@ import BrightroomParametric
 ///
 /// Each chip renders its own swatch when the strip appears and holds it in its
 /// SwiftUI `@State`, so the render happens once for that chip's lifetime.
-enum PhotosCropFilterThumbnailRenderer {
+enum FilterSwatch {
 
   /// Wide-gamut, GPU-backed context dedicated to swatch rendering. Mirrors the
   /// editing canvas's working space/precision so a swatch and the live canvas
   /// resolve the same colors. `CIContext` is thread-safe.
   private static let context: CIContext = {
     let options: [CIContextOption: Any] = [
-      .name: "Brightroom.FilterThumbnail",
+      .name: "Brightroom.FilterSwatch",
       .workingColorSpace: EditingCanvasImageProcessing.workingColorSpace,
       .workingFormat: EditingCanvasImageProcessing.workingFormat,
       .cacheIntermediates: false,

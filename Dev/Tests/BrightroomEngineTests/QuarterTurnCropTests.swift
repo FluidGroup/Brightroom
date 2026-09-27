@@ -33,7 +33,7 @@ struct QuarterTurnCropTests {
   ) async throws {
     let source = try Self.makePixelImage(size: size)
     let stack = EditingStack.test(cgImage: source)
-    var document = PhotosCropFeature(imageSize: size)
+    var document = ImageEditorFeature(imageSize: size)
     let sourceRect = CGRect(origin: .zero, size: size)
     let expectedExtent = sourceRect
 
@@ -41,7 +41,7 @@ struct QuarterTurnCropTests {
     crop.updateCropExtent(expectedExtent)
     crop.rotation = CropRotation(rotation)
 
-    // Done: CropView commits through `PhotosCropFeature.setCrop(_:)`.
+    // Done: CropView commits through `ImageEditorFeature.setCrop(_:)`.
     document.setCrop(crop)
     let committed = document.crop
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
@@ -72,7 +72,7 @@ struct QuarterTurnCropTests {
     let size = CGSize(width: 9, height: 8)
     let source = try Self.makePixelImage(size: size)
     let stack = EditingStack.test(cgImage: source)
-    var document = PhotosCropFeature(imageSize: size)
+    var document = ImageEditorFeature(imageSize: size)
     let expectedExtent = sourceRect
 
     var crop = CropEditingState(cropFeature: document.crop, imageSize: size)
@@ -96,7 +96,7 @@ struct QuarterTurnCropTests {
   func `Rotation button and Done preserve the full source through four turns`(imageWidth: Double) throws {
     let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
-    let owner = DocumentOwner(PhotosCropFeature(imageSize: size))
+    let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
     let (editor, window) = try openCropView(on: stack, owner: owner)
     var latestCrop: CropEditingState?
     editor.setStateHandler { latestCrop = $0.proposedCrop }
@@ -132,7 +132,7 @@ struct QuarterTurnCropTests {
   ) throws {
     let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
-    let owner = DocumentOwner(PhotosCropFeature(imageSize: size))
+    let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
     let expectedExtent = CGRect(origin: .zero, size: size)
     var crop = CropEditingState(cropFeature: owner.document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
@@ -161,7 +161,7 @@ struct QuarterTurnCropTests {
   ) throws {
     let size = CGSize(width: 53, height: 40)
     let stack = try makeStack(size: size)
-    let owner = DocumentOwner(PhotosCropFeature(imageSize: size))
+    let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
     let expectedExtent = CGRect(x: 10, y: 8, width: 29, height: 20)
     var crop = CropEditingState(cropFeature: owner.document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
@@ -232,7 +232,7 @@ struct QuarterTurnCropTests {
   ) async throws {
     let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
-    let owner = DocumentOwner(PhotosCropFeature(imageSize: size))
+    let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
 
     let (editor, window) = try openCropView(on: stack, owner: owner)
     editor.rotateClockwise()
@@ -307,7 +307,7 @@ struct QuarterTurnCropTests {
   /// selection to the maximum rectangle of that ratio in the source image.
   @Test func `Four rotation button presses preserve a partial crop and its aspect lock`() throws {
     let stack = try makeStack(size: imageSize)
-    let owner = DocumentOwner(PhotosCropFeature(imageSize: imageSize))
+    let owner = DocumentOwner(ImageEditorFeature(imageSize: imageSize))
     let (editor, window) = try openCropView(on: stack, owner: owner)
     var latest: CropView.StateSnapshot?
     editor.setStateHandler { latest = $0 }
@@ -344,9 +344,9 @@ struct QuarterTurnCropTests {
 
   /// Plays the document's owner: applies each change CropView reports.
   private final class DocumentOwner {
-    var document: PhotosCropFeature
+    var document: ImageEditorFeature
 
-    init(_ document: PhotosCropFeature) {
+    init(_ document: ImageEditorFeature) {
       self.document = document
     }
   }

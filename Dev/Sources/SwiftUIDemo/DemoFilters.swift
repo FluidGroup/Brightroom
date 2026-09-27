@@ -21,11 +21,11 @@
 
 import BrightroomParametric
 
-/// Sample filter presets used by the PhotosCrop demo.
+/// Sample filter presets used by the ImageEditor demo.
 ///
 /// These simple parameter combinations demonstrate host-provided presets through
-/// `SwiftUIPhotosCropView.Options.filterPresets`; they are not a production catalog.
-enum PhotosCropDemoFilterPresets {
+/// `ImageEditor.Options.filterPresets`; they are not a production catalog.
+enum DemoFilters {
 
   static func make() -> [PresetFeature] {
     [

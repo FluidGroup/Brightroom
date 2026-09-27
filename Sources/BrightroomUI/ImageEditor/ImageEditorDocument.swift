@@ -25,7 +25,11 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-extension EditingDocument where Content == PhotosCropFeature {
+/// The document `ImageEditor` edits: an image and its `ImageEditorFeature`,
+/// with the edit's history.
+public typealias ImageEditorDocument = EditingDocument<ImageEditorFeature>
+
+extension EditingDocument where Content == ImageEditorFeature {
 
   /// Creates a document with no effects and a crop that covers the whole
   /// image.
@@ -35,19 +39,19 @@ extension EditingDocument where Content == PhotosCropFeature {
   public init(image: SourceImage, history: History = History()) {
     self.init(
       image: image,
-      feature: PhotosCropFeature(imageSize: image.pixelSize),
+      feature: ImageEditorFeature(imageSize: image.pixelSize),
       history: history
     )
   }
 }
 
-// MARK: - PhotosCrop operations
+// MARK: - ImageEditor operations
 
-/// The document operations of PhotosCrop's controls.
+/// The document operations of ImageEditor's controls.
 ///
 /// They change `feature` only; the editor commits once per tool visit (see
-/// `PhotosCropEditorSession`).
-extension EditingDocument where Content == PhotosCropFeature {
+/// `ImageEditorSession`).
+extension EditingDocument where Content == ImageEditorFeature {
 
   /// Selects a filter preset, or clears it with nil.
   ///
@@ -63,20 +67,20 @@ extension EditingDocument where Content == PhotosCropFeature {
   /// Writes an adjustment slider value into the global effects.
   mutating func setAdjustmentValue(
     _ sliderValue: Double,
-    parameter: PhotosCropAdjustmentParameter
+    parameter: ImageEditor.Adjustment
   ) {
     parameter.apply(sliderValue: sliderValue, to: &feature.effects)
   }
 
-  /// Removes the blur mask; the effects and the crop are unchanged.
-  mutating func clearBlurMask() {
-    feature.blurMask = nil
+  /// Removes the local blur; the effects and the crop are unchanged.
+  mutating func clearLocalBlur() {
+    feature.localBlur = nil
   }
 
-  /// Whether the final crop differs from PhotosCrop's Reset target.
+  /// Whether the final crop differs from ImageEditor's Reset target.
   ///
   /// Reset only restores the crop geometry, so this intentionally ignores
-  /// effects and the blur mask.
+  /// effects and the local blur.
   func hasCropChanges(tolerance: CGFloat = 1) -> Bool {
     let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)
     let initial = crop.makeInitial()

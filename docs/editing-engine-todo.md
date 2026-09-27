@@ -6,8 +6,8 @@ file tracks concrete engineering items that are not yet done.
 
 Status context (as of Brightroom 6):
 
-- `EditingStack` holds no edit. PhotosCrop and `SwiftUICropView` edit a
-  `PhotosCropFeature` (a statically composed `Feature`) owned by
+- `EditingStack` holds no edit. ImageEditor and `SwiftUICropView` edit an
+  `ImageEditorFeature` (a statically composed `Feature`) owned by
   `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
   BrightroomUI edits crop through `CropEditingState` / `CropRotation`.
 - Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
@@ -105,7 +105,7 @@ Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKVie
 
 ### 3. Done: Store masks y-up in the document — "E5"
 
-`PhotosCropFeature` stores brush stamps in Core Image's y-up working space, and
+`ImageEditorFeature` stores brush stamps in Core Image's y-up working space, and
 the y-down bridge (`EditingDocumentBridge`) is deleted, so the document is
 directly renderable. The canvas converts gestures to y-up when it commits a
 stroke.
@@ -121,10 +121,10 @@ effort (e.g. the untracked `CommittedMaskParametricParityTests.swift`, and stale
 comments referencing a committed-mask bake) should be reconciled with the live
 real-time path or removed.
 
-### 5. Manual verification pass (PhotosCrop)
+### 5. Manual verification pass (ImageEditor)
 
 Live paint position/orientation and zoom memory were confirmed visually. Remaining:
-a full PhotosCrop pass on device/sim — pan/zoom, 90° rotate, straighten dial,
+a full ImageEditor pass on device/sim — pan/zoom, 90° rotate, straighten dial,
 aspect-ratio lock, reset — and confirm the exported result matches the on-screen
 preview. **Re-test drawing a mask on the 12000×12000 "Nasa" image** — the OOM
 that motivated the source-resolution-blur change cannot be unit-tested (it is a
@@ -132,7 +132,7 @@ device memory-watermark crash), so it needs a manual confirmation.
 
 ### 5a. Crop Done / tool switch before a gesture settles (from #330)
 
-PhotosCrop's Done and a switch from Crop to a tool commit the proposed crop,
+ImageEditor's Done and a switch from Crop to a tool commit the proposed crop,
 which is the last *recorded* interaction state. Pressing Done or switching
 before a scroll/pinch settles can omit the final unrecorded movement; there is
 no synchronous gesture flush. Quarter-turn crops (straighten → crop → quarter
@@ -146,8 +146,8 @@ Files: `Sources/BrightroomUI/Shared/Components/Crop/CropView.swift`
 
 The source-resolution-blur fix covers the **local-adjustment** preview path
 (`.localAdjustment`). The `.preview` / `.renderedEditPreview` paths still apply
-the global effects (`PhotosCropFeature.Effects`) to the full-canvas image. That is safe today because
-every global effect PhotosCrop exposes is pointwise (exposure/contrast/etc.) —
+the global effects (`ImageEditorFeature.Effects`) to the full-canvas image. That is safe today because
+every global effect ImageEditor exposes is pointwise (exposure/contrast/etc.) —
 Core Image evaluates those lazily at the output/viewport resolution, so no
 full-canvas buffer is materialized. If a global **spatial** effect (blur,
 sharpen, displacement) is ever added to the global effects, that path would

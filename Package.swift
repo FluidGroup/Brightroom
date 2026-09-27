@@ -52,7 +52,7 @@ let package = Package(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
     ),
-    // EditingDocument, SourceImage, and the PhotosCrop document flows. Hosts
+    // EditingDocument, SourceImage, and the ImageEditor document flows. Hosts
     // BrightroomUI views, so it depends on the whole stack.
     .testTarget(
       name: "BrightroomEngineDocumentTests",

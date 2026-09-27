@@ -10,7 +10,7 @@ import UIKit
 
 /// Pins the locked invariant that the interactive preview and the exported
 /// result are the *same composition*: the canvas composition `CropView`
-/// renders for a `PhotosCropFeature` (`CanvasCompositionPreview`) and the
+/// renders for an `ImageEditorFeature` (`CanvasCompositionPreview`) and the
 /// export of the same feature through `EditingDocument.render(options:)`
 /// must produce matching pixels.
 ///
@@ -48,7 +48,7 @@ struct EditingPreviewExportParityTests {
     )
     let document = Self.makeDocument(
       imageSize: imageSize,
-      blurMask: Self.makeBlurMask(
+      localBlur: Self.makeLocalBlur(
         radius: 8,
         displayCenter: CGPoint(x: 30, y: 12),
         domainHeight: imageSize.height
@@ -77,10 +77,10 @@ struct EditingPreviewExportParityTests {
     let mirrored = CGPoint(x: 20, y: imageSize.height - 8)
     let document = Self.makeDocument(
       imageSize: imageSize,
-      blurMask: Self.makeBlurMask(radius: 4, displayCenter: painted, domainHeight: imageSize.height)
+      localBlur: Self.makeLocalBlur(radius: 4, displayCenter: painted, domainHeight: imageSize.height)
     )
     var unmasked = document
-    unmasked.blurMask = nil
+    unmasked.localBlur = nil
 
     let exported = try await export(document, source: source)
     let preview = try CanvasCompositionPreview.render(document: document, source: source)
@@ -113,7 +113,7 @@ struct EditingPreviewExportParityTests {
     let document = Self.makeDocument(
       imageSize: imageSize,
       cropRect: cropRect,
-      blurMask: Self.makeBlurMask(
+      localBlur: Self.makeLocalBlur(
         radius: 8,
         displayCenter: CGPoint(x: 30, y: 12),
         domainHeight: imageSize.height
@@ -149,7 +149,7 @@ struct EditingPreviewExportParityTests {
       imageSize: imageSize,
       cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
       rotation: .angle_90,
-      blurMask: Self.makeBlurMask(
+      localBlur: Self.makeLocalBlur(
         radius: 4,
         displayCenter: CGPoint(x: 20, y: 10),
         domainHeight: imageSize.height
@@ -176,7 +176,7 @@ struct EditingPreviewExportParityTests {
       Self.makeDocument(
         imageSize: imageSize,
         cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
-        blurMask: document.blurMask
+        localBlur: document.localBlur
       ),
       source: source
     )
@@ -202,14 +202,14 @@ struct EditingPreviewExportParityTests {
 
     let emptyDocument = Self.makeDocument(
       imageSize: imageSize,
-      blurMask: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
+      localBlur: LocalAdjustment(maskTree: MaskTree(root: .brush(BrushMask(strokes: [])))) {
         GaussianBlurFeature(radius: 8)
       }
     )
-    #expect(CropView.CanvasRenderPlan(blurMask: emptyDocument.blurMask) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
 
     // Reference: same document with no blur mask at all.
-    let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, blurMask: nil)
+    let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, localBlur: nil)
 
     let emptyExport = try await export(emptyDocument, source: source)
     let globalOnlyExport = try await export(globalOnlyDocument, source: source)
@@ -368,7 +368,7 @@ struct EditingPreviewExportParityTests {
 
   /// A hard 18 px stamp painted at `displayCenter` (top-left origin, y-down),
   /// stored in working space through the production conversion.
-  private static func makeBlurMask(
+  private static func makeLocalBlur(
     radius: CGFloat,
     displayCenter: CGPoint,
     domainHeight: CGFloat
@@ -388,11 +388,11 @@ struct EditingPreviewExportParityTests {
     imageSize: CGSize,
     cropRect: CGRect? = nil,
     rotation: CropEditingState.Rotation = .angle_0,
-    blurMask: LocalAdjustment<GaussianBlurFeature>?
-  ) -> PhotosCropFeature {
-    var document = PhotosCropFeature(imageSize: imageSize)
+    localBlur: LocalAdjustment<GaussianBlurFeature>?
+  ) -> ImageEditorFeature {
+    var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.exposure = ExposureFeature(value: 0.4)
-    document.blurMask = blurMask
+    document.localBlur = localBlur
     if cropRect != nil || rotation != .angle_0 {
       var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
       if let cropRect {

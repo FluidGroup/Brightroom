@@ -176,15 +176,15 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   )
 
   struct Document: Feature {
-    var blurMask: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustment<GaussianBlurFeature>?
 
     var body: some Feature {
-      blurMask
+      localBlur
     }
   }
 
   var document = Document()
-  document.blurMask = LocalAdjustment(
+  document.localBlur = LocalAdjustment(
     maskTree: MaskTree(root: .brush(BrushMask(strokes: [stroke])))
   ) {
     GaussianBlurFeature(value: 40)
@@ -230,13 +230,13 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   struct PhotoDocument: Feature, Equatable {
     var exposure = ExposureFeature(value: 0)
     var look: FilmLook?
-    var blurMask: LocalAdjustment<GaussianBlurFeature>?
+    var localBlur: LocalAdjustment<GaussianBlurFeature>?
     var crop: CropFeature
 
     var body: some Feature {
       exposure
       look
-      blurMask
+      localBlur
       crop
     }
   }
@@ -246,7 +246,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   var document = PhotoDocument(crop: CropFeature(cropRect: fullFrame))
   document.exposure.value = -0.1
   document.look = FilmLook(warmth: 500)
-  document.blurMask = LocalAdjustment(
+  document.localBlur = LocalAdjustment(
     maskTree: MaskTree(
       root: .brush(
         BrushMask(strokes: [

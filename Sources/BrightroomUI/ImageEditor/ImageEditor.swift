@@ -25,9 +25,10 @@ import BrightroomEngine
 import BrightroomParametric
 
 /**
- Apple's Photos app like crop view.
+ An image editor: crop and straighten, filters, adjustments, and a painted
+ local blur.
 
- The view edits an `EditingDocument<PhotosCropFeature>` the host owns.
+ The view edits an `ImageEditorDocument` the host owns.
 
  - Each completed operation (a filter tap, a slider drag, a brush stroke, a
    crop applied) is written to the binding once; values in progress, such
@@ -52,16 +53,16 @@ import BrightroomParametric
 
  You might use `SwiftUICropView` to create a fully customized user interface.
  */
-public struct SwiftUIPhotosCropView: View {
+public struct ImageEditor: View {
 
   public struct LocalizedStrings {
-    public var button_done_title: String = "Done"
-    public var button_cancel_title: String = "Cancel"
-    public var button_reset_title: String = "Reset"
-    public var button_aspectratio_original: String = "ORIGINAL"
-    public var button_aspectratio_freeform: String = "FREEFORM"
-    public var button_aspectratio_square: String = "SQUARE"
-    public var button_filter_original: String = "ORIGINAL"
+    public var done: String = "Done"
+    public var cancel: String = "Cancel"
+    public var reset: String = "Reset"
+    public var originalAspectRatio: String = "ORIGINAL"
+    public var freeformAspectRatio: String = "FREEFORM"
+    public var squareAspectRatio: String = "SQUARE"
+    public var originalFilter: String = "ORIGINAL"
 
     public init() {}
   }
@@ -87,7 +88,7 @@ public struct SwiftUIPhotosCropView: View {
     }
   }
 
-  @Binding private var document: EditingDocument<PhotosCropFeature>
+  @Binding private var document: ImageEditorDocument
   private let options: Options
   private let localizedStrings: LocalizedStrings
   private let onDone: @MainActor () -> Void
@@ -97,9 +98,9 @@ public struct SwiftUIPhotosCropView: View {
   ///
   /// - Parameters:
   ///   - document: The edited document. Create it before showing the editor,
-  ///     with `EditingDocument(image:)` or, for a policy-decided initial crop,
-  ///     `EditingDocument(image:cropModifier:)`. A document of another image
-  ///     restarts the editor.
+  ///     with `ImageEditorDocument(image:)` or, for a policy-decided initial
+  ///     crop, `ImageEditorDocument(image:cropModifier:)`. A document of
+  ///     another image restarts the editor.
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.
   ///   - onDone: Called after the binding received the last change.
@@ -112,7 +113,7 @@ public struct SwiftUIPhotosCropView: View {
   ///     either hides Cancel, or binds the editor to a copy and assigns the
   ///     copy to its document on Done.
   public init(
-    document: Binding<EditingDocument<PhotosCropFeature>>,
+    document: Binding<ImageEditorDocument>,
     options: Options = .init(),
     localizedStrings: LocalizedStrings = .init(),
     onDone: @escaping @MainActor () -> Void,
@@ -128,7 +129,7 @@ public struct SwiftUIPhotosCropView: View {
   public var body: some View {
     // One stack per image, shared by the canvas and the filter swatches.
     OwnedEditingStack(image: document.image) { editingStack in
-      PhotosCropContentView(
+      ImageEditorContent(
         document: $document,
         editingStack: editingStack,
         options: options,

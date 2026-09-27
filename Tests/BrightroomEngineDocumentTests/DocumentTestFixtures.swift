@@ -53,17 +53,17 @@ enum DocumentTestFixtures {
     try SourceImage(data: makeRotatedJPEG())
   }
 
-  /// A full-image PhotosCrop feature of `makeImage()` with an exposure.
-  static func exposure(_ value: Double) -> PhotosCropFeature {
-    var feature = PhotosCropFeature(imageSize: rotatedJPEGSize)
+  /// A full-image `ImageEditorFeature` of `makeImage()` with an exposure.
+  static func exposure(_ value: Double) -> ImageEditorFeature {
+    var feature = ImageEditorFeature(imageSize: rotatedJPEGSize)
     feature.effects.exposure = ExposureFeature(value: value)
     return feature
   }
 
   static func makeDocument(
-    feature: PhotosCropFeature = exposure(0),
-    history: EditingDocument<PhotosCropFeature>.History = .init()
-  ) throws -> EditingDocument<PhotosCropFeature> {
+    feature: ImageEditorFeature = exposure(0),
+    history: ImageEditorDocument.History = .init()
+  ) throws -> ImageEditorDocument {
     EditingDocument(image: try makeImage(), feature: feature, history: history)
   }
 }

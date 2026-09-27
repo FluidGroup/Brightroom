@@ -28,7 +28,7 @@ import BrightroomParametric
 /// Prepares one image for interactive editing.
 ///
 /// Package access: editors in BrightroomUI (`SwiftUICropView`,
-/// `SwiftUIPhotosCropView`) create a stack for their document's image and
+/// `ImageEditor`) create a stack for their document's image and
 /// keep it while they are shown. Apps never create one; a custom editor
 /// displays `SourceImage.makeCIImage(maxPixelSize:)`.
 ///

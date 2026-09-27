@@ -1,7 +1,7 @@
 appId: app.muukii.brightroom.SwiftUIDemo
-name: PhotosCrop
+name: ImageEditor
 tags:
-  - photos-crop
+  - image-editor
 ---
 - launchApp:
     clearState: true
@@ -11,7 +11,7 @@ tags:
     duration: 500
 - tapOn: "Vertical"
 - assertVisible:
-    id: "photos.crop"
+    id: "image-editor"
 - assertVisible: "Cancel"
 - assertVisible: "Done"
 - assertVisible: "Rotate"
@@ -24,7 +24,7 @@ tags:
 - tapOn: "Cancel"
 - tapOn: "Vertical"
 - assertVisible:
-    id: "photos.crop"
+    id: "image-editor"
 - assertVisible: "Reset"
 - tapOn: "Reset"
 - assertNotVisible: "Reset"
@@ -40,26 +40,26 @@ tags:
 - tapOn: "4:5"
 - tapOn: "Horizontal"
 - assertVisible:
-    id: "photos.crop.aspect.original"
+    id: "image-editor.aspect.original"
     text: "not selected"
 - assertVisible:
-    id: "photos.crop.aspect.5x4"
+    id: "image-editor.aspect.5x4"
     text: "selected"
 - tapOn:
     text: "Rotate"
 - assertVisible:
-    id: "photos.crop.aspect.4x5"
+    id: "image-editor.aspect.4x5"
     text: "selected"
 - tapOn: "Horizontal"
 - assertVisible:
-    id: "photos.crop.aspect.5x4"
+    id: "image-editor.aspect.5x4"
     text: "selected"
 - tapOn: "ORIGINAL"
 - assertVisible:
-    id: "photos.crop.aspect.original"
+    id: "image-editor.aspect.original"
     text: "selected"
 - assertVisible:
-    id: "photos.crop.aspect.5x4"
+    id: "image-editor.aspect.5x4"
     text: "not selected"
 - tapOn: "SQUARE"
 - assertVisible: "Reset"

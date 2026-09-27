@@ -41,7 +41,7 @@ public struct CropViewMaskingBrush: Equatable {
 
 /// Shared policies for editors hosting CropView's masking surface.
 ///
-/// PhotosCrop and PixelEditor previously duplicated these verbatim; keep the
+/// ImageEditor and PixelEditor previously duplicated these verbatim; keep the
 /// single definition here so the editors cannot drift apart.
 enum CropViewMaskingDefaults {
 

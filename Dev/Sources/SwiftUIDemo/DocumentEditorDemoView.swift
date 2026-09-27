@@ -21,9 +21,9 @@ import SwiftUI
 ///   app that does not save history would do before saving.
 struct DocumentEditorDemoView: View {
 
-  @State private var document: EditingDocument<PhotosCropFeature>?
+  @State private var document: ImageEditorDocument?
   /// The copy the editor edits while Cancel is shown.
-  @State private var draft: EditingDocument<PhotosCropFeature>?
+  @State private var draft: ImageEditorDocument?
   @State private var isEditing = false
   @State private var showsCancel = true
   @State private var pickerItem: PhotosPickerItem?
@@ -81,7 +81,7 @@ struct DocumentEditorDemoView: View {
   private var editor: some View {
     if showsCancel {
       if let binding = Binding($draft) {
-        SwiftUIPhotosCropView(
+        ImageEditor(
           document: binding,
           options: .documentEditorDemo(),
           onDone: {
@@ -92,7 +92,7 @@ struct DocumentEditorDemoView: View {
         )
       }
     } else if let document {
-      SwiftUIPhotosCropView(
+      ImageEditor(
         // Reads the latest value: the editor can write twice in one event.
         document: Binding(get: { self.document ?? document }, set: { write($0) }),
         options: .documentEditorDemo(),
@@ -102,7 +102,7 @@ struct DocumentEditorDemoView: View {
   }
 
   @ViewBuilder
-  private func documentSections(_ document: EditingDocument<PhotosCropFeature>) -> some View {
+  private func documentSections(_ document: ImageEditorDocument) -> some View {
     Section("Document") {
       LabeledContent("Image", value: "\(Int(document.image.pixelSize.width)) x \(Int(document.image.pixelSize.height)) px")
       LabeledContent("Crop", value: Self.describe(document.feature.crop.cropRect))
@@ -200,13 +200,13 @@ struct DocumentEditorDemoView: View {
   /// `UndoManager` records it as the redo. Registering from
   /// `onChange(of:)` would run after the undo returned and record a new
   /// undo step instead.
-  private func write(_ new: EditingDocument<PhotosCropFeature>) {
+  private func write(_ new: ImageEditorDocument) {
     Self.write(new, to: $document, undoManager: undoManager, target: undoTarget)
   }
 
   private static func write(
-    _ new: EditingDocument<PhotosCropFeature>,
-    to document: Binding<EditingDocument<PhotosCropFeature>?>,
+    _ new: ImageEditorDocument,
+    to document: Binding<ImageEditorDocument?>,
     undoManager: UndoManager?,
     target: UndoTarget
   ) {
@@ -224,7 +224,7 @@ struct DocumentEditorDemoView: View {
   }
 
   /// Changes the document through `write(_:)`, so the change is undoable.
-  private func update(_ change: (inout EditingDocument<PhotosCropFeature>) -> Void) {
+  private func update(_ change: (inout ImageEditorDocument) -> Void) {
     guard var next = document else {
       return
     }
@@ -232,7 +232,7 @@ struct DocumentEditorDemoView: View {
     write(next)
   }
 
-  private func render(_ document: EditingDocument<PhotosCropFeature>) {
+  private func render(_ document: ImageEditorDocument) {
     renderTask = Task {
       defer {
         // A cancelled task's slot may already hold a newer task.
@@ -277,10 +277,10 @@ struct DocumentEditorDemoView: View {
   }
 }
 
-private extension SwiftUIPhotosCropView.Options {
+private extension ImageEditor.Options {
   static func documentEditorDemo() -> Self {
     var options = Self()
-    options.filterPresets = PhotosCropDemoFilterPresets.make()
+    options.filterPresets = DemoFilters.make()
     return options
   }
 }

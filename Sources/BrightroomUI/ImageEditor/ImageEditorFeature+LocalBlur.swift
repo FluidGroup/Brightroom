@@ -24,11 +24,11 @@ import CoreGraphics
 
 import BrightroomParametric
 
-extension PhotosCropFeature {
+extension ImageEditorFeature {
 
-  /// Appends a stroke to the blur mask.
+  /// Appends a stroke to the local blur's mask.
   ///
-  /// When there is no blur mask yet, one is created with the default blur
+  /// When there is no local blur yet, one is created with the default blur
   /// (`CropViewMaskingDefaults.blurEffect`, diagonal / 50 of the chain entry)
   /// and a brush-rooted mask tree. An existing blur keeps the content it was
   /// created with.
@@ -38,9 +38,9 @@ extension PhotosCropFeature {
   ///   resolution: x ∈ [0, W], y ∈ [0, H] for (W, H) =
   ///   `EditingStack.Loaded.imageSize`. The brush diameter is in the same
   ///   pixels.
-  mutating func appendBlurMaskStroke(_ stroke: BrushMaskStroke) {
-    guard blurMask != nil else {
-      blurMask = LocalAdjustment(
+  mutating func appendLocalBlurStroke(_ stroke: BrushMaskStroke) {
+    guard localBlur != nil else {
+      localBlur = LocalAdjustment(
         maskTree: MaskTree(
           root: .brush(BrushMask(strokes: [stroke]))
         )
@@ -49,13 +49,13 @@ extension PhotosCropFeature {
       }
       return
     }
-    blurMask?.maskTree.appendCanvasBrushStroke(stroke)
+    localBlur?.maskTree.appendCanvasBrushStroke(stroke)
   }
 
-  /// The blur mask's strokes in working space. Empty when there is no blur
-  /// mask or its tree is not rooted at a brush.
-  var blurMaskStrokes: [BrushMaskStroke] {
-    blurMask?.maskTree.canvasBrushStrokes ?? []
+  /// The local blur's strokes in working space. Empty when there is no local
+  /// blur or its mask tree is not rooted at a brush.
+  var localBlurStrokes: [BrushMaskStroke] {
+    localBlur?.maskTree.canvasBrushStrokes ?? []
   }
 }
 

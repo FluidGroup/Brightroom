@@ -22,7 +22,7 @@ import UIKit
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
 /// - brush-mask raster (`ParametricImageRenderer.makeMaskImage`, the parametric
 ///   `brushStamp` kernel)
-/// - parametric evaluation (`PhotosCropFeature.Effects.apply` / feature recipes)
+/// - parametric evaluation (`ImageEditorFeature.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 
   private static let context = CIContext()
@@ -75,7 +75,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Hot paths
 
   @inline(never)
-  private func exportRender(_ document: PhotosCropFeature, source: CGImage) throws -> CGImage {
+  private func exportRender(_ document: ImageEditorFeature, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
     return try EditingDocument(image: SourceImage(cgImage: source), feature: document)
@@ -84,7 +84,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   @inline(never)
-  private func previewComposition(_ document: PhotosCropFeature, source: CIImage) {
+  private func previewComposition(_ document: ImageEditorFeature, source: CIImage) {
     // The document is authored in full-resolution coordinates, so the preview
     // evaluates over the full-size source, with the crop neutralized.
     let preview = document.withCropNeutralized(imageSize: source.extent.size)
@@ -124,8 +124,8 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     ]
   )))
 
-  private static func makeEffects() -> PhotosCropFeature.Effects {
-    PhotosCropFeature.Effects(
+  private static func makeEffects() -> ImageEditorFeature.Effects {
+    ImageEditorFeature.Effects(
       preset: PresetFeature(
         name: "Perf",
         identifier: "perf.preset",
@@ -142,10 +142,10 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     )
   }
 
-  private static func makeDocument(imageSize: CGSize) -> PhotosCropFeature {
-    var document = PhotosCropFeature(imageSize: imageSize)
+  private static func makeDocument(imageSize: CGSize) -> ImageEditorFeature {
+    var document = ImageEditorFeature(imageSize: imageSize)
     document.effects = makeEffects()
-    document.blurMask = LocalAdjustment(maskTree: cachedMaskTree) {
+    document.localBlur = LocalAdjustment(maskTree: cachedMaskTree) {
       GaussianBlurFeature(value: 60)
     }
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)

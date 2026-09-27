@@ -12,35 +12,35 @@ import SwiftUI
 
 enum SketchImageLoading {
 
-  static func load(asset: PHAsset) async throws -> EditingDocument<PhotosCropFeature> {
+  static func load(asset: PHAsset) async throws -> ImageEditorDocument {
     let image = try await SourceImage(asset: asset)
     return await EditingDocument(image: image, cropModifier: .faceDetection(aspectRatio: .square))
   }
 
-  static func load(remote url: URL) async throws -> EditingDocument<PhotosCropFeature> {
+  static func load(remote url: URL) async throws -> ImageEditorDocument {
     // The app owns networking; the library reads the bytes.
     EditingDocument(image: try await DemoRemoteImage.load(url))
   }
 
-  static func load(file url: URL) throws -> EditingDocument<PhotosCropFeature> {
+  static func load(file url: URL) throws -> ImageEditorDocument {
     EditingDocument(image: try SourceImage(contentsOf: url))
   }
 
   /// RAW is developed when the image is created, which takes hundreds of
   /// milliseconds, so it runs off the main actor.
   @concurrent
-  static func load(raw url: URL) async throws -> EditingDocument<PhotosCropFeature> {
+  static func load(raw url: URL) async throws -> ImageEditorDocument {
     EditingDocument(image: try SourceImage(rawContentsOf: url))
   }
 
-  static func load(contentEditingInput input: PHContentEditingInput) throws -> EditingDocument<PhotosCropFeature> {
+  static func load(contentEditingInput input: PHContentEditingInput) throws -> ImageEditorDocument {
     guard let url = input.fullSizeImageURL else {
       throw CocoaError(.fileNoSuchFile)
     }
     return EditingDocument(image: try SourceImage(contentsOf: url))
   }
 
-  static func load(uiImage: UIImage) -> EditingDocument<PhotosCropFeature> {
+  static func load(uiImage: UIImage) -> ImageEditorDocument {
     EditingDocument(image: SourceImage(image: uiImage), history: .init(limit: 20))
   }
 }
@@ -51,7 +51,7 @@ struct SketchEditorScreen: View {
 
   // The document is a value in the host's state; the editor edits it through
   // a binding and the host's toolbar drives its history.
-  @State var document: EditingDocument<PhotosCropFeature>
+  @State var document: ImageEditorDocument
   @State private var isEditing = false
   @State private var exported: CGImage?
 
@@ -85,11 +85,11 @@ struct SketchEditorScreen: View {
 /// only dismisses.
 private struct SketchPresentedEditor: View {
 
-  @Binding var document: EditingDocument<PhotosCropFeature>
+  @Binding var document: ImageEditorDocument
   @Binding var isPresented: Bool
 
   var body: some View {
-    SwiftUIPhotosCropView(
+    ImageEditor(
       document: $document,
       onDone: { isPresented = false },
       onCancel: { isPresented = false }
@@ -101,7 +101,7 @@ private struct SketchPresentedEditor: View {
 
 struct SketchCustomCropEditor: View {
 
-  @Binding var document: EditingDocument<PhotosCropFeature>
+  @Binding var document: ImageEditorDocument
   @State private var target: CropViewEditingTarget? = .crop
   @State private var applyAction = SwiftUICropView.ApplyAction()
 
@@ -117,7 +117,7 @@ struct SketchCustomCropEditor: View {
 
       HStack {
         Button("Crop") { select(.crop) }
-        Button("Blur") { select(.blurMask) }
+        Button("Blur") { select(.localBlur) }
       }
 
       Slider(
@@ -165,13 +165,13 @@ struct SketchSavedEdit: Codable {
   var current: Step
   var undo: [Step]
 
-  init(document: EditingDocument<PhotosCropFeature>, imageFileName: String, keepsHistory: Bool) {
+  init(document: ImageEditorDocument, imageFileName: String, keepsHistory: Bool) {
     self.imageFileName = imageFileName
     self.current = Step(document.feature)
     self.undo = keepsHistory ? document.history.undoStack.map(Step.init) : []
   }
 
-  func makeDocument(imageDirectory: URL) throws -> EditingDocument<PhotosCropFeature> {
+  func makeDocument(imageDirectory: URL) throws -> ImageEditorDocument {
     let image = try SourceImage(contentsOf: imageDirectory.appendingPathComponent(imageFileName))
     return EditingDocument(
       image: image,
@@ -183,15 +183,15 @@ struct SketchSavedEdit: Codable {
 
 extension SketchSavedEdit.Step {
 
-  init(_ feature: PhotosCropFeature) {
+  init(_ feature: ImageEditorFeature) {
     self.exposure = feature.effects.exposure?.value
     self.cropRect = feature.crop.cropRect
     self.rotation = feature.crop.rotation.rawValue
     self.straightenRadians = feature.crop.straightenRadians
   }
 
-  func makeFeature() -> PhotosCropFeature {
-    PhotosCropFeature(
+  func makeFeature() -> ImageEditorFeature {
+    ImageEditorFeature(
       effects: .init(exposure: exposure.map { ExposureFeature(value: $0) }),
       crop: CropFeature(
         cropRect: cropRect,
@@ -206,7 +206,7 @@ extension SketchSavedEdit.Step {
 
 enum SketchFeatureRendering {
 
-  static func preview(of document: EditingDocument<PhotosCropFeature>) throws -> CIImage {
+  static func preview(of document: ImageEditorDocument) throws -> CIImage {
     try ParametricImageRenderer().makeImage(
       from: document.image.makeCIImage(maxPixelSize: 1024),
       feature: document.feature

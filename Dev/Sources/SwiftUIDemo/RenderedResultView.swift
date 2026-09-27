@@ -7,12 +7,12 @@ struct ResultImage: Identifiable {
   let cgImage: CGImage
   let image: Image
   let metadata: [String]
-  let feature: PhotosCropFeature?
+  let feature: ImageEditorFeature?
 
   init(
     cgImage: CGImage,
     metadata: [String] = [],
-    feature: PhotosCropFeature? = nil
+    feature: ImageEditorFeature? = nil
   ) {
     self.id = UUID().uuidString
     self.cgImage = cgImage

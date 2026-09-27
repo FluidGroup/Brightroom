@@ -25,26 +25,26 @@ import CoreImage
 import SwiftUI
 import UIKit
 
-struct PhotosCropContentView: View {
+struct ImageEditorContent: View {
 
-  @Binding var document: EditingDocument<PhotosCropFeature>
+  @Binding var document: ImageEditorDocument
   let editingStack: EditingStack
-  let options: SwiftUIPhotosCropView.Options
-  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let options: ImageEditor.Options
+  let localizedStrings: ImageEditor.LocalizedStrings
   let onDone: @MainActor () -> Void
   let onCancel: (@MainActor () -> Void)?
 
   /// Created once per editor identity (one per image), so it keeps the
   /// document as it was when the editor opened. It restarts itself when the
   /// binding shows a document it does not know.
-  @State private var session: PhotosCropEditorSession
+  @State private var session: ImageEditorSession
   @State private var rotation: CropEditingState.Rotation?
   @State private var adjustmentAngle: CropEditingState.AdjustmentAngle?
-  @State private var aspectRatioSelection: PhotosCropAspectRatioSelection
+  @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
-  @State private var editingMode: PhotosCropEditingMode = .crop
-  @State private var blurMaskingState = PhotosCropBlurMaskingState()
-  @State private var adjustmentParameter: PhotosCropAdjustmentParameter =
+  @State private var editingMode: ImageEditor.Mode = .crop
+  @State private var localBlurState = LocalBlurState()
+  @State private var adjustmentParameter: ImageEditor.Adjustment =
     .exposure
   @State private var resetAction = SwiftUICropView.ResetAction()
   @State private var rotateAction = SwiftUICropView.RotateAction()
@@ -53,10 +53,10 @@ struct PhotosCropContentView: View {
     SwiftUICropView.AdjustmentAngleCommitAction()
 
   init(
-    document: Binding<EditingDocument<PhotosCropFeature>>,
+    document: Binding<ImageEditorDocument>,
     editingStack: EditingStack,
-    options: SwiftUIPhotosCropView.Options,
-    localizedStrings: SwiftUIPhotosCropView.LocalizedStrings,
+    options: ImageEditor.Options,
+    localizedStrings: ImageEditor.LocalizedStrings,
     onDone: @escaping @MainActor () -> Void,
     onCancel: (@MainActor () -> Void)?
   ) {
@@ -67,7 +67,7 @@ struct PhotosCropContentView: View {
     self.onDone = onDone
     self.onCancel = onCancel
     self._session = State(
-      initialValue: PhotosCropEditorSession(documentAtStart: document.wrappedValue)
+      initialValue: ImageEditorSession(documentAtStart: document.wrappedValue)
     )
 
     switch options.aspectRatioOptions {
@@ -96,12 +96,12 @@ struct PhotosCropContentView: View {
           .ignoresSafeArea()
 
         VStack(spacing: 0) {
-          PhotosCropCanvasHost(
+          CanvasHost(
             document: canvasDocumentBinding,
             displayedFeature: displayedFeature,
             editingStack: editingStack,
             mode: editingMode,
-            blurMaskingState: blurMaskingState,
+            localBlurState: localBlurState,
             rotation: $rotation,
             adjustmentAngle: $adjustmentAngle,
             croppingAspectRatio: croppingAspectRatioBinding(
@@ -115,11 +115,11 @@ struct PhotosCropContentView: View {
           )
           .layoutPriority(1)
 
-          PhotosCropControlHost(
+          ControlHost(
             mode: editingMode,
             originalAspectRatio: originalAspectRatio,
             aspectRatioSelection: aspectRatioSelection,
-            blurMaskingState: blurMaskingState,
+            localBlurState: localBlurState,
             filterPresets: options.filterPresets,
             filterPreviewBaseImage: editingStack.loadedState?.thumbnailImage,
             currentEffects: displayedFeature.effects,
@@ -131,8 +131,8 @@ struct PhotosCropContentView: View {
             onSelectAspectRatio: selectAspectRatio,
             onSetAdjustmentAngle: setAdjustmentAngle,
             onCommitAdjustmentAngle: commitAdjustmentAngle,
-            onSetBrushDiameter: setBlurMaskingBrushDiameter,
-            onClearBlurMask: clearBlurMask,
+            onSetBrushDiameter: setLocalBlurBrushDiameter,
+            onClearLocalBlur: clearLocalBlur,
             onSelectFilterPreset: selectFilterPreset,
             onSelectAdjustmentParameter: selectAdjustmentParameter,
             onSetAdjustmentValue: previewAdjustmentValue,
@@ -144,7 +144,7 @@ struct PhotosCropContentView: View {
         }
       }
       .safeAreaInset(edge: .bottom) {
-        PhotosCropModeToolbar(
+        ModeToolbar(
           selection: editingMode,
           isLoaded: isLoaded,
           onSelect: selectMode
@@ -154,10 +154,10 @@ struct PhotosCropContentView: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
       .toolbar {
-        PhotosCropToolbar(
-          resetTitle: localizedStrings.button_reset_title,
-          cancelTitle: localizedStrings.button_cancel_title,
-          doneTitle: localizedStrings.button_done_title,
+        EditorToolbar(
+          resetTitle: localizedStrings.reset,
+          cancelTitle: localizedStrings.cancel,
+          doneTitle: localizedStrings.done,
           isLoaded: isLoaded,
           hasCropChanges: document.hasCropChanges(),
           // A failed preparation leaves nothing to edit; Done stays the
@@ -199,9 +199,9 @@ struct PhotosCropContentView: View {
         // one document's start over another.
         session.noteDocument(document)
       }
-      .accessibilityIdentifier("photos.crop")
+      .accessibilityIdentifier("image-editor")
     }
-    // PhotosCrop is a dark, full-screen editor; keep system toolbar glass
+    // ImageEditor is a dark, full-screen editor; keep system toolbar glass
     // resolved against dark traits even when the host app is in Light Mode.
     .preferredColorScheme(.dark)
     .environment(\.colorScheme, .dark)
@@ -232,7 +232,7 @@ struct PhotosCropContentView: View {
     isSelectingAspectRatio.toggle()
   }
 
-  private func selectAspectRatio(_ selection: PhotosCropAspectRatioSelection) {
+  private func selectAspectRatio(_ selection: AspectRatioSelection) {
     aspectRatioSelection = selection
   }
 
@@ -250,15 +250,15 @@ struct PhotosCropContentView: View {
     adjustmentAngleCommitAction(.init(degrees: degrees))
   }
 
-  private func setBlurMaskingBrushDiameter(_ diameter: CGFloat) {
-    guard blurMaskingState.brushDiameter != diameter else {
+  private func setLocalBlurBrushDiameter(_ diameter: CGFloat) {
+    guard localBlurState.brushDiameter != diameter else {
       return
     }
 
-    blurMaskingState.brushDiameter = diameter
+    localBlurState.brushDiameter = diameter
   }
 
-  private func selectMode(_ mode: PhotosCropEditingMode) {
+  private func selectMode(_ mode: ImageEditor.Mode) {
     guard editingMode != mode else {
       return
     }
@@ -282,7 +282,7 @@ struct PhotosCropContentView: View {
   }
 
   private func selectAdjustmentParameter(
-    _ parameter: PhotosCropAdjustmentParameter
+    _ parameter: ImageEditor.Adjustment
   ) {
     guard adjustmentParameter != parameter else {
       return
@@ -306,8 +306,8 @@ struct PhotosCropContentView: View {
     write()
   }
 
-  private func clearBlurMask() {
-    write { $0.clearBlurMask() }
+  private func clearLocalBlur() {
+    write { $0.clearLocalBlur() }
   }
 
   private func finish() {
@@ -333,7 +333,7 @@ struct PhotosCropContentView: View {
   /// first when this is the visit's first write. Nothing is written when
   /// the feature is unchanged.
   private func write(
-    _ change: (inout EditingDocument<PhotosCropFeature>) -> Void = { _ in }
+    _ change: (inout ImageEditorDocument) -> Void = { _ in }
   ) {
     if let next = session.document(after: document, change: change) {
       document = next
@@ -342,7 +342,7 @@ struct PhotosCropContentView: View {
 
   /// The binding the canvas writes through: its changes go through the
   /// session like the controls' writes.
-  private var canvasDocumentBinding: Binding<EditingDocument<PhotosCropFeature>> {
+  private var canvasDocumentBinding: Binding<ImageEditorDocument> {
     Binding {
       document
     } set: { changed in
@@ -365,15 +365,15 @@ struct PhotosCropContentView: View {
     }
   }
 
-  private struct PhotosCropModeToolbar: View {
+  private struct ModeToolbar: View {
 
-    let selection: PhotosCropEditingMode
+    let selection: ImageEditor.Mode
     let isLoaded: Bool
-    let onSelect: (PhotosCropEditingMode) -> Void
+    let onSelect: (ImageEditor.Mode) -> Void
 
     var body: some View {
       let body = HStack(spacing: 12) {
-        ForEach(PhotosCropEditingMode.allCases) { mode in
+        ForEach(ImageEditor.Mode.allCases) { mode in
           _Button(
             mode: mode,
             isSelected: selection == mode,
@@ -396,7 +396,7 @@ struct PhotosCropContentView: View {
 
     private struct _Button: View {
 
-      let mode: PhotosCropEditingMode
+      let mode: ImageEditor.Mode
       let isSelected: Bool
       let isEnabled: Bool
       let action: () -> Void
@@ -445,102 +445,105 @@ struct PhotosCropContentView: View {
 
 }
 
-/// A top-level editing mode shown in the PhotosCrop bottom toolbar.
-///
-/// The mode controls which controls are displayed below the canvas and which
-/// interaction surface `SwiftUICropView` exposes. Future modes are represented
-/// here even before their controls are implemented so the UI tree can settle
-/// around the same routing model.
-enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
-  case crop
-  case blurMasking
-  case filters
-  case adjustments
+extension ImageEditor {
 
-  var id: Self { self }
+  /// A top-level editing mode shown in the ImageEditor bottom toolbar.
+  ///
+  /// The mode controls which controls are displayed below the canvas and which
+  /// interaction surface `SwiftUICropView` exposes. Future modes are represented
+  /// here even before their controls are implemented so the UI tree can settle
+  /// around the same routing model.
+  enum Mode: CaseIterable, Equatable, Identifiable {
+    case crop
+    case localBlur
+    case filters
+    case adjust
 
-  var title: String {
-    switch self {
-    case .crop:
-      return "Crop"
-    case .blurMasking:
-      return "Blur"
-    case .filters:
-      return "Filters"
-    case .adjustments:
-      return "Adjust"
+    var id: Self { self }
+
+    var title: String {
+      switch self {
+      case .crop:
+        return "Crop"
+      case .localBlur:
+        return "Blur"
+      case .filters:
+        return "Filters"
+      case .adjust:
+        return "Adjust"
+      }
     }
-  }
 
-  var accessibilityLabel: String {
-    switch self {
-    case .crop:
-      return "Crop"
-    case .blurMasking:
-      return "Blur Masking"
-    case .filters:
-      return "Filters"
-    case .adjustments:
-      return "Adjustments"
+    var accessibilityLabel: String {
+      switch self {
+      case .crop:
+        return "Crop"
+      case .localBlur:
+        return "Blur Masking"
+      case .filters:
+        return "Filters"
+      case .adjust:
+        return "Adjustments"
+      }
     }
-  }
 
-  var systemImageName: String {
-    switch self {
-    case .crop:
-      return "crop"
-    case .blurMasking:
-      return "paintbrush"
-    case .filters:
-      return "camera.filters"
-    case .adjustments:
-      return "slider.horizontal.3"
+    var systemImageName: String {
+      switch self {
+      case .crop:
+        return "crop"
+      case .localBlur:
+        return "paintbrush"
+      case .filters:
+        return "camera.filters"
+      case .adjust:
+        return "slider.horizontal.3"
+      }
     }
-  }
 
-  var accessibilityIdentifier: String {
-    switch self {
-    case .crop:
-      return "photos.crop.mode.crop"
-    case .blurMasking:
-      return "photos.crop.mode.blur-masking"
-    case .filters:
-      return "photos.crop.mode.filters"
-    case .adjustments:
-      return "photos.crop.mode.adjustments"
+    var accessibilityIdentifier: String {
+      switch self {
+      case .crop:
+        return "image-editor.mode.crop"
+      case .localBlur:
+        return "image-editor.mode.local-blur"
+      case .filters:
+        return "image-editor.mode.filters"
+      case .adjust:
+        return "image-editor.mode.adjust"
+      }
     }
-  }
 
-  /// What `SwiftUICropView` gestures edit in this mode. Filters and
-  /// Adjustments edit through controls below the canvas, so the canvas only
-  /// views the output there.
-  var cropViewEditingTarget: CropViewEditingTarget? {
-    switch self {
-    case .crop:
-      return .crop
-    case .blurMasking:
-      return .blurMask
-    case .filters, .adjustments:
-      return nil
+    /// What `SwiftUICropView` gestures edit in this mode. Filters and
+    /// Adjustments edit through controls below the canvas, so the canvas only
+    /// views the output there.
+    var cropViewEditingTarget: CropViewEditingTarget? {
+      switch self {
+      case .crop:
+        return .crop
+      case .localBlur:
+        return .localBlur
+      case .filters, .adjust:
+        return nil
+      }
     }
   }
 }
 
-/// Mutable state for PhotosCrop's first local-adjustment mode.
+/// Mutable state for ImageEditor's first local-adjustment mode.
 ///
 /// The brush diameter is stored in viewport points so the visible control reads
 /// like a Photos-style tool; CropView resolves it into image space.
-private struct PhotosCropBlurMaskingState: Equatable {
+private struct LocalBlurState: Equatable {
   var brushDiameter: CGFloat = 30
 }
 
-private struct PhotosCropCanvasHost: View {
+private struct CanvasHost: View {
 
-  @Binding var document: EditingDocument<PhotosCropFeature>
-  let displayedFeature: PhotosCropFeature
+  @Binding var document: ImageEditorDocument
+  let displayedFeature: ImageEditorFeature
   let editingStack: EditingStack
-  let mode: PhotosCropEditingMode
-  let blurMaskingState: PhotosCropBlurMaskingState
+  let mode: ImageEditor.Mode
+  let localBlurState: LocalBlurState
   let rotation: Binding<CropEditingState.Rotation?>
   let adjustmentAngle: Binding<CropEditingState.AdjustmentAngle?>
   let croppingAspectRatio: Binding<PixelAspectRatio?>
@@ -562,7 +565,7 @@ private struct PhotosCropCanvasHost: View {
     .croppingAspectRatio(croppingAspectRatio)
     .editingTarget(editingTarget)
     .maskingBrush(
-      .init(diameter: .viewportPoints(blurMaskingState.brushDiameter))
+      .init(diameter: .viewportPoints(localBlurState.brushDiameter))
     )
     .strokeSmoothing(.init())
     .registerResetAction(resetAction)
@@ -573,27 +576,27 @@ private struct PhotosCropCanvasHost: View {
 
 }
 
-private struct PhotosCropControlHost: View {
+private struct ControlHost: View {
 
-  let mode: PhotosCropEditingMode
+  let mode: ImageEditor.Mode
   let originalAspectRatio: PixelAspectRatio?
-  let aspectRatioSelection: PhotosCropAspectRatioSelection
-  let blurMaskingState: PhotosCropBlurMaskingState
+  let aspectRatioSelection: AspectRatioSelection
+  let localBlurState: LocalBlurState
   let filterPresets: [PresetFeature]
   let filterPreviewBaseImage: CIImage?
-  let currentEffects: PhotosCropFeature.Effects?
-  let adjustmentParameter: PhotosCropAdjustmentParameter
-  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let currentEffects: ImageEditorFeature.Effects?
+  let adjustmentParameter: ImageEditor.Adjustment
+  let localizedStrings: ImageEditor.LocalizedStrings
   let adjustmentAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
-  let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
+  let onSelectAspectRatio: (AspectRatioSelection) -> Void
   let onSetAdjustmentAngle: (Double) -> Void
   let onCommitAdjustmentAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
-  let onClearBlurMask: () -> Void
+  let onClearLocalBlur: () -> Void
   let onSelectFilterPreset: (PresetFeature?) -> Void
-  let onSelectAdjustmentParameter: (PhotosCropAdjustmentParameter) -> Void
+  let onSelectAdjustmentParameter: (ImageEditor.Adjustment) -> Void
   let onSetAdjustmentValue: (Double) -> Void
   let onEndAdjustmentValue: (Double) -> Void
 
@@ -601,7 +604,7 @@ private struct PhotosCropControlHost: View {
     Group {
       switch mode {
       case .crop:
-        PhotosCropAdjustmentControl(
+        AdjustmentControl(
           originalAspectRatio: originalAspectRatio,
           aspectRatioSelection: aspectRatioSelection,
           localizedStrings: localizedStrings,
@@ -613,16 +616,16 @@ private struct PhotosCropControlHost: View {
           onCommitAdjustmentAngle: onCommitAdjustmentAngle
         )
 
-      case .blurMasking:
-        PhotosCropBlurMaskingControl(
-          brushDiameter: blurMaskingState.brushDiameter,
+      case .localBlur:
+        LocalBlurControl(
+          brushDiameter: localBlurState.brushDiameter,
           isLoaded: isLoaded,
           onSetBrushDiameter: onSetBrushDiameter,
-          onClearBlurMask: onClearBlurMask
+          onClearLocalBlur: onClearLocalBlur
         )
 
       case .filters:
-        PhotosCropFilterControl(
+        FilterControl(
           presets: filterPresets,
           baseImage: filterPreviewBaseImage,
           selectedPresetIdentifier: currentEffects?.preset?.identifier,
@@ -631,8 +634,8 @@ private struct PhotosCropControlHost: View {
           onSelectPreset: onSelectFilterPreset
         )
 
-      case .adjustments:
-        PhotosCropAdjustmentsControl(
+      case .adjust:
+        AdjustmentsControl(
           selection: adjustmentParameter,
           sliderValue: currentEffects.map {
             adjustmentParameter.sliderValue(in: $0)
@@ -648,7 +651,7 @@ private struct PhotosCropControlHost: View {
   }
 }
 
-private struct PhotosCropToolbar: ToolbarContent {
+private struct EditorToolbar: ToolbarContent {
 
   let resetTitle: String
   let cancelTitle: String
@@ -656,12 +659,12 @@ private struct PhotosCropToolbar: ToolbarContent {
   let isLoaded: Bool
   let hasCropChanges: Bool
   let isDoneEnabled: Bool
-  let mode: PhotosCropEditingMode
+  let mode: ImageEditor.Mode
   let isSelectingAspectRatio: Bool
   let onRotate: () -> Void
   let onReset: () -> Void
   let onToggleAspectRatio: () -> Void
-  let onSelectMode: (PhotosCropEditingMode) -> Void
+  let onSelectMode: (ImageEditor.Mode) -> Void
   /// nil hides the Cancel button.
   let onCancel: (() -> Void)?
   let onDone: () -> Void
@@ -669,9 +672,9 @@ private struct PhotosCropToolbar: ToolbarContent {
   var body: some ToolbarContent {
     if let onCancel {
       ToolbarItem(placement: .topBarLeading) {
-        PhotosCropToolbarTextButton(
+        ToolbarTextButton(
           title: cancelTitle,
-          accessibilityIdentifier: "photos.crop.cancel",
+          accessibilityIdentifier: "image-editor.cancel",
           isEnabled: true,
           role: .normal,
           minWidth: nil,
@@ -687,17 +690,17 @@ private struct PhotosCropToolbar: ToolbarContent {
     ToolbarItem(placement: .topBarLeading) {
       switch mode {
       case .crop:
-        PhotosCropToolbarIconButton(
+        ToolbarIconButton(
           systemName: "rotate.left",
           accessibilityLabel: "Rotate",
-          accessibilityIdentifier: "photos.crop.rotate",
+          accessibilityIdentifier: "image-editor.rotate",
           isEnabled: isLoaded && mode == .crop,
           isHighlighted: false,
           action: onRotate
         )
-      case .adjustments:
+      case .adjust:
         EmptyView()
-      case .blurMasking:
+      case .localBlur:
         EmptyView()
       case .filters:
         EmptyView()
@@ -706,9 +709,9 @@ private struct PhotosCropToolbar: ToolbarContent {
 
     ToolbarItem(placement: .principal) {
       if hasCropChanges && mode == .crop {
-        PhotosCropToolbarTextButton(
+        ToolbarTextButton(
           title: resetTitle,
-          accessibilityIdentifier: "photos.crop.reset",
+          accessibilityIdentifier: "image-editor.reset",
           isEnabled: isLoaded,
           role: .highlighted,
           minWidth: nil,
@@ -724,17 +727,17 @@ private struct PhotosCropToolbar: ToolbarContent {
     ToolbarItem(placement: .topBarTrailing) {
       switch mode {
       case .crop:
-        PhotosCropToolbarIconButton(
+        ToolbarIconButton(
           systemName: "aspectratio",
           accessibilityLabel: "Aspect Ratio",
-          accessibilityIdentifier: "photos.crop.aspect",
+          accessibilityIdentifier: "image-editor.aspect",
           isEnabled: isLoaded && mode == .crop,
           isHighlighted: isSelectingAspectRatio,
           action: onToggleAspectRatio
         )
-      case .adjustments:
+      case .adjust:
         EmptyView()
-      case .blurMasking:
+      case .localBlur:
         EmptyView()
       case .filters:
         EmptyView()
@@ -746,9 +749,9 @@ private struct PhotosCropToolbar: ToolbarContent {
     }
 
     ToolbarItem(placement: .topBarTrailing) {
-      PhotosCropToolbarTextButton(
+      ToolbarTextButton(
         title: doneTitle,
-        accessibilityIdentifier: "photos.crop.done",
+        accessibilityIdentifier: "image-editor.done",
         isEnabled: isDoneEnabled,
         role: .highlighted,
         minWidth: nil,
@@ -759,7 +762,7 @@ private struct PhotosCropToolbar: ToolbarContent {
   }
 }
 
-private struct PhotosCropToolbarIconButton: View {
+private struct ToolbarIconButton: View {
 
   let systemName: String
   let accessibilityLabel: String
@@ -785,7 +788,7 @@ private struct PhotosCropToolbarIconButton: View {
   }
 }
 
-private struct PhotosCropToolbarTextButton: View {
+private struct ToolbarTextButton: View {
 
   enum Role {
     case normal
@@ -832,12 +835,12 @@ private struct PhotosCropToolbarTextButton: View {
   }
 }
 
-private struct PhotosCropBlurMaskingControl: View {
+private struct LocalBlurControl: View {
 
   let brushDiameter: CGFloat
   let isLoaded: Bool
   let onSetBrushDiameter: (CGFloat) -> Void
-  let onClearBlurMask: () -> Void
+  let onClearLocalBlur: () -> Void
 
   var body: some View {
     HStack(spacing: 18) {
@@ -853,9 +856,9 @@ private struct PhotosCropBlurMaskingControl: View {
 
       BrightroomSteppedSlider(
         value: valueBinding,
-        range: PhotosCropBrushSizeMetrics.sizeRange,
-        stepCount: PhotosCropBrushSizeMetrics.stepCount,
-        style: .photosCropBrushSizeSlider,
+        range: BrushSizeMetrics.sizeRange,
+        stepCount: BrushSizeMetrics.stepCount,
+        style: .imageEditorBrushSizeSlider,
         transform: { $0.rounded() },
         hapticIdentity: { value in
           Int(value.rounded()).isMultiple(of: 10)
@@ -879,13 +882,13 @@ private struct PhotosCropBlurMaskingControl: View {
       .frame(height: 50)
       .accessibilityLabel("Brush Size")
 
-      PhotosCropToolbarIconButton(
+      ToolbarIconButton(
         systemName: "trash",
         accessibilityLabel: "Clear Blur Mask",
-        accessibilityIdentifier: "photos.crop.blur-masking.clear",
+        accessibilityIdentifier: "image-editor.local-blur.clear",
         isEnabled: isLoaded,
         isHighlighted: false,
-        action: onClearBlurMask
+        action: onClearLocalBlur
       )
       .frame(width: 44, height: 52)
     }
@@ -906,9 +909,9 @@ private struct PhotosCropBlurMaskingControl: View {
         min(
           max(
             Double(brushDiameter),
-            PhotosCropBrushSizeMetrics.sizeRange.lowerBound
+            BrushSizeMetrics.sizeRange.lowerBound
           ),
-          PhotosCropBrushSizeMetrics.sizeRange.upperBound
+          BrushSizeMetrics.sizeRange.upperBound
         )
       },
       set: { value in
@@ -923,7 +926,7 @@ private struct PhotosCropBlurMaskingControl: View {
   }
 }
 
-private enum PhotosCropBrushSizeMetrics {
+private enum BrushSizeMetrics {
   static let minimumSize: Double = 8
   static let maximumSize: Double = 64
   static let sizeRange = minimumSize...maximumSize
@@ -937,7 +940,7 @@ private enum PhotosCropBrushSizeMetrics {
 /// lazy: a chip renders its own swatch only as it first scrolls into view and
 /// holds it in `@State`, which a `LazyHStack` retains for the chip's lifetime —
 /// so scrolling never re-renders, only re-entering Filters mode does.
-private struct PhotosCropFilterControl: View {
+private struct FilterControl: View {
 
   /// On-screen edge length of a swatch.
   static let thumbnailPointSize: CGFloat = 56
@@ -948,7 +951,7 @@ private struct PhotosCropFilterControl: View {
   let presets: [PresetFeature]
   let baseImage: CIImage?
   let selectedPresetIdentifier: String?
-  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let localizedStrings: ImageEditor.LocalizedStrings
   let isLoaded: Bool
   let onSelectPreset: (PresetFeature?) -> Void
 
@@ -959,8 +962,8 @@ private struct PhotosCropFilterControl: View {
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
       LazyHStack(spacing: 12) {
-        PhotosCropFilterChip(
-          title: localizedStrings.button_filter_original,
+        FilterChip(
+          title: localizedStrings.originalFilter,
           preset: nil,
           baseImage: baseImage,
           pointSize: Self.thumbnailPointSize,
@@ -968,10 +971,10 @@ private struct PhotosCropFilterControl: View {
           action: { onSelectPreset(nil) }
         )
         .id(Self.originalScrollID)
-        .accessibilityIdentifier("photos.crop.filters.original")
+        .accessibilityIdentifier("image-editor.filters.original")
 
         ForEach(presets, id: \.identifier) { preset in
-          PhotosCropFilterChip(
+          FilterChip(
             title: preset.name,
             preset: preset,
             baseImage: baseImage,
@@ -980,7 +983,7 @@ private struct PhotosCropFilterControl: View {
             action: { onSelectPreset(preset) }
           )
           .id(preset.identifier)
-          .accessibilityIdentifier("photos.crop.filters.\(preset.identifier)")
+          .accessibilityIdentifier("image-editor.filters.\(preset.identifier)")
         }
       }
       .scrollTargetLayout()
@@ -992,7 +995,7 @@ private struct PhotosCropFilterControl: View {
     .opacity(isLoaded ? 1 : 0.5)
     .disabled(!isLoaded)
     .environment(\.colorScheme, .dark)
-    .accessibilityIdentifier("photos.crop.filters")
+    .accessibilityIdentifier("image-editor.filters")
     // Center the selected swatch on selection. ScrollView clamps at the ends, so
     // Original / the last filter just rest at the edge (Photos-like).
     .onChange(of: selectedPresetIdentifier) { _, newValue in
@@ -1008,7 +1011,7 @@ private struct PhotosCropFilterControl: View {
 /// The chip renders its own swatch when it appears (`.task`) into its `@State`,
 /// computed once for the chip's lifetime. `preset == nil` is the no-filter
 /// ("Original") swatch.
-private struct PhotosCropFilterChip: View {
+private struct FilterChip: View {
 
   let title: String
   let preset: PresetFeature?
@@ -1063,7 +1066,7 @@ private struct PhotosCropFilterChip: View {
         image = nil
         return
       }
-      let rendered = await PhotosCropFilterThumbnailRenderer.render(
+      let rendered = await FilterSwatch.render(
         base: baseImage,
         preset: preset,
         pointSize: pointSize,
@@ -1090,13 +1093,13 @@ private struct PhotosCropFilterChip: View {
   }
 }
 
-/// Parameter selector plus value slider for PhotosCrop's Adjust mode.
-private struct PhotosCropAdjustmentsControl: View {
+/// Parameter selector plus value slider for ImageEditor's Adjust mode.
+private struct AdjustmentsControl: View {
 
-  let selection: PhotosCropAdjustmentParameter
+  let selection: ImageEditor.Adjustment
   let sliderValue: Double
   let isLoaded: Bool
-  let onSelectParameter: (PhotosCropAdjustmentParameter) -> Void
+  let onSelectParameter: (ImageEditor.Adjustment) -> Void
   /// Called for each value while dragging.
   let onSetValue: (Double) -> Void
   /// Called once when a drag, an accessibility step, or a reset ends.
@@ -1106,8 +1109,8 @@ private struct PhotosCropAdjustmentsControl: View {
     VStack(spacing: 4) {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {
-          ForEach(PhotosCropAdjustmentParameter.allCases) { parameter in
-            PhotosCropAdjustmentParameterButton(
+          ForEach(ImageEditor.Adjustment.allCases) { parameter in
+            AdjustmentButton(
               parameter: parameter,
               isSelected: parameter == selection,
               action: { onSelectParameter(parameter) }
@@ -1125,7 +1128,7 @@ private struct PhotosCropAdjustmentsControl: View {
           (selection.sliderRange.upperBound - selection.sliderRange.lowerBound)
             / 4
         ),
-        style: .photosCropAdjustmentSlider,
+        style: .imageEditorAdjustmentSlider,
         resetValue: 0,
         snapsToTicksOnEditingEnd: false,
         transform: { $0.rounded() },
@@ -1162,7 +1165,7 @@ private struct PhotosCropAdjustmentsControl: View {
     .opacity(isLoaded ? 1 : 0.5)
     .disabled(!isLoaded)
     .environment(\.colorScheme, .dark)
-    .accessibilityIdentifier("photos.crop.adjustments")
+    .accessibilityIdentifier("image-editor.adjust")
   }
 
   private var valueBinding: Binding<Double> {
@@ -1180,9 +1183,9 @@ private struct PhotosCropAdjustmentsControl: View {
   }
 }
 
-private struct PhotosCropAdjustmentParameterButton: View {
+private struct AdjustmentButton: View {
 
-  let parameter: PhotosCropAdjustmentParameter
+  let parameter: ImageEditor.Adjustment
   let isSelected: Bool
   let action: () -> Void
 
@@ -1210,22 +1213,22 @@ private struct PhotosCropAdjustmentParameterButton: View {
   }
 }
 
-private struct PhotosCropAdjustmentControl: View {
+private struct AdjustmentControl: View {
 
   let originalAspectRatio: PixelAspectRatio?
-  let aspectRatioSelection: PhotosCropAspectRatioSelection
-  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
+  let aspectRatioSelection: AspectRatioSelection
+  let localizedStrings: ImageEditor.LocalizedStrings
   let adjustmentAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
-  let onSelectAspectRatio: (PhotosCropAspectRatioSelection) -> Void
+  let onSelectAspectRatio: (AspectRatioSelection) -> Void
   let onSetAdjustmentAngle: (Double) -> Void
   let onCommitAdjustmentAngle: (Double) -> Void
 
   var body: some View {
     Group {
       if isSelectingAspectRatio, let originalAspectRatio {
-        PhotosCropAspectRatioPicker(
+        AspectRatioPicker(
           originalAspectRatio: originalAspectRatio,
           selection: aspectRatioSelection,
           localizedStrings: localizedStrings,
@@ -1233,7 +1236,7 @@ private struct PhotosCropAdjustmentControl: View {
         )
         .transition(.opacity)
       } else {
-        PhotosCropRotationSlider(
+        StraightenSlider(
           value: adjustmentAngle?.degrees ?? 0,
           isEnabled: isLoaded,
           onChange: onSetAdjustmentAngle,
@@ -1249,7 +1252,7 @@ private struct PhotosCropAdjustmentControl: View {
   }
 }
 
-private struct PhotosCropRotationSlider: View {
+private struct StraightenSlider: View {
 
   let value: Double
   let isEnabled: Bool
@@ -1261,12 +1264,12 @@ private struct PhotosCropRotationSlider: View {
       value: valueBinding,
       range: -45...45,
       stepCount: 90,
-      style: .photosCropRotationSlider,
+      style: .imageEditorRotationSlider,
       resetValue: 0,
       snapsToTicksOnEditingEnd: false,
       transform: { source in
-        if (-PhotosCropRotationSliderMetrics
-          .neutralDeadZoneDegrees...PhotosCropRotationSliderMetrics
+        if (-StraightenSliderMetrics
+          .neutralDeadZoneDegrees...StraightenSliderMetrics
           .neutralDeadZoneDegrees).contains(source)
         {
           return 0
@@ -1317,12 +1320,12 @@ private struct PhotosCropRotationSlider: View {
   }
 }
 
-private enum PhotosCropRotationSliderMetrics {
+private enum StraightenSliderMetrics {
   static let neutralDeadZoneDegrees: Double = 0.5
 }
 
 extension BrightroomSteppedSliderStyle {
-  fileprivate static let photosCropRotationSlider =
+  fileprivate static let imageEditorRotationSlider =
     BrightroomSteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
@@ -1332,7 +1335,7 @@ extension BrightroomSteppedSliderStyle {
       majorTickInterval: 5
     )
 
-  fileprivate static let photosCropAdjustmentSlider =
+  fileprivate static let imageEditorAdjustmentSlider =
     BrightroomSteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
@@ -1342,7 +1345,7 @@ extension BrightroomSteppedSliderStyle {
       majorTickInterval: 5
     )
 
-  fileprivate static let photosCropBrushSizeSlider =
+  fileprivate static let imageEditorBrushSizeSlider =
     BrightroomSteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,
@@ -1359,10 +1362,10 @@ extension BrightroomSteppedSliderTickContext {
   }
 }
 
-private enum PhotosCropAspectRatioSelection: Equatable {
+private enum AspectRatioSelection: Equatable {
 
   case freeform
-  case original(PhotosCropAspectRatioDirection)
+  case original(AspectRatioDirection)
   case ratio(PixelAspectRatio)
 
   init(aspectRatio: PixelAspectRatio?) {
@@ -1406,7 +1409,7 @@ private enum PhotosCropAspectRatioSelection: Equatable {
   }
 
   func direction(originalAspectRatio: PixelAspectRatio?)
-    -> PhotosCropAspectRatioDirection?
+    -> AspectRatioDirection?
   {
     switch self {
     case .freeform:
@@ -1414,12 +1417,12 @@ private enum PhotosCropAspectRatioSelection: Equatable {
     case .original(let direction):
       return direction
     case .ratio(let aspectRatio):
-      return PhotosCropAspectRatioDirection(aspectRatio)
+      return AspectRatioDirection(aspectRatio)
     }
   }
 
   func withDirection(
-    _ direction: PhotosCropAspectRatioDirection,
+    _ direction: AspectRatioDirection,
     originalAspectRatio: PixelAspectRatio?
   ) -> Self {
     switch self {
@@ -1428,7 +1431,7 @@ private enum PhotosCropAspectRatioSelection: Equatable {
     case .original:
       return .original(direction)
     case .ratio(let aspectRatio):
-      if PhotosCropAspectRatioDirection(aspectRatio) == direction {
+      if AspectRatioDirection(aspectRatio) == direction {
         return self
       } else {
         return .ratio(aspectRatio.swapped())
@@ -1448,14 +1451,14 @@ private enum PhotosCropAspectRatioSelection: Equatable {
 
     if case .original = self, let aspectRatio, let originalAspectRatio {
       if aspectRatio == originalAspectRatio {
-        self = .original(PhotosCropAspectRatioDirection(originalAspectRatio))
+        self = .original(AspectRatioDirection(originalAspectRatio))
         return
       }
 
       let swappedOriginalAspectRatio = originalAspectRatio.swapped()
       if aspectRatio == swappedOriginalAspectRatio {
         self = .original(
-          PhotosCropAspectRatioDirection(swappedOriginalAspectRatio)
+          AspectRatioDirection(swappedOriginalAspectRatio)
         )
         return
       }
@@ -1465,24 +1468,24 @@ private enum PhotosCropAspectRatioSelection: Equatable {
   }
 }
 
-private struct PhotosCropAspectRatioPicker: View {
+private struct AspectRatioPicker: View {
 
   let originalAspectRatio: PixelAspectRatio?
-  let selection: PhotosCropAspectRatioSelection
-  let localizedStrings: SwiftUIPhotosCropView.LocalizedStrings
-  let onSelect: (PhotosCropAspectRatioSelection) -> Void
+  let selection: AspectRatioSelection
+  let localizedStrings: ImageEditor.LocalizedStrings
+  let onSelect: (AspectRatioSelection) -> Void
 
   var body: some View {
     VStack(spacing: 24) {
       HStack(spacing: 18) {
-        PhotosCropAspectRatioDirectionButton(
+        AspectRatioDirectionButton(
           direction: .vertical,
           selectedDirection: selectedDirection,
           isEnabled: canSelectDirection,
           onSelect: selectDirection
         )
 
-        PhotosCropAspectRatioDirectionButton(
+        AspectRatioDirectionButton(
           direction: .horizontal,
           selectedDirection: selectedDirection,
           isEnabled: canSelectDirection,
@@ -1494,36 +1497,36 @@ private struct PhotosCropAspectRatioPicker: View {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 12) {
           if originalAspectRatio != nil {
-            PhotosCropAspectRatioButton(
-              title: localizedStrings.button_aspectratio_original,
+            AspectRatioButton(
+              title: localizedStrings.originalAspectRatio,
               isSelected: selection.isOriginal
             ) {
               onSelect(.original(selectedDirection))
             }
-            .accessibilityIdentifier("photos.crop.aspect.original")
+            .accessibilityIdentifier("image-editor.aspect.original")
           }
 
-          PhotosCropAspectRatioButton(
-            title: localizedStrings.button_aspectratio_freeform,
+          AspectRatioButton(
+            title: localizedStrings.freeformAspectRatio,
             isSelected: selection.isFreeform
           ) {
             onSelect(.freeform)
           }
-          .accessibilityIdentifier("photos.crop.aspect.freeform")
+          .accessibilityIdentifier("image-editor.aspect.freeform")
 
-          PhotosCropAspectRatioButton(
-            title: localizedStrings.button_aspectratio_square,
+          AspectRatioButton(
+            title: localizedStrings.squareAspectRatio,
             isSelected: selection.isRatio(.square)
           ) {
             onSelect(.ratio(.square))
           }
-          .accessibilityIdentifier("photos.crop.aspect.square")
+          .accessibilityIdentifier("image-editor.aspect.square")
 
           ForEach(Self.horizontalRectangleAspectRatios) { ratio in
             let displayedRatio = displayedRatio(for: ratio)
             let minimizedDisplayedRatio = displayedRatio._minimized()
 
-            PhotosCropAspectRatioButton(
+            AspectRatioButton(
               title:
                 "\(Int(minimizedDisplayedRatio.width)):\(Int(minimizedDisplayedRatio.height))",
               isSelected: selection.isRatio(minimizedDisplayedRatio)
@@ -1531,7 +1534,7 @@ private struct PhotosCropAspectRatioPicker: View {
               onSelect(.ratio(minimizedDisplayedRatio))
             }
             .accessibilityIdentifier(
-              "photos.crop.aspect.\(Int(minimizedDisplayedRatio.width))x\(Int(minimizedDisplayedRatio.height))"
+              "image-editor.aspect.\(Int(minimizedDisplayedRatio.width))x\(Int(minimizedDisplayedRatio.height))"
             )
           }
         }
@@ -1540,13 +1543,13 @@ private struct PhotosCropAspectRatioPicker: View {
     }
   }
 
-  private var selectedDirection: PhotosCropAspectRatioDirection {
+  private var selectedDirection: AspectRatioDirection {
     selection.direction(originalAspectRatio: originalAspectRatio)
       ?? originalDirection
   }
 
-  private var originalDirection: PhotosCropAspectRatioDirection {
-    originalAspectRatio.map(PhotosCropAspectRatioDirection.init) ?? .horizontal
+  private var originalDirection: AspectRatioDirection {
+    originalAspectRatio.map(AspectRatioDirection.init) ?? .horizontal
   }
 
   private var canSelectDirection: Bool {
@@ -1572,7 +1575,7 @@ private struct PhotosCropAspectRatioPicker: View {
     }
   }
 
-  private func selectDirection(_ direction: PhotosCropAspectRatioDirection) {
+  private func selectDirection(_ direction: AspectRatioDirection) {
     guard canSelectDirection, selectedDirection != direction else {
       return
     }
@@ -1595,7 +1598,7 @@ private struct PhotosCropAspectRatioPicker: View {
   ]
 }
 
-private struct PhotosCropAspectRatioButton: View {
+private struct AspectRatioButton: View {
 
   let title: String
   let isSelected: Bool
@@ -1619,12 +1622,12 @@ private struct PhotosCropAspectRatioButton: View {
   }
 }
 
-private struct PhotosCropAspectRatioDirectionButton: View {
+private struct AspectRatioDirectionButton: View {
 
-  let direction: PhotosCropAspectRatioDirection
-  let selectedDirection: PhotosCropAspectRatioDirection
+  let direction: AspectRatioDirection
+  let selectedDirection: AspectRatioDirection
   let isEnabled: Bool
-  let onSelect: (PhotosCropAspectRatioDirection) -> Void
+  let onSelect: (AspectRatioDirection) -> Void
 
   var body: some View {
     Button {
@@ -1671,7 +1674,7 @@ private struct PhotosCropAspectRatioDirectionButton: View {
   }
 }
 
-private enum PhotosCropAspectRatioDirection {
+private enum AspectRatioDirection {
   case vertical
   case horizontal
 
@@ -1684,7 +1687,7 @@ private enum PhotosCropAspectRatioDirection {
   }
 
   func orient(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
-    if PhotosCropAspectRatioDirection(aspectRatio) == self {
+    if AspectRatioDirection(aspectRatio) == self {
       return aspectRatio
     } else {
       return aspectRatio.swapped()
@@ -1703,17 +1706,17 @@ private enum PhotosCropAspectRatioDirection {
   var accessibilityIdentifier: String {
     switch self {
     case .vertical:
-      return "photos.crop.aspect.direction.vertical"
+      return "image-editor.aspect.direction.vertical"
     case .horizontal:
-      return "photos.crop.aspect.direction.horizontal"
+      return "image-editor.aspect.direction.horizontal"
     }
   }
 }
 
 #if DEBUG
 
-  #Preview("PhotosCrop Checkerboard") {
-    PhotosCropPreviewHost()
+  #Preview("ImageEditor Checkerboard") {
+    PreviewHost()
   }
 
   #Preview("Toolbar Groups") {
@@ -1736,15 +1739,15 @@ private enum PhotosCropAspectRatioDirection {
 
   }
 
-  private struct PhotosCropPreviewHost: View {
+  private struct PreviewHost: View {
 
     // The document holds the edit and its history, so it lives with the view.
-    @State private var document = EditingDocument<PhotosCropFeature>(
-      image: SourceImage(image: PhotosCropPreviewFixtures.makeCheckerboardImage())
+    @State private var document = ImageEditorDocument(
+      image: SourceImage(image: PreviewFixtures.makeCheckerboardImage())
     )
 
     var body: some View {
-      SwiftUIPhotosCropView(
+      ImageEditor(
         document: $document,
         onDone: {},
         onCancel: {}
@@ -1752,7 +1755,7 @@ private enum PhotosCropAspectRatioDirection {
     }
   }
 
-  private enum PhotosCropPreviewFixtures {
+  private enum PreviewFixtures {
 
     static func makeCheckerboardImage() -> UIImage {
       let size = CGSize(width: 1400, height: 900)

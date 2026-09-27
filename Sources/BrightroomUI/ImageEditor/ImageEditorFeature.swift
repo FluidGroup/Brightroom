@@ -24,7 +24,7 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-/// The feature edited by PhotosCrop and `SwiftUICropView`.
+/// The feature edited by ImageEditor and `SwiftUICropView`.
 ///
 /// Evaluation order is the order of `body`: global effects, then the brush
 /// painted blur, then the final crop. Absent features are `nil` and contribute
@@ -35,8 +35,8 @@ import BrightroomParametric
 ///
 /// Features compare by value: two features built from the same values are
 /// equal, whichever way they were built. Edit one inside a
-/// `EditingDocument<PhotosCropFeature>`, which keeps it with its image.
-public struct PhotosCropFeature: Feature, Equatable {
+/// `ImageEditorDocument`, which keeps it with its image.
+public struct ImageEditorFeature: Feature, Equatable {
 
   /// Global, extent-preserving effects, evaluated in declaration order.
   public struct Effects: ImageEffect, Equatable {
@@ -116,7 +116,7 @@ public struct PhotosCropFeature: Feature, Equatable {
   /// previews only that shape. A mask tree with another root (for example an
   /// inverted or feathered brush) renders at export, but the canvas shows the
   /// image without it.
-  public var blurMask: LocalAdjustment<GaussianBlurFeature>?
+  public var localBlur: LocalAdjustment<GaussianBlurFeature>?
 
   /// The final crop: the framing and clipping Feature of this feature.
   public var crop: CropFeature
@@ -127,7 +127,7 @@ public struct PhotosCropFeature: Feature, Equatable {
   ///   `SourceImage.pixelSize`.
   init(imageSize: CGSize) {
     self.effects = .init()
-    self.blurMask = nil
+    self.localBlur = nil
     self.crop = CropFeature(
       displayCropRect: CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize
@@ -141,22 +141,22 @@ public struct PhotosCropFeature: Feature, Equatable {
   /// crop that covers the whole image.
   public init(
     effects: Effects = .init(),
-    blurMask: LocalAdjustment<GaussianBlurFeature>? = nil,
+    localBlur: LocalAdjustment<GaussianBlurFeature>? = nil,
     crop: CropFeature
   ) {
     self.effects = effects
-    self.blurMask = blurMask
+    self.localBlur = localBlur
     self.crop = crop
   }
 
   public var body: some Feature {
     effects
-    blurMask
+    localBlur
     crop
   }
 }
 
-extension PhotosCropFeature {
+extension ImageEditorFeature {
 
   /// Replaces the crop geometry with a crop-editing state.
   ///

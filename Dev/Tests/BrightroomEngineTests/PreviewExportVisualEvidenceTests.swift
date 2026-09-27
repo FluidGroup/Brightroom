@@ -35,12 +35,12 @@ struct PreviewExportVisualEvidenceTests {
         AnyImageEffect(ContrastFeature(value: 0.06)),
       ]
     )
-    var document = PhotosCropFeature(imageSize: imageSize)
+    var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.preset = preset
     document.effects.exposure = ExposureFeature(value: 0.35)
     // The band is centered vertically, so its working-space stamps equal the
     // display ones.
-    document.blurMask = LocalAdjustment(
+    document.localBlur = LocalAdjustment(
       maskTree: MaskTree(root: .brush(BrushMask(
         strokes: [makeHorizontalBandStroke(imageSize: imageSize)]
       )))
@@ -80,7 +80,7 @@ struct PreviewExportVisualEvidenceTests {
 
   // MARK: - Rendering
 
-  private func renderExport(_ document: PhotosCropFeature, source: CGImage) async throws -> CGImage {
+  private func renderExport(_ document: ImageEditorFeature, source: CGImage) async throws -> CGImage {
     try await EditingDocument(image: SourceImage(cgImage: source), feature: document)
       .render(options: .init(workingColorSpace: Self.sRGB))
       .cgImage

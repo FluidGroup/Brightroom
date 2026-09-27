@@ -16,12 +16,12 @@ import Foundation
 /// ```swift
 /// struct PhotoDocument: Feature, Equatable {
 ///   var exposure = ExposureFeature(value: 0)
-///   var blurMask: LocalAdjustment<GaussianBlurFeature>? = nil
+///   var localBlur: LocalAdjustment<GaussianBlurFeature>? = nil
 ///   var crop: CropFeature
 ///
 ///   var body: some Feature {
 ///     exposure
-///     blurMask
+///     localBlur
 ///     crop
 ///   }
 /// }

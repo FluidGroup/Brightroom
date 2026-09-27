@@ -75,7 +75,7 @@ authored in the domain `crop` produces, and `finalCrop` clips the adjusted
 result.
 
 The engine can express any such order; the UI decides how much freedom a
-document gives. `PhotosCropFeature` fixes one shape for a simple Photos-like
+document gives. `ImageEditorFeature` fixes one shape for a simple Photos-like
 editor, and another editor can define a deeper sequence with the same
 Features.
 
@@ -355,7 +355,7 @@ final crop, and the crop clips the already-adjusted image.
 
 ## Near-Term Direction
 
-PhotosCrop blur masking is a useful first pressure test because it already wants
+ImageEditor blur masking is a useful first pressure test because it already wants
 the current Crop and Tool relationship to behave like:
 
 ```text
@@ -365,7 +365,7 @@ Source
   -> Output
 ```
 
-In other words, the current PhotosCrop UI may visually use the crop frame as the
+In other words, the current ImageEditor UI may visually use the crop frame as the
 editing window, but the engine semantics should treat Blur Masking, Filters, and
 Adjustments as Features that happen before the final Crop. Crop is the final
 framing/clipping Feature for this UI path.
@@ -383,7 +383,7 @@ The next step is to make that shape feel natural rather than special-cased:
   Feature model.
 
 This should be treated as a small UI expression of the larger parametric engine,
-not as a one-off PhotosCrop feature.
+not as a one-off ImageEditor feature.
 
 ## Decided Semantics
 

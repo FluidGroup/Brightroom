@@ -237,7 +237,7 @@ private struct RawRenderingDemoView: View {
 
   @State private var resultImage: ResultImage?
   @State private var fullScreenView: FullscreenIdentifiableView?
-  @State private var photosCropSession = DemoPhotosCropSession(
+  @State private var documentStore = DemoDocumentStore(
     loading: {
       try SourceImage(
         rawContentsOf: DemoResource.url(forResource: "AppleRAW_1", ofType: "DNG")
@@ -253,9 +253,9 @@ private struct RawRenderingDemoView: View {
           loadRAW()
         }
 
-        Button("Open PhotosCrop") {
+        Button("Open ImageEditor") {
           fullScreenView = .init(showsDismissButton: false) {
-            DemoPhotosCropView(session: photosCropSession)
+            DemoImageEditor(store: documentStore)
           }
         }
 
@@ -339,9 +339,9 @@ private struct LUTImportDemoView: View {
       Section {
         PhotosPicker("Import LUT", selection: $selectedItem)
 
-        Button("Open PhotosCrop") {
+        Button("Open ImageEditor") {
           fullScreenView = .init(showsDismissButton: false) {
-            DemoPhotosCropView(
+            DemoImageEditor(
               image: {
                 SourceImage(image: Asset.l1000316.image)
               }

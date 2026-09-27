@@ -273,7 +273,7 @@ struct EditingDocumentHistoryTests {
   }
 
   @Test func `Restoring trims to the limit`() throws {
-    let history = EditingDocument<PhotosCropFeature>.History(
+    let history = ImageEditorDocument.History(
       undoStack: (0..<5).map { Fixtures.exposure(Double($0)) },
       redoStack: [Fixtures.exposure(9)],
       limit: 3

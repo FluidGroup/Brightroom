@@ -42,7 +42,7 @@ struct CropViewCanvasStrokeDomainTests {
 
   @Test func `Viewing strokes are mapped into crop output domain`() throws {
     let layer = makeLayer()
-    let plan = CropView.CanvasRenderPlan(blurMask: layer)
+    let plan = CropView.CanvasRenderPlan(localBlur: layer)
 
     // A non-identity final crop: offset extent plus a 90° rotation.
     let crop = CropEditingState(
@@ -75,7 +75,7 @@ struct CropViewCanvasStrokeDomainTests {
 
   @Test func `Source domain canvas receives flipped source records`() {
     let layer = makeLayer()
-    let plan = CropView.CanvasRenderPlan(blurMask: layer)
+    let plan = CropView.CanvasRenderPlan(localBlur: layer)
 
     // CropSurface's rendered-edit-preview canvas is sized to the source image,
     // so a source-domain canvas receives the source records, y-down.
@@ -85,14 +85,14 @@ struct CropViewCanvasStrokeDomainTests {
   }
 
   @Test func `Absent, empty, or non-brush-rooted mask selects the viewport base`() {
-    #expect(CropView.CanvasRenderPlan(blurMask: nil) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(localBlur: nil) == .viewportBase)
 
     let empty = LocalAdjustment(maskTree: .init(root: .brush(.init()))) {
       GaussianBlurFeature(radius: 10)
     }
-    #expect(CropView.CanvasRenderPlan(blurMask: empty) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(localBlur: empty) == .viewportBase)
 
-    // The canvas composites only the brush-rooted shape PhotosCrop authors.
+    // The canvas composites only the brush-rooted shape ImageEditor authors.
     // A feathered empty brush selects nothing, so export changes nothing
     // either.
     let featheredEmpty = LocalAdjustment(
@@ -100,12 +100,12 @@ struct CropViewCanvasStrokeDomainTests {
     ) {
       GaussianBlurFeature(radius: 10)
     }
-    #expect(CropView.CanvasRenderPlan(blurMask: featheredEmpty) == .viewportBase)
+    #expect(CropView.CanvasRenderPlan(localBlur: featheredEmpty) == .viewportBase)
 
     let layer = makeLayer()
-    #expect(CropView.CanvasRenderPlan(blurMask: layer) == .blurMask(layer))
+    #expect(CropView.CanvasRenderPlan(localBlur: layer) == .localBlur(layer))
     #expect(
-      CropView.CanvasRenderPlan(blurMask: layer).canvasMode
+      CropView.CanvasRenderPlan(localBlur: layer).canvasMode
         == .localAdjustment(effect: AnyImageEffect(layer.content))
     )
   }

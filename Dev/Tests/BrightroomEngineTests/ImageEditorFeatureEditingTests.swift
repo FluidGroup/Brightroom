@@ -8,13 +8,13 @@ import UIKit
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// PhotosCrop's document operations and the values its editor writes.
+/// ImageEditor's document operations and the values its editor writes.
 ///
-/// Replaces the tests of the removed `PhotosCropEditingModel`: the document
-/// (`EditingDocument<PhotosCropFeature>`) now holds the feature and its
-/// history, and `PhotosCropEditorSession` decides what the editor writes.
+/// Replaces the tests of the removed `ImageEditor.Model`: the document
+/// (`ImageEditorDocument`) now holds the feature and its
+/// history, and `ImageEditorSession` decides what the editor writes.
 @MainActor
-struct PhotosCropDocumentEditingTests {
+struct ImageEditorFeatureEditingTests {
 
   private let imageSize = CGSize(width: 40, height: 20)
 
@@ -27,7 +27,7 @@ struct PhotosCropDocumentEditingTests {
   // MARK: - Initial document
 
   @Test func `A resumed feature is installed unchanged`() {
-    var restored = PhotosCropFeature(
+    var restored = ImageEditorFeature(
       effects: .init(),
       crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
     )
@@ -55,7 +55,7 @@ struct PhotosCropDocumentEditingTests {
     let image = makeImage()
     let document = await EditingDocument(image: image, cropModifier: .identity)
 
-    #expect(document.feature == PhotosCropFeature(imageSize: imageSize))
+    #expect(document.feature == ImageEditorFeature(imageSize: imageSize))
     #expect(document == EditingDocument(image: image))
     #expect(!document.canUndo)
   }
@@ -157,7 +157,7 @@ struct PhotosCropDocumentEditingTests {
 
   @Test func `A tool visit is one step`() {
     let opened = EditingDocument(image: makeImage())
-    var session = PhotosCropEditorSession(documentAtStart: opened)
+    var session = ImageEditorSession(documentAtStart: opened)
 
     // A filter tap writes without committing.
     let tapped = session.document(after: opened) { $0.selectFilterPreset(preset) }
@@ -198,8 +198,8 @@ struct PhotosCropDocumentEditingTests {
 
   @Test func `Clear blur mask removes the blur mask only`() {
     var document = EditingDocument(image: makeImage())
-    PhotosCropAdjustmentParameter.exposure.apply(sliderValue: 50, to: &document.feature.effects)
-    document.feature.appendBlurMaskStroke(
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.feature.effects)
+    document.feature.appendLocalBlurStroke(
       BrushMaskStroke(stamps: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
     )
     var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: imageSize)
@@ -207,16 +207,16 @@ struct PhotosCropDocumentEditingTests {
     document.feature.setCrop(crop)
     let before = document.feature
 
-    document.clearBlurMask()
+    document.clearLocalBlur()
 
-    #expect(document.feature.blurMask == nil)
+    #expect(document.feature.localBlur == nil)
     #expect(document.feature.effects == before.effects)
     #expect(document.feature.crop == before.crop)
   }
 
   @Test func `An operation that leaves the document equal writes nothing`() {
     let document = EditingDocument(image: makeImage())
-    var session = PhotosCropEditorSession(documentAtStart: document)
+    var session = ImageEditorSession(documentAtStart: document)
     let feature = document.feature
 
     let written = session.document(after: document) { $0.feature = feature }
@@ -239,10 +239,10 @@ struct PhotosCropDocumentEditingTests {
   }
 
   @Test func `Editing target mapping`() {
-    #expect(PhotosCropEditingMode.crop.cropViewEditingTarget == .crop)
-    #expect(PhotosCropEditingMode.blurMasking.cropViewEditingTarget == .blurMask)
-    #expect(PhotosCropEditingMode.filters.cropViewEditingTarget == nil)
-    #expect(PhotosCropEditingMode.adjustments.cropViewEditingTarget == nil)
+    #expect(ImageEditor.Mode.crop.cropViewEditingTarget == .crop)
+    #expect(ImageEditor.Mode.localBlur.cropViewEditingTarget == .localBlur)
+    #expect(ImageEditor.Mode.filters.cropViewEditingTarget == nil)
+    #expect(ImageEditor.Mode.adjust.cropViewEditingTarget == nil)
   }
 
   // MARK: - Helpers

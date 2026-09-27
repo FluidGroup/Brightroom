@@ -4,7 +4,7 @@ import SwiftUI
 import StateGraph
 
 struct IsolatedEditinView: View {
-  @State private var session = DemoPhotosCropSession(
+  @State private var store = DemoDocumentStore(
     image: Mocks.makeSourceImage(image: Mocks.imageHorizontal())
   )
   @State private var fullScreenView: FullscreenIdentifiableView?
@@ -13,7 +13,7 @@ struct IsolatedEditinView: View {
     Form.init {
       Button("Crop") {
         fullScreenView = .init(showsDismissButton: false) {
-          DemoPhotosCropView(session: session)
+          DemoImageEditor(store: store)
         }
       }
     }
