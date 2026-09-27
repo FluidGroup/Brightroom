@@ -132,14 +132,29 @@ extension CGSize {
   }
 }
 
+/// The proportion between a width and a height.
+///
+/// Equality and hashing compare the proportion, not the authored numbers:
+/// `4:3`, `8:6` and a `4032x3024` image size are the same value, so they
+/// collapse to one element in a `Set` and find the same `Dictionary` entry.
 public struct PixelAspectRatio: Hashable, CustomReflectable, Identifiable, Sendable {
 
+  /// Identifies the exact width and height pair, not the proportion.
+  ///
+  /// This is deliberately finer than `==`, so a `ForEach` over presets such
+  /// as `5:4` and `10:8` keeps a separate, stable row for each.
   public var id: String {
     return "\(width.bitPattern), \(height.bitPattern)"
   }
 
   public static func == (lhs: Self, rhs: Self) -> Bool {
     lhs._comparingValue == rhs._comparingValue
+  }
+
+  /// Hashes the same proportion that `==` compares, so equal ratios always
+  /// hash equally.
+  public func hash(into hasher: inout Hasher) {
+    hasher.combine(_comparingValue)
   }
 
   public var width: CGFloat
