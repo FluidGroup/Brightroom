@@ -52,7 +52,6 @@ import BrightroomParametric
 
  You might use `SwiftUICropView` to create a fully customized user interface.
  */
-@available(iOS 14, *)
 public struct SwiftUIPhotosCropView: View {
 
   public struct LocalizedStrings {
@@ -140,8 +139,4 @@ public struct SwiftUIPhotosCropView: View {
     }
     .id(document.image)
   }
-}
-
-#Preview {
-  Text("h")
 }

@@ -259,7 +259,7 @@ struct PhotosCropContentView: View {
   }
 
   private func selectMode(_ mode: PhotosCropEditingMode) {
-    guard mode.isAvailable, editingMode != mode else {
+    guard editingMode != mode else {
       return
     }
 
@@ -377,7 +377,7 @@ struct PhotosCropContentView: View {
           _Button(
             mode: mode,
             isSelected: selection == mode,
-            isEnabled: isLoaded && mode.isAvailable
+            isEnabled: isLoaded
           ) {
             onSelect(mode)
           }
@@ -508,13 +508,6 @@ enum PhotosCropEditingMode: CaseIterable, Equatable, Identifiable {
       return "photos.crop.mode.filters"
     case .adjustments:
       return "photos.crop.mode.adjustments"
-    }
-  }
-
-  var isAvailable: Bool {
-    switch self {
-    case .crop, .blurMasking, .filters, .adjustments:
-      return true
     }
   }
 

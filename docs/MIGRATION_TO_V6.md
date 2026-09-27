@@ -50,6 +50,20 @@ The requirements do not change: iOS 17 (BrightroomUI and BrightroomEngine),
 iOS 17 and macOS 14 (BrightroomParametric), Swift 6.3 or later in Swift 6
 language mode. The products are the same.
 
+### Removed Unused API
+
+These public symbols had no use inside Brightroom and were removed without a
+replacement:
+
+| Module | Removed |
+| --- | --- |
+| BrightroomUI | `TODOL10n`, `NonL10n`, `String(raw:)`, `String(raw:_:)`, `BrightroomUIBundle`, and the `Media.xcassets` icons |
+| BrightroomEngine | `PlatformImage`, `ParameterRange`, `CoreImageInspector`, `EngineSanitizer`, `EngineRuntimeError`, `RequireError` |
+| BrightroomEngine | `ImageTool.loadOriginalCGImage(from:fixesOrientation:)`, `ImageTool.writeImageToTmpDirectory(image:)`, `ImageTool.makeImageForPNGOptimizedSharing(image:)` |
+| BrightroomEngine | The ignored `fixesOrientation:` parameter of `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)` and `ImageTool.makeResizedCGImage(from:maxPixelSize:)` taking a `CGImageSource` |
+| BrightroomEngine | `PixelAspectRatio.width(forHeight:)`, `size(byHeight:)`, `asCGSize()`, `sizeThatFill(in:)`, `rectThatFill(in:)`, `localizedText` |
+| BrightroomParametric | `CropFeature.aggregatedRotationRadians`, `LocalAdjustmentBlendMode`, `LocalAdjustment.blendMode`, and the `blendMode:` parameter |
+
 ## Persistence Moved to Your App
 
 `ParametricDocumentCodec`, `ParametricDocumentCodecError`,
@@ -57,8 +71,10 @@ language mode. The products are the same.
 `CodingUserInfoKey.parametricFeatureTypes`, the `featureTypeKey` and
 `schemaVersion` properties, and every `Codable` conformance on feature,
 mask, and parameter types (including `QuarterTurn`, `GaussianBlurRadius`,
-`LocalAdjustmentBlendMode`, and `ParametricRGBAColor`) were removed. Your app converts documents to its own `Codable`
-model and rebuilds them through the public initializers.
+and `ParametricRGBAColor`) were removed. Your app converts documents to its
+own `Codable` model and rebuilds them through the public initializers.
+`LocalAdjustmentBlendMode` was removed with its only case, `alpha`, which is
+how every local adjustment composites; ignore a stored `blendMode`.
 
 - [Saving parametric edits](parametric-persistence.md) describes the recipe,
   what to store for each feature, and the validating initializers.
@@ -200,7 +216,7 @@ parameters without `id:` and `isEnabled:`, for example
 | `Feature` as the base protocol with `id`, `isEnabled`, and `Equatable` | `Feature` is now the composition protocol (`body`, `apply(to:context:)`). Built-in features are `Equatable` themselves. |
 | `EditingDocument`, `MainTree`, `MainFeature` | A struct (or enum) that conforms to `Feature` |
 | `EffectPipeline`, `EffectPipelineFeature` | Effects listed in a body, or `[AnyImageEffect]` |
-| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustment(maskTree:blendMode:content:)` |
+| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustment(maskTree:content:)` |
 | `ImageEffectFeatureType` | `ImageEffect` (and `Equatable`) |
 | `DomainFeatureType` | `Feature` |
 | `childFeatures` | `body` |

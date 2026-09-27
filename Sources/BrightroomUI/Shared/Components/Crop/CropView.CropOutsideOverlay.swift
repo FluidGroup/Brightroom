@@ -69,7 +69,6 @@ extension CropView {
     }
   }
   
-  @available(iOS 14, *)
   class SwiftUICropOutsideOverlay<Content: View>: CropOutsideOverlayBase {
 
     private let controller: UIHostingController<Container>

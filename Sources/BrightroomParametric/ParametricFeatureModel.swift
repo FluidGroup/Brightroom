@@ -82,11 +82,6 @@ public struct CropFeature: Feature, Equatable {
   /// before extracting the crop and applying `rotation`.
   public var straightenRadians: Double
 
-  /// The combined rotation (quarter turn + straighten) in radians.
-  public var aggregatedRotationRadians: Double {
-    rotation.radians + (straightenRadians.isFinite ? straightenRadians : 0)
-  }
-
   /// Creates a current-domain crop feature.
   public init(
     cropRect: CGRect,
@@ -418,13 +413,6 @@ public struct FadeFeature: ImageEffect, Equatable {
   public init(intensity: Double) {
     self.intensity = intensity
   }
-}
-
-/// A blend rule for local adjustment output.
-public enum LocalAdjustmentBlendMode: String, Equatable, Sendable {
-
-  /// Uses the mask alpha to blend adjusted output over the base image.
-  case alpha
 }
 
 /// A mask graph that produces alpha in the current feature domain.

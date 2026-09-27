@@ -114,7 +114,7 @@ package final class EditingStack: Hashable {
   // value; the long side scales with the aspect ratio and is larger for anything
   // but a square (a 4032×3024 photo loads at 3413×2560). A source whose short
   // side is already below it — a wide panorama, say — is not downsampled at all.
-  // See `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`.
+  // See `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`.
   //
   // The canvas preview bake cap `EditingCanvasImageProcessing.contentBakeMaxPixelSize`
   // (BrightroomUI) carries the same number but caps the LONGEST side, so the two

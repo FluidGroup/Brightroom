@@ -21,28 +21,6 @@
 
 import UIKit
 
-#if !RELEASE
-
-public typealias TODOL10n = String
-
-extension TODOL10n {
-
-  public init(raw: String, _ key: String) {
-    self = raw
-  }
-
-  public init(raw: String) {
-    self = raw
-  }
-}
-#endif
-
-public typealias NonL10n = String
-
-let bundle = Bundle.module
-
-public let BrightroomUIBundle = bundle
-
 @inline(__always)
 @MainActor
 func _pixeleditor_ensureMainThread() {

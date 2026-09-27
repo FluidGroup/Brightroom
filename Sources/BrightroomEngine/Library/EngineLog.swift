@@ -29,11 +29,7 @@ enum EngineLog {
 
   static func debug(_ object: Any...) {
 #if DEBUG
-    if #available(iOS 12.0, *) {
-      os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
-    } else {
-      os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
-    }
+    os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
 #endif
   }
 

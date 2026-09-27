@@ -178,10 +178,8 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
     clearColor = .init(red: 0, green: 0, blue: 0, alpha: 0)
     clearsContextBeforeDrawing = true
 
-    if #available(iOS 17, *) {
-      registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: _MetalImageView, _) in
-        view.setNeedsDisplay()
-      }
+    registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (view: _MetalImageView, _) in
+      view.setNeedsDisplay()
     }
 
     #if targetEnvironment(simulator)
@@ -190,9 +188,7 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
 
     let metalLayer = layer as! CAMetalLayer
 
-    if #available(iOS 16, *) {
-      metalLayer.wantsExtendedDynamicRangeContent = true
-    }
+    metalLayer.wantsExtendedDynamicRangeContent = true
 
     let hasP3Display = traitCollection.displayGamut == .P3
 
@@ -318,57 +314,15 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
     let scale = min(scaleX, scaleY)
     let clampedImage = image.clampedToExtent()
 
-    let resolvedImage: CIImage
-
-    #if targetEnvironment(simulator)
-
-    if #available(iOS 17, *) {
-      // Fixes geometry in Metal
-      resolvedImage = clampedImage
-        .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        .transformed(
-          by: CGAffineTransform(
-            translationX: pixelAlignedTargetRect.origin.x,
-            y: pixelAlignedTargetRect.origin.y
-          )
+    return clampedImage
+      .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+      .transformed(
+        by: CGAffineTransform(
+          translationX: pixelAlignedTargetRect.origin.x,
+          y: pixelAlignedTargetRect.origin.y
         )
-        .cropped(to: pixelAlignedTargetRect)
-
-    } else {
-      // Fixes geometry in Metal
-      resolvedImage = clampedImage
-        .transformed(
-          by: CGAffineTransform(scaleX: 1, y: -1)
-            .concatenating(.init(translationX: 0, y: image.extent.height))
-            .concatenating(.init(scaleX: scale, y: scale))
-            .concatenating(
-              .init(
-                translationX: pixelAlignedTargetRect.origin.x,
-                y: pixelAlignedTargetRect.origin.y
-              )
-            )
-        )
-        .cropped(to: pixelAlignedTargetRect)
-
-    }
-
-
-    #else
-      resolvedImage =
-        clampedImage
-        //        .resizedSmooth(targetSize: targetRect.size)
-        .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        .transformed(
-          by: CGAffineTransform(
-            translationX: pixelAlignedTargetRect.origin.x,
-            y: pixelAlignedTargetRect.origin.y
-          )
-        )
-        .cropped(to: pixelAlignedTargetRect)
-
-    #endif
-
-    return resolvedImage
+      )
+      .cropped(to: pixelAlignedTargetRect)
   }
 
 }

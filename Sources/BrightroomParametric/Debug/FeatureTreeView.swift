@@ -209,7 +209,6 @@ public enum FeatureTreeDescriptor {
       symbolName: "slider.horizontal.3",
       children: effectNodes
     )
-    let blendMode = adjustment.reflectedBlendMode.rawValue
     let maskRoot = mask.children.first
     return FeatureTreeNode(
       id: path,
@@ -217,7 +216,6 @@ public enum FeatureTreeDescriptor {
       typeName: String(describing: type(of: adjustment)),
       summary: [maskRoot?.title, maskRoot?.summary].compactMap { $0 }.joined(separator: " · "),
       symbolName: "circle.dashed.inset.filled",
-      fields: [FeatureTreeNode.Field(name: "Blend Mode", value: blendMode)],
       children: [mask, effects]
     )
   }
@@ -476,13 +474,11 @@ extension AnyImageEffect: StructuralFeatureReflection {
 /// Exposes a `LocalAdjustment` without its generic content type.
 private protocol LocalAdjustmentReflection {
   var reflectedMaskTree: MaskTree { get }
-  var reflectedBlendMode: LocalAdjustmentBlendMode { get }
   var reflectedContent: any Feature { get }
 }
 
 extension LocalAdjustment: LocalAdjustmentReflection {
   var reflectedMaskTree: MaskTree { maskTree }
-  var reflectedBlendMode: LocalAdjustmentBlendMode { blendMode }
   var reflectedContent: any Feature { content }
 }
 
@@ -542,8 +538,6 @@ private enum FeatureValueFormatter {
       return "rgba(\(number(value.red)), \(number(value.green)), \(number(value.blue)), \(number(value.alpha)))"
     case let value as QuarterTurn:
       return "\(value.rawValue)°"
-    case let value as LocalAdjustmentBlendMode:
-      return value.rawValue
     case let value as GaussianBlurRadius:
       switch value {
       case let .absolute(radius):

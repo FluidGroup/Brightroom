@@ -299,14 +299,13 @@ extension SourceImage {
 
     /// Unoriented pixels downsampled so that the SHORT side is at most
     /// `shortSideHint`, as the editing source is prepared. See
-    /// `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`.
+    /// `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`.
     func makeResizedCGImage(shortSideHint: CGFloat) -> CGImage? {
       switch backing {
       case .imageSource(let imageSource):
         return ImageTool.makeResizedCGImage(
           from: imageSource,
-          maxPixelSizeHint: shortSideHint,
-          fixesOrientation: false
+          maxPixelSizeHint: shortSideHint
         )
       case .bitmap(let cgImage):
         return ImageTool.makeResizedCGImage(from: cgImage, maxPixelSizeHint: shortSideHint)

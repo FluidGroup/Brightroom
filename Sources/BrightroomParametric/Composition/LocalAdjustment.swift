@@ -33,9 +33,6 @@ public struct LocalAdjustment<Content: ImageEffect>: ImageEffect {
   /// The mask tree that produces the alpha used for compositing.
   public var maskTree: MaskTree
 
-  /// The blend rule used to composite the adjusted image over the input.
-  public var blendMode: LocalAdjustmentBlendMode
-
   /// The effects applied inside the mask.
   public var content: Content
 
@@ -43,15 +40,12 @@ public struct LocalAdjustment<Content: ImageEffect>: ImageEffect {
   ///
   /// - Parameters:
   ///   - maskTree: The mask that limits where `content` applies.
-  ///   - blendMode: The blend rule used to composite the adjusted image.
   ///   - content: The extent-preserving effects applied inside the mask.
   public init(
     maskTree: MaskTree,
-    blendMode: LocalAdjustmentBlendMode = .alpha,
     @FeatureBuilder content: () -> Content
   ) {
     self.maskTree = maskTree
-    self.blendMode = blendMode
     self.content = content()
   }
 
@@ -69,17 +63,14 @@ public struct LocalAdjustment<Content: ImageEffect>: ImageEffect {
       return base
     }
 
-    switch blendMode {
-    case .alpha:
-      return adjusted.applyingFilter(
-        "CIBlendWithAlphaMask",
-        parameters: [
-          kCIInputBackgroundImageKey: base,
-          kCIInputMaskImageKey: mask,
-        ]
-      )
-      .cropped(to: base.extent)
-    }
+    return adjusted.applyingFilter(
+      "CIBlendWithAlphaMask",
+      parameters: [
+        kCIInputBackgroundImageKey: base,
+        kCIInputMaskImageKey: mask,
+      ]
+    )
+    .cropped(to: base.extent)
   }
 }
 

@@ -24,7 +24,6 @@ import SwiftUI
 import BrightroomEngine
 import BrightroomParametric
 
-@available(iOS 14, *)
 public struct SwiftUICropView: View {
 
   public struct AdjustmentKind: OptionSet, Equatable, Sendable {
@@ -445,7 +444,6 @@ public struct SwiftUICropView: View {
 /// Hosts a `CropView` once the image and the document are available.
 ///
 /// Internal (not private) so tests can drive its coordinator.
-@available(iOS 14, *)
 struct LoadedCropViewRepresentable: UIViewRepresentable {
 
   let source: CropViewSource

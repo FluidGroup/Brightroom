@@ -88,7 +88,7 @@ enum PhotosCropAdjustmentParameter: CaseIterable, Identifiable, Equatable {
 
   /// The maximum effect value the slider's positive end maps to.
   ///
-  /// These mirror the legacy `ParameterRange` maxima; the parametric features
+  /// These mirror the slider maxima of Brightroom 5; the parametric features
   /// carry unbounded values, so the slider scale is a PhotosCrop policy.
   private var maximumFilterValue: Double {
     switch self {

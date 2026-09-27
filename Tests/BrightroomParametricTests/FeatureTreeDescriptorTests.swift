@@ -62,7 +62,7 @@ struct FeatureTreeDescriptorTests {
 
     #expect(adjustment.title == "Local Adjustment")
     #expect(adjustment.summary == "Feather · radius 4")
-    #expect(Self.value(of: "Blend Mode", in: adjustment) == "alpha")
+    #expect(adjustment.fields.isEmpty)
     #expect(adjustment.children.map(\.title) == ["Mask", "Effects"])
 
     let mask = adjustment.children[0]

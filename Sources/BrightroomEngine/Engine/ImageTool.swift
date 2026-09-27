@@ -113,19 +113,6 @@ public enum ImageTool: Sendable {
     return orientation
   }
 
-  public static func loadOriginalCGImage(
-    from imageSource: CGImageSource,
-    fixesOrientation: Bool
-  ) -> CGImage? {
-    CGImageSourceCreateImageAtIndex(
-      imageSource,
-      0,
-      [
-        kCGImageSourceCreateThumbnailWithTransform: fixesOrientation
-      ] as CFDictionary
-      )
-  }
-
   static func makeDecodedCGImage(from image: CGImage) -> CGImage? {
     autoreleasepool {
       guard let context = try? CGContext.makeContext(for: image) else {
@@ -136,25 +123,6 @@ public enum ImageTool: Sendable {
       context.draw(image, in: context.boundingBoxOfClipPath)
       return context.makeImage()
     }
-  }
-
-  public static func writeImageToTmpDirectory(image: UIImage) -> URL? {
-    let directory = NSTemporaryDirectory()
-    let fileName = UUID().uuidString
-    let path = directory + "/" + fileName
-    let destination = URL(fileURLWithPath: path)
-
-    guard let data = image.pngData() else {
-      return nil
-    }
-
-    do {
-      try data.write(to: destination, options: [])
-    } catch {
-      return nil
-    }
-
-    return destination
   }
 
   /// Downsamples the image so that its **shortest** side is at most
@@ -173,9 +141,8 @@ public enum ImageTool: Sendable {
   ///   downstream.
   public static func makeResizedCGImage(
     from imageSource: CGImageSource,
-    maxPixelSizeHint: CGFloat,
-    fixesOrientation: Bool
-    ) -> CGImage? {
+    maxPixelSizeHint: CGFloat
+  ) -> CGImage? {
     let imageSize: CGSize = {
       guard
         let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [AnyHashable: Any]
@@ -198,13 +165,12 @@ public enum ImageTool: Sendable {
       }
       return largestSide * maxPixelSizeHint / smallestSide
     }()
-    return makeResizedCGImage(from: imageSource, maxPixelSize: maxPixelSize, fixesOrientation: fixesOrientation)
+    return makeResizedCGImage(from: imageSource, maxPixelSize: maxPixelSize)
   }
 
   public static func makeResizedCGImage(
     from imageSource: CGImageSource,
-    maxPixelSize: CGFloat,
-    fixesOrientation: Bool
+    maxPixelSize: CGFloat
   )
     -> CGImage?
   {
@@ -232,7 +198,7 @@ public enum ImageTool: Sendable {
   /// `maxPixelSizeHint` pixels.
   ///
   /// Short-side target, not a longest-side cap; see
-  /// ``makeResizedCGImage(from:maxPixelSizeHint:fixesOrientation:)`` for the
+  /// ``makeResizedCGImage(from:maxPixelSizeHint:)`` for the
   /// full contract and its consequences for wide aspect ratios.
   public static func makeResizedCGImage(
     from sourceImage: CGImage,
@@ -262,20 +228,11 @@ public enum ImageTool: Sendable {
     let targetSize: CGSize = imageSize.scaled(maxPixelSize: maxPixelSize)
 
     guard let context = try? CGContext.makeContext(for: sourceImage, size: targetSize) else {
-      EngineSanitizer.global.onDidFindRuntimeError(
-        .failedToCreateCGContext(sourceImage: sourceImage)
-      )
       return nil
     }
-    guard let image = context.perform({ c in
+    return context.perform({ c in
       c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
-    }).makeImage() else {
-      EngineSanitizer.global.onDidFindRuntimeError(
-        .failedToCreateResizedCGImage(sourceImage: sourceImage, maxPixelSize: maxPixelSize)
-      )
-      return nil
-    }
-    return image
+    }).makeImage()
   }
 
   /// Makes an image that optimized for sharing.
@@ -299,31 +256,6 @@ public enum ImageTool: Sendable {
       [
         kCGImageDestinationLossyCompressionQuality: quality,
         kCGImageDestinationOptimizeColorForSharing: true,
-      ] as CFDictionary
-    )
-
-    CGImageDestinationFinalize(destination)
-
-    return data as Data
-  }
-
-  /// Makes an image that optimized for sharing.
-  /// It contains fixing color space to sRGB
-  public static func makeImageForPNGOptimizedSharing(image: CGImage) -> Data {
-    let data = NSMutableData()
-
-    let destination = CGImageDestinationCreateWithData(
-      data,
-      kUTTypePNG,
-      1,
-      [:] as CFDictionary
-    )!
-
-    CGImageDestinationAddImage(
-      destination,
-      image,
-      [
-        kCGImageDestinationOptimizeColorForSharing: true
       ] as CFDictionary
     )
 

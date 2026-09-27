@@ -128,7 +128,6 @@ extension CropView {
 
   }
 
-  @available(iOS 14, *)
   class SwiftUICropInsideOverlay<Content: View>: CropInsideOverlayBase {
 
     private let controller: UIHostingController<Container>
