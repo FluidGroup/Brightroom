@@ -838,6 +838,9 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   `.bezier(strength: 0.85)`).
 - `CropEditingState.updateCropExtent(toFitBoundingBox:respectingApectRatio:)`
   is spelled `respectingAspectRatio:`.
+- The initializers' `contentInset: UIEdgeInsets?` is
+  `contentInsets: EdgeInsets?`. Leading and trailing follow the layout
+  direction, so in a right-to-left layout `leading` insets the right edge.
 
 Before:
 

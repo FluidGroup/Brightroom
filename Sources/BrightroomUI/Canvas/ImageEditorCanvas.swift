@@ -154,7 +154,7 @@ public struct ImageEditorCanvas: View {
   private let areAnimationsEnabled: Bool
   private var clipsToGuide: Bool = false
   /// Fixed at creation. See the initializer documentation.
-  private let contentInset: UIEdgeInsets?
+  private let contentInsets: EdgeInsets?
   private var editingTarget: ImageEditorCanvas.Target? = .crop
   private var brush: Brush = .init(diameter: .viewportPoints(30))
 
@@ -179,11 +179,12 @@ public struct ImageEditorCanvas: View {
   ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
-  ///   - contentInset: **Fixed at creation.** `EditingCanvasView` stores the inset as a
-  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
-  ///     host that derives the inset from safe area or size class must give
-  ///     this view a new identity (for example with `.id`) for a new inset to
-  ///     take effect.
+  ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
+  ///     and the layout direction that resolves their leading and trailing
+  ///     edges, once when it is mounted; later values are ignored. A host
+  ///     that derives the insets from safe area or size class must give this
+  ///     view a new identity (for example with `.id`) for new insets to take
+  ///     effect.
   ///   - cropInsideOverlay: **Fixed at creation.** The builder is invoked by
   ///     the mounted canvas, but the closure itself is installed only once, so
   ///     values it captures are frozen at that point.
@@ -194,7 +195,7 @@ public struct ImageEditorCanvas: View {
     document: Binding<ImageEditorDocument>,
     isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
-    contentInset: UIEdgeInsets? = nil,
+    contentInsets: EdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropInteraction?) -> InsideOverlay,
     @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
@@ -204,7 +205,7 @@ public struct ImageEditorCanvas: View {
     self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
-    self.contentInset = contentInset
+    self.contentInsets = contentInsets
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
     self.cropOutsideOverlay = { AnyView(cropOutsideOverlay($0)) }
     self.stateHandler = stateHandler
@@ -213,24 +214,25 @@ public struct ImageEditorCanvas: View {
   /// Creates a crop canvas that edits `document`, with the built-in
   /// overlays.
   ///
-  /// See `init(document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:cropInsideOverlay:cropOutsideOverlay:stateHandler:)`
+  /// See `init(document:isGuideInteractionEnabled:areAnimationsEnabled:contentInsets:cropInsideOverlay:cropOutsideOverlay:stateHandler:)`
   /// for how the document is written back and displayed.
   ///
   /// - Parameters:
   ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
-  ///   - contentInset: **Fixed at creation.** `EditingCanvasView` stores the inset as a
-  ///     `let`, so a value supplied after the canvas is mounted is ignored. A
-  ///     host that derives the inset from safe area or size class must give
-  ///     this view a new identity (for example with `.id`) for a new inset to
-  ///     take effect.
+  ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
+  ///     and the layout direction that resolves their leading and trailing
+  ///     edges, once when it is mounted; later values are ignored. A host
+  ///     that derives the insets from safe area or size class must give this
+  ///     view a new identity (for example with `.id`) for new insets to take
+  ///     effect.
   ///   - stateHandler: Re-bound on every update.
   public init(
     document: Binding<ImageEditorDocument>,
     isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
-    contentInset: UIEdgeInsets? = nil,
+    contentInsets: EdgeInsets? = nil,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.cropInsideOverlay = nil
@@ -240,7 +242,7 @@ public struct ImageEditorCanvas: View {
     self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
-    self.contentInset = contentInset
+    self.contentInsets = contentInsets
     self.stateHandler = stateHandler
   }
 
@@ -264,7 +266,7 @@ public struct ImageEditorCanvas: View {
     self.editingStack = editingStack
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = true
-    self.contentInset = nil
+    self.contentInsets = nil
     self.stateHandler = { _ in }
   }
 
@@ -304,7 +306,7 @@ public struct ImageEditorCanvas: View {
           isGuideInteractionEnabled: isGuideInteractionEnabled,
           areAnimationsEnabled: areAnimationsEnabled,
           clipsToGuide: clipsToGuide,
-          contentInset: contentInset,
+          contentInsets: contentInsets,
           editingTarget: editingTarget,
           brush: brush
         )
@@ -448,7 +450,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let isGuideInteractionEnabled: Bool
   let areAnimationsEnabled: Bool
   let clipsToGuide: Bool
-  let contentInset: UIEdgeInsets?
+  let contentInsets: EdgeInsets?
   let editingTarget: ImageEditorCanvas.Target?
   let brush: ImageEditorCanvas.Brush
 
@@ -458,8 +460,18 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
 
   func makeUIView(context: Context) -> EditingCanvasView {
     let view: EditingCanvasView
-    if let contentInset {
-      view = .init(source: source, feature: feature, contentInset: contentInset)
+    if let contentInsets {
+      let isRightToLeft = context.environment.layoutDirection == .rightToLeft
+      view = .init(
+        source: source,
+        feature: feature,
+        contentInset: UIEdgeInsets(
+          top: contentInsets.top,
+          left: isRightToLeft ? contentInsets.trailing : contentInsets.leading,
+          bottom: contentInsets.bottom,
+          right: isRightToLeft ? contentInsets.leading : contentInsets.trailing
+        )
+      )
     } else {
       view = .init(source: source, feature: feature)
     }
@@ -474,7 +486,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     bindStateHandler(to: view, coordinator: context.coordinator)
     bindFeatureChangeHandler(to: view, coordinator: context.coordinator)
 
-    // `contentInset` above and the two overlays below are creation-only inputs,
+    // `contentInsets` above and the two overlays below are creation-only inputs,
     // as documented on ImageEditorCanvas's initializers. `updateUIView`
     // deliberately does not re-apply them: `contentInset` is a `let` on
     // EditingCanvasView, and re-installing `AnyView` overlay closures on every update
