@@ -7,7 +7,7 @@ import Testing
 @testable import BrightroomUI
 
 /// The canvas preview of an `ImageEditorFeature`, composed from the same pieces
-/// `CropView` renders with: the render plan, the canvas image factory, the
+/// `EditingCanvasView` renders with: the render plan, the canvas image factory, the
 /// Metal brush rasterizer, and the alpha blend of the viewport composite.
 ///
 /// The canvas is sized to the source (no crop, no viewport transform), so the
@@ -30,7 +30,7 @@ enum CanvasCompositionPreview {
     throughCrop: Bool = false
   ) throws -> CGImage {
     let imageSize = CGSize(width: source.width, height: source.height)
-    let plan = CropView.CanvasRenderPlan(localBlur: document.localBlur)
+    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur)
 
     let images: EditingCanvasRenderImages
     let geometry: EditingCanvasCropOutputGeometry?

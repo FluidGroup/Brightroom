@@ -324,19 +324,19 @@ struct ImageEditorSessionTests {
     let host = Host(EditingDocument(image: try SourceImage(data: data)))
 
     // A change queued by the canvas that showed `shown`.
-    SwiftUICropView.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: shown, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: shown, to: host.binding)
     #expect(host.writes == 0)
     #expect(host.document.feature.effects.exposure == nil)
 
-    SwiftUICropView.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
     #expect(host.writes == 1)
     #expect(host.document.feature.effects.exposure == ExposureFeature(value: 1))
   }
 
   @Test func `A canvas change that changes nothing is not written`() throws {
     let host = Host(try Fixtures.makeDocument())
-    SwiftUICropView.apply({ _ in }, preparedFor: host.document.image, to: host.binding)
-    SwiftUICropView.apply({ $0.localBlur = nil }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ _ in }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.localBlur = nil }, preparedFor: host.document.image, to: host.binding)
     #expect(host.writes == 0)
   }
 
@@ -344,7 +344,7 @@ struct ImageEditorSessionTests {
     let host = Host(try Fixtures.makeDocument())
     // The host changed the document after the canvas queued its change.
     host.document.feature.effects.saturation = SaturationFeature(value: 0.5)
-    SwiftUICropView.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(value: 1) }, preparedFor: host.document.image, to: host.binding)
     #expect(host.document.feature.effects.saturation == SaturationFeature(value: 0.5))
     #expect(host.document.feature.effects.exposure == ExposureFeature(value: 1))
   }

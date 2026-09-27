@@ -59,7 +59,7 @@ struct ImageEditorFeatureTests {
   @Test func `a quarter turn of the full image keeps the whole image`() {
     let size = CGSize(width: 300, height: 200)
     var crop = CropEditingState(imageSize: size, cropRect: CGRect(origin: .zero, size: size))
-    // What `CropView.rotateClockwise()` does: the output orientation changes
+    // What `EditingCanvasView.rotateClockwise()` does: the output orientation changes
     // and the selection before the turn stays the whole image.
     crop.rotation = .angle_90
 
@@ -82,7 +82,7 @@ struct ImageEditorFeatureTests {
 
     document.setCrop(crop)
 
-    // Pixel-snapped through the engine snapper, the one CropView commits through.
+    // Pixel-snapped through the engine snapper, the one EditingCanvasView commits through.
     #expect(document.crop == CropFeature(
       displayCropRect: crop.cropExtent,
       imageSize: imageSize,
@@ -108,7 +108,7 @@ struct ImageEditorFeatureTests {
     document.appendLocalBlurStroke(stroke)
 
     let localBlur = try #require(document.localBlur)
-    #expect(localBlur.content == CropViewMaskingDefaults.blurEffect)
+    #expect(localBlur.content == ImageEditorFeature.defaultLocalBlurContent)
     #expect(localBlur.content.radius == .proportional(40))
     #expect(localBlur.maskTree.root == .brush(BrushMask(strokes: [stroke])))
 

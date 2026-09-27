@@ -41,7 +41,7 @@ struct QuarterTurnCropTests {
     crop.updateCropExtent(expectedExtent)
     crop.rotation = CropRotation(rotation)
 
-    // Done: CropView commits through `ImageEditorFeature.setCrop(_:)`.
+    // Done: EditingCanvasView commits through `ImageEditorFeature.setCrop(_:)`.
     document.setCrop(crop)
     let committed = document.crop
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
@@ -97,7 +97,7 @@ struct QuarterTurnCropTests {
     let size = CGSize(width: imageWidth, height: 200)
     let stack = try makeStack(size: size)
     let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
-    let (editor, window) = try openCropView(on: stack, owner: owner)
+    let (editor, window) = try openCanvasView(on: stack, owner: owner)
     var latestCrop: CropEditingState?
     editor.setStateHandler { latestCrop = $0.proposedCrop }
 
@@ -112,7 +112,7 @@ struct QuarterTurnCropTests {
       let proposed = crop.makeCropFeature()
       #expect(proposed.displayCropRect(imageSize: size) == expectedExtent)
 
-      editor.applyDocumentChanges()
+      editor.applyPendingCrop()
       let committed = owner.document.crop
       #expect(committed.cropRect == proposed.cropRect)
       #expect(committed.rotation == rotation)
@@ -142,8 +142,8 @@ struct QuarterTurnCropTests {
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
 
     for cycle in 1...4 {
-      let (editor, window) = try openCropView(on: stack, owner: owner)
-      editor.applyDocumentChanges()
+      let (editor, window) = try openCanvasView(on: stack, owner: owner)
+      editor.applyPendingCrop()
       let recorded = owner.document.crop
       #expect(recorded.rotation == rotation)
       #expect(recorded.cropRect == committed.cropRect, "after open and Done #\(cycle)")
@@ -172,8 +172,8 @@ struct QuarterTurnCropTests {
     #expect(committed.displayCropRect(imageSize: size) == expectedExtent)
 
     for cycle in 1...3 {
-      let (editor, window) = try openCropView(on: stack, owner: owner)
-      editor.applyDocumentChanges()
+      let (editor, window) = try openCanvasView(on: stack, owner: owner)
+      editor.applyPendingCrop()
       let recorded = owner.document.crop
       #expect(recorded.rotation == committed.rotation)
       #expect(recorded.straightenRadians == committed.straightenRadians)
@@ -234,12 +234,12 @@ struct QuarterTurnCropTests {
     let stack = try makeStack(size: size)
     let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
 
-    let (editor, window) = try openCropView(on: stack, owner: owner)
+    let (editor, window) = try openCanvasView(on: stack, owner: owner)
     editor.rotateClockwise()
     editor.layoutIfNeeded()
-    editor.setAdjustmentAngle(.degrees(straightenDegrees))
+    editor.setStraightenAngle(.degrees(straightenDegrees))
     editor.layoutIfNeeded()
-    editor.applyDocumentChanges()
+    editor.applyPendingCrop()
     withExtendedLifetime(window) {}
 
     let rendered = try await EditingDocument(image: stack.image, feature: owner.document).render().cgImage
@@ -308,11 +308,11 @@ struct QuarterTurnCropTests {
   @Test func `Four rotation button presses preserve a partial crop and its aspect lock`() throws {
     let stack = try makeStack(size: imageSize)
     let owner = DocumentOwner(ImageEditorFeature(imageSize: imageSize))
-    let (editor, window) = try openCropView(on: stack, owner: owner)
-    var latest: CropView.StateSnapshot?
+    let (editor, window) = try openCanvasView(on: stack, owner: owner)
+    var latest: EditingCanvasView.StateSnapshot?
     editor.setStateHandler { latest = $0 }
     let sourceRatio = PixelAspectRatio(width: 3, height: 2)
-    editor.setCroppingAspectRatio(sourceRatio)
+    editor.setLockedAspectRatio(sourceRatio)
 
     let sourceRect = CGRect(x: 50, y: 40, width: 153, height: 102)
     var crop = try #require(latest?.proposedCrop)
@@ -342,7 +342,7 @@ struct QuarterTurnCropTests {
 
   // MARK: - Helpers
 
-  /// Plays the document's owner: applies each change CropView reports.
+  /// Plays the document's owner: applies each change EditingCanvasView reports.
   private final class DocumentOwner {
     var document: ImageEditorFeature
 
@@ -351,16 +351,16 @@ struct QuarterTurnCropTests {
     }
   }
 
-  /// Opens a CropView on the owner's current document over the stack's
+  /// Opens an EditingCanvasView on the owner's current document over the stack's
   /// source, laid out in a window the caller keeps alive.
-  private func openCropView(
+  private func openCanvasView(
     on stack: EditingStack,
     owner: DocumentOwner
-  ) throws -> (CropView, UIWindow) {
+  ) throws -> (EditingCanvasView, UIWindow) {
     let loaded = try #require(stack.loadedState)
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
-    let view = CropView(source: CropViewSource(loaded), document: owner.document)
-    view.setDocumentChangeHandler { change in
+    let view = EditingCanvasView(source: EditingCanvasSource(loaded), feature: owner.document)
+    view.setFeatureChangeHandler { change in
       change(&owner.document)
     }
     view.areAnimationsEnabled = false
@@ -368,7 +368,7 @@ struct QuarterTurnCropTests {
     window.addSubview(view)
     window.isHidden = false
     view.layoutIfNeeded()
-    view.loadDocumentState()
+    view.loadFeature()
     view.layoutIfNeeded()
     return (view, window)
   }

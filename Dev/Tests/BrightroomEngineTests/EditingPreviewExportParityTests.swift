@@ -9,7 +9,7 @@ import UIKit
 @testable import BrightroomUI
 
 /// Pins the locked invariant that the interactive preview and the exported
-/// result are the *same composition*: the canvas composition `CropView`
+/// result are the *same composition*: the canvas composition `EditingCanvasView`
 /// renders for an `ImageEditorFeature` (`CanvasCompositionPreview`) and the
 /// export of the same feature through `EditingDocument.render(options:)`
 /// must produce matching pixels.
@@ -206,7 +206,7 @@ struct EditingPreviewExportParityTests {
         GaussianBlurFeature(radius: 8)
       }
     )
-    #expect(CropView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
+    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
 
     // Reference: same document with no blur mask at all.
     let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, localBlur: nil)

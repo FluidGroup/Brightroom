@@ -239,10 +239,10 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Editing target mapping`() {
-    #expect(ImageEditor.Mode.crop.cropViewEditingTarget == .crop)
-    #expect(ImageEditor.Mode.localBlur.cropViewEditingTarget == .localBlur)
-    #expect(ImageEditor.Mode.filters.cropViewEditingTarget == nil)
-    #expect(ImageEditor.Mode.adjust.cropViewEditingTarget == nil)
+    #expect(ImageEditor.Mode.crop.canvasTarget == .crop)
+    #expect(ImageEditor.Mode.localBlur.canvasTarget == .localBlur)
+    #expect(ImageEditor.Mode.filters.canvasTarget == nil)
+    #expect(ImageEditor.Mode.adjust.canvasTarget == nil)
   }
 
   // MARK: - Helpers

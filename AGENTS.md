@@ -54,13 +54,15 @@ open Dev/Brightroom.xcodeproj
    - Uses swift-state-graph for observable state
 
 3. **BrightroomUI** - UI components for image editing
+   - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
+     `ImageEditorCanvas`, the internal UIKit `EditingCanvasView`, and its
+     Metal surface
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
-     (CropView, EditingCanvas Metal surface)
    - `Sources/BrightroomUI/ImageEditor/` - the built-in editor `ImageEditor`,
      its root feature `ImageEditorFeature`, and `ImageEditorDocument`
      (`EditingDocument<ImageEditorFeature>`), which the host owns with its
      history
-   - `SwiftUICropView` edits an `ImageEditorFeature` through a binding
+   - `ImageEditorCanvas` edits an `ImageEditorFeature` through a binding
    - Provides both UIKit and SwiftUI interfaces
 
 ### Key Concepts
@@ -88,7 +90,8 @@ results downstream, and compile into a Core Image graph.
 The project uses swift-state-graph for observable state. When modifying state-related code:
 - Look for `@GraphStored` properties
 - Document values flow from the owning model (`PhotosCropEditingModel`) or
-  binding into `CropView`; `CropView` reports changes back to the owner
+  binding into `EditingCanvasView`; `EditingCanvasView` reports changes back
+  to the owner
 - A document compares by value; an owner drops an update that leaves the
   document equal, so it adds no history checkpoint
 
@@ -119,9 +122,9 @@ The project uses swift-state-graph for observable state. When modifying state-re
   combinators) and `Sources/BrightroomColorAdjustmentKernels/` (tone curve and
   color mixer)
 - Performance-critical operations use Metal instead of Core Image
-- The CropView editing canvas draws through `_EditingCanvasMTKView` and
-  `EditingCanvasRenderer`, and live brush strokes through
-  `BrushMaskMetalRasterizer` (`Sources/BrightroomUI/Shared/Components/EditingCanvas/`);
+- The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
+  and `EditingCanvasRenderer`, and live brush strokes through
+  `BrushMaskMetalRasterizer` (`Sources/BrightroomUI/Canvas/`);
   `_MetalImageView` (`Shared/Components/ImageViews/`) displays a `CIImage`
 
 ### Testing

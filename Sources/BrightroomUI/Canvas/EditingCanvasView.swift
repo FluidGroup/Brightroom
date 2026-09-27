@@ -26,13 +26,13 @@ import MetalKit
 import BrightroomEngine
 import BrightroomParametric
 
-/// The prepared image a `CropView` edits over.
-struct CropViewSource {
+/// The prepared image an `EditingCanvasView` edits over.
+struct EditingCanvasSource {
 
   /// The oriented, downsampled, GPU-resident editing source (zero origin).
   let editingSourceImage: CIImage
 
-  /// The oriented source size at full resolution: the domain the document is
+  /// The oriented source size at full resolution: the domain the feature is
   /// authored in.
   let imageSize: CGSize
 
@@ -59,17 +59,17 @@ extension ImageEditorFeature.Effects {
 
 /// A UIKit canvas that edits an `ImageEditorFeature`: value in, changes out.
 ///
-/// Based on the editing vision in `docs/vision-of-editing.md`, the document
+/// Based on the editing vision in `docs/vision-of-editing.md`, the feature
 /// evaluates tool edits before the final crop:
 ///
 /// ```text
 /// Source -> Effects -> Blur Mask -> Final Crop -> Output
 /// ```
 ///
-/// The host passes the document with `setDocument(_:)` and receives CropView's
-/// own changes (crop commits, brush strokes) through the document change
-/// handler. `CropViewEditingTarget` picks what canvas gestures edit; the
-/// viewing point is always the document's output. Crop editing adjusts the
+/// The host passes the feature with `setFeature(_:)` and receives EditingCanvasView's
+/// own changes (crop commits, brush strokes) through the feature change
+/// handler. `ImageEditorCanvas.Target` picks what canvas gestures edit; the
+/// viewing point is always the feature's output. Crop editing adjusts the
 /// final crop while showing the effects and the blur mask over the whole
 /// source. Mask editing inspects the output through the crop while authoring
 /// strokes that belong to the pre-crop domain, so Tool navigation never
@@ -82,16 +82,15 @@ extension ImageEditorFeature.Effects {
 ///
 /// - TODO:
 ///   - Implicit animations occurs in first time load with remote image.
-final class CropView: UIView {
+final class EditingCanvasView: UIView {
 
-  typealias AdjustmentKind = SwiftUICropView.AdjustmentKind
-  typealias StateSnapshot = SwiftUICropView.StateSnapshot
+  typealias StateSnapshot = ImageEditorCanvas.StateSnapshot
 
-  /// A change CropView made to the document: a crop commit or a brush stroke.
+  /// A change EditingCanvasView made to the feature: a crop commit or a brush stroke.
   ///
-  /// The document's owner applies it to its latest document, so owner-side
-  /// changes CropView has not received yet are kept.
-  typealias DocumentChange = (inout ImageEditorFeature) -> Void
+  /// The feature's owner applies it to its latest feature, so owner-side
+  /// changes EditingCanvasView has not received yet are kept.
+  typealias FeatureChange = (inout ImageEditorFeature) -> Void
 
   private struct State {
 
@@ -99,7 +98,7 @@ final class CropView: UIView {
 
     var frame: CGRect = .zero
 
-    var adjustmentKind: AdjustmentKind = []
+    var interaction: CropInteraction = []
 
     /// The locked aspect ratio in the final output orientation.
     var preferredAspectRatio: PixelAspectRatio?
@@ -108,7 +107,7 @@ final class CropView: UIView {
       .init(
         proposedCrop: proposedCrop,
         frame: frame,
-        adjustmentKind: adjustmentKind,
+        interaction: interaction,
         preferredAspectRatio: preferredAspectRatio
       )
     }
@@ -175,18 +174,18 @@ final class CropView: UIView {
     }
   }
 
-  /// The prepared image the document is authored over.
-  private let source: CropViewSource
+  /// The prepared image the feature is authored over.
+  private let source: EditingCanvasSource
 
-  /// The document as CropView last received or changed it.
+  /// The feature as EditingCanvasView last received or changed it.
   ///
-  /// It is also the echo reference: a document passed back with the same crop
+  /// It is also the echo reference: a feature passed back with the same crop
   /// does not reload the crop state.
-  private var document: ImageEditorFeature
+  private var feature: ImageEditorFeature
 
-  private var documentChangeHandler: @MainActor (@escaping DocumentChange) -> Void = { _ in }
+  private var featureChangeHandler: @MainActor (@escaping FeatureChange) -> Void = { _ in }
 
-  /// The committed strokes of `document.localBlur` as canvas records, reused
+  /// The committed strokes of `feature.localBlur` as canvas records, reused
   /// while the mask (and, for the tool surface, the crop output) is unchanged.
   private var committedStrokeRecords = CommittedStrokeRecords()
 
@@ -206,7 +205,7 @@ final class CropView: UIView {
   private let toolSurface = ToolSurface()
 
   /// What canvas gestures edit; nil views the output only.
-  private var editingTarget: CropViewEditingTarget? = .crop
+  private var editingTarget: ImageEditorCanvas.Target? = .crop
 
   /// Whether the crop guide and the crop scroll surface own interaction.
   private var isCropEditing: Bool {
@@ -217,7 +216,7 @@ final class CropView: UIView {
   private var isMaskEditing: Bool {
     editingTarget == .localBlur
   }
-  private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
+  private var maskingBrush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
   /// The image-space brush most recently pushed to the canvas surfaces, used
   /// to skip redundant reconfiguration when neither the brush nor the
   /// geometry it resolves against has changed.
@@ -229,14 +228,14 @@ final class CropView: UIView {
   /// Streaming straighten updates mutate the crop scroll transform without
   /// animation. During that phase, viewport conversion should read model layers
   /// so Metal rendering does not chase stale presentation-layer geometry.
-  private var isStreamingAdjustmentAngle = false
+  private var isStreamingStraightenAngle = false
 
   private var hasSetupScrollViewCompleted = false
 
   /**
    a guide view that displayed on guide container view.
    */
-  private lazy var guideView = _InteractiveCropGuideView(
+  private lazy var guideView = InteractiveCropGuideView(
     containerView: self,
     insetOfGuideFlexibility: contentInset
   )
@@ -297,31 +296,31 @@ final class CropView: UIView {
 
   // MARK: - Initializers
 
-  /// Creates a canvas over `source` editing `document`.
+  /// Creates a canvas over `source` editing `feature`.
   ///
-  /// This only stores the values. Call `loadDocumentState()` once a state
+  /// This only stores the values. Call `loadFeature()` once a state
   /// handler is bound, so the first state snapshot reaches it.
   init(
-    source: CropViewSource,
-    document: ImageEditorFeature,
+    source: EditingCanvasSource,
+    feature: ImageEditorFeature,
     contentInset: UIEdgeInsets = .init(top: 20, left: 20, bottom: 20, right: 20)
   ) {
     _pixeleditor_ensureMainThread()
 
     self.source = source
-    self.document = document
+    self.feature = feature
     self.contentInset = contentInset
 
     super.init(frame: .zero)
 
     identifiers: do {
-      accessibilityIdentifier = "CropView"
-      surfaceHost.platterView.accessibilityIdentifier = "CropView.surfaceHost.platterView"
+      accessibilityIdentifier = "EditingCanvasView"
+      surfaceHost.platterView.accessibilityIdentifier = "EditingCanvasView.surfaceHost.platterView"
       surfaceHost.backdropView.accessibilityIdentifier = "scrollBackdropView"
-      cropSurface.scrollView.accessibilityIdentifier = "CropView.cropSurface.scrollView"
-      cropSurface.imagePlatterView.accessibilityIdentifier = "CropView.cropSurface.imagePlatterView"
-      toolSurface.scrollView.accessibilityIdentifier = "CropView.toolSurface.scrollView"
-      toolSurface.contentView.accessibilityIdentifier = "CropView.toolSurface.contentView"
+      cropSurface.scrollView.accessibilityIdentifier = "EditingCanvasView.cropSurface.scrollView"
+      cropSurface.imagePlatterView.accessibilityIdentifier = "EditingCanvasView.cropSurface.imagePlatterView"
+      toolSurface.scrollView.accessibilityIdentifier = "EditingCanvasView.toolSurface.scrollView"
+      toolSurface.contentView.accessibilityIdentifier = "EditingCanvasView.toolSurface.contentView"
     }
 
     clipsToBounds = false
@@ -333,7 +332,7 @@ final class CropView: UIView {
 
     surfaceHost.canvasHostView.isUserInteractionEnabled = false
     surfaceHost.canvasHostView.clipsToBounds = true
-    surfaceHost.canvasHostView.accessibilityIdentifier = "CropView.fixedCanvasHost"
+    surfaceHost.canvasHostView.accessibilityIdentifier = "EditingCanvasView.fixedCanvasHost"
     addSubview(surfaceHost.canvasHostView)
 
     addSubview(guideOutsideContainerView)
@@ -374,7 +373,7 @@ final class CropView: UIView {
 
     toolSurface.contentView.isUserInteractionEnabled = true
     toolSurface.scrollView.isHidden = true
-    // The shared _ScrollView defaults enable alwaysBounce for the crop
+    // The shared CropScrollView defaults enable alwaysBounce for the crop
     // surface, where over-dragging past the guide is how the user nudges the
     // crop composition. The tool surface has no such semantics: its offset
     // range degenerates to a point at fit zoom, and alwaysBounce would let a
@@ -519,16 +518,16 @@ final class CropView: UIView {
       self.didChangeGuideViewWithDelay()
     }
 
-    guideView.didUpdateAdjustmentKind = { [weak self] kind in
+    guideView.didUpdateInteraction = { [weak self] interaction in
       guard let self else { return }
-      self.state.adjustmentKind = kind
+      self.state.interaction = interaction
       self.emitStateSnapshot()
     }
 
     // apply defaultAppearance
     do {
-      setCropInsideOverlay(CropView.CropInsideOverlayRuleOfThirdsView())
-      setCropOutsideOverlay(CropView.CropOutsideOverlayBlurredView())
+      setCropInsideOverlay(EditingCanvasView.CropInsideOverlayRuleOfThirdsView())
+      setCropOutsideOverlay(EditingCanvasView.CropOutsideOverlayBlurredView())
     }
 
   }
@@ -549,45 +548,45 @@ final class CropView: UIView {
     self.stateHandler = handler
   }
 
-  /// Sets the handler that receives the changes CropView makes: crop commits
-  /// and brush strokes. The owner applies each one to its latest document.
-  func setDocumentChangeHandler(
-    _ handler: @escaping @MainActor (_ change: @escaping DocumentChange) -> Void
+  /// Sets the handler that receives the changes EditingCanvasView makes: crop commits
+  /// and brush strokes. The owner applies each one to its latest feature.
+  func setFeatureChangeHandler(
+    _ handler: @escaping @MainActor (_ change: @escaping FeatureChange) -> Void
   ) {
-    self.documentChangeHandler = handler
+    self.featureChangeHandler = handler
   }
 
-  /// Loads the crop state from the document and displays it.
+  /// Loads the crop state from the feature and displays it.
   ///
   /// Call it once, after the state handler is bound: loading emits the first
   /// state snapshot, which seeds the host's rotation and angle inputs.
-  func loadDocumentState() {
-    load(crop: CropEditingState(cropFeature: document.crop, imageSize: source.imageSize))
+  func loadFeature() {
+    load(crop: CropEditingState(cropFeature: feature.crop, imageSize: source.imageSize))
     updateDisplay()
   }
 
-  /// Displays `document`.
+  /// Displays `feature`.
   ///
-  /// When its crop differs from the crop CropView holds (for example after an
+  /// When its crop differs from the crop EditingCanvasView holds (for example after an
   /// undo), the crop state reloads, fitted to the active aspect-ratio lock,
   /// which first turns with the reloaded crop's output orientation. A
-  /// document CropView changed itself comes back equal and only refreshes the
+  /// feature EditingCanvasView changed itself comes back equal and only refreshes the
   /// display.
-  func setDocument(_ document: ImageEditorFeature) {
-    guard document != self.document else {
+  func setFeature(_ feature: ImageEditorFeature) {
+    guard feature != self.feature else {
       updateDisplay()
       return
     }
 
-    let cropChanged = document.crop.isRenderingEquivalent(
-      to: self.document.crop,
+    let cropChanged = feature.crop.isRenderingEquivalent(
+      to: self.feature.crop,
       orientedImageSize: source.imageSize
     ) == false
-    let localBlurChanged = document.localBlur != self.document.localBlur
-    self.document = document
+    let localBlurChanged = feature.localBlur != self.feature.localBlur
+    self.feature = feature
 
     if cropChanged, let current = state.proposedCrop {
-      var crop = CropEditingState(cropFeature: document.crop, imageSize: source.imageSize)
+      var crop = CropEditingState(cropFeature: feature.crop, imageSize: source.imageSize)
       if var ratio = state.preferredAspectRatio {
         // The lock describes the output, so it turns with the reloaded crop's
         // output orientation, as it does in `setRotation(_:)`.
@@ -603,23 +602,23 @@ final class CropView: UIView {
 
     // Effects-only changes (slider ticks, presets) leave the strokes alone.
     if cropChanged || localBlurChanged {
-      syncCommittedStrokesFromDocument()
+      syncCommittedStrokesFromFeature()
     }
     updateDisplay()
   }
 
   /**
-   Applies the proposed crop to the document.
+   Applies the proposed crop to the feature.
 
    Interaction callbacks record view geometry into the proposed crop. Committing
    uses that value directly so layout rounding cannot change an untouched crop.
    */
-  func applyDocumentChanges() {
+  func applyPendingCrop() {
     guard let crop = state.proposedCrop else {
-      EditorLog.error(.cropView, "CropView has not loaded the document state.")
+      EditorLog.error(.editingCanvas, "EditingCanvasView has not loaded the feature state.")
       return
     }
-    applyCropToDocumentIfRenderingChanged(crop)
+    applyCropToFeatureIfRenderingChanged(crop)
   }
 
   func resetCrop() {
@@ -628,8 +627,8 @@ final class CropView: UIView {
     debounce.cancel()
     scrollViewSettleDebounce.cancel()
     scrollViewAdjustmentSession = nil
-    isStreamingAdjustmentAngle = false
-    state.adjustmentKind = []
+    isStreamingStraightenAngle = false
+    state.interaction = []
     state.preferredAspectRatio = nil
     guideView.setLockedAspectRatio(nil)
 
@@ -664,7 +663,7 @@ final class CropView: UIView {
     setRotation(crop.rotation.next())
   }
 
-  func setAdjustmentAngle(
+  func setStraightenAngle(
     _ angle: CropEditingState.AdjustmentAngle,
     recordsCropExtent: Bool = true
   ) {
@@ -672,20 +671,20 @@ final class CropView: UIView {
       return
     }
 
-    isStreamingAdjustmentAngle = recordsCropExtent == false
+    isStreamingStraightenAngle = recordsCropExtent == false
     crop.adjustmentAngle = angle
     setProposedCrop(crop, animatesLayout: false)
 
     if recordsCropExtent {
       record()
-      isStreamingAdjustmentAngle = false
+      isStreamingStraightenAngle = false
     }
   }
 
-  func commitAdjustmentAngle(_ angle: CropEditingState.AdjustmentAngle) {
-    setAdjustmentAngle(angle, recordsCropExtent: false)
+  func commitStraightenAngle(_ angle: CropEditingState.AdjustmentAngle) {
+    setStraightenAngle(angle, recordsCropExtent: false)
     record()
-    isStreamingAdjustmentAngle = false
+    isStreamingStraightenAngle = false
 
   }
 
@@ -699,7 +698,7 @@ final class CropView: UIView {
     setProposedCrop(crop)
   }
 
-  func setCroppingAspectRatio(_ ratio: PixelAspectRatio?) {
+  func setLockedAspectRatio(_ ratio: PixelAspectRatio?) {
     _pixeleditor_ensureMainThread()
 
     guard state.preferredAspectRatio != ratio else {
@@ -780,7 +779,7 @@ final class CropView: UIView {
 
 // MARK: Internal
 
-extension CropView {
+extension EditingCanvasView {
   private func load(crop: CropEditingState) {
     prepareForCropIfNeeded(crop)
     setProposedCrop(crop, forcesLayout: true)
@@ -836,10 +835,10 @@ extension CropView {
 
       cropSurface.updateRenderedEditPreview(
         source: source,
-        document: document,
+        feature: feature,
         crop: crop,
         committedStrokes: committedStrokeRecords.sourceRecords(
-          localBlur: document.localBlur,
+          localBlur: feature.localBlur,
           domainHeight: source.imageSize.height
         )
       )
@@ -857,13 +856,13 @@ extension CropView {
       // its bakes survive that commit.
       toolSurface.updateCanvas(
         source: source,
-        effects: document.effects,
+        effects: feature.effects,
         geometry: geometry,
         mode: .localAdjustment(
-          effect: AnyImageEffect(document.localBlur?.content ?? CropViewMaskingDefaults.blurEffect)
+          effect: AnyImageEffect(feature.localBlur?.content ?? ImageEditorFeature.defaultLocalBlurContent)
         ),
         committedStrokes: committedStrokeRecords.outputRecords(
-          localBlur: document.localBlur,
+          localBlur: feature.localBlur,
           geometry: geometry,
           domainHeight: source.imageSize.height
         )
@@ -879,11 +878,11 @@ extension CropView {
 
       toolSurface.updateCanvas(
         source: source,
-        effects: document.effects,
+        effects: feature.effects,
         geometry: geometry,
-        mode: CanvasRenderPlan(localBlur: document.localBlur).canvasMode,
+        mode: CanvasRenderPlan(localBlur: feature.localBlur).canvasMode,
         committedStrokes: committedStrokeRecords.outputRecords(
-          localBlur: document.localBlur,
+          localBlur: feature.localBlur,
           geometry: geometry,
           domainHeight: source.imageSize.height
         )
@@ -902,19 +901,19 @@ extension CropView {
     /// stroke commit.
     var localBlur: LocalAdjustment<GaussianBlurFeature>?
 
-    init(source: CropViewSource, document: ImageEditorFeature, crop: CropEditingState) {
+    init(source: EditingCanvasSource, feature: ImageEditorFeature, crop: CropEditingState) {
       let previewSourceImage = source.editingSourceImage.removingExtentOffset()
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
       // editing source is always capped to the same max pixel size).
       self.sourceImage = ObjectIdentifier(source.editingSourceImage)
       self.sourceExtent = previewSourceImage.extent
-      self.effects = document.effects
-      self.localBlur = document.localBlur
+      self.effects = feature.effects
+      self.localBlur = feature.localBlur
     }
   }
 
-  /// How the canvas composites the document's blur mask.
+  /// How the canvas composites the feature's blur mask.
   ///
   /// Internal (not private) so tests can verify the stroke-domain mapping.
   enum CanvasRenderPlan: Equatable {
@@ -951,7 +950,7 @@ extension CropView {
 
     /// The committed strokes as canvas display records (y-down).
     ///
-    /// The document stores strokes in the working space (y-up) of the
+    /// The feature stores strokes in the working space (y-up) of the
     /// pre-crop source domain.
     ///
     /// - Parameters:
@@ -1024,7 +1023,7 @@ extension CropView {
     layers: DisplayLayers,
     contentSize: CGSize,
     contentToZoomingScale: CGFloat
-  ) -> CropDisplayViewport? {
+  ) -> CanvasViewport? {
     guard contentSize.width > 0, contentSize.height > 0 else { return nil }
     let source = layers.content
     let destination = layers.canvas
@@ -1036,11 +1035,11 @@ extension CropView {
     let vertical = destination.convert(
       CGPoint(x: 0, y: contentSize.height * contentToZoomingScale), from: source
     )
-    let transform = CropDisplayViewport.contentTransform(
+    let transform = CanvasViewport.contentTransform(
       contentSize: contentSize, origin: origin,
       horizontalCorner: horizontal, verticalCorner: vertical
     )
-    return CropDisplayViewport(
+    return CanvasViewport(
       contentBounds: CGRect(origin: .zero, size: contentSize),
       canvasBounds: surfaceHost.canvasHostView.bounds,
       contentToCanvasTransform: transform,
@@ -1127,7 +1126,7 @@ extension CropView {
       return
     }
 
-    EditorLog.debug(.cropView, """
+    EditorLog.debug(.editingCanvas, """
       [CropRecord]
       source: \(String(describing: source))
       preferredAspectRatio: \(String(describing: state.preferredAspectRatio))
@@ -1156,7 +1155,7 @@ extension CropView {
       isResting:\(cropSurface.scrollView.isContentOffsetResting)
       """
 
-    EditorLog.debug(.cropView, """
+    EditorLog.debug(.editingCanvas, """
       [CropScroll] \(event)
       scrollKind: \(String(describing: scrollViewAdjustmentKind))
       scroll: \(scrollViewState)
@@ -1172,9 +1171,9 @@ extension CropView {
   private func debugLogScrollViewAdjustment(_ event: String) {}
   #endif
 
-  private func applyCropToDocumentIfRenderingChanged(_ crop: CropEditingState) {
+  private func applyCropToFeatureIfRenderingChanged(_ crop: CropEditingState) {
     guard
-      document.crop.isRenderingEquivalent(
+      feature.crop.isRenderingEquivalent(
         to: crop.makeCropFeature(),
         orientedImageSize: crop.imageSize
       ) == false
@@ -1182,26 +1181,26 @@ extension CropView {
       return
     }
 
-    commitDocumentChange { document in
-      document.setCrop(crop)
+    commitFeatureChange { feature in
+      feature.setCrop(crop)
     }
   }
 
-  /// Applies a change to CropView's document and reports it to the owner.
-  /// A change that leaves the document equal is not reported.
-  private func commitDocumentChange(_ change: @escaping DocumentChange) {
-    var next = document
+  /// Applies a change to EditingCanvasView's feature and reports it to the owner.
+  /// A change that leaves the feature equal is not reported.
+  private func commitFeatureChange(_ change: @escaping FeatureChange) {
+    var next = feature
     change(&next)
-    guard next != document else {
+    guard next != feature else {
       return
     }
 
-    let localBlurChanged = next.localBlur != document.localBlur
-    document = next
-    documentChangeHandler(change)
+    let localBlurChanged = next.localBlur != feature.localBlur
+    feature = next
+    featureChangeHandler(change)
 
     if localBlurChanged {
-      syncCommittedStrokesFromDocument()
+      syncCommittedStrokesFromFeature()
     }
     updateDisplay()
   }
@@ -2067,7 +2066,7 @@ extension CGRect {
 
 }
 
-extension CropDisplayViewport {
+extension CanvasViewport {
   var editingCanvasViewport: EditingCanvasRenderer.Viewport {
     .init(
       visibleContentRect: visibleContentRect,
@@ -2160,7 +2159,7 @@ extension UIScrollView {
 
       setContentOffset(targetContentOffset, animated: false)
 
-      EditorLog.debug(.cropView, """
+      EditorLog.debug(.editingCanvas, """
         [Zoom]
         input: \(rect),
         bound: \(boundSize),
@@ -2187,12 +2186,12 @@ extension UIScrollView {
 
 // MARK: - Editing canvas (brush surface)
 
-extension CropView: UIGestureRecognizerDelegate {
+extension EditingCanvasView: UIGestureRecognizerDelegate {
 
   /// Sets what canvas gestures edit; nil views the output only.
   ///
-  /// Leaving crop editing commits the visible crop to the document first.
-  func setEditingTarget(_ target: CropViewEditingTarget?) {
+  /// Leaving crop editing commits the visible crop to the feature first.
+  func setEditingTarget(_ target: ImageEditorCanvas.Target?) {
     guard editingTarget != target else {
       return
     }
@@ -2201,7 +2200,7 @@ extension CropView: UIGestureRecognizerDelegate {
     if leavesCropEditing, state.proposedCrop != nil {
       // Leaving crop editing commits the proposed crop before
       // the tool surface derives its display geometry.
-      applyDocumentChanges()
+      applyPendingCrop()
     }
 
     editingTarget = target
@@ -2210,7 +2209,7 @@ extension CropView: UIGestureRecognizerDelegate {
     updateDisplay()
   }
 
-  func setMaskingBrush(_ brush: CropViewMaskingBrush) {
+  func setMaskingBrush(_ brush: ImageEditorCanvas.Brush) {
     guard maskingBrush != brush else {
       return
     }
@@ -2227,10 +2226,10 @@ extension CropView: UIGestureRecognizerDelegate {
     case .imagePixels(let value):
       imageDiameter = value
     case .viewportPoints(let value):
-      imageDiameter = CropViewMaskingDefaults.imageSpaceBrushDiameter(
+      imageDiameter = ImageEditorCanvas.Brush.imageSpaceDiameter(
         pointDiameter: value,
         viewportSize: bounds.size,
-        crop: document.crop
+        crop: feature.crop
       )
     }
     return .init(
@@ -2341,7 +2340,7 @@ extension CropView: UIGestureRecognizerDelegate {
   ///
   /// The stroke arrives in the tool canvas's crop-output space. It is mapped
   /// into the pre-crop source space and then, in the one conversion, into the
-  /// document's working space.
+  /// feature's working space.
   func commitCanvasStroke(
     record: EditingCanvasStrokeRecord,
     completion: @escaping () -> Void
@@ -2358,19 +2357,19 @@ extension CropView: UIGestureRecognizerDelegate {
     let sourceRecord = geometry.sourceRecord(fromOutputRecord: record)
     let stroke = sourceRecord.workingSpaceStroke(domainHeight: source.imageSize.height)
 
-    commitDocumentChange { document in
-      document.appendLocalBlurStroke(stroke)
+    commitFeatureChange { feature in
+      feature.appendLocalBlurStroke(stroke)
     }
     completion()
   }
 
   /// Pushes the committed strokes to both surfaces, including the hidden one.
-  private func syncCommittedStrokesFromDocument() {
+  private func syncCommittedStrokesFromFeature() {
     let domainHeight = source.imageSize.height
 
     cropSurface.setCommittedStrokes(
       committedStrokeRecords.sourceRecords(
-        localBlur: document.localBlur,
+        localBlur: feature.localBlur,
         domainHeight: domainHeight
       )
     )
@@ -2384,7 +2383,7 @@ extension CropView: UIGestureRecognizerDelegate {
 
     toolSurface.setCommittedStrokes(
       committedStrokeRecords.outputRecords(
-        localBlur: document.localBlur,
+        localBlur: feature.localBlur,
         geometry: geometry,
         domainHeight: domainHeight
       )
@@ -2392,7 +2391,7 @@ extension CropView: UIGestureRecognizerDelegate {
   }
 }
 
-extension CropView {
+extension EditingCanvasView {
 
   /// Memoized canvas records for the committed blur-mask strokes.
   ///

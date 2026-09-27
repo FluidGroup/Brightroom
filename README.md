@@ -18,7 +18,7 @@ Build a photo editor with the included Photos-style UI, compose your own editing
 ## Features
 
 - **A ready-to-use photo editor.** Crop, rotate, straighten, apply filter presets, adjust color, and paint blur masks with `ImageEditor`.
-- **Composable editing.** Use `SwiftUICropView` for a custom interface, with your own document and history, and `EditingStack` loading and rendering the image.
+- **Composable editing.** Use `ImageEditorCanvas` for a custom interface, with your own document and history, and `EditingStack` loading and rendering the image.
 - **Non-destructive processing.** Combine crops, effects, and masked local adjustments in a document you compose from typed features.
 - **Custom effects and LUTs.** Add your own Core Image transforms or color-cube LUTs. Edits are plain Swift values, so your app decides how to save them.
 - **Metal-backed previews and export.** Work with wide-color images and export to memory or directly to JPEG, HEIF, and PNG files.
@@ -122,7 +122,7 @@ struct PhotoEditor: View {
 
 The editor starts image preparation automatically. `onDone` receives the edited `ImageEditorFeature`, a plain value that describes the edit. Handle the result and dismiss the editor from `onComplete` when appropriate. Create a new model and stack when selecting a different source image.
 
-Customize aspect ratios and filter presets through `ImageEditor.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`SwiftUICropView`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift), which edits an `ImageEditorFeature` through a binding. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+Customize aspect ratios and filter presets through `ImageEditor.Options`, and button labels through `LocalizedStrings`. Filter presets default to an empty list; supply your own through `options.filterPresets`. The [sample presets](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Components/Crop/SwiftUICropView.swift), which edits an `ImageEditorFeature` through a binding. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
 
 ### Saving and Resuming an Edit
 

@@ -141,7 +141,7 @@ public struct CropModifier: Sendable {
         do {
           try handler.perform([request])
         } catch {
-          EditorLog.error(.cropView, "Face detection failed: \(error)")
+          EditorLog.error(.editingCanvas, "Face detection failed: \(error)")
           continuation.resume(returning: nil)
           return
         }

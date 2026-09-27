@@ -6,7 +6,7 @@ import UIKit
 ///
 /// The host applies a viewport and calls `drawIfNeeded()` each visible frame. This
 /// view never schedules its own display link or setNeedsDisplay-driven render.
-final class _EditingCanvasMTKView: MTKView, MTKViewDelegate {
+final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   /// Brush gesture state, including the active live stamps waiting for display.
   private struct StrokeState: ~Copyable {

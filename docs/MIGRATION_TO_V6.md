@@ -29,8 +29,8 @@ The most common migration path is:
    with optional members.
 5. Keep the edit in `PhotosCropEditingModel` (or in your own state), and
    render the document that `ImageEditor` passes to `onDone`.
-6. Give `SwiftUICropView` a document binding, and replace `featureFocus(_:)`
-   with `editingTarget(_:)`.
+6. Replace `SwiftUICropView` with `ImageEditorCanvas`, give it a document
+   binding, and replace `featureFocus(_:)` with `editingTarget(_:)`.
 7. Move `CropModifier` from `EditingStack` to `PhotosCropEditingModel`.
 8. Author crop rectangles as the selection before the quarter turn, and
    convert rectangles saved by 5.1.0
@@ -624,7 +624,7 @@ source domain, whose size is `EditingStack.Loaded.imageSize`.
 ### ImageEditorFeature
 
 `ImageEditorFeature` (BrightroomUI) is the document ImageEditor and
-`SwiftUICropView` edit. It is a `Feature` and `Equatable`:
+`ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
 - `effects: ImageEditorFeature.Effects` — the filter preset and twelve
   adjustments, each an optional member, evaluated in declaration order;
@@ -670,7 +670,7 @@ changes it. In 5.x you could change the stack's edit with
   then set `effects`, `localBlur`, and `crop`) and create the model with
   `init(editingStack:resuming:)`. See [Reopening an Edit](#reopening-an-edit).
 - To edit a document freely in code, own it yourself, for example as
-  `@State var document: ImageEditorFeature?`, show it with `SwiftUICropView`
+  `@State var document: ImageEditorFeature?`, show it with `ImageEditorCanvas`
   through a binding, and keep your own history if you need one.
 
 `commitCurrentEditIfNeeded()`, `hasUncommittedChanges`, `revert(to:)`,
@@ -785,17 +785,17 @@ image.
 `cropRect` is the selection before the quarter turn. Convert rectangles saved
 by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 
-## SwiftUICropView
+## SwiftUICropView → ImageEditorCanvas
 
-`SwiftUICropView` edits an `ImageEditorFeature` through a binding instead of
-the stack's edit:
+`SwiftUICropView` is now `ImageEditorCanvas`. It edits an
+`ImageEditorFeature` through a binding instead of the stack's edit:
 
 - `init(editingStack:document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:stateHandler:)`
   and the variant with `cropInsideOverlay`/`cropOutsideOverlay` take
   `document: Binding<ImageEditorFeature?>`. When the binding is `nil` once the
   image has loaded, the view writes a full-image document into it.
-- `editingTarget(_:)` with `CropViewEditingTarget` (`.crop`, `.localBlur`, or
-  `nil` to only view) replaces `featureFocus(_:)` and `CropViewFeatureFocus`.
+- `editingTarget(_:)` with `ImageEditorCanvas.Target` (`.crop`, `.localBlur`,
+  or `nil` to only view) replaces `featureFocus(_:)` and `CropViewFeatureFocus`.
   The seed effect of `CropViewFeatureFocus.masking(_:id:)` is gone: the
   first stroke creates `localBlur` with the default blur. To use another blur,
   set `document.localBlur` yourself.
@@ -803,6 +803,11 @@ the stack's edit:
 - To start from a `CropModifier`, create the document with
   `ImageEditorFeature.makeInitial(for:cropModifier:)` and show the view once
   it exists.
+- Renamed members: `adjustmentAngle(_:)` is `straightenAngle(_:)`,
+  `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)`,
+  `SwiftUICropView.AdjustmentKind` is `CropInteraction` (`.scrollView` is
+  `.movingImage`, `.guide` is `.resizingGuide`), and
+  `StateSnapshot.adjustmentKind` is `StateSnapshot.interaction`.
 
 Before:
 
@@ -822,10 +827,10 @@ import SwiftUI
 struct BlurEditor: View {
   let editingStack: EditingStack
   @State private var document: ImageEditorFeature?
-  @State private var target: CropViewEditingTarget? = .localBlur
+  @State private var target: ImageEditorCanvas.Target? = .localBlur
 
   var body: some View {
-    SwiftUICropView(editingStack: editingStack, document: $document)
+    ImageEditorCanvas(editingStack: editingStack, document: $document)
       .editingTarget(target)
   }
 }
@@ -954,7 +959,7 @@ rather than relying on the compiler to find them.
 
 `CropEditingState.id` was removed, and `makeCropFeature()` is internal. Write
 a crop state into a document with `ImageEditorFeature.setCrop(_:)`, which
-snaps the rectangle the same way `CropView` does:
+snaps the rectangle the same way the canvas does:
 
 ```swift
 import BrightroomUI
@@ -990,7 +995,8 @@ func squareDocument(orientedImageSize: CGSize) -> ImageEditorFeature {
       state; `EditingStack` is only asked for `loadedState` and
       `makeRenderer(document:)`.
 - [ ] `ImageEditor`'s `onDone` renders the document it receives.
-- [ ] `SwiftUICropView` has a document binding and uses `editingTarget(_:)`.
+- [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
+  document binding and uses `editingTarget(_:)`.
 - [ ] `CropModifier` is passed to `PhotosCropEditingModel` or
       `ImageEditorFeature.makeInitial(for:cropModifier:)`.
 - [ ] Filter presets are supplied through `options.filterPresets`.

@@ -39,18 +39,18 @@ struct ImageEditorContent: View {
   /// binding shows a document it does not know.
   @State private var session: ImageEditorSession
   @State private var rotation: CropEditingState.Rotation?
-  @State private var adjustmentAngle: CropEditingState.AdjustmentAngle?
+  @State private var straightenAngle: CropEditingState.AdjustmentAngle?
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: ImageEditor.Mode = .crop
   @State private var localBlurState = LocalBlurState()
   @State private var adjustmentParameter: ImageEditor.Adjustment =
     .exposure
-  @State private var resetAction = SwiftUICropView.ResetAction()
-  @State private var rotateAction = SwiftUICropView.RotateAction()
-  @State private var applyAction = SwiftUICropView.ApplyAction()
+  @State private var resetAction = ImageEditorCanvas.ResetAction()
+  @State private var rotateAction = ImageEditorCanvas.RotateAction()
+  @State private var applyAction = ImageEditorCanvas.ApplyAction()
   @State private var adjustmentAngleCommitAction =
-    SwiftUICropView.AdjustmentAngleCommitAction()
+    ImageEditorCanvas.AdjustmentAngleCommitAction()
 
   init(
     document: Binding<ImageEditorDocument>,
@@ -103,15 +103,15 @@ struct ImageEditorContent: View {
             mode: editingMode,
             localBlurState: localBlurState,
             rotation: $rotation,
-            adjustmentAngle: $adjustmentAngle,
-            croppingAspectRatio: croppingAspectRatioBinding(
+            straightenAngle: $straightenAngle,
+            lockedAspectRatio: lockedAspectRatioBinding(
               originalAspectRatio: originalAspectRatio
             ),
             resetAction: resetAction,
             rotateAction: rotateAction,
             applyAction: applyAction,
             adjustmentAngleCommitAction: adjustmentAngleCommitAction,
-            editingTarget: editingMode.cropViewEditingTarget
+            editingTarget: editingMode.canvasTarget
           )
           .layoutPriority(1)
 
@@ -125,12 +125,12 @@ struct ImageEditorContent: View {
             currentEffects: displayedFeature.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
-            adjustmentAngle: adjustmentAngle,
+            straightenAngle: straightenAngle,
             isSelectingAspectRatio: isSelectingAspectRatio,
             isLoaded: isLoaded,
             onSelectAspectRatio: selectAspectRatio,
-            onSetAdjustmentAngle: setAdjustmentAngle,
-            onCommitAdjustmentAngle: commitAdjustmentAngle,
+            onSetStraightenAngle: setStraightenAngle,
+            onCommitStraightenAngle: commitStraightenAngle,
             onSetBrushDiameter: setLocalBlurBrushDiameter,
             onClearLocalBlur: clearLocalBlur,
             onSelectFilterPreset: selectFilterPreset,
@@ -236,17 +236,17 @@ struct ImageEditorContent: View {
     aspectRatioSelection = selection
   }
 
-  private func setAdjustmentAngle(_ degrees: Double) {
+  private func setStraightenAngle(_ degrees: Double) {
     let angle = CropEditingState.AdjustmentAngle(degrees: degrees)
 
-    guard adjustmentAngle != angle else {
+    guard straightenAngle != angle else {
       return
     }
 
-    adjustmentAngle = angle
+    straightenAngle = angle
   }
 
-  private func commitAdjustmentAngle(_ degrees: Double) {
+  private func commitStraightenAngle(_ degrees: Double) {
     adjustmentAngleCommitAction(.init(degrees: degrees))
   }
 
@@ -352,7 +352,7 @@ struct ImageEditorContent: View {
     }
   }
 
-  private func croppingAspectRatioBinding(
+  private func lockedAspectRatioBinding(
     originalAspectRatio: PixelAspectRatio?
   ) -> Binding<PixelAspectRatio?> {
     Binding {
@@ -450,7 +450,7 @@ extension ImageEditor {
   /// A top-level editing mode shown in the ImageEditor bottom toolbar.
   ///
   /// The mode controls which controls are displayed below the canvas and which
-  /// interaction surface `SwiftUICropView` exposes. Future modes are represented
+  /// interaction surface `ImageEditorCanvas` exposes. Future modes are represented
   /// here even before their controls are implemented so the UI tree can settle
   /// around the same routing model.
   enum Mode: CaseIterable, Equatable, Identifiable {
@@ -513,10 +513,10 @@ extension ImageEditor {
       }
     }
 
-    /// What `SwiftUICropView` gestures edit in this mode. Filters and
+    /// What `ImageEditorCanvas` gestures edit in this mode. Filters and
     /// Adjustments edit through controls below the canvas, so the canvas only
     /// views the output there.
-    var cropViewEditingTarget: CropViewEditingTarget? {
+    var canvasTarget: ImageEditorCanvas.Target? {
       switch self {
       case .crop:
         return .crop
@@ -532,7 +532,7 @@ extension ImageEditor {
 /// Mutable state for ImageEditor's first local-adjustment mode.
 ///
 /// The brush diameter is stored in viewport points so the visible control reads
-/// like a Photos-style tool; CropView resolves it into image space.
+/// like a Photos-style tool; EditingCanvasView resolves it into image space.
 private struct LocalBlurState: Equatable {
   var brushDiameter: CGFloat = 30
 }
@@ -545,24 +545,24 @@ private struct CanvasHost: View {
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
   let rotation: Binding<CropEditingState.Rotation?>
-  let adjustmentAngle: Binding<CropEditingState.AdjustmentAngle?>
-  let croppingAspectRatio: Binding<PixelAspectRatio?>
-  let resetAction: SwiftUICropView.ResetAction
-  let rotateAction: SwiftUICropView.RotateAction
-  let applyAction: SwiftUICropView.ApplyAction
-  let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction
-  let editingTarget: CropViewEditingTarget?
+  let straightenAngle: Binding<CropEditingState.AdjustmentAngle?>
+  let lockedAspectRatio: Binding<PixelAspectRatio?>
+  let resetAction: ImageEditorCanvas.ResetAction
+  let rotateAction: ImageEditorCanvas.RotateAction
+  let applyAction: ImageEditorCanvas.ApplyAction
+  let adjustmentAngleCommitAction: ImageEditorCanvas.AdjustmentAngleCommitAction
+  let editingTarget: ImageEditorCanvas.Target?
 
   var body: some View {
-    SwiftUICropView(
+    ImageEditorCanvas(
       document: $document,
       displayedFeature: displayedFeature,
       editingStack: editingStack,
       isGuideInteractionEnabled: mode == .crop
     )
     .rotation(rotation)
-    .adjustmentAngle(adjustmentAngle)
-    .croppingAspectRatio(croppingAspectRatio)
+    .straightenAngle(straightenAngle)
+    .lockedAspectRatio(lockedAspectRatio)
     .editingTarget(editingTarget)
     .maskingBrush(
       .init(diameter: .viewportPoints(localBlurState.brushDiameter))
@@ -587,12 +587,12 @@ private struct ControlHost: View {
   let currentEffects: ImageEditorFeature.Effects?
   let adjustmentParameter: ImageEditor.Adjustment
   let localizedStrings: ImageEditor.LocalizedStrings
-  let adjustmentAngle: CropEditingState.AdjustmentAngle?
+  let straightenAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void
-  let onSetAdjustmentAngle: (Double) -> Void
-  let onCommitAdjustmentAngle: (Double) -> Void
+  let onSetStraightenAngle: (Double) -> Void
+  let onCommitStraightenAngle: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearLocalBlur: () -> Void
   let onSelectFilterPreset: (PresetFeature?) -> Void
@@ -608,12 +608,12 @@ private struct ControlHost: View {
           originalAspectRatio: originalAspectRatio,
           aspectRatioSelection: aspectRatioSelection,
           localizedStrings: localizedStrings,
-          adjustmentAngle: adjustmentAngle,
+          straightenAngle: straightenAngle,
           isSelectingAspectRatio: isSelectingAspectRatio,
           isLoaded: isLoaded,
           onSelectAspectRatio: onSelectAspectRatio,
-          onSetAdjustmentAngle: onSetAdjustmentAngle,
-          onCommitAdjustmentAngle: onCommitAdjustmentAngle
+          onSetStraightenAngle: onSetStraightenAngle,
+          onCommitStraightenAngle: onCommitStraightenAngle
         )
 
       case .localBlur:
@@ -1218,12 +1218,12 @@ private struct AdjustmentControl: View {
   let originalAspectRatio: PixelAspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localizedStrings: ImageEditor.LocalizedStrings
-  let adjustmentAngle: CropEditingState.AdjustmentAngle?
+  let straightenAngle: CropEditingState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void
-  let onSetAdjustmentAngle: (Double) -> Void
-  let onCommitAdjustmentAngle: (Double) -> Void
+  let onSetStraightenAngle: (Double) -> Void
+  let onCommitStraightenAngle: (Double) -> Void
 
   var body: some View {
     Group {
@@ -1237,10 +1237,10 @@ private struct AdjustmentControl: View {
         .transition(.opacity)
       } else {
         StraightenSlider(
-          value: adjustmentAngle?.degrees ?? 0,
+          value: straightenAngle?.degrees ?? 0,
           isEnabled: isLoaded,
-          onChange: onSetAdjustmentAngle,
-          onEditingEnded: onCommitAdjustmentAngle
+          onChange: onSetStraightenAngle,
+          onEditingEnded: onCommitStraightenAngle
         )
         .transition(.opacity)
       }

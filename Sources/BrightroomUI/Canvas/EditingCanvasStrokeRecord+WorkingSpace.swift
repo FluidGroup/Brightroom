@@ -64,7 +64,7 @@ extension EditingCanvasStrokeRecord {
         opacity: stroke.brush.opacity,
         // `BrushMaskStroke` does not store spacing; committed strokes render
         // from their stored stamps, so this is a placeholder kept in sync with
-        // the authoring default (CropViewMaskingBrush / EditingCanvasBrush).
+        // the authoring default (ImageEditorCanvas.Brush / EditingCanvasBrush).
         spacing: 0.05
       )
     )

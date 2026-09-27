@@ -24,7 +24,7 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-/// The feature edited by ImageEditor and `SwiftUICropView`.
+/// The feature edited by ImageEditor and `ImageEditorCanvas`.
 ///
 /// Evaluation order is the order of `body`: global effects, then the brush
 /// painted blur, then the final crop. Absent features are `nil` and contribute
@@ -161,7 +161,7 @@ extension ImageEditorFeature {
   /// Replaces the crop geometry with a crop-editing state.
   ///
   /// The rect is pixel-snapped through the engine snapper
-  /// (`CropFeature(displayCropRect:…)`), the same one `CropView` commits
+  /// (`CropFeature(displayCropRect:…)`), the same one `EditingCanvasView` commits
   /// through.
   public mutating func setCrop(_ crop: CropEditingState) {
     self.crop = crop.makeCropFeature()

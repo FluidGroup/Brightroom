@@ -26,10 +26,20 @@ import BrightroomParametric
 
 extension ImageEditorFeature {
 
+  /// The blur a new local blur starts with. Its radius resolves against the
+  /// render pass's chain-entry extent, so the apparent strength is comparable
+  /// across image sizes and render resolutions.
+  ///
+  /// `GaussianBlurFeature(value: 40)` resolves to diagonal/20 × 40/100 =
+  /// diagonal/50 — the strength the legacy crop-frozen seed produced. Because
+  /// the value form is scale-invariant, the default does not depend on the
+  /// current crop and can be a constant.
+  static let defaultLocalBlurContent = GaussianBlurFeature(value: 40)
+
   /// Appends a stroke to the local blur's mask.
   ///
   /// When there is no local blur yet, one is created with the default blur
-  /// (`CropViewMaskingDefaults.blurEffect`, diagonal / 50 of the chain entry)
+  /// (`defaultLocalBlurContent`, diagonal / 50 of the chain entry)
   /// and a brush-rooted mask tree. An existing blur keeps the content it was
   /// created with.
   ///
@@ -45,7 +55,7 @@ extension ImageEditorFeature {
           root: .brush(BrushMask(strokes: [stroke]))
         )
       ) {
-        CropViewMaskingDefaults.blurEffect
+        Self.defaultLocalBlurContent
       }
       return
     }

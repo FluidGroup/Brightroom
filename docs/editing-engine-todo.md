@@ -6,7 +6,7 @@ file tracks concrete engineering items that are not yet done.
 
 Status context (as of Brightroom 6):
 
-- `EditingStack` holds no edit. ImageEditor and `SwiftUICropView` edit an
+- `EditingStack` holds no edit. ImageEditor and `ImageEditorCanvas` edit an
   `ImageEditorFeature` (a statically composed `Feature`) owned by
   `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
   BrightroomUI edits crop through `CropEditingState` / `CropRotation`.
@@ -95,12 +95,12 @@ Guards: `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
 ### 2. Unify the live Metal rasterizer (MTKView ↔ `BrushMaskMetalRasterizer`)
 
 `BrushMaskMetalRasterizer` (added for the parity test) duplicates the inline stamp
-encode + pipeline setup in `_EditingCanvasMTKView.encodeStrokeMaskForViewport` /
+encode + pipeline setup in `EditingCanvasMTKView.encodeStrokeMaskForViewport` /
 `makeBrushMaskPipeline`. The falloff is shared, but the Metal encode/pipeline is
 not. Refactor the MTKView to use `BrushMaskMetalRasterizer` so there is literally
 one live Metal rasterizer.
 
-Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`,
+Files: `Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`,
 `.../BrushMaskMetalRasterizer.swift`.
 
 ### 3. Done: Store masks y-up in the document — "E5"
@@ -139,7 +139,7 @@ no synchronous gesture flush. Quarter-turn crops (straighten → crop → quarte
 turn, `CropFeature.OutputGeometry`) are covered by unit and UI tests on the
 Simulator but have not been verified on a physical device.
 
-Files: `Sources/BrightroomUI/Shared/Components/Crop/CropView.swift`
+Files: `Sources/BrightroomUI/Canvas/EditingCanvasView.swift`
 (`applyDocumentChanges()`, `record()`).
 
 ### 6. (If global spatial effects land) downsample the global-effect preview too
@@ -154,12 +154,12 @@ sharpen, displacement) is ever added to the global effects, that path would
 materialize a full-canvas intermediate and could OOM on huge sources; apply the
 same source-resolution-then-upscale treatment there.
 
-Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasRenderImageFactory.swift`.
+Files: `Sources/BrightroomUI/Canvas/EditingCanvasRenderImageFactory.swift`.
 
 ### 7. Texture bit-depth / memory for the GPU-resident source + content bake
 
-The CropView-rotation perf work added persistent GPU textures. Two memory
-reductions are **done**; one open question remains.
+The crop-rotation perf work in `EditingCanvasView` added persistent GPU
+textures. Two memory reductions are **done**; one open question remains.
 
 Done:
 - **Adaptive source depth.** `EditingSourcePreparation.makeGPUResidentSource`
@@ -189,8 +189,8 @@ Open:
   re-introduce per-frame cost (it shouldn't — pointwise on a GPU texture).
 
 Files: `Sources/BrightroomEngine/Engine/EditingSourcePreparation.swift`,
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasContentBake.swift`,
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`
+`Sources/BrightroomUI/Canvas/EditingCanvasContentBake.swift`,
+`Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`
 (`preparedAdjustedLayer`),
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasGeometry.swift`
+`Sources/BrightroomUI/Canvas/EditingCanvasGeometry.swift`
 (`colorTextureFormat`).

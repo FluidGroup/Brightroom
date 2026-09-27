@@ -39,10 +39,10 @@ struct HostedEditorTests {
     return nil
   }
 
-  /// Shows `rootView` in a window and waits until a `CropView` is mounted.
+  /// Shows `rootView` in a window and waits until an `EditingCanvasView` is mounted.
   private func mount(
     _ rootView: some View
-  ) async throws -> (window: UIWindow, host: UIViewController, cropView: CropView) {
+  ) async throws -> (window: UIWindow, host: UIViewController, canvasView: EditingCanvasView) {
     let host = UIHostingController(rootView: rootView)
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
     window.rootViewController = host
@@ -50,8 +50,8 @@ struct HostedEditorTests {
 
     for _ in 0..<300 {
       host.view.layoutIfNeeded()
-      if let cropView = find(CropView.self, in: host.view) {
-        return (window, host, cropView)
+      if let canvasView = find(EditingCanvasView.self, in: host.view) {
+        return (window, host, canvasView)
       }
       try await Task.sleep(for: .milliseconds(20))
     }
@@ -63,17 +63,17 @@ struct HostedEditorTests {
   @Test func `The crop canvas prepares the image and writes crop commits without committing`() async throws {
     let image = try DocumentTestFixtures.makeImage()
     let host = Host(EditingDocument(image: image))
-    let rotate = SwiftUICropView.RotateAction()
-    let apply = SwiftUICropView.ApplyAction()
+    let rotate = ImageEditorCanvas.RotateAction()
+    let apply = ImageEditorCanvas.ApplyAction()
 
     let mounted = try await mount(
-      SwiftUICropView(document: host.binding)
+      ImageEditorCanvas(document: host.binding)
         .registerRotateAction(rotate)
         .registerApplyAction(apply)
     )
     defer { mounted.window.isHidden = true }
 
-    #expect(mounted.cropView.bounds.isEmpty == false)
+    #expect(mounted.canvasView.bounds.isEmpty == false)
     #expect(host.writes == 0, "Mounting must not write the document.")
 
     rotate()
@@ -81,7 +81,7 @@ struct HostedEditorTests {
 
     #expect(host.writes == 1)
     #expect(host.document.feature.crop.rotation != .zero)
-    #expect(host.document.hasUncommittedChanges, "SwiftUICropView never commits.")
+    #expect(host.document.hasUncommittedChanges, "ImageEditorCanvas never commits.")
     #expect(host.document.image == image)
   }
 
@@ -90,7 +90,7 @@ struct HostedEditorTests {
   @Observable
   final class ToolHost {
     var document: ImageEditorDocument
-    var target: CropViewEditingTarget? = .crop
+    var target: ImageEditorCanvas.Target? = .crop
 
     init(_ document: ImageEditorDocument) {
       self.document = document
@@ -99,11 +99,11 @@ struct HostedEditorTests {
 
   private struct ToolHostView: View {
     let host: ToolHost
-    let rotate: SwiftUICropView.RotateAction
-    let apply: SwiftUICropView.ApplyAction
+    let rotate: ImageEditorCanvas.RotateAction
+    let apply: ImageEditorCanvas.ApplyAction
 
     var body: some View {
-      SwiftUICropView(document: Binding(get: { host.document }, set: { host.document = $0 }))
+      ImageEditorCanvas(document: Binding(get: { host.document }, set: { host.document = $0 }))
         .editingTarget(host.target)
         .registerRotateAction(rotate)
         .registerApplyAction(apply)
@@ -115,8 +115,8 @@ struct HostedEditorTests {
   /// would run before the crop the canvas writes when leaving `.crop`.
   @Test func `Applying before switching tools puts the crop in the commit`() async throws {
     let host = ToolHost(EditingDocument(image: try DocumentTestFixtures.makeImage()))
-    let rotate = SwiftUICropView.RotateAction()
-    let apply = SwiftUICropView.ApplyAction()
+    let rotate = ImageEditorCanvas.RotateAction()
+    let apply = ImageEditorCanvas.ApplyAction()
 
     let mounted = try await mount(ToolHostView(host: host, rotate: rotate, apply: apply))
     defer { mounted.window.isHidden = true }

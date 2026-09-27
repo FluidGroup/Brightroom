@@ -83,7 +83,7 @@ struct EditingCanvasDisplayInvalidationTests {
     #expect(canvas.drawIfNeeded())
   }
 
-  private func makeCanvas() throws -> (UIWindow, _EditingCanvasMTKView) {
+  private func makeCanvas() throws -> (UIWindow, EditingCanvasMTKView) {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let frame = CGRect(x: 0, y: 0, width: 80, height: 60)
     let window: UIWindow
@@ -94,7 +94,7 @@ struct EditingCanvasDisplayInvalidationTests {
     }
     let controller = UIViewController()
     window.rootViewController = controller
-    let canvas = _EditingCanvasMTKView(canvasSize: frame.size, device: device)
+    let canvas = EditingCanvasMTKView(canvasSize: frame.size, device: device)
     canvas.frame = frame
     controller.view.addSubview(canvas)
     window.isHidden = false

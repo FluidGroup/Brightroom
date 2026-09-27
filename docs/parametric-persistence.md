@@ -267,7 +267,7 @@ decoded 5.x document:
   channels become independent points in each channel.
 - Brush stamps in a document taken from 5.x `EditingStack.Edit.document`
   (for example `loadedState.currentEdit.document`, which ImageEditor and
-  `SwiftUICropView` authored) are y-down: top-left origin in the oriented
+  `ImageEditorCanvas` authored) are y-down: top-left origin in the oriented
   image. `ImageEditorFeature.localBlur` and every Brightroom 6 mask are y-up, so
   flip each stamp to `y = orientedImageSize.height - y` while converting, or
   the blur mask comes back mirrored vertically. A document from

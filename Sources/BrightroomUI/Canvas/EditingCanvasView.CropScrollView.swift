@@ -21,12 +21,12 @@
 
 import UIKit
 
-extension CropView {
+extension EditingCanvasView {
   
   /**
    Internal UIScrollView's subclass.
    */
-  final class _ScrollView: UIScrollView {
+  final class CropScrollView: UIScrollView {
     override init(frame: CGRect) {
       super.init(frame: frame)
       

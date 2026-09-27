@@ -1,5 +1,5 @@
 //
-//  CropView.GuideOverlays.swift
+//  EditingCanvasView.GuideOverlays.swift
 //  PixelEditor
 //
 //  Created by Muukii on 2021/03/03.
@@ -10,7 +10,7 @@ import SwiftUI
 import UIKit
 
 /// https://havecamerawilltravel.com/lightroom/crop-overlays/
-extension CropView {
+extension EditingCanvasView {
   final class CropOverlayHandlesView: _PixelEditorCodeBasedView {
 
     let edgeShapeLayer = UIView()
@@ -118,11 +118,11 @@ extension CropView {
       super.init(frame: .zero)
     }
 
-    func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    func didBeginInteraction(_ interaction: CropInteraction) {
 
     }
 
-    func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    func didEndInteraction(_ interaction: CropInteraction) {
 
     }
 
@@ -133,7 +133,7 @@ extension CropView {
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    init(@ViewBuilder content: @escaping (CropView.AdjustmentKind?) -> Content) {
+    init(@ViewBuilder content: @escaping (CropInteraction?) -> Content) {
       
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -146,17 +146,17 @@ extension CropView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
-      proxy.activeKind = kind
+    override func didBeginInteraction(_ interaction: CropInteraction) {
+      proxy.activeInteraction = interaction
     }
 
-    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
-      proxy.activeKind = nil
+    override func didEndInteraction(_ interaction: CropInteraction) {
+      proxy.activeInteraction = nil
     }
 
     private final class Proxy: ObservableObject {
 
-      @Published var activeKind: CropView.AdjustmentKind?
+      @Published var activeInteraction: CropInteraction?
 
     }
 
@@ -164,18 +164,18 @@ extension CropView {
 
       @ObservedObject var proxy: Proxy
 
-      private let content: (CropView.AdjustmentKind?) -> Content
+      private let content: (CropInteraction?) -> Content
 
       init(
         proxy: Proxy,
-        content: @escaping (CropView.AdjustmentKind?) -> Content
+        content: @escaping (CropInteraction?) -> Content
       ) {
         self.content = content
         self.proxy = proxy
       }
 
       var body: some View {
-        content(proxy.activeKind)
+        content(proxy.activeInteraction)
       }
     }
 
@@ -266,7 +266,7 @@ extension CropView {
       guideView.alpha = 0
     }
 
-    override func didBeginAdjustment(kind: CropView.AdjustmentKind) {
+    override func didBeginInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 1
@@ -275,7 +275,7 @@ extension CropView {
       }
     }
 
-    override func didEndAdjustment(kind: CropView.AdjustmentKind) {
+    override func didEndInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
       currentAnimator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
         self?.guideView.alpha = 0

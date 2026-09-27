@@ -102,12 +102,12 @@ private struct SketchPresentedEditor: View {
 struct SketchCustomCropEditor: View {
 
   @Binding var document: ImageEditorDocument
-  @State private var target: CropViewEditingTarget? = .crop
-  @State private var applyAction = SwiftUICropView.ApplyAction()
+  @State private var target: ImageEditorCanvas.Target? = .crop
+  @State private var applyAction = ImageEditorCanvas.ApplyAction()
 
   var body: some View {
     VStack {
-      SwiftUICropView(document: $document) { _ in
+      ImageEditorCanvas(document: $document) { _ in
         Color.clear
       } cropOutsideOverlay: { _ in
         Color.black.opacity(0.4)
@@ -133,12 +133,12 @@ struct SketchCustomCropEditor: View {
     }
   }
 
-  /// SwiftUICropView never commits; this editor makes each tool visit one
+  /// ImageEditorCanvas never commits; this editor makes each tool visit one
   /// undo step. The order matters: `applyAction()` writes the crop guide's
   /// pending crop synchronously, so the commit includes it. Committing in
   /// `onChange(of: target)` would run before the crop the canvas writes,
   /// later, when it leaves `.crop`.
-  private func select(_ newTarget: CropViewEditingTarget) {
+  private func select(_ newTarget: ImageEditorCanvas.Target) {
     guard newTarget != target else { return }
     if target == .crop {
       applyAction()

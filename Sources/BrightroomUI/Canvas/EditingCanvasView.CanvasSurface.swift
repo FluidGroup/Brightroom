@@ -25,7 +25,7 @@ import MetalKit
 import BrightroomEngine
 import BrightroomParametric
 
-extension CropView {
+extension EditingCanvasView {
 
   /// Drives the fixed canvas for the lifetime of the visible editor.
   ///
@@ -34,7 +34,7 @@ extension CropView {
   /// while the canvas submits Metal work only when its input changes.
   @MainActor
   final class ViewportDisplayLink: NSObject {
-    weak var owner: CropView?
+    weak var owner: EditingCanvasView?
     private var displayLink: CADisplayLink?
 
     func start(maximumFramesPerSecond: Int) {
@@ -112,12 +112,12 @@ extension CropView {
   /// These are reference types because UIKit may re-enter scroll-view delegate
   /// callbacks while a surface is updating its views and layers.
   class CanvasSurface: NSObject, UIScrollViewDelegate {
-    let scrollView = _ScrollView()
-    var canvasView: _EditingCanvasMTKView?
+    let scrollView = CropScrollView()
+    var canvasView: EditingCanvasMTKView?
     var canvasSize: CGSize?
     /// The mapping of the last frame submitted for display, also used to
     /// map drawing gestures back into the surface's editing domain.
-    var displayedViewport: CropDisplayViewport?
+    var displayedViewport: CanvasViewport?
 
     /// The transparent view the scroll view zooms to produce navigation geometry.
     let zoomingView: UIView
@@ -176,7 +176,7 @@ extension CropView {
       brush: EditingCanvasBrush,
       smoothing: EditingCanvasStrokeSmoothingConfiguration,
       onStrokeCommit: @escaping CanvasStrokeCommitHandler
-    ) -> _EditingCanvasMTKView? {
+    ) -> EditingCanvasMTKView? {
       if let canvasView, self.canvasSize == canvasSize {
         return canvasView
       }
@@ -191,7 +191,7 @@ extension CropView {
         return nil
       }
 
-      let view = _EditingCanvasMTKView(canvasSize: canvasSize, device: device)
+      let view = EditingCanvasMTKView(canvasSize: canvasSize, device: device)
       view.isUserInteractionEnabled = false
       view.isHidden = true
       view.configure(brush: brush, smoothing: smoothing)
@@ -226,7 +226,7 @@ extension CropView {
     }
 
     /// Samples the viewport and submits a changed frame without moving the canvas.
-    func draw(viewport: CropDisplayViewport?) {
+    func draw(viewport: CanvasViewport?) {
       guard let canvasView else { return }
       displayedViewport = viewport
       guard let viewport else {
@@ -282,7 +282,7 @@ extension CropView {
   /// adjusting the final Crop Feature.
   ///
   /// The crop surface always shows the rendered edit preview: the crop frame
-  /// is a viewing window over the document with its crop neutralized, so the
+  /// is a viewing window over the feature with its crop neutralized, so the
   /// global effects and the blur mask stay visible while choosing the crop.
   final class CropSurface: CanvasSurface {
 
@@ -301,8 +301,8 @@ extension CropView {
     }
 
     func updateRenderedEditPreview(
-      source: CropViewSource,
-      document: ImageEditorFeature,
+      source: EditingCanvasSource,
+      feature: ImageEditorFeature,
       crop: CropEditingState,
       committedStrokes: @autoclosure () -> [EditingCanvasStrokeRecord]
     ) {
@@ -310,17 +310,17 @@ extension CropView {
         return
       }
 
-      let key = CanvasInputKey(source: source, document: document, crop: crop)
+      let key = CanvasInputKey(source: source, feature: feature, crop: crop)
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
-      let renderPlan = CanvasRenderPlan(localBlur: document.localBlur)
+      let renderPlan = CanvasRenderPlan(localBlur: feature.localBlur)
       guard
         let images = EditingCanvasRenderImageFactory.makeRenderImages(
           editingSourceImage: source.editingSourceImage,
-          effects: document.effects.canvasEffect,
+          effects: feature.effects.canvasEffect,
           canvasSize: crop.imageSize,
           mode: renderPlan.canvasMode
         )
@@ -438,13 +438,13 @@ extension CropView {
   /// that are evaluated before the final Crop Feature.
   ///
   /// The Tool surface navigates the crop-output image. Drawing gestures arrive
-  /// in that crop-output coordinate space, then `CropView` maps the committed
+  /// in that crop-output coordinate space, then `EditingCanvasView` maps the committed
   /// stroke back into the pre-crop Feature domain before saving it.
   final class ToolSurface: CanvasSurface {
 
     /// Inputs that determine the output of
     /// `EditingCanvasRenderImageFactory.makeCropOutputRenderImages`. The source
-    /// image is compared by identity; `CropViewSource` stores it as an
+    /// image is compared by identity; `EditingCanvasSource` stores it as an
     /// immutable property, so a new editing source always produces a new
     /// instance. Strokes are not part of the key: committing one keeps the
     /// render images and their bakes.
@@ -456,7 +456,7 @@ extension CropView {
     }
 
     let contentView: UIView
-    let drawingGestureRecognizer = _EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
+    let drawingGestureRecognizer = EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
     /// A memo of the crop that produced the currently published
     /// `outputGeometry`.
     ///
@@ -493,7 +493,7 @@ extension CropView {
     /// Publishes the geometry that the next render and viewport read use.
     ///
     /// This is the single publish path for `outputGeometry`. Both writers —
-    /// `CropView.updateToolScrollGeometry` and this surface's own
+    /// `EditingCanvasView.updateToolScrollGeometry` and this surface's own
     /// `updateCanvas` — funnel through here, and both derive the value from
     /// the proposed crop; that shared derivation is what keeps the two call
     /// sites consistent.
@@ -521,7 +521,7 @@ extension CropView {
     }
 
     func updateCanvas(
-      source: CropViewSource,
+      source: EditingCanvasSource,
       effects: ImageEditorFeature.Effects,
       geometry: EditingCanvasCropOutputGeometry,
       mode: EditingCanvasMode,

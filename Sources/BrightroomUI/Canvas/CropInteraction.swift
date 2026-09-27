@@ -20,13 +20,19 @@
 // THE SOFTWARE.
 
 
-/// The part of an `ImageEditorFeature` that `SwiftUICropView` gestures edit.
-public enum CropViewEditingTarget: Equatable, Sendable {
+/// What the user is doing to the crop in `ImageEditorCanvas`. The empty set
+/// means idle.
+public struct CropInteraction: OptionSet, Equatable, Sendable {
 
-  /// Edit `crop` with the guide and the scroll surface. The canvas shows the
-  /// document with the crop neutralized.
-  case crop
+  public let rawValue: Int
 
-  /// Paint `localBlur`. The canvas shows the whole document through the crop.
-  case localBlur
+  public init(rawValue: Int) {
+    self.rawValue = rawValue
+  }
+
+  /// Panning or zooming the image under the crop guide.
+  public static let movingImage = CropInteraction(rawValue: 1 << 0)
+
+  /// Dragging the crop guide's edges or corners.
+  public static let resizingGuide = CropInteraction(rawValue: 1 << 1)
 }

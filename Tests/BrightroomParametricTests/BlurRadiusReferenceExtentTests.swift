@@ -11,7 +11,7 @@ import UIKit
 /// to be applied to.
 ///
 /// This is what keeps the masked blur a fixed fraction of the source across
-/// crop changes and viewport zoom, so the CropView preview matches the
+/// crop changes and viewport zoom, so the EditingCanvasView preview matches the
 /// exported result. Before the fix, the live viewport re-resolved `value=40`
 /// against the zoomed drawable extent, so zooming changed the visible blur.
 struct BlurRadiusReferenceExtentTests {

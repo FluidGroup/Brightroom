@@ -1,6 +1,6 @@
 import UIKit
 
-final class _EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
+final class EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
 
   var onBegin: ((CGPoint) -> Void)?
   var onMove: (([CGPoint]) -> Void)?

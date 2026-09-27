@@ -9,12 +9,12 @@ import Testing
 /// These tests use known content landmarks rather than UIKit's animation
 /// timing. They protect rotation, viewport culling, and inverse coordinates;
 /// physical pinch and bounce continuity still require interaction validation.
-struct CropDisplayViewportTests {
+struct CanvasViewportTests {
 
   @Test func `Mapped content corners preserve rotation and translation`() {
     // A uniformly scaled, rotated image with an offscreen origin. Rebuilding
     // this mapping from enclosing rectangles would lose both basis directions.
-    let transform = CropDisplayViewport.contentTransform(
+    let transform = CanvasViewport.contentTransform(
       contentSize: CGSize(width: 400, height: 300),
       origin: CGPoint(x: 35, y: -27),
       horizontalCorner: CGPoint(x: 335, y: 173),
@@ -31,7 +31,7 @@ struct CropDisplayViewportTests {
   }
 
   @Test func `Visible content and inverse input respect a nonzero content origin`() throws {
-    let viewport = try #require(CropDisplayViewport(
+    let viewport = try #require(CanvasViewport(
       contentBounds: CGRect(x: 40, y: 20, width: 400, height: 300),
       canvasBounds: CGRect(x: 0, y: 0, width: 320, height: 240),
       contentToCanvasTransform: CGAffineTransform(a: 2, b: 0, c: 0, d: 2, tx: -100, ty: -40),
@@ -44,13 +44,13 @@ struct CropDisplayViewportTests {
   }
 
   @Test func `Quarter turn preserves letterboxing and inverse input`() throws {
-    let transform = CropDisplayViewport.contentTransform(
+    let transform = CanvasViewport.contentTransform(
       contentSize: CGSize(width: 400, height: 300),
       origin: CGPoint(x: 280, y: 60),
       horizontalCorner: CGPoint(x: 280, y: 380),
       verticalCorner: CGPoint(x: 40, y: 60)
     )
-    let viewport = try #require(CropDisplayViewport(
+    let viewport = try #require(CanvasViewport(
       contentBounds: CGRect(x: 0, y: 0, width: 400, height: 300),
       canvasBounds: CGRect(x: 0, y: 0, width: 320, height: 480),
       contentToCanvasTransform: transform,
@@ -89,13 +89,13 @@ struct CropDisplayViewportTests {
         x: canvasAnchor.x - contentAnchor.x * sample.scale,
         y: canvasAnchor.y - contentAnchor.y * sample.scale
       )
-      let transform = CropDisplayViewport.contentTransform(
+      let transform = CanvasViewport.contentTransform(
         contentSize: contentSize,
         origin: origin,
         horizontalCorner: CGPoint(x: origin.x + contentSize.width * sample.scale, y: origin.y),
         verticalCorner: CGPoint(x: origin.x, y: origin.y + contentSize.height * sample.scale)
       )
-      let viewport = try #require(CropDisplayViewport(
+      let viewport = try #require(CanvasViewport(
         contentBounds: contentBounds,
         canvasBounds: canvasBounds,
         contentToCanvasTransform: transform,
@@ -119,8 +119,8 @@ struct CropDisplayViewportTests {
       canvasBounds: CGRect = CGRect(x: 0, y: 0, width: 320, height: 240),
       transform: CGAffineTransform = .identity,
       contentScaleFactor: CGFloat = 2
-    ) -> CropDisplayViewport? {
-      CropDisplayViewport(
+    ) -> CanvasViewport? {
+      CanvasViewport(
         contentBounds: contentBounds,
         canvasBounds: canvasBounds,
         contentToCanvasTransform: transform,

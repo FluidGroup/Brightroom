@@ -6,7 +6,7 @@ import CoreGraphics
 /// Both domains and the canvas use top-left, y-down coordinates. The affine
 /// transform retains rotation as well as pan and zoom; the bounding rectangles
 /// only limit rendering work and must not be used to reconstruct that transform.
-struct CropDisplayViewport {
+struct CanvasViewport {
 
   /// The conservative content bounds sampled by this frame.
   let visibleContentRect: CGRect

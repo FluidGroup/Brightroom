@@ -51,7 +51,7 @@ import BrightroomParametric
 
  Render the document with `EditingDocument.render(options:)`.
 
- You might use `SwiftUICropView` to create a fully customized user interface.
+ You might use `ImageEditorCanvas` to create a fully customized user interface.
  */
 public struct ImageEditor: View {
 

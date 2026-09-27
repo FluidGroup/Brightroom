@@ -24,35 +24,23 @@ import SwiftUI
 import BrightroomEngine
 import BrightroomParametric
 
-public struct SwiftUICropView: View {
-
-  public struct AdjustmentKind: OptionSet, Equatable, Sendable {
-
-    public let rawValue: Int
-
-    public init(rawValue: Int) {
-      self.rawValue = rawValue
-    }
-
-    public static let scrollView = AdjustmentKind(rawValue: 1 << 0)
-    public static let guide = AdjustmentKind(rawValue: 1 << 1)
-  }
+public struct ImageEditorCanvas: View {
 
   public struct StateSnapshot: Equatable {
     public var proposedCrop: CropEditingState?
     public var frame: CGRect
-    public var adjustmentKind: AdjustmentKind
+    public var interaction: CropInteraction
     public var preferredAspectRatio: PixelAspectRatio?
 
     public init(
       proposedCrop: CropEditingState?,
       frame: CGRect,
-      adjustmentKind: AdjustmentKind,
+      interaction: CropInteraction,
       preferredAspectRatio: PixelAspectRatio?
     ) {
       self.proposedCrop = proposedCrop
       self.frame = frame
-      self.adjustmentKind = adjustmentKind
+      self.interaction = interaction
       self.preferredAspectRatio = preferredAspectRatio
     }
   }
@@ -96,10 +84,10 @@ public struct SwiftUICropView: View {
     }
   }
 
-  /// Commits the current live straighten angle into CropView's recorded crop
+  /// Commits the current live straighten angle into EditingCanvasView's recorded crop
   /// geometry.
   ///
-  /// Use this from controls that stream `adjustmentAngle` while dragging but
+  /// Use this from controls that stream `straightenAngle` while dragging but
   /// only want to record the crop extent after the interaction settles.
   public final class AdjustmentAngleCommitAction {
 
@@ -122,7 +110,7 @@ public struct SwiftUICropView: View {
   /// document with one of another image while a change is still queued.
   @MainActor
   static func apply(
-    _ change: CropView.DocumentChange,
+    _ change: EditingCanvasView.FeatureChange,
     preparedFor image: SourceImage,
     to document: Binding<ImageEditorDocument>
   ) {
@@ -138,10 +126,10 @@ public struct SwiftUICropView: View {
   }
 
   /// Fixed at creation. See the initializer documentation.
-  private let cropInsideOverlay: ((AdjustmentKind?) -> AnyView)?
+  private let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
 
   /// Fixed at creation. See the initializer documentation.
-  private let cropOutsideOverlay: ((AdjustmentKind?) -> AnyView)?
+  private let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
 
   private let document: Binding<ImageEditorDocument>
 
@@ -154,8 +142,8 @@ public struct SwiftUICropView: View {
   private let displayedFeature: ImageEditorFeature?
 
   private var rotationInput: Binding<CropEditingState.Rotation?> = .constant(nil)
-  private var adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?> = .constant(nil)
-  private var croppingAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
+  private var straightenAngleInput: Binding<Angle?> = .constant(nil)
+  private var lockedAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
   private var _applyAction: ApplyAction?
@@ -167,8 +155,8 @@ public struct SwiftUICropView: View {
   private var clipsToGuide: Bool = false
   /// Fixed at creation. See the initializer documentation.
   private let contentInset: UIEdgeInsets?
-  private var editingTarget: CropViewEditingTarget? = .crop
-  private var maskingBrush: CropViewMaskingBrush = .init(diameter: .viewportPoints(30))
+  private var editingTarget: ImageEditorCanvas.Target? = .crop
+  private var maskingBrush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
   private var strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration = .init()
 
   /// Creates a crop canvas that edits `document`, with custom overlays.
@@ -192,7 +180,7 @@ public struct SwiftUICropView: View {
   ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
-  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///   - contentInset: **Fixed at creation.** `EditingCanvasView` stores the inset as a
   ///     `let`, so a value supplied after the canvas is mounted is ignored. A
   ///     host that derives the inset from safe area or size class must give
   ///     this view a new identity (for example with `.id`) for a new inset to
@@ -208,8 +196,8 @@ public struct SwiftUICropView: View {
     isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
     contentInset: UIEdgeInsets? = nil,
-    @ViewBuilder cropInsideOverlay: @escaping (AdjustmentKind?) -> InsideOverlay,
-    @ViewBuilder cropOutsideOverlay: @escaping (AdjustmentKind?) -> OutsideOverlay,
+    @ViewBuilder cropInsideOverlay: @escaping (CropInteraction?) -> InsideOverlay,
+    @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction?) -> OutsideOverlay,
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.document = document
@@ -233,7 +221,7 @@ public struct SwiftUICropView: View {
   ///   - document: The edited document.
   ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
-  ///   - contentInset: **Fixed at creation.** `CropView` stores the inset as a
+  ///   - contentInset: **Fixed at creation.** `EditingCanvasView` stores the inset as a
   ///     `let`, so a value supplied after the canvas is mounted is ignored. A
   ///     host that derives the inset from safe area or size class must give
   ///     this view a new identity (for example with `.id`) for a new inset to
@@ -298,17 +286,17 @@ public struct SwiftUICropView: View {
   private func canvas(editingStack: EditingStack) -> some View {
     ZStack {
       if let loadedState = editingStack.loadedState {
-        LoadedCropViewRepresentable(
-          source: CropViewSource(loadedState),
-          document: displayedFeature ?? document.wrappedValue.feature,
-          onDocumentChange: { [document] change in
+        EditingCanvasRepresentable(
+          source: EditingCanvasSource(loadedState),
+          feature: displayedFeature ?? document.wrappedValue.feature,
+          onFeatureChange: { [document] change in
             Self.apply(change, preparedFor: loadedState.image, to: document)
           },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
           rotationInput: rotationInput,
-          adjustmentAngleInput: adjustmentAngleInput,
-          croppingAspectRatioInput: croppingAspectRatioInput,
+          straightenAngleInput: straightenAngleInput,
+          lockedAspectRatioInput: lockedAspectRatioInput,
           resetAction: _resetAction,
           rotateAction: _rotateAction,
           applyAction: _applyAction,
@@ -322,7 +310,7 @@ public struct SwiftUICropView: View {
           maskingBrush: maskingBrush,
           strokeSmoothing: strokeSmoothing
         )
-        // `CropView` binds its source once, at creation. Tying the
+        // `EditingCanvasView` binds its source once, at creation. Tying the
         // representable's identity to the image makes an image swap rebuild
         // the canvas instead of leaving it bound to the old image.
         .id(loadedState.image)
@@ -366,15 +354,17 @@ public struct SwiftUICropView: View {
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: CropEditingState.AdjustmentAngle?) -> Self {
-
-    self.adjustmentAngleInput = .constant(angle)
+  /// Sets the straighten angle: the free rotation applied before cropping.
+  /// nil leaves the canvas's angle as it is.
+  public consuming func straightenAngle(_ angle: Angle?) -> Self {
+    self.straightenAngleInput = .constant(angle)
     return self
   }
 
-  public consuming func adjustmentAngle(_ angle: Binding<CropEditingState.AdjustmentAngle?>) -> Self {
-
-    self.adjustmentAngleInput = angle
+  /// Sets the straighten angle, and writes the canvas's angle back to the
+  /// binding when a gesture or a reloaded crop changes it.
+  public consuming func straightenAngle(_ angle: Binding<Angle?>) -> Self {
+    self.straightenAngleInput = angle
     return self
   }
 
@@ -383,32 +373,32 @@ public struct SwiftUICropView: View {
     return self
   }
 
-  public consuming func croppingAspectRatio(_ rect: PixelAspectRatio?) -> Self {
-
-    self.croppingAspectRatioInput = .constant(rect)
+  /// Locks the crop guide to an aspect ratio in the output orientation; nil
+  /// unlocks it.
+  public consuming func lockedAspectRatio(_ ratio: PixelAspectRatio?) -> Self {
+    self.lockedAspectRatioInput = .constant(ratio)
     return self
-
   }
 
-  public consuming func croppingAspectRatio(_ rect: Binding<PixelAspectRatio?>) -> Self {
-
-    self.croppingAspectRatioInput = rect
+  /// Locks the crop guide to an aspect ratio, and writes the canvas's locked
+  /// ratio back to the binding when it changes.
+  public consuming func lockedAspectRatio(_ ratio: Binding<PixelAspectRatio?>) -> Self {
+    self.lockedAspectRatioInput = ratio
     return self
-
   }
 
-  /// Sets which part of the document canvas gestures edit; nil views the
-  /// output only. The default is `.crop`.
+  /// Sets which part of the feature the canvas's gestures edit (the
+  /// adjustment point); nil views the output only. The default is `.crop`.
   ///
   /// Leaving `.crop` commits the visible crop to the document.
-  public consuming func editingTarget(_ target: CropViewEditingTarget?) -> Self {
+  public consuming func editingTarget(_ target: Target?) -> Self {
     self.editingTarget = target
     return self
   }
 
   /// Sets the masking brush. The diameter may be authored in viewport points
-  /// or image pixels; CropView resolves it against its own geometry.
-  public consuming func maskingBrush(_ brush: CropViewMaskingBrush) -> Self {
+  /// or image pixels; EditingCanvasView resolves it against its own geometry.
+  public consuming func maskingBrush(_ brush: ImageEditorCanvas.Brush) -> Self {
     self.maskingBrush = brush
     return self
   }
@@ -441,42 +431,42 @@ public struct SwiftUICropView: View {
 
 }
 
-/// Hosts a `CropView` once the image and the document are available.
+/// Hosts an `EditingCanvasView` once the image and the document are available.
 ///
 /// Internal (not private) so tests can drive its coordinator.
-struct LoadedCropViewRepresentable: UIViewRepresentable {
+struct EditingCanvasRepresentable: UIViewRepresentable {
 
-  let source: CropViewSource
-  let document: ImageEditorFeature
-  let onDocumentChange: @MainActor (_ change: CropView.DocumentChange) -> Void
-  let cropInsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
-  let cropOutsideOverlay: ((SwiftUICropView.AdjustmentKind?) -> AnyView)?
+  let source: EditingCanvasSource
+  let feature: ImageEditorFeature
+  let onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
+  let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
+  let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
   let rotationInput: Binding<CropEditingState.Rotation?>
-  let adjustmentAngleInput: Binding<CropEditingState.AdjustmentAngle?>
-  let croppingAspectRatioInput: Binding<PixelAspectRatio?>
-  let resetAction: SwiftUICropView.ResetAction?
-  let rotateAction: SwiftUICropView.RotateAction?
-  let applyAction: SwiftUICropView.ApplyAction?
-  let adjustmentAngleCommitAction: SwiftUICropView.AdjustmentAngleCommitAction?
-  let stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
+  let straightenAngleInput: Binding<Angle?>
+  let lockedAspectRatioInput: Binding<PixelAspectRatio?>
+  let resetAction: ImageEditorCanvas.ResetAction?
+  let rotateAction: ImageEditorCanvas.RotateAction?
+  let applyAction: ImageEditorCanvas.ApplyAction?
+  let adjustmentAngleCommitAction: ImageEditorCanvas.AdjustmentAngleCommitAction?
+  let stateHandler: @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
   let isGuideInteractionEnabled: Bool
   let areAnimationsEnabled: Bool
   let clipsToGuide: Bool
   let contentInset: UIEdgeInsets?
-  let editingTarget: CropViewEditingTarget?
-  let maskingBrush: CropViewMaskingBrush
+  let editingTarget: ImageEditorCanvas.Target?
+  let maskingBrush: ImageEditorCanvas.Brush
   let strokeSmoothing: EditingCanvasStrokeSmoothingConfiguration
 
   func makeCoordinator() -> Coordinator {
     Coordinator()
   }
 
-  func makeUIView(context: Context) -> CropView {
-    let view: CropView
+  func makeUIView(context: Context) -> EditingCanvasView {
+    let view: EditingCanvasView
     if let contentInset {
-      view = .init(source: source, document: document, contentInset: contentInset)
+      view = .init(source: source, feature: feature, contentInset: contentInset)
     } else {
-      view = .init(source: source, document: document)
+      view = .init(source: source, feature: feature)
     }
 
     view.isGuideInteractionEnabled = isGuideInteractionEnabled
@@ -488,93 +478,93 @@ struct LoadedCropViewRepresentable: UIViewRepresentable {
     // crop editing" commit against an unloaded view.
     view.setEditingTarget(editingTarget)
     bindStateHandler(to: view, coordinator: context.coordinator)
-    bindDocumentChangeHandler(to: view, coordinator: context.coordinator)
+    bindFeatureChangeHandler(to: view, coordinator: context.coordinator)
 
     // `contentInset` above and the two overlays below are creation-only inputs,
-    // as documented on SwiftUICropView's initializers. `updateUIView`
+    // as documented on ImageEditorCanvas's initializers. `updateUIView`
     // deliberately does not re-apply them: `contentInset` is a `let` on
-    // CropView, and re-installing `AnyView` overlay closures on every update
+    // EditingCanvasView, and re-installing `AnyView` overlay closures on every update
     // would rebuild the hosted overlays for no gain. Wiring live overlays would
     // need an explicit change token, not an unconditional re-set.
     if let cropInsideOverlay {
-      view.setCropInsideOverlay(CropView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
+      view.setCropInsideOverlay(EditingCanvasView.SwiftUICropInsideOverlay(content: cropInsideOverlay))
     }
 
     if let cropOutsideOverlay {
-      view.setCropOutsideOverlay(CropView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
+      view.setCropOutsideOverlay(EditingCanvasView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
     }
 
     configureActions(on: view)
     context.coordinator.applySwiftUIInputs {
-      view.loadDocumentState()
+      view.loadFeature()
     }
 
     return view
   }
 
-  func updateUIView(_ cropView: CropView, context: Context) {
-    bindStateHandler(to: cropView, coordinator: context.coordinator)
-    bindDocumentChangeHandler(to: cropView, coordinator: context.coordinator)
+  func updateUIView(_ canvasView: EditingCanvasView, context: Context) {
+    bindStateHandler(to: canvasView, coordinator: context.coordinator)
+    bindFeatureChangeHandler(to: canvasView, coordinator: context.coordinator)
 
-    if cropView.isGuideInteractionEnabled != isGuideInteractionEnabled {
-      cropView.isGuideInteractionEnabled = isGuideInteractionEnabled
+    if canvasView.isGuideInteractionEnabled != isGuideInteractionEnabled {
+      canvasView.isGuideInteractionEnabled = isGuideInteractionEnabled
     }
 
-    if cropView.areAnimationsEnabled != areAnimationsEnabled {
-      cropView.areAnimationsEnabled = areAnimationsEnabled
+    if canvasView.areAnimationsEnabled != areAnimationsEnabled {
+      canvasView.areAnimationsEnabled = areAnimationsEnabled
     }
 
-    // Everything that pushes SwiftUI inputs into CropView runs inside the
-    // guard. `setDocument` and `setEditingTarget` can emit a state snapshot
-    // or a document change synchronously, and an unguarded one writes the
+    // Everything that pushes SwiftUI inputs into EditingCanvasView runs inside the
+    // guard. `setFeature` and `setEditingTarget` can emit a state snapshot
+    // or a feature change synchronously, and an unguarded one writes the
     // host's bindings from inside `updateUIView` — a state mutation during
     // view update. The coordinator defers both. `setMaskingBrush` and
     // `setCanvasStrokeSmoothing` cannot emit today; they are inside for a
     // uniform contract, so a future emitting setter is safe by default.
     //
     // Order matters:
-    // - The rotation and angle inputs run before `setDocument`. They mirror
-    //   the proposed crop through deferred snapshots, so when `setDocument`
+    // - The rotation and angle inputs run before `setFeature`. They mirror
+    //   the proposed crop through deferred snapshots, so when `setFeature`
     //   reloads the crop (an undo), they still hold the previous values and
     //   would otherwise rotate the reloaded crop back.
-    // - `setDocument` runs before `setEditingTarget`. When an undo and a
+    // - `setFeature` runs before `setEditingTarget`. When an undo and a
     //   switch away from `.crop` arrive together, the crop reloads first, and
     //   leaving `.crop` then commits nothing over the host's undo.
-    // - While document changes are queued, the owner still holds the
-    //   document from before them, so they are applied to it for display.
+    // - While feature changes are queued, the owner still holds the
+    //   feature from before them, so they are applied to it for display.
     context.coordinator.applySwiftUIInputs {
-      if cropView.clipsToGuide != clipsToGuide {
-        cropView.clipsToGuide = clipsToGuide
+      if canvasView.clipsToGuide != clipsToGuide {
+        canvasView.clipsToGuide = clipsToGuide
       }
 
       if let rotation = rotationInput.wrappedValue {
-        cropView.setRotation(rotation)
+        canvasView.setRotation(rotation)
       }
 
-      if let adjustmentAngle = adjustmentAngleInput.wrappedValue {
-        cropView.setAdjustmentAngle(
-          adjustmentAngle,
+      if let straightenAngle = straightenAngleInput.wrappedValue {
+        canvasView.setStraightenAngle(
+          straightenAngle,
           recordsCropExtent: adjustmentAngleCommitAction == nil
         )
       }
 
-      cropView.setCroppingAspectRatio(croppingAspectRatioInput.wrappedValue)
+      canvasView.setLockedAspectRatio(lockedAspectRatioInput.wrappedValue)
 
-      cropView.setMaskingBrush(maskingBrush)
-      cropView.setCanvasStrokeSmoothing(strokeSmoothing)
+      canvasView.setMaskingBrush(maskingBrush)
+      canvasView.setCanvasStrokeSmoothing(strokeSmoothing)
 
       // Also refreshes the display for the inputs above.
-      cropView.setDocument(context.coordinator.applyingPendingDocumentChanges(to: document))
-      cropView.setEditingTarget(editingTarget)
+      canvasView.setFeature(context.coordinator.applyingPendingFeatureChanges(to: feature))
+      canvasView.setEditingTarget(editingTarget)
     }
 
-    configureActions(on: cropView)
+    configureActions(on: canvasView)
   }
 
   @MainActor
-  private func bindStateHandler(to cropView: CropView, coordinator: Coordinator) {
+  private func bindStateHandler(to canvasView: EditingCanvasView, coordinator: Coordinator) {
     coordinator.bindStateHandler(
-      to: cropView,
+      to: canvasView,
       syncInputs: { snapshot in
         syncInputs(with: snapshot)
       },
@@ -583,124 +573,124 @@ struct LoadedCropViewRepresentable: UIViewRepresentable {
   }
 
   @MainActor
-  private func bindDocumentChangeHandler(to cropView: CropView, coordinator: Coordinator) {
-    coordinator.bindDocumentChangeHandler(
-      to: cropView,
-      onDocumentChange: onDocumentChange
+  private func bindFeatureChangeHandler(to canvasView: EditingCanvasView, coordinator: Coordinator) {
+    coordinator.bindFeatureChangeHandler(
+      to: canvasView,
+      onFeatureChange: onFeatureChange
     )
   }
 
   @MainActor
-  private func configureActions(on cropView: CropView) {
-    resetAction?.onCall = { [weak cropView] in
-      guard let cropView else { return }
+  private func configureActions(on canvasView: EditingCanvasView) {
+    resetAction?.onCall = { [weak canvasView] in
+      guard let canvasView else { return }
 
-      cropView.resetCrop()
+      canvasView.resetCrop()
     }
 
-    rotateAction?.onCall = { [weak cropView] in
-      guard let cropView else { return }
+    rotateAction?.onCall = { [weak canvasView] in
+      guard let canvasView else { return }
 
-      cropView.rotateClockwise()
+      canvasView.rotateClockwise()
     }
 
-    applyAction?.onCall = { [weak cropView] in
-      cropView?.applyDocumentChanges()
+    applyAction?.onCall = { [weak canvasView] in
+      canvasView?.applyPendingCrop()
     }
 
-    adjustmentAngleCommitAction?.onCall = { [weak cropView] angle in
-      cropView?.commitAdjustmentAngle(angle)
+    adjustmentAngleCommitAction?.onCall = { [weak canvasView] angle in
+      canvasView?.commitStraightenAngle(angle)
     }
   }
 
   @MainActor
-  private func syncInputs(with snapshot: SwiftUICropView.StateSnapshot) {
+  private func syncInputs(with snapshot: ImageEditorCanvas.StateSnapshot) {
     if let crop = snapshot.proposedCrop {
       rotationInput.setIfChanged(crop.rotation)
-      adjustmentAngleInput.setIfChanged(crop.adjustmentAngle)
+      straightenAngleInput.setIfChanged(crop.adjustmentAngle)
     }
-    croppingAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
+    lockedAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
   }
 
   @MainActor
   final class Coordinator {
 
     private var isApplyingSwiftUIInputs = false
-    private var pendingInputSyncSnapshot: SwiftUICropView.StateSnapshot?
+    private var pendingInputSyncSnapshot: ImageEditorCanvas.StateSnapshot?
 
-    /// Document changes emitted while SwiftUI inputs were being applied, not
+    /// Feature changes emitted while SwiftUI inputs were being applied, not
     /// yet applied by the owner, in emission order.
     ///
-    /// Until they are delivered, the owner still holds the document from
-    /// before them; `updateUIView` displays them applied to it so CropView
+    /// Until they are delivered, the owner still holds the feature from
+    /// before them; `updateUIView` displays them applied to it so EditingCanvasView
     /// does not reload the stale crop.
-    private var pendingDocumentChanges: [CropView.DocumentChange] = []
+    private var pendingFeatureChanges: [EditingCanvasView.FeatureChange] = []
 
-    private var onDocumentChange: @MainActor (_ change: CropView.DocumentChange) -> Void = { _ in }
+    private var onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void = { _ in }
 
-    /// Routes CropView's document changes to `onDocumentChange`, re-bound on
+    /// Routes EditingCanvasView's feature changes to `onFeatureChange`, re-bound on
     /// every update because the host's destination can change.
-    func bindDocumentChangeHandler(
-      to cropView: CropView,
-      onDocumentChange: @escaping @MainActor (_ change: CropView.DocumentChange) -> Void
+    func bindFeatureChangeHandler(
+      to canvasView: EditingCanvasView,
+      onFeatureChange: @escaping @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
     ) {
-      self.onDocumentChange = onDocumentChange
-      cropView.setDocumentChangeHandler { [weak self] change in
-        self?.deliverDocumentChange(change)
+      self.onFeatureChange = onFeatureChange
+      canvasView.setFeatureChangeHandler { [weak self] change in
+        self?.deliverFeatureChange(change)
       }
     }
 
-    /// Applies a change to the owner's document: now, or on the next
+    /// Applies a change to the owner's feature: now, or on the next
     /// main-actor turn when it was emitted while SwiftUI inputs were being
     /// applied. Changes are delivered in emission order.
-    func deliverDocumentChange(_ change: @escaping CropView.DocumentChange) {
+    func deliverFeatureChange(_ change: @escaping EditingCanvasView.FeatureChange) {
       if isApplyingSwiftUIInputs {
-        if pendingDocumentChanges.isEmpty {
-          schedulePendingDocumentDelivery()
+        if pendingFeatureChanges.isEmpty {
+          schedulePendingFeatureDelivery()
         }
-        pendingDocumentChanges.append(change)
+        pendingFeatureChanges.append(change)
       } else {
-        deliverPendingDocumentChanges()
-        onDocumentChange(change)
+        deliverPendingFeatureChanges()
+        onFeatureChange(change)
       }
     }
 
-    /// `document` with the undelivered changes applied.
-    func applyingPendingDocumentChanges(to document: ImageEditorFeature) -> ImageEditorFeature {
-      var document = document
-      for change in pendingDocumentChanges {
-        change(&document)
+    /// `feature` with the undelivered changes applied.
+    func applyingPendingFeatureChanges(to feature: ImageEditorFeature) -> ImageEditorFeature {
+      var feature = feature
+      for change in pendingFeatureChanges {
+        change(&feature)
       }
-      return document
+      return feature
     }
 
-    private func deliverPendingDocumentChanges() {
-      let changes = pendingDocumentChanges
-      pendingDocumentChanges = []
+    private func deliverPendingFeatureChanges() {
+      let changes = pendingFeatureChanges
+      pendingFeatureChanges = []
       for change in changes {
-        onDocumentChange(change)
+        onFeatureChange(change)
       }
     }
 
-    private func schedulePendingDocumentDelivery() {
+    private func schedulePendingFeatureDelivery() {
       Task { @MainActor [weak self] in
         guard let self else { return }
 
         if self.isApplyingSwiftUIInputs {
-          self.schedulePendingDocumentDelivery()
+          self.schedulePendingFeatureDelivery()
           return
         }
 
-        self.deliverPendingDocumentChanges()
+        self.deliverPendingFeatureChanges()
       }
     }
 
     func bindStateHandler(
-      to cropView: CropView,
-      syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void,
-      stateHandler: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void
+      to canvasView: EditingCanvasView,
+      syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void,
+      stateHandler: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
     ) {
-      cropView.setStateHandler { [weak self] snapshot in
+      canvasView.setStateHandler { [weak self] snapshot in
         guard let self else { return }
 
         self.handleStateSnapshot(
@@ -721,9 +711,9 @@ struct LoadedCropViewRepresentable: UIViewRepresentable {
     }
 
     private func handleStateSnapshot(
-      _ snapshot: SwiftUICropView.StateSnapshot,
-      syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void,
-      stateHandler: @MainActor (SwiftUICropView.StateSnapshot) -> Void
+      _ snapshot: ImageEditorCanvas.StateSnapshot,
+      syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void,
+      stateHandler: @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
     ) {
       if isApplyingSwiftUIInputs {
         pendingInputSyncSnapshot = snapshot
@@ -736,7 +726,7 @@ struct LoadedCropViewRepresentable: UIViewRepresentable {
     }
 
     private func schedulePendingInputSync(
-      _ syncInputs: @escaping @MainActor (SwiftUICropView.StateSnapshot) -> Void
+      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
     ) {
       Task { @MainActor [weak self] in
         guard let self else { return }

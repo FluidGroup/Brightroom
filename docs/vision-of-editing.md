@@ -255,7 +255,7 @@ This is not a contradiction. It is the expected behavior of a parametric editor.
 The user should be able to edit an upstream Feature while seeing the
 downstream result that will actually be exported.
 
-This distinction is especially important for CropView. The current UI should
+This distinction is especially important for the canvas (`ImageEditorCanvas`). The current UI should
 not be interpreted as "Tool edits happen after Crop" merely because the user
 paints through the crop frame. The crop frame can be the viewing window for the
 fully evaluated result while Tool Features remain authored before the final

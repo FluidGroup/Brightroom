@@ -6,12 +6,12 @@ import UIKit
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// `CropView` takes a document value and reports its own changes (value in,
+/// `EditingCanvasView` takes a feature value and reports its own changes (value in,
 /// changes out). These run without a window: the editing target is set before
-/// `loadDocumentState()`, the order `makeUIView` uses, because leaving `.crop`
+/// `loadFeature()`, the order `makeUIView` uses, because leaving `.crop`
 /// after loading records the crop from zero-size views.
 @MainActor
-struct CropViewDocumentFlowTests {
+struct EditingCanvasViewFeatureFlowTests {
 
   private let imageSize = CGSize(width: 400, height: 300)
 
@@ -30,16 +30,16 @@ struct CropViewDocumentFlowTests {
   }
 
   private struct Harness {
-    let cropView: CropView
-    var snapshots: [SwiftUICropView.StateSnapshot] { box.snapshots }
-    /// The owner's document after each change CropView reported.
+    let canvasView: EditingCanvasView
+    var snapshots: [ImageEditorCanvas.StateSnapshot] { box.snapshots }
+    /// The owner's feature after each change EditingCanvasView reported.
     var emitted: [ImageEditorFeature] { box.emitted }
     let box: Box
 
-    /// Plays the document's owner: applies each change to its own latest
-    /// document.
+    /// Plays the feature's owner: applies each change to its own latest
+    /// feature.
     final class Box {
-      var snapshots: [SwiftUICropView.StateSnapshot] = []
+      var snapshots: [ImageEditorCanvas.StateSnapshot] = []
       var emitted: [ImageEditorFeature] = []
       var owned: ImageEditorFeature
 
@@ -49,37 +49,37 @@ struct CropViewDocumentFlowTests {
     }
   }
 
-  /// A CropView over a checkerboard, with the handlers bound and the target
+  /// An EditingCanvasView over a checkerboard, with the handlers bound and the target
   /// set before loading, as `makeUIView` does.
-  private func makeLoadedCropView(
-    document: ImageEditorFeature,
-    target: CropViewEditingTarget? = .localBlur
+  private func makeLoadedCanvasView(
+    feature: ImageEditorFeature,
+    target: ImageEditorCanvas.Target? = .localBlur
   ) -> Harness {
-    let cropView = CropView(
-      source: CropViewSource(editingSourceImage: makeSource(size: imageSize), imageSize: imageSize),
-      document: document
+    let canvasView = EditingCanvasView(
+      source: EditingCanvasSource(editingSourceImage: makeSource(size: imageSize), imageSize: imageSize),
+      feature: feature
     )
-    let box = Harness.Box(owned: document)
-    cropView.setStateHandler { box.snapshots.append($0) }
-    cropView.setDocumentChangeHandler { change in
+    let box = Harness.Box(owned: feature)
+    canvasView.setStateHandler { box.snapshots.append($0) }
+    canvasView.setFeatureChangeHandler { change in
       change(&box.owned)
       box.emitted.append(box.owned)
     }
-    cropView.setEditingTarget(target)
-    cropView.loadDocumentState()
-    return Harness(cropView: cropView, box: box)
+    canvasView.setEditingTarget(target)
+    canvasView.loadFeature()
+    return Harness(canvasView: canvasView, box: box)
   }
 
-  private func makeAngledDocument(degrees: Double) -> ImageEditorFeature {
-    var document = ImageEditorFeature(imageSize: imageSize)
-    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+  private func makeAngledFeature(degrees: Double) -> ImageEditorFeature {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    var crop = CropEditingState(cropFeature: feature.crop, imageSize: imageSize)
     crop.adjustmentAngle = .init(degrees: degrees)
-    document.setCrop(crop)
-    return document
+    feature.setCrop(crop)
+    return feature
   }
 
   @Test func `Loading emits the first snapshot to the bound handler`() throws {
-    let harness = makeLoadedCropView(document: makeAngledDocument(degrees: 10))
+    let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
 
     #expect(harness.emitted.isEmpty, "setting the target before loading commits nothing")
     let snapshot = try #require(harness.snapshots.last)
@@ -88,7 +88,7 @@ struct CropViewDocumentFlowTests {
   }
 
   @Test func `A committed stroke is stored in working space`() throws {
-    let harness = makeLoadedCropView(document: makeAngledDocument(degrees: 10))
+    let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
     let proposed = try #require(harness.snapshots.last?.proposedCrop)
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: proposed))
     let record = EditingCanvasStrokeRecord(
@@ -97,26 +97,26 @@ struct CropViewDocumentFlowTests {
     )
 
     var completed = false
-    harness.cropView.commitCanvasStroke(record: record) { completed = true }
+    harness.canvasView.commitCanvasStroke(record: record) { completed = true }
 
     #expect(completed)
     #expect(harness.emitted.count == 1)
     let expected = geometry.sourceRecord(fromOutputRecord: record)
       .workingSpaceStroke(domainHeight: imageSize.height)
     #expect(harness.emitted.last?.localBlurStrokes == [expected])
-    #expect(harness.emitted.last?.localBlur?.content == CropViewMaskingDefaults.blurEffect)
+    #expect(harness.emitted.last?.localBlur?.content == ImageEditorFeature.defaultLocalBlurContent)
   }
 
   @Test func `Echo does not reload the crop`() throws {
-    let harness = makeLoadedCropView(document: makeAngledDocument(degrees: 10))
-    harness.cropView.commitCanvasStroke(
+    let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
+    harness.canvasView.commitCanvasStroke(
       record: .init(stamps: [CGPoint(x: 40, y: 30)], brush: .init(size: 12))
     ) {}
     let echoed = try #require(harness.emitted.last)
     let snapshotCount = harness.snapshots.count
     let proposed = harness.snapshots.last?.proposedCrop
 
-    harness.cropView.setDocument(echoed)
+    harness.canvasView.setFeature(echoed)
 
     #expect(harness.snapshots.count == snapshotCount)
     #expect(harness.snapshots.last?.proposedCrop == proposed)
@@ -124,36 +124,36 @@ struct CropViewDocumentFlowTests {
   }
 
   @Test func `An external crop change reloads the crop`() throws {
-    let harness = makeLoadedCropView(document: makeAngledDocument(degrees: 10))
+    let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
     let snapshotCount = harness.snapshots.count
 
-    // What an undo produces: a document whose crop differs from the view's.
-    var undone = makeAngledDocument(degrees: 10)
+    // What an undo produces: a feature whose crop differs from the view's.
+    var undone = makeAngledFeature(degrees: 10)
     var smaller = CropEditingState(cropFeature: undone.crop, imageSize: imageSize)
     smaller.adjustmentAngle = .zero
     smaller.updateCropExtent(CGRect(x: 20, y: 10, width: 200, height: 150))
     undone.setCrop(smaller)
-    harness.cropView.setDocument(undone)
+    harness.canvasView.setFeature(undone)
 
     #expect(harness.snapshots.count > snapshotCount)
     let reloaded = try #require(harness.snapshots.last?.proposedCrop)
     #expect(reloaded.adjustmentAngle == .zero)
     #expect(reloaded.cropExtent == smaller.cropExtent)
-    #expect(harness.emitted.isEmpty, "an external document is not echoed back")
+    #expect(harness.emitted.isEmpty, "an external feature is not echoed back")
   }
 
-  /// An owner-side change CropView has not received yet (an effect set in the
+  /// An owner-side change EditingCanvasView has not received yet (an effect set in the
   /// same turn as a crop commit) survives the commit.
-  @Test func `A crop commit keeps owner changes CropView has not received`() throws {
-    let harness = makeLoadedCropView(
-      document: ImageEditorFeature(imageSize: imageSize),
+  @Test func `A crop commit keeps owner changes EditingCanvasView has not received`() throws {
+    let harness = makeLoadedCanvasView(
+      feature: ImageEditorFeature(imageSize: imageSize),
       target: .crop
     )
     ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &harness.box.owned.effects)
     let exposure = harness.box.owned.effects.exposure
 
-    harness.cropView.setCroppingAspectRatio(.square)
-    harness.cropView.applyDocumentChanges()
+    harness.canvasView.setLockedAspectRatio(.square)
+    harness.canvasView.applyPendingCrop()
 
     let committed = try #require(harness.emitted.last)
     #expect(committed.effects.exposure == exposure)
@@ -165,15 +165,15 @@ struct CropViewDocumentFlowTests {
   /// lock, so Done cannot commit a crop that breaks it.
   @Test func `A reloaded crop keeps the aspect-ratio lock`() throws {
     let initial = ImageEditorFeature(imageSize: imageSize)
-    let harness = makeLoadedCropView(document: initial, target: .crop)
+    let harness = makeLoadedCanvasView(feature: initial, target: .crop)
 
-    harness.cropView.setCroppingAspectRatio(.square)
-    harness.cropView.applyDocumentChanges()
+    harness.canvasView.setLockedAspectRatio(.square)
+    harness.canvasView.applyPendingCrop()
     #expect(harness.emitted.count == 1)
 
     // What an undo produces: the full-image crop, while the lock is active.
-    harness.cropView.setDocument(initial)
-    harness.cropView.setCroppingAspectRatio(.square)
+    harness.canvasView.setFeature(initial)
+    harness.canvasView.setLockedAspectRatio(.square)
 
     let reloaded = try #require(harness.snapshots.last?.proposedCrop)
     #expect(abs(reloaded.cropExtent.width - reloaded.cropExtent.height) <= 1)
@@ -184,19 +184,19 @@ struct CropViewDocumentFlowTests {
   /// lock; Done then keeps the undone crop.
   @Test func `A reloaded crop across a sideways turn turns the aspect-ratio lock`() throws {
     let initial = ImageEditorFeature(imageSize: imageSize)
-    let harness = makeLoadedCropView(document: initial, target: .crop)
+    let harness = makeLoadedCanvasView(feature: initial, target: .crop)
     let landscape = PixelAspectRatio(width: 4, height: 3)
 
-    harness.cropView.setCroppingAspectRatio(landscape)
-    harness.cropView.applyDocumentChanges()
-    harness.cropView.rotateClockwise()
-    harness.cropView.applyDocumentChanges()
+    harness.canvasView.setLockedAspectRatio(landscape)
+    harness.canvasView.applyPendingCrop()
+    harness.canvasView.rotateClockwise()
+    harness.canvasView.applyPendingCrop()
     let turned = try #require(harness.emitted.last)
     #expect(turned.crop.rotation.isSideways)
     #expect(harness.snapshots.last?.preferredAspectRatio == landscape.swapped())
 
     // What an undo of the turn produces.
-    harness.cropView.setDocument(initial)
+    harness.canvasView.setFeature(initial)
 
     let snapshot = try #require(harness.snapshots.last)
     #expect(snapshot.preferredAspectRatio == landscape)
@@ -205,41 +205,41 @@ struct CropViewDocumentFlowTests {
     #expect(reloaded.cropExtent == CGRect(origin: .zero, size: imageSize))
 
     let emittedCount = harness.emitted.count
-    harness.cropView.applyDocumentChanges()
+    harness.canvasView.applyPendingCrop()
     #expect(harness.emitted.count == emittedCount)
   }
 
   @Test func `Switching between tool targets commits nothing`() {
-    let harness = makeLoadedCropView(document: ImageEditorFeature(imageSize: imageSize))
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize))
 
-    harness.cropView.setEditingTarget(nil)
-    harness.cropView.setEditingTarget(.localBlur)
+    harness.canvasView.setEditingTarget(nil)
+    harness.canvasView.setEditingTarget(.localBlur)
 
     #expect(harness.emitted.isEmpty)
   }
 
-  /// D2 end to end: a stroke painted at a display point through CropView and
-  /// exported with the document changes the export at that point, and not at
+  /// D2 end to end: a stroke painted at a display point through EditingCanvasView and
+  /// exported with the feature changes the export at that point, and not at
   /// its vertical mirror.
   @Test func `A painted stroke exports at the painted display point`() throws {
     let size = CGSize(width: 240, height: 180)
     let source = makeSource(size: size)
     let plain = ImageEditorFeature(imageSize: size)
-    let cropView = CropView(
-      source: CropViewSource(editingSourceImage: source, imageSize: size),
-      document: plain
+    let canvasView = EditingCanvasView(
+      source: EditingCanvasSource(editingSourceImage: source, imageSize: size),
+      feature: plain
     )
     var owned = plain
     var emitted: [ImageEditorFeature] = []
-    cropView.setDocumentChangeHandler { change in
+    canvasView.setFeatureChangeHandler { change in
       change(&owned)
       emitted.append(owned)
     }
-    cropView.setEditingTarget(.localBlur)
-    cropView.loadDocumentState()
+    canvasView.setEditingTarget(.localBlur)
+    canvasView.loadFeature()
 
     let display = CGPoint(x: 50, y: 40)
-    cropView.commitCanvasStroke(
+    canvasView.commitCanvasStroke(
       record: .init(stamps: [display], brush: .init(size: 30, hardness: 1))
     ) {}
     let painted = try #require(emitted.last)
@@ -299,46 +299,46 @@ struct CropViewDocumentFlowTests {
   }
 }
 
-/// The SwiftUI coordinator defers a document change that CropView emits while
+/// The SwiftUI coordinator defers a feature change that EditingCanvasView emits while
 /// SwiftUI inputs are being applied (a state write during a view update), and
-/// shows the pending changes applied to the stale owner document until they
+/// shows the pending changes applied to the stale owner feature until they
 /// are delivered.
 @MainActor
-struct LoadedCropViewCoordinatorTests {
+struct EditingCanvasRepresentableCoordinatorTests {
 
   @Test func `A change emitted while applying inputs is delivered later`() async throws {
     let size = CGSize(width: 80, height: 60)
-    let document = ImageEditorFeature(imageSize: size)
-    let cropView = CropView(
-      source: CropViewSource(
+    let feature = ImageEditorFeature(imageSize: size)
+    let canvasView = EditingCanvasView(
+      source: EditingCanvasSource(
         editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),
         imageSize: size
       ),
-      document: document
+      feature: feature
     )
     let stroke = BrushMaskStroke(
       stamps: [CGPoint(x: 10, y: 10)],
       brush: .init(diameter: 4, hardness: 1, opacity: 1)
     )
-    var changed = document
+    var changed = feature
     changed.appendLocalBlurStroke(stroke)
 
-    let coordinator = LoadedCropViewRepresentable.Coordinator()
-    var owned = document
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    var owned = feature
     var deliveries = 0
-    coordinator.bindDocumentChangeHandler(to: cropView) { change in
+    coordinator.bindFeatureChangeHandler(to: canvasView) { change in
       change(&owned)
       deliveries += 1
     }
 
     coordinator.applySwiftUIInputs {
-      coordinator.deliverDocumentChange { $0.appendLocalBlurStroke(stroke) }
+      coordinator.deliverFeatureChange { $0.appendLocalBlurStroke(stroke) }
     }
 
     #expect(deliveries == 0, "not delivered during the view update")
     #expect(
-      coordinator.applyingPendingDocumentChanges(to: document) == changed,
-      "the pending change is shown over the stale owner document"
+      coordinator.applyingPendingFeatureChanges(to: feature) == changed,
+      "the pending change is shown over the stale owner feature"
     )
 
     for _ in 0..<10 where deliveries == 0 {
@@ -346,11 +346,11 @@ struct LoadedCropViewCoordinatorTests {
     }
     #expect(deliveries == 1)
     #expect(owned == changed)
-    #expect(coordinator.applyingPendingDocumentChanges(to: document) == document)
+    #expect(coordinator.applyingPendingFeatureChanges(to: feature) == feature)
 
     // Outside input application a change is delivered at once.
-    coordinator.deliverDocumentChange { $0.localBlur = nil }
+    coordinator.deliverFeatureChange { $0.localBlur = nil }
     #expect(deliveries == 2)
-    #expect(owned == document)
+    #expect(owned == feature)
   }
 }

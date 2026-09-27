@@ -22,7 +22,7 @@
 import UIKit
 import BrightroomEngine
 
-extension CropView {
+extension EditingCanvasView {
   
   private final class TapExpandedView: _PixelEditorCodeBasedView {
     
@@ -40,13 +40,13 @@ extension CropView {
     }
   }
   
-  final class _InteractiveCropGuideView: _PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
+  final class InteractiveCropGuideView: _PixelEditorCodeBasedView, UIGestureRecognizerDelegate {
 
     var willChange: () -> Void = {}
     var updating: () -> Void = {}
     var didChange: () -> Void = {}
 
-    var didUpdateAdjustmentKind: (CropView.AdjustmentKind) -> Void = { _ in }
+    var didUpdateInteraction: (CropInteraction) -> Void = { _ in }
 
     private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
     private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
@@ -61,7 +61,7 @@ extension CropView {
     private weak var cropInsideOverlay: CropInsideOverlayBase?
     private weak var cropOutsideOverlay: CropOutsideOverlayBase?
 
-    private unowned let containerView: CropView
+    private unowned let containerView: EditingCanvasView
 
     private lazy var invertedMaskShapeLayerView = MaskView()
 
@@ -74,7 +74,7 @@ extension CropView {
     private let insetOfGuideFlexibility: UIEdgeInsets
 
     init(
-      containerView: CropView,
+      containerView: EditingCanvasView,
       insetOfGuideFlexibility: UIEdgeInsets
     ) {
       self.containerView = containerView
@@ -335,15 +335,15 @@ extension CropView {
     }
 
     func willBeginScrollViewAdjustment() {
-      cropInsideOverlay?.didBeginAdjustment(kind: .scrollView)
-      cropOutsideOverlay?.didBeginAdjustment(kind: .scrollView)
-      didUpdateAdjustmentKind(.scrollView)
+      cropInsideOverlay?.didBeginInteraction(.movingImage)
+      cropOutsideOverlay?.didBeginInteraction(.movingImage)
+      didUpdateInteraction(.movingImage)
     }
 
     func didEndScrollViewAdjustment() {
-      cropInsideOverlay?.didEndAdjustment(kind: .scrollView)
-      cropOutsideOverlay?.didEndAdjustment(kind: .scrollView)
-      didUpdateAdjustmentKind([])
+      cropInsideOverlay?.didEndInteraction(.movingImage)
+      cropOutsideOverlay?.didEndInteraction(.movingImage)
+      didUpdateInteraction([])
     }
 
     @inline(__always)
@@ -388,9 +388,9 @@ extension CropView {
 
       updateMaximumRect()
       willChange()
-      cropInsideOverlay?.didBeginAdjustment(kind: .guide)
-      cropOutsideOverlay?.didBeginAdjustment(kind: .guide)
-      didUpdateAdjustmentKind(.guide)
+      cropInsideOverlay?.didBeginInteraction(.resizingGuide)
+      cropOutsideOverlay?.didBeginInteraction(.resizingGuide)
+      didUpdateInteraction(.resizingGuide)
     }
 
     private func onGestureTrackingChanged() {
@@ -404,9 +404,9 @@ extension CropView {
 
       deactivateAllConstraints()
       didChange()
-      cropInsideOverlay?.didEndAdjustment(kind: .guide)
-      cropOutsideOverlay?.didEndAdjustment(kind: .guide)
-      didUpdateAdjustmentKind([])
+      cropInsideOverlay?.didEndInteraction(.resizingGuide)
+      cropOutsideOverlay?.didEndInteraction(.resizingGuide)
+      didUpdateInteraction([])
     }
 
     private var widthConstraint: NSLayoutConstraint!
