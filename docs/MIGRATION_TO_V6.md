@@ -1045,6 +1045,17 @@ the chain-entry extent everywhere.
 `EditingDocument.render(options:)` takes `ExportRenderer.Options` and returns
 a `RenderedImage`.
 
+Two export behaviors changed with the rename:
+
+- `Rendered.makeOptimizedForSharingData(dataType:)` and `Rendered.DataType`
+  are `RenderedImage.sharingData(as:)`, which takes the same
+  `ExportRenderer.FileType` as `Output.file`, so HEIF is available for
+  sharing too. It now throws `ExportRendererError.sharingDataEncodingFailed`
+  when Image I/O cannot encode the image; it used to return empty data.
+- Every export failure is an `ExportRendererError`, which is `Equatable` and a
+  `LocalizedError`. A failed `Output.file` write, which used to throw an
+  internal writer error, throws `.fileWriteFailed(url, step:)`.
+
 ### Masks and Local Adjustments
 
 | 5.1.1 | 6.0 |

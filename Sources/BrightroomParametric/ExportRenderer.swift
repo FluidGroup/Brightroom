@@ -330,8 +330,31 @@ public struct ExportRenderer {
   }
 }
 
-/// Errors thrown by `ExportRenderer` and by reading its `RenderedImage`.
-public enum ExportRendererError: Swift.Error {
+/// Errors thrown by `ExportRenderer`, by its file writer, and by reading a
+/// `RenderedImage`.
+///
+/// Every failure the export path raises is one of these cases, so callers can
+/// match a thrown error with `==` or `switch`.
+public enum ExportRendererError: Error, Equatable, LocalizedError, Sendable {
+
+  /// A step of writing `ExportRenderer.Output.file`.
+  public enum WriteStep: Equatable, Sendable {
+    /// The image extent is empty, infinite, or smaller than one pixel.
+    case validatingExtent
+    /// The disk-backed scratch buffer could not be created.
+    case creatingScratchFile
+    /// The scratch buffer could not be mapped into memory.
+    case mappingScratchFile
+    /// Core Graphics could not wrap the scratch buffer.
+    case creatingDataProvider
+    /// Core Graphics could not create an image over the scratch buffer.
+    case creatingImage
+    /// Image I/O could not create a destination for the file type.
+    case creatingDestination
+    /// Image I/O could not finish encoding the file.
+    case finalizing
+  }
+
   /// A file-backed render could not be decoded back into a `CGImage`.
   case failedToDecodeRenderedFile(URL)
 
@@ -339,6 +362,40 @@ public enum ExportRendererError: Swift.Error {
   ///
   /// Most likely at the sizes `ExportRenderer.Output.file` exists to avoid.
   case failedToCreateCGImage(extent: CGRect)
+
+  /// Writing the file at the URL failed at `step`.
+  case fileWriteFailed(URL, step: WriteStep)
+
+  /// Image I/O could not encode the result for `RenderedImage.sharingData(as:)`.
+  case sharingDataEncodingFailed
+
+  public var errorDescription: String? {
+    switch self {
+    case let .failedToDecodeRenderedFile(url):
+      "The rendered file at \(url.path) couldn't be decoded."
+    case let .failedToCreateCGImage(extent):
+      "Core Image couldn't create an image of \(extent.width) × \(extent.height) pixels."
+    case let .fileWriteFailed(url, step):
+      "Writing the rendered file at \(url.path) failed while \(step.description)."
+    case .sharingDataEncodingFailed:
+      "The rendered image couldn't be encoded for sharing."
+    }
+  }
+}
+
+extension ExportRendererError.WriteStep: CustomStringConvertible {
+
+  public var description: String {
+    switch self {
+    case .validatingExtent: "validating the image extent"
+    case .creatingScratchFile: "creating the scratch file"
+    case .mappingScratchFile: "mapping the scratch file"
+    case .creatingDataProvider: "creating the data provider"
+    case .creatingImage: "creating the image"
+    case .creatingDestination: "creating the destination"
+    case .finalizing: "finalizing the file"
+    }
+  }
 }
 
 /**
@@ -350,11 +407,6 @@ public enum ExportRendererError: Swift.Error {
  backing for you.
  */
 public struct RenderedImage: Sendable {
-
-  public enum DataType: Sendable {
-    case jpeg(quality: CGFloat)
-    case png
-  }
 
   enum Storage: Sendable {
     case memory(CGImage)
@@ -444,21 +496,29 @@ public struct RenderedImage: Sendable {
     }
   }
 
-  /**
-   Makes a data of the image that optimized for sharing.
-
-   Since the rendered image is working on DisplayP3 profile, that data might display wrong color on other platform devices.
-   To avoid those issues, use this method to create data to send instead of creating data from `cgImageDisplayP3`.
-   */
-  public func makeOptimizedForSharingData(dataType: DataType) throws -> Data {
+  /// Encodes the result for sharing with other devices and apps.
+  ///
+  /// The data is converted for sharing
+  /// (`kCGImageDestinationOptimizeColorForSharing`), so a wide-gamut result
+  /// displays correctly on devices that do not manage color. Use it instead of
+  /// encoding `cgImage` yourself when the data leaves the app.
+  ///
+  /// - Parameter fileType: The encoding, the same `ExportRenderer.FileType`
+  ///   `ExportRenderer.Output.file` takes.
+  /// - Throws: `ExportRendererError.sharingDataEncodingFailed` when Image I/O
+  ///   cannot encode the image, or the error `cgImage` throws.
+  public func sharingData(as fileType: ExportRenderer.FileType) throws -> Data {
     let image = try cgImage
     let data = NSMutableData()
 
     let utType: UTType
     var properties: [CFString: Any] = [kCGImageDestinationOptimizeColorForSharing: true]
-    switch dataType {
+    switch fileType {
     case .jpeg(let quality):
       utType = .jpeg
+      properties[kCGImageDestinationLossyCompressionQuality] = quality
+    case .heif(let quality):
+      utType = .heic
       properties[kCGImageDestinationLossyCompressionQuality] = quality
     case .png:
       utType = .png
@@ -472,10 +532,12 @@ public struct RenderedImage: Sendable {
         nil
       )
     else {
-      return data as Data
+      throw ExportRendererError.sharingDataEncodingFailed
     }
     CGImageDestinationAddImage(destination, image, properties as CFDictionary)
-    CGImageDestinationFinalize(destination)
+    guard CGImageDestinationFinalize(destination) else {
+      throw ExportRendererError.sharingDataEncodingFailed
+    }
     return data as Data
   }
 

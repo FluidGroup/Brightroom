@@ -56,16 +56,6 @@ import UniformTypeIdentifiers
 ///   premultiplied vs. straight alpha is moot here.
 enum CIImageStreamingFileWriter {
 
-  enum WriterError: Swift.Error {
-    case invalidExtent
-    case scratchCreationFailed
-    case mmapFailed
-    case providerCreationFailed
-    case cgImageCreationFailed
-    case destinationCreationFailed
-    case finalizeFailed
-  }
-
   /// Output rows rendered per `render(_:toBitmap:bounds:)` call. Bounds the
   /// per-strip working set; smaller = lower peak (more, smaller GPU readbacks).
   static let defaultStripHeight = 512
@@ -85,7 +75,7 @@ enum CIImageStreamingFileWriter {
       extent.width >= 1,
       extent.height >= 1
     else {
-      throw WriterError.invalidExtent
+      throw ExportRendererError.fileWriteFailed(url, step: .validatingExtent)
     }
 
     let width = Int(extent.width.rounded())
@@ -100,18 +90,18 @@ enum CIImageStreamingFileWriter {
 
     let fd = open(scratchURL.path, O_RDWR | O_CREAT | O_TRUNC, 0o600)
     guard fd >= 0 else {
-      throw WriterError.scratchCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingScratchFile)
     }
     guard ftruncate(fd, off_t(totalBytes)) == 0 else {
       close(fd)
       try? FileManager.default.removeItem(at: scratchURL)
-      throw WriterError.scratchCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingScratchFile)
     }
     let mapped = mmap(nil, totalBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
     guard let base = mapped, base != MAP_FAILED else {
       close(fd)
       try? FileManager.default.removeItem(at: scratchURL)
-      throw WriterError.mmapFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .mappingScratchFile)
     }
 
     // 2. Render strip-by-strip into the mmap'd buffer.
@@ -162,7 +152,7 @@ enum CIImageStreamingFileWriter {
     guard let provider = CGDataProvider(directInfo: info, size: off_t(totalBytes), callbacks: &callbacks) else {
       Unmanaged<MmapScratch>.fromOpaque(info).release()
       scratch.cleanup()
-      throw WriterError.providerCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingDataProvider)
     }
     // `provider` now owns `scratch` cleanup via `releaseInfo`.
 
@@ -181,7 +171,7 @@ enum CIImageStreamingFileWriter {
       shouldInterpolate: false,
       intent: .defaultIntent
     ) else {
-      throw WriterError.cgImageCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingImage)
     }
 
     // 4. Encode. CGImageDestination demand-pages pixels through the provider.
@@ -206,11 +196,11 @@ enum CIImageStreamingFileWriter {
         nil
       )
     else {
-      throw WriterError.destinationCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingDestination)
     }
     CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
     guard CGImageDestinationFinalize(destination) else {
-      throw WriterError.finalizeFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .finalizing)
     }
     // `cgImage` / `provider` drop here → `scratch.cleanup()` removes the temp file.
     withExtendedLifetime(cgImage) {}
