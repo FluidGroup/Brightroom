@@ -551,7 +551,7 @@ private extension ImageEditor.Options {
     return options
   }
 
-  static func fixedAspectRatio(_ aspectRatio: PixelAspectRatio?) -> Self {
+  static func fixedAspectRatio(_ aspectRatio: AspectRatio?) -> Self {
     var options = Self.demo()
     options.aspectRatioOptions = .fixed(aspectRatio)
     return options

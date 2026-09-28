@@ -22,25 +22,25 @@
 import Testing
 import CoreGraphics
 
-import BrightroomEngine
+import BrightroomParametric
 
-/// `PixelAspectRatio` compares by ratio, so `4:3`, `8:6` and a `4032x3024`
+/// `AspectRatio` compares by ratio, so `4:3`, `8:6` and a `4032x3024`
 /// image size are the same value. `Hashable` must agree with that, or `Set`
 /// and `Dictionary` treat equal ratios as different keys.
-struct PixelAspectRatioTests {
+struct AspectRatioTests {
 
   @Test func `Ratios with the same proportion are equal`() {
-    #expect(PixelAspectRatio(width: 4, height: 3) == PixelAspectRatio(width: 8, height: 6))
-    #expect(PixelAspectRatio(width: 4, height: 3) == PixelAspectRatio(width: 4032, height: 3024))
-    #expect(PixelAspectRatio(width: 4, height: 3) != PixelAspectRatio(width: 3, height: 4))
-    #expect(PixelAspectRatio(width: 4, height: 3).swapped() == PixelAspectRatio(width: 6, height: 8))
+    #expect(AspectRatio(width: 4, height: 3) == AspectRatio(width: 8, height: 6))
+    #expect(AspectRatio(width: 4, height: 3) == AspectRatio(width: 4032, height: 3024))
+    #expect(AspectRatio(width: 4, height: 3) != AspectRatio(width: 3, height: 4))
+    #expect(AspectRatio(width: 4, height: 3).swapped() == AspectRatio(width: 6, height: 8))
   }
 
   @Test func `Equal ratios have equal hash values`() {
-    let base = PixelAspectRatio(width: 4, height: 3)
+    let base = AspectRatio(width: 4, height: 3)
 
     for scale in 1...100 {
-      let scaled = PixelAspectRatio(width: 4 * CGFloat(scale), height: 3 * CGFloat(scale))
+      let scaled = AspectRatio(width: 4 * CGFloat(scale), height: 3 * CGFloat(scale))
       #expect(scaled == base)
       #expect(scaled.hashValue == base.hashValue, "scale \(scale)")
     }
@@ -48,7 +48,7 @@ struct PixelAspectRatioTests {
 
   @Test func `A set holds one element per ratio`() {
     let ratios = (1...100).map {
-      PixelAspectRatio(width: 16 * CGFloat($0), height: 9 * CGFloat($0))
+      AspectRatio(width: 16 * CGFloat($0), height: 9 * CGFloat($0))
     }
 
     #expect(Set(ratios).count == 1)
@@ -59,7 +59,7 @@ struct PixelAspectRatioTests {
   /// with `==`, a single lookup can still land on the equal key by chance
   /// under the per-process hash seed.
   @Test func `A dictionary finds a value through an equal ratio`() {
-    let titles: [PixelAspectRatio: String] = [
+    let titles: [AspectRatio: String] = [
       .init(width: 4, height: 3): "4:3",
       .init(width: 16, height: 9): "16:9",
     ]
@@ -80,22 +80,22 @@ struct PixelAspectRatioTests {
   /// `height / width`, which gives these edge cases.
   @Test func `Zero sides compare by their exact proportion`() {
     // 0 / 4 and 0 / -4 are +0 and -0, which are equal and hash equally.
-    #expect(PixelAspectRatio(width: 4, height: 0) == PixelAspectRatio(width: -4, height: 0))
-    #expect(PixelAspectRatio(width: 4, height: 0).hashValue == PixelAspectRatio(width: -4, height: 0).hashValue)
+    #expect(AspectRatio(width: 4, height: 0) == AspectRatio(width: -4, height: 0))
+    #expect(AspectRatio(width: 4, height: 0).hashValue == AspectRatio(width: -4, height: 0).hashValue)
 
     // A zero width gives an infinite proportion, whatever the height.
-    #expect(PixelAspectRatio(width: 0, height: 3) == PixelAspectRatio(width: 0, height: 7))
-    #expect(PixelAspectRatio(width: 0, height: 3).hashValue == PixelAspectRatio(width: 0, height: 7).hashValue)
-    #expect(PixelAspectRatio(width: -0.0, height: 3) != PixelAspectRatio(width: 0, height: 3))
+    #expect(AspectRatio(width: 0, height: 3) == AspectRatio(width: 0, height: 7))
+    #expect(AspectRatio(width: 0, height: 3).hashValue == AspectRatio(width: 0, height: 7).hashValue)
+    #expect(AspectRatio(width: -0.0, height: 3) != AspectRatio(width: 0, height: 3))
 
     // Zero by zero is NaN, which is not equal to itself.
-    #expect(PixelAspectRatio(width: 0, height: 0) != PixelAspectRatio(width: 0, height: 0))
+    #expect(AspectRatio(width: 0, height: 0) != AspectRatio(width: 0, height: 0))
   }
 
   /// `id` identifies the exact width and height pair, not the ratio, so a
   /// `ForEach` over presets such as `5:4` and `10:8` keeps one row for each.
   @Test func `Identity keeps the authored width and height apart`() {
-    #expect(PixelAspectRatio(width: 5, height: 4).id != PixelAspectRatio(width: 10, height: 8).id)
-    #expect(PixelAspectRatio(width: 5, height: 4).id == PixelAspectRatio(width: 5, height: 4).id)
+    #expect(AspectRatio(width: 5, height: 4).id != AspectRatio(width: 10, height: 8).id)
+    #expect(AspectRatio(width: 5, height: 4).id == AspectRatio(width: 5, height: 4).id)
   }
 }

@@ -30,13 +30,13 @@ public struct ImageEditorCanvas: View {
     public var proposedCrop: CropEditingState?
     public var frame: CGRect
     public var interaction: CropInteraction
-    public var preferredAspectRatio: PixelAspectRatio?
+    public var preferredAspectRatio: AspectRatio?
 
     public init(
       proposedCrop: CropEditingState?,
       frame: CGRect,
       interaction: CropInteraction,
-      preferredAspectRatio: PixelAspectRatio?
+      preferredAspectRatio: AspectRatio?
     ) {
       self.proposedCrop = proposedCrop
       self.frame = frame
@@ -143,7 +143,7 @@ public struct ImageEditorCanvas: View {
 
   private var quarterTurnInput: Binding<QuarterTurn?> = .constant(nil)
   private var straightenAngleInput: Binding<Angle?> = .constant(nil)
-  private var lockedAspectRatioInput: Binding<PixelAspectRatio?> = .constant(nil)
+  private var lockedAspectRatioInput: Binding<AspectRatio?> = .constant(nil)
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
   private var _applyAction: ApplyAction?
@@ -377,14 +377,14 @@ public struct ImageEditorCanvas: View {
 
   /// Locks the crop guide to an aspect ratio in the output orientation; nil
   /// unlocks it.
-  public consuming func lockedAspectRatio(_ ratio: PixelAspectRatio?) -> Self {
+  public consuming func lockedAspectRatio(_ ratio: AspectRatio?) -> Self {
     self.lockedAspectRatioInput = .constant(ratio)
     return self
   }
 
   /// Locks the crop guide to an aspect ratio, and writes the canvas's locked
   /// ratio back to the binding when it changes.
-  public consuming func lockedAspectRatio(_ ratio: Binding<PixelAspectRatio?>) -> Self {
+  public consuming func lockedAspectRatio(_ ratio: Binding<AspectRatio?>) -> Self {
     self.lockedAspectRatioInput = ratio
     return self
   }
@@ -441,7 +441,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
   let quarterTurnInput: Binding<QuarterTurn?>
   let straightenAngleInput: Binding<Angle?>
-  let lockedAspectRatioInput: Binding<PixelAspectRatio?>
+  let lockedAspectRatioInput: Binding<AspectRatio?>
   let resetAction: ImageEditorCanvas.ResetAction?
   let rotateAction: ImageEditorCanvas.RotateAction?
   let applyAction: ImageEditorCanvas.ApplyAction?

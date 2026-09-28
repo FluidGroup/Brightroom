@@ -71,7 +71,7 @@ public struct ImageEditor: View {
 
     public enum AspectRatioOptions: Equatable {
       case selectable
-      case fixed(PixelAspectRatio?)
+      case fixed(AspectRatio?)
     }
 
     public var aspectRatioOptions: AspectRatioOptions = .selectable

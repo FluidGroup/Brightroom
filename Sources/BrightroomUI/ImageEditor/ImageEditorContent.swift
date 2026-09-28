@@ -82,7 +82,7 @@ struct ImageEditorContent: View {
 
   var body: some View {
     // Known from the image itself, before the editing source is prepared.
-    let originalAspectRatio = PixelAspectRatio(document.image.pixelSize)
+    let originalAspectRatio = AspectRatio(document.image.pixelSize)
     let isLoaded = editingStack.loadedState != nil
     // Includes a slider value that is shown but not yet written.
     let displayedFeature = session.displayedFeature(of: document)
@@ -353,8 +353,8 @@ struct ImageEditorContent: View {
   }
 
   private func lockedAspectRatioBinding(
-    originalAspectRatio: PixelAspectRatio?
-  ) -> Binding<PixelAspectRatio?> {
+    originalAspectRatio: AspectRatio?
+  ) -> Binding<AspectRatio?> {
     Binding {
       aspectRatioSelection.aspectRatio(originalAspectRatio: originalAspectRatio)
     } set: { aspectRatio in
@@ -546,7 +546,7 @@ private struct CanvasHost: View {
   let localBlurState: LocalBlurState
   let quarterTurn: Binding<QuarterTurn?>
   let straightenAngle: Binding<CropEditingState.AdjustmentAngle?>
-  let lockedAspectRatio: Binding<PixelAspectRatio?>
+  let lockedAspectRatio: Binding<AspectRatio?>
   let resetAction: ImageEditorCanvas.ResetAction
   let rotateAction: ImageEditorCanvas.RotateAction
   let applyAction: ImageEditorCanvas.ApplyAction
@@ -578,7 +578,7 @@ private struct CanvasHost: View {
 private struct ControlHost: View {
 
   let mode: ImageEditor.Mode
-  let originalAspectRatio: PixelAspectRatio?
+  let originalAspectRatio: AspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localBlurState: LocalBlurState
   let filters: [FilterFeature]
@@ -1214,7 +1214,7 @@ private struct AdjustmentButton: View {
 
 private struct AdjustmentControl: View {
 
-  let originalAspectRatio: PixelAspectRatio?
+  let originalAspectRatio: AspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localizedStrings: ImageEditor.LocalizedStrings
   let straightenAngle: CropEditingState.AdjustmentAngle?
@@ -1365,9 +1365,9 @@ private enum AspectRatioSelection: Equatable {
 
   case freeform
   case original(AspectRatioDirection)
-  case ratio(PixelAspectRatio)
+  case ratio(AspectRatio)
 
-  init(aspectRatio: PixelAspectRatio?) {
+  init(aspectRatio: AspectRatio?) {
     if let aspectRatio {
       self = .ratio(aspectRatio)
     } else {
@@ -1387,7 +1387,7 @@ private enum AspectRatioSelection: Equatable {
     }
   }
 
-  func isRatio(_ ratio: PixelAspectRatio) -> Bool {
+  func isRatio(_ ratio: AspectRatio) -> Bool {
     if case .ratio(let selectedRatio) = self {
       return selectedRatio == ratio
     } else {
@@ -1395,7 +1395,7 @@ private enum AspectRatioSelection: Equatable {
     }
   }
 
-  func aspectRatio(originalAspectRatio: PixelAspectRatio?) -> PixelAspectRatio?
+  func aspectRatio(originalAspectRatio: AspectRatio?) -> AspectRatio?
   {
     switch self {
     case .freeform:
@@ -1407,7 +1407,7 @@ private enum AspectRatioSelection: Equatable {
     }
   }
 
-  func direction(originalAspectRatio: PixelAspectRatio?)
+  func direction(originalAspectRatio: AspectRatio?)
     -> AspectRatioDirection?
   {
     switch self {
@@ -1422,7 +1422,7 @@ private enum AspectRatioSelection: Equatable {
 
   func withDirection(
     _ direction: AspectRatioDirection,
-    originalAspectRatio: PixelAspectRatio?
+    originalAspectRatio: AspectRatio?
   ) -> Self {
     switch self {
     case .freeform:
@@ -1439,8 +1439,8 @@ private enum AspectRatioSelection: Equatable {
   }
 
   mutating func sync(
-    aspectRatio: PixelAspectRatio?,
-    originalAspectRatio: PixelAspectRatio?
+    aspectRatio: AspectRatio?,
+    originalAspectRatio: AspectRatio?
   ) {
     guard
       self.aspectRatio(originalAspectRatio: originalAspectRatio) != aspectRatio
@@ -1469,7 +1469,7 @@ private enum AspectRatioSelection: Equatable {
 
 private struct AspectRatioPicker: View {
 
-  let originalAspectRatio: PixelAspectRatio?
+  let originalAspectRatio: AspectRatio?
   let selection: AspectRatioSelection
   let localizedStrings: ImageEditor.LocalizedStrings
   let onSelect: (AspectRatioSelection) -> Void
@@ -1523,7 +1523,7 @@ private struct AspectRatioPicker: View {
 
           ForEach(Self.horizontalRectangleAspectRatios) { ratio in
             let displayedRatio = displayedRatio(for: ratio)
-            let minimizedDisplayedRatio = displayedRatio._minimized()
+            let minimizedDisplayedRatio = displayedRatio.reduced()
 
             AspectRatioButton(
               title:
@@ -1563,8 +1563,8 @@ private struct AspectRatioPicker: View {
     return true
   }
 
-  private func displayedRatio(for horizontalRatio: PixelAspectRatio)
-    -> PixelAspectRatio
+  private func displayedRatio(for horizontalRatio: AspectRatio)
+    -> AspectRatio
   {
     switch selectedDirection {
     case .horizontal:
@@ -1587,7 +1587,7 @@ private struct AspectRatioPicker: View {
     )
   }
 
-  private static let horizontalRectangleAspectRatios: [PixelAspectRatio] = [
+  private static let horizontalRectangleAspectRatios: [AspectRatio] = [
     .init(width: 16, height: 9),
     .init(width: 10, height: 8),
     .init(width: 7, height: 5),
@@ -1677,7 +1677,7 @@ private enum AspectRatioDirection {
   case vertical
   case horizontal
 
-  init(_ aspectRatio: PixelAspectRatio) {
+  init(_ aspectRatio: AspectRatio) {
     if aspectRatio.height > aspectRatio.width {
       self = .vertical
     } else {
@@ -1685,7 +1685,7 @@ private enum AspectRatioDirection {
     }
   }
 
-  func orient(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
+  func orient(_ aspectRatio: AspectRatio) -> AspectRatio {
     if AspectRatioDirection(aspectRatio) == self {
       return aspectRatio
     } else {

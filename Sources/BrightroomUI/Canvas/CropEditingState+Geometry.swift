@@ -10,6 +10,7 @@ import Foundation
 import CoreGraphics
 
 import BrightroomEngine
+import BrightroomParametric
 
 /// Image <-> platter conversions for the crop scroll view.
 ///
@@ -35,7 +36,7 @@ extension CropEditingState {
   static let minimumAuthoredCropOutputSideLength: CGFloat = 128
 
   func scrollViewContentSize() -> CGSize {
-    PixelAspectRatio(imageSize).size(byWidth: 1000)
+    AspectRatio(imageSize).size(byWidth: 1000)
   }
 
   /// The uniform image -> platter scale.

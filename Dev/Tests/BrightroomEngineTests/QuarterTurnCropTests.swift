@@ -311,7 +311,7 @@ struct QuarterTurnCropTests {
     let (editor, window) = try openCanvasView(on: stack, owner: owner)
     var latest: EditingCanvasView.StateSnapshot?
     editor.setStateHandler { latest = $0 }
-    let sourceRatio = PixelAspectRatio(width: 3, height: 2)
+    let sourceRatio = AspectRatio(width: 3, height: 2)
     editor.setLockedAspectRatio(sourceRatio)
 
     let sourceRect = CGRect(x: 50, y: 40, width: 153, height: 102)

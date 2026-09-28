@@ -55,7 +55,7 @@ public struct CropEditingState: Equatable, Sendable {
   public var rotation: QuarterTurn = .zero
 
   /// The active aspect-ratio session in the final output orientation.
-  public private(set) var _usedAspectRatio: PixelAspectRatio?
+  public private(set) var _usedAspectRatio: AspectRatio?
 
   /// A free straightening angle applied before cropping and output rotation.
   public var adjustmentAngle: AdjustmentAngle = .zero
@@ -138,7 +138,7 @@ public struct CropEditingState: Equatable, Sendable {
 
   /// Sets an output aspect ratio and fits a centered selection inside the image.
   /// The stored extent remains in the orientation before the output quarter turn.
-  public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
+  public mutating func updateCropExtent(toFitAspectRatio newAspectRatio: AspectRatio) {
     self._usedAspectRatio = newAspectRatio
     let aspectRatio = aspectRatioBeforeOutputRotation(newAspectRatio)
     self.cropExtent = CropGeometry.cropRect(
@@ -150,7 +150,7 @@ public struct CropEditingState: Equatable, Sendable {
 
   /// As `updateCropExtent(toFitAspectRatio:)`, but a no-op when the ratio is
   /// already active.
-  public mutating func updateCropExtentIfNeeded(toFitAspectRatio newAspectRatio: PixelAspectRatio) {
+  public mutating func updateCropExtentIfNeeded(toFitAspectRatio newAspectRatio: AspectRatio) {
     guard _usedAspectRatio != newAspectRatio else {
       return
     }
@@ -166,7 +166,7 @@ public struct CropEditingState: Equatable, Sendable {
   /// to the image origin. The optional aspect ratio describes the final output.
   public mutating func updateCropExtent(
     toFitBoundingBox boundingBox: CGRect,
-    respectingAspectRatio: PixelAspectRatio?
+    respectingAspectRatio: AspectRatio?
   ) {
     self._usedAspectRatio = respectingAspectRatio
     self.cropExtent = CropGeometry.cropRect(
@@ -184,7 +184,7 @@ public struct CropEditingState: Equatable, Sendable {
   }
 
   /// Converts an output aspect ratio into the stored selection's orientation.
-  func aspectRatioBeforeOutputRotation(_ aspectRatio: PixelAspectRatio) -> PixelAspectRatio {
+  func aspectRatioBeforeOutputRotation(_ aspectRatio: AspectRatio) -> AspectRatio {
     rotation.isSideways ? aspectRatio.swapped() : aspectRatio
   }
 

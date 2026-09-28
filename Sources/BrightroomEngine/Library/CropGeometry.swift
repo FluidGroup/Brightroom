@@ -40,7 +40,7 @@ public enum CropGeometry {
   public static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
-    respectingAspectRatio: PixelAspectRatio?
+    respectingAspectRatio: AspectRatio?
   ) -> CGRect {
 
     func clamp<T: Comparable>(value: T, lower: T, upper: T) -> T {
@@ -134,7 +134,7 @@ public enum CropGeometry {
     rect: CGRect,
     in imageSize: CGSize,
     straightenRadians: Double,
-    respectingAspectRatio aspectRatio: PixelAspectRatio?
+    respectingAspectRatio aspectRatio: AspectRatio?
   ) -> CGRect {
     if straightenRadians.isFinite, straightenRadians != 0 {
       return fittingStraightenedRect(
@@ -208,7 +208,7 @@ public enum CropGeometry {
   /// A centered selection of `aspectRatio` that fits inside the image
   /// after straightening and before any output quarter turn.
   public static func cropRect(
-    toFitAspectRatio aspectRatio: PixelAspectRatio,
+    toFitAspectRatio aspectRatio: AspectRatio,
     in imageSize: CGSize,
     straightenRadians: Double = 0
   ) -> CGRect {
@@ -244,7 +244,7 @@ public enum CropGeometry {
     within cropExtent: CGRect,
     in imageSize: CGSize,
     straightenRadians: Double = 0,
-    respectingAspectRatio: PixelAspectRatio?
+    respectingAspectRatio: AspectRatio?
   ) -> CGRect {
 
     let transform = CGAffineTransform(scaleX: 1, y: -1)

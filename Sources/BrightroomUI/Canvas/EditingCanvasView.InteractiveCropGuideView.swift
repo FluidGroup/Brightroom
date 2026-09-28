@@ -21,6 +21,7 @@
 
 import UIKit
 import BrightroomEngine
+import BrightroomParametric
 
 extension EditingCanvasView {
   
@@ -67,7 +68,7 @@ extension EditingCanvasView {
 
     private var maximumRect: CGRect?
 
-    private(set) var lockedAspectRatio: PixelAspectRatio?
+    private(set) var lockedAspectRatio: AspectRatio?
 
     private let minimumSize = CGSize(width: 80, height: 80)
     
@@ -265,7 +266,7 @@ extension EditingCanvasView {
    
     }
 
-    func setLockedAspectRatio(_ aspectRatio: PixelAspectRatio?) {
+    func setLockedAspectRatio(_ aspectRatio: AspectRatio?) {
       lockedAspectRatio = aspectRatio
     }
 

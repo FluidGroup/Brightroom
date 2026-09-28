@@ -101,7 +101,7 @@ final class EditingCanvasView: UIView {
     var interaction: CropInteraction = []
 
     /// The locked aspect ratio in the final output orientation.
-    var preferredAspectRatio: PixelAspectRatio?
+    var preferredAspectRatio: AspectRatio?
 
     var snapshot: StateSnapshot {
       .init(
@@ -688,7 +688,7 @@ final class EditingCanvasView: UIView {
     setProposedCrop(crop)
   }
 
-  func setLockedAspectRatio(_ ratio: PixelAspectRatio?) {
+  func setLockedAspectRatio(_ ratio: AspectRatio?) {
     guard state.preferredAspectRatio != ratio else {
       return
     }
@@ -727,7 +727,7 @@ final class EditingCanvasView: UIView {
     }
 
     crop.updateCropExtentIfNeeded(
-      toFitAspectRatio: PixelAspectRatio(crop.outputCropExtent.size).swapped()
+      toFitAspectRatio: AspectRatio(crop.outputCropExtent.size).swapped()
     )
     setProposedCrop(crop, forcesLayout: true)
   }
@@ -1294,7 +1294,7 @@ extension EditingCanvasView {
 
           let bounds = self.bounds.inset(by: contentInset)
 
-          let size = PixelAspectRatio(crop.outputCropExtent.size)
+          let size = AspectRatio(crop.outputCropExtent.size)
             .sizeThatFits(in: bounds.size)
 
           return .init(
@@ -1341,7 +1341,7 @@ extension EditingCanvasView {
 
           let bounds = self.bounds.inset(by: contentInset)
 
-          let size = PixelAspectRatio(crop.outputCropExtent.size)
+          let size = AspectRatio(crop.outputCropExtent.size)
             .sizeThatFits(in: bounds.size)
 
           return .init(

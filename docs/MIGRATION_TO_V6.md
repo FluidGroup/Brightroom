@@ -1125,6 +1125,22 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | --- | --- |
 | `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | `BrightroomMetalLibrary`, `BrightroomMetalLibraryError`. The library holds more than the brush stamp. |
 
+## Renamed Engine API
+
+BrightroomEngine keeps the document and its image. Crop value types moved
+next to `CropFeature` in BrightroomParametric, so add
+`import BrightroomParametric` where you name them.
+
+### Aspect Ratio
+
+"Pixel aspect ratio" names the shape of one pixel
+(`AVVideoPixelAspectRatioKey`), not the proportion of an image or a crop.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `PixelAspectRatio` (BrightroomEngine) | `AspectRatio` (BrightroomParametric) |
+| `PixelAspectRatio._minimized()` | `AspectRatio.reduced()` |
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.

@@ -185,7 +185,7 @@ struct EditingCanvasViewFeatureFlowTests {
   @Test func `A reloaded crop across a sideways turn turns the aspect-ratio lock`() throws {
     let initial = ImageEditorFeature(imageSize: imageSize)
     let harness = makeLoadedCanvasView(feature: initial, target: .crop)
-    let landscape = PixelAspectRatio(width: 4, height: 3)
+    let landscape = AspectRatio(width: 4, height: 3)
 
     harness.canvasView.setLockedAspectRatio(landscape)
     harness.canvasView.applyPendingCrop()

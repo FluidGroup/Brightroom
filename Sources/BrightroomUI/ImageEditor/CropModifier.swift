@@ -71,7 +71,7 @@ public struct CropModifier: Sendable {
   /// `aspectRatio` if one is given and left unchanged otherwise.
   public static func faceDetection(
     paddingBias: CGFloat = 1.3,
-    aspectRatio: PixelAspectRatio? = nil
+    aspectRatio: AspectRatio? = nil
   ) -> CropModifier {
     .init { image, crop in
 
@@ -111,7 +111,7 @@ public struct CropModifier: Sendable {
       framed.updateCropExtent(
         toFitBoundingBox: boundingBox,
         respectingAspectRatio: aspectRatio
-          ?? crop.aspectRatioBeforeOutputRotation(PixelAspectRatio(imageSize))
+          ?? crop.aspectRatioBeforeOutputRotation(AspectRatio(imageSize))
       )
       return framed
     }
