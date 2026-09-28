@@ -32,8 +32,8 @@ package struct PreviewSource: Equatable, Sendable {
   /// domain documents of this image are authored in.
   package let source: SourceImage
 
-  /// A small oriented thumbnail (short side 180 pixels), used for previews
-  /// such as filter swatches.
+  /// A small oriented thumbnail (short side at most 180 pixels), used for
+  /// previews such as filter swatches.
   package let thumbnail: CIImage
 
   /// The oriented, downsampled editing source (zero origin). It is
@@ -178,7 +178,8 @@ extension PreviewSource {
   /// one intent, and neither module can enforce the relation at compile time.
   static let previewShortSideLength: CGFloat = 2560
 
-  /// The short side of `thumbnail`.
+  /// The largest short side of `thumbnail`; a smaller source is not
+  /// upscaled.
   static let thumbnailShortSideLength: CGFloat = 180
 
   /// Decodes `source` into a thumbnail and an editing source, and uploads the

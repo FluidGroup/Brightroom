@@ -81,8 +81,8 @@ open Dev/Brightroom.xcodeproj
 The vocabulary is defined in `docs/vision-of-editing.md` ("Vocabulary"). Use
 one word per concept in names and docs.
 
-- **Source image** (`SourceImage`): the image an edit is authored over. It is
-  fixed for a document's lifetime.
+- **Source image** (`SourceImage`, `EditingDocument.source`): the image an
+  edit is authored over. It is fixed for a document's lifetime.
 - **Feature**: one step of an edit. The **root feature** is the feature a
   document holds, such as `ImageEditorFeature`.
 - **Document** (`EditingDocument`): the source image, the root feature, and

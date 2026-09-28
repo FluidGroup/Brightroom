@@ -8,8 +8,8 @@ import BrightroomParametric
 @testable import BrightroomUI
 
 /// Hosts the editors over a document binding in a window: they prepare the
-/// document's image themselves, write nothing on mount, and write canvas
-/// changes back without committing.
+/// document's source image themselves, write nothing on mount, and write
+/// canvas changes back without committing.
 @MainActor
 struct HostedEditorTests {
 

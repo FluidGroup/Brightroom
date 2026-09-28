@@ -47,7 +47,7 @@ enum PreviewTextureUpload {
   /// preparation, off the main actor, rather than on the first frame.
   private static let context: CIContext? = {
     guard let device else { return nil }
-    return CIContext(mtlDevice: device, options: [.name: "Brightroom.SourceUpload"])
+    return CIContext(mtlDevice: device, options: [.name: "Brightroom.PreviewTextureUpload"])
   }()
 
   /// Returns an oriented, GPU-resident `CIImage` for `cgImage`, or `nil` if no

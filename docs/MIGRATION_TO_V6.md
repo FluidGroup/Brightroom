@@ -25,8 +25,8 @@ Brightroom 6 is a major release with four themes:
 
 The name `EditingDocument` changed meaning. In 5.x it was the parametric edit
 itself, with a `MainTree`; that role is now your root feature. In Brightroom
-6 it is BrightroomEngine's value that pairs a root feature with its image and
-history.
+6 it is BrightroomEngine's value that pairs a root feature with its source
+image and history.
 
 Samples marked `// Brightroom 5.x` show the old API and do not compile against
 Brightroom 6. Every other sample in this guide compiles against Brightroom 6.
@@ -111,8 +111,8 @@ sections.
 | 5.1.1 | 6.0 | See |
 | --- | --- | --- |
 | `ImageProvider`, `ImageSource`, `ImageProviderError` | `SourceImage`, `SourceImageError` | [SourceImage](#sourceimage-replaces-imageprovider) |
-| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Removed. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-no-longer-public) |
-| `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-no-longer-public) |
+| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Removed. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-removed) |
+| `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-removed) |
 | `EditingFeatureTree`, `FeatureTreePoint` | Removed. Address features by member name. | [Addressing Features](#addressing-features) |
 | `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
 | `CropGeometry` | `CropGeometry` (BrightroomParametric) | [Crop Conversions](#crop-conversions) |
@@ -728,15 +728,7 @@ undo steps (100 by default), and `history.removeAll()` drops them.
 `ImageEditor` and `ImageEditorCanvas` edit. Your own editor can use
 `EditingDocument` with its own root feature.
 
-If you built against an unreleased Brightroom 6 snapshot, the document's
-image was named `image`. It is `source` now, matching the vocabulary word
-"source image":
-
-| Earlier 6.0 snapshot | 6.0 |
-| --- | --- |
-| `EditingDocument.image`, `init(image:feature:history:)`, `ImageEditorDocument(image:)`, `ImageEditorDocument(image:cropModifier:)` | `EditingDocument.source`, `init(source:feature:history:)`, `ImageEditorDocument(source:)`, `ImageEditorDocument(source:cropModifier:)` |
-
-### EditingStack Is No Longer Public
+### EditingStack Is Removed
 
 `EditingStack` is gone. BrightroomUI's editors prepare their preview
 themselves, with a package-internal loader that holds no edit and no history;
@@ -998,8 +990,8 @@ second name for the same four values and is removed. Use `QuarterTurn`:
 - `init(editingStack:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:stateHandler:)`
   and the variant with `cropInsideOverlay`/`cropOutsideOverlay` take
   `document: Binding<ImageEditorDocument>` instead of `editingStack:`. The
-  canvas prepares the document's image itself, and a document of another
-  image rebuilds it.
+  canvas prepares the document's source image itself, and a document of
+  another image rebuilds it.
 - Changes made on the canvas (applied crops and brush strokes) are written
   to the document's `feature`. The canvas never commits; call
   `document.commit()` when a change should become an undo step.
@@ -1300,8 +1292,8 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 
 ## Renamed Engine API
 
-BrightroomEngine keeps the document and its image. Crop value types moved
-next to `CropFeature` in BrightroomParametric, so add
+BrightroomEngine keeps the document and its source image. Crop value types
+moved next to `CropFeature` in BrightroomParametric, so add
 `import BrightroomParametric` where you name them.
 
 ### Aspect Ratio

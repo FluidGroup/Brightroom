@@ -153,7 +153,7 @@ struct DocumentCreationTests {
 
   // MARK: - Rendering
 
-  @Test func `Rendering a document renders its feature over its image`() async throws {
+  @Test func `Rendering a document renders its feature over its source image`() async throws {
     var document = EditingDocument(source: try Fixtures.makeImage())
     document.feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 20, height: 10))
     let rendered = try await document.render()
