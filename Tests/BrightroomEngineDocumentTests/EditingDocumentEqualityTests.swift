@@ -83,7 +83,7 @@ struct EditingDocumentEqualityTests {
     let rebuilt = ImageEditorFeature(
       effects: .init(exposure: ExposureFeature(ev: 1)),
       crop: CropFeature(
-        displayCropRect: CGRect(origin: .zero, size: Fixtures.rotatedJPEGSize),
+        topLeftRect: CGRect(origin: .zero, size: Fixtures.rotatedJPEGSize),
         imageSize: Fixtures.rotatedJPEGSize
       )
     )

@@ -17,10 +17,10 @@ extension CropFeature {
     straighten: Double = 0
   ) -> CropFeature {
     CropFeature(
-      displayCropRect: cropRect ?? CGRect(origin: .zero, size: imageSize),
+      topLeftRect: cropRect ?? CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize,
       quarterTurn: rotation,
-      straighten: straighten
+      straightenRadians: straighten
     )
   }
 }

@@ -575,9 +575,9 @@ final class EditingCanvasView: UIView {
       return
     }
 
-    let cropChanged = feature.crop.isRenderingEquivalent(
+    let cropChanged = feature.crop.isPixelEquivalent(
       to: self.feature.crop,
-      orientedImageSize: source.imageSize
+      imageSize: source.imageSize
     ) == false
     let localBlurChanged = feature.localBlur != self.feature.localBlur
     self.feature = feature
@@ -1157,9 +1157,9 @@ extension EditingCanvasView {
 
   private func applyCropToFeatureIfRenderingChanged(_ crop: CropEditingState) {
     guard
-      feature.crop.isRenderingEquivalent(
+      feature.crop.isPixelEquivalent(
         to: crop.makeCropFeature(),
-        orientedImageSize: crop.imageSize
+        imageSize: crop.imageSize
       ) == false
     else {
       return
@@ -1514,7 +1514,7 @@ extension EditingCanvasView {
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
     let shouldResetToolSurface = syncsViewportFromCropSurface
       || isContentSizeChanged
-      || toolSurface.lastAppliedCrop?.isRenderingEquivalent(to: crop) != true
+      || toolSurface.lastAppliedCrop?.isPixelEquivalent(to: crop) != true
 
     // Resolve and validate the frame BEFORE any write so a degenerate layout
     // pass cannot leave the surface half-configured.
@@ -1901,7 +1901,7 @@ extension EditingCanvasView {
     if
       let baselineCrop = scrollViewAdjustmentSession?.baselineCrop,
       let recordedCrop,
-      baselineCrop.isRenderingEquivalent(to: recordedCrop)
+      baselineCrop.isPixelEquivalent(to: recordedCrop)
     {
       setProposedCrop(baselineCrop)
     }

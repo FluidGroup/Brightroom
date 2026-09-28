@@ -24,9 +24,9 @@ import Foundation
 import CoreGraphics
 
 @testable import BrightroomEngine
-import BrightroomParametric
+@testable import BrightroomParametric
 
-/// Verifies the crop geometry shared by engine canonicalization and UI editing,
+/// Verifies the crop geometry shared by pixel alignment and UI editing,
 /// including bounds, aspect fitting, and display-coordinate conversion.
 struct CropGeometryTests {
 

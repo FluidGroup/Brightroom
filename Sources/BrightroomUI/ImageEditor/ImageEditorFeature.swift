@@ -129,7 +129,7 @@ public struct ImageEditorFeature: Feature, Equatable {
     self.effects = .init()
     self.localBlur = nil
     self.crop = CropFeature(
-      displayCropRect: CGRect(origin: .zero, size: imageSize),
+      topLeftRect: CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize
     )
   }
@@ -160,8 +160,8 @@ extension ImageEditorFeature {
 
   /// Replaces the crop geometry with a crop-editing state.
   ///
-  /// The rect is pixel-snapped through the engine snapper
-  /// (`CropFeature(displayCropRect:…)`), the same one `EditingCanvasView` commits
+  /// The rect is pixel-snapped by
+  /// `CropFeature(topLeftRect:…)`, the same one `EditingCanvasView` commits
   /// through.
   public mutating func setCrop(_ crop: CropEditingState) {
     self.crop = crop.makeCropFeature()

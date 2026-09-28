@@ -73,7 +73,7 @@ public struct CropEditingState: Equatable, Sendable {
     // Containment uses the straightened selection, which may extend past the
     // unrotated image bounds while still sampling entirely inside the source.
     self.cropExtent = CropGeometry.fittingRect(
-      rect: cropFeature.displayCropRect(imageSize: imageSize),
+      rect: cropFeature.topLeftRect(imageSize: imageSize),
       in: imageSize,
       straightenRadians: cropFeature.straightenRadians,
       respectingAspectRatio: nil
@@ -82,14 +82,15 @@ public struct CropEditingState: Equatable, Sendable {
     self.adjustmentAngle = .radians(cropFeature.straightenRadians)
   }
 
-  /// Creates a stored crop feature (y-down → y-up), using the engine's pixel
-  /// canonicalization for the selection before its output quarter turn.
+  /// Creates a stored crop feature (y-down → y-up), using the pixel
+  /// alignment of `CropFeature(topLeftRect:…)` for the selection before its
+  /// output quarter turn.
   func makeCropFeature() -> CropFeature {
     CropFeature(
-      displayCropRect: cropExtent,
+      topLeftRect: cropExtent,
       imageSize: imageSize,
       quarterTurn: rotation,
-      straighten: adjustmentAngle.radians
+      straightenRadians: adjustmentAngle.radians
     )
   }
 
@@ -190,13 +191,13 @@ public struct CropEditingState: Equatable, Sendable {
 
   // MARK: - Rendering equivalence
 
-  /// Whether two working states render identically, through the engine's
-  /// integer pixel-snap crop equivalence. The UI uses this to decide whether a
+  /// Whether two working states render identically, through
+  /// `CropFeature.isPixelEquivalent(to:imageSize:)`. The UI uses this to decide whether a
   /// crop gesture actually changed the rendered result.
-  public func isRenderingEquivalent(to other: CropEditingState) -> Bool {
-    makeCropFeature().isRenderingEquivalent(
+  public func isPixelEquivalent(to other: CropEditingState) -> Bool {
+    makeCropFeature().isPixelEquivalent(
       to: other.makeCropFeature(),
-      orientedImageSize: imageSize
+      imageSize: imageSize
     )
   }
 }

@@ -83,12 +83,12 @@ struct ImageEditorFeatureTests {
 
     document.setCrop(crop)
 
-    // Pixel-snapped through the engine snapper, the one EditingCanvasView commits through.
+    // Pixel-aligned by CropFeature(topLeftRect:), the same way EditingCanvasView commits through.
     #expect(document.crop == CropFeature(
-      displayCropRect: crop.cropExtent,
+      topLeftRect: crop.cropExtent,
       imageSize: imageSize,
       quarterTurn: crop.rotation,
-      straighten: crop.adjustmentAngle.radians
+      straightenRadians: crop.adjustmentAngle.radians
     ))
     #expect(document.crop.rect == document.crop.rect.integral)
     #expect(document.crop.quarterTurn == .counterclockwise || document.crop.quarterTurn == .clockwise)
@@ -97,7 +97,7 @@ struct ImageEditorFeatureTests {
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     document.setCrop(crop)
     #expect(
-      document.crop.displayCropRect(imageSize: imageSize)
+      document.crop.topLeftRect(imageSize: imageSize)
         == CGRect(x: 10, y: 20, width: 200, height: 100)
     )
     #expect(document.crop.rect == CGRect(x: 10, y: 180, width: 200, height: 100))

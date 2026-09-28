@@ -197,7 +197,7 @@ struct RendererTests {
   }
 }
 
-struct RenderCropTests {
+struct PixelAlignedCropTests {
 
   @Test(arguments: [
     CGRect(x: 0.05, y: 0.05, width: 0.2, height: 0.2),
@@ -205,10 +205,10 @@ struct RenderCropTests {
   ], QuarterTurn.allCases)
   func `Unrepresentable straightened crops use a stable single pixel`(input: CGRect, rotation: QuarterTurn) {
     let imageSize = CGSize(width: 300, height: 200)
-    let first = RenderCrop(
-      cropRectYDown: input,
+    let first = PixelAlignedCrop(
+      topLeftRect: input,
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straightenRadians: .pi / 4
     )
     let crop = first.cropExtent
@@ -218,10 +218,10 @@ struct RenderCropTests {
     #expect(crop.midY - halfFootprint >= -1e-8)
     #expect(crop.midX + halfFootprint <= imageSize.width + 1e-8)
     #expect(crop.midY + halfFootprint <= imageSize.height + 1e-8)
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straightenRadians: .pi / 4
     )
     #expect(second == first)
@@ -229,14 +229,14 @@ struct RenderCropTests {
 
   @Test func `A tiny straightened source retains a stable minimum canvas`() {
     let size = CGSize(width: 1, height: 1)
-    let first = RenderCrop(
-      cropRectYDown: CGRect(origin: .zero, size: size),
+    let first = PixelAlignedCrop(
+      topLeftRect: CGRect(origin: .zero, size: size),
       imageSize: size,
       straightenRadians: .pi / 4
     )
     #expect(first.cropExtent == CGRect(origin: .zero, size: size))
-    #expect(RenderCrop(
-      cropRectYDown: first.cropExtent,
+    #expect(PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: size,
       straightenRadians: .pi / 4
     ) == first)
@@ -248,20 +248,20 @@ struct RenderCropTests {
     let expected = CGRect(x: requested.midX - 60.5, y: requested.midY - 35, width: 121, height: 70)
 
     for rotation in QuarterTurn.allCases {
-      let first = RenderCrop(
-        cropRectYDown: requested,
+      let first = PixelAlignedCrop(
+        topLeftRect: requested,
         imageSize: imageSize,
-        rotation: rotation,
+        quarterTurn: rotation,
         straightenRadians: .pi / 6
       )
       #expect(abs(first.cropExtent.minX - expected.minX) < 1e-8)
       #expect(abs(first.cropExtent.minY - expected.minY) < 1e-8)
       #expect(first.cropExtent.size == expected.size)
 
-      let second = RenderCrop(
-        cropRectYDown: first.cropExtent,
+      let second = PixelAlignedCrop(
+        topLeftRect: first.cropExtent,
         imageSize: imageSize,
-        rotation: rotation,
+        quarterTurn: rotation,
         straightenRadians: .pi / 6
       )
       #expect(second == first)
@@ -269,8 +269,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes image size to pixel dimensions`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0, y: 0, width: 100, height: 100),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0, y: 0, width: 100, height: 100),
       imageSize: .init(width: 99.999999999, height: 100.2)
     )
 
@@ -278,8 +278,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes fractional origin inward`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 3.4, width: 20.8, height: 30.9),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 3.4, width: 20.8, height: 30.9),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -287,8 +287,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes fractional max inward`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0, y: 0, width: 999.8, height: 499.8),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0, y: 0, width: 999.8, height: 499.8),
       imageSize: .init(width: 1000, height: 1000)
     )
 
@@ -296,8 +296,8 @@ struct RenderCropTests {
   }
 
   @Test func `treats near integers as integers`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(
         x: 0.000000001,
         y: 0.000000001,
         width: 99.999999998,
@@ -310,8 +310,8 @@ struct RenderCropTests {
   }
 
   @Test func `clamps outside image bounds`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: -10.4, y: -20.1, width: 150.9, height: 130.2),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: -10.4, y: -20.1, width: 150.9, height: 130.2),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -319,8 +319,8 @@ struct RenderCropTests {
   }
 
   @Test func `sub pixel crop falls back to nearest single pixel`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 10.2, y: 20.2, width: 0.2, height: 0.2),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 10.2, y: 20.2, width: 0.2, height: 0.2),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -328,8 +328,8 @@ struct RenderCropTests {
   }
 
   @Test func `broken crop falls back to single pixel at origin`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(
         x: CGFloat.nan,
         y: CGFloat.nan,
         width: CGFloat.nan,
@@ -342,14 +342,14 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalization is idempotent`() {
-    let first = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
+    let first = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100)
     )
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: first.imageSize.cgSize,
-      rotation: first.rotation,
+      quarterTurn: first.quarterTurn,
       straightenRadians: first.straightenRadians
     )
 
@@ -360,11 +360,11 @@ struct RenderCropTests {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cropRect = CropGeometry.cropRect(toFitAspectRatio: .init(width: 4, height: 5), in: imageSize)
 
-    let first = RenderCrop(cropRectYDown: cropRect, imageSize: imageSize)
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let first = PixelAlignedCrop(topLeftRect: cropRect, imageSize: imageSize)
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: first.imageSize.cgSize,
-      rotation: first.rotation,
+      quarterTurn: first.quarterTurn,
       straightenRadians: first.straightenRadians
     )
 
@@ -372,14 +372,14 @@ struct RenderCropTests {
   }
 
   @Test func `retains rotation and adjustment angle`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100),
-      rotation: .counterclockwise,
+      quarterTurn: .counterclockwise,
       straightenRadians: 0.25 * .pi / 180
     )
 
-    #expect(crop.rotation == .counterclockwise)
+    #expect(crop.quarterTurn == .counterclockwise)
     #expect(abs(crop.straightenRadians - 0.25 * .pi / 180) <= 1e-12)
   }
 
@@ -387,14 +387,14 @@ struct RenderCropTests {
 
 /// Pins the shared y-flip + integer-snap contract on `CropFeature` that UI crop
 /// commits (`CropEditingState`) and the engine bridge both flow through. If these
-/// drift, `isRenderingEquivalent` oscillates and the live crop jitters / reverts.
+/// drift, `isPixelEquivalent` oscillates and the live crop jitters / reverts.
 struct CropFeatureDisplaySpaceTests {
 
   @Test func `display rect flip maps y-down top-left to y-up bottom-left`() {
     let imageSize = CGSize(width: 200, height: 100)
     // y-down display rect anchored at the top-left of the image.
     let feature = CropFeature(
-      displayCropRect: .init(x: 10, y: 20, width: 80, height: 30),
+      topLeftRect: .init(x: 10, y: 20, width: 80, height: 30),
       imageSize: imageSize
     )
     // Stored (y-up) rect: top edge (display y=20) becomes the far edge from the
@@ -413,18 +413,18 @@ struct CropFeatureDisplaySpaceTests {
 
     for (displayRect, rotation, straighten) in cases {
       let feature = CropFeature(
-        displayCropRect: displayRect,
+        topLeftRect: displayRect,
         imageSize: imageSize,
         quarterTurn: rotation,
-        straighten: straighten
+        straightenRadians: straighten
       )
       // Re-seeding the working model from the stored crop and re-committing must
       // be a fixed point — otherwise document-follow fights the live viewport.
       let reseeded = CropFeature(
-        displayCropRect: feature.displayCropRect(imageSize: imageSize),
+        topLeftRect: feature.topLeftRect(imageSize: imageSize),
         imageSize: imageSize,
         quarterTurn: feature.quarterTurn,
-        straighten: feature.straightenRadians
+        straightenRadians: feature.straightenRadians
       )
       #expect(reseeded.rect == feature.rect, "rect @ \(rotation)")
       #expect(reseeded.quarterTurn == feature.quarterTurn, "rotation @ \(rotation)")
@@ -434,7 +434,7 @@ struct CropFeatureDisplaySpaceTests {
 
 }
 
-struct RenderCropRendererTests {
+struct PixelAlignedCropRendererTests {
 
   @Test func `render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)

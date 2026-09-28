@@ -21,13 +21,12 @@
 
 import CoreGraphics
 
-import BrightroomParametric
-
-/// Crop fitting and coordinate conversions shared by the engine and UI.
+/// Crop fitting and coordinate conversions shared by pixel alignment and the
+/// crop UI.
 ///
 /// The math is coordinate-convention-agnostic for clamping and aspect fitting:
-/// pass the crop rect and image size in the SAME space (the engine and UI use
-/// y-down display space; `CropFeature` stores y-up — both work as long as the
+/// pass the crop rect and image size in the SAME space (pixel alignment and
+/// the UI use y-down top-left coordinates; `CropFeature` stores y-up — both work as long as the
 /// rect and bounds share a convention). `cropRect(toFitBoundingBox:)` is the one
 /// exception and documents its y-flip explicitly.
 public enum CropGeometry {
@@ -179,7 +178,7 @@ public enum CropGeometry {
     let sine = abs(CGFloat(sin(straightenRadians)))
     let sourceWidth = cosine * rect.width + sine * rect.height
     let sourceHeight = sine * rect.width + cosine * rect.height
-    let epsilon = RenderGeometry.pixelEpsilon
+    let epsilon = PixelAlignedCrop.pixelEpsilon
     if rect.midX - sourceWidth / 2 >= -epsilon,
       rect.midX + sourceWidth / 2 <= imageSize.width + epsilon,
       rect.midY - sourceHeight / 2 >= -epsilon,
@@ -235,7 +234,7 @@ public enum CropGeometry {
   /// crop rect.
   ///
   /// The box is scaled by the current crop extent's size and flipped from the
-  /// detection's y-up normalized space into the engine's y-down display space,
+  /// detection's y-up normalized space into y-down top-left coordinates,
   /// then fitted against the straightened source. Both the crop and aspect ratio
   /// are expressed before output rotation. `cropExtent` supplies only the scale
   /// of the box; the result is anchored against the image origin.

@@ -157,7 +157,7 @@ struct EditingCanvasViewFeatureFlowTests {
 
     let committed = try #require(harness.emitted.last)
     #expect(committed.effects.exposure == exposure)
-    let rect = committed.crop.displayCropRect(imageSize: imageSize)
+    let rect = committed.crop.topLeftRect(imageSize: imageSize)
     #expect(rect.width == rect.height)
   }
 

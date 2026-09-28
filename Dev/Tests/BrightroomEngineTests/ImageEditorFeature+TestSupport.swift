@@ -19,7 +19,7 @@ extension ImageEditorFeature {
   func withCropNeutralized(imageSize: CGSize) -> Self {
     var copy = self
     copy.crop = CropFeature(
-      displayCropRect: CGRect(origin: .zero, size: imageSize),
+      topLeftRect: CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize
     )
     return copy

@@ -22,6 +22,8 @@
 import CoreGraphics
 import ImageIO
 
+import BrightroomParametric
+
 extension CGContext {
 
   @discardableResult

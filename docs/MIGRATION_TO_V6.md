@@ -604,7 +604,7 @@ over it. It no longer holds an edit or a history.
 | The public setter of `loadedState` | None; `loadedState` is read-only |
 | `EffectPipeline.applyIgnoringFailure(to:radiusReferenceExtent:)`, `EffectPipeline.hasEnabledEffects` | Render the effects with `FeatureRenderer` |
 | `BrightRoomImageRenderer(source:orientation:)`, `BrightRoomImageRenderer.edit`, `BrightRoomImageRenderer.Edit` | `BrightRoomImageRenderer(source:orientation:document:)`, `BrightRoomImageRenderer.document` |
-| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` |
+| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)`. See [Crop Conversions](#crop-conversions). |
 
 `makeRenderer(document:)` has an overload for an optional document, which
 throws the new `EditingStackError.documentUnavailable` when the document is
@@ -931,8 +931,8 @@ let squareCrop = CropModifier { _, crop in
 ## Crop Rectangles and Output Rotation
 
 `CropFeature` evaluates straighten → crop → exact quarter turn. `rect`
-(5.x `cropRect`), `displayCropRect(imageSize:)`,
-`CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)`, and
+(5.x `cropRect`), `topLeftRect(imageSize:)`,
+`CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)`, and
 `CropEditingState.cropExtent` describe the selection after straightening and
 before the quarter turn. In 5.1.0 they described the frame in the output
 orientation, turned about its center.
@@ -986,7 +986,7 @@ relying on the compiler to find them.
   and a `straightenRadians:` parameter on
   `CropGeometry.cropRect(toFitAspectRatio:in:)` and
   `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)`.
-- `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` with a
+- `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` with a
   non-zero `straighten` now fits the selection so its straightened footprint
   lies inside the input, shrinking it uniformly and moving it only if needed,
   and then snaps its dimensions inward; the origin can stay fractional. 5.1.0
@@ -1140,6 +1140,22 @@ next to `CropFeature` in BrightroomParametric, so add
 | --- | --- |
 | `PixelAspectRatio` (BrightroomEngine) | `AspectRatio` (BrightroomParametric) |
 | `PixelAspectRatio._minimized()` | `AspectRatio.reduced()` |
+
+### Crop Conversions
+
+The y-down conversions and the pixel-grid comparison were extensions that
+BrightroomEngine added to `CropFeature`. They are now part of `CropFeature`
+in BrightroomParametric, together with `CropGeometry`. "Display" is kept for
+the viewport, and the comparison checks the pixels a crop selects, not how
+it renders.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` |
+| `CropFeature.displayCropRect(imageSize:)` | `CropFeature.topLeftRect(imageSize:)` |
+| `CropFeature.isRenderingEquivalent(to:orientedImageSize:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
+| `CropEditingState.isRenderingEquivalent(to:)` | `CropEditingState.isPixelEquivalent(to:)` |
+| `CropGeometry` (BrightroomEngine) | `CropGeometry` (BrightroomParametric), with the same members |
 
 ## Migration Checklist
 

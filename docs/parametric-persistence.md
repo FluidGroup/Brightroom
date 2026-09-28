@@ -307,7 +307,7 @@ exchanged:
 - `rotation` `-90` or `-270`, with a stored `cropRect` of `(x, y, w, h)`: use
   `(x + (w − h) / 2, y + (h − w) / 2, h, w)`. The center stays at
   `(x + w/2, y + h/2)`, and the output is still w × h, as in 5.1.0.
-  BrightroomEngine's `CropGeometry.rect(_:turnedBy:)` computes the same
+  BrightroomParametric's `CropGeometry.rect(_:turnedBy:)` computes the same
   rectangle.
 - Example: on a 300 × 200 image, a schema 2 frame `(50, −50, 200, 300)` with
   `rotation` `-90` becomes `(0, 0, 300, 200)` with `.counterclockwise`: the
@@ -316,8 +316,8 @@ exchanged:
   reproduces 5.1.0's geometry, which resampled such crops by the same half
   pixel. ImageEditor keeps an untouched crop exactly, so reopening it and
   pressing Done leaves the half pixel in place. A host that wants integer
-  edges must canonicalize while converting, with BrightroomEngine's
-  `CropFeature(displayCropRect:imageSize:quarterTurn:straighten:)` (y-down
+  edges must canonicalize while converting, with
+  `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` (y-down
   input). Without straightening it snaps the edges inward, which drops the
   half-pixel row and column, so the output becomes (w − 1) × (h − 1) instead
   of 5.1.0's w × h. With straightening it keeps a fractional origin, and the

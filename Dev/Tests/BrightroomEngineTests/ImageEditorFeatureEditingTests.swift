@@ -29,7 +29,7 @@ struct ImageEditorFeatureEditingTests {
   @Test func `A resumed feature is installed unchanged`() {
     var restored = ImageEditorFeature(
       effects: .init(),
-      crop: CropFeature(displayCropRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
+      crop: CropFeature(topLeftRect: CGRect(origin: .zero, size: imageSize), imageSize: imageSize)
     )
     // Members assigned after construction are ordinary values too.
     restored.effects.exposure = ExposureFeature(ev: 0.9)
@@ -70,7 +70,7 @@ struct ImageEditorFeatureEditingTests {
       }
     )
 
-    let rect = document.feature.crop.displayCropRect(imageSize: imageSize)
+    let rect = document.feature.crop.topLeftRect(imageSize: imageSize)
     #expect(rect.width == rect.height)
     #expect(!document.canUndo)
   }
@@ -109,7 +109,7 @@ struct ImageEditorFeatureEditingTests {
       cropModifier: .faceDetection(aspectRatio: .square)
     )
 
-    let rect = document.feature.crop.displayCropRect(imageSize: imageSize)
+    let rect = document.feature.crop.topLeftRect(imageSize: imageSize)
     #expect(rect.width == rect.height)
   }
 
