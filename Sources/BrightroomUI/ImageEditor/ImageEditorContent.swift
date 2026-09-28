@@ -28,7 +28,7 @@ import UIKit
 struct ImageEditorContent: View {
 
   @Binding var document: ImageEditorDocument
-  let editingStack: EditingStack
+  let previewSourceLoader: PreviewSourceLoader
   let options: ImageEditor.Options
   let localizedStrings: ImageEditor.LocalizedStrings
   let onDone: @MainActor () -> Void
@@ -54,14 +54,14 @@ struct ImageEditorContent: View {
 
   init(
     document: Binding<ImageEditorDocument>,
-    editingStack: EditingStack,
+    previewSourceLoader: PreviewSourceLoader,
     options: ImageEditor.Options,
     localizedStrings: ImageEditor.LocalizedStrings,
     onDone: @escaping @MainActor () -> Void,
     onCancel: (@MainActor () -> Void)?
   ) {
     self._document = document
-    self.editingStack = editingStack
+    self.previewSourceLoader = previewSourceLoader
     self.options = options
     self.localizedStrings = localizedStrings
     self.onDone = onDone
@@ -81,7 +81,7 @@ struct ImageEditorContent: View {
   var body: some View {
     // Known from the image itself, before the editing source is prepared.
     let originalAspectRatio = AspectRatio(document.source.pixelSize)
-    let isLoaded = editingStack.loadedState != nil
+    let isLoaded = previewSourceLoader.previewSource != nil
     // Includes a slider value that is shown but not yet written.
     let displayedFeature = session.displayedFeature(of: document)
     let cancelAction: (() -> Void)? = onCancel == nil ? nil : { cancel() }
@@ -97,7 +97,7 @@ struct ImageEditorContent: View {
           CanvasHost(
             document: canvasDocumentBinding,
             displayedFeature: displayedFeature,
-            editingStack: editingStack,
+            previewSourceLoader: previewSourceLoader,
             mode: editingMode,
             localBlurState: localBlurState,
             quarterTurn: $quarterTurn,
@@ -119,7 +119,7 @@ struct ImageEditorContent: View {
             aspectRatioSelection: aspectRatioSelection,
             localBlurState: localBlurState,
             filters: options.filters,
-            filterPreviewBaseImage: editingStack.loadedState?.thumbnailImage,
+            filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
             currentEffects: displayedFeature.effects,
             adjustmentParameter: adjustmentParameter,
             localizedStrings: localizedStrings,
@@ -160,7 +160,7 @@ struct ImageEditorContent: View {
           hasCropChanges: document.hasCropChanges(),
           // A failed preparation leaves nothing to edit; Done stays the
           // way out even when the host hides Cancel.
-          isDoneEnabled: isLoaded || editingStack.didFailToPrepare,
+          isDoneEnabled: isLoaded || previewSourceLoader.phase == .failed,
           mode: editingMode,
           isSelectingAspectRatio: isSelectingAspectRatio,
           onRotate: rotate,
@@ -173,7 +173,7 @@ struct ImageEditorContent: View {
       }
       .foregroundStyle(.white)
       .task {
-        editingStack.start()
+        await previewSourceLoader.load()
       }
       .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
         if isAvailable == false {
@@ -539,7 +539,7 @@ private struct CanvasHost: View {
 
   @Binding var document: ImageEditorDocument
   let displayedFeature: ImageEditorFeature
-  let editingStack: EditingStack
+  let previewSourceLoader: PreviewSourceLoader
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
   let quarterTurn: Binding<QuarterTurn?>
@@ -555,7 +555,7 @@ private struct CanvasHost: View {
     ImageEditorCanvas(
       document: $document,
       displayedFeature: displayedFeature,
-      editingStack: editingStack,
+      previewSourceLoader: previewSourceLoader,
       isGuideInteractionEnabled: mode == .crop
     )
     .quarterTurn(quarterTurn)

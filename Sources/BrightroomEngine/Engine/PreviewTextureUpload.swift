@@ -34,7 +34,7 @@ import Metal
 ///
 /// Building the texture also primes Core Image's device-wide pipeline cache, so
 /// it replaces the separate warm-up render the CGImage path required.
-enum EditingSourcePreparation {
+enum PreviewTextureUpload {
 
   /// The system default device. The editing canvas creates its `MTKView` and
   /// `CIContext` from `MTLCreateSystemDefaultDevice()` as well, so the texture
@@ -43,8 +43,8 @@ enum EditingSourcePreparation {
   private static let device: MTLDevice? = MTLCreateSystemDefaultDevice()
 
   /// Dedicated process-wide context for source uploads. Created lazily so the
-  /// first call absorbs the context/library compilation cost on the calling
-  /// (background) queue rather than on the first frame.
+  /// first call absorbs the context/library compilation cost in the preview
+  /// preparation, off the main actor, rather than on the first frame.
   private static let context: CIContext? = {
     guard let device else { return nil }
     return CIContext(mtlDevice: device, options: [.name: "Brightroom.SourceUpload"])
@@ -124,9 +124,10 @@ enum EditingSourcePreparation {
       colorSpace: colorSpace
     )
     // Wait so the texture is fully filled before it is published and sampled by
-    // the canvas's own context. This runs on a background queue at load time, so
-    // the wait never touches the main thread; it also gates presentation behind a
-    // hot pipeline, matching the previous warm-up's "spinner until ready" behavior.
+    // the canvas's own context. This runs off the main actor at load time
+    // (`PreviewSource.make(from:)`), so the wait never touches the main thread; it
+    // also gates presentation behind a hot pipeline, matching the previous
+    // warm-up's "spinner until ready" behavior.
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
 

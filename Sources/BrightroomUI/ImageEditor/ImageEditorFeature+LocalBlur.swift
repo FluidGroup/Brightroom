@@ -46,7 +46,7 @@ extension ImageEditorFeature {
   /// - Parameter stroke: A stroke in BrightroomParametric's working space
   ///   (bottom-left origin, y-up) of the oriented, pre-crop source at full
   ///   resolution: x ∈ [0, W], y ∈ [0, H] for (W, H) =
-  ///   `EditingStack.Loaded.imageSize`. The brush diameter is in the same
+  ///   `SourceImage.pixelSize`. The brush diameter is in the same
   ///   pixels.
   mutating func appendLocalBlurStroke(_ stroke: BrushMask.Stroke) {
     guard localBlur != nil else {

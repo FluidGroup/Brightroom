@@ -59,7 +59,7 @@ enum EditingCanvasImageProcessing {
   /// bake, bounding the texture memory the bake holds for a gesture's duration.
   ///
   /// Numerically this matches the engine's editing-source value
-  /// (`EditingStack.editingImageMaxPixelSize`, currently also 2560), but the two
+  /// (`PreviewSource.previewShortSideLength`, currently also 2560), but the two
   /// are not the same measurement: the engine caps the SHORT side, so its source
   /// is at least this large on the long side (a 4032×3024 photo loads at
   /// 3413×2560). Baking at this cap is therefore visually lossless only for

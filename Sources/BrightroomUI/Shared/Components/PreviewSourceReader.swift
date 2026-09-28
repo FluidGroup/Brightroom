@@ -24,26 +24,29 @@ import SwiftUI
 
 import BrightroomEngine
 
-/// Prepares a source image for the lifetime of this view's identity.
+/// Gives its content one `PreviewSourceLoader` for the lifetime of this view's
+/// identity.
 ///
-/// Give it an identity per source image (`.id(source)`): the stack is created once
-/// per identity and released with it, so the GPU-resident editing source
-/// lives only while an editor shows the image.
-struct OwnedEditingStack<Content: View>: View {
+/// Give it an identity per source image (`.id(source)`): the loader is created
+/// once per identity and released with it, so the GPU-resident editing source
+/// lives only while an editor shows the image. The content starts loading
+/// (`await loader.load()` in a `.task`); every view of one identity shares the
+/// loader, so the image is decoded once.
+struct PreviewSourceReader<Content: View>: View {
 
   // `State(initialValue:)` is evaluated on every init but kept only for a
-  // new identity. A stack costs nothing until `start()`, so the discarded
+  // new identity. A loader costs nothing until `load()`, so the discarded
   // ones are cheap.
-  @State private var stack: EditingStack
+  @State private var loader: PreviewSourceLoader
 
-  private let content: (EditingStack) -> Content
+  private let content: (PreviewSourceLoader) -> Content
 
-  init(source: SourceImage, @ViewBuilder content: @escaping (EditingStack) -> Content) {
-    self._stack = State(initialValue: EditingStack(source: source))
+  init(source: SourceImage, @ViewBuilder content: @escaping (PreviewSourceLoader) -> Content) {
+    self._loader = State(initialValue: PreviewSourceLoader(source: source))
     self.content = content
   }
 
   var body: some View {
-    content(stack)
+    content(loader)
   }
 }

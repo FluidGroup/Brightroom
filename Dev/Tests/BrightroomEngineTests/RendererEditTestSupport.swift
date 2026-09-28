@@ -91,25 +91,17 @@ extension Mask {
   }
 }
 
-extension EditingStack {
+extension PreviewSource {
 
-  /// A stack whose loaded state is injected synchronously, without running the
-  /// image preparation. The editing source is the full-resolution oriented
-  /// image.
+  /// A preview built synchronously, without the loader's preparation. The
+  /// editing source and the thumbnail are the full-resolution oriented image.
   static func test(
     cgImage: CGImage,
     orientation: CGImagePropertyOrientation = .up
-  ) -> EditingStack {
-    let image = SourceImage(cgImage: cgImage, orientation: orientation)
-    let stack = EditingStack(source: image)
-    let editingSource = image.makeCIImage()
-    stack.loadedState = .init(
-      source: image,
-      thumbnailImage: editingSource,
-      editingSourceCGImage: cgImage,
-      editingSourceImage: editingSource
-    )
-    return stack
+  ) -> PreviewSource {
+    let source = SourceImage(cgImage: cgImage, orientation: orientation)
+    let image = source.makeCIImage()
+    return PreviewSource(source: source, thumbnail: image, image: image)
   }
 }
 

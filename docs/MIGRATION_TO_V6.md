@@ -111,7 +111,7 @@ sections.
 | 5.1.1 | 6.0 | See |
 | --- | --- | --- |
 | `ImageProvider`, `ImageSource`, `ImageProviderError` | `SourceImage`, `SourceImageError` | [SourceImage](#sourceimage-replaces-imageprovider) |
-| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Package access only. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-no-longer-public) |
+| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Removed. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-no-longer-public) |
 | `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-no-longer-public) |
 | `EditingFeatureTree`, `FeatureTreePoint` | Removed. Address features by member name. | [Addressing Features](#addressing-features) |
 | `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
@@ -738,8 +738,9 @@ image was named `image`. It is `source` now, matching the vocabulary word
 
 ### EditingStack Is No Longer Public
 
-`EditingStack` is now a package-internal detail of BrightroomUI's editors,
-which prepare their preview themselves. Apps never create one.
+`EditingStack` is gone. BrightroomUI's editors prepare their preview
+themselves, with a package-internal loader that holds no edit and no history;
+apps never create one.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
@@ -1350,7 +1351,7 @@ Console filters that match BrightroomEngine's log names need updating:
 | --- | --- |
 | OSLog subsystem `PixelEngine` | `BrightroomEngine` |
 | OSLog category `🥞 Stack` | `Preview` |
-| Dispatch queue labels `app.muukii.Brightroom.EditingStack`, `…EditingStack.central` | `app.muukii.Brightroom.PreviewSource`, `…PreviewSource.central` |
+| Dispatch queue labels `app.muukii.Brightroom.EditingStack`, `…EditingStack.central` | None. The preview is prepared in a Swift concurrency task, not on a named dispatch queue. |
 
 ## Still Open Before 6.0
 

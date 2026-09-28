@@ -132,11 +132,11 @@ public struct ImageEditor: View {
   }
 
   public var body: some View {
-    // One stack per source image, shared by the canvas and the filter swatches.
-    OwnedEditingStack(source: document.source) { editingStack in
+    // One loader per source image, shared by the canvas and the filter swatches.
+    PreviewSourceReader(source: document.source) { previewSourceLoader in
       ImageEditorContent(
         document: $document,
-        editingStack: editingStack,
+        previewSourceLoader: previewSourceLoader,
         options: options,
         localizedStrings: localizedStrings,
         onDone: onDone,

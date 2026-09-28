@@ -28,8 +28,8 @@ import BrightroomParametric
 
 /// Renders a single filter-preview swatch for ImageEditor's Filters strip.
 ///
-/// A swatch is the session thumbnail — the uncropped, already-oriented ~180px
-/// preview the EditingStack decoded at load — center-cropped to a square and run
+/// A swatch is the preview thumbnail — the uncropped, already-oriented ~180px
+/// `PreviewSource.thumbnail` decoded at load — center-cropped to a square and run
 /// through one preset's effects. Swatches preview the filter only, not the user's
 /// manual adjustments or the current crop, matching the Photos/Instagram strip.
 ///

@@ -6,7 +6,8 @@ file tracks concrete engineering items that are not yet done.
 
 Status context (as of Brightroom 6):
 
-- `EditingStack` (package) holds no edit; it only prepares the preview.
+- `PreviewSourceLoader` (package) holds no edit; it only prepares the preview
+  (`await load()`, one decode per image, published as `phase`).
   ImageEditor and `ImageEditorCanvas` edit an `ImageEditorDocument` owned by
   the host: its `SourceImage`, its `ImageEditorFeature` (a statically composed
   `Feature`), and its undo history. Crop is a parametric `CropFeature`.
@@ -163,7 +164,7 @@ The crop-rotation perf work in `EditingCanvasView` added persistent GPU
 textures. Two memory reductions are **done**; one open question remains.
 
 Done:
-- **Adaptive source depth.** `EditingSourcePreparation.makeGPUResidentSource`
+- **Adaptive source depth.** `PreviewTextureUpload.makeGPUResidentSource`
   picks the texture format from `cgImage.bitsPerComponent`: `rgba8Unorm` for an
   8-bit source (the common case — lossless, half the memory), `rgba16Float` for
   >8-bit / HDR (preserves precision + extended range). Guard:
@@ -172,6 +173,9 @@ Done:
   (the blur), not `base`. `base` is the global effects on the GPU-resident source
   — pointwise, so re-evaluating it per frame is cheap and needs no held texture.
   When there is no local effect, nothing is baked. (See `preparedAdjustedLayer`.)
+- **No CPU copy after upload.** `PreviewSource` keeps only the texture-backed
+  editing source; the decoded `CGImage` is released once it is uploaded (the
+  CPU-backed image is the editing source only when there is no Metal device).
 
 Net (8-bit source): plain crop/rotate now holds just the source texture (~26MB,
 ~back to the pre-change CGImage footprint); a blur-mask gesture adds one ~52MB
@@ -189,7 +193,7 @@ Open:
 - Confirm on device that keeping `base` as a live (un-baked) graph did not
   re-introduce per-frame cost (it shouldn't — pointwise on a GPU texture).
 
-Files: `Sources/BrightroomEngine/Engine/EditingSourcePreparation.swift`,
+Files: `Sources/BrightroomEngine/Engine/PreviewTextureUpload.swift`,
 `Sources/BrightroomUI/Canvas/EditingCanvasContentBake.swift`,
 `Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`
 (`preparedAdjustedLayer`),

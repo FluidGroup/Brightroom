@@ -18,7 +18,7 @@ struct LocalAdjustmentMaskOrientationTests {
 
   /// The stamp is authored as a display point and stored in working space
   /// through the production conversion, against the ORIENTED image size
-  /// (`EditingStack.Loaded.imageSize`). The `.right` case swaps width and
+  /// (`SourceImage.pixelSize`). The `.right` case swaps width and
   /// height, so a regression that flips by the raw pixel height passes every
   /// `.up` case and fails only there.
   @Test(arguments: [CGImagePropertyOrientation.up, .right])

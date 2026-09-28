@@ -133,9 +133,9 @@ public struct ImageEditorCanvas: View {
 
   private let document: Binding<ImageEditorDocument>
 
-  /// The stack a built-in editor shares with its other views; nil when the
+  /// The loader a built-in editor shares with its other views; nil when the
   /// view prepares the document's source image itself.
-  private let editingStack: EditingStack?
+  private let previewSourceLoader: PreviewSourceLoader?
 
   /// A feature a built-in editor shows in place of `document.feature`, such
   /// as a slider value not yet written; nil shows the document.
@@ -201,7 +201,7 @@ public struct ImageEditorCanvas: View {
     stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
   ) {
     self.document = document
-    self.editingStack = nil
+    self.previewSourceLoader = nil
     self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
@@ -238,7 +238,7 @@ public struct ImageEditorCanvas: View {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
-    self.editingStack = nil
+    self.previewSourceLoader = nil
     self.displayedFeature = nil
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
@@ -246,8 +246,8 @@ public struct ImageEditorCanvas: View {
     self.stateHandler = stateHandler
   }
 
-  /// Creates a crop canvas with the built-in overlays over a stack a
-  /// built-in editor already prepares for `document`'s source image.
+  /// Creates a crop canvas with the built-in overlays over a loader a
+  /// built-in editor already shares for `document`'s source image.
   ///
   /// - Parameter displayedFeature: Shown in place of `document.feature` while
   ///   non-nil. It must differ from the document only in what the editor has
@@ -256,14 +256,14 @@ public struct ImageEditorCanvas: View {
   init(
     document: Binding<ImageEditorDocument>,
     displayedFeature: ImageEditorFeature?,
-    editingStack: EditingStack,
+    previewSourceLoader: PreviewSourceLoader,
     isGuideInteractionEnabled: Bool
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
     self.displayedFeature = displayedFeature
-    self.editingStack = editingStack
+    self.previewSourceLoader = previewSourceLoader
     self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = true
     self.contentInsets = nil
@@ -272,26 +272,27 @@ public struct ImageEditorCanvas: View {
 
   public var body: some View {
     let source = document.wrappedValue.source
-    if let editingStack, editingStack.source == source {
-      canvas(editingStack: editingStack)
+    if let previewSourceLoader, previewSourceLoader.source == source {
+      canvas(previewSourceLoader: previewSourceLoader)
     } else {
-      // A new identity per source image: the owned stack, and the canvas bound
+      // A new identity per source image: the owned loader, and the canvas bound
       // to it, are rebuilt when the host switches to a document of another image.
-      OwnedEditingStack(source: source) { stack in
-        canvas(editingStack: stack)
+      PreviewSourceReader(source: source) { loader in
+        canvas(previewSourceLoader: loader)
       }
       .id(source)
     }
   }
 
-  private func canvas(editingStack: EditingStack) -> some View {
+  private func canvas(previewSourceLoader: PreviewSourceLoader) -> some View {
     ZStack {
-      if let loadedState = editingStack.loadedState {
+      switch previewSourceLoader.phase {
+      case .loaded(let previewSource):
         EditingCanvasRepresentable(
-          source: EditingCanvasSource(loadedState),
+          source: EditingCanvasSource(previewSource),
           feature: displayedFeature ?? document.wrappedValue.feature,
           onFeatureChange: { [document] change in
-            Self.apply(change, preparedFor: loadedState.source, to: document)
+            Self.apply(change, preparedFor: previewSource.source, to: document)
           },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
@@ -313,9 +314,9 @@ public struct ImageEditorCanvas: View {
         // `EditingCanvasView` binds its source once, at creation. Tying the
         // representable's identity to the image makes an image swap rebuild
         // the canvas instead of leaving it bound to the old image.
-        .id(loadedState.source)
+        .id(previewSource.source)
         .transition(.opacity.animation(.smooth))
-      } else if editingStack.didFailToPrepare {
+      case .failed:
         // Nothing to edit; the host's own controls stay the way out.
         ContentUnavailableView(
           "The image could not be loaded",
@@ -323,14 +324,14 @@ public struct ImageEditorCanvas: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(.opacity.animation(.smooth))
-      } else {
+      case .idle, .loading:
         ProgressView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
           .transition(.opacity.animation(.smooth))
       }
     }
-    .onAppear {
-      editingStack.start()
+    .task {
+      await previewSourceLoader.load()
     }
   }
 

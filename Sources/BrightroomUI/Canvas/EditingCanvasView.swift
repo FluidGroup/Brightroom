@@ -36,9 +36,9 @@ struct EditingCanvasSource {
   /// authored in.
   let imageSize: CGSize
 
-  init(_ loaded: EditingStack.Loaded) {
-    self.editingSourceImage = loaded.editingSourceImage
-    self.imageSize = loaded.imageSize
+  init(_ previewSource: PreviewSource) {
+    self.editingSourceImage = previewSource.image
+    self.imageSize = previewSource.source.pixelSize
   }
 
   init(editingSourceImage: CIImage, imageSize: CGSize) {

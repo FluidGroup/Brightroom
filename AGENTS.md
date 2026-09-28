@@ -54,12 +54,15 @@ open Dev/Brightroom.xcodeproj
      asset), with its oriented `pixelSize`
    - `Sources/BrightroomEngine/Core/` - `EditingDocument<Content>` (the source
      image, the root feature, and its commit-style `History`;
-     `render(options:)`), and the package `EditingStack`, which prepares a
-     thumbnail and the GPU-resident editing source for BrightroomUI's editors.
-     It holds no edit and no history
+     `render(options:)`), and the package `PreviewSourceLoader`. The document
+     holds the edit and its history; the loader only prepares preview pixels
+     for BrightroomUI's editors: `await load()` decodes the image once, off
+     the main actor, into a `PreviewSource` (a thumbnail and the GPU-resident
+     editing source) and publishes its `phase` (`.idle`, `.loading`,
+     `.loaded`, `.failed`) on the main actor
    - `Sources/BrightroomEngine/Engine/` - internal image decoding
-     (`ImageDecoding`) and preview preparation
-   - Uses swift-state-graph for observable state
+     (`ImageDecoding`) and the preview's GPU upload (`PreviewTextureUpload`)
+   - Uses swift-state-graph for observable state (`PreviewSourceLoader.phase`)
 
 3. **BrightroomUI** - SwiftUI image editing components (UIKit internally)
    - `Sources/BrightroomUI/ImageEditor/` - the built-in editor `ImageEditor`,
@@ -92,13 +95,14 @@ one word per concept in names and docs.
   `ImageEditorCanvas.editingTarget(_:)`, while the canvas shows the evaluated
   result (the viewing point).
 - **Chain-entry extent**: the extent proportional radii resolve against.
-- **EditingStack** (package): per-image preview preparation owned by an editor
-  view (`OwnedEditingStack`). Apps never create one.
+- **PreviewSourceLoader** (package): per-image preview preparation owned by an
+  editor view (`PreviewSourceReader`). It holds no edit and no history. Apps
+  never create one.
 
 ### Editing Engine Vision
 
 Read `docs/vision-of-editing.md` before making architectural changes to
-BrightroomEngine, EditingStack, crop/mask/adjustment semantics, or renderer
+BrightroomEngine, PreviewSourceLoader, crop/mask/adjustment semantics, or renderer
 evaluation strategy. The target direction is an Onshape-like parametric editing
 stack where Features such as Crop, Mask, and Adjust can repeat, pass their
 results downstream, and compile into a Core Image graph.
@@ -242,11 +246,11 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 ### Adding Custom UI Component
 1. Create component in `Sources/BrightroomUI/`
 2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`);
-   prepare the image for display through `OwnedEditingStack`, keyed by the
-   document's `SourceImage`
+   prepare the image for display through `PreviewSourceReader`, keyed by the
+   document's `SourceImage`, and start it with `.task { await loader.load() }`
 3. Write each completed change to the binding's latest document once; leave
    `commit()` to the editor that owns the undo granularity
-4. Do not store edits in `EditingStack`; it only prepares the preview
+4. Do not store edits in `PreviewSourceLoader`; it only prepares the preview
 
 ## Platform Requirements
 - iOS 17.0+ (BrightroomUI, BrightroomEngine)

@@ -38,7 +38,7 @@ extension EditingCanvasStrokeRecord {
   /// working space (y-up) of the same domain.
   ///
   /// - Parameter domainHeight: The height of the domain, the oriented source
-  ///   height `EditingStack.Loaded.imageSize.height`.
+  ///   height `SourceImage.pixelSize.height`.
   func workingSpaceStroke(domainHeight: CGFloat) -> BrushMask.Stroke {
     BrushMask.Stroke(
       stampCenters: stamps.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },
@@ -54,7 +54,7 @@ extension EditingCanvasStrokeRecord {
   /// record (y-down). Used only to display committed strokes on the canvas.
   ///
   /// - Parameter domainHeight: The height of the domain, the oriented source
-  ///   height `EditingStack.Loaded.imageSize.height`.
+  ///   height `SourceImage.pixelSize.height`.
   init(workingSpaceStroke stroke: BrushMask.Stroke, domainHeight: CGFloat) {
     self.init(
       stamps: stroke.stampCenters.map { CGPoint(x: $0.x, y: domainHeight - $0.y) },

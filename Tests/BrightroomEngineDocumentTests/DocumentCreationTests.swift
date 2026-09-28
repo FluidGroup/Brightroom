@@ -162,17 +162,13 @@ struct DocumentCreationTests {
     #expect(cgImage.height == 10)
   }
 
-  @Test func `An editing stack prepares the document's image`() async throws {
+  @MainActor
+  @Test func `A preview source loader prepares the document's source image`() async throws {
     let image = try Fixtures.makeImage()
-    let stack = EditingStack(source: image)
-    await withCheckedContinuation { continuation in
-      stack.start {
-        continuation.resume()
-      }
-    }
-    let loaded = try #require(stack.loadedState)
-    #expect(loaded.source == image)
-    #expect(loaded.imageSize == image.pixelSize)
-    #expect(loaded.editingSourceImage.extent.size == image.pixelSize)
+    let loader = PreviewSourceLoader(source: image)
+    await loader.load()
+    let previewSource = try #require(loader.previewSource)
+    #expect(previewSource.source == image)
+    #expect(previewSource.image.extent.size == image.pixelSize)
   }
 }
