@@ -10,16 +10,22 @@ Amended 2026-09: the library no longer owns persistence. `ParametricDocumentCode
 hosts store edits in their own format (see
 [Saving parametric edits](parametric-persistence.md)).
 
-Amended 2026-09 (v6): documents are static compositions. The identified model
-(`EditingDocument`, `MainTree`, `FeatureID`, `isEnabled`, and the
-`ImageEffectFeatureType` / `DomainFeatureType` protocols) was removed. A
-document is a `Feature` value whose `body` lists its members, the way a
-SwiftUI view lists its content. [Migrating to Brightroom 6](MIGRATION_TO_V6.md)
-maps the old API to the new one.
+Amended 2026-09 (v6): edits are static compositions. The 5.x identified
+model (the parametric `EditingDocument` with its `MainTree`, `FeatureID`,
+`isEnabled`, and the `ImageEffectFeatureType` / `DomainFeatureType`
+protocols) was removed. An edit is a root feature: a `Feature` value whose
+`body` lists its members, the way a SwiftUI view lists its content.
+BrightroomEngine's `EditingDocument` (a new type that reuses the 5.x name)
+pairs a root feature with its source image and undo history; this library
+knows nothing about images or history.
+
+Amended 2026-09 (v6 naming): names follow the vocabulary in
+[Vision of Editing](vision-of-editing.md#vocabulary). [Migrating to
+Brightroom 6](MIGRATION_TO_V6.md) maps the 5.1.1 API to the new one.
 
 ## Principles
 
-1. **The runtime document is not a text document.** The in-memory editing
+1. **The runtime edit is not a text document.** The in-memory editing
    model is a Swift-native value tree: plain structs, `Equatable`, `Sendable`,
    copy-on-write through standard containers (`Array`, `Data`). No JSON, no
    string-keyed dictionaries, no type-erased byte payloads participate in
@@ -41,11 +47,12 @@ maps the old API to the new one.
    of features defines its own closed model — for example an enum of the
    types it supports — so unknown types and migrations are compiler-checked
    in the host.
-5. **Documents are static compositions; identity is the value.** A document's
-   structure is its Swift type. Features have no `id` and no `isEnabled`: two
-   documents built from the same values are equal, and a feature is switched
-   off by leaving it out (a `nil` member, a branch not taken, a mask node
-   removed). Hosts address parts of a document by their own member names.
+5. **Edits are static compositions; identity is the value.** A root
+   feature's structure is its Swift type. Features have no `id` and no
+   `isEnabled`: two root features built from the same values are equal, and a
+   feature is switched off by leaving it out (a `nil` member, a branch not
+   taken, a mask node removed). Hosts address parts of an edit by their own
+   member names.
 6. **`any` only where data decides content.** A preset catalog or a list of
    effects decoded by the host is `[AnyImageEffect]`. Everything the code
    decides keeps its static type.
@@ -57,7 +64,7 @@ maps the old API to the new one.
   - A *primitive* implements `apply(to: CIImage, context: FeatureEvaluationContext) throws -> CIImage`
     and leaves `Body` as `Never` (`ExposureFeature`, `CropFeature`, …).
   - A *composite* declares `body`; the default `apply` evaluates it
-    (`FilterFeature`, `ImageEditorFeature`, a host's document).
+    (`FilterFeature`, `ImageEditorFeature`, a host's root feature).
 - `ImageEffect: Feature` marks features that preserve the extent and
   coordinate domain of their input. A composite is an `ImageEffect` only when
   its body is one. Features that are not image effects, such as `CropFeature`,
@@ -79,13 +86,14 @@ maps the old API to the new one.
 - `Mask` stays a closed indirect enum (brush, inverted, feathered, union,
   intersection, subtraction); opening it for generated masks (subject/sky) follows
   the same protocol pattern later.
-- Every built-in value is `Equatable`, so documents compare with `==` and
-  owners (undo history, canvas caches) can drop updates that change nothing.
+- Every built-in value is `Equatable`, so root features compare with `==`
+  and owners (undo history, canvas caches) can drop updates that change
+  nothing.
   Equality compares a value's stored, authored members; derived state such as
   a compiled render plan never takes part. "Renders the same" is a separate
   question, answered by the render identity types where a cache needs it.
 
-A document's structure is visible in its type. `ImageEditorFeature` declares
+A root feature's structure is visible in its type. `ImageEditorFeature` declares
 
 ```swift
 var body: some Feature {
@@ -140,8 +148,9 @@ struct Inset: Feature, Equatable {
 }
 ```
 
-A composite groups other features, and a host document is a composite. This
-example uses `Posterize` and `Inset` from the two examples above:
+A composite groups other features, and a host's root feature is a
+composite. This example uses `Posterize` and `Inset` from the two examples
+above:
 
 ```swift
 struct FilmLook: ImageEffect, Equatable {
@@ -155,7 +164,7 @@ struct FilmLook: ImageEffect, Equatable {
   }
 }
 
-struct EditDocument: Feature, Equatable {
+struct EditFeature: Feature, Equatable {
   var look: FilmLook?
   var inset: Inset?
   var crop: CropFeature
@@ -215,15 +224,17 @@ materialization, and callers own the `CIContext`.
 - Evaluation errors are `FeatureEvaluationError` (a `LocalizedError`):
   `invalidCropRect(CGRect)`,
   `invalidColorCubeData(id:expectedByteCount:actualByteCount:)`,
-  `emptyMaskComposite`, `kernelUnavailable(name:reason:)`,
-  `imageCreationFailed(String)`, and `documentUnavailable`. Built-in features
-  and the renderers throw no other error type while evaluating.
-- The renderers take `some Feature`. A `nil` optional document throws
-  `documentUnavailable`, as `EditingStack.makeRenderer(document:)` does, so a
-  document that is not ready yet cannot render the unedited image by
-  accident; pass `EmptyFeature()` for that.
-- `FeatureTreeView(document:)` and `FeatureTreeOutline(document:)` show a
-  document's body structure for debugging, in evaluation order. Node ids are
+  `emptyMaskComposite`, `kernelUnavailable(name:reason:)`, and
+  `imageCreationFailed(String)`. Built-in features and the renderers throw no
+  other error type while evaluating.
+- The renderers take `some Feature`. A `nil` optional feature leaves its
+  input unchanged, as an absent member does, so rendering `nil` renders the
+  unedited image. `EmptyFeature()` says the same explicitly.
+- `EditingDocument.render(options:)` (BrightroomEngine) renders a document's
+  root feature over its full-resolution source image through
+  `ExportRenderer`.
+- `FeatureTreeView(feature:)` and `FeatureTreeOutline(feature:)` show a
+  feature's body structure for debugging, in evaluation order. Node ids are
   type paths (`FilterFeature#0/WhiteBalanceFeature#0`), so an absent member
   does not re-key the nodes after it.
 
@@ -298,7 +309,7 @@ points lie on the diagonal. Mixer render identities include the selected
 algorithm and the same normalized Float32 parameters as the kernel.
 
 Equality of both features compares their stored, authored members like
-every other feature: `value` for a curve, `adjustment` and `algorithm` for a
+every other feature: `curves` for a curve, `bands` and `algorithm` for a
 mixer. The compiled plan is derived state and does not take part. Two curves
 that differ only in diagonal interior points are therefore not equal, and
 neither are mixers whose values differ as Doubles but round to the same
@@ -337,8 +348,9 @@ host that stores it can detect a future change in interpretation.
 - Per-apply JSON decode/encode and double validation.
 - The closed `ImageEffectFeature`/`DomainFeature` enums.
 - (v6) The identified model: `FeatureID`, `IdentifiedFeature` (an unreleased
-  transitional name), `EditingDocument`, `MainTree`, `MainFeature`, `EffectPipeline`,
-  `EffectPipelineFeature`, `LocalAdjustmentFeature`, the
+  transitional name), the parametric `EditingDocument` (5.x), `MainTree`,
+  `MainFeature`, `EffectPipeline`, `EffectPipelineFeature`, the 5.x
+  `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)`, the
   `ImageEffectFeatureType` and `DomainFeatureType` protocols with their
   `childFeatures` and `validate()` requirements, duplicate-id validation, the
   existential equality helpers, `FeatureGraphCompiler` with

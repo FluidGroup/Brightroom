@@ -1,18 +1,31 @@
 # Migrating to Brightroom 6
 
 This guide is for applications using Brightroom 5.1 (or 5.0) and moving to
-Brightroom 6.
+Brightroom 6. Names in the left-hand columns of the tables are the 5.1.1
+names.
 
-Brightroom 6 is a major release with three themes:
+Brightroom 6 is a major release with four themes:
 
 1. **Your app owns storage.** The library no longer defines a file format for
    edits.
-2. **Documents are static compositions.** An edit is a Swift value whose
-   `body` lists its features, the way a SwiftUI view lists its content.
-   Features have no ids and no `isEnabled` flags.
-3. **The UI owns the edit.** `EditingStack` loads and renders an image; the
-   document and its undo history belong to the editor
-   (`PhotosCropEditingModel`) or to your app.
+2. **Edits are static compositions.** An edit is a Swift value, a *root
+   feature*, whose `body` lists its features, the way a SwiftUI view lists
+   its content. Features have no ids and no `isEnabled` flags.
+3. **Your app owns the document.** An `EditingDocument` (BrightroomEngine) is
+   a value that holds the source image, the root feature, and its undo
+   history. `ImageEditor` and `ImageEditorCanvas` edit it through a binding.
+   `ImageProvider`, `PhotosCropEditingModel`, and the public `EditingStack`
+   are gone.
+4. **One word per concept.** Types were renamed to the vocabulary in
+   [Vision of Editing](vision-of-editing.md#vocabulary):
+   `SwiftUIPhotosCropView` is `ImageEditor`, `SwiftUICropView` is
+   `ImageEditorCanvas`, the `Parametric` prefix is gone, and so on. See
+   [Name Changes at a Glance](#name-changes-at-a-glance).
+
+The name `EditingDocument` changed meaning. In 5.x it was the parametric edit
+itself, with a `MainTree`; that role is now your root feature. In Brightroom
+6 it is BrightroomEngine's value that pairs a root feature with its image and
+history.
 
 Samples marked `// Brightroom 5.x` show the old API and do not compile against
 Brightroom 6. Every other sample in this guide compiles against Brightroom 6.
@@ -23,20 +36,26 @@ The most common migration path is:
 
 1. Update the package requirement to 6.0.0.
 2. Replace `ParametricDocumentCodec` with your own `Codable` model.
-3. Replace `EditingDocument` and `MainTree` with a document struct that
-   conforms to `Feature`.
+3. Replace the 5.x `EditingDocument` and `MainTree` with a root feature: a
+   struct that conforms to `Feature`.
 4. Remove every `id:`, `isEnabled:`, and `FeatureID`, and express enablement
    with optional members.
-5. Keep the edit in `PhotosCropEditingModel` (or in your own state), and
-   render the document that `ImageEditor` passes to `onDone`.
-6. Replace `SwiftUICropView` with `ImageEditorCanvas`, give it a document
-   binding, and replace `featureFocus(_:)` with `editingTarget(_:)`.
-7. Move `CropModifier` from `EditingStack` to `PhotosCropEditingModel`.
-8. Author crop rectangles as the selection before the quarter turn, and
-   convert rectangles saved by 5.1.0
-   ([Crop Rectangles and Output Rotation](#crop-rectangles-and-output-rotation)).
-9. Re-run image loading, crop, filter, adjustment, blur mask, undo, and final
-   rendering flows.
+5. Replace `ImageProvider` with `SourceImage`, and `EditingStack` plus
+   `PhotosCropEditingModel` with an `ImageEditorDocument` that your app keeps
+   in its state.
+6. Replace `SwiftUIPhotosCropView(editingModel:)` with
+   `ImageEditor(document:)`, and render the document with
+   `render(options:)` when the editor is done.
+7. Replace `SwiftUICropView` with `ImageEditorCanvas(document:)`, and
+   `featureFocus(_:)` with `editingTarget(_:)`.
+8. Pass a `CropModifier` to `await ImageEditorDocument(image:cropModifier:)`
+   instead of to `EditingStack`.
+9. Apply the renames in [Name Changes at a Glance](#name-changes-at-a-glance).
+10. Author crop rectangles as the selection before the quarter turn, and
+    convert rectangles saved by 5.1.0
+    ([Crop Rectangles and Output Rotation](#crop-rectangles-and-output-rotation)).
+11. Re-run image loading, crop, filter, adjustment, blur mask, undo, and final
+    rendering flows.
 
 ## Package and Platform Changes
 
@@ -64,6 +83,72 @@ replacement:
 | BrightroomEngine | `PixelAspectRatio.width(forHeight:)`, `size(byHeight:)`, `asCGSize()`, `sizeThatFill(in:)`, `rectThatFill(in:)`, `localizedText` |
 | BrightroomParametric | `CropFeature.aggregatedRotationRadians`, `LocalAdjustmentBlendMode`, `LocalAdjustment.blendMode`, and the `blendMode:` parameter |
 
+## Name Changes at a Glance
+
+Top-level public types, 5.1.1 to 6.0. Member-level renames are in the linked
+sections.
+
+### BrightroomUI
+
+| 5.1.1 | 6.0 | See |
+| --- | --- | --- |
+| `SwiftUIPhotosCropView` | `ImageEditor` | [ImageEditor](#imageeditor) |
+| `SwiftUIPhotosCropView.Options`, `.LocalizedStrings` | `ImageEditor.Options`, `ImageEditor.LocalizedStrings` | [ImageEditor](#imageeditor) |
+| `PhotosCropEditingModel` | Removed. Keep an `ImageEditorDocument` in your state. | [ImageEditor](#imageeditor) |
+| (none) | `ImageEditorFeature`, the editor's root feature, and `ImageEditorDocument` (`EditingDocument<ImageEditorFeature>`) | [ImageEditorFeature](#imageeditorfeature) |
+| `PhotosCropDefaultFilterPresets` | Removed. Supply `ImageEditor.Options.filters`. | [ImageEditor](#imageeditor) |
+| `SwiftUICropView` | `ImageEditorCanvas` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `SwiftUICropView.AdjustmentKind` | `CropInteraction` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `CropViewFeatureFocus` | `ImageEditorCanvas.Target`, set with `editingTarget(_:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `CropViewMaskingBrush` | `ImageEditorCanvas.Brush` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `EditingCanvasStrokeSmoothingConfiguration`, `EditingCanvasStrokeSmoothingAlgorithm` | `ImageEditorCanvas.Brush.Smoothing` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `CropRotation` | `QuarterTurn` | [QuarterTurn Case Names](#quarterturn-case-names) |
+| `EditingStack.CropModifier` (BrightroomEngine) | `CropModifier` (BrightroomUI) | [CropModifier](#cropmodifier-moved-to-brightroomui) |
+
+### BrightroomEngine
+
+| 5.1.1 | 6.0 | See |
+| --- | --- | --- |
+| `ImageProvider`, `ImageSource`, `ImageProviderError` | `SourceImage`, `SourceImageError` | [SourceImage](#sourceimage-replaces-imageprovider) |
+| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Package access only. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-no-longer-public) |
+| `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-no-longer-public) |
+| `EditingFeatureTree`, `FeatureTreePoint` | Removed. Address features by member name. | [Addressing Features](#addressing-features) |
+| `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
+| `CropGeometry` | `CropGeometry` (BrightroomParametric) | [Crop Conversions](#crop-conversions) |
+| `ImageTool` | Internal | [Image Decoding](#image-decoding) |
+
+### BrightroomParametric
+
+| 5.1.1 | 6.0 | See |
+| --- | --- | --- |
+| `EditingDocument`, `MainTree`, `MainFeature` | Your root feature, a type that conforms to `Feature` | [Edits Are Static Compositions](#edits-are-static-compositions) |
+| `ImageEffectFeatureType`, `DomainFeatureType` | `ImageEffect`, `Feature` | [Removed Identity and Flags](#removed-identity-and-flags) |
+| `EffectPipeline`, `EffectPipelineFeature` | Effects in a body, or `[AnyImageEffect]` | [Removed Identity and Flags](#removed-identity-and-flags) |
+| `FeatureGraphCompiler`, `FeatureGraphOutput`, `FeatureGraphCompilerError` | `FeatureRenderer`, `FeatureEvaluationError` | [Removed Identity and Flags](#removed-identity-and-flags) |
+| `ParametricImageRenderer`, `ParametricExportRenderer`, `ParametricVideoRenderer` | `FeatureRenderer`, `ExportRenderer`, `VideoRenderer` | [Renderers](#renderers) |
+| `ParametricExportRenderer.Rendered` | `RenderedImage` | [Renderers](#renderers) |
+| `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustmentFeature(mask:content:)` | [Masks and Local Adjustments](#masks-and-local-adjustments) |
+| `MaskTree`, `MaskNode`, `MaskFeather`, `MaskSubtract` | `Mask` | [Masks and Local Adjustments](#masks-and-local-adjustments) |
+| `BrushMaskStroke`, `BrushMaskBrush` | `BrushMask.Stroke`, `BrushMask.Brush` | [Masks and Local Adjustments](#masks-and-local-adjustments) |
+| `TemperatureFeature` | `WhiteBalanceFeature` | [Feature Members](#feature-members) |
+| `GaussianBlurRadius` | `GaussianBlurFeature.Radius` | [Feature Members](#feature-members) |
+| `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` | [Feature Members](#feature-members) |
+| `PresetFeature` | `FilterFeature` | [Filters and Color Cubes](#filters-and-color-cubes) |
+| `ColorCubeFeatureLoadingError` | `ColorCubeLoadingError` | [Filters and Color Cubes](#filters-and-color-cubes) |
+| `ToneCurveEditorValue`, `ToneCurveChannel` | `ToneCurveFeature.Curves`, `ToneCurveFeature.Channel` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
+| `ColorMixerAdjustment`, `ColorMixerBandAdjustment`, `ColorMixerBand` | `ColorMixerFeature.Bands`, `.BandCorrection`, `.Band` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
+| `ToneCurveRenderIdentity`, `ColorMixerRenderIdentity` | `ToneCurveFeature.RenderKey`, `ColorMixerFeature.RenderKey` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
+| `BrushStampMetalLibrary` | `BrightroomMetalLibrary` | [Metal Library](#metal-library) |
+| `ParametricDocumentCodec`, `PersistableFeature`, `FeatureTypeKey`, `ParametricFeatureTypeRegistry` | Removed; your app owns storage | [Persistence Moved to Your App](#persistence-moved-to-your-app) |
+| `FeatureID`, `ParametricKernelRegistry` | Removed | [Removed Identity and Flags](#removed-identity-and-flags) |
+
+Library types that conform to `Feature` keep the `Feature` suffix
+(`ExposureFeature`, `ImageEditorFeature`); values that are not features have
+none (`Mask`, `QuarterTurn`, `AspectRatio`). Some of these names are common
+words. If your app declares its own `ImageEditor`, `AspectRatio`, or `Mask`,
+your type wins inside your module; qualify Brightroom's with its module name,
+such as `BrightroomUI.ImageEditor` or `BrightroomParametric.Mask`.
+
 ## Persistence Moved to Your App
 
 `ParametricDocumentCodec`, `ParametricDocumentCodecError`,
@@ -71,8 +156,8 @@ replacement:
 `CodingUserInfoKey.parametricFeatureTypes`, the `featureTypeKey` and
 `schemaVersion` properties, and every `Codable` conformance on feature,
 mask, and parameter types (including `QuarterTurn`, `GaussianBlurRadius`,
-and `ParametricRGBAColor`) were removed. Your app converts documents to its
-own `Codable` model and rebuilds them through the public initializers.
+and `ParametricRGBAColor`) were removed. Your app converts edits to its own
+`Codable` model and rebuilds them through the public initializers.
 `LocalAdjustmentBlendMode` was removed with its only case, `alpha`, which is
 how every local adjustment composites; ignore a stored `blendMode`.
 
@@ -82,10 +167,11 @@ how every local adjustment composites; ignore a stored `blendMode`.
   documents the JSON that `ParametricDocumentCodec` wrote, so you can read
   documents your app already saved and convert them once.
 
-## Documents Are Static Compositions
+## Edits Are Static Compositions
 
-A document is a type that conforms to `Feature` and declares a `body`. Members
-of the body evaluate in order, and each receives the previous member's output.
+An edit is a root feature: a type that conforms to `Feature` and declares a
+`body`. Members of the body evaluate in order, and each receives the previous
+member's output. It replaces the 5.x `EditingDocument` and its `MainTree`.
 
 - `Feature` is the base protocol. A *primitive* implements
   `apply(to:context:)`; a *composite* declares `body`.
@@ -97,7 +183,7 @@ of the body evaluate in order, and each receives the previous member's output.
 - `LocalAdjustmentFeature<Content>` is generic over its content, and its
   content is a builder instead of an `EffectPipeline`.
 - `AnyImageEffect` erases an `Equatable` image effect for content decided by
-  data, such as a preset catalog. `[AnyImageEffect]` is itself an image
+  data, such as a filter catalog. `[AnyImageEffect]` is itself an image
   effect.
 - `EmptyFeature` is a feature that does nothing.
 
@@ -122,7 +208,7 @@ After:
 import BrightroomParametric
 import CoreImage
 
-struct RetouchDocument: Feature, Equatable {
+struct RetouchFeature: Feature, Equatable {
   var crop: CropFeature
   var exposure: ExposureFeature? = ExposureFeature(ev: 0.5)
   var blur: LocalAdjustmentFeature<GaussianBlurFeature>?
@@ -139,22 +225,21 @@ func makeRetouchedImage(
   rect: CGRect,
   strokes: [BrushMask.Stroke]
 ) throws -> CIImage {
-  let document = RetouchDocument(
+  let feature = RetouchFeature(
     crop: CropFeature(rect: rect),
     blur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: strokes))) {
       GaussianBlurFeature(radius: .proportional(40))
     }
   )
-  return try FeatureRenderer().makeImage(from: source, feature: document)
+  return try FeatureRenderer().makeImage(from: source, feature: feature)
 }
 ```
 
 The renderers take any `some Feature`: `FeatureRenderer().makeImage(from:feature:)`,
 `ExportRenderer().render(from:feature:)`, and the
-`VideoRenderer()` methods. Like `EditingStack.makeRenderer(document:)`,
-they throw `FeatureEvaluationError.documentUnavailable` for a `nil` optional
-document instead of rendering the unedited image; pass `EmptyFeature()` for
-that.
+`VideoRenderer()` methods. The 5.x `document:` label is `feature:`. A `nil`
+optional feature leaves the image unchanged, so it renders the unedited
+image; `EmptyFeature()` says the same explicitly.
 
 Control flow in a body replaces the flags and pipelines you assembled by hand:
 
@@ -191,7 +276,7 @@ struct Look: ImageEffect, Equatable {
 }
 ```
 
-Documents compare with `==`. Two documents built from the same values are
+Features compare with `==`. Two root features built from the same values are
 equal, however they were built, so an undo history or a cache can drop an
 update that changes nothing.
 
@@ -213,10 +298,10 @@ for example
 
 | Removed | Replacement |
 | --- | --- |
-| `FeatureID`, `id` properties, `id:` parameters | None. Address features by your document's member names or your own keys. |
+| `FeatureID`, `id` properties, `id:` parameters | None. Address features by your root feature's member names or your own keys. |
 | `isEnabled` properties and `isEnabled:` parameters | An optional member, `if`, or leaving the feature out. See [Enablement](#enablement). |
 | `Feature` as the base protocol with `id`, `isEnabled`, and `Equatable` | `Feature` is now the composition protocol (`body`, `apply(to:context:)`). Built-in features are `Equatable` themselves. |
-| `EditingDocument`, `MainTree`, `MainFeature` | A struct (or enum) that conforms to `Feature` |
+| `EditingDocument` (BrightroomParametric), `MainTree`, `MainFeature` | A struct (or enum) that conforms to `Feature`. `EditingDocument` now names BrightroomEngine's document. |
 | `EffectPipeline`, `EffectPipelineFeature` | Effects listed in a body, or `[AnyImageEffect]` |
 | `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)` | `LocalAdjustmentFeature(mask:content:)` |
 | `ImageEffectFeatureType` | `ImageEffect` (and `Equatable`) |
@@ -224,8 +309,8 @@ for example
 | `childFeatures` | `body` |
 | `validate()` as a protocol requirement | Removed as a requirement. `CropFeature.validate()` and `ColorCubeFeature.validate()` stay public; `apply` calls them. |
 | `PresetFeature.validate()` | Removed. Call `validate()` on each `ColorCubeFeature` you rebuild; rendering validates anyway. |
-| `Feature.isEqualFeature(to:)`, `parametricFeatureIsEqual(_:_:)`, `parametricFeaturesAreEqual(_:_:)` | `==` on documents; `AnyImageEffect` compares the wrapped values |
-| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `FeatureRenderer().makeImage(from:feature:)`. To skip origin normalization, call `document.apply(to:context:)` |
+| `Feature.isEqualFeature(to:)`, `parametricFeatureIsEqual(_:_:)`, `parametricFeaturesAreEqual(_:_:)` | `==` on features; `AnyImageEffect` compares the wrapped values |
+| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `FeatureRenderer().makeImage(from:feature:)`. To skip origin normalization, call `feature.apply(to:context:)` |
 | `FeatureGraphCompiler.renderMask(_:extent:)`, `FeatureGraphOutput`, `localAdjustmentMasks` | `FeatureRenderer().makeMaskImage(for:extent:)` |
 | `FeatureGraphCompilerError` | `FeatureEvaluationError`. See [Errors](#errors). |
 | `ParametricImageRenderer(compiler:)`, `ParametricImageRenderer.compiler`, `ParametricImageRenderer.makeOutput` | `FeatureRenderer()` |
@@ -238,7 +323,7 @@ for example
 | `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking an optional `id: String`, which defaults to the file name as before. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
-| `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | The same APIs taking `some Feature` |
+| `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeView(feature:)`, `FeatureTreeOutline(feature:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `some Feature` |
 
 ### Enablement
 
@@ -257,13 +342,14 @@ union or intersection with no inputs throws wherever it is in the tree.
 ### Addressing Features
 
 5.x code found features by id (`updateFeature(id:mutate:)`,
-`EffectPipeline.first(of:)`, `localAdjustmentMasks[id]`). In Brightroom 6 a
-feature is a member of your document, so you read and write it by name:
+`EffectPipeline.first(of:)`, `localAdjustmentMasks[id]`) or through
+`EditingFeatureTree`. In Brightroom 6 a feature is a member of your root
+feature, so you read and write it by name:
 
 ```swift
 import BrightroomParametric
 
-struct PortraitDocument: Feature, Equatable {
+struct PortraitFeature: Feature, Equatable {
   var exposure: ExposureFeature?
   var crop: CropFeature
 
@@ -273,13 +359,13 @@ struct PortraitDocument: Feature, Equatable {
   }
 }
 
-func brighten(_ document: inout PortraitDocument, by amount: Double) {
-  let current = document.exposure?.ev ?? 0
-  document.exposure = ExposureFeature(ev: current + amount)
+func brighten(_ portrait: inout PortraitFeature, by amount: Double) {
+  let current = portrait.exposure?.ev ?? 0
+  portrait.exposure = ExposureFeature(ev: current + amount)
 }
 ```
 
-The debug views (`FeatureTreeView(document:)`) identify nodes by their type
+The debug views (`FeatureTreeView(feature:)`) identify nodes by their type
 path in the body, such as `FilterFeature#0/WhiteBalanceFeature#0`.
 
 ### Tone Curve and Color Mixer
@@ -401,7 +487,6 @@ throws, including failures of Brightroom's own kernels, and it conforms to
 | `failedToCreateImage(String)` | `imageCreationFailed(String)` |
 | `ParametricKernelRegistryError.failedToApplyKernel(String)` | `imageCreationFailed(String)` |
 | `ParametricKernelRegistryError.missingKernel`, `failedToLoadKernel`, `missingKernelLibraryResource` | `kernelUnavailable(name:reason:)` |
-| (new) | `documentUnavailable`: a renderer received a `nil` optional document |
 
 A mask error is now thrown before the adjustment's content is evaluated (5.x
 evaluated the effects first), so an invalid mask wins over an error from the
@@ -517,7 +602,7 @@ enum Step: Feature, Equatable {
   }
 }
 
-struct StepDocument: Feature, Equatable {
+struct StepsFeature: Feature, Equatable {
   var steps: [Step]
 
   var body: some Feature {
@@ -568,7 +653,7 @@ func loadLUT(at url: URL) throws -> ColorCubeFeature {
 
 ### Debug Feature Tree
 
-`FeatureTreeView(document:)` and `FeatureTreeOutline(document:)` accept any
+`FeatureTreeView(feature:)` and `FeatureTreeOutline(feature:)` accept any
 `some Feature` and show its body structure in evaluation order. `nil` members
 are left out, composites and presets show their members as children, and
 nodes have positional ids. `FeatureTreeNode` lost `isEnabled`.
@@ -577,170 +662,133 @@ nodes have positional ids. `FeatureTreeNode` lost `isEnabled`.
 import BrightroomParametric
 import SwiftUI
 
-struct DocumentInspector<Document: Feature>: View {
-  var document: Document
+struct FeatureInspector<Inspected: Feature>: View {
+  var feature: Inspected
 
   var body: some View {
-    FeatureTreeView(document: document)
+    FeatureTreeView(feature: feature)
   }
 }
 ```
 
-## EditingStack Loads and Renders Only
+## Images and Documents
 
-`EditingStack` keeps its name. It loads and prepares an image (metadata,
-orientation, thumbnail, downsampled editing source) and renders documents
-over it. It no longer holds an edit or a history.
+### SourceImage Replaces ImageProvider
 
-| Removed | Replacement |
+`SourceImage` is the image an edit is authored over. It reads the image's
+orientation and oriented pixel size when you create it, so it throws (or
+suspends, for a Photos asset) up front instead of reporting failures from a
+loading stack later. Encoded data and files are decoded only when something
+renders or prepares the image.
+
+| 5.1.1 | 6.0 |
 | --- | --- |
-| `EditingStack.Edit`, `Loaded.currentEdit`, `featureTree`, `EditingFeatureTree`, `FeatureTreePoint`, `updateFeature(id:mutate:)` | Your own document value, or the read-only `PhotosCropEditingModel.document`. See [Editing in Code](#editing-in-code). |
-| `undo()`, `redo()`, `revertCurrentEdit()` | The document owner's history: `PhotosCropEditingModel.undo()`, `redo()`, `discardUncommittedChanges()` |
-| `commitCurrentEditIfNeeded()`, `revert(to:)`, `removeAllHistory()`, `currentRevision`, `Revision` | None. ImageEditor commits on Done and on tool changes; a new model starts a new history. |
-| `Loaded.canUndo`, `canRedo`, `isDirty` | `PhotosCropEditingModel.canUndo`, `canRedo`, `isDirty` |
-| `Loaded.hasUncommittedChanges` | None |
-| `cropModifier` and `init(imageProvider:options:cropModifier:)` | `init(imageProvider:options:)`; pass the modifier to `PhotosCropEditingModel`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
-| `makeRenderer()` | `makeRenderer(document:)` |
-| The public setter of `loadedState` | None; `loadedState` is read-only |
-| `EffectPipeline.applyIgnoringFailure(to:radiusReferenceExtent:)`, `EffectPipeline.hasEnabledEffects` | Render the effects with `FeatureRenderer` |
-| `BrightRoomImageRenderer(source:orientation:)`, `BrightRoomImageRenderer.edit`, `BrightRoomImageRenderer.Edit` | `BrightRoomImageRenderer(source:orientation:document:)`, `BrightRoomImageRenderer.document` |
-| `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)`. See [Crop Conversions](#crop-conversions). |
+| `ImageProvider(image:)` | `SourceImage(image:)` |
+| `ImageProvider(data:)` | `SourceImage(data:)` |
+| `ImageProvider(fileURL:)` | `SourceImage(contentsOf:)` |
+| `ImageProvider(rawData:)`, `ImageProvider(rawDataURL:)` | `SourceImage(rawData:)`, `SourceImage(rawContentsOf:)`. They develop the RAW image when called, so call them off the main actor. |
+| `ImageProvider(asset:)` | `try await SourceImage(asset:)` |
+| `ImageProvider(editableRemoteURL:)`, `ImageProvider(editableRemoteURLRequest:)` | Download the data yourself, then `SourceImage(data:)` |
+| `ImageProvider(contentEditingInput:)` | `SourceImage(contentsOf:)` with the input's `fullSizeImageURL` |
+| `ImageProvider(imageSize:orientation:editableImage:pendingAction:)` | Load the image yourself, then create a `SourceImage` |
+| `ImageSource`, `ImageProvider.LoadedImage` | `SourceImage` |
+| `ImageProvider.ImageMetadata`, `EditingStack.Loaded.imageSize` | `SourceImage.pixelSize` (orientation applied) |
+| `ImageProviderError` | `SourceImageError` |
+| (new) | `SourceImage(cgImage:orientation:)`, `SourceImage.makeCIImage(maxPixelSize:)` |
 
-`makeRenderer(document:)` has an overload for an optional document, which
-throws the new `EditingStackError.documentUnavailable` when the document is
-`nil` (for example while an editor prepares it). To render the unedited
-image, pass `EmptyFeature()`.
+Two source images are equal when they are the same load: copies are equal,
+and loading the same file twice gives two different images. Keep the value
+you loaded, for example in its document.
 
-```swift
-import BrightroomEngine
-import BrightroomParametric
-import UIKit
+### EditingDocument
 
-func renderOriginal(of stack: EditingStack) async throws -> UIImage {
-  let rendered = try await stack.makeRenderer(document: EmptyFeature()).render()
-  return try rendered.uiImage
-}
-```
+`EditingDocument<Content>` (BrightroomEngine) is a value that holds:
 
-A document passed to `makeRenderer(document:)` is authored in the oriented
-source domain, whose size is `EditingStack.Loaded.imageSize`.
+- `image`, the `SourceImage`, fixed for the document's lifetime;
+- `feature`, the root feature, authored in the image's oriented pixel
+  coordinates;
+- `history`, its commit-style undo history.
 
-## ImageEditor
+Changing `feature` records nothing. `commit()` records the current feature as
+one undo step, and `undo()`, `redo()`, `canUndo`, `canRedo`,
+`hasUncommittedChanges`, and `discardUncommittedChanges()` work on the value.
+The UI that edits a document decides when to commit. `history.limit` caps the
+undo steps (100 by default), and `history.removeAll()` drops them.
+`render(options:)` renders the feature over the full-resolution image.
 
-### ImageEditorFeature
+`ImageEditorDocument` is `EditingDocument<ImageEditorFeature>`, the document
+`ImageEditor` and `ImageEditorCanvas` edit. Your own editor can use
+`EditingDocument` with its own root feature.
 
-`ImageEditorFeature` (BrightroomUI) is the document ImageEditor and
-`ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
+### EditingStack Is No Longer Public
 
-- `effects: ImageEditorFeature.Effects` — the filter preset and twelve
-  adjustments, each an optional member, evaluated in declaration order;
-- `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
-- `crop: CropFeature` — the final crop.
+`EditingStack` is now a package-internal detail of BrightroomUI's editors,
+which prepare their preview themselves. Apps never create one.
 
-It is authored in the oriented, pre-crop source domain at full resolution
-(`EditingStack.Loaded.imageSize`). Brush stamps are Core Image working-space
-points (bottom-left origin, y-up). A 5.x `EditingStack.Edit.document` stored
-them y-down, so flip them when you convert a saved 5.x edit (see
-[Converting 5.x documents](parametric-persistence.md#converting-5x-documents)).
-Create one with
-`ImageEditorFeature(orientedImageSize:)`,
-`ImageEditorFeature(effects:localBlur:crop:)`, or
-`ImageEditorFeature.makeInitial(for:cropModifier:)`, and set the crop from a
-`CropEditingState` with `setCrop(_:)`.
-
-### PhotosCropEditingModel
-
-`PhotosCropEditingModel` owns the document and its commit-style undo history.
-
-- `init(editingStack:cropModifier:)` starts a new document; `cropModifier`
-  defaults to `.identity`, so `PhotosCropEditingModel(editingStack:)` still
-  compiles.
-- `init(editingStack:resuming:)` resumes a document you saved.
-- `document` is `nil` until the image loads and the initial document is ready.
-- `canUndo`, `canRedo`, `isDirty`, `undo()`, `redo()`, and
-  `discardUncommittedChanges()` replace the history API of `EditingStack`.
-- `editingStack` is the stack the model was created with.
-
-Keep the model (for example in `@State`) for as long as the editing session
-lasts. You no longer need to keep the stack separately.
-
-#### Editing in Code
-
-`PhotosCropEditingModel.document` is read-only to your app; only the editor
-changes it. In 5.x you could change the stack's edit with
-`updateFeature(id:mutate:)` and `commitCurrentEditIfNeeded()`. In Brightroom
-6:
-
-- To open ImageEditor on an edit built in code, build an `ImageEditorFeature`
-  (with `ImageEditorFeature(orientedImageSize:)` or `makeInitial(for:cropModifier:)`,
-  then set `effects`, `localBlur`, and `crop`) and create the model with
-  `init(editingStack:resuming:)`. See [Reopening an Edit](#reopening-an-edit).
-- To edit a document freely in code, own it yourself, for example as
-  `@State var document: ImageEditorFeature?`, show it with `ImageEditorCanvas`
-  through a binding, and keep your own history if you need one.
-
-`commitCurrentEditIfNeeded()`, `hasUncommittedChanges`, `revert(to:)`,
-`removeAllHistory()`, and `currentRevision` have no replacement: Done
-commits, and a new model starts a new history.
-
-### ImageEditor
-
-`onDone` now receives the edited `ImageEditorFeature`. Render it with the
-model's stack:
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(image:)`, or `await ImageEditorDocument(image:cropModifier:)` for a policy-decided crop |
+| `start()`, `isLoading`, `loadedState` | None. The editor prepares its preview. To show the image yourself, use `SourceImage.makeCIImage(maxPixelSize:)`. |
+| `Loaded.makeOriginalCIImage()` | `SourceImage.makeCIImage()` |
+| `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `SourceImage.makeCIImage(maxPixelSize:)` |
+| `Loaded.currentEdit`, `EditingStack.Edit`, `featureTree`, `updateFeature(id:mutate:)`, `Edit.makeEditingDocument(orientedImageSize:)` | `document.feature`, read and written by member name |
+| `undo()`, `redo()`, `Loaded.canUndo`, `Loaded.canRedo` | `document.undo()`, `redo()`, `canUndo`, `canRedo` |
+| `commitCurrentEditIfNeeded()`, `Loaded.hasUncommittedChanges` | `document.commit()`, `hasUncommittedChanges` |
+| `revertCurrentEdit()` | `document.discardUncommittedChanges()` |
+| `removeAllHistory()` | `document.history.removeAll()` |
+| `revert(to:)`, `currentRevision`, `Revision` | None. Keep a copy of the document to return to. |
+| `Loaded.isDirty` | Compare `document.feature` with the feature you started from |
+| `cropModifier` | `await ImageEditorDocument(image:cropModifier:)`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
+| `makeRenderer().render(options:)`, `BrightRoomImageRenderer`, `ImageRenderer` | `document.render(options:)` |
+| `EditingStackError` | None. `SourceImageError` covers loading. |
 
 Before:
 
 ```swift
 // Brightroom 5.x
-ImageEditor(
-  editingModel: editingModel,
-  onDone: {
-    Task {
-      let rendered = try await editingStack.makeRenderer().render()
-      // …
-    }
-  },
-  onCancel: {}
-)
+let stack = EditingStack(imageProvider: .init(image: image))
+stack.start()
+// …
+let rendered = try await stack.makeRenderer().render()
 ```
 
 After:
 
 ```swift
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
-import SwiftUI
 import UIKit
 
-struct Editor: View {
-  @State var editingModel: PhotosCropEditingModel
-  var onExport: @MainActor (Result<UIImage, Error>) -> Void
-
-  var body: some View {
-    ImageEditor(
-      editingModel: editingModel,
-      onDone: { document in
-        Task {
-          do {
-            let rendered = try await editingModel.editingStack
-              .makeRenderer(document: document)
-              .render()
-            onExport(.success(try rendered.uiImage))
-          } catch {
-            onExport(.failure(error))
-          }
-        }
-      },
-      onCancel: {}
-    )
-  }
+func renderEdit(of image: UIImage) async throws -> UIImage {
+  let document = ImageEditorDocument(image: SourceImage(image: image))
+  // … edit the document …
+  let rendered = try await document.render()
+  return try rendered.uiImage
 }
 ```
 
-`ImageEditor.Options.filters` defaults to an empty list, and
-`PhotosCropDefaultFilterPresets` was removed. Supply your own presets; the
-former samples live in the demo app
-([`DemoFilters.swift`](../Dev/Sources/SwiftUIDemo/DemoFilters.swift)).
+A new `ImageEditorDocument` has no effects and a crop that covers the whole
+image, so it renders the unedited image. Without BrightroomUI, pass
+`EmptyFeature()` to `ExportRenderer` for the same result.
+
+## ImageEditor
+
+`SwiftUIPhotosCropView` is `ImageEditor`, and it edits an
+`ImageEditorDocument` your app owns instead of a `PhotosCropEditingModel`
+over an `EditingStack`.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `SwiftUIPhotosCropView(editingModel:options:localizedStrings:onDone:onCancel:)` | `ImageEditor(document:options:localizedStrings:onDone:onCancel:)`, with a `Binding<ImageEditorDocument>` |
+| `PhotosCropEditingModel(editingStack:)` | `ImageEditorDocument(image:)`, kept in your state (for example `@State`) |
+| `onCancel` (required) | Optional. The editor writes back the document it opened with, then calls `onCancel`. `nil` hides the Cancel button. |
+| `SwiftUIPhotosCropView.Options` | `ImageEditor.Options` |
+| `SwiftUIPhotosCropView.LocalizedStrings` | `ImageEditor.LocalizedStrings` |
+| `button_done_title`, `button_cancel_title`, `button_reset_title` | `done`, `cancel`, `reset` |
+| `button_aspectratio_original`, `button_aspectratio_freeform`, `button_aspectratio_square` | `originalAspectRatio`, `freeformAspectRatio`, `squareAspectRatio` |
+| `button_filter_original` | `originalFilter` |
+| `Options.filterPresets` (default `PhotosCropDefaultFilterPresets.make()`) | `ImageEditor.Options.filters`, empty by default |
 
 The aspect ratio option is one choice, so it is a policy, and the freeform
 lock has its own case instead of `.fixed(nil)`:
@@ -752,54 +800,153 @@ lock has its own case instead of `.fixed(nil)`:
 | `.fixed(ratio)` with a non-nil ratio | `.fixed(ratio)`, taking an `AspectRatio` |
 | `.fixed(nil)` | `.freeform` |
 
-### Reopening an Edit
+`PhotosCropDefaultFilterPresets` was removed. Supply your own filters; the
+former samples live in the demo app
+([`DemoFilters.swift`](../Dev/Sources/SwiftUIDemo/DemoFilters.swift)).
 
-In 5.x the `EditingStack` held the edit and its history, so keeping the stack
-reopened the editor where the user left it. In Brightroom 6 there are two
-ways to reopen:
+Before:
 
-- **Keep the session.** Keep the same `PhotosCropEditingModel` and pass it to
-  a new `ImageEditor`. The document and its undo history are kept.
-- **Resume a document.** Store the document's values in your own format (see
-  [Saving parametric edits](parametric-persistence.md)), rebuild the document,
-  and create a model with `init(editingStack:resuming:)`. The undo history
-  starts empty, and `isDirty` is measured against the resumed document.
+```swift
+// Brightroom 5.x
+SwiftUIPhotosCropView(
+  editingModel: editingModel,
+  onDone: {
+    Task {
+      let rendered = try await editingStack.makeRenderer().render()
+      // …
+    }
+  },
+  onCancel: { dismiss() }
+)
+```
+
+After:
 
 ```swift
 import BrightroomEngine
 import BrightroomParametric
 import BrightroomUI
+import SwiftUI
 import UIKit
 
-@MainActor
+struct Editor: View {
+  @State var document: ImageEditorDocument
+  var onExport: @MainActor (Result<UIImage, Error>) -> Void
+  var onClose: @MainActor () -> Void
+
+  var body: some View {
+    ImageEditor(
+      document: $document,
+      onDone: {
+        let document = document
+        Task {
+          do {
+            let rendered = try await document.render()
+            onExport(.success(try rendered.uiImage))
+          } catch {
+            onExport(.failure(error))
+          }
+        }
+      },
+      onCancel: onClose
+    )
+  }
+}
+```
+
+How the editor writes to the binding:
+
+- Each completed operation (a filter tap, a slider drag, a brush stroke, an
+  applied crop) is written once. Values in progress are not.
+- The work of one tool visit is one undo step. The commit happens with the
+  next visit's first write, so after Done the last visit may still be
+  uncommitted; `undo()` treats it as a step. Commit a copy before you save the
+  history.
+- The editor never registers anything with an `UndoManager`. Drive
+  `document.undo()` and `redo()` from your own controls if you want them.
+- `onDone` is called after the binding received the last change, so the
+  document you read there is final.
+
+### ImageEditorFeature
+
+`ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
+`ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
+
+- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and twelve
+  adjustments, each an optional member, evaluated in declaration order;
+- `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
+- `crop: CropFeature` — the final crop.
+
+It is authored in the oriented, pre-crop source domain at full resolution
+(`SourceImage.pixelSize`). Brush stamps are Core Image working-space points
+(bottom-left origin, y-up). A 5.x `EditingStack.Edit.document` stored them
+y-down, so flip them when you convert a saved 5.x edit (see
+[Converting 5.x documents](parametric-persistence.md#converting-5x-documents)).
+A new document from `ImageEditorDocument(image:)` has no effects and a crop
+that covers the whole image. To rebuild a saved edit, use
+`ImageEditorFeature(effects:localBlur:crop:)`.
+
+### Editing in Code
+
+`document.feature` is a plain value. Change it and commit when the change
+should become an undo step:
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+
+func brighten(_ document: inout ImageEditorDocument) {
+  let current = document.feature.effects.exposure?.ev ?? 0
+  document.feature.effects.exposure = ExposureFeature(ev: current + 0.3)
+  document.commit()
+}
+```
+
+### Reopening an Edit
+
+In 5.x the `EditingStack` held the edit and its history, so keeping the stack
+reopened the editor where the user left it. In Brightroom 6:
+
+- **Keep the document.** Pass the same document to a new `ImageEditor`. The
+  feature and its undo history are kept.
+- **Resume a saved edit.** Store the image reference and the feature's values
+  in your own format (see
+  [Saving parametric edits](parametric-persistence.md)), and rebuild the
+  document with `ImageEditorDocument(image:feature:history:)`.
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import Foundation
+
 func resumeEdit(
-  of image: UIImage,
+  of imageURL: URL,
   exposure: Double?,
   cropRect: CGRect,
-  rotation: QuarterTurn,
+  quarterTurn: QuarterTurn,
   straightenRadians: Double
-) -> PhotosCropEditingModel {
-  let document = ImageEditorFeature(
+) throws -> ImageEditorDocument {
+  let feature = ImageEditorFeature(
     effects: .init(exposure: exposure.map { ExposureFeature(ev: $0) }),
     crop: CropFeature(
       rect: cropRect,
-      quarterTurn: rotation,
+      quarterTurn: quarterTurn,
       straightenRadians: straightenRadians
     )
   )
-  return PhotosCropEditingModel(
-    editingStack: EditingStack(imageProvider: .init(image: image)),
-    resuming: document
+  return ImageEditorDocument(
+    image: try SourceImage(contentsOf: imageURL),
+    feature: feature
   )
 }
 ```
 
-A rebuilt document equals the one you saved. The model does not check that
-the document was authored for the loaded image; resume it only over the same
-image.
-
-`rect` is the selection before the quarter turn. Convert rectangles saved
-by 5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
+A rebuilt feature equals the one you saved. The document does not check that
+the feature was authored for the image; resume it only over the same image.
+`rect` is the selection before the quarter turn. Convert rectangles saved by
+5.1.0 first ([Crop rectangles](parametric-persistence.md#crop-rectangles)).
 
 ## QuarterTurn Case Names
 
@@ -826,26 +973,28 @@ second name for the same four values and is removed. Use `QuarterTurn`:
 ## SwiftUICropView → ImageEditorCanvas
 
 `SwiftUICropView` is now `ImageEditorCanvas`. It edits an
-`ImageEditorFeature` through a binding instead of the stack's edit:
+`ImageEditorDocument` through a binding instead of the stack's edit:
 
-- `init(editingStack:document:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:stateHandler:)`
+- `init(editingStack:isGuideInteractionEnabled:areAnimationsEnabled:contentInset:stateHandler:)`
   and the variant with `cropInsideOverlay`/`cropOutsideOverlay` take
-  `document: Binding<ImageEditorFeature?>`. When the binding is `nil` once the
-  image has loaded, the view writes a full-image document into it.
+  `document: Binding<ImageEditorDocument>` instead of `editingStack:`. The
+  canvas prepares the document's image itself, and a document of another
+  image rebuilds it.
+- Changes made on the canvas (applied crops and brush strokes) are written
+  to the document's `feature`. The canvas never commits; call
+  `document.commit()` when a change should become an undo step.
 - `editingTarget(_:)` with `ImageEditorCanvas.Target` (`.crop`, `.localBlur`,
-  or `nil` to only view) replaces `featureFocus(_:)` and `CropViewFeatureFocus`.
-  The seed effect of `CropViewFeatureFocus.masking(_:id:)` is gone: the
-  first stroke creates `localBlur` with the default blur. To use another blur,
-  set `document.localBlur` yourself.
-- Your app keeps the document's history, if it needs one.
-- To start from a `CropModifier`, create the document with
-  `ImageEditorFeature.makeInitial(for:cropModifier:)` and show the view once
-  it exists.
+  or `nil` to only view) replaces `featureFocus(_:)` and
+  `CropViewFeatureFocus`. The target is the adjustment point: the feature the
+  canvas edits while it shows the evaluated result. The seed effect of
+  `CropViewFeatureFocus.masking(_:id:)` is gone: the first stroke creates
+  `localBlur` with the default blur. To use another blur, set
+  `document.feature.localBlur` yourself.
 - Renamed members: `rotation(_:)` is `quarterTurn(_:)` (taking a
   `QuarterTurn`), `adjustmentAngle(_:)` is `straightenAngle(_:)`,
-  `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)`,
-  `SwiftUICropView.AdjustmentKind` is `CropInteraction` (`.scrollView` is
-  `.movingImage`, `.guide` is `.resizingGuide`), and
+  `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
+  `AspectRatio`), `SwiftUICropView.AdjustmentKind` is `CropInteraction`
+  (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`), and
   `StateSnapshot.adjustmentKind` is `StateSnapshot.interaction`.
 - `maskingBrush(_:)` and `strokeSmoothing(_:)` are one `brush(_:)`.
   `CropViewMaskingBrush` is `ImageEditorCanvas.Brush`, and the smoothing
@@ -874,21 +1023,14 @@ import BrightroomUI
 import SwiftUI
 
 struct BlurEditor: View {
-  let editingStack: EditingStack
-  @State private var document: ImageEditorFeature?
+  @Binding var document: ImageEditorDocument
   @State private var target: ImageEditorCanvas.Target? = .localBlur
 
   var body: some View {
-    ImageEditorCanvas(editingStack: editingStack, document: $document)
+    ImageEditorCanvas(document: $document)
       .editingTarget(target)
+      .onDisappear { document.commit() }
   }
-}
-
-func makeFramedDocument(for loadedState: EditingStack.Loaded) async -> ImageEditorFeature {
-  await ImageEditorFeature.makeInitial(
-    for: loadedState,
-    cropModifier: .faceDetection(aspectRatio: .square)
-  )
 }
 ```
 
@@ -900,11 +1042,12 @@ works on a `CropEditingState`, and is `@Sendable`:
 `@Sendable (CIImage, CropEditingState) async -> CropEditingState`. It runs off
 the main actor, so the state it captures must be `Sendable`; move blocking work
 to your own queue, as `faceDetection` does. `.identity` and
-`.faceDetection(paddingBias:aspectRatio:)` are provided. Pass it to
-`PhotosCropEditingModel(editingStack:cropModifier:)` or to
-`ImageEditorFeature.makeInitial(for:cropModifier:)`. It runs only for a new
-document, never for a resumed one. The `aspectRatio` of `.faceDetection`
-describes the final output, after the crop's quarter turn.
+`.faceDetection(paddingBias:aspectRatio:)` are provided. It runs once, when
+you create a document with `await ImageEditorDocument(image:cropModifier:)`,
+and never for a document you rebuild from saved values. Its crop is the
+document's committed state, so undo does not return to the full-image crop.
+The `aspectRatio` of `.faceDetection` describes the final output, after the
+crop's quarter turn.
 
 Before:
 
@@ -921,12 +1064,12 @@ After:
 
 ```swift
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 
-@MainActor
-func makeModel(provider: ImageProvider) -> PhotosCropEditingModel {
-  PhotosCropEditingModel(
-    editingStack: EditingStack(imageProvider: provider),
+func makeFramedDocument(for image: SourceImage) async -> ImageEditorDocument {
+  await ImageEditorDocument(
+    image: image,
     cropModifier: .faceDetection(aspectRatio: .square)
   )
 }
@@ -1010,18 +1153,18 @@ relying on the compiler to find them.
 ## CropEditingState
 
 `CropEditingState.id` was removed, and `makeCropFeature()` is internal. Write
-a crop state into a document with `ImageEditorFeature.setCrop(_:)`, which
+a crop state into a root feature with `ImageEditorFeature.setCrop(_:)`, which
 snaps the rectangle the same way the canvas does:
 
 ```swift
+import BrightroomEngine
 import BrightroomUI
-import CoreGraphics
 
-func squareDocument(orientedImageSize: CGSize) -> ImageEditorFeature {
-  var document = ImageEditorFeature(orientedImageSize: orientedImageSize)
-  var crop = CropEditingState(cropFeature: document.crop, imageSize: orientedImageSize)
+func squareDocument(for image: SourceImage) -> ImageEditorDocument {
+  var document = ImageEditorDocument(image: image)
+  var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: image.pixelSize)
   crop.updateCropExtent(toFitAspectRatio: .square)
-  document.setCrop(crop)
+  document.feature.setCrop(crop)
   return document
 }
 ```
@@ -1190,32 +1333,64 @@ Console filters that match BrightroomEngine's log names need updating:
 | OSLog category `🥞 Stack` | `Preview` |
 | Dispatch queue labels `app.muukii.Brightroom.EditingStack`, `…EditingStack.central` | `app.muukii.Brightroom.PreviewSource`, `…PreviewSource.central` |
 
+## Still Open Before 6.0
+
+Brightroom 6 is not released yet. These parts of the public API may still
+change before 6.0.0; the rest of this guide describes them as they are now.
+
+- `EditingDocument.image` and the `image:` labels of its initializers may
+  become `source`.
+- `CropModifier` and `ImageEditorDocument(image:cropModifier:)` may become an
+  initial-crop policy that works on `CropFeature`. `CropEditingState` and
+  `ImageEditorFeature.setCrop(_:)` may leave the public API, so that
+  `CropFeature` is the one public crop value.
+- `ImageEditorCanvas.StateSnapshot` with `stateHandler`, and the
+  `ResetAction`, `RotateAction`, `ApplyAction`, and
+  `AdjustmentAngleCommitAction` classes, may be replaced by a crop-guide
+  change callback and a reader/proxy pair. The `Binding` forms of
+  `quarterTurn(_:)`, `straightenAngle(_:)`, and `lockedAspectRatio(_:)` may
+  become value-only.
+- `FeatureTreeView` and `FeatureTreeOutline` may move out of
+  BrightroomParametric, and `RenderedImage.swiftUIImage` may be removed.
+- `SwiftUIMetalImageView` may move to the demo app.
+- BrightroomEngine's `ColorCubeLoader`, `ColorCubeHelper`,
+  `ColorCubeTextParser`, and `PresetStorage` may be removed in favor of the
+  `ColorCubeFeature` loaders.
+- Public helpers meant for Brightroom's own modules may become package
+  access: `FeatureEvaluationContext.init`, `CropGeometry`,
+  `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
+  `ExportRenderer.Device`, `VideoRenderer.resolveRenderSize`,
+  `ToneCurveEvaluator`, and `BrightroomMetalLibrary`. To test a custom
+  feature, evaluate it through `FeatureRenderer` rather than calling
+  `apply(to:context:)` with a context you build.
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.
 - [ ] Saved edits use your own `Codable` model; documents written by
       `ParametricDocumentCodec` are converted once
       ([5.x conversion list](parametric-persistence.md#converting-5x-documents)).
-- [ ] `EditingDocument`, `MainTree`, `EffectPipeline`, and
-      `LocalAdjustmentFeature` are replaced by document types that conform to
-      `Feature`.
+- [ ] The 5.x `EditingDocument`, `MainTree`, and `EffectPipeline` are
+      replaced by root features that conform to `Feature`.
 - [ ] No `FeatureID`, `id:`, or `isEnabled:` remains; enablement is optional
-      members, `if`, or nodes left out of mask trees.
+      members, `if`, or nodes left out of masks.
 - [ ] Custom effects conform to `ImageEffect` and `Equatable`; custom domain
       features conform to `Feature` and return a zero-origin image.
 - [ ] Code that caught `FeatureGraphCompilerError` catches
       `FeatureEvaluationError`, and code that relied on
       `emptyLocalAdjustmentEffectPipeline` checks the content itself.
-- [ ] Presets pass `[AnyImageEffect]`; color-cube loaders drop `id:`.
-- [ ] The edit and its history live in `PhotosCropEditingModel` or your own
-      state; `EditingStack` is only asked for `loadedState` and
-      `makeRenderer(document:)`.
-- [ ] `ImageEditor`'s `onDone` renders the document it receives.
+- [ ] Filters pass `[AnyImageEffect]`; color-cube loaders drop `id:`.
+- [ ] `ImageProvider` is replaced by `SourceImage`, and `EditingStack` and
+      `PhotosCropEditingModel` by an `ImageEditorDocument` in your state.
+- [ ] `ImageEditor(document:)` replaces `SwiftUIPhotosCropView`, and `onDone`
+      renders the document with `render(options:)`.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
-  document binding and uses `editingTarget(_:)`.
-- [ ] `CropModifier` is passed to `PhotosCropEditingModel` or
-      `ImageEditorFeature.makeInitial(for:cropModifier:)`.
+      document binding and uses `editingTarget(_:)`; your code commits undo
+      steps for canvas edits.
+- [ ] `CropModifier` is passed to `await ImageEditorDocument(image:cropModifier:)`.
 - [ ] Filters are supplied through `options.filters`.
+- [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
+      are applied, including `QuarterTurn` case names and log filters.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles
       saved by 5.1.0 with a sideways rotation are converted.
 - [ ] Loading, crop, filters, adjustments, blur mask, undo, reopening, and

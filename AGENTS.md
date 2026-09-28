@@ -30,51 +30,68 @@ open Dev/Brightroom.xcodeproj
 ### Core Modules
 
 1. **BrightroomParametric** - Dependency-free parametric editing vocabulary
-   - Documents are static compositions of features, the way a SwiftUI view
-     composes its body: `Feature`, `ImageEffect`, `FeatureBuilder` (`if`,
-     `switch`, `for`, optional members, `#available`)
+   - An edit is a root feature: a static composition of features, the way a
+     SwiftUI view composes its body: `Feature`, `ImageEffect`,
+     `FeatureBuilder` (`if`, `switch`, `for`, optional members, `#available`)
    - Built-in features (`ExposureFeature`, `GaussianBlurFeature`,
      `CropFeature`, `ToneCurveFeature`, `ColorMixerFeature`, ...),
      `FilterFeature`, `LocalAdjustmentFeature` with a `Mask`, and
      `AnyImageEffect` for content decided by data
-   - `FeatureRenderer`, `ExportRenderer`, and
-     `VideoRenderer` evaluate any `some Feature` root feature into a
-     Core Image graph
+   - `FeatureRenderer`, `ExportRenderer`, and `VideoRenderer` evaluate any
+     `some Feature` into a Core Image graph
+   - Crop value types live next to `CropFeature`: `AspectRatio`,
+     `QuarterTurn`, `CropGeometry`
    - Features are plain values with no identity: no `id`, no `isEnabled`.
      The library owns no storage format: apps convert features to their own
      `Codable` models and rebuild them through public, validating initializers
      (`docs/parametric-persistence.md`)
 
-2. **BrightroomEngine** - Image loading and rendering (depends on BrightroomParametric)
-   - `Sources/BrightroomEngine/Core/` - `EditingStack` (loads and prepares an
-     image, renders a document with `makeRenderer(document:)`; holds no edit
-     and no history)
-   - `Sources/BrightroomEngine/DataSource/` - `ImageProvider`
-   - `Sources/BrightroomEngine/Engine/` - Rendering pipeline (`BrightRoomImageRenderer`)
+2. **BrightroomEngine** - Source images and editing documents (depends on BrightroomParametric)
+   - `Sources/BrightroomEngine/DataSource/` - `SourceImage`: the image a
+     document is authored over (data, file, `UIImage`, `CGImage`, RAW, Photos
+     asset), with its oriented `pixelSize`
+   - `Sources/BrightroomEngine/Core/` - `EditingDocument<Content>` (the source
+     image, the root feature, and its commit-style `History`;
+     `render(options:)`), and the package `EditingStack`, which prepares a
+     thumbnail and the GPU-resident editing source for BrightroomUI's editors.
+     It holds no edit and no history
+   - `Sources/BrightroomEngine/Engine/` - internal image decoding
+     (`ImageDecoding`) and preview preparation
    - Uses swift-state-graph for observable state
 
-3. **BrightroomUI** - UI components for image editing
-   - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
-     `ImageEditorCanvas`, the internal UIKit `EditingCanvasView`, and its
-     Metal surface
-   - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
+3. **BrightroomUI** - SwiftUI image editing components (UIKit internally)
    - `Sources/BrightroomUI/ImageEditor/` - the built-in editor `ImageEditor`,
      its root feature `ImageEditorFeature`, and `ImageEditorDocument`
      (`EditingDocument<ImageEditorFeature>`), which the host owns with its
      history
-   - `ImageEditorCanvas` edits an `ImageEditorFeature` through a binding
-   - Provides both UIKit and SwiftUI interfaces
+   - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
+     `ImageEditorCanvas`, the internal UIKit `EditingCanvasView`, and its
+     Metal surface
+   - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
+   - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
+     through a binding
 
 ### Key Concepts
 
-- **Document**: a `Feature` value that describes an edit, such as
-  `ImageEditorFeature`. The UI that edits an image defines and owns its
-  document; the document's owner keeps its history (`PhotosCropEditingModel`).
-- **EditingStack**: loads an image (metadata, orientation, thumbnail, and the
-  downsampled editing source) and renders documents over it. It holds no edit.
-- **ImageProvider**: Abstraction for various image sources (UIImage, URL, Data)
-- **Renderer**: Metal-based rendering system that applies filters and transformations
-- **Component-based UI**: All UI components can be used standalone or composed together
+The vocabulary is defined in `docs/vision-of-editing.md` ("Vocabulary"). Use
+one word per concept in names and docs.
+
+- **Source image** (`SourceImage`): the image an edit is authored over. It is
+  fixed for a document's lifetime.
+- **Feature**: one step of an edit. The **root feature** is the feature a
+  document holds, such as `ImageEditorFeature`.
+- **Document** (`EditingDocument`): the source image, the root feature, and
+  its undo history. "Document" means only this type; do not call a root
+  feature a document.
+- **Editor** (`ImageEditor`) and **canvas** (`ImageEditorCanvas`): the UI that
+  edits a document through a binding. The host owns the document; the UI
+  decides when to `commit()` an undo step.
+- **Adjustment point**: the feature a tool edits, chosen with
+  `ImageEditorCanvas.editingTarget(_:)`, while the canvas shows the evaluated
+  result (the viewing point).
+- **Chain-entry extent**: the extent proportional radii resolve against.
+- **EditingStack** (package): per-image preview preparation owned by an editor
+  view (`OwnedEditingStack`). Apps never create one.
 
 ### Editing Engine Vision
 
@@ -89,11 +106,11 @@ results downstream, and compile into a Core Image graph.
 
 The project uses swift-state-graph for observable state. When modifying state-related code:
 - Look for `@GraphStored` properties
-- Document values flow from the owning model (`PhotosCropEditingModel`) or
-  binding into `EditingCanvasView`; `EditingCanvasView` reports changes back
-  to the owner
-- A document compares by value; an owner drops an update that leaves the
-  document equal, so it adds no history checkpoint
+- Documents flow from the host's binding (`Binding<ImageEditorDocument>`)
+  into `EditingCanvasView`; each completed operation is written back to the
+  binding once, never per gesture tick and never during a view update
+- A document compares by value; writes that leave the feature equal are
+  dropped, so they add no history checkpoint
 
 ## Development Guidelines
 
@@ -117,19 +134,27 @@ The project uses swift-state-graph for observable state. When modifying state-re
 6. Test it against an explicit Core Image recipe in
    `Tests/BrightroomParametricTests`.
 
-### Naming Parametric Types
+### Naming
 - A library type that conforms to `Feature` ends in `Feature`
-  (`ExposureFeature`, `LocalAdjustmentFeature`). Type-erased wrappers are
-  `Any` plus the protocol name (`AnyImageEffect`).
+  (`ExposureFeature`, `LocalAdjustmentFeature`, `ImageEditorFeature`). Keep
+  the suffix; do not introduce bare nouns such as `Crop` or `Exposure`, which
+  hosts often declare themselves. Type-erased wrappers are `Any` plus the
+  protocol name (`AnyImageEffect`).
 - A value that is not a feature has no suffix (`Mask`, `BrushMask`,
-  `QuarterTurn`).
+  `QuarterTurn`, `AspectRatio`).
 - A parameter type used by only one feature is nested in it
-  (`GaussianBlurFeature.Radius`, `ToneCurveFeature.Curves`).
+  (`GaussianBlurFeature.Radius`, `ToneCurveFeature.Curves`,
+  `HighlightShadowTintFeature.Color`).
 - Name parameters by their unit or meaning (`ev`, `intensity`,
   `temperature`) rather than `value` when one exists.
 - "Renderer" is reserved for the public types that evaluate features
   (`FeatureRenderer`, `ExportRenderer`, `VideoRenderer`); `makeImage` returns
   a lazy `CIImage` recipe and `render` produces pixels.
+- Do not give new types module or history prefixes (`Parametric`,
+  `PhotosCrop`, `PixelEditor`) or leading underscores.
+- "Display" is reserved for the viewport; image-space conversions say what
+  they convert (`topLeftRect`). "Source" is the chain entry; a feature's own
+  input is its "input" (`inputToOutputTransform`).
 
 ### Working with Metal
 - Metal shaders are in `Sources/BrightroomParametric/` (brush masks and mask
@@ -168,38 +193,56 @@ xcodebuild -scheme Brightroom-Package test \
 
 ## Common Tasks
 
-### Implementing Custom Image Editor
+### Presenting the Built-in Editor
 ```swift
-// 1. Create a model over an EditingStack; keep it for the session
-let editingModel = PhotosCropEditingModel(
-  editingStack: EditingStack(imageProvider: .init(image: uiImage))
-)
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import SwiftUI
+import UIKit
 
-// 2. Use the built-in UI or create a custom one
-let editor = ImageEditor(
-  editingModel: editingModel,
-  onDone: { document in
-    // 3. Render the edited document
-    Task {
-      do {
-        let rendered = try await editingModel.editingStack
-          .makeRenderer(document: document)
-          .render()
-        didExport(.success(try rendered.uiImage))  // your handler
-      } catch {
-        didExport(.failure(error))
+struct EditorScreen: View {
+  // 1. The host owns the document: the image, the edit, and its history
+  @State var document: ImageEditorDocument
+  var didExport: (Result<UIImage, Error>) -> Void
+
+  var body: some View {
+    // 2. The built-in editor edits it through a binding
+    ImageEditor(
+      document: $document,
+      onDone: {
+        // 3. Render the edited document
+        let document = document
+        Task {
+          do {
+            let rendered = try await document.render()
+            didExport(.success(try rendered.uiImage))
+          } catch {
+            didExport(.failure(error))
+          }
+        }
       }
-    }
-  },
-  onCancel: {}
-)
+    )
+  }
+}
+
+// Create the document before showing the editor, for example:
+func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
+  EditorScreen(
+    document: ImageEditorDocument(image: try SourceImage(contentsOf: fileURL)),
+    didExport: { _ in }
+  )
+}
 ```
 
 ### Adding Custom UI Component
 1. Create component in `Sources/BrightroomUI/`
-2. Accept `EditingStack` for loading, plus a document value or binding
-3. Observe the stack's `loadedState` for the loaded image
-4. Report document changes to the document's owner; do not store edits in the stack
+2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`);
+   prepare the image for display through `OwnedEditingStack`, keyed by the
+   document's `SourceImage`
+3. Write each completed change to the binding's latest document once; leave
+   `commit()` to the editor that owns the undo granularity
+4. Do not store edits in `EditingStack`; it only prepares the preview
 
 ## Platform Requirements
 - iOS 17.0+ (BrightroomUI, BrightroomEngine)

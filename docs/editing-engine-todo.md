@@ -6,9 +6,10 @@ file tracks concrete engineering items that are not yet done.
 
 Status context (as of Brightroom 6):
 
-- `EditingStack` holds no edit. ImageEditor and `ImageEditorCanvas` edit an
-  `ImageEditorFeature` (a statically composed `Feature`) owned by
-  `PhotosCropEditingModel` or the host; crop is a parametric `CropFeature`.
+- `EditingStack` (package) holds no edit; it only prepares the preview.
+  ImageEditor and `ImageEditorCanvas` edit an `ImageEditorDocument` owned by
+  the host: its `SourceImage`, its `ImageEditorFeature` (a statically composed
+  `Feature`), and its undo history. Crop is a parametric `CropFeature`.
   BrightroomUI edits crop through `CropEditingState`.
 - Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
   across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
@@ -192,5 +193,5 @@ Files: `Sources/BrightroomEngine/Engine/EditingSourcePreparation.swift`,
 `Sources/BrightroomUI/Canvas/EditingCanvasContentBake.swift`,
 `Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`
 (`preparedAdjustedLayer`),
-`Sources/BrightroomUI/Canvas/EditingCanvasGeometry.swift`
+`Sources/BrightroomUI/Canvas/EditingCanvasImageProcessing.swift`
 (`colorTextureFormat`).

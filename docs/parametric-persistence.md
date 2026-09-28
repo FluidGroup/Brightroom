@@ -8,20 +8,21 @@ evaluation. It does not define how edits are stored. Your app decides:
 - how large assets such as LUTs are referenced,
 - how its own older formats migrate.
 
-Undo and redo belong to the document's owner, such as
-`PhotosCropEditingModel`, which keeps in-memory document values and needs no
-storage format.
+An `EditingDocument` (BrightroomEngine) keeps the edit together with its
+source image and undo history, all as in-memory values. Your app stores what
+it needs to rebuild one: a reference to the image, the root feature, and,
+optionally, the history. See [Documents and History](#documents-and-history).
 
 ## Recipe
 
-1. Compose your document from the features your app supports. Optional
+1. Compose your root feature from the features your app supports. Optional
    members are features that can be absent; a member that is present is
    enabled. Features carry no identity, so there are no ids to store.
-2. Define a `Codable` model for that document. For content decided by data,
+2. Define a `Codable` model for that feature. For content decided by data,
    such as a list of `AnyImageEffect`, use an enum with one case per feature
    type. A closed model makes unsupported types and migrations explicit in
    your code.
-3. To save, convert the *current* document to that model. Save the edited
+3. To save, convert the *current* feature to that model. Save the edited
    result, not only the values you started from.
 4. To restore, rebuild features through their public initializers. Use the
    validating initializers and `validate()` methods below for values that did
@@ -30,7 +31,7 @@ storage format.
 ```swift
 import BrightroomParametric
 
-/// The app's document: the features it supports, in a fixed order.
+/// The app's edit: the features it supports, in a fixed order.
 struct Look: ImageEffect, Equatable {
   var exposure: ExposureFeature?
   var lut: ColorCubeFeature?
@@ -47,7 +48,7 @@ struct Look: ImageEffect, Equatable {
 struct StoredLook: Codable {
   struct StoredLUT: Codable {
     var assetID: String
-    var amount: Double
+    var intensity: Double
   }
 
   var exposure: Double?
@@ -56,7 +57,7 @@ struct StoredLook: Codable {
 
   init(_ look: Look) throws {
     exposure = look.exposure?.ev
-    lut = look.lut.map { StoredLUT(assetID: $0.id, amount: $0.intensity) }
+    lut = look.lut.map { StoredLUT(assetID: $0.id, intensity: $0.intensity) }
     extras = try look.extras.map(StoredEffect.init)
   }
 
@@ -65,7 +66,7 @@ struct StoredLook: Codable {
     look.exposure = exposure.map { ExposureFeature(ev: $0) }
     if let lut {
       var feature = try loadLUT(lut.assetID)  // Cube data stays in your asset catalog.
-      feature.intensity = lut.amount
+      feature.intensity = lut.intensity
       try feature.validate()
       look.lut = feature
     }
@@ -105,7 +106,7 @@ enum StorageError: Error {
 }
 ```
 
-A rebuilt document equals the one that was saved, because features compare by
+A rebuilt feature equals the one that was saved, because features compare by
 value. A complete example covering Exposure, Tone Curve, Color Mixer, and LUTs,
 with rejection of invalid stored values, is
 [`AppOwnedPersistenceExampleTests.swift`](../Tests/BrightroomParametricTests/AppOwnedPersistenceExampleTests.swift).
@@ -122,7 +123,7 @@ It uses only the public API.
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
-| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's stamps, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `PhotosCropEditingModel(editingStack:resuming:)` |
+| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `ImageEditorDocument(image:feature:history:)` |
 
 Notes:
 
@@ -157,8 +158,88 @@ Notes:
   the saved one. To ask whether two values render the same, compare
   `ToneCurveFeature.RenderKey` or `ColorMixerFeature.RenderKey` instead.
 - An `ImageEditorFeature` is authored for one image: its domain is the oriented
-  image size (`EditingStack.Loaded.imageSize`). Store a reference to the
-  source image with it, and resume it only over that image.
+  image size (`SourceImage.pixelSize`). Store a reference to the source image
+  with it, and resume it only over that image.
+
+## Documents and History
+
+An `EditingDocument` is the source image, the root feature, and the root
+feature's undo history. `SourceImage` is not storable: store how your app
+finds the image again (a file name, a Photos local identifier), and create a
+new `SourceImage` when you restore. The history is optional. Its steps are
+root features, so store them with the same conversion as the current one,
+and restore them with `EditingDocument.History(undoStack:redoStack:limit:)`.
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import Foundation
+
+/// The app's saved form of an ImageEditor document.
+struct SavedEdit: Codable {
+  struct Step: Codable {
+    var exposure: Double?
+    var cropRect: CGRect
+    var quarterTurn: Int
+    var straightenRadians: Double
+  }
+
+  var imageFileName: String
+  var current: Step
+  /// Committed steps before `current`, oldest first. Empty when the app does
+  /// not keep history.
+  var undo: [Step]
+
+  init(document: ImageEditorDocument, imageFileName: String, keepsHistory: Bool) {
+    // ImageEditor commits a tool visit when the next one starts, so the last
+    // visit may be uncommitted. Commit a copy so it becomes a step too.
+    var document = document
+    document.commit()
+    self.imageFileName = imageFileName
+    self.current = Step(document.feature)
+    self.undo = keepsHistory ? document.history.undoStack.map(Step.init) : []
+  }
+
+  func makeDocument(imageDirectory: URL) throws -> ImageEditorDocument {
+    let image = try SourceImage(
+      contentsOf: imageDirectory.appendingPathComponent(imageFileName)
+    )
+    return ImageEditorDocument(
+      image: image,
+      feature: try current.makeFeature(),
+      history: .init(undoStack: try undo.map { try $0.makeFeature() }, redoStack: [])
+    )
+  }
+}
+
+extension SavedEdit.Step {
+  init(_ feature: ImageEditorFeature) {
+    exposure = feature.effects.exposure?.ev
+    cropRect = feature.crop.rect
+    quarterTurn = feature.crop.quarterTurn.rawValue
+    straightenRadians = feature.crop.straightenRadians
+  }
+
+  func makeFeature() throws -> ImageEditorFeature {
+    guard let turn = QuarterTurn(rawValue: quarterTurn) else {
+      throw CocoaError(.coderReadCorrupt)
+    }
+    let crop = CropFeature(rect: cropRect, quarterTurn: turn, straightenRadians: straightenRadians)
+    try crop.validate()
+    return ImageEditorFeature(
+      effects: .init(exposure: exposure.map { ExposureFeature(ev: $0) }),
+      crop: crop
+    )
+  }
+}
+```
+
+The example stores only the exposure and the crop to stay short; store every
+member your app edits, as listed in [What to Store](#what-to-store). A
+restored document has no uncommitted changes, and its first undo returns to
+the last saved step. Resume a document only over the image its feature was
+authored for.
 
 ## Migrating from `ParametricDocumentCodec`
 
@@ -266,11 +347,12 @@ decoded 5.x document:
   alone makes them the endpoints. Points that shared an interior id across
   channels become independent points in each channel.
 - Brush stamps in a document taken from 5.x `EditingStack.Edit.document`
-  (for example `loadedState.currentEdit.document`, which ImageEditor and
-  `ImageEditorCanvas` authored) are y-down: top-left origin in the oriented
-  image. `ImageEditorFeature.localBlur` and every Brightroom 6 mask are y-up, so
-  flip each stamp to `y = orientedImageSize.height - y` while converting, or
-  the blur mask comes back mirrored vertically. A document from
+  (for example `loadedState.currentEdit.document`, which
+  `SwiftUIPhotosCropView` and `SwiftUICropView` authored) are y-down: top-left
+  origin in the oriented image. `ImageEditorFeature.localBlur` and every
+  Brightroom 6 mask are y-up, so flip each stamp to `y = height - y`, where
+  `height` is the oriented image height (`SourceImage.pixelSize.height`),
+  while converting, or the blur mask comes back mirrored vertically. A document from
   `Edit.makeEditingDocument(orientedImageSize:)` was already y-up. Crop
   rectangles were stored in the y-up form in both and need no flip, but see
   [Crop rectangles](#crop-rectangles) for schema 2.
