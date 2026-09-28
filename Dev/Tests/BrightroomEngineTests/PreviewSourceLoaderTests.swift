@@ -2,6 +2,7 @@ import CoreGraphics
 import CoreImage
 import Testing
 import UIKit
+import os
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
@@ -62,6 +63,26 @@ struct PreviewSourceLoaderTests {
     await caller.value
     #expect(loader.phase == .loaded(expected))
     #expect(loader.previewSource == expected)
+  }
+
+  @Test func `The preparation starts while the main actor is busy`() async throws {
+    let source = try makeSourceImage()
+    let expected = PreviewSource(source: source, thumbnail: CIImage.empty(), image: CIImage.empty())
+    let started = OSAllocatedUnfairLock(initialState: false)
+    let loader = PreviewSourceLoader(source: source) { _ in
+      started.withLock { $0 = true }
+      return expected
+    }
+
+    // The editor's `.task` calls `load()`, and then the main actor is busy,
+    // as it is during the editor's presentation animation. The decode must
+    // not wait for it.
+    let caller = Task { await loader.load() }
+    let busyMainActor = Task { blockUntil(started, timeout: 2) }
+    #expect(await busyMainActor.value)
+
+    await caller.value
+    #expect(loader.phase == .loaded(expected))
   }
 
   @Test func `Concurrent and later loads share one preparation`() async throws {
@@ -145,6 +166,19 @@ struct PreviewSourceLoaderTests {
     #expect(image.width == 16)
     #expect(image.height == 12)
   }
+}
+
+/// Blocks the calling thread until `flag` is set or `timeout` passes, and
+/// returns whether it was set.
+private func blockUntil(_ flag: OSAllocatedUnfairLock<Bool>, timeout: TimeInterval) -> Bool {
+  let deadline = Date().addingTimeInterval(timeout)
+  while Date() < deadline {
+    if flag.withLock({ $0 }) {
+      return true
+    }
+    usleep(1_000)
+  }
+  return flag.withLock { $0 }
 }
 
 /// Holds a preparation until the test opens it.

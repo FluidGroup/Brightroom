@@ -119,22 +119,30 @@ package final class PreviewSourceLoader {
   /// Prepares the preview, and returns once `phase` is `.loaded` or
   /// `.failed`.
   ///
-  /// The first call starts one preparation off the main actor; every call,
-  /// concurrent or later, awaits that same preparation, so the image is
-  /// decoded once. The preparation is not tied to any caller's task:
-  /// cancelling a caller (a SwiftUI `.task` whose view disappeared) neither
-  /// cancels it for the others nor leaves `phase` at `.loading`; the cancelled
-  /// caller still returns when the preparation ends.
+  /// The first call starts one preparation off the main actor at once,
+  /// without waiting for the main actor to be free; every call, concurrent or
+  /// later, awaits that same preparation, so the image is decoded once. The
+  /// preparation is not tied to any caller's task: cancelling a caller (a
+  /// SwiftUI `.task` whose view disappeared) neither cancels it for the others
+  /// nor leaves `phase` at `.loading`; the cancelled caller still returns when
+  /// the preparation ends. A started preparation always runs to its end.
   package func load() async {
     if preparation == nil {
       phase = .loading
       let source = source
       let prepare = prepare
-      // An unstructured task, so no caller's cancellation reaches it. It
-      // inherits the main actor, which publishes `phase`; `prepare` runs off
-      // it.
+      // Detached, so the decode starts now rather than when the main actor
+      // next runs a task (an editor's presentation animation can hold it for
+      // tens of milliseconds), and so no caller's cancellation reaches it.
+      let decoding = Task.detached(priority: Task.currentPriority) {
+        await prepare(source)
+      }
+      // Publishes `phase` on the main actor once the decode ends.
       preparation = Task { [weak self] in
-        let previewSource = await prepare(source)
+        let previewSource = await decoding.value
+        // Defensive only: every `load()` caller keeps the loader alive until
+        // this task ends, so releasing the editor does not end the decode
+        // early.
         guard let self else {
           return
         }
