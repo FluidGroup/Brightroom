@@ -444,7 +444,7 @@ final class DemoDocumentStore {
     }
     do {
       let image = try await loadImage()
-      let document = await EditingDocument(image: image, cropModifier: cropModifier)
+      let document = await EditingDocument(source: image, cropModifier: cropModifier)
       // Another call may have finished first while this one was suspended.
       if self.document == nil {
         self.document = document

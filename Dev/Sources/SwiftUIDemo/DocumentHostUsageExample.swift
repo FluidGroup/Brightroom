@@ -14,34 +14,34 @@ enum ExampleImageLoading {
 
   static func load(asset: PHAsset) async throws -> ImageEditorDocument {
     let image = try await SourceImage(asset: asset)
-    return await EditingDocument(image: image, cropModifier: .faceDetection(aspectRatio: .square))
+    return await EditingDocument(source: image, cropModifier: .faceDetection(aspectRatio: .square))
   }
 
   static func load(remote url: URL) async throws -> ImageEditorDocument {
     // The app owns networking; the library reads the bytes.
-    EditingDocument(image: try await DemoRemoteImage.load(url))
+    EditingDocument(source: try await DemoRemoteImage.load(url))
   }
 
   static func load(file url: URL) throws -> ImageEditorDocument {
-    EditingDocument(image: try SourceImage(contentsOf: url))
+    EditingDocument(source: try SourceImage(contentsOf: url))
   }
 
   /// RAW is developed when the image is created, which takes hundreds of
   /// milliseconds, so it runs off the main actor.
   @concurrent
   static func load(raw url: URL) async throws -> ImageEditorDocument {
-    EditingDocument(image: try SourceImage(rawContentsOf: url))
+    EditingDocument(source: try SourceImage(rawContentsOf: url))
   }
 
   static func load(contentEditingInput input: PHContentEditingInput) throws -> ImageEditorDocument {
     guard let url = input.fullSizeImageURL else {
       throw CocoaError(.fileNoSuchFile)
     }
-    return EditingDocument(image: try SourceImage(contentsOf: url))
+    return EditingDocument(source: try SourceImage(contentsOf: url))
   }
 
   static func load(uiImage: UIImage) -> ImageEditorDocument {
-    EditingDocument(image: SourceImage(image: uiImage), history: .init(limit: 20))
+    EditingDocument(source: SourceImage(image: uiImage), history: .init(limit: 20))
   }
 }
 
@@ -172,9 +172,9 @@ struct ExampleSavedEdit: Codable {
   }
 
   func makeDocument(imageDirectory: URL) throws -> ImageEditorDocument {
-    let image = try SourceImage(contentsOf: imageDirectory.appendingPathComponent(imageFileName))
+    let source = try SourceImage(contentsOf: imageDirectory.appendingPathComponent(imageFileName))
     return EditingDocument(
-      image: image,
+      source: source,
       feature: current.makeFeature(),
       history: .init(undoStack: undo.map { $0.makeFeature() }, redoStack: [])
     )
@@ -208,7 +208,7 @@ enum ExampleFeatureRendering {
 
   static func preview(of document: ImageEditorDocument) throws -> CIImage {
     try FeatureRenderer().makeImage(
-      from: document.image.makeCIImage(maxPixelSize: 1024),
+      from: document.source.makeCIImage(maxPixelSize: 1024),
       feature: document.feature
     )
   }

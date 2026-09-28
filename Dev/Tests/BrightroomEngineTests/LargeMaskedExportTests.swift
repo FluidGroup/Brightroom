@@ -51,7 +51,7 @@ struct LargeMaskedExportTests {
 
     // Export WITH the local adjustment through an identity crop.
     let adjustedRenderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     let adjusted = try await adjustedRenderer.render(
@@ -60,7 +60,7 @@ struct LargeMaskedExportTests {
 
     // Export the SAME edit with NO local adjustment as the baseline.
     let baselineRenderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     let baseline = try await baselineRenderer.render(

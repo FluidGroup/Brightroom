@@ -66,7 +66,7 @@ struct LocalAdjustmentRenderingTests {
   @Test func `Renderer applies local adjustment before crop`() async throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
     let imageSource = SourceImage(cgImage: sourceImage)
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(localAdjustments: [
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ], crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
@@ -93,7 +93,7 @@ struct LocalAdjustmentRenderingTests {
       rightWhite: 0.625
     )
     let imageSource = SourceImage(cgImage: sourceImage)
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(ExposureFeature(ev: 0.5))], localAdjustments: [
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(ExposureFeature(ev: 0.5))], localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ], crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),

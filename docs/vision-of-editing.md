@@ -89,7 +89,7 @@ each word has one meaning; new API and documentation follow this list.
 
 | Word | Meaning | In the API |
 | --- | --- | --- |
-| Source image | The image an edit is authored over, fixed for a document's lifetime. Its oriented pixel size is the domain the first Feature receives. "Source" means only this: the entry of the chain. | `SourceImage`, `SourceImage.pixelSize` |
+| Source image | The image an edit is authored over, fixed for a document's lifetime. Its oriented pixel size is the domain the first Feature receives. "Source" means only this: the entry of the chain. | `SourceImage`, `EditingDocument.source`, `SourceImage.pixelSize` |
 | Feature | One step of an edit: a value with parameters that turns an input image into an output image. | `Feature`; top-level library types end in `Feature` (`CropFeature`, `ExposureFeature`) |
 | Root feature | The Feature a document holds: the whole edit, composed from other Features. | `EditingDocument.feature`, `ImageEditorFeature` |
 | Input, output | The image a Feature receives and the image it returns. | `inputToOutputTransform` |

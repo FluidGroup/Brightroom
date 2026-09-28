@@ -80,7 +80,7 @@ struct ImageEditorContent: View {
 
   var body: some View {
     // Known from the image itself, before the editing source is prepared.
-    let originalAspectRatio = AspectRatio(document.image.pixelSize)
+    let originalAspectRatio = AspectRatio(document.source.pixelSize)
     let isLoaded = editingStack.loadedState != nil
     // Includes a slider value that is shown but not yet written.
     let displayedFeature = session.displayedFeature(of: document)
@@ -1740,7 +1740,7 @@ private enum AspectRatioDirection {
 
     // The document holds the edit and its history, so it lives with the view.
     @State private var document = ImageEditorDocument(
-      image: SourceImage(image: PreviewFixtures.makeCheckerboardImage())
+      source: SourceImage(image: PreviewFixtures.makeCheckerboardImage())
     )
 
     var body: some View {

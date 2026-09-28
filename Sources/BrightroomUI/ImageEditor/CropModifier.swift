@@ -29,7 +29,7 @@ import BrightroomParametric
 /// Decides the initial crop of a newly loaded image.
 ///
 /// It runs once, when a new document is created with
-/// `EditingDocument(image:cropModifier:history:)`. An existing document is never
+/// `EditingDocument(source:cropModifier:history:)`. An existing document is never
 /// modified.
 public struct CropModifier: Sendable {
 
@@ -161,28 +161,28 @@ extension EditingDocument where Content == ImageEditorFeature {
   /// state, so undo does not return to the full-image crop.
   ///
   /// - Parameters:
-  ///   - image: The image to edit.
+  ///   - source: The source image to edit.
   ///   - cropModifier: The initial-crop policy. `.identity` returns without
   ///     suspending work.
   ///   - history: The history of the new document. Empty by default.
   nonisolated(nonsending)
   public init(
-    image: SourceImage,
+    source: SourceImage,
     cropModifier: CropModifier,
     history: History = History()
   ) async {
-    var feature = ImageEditorFeature(imageSize: image.pixelSize)
+    var feature = ImageEditorFeature(imageSize: source.pixelSize)
 
     if cropModifier.isIdentity == false {
-      let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)
+      let crop = CropEditingState(cropFeature: feature.crop, imageSize: source.pixelSize)
       // The input is built off the calling actor: downsampling decodes the
       // full image, which would otherwise hitch the caller (often main).
       feature.setCrop(
-        await Self.runCropModifier(cropModifier, image: image, crop: crop)
+        await Self.runCropModifier(cropModifier, source: source, crop: crop)
       )
     }
 
-    self.init(image: image, feature: feature, history: history)
+    self.init(source: source, feature: feature, history: history)
   }
 
   /// The largest side of the image a crop modifier inspects.
@@ -190,9 +190,9 @@ extension EditingDocument where Content == ImageEditorFeature {
 
   /// A downsampled, oriented image scaled up to the oriented pixel size with
   /// a zero origin: the domain the crop is authored in.
-  private static func makeCropModifierInput(_ image: SourceImage) -> CIImage {
-    let downsampled = image.makeCIImage(maxPixelSize: cropModifierInputMaxPixelSize)
-    let imageSize = image.pixelSize
+  private static func makeCropModifierInput(_ source: SourceImage) -> CIImage {
+    let downsampled = source.makeCIImage(maxPixelSize: cropModifierInputMaxPixelSize)
+    let imageSize = source.pixelSize
 
     let scaled = downsampled.transformed(
       by: .init(
@@ -214,9 +214,9 @@ extension EditingDocument where Content == ImageEditorFeature {
   @concurrent
   private static func runCropModifier(
     _ cropModifier: CropModifier,
-    image: SourceImage,
+    source: SourceImage,
     crop: CropEditingState
   ) async -> CropEditingState {
-    await cropModifier.modify(makeCropModifierInput(image), crop)
+    await cropModifier.modify(makeCropModifierInput(source), crop)
   }
 }

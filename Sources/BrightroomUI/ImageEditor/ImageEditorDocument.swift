@@ -25,7 +25,7 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-/// The document `ImageEditor` edits: an image and its `ImageEditorFeature`,
+/// The document `ImageEditor` edits: a source image and its `ImageEditorFeature`,
 /// with the edit's history.
 public typealias ImageEditorDocument = EditingDocument<ImageEditorFeature>
 
@@ -35,11 +35,11 @@ extension EditingDocument where Content == ImageEditorFeature {
   /// image.
   ///
   /// To start from a policy-decided crop such as a framed face, use
-  /// `init(image:cropModifier:history:)`.
-  public init(image: SourceImage, history: History = History()) {
+  /// `init(source:cropModifier:history:)`.
+  public init(source: SourceImage, history: History = History()) {
     self.init(
-      image: image,
-      feature: ImageEditorFeature(imageSize: image.pixelSize),
+      source: source,
+      feature: ImageEditorFeature(imageSize: source.pixelSize),
       history: history
     )
   }
@@ -82,7 +82,7 @@ extension EditingDocument where Content == ImageEditorFeature {
   /// Reset only restores the crop geometry, so this intentionally ignores
   /// effects and the local blur.
   func hasCropChanges(tolerance: CGFloat = 1) -> Bool {
-    let crop = CropEditingState(cropFeature: feature.crop, imageSize: image.pixelSize)
+    let crop = CropEditingState(cropFeature: feature.crop, imageSize: source.pixelSize)
     let initial = crop.makeInitial()
     return crop.rotation != initial.rotation
       || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001

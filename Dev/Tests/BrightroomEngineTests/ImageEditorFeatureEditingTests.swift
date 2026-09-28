@@ -35,7 +35,7 @@ struct ImageEditorFeatureEditingTests {
     restored.effects.exposure = ExposureFeature(ev: 0.9)
     restored.effects.vignette = VignetteFeature(value: 1)
 
-    var document = EditingDocument(image: makeImage(), feature: restored)
+    var document = EditingDocument(source: makeImage(), feature: restored)
     #expect(document.feature == restored)
     #expect(!document.canUndo)
 
@@ -53,16 +53,16 @@ struct ImageEditorFeatureEditingTests {
 
   @Test func `The identity modifier creates the full-image document`() async {
     let image = makeImage()
-    let document = await EditingDocument(image: image, cropModifier: .identity)
+    let document = await EditingDocument(source: image, cropModifier: .identity)
 
     #expect(document.feature == ImageEditorFeature(imageSize: imageSize))
-    #expect(document == EditingDocument(image: image))
+    #expect(document == EditingDocument(source: image))
     #expect(!document.canUndo)
   }
 
   @Test func `A custom crop modifier sets the initial crop`() async {
     let document = await EditingDocument(
-      image: makeImage(),
+      source: makeImage(),
       cropModifier: CropModifier { _, crop in
         var crop = crop
         crop.updateCropExtent(toFitAspectRatio: .square)
@@ -85,7 +85,7 @@ struct ImageEditorFeatureEditingTests {
     let counter = Counter()
 
     let document = await EditingDocument(
-      image: makeImage(),
+      source: makeImage(),
       cropModifier: CropModifier { _, crop in
         counter.increment()
         return crop
@@ -105,7 +105,7 @@ struct ImageEditorFeatureEditingTests {
   /// installs its fallback crop instead of hanging.
   @Test func `Face detection without a face falls back instead of hanging`() async {
     let document = await EditingDocument(
-      image: makeImage(),
+      source: makeImage(),
       cropModifier: .faceDetection(aspectRatio: .square)
     )
 
@@ -116,7 +116,7 @@ struct ImageEditorFeatureEditingTests {
   // MARK: - Edits
 
   @Test func `Global effect edits change the feature`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
 
     document.selectFilterPreset(preset)
     document.setAdjustmentValue(50, parameter: .exposure)
@@ -127,7 +127,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Re-applying the same slider value adds no step`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
 
     document.setAdjustmentValue(50, parameter: .exposure)
     document.commit()
@@ -145,7 +145,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Re-selecting the same preset adds no step`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
 
     document.selectFilterPreset(preset)
     document.commit()
@@ -156,7 +156,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `A tool visit is one step`() {
-    let opened = EditingDocument(image: makeImage())
+    let opened = EditingDocument(source: makeImage())
     var session = ImageEditorSession(documentAtStart: opened)
 
     // A filter tap writes without committing.
@@ -184,7 +184,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Discarding uncommitted changes returns to the latest commit`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
 
     document.selectFilterPreset(preset)
     document.commit()
@@ -197,7 +197,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Clear blur mask removes the blur mask only`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
     ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.feature.effects)
     document.feature.appendLocalBlurStroke(
       BrushMask.Stroke(stampCenters: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
@@ -215,7 +215,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `An operation that leaves the document equal writes nothing`() {
-    let document = EditingDocument(image: makeImage())
+    let document = EditingDocument(source: makeImage())
     var session = ImageEditorSession(documentAtStart: document)
     let feature = document.feature
 
@@ -224,7 +224,7 @@ struct ImageEditorFeatureEditingTests {
   }
 
   @Test func `Crop changes are measured against the whole image`() {
-    var document = EditingDocument(image: makeImage())
+    var document = EditingDocument(source: makeImage())
     #expect(!document.hasCropChanges())
 
     var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: imageSize)
@@ -233,7 +233,7 @@ struct ImageEditorFeatureEditingTests {
     #expect(document.hasCropChanges())
 
     // Effects are not crop changes.
-    var effectsOnly = EditingDocument(image: makeImage())
+    var effectsOnly = EditingDocument(source: makeImage())
     effectsOnly.setAdjustmentValue(50, parameter: .exposure)
     #expect(!effectsOnly.hasCropChanges())
   }

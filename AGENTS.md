@@ -233,7 +233,7 @@ struct EditorScreen: View {
 // Create the document before showing the editor, for example:
 func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
   EditorScreen(
-    document: ImageEditorDocument(image: try SourceImage(contentsOf: fileURL)),
+    document: ImageEditorDocument(source: try SourceImage(contentsOf: fileURL)),
     didExport: { _ in }
   )
 }

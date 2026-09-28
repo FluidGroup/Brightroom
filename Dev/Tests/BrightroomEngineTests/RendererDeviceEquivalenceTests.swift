@@ -122,7 +122,7 @@ struct RendererDeviceEquivalenceTests {
     makeDocument: (_ imageSize: CGSize) -> RendererTestDocument
   ) async throws -> RenderedImage {
     let source = SourceImage.test(image)
-    return try EditingDocument(image: source, feature: makeDocument(source.pixelSize))
+    return try EditingDocument(source: source, feature: makeDocument(source.pixelSize))
       .renderForTesting(options: options, device: device)
   }
 

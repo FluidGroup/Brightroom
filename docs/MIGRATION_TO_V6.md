@@ -49,7 +49,7 @@ The most common migration path is:
    `render(options:)` when the editor is done.
 7. Replace `SwiftUICropView` with `ImageEditorCanvas(document:)`, and
    `featureFocus(_:)` with `editingTarget(_:)`.
-8. Pass a `CropModifier` to `await ImageEditorDocument(image:cropModifier:)`
+8. Pass a `CropModifier` to `await ImageEditorDocument(source:cropModifier:)`
    instead of to `EditingStack`.
 9. Apply the renames in [Name Changes at a Glance](#name-changes-at-a-glance).
 10. Author crop rectangles as the selection before the quarter turn, and
@@ -712,8 +712,8 @@ you loaded, for example in its document.
 
 `EditingDocument<Content>` (BrightroomEngine) is a value that holds:
 
-- `image`, the `SourceImage`, fixed for the document's lifetime;
-- `feature`, the root feature, authored in the image's oriented pixel
+- `source`, the `SourceImage`, fixed for the document's lifetime;
+- `feature`, the root feature, authored in the source image's oriented pixel
   coordinates;
 - `history`, its commit-style undo history.
 
@@ -722,11 +722,19 @@ one undo step, and `undo()`, `redo()`, `canUndo`, `canRedo`,
 `hasUncommittedChanges`, and `discardUncommittedChanges()` work on the value.
 The UI that edits a document decides when to commit. `history.limit` caps the
 undo steps (100 by default), and `history.removeAll()` drops them.
-`render(options:)` renders the feature over the full-resolution image.
+`render(options:)` renders the feature over the full-resolution source image.
 
 `ImageEditorDocument` is `EditingDocument<ImageEditorFeature>`, the document
 `ImageEditor` and `ImageEditorCanvas` edit. Your own editor can use
 `EditingDocument` with its own root feature.
+
+If you built against an unreleased Brightroom 6 snapshot, the document's
+image was named `image`. It is `source` now, matching the vocabulary word
+"source image":
+
+| Earlier 6.0 snapshot | 6.0 |
+| --- | --- |
+| `EditingDocument.image`, `init(image:feature:history:)`, `ImageEditorDocument(image:)`, `ImageEditorDocument(image:cropModifier:)` | `EditingDocument.source`, `init(source:feature:history:)`, `ImageEditorDocument(source:)`, `ImageEditorDocument(source:cropModifier:)` |
 
 ### EditingStack Is No Longer Public
 
@@ -735,7 +743,7 @@ which prepare their preview themselves. Apps never create one.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
-| `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(image:)`, or `await ImageEditorDocument(image:cropModifier:)` for a policy-decided crop |
+| `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(source:)`, or `await ImageEditorDocument(source:cropModifier:)` for a policy-decided crop |
 | `start()`, `isLoading`, `loadedState` | None. The editor prepares its preview. To show the image yourself, use `SourceImage.makeCIImage(maxPixelSize:)`. |
 | `Loaded.makeOriginalCIImage()` | `SourceImage.makeCIImage()` |
 | `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `SourceImage.makeCIImage(maxPixelSize:)` |
@@ -746,7 +754,7 @@ which prepare their preview themselves. Apps never create one.
 | `removeAllHistory()` | `document.history.removeAll()` |
 | `revert(to:)`, `currentRevision`, `Revision` | None. Keep a copy of the document to return to. |
 | `Loaded.isDirty` | Compare `document.feature` with the feature you started from |
-| `cropModifier` | `await ImageEditorDocument(image:cropModifier:)`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
+| `cropModifier` | `await ImageEditorDocument(source:cropModifier:)`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
 | `makeRenderer().render(options:)`, `BrightRoomImageRenderer`, `ImageRenderer` | `document.render(options:)` |
 | `EditingStackError` | None. `SourceImageError` covers loading. |
 
@@ -769,7 +777,7 @@ import BrightroomUI
 import UIKit
 
 func renderEdit(of image: UIImage) async throws -> UIImage {
-  let document = ImageEditorDocument(image: SourceImage(image: image))
+  let document = ImageEditorDocument(source: SourceImage(image: image))
   // … edit the document …
   let rendered = try await document.render()
   return try rendered.uiImage
@@ -789,7 +797,7 @@ over an `EditingStack`.
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `SwiftUIPhotosCropView(editingModel:options:localizedStrings:onDone:onCancel:)` | `ImageEditor(document:options:localizedStrings:onDone:onCancel:)`, with a `Binding<ImageEditorDocument>` |
-| `PhotosCropEditingModel(editingStack:)` | `ImageEditorDocument(image:)`, kept in your state (for example `@State`) |
+| `PhotosCropEditingModel(editingStack:)` | `ImageEditorDocument(source:)`, kept in your state (for example `@State`) |
 | `onCancel` (required) | Optional. The editor writes back the document it opened with, then calls `onCancel`. `nil` hides the Cancel button. |
 | `SwiftUIPhotosCropView.Options` | `ImageEditor.Options` |
 | `SwiftUIPhotosCropView.LocalizedStrings` | `ImageEditor.LocalizedStrings` |
@@ -890,7 +898,7 @@ It is authored in the oriented, pre-crop source domain at full resolution
 (bottom-left origin, y-up). A 5.x `EditingStack.Edit.document` stored them
 y-down, so flip them when you convert a saved 5.x edit (see
 [Converting 5.x documents](parametric-persistence.md#converting-5x-documents)).
-A new document from `ImageEditorDocument(image:)` has no effects and a crop
+A new document from `ImageEditorDocument(source:)` has no effects and a crop
 that covers the whole image. To rebuild a saved edit, use
 `ImageEditorFeature(effects:localBlur:crop:)`.
 
@@ -921,7 +929,7 @@ reopened the editor where the user left it. In Brightroom 6:
 - **Resume a saved edit.** Store the image reference and the feature's values
   in your own format (see
   [Saving parametric edits](parametric-persistence.md)), and rebuild the
-  document with `ImageEditorDocument(image:feature:history:)`.
+  document with `ImageEditorDocument(source:feature:history:)`.
 
 ```swift
 import BrightroomEngine
@@ -945,7 +953,7 @@ func resumeEdit(
     )
   )
   return ImageEditorDocument(
-    image: try SourceImage(contentsOf: imageURL),
+    source: try SourceImage(contentsOf: imageURL),
     feature: feature
   )
 }
@@ -1054,7 +1062,7 @@ works on a `CropEditingState`, and is `@Sendable`:
 the main actor, so the state it captures must be `Sendable`; move blocking work
 to your own queue, as `faceDetection` does. `.identity` and
 `.faceDetection(paddingBias:aspectRatio:)` are provided. It runs once, when
-you create a document with `await ImageEditorDocument(image:cropModifier:)`,
+you create a document with `await ImageEditorDocument(source:cropModifier:)`,
 and never for a document you rebuild from saved values. Its crop is the
 document's committed state, so undo does not return to the full-image crop.
 The `aspectRatio` of `.faceDetection` describes the final output, after the
@@ -1078,9 +1086,9 @@ import BrightroomEngine
 import BrightroomParametric
 import BrightroomUI
 
-func makeFramedDocument(for image: SourceImage) async -> ImageEditorDocument {
+func makeFramedDocument(for source: SourceImage) async -> ImageEditorDocument {
   await ImageEditorDocument(
-    image: image,
+    source: source,
     cropModifier: .faceDetection(aspectRatio: .square)
   )
 }
@@ -1171,9 +1179,9 @@ snaps the rectangle the same way the canvas does:
 import BrightroomEngine
 import BrightroomUI
 
-func squareDocument(for image: SourceImage) -> ImageEditorDocument {
-  var document = ImageEditorDocument(image: image)
-  var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: image.pixelSize)
+func squareDocument(for source: SourceImage) -> ImageEditorDocument {
+  var document = ImageEditorDocument(source: source)
+  var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: source.pixelSize)
   crop.updateCropExtent(toFitAspectRatio: .square)
   document.feature.setCrop(crop)
   return document
@@ -1349,9 +1357,7 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `EditingDocument.image` and the `image:` labels of its initializers may
-  become `source`.
-- `CropModifier` and `ImageEditorDocument(image:cropModifier:)` may become an
+- `CropModifier` and `ImageEditorDocument(source:cropModifier:)` may become an
   initial-crop policy that works on `CropFeature`. `CropEditingState` and
   `ImageEditorFeature.setCrop(_:)` may leave the public API, so that
   `CropFeature` is the one public crop value.
@@ -1399,7 +1405,7 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
       document binding and uses `editingTarget(_:)`; your code commits undo
       steps for canvas edits.
-- [ ] `CropModifier` is passed to `await ImageEditorDocument(image:cropModifier:)`.
+- [ ] `CropModifier` is passed to `await ImageEditorDocument(source:cropModifier:)`.
 - [ ] Filters are supplied through `options.filters`.
 - [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
       are applied, including `QuarterTurn` case names and log filters.

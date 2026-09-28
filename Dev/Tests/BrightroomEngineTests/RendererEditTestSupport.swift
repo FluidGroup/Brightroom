@@ -101,10 +101,10 @@ extension EditingStack {
     orientation: CGImagePropertyOrientation = .up
   ) -> EditingStack {
     let image = SourceImage(cgImage: cgImage, orientation: orientation)
-    let stack = EditingStack(image: image)
+    let stack = EditingStack(source: image)
     let editingSource = image.makeCIImage()
     stack.loadedState = .init(
-      image: image,
+      source: image,
       thumbnailImage: editingSource,
       editingSourceCGImage: cgImage,
       editingSourceImage: editingSource

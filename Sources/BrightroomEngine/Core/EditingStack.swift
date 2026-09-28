@@ -28,7 +28,7 @@ import BrightroomParametric
 /// Prepares one image for interactive editing.
 ///
 /// Package access: editors in BrightroomUI (`ImageEditorCanvas`,
-/// `ImageEditor`) create a stack for their document's image and
+/// `ImageEditor`) create a stack for their document's source image and
 /// keep it while they are shown. Apps never create one; a custom editor
 /// displays `SourceImage.makeCIImage(maxPixelSize:)`.
 ///
@@ -65,13 +65,13 @@ package final class EditingStack: Hashable {
   /// The prepared image, published once preparation finishes.
   package struct Loaded: Equatable {
 
-    /// The image this state was prepared from.
-    package let image: SourceImage
+    /// The source image this state was prepared from.
+    package let source: SourceImage
 
     /// The oriented source pixel size: the domain documents of this image are
     /// authored in.
     package var imageSize: CGSize {
-      image.pixelSize
+      source.pixelSize
     }
 
     /// A small oriented thumbnail, used for previews such as filter swatches.
@@ -105,8 +105,8 @@ package final class EditingStack: Hashable {
 
   // MARK: - Stored Properties
 
-  /// The image this stack prepares.
-  package let image: SourceImage
+  /// The source image this stack prepares.
+  package let source: SourceImage
 
   private let startLock = NSLock()
 
@@ -126,9 +126,9 @@ package final class EditingStack: Hashable {
 
   // MARK: - Initializers
 
-  /// Creates a stack that prepares `image` once `start()` is called.
-  package init(image: SourceImage) {
-    self.image = image
+  /// Creates a stack that prepares `source` once `start()` is called.
+  package init(source: SourceImage) {
+    self.source = source
   }
 
   /// Starts preparing the image. Calling it again does nothing.
@@ -165,7 +165,7 @@ package final class EditingStack: Hashable {
   }
 
   private func prepare(onPreparationCompleted: @escaping @MainActor () -> Void) {
-    let storage = image.storage
+    let storage = source.storage
     let orientation = storage.orientation
 
     guard
@@ -196,7 +196,7 @@ package final class EditingStack: Hashable {
     ) ?? cpuEditingSource
 
     loadedState = Loaded(
-      image: image,
+      source: source,
       thumbnailImage: thumbnailImage,
       editingSourceCGImage: editingSourceCGImage,
       editingSourceImage: editingSource

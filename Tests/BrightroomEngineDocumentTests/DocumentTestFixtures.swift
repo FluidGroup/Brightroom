@@ -64,6 +64,6 @@ enum DocumentTestFixtures {
     feature: ImageEditorFeature = exposure(0),
     history: ImageEditorDocument.History = .init()
   ) throws -> ImageEditorDocument {
-    EditingDocument(image: try makeImage(), feature: feature, history: history)
+    EditingDocument(source: try makeImage(), feature: feature, history: history)
   }
 }

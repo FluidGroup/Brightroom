@@ -259,7 +259,7 @@ struct EditingDocumentHistoryTests {
     // An app that saves history writes the stacks in its own format.
     let saved = document.history
     var restored = EditingDocument(
-      image: document.image,
+      source: document.source,
       feature: document.feature,
       history: .init(undoStack: saved.undoStack, redoStack: saved.redoStack, limit: saved.limit)
     )
@@ -286,7 +286,7 @@ struct EditingDocumentHistoryTests {
     var document = try Fixtures.makeDocument()
     document.feature = Fixtures.exposure(1)
 
-    let restored = EditingDocument(image: document.image, feature: document.feature, history: document.history)
+    let restored = EditingDocument(source: document.source, feature: document.feature, history: document.history)
     #expect(!restored.hasUncommittedChanges)
     #expect(!restored.canUndo)
   }

@@ -22,7 +22,7 @@ struct EditingStackTests {
   @Test func `Loading publishes a state without an edit`() async throws {
     let size = CGSize(width: 40, height: 20)
     let image = SourceImage(image: makeImage(size: size))
-    let stack = EditingStack(image: image)
+    let stack = EditingStack(source: image)
     #expect(stack.isLoading)
 
     stack.start()
@@ -32,7 +32,7 @@ struct EditingStackTests {
     }
 
     let loaded = try #require(stack.loadedState)
-    #expect(loaded.image == image)
+    #expect(loaded.source == image)
     #expect(loaded.imageSize == size)
     #expect(loaded.thumbnailImage.extent.isEmpty == false)
     #expect(loaded.editingSourceImage.extent.size == size)
@@ -45,7 +45,7 @@ struct EditingStackTests {
     let stack = EditingStack.test(cgImage: cgImage)
 
     let crop = CropFeature.test(imageSize: size, topLeftRect: CGRect(x: 4, y: 2, width: 16, height: 12))
-    let rendered = try await EditingDocument(image: stack.image, feature: crop).render()
+    let rendered = try await EditingDocument(source: stack.source, feature: crop).render()
 
     let image = try rendered.cgImage
     #expect(image.width == 16)

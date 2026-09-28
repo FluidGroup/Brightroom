@@ -113,7 +113,7 @@ final class DiskExportTests {
     let source = Self.makeTopWhiteBottomBlack(side: side)
 
     let renderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     _ = try await renderer.render(
@@ -140,7 +140,7 @@ final class DiskExportTests {
     let source = Self.makeSolidColorImage(side: side, red: 200, green: 100, blue: 30)
 
     let renderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     _ = try await renderer.render(
@@ -185,7 +185,7 @@ final class DiskExportTests {
     }
 
     let renderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     return renderer

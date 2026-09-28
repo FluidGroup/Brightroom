@@ -24,9 +24,9 @@ import SwiftUI
 
 import BrightroomEngine
 
-/// Prepares an image for the lifetime of this view's identity.
+/// Prepares a source image for the lifetime of this view's identity.
 ///
-/// Give it an identity per image (`.id(image)`): the stack is created once
+/// Give it an identity per source image (`.id(source)`): the stack is created once
 /// per identity and released with it, so the GPU-resident editing source
 /// lives only while an editor shows the image.
 struct OwnedEditingStack<Content: View>: View {
@@ -38,8 +38,8 @@ struct OwnedEditingStack<Content: View>: View {
 
   private let content: (EditingStack) -> Content
 
-  init(image: SourceImage, @ViewBuilder content: @escaping (EditingStack) -> Content) {
-    self._stack = State(initialValue: EditingStack(image: image))
+  init(source: SourceImage, @ViewBuilder content: @escaping (EditingStack) -> Content) {
+    self._stack = State(initialValue: EditingStack(source: source))
     self.content = content
   }
 

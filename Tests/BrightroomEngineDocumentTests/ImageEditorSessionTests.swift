@@ -246,7 +246,7 @@ struct ImageEditorSessionTests {
     })
 
     // The host rebinds the editor to a duplicate with its own edit.
-    var duplicate = EditingDocument(image: opened.image, feature: Fixtures.exposure(-1))
+    var duplicate = EditingDocument(source: opened.source, feature: Fixtures.exposure(-1))
     session.noteDocument(duplicate)
     #expect(session.documentForCancel(replacing: duplicate) == nil, "Cancel must not write the first document over the duplicate.")
 
@@ -264,7 +264,7 @@ struct ImageEditorSessionTests {
     })
 
     // The rebinding and the next write arrive before any onChange.
-    let duplicate = EditingDocument(image: opened.image, feature: Fixtures.exposure(-1))
+    let duplicate = EditingDocument(source: opened.source, feature: Fixtures.exposure(-1))
     let written = try #require(session.document(after: duplicate) {
       $0.feature.effects.contrast = ContrastFeature(value: 0.2)
     })
@@ -292,9 +292,9 @@ struct ImageEditorSessionTests {
 
   @Test func `Cancel never replaces a document of another image`() throws {
     let data = try Fixtures.makeRotatedJPEG()
-    let opened = EditingDocument(image: try SourceImage(data: data))
+    let opened = EditingDocument(source: try SourceImage(data: data))
     let session = ImageEditorSession(documentAtStart: opened)
-    let other = EditingDocument(image: try SourceImage(data: data))
+    let other = EditingDocument(source: try SourceImage(data: data))
     #expect(session.documentForCancel(replacing: other) == nil)
   }
 
@@ -321,22 +321,22 @@ struct ImageEditorSessionTests {
   @Test func `A canvas change of another image is dropped`() throws {
     let data = try Fixtures.makeRotatedJPEG()
     let shown = try SourceImage(data: data)
-    let host = Host(EditingDocument(image: try SourceImage(data: data)))
+    let host = Host(EditingDocument(source: try SourceImage(data: data)))
 
     // A change queued by the canvas that showed `shown`.
     ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: shown, to: host.binding)
     #expect(host.writes == 0)
     #expect(host.document.feature.effects.exposure == nil)
 
-    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.source, to: host.binding)
     #expect(host.writes == 1)
     #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 1))
   }
 
   @Test func `A canvas change that changes nothing is not written`() throws {
     let host = Host(try Fixtures.makeDocument())
-    ImageEditorCanvas.apply({ _ in }, preparedFor: host.document.image, to: host.binding)
-    ImageEditorCanvas.apply({ $0.localBlur = nil }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ _ in }, preparedFor: host.document.source, to: host.binding)
+    ImageEditorCanvas.apply({ $0.localBlur = nil }, preparedFor: host.document.source, to: host.binding)
     #expect(host.writes == 0)
   }
 
@@ -344,7 +344,7 @@ struct ImageEditorSessionTests {
     let host = Host(try Fixtures.makeDocument())
     // The host changed the document after the canvas queued its change.
     host.document.feature.effects.saturation = SaturationFeature(value: 0.5)
-    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.image, to: host.binding)
+    ImageEditorCanvas.apply({ $0.effects.exposure = .init(ev: 1) }, preparedFor: host.document.source, to: host.binding)
     #expect(host.document.feature.effects.saturation == SaturationFeature(value: 0.5))
     #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 1))
   }

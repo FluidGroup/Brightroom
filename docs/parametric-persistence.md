@@ -123,7 +123,7 @@ It uses only the public API.
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
-| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `ImageEditorDocument(image:feature:history:)` |
+| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
 
 Notes:
 
@@ -202,11 +202,11 @@ struct SavedEdit: Codable {
   }
 
   func makeDocument(imageDirectory: URL) throws -> ImageEditorDocument {
-    let image = try SourceImage(
+    let source = try SourceImage(
       contentsOf: imageDirectory.appendingPathComponent(imageFileName)
     )
     return ImageEditorDocument(
-      image: image,
+      source: source,
       feature: try current.makeFeature(),
       history: .init(undoStack: try undo.map { try $0.makeFeature() }, redoStack: [])
     )

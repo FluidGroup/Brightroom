@@ -78,7 +78,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   private func exportRender(_ document: ImageEditorFeature, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
-    return try EditingDocument(image: SourceImage(cgImage: source), feature: document)
+    return try EditingDocument(source: SourceImage(cgImage: source), feature: document)
       .renderForTesting(options: .init(outputColorSpace: Self.sRGB), device: .automatic)
       .cgImage
   }

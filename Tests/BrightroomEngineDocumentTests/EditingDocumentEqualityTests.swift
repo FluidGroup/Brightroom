@@ -50,30 +50,30 @@ struct EditingDocumentEqualityTests {
 
   @Test func `Documents of different images are not equal`() throws {
     let data = try Fixtures.makeRotatedJPEG()
-    let first = EditingDocument(image: try SourceImage(data: data))
-    let second = EditingDocument(image: try SourceImage(data: data))
+    let first = EditingDocument(source: try SourceImage(data: data))
+    let second = EditingDocument(source: try SourceImage(data: data))
     #expect(first.feature == second.feature)
     #expect(first != second)
   }
 
   @Test func `Render keys come from the feature, so a commit keeps them`() throws {
-    // A preview cache keyed on the feature (or on image and feature) is not
+    // A preview cache keyed on the feature (or on source and feature) is not
     // invalidated by a commit, which changes the document but no pixel.
     struct RenderKey: Equatable {
-      let image: SourceImage
+      let source: SourceImage
       let feature: ImageEditorFeature
     }
     var document = try Fixtures.makeDocument()
     document.feature = Fixtures.exposure(1)
-    let before = RenderKey(image: document.image, feature: document.feature)
+    let before = RenderKey(source: document.source, feature: document.feature)
     let documentBefore = document
 
     document.commit()
-    #expect(RenderKey(image: document.image, feature: document.feature) == before)
+    #expect(RenderKey(source: document.source, feature: document.feature) == before)
     #expect(document != documentBefore)
 
     document.undo()
-    #expect(RenderKey(image: document.image, feature: document.feature) != before)
+    #expect(RenderKey(source: document.source, feature: document.feature) != before)
   }
 
   @Test func `Features built from the same values are equal`() throws {

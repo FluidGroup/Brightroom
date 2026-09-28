@@ -111,11 +111,11 @@ public struct ImageEditorCanvas: View {
   @MainActor
   static func apply(
     _ change: EditingCanvasView.FeatureChange,
-    preparedFor image: SourceImage,
+    preparedFor source: SourceImage,
     to document: Binding<ImageEditorDocument>
   ) {
     var next = document.wrappedValue
-    guard next.image == image else {
+    guard next.source == source else {
       return
     }
     change(&next.feature)
@@ -134,7 +134,7 @@ public struct ImageEditorCanvas: View {
   private let document: Binding<ImageEditorDocument>
 
   /// The stack a built-in editor shares with its other views; nil when the
-  /// view prepares the document's image itself.
+  /// view prepares the document's source image itself.
   private let editingStack: EditingStack?
 
   /// A feature a built-in editor shows in place of `document.feature`, such
@@ -160,7 +160,7 @@ public struct ImageEditorCanvas: View {
 
   /// Creates a crop canvas that edits `document`, with custom overlays.
   ///
-  /// The view prepares the document's image for display and shows a
+  /// The view prepares the document's source image for display and shows a
   /// progress indicator until it is ready, or a failure message when the
   /// image's pixels cannot be decoded (the document is left untouched). Changes made on the canvas (crop
   /// commits through `ApplyAction` or when leaving crop editing, and brush
@@ -247,7 +247,7 @@ public struct ImageEditorCanvas: View {
   }
 
   /// Creates a crop canvas with the built-in overlays over a stack a
-  /// built-in editor already prepares for `document`'s image.
+  /// built-in editor already prepares for `document`'s source image.
   ///
   /// - Parameter displayedFeature: Shown in place of `document.feature` while
   ///   non-nil. It must differ from the document only in what the editor has
@@ -271,16 +271,16 @@ public struct ImageEditorCanvas: View {
   }
 
   public var body: some View {
-    let image = document.wrappedValue.image
-    if let editingStack, editingStack.image == image {
+    let source = document.wrappedValue.source
+    if let editingStack, editingStack.source == source {
       canvas(editingStack: editingStack)
     } else {
-      // A new identity per image: the owned stack, and the canvas bound to it,
-      // are rebuilt when the host switches to a document of another image.
-      OwnedEditingStack(image: image) { stack in
+      // A new identity per source image: the owned stack, and the canvas bound
+      // to it, are rebuilt when the host switches to a document of another image.
+      OwnedEditingStack(source: source) { stack in
         canvas(editingStack: stack)
       }
-      .id(image)
+      .id(source)
     }
   }
 
@@ -291,7 +291,7 @@ public struct ImageEditorCanvas: View {
           source: EditingCanvasSource(loadedState),
           feature: displayedFeature ?? document.wrappedValue.feature,
           onFeatureChange: { [document] change in
-            Self.apply(change, preparedFor: loadedState.image, to: document)
+            Self.apply(change, preparedFor: loadedState.source, to: document)
           },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
@@ -313,7 +313,7 @@ public struct ImageEditorCanvas: View {
         // `EditingCanvasView` binds its source once, at creation. Tying the
         // representable's identity to the image makes an image swap rebuild
         // the canvas instead of leaving it bound to the old image.
-        .id(loadedState.image)
+        .id(loadedState.source)
         .transition(.opacity.animation(.smooth))
       } else if editingStack.didFailToPrepare {
         // Nothing to edit; the host's own controls stay the way out.

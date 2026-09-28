@@ -93,8 +93,8 @@ struct DocumentCreationTests {
 
   @Test func `A new image editor document crops the whole image`() throws {
     let image = try Fixtures.makeImage()
-    let document = EditingDocument(image: image)
-    #expect(document.image == image)
+    let document = EditingDocument(source: image)
+    #expect(document.source == image)
     #expect(document.feature == ImageEditorFeature(imageSize: image.pixelSize))
     #expect(document.feature.crop.rect == CGRect(origin: .zero, size: image.pixelSize))
     #expect(document.feature.effects == .init())
@@ -104,15 +104,15 @@ struct DocumentCreationTests {
 
   @Test func `The identity crop modifier keeps the whole image`() async throws {
     let image = try Fixtures.makeImage()
-    let document = await EditingDocument(image: image, cropModifier: .identity)
-    #expect(document == EditingDocument(image: image, history: document.history))
+    let document = await EditingDocument(source: image, cropModifier: .identity)
+    #expect(document == EditingDocument(source: image, history: document.history))
     #expect(document.feature.crop.rect == CGRect(origin: .zero, size: image.pixelSize))
   }
 
   @Test func `A crop modifier decides the committed initial crop`() async throws {
     let image = try Fixtures.makeImage()
     let document = await EditingDocument(
-      image: image,
+      source: image,
       cropModifier: CropModifier { input, crop in
         // The modifier sees the image in the document's domain.
         #expect(input.extent == CGRect(origin: .zero, size: image.pixelSize))
@@ -131,7 +131,7 @@ struct DocumentCreationTests {
   @Test func `A document can carry a restored history and limit`() throws {
     let image = try Fixtures.makeImage()
     let document = EditingDocument(
-      image: image,
+      source: image,
       history: .init(undoStack: [Fixtures.exposure(3)], redoStack: [], limit: 5)
     )
     #expect(document.history.limit == 5)
@@ -140,13 +140,13 @@ struct DocumentCreationTests {
 
   @Test func `An edit moves to another image only explicitly`() throws {
     let data = try Fixtures.makeRotatedJPEG()
-    var original = EditingDocument(image: try SourceImage(data: data))
+    var original = EditingDocument(source: try SourceImage(data: data))
     original.feature.effects.exposure = ExposureFeature(ev: 1)
     original.commit()
 
     let other = try SourceImage(data: data)
-    let moved = EditingDocument(image: other, feature: original.feature)
-    #expect(moved.image == other)
+    let moved = EditingDocument(source: other, feature: original.feature)
+    #expect(moved.source == other)
     #expect(moved.feature == original.feature)
     #expect(!moved.canUndo, "History stays with the original document.")
   }
@@ -154,7 +154,7 @@ struct DocumentCreationTests {
   // MARK: - Rendering
 
   @Test func `Rendering a document renders its feature over its image`() async throws {
-    var document = EditingDocument(image: try Fixtures.makeImage())
+    var document = EditingDocument(source: try Fixtures.makeImage())
     document.feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 20, height: 10))
     let rendered = try await document.render()
     let cgImage = try rendered.cgImage
@@ -164,14 +164,14 @@ struct DocumentCreationTests {
 
   @Test func `An editing stack prepares the document's image`() async throws {
     let image = try Fixtures.makeImage()
-    let stack = EditingStack(image: image)
+    let stack = EditingStack(source: image)
     await withCheckedContinuation { continuation in
       stack.start {
         continuation.resume()
       }
     }
     let loaded = try #require(stack.loadedState)
-    #expect(loaded.image == image)
+    #expect(loaded.source == image)
     #expect(loaded.imageSize == image.pixelSize)
     #expect(loaded.editingSourceImage.extent.size == image.pixelSize)
   }

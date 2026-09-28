@@ -62,7 +62,7 @@ struct HostedEditorTests {
 
   @Test func `The crop canvas prepares the image and writes crop commits without committing`() async throws {
     let image = try DocumentTestFixtures.makeImage()
-    let host = Host(EditingDocument(image: image))
+    let host = Host(EditingDocument(source: image))
     let rotate = ImageEditorCanvas.RotateAction()
     let apply = ImageEditorCanvas.ApplyAction()
 
@@ -82,7 +82,7 @@ struct HostedEditorTests {
     #expect(host.writes == 1)
     #expect(host.document.feature.crop.quarterTurn != .zero)
     #expect(host.document.hasUncommittedChanges, "ImageEditorCanvas never commits.")
-    #expect(host.document.image == image)
+    #expect(host.document.source == image)
   }
 
   /// A custom editor's host state: the document and the tool.
@@ -114,7 +114,7 @@ struct HostedEditorTests {
   /// the tool, then commit. Committing in `onChange(of: target)` instead
   /// would run before the crop the canvas writes when leaving `.crop`.
   @Test func `Applying before switching tools puts the crop in the commit`() async throws {
-    let host = ToolHost(EditingDocument(image: try DocumentTestFixtures.makeImage()))
+    let host = ToolHost(EditingDocument(source: try DocumentTestFixtures.makeImage()))
     let rotate = ImageEditorCanvas.RotateAction()
     let apply = ImageEditorCanvas.ApplyAction()
 

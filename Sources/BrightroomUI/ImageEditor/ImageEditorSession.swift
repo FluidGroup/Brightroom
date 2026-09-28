@@ -154,7 +154,7 @@ struct ImageEditorSession {
   func documentForCancel(
     replacing document: ImageEditorDocument
   ) -> ImageEditorDocument? {
-    guard document.image == documentAtStart.image, document != documentAtStart else {
+    guard document.source == documentAtStart.source, document != documentAtStart else {
       return nil
     }
     return documentAtStart

@@ -47,7 +47,7 @@ struct QuarterTurnCropTests {
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
     #expect(committed.quarterTurn == rotation)
 
-    let rendered = try await EditingDocument(image: stack.image, feature: document).render().cgImage
+    let rendered = try await EditingDocument(source: stack.source, feature: document).render().cgImage
     try Self.expectPixels(rendered, from: source, sourceRect: sourceRect, rotation: rotation)
 
     // Output orientation changes neither the selected source rectangle nor
@@ -82,7 +82,7 @@ struct QuarterTurnCropTests {
     document.setCrop(crop)
     let committed = document.crop
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
-    let rendered = try await EditingDocument(image: stack.image, feature: document).render().cgImage
+    let rendered = try await EditingDocument(source: stack.source, feature: document).render().cgImage
     try Self.expectPixels(rendered, from: source, sourceRect: sourceRect, rotation: rotation)
 
     let reopened = CropEditingState(cropFeature: committed, imageSize: size)
@@ -242,7 +242,7 @@ struct QuarterTurnCropTests {
     editor.applyPendingCrop()
     withExtendedLifetime(window) {}
 
-    let rendered = try await EditingDocument(image: stack.image, feature: owner.document).render().cgImage
+    let rendered = try await EditingDocument(source: stack.source, feature: owner.document).render().cgImage
     let pixels = try Self.rgbaPixels(of: rendered)
     let notOpaque = stride(from: 3, to: pixels.count, by: 4).filter { pixels[$0] < 255 }
     #expect(
@@ -395,7 +395,7 @@ struct QuarterTurnCropTests {
 
   private static func render(_ source: CGImage, crop: CropFeature) async throws -> CGImage {
     let renderer = EditingDocument(
-      image: SourceImage(cgImage: source, orientation: .up),
+      source: SourceImage(cgImage: source, orientation: .up),
       feature: crop
     )
     return try await renderer.render().cgImage

@@ -29,7 +29,7 @@ struct EditingPreviewExportParityTests {
     _ document: some Feature & Equatable,
     source: CGImage
   ) async throws -> CGImage {
-    try await EditingDocument(image: SourceImage(cgImage: source), feature: document).render(
+    try await EditingDocument(source: SourceImage(cgImage: source), feature: document).render(
       options: .init(outputColorSpace: Self.sRGB)
     ).cgImage
   }

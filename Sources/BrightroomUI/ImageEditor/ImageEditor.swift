@@ -42,8 +42,8 @@ import BrightroomParametric
    Undo and redo are operations on the document value, so the host can
    drive them from its own buttons.
  - The view never registers anything with an `UndoManager`, and never
-   changes the document's image.
- - The editor's state follows the document's image. To switch the editor
+   changes the document's source image.
+ - The editor's state follows the document's source image. To switch the editor
    to another document of the same image (a duplicate or a variant), give
    it a new identity with `.id`; the editor restarts its Cancel point
    itself when it sees a document it did not write, but its tool and crop
@@ -103,9 +103,9 @@ public struct ImageEditor: View {
   ///
   /// - Parameters:
   ///   - document: The edited document. Create it before showing the editor,
-  ///     with `ImageEditorDocument(image:)` or, for a policy-decided initial
-  ///     crop, `ImageEditorDocument(image:cropModifier:)`. A document of
-  ///     another image restarts the editor.
+  ///     with `ImageEditorDocument(source:)` or, for a policy-decided initial
+  ///     crop, `ImageEditorDocument(source:cropModifier:)`. A document of
+  ///     another source image restarts the editor.
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.
   ///   - onDone: Called after the binding received the last change.
@@ -132,8 +132,8 @@ public struct ImageEditor: View {
   }
 
   public var body: some View {
-    // One stack per image, shared by the canvas and the filter swatches.
-    OwnedEditingStack(image: document.image) { editingStack in
+    // One stack per source image, shared by the canvas and the filter swatches.
+    OwnedEditingStack(source: document.source) { editingStack in
       ImageEditorContent(
         document: $document,
         editingStack: editingStack,
@@ -143,6 +143,6 @@ public struct ImageEditor: View {
         onCancel: onCancel
       )
     }
-    .id(document.image)
+    .id(document.source)
   }
 }

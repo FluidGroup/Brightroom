@@ -21,7 +21,7 @@ struct RendererOrientationTests {
   {
 
     let imageSource = SourceImage.test(image, orientation: orientation)
-    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
     let rendered = try await renderer.render()
     return rendered

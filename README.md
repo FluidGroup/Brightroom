@@ -85,7 +85,7 @@ struct PhotoEditor: View {
     image: UIImage,
     onComplete: @escaping (Result<UIImage, Error>) -> Void
   ) {
-    _document = State(initialValue: ImageEditorDocument(image: SourceImage(image: image)))
+    _document = State(initialValue: ImageEditorDocument(source: SourceImage(image: image)))
     self.onComplete = onComplete
   }
 
@@ -123,13 +123,13 @@ struct PhotoEditor: View {
 
 The editor prepares the image itself. Each completed operation, such as a filter tap, a slider drag, a brush stroke, or an applied crop, is written to the binding once. On Cancel, the editor writes back the document it opened with and then calls `onCancel`; pass `nil` for `onCancel` to hide the Cancel button. The editor never registers anything with an `UndoManager`: undo and redo are `document.undo()` and `document.redo()`, so you can drive them from your own buttons.
 
-For large images, prefer `SourceImage(contentsOf:)` or `SourceImage(data:)`, which decode only when the image is rendered or prepared. `SourceImage(asset:)` loads a Photos asset. To start from a crop that frames a face, create the document with `await ImageEditorDocument(image:cropModifier:)` and `.faceDetection(aspectRatio:)`.
+For large images, prefer `SourceImage(contentsOf:)` or `SourceImage(data:)`, which decode only when the image is rendered or prepared. `SourceImage(asset:)` loads a Photos asset. To start from a crop that frames a face, create the document with `await ImageEditorDocument(source:cropModifier:)` and `.faceDetection(aspectRatio:)`.
 
 Customize the aspect ratio policy and filters through `ImageEditor.Options`, and button labels through `ImageEditor.LocalizedStrings`. Filters default to an empty list; supply your own `FilterFeature` values through `options.filters`. The [sample filters](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
 
 ### Saving and Resuming an Edit
 
-A document is a value, so keeping it keeps the edit and its undo history. To resume after the app restarts, store a reference to the source image and the feature's values in your own format, then rebuild the document with `ImageEditorDocument(image:feature:history:)`. Saving the history is optional; see [Saving parametric edits](docs/parametric-persistence.md).
+A document is a value, so keeping it keeps the edit and its undo history. To resume after the app restarts, store a reference to the source image and the feature's values in your own format, then rebuild the document with `ImageEditorDocument(source:feature:history:)`. Saving the history is optional; see [Saving parametric edits](docs/parametric-persistence.md).
 
 ### Exporting Large Images
 

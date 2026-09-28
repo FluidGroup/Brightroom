@@ -61,7 +61,7 @@ struct RendererTests {
       topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: crop)
     )
 
     let rendered = try await renderer.render()
@@ -74,7 +74,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
     let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -87,7 +87,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
     let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
@@ -102,7 +102,7 @@ struct RendererTests {
 
     let filter = ExposureFeature(ev: 0.72)
 
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
     )
 
     let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
@@ -124,7 +124,7 @@ struct RendererTests {
       topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
     let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
@@ -146,7 +146,7 @@ struct RendererTests {
       topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
     )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
@@ -168,7 +168,7 @@ struct RendererTests {
       quarterTurn: .counterclockwise90
     )
 
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: crop)
     )
 
     let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
@@ -183,7 +183,7 @@ struct RendererTests {
     let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
     let rendered = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3))
 
@@ -439,7 +439,7 @@ struct PixelAlignedCropRendererTests {
   @Test func `render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
     let imageSource = SourceImage(cgImage: sourceImage)
-    let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
     )
 
     let renderedImage = try await renderer.render().cgImage

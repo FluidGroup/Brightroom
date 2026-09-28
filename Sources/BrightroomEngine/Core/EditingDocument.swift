@@ -24,23 +24,24 @@ import QuartzCore
 
 import BrightroomParametric
 
-/// An edit of one image: the image, the feature authored over it, and the
-/// undo history of that feature.
+/// An edit of one image: the source image, the feature authored over it, and
+/// the undo history of that feature.
 ///
-/// The image is fixed for the document's lifetime, so an edit never travels
-/// without the image its coordinates belong to. `feature` is authored in the
-/// image's oriented pixel coordinates (`image.pixelSize`).
+/// The source image is fixed for the document's lifetime, so an edit never
+/// travels without the image its coordinates belong to. `feature` is authored
+/// in the source image's oriented pixel coordinates (`source.pixelSize`).
 ///
 /// History is commit style. Changing `feature` records nothing; `commit()`
 /// records the current feature as an undo step when it changed. The editing
 /// UI decides when to commit, for example when leaving a tool.
 ///
 /// Documents are values: copies are independent, and two documents are equal
-/// when they have the same image (the same load), feature, and history.
+/// when they have the same source image (the same load), feature, and
+/// history.
 public struct EditingDocument<Content: Feature & Equatable>: Equatable, Sendable {
 
-  /// The image `feature` is authored over.
-  public let image: SourceImage
+  /// The source image `feature` is authored over.
+  public let source: SourceImage
 
   /// The current feature: what renders and what editors show.
   public var feature: Content
@@ -58,12 +59,12 @@ public struct EditingDocument<Content: Feature & Equatable>: Equatable, Sendable
   /// Creates a document with `feature` as its committed state.
   ///
   /// - Parameters:
-  ///   - image: The image `feature` is authored over.
-  ///   - feature: The feature, in `image`'s oriented pixel coordinates.
+  ///   - source: The source image `feature` is authored over.
+  ///   - feature: The feature, in `source`'s oriented pixel coordinates.
   ///   - history: The undo and redo steps, for example restored by the host.
   ///     Empty by default.
-  public init(image: SourceImage, feature: Content, history: History = History()) {
-    self.image = image
+  public init(source: SourceImage, feature: Content, history: History = History()) {
+    self.source = source
     self.feature = feature
     self.history = history
     self.committedFeature = feature
@@ -207,7 +208,7 @@ extension EditingDocument {
 
 extension EditingDocument {
 
-  /// Renders the feature over the full-resolution image.
+  /// Renders the feature over the full-resolution source image.
   ///
   /// The Core Image work runs off the calling actor. See
   /// `ExportRenderer.render(from:feature:options:device:)` for the
@@ -227,7 +228,7 @@ extension EditingDocument {
   ) throws -> RenderedImage {
     let startTime = CACurrentMediaTime()
     let rendered = try ExportRenderer().render(
-      from: image.makeCIImage(),
+      from: source.makeCIImage(),
       feature: feature,
       options: options,
       device: device

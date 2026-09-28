@@ -52,7 +52,7 @@ struct LocalAdjustmentMaskOrientationTests {
       localAdjustments: [LocalAdjustmentFeature<[AnyImageEffect]>]
     ) async throws -> CGImage {
       let renderer = EditingDocument(
-        image: imageSource,
+        source: imageSource,
         feature: RendererTestDocument(
           localAdjustments: localAdjustments,
           crop: CropFeature.test(imageSize: imageSize)

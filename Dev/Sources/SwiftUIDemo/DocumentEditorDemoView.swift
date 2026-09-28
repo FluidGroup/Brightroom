@@ -104,7 +104,7 @@ struct DocumentEditorDemoView: View {
   @ViewBuilder
   private func documentSections(_ document: ImageEditorDocument) -> some View {
     Section("Document") {
-      LabeledContent("Image", value: "\(Int(document.image.pixelSize.width)) x \(Int(document.image.pixelSize.height)) px")
+      LabeledContent("Image", value: "\(Int(document.source.pixelSize.width)) x \(Int(document.source.pixelSize.height)) px")
       LabeledContent("Crop", value: Self.describe(document.feature.crop.rect))
       LabeledContent("Undo steps", value: "\(document.history.undoStack.count)")
       LabeledContent("Redo steps", value: "\(document.history.redoStack.count)")
@@ -175,7 +175,7 @@ struct DocumentEditorDemoView: View {
     loadingMessage = "Loading..."
     do {
       let image = try await loadImage()
-      let newDocument = await EditingDocument(image: image, cropModifier: cropModifier)
+      let newDocument = await EditingDocument(source: image, cropModifier: cropModifier)
       // Replacing the image starts a new edit; it is not an undoable change.
       undoManager?.removeAllActions(withTarget: undoTarget)
       document = newDocument
@@ -215,7 +215,7 @@ struct DocumentEditorDemoView: View {
     }
     document.wrappedValue = new
     // Replacing the photo is not an edit.
-    guard old.image == new.image else {
+    guard old.source == new.source else {
       return
     }
     undoManager?.registerUndo(withTarget: target) { _ in
