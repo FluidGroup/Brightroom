@@ -165,7 +165,7 @@ struct RendererTests {
     let crop = CropFeature.test(
       imageSize: size,
       topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
-      quarterTurn: .counterclockwise
+      quarterTurn: .counterclockwise90
     )
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
@@ -375,11 +375,11 @@ struct PixelAlignedCropTests {
     let crop = PixelAlignedCrop(
       topLeftRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100),
-      quarterTurn: .counterclockwise,
+      quarterTurn: .counterclockwise90,
       straightenRadians: 0.25 * .pi / 180
     )
 
-    #expect(crop.quarterTurn == .counterclockwise)
+    #expect(crop.quarterTurn == .counterclockwise90)
     #expect(abs(crop.straightenRadians - 0.25 * .pi / 180) <= 1e-12)
   }
 
@@ -406,9 +406,9 @@ struct CropFeatureDisplaySpaceTests {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cases: [(CGRect, QuarterTurn, Double)] = [
       (.init(x: 0, y: 0, width: 7864, height: 5248), .zero, 0),
-      (.init(x: 100, y: 200, width: 4000, height: 3000), .counterclockwise, 0),
-      (.init(x: 1745.4, y: 0.2, width: 4373.6, height: 5247.8), .halfTurn, 0.02),
-      (.init(x: 12, y: 34, width: 56, height: 78), .clockwise, -0.05),
+      (.init(x: 100, y: 200, width: 4000, height: 3000), .counterclockwise90, 0),
+      (.init(x: 1745.4, y: 0.2, width: 4373.6, height: 5247.8), .counterclockwise180, 0.02),
+      (.init(x: 12, y: 34, width: 56, height: 78), .counterclockwise270, -0.05),
     ]
 
     for (displayRect, rotation, straighten) in cases {

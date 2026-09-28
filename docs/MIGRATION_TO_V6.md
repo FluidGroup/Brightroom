@@ -958,24 +958,27 @@ the feature was authored for the image; resume it only over the same image.
 
 ## QuarterTurn Case Names
 
-`QuarterTurn`'s cases now say which way the picture turns on screen. The raw
-values, which your app may store, are unchanged:
+`QuarterTurn`'s cases now say how far the picture turns counterclockwise on
+screen, in the order the built-in rotate button steps through. The number is
+the magnitude of the raw value. The raw values, which your app may store, are
+unchanged:
 
 | 5.x | 6 | Raw value |
 | --- | --- | --- |
 | `.zero` | `.zero` | `0` |
-| `.quarterCW` | `.counterclockwise` | `-90` |
-| `.half` | `.halfTurn` | `-180` |
-| `.quarterCCW` | `.clockwise` | `-270` |
+| `.quarterCW` | `.counterclockwise90` | `-90` |
+| `.half` | `.counterclockwise180` | `-180` |
+| `.quarterCCW` | `.counterclockwise270` | `-270` |
 
 The 5.x names read the raw value's sign as y-up math, but the raw value is a
 y-down (UIKit) angle: `-90` has always turned the output counterclockwise on
-screen, like the built-in rotate button. Rendering is unchanged.
+screen, like the built-in rotate button, and `-270` (270° counterclockwise)
+looks the same as 90° clockwise. Rendering is unchanged.
 
 `CropRotation` (`.angle_0`, `.angle_90`, `.angle_180`, `.angle_270`) was a
 second name for the same four values and is removed. Use `QuarterTurn`:
 `CropEditingState.rotation` is a `QuarterTurn`, `.angle_90` is
-`.counterclockwise`, and `ImageEditorCanvas`'s `rotation(_:)` is
+`.counterclockwise90`, and `ImageEditorCanvas`'s `rotation(_:)` is
 `quarterTurn(_:)`.
 
 ## SwiftUICropView → ImageEditorCanvas
@@ -1121,13 +1124,13 @@ import CoreGraphics
 // The whole 300 × 200 image; it renders 200 × 300.
 let crop = CropFeature(
   rect: CGRect(x: 0, y: 0, width: 300, height: 200),
-  quarterTurn: .counterclockwise
+  quarterTurn: .counterclockwise90
 )
 ```
 
 Unlike most 5.x samples, the Before code still compiles against Brightroom 6
 once `cropRect:` is renamed `rect:`, `rotation:` is renamed `quarterTurn:`,
-and `.quarterCW` is renamed `.counterclockwise`
+and `.quarterCW` is renamed `.counterclockwise90`
 ([QuarterTurn Case Names](#quarterturn-case-names)). There it selects a
 200 × 300 area that extends past the 200-pixel-high image and renders
 300 × 200 with transparent bands, so convert such rectangles rather than

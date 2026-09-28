@@ -14,7 +14,7 @@ import UIKit
 /// a sign is easy to name the wrong way round. These
 /// tests only look at display coordinates (y-down, row 0 at the top): the
 /// exported pixels, the live canvas's UIKit transform, and the rotate button.
-/// A case name that says "clockwise" must match what the user sees.
+/// A case name's direction and angle must match what the user sees.
 @MainActor
 struct QuarterTurnScreenDirectionTests {
 
@@ -74,14 +74,14 @@ struct QuarterTurnScreenDirectionTests {
     }
   }
 
-  /// What each turn does on screen. The case names were `.quarterCW` (-90)
-  /// and `.quarterCCW` (-270), which read the sign in y-up math and said the
-  /// opposite of what the user sees.
+  /// What each turn does on screen. The 5.x case names were `.quarterCW`
+  /// (-90) and `.quarterCCW` (-270), which read the sign in y-up math and
+  /// said the opposite of what the user sees.
   nonisolated static let pinned: [(QuarterTurn, ScreenTurn)] = [
     (.zero, .noTurn),
-    (.counterclockwise, .counterclockwise),
-    (.halfTurn, .halfTurn),
-    (.clockwise, .clockwise),
+    (.counterclockwise90, .counterclockwise),
+    (.counterclockwise180, .halfTurn),
+    (.counterclockwise270, .clockwise),
   ]
 
   @Test(arguments: pinned)

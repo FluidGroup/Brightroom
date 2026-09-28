@@ -64,11 +64,11 @@ extension CropFeature {
     switch quarterTurn {
     case .zero:
       cropToOutput = .identity
-    case .counterclockwise:
+    case .counterclockwise90:
       cropToOutput = .init(a: 0, b: 1, c: -1, d: 0, tx: cropSize.height, ty: 0)
-    case .halfTurn:
+    case .counterclockwise180:
       cropToOutput = .init(a: -1, b: 0, c: 0, d: -1, tx: cropSize.width, ty: cropSize.height)
-    case .clockwise:
+    case .counterclockwise270:
       cropToOutput = .init(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: cropSize.width)
     }
 

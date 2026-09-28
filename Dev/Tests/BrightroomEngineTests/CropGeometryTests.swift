@@ -112,9 +112,9 @@ struct CropGeometryTests {
 
   @Test func `Quarter turn swaps a rect about its center`() {
     let rect = CGRect(x: 0, y: 0, width: 200, height: 100)
-    #expect(CropGeometry.rect(rect, turnedBy: .counterclockwise) == .init(x: 50, y: -50, width: 100, height: 200))
-    #expect(CropGeometry.rect(rect, turnedBy: .clockwise) == .init(x: 50, y: -50, width: 100, height: 200))
-    #expect(CropGeometry.rect(rect, turnedBy: .halfTurn) == rect)
+    #expect(CropGeometry.rect(rect, turnedBy: .counterclockwise90) == .init(x: 50, y: -50, width: 100, height: 200))
+    #expect(CropGeometry.rect(rect, turnedBy: .counterclockwise270) == .init(x: 50, y: -50, width: 100, height: 200))
+    #expect(CropGeometry.rect(rect, turnedBy: .counterclockwise180) == rect)
     #expect(CropGeometry.rect(rect, turnedBy: .zero) == rect)
   }
 

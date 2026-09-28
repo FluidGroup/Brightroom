@@ -255,7 +255,7 @@ private struct TreeDocument: Feature {
   var vignette: VignetteFeature?
   var crop = CropFeature(
     rect: CGRect(x: 4, y: 6, width: 80, height: 60),
-    quarterTurn: .counterclockwise,
+    quarterTurn: .counterclockwise90,
     straightenRadians: 0.05
   )
 

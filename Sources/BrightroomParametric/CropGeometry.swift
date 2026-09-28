@@ -109,7 +109,7 @@ public enum CropGeometry {
   /// Exchanges a crop's display dimensions for a quarter-turned viewport.
   ///
   /// A sideways turn swaps width and height about the same center. `.zero` and
-  /// `.halfTurn` leave the rectangle unchanged. The size exchange is its own inverse.
+  /// `.counterclockwise180` leave the rectangle unchanged. The size exchange is its own inverse.
   /// This is a presentation conversion; stored selections and fitting use the
   /// rectangle before its output turn.
   public static func rect(_ rect: CGRect, turnedBy rotation: QuarterTurn) -> CGRect {

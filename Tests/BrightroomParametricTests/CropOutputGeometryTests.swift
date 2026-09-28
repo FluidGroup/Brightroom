@@ -52,7 +52,7 @@ struct CropOutputGeometryTests {
   @Test(arguments: QuarterTurn.allCases)
   func laterCropUsesPreviousOutputDomain(rotation: QuarterTurn) throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let first = CropFeature(rect: source.extent, quarterTurn: .counterclockwise)
+    let first = CropFeature(rect: source.extent, quarterTurn: .counterclockwise90)
     let intermediate = try first.apply(to: source, context: .init())
     try Self.expectExactQuarterTurn(
       source: intermediate,
@@ -65,7 +65,7 @@ struct CropOutputGeometryTests {
     let source = Self.makeSource(size: CGSize(width: 300, height: 200))
     let feature = CropFeature(
       rect: CGRect(x: 132, y: -5, width: 36, height: 210),
-      quarterTurn: .counterclockwise,
+      quarterTurn: .counterclockwise90,
       straightenRadians: .pi / 6
     )
     let output = try feature.apply(to: source, context: .init())
@@ -110,7 +110,7 @@ struct CropOutputGeometryTests {
     for fixture in cases {
       let crop = CropFeature(rect: fixture.footprint, quarterTurn: rotation)
       let output = try crop.apply(to: source, context: .init())
-      let isSideways = rotation == .counterclockwise || rotation == .clockwise
+      let isSideways = rotation == .counterclockwise90 || rotation == .counterclockwise270
       let expectedSize = isSideways
         ? CGSize(width: fixture.rasterSize.height, height: fixture.rasterSize.width)
         : fixture.rasterSize
@@ -133,9 +133,9 @@ struct CropOutputGeometryTests {
     let width: Int
     let height: Int
     switch rotation {
-    case .zero, .halfTurn:
+    case .zero, .counterclockwise180:
       (width, height) = (fw, fh)
-    case .counterclockwise, .clockwise:
+    case .counterclockwise90, .counterclockwise270:
       (width, height) = (fh, fw)
     }
     let crop = CropFeature(rect: footprint, quarterTurn: rotation)
@@ -156,13 +156,13 @@ struct CropOutputGeometryTests {
         case .zero:
           sourceX = fx + x
           sourceY = fy + y
-        case .counterclockwise:
+        case .counterclockwise90:
           sourceX = fx + y
           sourceY = fy + fh - 1 - x
-        case .halfTurn:
+        case .counterclockwise180:
           sourceX = fx + fw - 1 - x
           sourceY = fy + fh - 1 - y
-        case .clockwise:
+        case .counterclockwise270:
           sourceX = fx + fw - 1 - y
           sourceY = fy + x
         }

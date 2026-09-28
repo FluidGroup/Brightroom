@@ -647,7 +647,7 @@ private struct TwoCropsDocument: Feature {
   var saturation = SaturationFeature(value: 0.3)
   var second = CropFeature(
     rect: CGRect(x: 20, y: 30, width: 180, height: 120),
-    quarterTurn: .counterclockwise
+    quarterTurn: .counterclockwise90
   )
   var exposure = ExposureFeature(ev: 0.1)
 

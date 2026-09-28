@@ -69,7 +69,7 @@ struct StoredCropConversionExampleTests {
 
     let crop = try #require(try makeCrop(schema: 2, stored: stored))
 
-    #expect(crop == CropFeature(rect: CGRect(x: 0, y: 0, width: 300, height: 200), quarterTurn: .counterclockwise))
+    #expect(crop == CropFeature(rect: CGRect(x: 0, y: 0, width: 300, height: 200), quarterTurn: .counterclockwise90))
   }
 
   @Test(arguments: [
@@ -109,7 +109,7 @@ struct StoredCropConversionExampleTests {
     let v3 = Stored5xCrop(isEnabled: true, cropRect: rect, rotation: -90, straightenRadians: 0)
 
     #expect(try makeCrop(schema: 1, stored: v1) == CropFeature(rect: rect))
-    #expect(try makeCrop(schema: 3, stored: v3) == CropFeature(rect: rect, quarterTurn: .counterclockwise))
+    #expect(try makeCrop(schema: 3, stored: v3) == CropFeature(rect: rect, quarterTurn: .counterclockwise90))
   }
 
   @Test

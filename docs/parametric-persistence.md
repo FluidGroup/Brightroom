@@ -367,8 +367,8 @@ want to reproduce what 5.1.0 rendered. Apps that do not need that can treat
 schema `1` and `2` crops as unsupported and have users re-author them.
 
 All three schemas are y-up and relative to the input image's origin.
-`rotation` holds `0`, `-90`, `-180`, or `-270` (`counterclockwise` is `-90`,
-`clockwise` is `-270`).
+`rotation` holds `0`, `-90`, `-180`, or `-270` (`.counterclockwise90` is
+`-90`, `.counterclockwise270` is `-270`).
 
 - **Schema 1**: `cropRect` only. Convert to `CropFeature(rect:)`.
 - **Schema 2 (5.0 and 5.1.0)**: `cropRect` is the output frame. 5.1.0 turned
@@ -392,7 +392,7 @@ exchanged:
   BrightroomParametric's `CropGeometry.rect(_:turnedBy:)` computes the same
   rectangle.
 - Example: on a 300 × 200 image, a schema 2 frame `(50, −50, 200, 300)` with
-  `rotation` `-90` becomes `(0, 0, 300, 200)` with `.counterclockwise`: the
+  `rotation` `-90` becomes `(0, 0, 300, 200)` with `.counterclockwise90`: the
   whole image, rendered 200 × 300.
 - When `w − h` is odd, the converted origin lies on a half pixel. That
   reproduces 5.1.0's geometry, which resampled such crops by the same half

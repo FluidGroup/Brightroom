@@ -49,7 +49,7 @@ struct EditingCanvasViewStrokeDomainTests {
       cropFeature: CropFeature.test(
         imageSize: imageSize,
         topLeftRect: CGRect(x: 60, y: 40, width: 200, height: 150),
-        quarterTurn: .counterclockwise
+        quarterTurn: .counterclockwise90
       ),
       imageSize: imageSize
     )

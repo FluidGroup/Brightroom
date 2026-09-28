@@ -37,10 +37,10 @@ extension QuarterTurn {
   /// rotate button does.
   func turnedCounterclockwise() -> QuarterTurn {
     switch self {
-    case .zero: return .counterclockwise
-    case .counterclockwise: return .halfTurn
-    case .halfTurn: return .clockwise
-    case .clockwise: return .zero
+    case .zero: return .counterclockwise90
+    case .counterclockwise90: return .counterclockwise180
+    case .counterclockwise180: return .counterclockwise270
+    case .counterclockwise270: return .zero
     }
   }
 }

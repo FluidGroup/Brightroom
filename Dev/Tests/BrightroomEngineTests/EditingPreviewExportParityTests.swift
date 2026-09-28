@@ -148,7 +148,7 @@ struct EditingPreviewExportParityTests {
     let document = Self.makeDocument(
       imageSize: imageSize,
       cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
-      rotation: .counterclockwise,
+      rotation: .counterclockwise90,
       localBlur: Self.makeLocalBlur(
         radius: 4,
         displayCenter: CGPoint(x: 20, y: 10),

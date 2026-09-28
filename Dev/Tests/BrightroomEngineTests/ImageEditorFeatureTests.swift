@@ -43,7 +43,7 @@ struct ImageEditorFeatureTests {
     var document = ImageEditorFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
-    crop.rotation = .counterclockwise
+    crop.rotation = .counterclockwise90
     document.setCrop(crop)
     let edited = document
 
@@ -62,13 +62,13 @@ struct ImageEditorFeatureTests {
     // What `EditingCanvasView.rotateCounterclockwise()` does: the output
     // orientation changes and the selection before the turn stays the whole
     // image.
-    crop.rotation = .counterclockwise
+    crop.rotation = .counterclockwise90
 
     var document = ImageEditorFeature(imageSize: size)
     document.setCrop(crop)
 
     #expect(document.crop.rect == CGRect(origin: .zero, size: size))
-    #expect(document.crop.quarterTurn == .counterclockwise || document.crop.quarterTurn == .clockwise)
+    #expect(document.crop.quarterTurn == .counterclockwise90 || document.crop.quarterTurn == .counterclockwise270)
     #expect(
       document.crop.outputGeometry(in: CGRect(origin: .zero, size: size)).outputBounds.size
         == CGSize(width: 200, height: 300)
@@ -79,7 +79,7 @@ struct ImageEditorFeatureTests {
     var document = ImageEditorFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10.4, y: 20.6, width: 200.3, height: 100.2))
-    crop.rotation = .counterclockwise
+    crop.rotation = .counterclockwise90
 
     document.setCrop(crop)
 
@@ -91,7 +91,7 @@ struct ImageEditorFeatureTests {
       straightenRadians: crop.adjustmentAngle.radians
     ))
     #expect(document.crop.rect == document.crop.rect.integral)
-    #expect(document.crop.quarterTurn == .counterclockwise || document.crop.quarterTurn == .clockwise)
+    #expect(document.crop.quarterTurn == .counterclockwise90 || document.crop.quarterTurn == .counterclockwise270)
 
     // An integral rect round-trips exactly through the y-up working space.
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
@@ -131,7 +131,7 @@ struct ImageEditorFeatureTests {
     var edited = ImageEditorFeature(imageSize: imageSize)
     var crop = CropEditingState(cropFeature: edited.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
-    crop.rotation = .counterclockwise
+    crop.rotation = .counterclockwise90
     edited.setCrop(crop)
     edited.appendLocalBlurStroke(stroke)
     ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &edited.effects)
@@ -307,7 +307,7 @@ struct ImageEditorFeatureTests {
 
     var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 30, y: 20, width: 300, height: 220))
-    crop.rotation = .counterclockwise
+    crop.rotation = .counterclockwise90
     document.setCrop(crop)
     return document
   }
