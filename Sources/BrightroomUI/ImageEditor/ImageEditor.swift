@@ -69,12 +69,17 @@ public struct ImageEditor: View {
 
   public struct Options: Equatable {
 
-    public enum AspectRatioOptions: Equatable {
+    /// How the crop's aspect ratio is chosen.
+    public enum AspectRatioPolicy: Equatable {
+      /// The user picks a ratio in crop mode, starting from freeform.
       case selectable
-      case fixed(AspectRatio?)
+      /// The crop is locked to `ratio`, and no picker is shown.
+      case fixed(AspectRatio)
+      /// The crop is freeform, and no picker is shown.
+      case freeform
     }
 
-    public var aspectRatioOptions: AspectRatioOptions = .selectable
+    public var aspectRatioPolicy: AspectRatioPolicy = .selectable
 
     /// The host-provided presets offered by the Filters mode.
     ///

@@ -742,6 +742,16 @@ struct Editor: View {
 former samples live in the demo app
 ([`DemoFilters.swift`](../Dev/Sources/SwiftUIDemo/DemoFilters.swift)).
 
+The aspect ratio option is one choice, so it is a policy, and the freeform
+lock has its own case instead of `.fixed(nil)`:
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `Options.aspectRatioOptions: AspectRatioOptions` | `ImageEditor.Options.aspectRatioPolicy: AspectRatioPolicy` |
+| `.selectable` | `.selectable` |
+| `.fixed(ratio)` with a non-nil ratio | `.fixed(ratio)`, taking an `AspectRatio` |
+| `.fixed(nil)` | `.freeform` |
+
 ### Reopening an Edit
 
 In 5.x the `EditingStack` held the edit and its history, so keeping the stack

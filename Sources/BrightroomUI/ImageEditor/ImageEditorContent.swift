@@ -70,12 +70,10 @@ struct ImageEditorContent: View {
       initialValue: ImageEditorSession(documentAtStart: document.wrappedValue)
     )
 
-    switch options.aspectRatioOptions {
+    switch options.aspectRatioPolicy {
     case .fixed(let aspectRatio):
-      self._aspectRatioSelection = State(
-        initialValue: .init(aspectRatio: aspectRatio)
-      )
-    case .selectable:
+      self._aspectRatioSelection = State(initialValue: .ratio(aspectRatio))
+    case .selectable, .freeform:
       self._aspectRatioSelection = State(initialValue: .freeform)
     }
   }
@@ -208,10 +206,10 @@ struct ImageEditorContent: View {
   }
 
   private var isAspectRatioControlAvailable: Bool {
-    switch options.aspectRatioOptions {
+    switch options.aspectRatioPolicy {
     case .selectable:
       return true
-    case .fixed:
+    case .fixed, .freeform:
       return false
     }
   }
