@@ -41,13 +41,13 @@ import BrightroomParametric
 package final class EditingStack: Hashable {
 
   private static let centralQueue = DispatchQueue.init(
-    label: "app.muukii.Brightroom.EditingStack.central",
+    label: "app.muukii.Brightroom.PreviewSource.central",
     qos: .default,
     attributes: .concurrent
   )
 
   private let backgroundQueue = DispatchQueue.init(
-    label: "app.muukii.Brightroom.EditingStack",
+    label: "app.muukii.Brightroom.PreviewSource",
     qos: .default,
     target: centralQueue
   )
@@ -172,7 +172,7 @@ package final class EditingStack: Hashable {
       let thumbnailCGImage = storage.makeResizedCGImage(shortSideLength: 180),
       let editingSourceCGImage = storage.makeResizedCGImage(shortSideLength: editingImageMaxPixelSize)
     else {
-      EngineLog.error(.stack, "Failed to prepare the editing source.")
+      EngineLog.error(.preview, "Failed to prepare the editing source.")
       didFailToPrepare = true
       DispatchQueue.main.async {
         onPreparationCompleted()

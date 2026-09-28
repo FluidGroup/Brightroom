@@ -25,7 +25,7 @@ import os.log
 
 enum EngineLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
+  private static let osLog = OSLog.init(subsystem: "BrightroomEngine", category: "Engine")
 
   static func debug(_ object: Any...) {
 #if DEBUG
@@ -53,6 +53,6 @@ extension OSLog {
 #endif
   }()
 
-  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "🥞 Stack")
+  static let preview = OSLog.init(subsystem: "BrightroomEngine", category: "Preview")
 
 }

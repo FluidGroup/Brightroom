@@ -130,7 +130,7 @@ enum EditingSourcePreparation {
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
 
-    EngineLog.debug(.stack, "Uploaded editing source to GPU texture (\(width)x\(height))")
+    EngineLog.debug(.preview, "Uploaded editing source to GPU texture (\(width)x\(height))")
 
     return CIImage(mtlTexture: texture, options: [.colorSpace: colorSpace])
   }

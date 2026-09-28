@@ -1170,6 +1170,16 @@ and the type only serves `SourceImage` and the editing preview. Its
 | `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`, `ImageTool.makeResizedCGImage(from:maxPixelSize:)` | `SourceImage.makeCIImage(maxPixelSize:)`, which caps the longer side |
 | `ImageTool.makeImageForJPEGOptimizedSharing(image:quality:)` | `RenderedImage.sharingData(as: .jpeg(quality:))` |
 
+### Logging
+
+Console filters that match BrightroomEngine's log names need updating:
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| OSLog subsystem `PixelEngine` | `BrightroomEngine` |
+| OSLog category `🥞 Stack` | `Preview` |
+| Dispatch queue labels `app.muukii.Brightroom.EditingStack`, `…EditingStack.central` | `app.muukii.Brightroom.PreviewSource`, `…PreviewSource.central` |
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.
