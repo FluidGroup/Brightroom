@@ -48,8 +48,9 @@ Brightroom 6](MIGRATION_TO_V6.md) maps the 5.1.1 API to the new one.
    types it supports — so unknown types and migrations are compiler-checked
    in the host.
 5. **Edits are static compositions; identity is the value.** A root
-   feature's structure is its Swift type. Features have no `id` and no
-   `isEnabled`: two root features built from the same values are equal, and a
+   feature's structure is its Swift type. Features have no identity id and
+   no `isEnabled` (`FilterFeature.id` and `ColorCubeFeature.id` are string
+   lookup keys, not feature identity): two root features built from the same values are equal, and a
    feature is switched off by leaving it out (a `nil` member, a branch not
    taken, a mask node removed). Hosts address parts of an edit by their own
    member names.

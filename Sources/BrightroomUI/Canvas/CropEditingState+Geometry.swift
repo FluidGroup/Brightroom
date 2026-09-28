@@ -1,6 +1,6 @@
 //
-//  EditingCrop+.swift
-//  PixelEditor
+//  CropEditingState+Geometry.swift
+//  BrightroomUI
 //
 //  Created by Muukii on 2021/03/19.
 //  Copyright © 2021 muukii. All rights reserved.

@@ -19,7 +19,7 @@ struct CropEditingZoomScaleTests {
     let imageSize = CGSize(width: 400, height: 300)
     let selection = CGRect(x: 40, y: 30, width: 201, height: 120)
     let crop = CropEditingState(
-      cropFeature: CropFeature.test(imageSize: imageSize, cropRect: selection, rotation: rotation),
+      cropFeature: CropFeature.test(imageSize: imageSize, topLeftRect: selection, quarterTurn: rotation),
       imageSize: imageSize
     )
     // The 1000-point platter scales image coordinates by 2.5. Sideways output

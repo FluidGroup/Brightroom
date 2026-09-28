@@ -29,11 +29,11 @@ import SwiftUI
 
 /// A read-only, display-oriented snapshot of one node in a feature tree.
 ///
-/// `FeatureTreeNode` is a debug projection of a feature document:
+/// `FeatureTreeNode` is a debug projection of a root feature:
 /// it flattens a feature, a `LocalAdjustmentFeature`, or a `Mask` into a title, a
 /// set of scalar parameter fields, and child nodes. It carries no rendering or
 /// editing capability — it exists purely so a viewer can present the structure
-/// of a document without each call site re-implementing the walk over the
+/// of a root feature without each call site re-implementing the walk over the
 /// parametric vocabulary.
 public struct FeatureTreeNode: Identifiable, Sendable {
 
@@ -105,9 +105,9 @@ public struct FeatureTreeNode: Identifiable, Sendable {
 
 // MARK: - Descriptor builder
 
-/// Builds `FeatureTreeNode` snapshots from a feature document.
+/// Builds `FeatureTreeNode` snapshots from a root feature.
 ///
-/// The tree is the document's body structure in evaluation order. Structural
+/// The tree is the root feature's body structure in evaluation order. Structural
 /// values the builder produces (tuples, branches, optionals, arrays,
 /// `AnyImageEffect`) are flattened into their parent, and a `nil` member or a
 /// branch not taken is left out. A composite feature shows its body members as
@@ -118,12 +118,12 @@ public struct FeatureTreeNode: Identifiable, Sendable {
 /// here; properties that hold features are shown as children, not as fields.
 public enum FeatureTreeDescriptor {
 
-  /// The nodes of a document in evaluation order.
+  /// The nodes of a root feature in evaluation order.
   ///
-  /// A document that only groups other features (a composite with no scalar
-  /// fields, such as an editor's document type) lists its body members. Any
-  /// other document, including a preset or a composite with settings, is one
-  /// node, and a structural value such as an array lists its members.
+  /// A root feature that only groups other features (a composite with no
+  /// scalar fields, such as an editor's root feature) lists its body members.
+  /// Any other root feature, including a filter or a composite with settings,
+  /// is one node, and a structural value such as an array lists its members.
   public static func nodes(for feature: some Feature) -> [FeatureTreeNode] {
     var root: any Feature = feature
     while let wrapper = root as? any WrappingFeatureReflection {
@@ -443,7 +443,7 @@ extension Optional: StructuralFeatureReflection where Wrapped: Feature {
   }
 }
 
-/// A structural value that holds at most one feature. The document root is
+/// A structural value that holds at most one feature. The root feature is
 /// unwrapped through it before deciding whether to list the body members.
 private protocol WrappingFeatureReflection {
   var reflectedWrapped: (any Feature)? { get }
@@ -595,15 +595,15 @@ private enum FeatureValueFormatter {
 
 /// A standalone, `List`-based viewer for a parametric feature tree.
 ///
-/// This is a debug component: it presents the body structure of a feature
-/// document as a hierarchy of `DisclosureGroup`s so the features used to produce a render
+/// This is a debug component: it presents the body structure of a root
+/// feature as a hierarchy of `DisclosureGroup`s so the features used to produce a render
 /// can be inspected. To embed the rows inside an existing `List` or `Form`, use
 /// ``FeatureTreeOutline`` instead.
 public struct FeatureTreeView: View {
 
   private let nodes: [FeatureTreeNode]
 
-  /// Creates a viewer for a document.
+  /// Creates a viewer for a root feature.
   public init(feature: some Feature) {
     self.nodes = FeatureTreeDescriptor.nodes(for: feature)
   }
@@ -630,7 +630,7 @@ public struct FeatureTreeOutline: View {
 
   private let nodes: [FeatureTreeNode]
 
-  /// Creates an outline for a document.
+  /// Creates an outline for a root feature.
   public init(feature: some Feature) {
     self.nodes = FeatureTreeDescriptor.nodes(for: feature)
   }

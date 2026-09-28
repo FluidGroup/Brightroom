@@ -5,7 +5,7 @@
 // Image editing in code with the static composition model.
 //
 // Open this file in Xcode and run a playground from the canvas. Each
-// playground describes an edit as a document, a struct whose `body` lists
+// playground describes an edit as a root feature, a struct whose `body` lists
 // features in evaluation order, and ends by rendering it. The canvas shows
 // the value of every expression, so changing a value shows the new image.
 //
@@ -27,7 +27,7 @@ internal import Playgrounds
 // MARK: - Adjustments
 
 #Playground("Adjustments") {
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var exposure = ExposureFeature(ev: -0.1)
     var contrast = ContrastFeature(value: 0.1)
     var highlights = HighlightsFeature(value: 0.6)
@@ -43,10 +43,10 @@ internal import Playgrounds
     }
   }
 
-  // Before: an empty document leaves the image unchanged.
+  // Before: an empty feature leaves the image unchanged.
   try Sample.render(EmptyFeature())
   // After.
-  try Sample.render(Document())
+  try Sample.render(PlaygroundFeature())
 }
 
 // MARK: - Reusable look
@@ -54,7 +54,7 @@ internal import Playgrounds
 /// A look made only of image effects.
 ///
 /// The body is `some ImageEffect`, so the look is an `ImageEffect` as well:
-/// any document can reuse it, it can go inside a `LocalAdjustmentFeature`, and a
+/// any root feature can reuse it, it can go inside a `LocalAdjustmentFeature`, and a
 /// crop in its body does not compile.
 fileprivate struct FilmLook: ImageEffect, Equatable {
   var warmth = 900.0
@@ -74,7 +74,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 }
 
 #Playground("Reusable look") {
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var exposure = ExposureFeature(ev: -0.1)
     var look = FilmLook()
 
@@ -84,11 +84,11 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     }
   }
 
-  var document = Document()
-  try Sample.render(document)
+  var feature = PlaygroundFeature()
+  try Sample.render(feature)
 
-  document.look.isMonochrome = true
-  try Sample.render(document)
+  feature.look.isMonochrome = true
+  try Sample.render(feature)
 }
 
 // MARK: - Tone curve and color mixer
@@ -105,7 +105,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   mix.green = ColorMixerFeature.BandCorrection(hue: 40, saturation: 20, luminance: -20)
   mix.yellow = ColorMixerFeature.BandCorrection(hue: -30, saturation: 20)
 
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var toneCurve: ToneCurveFeature
     var colorMixer: ColorMixerFeature
 
@@ -115,17 +115,17 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     }
   }
 
-  let document = Document(
+  let feature = PlaygroundFeature(
     toneCurve: ToneCurveFeature(curves: ToneCurveFeature.Curves(y: curve)),
     colorMixer: ColorMixerFeature(bands: mix)
   )
-  try Sample.render(document)
+  try Sample.render(feature)
 }
 
 // MARK: - LUT
 
 #Playground("LUT") {
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var exposure = ExposureFeature(ev: 0.1)
     var lut: ColorCubeFeature?
 
@@ -139,13 +139,13 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   // A 512×512 CLUT image holds a 64³ color cube; the dimension is inferred.
   // The result is `nil` when the file is missing.
   let lut = try? ColorCubeFeature(contentsOfCubeImage: Sample.lutURL, intensity: 0.8)
-  try Sample.render(Document(lut: lut))
+  try Sample.render(PlaygroundFeature(lut: lut))
 }
 
 // MARK: - Crop in the middle
 
 #Playground("Crop in the middle") {
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var exposure = ExposureFeature(ev: -0.1)
     // Core Image coordinates of the incoming image: bottom-left origin, y-up.
     var crop = CropFeature(rect: CGRect(x: 0, y: 270, width: 820, height: 524))
@@ -160,7 +160,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     }
   }
 
-  try Sample.render(Document())
+  try Sample.render(PlaygroundFeature())
 }
 
 // MARK: - Brush mask
@@ -175,7 +175,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     brush: BrushMask.Brush(diameter: 260, hardness: 0.3, opacity: 1)
   )
 
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
     var body: some Feature {
@@ -183,13 +183,13 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     }
   }
 
-  var document = Document()
-  document.localBlur = LocalAdjustmentFeature(
+  var feature = PlaygroundFeature()
+  feature.localBlur = LocalAdjustmentFeature(
     mask: .brush(BrushMask(strokes: [stroke]))
   ) {
     GaussianBlurFeature(radius: .proportional(40))
   }
-  try Sample.render(document)
+  try Sample.render(feature)
 }
 
 // MARK: - Data-driven effects
@@ -198,7 +198,7 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   // `any` stays only where data decides the content, such as a list of
   // effects the host decoded. `[AnyImageEffect]` is itself an image effect
   // that evaluates in order.
-  struct Document: Feature {
+  struct PlaygroundFeature: Feature {
     var isMonochrome = false
     var extraEffects: [AnyImageEffect] = []
 
@@ -210,24 +210,24 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
     }
   }
 
-  var document = Document()
-  document.extraEffects = [
+  var feature = PlaygroundFeature()
+  feature.extraEffects = [
     AnyImageEffect(ContrastFeature(value: 0.2)),
     AnyImageEffect(VignetteFeature(value: 1)),
   ]
-  try Sample.render(document)
+  try Sample.render(feature)
 
-  document.isMonochrome = true
-  try Sample.render(document)
+  feature.isMonochrome = true
+  try Sample.render(feature)
 }
 
-// MARK: - Editor document
+// MARK: - Editor root feature
 
-#Playground("Editor document") {
-  /// The kind of document an editor owns. The editor decides which edits
+#Playground("Editor root feature") {
+  /// The kind of root feature an editor owns. The editor decides which edits
   /// exist, keeps the history of this value, and renders views of it by
   /// substituting values.
-  struct PhotoDocument: Feature, Equatable {
+  struct PhotoFeature: Feature, Equatable {
     var exposure = ExposureFeature(ev: 0)
     var look: FilmLook?
     var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
@@ -243,10 +243,10 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
 
   let fullFrame = CGRect(origin: .zero, size: Sample.photo.extent.size)
 
-  var document = PhotoDocument(crop: CropFeature(rect: fullFrame))
-  document.exposure.ev = -0.1
-  document.look = FilmLook(warmth: 500)
-  document.localBlur = LocalAdjustmentFeature(
+  var feature = PhotoFeature(crop: CropFeature(rect: fullFrame))
+  feature.exposure.ev = -0.1
+  feature.look = FilmLook(warmth: 500)
+  feature.localBlur = LocalAdjustmentFeature(
     mask: .brush(
       BrushMask(strokes: [
         BrushMask.Stroke(
@@ -258,15 +258,15 @@ fileprivate struct FilmLook: ImageEffect, Equatable {
   ) {
     GaussianBlurFeature(radius: .proportional(30))
   }
-  document.crop.rect = CGRect(x: 400, y: 40, width: 680, height: 720)
-  document.crop.straightenRadians = 0.05
+  feature.crop.rect = CGRect(x: 400, y: 40, width: 680, height: 720)
+  feature.crop.straightenRadians = 0.05
 
   // The exported image.
-  try Sample.render(document)
+  try Sample.render(feature)
 
   // The view a crop tool shows: every edit before the crop, on the whole
   // image. Substituting the crop value is all it takes.
-  var uncropped = document
+  var uncropped = feature
   uncropped.crop = CropFeature(rect: fullFrame)
   try Sample.render(uncropped)
 }
@@ -293,15 +293,15 @@ fileprivate enum Sample {
   /// A 512×512 CLUT image.
   static let lutURL = bundleDirectory.appending(path: "LUTs/LUT_64_Dark_HighContrast_v3.png")
 
-  /// Renders a document from `source`.
+  /// Renders a root feature from `source`.
   ///
   /// The context works in extended-linear Display P3 with half-float pixels,
   /// which the tone curve and the color mixer require. The result is
   /// discardable: the canvas shows the value of every expression, and a
   /// named constant would warn about an unused value in ordinary builds.
   @discardableResult
-  static func render(_ document: some Feature, from source: CIImage = photo) throws -> CGImage {
-    let output = try FeatureRenderer().makeImage(from: source, feature: document)
+  static func render(_ feature: some Feature, from source: CIImage = photo) throws -> CGImage {
+    let output = try FeatureRenderer().makeImage(from: source, feature: feature)
     guard
       let image = context.createCGImage(
         output,

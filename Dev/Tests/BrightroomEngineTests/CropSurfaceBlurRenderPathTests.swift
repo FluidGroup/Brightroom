@@ -69,7 +69,7 @@ struct CropSurfaceBlurRenderPathTests {
     let crop = CropEditingState(
       cropFeature: CropFeature.test(
         imageSize: CGSize(width: 64, height: 48),
-        cropRect: CGRect(x: 8, y: 6, width: 48, height: 36)
+        topLeftRect: CGRect(x: 8, y: 6, width: 48, height: 36)
       ),
       imageSize: CGSize(width: 64, height: 48)
     )

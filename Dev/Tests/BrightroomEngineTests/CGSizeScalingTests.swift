@@ -1,6 +1,6 @@
 //
-//  PixelEngineTests.swift
-//  PixelEngineTests
+//  CGSizeScalingTests.swift
+//  BrightroomEngineTests
 //
 //  Created by Muukii on 2021/03/10.
 //  Copyright © 2021 muukii. All rights reserved.
@@ -12,7 +12,7 @@ import CoreGraphics
 
 @testable import BrightroomEngine
 
-struct PixelEngineTests {
+struct CGSizeScalingTests {
   @Test func `Scaling CGSize`() throws {
 
     do {

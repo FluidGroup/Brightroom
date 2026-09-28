@@ -41,7 +41,9 @@ open Dev/Brightroom.xcodeproj
      `some Feature` into a Core Image graph
    - Crop value types live next to `CropFeature`: `AspectRatio`,
      `QuarterTurn`, `CropGeometry`
-   - Features are plain values with no identity: no `id`, no `isEnabled`.
+   - Features are plain values with no identity: no `FeatureID`, no
+     `isEnabled`. (`FilterFeature.id` and `ColorCubeFeature.id` are string
+     lookup keys for a filter or a LUT, not feature identity.)
      The library owns no storage format: apps convert features to their own
      `Codable` models and rebuild them through public, validating initializers
      (`docs/parametric-persistence.md`)
@@ -125,7 +127,7 @@ The project uses swift-state-graph for observable state. When modifying state-re
 3. Keep every authored parameter reconstructible through public API; add a
    validating initializer when a plain initializer clamps or repairs values.
    Do not add `Codable` conformances or storage formats to the library
-4. Do not add `id` or `isEnabled`: enablement is structural (an optional
+4. Do not add an identity `id` or `isEnabled`: enablement is structural (an optional
    member, `if`, or leaving a node out). An exact neutral bypass (returning
    the input image itself) belongs inside `apply(to:context:)`.
 5. To surface it in ImageEditor, add an optional member to
@@ -135,11 +137,13 @@ The project uses swift-state-graph for observable state. When modifying state-re
    `Tests/BrightroomParametricTests`.
 
 ### Naming
-- A library type that conforms to `Feature` ends in `Feature`
-  (`ExposureFeature`, `LocalAdjustmentFeature`, `ImageEditorFeature`). Keep
-  the suffix; do not introduce bare nouns such as `Crop` or `Exposure`, which
-  hosts often declare themselves. Type-erased wrappers are `Any` plus the
-  protocol name (`AnyImageEffect`).
+- A top-level library type that conforms to `Feature` ends in `Feature`
+  (`ExposureFeature`, `LocalAdjustmentFeature`, `ImageEditorFeature`). A
+  type nested inside a feature as one of its parts may omit it
+  (`ImageEditorFeature.Effects`). Keep the suffix on top-level types; do not
+  introduce bare nouns such as `Crop` or `Exposure`, which hosts often
+  declare themselves. Type-erased wrappers are `Any` plus the protocol name
+  (`AnyImageEffect`).
 - A value that is not a feature has no suffix (`Mask`, `BrushMask`,
   `QuarterTurn`, `AspectRatio`).
 - A parameter type used by only one feature is nested in it

@@ -9,8 +9,9 @@ import UIKit
 
 /// Pins which way each quarter turn rotates the picture on screen.
 ///
-/// `QuarterTurn`'s raw value is a signed angle in the engine's y-up space,
-/// and a sign read in that space is easy to name the wrong way round. These
+/// `QuarterTurn`'s raw value is a signed angle in the y-down (UIKit)
+/// convention, while the engine evaluates crops in Core Image's y-up space, so
+/// a sign is easy to name the wrong way round. These
 /// tests only look at display coordinates (y-down, row 0 at the top): the
 /// exported pixels, the live canvas's UIKit transform, and the rotate button.
 /// A case name that says "clockwise" must match what the user sees.

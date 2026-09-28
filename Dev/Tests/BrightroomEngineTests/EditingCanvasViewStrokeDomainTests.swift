@@ -35,7 +35,7 @@ struct EditingCanvasViewStrokeDomainTests {
   /// The layer's strokes as canvas-source records (y-down), through the
   /// production inverse conversion.
   private func sourceRecords(of layer: LocalAdjustmentFeature<GaussianBlurFeature>) -> [EditingCanvasStrokeRecord] {
-    layer.mask.canvasBrushStrokes.map {
+    layer.mask.brushStrokes.map {
       EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: imageSize.height)
     }
   }
@@ -48,8 +48,8 @@ struct EditingCanvasViewStrokeDomainTests {
     let crop = CropEditingState(
       cropFeature: CropFeature.test(
         imageSize: imageSize,
-        cropRect: CGRect(x: 60, y: 40, width: 200, height: 150),
-        rotation: .counterclockwise
+        topLeftRect: CGRect(x: 60, y: 40, width: 200, height: 150),
+        quarterTurn: .counterclockwise
       ),
       imageSize: imageSize
     )

@@ -25,7 +25,7 @@ import Foundation
 
 /// Values available to features while they evaluate.
 ///
-/// The context deliberately carries no document state. A feature sees its input
+/// The context deliberately carries no state from the rest of the edit. A feature sees its input
 /// image, explicit render-time values, and shared facilities. This keeps
 /// evaluation a pure function of (parameters, input, context).
 public struct FeatureEvaluationContext: Sendable {

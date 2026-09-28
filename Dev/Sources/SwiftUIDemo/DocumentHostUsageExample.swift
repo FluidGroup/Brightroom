@@ -1,4 +1,4 @@
-// Host usage sketch for the document design. It only has to type-check; it
+// Host usage example for the document design. It only has to type-check; it
 // is not wired into the demo UI. `DocumentEditorDemoView` is the runnable
 // counterpart.
 
@@ -10,7 +10,7 @@ import SwiftUI
 
 // MARK: - Loading: every source becomes a SourceImage before a document exists
 
-enum SketchImageLoading {
+enum ExampleImageLoading {
 
   static func load(asset: PHAsset) async throws -> ImageEditorDocument {
     let image = try await SourceImage(asset: asset)
@@ -47,7 +47,7 @@ enum SketchImageLoading {
 
 // MARK: - A host that owns undo, presents the built-in editor, and exports
 
-struct SketchEditorScreen: View {
+struct ExampleEditorScreen: View {
 
   // The document is a value in the host's state; the editor edits it through
   // a binding and the host's toolbar drives its history.
@@ -76,14 +76,14 @@ struct SketchEditorScreen: View {
       }
     }
     .fullScreenCover(isPresented: $isEditing) {
-      SketchPresentedEditor(document: $document, isPresented: $isEditing)
+      ExamplePresentedEditor(document: $document, isPresented: $isEditing)
     }
   }
 }
 
 /// The editor restores the document it opened with on Cancel, so the host
 /// only dismisses.
-private struct SketchPresentedEditor: View {
+private struct ExamplePresentedEditor: View {
 
   @Binding var document: ImageEditorDocument
   @Binding var isPresented: Bool
@@ -99,7 +99,7 @@ private struct SketchPresentedEditor: View {
 
 // MARK: - A custom editor over the reusable canvas
 
-struct SketchCustomCropEditor: View {
+struct ExampleCustomCropEditor: View {
 
   @Binding var document: ImageEditorDocument
   @State private var target: ImageEditorCanvas.Target? = .crop
@@ -152,7 +152,7 @@ struct SketchCustomCropEditor: View {
 
 /// The app's own saved form. It stores how to find the image again and the
 /// feature's parameters; history is optional and saved here as plain steps.
-struct SketchSavedEdit: Codable {
+struct ExampleSavedEdit: Codable {
 
   struct Step: Codable {
     var exposure: Double?
@@ -181,7 +181,7 @@ struct SketchSavedEdit: Codable {
   }
 }
 
-extension SketchSavedEdit.Step {
+extension ExampleSavedEdit.Step {
 
   init(_ feature: ImageEditorFeature) {
     self.exposure = feature.effects.exposure?.ev
@@ -204,7 +204,7 @@ extension SketchSavedEdit.Step {
 
 // MARK: - Parametric renderers take a feature, not a document
 
-enum SketchFeatureRendering {
+enum ExampleFeatureRendering {
 
   static func preview(of document: ImageEditorDocument) throws -> CIImage {
     try FeatureRenderer().makeImage(

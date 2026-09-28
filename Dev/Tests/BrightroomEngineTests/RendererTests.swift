@@ -58,7 +58,7 @@ struct RendererTests {
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
@@ -121,7 +121,7 @@ struct RendererTests {
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
@@ -143,7 +143,7 @@ struct RendererTests {
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
@@ -164,8 +164,8 @@ struct RendererTests {
     let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
-      rotation: .counterclockwise
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
+      quarterTurn: .counterclockwise
     )
 
     let renderer = EditingDocument(image: imageSource, feature: RendererTestDocument(crop: crop)
@@ -452,7 +452,7 @@ struct PixelAlignedCropRendererTests {
   private static func fractionalCrop(for image: CGImage) -> CropFeature {
     CropFeature.test(
       imageSize: image.size,
-      cropRect: .init(
+      topLeftRect: .init(
         x: 0.2,
         y: 0.2,
         width: CGFloat(image.width) - 0.4,

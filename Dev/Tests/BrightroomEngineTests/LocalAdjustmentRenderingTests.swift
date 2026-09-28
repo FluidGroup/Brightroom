@@ -70,7 +70,7 @@ struct LocalAdjustmentRenderingTests {
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ], crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
-        cropRect: CGRect(x: 20, y: 0, width: 20, height: 20)
+        topLeftRect: CGRect(x: 20, y: 0, width: 20, height: 20)
       ))
     )
 
@@ -97,7 +97,7 @@ struct LocalAdjustmentRenderingTests {
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
       ], crop: CropFeature.test(
         imageSize: CGSize(width: 40, height: 20),
-        cropRect: CGRect(x: 0, y: 0, width: 40, height: 20)
+        topLeftRect: CGRect(x: 0, y: 0, width: 40, height: 20)
       ))
     )
 

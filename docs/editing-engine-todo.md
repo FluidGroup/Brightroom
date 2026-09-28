@@ -25,11 +25,11 @@ Status context (as of Brightroom 6):
   `.localAdjustment` in both `makeRenderImages` and `makeCropOutputRenderImages`.
   A small preview↔export resampling discrepancy is inherent and accepted (any
   editor downsamples its preview).
-- `BrightRoomImageRenderer` has a SINGLE rendering path AND a single public
-  entry point: `func render(options:) async throws -> RenderedImage`. The render
-  compiles the edit (effects, local adjustments, crop-as-domain-feature) to one
-  `CIImage` recipe via `FeatureRenderer` and evaluates it on the
-  renderer's private serial queue (off the calling actor). The old CoreGraphics
+- Export has a SINGLE rendering path AND a single public entry point:
+  `EditingDocument.render(options:) async throws -> RenderedImage`, backed by
+  `ExportRenderer`. The render compiles the edit (effects, local adjustments,
+  crop-as-domain-feature) to one `CIImage` recipe via `FeatureRenderer` and
+  evaluates it off the calling actor (`@concurrent`). The old CoreGraphics
   fast path (`renderOnlyCropping` / `axisAlignedCropOnlyFeature` /
   `pixelCropRect` / `Rendered.Engine`), the completion-handler `render`, and the
   separate `renderToFile` are all deleted.
@@ -141,7 +141,7 @@ turn, `CropFeature.OutputGeometry`) are covered by unit and UI tests on the
 Simulator but have not been verified on a physical device.
 
 Files: `Sources/BrightroomUI/Canvas/EditingCanvasView.swift`
-(`applyDocumentChanges()`, `record()`).
+(`applyPendingCrop()`, `record()`).
 
 ### 6. (If global spatial effects land) downsample the global-effect preview too
 

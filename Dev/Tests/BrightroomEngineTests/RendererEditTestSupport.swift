@@ -12,15 +12,15 @@ extension CropFeature {
   /// changes the rendered orientation without changing this selected rectangle.
   static func test(
     imageSize: CGSize,
-    cropRect: CGRect? = nil,
-    rotation: QuarterTurn = .zero,
-    straighten: Double = 0
+    topLeftRect: CGRect? = nil,
+    quarterTurn: QuarterTurn = .zero,
+    straightenRadians: Double = 0
   ) -> CropFeature {
     CropFeature(
-      topLeftRect: cropRect ?? CGRect(origin: .zero, size: imageSize),
+      topLeftRect: topLeftRect ?? CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize,
-      quarterTurn: rotation,
-      straightenRadians: straighten
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
     )
   }
 }

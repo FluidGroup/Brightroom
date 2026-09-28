@@ -10,7 +10,8 @@ Brightroom 6 is a major release with four themes:
    edits.
 2. **Edits are static compositions.** An edit is a Swift value, a *root
    feature*, whose `body` lists its features, the way a SwiftUI view lists
-   its content. Features have no ids and no `isEnabled` flags.
+   its content. Features have no `FeatureID` identity and no `isEnabled`
+   flags.
 3. **Your app owns the document.** An `EditingDocument` (BrightroomEngine) is
    a value that holds the source image, the root feature, and its undo
    history. `ImageEditor` and `ImageEditorCanvas` edit it through a binding.
@@ -81,7 +82,7 @@ replacement:
 | BrightroomEngine | `ImageTool.loadOriginalCGImage(from:fixesOrientation:)`, `ImageTool.writeImageToTmpDirectory(image:)`, `ImageTool.makeImageForPNGOptimizedSharing(image:)` |
 | BrightroomEngine | The ignored `fixesOrientation:` parameter of `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)` and `ImageTool.makeResizedCGImage(from:maxPixelSize:)` taking a `CGImageSource` |
 | BrightroomEngine | `PixelAspectRatio.width(forHeight:)`, `size(byHeight:)`, `asCGSize()`, `sizeThatFill(in:)`, `rectThatFill(in:)`, `localizedText` |
-| BrightroomParametric | `CropFeature.aggregatedRotationRadians`, `LocalAdjustmentBlendMode`, `LocalAdjustment.blendMode`, and the `blendMode:` parameter |
+| BrightroomParametric | `CropFeature.aggregatedRotationRadians`, `LocalAdjustmentBlendMode`, `LocalAdjustmentFeature.blendMode`, and the `blendMode:` parameter |
 
 ## Name Changes at a Glance
 
@@ -142,8 +143,9 @@ sections.
 | `ParametricDocumentCodec`, `PersistableFeature`, `FeatureTypeKey`, `ParametricFeatureTypeRegistry` | Removed; your app owns storage | [Persistence Moved to Your App](#persistence-moved-to-your-app) |
 | `FeatureID`, `ParametricKernelRegistry` | Removed | [Removed Identity and Flags](#removed-identity-and-flags) |
 
-Library types that conform to `Feature` keep the `Feature` suffix
-(`ExposureFeature`, `ImageEditorFeature`); values that are not features have
+Top-level library types that conform to `Feature` keep the `Feature` suffix
+(`ExposureFeature`, `ImageEditorFeature`), a part nested inside one may omit
+it (`ImageEditorFeature.Effects`), and values that are not features have
 none (`Mask`, `QuarterTurn`, `AspectRatio`). Some of these names are common
 words. If your app declares its own `ImageEditor`, `AspectRatio`, or `Mask`,
 your type wins inside your module; qualify Brightroom's with its module name,
@@ -282,15 +284,19 @@ update that changes nothing.
 
 ## Removed Identity and Flags
 
-Features no longer have an identity. Every `id` property, every `id:` and
-`isEnabled:` initializer parameter, and `FeatureID` were removed. This covers
-every built-in value: `BrightnessFeature`, `ContrastFeature`,
-`SaturationFeature`, `ExposureFeature`, `HighlightsFeature`,
-`ShadowsFeature`, `HighlightShadowTintFeature`, `TemperatureFeature`,
-`SharpenFeature`, `GaussianBlurFeature`, `UnsharpMaskFeature`,
-`VignetteFeature`, `FadeFeature`, `CropFeature`, `PresetFeature`,
-`ColorCubeFeature`, `ToneCurveFeature`, `ColorMixerFeature`, `BrushMask`,
-`MaskFeather`, and `MaskSubtract` (the last two are now `Mask` cases).
+Features no longer have an identity. `FeatureID`, every `FeatureID`-typed
+`id` property and `id:` parameter, and every `isEnabled` property and
+`isEnabled:` parameter were removed. This covers every built-in value:
+`BrightnessFeature`, `ContrastFeature`, `SaturationFeature`,
+`ExposureFeature`, `HighlightsFeature`, `ShadowsFeature`,
+`HighlightShadowTintFeature`, `TemperatureFeature`, `SharpenFeature`,
+`GaussianBlurFeature`, `UnsharpMaskFeature`, `VignetteFeature`,
+`FadeFeature`, `CropFeature`, `PresetFeature`, `ColorCubeFeature`,
+`ToneCurveFeature`, `ColorMixerFeature`, `BrushMask`, `MaskFeather`, and
+`MaskSubtract` (the last two are now `Mask` cases). `FilterFeature` (5.x
+`PresetFeature`) and `ColorCubeFeature` keep a string `id`, 5.x's
+`identifier`: it is a lookup key for a filter or a LUT, not feature
+identity, and features never compare by it.
 Their initializers take the same parameters without `id:` and `isEnabled:`,
 for example
 `ExposureFeature(ev:)` and `CropFeature(rect:quarterTurn:straightenRadians:)`
@@ -298,7 +304,7 @@ for example
 
 | Removed | Replacement |
 | --- | --- |
-| `FeatureID`, `id` properties, `id:` parameters | None. Address features by your root feature's member names or your own keys. |
+| `FeatureID`, `FeatureID`-typed `id` properties and `id:` parameters | None. Address features by your root feature's member names or your own keys. (`FilterFeature.id` and `ColorCubeFeature.id` are 5.x's string `identifier`, renamed.) |
 | `isEnabled` properties and `isEnabled:` parameters | An optional member, `if`, or leaving the feature out. See [Enablement](#enablement). |
 | `Feature` as the base protocol with `id`, `isEnabled`, and `Equatable` | `Feature` is now the composition protocol (`body`, `apply(to:context:)`). Built-in features are `Equatable` themselves. |
 | `EditingDocument` (BrightroomParametric), `MainTree`, `MainFeature` | A struct (or enum) that conforms to `Feature`. `EditingDocument` now names BrightroomEngine's document. |
@@ -320,7 +326,7 @@ for example
 | `ToneCurve.Point.ID`, `ToneCurve.Point.id`, `ToneCurve.Point.isEndpoint`, and the point editing methods taking `id:` | Points are plain coordinates addressed by index. See [Tone Curve points](#tone-curve-points). |
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `FilterFeature(name:id:effects:)` with `[AnyImageEffect]` |
-| `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking an optional `id: String`, which defaults to the file name as before. |
+| `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking `id: String`: optional in the two file loaders, where it defaults to the file name as before, and required in `init(cubeImage:name:id:intensity:dimension:)`. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeView(feature:)`, `FeatureTreeOutline(feature:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `some Feature` |
@@ -637,8 +643,10 @@ let film = FilterFeature(
 `ColorCubeFeature(contentsOfCubeFile:name:id:intensity:)`,
 `ColorCubeFeature(contentsOfCubeImage:name:id:intensity:dimension:)`, and
 `ColorCubeFeature(cubeImage:name:id:intensity:dimension:)` take the
-lookup-table identifier as an optional `id: String` instead of a
-`FeatureID`, and the opacity as `intensity` (5.x `amount`).
+lookup-table identifier as `id: String` instead of a `FeatureID`
+(optional in the two file loaders, where it defaults to the file name;
+required in `init(cubeImage:…)`), and the opacity as `intensity` (5.x
+`amount`).
 `PresetStorage.loadLUTs(fromBundle:)` builds filters whose `effects` hold the
 cube as `AnyImageEffect`.
 
@@ -1372,14 +1380,15 @@ change before 6.0.0; the rest of this guide describes them as they are now.
       ([5.x conversion list](parametric-persistence.md#converting-5x-documents)).
 - [ ] The 5.x `EditingDocument`, `MainTree`, and `EffectPipeline` are
       replaced by root features that conform to `Feature`.
-- [ ] No `FeatureID`, `id:`, or `isEnabled:` remains; enablement is optional
-      members, `if`, or nodes left out of masks.
+- [ ] No `FeatureID`, `FeatureID`-typed `id:`, or `isEnabled:` remains;
+      enablement is optional members, `if`, or nodes left out of masks.
 - [ ] Custom effects conform to `ImageEffect` and `Equatable`; custom domain
       features conform to `Feature` and return a zero-origin image.
 - [ ] Code that caught `FeatureGraphCompilerError` catches
       `FeatureEvaluationError`, and code that relied on
       `emptyLocalAdjustmentEffectPipeline` checks the content itself.
-- [ ] Filters pass `[AnyImageEffect]`; color-cube loaders drop `id:`.
+- [ ] Filters pass `[AnyImageEffect]`; color-cube loaders take `id: String`
+      instead of `FeatureID`.
 - [ ] `ImageProvider` is replaced by `SourceImage`, and `EditingStack` and
       `PhotosCropEditingModel` by an `ImageEditorDocument` in your state.
 - [ ] `ImageEditor(document:)` replaces `SwiftUIPhotosCropView`, and `onDone`

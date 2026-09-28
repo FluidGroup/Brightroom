@@ -950,7 +950,7 @@ extension EditingCanvasView {
       case .viewportBase:
         return []
       case let .localBlur(layer):
-        let sourceRecords = layer.mask.canvasBrushStrokes.map {
+        let sourceRecords = layer.mask.brushStrokes.map {
           EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: domainHeight)
         }
         guard let geometry else {

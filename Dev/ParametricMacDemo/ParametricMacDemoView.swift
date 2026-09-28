@@ -106,14 +106,14 @@ struct ParametricMacDemoView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 8) {
           if let output {
-            documentSummaryRow(
+            summaryRow(
               icon: "photo",
               title: "Source",
               detail: "\(Int(output.sourceExtent.width)) x \(Int(output.sourceExtent.height))"
             )
           }
 
-          documentSummaryRow(
+          summaryRow(
             icon: "arrow.right",
             title: "Main",
             detail: "source -> output"
@@ -132,7 +132,7 @@ struct ParametricMacDemoView: View {
     .padding(20)
   }
 
-  private func documentSummaryRow(
+  private func summaryRow(
     icon: String,
     title: String,
     detail: String
@@ -439,7 +439,7 @@ struct ParametricMacDemoView: View {
   }
 }
 
-/// User-editable values that define the macOS parametric preview document.
+/// User-editable values that define the macOS parametric preview's root feature.
 struct ParametricMacPreviewSettings {
 
   static let initial = ParametricMacPreviewSettings(
@@ -467,10 +467,10 @@ struct ParametricMacPreviewSettings {
   var globalSaturation: Double
   var globalVignette: Double
   /// Nodes the user switched off. A suppressed node is left out of the
-  /// document; the document has no per-node enabled flags.
+  /// root feature; features have no per-node enabled flags.
   var suppressedNodes: Set<ParametricMacNode>
 
-  /// Whether the document includes `node`, that is, it is not suppressed.
+  /// Whether the root feature includes `node`, that is, it is not suppressed.
   func includes(_ node: ParametricMacNode) -> Bool {
     suppressedNodes.contains(node) == false
   }
@@ -529,7 +529,7 @@ enum ParametricMacTreeKind: String {
 /// Top-level editable actions in the macOS parametric demo.
 ///
 /// The order of this list is the order of the generated
-/// `ParametricMacDocument` steps, so dragging rows in the editor changes the real
+/// `MacDemoFeature` steps, so dragging rows in the editor changes the real
 /// evaluation sequence instead of only rearranging display rows.
 enum ParametricMacEditableFeature: String, CaseIterable, Identifiable {
 
@@ -644,7 +644,7 @@ struct ParametricMacFeatureDropDelegate: DropDelegate {
   }
 }
 
-/// Nodes of the macOS demo document that the tree editor can suppress.
+/// Nodes of the macOS demo's root feature that the tree editor can suppress.
 enum ParametricMacNode: String, Hashable {
 
   case crop1
@@ -659,8 +659,8 @@ enum ParametricMacNode: String, Hashable {
   case globalVignette
 }
 
-/// The macOS demo document: its steps evaluate in the order the editor lists them.
-struct ParametricMacDocument: Feature {
+/// The macOS demo's root feature: its steps evaluate in the order the editor lists them.
+struct MacDemoFeature: Feature {
 
   var steps: [ParametricMacStep]
 
@@ -669,7 +669,7 @@ struct ParametricMacDocument: Feature {
   }
 }
 
-/// One reorderable step of the macOS demo document.
+/// One reorderable step of the macOS demo's root feature.
 ///
 /// The steps are decided at runtime (their order is user data), so a host enum
 /// gives them one type while each case keeps its concrete feature.
@@ -691,7 +691,7 @@ enum ParametricMacStep: Feature {
   }
 }
 
-/// Builds and renders a value-tree parametric document for the macOS demo.
+/// Builds and renders a value-tree root feature for the macOS demo.
 struct ParametricMacPreviewRenderer {
 
   private static let sourceSize = CGSize(width: 960, height: 640)
@@ -700,10 +700,10 @@ struct ParametricMacPreviewRenderer {
   /// Renders the current settings into AppKit images for display.
   func render(settings: ParametricMacPreviewSettings) throws -> ParametricMacPreviewOutput {
     let sourceImage = makeSourceImage()
-    let document = makeDocument(settings: settings)
+    let feature = makeFeature(settings: settings)
     let outputImage = try FeatureRenderer().makeImage(
       from: sourceImage,
-      feature: document.document
+      feature: feature.feature
     )
 
     return ParametricMacPreviewOutput(
@@ -711,13 +711,13 @@ struct ParametricMacPreviewRenderer {
       outputImage: try makeNSImage(from: outputImage),
       sourceExtent: sourceImage.extent,
       outputExtent: outputImage.extent,
-      treeLines: document.treeLines
+      treeLines: feature.treeLines
     )
   }
 
-  private func makeDocument(
+  private func makeFeature(
     settings: ParametricMacPreviewSettings
-  ) -> (document: ParametricMacDocument, treeLines: [ParametricMacTreeLine]) {
+  ) -> (feature: MacDemoFeature, treeLines: [ParametricMacTreeLine]) {
     var steps: [ParametricMacStep] = []
     var treeLines: [ParametricMacTreeLine] = []
     var currentSize = Self.sourceSize
@@ -797,7 +797,7 @@ struct ParametricMacPreviewRenderer {
     }
 
     return (
-      ParametricMacDocument(steps: steps),
+      MacDemoFeature(steps: steps),
       treeLines
     )
   }

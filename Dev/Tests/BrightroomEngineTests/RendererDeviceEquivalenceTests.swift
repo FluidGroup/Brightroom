@@ -33,7 +33,7 @@ struct RendererDeviceEquivalenceTests {
       makeDocument: { size in
         let crop = CropFeature.test(
           imageSize: size,
-          cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+          topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
         )
 
         return RendererTestDocument(

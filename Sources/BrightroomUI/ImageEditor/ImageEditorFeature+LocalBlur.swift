@@ -57,13 +57,13 @@ extension ImageEditorFeature {
       }
       return
     }
-    localBlur?.mask.appendCanvasBrushStroke(stroke)
+    localBlur?.mask.appendBrushStroke(stroke)
   }
 
   /// The local blur's strokes in working space. Empty when there is no local
   /// blur or its mask is not a brush mask.
   var localBlurStrokes: [BrushMask.Stroke] {
-    localBlur?.mask.canvasBrushStrokes ?? []
+    localBlur?.mask.brushStrokes ?? []
   }
 }
 
@@ -76,7 +76,7 @@ extension ImageEditorFeature {
 extension Mask {
 
   /// The strokes of a brush mask; empty for composite masks.
-  var canvasBrushStrokes: [BrushMask.Stroke] {
+  var brushStrokes: [BrushMask.Stroke] {
     guard case let .brush(mask) = self else {
       return []
     }
@@ -85,7 +85,7 @@ extension Mask {
 
   /// Appends a stroke to a brush mask. Composite masks are not editable by
   /// the canvas; appending to one is a programmer error.
-  mutating func appendCanvasBrushStroke(_ stroke: BrushMask.Stroke) {
+  mutating func appendBrushStroke(_ stroke: BrushMask.Stroke) {
     guard case var .brush(mask) = self else {
       assertionFailure("The canvas can only append strokes to a brush mask.")
       return

@@ -144,10 +144,10 @@ struct ParametricFeaturePreviewView: View {
   private func makePreviewImage() -> ParametricPreviewImage {
     do {
       let renderer = FeatureRenderer()
-      let document = makeDocument()
+      let feature = makeFeature()
       let output = try renderer.makeImage(
         from: Self.sourceImage,
-        feature: document
+        feature: feature
       )
 
       // Both local adjustments come after both crops and the brightness keeps
@@ -159,13 +159,13 @@ struct ParametricFeaturePreviewView: View {
         return .image(output)
       case .localExposureMask:
         return .image(
-          try document.localExposure.map {
+          try feature.localExposure.map {
             try renderer.makeMaskImage(for: $0.mask, extent: output.extent)
           } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
       case .localBlurMask:
         return .image(
-          try document.localBlur.map {
+          try feature.localBlur.map {
             try renderer.makeMaskImage(for: $0.mask, extent: output.extent)
           } ?? CIImage.parametricPreviewTransparent(extent: output.extent)
         )
@@ -175,8 +175,8 @@ struct ParametricFeaturePreviewView: View {
     }
   }
 
-  private func makeDocument() -> ParametricPreviewDocument {
-    ParametricPreviewDocument(
+  private func makeFeature() -> PreviewDemoFeature {
+    PreviewDemoFeature(
       firstCrop: isFirstCropEnabled ? CropFeature(rect: firstCropRect) : nil,
       secondCrop: isSecondCropEnabled ? CropFeature(rect: secondCropRect) : nil,
       localExposure: isLocalExposureEnabled
@@ -332,11 +332,11 @@ struct ParametricFeaturePreviewView: View {
   }()
 }
 
-/// The document the parametric feature preview renders: two crops, two local
+/// The root feature the parametric feature preview renders: two crops, two local
 /// adjustments authored in the cropped domain, then a global brightness.
 ///
 /// A toggled-off member is `nil`, so it contributes nothing.
-private struct ParametricPreviewDocument: Feature, Equatable {
+private struct PreviewDemoFeature: Feature, Equatable {
   var firstCrop: CropFeature?
   var secondCrop: CropFeature?
   var localExposure: LocalAdjustmentFeature<ExposureFeature>?

@@ -7,7 +7,7 @@ import Testing
 
 /// Numeric and compiled-kernel regression coverage for the scene-linear YRGB effect.
 @Suite("Tone Curve rendering", .serialized)
-struct ToneCurveRendererTests {
+struct ToneCurveRecipeTests {
 
   @Test
   func sceneLinearShaperMatchesAnchorsAndRoundTripsExtendedValues() {

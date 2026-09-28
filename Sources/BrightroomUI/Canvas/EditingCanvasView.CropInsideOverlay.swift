@@ -1,6 +1,6 @@
 //
-//  EditingCanvasView.GuideOverlays.swift
-//  PixelEditor
+//  EditingCanvasView.CropInsideOverlay.swift
+//  BrightroomUI
 //
 //  Created by Muukii on 2021/03/03.
 //  Copyright © 2021 muukii. All rights reserved.

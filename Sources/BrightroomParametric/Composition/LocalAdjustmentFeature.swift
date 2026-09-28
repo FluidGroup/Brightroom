@@ -15,7 +15,7 @@ import Foundation
 /// `CropFeature` cannot appear inside a local adjustment:
 ///
 /// ```swift
-/// LocalAdjustmentFeature(mask: .brush(strokes)) {
+/// LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: strokes))) {
 ///   GaussianBlurFeature(radius: .proportional(40))
 /// }
 /// ```

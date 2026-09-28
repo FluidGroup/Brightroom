@@ -6,7 +6,7 @@ import Testing
 
 /// Numeric contract and GPU parity proofs for the independent Color Mixer.
 @Suite("Color Mixer rendering", .serialized)
-struct ColorMixerRendererTests {
+struct ColorMixerRecipeTests {
 
   @Test
   func neutralUsesExactCPUAndCoreImageBypass() throws {

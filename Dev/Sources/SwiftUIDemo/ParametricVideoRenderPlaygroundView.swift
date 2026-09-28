@@ -165,7 +165,7 @@ struct ParametricVideoRenderPlaygroundView: View {
     do {
       item.videoComposition = try VideoRenderer().makeVideoComposition(
         for: asset,
-        feature: makeFeatureDocument(),
+        feature: makeFeature(),
         renderSizeMode: renderSizeMode.rendererMode
       )
       errorMessage = nil
@@ -188,8 +188,8 @@ struct ParametricVideoRenderPlaygroundView: View {
     }
   }
 
-  private func makeFeatureDocument() -> ParametricVideoPlaygroundDocument {
-    ParametricVideoPlaygroundDocument(
+  private func makeFeature() -> VideoPlaygroundFeature {
+    VideoPlaygroundFeature(
       crop: isCropEnabled ? CropFeature(rect: cropRect) : nil,
       brightness: abs(brightness) > 0.001 ? BrightnessFeature(value: brightness) : nil,
       saturation: abs(saturation) > 0.001 ? SaturationFeature(value: saturation) : nil,
@@ -347,9 +347,9 @@ struct ParametricVideoRenderPlaygroundView: View {
   nonisolated private static let videoSize = CGSize(width: 320, height: 200)
 }
 
-/// The document applied to every video frame: an optional crop, then optional
+/// The root feature applied to every video frame: an optional crop, then optional
 /// global effects. A member that is `nil` contributes nothing.
-private struct ParametricVideoPlaygroundDocument: Feature, Equatable {
+private struct VideoPlaygroundFeature: Feature, Equatable {
   var crop: CropFeature?
   var brightness: BrightnessFeature?
   var saturation: SaturationFeature?

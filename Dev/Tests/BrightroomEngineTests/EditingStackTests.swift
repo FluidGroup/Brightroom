@@ -44,7 +44,7 @@ struct EditingStackTests {
     let cgImage = try #require(makeImage(size: size).cgImage)
     let stack = EditingStack.test(cgImage: cgImage)
 
-    let crop = CropFeature.test(imageSize: size, cropRect: CGRect(x: 4, y: 2, width: 16, height: 12))
+    let crop = CropFeature.test(imageSize: size, topLeftRect: CGRect(x: 4, y: 2, width: 16, height: 12))
     let rendered = try await EditingDocument(image: stack.image, feature: crop).render()
 
     let image = try rendered.cgImage
