@@ -48,7 +48,13 @@ struct LoadingTests {
     // The oriented size swaps the stored width and height for the quarter
     // turns, and the full-resolution image starts at zero with that size.
     let imageSource = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
-    let stored = try #require(ImageTool.readImageSize(from: imageSource))
+    let properties = try #require(
+      CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
+    )
+    let stored = CGSize(
+      width: try #require(properties[kCGImagePropertyPixelWidth] as? CGFloat),
+      height: try #require(properties[kCGImagePropertyPixelHeight] as? CGFloat)
+    )
     let swapsAxes = [.left, .right, .leftMirrored, .rightMirrored].contains(expected)
     let expectedSize = swapsAxes ? CGSize(width: stored.height, height: stored.width) : stored
     #expect(image.pixelSize == expectedSize)

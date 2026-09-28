@@ -34,7 +34,7 @@ struct RAWImportTests {
     let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
 
     let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
-    let value = ImageTool.readOrientation(from: source)
+    let value = ImageDecoding.makeImageMetadata(from: source)?.orientation
 
     #expect(value != nil)
     #expect(value == .right)
@@ -47,7 +47,7 @@ struct RAWImportTests {
     let data = try! Data.init(contentsOf: url)
 
     let source = CGImageSourceCreateWithData(data as CFData, nil)!
-    let value = ImageTool.readOrientation(from: source)
+    let value = ImageDecoding.makeImageMetadata(from: source)?.orientation
 
     #expect(value != nil)
     #expect(value == .right)

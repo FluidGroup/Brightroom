@@ -129,7 +129,7 @@ extension SourceImage {
   /// - Precondition: `image.cgImage` is not nil.
   public init(image: UIImage) {
     precondition(image.cgImage != nil, "SourceImage(image:) requires a bitmap-backed UIImage.")
-    let decoded = ImageTool.makeDecodedCGImage(from: image.cgImage!) ?? image.cgImage!
+    let decoded = ImageDecoding.makeDecodedCGImage(from: image.cgImage!) ?? image.cgImage!
     self.init(cgImage: decoded, orientation: CGImagePropertyOrientation(image.imageOrientation))
   }
 
@@ -180,14 +180,14 @@ extension SourceImage {
   }
 
   private init(imageSource: CGImageSource) throws {
-    guard let metadata = ImageTool.makeImageMetadata(from: imageSource) else {
+    guard let metadata = ImageDecoding.makeImageMetadata(from: imageSource) else {
       throw SourceImageError.unreadableImage
     }
     self.init(
       storage: Storage(
         imageSource: imageSource,
         orientation: metadata.orientation,
-        pixelSize: metadata.imageSize
+        pixelSize: metadata.pixelSize
       )
     )
   }
@@ -298,17 +298,17 @@ extension SourceImage {
     }
 
     /// Unoriented pixels downsampled so that the SHORT side is at most
-    /// `shortSideHint`, as the editing source is prepared. See
-    /// `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`.
-    func makeResizedCGImage(shortSideHint: CGFloat) -> CGImage? {
+    /// `shortSideLength`, as the editing source is prepared. See
+    /// `ImageDecoding.makeResizedCGImage(from:shortSideLength:)`.
+    func makeResizedCGImage(shortSideLength: CGFloat) -> CGImage? {
       switch backing {
       case .imageSource(let imageSource):
-        return ImageTool.makeResizedCGImage(
+        return ImageDecoding.makeResizedCGImage(
           from: imageSource,
-          maxPixelSizeHint: shortSideHint
+          shortSideLength: shortSideLength
         )
       case .bitmap(let cgImage):
-        return ImageTool.makeResizedCGImage(from: cgImage, maxPixelSizeHint: shortSideHint)
+        return ImageDecoding.makeResizedCGImage(from: cgImage, shortSideLength: shortSideLength)
       }
     }
 

@@ -114,7 +114,7 @@ package final class EditingStack: Hashable {
   // value; the long side scales with the aspect ratio and is larger for anything
   // but a square (a 4032×3024 photo loads at 3413×2560). A source whose short
   // side is already below it — a wide panorama, say — is not downsampled at all.
-  // See `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`.
+  // See `ImageDecoding.makeResizedCGImage(from:shortSideLength:)`.
   //
   // The canvas preview bake cap `EditingCanvasImageProcessing.contentBakeMaxPixelSize`
   // (BrightroomUI) carries the same number but caps the LONGEST side, so the two
@@ -169,8 +169,8 @@ package final class EditingStack: Hashable {
     let orientation = storage.orientation
 
     guard
-      let thumbnailCGImage = storage.makeResizedCGImage(shortSideHint: 180),
-      let editingSourceCGImage = storage.makeResizedCGImage(shortSideHint: editingImageMaxPixelSize)
+      let thumbnailCGImage = storage.makeResizedCGImage(shortSideLength: 180),
+      let editingSourceCGImage = storage.makeResizedCGImage(shortSideLength: editingImageMaxPixelSize)
     else {
       EngineLog.error(.stack, "Failed to prepare the editing source.")
       didFailToPrepare = true

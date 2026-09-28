@@ -1157,6 +1157,19 @@ it renders.
 | `CropEditingState.isRenderingEquivalent(to:)` | `CropEditingState.isPixelEquivalent(to:)` |
 | `CropGeometry` (BrightroomEngine) | `CropGeometry` (BrightroomParametric), with the same members |
 
+### Image Decoding
+
+`ImageTool` is now the internal `ImageDecoding`. "Tool" names an editor mode,
+and the type only serves `SourceImage` and the editing preview. Its
+`maxPixelSizeHint:` was a short-side length, not the longest-side cap that
+`maxPixelSize` means in Image I/O; internally it is `shortSideLength:`.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `ImageTool.readImageSize(from:)`, `ImageTool.readOrientation(from:)` | `SourceImage(contentsOf:)` or `SourceImage(data:)`, then `pixelSize` (orientation applied). For the stored size or orientation, read `CGImageSourceCopyPropertiesAtIndex` yourself. |
+| `ImageTool.makeResizedCGImage(from:maxPixelSizeHint:)`, `ImageTool.makeResizedCGImage(from:maxPixelSize:)` | `SourceImage.makeCIImage(maxPixelSize:)`, which caps the longer side |
+| `ImageTool.makeImageForJPEGOptimizedSharing(image:quality:)` | `RenderedImage.sharingData(as: .jpeg(quality:))` |
+
 ## Migration Checklist
 
 - [ ] The package requirement is `from: "6.0.0"`.

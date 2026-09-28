@@ -185,11 +185,11 @@ struct RendererTests {
 
     let renderer = EditingDocument(image: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
+    let rendered = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3))
 
-    #expect(image.colorSpace == ColorSpaces.displayP3)
+    #expect(try rendered.cgImage.colorSpace == ColorSpaces.displayP3)
 
-    let data = ImageTool.makeImageForJPEGOptimizedSharing(image: image)
+    let data = try rendered.sharingData(as: .jpeg(quality: 1))
 
     let result = UIImage(data: data as Data)!.cgImage
 

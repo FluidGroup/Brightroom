@@ -65,7 +65,7 @@ struct SourceImageInitTests {
     let small = image.makeCIImage(maxPixelSize: 10)
     #expect(small.extent.origin == .zero)
     #expect(max(small.extent.width, small.extent.height) <= 10.5)
-    #expect(image.storage.makeResizedCGImage(shortSideHint: 10) != nil)
+    #expect(image.storage.makeResizedCGImage(shortSideLength: 10) != nil)
   }
 }
 

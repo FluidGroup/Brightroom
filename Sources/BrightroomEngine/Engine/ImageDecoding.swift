@@ -19,19 +19,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import AVFoundation
-import CoreImage
-import MobileCoreServices
-import UIKit
+import CoreGraphics
+import Foundation
+import ImageIO
 
-/// A set of functions that handle image and manipulations.
-public enum ImageTool: Sendable {
+/// Reads image metadata and decodes or downsamples bitmaps for
+/// `SourceImage` and the editing preview.
+enum ImageDecoding {
 
   /// The orientation and oriented pixel size read from image properties.
   struct ImageMetadata: Equatable {
     var orientation: CGImagePropertyOrientation
     /// The pixel size with the orientation applied.
-    var imageSize: CGSize
+    var pixelSize: CGSize
   }
 
   static func makeImageMetadata(
@@ -61,56 +61,7 @@ public enum ImageTool: Sendable {
 
     let size = CGSize(width: width, height: height)
 
-    return .init(orientation: orientation, imageSize: size.applying(cgOrientation: orientation))
-  }
-
-  /**
-   Returns a pixel size of image.
-
-   https://oleb.net/blog/2011/09/accessing-image-properties-without-loading-the-image-into-memory/
-   */
-  public static func readImageSize(from imageSource: CGImageSource) -> CGSize? {
-    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-    guard
-      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
-        as? [CFString: Any]
-    else {
-      return nil
-    }
-
-    guard
-      let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
-      let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
-    else {
-      return nil
-    }
-    return CGSize(width: width, height: height)
-  }
-
-  public static func readOrientation(
-    from imageSource: CGImageSource
-  ) -> CGImagePropertyOrientation? {
-    let propertiesOptions = [kCGImageSourceShouldCache: false] as CFDictionary
-
-    guard
-      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, propertiesOptions)
-        as? [CFString: Any]
-    else {
-      return nil
-    }
-
-    let _orientation: CGImagePropertyOrientation? =
-      (properties[kCGImagePropertyTIFFOrientation] as? UInt32).flatMap {
-        CGImagePropertyOrientation(rawValue: $0)
-      }
-
-    guard
-      let orientation = _orientation
-    else {
-      return nil
-    }
-
-    return orientation
+    return .init(orientation: orientation, pixelSize: size.applying(cgOrientation: orientation))
   }
 
   static func makeDecodedCGImage(from image: CGImage) -> CGImage? {
@@ -126,22 +77,23 @@ public enum ImageTool: Sendable {
   }
 
   /// Downsamples the image so that its **shortest** side is at most
-  /// `maxPixelSizeHint` pixels.
+  /// `shortSideLength` pixels.
   ///
-  /// Despite the "max pixel size" wording, the hint is a short-side target, not
-  /// a longest-side cap. The longest side lands at `hint × aspectRatio` and may
-  /// far exceed the hint — a 4032×3024 source with a hint of 2560 loads at
-  /// 3413×2560 — and an image whose shortest side is already below the hint is
-  /// not downsampled at all, so a 6000×2000 panorama loads at full resolution.
+  /// This is a short-side target, not a longest-side cap (which is what
+  /// `maxPixelSize` means). The longest side lands at
+  /// `shortSideLength × aspectRatio` and may far exceed it — a 4032×3024
+  /// source with a length of 2560 loads at 3413×2560 — and an image whose
+  /// shortest side is already below it is not downsampled at all, so a
+  /// 6000×2000 panorama loads at full resolution.
   ///
   /// - Note: Whether this should instead be a true longest-side cap (bounding
   ///   the memory of extreme aspect ratios at the cost of preview detail on
   ///   ordinary photos) is an open product decision. The behavior is documented
   ///   here as it stands; changing it moves preview detail everywhere
   ///   downstream.
-  public static func makeResizedCGImage(
+  static func makeResizedCGImage(
     from imageSource: CGImageSource,
-    maxPixelSizeHint: CGFloat
+    shortSideLength: CGFloat
   ) -> CGImage? {
     let imageSize: CGSize = {
       guard
@@ -156,19 +108,19 @@ public enum ImageTool: Sendable {
       CFNumberGetValue(pixelWidth, .cgFloatType, &width)
       CFNumberGetValue(pixelHeight, .cgFloatType, &height)
       return CGSize(width: width, height: height)
-  }()
+    }()
     let maxPixelSize: CGFloat = {
       let largestSide = max(imageSize.width, imageSize.height)
       let smallestSide = min(imageSize.width, imageSize.height)
-      guard smallestSide >= maxPixelSizeHint else {
+      guard smallestSide >= shortSideLength else {
         return largestSide
       }
-      return largestSide * maxPixelSizeHint / smallestSide
+      return largestSide * shortSideLength / smallestSide
     }()
     return makeResizedCGImage(from: imageSource, maxPixelSize: maxPixelSize)
   }
 
-  public static func makeResizedCGImage(
+  static func makeResizedCGImage(
     from imageSource: CGImageSource,
     maxPixelSize: CGFloat
   )
@@ -195,27 +147,27 @@ public enum ImageTool: Sendable {
   }
 
   /// Downsamples the image so that its **shortest** side is at most
-  /// `maxPixelSizeHint` pixels.
+  /// `shortSideLength` pixels.
   ///
   /// Short-side target, not a longest-side cap; see
-  /// ``makeResizedCGImage(from:maxPixelSizeHint:)`` for the
+  /// ``makeResizedCGImage(from:shortSideLength:)`` for the
   /// full contract and its consequences for wide aspect ratios.
-  public static func makeResizedCGImage(
+  static func makeResizedCGImage(
     from sourceImage: CGImage,
-    maxPixelSizeHint: CGFloat
+    shortSideLength: CGFloat
   ) -> CGImage? {
     let maxPixelSize: CGFloat = {
       let largestSide = max(sourceImage.size.width, sourceImage.size.height)
       let smallestSide = min(sourceImage.size.width, sourceImage.size.height)
-      guard smallestSide >= maxPixelSizeHint else {
+      guard smallestSide >= shortSideLength else {
         return largestSide
       }
-      return largestSide * maxPixelSizeHint / smallestSide
+      return largestSide * shortSideLength / smallestSide
     }()
     return makeResizedCGImage(from: sourceImage, maxPixelSize: maxPixelSize)
   }
   
-  public static func makeResizedCGImage(
+  static func makeResizedCGImage(
     from sourceImage: CGImage,
     maxPixelSize: CGFloat
   ) -> CGImage? {
@@ -233,34 +185,5 @@ public enum ImageTool: Sendable {
     return context.perform({ c in
       c.draw(sourceImage, in: .init(origin: .zero, size: targetSize))
     }).makeImage()
-  }
-
-  /// Makes an image that optimized for sharing.
-  /// It contains fixing color space to sRGB
-  public static func makeImageForJPEGOptimizedSharing(
-    image: CGImage,
-    quality: CGFloat = 1
-  ) -> Data {
-    let data = NSMutableData()
-
-    let destination = CGImageDestinationCreateWithData(
-      data,
-      kUTTypeJPEG,
-      1,
-      [:] as CFDictionary
-    )!
-
-    CGImageDestinationAddImage(
-      destination,
-      image,
-      [
-        kCGImageDestinationLossyCompressionQuality: quality,
-        kCGImageDestinationOptimizeColorForSharing: true,
-      ] as CFDictionary
-    )
-
-    CGImageDestinationFinalize(destination)
-
-    return data as Data
   }
 }

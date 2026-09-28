@@ -130,7 +130,7 @@ extension UIImage {
   /// The decoded, unoriented full-resolution pixels (what the removed
   /// `ImageSource(image:).loadOriginalCGImage()` returned).
   var decodedCGImageForTesting: CGImage {
-    ImageTool.makeDecodedCGImage(from: cgImage!) ?? cgImage!
+    ImageDecoding.makeDecodedCGImage(from: cgImage!) ?? cgImage!
   }
 }
 
