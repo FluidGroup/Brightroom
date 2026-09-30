@@ -1,5 +1,5 @@
 //
-//  CropEditingState+Geometry.swift
+//  CropGuideState+Geometry.swift
 //  BrightroomUI
 //
 //  Created by Muukii on 2021/03/19.
@@ -18,7 +18,7 @@ import BrightroomParametric
 /// at 1000pt, height preserving the image aspect ratio exactly. Pixel-to-point
 /// conversions use the single `imageToPlatterScale()` scalar. Guide layout and
 /// gesture readback also account for the crop's output orientation.
-extension CropEditingState {
+extension CropGuideState {
 
   /// The viewport crop rectangle, with the output's size about the image-space
   /// selection center. This derived rectangle is only used to lay out the guide

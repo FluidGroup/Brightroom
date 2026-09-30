@@ -27,13 +27,13 @@ import BrightroomParametric
 public struct ImageEditorCanvas: View {
 
   public struct StateSnapshot: Equatable {
-    public var proposedCrop: CropEditingState?
+    public var proposedCrop: CropGuideState?
     public var frame: CGRect
     public var interaction: CropInteraction
     public var preferredAspectRatio: AspectRatio?
 
     public init(
-      proposedCrop: CropEditingState?,
+      proposedCrop: CropGuideState?,
       frame: CGRect,
       interaction: CropInteraction,
       preferredAspectRatio: AspectRatio?
@@ -91,13 +91,13 @@ public struct ImageEditorCanvas: View {
   /// only want to record the crop extent after the interaction settles.
   public final class AdjustmentAngleCommitAction {
 
-    var onCall: (CropEditingState.AdjustmentAngle) -> Void = { _ in }
+    var onCall: (CropGuideState.AdjustmentAngle) -> Void = { _ in }
 
     public init() {
 
     }
 
-    public func callAsFunction(_ angle: CropEditingState.AdjustmentAngle) {
+    public func callAsFunction(_ angle: CropGuideState.AdjustmentAngle) {
       onCall(angle)
     }
   }

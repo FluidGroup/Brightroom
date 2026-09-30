@@ -99,7 +99,7 @@ struct QuarterTurnScreenDirectionTests {
     turn: QuarterTurn,
     expected: ScreenTurn
   ) {
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       imageSize: CGSize(width: 4, height: 2),
       cropRect: CGRect(x: 0, y: 0, width: 4, height: 2),
       rotation: turn

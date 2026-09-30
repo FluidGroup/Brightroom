@@ -37,7 +37,7 @@ enum CanvasCompositionPreview {
     if throughCrop {
       let cropOutput = try #require(
         EditingCanvasCropOutputGeometry(
-          crop: CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+          crop: CropGuideState(cropFeature: document.crop, imageSize: imageSize)
         )
       )
       geometry = cropOutput

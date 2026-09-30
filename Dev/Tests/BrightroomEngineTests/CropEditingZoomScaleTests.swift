@@ -18,7 +18,7 @@ struct CropEditingZoomScaleTests {
   func `Viewport readback preserves the pre-turn selection`(rotation: QuarterTurn) {
     let imageSize = CGSize(width: 400, height: 300)
     let selection = CGRect(x: 40, y: 30, width: 201, height: 120)
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       cropFeature: CropFeature.test(imageSize: imageSize, topLeftRect: selection, quarterTurn: rotation),
       imageSize: imageSize
     )
@@ -39,7 +39,7 @@ struct CropEditingZoomScaleTests {
 
   @Test func `Maximum zoom keeps crop output at the minimum maskable side`() {
     let imageSize = CGSize(width: 4000, height: 3000)
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       cropFeature: CropFeature.test(imageSize: imageSize),
       imageSize: imageSize
     )
@@ -55,13 +55,13 @@ struct CropEditingZoomScaleTests {
     #expect(abs(scales.max - 9.375) < 0.0001)
     #expect(
       abs(min(cropOutputSizeAtMaximumZoom.width, cropOutputSizeAtMaximumZoom.height)
-        - CropEditingState.minimumAuthoredCropOutputSideLength) < 0.0001
+        - CropGuideState.minimumAuthoredCropOutputSideLength) < 0.0001
     )
   }
 
   @Test func `Maximum zoom does not require a crop output larger than the image`() {
     let imageSize = CGSize(width: 80, height: 60)
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       cropFeature: CropFeature.test(imageSize: imageSize),
       imageSize: imageSize
     )

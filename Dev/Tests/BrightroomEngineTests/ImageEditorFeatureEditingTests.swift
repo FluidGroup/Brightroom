@@ -200,7 +200,7 @@ struct ImageEditorFeatureEditingTests {
     document.feature.appendLocalBlurStroke(
       BrushMask.Stroke(stampCenters: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
     )
-    var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.feature.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 0, y: 0, width: 20, height: 20))
     document.feature.setCrop(crop)
     let before = document.feature
@@ -225,7 +225,7 @@ struct ImageEditorFeatureEditingTests {
     var document = EditingDocument(source: makeImage())
     #expect(!document.hasCropChanges())
 
-    var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.feature.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 0, y: 0, width: 20, height: 20))
     document.feature.setCrop(crop)
     #expect(document.hasCropChanges())

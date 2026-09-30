@@ -39,7 +39,7 @@ import BrightroomParametric
 /// This is the home for the UI-authoring richness the engine no longer carries:
 /// the y-down selection, the active aspect-ratio session, and the output
 /// quarter turn.
-public struct CropEditingState: Equatable, Sendable {
+public struct CropGuideState: Equatable, Sendable {
 
   public typealias AdjustmentAngle = SwiftUI.Angle
 
@@ -194,7 +194,7 @@ public struct CropEditingState: Equatable, Sendable {
   /// Whether two working states render identically, through
   /// `CropFeature.isPixelEquivalent(to:imageSize:)`. The UI uses this to decide whether a
   /// crop gesture actually changed the rendered result.
-  public func isPixelEquivalent(to other: CropEditingState) -> Bool {
+  public func isPixelEquivalent(to other: CropGuideState) -> Bool {
     makeCropFeature().isPixelEquivalent(
       to: other.makeCropFeature(),
       imageSize: imageSize

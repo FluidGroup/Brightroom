@@ -386,7 +386,7 @@ struct PixelAlignedCropTests {
 }
 
 /// Pins the shared y-flip + integer-snap contract on `CropFeature` that UI crop
-/// commits (`CropEditingState`) and the engine bridge both flow through. If these
+/// commits (`CropGuideState`) and the engine bridge both flow through. If these
 /// drift, `isPixelEquivalent` oscillates and the live crop jitters / reverts.
 struct CropFeatureDisplaySpaceTests {
 

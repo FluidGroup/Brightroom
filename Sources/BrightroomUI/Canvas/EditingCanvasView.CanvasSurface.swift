@@ -303,7 +303,7 @@ extension EditingCanvasView {
     func updateRenderedEditPreview(
       source: EditingCanvasSource,
       feature: ImageEditorFeature,
-      crop: CropEditingState,
+      crop: CropGuideState,
       committedStrokes: @autoclosure () -> [EditingCanvasStrokeRecord]
     ) {
       guard crop.imageSize == canvasSize, let canvasView else {
@@ -345,7 +345,7 @@ extension EditingCanvasView {
     func remainingScroll(
       guideRectInPlatter: CGRect,
       guideSize: CGSize,
-      crop: CropEditingState
+      crop: CropGuideState
     ) -> UIEdgeInsets {
       let scale = Geometry.diagonalRatio(to: guideSize, from: guideRectInPlatter.size)
       let outbound = imagePlatterView.bounds
@@ -463,7 +463,7 @@ extension EditingCanvasView {
     /// This is not the surface's primary state and nothing renders from it: it
     /// exists so the scroll-geometry pass can detect that the crop changed and
     /// reset tool navigation.
-    var lastAppliedCrop: CropEditingState?
+    var lastAppliedCrop: CropGuideState?
 
     /// The geometry that the next render and viewport read use.
     ///

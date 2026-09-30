@@ -148,7 +148,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
     document.localBlur = LocalAdjustmentFeature(mask: cachedMask) {
       GaussianBlurFeature(radius: .proportional(60))
     }
-    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(
       CGRect(
         x: imageSize.width * 0.1,

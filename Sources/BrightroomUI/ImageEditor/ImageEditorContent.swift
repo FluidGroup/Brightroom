@@ -39,7 +39,7 @@ struct ImageEditorContent: View {
   /// binding shows a document it does not know.
   @State private var session: ImageEditorSession
   @State private var quarterTurn: QuarterTurn?
-  @State private var straightenAngle: CropEditingState.AdjustmentAngle?
+  @State private var straightenAngle: CropGuideState.AdjustmentAngle?
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: ImageEditor.Mode = .crop
@@ -235,7 +235,7 @@ struct ImageEditorContent: View {
   }
 
   private func setStraightenAngle(_ degrees: Double) {
-    let angle = CropEditingState.AdjustmentAngle(degrees: degrees)
+    let angle = CropGuideState.AdjustmentAngle(degrees: degrees)
 
     guard straightenAngle != angle else {
       return
@@ -543,7 +543,7 @@ private struct CanvasHost: View {
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
   let quarterTurn: Binding<QuarterTurn?>
-  let straightenAngle: Binding<CropEditingState.AdjustmentAngle?>
+  let straightenAngle: Binding<CropGuideState.AdjustmentAngle?>
   let lockedAspectRatio: Binding<AspectRatio?>
   let resetAction: ImageEditorCanvas.ResetAction
   let rotateAction: ImageEditorCanvas.RotateAction
@@ -584,7 +584,7 @@ private struct ControlHost: View {
   let currentEffects: ImageEditorFeature.Effects?
   let adjustmentParameter: ImageEditor.Adjustment
   let localizedStrings: ImageEditor.LocalizedStrings
-  let straightenAngle: CropEditingState.AdjustmentAngle?
+  let straightenAngle: CropGuideState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void
@@ -1215,7 +1215,7 @@ private struct AdjustmentControl: View {
   let originalAspectRatio: AspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localizedStrings: ImageEditor.LocalizedStrings
-  let straightenAngle: CropEditingState.AdjustmentAngle?
+  let straightenAngle: CropGuideState.AdjustmentAngle?
   let isSelectingAspectRatio: Bool
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void

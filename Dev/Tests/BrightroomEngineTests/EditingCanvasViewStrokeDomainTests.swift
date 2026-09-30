@@ -45,7 +45,7 @@ struct EditingCanvasViewStrokeDomainTests {
     let plan = EditingCanvasView.CanvasRenderPlan(localBlur: layer)
 
     // A non-identity final crop: offset extent plus a 90° rotation.
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       cropFeature: CropFeature.test(
         imageSize: imageSize,
         topLeftRect: CGRect(x: 60, y: 40, width: 200, height: 150),

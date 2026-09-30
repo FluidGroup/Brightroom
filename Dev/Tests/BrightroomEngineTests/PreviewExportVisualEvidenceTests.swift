@@ -68,7 +68,7 @@ struct PreviewExportVisualEvidenceTests {
       height: imageSize.height * 0.7
     ).integral
     var croppedDocument = document
-    var crop = CropEditingState(cropFeature: croppedDocument.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: croppedDocument.crop, imageSize: imageSize)
     crop.updateCropExtent(cropRect)
     croppedDocument.setCrop(crop)
     let croppedExport = try await renderExport(croppedDocument, source: source)

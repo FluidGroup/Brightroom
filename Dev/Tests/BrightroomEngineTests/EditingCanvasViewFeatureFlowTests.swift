@@ -72,7 +72,7 @@ struct EditingCanvasViewFeatureFlowTests {
 
   private func makeAngledFeature(degrees: Double) -> ImageEditorFeature {
     var feature = ImageEditorFeature(imageSize: imageSize)
-    var crop = CropEditingState(cropFeature: feature.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
     crop.adjustmentAngle = .init(degrees: degrees)
     feature.setCrop(crop)
     return feature
@@ -129,7 +129,7 @@ struct EditingCanvasViewFeatureFlowTests {
 
     // What an undo produces: a feature whose crop differs from the view's.
     var undone = makeAngledFeature(degrees: 10)
-    var smaller = CropEditingState(cropFeature: undone.crop, imageSize: imageSize)
+    var smaller = CropGuideState(cropFeature: undone.crop, imageSize: imageSize)
     smaller.adjustmentAngle = .zero
     smaller.updateCropExtent(CGRect(x: 20, y: 10, width: 200, height: 150))
     undone.setCrop(smaller)

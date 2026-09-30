@@ -28,7 +28,7 @@ struct ImageEditorFeatureTests {
   @Test func `Documents built through the same operations are equal`() {
     func build() -> ImageEditorFeature {
       var document = ImageEditorFeature(imageSize: imageSize)
-      var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+      var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
       crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
       document.setCrop(crop)
       document.appendLocalBlurStroke(stroke)
@@ -41,14 +41,14 @@ struct ImageEditorFeatureTests {
 
   @Test func `setCrop with an equal state leaves the document equal`() {
     var document = ImageEditorFeature(imageSize: imageSize)
-    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .counterclockwise90
     document.setCrop(crop)
     let edited = document
 
     // Re-committing the state read back from the document changes nothing.
-    document.setCrop(CropEditingState(cropFeature: document.crop, imageSize: imageSize))
+    document.setCrop(CropGuideState(cropFeature: document.crop, imageSize: imageSize))
     #expect(document == edited)
 
     // Neither does committing the same state again.
@@ -58,7 +58,7 @@ struct ImageEditorFeatureTests {
 
   @Test func `a quarter turn of the full image keeps the whole image`() {
     let size = CGSize(width: 300, height: 200)
-    var crop = CropEditingState(imageSize: size, cropRect: CGRect(origin: .zero, size: size))
+    var crop = CropGuideState(imageSize: size, cropRect: CGRect(origin: .zero, size: size))
     // What `EditingCanvasView.rotateCounterclockwise()` does: the output
     // orientation changes and the selection before the turn stays the whole
     // image.
@@ -77,7 +77,7 @@ struct ImageEditorFeatureTests {
 
   @Test func `setCrop stores the snapped rect`() {
     var document = ImageEditorFeature(imageSize: imageSize)
-    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10.4, y: 20.6, width: 200.3, height: 100.2))
     crop.rotation = .counterclockwise90
 
@@ -129,7 +129,7 @@ struct ImageEditorFeatureTests {
     )
 
     var edited = ImageEditorFeature(imageSize: imageSize)
-    var crop = CropEditingState(cropFeature: edited.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: edited.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .counterclockwise90
     edited.setCrop(crop)
@@ -305,7 +305,7 @@ struct ImageEditorFeatureTests {
 
     document.appendLocalBlurStroke(stroke)
 
-    var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 30, y: 20, width: 300, height: 220))
     crop.rotation = .counterclockwise90
     document.setCrop(crop)

@@ -164,7 +164,7 @@ extension ImageEditorFeature {
   /// The rect is pixel-snapped by
   /// `CropFeature(topLeftRect:…)`, the same one `EditingCanvasView` commits
   /// through.
-  public mutating func setCrop(_ crop: CropEditingState) {
+  public mutating func setCrop(_ crop: CropGuideState) {
     self.crop = crop.makeCropFeature()
   }
 }

@@ -66,7 +66,7 @@ struct CropSurfaceBlurRenderPathTests {
   /// ToolSurface already used the prepared path; this guards that they agree.
   @Test func `Tool surface blur also uses prepared path`() throws {
     let source = makeSource(width: 64, height: 48)
-    let crop = CropEditingState(
+    let crop = CropGuideState(
       cropFeature: CropFeature.test(
         imageSize: CGSize(width: 64, height: 48),
         topLeftRect: CGRect(x: 8, y: 6, width: 48, height: 36)

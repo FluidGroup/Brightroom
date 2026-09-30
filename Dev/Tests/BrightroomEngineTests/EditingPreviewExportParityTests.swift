@@ -394,7 +394,7 @@ struct EditingPreviewExportParityTests {
     document.effects.exposure = ExposureFeature(ev: 0.4)
     document.localBlur = localBlur
     if cropRect != nil || rotation != .zero {
-      var crop = CropEditingState(cropFeature: document.crop, imageSize: imageSize)
+      var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
       if let cropRect {
         crop.updateCropExtent(cropRect)
       }

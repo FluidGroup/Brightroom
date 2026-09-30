@@ -26,7 +26,7 @@ struct EditingCanvasCropOutputGeometry: Equatable {
     CGRect(origin: .zero, size: outputSize)
   }
 
-  init?(crop: CropEditingState) {
+  init?(crop: CropGuideState) {
     let cropRect = crop.cropExtent.standardized
     guard
       crop.imageSize.width > 0,
