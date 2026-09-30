@@ -227,6 +227,75 @@ struct HostedEditorTests {
     #expect(recorded.cropExtent.height < level.cropExtent.height)
   }
 
+  private struct StraightenReaderView: View {
+    let host: StraightenHost
+    let box: ProxyBox
+
+    var body: some View {
+      ImageEditorCanvasReader { canvas in
+        ImageEditorCanvas(document: Binding(get: { host.document }, set: { host.document = $0 }))
+          .straightenAngle(host.angle, isEditing: host.isEditing)
+          .onAppear { box.proxy = canvas }
+      }
+    }
+  }
+
+  /// Lays the window out over a few main-actor turns.
+  private func settle(_ view: UIView) async throws {
+    for _ in 0..<5 {
+      view.layoutIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+  }
+
+  @Test func `Ending straightening and applying in one action writes the recorded crop`() async throws {
+    let host = StraightenHost(EditingDocument(source: try DocumentTestFixtures.makeImage()))
+    let box = ProxyBox()
+    let mounted = try await mount(StraightenReaderView(host: host, box: box))
+    defer { mounted.window.isHidden = true }
+    try await settle(mounted.host.view)
+    let level = host.document.feature.crop
+
+    host.angle = .degrees(10)
+    host.isEditing = true
+    try await settle(mounted.host.view)
+
+    // A slider's end handler that also applies and commits: the end of the
+    // edit reaches the canvas only on its next update.
+    host.isEditing = false
+    try #require(box.proxy).applyPendingCrop()
+    host.document.commit()
+    let written = host.document.feature.crop
+
+    try await settle(mounted.host.view)
+    let recorded = try #require(mounted.canvasView.proposedCrop).makeCropFeature()
+    #expect(written == recorded)
+    #expect(written.straightenRadians == Angle.degrees(10).radians)
+    #expect(written.rect.width < level.rect.width)
+    #expect(written.rect.height < level.rect.height)
+  }
+
+  @Test func `Ending straightening without an angle records the crop at the angle shown`() async throws {
+    let host = StraightenHost(EditingDocument(source: try DocumentTestFixtures.makeImage()))
+    let mounted = try await mount(StraightenHostView(host: host))
+    defer { mounted.window.isHidden = true }
+    try await settle(mounted.host.view)
+    let level = try #require(mounted.canvasView.proposedCrop)
+
+    host.angle = .degrees(10)
+    host.isEditing = true
+    try await settle(mounted.host.view)
+
+    host.angle = nil
+    host.isEditing = false
+    try await settle(mounted.host.view)
+
+    let recorded = try #require(mounted.canvasView.proposedCrop)
+    #expect(recorded.adjustmentAngle == .degrees(10))
+    #expect(recorded.cropExtent.width < level.cropExtent.width)
+    #expect(recorded.cropExtent.height < level.cropExtent.height)
+  }
+
   @Test func `ImageEditor writes nothing on mount`() async throws {
     var document = try DocumentTestFixtures.makeDocument()
     document.feature = DocumentTestFixtures.exposure(1)

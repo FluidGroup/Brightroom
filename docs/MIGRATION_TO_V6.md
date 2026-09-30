@@ -1187,9 +1187,13 @@ replacement on `ImageEditorCanvas`
   `isEditing: true` to `straightenAngle(_:isEditing:)` while a control
   changes the angle, and `false` when it ends: the canvas shows the angle
   without recording the crop while editing, and records the crop at the
-  final angle when the edit ends, as the commit action did. In 5.x
-  registering the action also stopped every `adjustmentAngle(_:)` value
-  from recording; now only `isEditing` does.
+  final angle when the edit ends, as the commit action did. The commit
+  action recorded before it returned; the end of the edit reaches the
+  canvas on its next update. `applyPendingCrop()` records an edit still in
+  progress at the angle on screen first, so ending the edit and applying
+  in the same action writes the recorded crop when the final angle is the
+  one last shown. In 5.x registering the action also stopped every
+  `adjustmentAngle(_:)` value from recording; now only `isEditing` does.
 - `maskingBrush(_:)` and `strokeSmoothing(_:)` are one `brush(_:)`.
   `CropViewMaskingBrush` is `ImageEditorCanvas.Brush`, and the smoothing
   configuration is its `smoothing` member: `.off`, `.bezier(strength:)`,

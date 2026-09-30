@@ -293,9 +293,14 @@ public struct ImageEditorCanvas: View {
   ///   - isEditing: Pass true while the user is still changing the angle,
   ///     for example while a slider is dragged. The canvas then shows each
   ///     angle without recording the crop. When `isEditing` becomes false,
-  ///     the canvas records the crop at `angle`: it fits the guide's
-  ///     selection to the straightened image and reports it. An angle that
-  ///     changes while `isEditing` is false is recorded at once.
+  ///     the canvas records the crop at `angle` (at the angle it shows when
+  ///     `angle` is nil): it fits the guide's selection to the
+  ///     straightened image and reports it. An angle that changes while
+  ///     `isEditing` is false is recorded at once. The canvas receives the
+  ///     end of the edit on its next update, so
+  ///     `ImageEditorCanvasProxy.applyPendingCrop()` records an edit still
+  ///     in progress at the angle on screen before writing; ending the edit
+  ///     and applying in the same action writes the recorded crop.
   public consuming func straightenAngle(_ angle: Angle?, isEditing: Bool = false) -> Self {
     self.straightenAngleInput = StraightenAngleInput(angle: angle, isEditing: isEditing)
     return self
@@ -600,8 +605,8 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     ///
     /// While the host edits, the angle is shown without recording the crop.
     /// When the edit ends the crop is recorded at the final angle, even
-    /// when that angle was already shown; otherwise a changed angle is
-    /// recorded at once.
+    /// when that angle was already shown, or at the angle on screen when the
+    /// final angle is nil; otherwise a changed angle is recorded at once.
     func applyStraightenAngle(
       _ input: ImageEditorCanvas.StraightenAngleInput,
       to canvasView: EditingCanvasView
@@ -613,6 +618,10 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       appliedStraightenAngle = input
 
       guard let angle = input.angle else {
+        // An edit that ends without an angle ends at the angle on screen.
+        if input.isEditing == false, previous?.isEditing == true {
+          canvasView.finishStreamedStraightening()
+        }
         return
       }
       if input.isEditing {

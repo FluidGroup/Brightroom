@@ -618,6 +618,11 @@ final class EditingCanvasView: UIView {
    uses that value directly so layout rounding cannot change an untouched crop.
    */
   func applyPendingCrop() {
+    // A straighten edit the host ended in the same action reaches the
+    // canvas only on the next view update; record its crop first so the
+    // write is the recorded crop, not the streamed one.
+    finishStreamedStraightening()
+
     guard let crop = state.proposedCrop else {
       EditorLog.error(.editingCanvas, "EditingCanvasView has not loaded the feature state.")
       return
@@ -685,6 +690,16 @@ final class EditingCanvasView: UIView {
     record()
     isStreamingStraightenAngle = false
 
+  }
+
+  /// Ends a streamed straighten edit at the angle on screen, recording the
+  /// crop; does nothing when no edit is streaming.
+  func finishStreamedStraightening() {
+    guard isStreamingStraightenAngle else {
+      return
+    }
+    record()
+    isStreamingStraightenAngle = false
   }
 
   func setCrop(_ crop: CropGuideState) {

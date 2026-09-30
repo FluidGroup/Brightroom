@@ -94,6 +94,10 @@ public struct ImageEditorCanvasProxy {
   /// The canvas never commits. Because the write happens before this
   /// returns, `canvas.applyPendingCrop(); document.commit()` puts the crop
   /// in the undo step.
+  ///
+  /// A straighten edit still in progress (`straightenAngle(_:isEditing:)`
+  /// with `isEditing: true` as of the canvas's last update) is first
+  /// recorded at the angle on screen, as the end of the edit records it.
   public func applyPendingCrop() {
     registry.canvasView?.applyPendingCrop()
   }
