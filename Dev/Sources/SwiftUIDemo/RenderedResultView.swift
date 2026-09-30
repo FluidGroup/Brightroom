@@ -55,7 +55,7 @@ struct RenderedResultView: View {
 
       if let feature = result.feature {
         Section {
-          // Reusable debug viewer from BrightroomParametric: it walks the
+          // Reusable debug rows from BrightroomUI: they walk the
           // body of the feature used to produce this render.
           FeatureTreeOutline(feature: feature)
         } header: {

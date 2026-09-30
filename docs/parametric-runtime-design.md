@@ -234,8 +234,9 @@ materialization, and callers own the `CIContext`.
 - `EditingDocument.render(options:)` (BrightroomEngine) renders a document's
   root feature over its full-resolution source image through
   `ExportRenderer`.
-- `FeatureTreeView(feature:)` and `FeatureTreeOutline(feature:)` show a
-  feature's body structure for debugging, in evaluation order. Node ids are
+- `FeatureTreeDescriptor.nodes(for:)` describes a feature's body structure
+  for debugging, in evaluation order, and BrightroomUI's
+  `FeatureTreeOutline(feature:)` shows it as SwiftUI rows. Node ids are
   type paths (`FilterFeature#0/WhiteBalanceFeature#0`), so an absent member
   does not re-key the nodes after it.
 

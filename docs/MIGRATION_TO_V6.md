@@ -145,6 +145,7 @@ sections.
 | `ColorMixerAdjustment`, `ColorMixerBandAdjustment`, `ColorMixerBand` | `ColorMixerFeature.Bands`, `.BandCorrection`, `.Band` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
 | `ToneCurveRenderIdentity`, `ColorMixerRenderIdentity` | `ToneCurveFeature.RenderKey`, `ColorMixerFeature.RenderKey` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
 | `BrushStampMetalLibrary` | `BrightroomMetalLibrary` | [Metal Library](#metal-library) |
+| `FeatureTreeView`, `FeatureTreeOutline` | `FeatureTreeView` is removed; `FeatureTreeOutline` moved to BrightroomUI | [Debug Feature Tree](#debug-feature-tree) |
 | `ParametricDocumentCodec`, `PersistableFeature`, `FeatureTypeKey`, `ParametricFeatureTypeRegistry` | Removed; your app owns storage | [Persistence Moved to Your App](#persistence-moved-to-your-app) |
 | `FeatureID`, `ParametricKernelRegistry` | Removed | [Removed Identity and Flags](#removed-identity-and-flags) |
 
@@ -334,7 +335,7 @@ for example
 | `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking `id: String`: optional in the two file loaders, where it defaults to the file name as before, and required in `init(cubeImage:name:id:intensity:dimension:)`. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
-| `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeView(feature:)`, `FeatureTreeOutline(feature:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `some Feature` |
+| `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeOutline(feature:)` (BrightroomUI) and `FeatureTreeDescriptor.nodes(for:)` taking `some Feature`. See [Debug Feature Tree](#debug-feature-tree). |
 
 ### Enablement
 
@@ -376,7 +377,7 @@ func brighten(_ portrait: inout PortraitFeature, by amount: Double) {
 }
 ```
 
-The debug views (`FeatureTreeView(feature:)`) identify nodes by their type
+The debug rows (`FeatureTreeOutline(feature:)`) identify nodes by their type
 path in the body, such as `FilterFeature#0/WhiteBalanceFeature#0`.
 
 ### Tone Curve and Color Mixer
@@ -666,20 +667,34 @@ func loadLUT(at url: URL) throws -> ColorCubeFeature {
 
 ### Debug Feature Tree
 
-`FeatureTreeView(feature:)` and `FeatureTreeOutline(feature:)` accept any
-`some Feature` and show its body structure in evaluation order. `nil` members
-are left out, composites and presets show their members as children, and
-nodes have positional ids. `FeatureTreeNode` lost `isEnabled`.
+`FeatureTreeOutline(feature:)` accepts any `some Feature` and shows its body
+structure in evaluation order. `nil` members are left out, composites and
+presets show their members as children, and nodes have positional ids.
+`FeatureTreeNode` lost `isEnabled`.
+
+The outline moved to BrightroomUI, so BrightroomParametric does not depend on
+SwiftUI for it. `FeatureTreeView` is removed: it only wrapped the outline in a
+`List`, so put the outline in a `List` of your own. BrightroomUI supports
+iOS only; on macOS, show the nodes that `FeatureTreeDescriptor.nodes(for:)`
+returns, which stays in BrightroomParametric.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `FeatureTreeView(document:)`, `FeatureTreeView(nodes:)` | Removed. `List { FeatureTreeOutline(feature:) }` |
+| `FeatureTreeOutline` in BrightroomParametric | `FeatureTreeOutline` in BrightroomUI; add `import BrightroomUI` |
 
 ```swift
 import BrightroomParametric
+import BrightroomUI
 import SwiftUI
 
 struct FeatureInspector<Inspected: Feature>: View {
   var feature: Inspected
 
   var body: some View {
-    FeatureTreeView(feature: feature)
+    List {
+      FeatureTreeOutline(feature: feature)
+    }
   }
 }
 ```
@@ -1494,8 +1509,7 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `FeatureTreeView` and `FeatureTreeOutline` may move out of
-  BrightroomParametric, and `RenderedImage.swiftUIImage` may be removed.
+- `RenderedImage.swiftUIImage` may be removed.
 - `SwiftUIMetalImageView` may move to the demo app.
 - BrightroomEngine's `ColorCubeLoader`, `ColorCubeHelper`,
   `ColorCubeTextParser`, and `PresetStorage` may be removed in favor of the
@@ -1540,6 +1554,8 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`
       instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.
+- [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
+      BrightroomUI in a `List`.
 - [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
       are applied, including `QuarterTurn` case names and log filters.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles

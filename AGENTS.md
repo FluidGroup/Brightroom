@@ -75,6 +75,8 @@ open Dev/Brightroom.xcodeproj
      `ImageEditorCanvasReader`/`ImageEditorCanvasProxy` for commands, the
      internal UIKit `EditingCanvasView`, and its Metal surface
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
+   - `Sources/BrightroomUI/Debug/` - `FeatureTreeOutline`, SwiftUI rows that
+     show the `FeatureTreeNode`s BrightroomParametric builds from a feature
    - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
      through a binding
 

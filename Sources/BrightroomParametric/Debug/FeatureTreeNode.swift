@@ -19,11 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if canImport(SwiftUI)
-
 import CoreGraphics
 import Foundation
-import SwiftUI
 
 // MARK: - Display model
 
@@ -34,7 +31,8 @@ import SwiftUI
 /// set of scalar parameter fields, and child nodes. It carries no rendering or
 /// editing capability — it exists purely so a viewer can present the structure
 /// of a root feature without each call site re-implementing the walk over the
-/// parametric vocabulary.
+/// parametric vocabulary. BrightroomUI's `FeatureTreeOutline` shows these
+/// nodes as SwiftUI rows.
 public struct FeatureTreeNode: Identifiable, Sendable {
 
   /// A single scalar parameter shown under a node.
@@ -590,145 +588,3 @@ private enum FeatureValueFormatter {
     return mirror.children.first?.value ?? value
   }
 }
-
-// MARK: - Views
-
-/// A standalone, `List`-based viewer for a parametric feature tree.
-///
-/// This is a debug component: it presents the body structure of a root
-/// feature as a hierarchy of `DisclosureGroup`s so the features used to produce a render
-/// can be inspected. To embed the rows inside an existing `List` or `Form`, use
-/// ``FeatureTreeOutline`` instead.
-public struct FeatureTreeView: View {
-
-  private let nodes: [FeatureTreeNode]
-
-  /// Creates a viewer for a root feature.
-  public init(feature: some Feature) {
-    self.nodes = FeatureTreeDescriptor.nodes(for: feature)
-  }
-
-  /// Creates a viewer for pre-built nodes.
-  public init(nodes: [FeatureTreeNode]) {
-    self.nodes = nodes
-  }
-
-  public var body: some View {
-    List {
-      FeatureTreeOutline(nodes: nodes)
-    }
-  }
-}
-
-/// The recursive rows of a feature tree, suitable for embedding inside a host
-/// `List`, `Form`, or `Section`.
-///
-/// Use this when the feature tree should appear as one section among others (for
-/// example under a rendered-result preview). For a self-contained screen use
-/// ``FeatureTreeView``.
-public struct FeatureTreeOutline: View {
-
-  private let nodes: [FeatureTreeNode]
-
-  /// Creates an outline for a root feature.
-  public init(feature: some Feature) {
-    self.nodes = FeatureTreeDescriptor.nodes(for: feature)
-  }
-
-  /// Creates an outline for pre-built nodes.
-  public init(nodes: [FeatureTreeNode]) {
-    self.nodes = nodes
-  }
-
-  public var body: some View {
-    ForEach(nodes) { node in
-      FeatureTreeNodeRow(node: node, depth: 0)
-    }
-  }
-}
-
-private struct FeatureTreeNodeRow: View {
-
-  let node: FeatureTreeNode
-  let depth: Int
-
-  @State private var isExpanded: Bool
-
-  init(node: FeatureTreeNode, depth: Int) {
-    self.node = node
-    self.depth = depth
-    // Expand the top level by default; collapse nested structure so deep trees
-    // stay scannable.
-    _isExpanded = State(initialValue: depth == 0)
-  }
-
-  private var hasDetail: Bool {
-    node.fields.isEmpty == false || node.children.isEmpty == false
-  }
-
-  var body: some View {
-    if hasDetail {
-      DisclosureGroup(isExpanded: $isExpanded) {
-        ForEach(node.fields) { field in
-          FeatureTreeFieldRow(field: field)
-        }
-        ForEach(node.children) { child in
-          FeatureTreeNodeRow(node: child, depth: depth + 1)
-        }
-      } label: {
-        FeatureTreeNodeLabel(node: node)
-      }
-    } else {
-      FeatureTreeNodeLabel(node: node)
-    }
-  }
-}
-
-private struct FeatureTreeNodeLabel: View {
-
-  let node: FeatureTreeNode
-
-  var body: some View {
-    HStack(spacing: 10) {
-      Image(systemName: node.symbolName)
-        .font(.callout)
-        .frame(width: 22)
-        .foregroundStyle(Color.accentColor)
-
-      VStack(alignment: .leading, spacing: 2) {
-        Text(node.title)
-          .font(.callout.weight(.medium))
-
-        if let summary = node.summary, summary.isEmpty == false {
-          Text(summary)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-        }
-      }
-    }
-  }
-}
-
-private struct FeatureTreeFieldRow: View {
-
-  let field: FeatureTreeNode.Field
-
-  var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 12) {
-      Text(field.name)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-
-      Spacer(minLength: 12)
-
-      Text(field.value)
-        .font(.caption.monospaced())
-        .foregroundStyle(.primary)
-        .multilineTextAlignment(.trailing)
-        .textSelection(.enabled)
-    }
-  }
-}
-
-#endif
