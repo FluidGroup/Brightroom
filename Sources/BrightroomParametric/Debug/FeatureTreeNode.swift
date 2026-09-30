@@ -101,22 +101,21 @@ public struct FeatureTreeNode: Identifiable, Sendable {
   }
 }
 
-// MARK: - Descriptor builder
+// MARK: - Tree building
 
-/// Builds `FeatureTreeNode` snapshots from a root feature.
-///
-/// The tree is the root feature's body structure in evaluation order. Structural
-/// values the builder produces (tuples, branches, optionals, arrays,
-/// `AnyImageEffect`) are flattened into their parent, and a `nil` member or a
-/// branch not taken is left out. A composite feature shows its body members as
-/// children, even when it also implements `apply(to:context:)`; a composite
-/// with no fields and no present members is left out. A `LocalAdjustmentFeature`
-/// shows its mask and its effects. Scalar parameters come from `Mirror`
-/// reflection of stored properties, so new features appear without changes
-/// here; properties that hold features are shown as children, not as fields.
-public enum FeatureTreeDescriptor {
+extension FeatureTreeNode {
 
   /// The nodes of a root feature in evaluation order.
+  ///
+  /// The tree is the root feature's body structure in evaluation order. Structural
+  /// values the builder produces (tuples, branches, optionals, arrays,
+  /// `AnyImageEffect`) are flattened into their parent, and a `nil` member or a
+  /// branch not taken is left out. A composite feature shows its body members as
+  /// children, even when it also implements `apply(to:context:)`; a composite
+  /// with no fields and no present members is left out. A `LocalAdjustmentFeature`
+  /// shows its mask and its effects. Scalar parameters come from `Mirror`
+  /// reflection of stored properties, so new features appear without changes
+  /// here; properties that hold features are shown as children, not as fields.
   ///
   /// A root feature that only groups other features (a composite with no
   /// scalar fields, such as an editor's root feature) lists its body members.

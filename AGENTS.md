@@ -41,8 +41,8 @@ open Dev/Brightroom.xcodeproj
      `AnyImageEffect` for content decided by data
    - `FeatureRenderer`, `ExportRenderer`, and `VideoRenderer` evaluate any
      `some Feature` into a Core Image graph
-   - `FeatureTreeDescriptor.nodes(for:)` describes a feature's body as
-     `FeatureTreeNode`s for debugging; BrightroomUI shows them
+   - `FeatureTreeNode.nodes(for:)` describes a feature's body for
+     debugging; BrightroomUI's `FeatureTreeOutline` shows the nodes
    - Crop value types live next to `CropFeature`: `AspectRatio` and
      `QuarterTurn` (the package `CropGeometry` does the fitting math behind
      `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`)

@@ -36,7 +36,7 @@ public struct FeatureTreeOutline: View {
 
   /// Creates an outline for a root feature.
   public init(feature: some Feature) {
-    self.nodes = FeatureTreeDescriptor.nodes(for: feature)
+    self.nodes = FeatureTreeNode.nodes(for: feature)
   }
 
   /// Creates an outline for pre-built nodes.
