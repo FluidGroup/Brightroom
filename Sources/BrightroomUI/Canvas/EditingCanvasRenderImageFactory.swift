@@ -25,7 +25,7 @@ enum EditingCanvasRenderImageFactory {
     mode: EditingCanvasMode
   ) -> EditingCanvasRenderImages? {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
-    let previewSourceImage = editingSourceImage.removingExtentOffset()
+    let previewSourceImage = ImageGeometry.removingExtentOffset(editingSourceImage)
     let sourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
     let displaySourceExtent = sourceImage.extent
     guard displaySourceExtent.width > 0, displaySourceExtent.height > 0 else {
@@ -110,7 +110,7 @@ enum EditingCanvasRenderImageFactory {
   ) -> EditingCanvasRenderImages? {
     let canvasRect = geometry.outputBounds
     let sourceRect = CGRect(origin: .zero, size: geometry.sourceImageSize)
-    let previewSourceImage = editingSourceImage.removingExtentOffset()
+    let previewSourceImage = ImageGeometry.removingExtentOffset(editingSourceImage)
     let displaySourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
     let sourceImage = scaledImage(
       displaySourceImage,
@@ -240,10 +240,10 @@ enum EditingCanvasRenderImageFactory {
     _ image: CIImage,
     canvasSize: CGSize
   ) -> CIImage {
-    image
+    let flipped = image
       .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
       .transformed(by: CGAffineTransform(translationX: 0, y: canvasSize.height))
-      .removingExtentOffset()
+    return ImageGeometry.removingExtentOffset(flipped)
       .cropped(to: CGRect(origin: .zero, size: canvasSize))
   }
 }

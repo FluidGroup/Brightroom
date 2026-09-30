@@ -1626,6 +1626,7 @@ the same shape; the table says what to use instead.
 | `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | Package access. A kernel that cannot load throws `FeatureEvaluationError.kernelUnavailable(name:reason:)`. |
 | `PixelAspectRatio._minimized()`, `._comparingValue` | Package access (`AspectRatio.reduced()`) and private. Compare ratios with `==`; for lowest terms, divide the width and height by their greatest common divisor. |
 | `Geometry` (BrightroomEngine) | Internal, and its aspect-fit, aspect-fill, and diagonal helpers are removed. Use `AspectRatio(size).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. (`rectThatAspectFill` ignored the rectangle's origin.) |
+| `CIImage.removingExtentOffset()` (BrightroomEngine) | Removed. `image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))`. `FeatureRenderer` already does this to the image you pass. |
 | `Optional.BrightroomUnwrappedNilError` (BrightroomEngine) | Internal. No public API threw it. |
 | `_BrightroomDebounce` (BrightroomEngine) | Removed. Use a `Task` you cancel and restart, or your own timer. |
 | `SwiftUIMetalImageView`, `ImageDisplayBackground` (BrightroomUI) | Removed. The editor never used them. Show a rendered image with `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)`, or copy the demo app's view (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), which draws a `CIImage` with Metal. |

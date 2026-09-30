@@ -893,7 +893,7 @@ extension EditingCanvasView {
     var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
     init(source: EditingCanvasSource, feature: ImageEditorFeature, crop: CropGuideState) {
-      let previewSourceImage = source.editingSourceImage.removingExtentOffset()
+      let previewSourceImage = ImageGeometry.removingExtentOffset(source.editingSourceImage)
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
       // editing source is always capped to the same max pixel size).

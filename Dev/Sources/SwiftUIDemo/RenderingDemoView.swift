@@ -212,11 +212,13 @@ private struct UIImageCIImageDisplayRepresentable: UIViewRepresentable {
   }
 
   func updateUIView(_ uiView: UIImageView, context: Context) {
-    let processed = image
+    let blurred = image
       .clampedToExtent()
       .applyingGaussianBlur(sigma: blurRadius)
       .cropped(to: image.extent)
-      .removingExtentOffset()
+    let processed = blurred.transformed(
+      by: CGAffineTransform(translationX: -blurred.extent.minX, y: -blurred.extent.minY)
+    )
 
     guard let cgImage = context.coordinator.context.createCGImage(
       processed,
