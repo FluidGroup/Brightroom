@@ -309,7 +309,9 @@ Features no longer have an identity. `FeatureID`, every `FeatureID`-typed
 `MaskSubtract` (the last two are now `Mask` cases). `FilterFeature` (5.x
 `PresetFeature`) and `ColorCubeFeature` keep a string `id`, 5.x's
 `identifier`: it is a lookup key for a filter or a LUT, not feature
-identity, and features never compare by it.
+identity. `==` still compares it along with the other stored properties: a
+filter's name and effects, and a LUT's name, intensity, dimension, and cube
+data.
 Their initializers take the same parameters without `id:` and `isEnabled:`,
 for example
 `ExposureFeature(ev:)` and `CropFeature(rect:quarterTurn:straightenRadians:)`
@@ -1514,7 +1516,7 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | `ColorCubeFeature.inferCubeDimension(width:height:)` | Removed from the public API. The image loaders infer the dimension when you pass `dimension: nil`. |
 | `ColorCubeFeatureLoadingError` | `ColorCubeLoadingError` |
 | `.failedToCreateImage(_:)`, `.missingLUT3DSize`, `.invalidLUT3DSize(_:line:)` | `.unreadableImage(_:)`, `.missingCubeSize`, `.invalidCubeSize(_:line:)` |
-| `FeatureEvaluationError.invalidColorCubeData(identifier:…)` | `FeatureEvaluationError.invalidColorCubeData(id:…)` |
+| `FeatureGraphCompilerError.invalidColorCubeData(FeatureID, …)` | `FeatureEvaluationError.invalidColorCubeData(id:…)`, where `id` is the cube's `id`. See [Errors](#errors). |
 | `SwiftUIPhotosCropView.Options.filterPresets` | `ImageEditor.Options.filters` |
 
 ### Tone Curve and Color Mixer Values
