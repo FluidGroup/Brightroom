@@ -567,3 +567,56 @@ struct EditingCanvasRepresentableValueInputTests {
     #expect(canvasView.proposedCrop?.adjustmentAngle == .degrees(5))
   }
 }
+
+/// `ImageEditorCanvasProxy` sends commands to the canvas an
+/// `ImageEditorCanvasReader` registered most recently.
+@MainActor
+struct ImageEditorCanvasProxyTests {
+
+  private let size = CGSize(width: 80, height: 60)
+
+  private func makeLoadedCanvasView() -> EditingCanvasView {
+    let canvasView = EditingCanvasView(
+      source: EditingCanvasSource(
+        editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),
+        imageSize: size
+      ),
+      feature: ImageEditorFeature(imageSize: size)
+    )
+    canvasView.setEditingTarget(.crop)
+    canvasView.loadFeature()
+    return canvasView
+  }
+
+  @Test func `Commands before a canvas is mounted do nothing`() {
+    let registry = ImageEditorCanvasRegistry()
+    let canvas = ImageEditorCanvasProxy(registry: registry)
+
+    canvas.resetCrop()
+    canvas.rotateCounterclockwise()
+    canvas.applyPendingCrop()
+    #expect(registry.canvasView == nil)
+  }
+
+  @Test func `Commands go to the most recently mounted canvas`() {
+    let registry = ImageEditorCanvasRegistry()
+    let canvas = ImageEditorCanvasProxy(registry: registry)
+    let first = makeLoadedCanvasView()
+    let second = makeLoadedCanvasView()
+
+    registry.register(first)
+    registry.register(second)
+    // Registering again on an update keeps the mount order.
+    registry.register(first)
+    #expect(registry.canvasView === second)
+
+    canvas.rotateCounterclockwise()
+    #expect(second.proposedCrop?.rotation == .counterclockwise90)
+    #expect(first.proposedCrop?.rotation == .zero)
+
+    // When the latest canvas is dismantled, the earlier one receives them.
+    registry.unregister(second)
+    canvas.rotateCounterclockwise()
+    #expect(first.proposedCrop?.rotation == .counterclockwise90)
+  }
+}

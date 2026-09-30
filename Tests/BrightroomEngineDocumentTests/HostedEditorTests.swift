@@ -39,6 +39,12 @@ struct HostedEditorTests {
     return nil
   }
 
+  /// Receives the proxy of an `ImageEditorCanvasReader` from inside a view.
+  @MainActor
+  final class ProxyBox {
+    var proxy: ImageEditorCanvasProxy?
+  }
+
   /// Shows `rootView` in a window and waits until an `EditingCanvasView` is mounted.
   private func mount(
     _ rootView: some View
@@ -63,21 +69,22 @@ struct HostedEditorTests {
   @Test func `The crop canvas prepares the image and writes crop commits without committing`() async throws {
     let image = try DocumentTestFixtures.makeImage()
     let host = Host(EditingDocument(source: image))
-    let rotate = ImageEditorCanvas.RotateAction()
-    let apply = ImageEditorCanvas.ApplyAction()
+    let box = ProxyBox()
 
     let mounted = try await mount(
-      ImageEditorCanvas(document: host.binding)
-        .registerRotateAction(rotate)
-        .registerApplyAction(apply)
+      ImageEditorCanvasReader { canvas in
+        ImageEditorCanvas(document: host.binding)
+          .onAppear { box.proxy = canvas }
+      }
     )
     defer { mounted.window.isHidden = true }
 
     #expect(mounted.canvasView.bounds.isEmpty == false)
     #expect(host.writes == 0, "Mounting must not write the document.")
 
-    rotate()
-    apply()
+    let canvas = try #require(box.proxy)
+    canvas.rotateCounterclockwise()
+    canvas.applyPendingCrop()
 
     #expect(host.writes == 1)
     #expect(host.document.feature.crop.quarterTurn != .zero)
@@ -129,14 +136,14 @@ struct HostedEditorTests {
 
   private struct ToolHostView: View {
     let host: ToolHost
-    let rotate: ImageEditorCanvas.RotateAction
-    let apply: ImageEditorCanvas.ApplyAction
+    let box: ProxyBox
 
     var body: some View {
-      ImageEditorCanvas(document: Binding(get: { host.document }, set: { host.document = $0 }))
-        .editingTarget(host.target)
-        .registerRotateAction(rotate)
-        .registerApplyAction(apply)
+      ImageEditorCanvasReader { canvas in
+        ImageEditorCanvas(document: Binding(get: { host.document }, set: { host.document = $0 }))
+          .editingTarget(host.target)
+          .onAppear { box.proxy = canvas }
+      }
     }
   }
 
@@ -145,15 +152,15 @@ struct HostedEditorTests {
   /// would run before the crop the canvas writes when leaving `.crop`.
   @Test func `Applying before switching tools puts the crop in the commit`() async throws {
     let host = ToolHost(EditingDocument(source: try DocumentTestFixtures.makeImage()))
-    let rotate = ImageEditorCanvas.RotateAction()
-    let apply = ImageEditorCanvas.ApplyAction()
+    let box = ProxyBox()
 
-    let mounted = try await mount(ToolHostView(host: host, rotate: rotate, apply: apply))
+    let mounted = try await mount(ToolHostView(host: host, box: box))
     defer { mounted.window.isHidden = true }
 
-    rotate()
+    let canvas = try #require(box.proxy)
+    canvas.rotateCounterclockwise()
     // The tool button.
-    apply()
+    canvas.applyPendingCrop()
     host.target = .localBlur
     host.document.commit()
 

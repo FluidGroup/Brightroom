@@ -49,9 +49,6 @@ struct ImageEditorContent: View {
   @State private var localBlurState = LocalBlurState()
   @State private var adjustmentParameter: ImageEditor.Adjustment =
     .exposure
-  @State private var resetAction = ImageEditorCanvas.ResetAction()
-  @State private var rotateAction = ImageEditorCanvas.RotateAction()
-  @State private var applyAction = ImageEditorCanvas.ApplyAction()
 
   init(
     document: Binding<ImageEditorDocument>,
@@ -90,117 +87,118 @@ struct ImageEditorContent: View {
     let bottomControlMaxWidth: CGFloat = 560
 
     NavigationStack {
-      ZStack {
-        Color.black
-          .ignoresSafeArea()
+      // The toolbar's and the mode buttons' commands reach the canvas
+      // through the reader's proxy.
+      ImageEditorCanvasReader { canvas in
+        ZStack {
+          Color.black
+            .ignoresSafeArea()
 
-        VStack(spacing: 0) {
-          CanvasHost(
-            document: canvasDocumentBinding,
-            displayedFeature: displayedFeature,
-            previewSourceLoader: previewSourceLoader,
-            mode: editingMode,
-            localBlurState: localBlurState,
-            straightenAngle: straightenAngle,
-            isStraightening: isStraightening,
-            lockedAspectRatio: aspectRatioSelection.aspectRatio(
-              originalAspectRatio: originalAspectRatio
-            ),
-            resetAction: resetAction,
-            rotateAction: rotateAction,
-            applyAction: applyAction,
-            editingTarget: editingMode.canvasTarget,
-            onCropGuideChange: { guide in
-              followCropGuide(guide, originalAspectRatio: originalAspectRatio)
-            }
-          )
-          .layoutPriority(1)
+          VStack(spacing: 0) {
+            CanvasHost(
+              document: canvasDocumentBinding,
+              displayedFeature: displayedFeature,
+              previewSourceLoader: previewSourceLoader,
+              mode: editingMode,
+              localBlurState: localBlurState,
+              straightenAngle: straightenAngle,
+              isStraightening: isStraightening,
+              lockedAspectRatio: aspectRatioSelection.aspectRatio(
+                originalAspectRatio: originalAspectRatio
+              ),
+              editingTarget: editingMode.canvasTarget,
+              onCropGuideChange: { guide in
+                followCropGuide(guide, originalAspectRatio: originalAspectRatio)
+              }
+            )
+            .layoutPriority(1)
 
-          ControlHost(
-            mode: editingMode,
-            originalAspectRatio: originalAspectRatio,
-            aspectRatioSelection: aspectRatioSelection,
-            localBlurState: localBlurState,
-            filters: options.filters,
-            filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
-            currentEffects: displayedFeature.effects,
-            adjustmentParameter: adjustmentParameter,
-            localizedStrings: localizedStrings,
-            straightenAngle: straightenAngle,
-            isSelectingAspectRatio: isSelectingAspectRatio,
+            ControlHost(
+              mode: editingMode,
+              originalAspectRatio: originalAspectRatio,
+              aspectRatioSelection: aspectRatioSelection,
+              localBlurState: localBlurState,
+              filters: options.filters,
+              filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
+              currentEffects: displayedFeature.effects,
+              adjustmentParameter: adjustmentParameter,
+              localizedStrings: localizedStrings,
+              straightenAngle: straightenAngle,
+              isSelectingAspectRatio: isSelectingAspectRatio,
+              isLoaded: isLoaded,
+              onSelectAspectRatio: selectAspectRatio,
+              onSetStraightenAngle: setStraightenAngle,
+              onCommitStraightenAngle: endStraightening,
+              onSetBrushDiameter: setLocalBlurBrushDiameter,
+              onClearLocalBlur: clearLocalBlur,
+              onSelectFilterPreset: selectFilterPreset,
+              onSelectAdjustmentParameter: selectAdjustmentParameter,
+              onSetAdjustmentValue: previewAdjustmentValue,
+              onEndAdjustmentValue: endAdjustmentValue
+            )
+            .frame(maxWidth: bottomControlMaxWidth)
+            .frame(maxWidth: .infinity)
+            .frame(height: bottomControlHeight)
+          }
+        }
+        .safeAreaInset(edge: .bottom) {
+          ModeToolbar(
+            selection: editingMode,
             isLoaded: isLoaded,
-            onSelectAspectRatio: selectAspectRatio,
-            onSetStraightenAngle: setStraightenAngle,
-            onCommitStraightenAngle: endStraightening,
-            onSetBrushDiameter: setLocalBlurBrushDiameter,
-            onClearLocalBlur: clearLocalBlur,
-            onSelectFilterPreset: selectFilterPreset,
-            onSelectAdjustmentParameter: selectAdjustmentParameter,
-            onSetAdjustmentValue: previewAdjustmentValue,
-            onEndAdjustmentValue: endAdjustmentValue
+            onSelect: { selectMode($0, canvas: canvas) }
           )
-          .frame(maxWidth: bottomControlMaxWidth)
-          .frame(maxWidth: .infinity)
-          .frame(height: bottomControlHeight)
         }
-      }
-      .safeAreaInset(edge: .bottom) {
-        ModeToolbar(
-          selection: editingMode,
-          isLoaded: isLoaded,
-          onSelect: selectMode
-        )
-      }
-      .navigationTitle("")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
-      .toolbar {
-        EditorToolbar(
-          resetTitle: localizedStrings.reset,
-          cancelTitle: localizedStrings.cancel,
-          doneTitle: localizedStrings.done,
-          isLoaded: isLoaded,
-          hasCropChanges: document.hasCropChanges(),
-          // A failed preparation leaves nothing to edit; Done stays the
-          // way out even when the host hides Cancel.
-          isDoneEnabled: isLoaded || previewSourceLoader.phase == .failed,
-          mode: editingMode,
-          isSelectingAspectRatio: isSelectingAspectRatio,
-          onRotate: rotate,
-          onReset: reset,
-          onToggleAspectRatio: toggleAspectRatioControl,
-          onSelectMode: selectMode,
-          onCancel: cancelAction,
-          onDone: finish
-        )
-      }
-      .foregroundStyle(.white)
-      .task {
-        await previewSourceLoader.load()
-      }
-      .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
-        if isAvailable == false {
-          isSelectingAspectRatio = false
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar, .bottomBar)
+        .toolbar {
+          EditorToolbar(
+            resetTitle: localizedStrings.reset,
+            cancelTitle: localizedStrings.cancel,
+            doneTitle: localizedStrings.done,
+            isLoaded: isLoaded,
+            hasCropChanges: document.hasCropChanges(),
+            // A failed preparation leaves nothing to edit; Done stays the
+            // way out even when the host hides Cancel.
+            isDoneEnabled: isLoaded || previewSourceLoader.phase == .failed,
+            mode: editingMode,
+            isSelectingAspectRatio: isSelectingAspectRatio,
+            onRotate: { canvas.rotateCounterclockwise() },
+            onReset: { canvas.resetCrop() },
+            onToggleAspectRatio: toggleAspectRatioControl,
+            onSelectMode: { selectMode($0, canvas: canvas) },
+            onCancel: cancelAction,
+            onDone: { finish(canvas) }
+          )
         }
-      }
-      .onChange(of: editingMode) { _, mode in
-        if mode != .crop {
-          isSelectingAspectRatio = false
+        .foregroundStyle(.white)
+        .task {
+          await previewSourceLoader.load()
         }
+        .onChange(of: isAspectRatioControlAvailable) { _, isAvailable in
+          if isAvailable == false {
+            isSelectingAspectRatio = false
+          }
+        }
+        .onChange(of: editingMode) { _, mode in
+          if mode != .crop {
+            isSelectingAspectRatio = false
+          }
+        }
+        .onChange(of: document.feature) { _, _ in
+          // The editor's own writes consume the live value first, so a change
+          // here while a value is live came from outside (for example an undo
+          // by the host). The document wins.
+          session.discardLiveFeature()
+        }
+        .onChange(of: document) { _, document in
+          // A document the session did not write (for example another
+          // document of the same image) restarts it, so Cancel never writes
+          // one document's start over another.
+          session.noteDocument(document)
+        }
+        .accessibilityIdentifier("image-editor")
       }
-      .onChange(of: document.feature) { _, _ in
-        // The editor's own writes consume the live value first, so a change
-        // here while a value is live came from outside (for example an undo
-        // by the host). The document wins.
-        session.discardLiveFeature()
-      }
-      .onChange(of: document) { _, document in
-        // A document the session did not write (for example another
-        // document of the same image) restarts it, so Cancel never writes
-        // one document's start over another.
-        session.noteDocument(document)
-      }
-      .accessibilityIdentifier("image-editor")
     }
     // ImageEditor is a dark, full-screen editor; keep system toolbar glass
     // resolved against dark traits even when the host app is in Light Mode.
@@ -215,14 +213,6 @@ struct ImageEditorContent: View {
     case .fixed, .freeform:
       return false
     }
-  }
-
-  private func rotate() {
-    rotateAction()
-  }
-
-  private func reset() {
-    resetAction()
   }
 
   private func toggleAspectRatioControl() {
@@ -287,14 +277,14 @@ struct ImageEditorContent: View {
     localBlurState.brushDiameter = diameter
   }
 
-  private func selectMode(_ mode: ImageEditor.Mode) {
+  private func selectMode(_ mode: ImageEditor.Mode, canvas: ImageEditorCanvasProxy) {
     guard editingMode != mode else {
       return
     }
 
     if editingMode == .crop {
       // Writes the crop guide's pending crop to the binding synchronously.
-      applyAction()
+      canvas.applyPendingCrop()
     }
 
     // The next write commits this visit's work, so undo/redo steps at tool
@@ -339,11 +329,11 @@ struct ImageEditorContent: View {
     write { $0.clearLocalBlur() }
   }
 
-  private func finish() {
+  private func finish(_ canvas: ImageEditorCanvasProxy) {
     // The crop guide's pending crop reaches the binding synchronously. The
     // last tool visit stays uncommitted: a commit alone would be a write
     // that changes nothing visible. The next edit commits it.
-    applyAction()
+    canvas.applyPendingCrop()
     write()
     onDone()
   }
@@ -563,9 +553,6 @@ private struct CanvasHost: View {
   let straightenAngle: Angle?
   let isStraightening: Bool
   let lockedAspectRatio: AspectRatio?
-  let resetAction: ImageEditorCanvas.ResetAction
-  let rotateAction: ImageEditorCanvas.RotateAction
-  let applyAction: ImageEditorCanvas.ApplyAction
   let editingTarget: ImageEditorCanvas.Target?
   let onCropGuideChange: @MainActor (ImageEditorCanvas.CropGuide) -> Void
 
@@ -583,9 +570,6 @@ private struct CanvasHost: View {
     .brush(
       .init(diameter: .viewportPoints(localBlurState.brushDiameter))
     )
-    .registerResetAction(resetAction)
-    .registerRotateAction(rotateAction)
-    .registerApplyAction(applyAction)
   }
 
 }

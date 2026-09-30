@@ -47,8 +47,9 @@ The most common migration path is:
 6. Replace `SwiftUIPhotosCropView(editingModel:)` with
    `ImageEditor(document:)`, and render the document with
    `render(options:)` when the editor is done.
-7. Replace `SwiftUICropView` with `ImageEditorCanvas(document:)`, and
-   `featureFocus(_:)` with `editingTarget(_:)`.
+7. Replace `SwiftUICropView` with `ImageEditorCanvas(document:)`,
+   `featureFocus(_:)` with `editingTarget(_:)`, and its actions with an
+   `ImageEditorCanvasReader`.
 8. Pass an `InitialCrop` to `await ImageEditorDocument(source:initialCrop:)`
    instead of a `CropModifier` to `EditingStack`.
 9. Apply the renames in [Name Changes at a Glance](#name-changes-at-a-glance).
@@ -101,6 +102,8 @@ sections.
 | `SwiftUICropView` | `ImageEditorCanvas` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `SwiftUICropView.AdjustmentKind` | `CropInteraction` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `SwiftUICropView.StateSnapshot` | `ImageEditorCanvas.CropGuide`, reported by `onCropGuideChange(_:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `SwiftUICropView.ResetAction`, `.RotateAction`, `.ApplyAction` | `ImageEditorCanvasReader` and `ImageEditorCanvasProxy` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `SwiftUICropView.AdjustmentAngleCommitAction` | `straightenAngle(_:isEditing:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropViewFeatureFocus` | `ImageEditorCanvas.Target`, set with `editingTarget(_:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropViewMaskingBrush` | `ImageEditorCanvas.Brush` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `EditingCanvasStrokeSmoothingConfiguration`, `EditingCanvasStrokeSmoothingAlgorithm` | `ImageEditorCanvas.Brush.Smoothing` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
@@ -1023,8 +1026,22 @@ replacement on `ImageEditorCanvas`
   you pass a different value. To lock again after a reset, pass `nil` and
   then the ratio, or mirror `CropGuide.lockedAspectRatio` into your state
   so the ratio you pass changes.
-- `rotation(_:)` is removed. Turn the output with `RotateAction` and read
-  the turn from `CropGuide.pendingCrop.quarterTurn`.
+- `rotation(_:)` is removed. Turn the output with the proxy's
+  `rotateCounterclockwise()` (below) and read the turn from
+  `CropGuide.pendingCrop.quarterTurn`.
+- `ResetAction`, `RotateAction`, and `ApplyAction`, with
+  `registerResetAction(_:)`, `registerRotateAction(_:)`, and
+  `registerApplyAction(_:)`, are replaced by `ImageEditorCanvasReader`,
+  which works like `ScrollViewReader`: put the canvas and your controls in
+  its content, and call the `ImageEditorCanvasProxy` it passes.
+  `resetCrop()`, `rotateCounterclockwise()`, and `applyPendingCrop()` do
+  what calling the three actions did. `applyPendingCrop()` still writes the
+  crop to your binding before it returns, so
+  `canvas.applyPendingCrop(); document.commit()` puts the crop in the undo
+  step. A command before the canvas is mounted still does nothing. With
+  several canvases under one reader, commands go to the one mounted most
+  recently; an action registered on two canvases went to the one SwiftUI
+  updated last.
 - `stateHandler:` is the `onCropGuideChange(_:)` modifier, and
   `StateSnapshot` is `ImageEditorCanvas.CropGuide`:
 
@@ -1085,6 +1102,44 @@ struct BlurEditor: View {
     ImageEditorCanvas(document: $document)
       .editingTarget(target)
       .onDisappear { document.commit() }
+  }
+}
+```
+
+Commands, before:
+
+```swift
+// Brightroom 5.x
+@State private var applyAction = SwiftUICropView.ApplyAction()
+
+SwiftUICropView(editingStack: editingStack)
+  .registerApplyAction(applyAction)
+Button("Apply") { applyAction() }
+```
+
+After:
+
+```swift
+import BrightroomEngine
+import BrightroomUI
+import SwiftUI
+
+struct CropEditor: View {
+  @Binding var document: ImageEditorDocument
+
+  var body: some View {
+    ImageEditorCanvasReader { canvas in
+      VStack {
+        ImageEditorCanvas(document: $document)
+        HStack {
+          Button("Rotate") { canvas.rotateCounterclockwise() }
+          Button("Apply") {
+            canvas.applyPendingCrop()
+            document.commit()
+          }
+        }
+      }
+    }
   }
 }
 ```
@@ -1439,8 +1494,6 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- The `ImageEditorCanvas` `ResetAction`, `RotateAction`, and
-  `ApplyAction` classes may be replaced by a reader/proxy pair.
 - `FeatureTreeView` and `FeatureTreeOutline` may move out of
   BrightroomParametric, and `RenderedImage.swiftUIImage` may be removed.
 - `SwiftUIMetalImageView` may move to the demo app.
@@ -1478,6 +1531,10 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
       document binding and uses `editingTarget(_:)`; your code commits undo
       steps for canvas edits.
+- [ ] Canvas commands go through `ImageEditorCanvasReader`, state you
+      mirrored through bindings or `stateHandler` comes from
+      `onCropGuideChange(_:)`, and code that relied on a value input
+      being applied on every update passes a changed value instead.
 - [ ] Code that used `CropEditingState` or `CropGeometry` works on
       `CropFeature`, and crops you assign are pixel-aligned.
 - [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`

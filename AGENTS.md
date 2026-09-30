@@ -71,8 +71,9 @@ open Dev/Brightroom.xcodeproj
      (`EditingDocument<ImageEditorFeature>`), which the host owns with its
      history
    - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
-     `ImageEditorCanvas`, the internal UIKit `EditingCanvasView`, and its
-     Metal surface
+     `ImageEditorCanvas` (value inputs, `onCropGuideChange`), its
+     `ImageEditorCanvasReader`/`ImageEditorCanvasProxy` for commands, the
+     internal UIKit `EditingCanvasView`, and its Metal surface
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
    - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
      through a binding

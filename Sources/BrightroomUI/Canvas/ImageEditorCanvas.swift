@@ -26,45 +26,6 @@ import BrightroomParametric
 
 public struct ImageEditorCanvas: View {
 
-  public final class ResetAction {
-
-    var onCall: () -> Void = {}
-
-    public init() {
-
-    }
-
-    public func callAsFunction() {
-      onCall()
-    }
-  }
-
-  public final class RotateAction {
-
-    var onCall: () -> Void = {}
-
-    public init() {
-
-    }
-
-    public func callAsFunction() {
-      onCall()
-    }
-  }
-
-  public final class ApplyAction {
-
-    var onCall: () -> Void = {}
-
-    public init() {
-
-    }
-
-    public func callAsFunction() {
-      onCall()
-    }
-  }
-
   /// The `straightenAngle(_:isEditing:)` input.
   struct StraightenAngleInput: Equatable {
     var angle: Angle?
@@ -112,9 +73,6 @@ public struct ImageEditorCanvas: View {
 
   private var straightenAngleInput = StraightenAngleInput(angle: nil, isEditing: false)
   private var lockedAspectRatioInput: AspectRatio?
-  private var _resetAction: ResetAction?
-  private var _rotateAction: RotateAction?
-  private var _applyAction: ApplyAction?
 
   private var onCropGuideChange: (@MainActor (CropGuide) -> Void)?
   private var isCropGuideDisabled = false
@@ -129,9 +87,10 @@ public struct ImageEditorCanvas: View {
   ///
   /// The view prepares the document's source image for display and shows a
   /// progress indicator until it is ready, or a failure message when the
-  /// image's pixels cannot be decoded (the document is left untouched). Changes made on the canvas (crop
-  /// commits through `ApplyAction` or when leaving crop editing, and brush
-  /// strokes) are applied to the binding's latest document's `feature`; the
+  /// image's pixels cannot be decoded (the document is left untouched). Changes made on the canvas (the
+  /// pending crop, applied through `ImageEditorCanvasProxy.applyPendingCrop()`
+  /// or when leaving crop editing, and brush strokes) are applied to the
+  /// binding's latest document's `feature`; the
   /// view never commits them to the history, so call `commit()` when a change
   /// should become an undo step. A document set from outside (for example an
   /// undo) is displayed, and its crop reloads the crop guide. A document of
@@ -250,9 +209,6 @@ public struct ImageEditorCanvas: View {
           cropOutsideOverlay: cropOutsideOverlay,
           straightenAngleInput: straightenAngleInput,
           lockedAspectRatioInput: lockedAspectRatioInput,
-          resetAction: _resetAction,
-          rotateAction: _rotateAction,
-          applyAction: _applyAction,
           onCropGuideChange: onCropGuideChange,
           isCropGuideDisabled: isCropGuideDisabled,
           areAnimationsEnabled: areAnimationsEnabled,
@@ -374,28 +330,6 @@ public struct ImageEditorCanvas: View {
     self.brush = brush
     return self
   }
-
-  public consuming func registerResetAction(_ action: ResetAction) -> Self {
-
-    self._resetAction = action
-    return self
-
-  }
-
-  public consuming func registerRotateAction(_ action: RotateAction) -> Self {
-
-    self._rotateAction = action
-    return self
-
-  }
-
-  public consuming func registerApplyAction(_ action: ApplyAction) -> Self {
-
-    self._applyAction = action
-    return self
-
-  }
-
 }
 
 /// Hosts an `EditingCanvasView` once the image and the document are available.
@@ -410,9 +344,6 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
   let straightenAngleInput: ImageEditorCanvas.StraightenAngleInput
   let lockedAspectRatioInput: AspectRatio?
-  let resetAction: ImageEditorCanvas.ResetAction?
-  let rotateAction: ImageEditorCanvas.RotateAction?
-  let applyAction: ImageEditorCanvas.ApplyAction?
   let onCropGuideChange: (@MainActor (ImageEditorCanvas.CropGuide) -> Void)?
   let isCropGuideDisabled: Bool
   let areAnimationsEnabled: Bool
@@ -467,7 +398,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       view.setCropOutsideOverlay(EditingCanvasView.SwiftUICropOutsideOverlay(content: cropOutsideOverlay))
     }
 
-    configureActions(on: view)
+    context.coordinator.register(view, in: context.environment.imageEditorCanvasRegistry)
     context.coordinator.applySwiftUIInputs {
       view.loadFeature()
     }
@@ -523,7 +454,12 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       canvasView.setEditingTarget(editingTarget)
     }
 
-    configureActions(on: canvasView)
+    // The canvas can move under another reader.
+    context.coordinator.register(canvasView, in: context.environment.imageEditorCanvasRegistry)
+  }
+
+  static func dismantleUIView(_ canvasView: EditingCanvasView, coordinator: Coordinator) {
+    coordinator.register(canvasView, in: nil)
   }
 
   @MainActor
@@ -543,28 +479,24 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   }
 
   @MainActor
-  private func configureActions(on canvasView: EditingCanvasView) {
-    resetAction?.onCall = { [weak canvasView] in
-      guard let canvasView else { return }
-
-      canvasView.resetCrop()
-    }
-
-    rotateAction?.onCall = { [weak canvasView] in
-      guard let canvasView else { return }
-
-      canvasView.rotateCounterclockwise()
-    }
-
-    applyAction?.onCall = { [weak canvasView] in
-      canvasView?.applyPendingCrop()
-    }
-  }
-
-  @MainActor
   final class Coordinator {
 
     private var isApplyingSwiftUIInputs = false
+
+    /// The reader's registry the canvas is registered in, so it receives
+    /// `ImageEditorCanvasProxy` commands.
+    private weak var registry: ImageEditorCanvasRegistry?
+
+    /// Registers `canvasView` in `registry` for proxy commands, leaving the
+    /// registry it was in before; nil only leaves it. Registering again in
+    /// the same registry keeps its mount order.
+    func register(_ canvasView: EditingCanvasView, in registry: ImageEditorCanvasRegistry?) {
+      if self.registry !== registry {
+        self.registry?.unregister(canvasView)
+        self.registry = registry
+      }
+      registry?.register(canvasView)
+    }
 
     /// The value of each value input when it was last applied; nil before
     /// the first update. An input takes effect only when the host's value

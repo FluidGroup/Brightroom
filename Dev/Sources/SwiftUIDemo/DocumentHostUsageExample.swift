@@ -103,45 +103,48 @@ struct ExampleCustomCropEditor: View {
 
   @Binding var document: ImageEditorDocument
   @State private var target: ImageEditorCanvas.Target? = .crop
-  @State private var applyAction = ImageEditorCanvas.ApplyAction()
 
   var body: some View {
-    VStack {
-      ImageEditorCanvas(document: $document) { _ in
-        Color.clear
-      } cropOutsideOverlay: { _ in
-        Color.black.opacity(0.4)
-      }
-      .editingTarget(target)
-      .registerApplyAction(applyAction)
-
-      HStack {
-        Button("Crop") { select(.crop) }
-        Button("Blur") { select(.localBlur) }
-      }
-
-      Slider(
-        value: Binding(
-          get: { document.feature.effects.exposure?.ev ?? 0 },
-          set: { document.feature.effects.exposure = ExposureFeature(ev: $0) }
-        ),
-        in: -1...1,
-        onEditingChanged: { isEditing in
-          if !isEditing { document.commit() }
+    ImageEditorCanvasReader { canvas in
+      VStack {
+        ImageEditorCanvas(document: $document) { _ in
+          Color.clear
+        } cropOutsideOverlay: { _ in
+          Color.black.opacity(0.4)
         }
-      )
+        .editingTarget(target)
+
+        HStack {
+          Button("Crop") { select(.crop, canvas: canvas) }
+          Button("Blur") { select(.localBlur, canvas: canvas) }
+        }
+
+        Slider(
+          value: Binding(
+            get: { document.feature.effects.exposure?.ev ?? 0 },
+            set: { document.feature.effects.exposure = ExposureFeature(ev: $0) }
+          ),
+          in: -1...1,
+          onEditingChanged: { isEditing in
+            if !isEditing { document.commit() }
+          }
+        )
+      }
     }
   }
 
   /// ImageEditorCanvas never commits; this editor makes each tool visit one
-  /// undo step. The order matters: `applyAction()` writes the crop guide's
-  /// pending crop synchronously, so the commit includes it. Committing in
-  /// `onChange(of: target)` would run before the crop the canvas writes,
-  /// later, when it leaves `.crop`.
-  private func select(_ newTarget: ImageEditorCanvas.Target) {
+  /// undo step. The order matters: `applyPendingCrop()` writes the crop
+  /// guide's pending crop before it returns, so the commit includes it.
+  /// Committing in `onChange(of: target)` would run before the crop the
+  /// canvas writes, later, when it leaves `.crop`.
+  private func select(
+    _ newTarget: ImageEditorCanvas.Target,
+    canvas: ImageEditorCanvasProxy
+  ) {
     guard newTarget != target else { return }
     if target == .crop {
-      applyAction()
+      canvas.applyPendingCrop()
     }
     target = newTarget
     document.commit()
