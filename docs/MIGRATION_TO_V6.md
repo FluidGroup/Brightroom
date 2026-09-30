@@ -71,6 +71,11 @@ The requirements do not change: iOS 17 (BrightroomUI and BrightroomEngine),
 iOS 17 and macOS 14 (BrightroomParametric), Swift 6.3 or later in Swift 6
 language mode. The products are the same.
 
+BrightroomParametric no longer imports SwiftUI: the feature tree rows moved
+to BrightroomUI ([Debug Feature Tree](#debug-feature-tree)) and
+`RenderedImage.swiftUIImage` is removed ([Renderers](#renderers)).
+`RenderedImage.uiImage` stays, where UIKit is available.
+
 ### Removed Unused API
 
 These public symbols had no use inside Brightroom and were removed without a
@@ -1356,6 +1361,7 @@ the chain-entry extent everywhere.
 | `ParametricExportRenderer.RenderingDevice` | `ExportRenderer.Device` |
 | `ParametricExportRenderer.RenderingError` | `ExportRendererError` |
 | `ParametricExportRenderer.Rendered` | `RenderedImage` |
+| `ParametricExportRenderer.Rendered.swiftUIImage` | Removed. `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)` |
 | `ParametricVideoRenderer` | `VideoRenderer` |
 | `ParametricVideoRenderer.makeFrameImage(from:feature:renderExtent:presentationTime:)` | `VideoRenderer.makeImage(from:feature:renderExtent:presentationTime:)` |
 | `ParametricVideoRendererError` | `VideoRendererError` |
@@ -1509,7 +1515,6 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `RenderedImage.swiftUIImage` may be removed.
 - `SwiftUIMetalImageView` may move to the demo app.
 - BrightroomEngine's `ColorCubeLoader`, `ColorCubeHelper`,
   `ColorCubeTextParser`, and `PresetStorage` may be removed in favor of the
@@ -1555,7 +1560,8 @@ change before 6.0.0; the rest of this guide describes them as they are now.
       instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
-      BrightroomUI in a `List`.
+      BrightroomUI in a `List`, and code that read `swiftUIImage` builds
+      `Image(decorative:scale:orientation:)` from `cgImage`.
 - [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
       are applied, including `QuarterTurn` case names and log filters.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles

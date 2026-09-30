@@ -21,7 +21,6 @@
 
 import CoreImage
 import ImageIO
-import SwiftUI
 import UniformTypeIdentifiers
 
 #if canImport(UIKit)
@@ -464,12 +463,6 @@ public struct RenderedImage: Sendable {
     }
   }
   #endif
-
-  public var swiftUIImage: SwiftUI.Image {
-    get throws {
-      .init(decorative: try cgImage, scale: 1, orientation: .up)
-    }
-  }
 
   /// A downsampled decode of the result, capped to `maxPixelSize` on the long
   /// side — preview a large export WITHOUT the full-resolution decode spike.

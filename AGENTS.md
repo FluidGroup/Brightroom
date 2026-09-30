@@ -29,7 +29,9 @@ open Dev/Brightroom.xcodeproj
 
 ### Core Modules
 
-1. **BrightroomParametric** - Dependency-free parametric editing vocabulary
+1. **BrightroomParametric** - Dependency-free parametric editing vocabulary:
+   no package dependencies and no SwiftUI (UIKit only for
+   `RenderedImage.uiImage`, under `canImport(UIKit)`)
    - An edit is a root feature: a static composition of features, the way a
      SwiftUI view composes its body: `Feature`, `ImageEffect`,
      `FeatureBuilder` (`if`, `switch`, `for`, optional members, `#available`)
@@ -39,6 +41,8 @@ open Dev/Brightroom.xcodeproj
      `AnyImageEffect` for content decided by data
    - `FeatureRenderer`, `ExportRenderer`, and `VideoRenderer` evaluate any
      `some Feature` into a Core Image graph
+   - `FeatureTreeDescriptor.nodes(for:)` describes a feature's body as
+     `FeatureTreeNode`s for debugging; BrightroomUI shows them
    - Crop value types live next to `CropFeature`: `AspectRatio` and
      `QuarterTurn` (the package `CropGeometry` does the fitting math behind
      `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`)

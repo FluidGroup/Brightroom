@@ -33,7 +33,7 @@ Choose the product that matches what you want to build:
 | --- | --- | --- |
 | `BrightroomUI` | The built-in image editor and a reusable editing canvas for SwiftUI | iOS 17+ |
 | `BrightroomEngine` | Source images, editing documents with undo history, and rendering | iOS 17+ |
-| `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies | iOS 17+, macOS 14+ |
+| `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies and no SwiftUI | iOS 17+, macOS 14+ |
 
 The Swift package requires **Swift 6.3 or later** and uses Swift 6 language mode. Use an Xcode toolchain that includes Swift 6.3 or later. The built-in UI uses UIKit internally; UIKit apps can present it through `UIHostingController`.
 
