@@ -76,7 +76,11 @@ public struct CropFeature: Feature, Equatable {
   /// Its size is the crop size. A sideways `quarterTurn` exchanges only the
   /// final output dimensions; the selection rectangle remains unchanged.
   /// Regions outside the input are transparent. Pixel fitting is the caller's
-  /// responsibility; evaluation does not shrink the requested canvas.
+  /// responsibility; evaluation does not shrink the requested canvas. Snap a
+  /// rectangle to whole pixels inside the input with
+  /// `pixelAligned(imageSize:)`, or create the crop with
+  /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:)` or
+  /// `fitted(to:imageSize:)`, which align it.
   public var rect: CGRect
 
   /// The quarter turn applied to the cropped output.

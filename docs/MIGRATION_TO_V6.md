@@ -1146,7 +1146,10 @@ relying on the compiler to find them.
   the dimensions, so odd sizes keep every pixel.
 - New API: `CropFeature.outputGeometry(in:)`, which returns
   `CropFeature.OutputGeometry` (`outputBounds`, `inputToOutputTransform`);
-  `QuarterTurn.isSideways`; `CropGeometry.rect(_:turnedBy:)`;
+  `CropFeature.pixelAligned(imageSize:)`, which snaps a crop to whole pixels
+  inside its input as `CropFeature(topLeftRect:…)` does;
+  `CropFeature.fitted(to:imageSize:)`, the largest centered selection of an
+  output aspect ratio; `QuarterTurn.isSideways`; `CropGeometry.rect(_:turnedBy:)`;
   `CropGeometry.fittingRect(rect:in:straightenRadians:respectingAspectRatio:)`;
   and a `straightenRadians:` parameter on
   `CropGeometry.cropRect(toFitAspectRatio:in:)` and

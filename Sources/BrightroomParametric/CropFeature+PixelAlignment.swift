@@ -307,6 +307,58 @@ extension CropFeature {
     )
   }
 
+  /// This crop snapped to the pixel grid of an input of `imageSize`, as
+  /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:)` snaps it.
+  ///
+  /// Without straightening, the edges snap inward to whole pixels and the
+  /// selection is clipped to the input. With straightening, the selection
+  /// is fitted so its straightened footprint lies inside the input
+  /// (shrinking uniformly and moving only if needed), and its dimensions
+  /// snap inward about the fitted center; the origin can stay fractional.
+  /// `quarterTurn` and `straightenRadians` are kept. A crop that is already
+  /// aligned is returned unchanged.
+  ///
+  /// Evaluation renders `rect` as given, so a crop set from arbitrary
+  /// coordinates can have fractional edges or transparent parts outside the
+  /// input. Align it with this method before storing it.
+  ///
+  /// - Parameter imageSize: The oriented pixel size of the crop's input.
+  public func pixelAligned(imageSize: CGSize) -> CropFeature {
+    CropFeature(
+      topLeftRect: topLeftRect(imageSize: imageSize),
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
+    )
+  }
+
+  /// The largest selection of `aspectRatio`, centered in an input of
+  /// `imageSize` and pixel-aligned.
+  ///
+  /// The result is re-centered: the current `rect` is not used, so this is
+  /// not a fit inside the current selection. `aspectRatio` describes the
+  /// output, after `quarterTurn`; a sideways turn exchanges it for the
+  /// selection. `quarterTurn` and `straightenRadians` are kept, and with
+  /// straightening the selection shrinks until its straightened footprint
+  /// lies inside the input.
+  ///
+  /// - Parameter imageSize: The oriented pixel size of the crop's input.
+  public func fitted(to aspectRatio: AspectRatio, imageSize: CGSize) -> CropFeature {
+    let selectionAspectRatio = quarterTurn.isSideways ? aspectRatio.swapped() : aspectRatio
+    // Centered, so the rectangle is the same in y-down and y-up coordinates.
+    let selection = CropGeometry.cropRect(
+      toFitAspectRatio: selectionAspectRatio,
+      in: imageSize,
+      straightenRadians: straightenRadians
+    )
+    return CropFeature(
+      topLeftRect: selection,
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
+    )
+  }
+
   /// This crop snapped to the pixel grid of an input of `imageSize`.
   func pixelAlignedCrop(imageSize: CGSize) -> PixelAlignedCrop {
     PixelAlignedCrop(
