@@ -24,19 +24,22 @@ import CoreGraphics
 /// Crop fitting and coordinate conversions shared by pixel alignment and the
 /// crop UI.
 ///
+/// Package access: hosts fit crops with `CropFeature.fitted(to:imageSize:)`
+/// and `CropFeature.pixelAligned(imageSize:)`.
+///
 /// The math is coordinate-convention-agnostic for clamping and aspect fitting:
 /// pass the crop rect and image size in the SAME space (pixel alignment and
 /// the UI use y-down top-left coordinates; `CropFeature` stores y-up — both work as long as the
 /// rect and bounds share a convention). `cropRect(toFitBoundingBox:)` is the one
 /// exception and documents its y-flip explicitly.
-public enum CropGeometry {
+package enum CropGeometry {
 
   /// Clamps `rect` into `[0, imageSize]` and, when an aspect ratio is supplied,
   /// fits the largest centered-in-place rectangle of that ratio inside the
   /// clamped bounds.
   ///
   /// Use the overload with `straightenRadians` for a straightened selection.
-  public static func fittingRect(
+  package static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
     respectingAspectRatio: AspectRatio?
@@ -112,7 +115,7 @@ public enum CropGeometry {
   /// `.counterclockwise180` leave the rectangle unchanged. The size exchange is its own inverse.
   /// This is a presentation conversion; stored selections and fitting use the
   /// rectangle before its output turn.
-  public static func rect(_ rect: CGRect, turnedBy rotation: QuarterTurn) -> CGRect {
+  package static func rect(_ rect: CGRect, turnedBy rotation: QuarterTurn) -> CGRect {
     guard rotation.isSideways else {
       return rect
     }
@@ -129,7 +132,7 @@ public enum CropGeometry {
   ///
   /// `rect` and `aspectRatio` use that same selection orientation. Straightening
   /// determines the sampled source area; output rotation has no role in fitting.
-  public static func fittingRect(
+  package static func fittingRect(
     rect: CGRect,
     in imageSize: CGSize,
     straightenRadians: Double,
@@ -206,7 +209,7 @@ public enum CropGeometry {
 
   /// A centered selection of `aspectRatio` that fits inside the image
   /// after straightening and before any output quarter turn.
-  public static func cropRect(
+  package static func cropRect(
     toFitAspectRatio aspectRatio: AspectRatio,
     in imageSize: CGSize,
     straightenRadians: Double = 0
@@ -238,7 +241,7 @@ public enum CropGeometry {
   /// then fitted against the straightened source. Both the crop and aspect ratio
   /// are expressed before output rotation. `cropExtent` supplies only the scale
   /// of the box; the result is anchored against the image origin.
-  public static func cropRect(
+  package static func cropRect(
     toFitBoundingBox boundingBox: CGRect,
     within cropExtent: CGRect,
     in imageSize: CGSize,

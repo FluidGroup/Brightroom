@@ -116,7 +116,7 @@ sections.
 | `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-removed) |
 | `EditingFeatureTree`, `FeatureTreePoint` | Removed. Address features by member name. | [Addressing Features](#addressing-features) |
 | `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
-| `CropGeometry` | `CropGeometry` (BrightroomParametric) | [Crop Conversions](#crop-conversions) |
+| `CropGeometry` | Removed from the public API. Use `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`. | [Crop Conversions](#crop-conversions) |
 | `ImageTool` | Internal | [Image Decoding](#image-decoding) |
 
 ### BrightroomParametric
@@ -1166,11 +1166,7 @@ relying on the compiler to find them.
   `CropFeature.pixelAligned(imageSize:)`, which snaps a crop to whole pixels
   inside its input as `CropFeature(topLeftRect:…)` does;
   `CropFeature.fitted(to:imageSize:)`, the largest centered selection of an
-  output aspect ratio; `QuarterTurn.isSideways`; `CropGeometry.rect(_:turnedBy:)`;
-  `CropGeometry.fittingRect(rect:in:straightenRadians:respectingAspectRatio:)`;
-  and a `straightenRadians:` parameter on
-  `CropGeometry.cropRect(toFitAspectRatio:in:)` and
-  `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)`.
+  output aspect ratio; and `QuarterTurn.isSideways`.
 - `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` with a
   non-zero `straighten` now fits the selection so its straightened footprint
   lies inside the input, shrinking it uniformly and moving it only if needed,
@@ -1366,9 +1362,10 @@ moved next to `CropFeature` in BrightroomParametric, so add
 
 The y-down conversions and the pixel-grid comparison were extensions that
 BrightroomEngine added to `CropFeature`. They are now part of `CropFeature`
-in BrightroomParametric, together with `CropGeometry`. "Display" is kept for
-the viewport, and the comparison checks the pixels a crop selects, not how
-it renders.
+in BrightroomParametric. "Display" is kept for the viewport, and the
+comparison checks the pixels a crop selects, not how it renders.
+`CropGeometry` is no longer public; `CropFeature` covers what hosts used it
+for.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
@@ -1376,7 +1373,10 @@ it renders.
 | `CropFeature.displayCropRect(imageSize:)` | `CropFeature.topLeftRect(imageSize:)` |
 | `CropFeature.isRenderingEquivalent(to:orientedImageSize:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
 | `CropEditingState.isRenderingEquivalent(to:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` ([CropEditingState](#cropeditingstate-is-no-longer-public)) |
-| `CropGeometry` (BrightroomEngine) | `CropGeometry` (BrightroomParametric), with the same members |
+| `CropGeometry.cropRect(toFitAspectRatio:in:)` | `CropFeature.fitted(to:imageSize:)` (the ratio describes the output) |
+| `CropGeometry.fittingRect(rect:in:respectingAspectRatio:)`, `fittingRect(rect:in:straightenRadians:respectingAspectRatio:)` | `CropFeature.pixelAligned(imageSize:)`, which clips the selection (or fits its straightened footprint) to the image; fit a ratio into your rectangle with `AspectRatio.rectThatFits(in:)` first |
+| `CropGeometry.rect(_:turnedBy:)` | None. For a sideways turn, exchange the width and height about the same center. |
+| `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle passed through `pixelAligned(imageSize:)` |
 
 ### Image Decoding
 
@@ -1419,8 +1419,7 @@ change before 6.0.0; the rest of this guide describes them as they are now.
   `ColorCubeTextParser`, and `PresetStorage` may be removed in favor of the
   `ColorCubeFeature` loaders.
 - Public helpers meant for Brightroom's own modules may become package
-  access: `FeatureEvaluationContext.init`, `CropGeometry`,
-  `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
+  access: `FeatureEvaluationContext.init`, `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
   `ExportRenderer.Device`, `VideoRenderer.resolveRenderSize`,
   `ToneCurveEvaluator`, and `BrightroomMetalLibrary`. To test a custom
   feature, evaluate it through `FeatureRenderer` rather than calling
@@ -1450,8 +1449,8 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
       document binding and uses `editingTarget(_:)`; your code commits undo
       steps for canvas edits.
-- [ ] Code that used `CropEditingState` works on `CropFeature`, and crops
-      you assign are pixel-aligned.
+- [ ] Code that used `CropEditingState` or `CropGeometry` works on
+      `CropFeature`, and crops you assign are pixel-aligned.
 - [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`
       instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.

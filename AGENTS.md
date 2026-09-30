@@ -39,8 +39,9 @@ open Dev/Brightroom.xcodeproj
      `AnyImageEffect` for content decided by data
    - `FeatureRenderer`, `ExportRenderer`, and `VideoRenderer` evaluate any
      `some Feature` into a Core Image graph
-   - Crop value types live next to `CropFeature`: `AspectRatio`,
-     `QuarterTurn`, `CropGeometry`
+   - Crop value types live next to `CropFeature`: `AspectRatio` and
+     `QuarterTurn` (the package `CropGeometry` does the fitting math behind
+     `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`)
    - Features are plain values with no identity: no `FeatureID`, no
      `isEnabled`. (`FilterFeature.id` and `ColorCubeFeature.id` are string
      lookup keys for a filter or a LUT, not feature identity.)

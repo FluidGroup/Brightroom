@@ -389,8 +389,6 @@ exchanged:
 - `rotation` `-90` or `-270`, with a stored `cropRect` of `(x, y, w, h)`: use
   `(x + (w − h) / 2, y + (h − w) / 2, h, w)`. The center stays at
   `(x + w/2, y + h/2)`, and the output is still w × h, as in 5.1.0.
-  BrightroomParametric's `CropGeometry.rect(_:turnedBy:)` computes the same
-  rectangle.
 - Example: on a 300 × 200 image, a schema 2 frame `(50, −50, 200, 300)` with
   `rotation` `-90` becomes `(0, 0, 300, 200)` with `.counterclockwise90`: the
   whole image, rendered 200 × 300.
