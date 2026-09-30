@@ -424,7 +424,7 @@ private struct LUTImportDemoView: View {
       FilterFeature(name: cube.name, id: cube.id, effects: [AnyImageEffect(cube)]),
       at: 0
     )
-    status = "Imported \(name). Open ImageEditor to try it in Filters."
+    status = "Added \(name). Open ImageEditor to try it in Filters."
   }
 }
 
