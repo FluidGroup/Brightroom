@@ -211,8 +211,7 @@ extension EditingDocument {
   /// Renders the feature over the full-resolution source image.
   ///
   /// The Core Image work runs off the calling actor. See
-  /// `ExportRenderer.render(from:feature:options:device:)` for the
-  /// output options.
+  /// `ExportRenderer.render(from:feature:options:)` for the output options.
   @concurrent
   public func render(
     options: ExportRenderer.Options = .init()

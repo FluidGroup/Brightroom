@@ -22,9 +22,9 @@
 import CoreImage
 import UIKit
 
-public enum Geometry: Sendable {
+enum Geometry: Sendable {
 
-  public static func sizeThatAspectFit(size: CGSize, maxPixelSize: CGFloat) -> CGSize {
+  static func sizeThatAspectFit(size: CGSize, maxPixelSize: CGFloat) -> CGSize {
 
     guard size.width >= maxPixelSize || size.height >= maxPixelSize else {
       return size

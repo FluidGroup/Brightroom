@@ -60,7 +60,11 @@ public struct FeatureEvaluationContext: Sendable {
   public let chainEntryExtent: CGRect?
 
   /// Creates an evaluation context.
-  public init(
+  ///
+  /// Package access: hosts evaluate through `FeatureRenderer`, which
+  /// normalizes the chain entry's origin and fixes its extent before
+  /// building the context.
+  package init(
     chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) {
@@ -83,7 +87,7 @@ public struct FeatureEvaluationContext: Sendable {
 
   /// Returns a copy that resolves diagonal-based radii against `extent`
   /// (the full source extent in the current render pixel space).
-  public func withChainEntryExtent(_ extent: CGRect?) -> Self {
+  package func withChainEntryExtent(_ extent: CGRect?) -> Self {
     .init(
       chainEntryExtent: extent,
       presentationTime: presentationTime

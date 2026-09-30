@@ -101,7 +101,7 @@ public struct AspectRatio: Hashable, CustomReflectable, Identifiable, Sendable {
 
   /// The same proportion in its lowest terms, such as `4:3` for a
   /// `4032x3024` image size.
-  public func reduced() -> Self {
+  package func reduced() -> Self {
     func gcd(_ a: CGFloat, _ b: CGFloat) -> CGFloat {
       let r = a.truncatingRemainder(dividingBy: b)
       if r.isNormal {
@@ -116,7 +116,7 @@ public struct AspectRatio: Hashable, CustomReflectable, Identifiable, Sendable {
     return .init(width: width / v, height: height / v)
   }
 
-  public var _comparingValue: CGFloat {
+  private var _comparingValue: CGFloat {
     return (height / width)
   }
 

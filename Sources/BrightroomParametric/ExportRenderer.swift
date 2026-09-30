@@ -98,7 +98,9 @@ public struct ExportRenderer {
 
   }
 
-  public enum Device: Sendable {
+  /// Where Core Image renders. Package access, so Brightroom's tests can
+  /// compare devices; the public `render` always uses `.automatic`.
+  package enum Device: Sendable {
     /// GPU rendering, falling back to software rendering when the image
     /// exceeds the GPU context's maximum input or output size.
     case automatic
@@ -134,14 +136,26 @@ public struct ExportRenderer {
    - `.file` streams the render to disk through Core Image's tiled writer (no
      full-resolution `CGImage`; bounded peak memory) — use it for large images.
 
+   Core Image renders on the GPU, and in software when the image exceeds the
+   GPU context's maximum input or output size.
+
    This call is synchronous; callers that need to stay off an actor should hop
    to their own queue first.
    */
   public func render(
     from sourceImage: CIImage,
     feature: some Feature,
-    options: Options = .init(),
-    device: Device = .automatic
+    options: Options = .init()
+  ) throws -> RenderedImage {
+    try render(from: sourceImage, feature: feature, options: options, device: .automatic)
+  }
+
+  /// Renders on a chosen device. See `render(from:feature:options:)`.
+  package func render(
+    from sourceImage: CIImage,
+    feature: some Feature,
+    options: Options,
+    device: Device
   ) throws -> RenderedImage {
 
     let outputCIImage = try featureRenderer.makeImage(from: sourceImage, feature: feature)
@@ -398,7 +412,7 @@ extension ExportRendererError.WriteStep: CustomStringConvertible {
 }
 
 /**
- The result of `ExportRenderer.render(from:feature:options:device:)`.
+ The result of `ExportRenderer.render(from:feature:options:)`.
 
  `RenderedImage` hides whether the result lives in memory or on disk: the same type
  is returned for `ExportRenderer.Output.memory` and `ExportRenderer.Output.file`. Ask it for whatever you

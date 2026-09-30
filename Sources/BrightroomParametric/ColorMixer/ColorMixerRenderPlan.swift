@@ -66,7 +66,7 @@ extension ColorMixerFeature {
     public let algorithm: ColorMixerFeature.Algorithm
 
     /// The color-transform semantics represented by this identity.
-    public let semanticVersion = ColorMixerRenderPlan.semanticVersion
+    let semanticVersion = ColorMixerRenderPlan.semanticVersion
     private let values: [Float]
 
     /// Creates an identity only when the Mixer changes rendered pixels.

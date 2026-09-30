@@ -37,14 +37,12 @@ extension Optional {
     )
   }
 
-  public struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
+  struct BrightroomUnwrappedNilError: Swift.Error, CustomDebugStringConvertible {
     let file: StaticString
     let function: StaticString
     let line: UInt
 
-    // MARK: Public
-
-    public init(
+    init(
       _ debugDescription: String? = nil,
       file: StaticString = #file,
       function: StaticString = #function,
@@ -58,6 +56,6 @@ extension Optional {
 
     // MARK: CustomDebugStringConvertible
 
-    public let debugDescription: String
+    let debugDescription: String
   }
 }

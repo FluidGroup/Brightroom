@@ -83,7 +83,7 @@ public struct VideoRenderer: Sendable {
   /// `featureOutput` performs a dry run with a transparent frame so domain
   /// features such as crop can decide the final canvas size without decoding a
   /// real video frame.
-  public func resolveRenderSize(
+  package func resolveRenderSize(
     sourceRenderSize: CGSize,
     feature: some Feature,
     mode: RenderSizeMode

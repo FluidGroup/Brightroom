@@ -166,6 +166,10 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - "Renderer" is reserved for the public types that evaluate features
   (`FeatureRenderer`, `ExportRenderer`, `VideoRenderer`); `makeImage` returns
   a lazy `CIImage` recipe and `render` produces pixels.
+- Code that only Brightroom's own modules or tests call is `package`, not
+  `public` (`FeatureEvaluationContext.init`, `ExportRenderer.Device`,
+  `BrightroomMetalLibrary`, `PreviewSourceLoader`). Public API is what a
+  host needs.
 - Do not give new types module or history prefixes (`Parametric`,
   `PhotosCrop`, `PixelEditor`) or leading underscores.
 - "Display" is reserved for the viewport; image-space conversions say what
@@ -188,6 +192,10 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Parametric tests are in `Tests/BrightroomParametricTests/`
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
+- Test files marked "Public API only" play a host app: evaluate through
+  `FeatureRenderer`, never `apply(to:context:)` with a context you build.
+  Package tests can see `package` symbols, so the compiler does not catch
+  this
 
 ```bash
 # Engine and UI tests

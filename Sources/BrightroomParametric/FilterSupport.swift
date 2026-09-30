@@ -89,10 +89,11 @@ enum VignetteRecipe {
 
 /// Geometry helpers kept inside the Parametric layer so the renderer can be
 /// compiled without BrightroomEngine's UIKit-backed support files.
-enum ImageGeometry {
+/// BrightroomUI uses them through package access.
+package enum ImageGeometry {
 
   /// Translates the image so its extent starts at zero while preserving pixels.
-  static func removingExtentOffset(_ image: CIImage) -> CIImage {
+  package static func removingExtentOffset(_ image: CIImage) -> CIImage {
     image.transformed(
       by: .init(
         translationX: -image.extent.origin.x,

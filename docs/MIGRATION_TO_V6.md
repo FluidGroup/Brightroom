@@ -129,6 +129,7 @@ sections.
 | `CropGeometry` | Removed from the public API. Use `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`. | [Crop Conversions](#crop-conversions) |
 | `ImageTool` | Internal | [Image Decoding](#image-decoding) |
 | `ColorCubeLoader`, `ColorCubeHelper`, `PresetStorage` (with their error types) | Removed. Use the `ColorCubeFeature` loaders and `ImageEditor.Options.filters`. | [Loading LUT Files](#loading-lut-files) |
+| `Geometry` | Internal | [Helpers No Longer Public](#helpers-no-longer-public) |
 | `_BrightroomDebounce` | Removed | [Helpers No Longer Public](#helpers-no-longer-public) |
 
 ### BrightroomParametric
@@ -152,7 +153,7 @@ sections.
 | `ToneCurveEditorValue`, `ToneCurveChannel` | `ToneCurveFeature.Curves`, `ToneCurveFeature.Channel` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
 | `ColorMixerAdjustment`, `ColorMixerBandAdjustment`, `ColorMixerBand` | `ColorMixerFeature.Bands`, `.BandCorrection`, `.Band` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
 | `ToneCurveRenderIdentity`, `ColorMixerRenderIdentity` | `ToneCurveFeature.RenderKey`, `ColorMixerFeature.RenderKey` | [Tone Curve and Color Mixer Values](#tone-curve-and-color-mixer-values) |
-| `BrushStampMetalLibrary` | `BrightroomMetalLibrary` | [Metal Library](#metal-library) |
+| `BrushStampMetalLibrary` | Not public | [Metal Library](#metal-library) |
 | `FeatureTreeView`, `FeatureTreeOutline` | `FeatureTreeView` is removed; `FeatureTreeOutline` moved to BrightroomUI | [Debug Feature Tree](#debug-feature-tree) |
 | `FeatureTreeDescriptor` | `FeatureTreeNode.nodes(for:)` | [Debug Feature Tree](#debug-feature-tree) |
 | `ParametricDocumentCodec`, `PersistableFeature`, `FeatureTypeKey`, `ParametricFeatureTypeRegistry` | Removed; your app owns storage | [Persistence Moved to Your App](#persistence-moved-to-your-app) |
@@ -333,7 +334,7 @@ for example
 | `validate()` as a protocol requirement | Removed as a requirement. `CropFeature.validate()` and `ColorCubeFeature.validate()` stay public; `apply` calls them. |
 | `PresetFeature.validate()` | Removed. Call `validate()` on each `ColorCubeFeature` you rebuild; rendering validates anyway. |
 | `Feature.isEqualFeature(to:)`, `parametricFeatureIsEqual(_:_:)`, `parametricFeaturesAreEqual(_:_:)` | `==` on features; `AnyImageEffect` compares the wrapped values |
-| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `FeatureRenderer().makeImage(from:feature:)`. To skip origin normalization, call `feature.apply(to:context:)` |
+| `FeatureGraphCompiler`, `FeatureGraphCompiler.Options`, `makeOutput(from:document:…)` | `FeatureRenderer().makeImage(from:feature:)` |
 | `FeatureGraphCompiler.renderMask(_:extent:)`, `FeatureGraphOutput`, `localAdjustmentMasks` | `FeatureRenderer().makeMaskImage(for:extent:)` |
 | `FeatureGraphCompilerError` | `FeatureEvaluationError`. See [Errors](#errors). |
 | `ParametricImageRenderer(compiler:)`, `ParametricImageRenderer.compiler`, `ParametricImageRenderer.makeOutput` | `FeatureRenderer()` |
@@ -345,7 +346,7 @@ for example
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `FilterFeature(name:id:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking `id: String`: optional in the two file loaders, where it defaults to the file name as before, and required in `init(cubeImage:name:id:intensity:dimension:)`. |
 | `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
-| `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal. `FeatureEvaluationContext(chainEntryExtent:presentationTime:)` |
+| `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal, and the renderers build the context. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeOutline(feature:)` (BrightroomUI) and `FeatureTreeNode.nodes(for:)` taking `some Feature`. See [Debug Feature Tree](#debug-feature-tree). |
 
 ### Enablement
@@ -599,6 +600,9 @@ struct Inset: Feature, Equatable {
   does.
 - An effect with nothing to do can return its input image itself; a
   `LocalAdjustmentFeature` then returns its input unchanged.
+- To test a custom feature, evaluate it with
+  `FeatureRenderer().makeImage(from:feature:)`. `FeatureEvaluationContext`
+  has no public initializer; the renderer builds it.
 
 ### Reorderable Steps
 
@@ -1447,17 +1451,19 @@ the chain-entry extent everywhere.
 | `ParametricImageRenderer` | `FeatureRenderer` |
 | `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)` |
 | `ParametricExportRenderer` | `ExportRenderer` |
-| `ParametricExportRenderer.render(source:feature:options:device:)` | `ExportRenderer.render(from:feature:options:device:)` |
+| `ParametricExportRenderer.render(source:feature:options:device:)` | `ExportRenderer.render(from:feature:options:)`, which renders like `device: .automatic`. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricExportRenderer.Options(workingFormat:workingColorSpace:)`, `.workingFormat`, `.workingColorSpace` | `ExportRenderer.Options(outputFormat:outputColorSpace:)`, `.outputFormat`, `.outputColorSpace`. They were always the output format and the output color-space tag; processing runs in a half-float working space either way. |
 | `ParametricExportRenderer.ExportFileType` | `ExportRenderer.FileType` |
-| `ParametricExportRenderer.RenderingDevice` | `ExportRenderer.Device` |
+| `ParametricExportRenderer.RenderingDevice` | Not public. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricExportRenderer.RenderingError` | `ExportRendererError` |
 | `ParametricExportRenderer.Rendered` | `RenderedImage` |
 | `ParametricExportRenderer.Rendered.swiftUIImage` | Removed. `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)` |
 | `ParametricVideoRenderer` | `VideoRenderer` |
 | `ParametricVideoRenderer.makeFrameImage(from:feature:renderExtent:presentationTime:)` | `VideoRenderer.makeImage(from:feature:renderExtent:presentationTime:)` |
+| `ParametricVideoRenderer.resolveRenderSize(sourceRenderSize:document:mode:)` | Not public. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricVideoRendererError` | `VideoRendererError` |
-| `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)`, `.radiusReferenceExtent`, `radiusBasis(for:)`, `withRadiusReferenceExtent(_:)` | `FeatureEvaluationContext(chainEntryExtent:presentationTime:)`, `.chainEntryExtent`, `chainEntryExtent(for:)`, `withChainEntryExtent(_:)` |
+| `FeatureEvaluationContext.radiusReferenceExtent`, `radiusBasis(for:)` | `FeatureEvaluationContext.chainEntryExtent`, `chainEntryExtent(for:)` |
+| `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Not public. Pass `chainEntryExtent:` to `FeatureRenderer.makeImage`. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `FeatureEvaluationError.failedToCreateImage(_:)` | `FeatureEvaluationError.imageCreationFailed(_:)` |
 
 `EditingDocument.render(options:)` takes `ExportRenderer.Options` and returns
@@ -1537,12 +1543,13 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | `ColorMixerFeature(adjustment:algorithm:)`, `.adjustment` | `ColorMixerFeature(bands:algorithm:)`, `.bands` |
 | `ColorMixerAdjustment.isNeutral`, `ColorMixerBandAdjustment.isNeutral` | `ColorMixerFeature.Bands.isIdentity`, `ColorMixerFeature.BandCorrection.isIdentity` |
 | `ColorMixerRenderIdentity(activeAdjustment:algorithm:)` | `ColorMixerFeature.RenderKey(activeBands:algorithm:)` |
+| `ColorMixerRenderIdentity.semanticVersion` | Not public; `==` on `RenderKey` still includes it |
 
 ### Metal Library
 
 | 5.1.1 | 6.0 |
 | --- | --- |
-| `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | `BrightroomMetalLibrary`, `BrightroomMetalLibraryError`. The library holds more than the brush stamp. |
+| `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | Not public. Brightroom loads its own kernels; a kernel that cannot load throws `FeatureEvaluationError.kernelUnavailable(name:reason:)`. |
 
 ## Renamed Engine API
 
@@ -1558,7 +1565,7 @@ moved next to `CropFeature` in BrightroomParametric, so add
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `PixelAspectRatio` (BrightroomEngine) | `AspectRatio` (BrightroomParametric) |
-| `PixelAspectRatio._minimized()` | `AspectRatio.reduced()` |
+| `PixelAspectRatio._minimized()`, `._comparingValue` | Not public. See [Helpers No Longer Public](#helpers-no-longer-public). |
 
 ### Crop Conversions
 
@@ -1612,22 +1619,21 @@ the same shape; the table says what to use instead.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
+| `FeatureEvaluationContext(kernelRegistry:radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Package access. Evaluate a feature with `FeatureRenderer().makeImage(from:feature:chainEntryExtent:presentationTime:)`, which moves the source to zero origin and builds the context. A feature still reads `chainEntryExtent`, `chainEntryExtent(for:)`, and `presentationTime`, and passes the context it receives on to the features it evaluates. |
+| `ParametricExportRenderer.RenderingDevice` and the `device:` parameter of `render(source:feature:options:device:)` | Package access. `ExportRenderer.render(from:feature:options:)` does what `.automatic` did: it renders on the GPU, and in software when the image exceeds the GPU's size limits. |
+| `ParametricVideoRenderer.resolveRenderSize(sourceRenderSize:document:mode:)` | Package access. `VideoRenderer.makeVideoComposition(for:feature:renderSizeMode:ciContext:)` resolves the size. To compute it yourself, read the extent of `FeatureRenderer().makeImage(from:feature:)` over a transparent image of the source size. |
+| `ColorMixerRenderIdentity.semanticVersion` | Internal. Two `ColorMixerFeature.RenderKey` values still compare unequal when the semantics differ. |
+| `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | Package access. A kernel that cannot load throws `FeatureEvaluationError.kernelUnavailable(name:reason:)`. |
+| `PixelAspectRatio._minimized()`, `._comparingValue` | Package access (`AspectRatio.reduced()`) and private. Compare ratios with `==`; for lowest terms, divide the width and height by their greatest common divisor. |
+| `Geometry` (BrightroomEngine) | Internal, and its aspect-fit, aspect-fill, and diagonal helpers are removed. Use `AspectRatio(size).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. (`rectThatAspectFill` ignored the rectangle's origin.) |
+| `Optional.BrightroomUnwrappedNilError` (BrightroomEngine) | Internal. No public API threw it. |
 | `_BrightroomDebounce` (BrightroomEngine) | Removed. Use a `Task` you cancel and restart, or your own timer. |
-| `Geometry.sizeThatAspectFit(aspectRatio:boundingSize:)`, `rectThatAspectFit(aspectRatio:boundingRect:)` (BrightroomEngine) | Removed. `AspectRatio(aspectRatio).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. |
-| `Geometry.sizeThatAspectFill(aspectRatio:minimumSize:)`, `rectThatAspectFill(aspectRatio:minimumRect:)`, `diagonalRatio(to:from:)` (BrightroomEngine) | Removed. `rectThatAspectFill` ignored the rectangle's origin. |
 | `SwiftUIMetalImageView`, `ImageDisplayBackground` (BrightroomUI) | Removed. The editor never used them. Show a rendered image with `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)`, or copy the demo app's view (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), which draws a `CIImage` with Metal. |
 
-## Still Open Before 6.0
-
-Brightroom 6 is not released yet. These parts of the public API may still
-change before 6.0.0; the rest of this guide describes them as they are now.
-
-- Public helpers meant for Brightroom's own modules may become package
-  access: `FeatureEvaluationContext.init`, `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
-  `ExportRenderer.Device`, `VideoRenderer.resolveRenderSize`,
-  `ToneCurveEvaluator`, and `BrightroomMetalLibrary`. To test a custom
-  feature, evaluate it through `FeatureRenderer` rather than calling
-  `apply(to:context:)` with a context you build.
+`ToneCurveEvaluator`, `ToneCurveFeature.semanticVersion`, and
+`CropFeature.outputGeometry(in:)` stay public: a host can draw the curve a
+tone curve renders, store the curve semantics it saved, and size a crop's
+output.
 
 ## Migration Checklist
 
@@ -1668,6 +1674,10 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
       BrightroomUI in a `List`, and code that read `swiftUIImage` builds
       `Image(decorative:scale:orientation:)` from `cgImage`.
+- [ ] Code that built a `FeatureEvaluationContext`, passed `device:` to an
+      export, or used `Geometry`, `SwiftUIMetalImageView`, or another helper
+      in [Helpers No Longer Public](#helpers-no-longer-public) uses the
+      public API listed there.
 - [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
       are applied, including `QuarterTurn` case names and log filters.
 - [ ] Crop rectangles are selections before the quarter turn; rectangles
