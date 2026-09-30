@@ -617,7 +617,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       if input.isEditing {
         canvasView.setStraightenAngle(angle, recordsCropExtent: false)
       } else if previous?.isEditing == true {
-        canvasView.commitStraightenAngle(angle)
+        canvasView.endStraightening(at: angle)
       } else {
         canvasView.setStraightenAngle(angle)
       }

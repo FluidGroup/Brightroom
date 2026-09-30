@@ -128,7 +128,7 @@ struct ImageEditorContent: View {
               isLoaded: isLoaded,
               onSelectAspectRatio: selectAspectRatio,
               onSetStraightenAngle: setStraightenAngle,
-              onCommitStraightenAngle: endStraightening,
+              onEndStraightening: endStraightening,
               onSetBrushDiameter: setLocalBlurBrushDiameter,
               onClearLocalBlur: clearLocalBlur,
               onSelectFilterPreset: selectFilterPreset,
@@ -590,7 +590,7 @@ private struct ControlHost: View {
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void
   let onSetStraightenAngle: (Double) -> Void
-  let onCommitStraightenAngle: (Double) -> Void
+  let onEndStraightening: (Double) -> Void
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearLocalBlur: () -> Void
   let onSelectFilterPreset: (FilterFeature?) -> Void
@@ -611,7 +611,7 @@ private struct ControlHost: View {
           isLoaded: isLoaded,
           onSelectAspectRatio: onSelectAspectRatio,
           onSetStraightenAngle: onSetStraightenAngle,
-          onCommitStraightenAngle: onCommitStraightenAngle
+          onEndStraightening: onEndStraightening
         )
 
       case .localBlur:
@@ -1221,7 +1221,7 @@ private struct AdjustmentControl: View {
   let isLoaded: Bool
   let onSelectAspectRatio: (AspectRatioSelection) -> Void
   let onSetStraightenAngle: (Double) -> Void
-  let onCommitStraightenAngle: (Double) -> Void
+  let onEndStraightening: (Double) -> Void
 
   var body: some View {
     Group {
@@ -1238,7 +1238,7 @@ private struct AdjustmentControl: View {
           value: straightenAngle?.degrees ?? 0,
           isEnabled: isLoaded,
           onChange: onSetStraightenAngle,
-          onEditingEnded: onCommitStraightenAngle
+          onEditingEnded: onEndStraightening
         )
         .transition(.opacity)
       }

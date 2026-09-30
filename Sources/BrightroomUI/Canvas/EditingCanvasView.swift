@@ -99,14 +99,14 @@ final class EditingCanvasView: UIView {
     var interaction: CropInteraction = []
 
     /// The locked aspect ratio in the final output orientation.
-    var preferredAspectRatio: AspectRatio?
+    var lockedAspectRatio: AspectRatio?
 
     var cropGuide: ImageEditorCanvas.CropGuide {
       .init(
         pendingCrop: proposedCrop?.makeCropFeature(),
         canvasBounds: CGRect(origin: .zero, size: frame.size),
         interaction: interaction,
-        lockedAspectRatio: preferredAspectRatio
+        lockedAspectRatio: lockedAspectRatio
       )
     }
   }
@@ -591,12 +591,12 @@ final class EditingCanvasView: UIView {
 
     if cropChanged, let current = state.proposedCrop {
       var crop = CropGuideState(cropFeature: feature.crop, imageSize: source.imageSize)
-      if var ratio = state.preferredAspectRatio {
+      if var ratio = state.lockedAspectRatio {
         // The lock describes the output, so it turns with the reloaded crop's
         // output orientation, as it does in `setQuarterTurn(_:)`.
         if crop.rotation.isSideways != current.rotation.isSideways {
           ratio = ratio.swapped()
-          state.preferredAspectRatio = ratio
+          state.lockedAspectRatio = ratio
           guideView.setLockedAspectRatio(ratio)
         }
         crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
@@ -631,7 +631,7 @@ final class EditingCanvasView: UIView {
     scrollViewAdjustmentSession = nil
     isStreamingStraightenAngle = false
     state.interaction = []
-    state.preferredAspectRatio = nil
+    state.lockedAspectRatio = nil
     guideView.setLockedAspectRatio(nil)
 
     if let crop = state.proposedCrop {
@@ -647,9 +647,9 @@ final class EditingCanvasView: UIView {
     }
 
     let swapsDimensions = crop.updateRotation(to: rotation)
-    if swapsDimensions, let preferredAspectRatio = state.preferredAspectRatio?.swapped() {
-      state.preferredAspectRatio = preferredAspectRatio
-      guideView.setLockedAspectRatio(preferredAspectRatio)
+    if swapsDimensions, let lockedAspectRatio = state.lockedAspectRatio?.swapped() {
+      state.lockedAspectRatio = lockedAspectRatio
+      guideView.setLockedAspectRatio(lockedAspectRatio)
     }
     setProposedCrop(crop, forcesLayout: true)
   }
@@ -680,7 +680,7 @@ final class EditingCanvasView: UIView {
     }
   }
 
-  func commitStraightenAngle(_ angle: Angle) {
+  func endStraightening(at angle: Angle) {
     setStraightenAngle(angle, recordsCropExtent: false)
     record()
     isStreamingStraightenAngle = false
@@ -689,18 +689,18 @@ final class EditingCanvasView: UIView {
 
   func setCrop(_ crop: CropGuideState) {
     var crop = crop
-    if let ratio = state.preferredAspectRatio {
+    if let ratio = state.lockedAspectRatio {
       crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
     }
     setProposedCrop(crop)
   }
 
   func setLockedAspectRatio(_ ratio: AspectRatio?) {
-    guard state.preferredAspectRatio != ratio else {
+    guard state.lockedAspectRatio != ratio else {
       return
     }
 
-    state.preferredAspectRatio = ratio
+    state.lockedAspectRatio = ratio
     var crop = state.proposedCrop
     if let ratio = ratio {
       crop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
@@ -1113,21 +1113,21 @@ extension EditingCanvasView {
     normalizedRect: CGRect,
     resolvedRect: CGRect
   ) {
-    guard state.preferredAspectRatio != nil || source != nil else {
+    guard state.lockedAspectRatio != nil || source != nil else {
       return
     }
 
     EditorLog.debug(.editingCanvas, """
       [CropRecord]
       source: \(String(describing: source))
-      preferredAspectRatio: \(String(describing: state.preferredAspectRatio))
+      lockedAspectRatio: \(String(describing: state.lockedAspectRatio))
       normalizedAspect: \(Self.debugAspectRatio(normalizedRect.size))
       resolvedAspect: \(Self.debugAspectRatio(resolvedRect.size))
       """)
   }
 
   private func debugLogScrollViewAdjustment(_ event: String) {
-    guard state.preferredAspectRatio != nil || scrollViewAdjustmentSession != nil else {
+    guard state.lockedAspectRatio != nil || scrollViewAdjustmentSession != nil else {
       return
     }
 
@@ -1795,7 +1795,7 @@ extension EditingCanvasView {
       convertedCropExtent,
       currentCrop: crop
     )
-    let resolvedRect = cropExtentRespectingPreferredAspectRatio(
+    let resolvedRect = cropExtentRespectingLockedAspectRatio(
       normalizedCropExtent,
       currentCrop: crop
     )
@@ -1812,11 +1812,11 @@ extension EditingCanvasView {
     return crop
   }
 
-  private func cropExtentRespectingPreferredAspectRatio(
+  private func cropExtentRespectingLockedAspectRatio(
     _ cropExtent: CGRect,
     currentCrop: CropGuideState
   ) -> CGRect {
-    guard let preferredAspectRatio = state.preferredAspectRatio else {
+    guard let lockedAspectRatio = state.lockedAspectRatio else {
       return cropExtent
     }
 
@@ -1824,7 +1824,7 @@ extension EditingCanvasView {
       rect: cropExtent,
       in: currentCrop.imageSize,
       straightenRadians: currentCrop.adjustmentAngle.radians,
-      respectingAspectRatio: currentCrop.aspectRatioBeforeOutputRotation(preferredAspectRatio)
+      respectingAspectRatio: currentCrop.aspectRatioBeforeOutputRotation(lockedAspectRatio)
     )
     guard boundedCropExtent.isNull == false, boundedCropExtent.isEmpty == false else {
       return cropExtent
