@@ -87,6 +87,10 @@ struct ToneCurveRecipeTests {
       context: FeatureEvaluationContext()
     )
     #expect(featureOutput === source)
+
+    let luminanceDiagonal = ToneCurveFeature(curves: .init(y: diagonal))
+    #expect(ToneCurveFeature.RenderKey(activeCurves: luminanceDiagonal.curves) == nil)
+    #expect(try luminanceDiagonal.apply(to: source, context: FeatureEvaluationContext()) === source)
   }
 
   @Test

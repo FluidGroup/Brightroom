@@ -92,7 +92,7 @@ struct StoredCropConversionExampleTests {
     )
 
     let crop = try #require(try makeCrop(schema: 2, stored: stored))
-    let converted = try crop.apply(to: source, context: .init())
+    let converted = try FeatureRenderer().makeImage(from: source, feature: crop)
     let legacy = Self.render5_1(source: source, stored: stored)
 
     // 5.1.0 output kept the stored frame's size at every rotation.

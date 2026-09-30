@@ -72,8 +72,12 @@ struct ToneCurveReconstructionTests {
 
     let source = CIImage(color: .init(red: -0.1, green: 1.5, blue: 0.3, alpha: 0.5))
       .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
-    let bypassed = try restoredDiagonal.apply(to: source, context: .init())
-    #expect(bypassed === source)
+    // A host sees the bypass as unchanged pixels, extended values included.
+    // ToneCurveRecipeTests checks in the package that the input image itself
+    // comes back.
+    let bypassed = try FeatureRenderer().makeImage(from: source, feature: restoredDiagonal)
+    #expect(bypassed.extent == source.extent)
+    #expect(Self.unmanagedPixel(bypassed) == Self.unmanagedPixel(source))
   }
 
   @Test(arguments: InvalidCurve.allCases)
@@ -143,6 +147,22 @@ struct ToneCurveReconstructionTests {
   }
 
   /// Round-trips a curve through the scalar fields a host would store.
+  /// Reads the first pixel as float RGBA with color management off, so
+  /// values outside 0...1 survive.
+  private static func unmanagedPixel(_ image: CIImage) -> [Float] {
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+    var pixel = [Float](repeating: 0, count: 4)
+    context.render(
+      image,
+      toBitmap: &pixel,
+      rowBytes: MemoryLayout<Float>.stride * 4,
+      bounds: CGRect(x: image.extent.minX, y: image.extent.minY, width: 1, height: 1),
+      format: .RGBAf,
+      colorSpace: nil
+    )
+    return pixel
+  }
+
   private static func restore(_ curve: ToneCurve) throws -> ToneCurve {
     let stored = curve.points.map { (input: $0.input, output: $0.output) }
     return try #require(
