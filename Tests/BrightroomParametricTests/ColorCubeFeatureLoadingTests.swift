@@ -259,9 +259,15 @@ struct ColorCubeFeatureLoadingTests {
   }
 
   /// An image in an extended space, which an 8-bit context cannot hold,
-  /// still loads, through sRGB.
-  @Test func `Image LUTs in an extended space load through sRGB`() throws {
-    let space = try #require(CGColorSpace(name: CGColorSpace.extendedSRGB))
+  /// keeps its raw values in 0...1 through the standard-range version of the
+  /// space, including wide-gamut and linear ones.
+  @Test(arguments: [
+    CGColorSpace.extendedSRGB as String,
+    CGColorSpace.extendedDisplayP3 as String,
+    CGColorSpace.extendedLinearSRGB as String,
+  ])
+  func `Image LUTs in an extended space keep their raw values`(spaceName: String) throws {
+    let space = try #require(CGColorSpace(name: spaceName as CFString))
     let dimension = 16
     let values = Self.rawValueCubeBytes(dimension: dimension).enumerated().map { index, byte in
       index % 4 == 3 ? Float(1) : Float(byte) / 255
@@ -292,8 +298,7 @@ struct ColorCubeFeatureLoadingTests {
     let feature = try ColorCubeFeature(cubeImage: image, name: "Extended", id: "extended")
 
     #expect(feature.dimension == dimension)
-    // Extended sRGB and sRGB agree inside 0...1, so only 8-bit quantization
-    // separates the loaded values from the source.
+    // Only 8-bit quantization separates the loaded values from the source.
     #expect(Self.maximumDifference(Self.floats(of: feature.cubeData), values) <= 0.5 / 255 + 0.000_01)
   }
 

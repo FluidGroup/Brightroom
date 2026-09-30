@@ -688,8 +688,10 @@ space first, so a LUT image tagged with a space other than sRGB, such as
 Display P3 (common for images taken from an iPhone) or Adobe RGB, now loads
 different values than it did through that initializer: the ones the file
 stores, which is what 5.1.1's `ColorCubeHelper.createColorCubeData` read.
-sRGB LUT images load the same values as before. An image in a
-non-RGB space, or in an extended space such as extended sRGB, is still
+sRGB LUT images load the same values as before. An image in an extended
+space, such as extended Display P3 or extended linear sRGB, loads its values
+in 0...1 unchanged through the standard-range version of the space, and
+values outside it are clipped. An image in a non-RGB space is still
 converted to sRGB. To keep 5.1.1's result for a wide-gamut LUT image, draw it
 into an sRGB image yourself and pass that to `init(cubeImage:…)`.
 
