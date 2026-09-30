@@ -195,6 +195,174 @@ struct ColorCubeFeatureLoadingTests {
     }
   }
 
+  /// LUT pixels are table entries, so an image tagged with a wide or
+  /// non-sRGB space loads its raw values instead of colors converted to
+  /// sRGB, in memory and through a PNG file that carries the profile.
+  @Test(arguments: [
+    CGColorSpace.sRGB as String,
+    CGColorSpace.displayP3 as String,
+    CGColorSpace.adobeRGB1998 as String,
+  ])
+  func `Image LUTs keep their raw values in their own RGB space`(spaceName: String) throws {
+    let space = try #require(CGColorSpace(name: spaceName as CFString))
+    let bytes = Self.rawValueCubeBytes(dimension: 16)
+    let image = try Self.makeRGBXImage(bytes: bytes, width: 64, height: 64, space: space)
+    let expected = bytes.enumerated().map { index, byte in
+      index % 4 == 3 ? Float(1) : Float(byte) / 255
+    }
+
+    let inMemory = try ColorCubeFeature(cubeImage: image, name: "Raw", id: "raw")
+    #expect(inMemory.dimension == 16)
+    #expect(Self.maximumDifference(Self.floats(of: inMemory.cubeData), expected) < 0.000_01)
+
+    let directory = try Self.makeTemporaryDirectory()
+    defer {
+      try? FileManager.default.removeItem(at: directory)
+    }
+    let url = directory.appendingPathComponent("LUT_16_Raw.png")
+    try Self.write(image, to: url, type: .png)
+    let decoded = try #require(
+      CGImageSourceCreateWithURL(url as CFURL, nil)
+        .flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+    )
+    // The file keeps its profile (ImageIO leaves Adobe RGB unnamed).
+    let decodedName = decoded.colorSpace?.name.map { $0 as String }
+    #expect((decodedName == CGColorSpace.sRGB as String) == (spaceName == CGColorSpace.sRGB as String))
+
+    let fromFile = try ColorCubeFeature(contentsOfCubeImage: url, dimension: 16)
+    #expect(Self.maximumDifference(Self.floats(of: fromFile.cubeData), expected) < 0.000_01)
+  }
+
+  /// An image in an extended space, which an 8-bit context cannot hold,
+  /// still loads, through sRGB.
+  @Test func `Image LUTs in an extended space load through sRGB`() throws {
+    let space = try #require(CGColorSpace(name: CGColorSpace.extendedSRGB))
+    let dimension = 16
+    let values = Self.rawValueCubeBytes(dimension: dimension).enumerated().map { index, byte in
+      index % 4 == 3 ? Float(1) : Float(byte) / 255
+    }
+    let data = values.withUnsafeBufferPointer { Data(buffer: $0) }
+    let provider = try #require(CGDataProvider(data: data as CFData))
+    let image = try #require(
+      CGImage(
+        width: 64,
+        height: 64,
+        bitsPerComponent: 32,
+        bitsPerPixel: 128,
+        bytesPerRow: 64 * 4 * MemoryLayout<Float>.size,
+        space: space,
+        bitmapInfo: CGBitmapInfo(
+          rawValue:
+            CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.floatComponents.rawValue
+            | CGBitmapInfo.byteOrder32Little.rawValue
+        ),
+        provider: provider,
+        decode: nil,
+        shouldInterpolate: false,
+        intent: .defaultIntent
+      )
+    )
+
+    let feature = try ColorCubeFeature(cubeImage: image, name: "Extended", id: "extended")
+
+    #expect(feature.dimension == dimension)
+    // Extended sRGB and sRGB agree inside 0...1, so only 8-bit quantization
+    // separates the loaded values from the source.
+    #expect(Self.maximumDifference(Self.floats(of: feature.cubeData), values) <= 0.5 / 255 + 0.000_01)
+  }
+
+  /// An identity LUT image renders its input unchanged, which pins the row
+  /// order, the channel order, and the cube layout of image loading.
+  @Test func `Identity LUT image renders its input unchanged`() throws {
+    let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+    let image = try Self.makeRGBXImage(
+      bytes: Self.identityCubeBytes(dimension: 16),
+      width: 64,
+      height: 64,
+      space: space
+    )
+    let identity = try ColorCubeFeature(cubeImage: image, name: "Identity", id: "identity-image-lut")
+    let source = try RenderingFixtures.normalizedSource()
+
+    let rendered = try RenderingFixtures.renderer.makeImage(
+      from: RenderingFixtures.makeSource(),
+      feature: identity
+    )
+
+    RenderingFixtures.expectPixelsMatch(source, rendered, tolerance: 1 / 255)
+  }
+
+  /// The RGBA8 bytes of an identity cube, red varying fastest.
+  private static func identityCubeBytes(dimension: Int) -> [UInt8] {
+    let scale = Double(dimension - 1)
+    var bytes: [UInt8] = []
+    bytes.reserveCapacity(dimension * dimension * dimension * 4)
+    for blue in 0..<dimension {
+      for green in 0..<dimension {
+        for red in 0..<dimension {
+          bytes += [red, green, blue].map { UInt8((Double($0) / scale * 255).rounded()) }
+          bytes.append(255)
+        }
+      }
+    }
+    return bytes
+  }
+
+  /// RGBA8 bytes where every channel of every entry has its own value, so a
+  /// color conversion, a swapped channel, or a flipped row changes them.
+  private static func rawValueCubeBytes(dimension: Int) -> [UInt8] {
+    let count = dimension * dimension * dimension
+    return (0..<count).flatMap { index -> [UInt8] in
+      [
+        UInt8(index % 251),
+        UInt8((index * 7 + 30) % 253),
+        UInt8((index / 3 + 90) % 256),
+        255,
+      ]
+    }
+  }
+
+  /// An opaque 8-bit image laid out the way ImageIO decodes most LUT files.
+  private static func makeRGBXImage(
+    bytes: [UInt8],
+    width: Int,
+    height: Int,
+    space: CGColorSpace
+  ) throws -> CGImage {
+    let provider = try #require(CGDataProvider(data: Data(bytes) as CFData))
+    return try #require(
+      CGImage(
+        width: width,
+        height: height,
+        bitsPerComponent: 8,
+        bitsPerPixel: 32,
+        bytesPerRow: width * 4,
+        space: space,
+        bitmapInfo: CGBitmapInfo(
+          rawValue:
+            CGImageAlphaInfo.noneSkipLast.rawValue
+            | CGBitmapInfo.byteOrder32Big.rawValue
+        ),
+        provider: provider,
+        decode: nil,
+        shouldInterpolate: false,
+        intent: .defaultIntent
+      )
+    )
+  }
+
+  private static func floats(of data: Data) -> [Float] {
+    data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+  }
+
+  private static func maximumDifference(_ lhs: [Float], _ rhs: [Float]) -> Float {
+    guard lhs.count == rhs.count else {
+      return .infinity
+    }
+    return zip(lhs, rhs).reduce(0) { max($0, abs($1.0 - $1.1)) }
+  }
+
   private static func makeTemporaryDirectory() throws -> URL {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent(UUID().uuidString, isDirectory: true)

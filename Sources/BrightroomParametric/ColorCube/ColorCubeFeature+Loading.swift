@@ -136,8 +136,12 @@ extension ColorCubeFeature {
 
   /// Creates a color-cube feature from an in-memory square LUT image.
   ///
-  /// The image is normalized to tightly packed RGBA8 pixels before conversion,
-  /// so its original bit depth and alpha layout do not leak into cube data.
+  /// The image is normalized to tightly packed, premultiplied RGBA8 pixels
+  /// before conversion, so its original bit depth and alpha layout do not
+  /// leak into cube data. Its pixel values are table entries, so they are
+  /// read in the image's own RGB color space without color conversion; an
+  /// image in a non-RGB space, or in an extended space an 8-bit context
+  /// cannot hold, is converted to sRGB instead.
   public init(
     cubeImage: CGImage,
     name: String,
@@ -215,18 +219,28 @@ extension ColorCubeFeature {
     var rgbaBytes = [UInt8](repeating: 0, count: componentCount)
 
     let didRender = rgbaBytes.withUnsafeMutableBytes { storage -> Bool in
-      guard
-        let context = CGContext(
+      func makeContext(_ space: CGColorSpace) -> CGContext? {
+        CGContext(
           data: storage.baseAddress,
           width: width,
           height: height,
           bitsPerComponent: 8,
           bytesPerRow: width * 4,
-          space: CGColorSpaceCreateDeviceRGB(),
+          space: space,
           bitmapInfo:
             CGImageAlphaInfo.premultipliedLast.rawValue
             | CGBitmapInfo.byteOrder32Big.rawValue
         )
+      }
+
+      // A LUT image's pixels are table entries, not colors: drawing into the
+      // image's own RGB space keeps their values instead of converting them.
+      // Spaces an 8-bit context cannot use (the extended ones) and non-RGB
+      // images fall back to sRGB.
+      let ownSpace = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil }
+      guard
+        let context = ownSpace.flatMap(makeContext)
+          ?? CGColorSpace(name: CGColorSpace.sRGB).flatMap(makeContext)
       else {
         return false
       }

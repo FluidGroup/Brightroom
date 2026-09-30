@@ -671,6 +671,18 @@ func loadLUT(at url: URL) throws -> ColorCubeFeature {
 }
 ```
 
+The image loaders (`init(contentsOfCubeImage:…)` and `init(cubeImage:…)`)
+read a LUT image's pixel values as they are stored, in the image's own RGB
+color space. 5.1.1's `init(cubeImageAt:…)` converted them to the device RGB
+space first, so a LUT image tagged with a space other than sRGB, such as
+Display P3 (common for images taken from an iPhone) or Adobe RGB, now loads
+different values than it did through that initializer: the ones the file
+stores, which is what 5.1.1's `ColorCubeHelper.createColorCubeData` read.
+sRGB LUT images load the same values as before. An image in a
+non-RGB space, or in an extended space such as extended sRGB, is still
+converted to sRGB. To keep 5.1.1's result for a wide-gamut LUT image, draw it
+into an sRGB image yourself and pass that to `init(cubeImage:…)`.
+
 ### Debug Feature Tree
 
 `FeatureTreeOutline(feature:)` accepts any `some Feature` and shows its body
