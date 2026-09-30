@@ -324,12 +324,26 @@ extension CropFeature {
   ///
   /// - Parameter imageSize: The oriented pixel size of the crop's input.
   public func pixelAligned(imageSize: CGSize) -> CropFeature {
-    CropFeature(
+    let aligned = CropFeature(
       topLeftRect: topLeftRect(imageSize: imageSize),
       imageSize: imageSize,
       quarterTurn: quarterTurn,
       straightenRadians: straightenRadians
     )
+
+    // A straightened crop keeps a fractional origin, and the round trip
+    // through y-down coordinates can move it by an ulp. A crop whose size
+    // already matches and whose origin is within the snapping tolerance is
+    // already aligned, so it is returned as is and compares equal.
+    let epsilon = PixelAlignedCrop.pixelEpsilon
+    if straightenRadians.isFinite, straightenRadians != 0,
+       aligned.rect.size == rect.size,
+       abs(aligned.rect.origin.x - rect.origin.x) <= epsilon,
+       abs(aligned.rect.origin.y - rect.origin.y) <= epsilon
+    {
+      return self
+    }
+    return aligned
   }
 
   /// The largest selection of `aspectRatio`, centered in an input of

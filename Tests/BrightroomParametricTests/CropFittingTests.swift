@@ -70,6 +70,35 @@ struct CropFittingTests {
     #expect(aligned.pixelAligned(imageSize: imageSize) == aligned)
   }
 
+  /// Aligning an aligned crop returns it unchanged under `==`, including
+  /// straightened crops, whose fractional origin goes through y-down
+  /// coordinates and back.
+  @Test func `Pixel alignment is idempotent for random crops`() {
+    var generator = SeededGenerator(state: 99)
+    let turns = QuarterTurn.allCases
+    for index in 0..<5_000 {
+      let size = CGSize(
+        width: CGFloat(Int.random(in: 2...6000, using: &generator)),
+        height: CGFloat(Int.random(in: 2...6000, using: &generator))
+      )
+      let straighten = index.isMultiple(of: 2) ? 0 : Double.random(in: -0.8...0.8, using: &generator)
+      let raw = CropFeature(
+        rect: CGRect(
+          x: Double.random(in: -0.2...1, using: &generator) * size.width,
+          y: Double.random(in: -0.2...1, using: &generator) * size.height,
+          width: Double.random(in: 0.001...1.2, using: &generator) * size.width,
+          height: Double.random(in: 0.001...1.2, using: &generator) * size.height
+        ),
+        quarterTurn: turns.randomElement(using: &generator)!,
+        straightenRadians: straighten
+      )
+
+      let aligned = raw.pixelAligned(imageSize: size)
+
+      #expect(aligned.pixelAligned(imageSize: size) == aligned, "size \(size), crop \(raw)")
+    }
+  }
+
   // MARK: - fitted
 
   @Test func `Fitting centers the largest selection of the ratio`() {
@@ -124,5 +153,18 @@ struct CropFittingTests {
       straightenRadians: straightenRadians
     )
     #expect(fitted == expected)
+  }
+}
+
+/// A deterministic SplitMix64 generator, so random cases repeat.
+private struct SeededGenerator: RandomNumberGenerator {
+  var state: UInt64
+
+  mutating func next() -> UInt64 {
+    state &+= 0x9E37_79B9_7F4A_7C15
+    var value = state
+    value = (value ^ (value >> 30)) &* 0xBF58_476D_1CE4_E5B9
+    value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
+    return value ^ (value >> 31)
   }
 }
