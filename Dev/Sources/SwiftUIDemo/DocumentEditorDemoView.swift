@@ -280,7 +280,7 @@ struct DocumentEditorDemoView: View {
 private extension ImageEditor.Options {
   static func documentEditorDemo() -> Self {
     var options = Self()
-    options.filters = DemoFilters.make()
+    options.filters = DemoFilters.make() + DemoLUTs.bundled
     return options
   }
 }

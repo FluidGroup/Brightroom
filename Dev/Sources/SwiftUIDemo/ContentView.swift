@@ -234,9 +234,6 @@ struct ContentView: View {
         .font(.largeTitle.bold())
         .foregroundStyle(.secondary)
     }
-    .onAppear(perform: {
-      try? PresetStorage.default.loadLUTs()
-    })
   }
 }
 
@@ -540,10 +537,10 @@ struct DemoImageEditor: View {
 }
 
 private extension ImageEditor.Options {
-  /// Creates demo options with the sample filter catalog explicitly supplied.
+  /// Creates demo options with the sample filters and the bundled LUTs.
   static func demo() -> Self {
     var options = Self()
-    options.filters = DemoFilters.make()
+    options.filters = DemoFilters.make() + DemoLUTs.bundled
     return options
   }
 

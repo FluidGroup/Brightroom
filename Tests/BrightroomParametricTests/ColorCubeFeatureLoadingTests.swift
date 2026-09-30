@@ -109,6 +109,31 @@ struct ColorCubeFeatureLoadingTests {
     }
   }
 
+  @Test func `Color cube parser rejects a non-default domain`() {
+    let cube = [
+      "LUT_3D_SIZE 2",
+      "DOMAIN_MIN -0.5 0.0 0.0",
+      "DOMAIN_MAX 1.0 1.0 1.0",
+      "0 0 0",
+      "1 0 0",
+      "0 1 0",
+      "1 1 0",
+      "0 0 1",
+      "1 0 1",
+      "0 1 1",
+      "1 1 1",
+    ].joined(separator: "\n")
+
+    #expect(
+      throws: ColorCubeLoadingError.unsupportedDomain(
+        domainMin: [-0.5, 0, 0],
+        domainMax: [1, 1, 1]
+      )
+    ) {
+      try ColorCubeTextFileParser().parse(cube)
+    }
+  }
+
   @Test func `Color cube feature normalizes image LUT data`() throws {
     let image = try Self.makeCubeImage()
     let feature = try ColorCubeFeature(

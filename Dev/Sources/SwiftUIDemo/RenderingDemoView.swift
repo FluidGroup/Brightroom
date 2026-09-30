@@ -1,6 +1,7 @@
 import BrightroomEngine
 import BrightroomParametric
 import BrightroomUI
+import ImageIO
 import MetalKit
 import PhotosUI
 import SwiftUI
@@ -333,6 +334,9 @@ private struct LUTImportDemoView: View {
   @State private var selectedItem: PhotosPickerItem?
   @State private var fullScreenView: FullscreenIdentifiableView?
   @State private var status = "Select a 512 x 512 LUT image."
+  /// The LUTs imported on this screen, newest first. The editor opened here
+  /// lists them before the demo filters.
+  @State private var importedFilters: [FilterFeature] = []
 
   var body: some View {
     Form {
@@ -340,11 +344,14 @@ private struct LUTImportDemoView: View {
         PhotosPicker("Import LUT", selection: $selectedItem)
 
         Button("Open ImageEditor") {
+          var options = ImageEditor.Options()
+          options.filters = importedFilters + DemoFilters.make() + DemoLUTs.bundled
           fullScreenView = .init(showsDismissButton: false) {
             DemoImageEditor(
               image: {
                 SourceImage(image: Asset.l1000316.image)
-              }
+              },
+              options: options
             )
           }
         }
@@ -375,15 +382,8 @@ private struct LUTImportDemoView: View {
           return
         }
 
-        guard let image = UIImage(data: data) else {
-          await MainActor.run {
-            status = "Selected data was not a UIImage."
-          }
-          return
-        }
-
         await MainActor.run {
-          importLUT(image)
+          importLUT(data)
         }
       } catch {
         await MainActor.run {
@@ -393,45 +393,36 @@ private struct LUTImportDemoView: View {
     }
   }
 
-  private func importLUT(_ image: UIImage) {
-    guard image.scale == 1 else {
-      status = "Invalid LUT: image scale is \(image.scale)."
+  private func importLUT(_ data: Data) {
+    guard
+      let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
+      let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+    else {
+      status = "Selected data was not an image."
       return
     }
 
-    guard image.size == CGSize(width: 512, height: 512) else {
-      status = "Invalid LUT: image size is \(image.size)."
-      return
-    }
-
-    guard let cgImage = image.cgImage else {
-      status = "Invalid LUT: no CGImage backing."
-      return
-    }
-
-    let identifier = "Imported_\(Int(Date().timeIntervalSince1970))"
-    let cubeData: Data
+    let name = "Imported \(importedFilters.count + 1)"
+    let cube: ColorCubeFeature
     do {
-      cubeData = try ColorCubeHelper.createColorCubeData(inputImage: cgImage, cubeDimension: 64)
+      // Each import gets its own id: filters and the render cache tell
+      // lookup tables apart by id.
+      cube = try ColorCubeFeature(
+        cubeImage: cgImage,
+        name: name,
+        id: "imported.\(UUID().uuidString)",
+        dimension: 64
+      )
     } catch {
-      status = "Invalid LUT: \(error)"
+      status = "Invalid LUT: \(error.localizedDescription)"
       return
     }
 
-    let cube = ColorCubeFeature(
-      name: identifier,
-      id: identifier,
-      dimension: 64,
-      cubeData: cubeData
+    importedFilters.insert(
+      FilterFeature(name: cube.name, id: cube.id, effects: [AnyImageEffect(cube)]),
+      at: 0
     )
-    let preset = FilterFeature(
-      name: cube.name,
-      id: cube.id,
-      effects: [AnyImageEffect(cube)]
-    )
-    PresetStorage.default.presets.insert(preset, at: 0)
-
-    status = "Imported \(identifier)"
+    status = "Imported \(name). Open ImageEditor to try it in Filters."
   }
 }
 

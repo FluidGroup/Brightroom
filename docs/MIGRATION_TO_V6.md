@@ -127,6 +127,7 @@ sections.
 | `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
 | `CropGeometry` | Removed from the public API. Use `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`. | [Crop Conversions](#crop-conversions) |
 | `ImageTool` | Internal | [Image Decoding](#image-decoding) |
+| `ColorCubeLoader`, `ColorCubeHelper`, `PresetStorage` (with their error types) | Removed. Use the `ColorCubeFeature` loaders and `ImageEditor.Options.filters`. | [Loading LUT Files](#loading-lut-files) |
 
 ### BrightroomParametric
 
@@ -658,9 +659,10 @@ let film = FilterFeature(
 lookup-table identifier as `id: String` instead of a `FeatureID`
 (optional in the two file loaders, where it defaults to the file name;
 required in `init(cubeImage:…)`), and the opacity as `intensity` (5.x
-`amount`).
-`PresetStorage.loadLUTs(fromBundle:)` builds filters whose `effects` hold the
-cube as `AnyImageEffect`.
+`amount`). They are the only way to load a LUT: BrightroomEngine's
+`ColorCubeLoader`, `ColorCubeLoaderError`, `ColorCubeHelper`,
+`ColorCubeHelperError`, and `PresetStorage` are removed (see
+[Loading LUT Files](#loading-lut-files)).
 
 ```swift
 import BrightroomParametric
@@ -682,6 +684,78 @@ sRGB LUT images load the same values as before. An image in a
 non-RGB space, or in an extended space such as extended sRGB, is still
 converted to sRGB. To keep 5.1.1's result for a wide-gamut LUT image, draw it
 into an sRGB image yourself and pass that to `init(cubeImage:…)`.
+
+### Loading LUT Files
+
+BrightroomEngine's LUT loading is removed in favor of the `ColorCubeFeature`
+loaders:
+
+| 5.1.1 (BrightroomEngine) | 6.0 |
+| --- | --- |
+| `ColorCubeLoader(bundle:).load()`, `ColorCubeLoaderError` | Your own scan of a folder, calling `ColorCubeFeature(contentsOfCubeImage:…)` or `ColorCubeFeature(contentsOfCubeFile:…)` per file (below) |
+| `ColorCubeHelper.createColorCubeData(inputImage:cubeDimension:)`, `ColorCubeHelperError` | `ColorCubeFeature(cubeImage:name:id:intensity:dimension:)` |
+| `ColorCubeHelper.makeColorCubeFilter(cubeData:dimension:cacheKey:)` | None. Apply the `ColorCubeFeature` as a feature. |
+| `PresetStorage`, `PresetStorage.default`, `loadLUTs(fromBundle:)` | None. Pass the filters to `ImageEditor.Options.filters`, which is what the editor reads. (5.1.1's editor did not read `PresetStorage` either.) |
+
+The file naming rule is your app's, so Brightroom no longer scans bundles.
+This function follows 5.1.1's `ColorCubeLoader` rule,
+`LUT_<dimension>_<name>.{png,jpg,jpeg}` and `<name>.cube`, and builds the
+same names and ids (the id is the file name). Unlike 5.1.1, it skips other
+files instead of failing on a `LUT_` file that is not an image, and it uses
+the dimension in the name only to check the image's pixel count.
+
+```swift
+import BrightroomParametric
+import BrightroomUI
+import CoreGraphics
+import Foundation
+
+func loadLUTFilters(in directory: URL) throws -> [FilterFeature] {
+  try FileManager.default
+    .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+    .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    .compactMap { url -> FilterFeature? in
+      let cube: ColorCubeFeature
+      switch url.pathExtension.lowercased() {
+      case "cube":
+        cube = try ColorCubeFeature(contentsOfCubeFile: url)
+      case "png", "jpg", "jpeg":
+        let parts = url.deletingPathExtension().lastPathComponent
+          .split(separator: "_", maxSplits: 2)
+        guard parts.count == 3, parts[0] == "LUT" else { return nil }
+        cube = try ColorCubeFeature(
+          contentsOfCubeImage: url,
+          name: String(parts[2]),  // "Gloss" for LUT_64_Gloss.png, as in 5.1.1
+          dimension: Int(parts[1])
+        )
+      default:
+        return nil
+      }
+      return FilterFeature(name: cube.name, id: cube.id, effects: [AnyImageEffect(cube)])
+    }
+}
+
+func makeEditorOptions() throws -> ImageEditor.Options {
+  var options = ImageEditor.Options()
+  options.filters = try loadLUTFilters(in: Bundle.main.bundleURL)
+  return options
+}
+
+// In place of ColorCubeHelper.createColorCubeData, for a LUT image the user
+// picks. Give every LUT its own id.
+func importLUT(_ image: CGImage) throws -> ColorCubeFeature {
+  try ColorCubeFeature(
+    cubeImage: image,
+    name: "Imported",
+    id: UUID().uuidString,
+    dimension: 64
+  )
+}
+```
+
+Give every LUT a unique `id`. The editor treats filters with the same `id`
+as the same filter, and rendering caches the Core Image filter by the id and
+the dimension, so two LUTs that share both render the same.
 
 ### Debug Feature Tree
 
@@ -1530,9 +1604,6 @@ Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
 - `SwiftUIMetalImageView` may move to the demo app.
-- BrightroomEngine's `ColorCubeLoader`, `ColorCubeHelper`,
-  `ColorCubeTextParser`, and `PresetStorage` may be removed in favor of the
-  `ColorCubeFeature` loaders.
 - Public helpers meant for Brightroom's own modules may become package
   access: `FeatureEvaluationContext.init`, `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
   `ExportRenderer.Device`, `VideoRenderer.resolveRenderSize`,
@@ -1573,6 +1644,9 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`
       instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.
+- [ ] LUTs are loaded with the `ColorCubeFeature` loaders instead of
+      `ColorCubeLoader`, `ColorCubeHelper`, or `PresetStorage`, each LUT has
+      a unique `id`, and wide-gamut LUT images are checked again.
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
       BrightroomUI in a `List`, and code that read `swiftUIImage` builds
       `Image(decorative:scale:orientation:)` from `cgImage`.
