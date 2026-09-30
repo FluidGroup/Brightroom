@@ -104,7 +104,7 @@ public struct ImageEditor: View {
   /// - Parameters:
   ///   - document: The edited document. Create it before showing the editor,
   ///     with `ImageEditorDocument(source:)` or, for a policy-decided initial
-  ///     crop, `ImageEditorDocument(source:cropModifier:)`. A document of
+  ///     crop, `ImageEditorDocument(source:initialCrop:)`. A document of
   ///     another source image restarts the editor.
   ///   - options: The editor options.
   ///   - localizedStrings: The button titles.

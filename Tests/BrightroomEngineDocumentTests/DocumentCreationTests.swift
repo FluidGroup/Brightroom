@@ -102,30 +102,55 @@ struct DocumentCreationTests {
     #expect(!document.canUndo)
   }
 
-  @Test func `The identity crop modifier keeps the whole image`() async throws {
+  @Test func `The full-image initial crop keeps the whole image`() async throws {
     let image = try Fixtures.makeImage()
-    let document = await EditingDocument(source: image, cropModifier: .identity)
+    let document = await EditingDocument(source: image, initialCrop: .fullImage)
     #expect(document == EditingDocument(source: image, history: document.history))
     #expect(document.feature.crop.rect == CGRect(origin: .zero, size: image.pixelSize))
   }
 
-  @Test func `A crop modifier decides the committed initial crop`() async throws {
+  @Test func `An initial crop decides the committed initial crop`() async throws {
     let image = try Fixtures.makeImage()
     let document = await EditingDocument(
       source: image,
-      cropModifier: CropModifier { input, crop in
-        // The modifier sees the image in the document's domain.
-        #expect(input.extent == CGRect(origin: .zero, size: image.pixelSize))
-        #expect(crop.imageSize == image.pixelSize)
-        var crop = crop
-        crop.updateCropExtent(toFitAspectRatio: .square)
-        return crop
+      initialCrop: InitialCrop { input in
+        // The policy sees the image in the document's domain.
+        #expect(input.image.extent == CGRect(origin: .zero, size: image.pixelSize))
+        #expect(input.imageSize == image.pixelSize)
+        #expect(input.crop == ImageEditorFeature(imageSize: image.pixelSize).crop)
+        return input.crop.fitted(to: .square, imageSize: input.imageSize)
       }
     )
     let cropRect = document.feature.crop.rect
     #expect(cropRect.width == cropRect.height)
-    #expect(!document.canUndo, "The modifier's crop is the starting point, not an undo step.")
+    #expect(!document.canUndo, "The initial crop is the starting point, not an undo step.")
     #expect(!document.hasUncommittedChanges)
+  }
+
+  @Test func `The document pixel-aligns the crop an initial crop returns`() async throws {
+    let image = try Fixtures.makeImage()
+    let requested = CropFeature(
+      rect: CGRect(x: -3.5, y: 2.25, width: 15.5, height: 60),
+      quarterTurn: .counterclockwise90
+    )
+    let document = await EditingDocument(
+      source: image,
+      initialCrop: InitialCrop { _ in requested }
+    )
+    // x -3.5...12 → 0...12, y 2.25...62.25 clipped to 40 → 3...40.
+    #expect(document.feature.crop == requested.pixelAligned(imageSize: image.pixelSize))
+    #expect(document.feature.crop.rect == CGRect(x: 0, y: 3, width: 12, height: 37))
+    #expect(document.feature.crop.quarterTurn == .counterclockwise90)
+  }
+
+  @Test func `An aspect-ratio initial crop fits the image`() async throws {
+    let image = try Fixtures.makeImage()
+    let document = await EditingDocument(source: image, initialCrop: .aspectRatio(.square))
+    let full = ImageEditorFeature(imageSize: image.pixelSize).crop
+    #expect(document.feature.crop == full.fitted(to: .square, imageSize: image.pixelSize))
+    // The 20 x 40 image fits a centered 20 x 20 square.
+    #expect(document.feature.crop.rect == CGRect(x: 0, y: 10, width: 20, height: 20))
+    #expect(!document.canUndo)
   }
 
   @Test func `A document can carry a restored history and limit`() throws {

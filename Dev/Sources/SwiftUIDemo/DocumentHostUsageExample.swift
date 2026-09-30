@@ -14,7 +14,7 @@ enum ExampleImageLoading {
 
   static func load(asset: PHAsset) async throws -> ImageEditorDocument {
     let image = try await SourceImage(asset: asset)
-    return await EditingDocument(source: image, cropModifier: .faceDetection(aspectRatio: .square))
+    return await EditingDocument(source: image, initialCrop: .faceDetection(aspectRatio: .square))
   }
 
   static func load(remote url: URL) async throws -> ImageEditorDocument {

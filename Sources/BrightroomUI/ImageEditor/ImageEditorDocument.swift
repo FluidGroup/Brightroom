@@ -35,7 +35,7 @@ extension EditingDocument where Content == ImageEditorFeature {
   /// image.
   ///
   /// To start from a policy-decided crop such as a framed face, use
-  /// `init(source:cropModifier:history:)`.
+  /// `init(source:initialCrop:history:)`.
   public init(source: SourceImage, history: History = History()) {
     self.init(
       source: source,

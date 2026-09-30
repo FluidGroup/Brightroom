@@ -20,96 +20,119 @@
 // THE SOFTWARE.
 
 
+
 import CoreImage
 import Vision
 
 import BrightroomEngine
 import BrightroomParametric
 
-/// Decides the initial crop of a newly loaded image.
+/// Decides the crop a new document starts from.
 ///
-/// It runs once, when a new document is created with
-/// `EditingDocument(source:cropModifier:history:)`. An existing document is never
-/// modified.
-public struct CropModifier: Sendable {
+/// It runs once, when a document is created with
+/// `ImageEditorDocument(source:initialCrop:history:)`, and never for a
+/// document rebuilt from saved values. The document pixel-aligns the crop it
+/// decides with `CropFeature.pixelAligned(imageSize:)`.
+public struct InitialCrop: Sendable {
 
-  /// Receives a downsampled image (scaled up to the oriented image size, zero
-  /// origin) and a crop covering the whole image, and returns the
-  /// crop to start from. It runs off the main actor, on Swift concurrency's
-  /// shared executor: move blocking work (such as a synchronous Vision
-  /// request) to a queue of its own, as `faceDetection` does.
-  public typealias Modify = @Sendable (_ image: CIImage, _ crop: CropEditingState) async -> CropEditingState
+  /// What a custom initial crop decides from.
+  public struct Input: Sendable {
 
-  let modify: Modify
+    /// A downsampled preview of the source image, scaled up to `imageSize`
+    /// with a zero origin, so its coordinates are the crop's. Use it to find
+    /// what to frame; its detail is lower than the source's.
+    public let image: CIImage
 
-  /// Whether this is `identity`, so a new document is created without
-  /// preparing the modifier's input image.
-  let isIdentity: Bool
+    /// The oriented pixel size of the source image
+    /// (`SourceImage.pixelSize`): the input of the crop.
+    public let imageSize: CGSize
 
-  public init(modify: @escaping Modify) {
-    self.init(isIdentity: false, modify: modify)
+    /// The crop to start from: the whole image, with no quarter turn or
+    /// straighten.
+    public let crop: CropFeature
   }
 
-  private init(isIdentity: Bool, modify: @escaping Modify) {
-    self.isIdentity = isIdentity
-    self.modify = modify
+  fileprivate enum Policy: Sendable {
+    case fullImage
+    case aspectRatio(AspectRatio)
+    case decide(@Sendable (Input) async -> CropFeature)
   }
 
-  /// Leaves the full-image crop unchanged.
-  public static let identity = CropModifier(isIdentity: true) { _, crop in crop }
+  fileprivate let policy: Policy
 
-  /// Frames the first detected face (Vision), optionally at an aspect ratio.
+  private init(policy: Policy) {
+    self.policy = policy
+  }
+
+  /// An initial crop that `decide` returns.
+  ///
+  /// `decide` runs off the main actor, on Swift concurrency's shared
+  /// executor: move blocking work (such as a synchronous Vision request) to
+  /// a queue of its own, as `faceDetection` does. Return a crop in
+  /// `input.imageSize`; the document snaps it to whole pixels inside the
+  /// image.
+  public init(_ decide: @escaping @Sendable (_ input: Input) async -> CropFeature) {
+    self.init(policy: .decide(decide))
+  }
+
+  /// The whole image.
+  public static let fullImage = InitialCrop(policy: .fullImage)
+
+  /// The largest selection of `aspectRatio`, centered in the image. See
+  /// `CropFeature.fitted(to:imageSize:)`.
+  ///
+  /// The editor does not lock the ratio; pass
+  /// `ImageEditor.Options.aspectRatioPolicy` for that.
+  public static func aspectRatio(_ aspectRatio: AspectRatio) -> InitialCrop {
+    InitialCrop(policy: .aspectRatio(aspectRatio))
+  }
+
+  /// Frames the first face Vision detects, optionally at an aspect ratio.
   ///
   /// - Parameters:
   ///   - paddingBias: The padding around the face box, as a fraction of the
   ///     box size on each side.
-  ///   - aspectRatio: The ratio of the framing crop in the final output
-  ///     orientation (after the crop's quarter turn). When nil, the selection
-  ///     keeps the image's own aspect ratio.
+  ///   - aspectRatio: The ratio of the framing crop. When nil, the crop keeps
+  ///     the image's own aspect ratio.
   ///
   /// When no face is found, or detection fails, the crop is fitted to
-  /// `aspectRatio` if one is given and left unchanged otherwise.
+  /// `aspectRatio` if one is given and covers the whole image otherwise. The
+  /// editor does not lock the ratio; pass
+  /// `ImageEditor.Options.aspectRatioPolicy` for that.
   public static func faceDetection(
     paddingBias: CGFloat = 1.3,
     aspectRatio: AspectRatio? = nil
-  ) -> CropModifier {
-    .init { image, crop in
+  ) -> InitialCrop {
+    InitialCrop { input in
 
-      var fallbackCrop: CropEditingState {
+      var fallbackCrop: CropFeature {
         guard let aspectRatio else {
-          return crop
+          return input.crop
         }
-        var fitted = crop
-        fitted.updateCropExtent(toFitAspectRatio: aspectRatio)
-        return fitted
+        return input.crop.fitted(to: aspectRatio, imageSize: input.imageSize)
       }
 
       // A released editor no longer needs the crop.
       guard Task.isCancelled == false else {
-        return crop
+        return input.crop
       }
 
-      guard let face = await detectFirstFace(in: image) else {
+      guard let face = await detectFirstFace(in: input.image) else {
         return fallbackCrop
       }
 
-      // The document passes the full-image crop with no quarter turn or
-      // straighten, which is the crop `framingFace` starts from.
-      return CropEditingState(
-        cropFeature: CropFeature.framingFace(
-          face.boundingBox,
-          imageSize: crop.imageSize,
-          paddingBias: paddingBias,
-          aspectRatio: aspectRatio
-        ),
-        imageSize: crop.imageSize
+      return CropFeature.framingFace(
+        face.boundingBox,
+        imageSize: input.imageSize,
+        paddingBias: paddingBias,
+        aspectRatio: aspectRatio
       )
     }
   }
 
   /// Serializes face detection off Swift concurrency's shared executor.
   private static let visionQueue = DispatchQueue(
-    label: "app.muukii.Brightroom.CropModifier.vision",
+    label: "app.muukii.Brightroom.InitialCrop.vision",
     qos: .utility
   )
 
@@ -158,72 +181,71 @@ extension CropFeature {
     paddingBias: CGFloat,
     aspectRatio: AspectRatio?
   ) -> CropFeature {
-    let width = Int(imageSize.width)
-    let height = Int(imageSize.height)
-
-    let faceRect = VNImageRectForNormalizedRect(normalizedFaceBox, width, height)
+    // Vision's image rectangles and `CropFeature.rect` share the bottom-left
+    // origin, so no flip is needed.
+    let faceRect = VNImageRectForNormalizedRect(
+      normalizedFaceBox,
+      Int(imageSize.width),
+      Int(imageSize.height)
+    )
     let paddedRect = faceRect.insetBy(
       dx: -faceRect.width * paddingBias,
       dy: -faceRect.height * paddingBias
     )
-    let boundingBox = VNNormalizedRectForImageRect(paddedRect, width, height)
-
-    var framed = CropEditingState(
-      cropFeature: CropFeature(
-        topLeftRect: CGRect(origin: .zero, size: imageSize),
-        imageSize: imageSize
-      ),
-      imageSize: imageSize
-    )
-    framed.updateCropExtent(
-      toFitBoundingBox: boundingBox,
+    let selection = CropGeometry.fittingRect(
+      rect: paddedRect,
+      in: imageSize,
+      straightenRadians: 0,
       respectingAspectRatio: aspectRatio ?? AspectRatio(imageSize)
     )
-    return framed.makeCropFeature()
+    return CropFeature(rect: selection).pixelAligned(imageSize: imageSize)
   }
 }
 
 extension EditingDocument where Content == ImageEditorFeature {
 
-  /// Creates a document with no effects and a crop that covers the whole
-  /// image, adjusted by `cropModifier`.
+  /// Creates a document with no effects and the crop `initialCrop` decides.
   ///
   /// Create the document before showing an editor; the editor then edits a
-  /// document that already exists. The modifier's crop is the committed
-  /// state, so undo does not return to the full-image crop.
+  /// document that already exists. The decided crop is the committed state,
+  /// so undo does not return to the full-image crop.
   ///
   /// - Parameters:
   ///   - source: The source image to edit.
-  ///   - cropModifier: The initial-crop policy. `.identity` returns without
-  ///     suspending work.
+  ///   - initialCrop: The initial-crop policy. `.fullImage` and
+  ///     `.aspectRatio(_:)` return without suspending work.
   ///   - history: The history of the new document. Empty by default.
   nonisolated(nonsending)
   public init(
     source: SourceImage,
-    cropModifier: CropModifier,
+    initialCrop: InitialCrop,
     history: History = History()
   ) async {
-    var feature = ImageEditorFeature(imageSize: source.pixelSize)
+    let imageSize = source.pixelSize
+    var feature = ImageEditorFeature(imageSize: imageSize)
 
-    if cropModifier.isIdentity == false {
-      let crop = CropEditingState(cropFeature: feature.crop, imageSize: source.pixelSize)
+    switch initialCrop.policy {
+    case .fullImage:
+      break
+    case .aspectRatio(let aspectRatio):
+      feature.crop = feature.crop.fitted(to: aspectRatio, imageSize: imageSize)
+    case .decide(let decide):
       // The input is built off the calling actor: downsampling decodes the
       // full image, which would otherwise hitch the caller (often main).
-      feature.setCrop(
-        await Self.runCropModifier(cropModifier, source: source, crop: crop)
-      )
+      let decided = await Self.decideInitialCrop(decide, source: source, crop: feature.crop)
+      feature.crop = decided.pixelAligned(imageSize: imageSize)
     }
 
     self.init(source: source, feature: feature, history: history)
   }
 
-  /// The largest side of the image a crop modifier inspects.
-  private static var cropModifierInputMaxPixelSize: CGFloat { 2560 }
+  /// The largest side of the image an initial crop inspects.
+  private static var initialCropImageMaxPixelSize: CGFloat { 2560 }
 
   /// A downsampled, oriented image scaled up to the oriented pixel size with
   /// a zero origin: the domain the crop is authored in.
-  private static func makeCropModifierInput(_ source: SourceImage) -> CIImage {
-    let downsampled = source.makeCIImage(maxPixelSize: cropModifierInputMaxPixelSize)
+  private static func makeInitialCropImage(_ source: SourceImage) -> CIImage {
+    let downsampled = source.makeCIImage(maxPixelSize: initialCropImageMaxPixelSize)
     let imageSize = source.pixelSize
 
     let scaled = downsampled.transformed(
@@ -241,14 +263,19 @@ extension EditingDocument where Content == ImageEditorFeature {
     )
   }
 
-  /// Builds the modifier's input and runs the modifier, both off the
-  /// calling actor.
+  /// Builds the input and runs `decide`, both off the calling actor.
   @concurrent
-  private static func runCropModifier(
-    _ cropModifier: CropModifier,
+  private static func decideInitialCrop(
+    _ decide: @Sendable (InitialCrop.Input) async -> CropFeature,
     source: SourceImage,
-    crop: CropEditingState
-  ) async -> CropEditingState {
-    await cropModifier.modify(makeCropModifierInput(source), crop)
+    crop: CropFeature
+  ) async -> CropFeature {
+    await decide(
+      InitialCrop.Input(
+        image: makeInitialCropImage(source),
+        imageSize: source.pixelSize,
+        crop: crop
+      )
+    )
   }
 }

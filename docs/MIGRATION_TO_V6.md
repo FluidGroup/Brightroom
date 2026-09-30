@@ -49,8 +49,8 @@ The most common migration path is:
    `render(options:)` when the editor is done.
 7. Replace `SwiftUICropView` with `ImageEditorCanvas(document:)`, and
    `featureFocus(_:)` with `editingTarget(_:)`.
-8. Pass a `CropModifier` to `await ImageEditorDocument(source:cropModifier:)`
-   instead of to `EditingStack`.
+8. Pass an `InitialCrop` to `await ImageEditorDocument(source:initialCrop:)`
+   instead of a `CropModifier` to `EditingStack`.
 9. Apply the renames in [Name Changes at a Glance](#name-changes-at-a-glance).
 10. Author crop rectangles as the selection before the quarter turn, and
     convert rectangles saved by 5.1.0
@@ -104,7 +104,7 @@ sections.
 | `CropViewMaskingBrush` | `ImageEditorCanvas.Brush` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `EditingCanvasStrokeSmoothingConfiguration`, `EditingCanvasStrokeSmoothingAlgorithm` | `ImageEditorCanvas.Brush.Smoothing` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropRotation` | `QuarterTurn` | [QuarterTurn Case Names](#quarterturn-case-names) |
-| `EditingStack.CropModifier` (BrightroomEngine) | `CropModifier` (BrightroomUI) | [CropModifier](#cropmodifier-moved-to-brightroomui) |
+| `EditingStack.CropModifier` (BrightroomEngine) | `InitialCrop` (BrightroomUI) | [InitialCrop](#initialcrop-replaces-cropmodifier) |
 
 ### BrightroomEngine
 
@@ -736,7 +736,7 @@ apps never create one.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
-| `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(source:)`, or `await ImageEditorDocument(source:cropModifier:)` for a policy-decided crop |
+| `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(source:)`, or `await ImageEditorDocument(source:initialCrop:)` for a policy-decided crop |
 | `start()`, `isLoading`, `loadedState` | None. The editor prepares its preview. To show the image yourself, use `SourceImage.makeCIImage(maxPixelSize:)`. |
 | `Loaded.makeOriginalCIImage()` | `SourceImage.makeCIImage()` |
 | `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `SourceImage.makeCIImage(maxPixelSize:)` |
@@ -747,7 +747,7 @@ apps never create one.
 | `removeAllHistory()` | `document.history.removeAll()` |
 | `revert(to:)`, `currentRevision`, `Revision` | None. Keep a copy of the document to return to. |
 | `Loaded.isDirty` | Compare `document.feature` with the feature you started from |
-| `cropModifier` | `await ImageEditorDocument(source:cropModifier:)`. See [CropModifier](#cropmodifier-moved-to-brightroomui). |
+| `cropModifier` | `await ImageEditorDocument(source:initialCrop:)`. See [InitialCrop](#initialcrop-replaces-cropmodifier). |
 | `makeRenderer().render(options:)`, `BrightRoomImageRenderer`, `ImageRenderer` | `document.render(options:)` |
 | `EditingStackError` | None. `SourceImageError` covers loading. |
 
@@ -1046,20 +1046,28 @@ struct BlurEditor: View {
 }
 ```
 
-## CropModifier Moved to BrightroomUI
+## InitialCrop Replaces CropModifier
 
-`EditingStack.CropModifier` is now `CropModifier` in BrightroomUI, and
-`CropModifier.Closure` is now `CropModifier.Modify`. The closure is `async`,
-works on a `CropEditingState`, and is `@Sendable`:
-`@Sendable (CIImage, CropEditingState) async -> CropEditingState`. It runs off
-the main actor, so the state it captures must be `Sendable`; move blocking work
-to your own queue, as `faceDetection` does. `.identity` and
-`.faceDetection(paddingBias:aspectRatio:)` are provided. It runs once, when
-you create a document with `await ImageEditorDocument(source:cropModifier:)`,
-and never for a document you rebuild from saved values. Its crop is the
-document's committed state, so undo does not return to the full-image crop.
-The `aspectRatio` of `.faceDetection` describes the final output, after the
-crop's quarter turn.
+`EditingStack.CropModifier` is now `InitialCrop` in BrightroomUI. It runs
+once, when you create a document with
+`await ImageEditorDocument(source:initialCrop:)`, and never for a document
+you rebuild from saved values. Its crop is the document's committed state, so
+undo does not return to the full-image crop.
+
+- `CropModifier(modify:)` is `InitialCrop(_:)`. The closure is `async` and
+  `@Sendable`, and returns the crop instead of calling a completion:
+  `@Sendable (InitialCrop.Input) async -> CropFeature`. `Input` carries what
+  the 5.x closure received: `image` (a downsampled preview scaled up to the
+  image's size, with a zero origin), `imageSize` (the oriented pixel size),
+  and `crop` (the whole image). The closure runs off the main actor, so the
+  state it captures must be `Sendable`; move blocking work to your own
+  queue, as `faceDetection` does.
+- The document snaps the returned crop to whole pixels inside the image with
+  `CropFeature.pixelAligned(imageSize:)`.
+- `.faceDetection(paddingBias:aspectRatio:)` takes an `AspectRatio`.
+  `.fullImage` keeps the whole image, and `.aspectRatio(_:)` starts from the
+  largest centered crop of a ratio. None of them locks the ratio in the
+  editor; use `ImageEditor.Options.aspectRatioPolicy` for that.
 
 Before:
 
@@ -1082,14 +1090,14 @@ import BrightroomUI
 func makeFramedDocument(for source: SourceImage) async -> ImageEditorDocument {
   await ImageEditorDocument(
     source: source,
-    cropModifier: .faceDetection(aspectRatio: .square)
+    initialCrop: .faceDetection(aspectRatio: .square)
   )
 }
 
-let squareCrop = CropModifier { _, crop in
-  var crop = crop
-  crop.updateCropExtent(toFitAspectRatio: .square)
-  return crop
+let squareCrop = InitialCrop.aspectRatio(.square)
+
+let portraitCrop = InitialCrop { input in
+  input.crop.fitted(to: AspectRatio(width: 4, height: 5), imageSize: input.imageSize)
 }
 ```
 
@@ -1139,7 +1147,7 @@ relying on the compiler to find them.
 
 - Aspect ratios describe the final output:
   `CropEditingState.updateCropExtent(toFitAspectRatio:)`, the crop view's
-  aspect lock, and `CropModifier.faceDetection(aspectRatio:)`. A locked ratio
+  aspect lock, and `InitialCrop.faceDetection(aspectRatio:)`. A locked ratio
   turns with the output without refitting the selection.
 - Crops keep the requested canvas at every rotation; parts outside the input
   are transparent. Quarter turns no longer trim a row or column to even out
@@ -1353,10 +1361,8 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `CropModifier` and `ImageEditorDocument(source:cropModifier:)` may become an
-  initial-crop policy that works on `CropFeature`. `CropEditingState` and
-  `ImageEditorFeature.setCrop(_:)` may leave the public API, so that
-  `CropFeature` is the one public crop value.
+- `CropEditingState` and `ImageEditorFeature.setCrop(_:)` may leave the
+  public API, so that `CropFeature` is the one public crop value.
 - `ImageEditorCanvas.StateSnapshot` with `stateHandler`, and the
   `ResetAction`, `RotateAction`, `ApplyAction`, and
   `AdjustmentAngleCommitAction` classes, may be replaced by a crop-guide
@@ -1401,7 +1407,8 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
       document binding and uses `editingTarget(_:)`; your code commits undo
       steps for canvas edits.
-- [ ] `CropModifier` is passed to `await ImageEditorDocument(source:cropModifier:)`.
+- [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`
+      instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.
 - [ ] The renames in [Name Changes at a Glance](#name-changes-at-a-glance)
       are applied, including `QuarterTurn` case names and log filters.

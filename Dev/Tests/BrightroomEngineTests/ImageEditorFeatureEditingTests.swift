@@ -51,22 +51,20 @@ struct ImageEditorFeatureEditingTests {
     #expect(!document.hasUncommittedChanges)
   }
 
-  @Test func `The identity modifier creates the full-image document`() async {
+  @Test func `The full-image initial crop creates the full-image document`() async {
     let image = makeImage()
-    let document = await EditingDocument(source: image, cropModifier: .identity)
+    let document = await EditingDocument(source: image, initialCrop: .fullImage)
 
     #expect(document.feature == ImageEditorFeature(imageSize: imageSize))
     #expect(document == EditingDocument(source: image))
     #expect(!document.canUndo)
   }
 
-  @Test func `A custom crop modifier sets the initial crop`() async {
+  @Test func `A custom initial crop sets the initial crop`() async {
     let document = await EditingDocument(
       source: makeImage(),
-      cropModifier: CropModifier { _, crop in
-        var crop = crop
-        crop.updateCropExtent(toFitAspectRatio: .square)
-        return crop
+      initialCrop: InitialCrop { input in
+        input.crop.fitted(to: .square, imageSize: input.imageSize)
       }
     )
 
@@ -75,7 +73,7 @@ struct ImageEditorFeatureEditingTests {
     #expect(!document.canUndo)
   }
 
-  @Test func `The crop modifier runs once per document`() async {
+  @Test func `The initial crop runs once per document`() async {
     final class Counter: @unchecked Sendable {
       private let lock = NSLock()
       private var value = 0
@@ -86,9 +84,9 @@ struct ImageEditorFeatureEditingTests {
 
     let document = await EditingDocument(
       source: makeImage(),
-      cropModifier: CropModifier { _, crop in
+      initialCrop: InitialCrop { input in
         counter.increment()
-        return crop
+        return input.crop
       }
     )
     // Copies, commits, and undo never run it again.
@@ -101,12 +99,12 @@ struct ImageEditorFeatureEditingTests {
     #expect(copy.feature == document.feature)
   }
 
-  /// A face-detection modifier that finds no face (or whose request fails)
-  /// installs its fallback crop instead of hanging.
+  /// A face-detection initial crop that finds no face (or whose request
+  /// fails) installs its fallback crop instead of hanging.
   @Test func `Face detection without a face falls back instead of hanging`() async {
     let document = await EditingDocument(
       source: makeImage(),
-      cropModifier: .faceDetection(aspectRatio: .square)
+      initialCrop: .faceDetection(aspectRatio: .square)
     )
 
     let rect = document.feature.crop.topLeftRect(imageSize: imageSize)

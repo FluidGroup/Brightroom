@@ -39,10 +39,10 @@ struct DocumentEditorDemoView: View {
     Form {
       Section("Image") {
         Button("Bundled photo (data)") {
-          Task { await open(Self.loadBundledImage, cropModifier: .identity) }
+          Task { await open(Self.loadBundledImage, initialCrop: .fullImage) }
         }
         Button("Bundled photo, square face crop") {
-          Task { await open(Self.loadBundledImage, cropModifier: .faceDetection(aspectRatio: .square)) }
+          Task { await open(Self.loadBundledImage, initialCrop: .faceDetection(aspectRatio: .square)) }
         }
         PhotosPicker("Pick a photo", selection: $pickerItem, matching: .images)
         if let loadingMessage {
@@ -70,7 +70,7 @@ struct DocumentEditorDemoView: View {
             throw CocoaError(.fileReadCorruptFile)
           }
           return try SourceImage(data: data)
-        }, cropModifier: .identity)
+        }, initialCrop: .fullImage)
       }
     }
   }
@@ -170,12 +170,12 @@ struct DocumentEditorDemoView: View {
   /// Loads an image, then creates the document over it.
   private func open(
     _ loadImage: @escaping () async throws -> SourceImage,
-    cropModifier: CropModifier
+    initialCrop: InitialCrop
   ) async {
     loadingMessage = "Loading..."
     do {
       let image = try await loadImage()
-      let newDocument = await EditingDocument(source: image, cropModifier: cropModifier)
+      let newDocument = await EditingDocument(source: image, initialCrop: initialCrop)
       // Replacing the image starts a new edit; it is not an undoable change.
       undoManager?.removeAllActions(withTarget: undoTarget)
       document = newDocument

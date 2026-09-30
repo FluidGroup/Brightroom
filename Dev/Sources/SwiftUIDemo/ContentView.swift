@@ -96,7 +96,7 @@ struct ContentView: View {
                     image: {
                       Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
-                    cropModifier: .faceDetection(aspectRatio: .square)
+                    initialCrop: .faceDetection(aspectRatio: .square)
                   )
                 }
               }
@@ -107,7 +107,7 @@ struct ContentView: View {
                     image: {
                       Mocks.makeSourceImage(image: Asset.horizontalRect.image)
                     },
-                    cropModifier: .faceDetection(aspectRatio: .square),
+                    initialCrop: .faceDetection(aspectRatio: .square),
                     options: .fixedAspectRatio(.square)
                   )
                 }
@@ -172,17 +172,13 @@ struct ContentView: View {
           )
 
           Section(content: {
-            Button("ImageEditor Square (modifier)") {
+            Button("ImageEditor Square (initial crop)") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoImageEditor(
                   image: {
                     SourceImage(image: Asset.l1000316.image)
                   },
-                  cropModifier: CropModifier { _, crop in
-                    var crop = crop
-                    crop.updateCropExtent(toFitAspectRatio: .square)
-                    return crop
-                  },
+                  initialCrop: .aspectRatio(.square),
                   options: .fixedAspectRatio(.square)
                 )
               }
@@ -421,20 +417,20 @@ final class DemoDocumentStore {
   private let loadImage: @Sendable () async throws -> SourceImage
 
   @ObservationIgnored
-  private let cropModifier: CropModifier
+  private let initialCrop: InitialCrop
 
   /// A store over an image that loads asynchronously, such as a download.
   init(
     loading loadImage: @escaping @Sendable () async throws -> SourceImage,
-    cropModifier: CropModifier = .identity
+    initialCrop: InitialCrop = .fullImage
   ) {
     self.loadImage = loadImage
-    self.cropModifier = cropModifier
+    self.initialCrop = initialCrop
   }
 
   /// A store over an image that is already available.
-  convenience init(image: SourceImage, cropModifier: CropModifier = .identity) {
-    self.init(loading: { image }, cropModifier: cropModifier)
+  convenience init(image: SourceImage, initialCrop: InitialCrop = .fullImage) {
+    self.init(loading: { image }, initialCrop: initialCrop)
   }
 
   /// Loads the image and creates the document, once.
@@ -444,7 +440,7 @@ final class DemoDocumentStore {
     }
     do {
       let image = try await loadImage()
-      let document = await EditingDocument(source: image, cropModifier: cropModifier)
+      let document = await EditingDocument(source: image, initialCrop: initialCrop)
       // Another call may have finished first while this one was suspended.
       if self.document == nil {
         self.document = document
@@ -478,11 +474,11 @@ struct DemoImageEditor: View {
   @MainActor
   init(
     image: @escaping () -> SourceImage,
-    cropModifier: CropModifier = .identity,
+    initialCrop: InitialCrop = .fullImage,
     options: ImageEditor.Options = .demo()
   ) {
     self._store = .init(
-      wrappedValue: DemoDocumentStore(image: image(), cropModifier: cropModifier)
+      wrappedValue: DemoDocumentStore(image: image(), initialCrop: initialCrop)
     )
     self.options = options
   }
