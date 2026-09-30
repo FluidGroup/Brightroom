@@ -93,27 +93,17 @@ public struct CropModifier: Sendable {
         return fallbackCrop
       }
 
-      let imageSize = crop.imageSize
-      let width = Int(imageSize.width)
-      let height = Int(imageSize.height)
-
-      let faceRect = VNImageRectForNormalizedRect(face.boundingBox, width, height)
-      let paddedRect = faceRect.insetBy(
-        dx: -faceRect.width * paddingBias,
-        dy: -faceRect.height * paddingBias
+      // The document passes the full-image crop with no quarter turn or
+      // straighten, which is the crop `framingFace` starts from.
+      return CropEditingState(
+        cropFeature: CropFeature.framingFace(
+          face.boundingBox,
+          imageSize: crop.imageSize,
+          paddingBias: paddingBias,
+          aspectRatio: aspectRatio
+        ),
+        imageSize: crop.imageSize
       )
-      let boundingBox = VNNormalizedRectForImageRect(paddedRect, width, height)
-
-      // Face bounds select pixels before the output quarter turn. An explicit
-      // ratio describes the output; the image's own ratio describes the
-      // selection, so it is turned into the output orientation first.
-      var framed = crop
-      framed.updateCropExtent(
-        toFitBoundingBox: boundingBox,
-        respectingAspectRatio: aspectRatio
-          ?? crop.aspectRatioBeforeOutputRotation(AspectRatio(imageSize))
-      )
-      return framed
     }
   }
 
@@ -148,6 +138,48 @@ public struct CropModifier: Sendable {
         continuation.resume(returning: request.results?.first)
       }
     }
+  }
+}
+
+extension CropFeature {
+
+  /// The pixel-aligned crop that frames a face in an image of `imageSize`,
+  /// starting from the full image with no quarter turn or straighten.
+  ///
+  /// The face box is padded by `paddingBias` of its size on each side,
+  /// clipped to the image, and fitted to `aspectRatio`, or to the image's own
+  /// ratio when nil.
+  ///
+  /// - Parameter normalizedFaceBox: A Vision bounding box: normalized to the
+  ///   image, with a bottom-left origin.
+  static func framingFace(
+    _ normalizedFaceBox: CGRect,
+    imageSize: CGSize,
+    paddingBias: CGFloat,
+    aspectRatio: AspectRatio?
+  ) -> CropFeature {
+    let width = Int(imageSize.width)
+    let height = Int(imageSize.height)
+
+    let faceRect = VNImageRectForNormalizedRect(normalizedFaceBox, width, height)
+    let paddedRect = faceRect.insetBy(
+      dx: -faceRect.width * paddingBias,
+      dy: -faceRect.height * paddingBias
+    )
+    let boundingBox = VNNormalizedRectForImageRect(paddedRect, width, height)
+
+    var framed = CropEditingState(
+      cropFeature: CropFeature(
+        topLeftRect: CGRect(origin: .zero, size: imageSize),
+        imageSize: imageSize
+      ),
+      imageSize: imageSize
+    )
+    framed.updateCropExtent(
+      toFitBoundingBox: boundingBox,
+      respectingAspectRatio: aspectRatio ?? AspectRatio(imageSize)
+    )
+    return framed.makeCropFeature()
   }
 }
 
