@@ -342,12 +342,19 @@ extension EditingCanvasView {
       scrollView.isHidden = !isActive
     }
 
+    /// The ratio of `to`'s diagonal to `from`'s diagonal.
+    private static func diagonalRatio(to: CGSize, from: CGSize) -> CGFloat {
+      let fromDiagonal = sqrt(pow(from.height, 2) + pow(from.width, 2))
+      let toDiagonal = sqrt(pow(to.height, 2) + pow(to.width, 2))
+      return toDiagonal / fromDiagonal
+    }
+
     func remainingScroll(
       guideRectInPlatter: CGRect,
       guideSize: CGSize,
       crop: CropGuideState
     ) -> UIEdgeInsets {
-      let scale = Geometry.diagonalRatio(to: guideSize, from: guideRectInPlatter.size)
+      let scale = Self.diagonalRatio(to: guideSize, from: guideRectInPlatter.size)
       let outbound = imagePlatterView.bounds
 
       let rawInsets = UIEdgeInsets(

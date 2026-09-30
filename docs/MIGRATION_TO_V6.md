@@ -129,6 +129,7 @@ sections.
 | `CropGeometry` | Removed from the public API. Use `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`. | [Crop Conversions](#crop-conversions) |
 | `ImageTool` | Internal | [Image Decoding](#image-decoding) |
 | `ColorCubeLoader`, `ColorCubeHelper`, `PresetStorage` (with their error types) | Removed. Use the `ColorCubeFeature` loaders and `ImageEditor.Options.filters`. | [Loading LUT Files](#loading-lut-files) |
+| `_BrightroomDebounce` | Removed | [Helpers No Longer Public](#helpers-no-longer-public) |
 
 ### BrightroomParametric
 
@@ -1611,6 +1612,9 @@ the same shape; the table says what to use instead.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
+| `_BrightroomDebounce` (BrightroomEngine) | Removed. Use a `Task` you cancel and restart, or your own timer. |
+| `Geometry.sizeThatAspectFit(aspectRatio:boundingSize:)`, `rectThatAspectFit(aspectRatio:boundingRect:)` (BrightroomEngine) | Removed. `AspectRatio(aspectRatio).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. |
+| `Geometry.sizeThatAspectFill(aspectRatio:minimumSize:)`, `rectThatAspectFill(aspectRatio:minimumRect:)`, `diagonalRatio(to:from:)` (BrightroomEngine) | Removed. `rectThatAspectFill` ignored the rectangle's origin. |
 | `SwiftUIMetalImageView`, `ImageDisplayBackground` (BrightroomUI) | Removed. The editor never used them. Show a rendered image with `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)`, or copy the demo app's view (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), which draws a `CIImage` with Metal. |
 
 ## Still Open Before 6.0

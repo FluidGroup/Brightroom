@@ -275,9 +275,9 @@ final class EditingCanvasView: UIView {
   /// A throttling timer to apply guide changed event.
   ///
   /// This's waiting for Combine availability in minimum iOS Version.
-  private let debounce = _BrightroomDebounce(interval: 0.8)
+  private let debounce = Debouncer(interval: 0.8)
 
-  private let scrollViewSettleDebounce = _BrightroomDebounce(interval: 0.2)
+  private let scrollViewSettleDebounce = Debouncer(interval: 0.2)
 
   private let contentInset: UIEdgeInsets
 

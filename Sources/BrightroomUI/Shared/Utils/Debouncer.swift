@@ -1,6 +1,8 @@
 import Foundation
 
-public final class _BrightroomDebounce {
+/// Runs only the last handler it receives, `interval` seconds after it
+/// arrives; a newer handler replaces a pending one.
+final class Debouncer {
   private var timerReference: DispatchSourceTimer?
 
   let interval: TimeInterval
@@ -8,12 +10,12 @@ public final class _BrightroomDebounce {
 
   private var lastSendTime: Date?
 
-  public init(interval: TimeInterval, queue: DispatchQueue = .main) {
+  init(interval: TimeInterval, queue: DispatchQueue = .main) {
     self.interval = interval
     self.queue = queue
   }
 
-  public func on(handler: @escaping () -> Void) {
+  func on(handler: @escaping () -> Void) {
     let deadline = DispatchTime.now() + DispatchTimeInterval.milliseconds(Int(interval * 1000.0))
 
     timerReference?.cancel()
@@ -32,7 +34,7 @@ public final class _BrightroomDebounce {
     timerReference = timer
   }
 
-  public func cancel() {
+  func cancel() {
     timerReference?.cancel()
     timerReference = nil
   }
