@@ -115,6 +115,7 @@ sections.
 | `CropRotation` | `QuarterTurn` | [QuarterTurn Case Names](#quarterturn-case-names) |
 | `CropEditingState` | Removed from the public API. Use `CropFeature`. | [CropEditingState](#cropeditingstate-is-no-longer-public) |
 | `EditingStack.CropModifier` (BrightroomEngine) | `InitialCrop` (BrightroomUI) | [InitialCrop](#initialcrop-replaces-cropmodifier) |
+| `SwiftUIMetalImageView`, `ImageDisplayBackground` | Removed; the demo app keeps its own copy | [Helpers No Longer Public](#helpers-no-longer-public) |
 
 ### BrightroomEngine
 
@@ -1601,12 +1602,22 @@ Console filters that match BrightroomEngine's log names need updating:
 | OSLog category `🥞 Stack` | `Preview` |
 | Dispatch queue labels `app.muukii.Brightroom.EditingStack`, `…EditingStack.central` | None. The preview is prepared in a Swift concurrency task, not on a named dispatch queue. |
 
+## Helpers No Longer Public
+
+Some public symbols existed only so Brightroom's own modules could share
+code. In 6.0 they are package access (visible only inside the Brightroom
+package), internal, or removed. None of them has a public replacement with
+the same shape; the table says what to use instead.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `SwiftUIMetalImageView`, `ImageDisplayBackground` (BrightroomUI) | Removed. The editor never used them. Show a rendered image with `Image(decorative: try rendered.cgImage, scale: 1, orientation: .up)`, or copy the demo app's view (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), which draws a `CIImage` with Metal. |
+
 ## Still Open Before 6.0
 
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `SwiftUIMetalImageView` may move to the demo app.
 - Public helpers meant for Brightroom's own modules may become package
   access: `FeatureEvaluationContext.init`, `AspectRatio.reduced()`, `Geometry`, `CIImage.removingExtentOffset()`,
   `ExportRenderer.Device`, `VideoRenderer.resolveRenderSize`,

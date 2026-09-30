@@ -179,8 +179,9 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Performance-critical operations use Metal instead of Core Image
 - The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
   and `EditingCanvasRenderer`, and live brush strokes through
-  `BrushMaskMetalRasterizer` (`Sources/BrightroomUI/Canvas/`);
-  `_MetalImageView` (`Shared/Components/ImageViews/`) displays a `CIImage`
+  `BrushMaskMetalRasterizer` (`Sources/BrightroomUI/Canvas/`)
+- The SwiftUI demo shows a `CIImage` through its own `SwiftUIMetalImageView`
+  (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), not a library type
 
 ### Testing
 - Engine and UI tests are in `Dev/Tests/BrightroomEngineTests/`

@@ -22,9 +22,11 @@
 import MetalKit
 import SwiftUI
 import UIKit
-import BrightroomEngine
 
-public enum ImageDisplayBackground {
+// The demo's `CIImage` display view. It used to be BrightroomUI's public
+// `SwiftUIMetalImageView`; the editor never used it, so it lives here now.
+
+enum ImageDisplayBackground {
   case transparent
   case color(UIColor)
 
@@ -38,14 +40,14 @@ public enum ImageDisplayBackground {
   }
 }
 
-public struct SwiftUIMetalImageView: View {
+struct SwiftUIMetalImageView: View {
 
   private let image: CIImage?
   private let contentMode: UIView.ContentMode
   private let displayBackground: ImageDisplayBackground
   private let postProcessing: (CIImage) -> CIImage
 
-  public init(
+  init(
     image: CIImage?,
     contentMode: UIView.ContentMode = .scaleAspectFill,
     displayBackground: ImageDisplayBackground = .transparent,
@@ -57,7 +59,7 @@ public struct SwiftUIMetalImageView: View {
     self.postProcessing = postProcessing
   }
 
-  public var body: some View {
+  var body: some View {
     MetalImageRepresentable(
       image: image,
       contentMode: contentMode,
@@ -234,20 +236,17 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
       return
     }
 
-    EditorLog.debug(.imageView, "[_MetalImageView] Render")
-
-    #if DEBUG
-      //    if image.cgImage != nil {
-      //      EditorLog.debug("[_MetalImageView] the backing storage of the image is in CPU, Render by metal might be slow.")
-      //    }
-    #endif
-
     let bounds = CGRect(
       origin: .zero,
       size: drawableSize
     )
 
-    let fixedImage = image.removingExtentOffset()
+    let fixedImage = image.transformed(
+      by: CGAffineTransform(
+        translationX: -image.extent.origin.x,
+        y: -image.extent.origin.y
+      )
+    )
 
     let resolvedImage = downsample(image: fixedImage, bounds: bounds, contentMode: contentMode)
 
@@ -271,8 +270,6 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
       commandEncoder.endEncoding()
     }
 
-    EditorLog.debug(.imageView, "ColorSpace => \(displayImage.colorSpace as Any)")
-
     ciContext.render(
       displayImage,
       to: targetTexture,
@@ -291,20 +288,11 @@ final class _MetalImageView: MTKView, MTKViewDelegate {
 
     switch contentMode {
     case .scaleAspectFill:
-      targetRect = Geometry.rectThatAspectFill(
-        aspectRatio: image.extent.size,
-        minimumRect: bounds
-      )
+      targetRect = bounds.aspectFillRect(for: image.extent.size)
     case .scaleAspectFit:
-      targetRect = Geometry.rectThatAspectFit(
-        aspectRatio: image.extent.size,
-        boundingRect: bounds
-      )
+      targetRect = bounds.aspectFitRect(for: image.extent.size)
     default:
-      targetRect = Geometry.rectThatAspectFit(
-        aspectRatio: image.extent.size,
-        boundingRect: bounds
-      )
+      targetRect = bounds.aspectFitRect(for: image.extent.size)
       assertionFailure("ContentMode:\(contentMode) is not supported.")
     }
 
@@ -362,6 +350,47 @@ private extension _MetalImageView.DisplayBackground {
 
 private extension CGRect {
 
+  /// The rectangle of `aspectRatio` centered in this one and covering it, with
+  /// its size rounded up to whole points.
+  func aspectFillRect(for aspectRatio: CGSize) -> CGRect {
+    let widthRatio = width / aspectRatio.width
+    let heightRatio = height / aspectRatio.height
+    var size = self.size
+
+    if widthRatio > heightRatio {
+      size.height = width / aspectRatio.width * aspectRatio.height
+    } else if heightRatio > widthRatio {
+      size.width = height / aspectRatio.height * aspectRatio.width
+    }
+
+    return centered(CGSize(width: ceil(size.width), height: ceil(size.height)))
+  }
+
+  /// The rectangle of `aspectRatio` centered in this one and fitting inside
+  /// it, with its size rounded up to whole points.
+  func aspectFitRect(for aspectRatio: CGSize) -> CGRect {
+    let widthRatio = width / aspectRatio.width
+    let heightRatio = height / aspectRatio.height
+    var size = self.size
+
+    if widthRatio < heightRatio {
+      size.height = width / aspectRatio.width * aspectRatio.height
+    } else if heightRatio < widthRatio {
+      size.width = height / aspectRatio.height * aspectRatio.width
+    }
+
+    return centered(CGSize(width: ceil(size.width), height: ceil(size.height)))
+  }
+
+  private func centered(_ size: CGSize) -> CGRect {
+    CGRect(
+      x: minX + (width - size.width) / 2,
+      y: minY + (height - size.height) / 2,
+      width: size.width,
+      height: size.height
+    )
+  }
+
   func pixelAlignedForDisplay() -> CGRect {
     guard
       minX.isFinite,
@@ -401,20 +430,5 @@ private extension CIImage {
       .cropped(to: bounds)
 
     return composited(over: backgroundImage)
-  }
-
-  func resizedSmooth(targetSize: CGSize) -> CIImage {
-
-    let resizeFilter = CIFilter(name: "CILanczosScaleTransform")!
-
-    let scale = targetSize.height / (extent.height)
-    let aspectRatio = targetSize.width / ((extent.width) * scale)
-
-    resizeFilter.setValue(self, forKey: kCIInputImageKey)
-    resizeFilter.setValue(scale, forKey: kCIInputScaleKey)
-    resizeFilter.setValue(aspectRatio, forKey: kCIInputAspectRatioKey)
-    let outputImage = resizeFilter.outputImage
-
-    return outputImage!
   }
 }
