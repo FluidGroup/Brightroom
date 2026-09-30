@@ -6,7 +6,7 @@ import Darwin
 import Foundation
 
 /// The internal representation produced while parsing a `.cube` text file.
-struct _ParsedColorCube {
+struct ParsedColorCube {
   let title: String?
   let dimension: Int
   let cubeData: Data
@@ -183,13 +183,13 @@ private struct ColorCubeTextLineIterator: IteratorProtocol {
 
 /// Parses three-dimensional `.cube` text without exposing parser mechanics as
 /// part of BrightroomParametric's public surface.
-struct ColorCubeTextFileParser {
+struct ColorCubeTextParser {
 
-  func parse(contentsOf url: URL) throws -> _ParsedColorCube {
+  func parse(contentsOf url: URL) throws -> ParsedColorCube {
     try parse(String(contentsOf: url, encoding: .utf8))
   }
 
-  func parse(_ string: String) throws -> _ParsedColorCube {
+  func parse(_ string: String) throws -> ParsedColorCube {
     var utf8 = Array(string.utf8)
     // `strtof` may inspect one byte past the final token.
     utf8.append(0)
@@ -208,7 +208,7 @@ struct ColorCubeTextFileParser {
     }
   }
 
-  private func parse(_ source: _ColorCubeUTF8Source) throws -> _ParsedColorCube {
+  private func parse(_ source: _ColorCubeUTF8Source) throws -> ParsedColorCube {
     var title: String?
     var dimension: Int?
     var domainMin: [Float] = [0, 0, 0]
@@ -344,7 +344,7 @@ struct ColorCubeTextFileParser {
       )
     }
 
-    return _ParsedColorCube(
+    return ParsedColorCube(
       title: title,
       dimension: dimension,
       cubeData: rgbaValues.withUnsafeBufferPointer { Data(buffer: $0) }

@@ -1511,6 +1511,7 @@ used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
 | `PresetFeature(name:identifier:effects:)`, `.identifier` | `FilterFeature(name:id:effects:)`, `.id` (`Identifiable`) |
 | `ColorCubeFeature.identifier`, `.amount` | `ColorCubeFeature.id`, `.intensity` |
 | `ColorCubeFeature(cubeImageAt:…)` | `ColorCubeFeature(contentsOfCubeImage:…)` |
+| `ColorCubeFeature.inferCubeDimension(width:height:)` | Removed from the public API. The image loaders infer the dimension when you pass `dimension: nil`. |
 | `ColorCubeFeatureLoadingError` | `ColorCubeLoadingError` |
 | `.failedToCreateImage(_:)`, `.missingLUT3DSize`, `.invalidLUT3DSize(_:line:)` | `.unreadableImage(_:)`, `.missingCubeSize`, `.invalidCubeSize(_:line:)` |
 | `FeatureEvaluationError.invalidColorCubeData(identifier:…)` | `FeatureEvaluationError.invalidColorCubeData(id:…)` |

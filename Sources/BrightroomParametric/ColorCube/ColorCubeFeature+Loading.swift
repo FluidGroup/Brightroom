@@ -87,7 +87,7 @@ extension ColorCubeFeature {
     id: String? = nil,
     intensity: Double = 1
   ) throws {
-    let parsed = try ColorCubeTextFileParser().parse(contentsOf: url)
+    let parsed = try ColorCubeTextParser().parse(contentsOf: url)
     self.init(
       name: name ?? parsed.title ?? url.deletingPathExtension().lastPathComponent,
       id: id ?? url.lastPathComponent,
@@ -167,7 +167,7 @@ extension ColorCubeFeature {
   }
 
   /// Infers the cube dimension `d` when `width × height == d³`.
-  public static func inferCubeDimension(width: Int, height: Int) throws -> Int {
+  static func inferCubeDimension(width: Int, height: Int) throws -> Int {
     let (pixelCount, overflowed) = width.multipliedReportingOverflow(by: height)
     guard overflowed == false, pixelCount > 0 else {
       throw ColorCubeLoadingError.unableToInferCubeDimension(
