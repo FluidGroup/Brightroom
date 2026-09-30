@@ -99,7 +99,7 @@ struct QuarterTurnCropTests {
     let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
     let (editor, window) = try openCanvasView(on: previewSource, owner: owner)
     var pendingCrop: CropFeature?
-    editor.setStateHandler { pendingCrop = $0.pendingCrop }
+    editor.setCropGuideHandler { pendingCrop = $0.pendingCrop }
 
     for rotation in [QuarterTurn.counterclockwise90, .counterclockwise180, .counterclockwise270, .zero] {
       editor.rotateCounterclockwise()
@@ -310,8 +310,8 @@ struct QuarterTurnCropTests {
     let previewSource = try makePreviewSource(size: imageSize)
     let owner = DocumentOwner(ImageEditorFeature(imageSize: imageSize))
     let (editor, window) = try openCanvasView(on: previewSource, owner: owner)
-    var latest: EditingCanvasView.StateSnapshot?
-    editor.setStateHandler { latest = $0 }
+    var latest: ImageEditorCanvas.CropGuide?
+    editor.setCropGuideHandler { latest = $0 }
     let sourceRatio = AspectRatio(width: 3, height: 2)
     editor.setLockedAspectRatio(sourceRatio)
 
@@ -326,13 +326,13 @@ struct QuarterTurnCropTests {
     for rotation in [QuarterTurn.counterclockwise90, .counterclockwise180, .counterclockwise270, .zero] {
       editor.rotateCounterclockwise()
       editor.layoutIfNeeded()
-      let snapshot = try #require(latest)
+      let guide = try #require(latest)
       let rotated = try #require(editor.proposedCrop)
-      #expect(snapshot.pendingCrop == rotated.makeCropFeature())
+      #expect(guide.pendingCrop == rotated.makeCropFeature())
       let isSideways = rotation == .counterclockwise90 || rotation == .counterclockwise270
       let expectedRatio = isSideways ? sourceRatio.swapped() : sourceRatio
       let expectedExtent = sourceRect
-      #expect(snapshot.lockedAspectRatio == expectedRatio)
+      #expect(guide.lockedAspectRatio == expectedRatio)
       #expect(rotated._usedAspectRatio == expectedRatio)
       #expect(rotated.rotation == rotation)
       #expect(rotated.cropExtent == expectedExtent)

@@ -555,9 +555,9 @@ private struct CanvasHost: View {
     ImageEditorCanvas(
       document: $document,
       displayedFeature: displayedFeature,
-      previewSourceLoader: previewSourceLoader,
-      isGuideInteractionEnabled: mode == .crop
+      previewSourceLoader: previewSourceLoader
     )
+    .cropGuideDisabled(mode != .crop)
     .quarterTurn(quarterTurn)
     .straightenAngle(straightenAngle)
     .lockedAspectRatio(lockedAspectRatio)

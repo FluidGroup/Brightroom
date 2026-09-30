@@ -84,8 +84,6 @@ extension ImageEditorFeature.Effects {
 ///   - Implicit animations occurs in first time load with remote image.
 final class EditingCanvasView: UIView {
 
-  typealias StateSnapshot = ImageEditorCanvas.StateSnapshot
-
   /// A change EditingCanvasView made to the feature: a crop commit or a brush stroke.
   ///
   /// The feature's owner applies it to its latest feature, so owner-side
@@ -103,10 +101,10 @@ final class EditingCanvasView: UIView {
     /// The locked aspect ratio in the final output orientation.
     var preferredAspectRatio: AspectRatio?
 
-    var snapshot: StateSnapshot {
+    var cropGuide: ImageEditorCanvas.CropGuide {
       .init(
         pendingCrop: proposedCrop?.makeCropFeature(),
-        frame: frame,
+        canvasBounds: CGRect(origin: .zero, size: frame.size),
         interaction: interaction,
         lockedAspectRatio: preferredAspectRatio
       )
@@ -289,7 +287,7 @@ final class EditingCanvasView: UIView {
     scrollViewAdjustmentSession?.kind
   }
 
-  private var stateHandler: @MainActor (StateSnapshot) -> Void = { _ in }
+  private var cropGuideHandler: @MainActor (ImageEditorCanvas.CropGuide) -> Void = { _ in }
 
   private var lastLaidOutCrop: CropGuideState?
 
@@ -297,8 +295,8 @@ final class EditingCanvasView: UIView {
 
   /// Creates a canvas over `source` editing `feature`.
   ///
-  /// This only stores the values. Call `loadFeature()` once a state
-  /// handler is bound, so the first state snapshot reaches it.
+  /// This only stores the values. Call `loadFeature()` once a crop guide
+  /// handler is bound, so the first crop guide reaches it.
   init(
     source: EditingCanvasSource,
     feature: ImageEditorFeature,
@@ -518,7 +516,7 @@ final class EditingCanvasView: UIView {
     guideView.didUpdateInteraction = { [weak self] interaction in
       guard let self else { return }
       self.state.interaction = interaction
-      self.emitStateSnapshot()
+      self.emitCropGuide()
     }
 
     // apply defaultAppearance
@@ -541,11 +539,14 @@ final class EditingCanvasView: UIView {
 
   // MARK: - Functions
 
-  func setStateHandler(_ handler: @escaping @MainActor (StateSnapshot) -> Void) {
-    self.stateHandler = handler
+  /// Sets the handler that receives the crop guide each time the canvas
+  /// reports it. The canvas may report an unchanged guide; the SwiftUI
+  /// coordinator drops repeats.
+  func setCropGuideHandler(_ handler: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void) {
+    self.cropGuideHandler = handler
   }
 
-  /// The crop guide's working state, which snapshots report as
+  /// The crop guide's working state, which the reported guide shows as
   /// `pendingCrop`; nil until the feature is loaded.
   var proposedCrop: CropGuideState? {
     state.proposedCrop
@@ -561,8 +562,8 @@ final class EditingCanvasView: UIView {
 
   /// Loads the crop state from the feature and displays it.
   ///
-  /// Call it once, after the state handler is bound: loading emits the first
-  /// state snapshot, which seeds the host's rotation and angle inputs.
+  /// Call it once, after the crop guide handler is bound: loading reports the
+  /// first crop guide.
   func loadFeature() {
     load(crop: CropGuideState(cropFeature: feature.crop, imageSize: source.imageSize))
     updateDisplay()
@@ -637,7 +638,7 @@ final class EditingCanvasView: UIView {
       setProposedCrop(crop.makeInitial(), previousCrop: crop, forcesLayout: true)
     }
 
-    emitStateSnapshot()
+    emitCropGuide()
   }
 
   func setQuarterTurn(_ rotation: QuarterTurn) {
@@ -713,7 +714,7 @@ final class EditingCanvasView: UIView {
     }
 
     guideView.setLockedAspectRatio(ratio)
-    emitStateSnapshot()
+    emitCropGuide()
   }
 
   /**
@@ -1089,8 +1090,8 @@ extension EditingCanvasView {
     updateCropLayout(previousCrop: previousCrop, animatesLayout: animatesLayout)
   }
 
-  private func emitStateSnapshot() {
-    stateHandler(state.snapshot)
+  private func emitCropGuide() {
+    cropGuideHandler(state.cropGuide)
   }
 
   @discardableResult
@@ -1101,7 +1102,7 @@ extension EditingCanvasView {
 
     state.proposedCrop = crop
 
-    emitStateSnapshot()
+    emitCropGuide()
 
     return true
   }

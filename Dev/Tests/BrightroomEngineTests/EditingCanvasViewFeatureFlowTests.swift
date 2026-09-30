@@ -31,7 +31,7 @@ struct EditingCanvasViewFeatureFlowTests {
 
   private struct Harness {
     let canvasView: EditingCanvasView
-    var snapshots: [ImageEditorCanvas.StateSnapshot] { box.snapshots }
+    var guides: [ImageEditorCanvas.CropGuide] { box.guides }
     /// The owner's feature after each change EditingCanvasView reported.
     var emitted: [ImageEditorFeature] { box.emitted }
     let box: Box
@@ -39,7 +39,7 @@ struct EditingCanvasViewFeatureFlowTests {
     /// Plays the feature's owner: applies each change to its own latest
     /// feature.
     final class Box {
-      var snapshots: [ImageEditorCanvas.StateSnapshot] = []
+      var guides: [ImageEditorCanvas.CropGuide] = []
       var emitted: [ImageEditorFeature] = []
       var owned: ImageEditorFeature
 
@@ -60,7 +60,7 @@ struct EditingCanvasViewFeatureFlowTests {
       feature: feature
     )
     let box = Harness.Box(owned: feature)
-    canvasView.setStateHandler { box.snapshots.append($0) }
+    canvasView.setCropGuideHandler { box.guides.append($0) }
     canvasView.setFeatureChangeHandler { change in
       change(&box.owned)
       box.emitted.append(box.owned)
@@ -78,19 +78,19 @@ struct EditingCanvasViewFeatureFlowTests {
     return feature
   }
 
-  @Test func `Loading emits the first snapshot to the bound handler`() throws {
+  @Test func `Loading reports the first crop guide to the bound handler`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
 
     #expect(harness.emitted.isEmpty, "setting the target before loading commits nothing")
-    let snapshot = try #require(harness.snapshots.last)
-    let radians = try #require(snapshot.pendingCrop?.straightenRadians)
+    let guide = try #require(harness.guides.last)
+    let radians = try #require(guide.pendingCrop?.straightenRadians)
     #expect(abs(radians * 180 / .pi - 10) < 0.001)
   }
 
   @Test func `A committed stroke is stored in working space`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
     let proposed = try #require(harness.canvasView.proposedCrop)
-    #expect(harness.snapshots.last?.pendingCrop == proposed.makeCropFeature())
+    #expect(harness.guides.last?.pendingCrop == proposed.makeCropFeature())
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: proposed))
     let record = EditingCanvasStrokeRecord(
       stamps: [CGPoint(x: 40, y: 30), CGPoint(x: 42, y: 31)],
@@ -114,19 +114,19 @@ struct EditingCanvasViewFeatureFlowTests {
       record: .init(stamps: [CGPoint(x: 40, y: 30)], brush: .init(size: 12))
     ) {}
     let echoed = try #require(harness.emitted.last)
-    let snapshotCount = harness.snapshots.count
-    let pending = harness.snapshots.last?.pendingCrop
+    let guideCount = harness.guides.count
+    let pending = harness.guides.last?.pendingCrop
 
     harness.canvasView.setFeature(echoed)
 
-    #expect(harness.snapshots.count == snapshotCount)
-    #expect(harness.snapshots.last?.pendingCrop == pending)
+    #expect(harness.guides.count == guideCount)
+    #expect(harness.guides.last?.pendingCrop == pending)
     #expect(harness.emitted.count == 1, "an echo is not emitted again")
   }
 
   @Test func `An external crop change reloads the crop`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
-    let snapshotCount = harness.snapshots.count
+    let guideCount = harness.guides.count
 
     // What an undo produces: a feature whose crop differs from the view's.
     var undone = makeAngledFeature(degrees: 10)
@@ -136,8 +136,8 @@ struct EditingCanvasViewFeatureFlowTests {
     undone.crop = smaller.makeCropFeature()
     harness.canvasView.setFeature(undone)
 
-    #expect(harness.snapshots.count > snapshotCount)
-    let reloaded = try #require(harness.snapshots.last?.pendingCrop)
+    #expect(harness.guides.count > guideCount)
+    let reloaded = try #require(harness.guides.last?.pendingCrop)
     #expect(reloaded.straightenRadians == 0)
     #expect(reloaded == undone.crop)
     #expect(harness.canvasView.proposedCrop?.cropExtent == smaller.cropExtent)
@@ -177,7 +177,7 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.setFeature(initial)
     harness.canvasView.setLockedAspectRatio(.square)
 
-    let reloaded = try #require(harness.snapshots.last?.pendingCrop)
+    let reloaded = try #require(harness.guides.last?.pendingCrop)
     #expect(abs(reloaded.rect.width - reloaded.rect.height) <= 1)
   }
 
@@ -195,14 +195,14 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.applyPendingCrop()
     let turned = try #require(harness.emitted.last)
     #expect(turned.crop.quarterTurn.isSideways)
-    #expect(harness.snapshots.last?.lockedAspectRatio == landscape.swapped())
+    #expect(harness.guides.last?.lockedAspectRatio == landscape.swapped())
 
     // What an undo of the turn produces.
     harness.canvasView.setFeature(initial)
 
-    let snapshot = try #require(harness.snapshots.last)
-    #expect(snapshot.lockedAspectRatio == landscape)
-    let reloaded = try #require(snapshot.pendingCrop)
+    let guide = try #require(harness.guides.last)
+    #expect(guide.lockedAspectRatio == landscape)
+    let reloaded = try #require(guide.pendingCrop)
     #expect(reloaded.quarterTurn.isSideways == false)
     #expect(reloaded.topLeftRect(imageSize: imageSize) == CGRect(origin: .zero, size: imageSize))
 
@@ -354,5 +354,139 @@ struct EditingCanvasRepresentableCoordinatorTests {
     coordinator.deliverFeatureChange { $0.localBlur = nil }
     #expect(deliveries == 2)
     #expect(owned == feature)
+  }
+}
+
+/// The SwiftUI coordinator delivers the canvas's crop guide to the host's
+/// `onCropGuideChange`: at once outside a view update, on the next
+/// main-actor turn (latest only) while SwiftUI inputs are being applied, and
+/// never twice in a row with an equal value.
+@MainActor
+struct EditingCanvasRepresentableCropGuideTests {
+
+  private let size = CGSize(width: 80, height: 60)
+
+  private func makeCanvasView() -> EditingCanvasView {
+    EditingCanvasView(
+      source: EditingCanvasSource(
+        editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),
+        imageSize: size
+      ),
+      feature: ImageEditorFeature(imageSize: size)
+    )
+  }
+
+  private func guide(_ interaction: CropInteraction) -> ImageEditorCanvas.CropGuide {
+    .init(
+      pendingCrop: nil,
+      canvasBounds: CGRect(x: 0, y: 0, width: 320, height: 480),
+      interaction: interaction,
+      lockedAspectRatio: nil
+    )
+  }
+
+  /// Lets queued main-actor work run.
+  private func drainMainActor() async {
+    for _ in 0..<10 {
+      await Task.yield()
+    }
+  }
+
+  private final class Deliveries {
+    var guides: [ImageEditorCanvas.CropGuide] = []
+  }
+
+  private func bind(
+    _ coordinator: EditingCanvasRepresentable.Coordinator,
+    to canvasView: EditingCanvasView
+  ) -> Deliveries {
+    let deliveries = Deliveries()
+    coordinator.bindCropGuideHandler(
+      to: canvasView,
+      syncInputs: { _ in },
+      onCropGuideChange: { deliveries.guides.append($0) }
+    )
+    return deliveries
+  }
+
+  @Test func `A guide reported while applying inputs is delivered on the next turn, latest only`() async {
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let deliveries = bind(coordinator, to: makeCanvasView())
+
+    coordinator.applySwiftUIInputs {
+      coordinator.deliverCropGuide(guide([]))
+      coordinator.deliverCropGuide(guide(.movingImage))
+    }
+    #expect(deliveries.guides.isEmpty, "not delivered during the view update")
+
+    await drainMainActor()
+    #expect(deliveries.guides == [guide(.movingImage)])
+
+    // Outside input application a guide is delivered at once.
+    coordinator.deliverCropGuide(guide(.resizingGuide))
+    #expect(deliveries.guides == [guide(.movingImage), guide(.resizingGuide)])
+  }
+
+  @Test func `An equal guide is not delivered again`() async {
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let deliveries = bind(coordinator, to: makeCanvasView())
+
+    coordinator.deliverCropGuide(guide([]))
+    coordinator.deliverCropGuide(guide([]))
+    #expect(deliveries.guides == [guide([])])
+
+    coordinator.applySwiftUIInputs {
+      coordinator.deliverCropGuide(guide([]))
+    }
+    await drainMainActor()
+    #expect(deliveries.guides == [guide([])], "a deferred guide equal to the last one is dropped")
+
+    coordinator.deliverCropGuide(guide(.movingImage))
+    coordinator.deliverCropGuide(guide([]))
+    #expect(deliveries.guides == [guide([]), guide(.movingImage), guide([])])
+  }
+
+  @Test func `A guide reported outside an update supersedes a pending one`() async {
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let deliveries = bind(coordinator, to: makeCanvasView())
+
+    coordinator.applySwiftUIInputs {
+      coordinator.deliverCropGuide(guide(.movingImage))
+    }
+    coordinator.deliverCropGuide(guide(.resizingGuide))
+    #expect(deliveries.guides == [guide(.resizingGuide)])
+
+    await drainMainActor()
+    #expect(deliveries.guides == [guide(.resizingGuide)], "the older pending guide is never delivered")
+  }
+
+  @Test func `The canvas's own reports follow the same rules`() async throws {
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let canvasView = makeCanvasView()
+    let deliveries = bind(coordinator, to: canvasView)
+    canvasView.setEditingTarget(.crop)
+
+    // Mounting loads the feature inside the view update.
+    coordinator.applySwiftUIInputs {
+      canvasView.loadFeature()
+    }
+    #expect(deliveries.guides.isEmpty)
+    await drainMainActor()
+    #expect(deliveries.guides.count == 1)
+    #expect(deliveries.guides.last?.pendingCrop == canvasView.proposedCrop?.makeCropFeature())
+
+    // A command outside the update is reported before it returns.
+    let square = AspectRatio(width: 1, height: 1)
+    canvasView.setLockedAspectRatio(square)
+    #expect(deliveries.guides.count == 2)
+    #expect(deliveries.guides.last?.lockedAspectRatio == square)
+
+    // Reset reports the reset crop, then the same guide again; the repeat is
+    // dropped.
+    canvasView.resetCrop()
+    #expect(deliveries.guides.count == 3)
+    let reset = try #require(deliveries.guides.last)
+    #expect(reset.lockedAspectRatio == nil)
+    #expect(reset.pendingCrop == canvasView.proposedCrop?.makeCropFeature())
   }
 }

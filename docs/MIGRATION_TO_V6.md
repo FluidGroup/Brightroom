@@ -100,6 +100,7 @@ sections.
 | `PhotosCropDefaultFilterPresets` | Removed. Supply `ImageEditor.Options.filters`. | [ImageEditor](#imageeditor) |
 | `SwiftUICropView` | `ImageEditorCanvas` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `SwiftUICropView.AdjustmentKind` | `CropInteraction` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
+| `SwiftUICropView.StateSnapshot` | `ImageEditorCanvas.CropGuide`, reported by `onCropGuideChange(_:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropViewFeatureFocus` | `ImageEditorCanvas.Target`, set with `editingTarget(_:)` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropViewMaskingBrush` | `ImageEditorCanvas.Brush` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `EditingCanvasStrokeSmoothingConfiguration`, `EditingCanvasStrokeSmoothingAlgorithm` | `ImageEditorCanvas.Brush.Smoothing` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
@@ -992,7 +993,8 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   and the variant with `cropInsideOverlay`/`cropOutsideOverlay` take
   `document: Binding<ImageEditorDocument>` instead of `editingStack:`. The
   canvas prepares the document's source image itself, and a document of
-  another image rebuilds it.
+  another image rebuilds it. `isGuideInteractionEnabled:` and
+  `stateHandler:` are modifiers now (below).
 - Changes made on the canvas (applied crops and brush strokes) are written
   to the document's `feature`. The canvas never commits; call
   `document.commit()` when a change should become an undo step.
@@ -1007,16 +1009,27 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   `QuarterTurn`), `adjustmentAngle(_:)` is `straightenAngle(_:)`,
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
   `AspectRatio`), `SwiftUICropView.AdjustmentKind` is `CropInteraction`
-  (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`), and
-  `StateSnapshot.adjustmentKind` is `StateSnapshot.interaction`.
-- `StateSnapshot.proposedCrop` (a `CropEditingState`) is `pendingCrop`, a
-  `CropFeature?`: the crop Apply writes, pixel-aligned, in the same y-up
-  coordinates as `document.feature.crop`. The output size is
-  `pendingCrop.outputGeometry(in: .zero).outputBounds.size`;
-  `proposedCrop.cropExtent` was the selection before the quarter turn, so
-  its width and height were exchanged for a sideways crop.
-  `StateSnapshot.preferredAspectRatio` is `lockedAspectRatio`, the name of
-  the modifier that sets it.
+  (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`).
+- `stateHandler:` is the `onCropGuideChange(_:)` modifier, and
+  `StateSnapshot` is `ImageEditorCanvas.CropGuide`:
+
+  | 5.1.1 `StateSnapshot` | 6.0 `CropGuide` |
+  | --- | --- |
+  | `proposedCrop` (a `CropEditingState`) | `pendingCrop`, a `CropFeature?`: the crop Apply writes, pixel-aligned, in the same y-up coordinates as `document.feature.crop`. The output size is `pendingCrop.outputGeometry(in: .zero).outputBounds.size`; `proposedCrop.cropExtent` was the selection before the quarter turn, so its width and height were exchanged for a sideways crop. |
+  | `frame` | `canvasBounds`: the canvas's size with a zero origin, in the canvas's own coordinates. `frame` was the canvas's frame in a view SwiftUI owns. |
+  | `adjustmentKind` | `interaction` (`CropInteraction`) |
+  | `preferredAspectRatio` | `lockedAspectRatio`, the name of the modifier that sets it |
+
+  The callback no longer runs inside a SwiftUI view update, so it can write
+  to `@State`. A change made while SwiftUI updates the canvas (mounting it,
+  displaying a new document such as an undo, or applying an input) now
+  arrives on the next main-actor turn instead of during `makeUIView` or
+  `updateUIView`, and only the latest such change arrives. A change from a
+  gesture or a command still arrives before the call returns. A guide equal
+  to the last one reported is not reported again.
+- `isGuideInteractionEnabled:` is the `cropGuideDisabled(_:)` modifier,
+  with the opposite value: `isGuideInteractionEnabled: false` is
+  `.cropGuideDisabled()`.
 - `AdjustmentAngleCommitAction` takes an `Angle`. The 5.x parameter type,
   `CropEditingState.AdjustmentAngle`, was a name for `Angle`, so calls such
   as `commitAngle(.degrees(10))` are unchanged.
@@ -1406,10 +1419,9 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `ImageEditorCanvas.StateSnapshot` with `stateHandler`, and the
-  `ResetAction`, `RotateAction`, `ApplyAction`, and
-  `AdjustmentAngleCommitAction` classes, may be replaced by a crop-guide
-  change callback and a reader/proxy pair. The `Binding` forms of
+- The `ImageEditorCanvas` `ResetAction`, `RotateAction`, `ApplyAction`,
+  and `AdjustmentAngleCommitAction` classes may be replaced by a
+  reader/proxy pair. The `Binding` forms of
   `quarterTurn(_:)`, `straightenAngle(_:)`, and `lockedAspectRatio(_:)` may
   become value-only.
 - `FeatureTreeView` and `FeatureTreeOutline` may move out of

@@ -39,7 +39,7 @@ import BrightroomParametric
 /// This is the home for the UI-authoring richness the engine does not carry:
 /// the y-down selection, the active aspect-ratio session, and the output
 /// quarter turn. It is internal: hosts see the crop only as a `CropFeature`
-/// (`ImageEditorCanvas.StateSnapshot.pendingCrop` is `makeCropFeature()`).
+/// (`ImageEditorCanvas.CropGuide.pendingCrop` is `makeCropFeature()`).
 struct CropGuideState: Equatable, Sendable {
 
   /// The oriented image pixel size, from the loaded state.

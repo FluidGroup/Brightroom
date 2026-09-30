@@ -85,6 +85,36 @@ struct HostedEditorTests {
     #expect(host.document.source == image)
   }
 
+  @MainActor
+  final class GuideRecorder {
+    var guides: [ImageEditorCanvas.CropGuide] = []
+  }
+
+  @Test func `The crop canvas reports its guide after mounting, once`() async throws {
+    let host = Host(EditingDocument(source: try DocumentTestFixtures.makeImage()))
+    let recorder = GuideRecorder()
+
+    let mounted = try await mount(
+      ImageEditorCanvas(document: host.binding)
+        .onCropGuideChange { recorder.guides.append($0) }
+    )
+    defer { mounted.window.isHidden = true }
+
+    // The guide loaded in makeUIView arrives on a later turn.
+    for _ in 0..<10 {
+      mounted.host.view.layoutIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(recorder.guides.count == 1)
+    let guide = try #require(recorder.guides.last)
+    #expect(guide.pendingCrop?.isPixelEquivalent(
+      to: host.document.feature.crop,
+      imageSize: host.document.source.pixelSize
+    ) == true)
+    #expect(guide.interaction.isEmpty)
+    #expect(host.writes == 0)
+  }
+
   /// A custom editor's host state: the document and the tool.
   @MainActor
   @Observable

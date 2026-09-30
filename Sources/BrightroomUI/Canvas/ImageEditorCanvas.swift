@@ -26,37 +26,6 @@ import BrightroomParametric
 
 public struct ImageEditorCanvas: View {
 
-  public struct StateSnapshot: Equatable {
-
-    /// The crop the guide shows, which Apply writes to the document; nil
-    /// until the canvas has loaded the document.
-    ///
-    /// It is pixel-aligned, and like `ImageEditorFeature.crop` it is in y-up
-    /// coordinates of the oriented, pre-crop source image, with `rect` the
-    /// selection before the quarter turn. The output size is
-    /// `pendingCrop.outputGeometry(in: .zero).outputBounds.size`.
-    public var pendingCrop: CropFeature?
-
-    public var frame: CGRect
-    public var interaction: CropInteraction
-
-    /// The locked aspect ratio in the output orientation, or nil when the
-    /// guide is free.
-    public var lockedAspectRatio: AspectRatio?
-
-    public init(
-      pendingCrop: CropFeature?,
-      frame: CGRect,
-      interaction: CropInteraction,
-      lockedAspectRatio: AspectRatio?
-    ) {
-      self.pendingCrop = pendingCrop
-      self.frame = frame
-      self.interaction = interaction
-      self.lockedAspectRatio = lockedAspectRatio
-    }
-  }
-
   public final class ResetAction {
 
     var onCall: () -> Void = {}
@@ -161,8 +130,8 @@ public struct ImageEditorCanvas: View {
   private var _applyAction: ApplyAction?
   private var _adjustmentAngleCommitAction: AdjustmentAngleCommitAction?
 
-  private let stateHandler: @MainActor (StateSnapshot) -> Void
-  private let isGuideInteractionEnabled: Bool
+  private var onCropGuideChange: (@MainActor (CropGuide) -> Void)?
+  private var isCropGuideDisabled = false
   private let areAnimationsEnabled: Bool
   private var clipsToGuide: Bool = false
   /// Fixed at creation. See the initializer documentation.
@@ -189,7 +158,6 @@ public struct ImageEditorCanvas: View {
   ///
   /// - Parameters:
   ///   - document: The edited document.
-  ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
   ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
   ///     and the layout direction that resolves their leading and trailing
@@ -202,36 +170,30 @@ public struct ImageEditorCanvas: View {
   ///     values it captures are frozen at that point.
   ///   - cropOutsideOverlay: **Fixed at creation.** Same contract as
   ///     `cropInsideOverlay`.
-  ///   - stateHandler: Re-bound on every update.
   public init<InsideOverlay: View, OutsideOverlay: View>(
     document: Binding<ImageEditorDocument>,
-    isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
     contentInsets: EdgeInsets? = nil,
     @ViewBuilder cropInsideOverlay: @escaping (CropInteraction?) -> InsideOverlay,
-    @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction?) -> OutsideOverlay,
-    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
+    @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction?) -> OutsideOverlay
   ) {
     self.document = document
     self.previewSourceLoader = nil
     self.displayedFeature = nil
-    self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInsets = contentInsets
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
     self.cropOutsideOverlay = { AnyView(cropOutsideOverlay($0)) }
-    self.stateHandler = stateHandler
   }
 
   /// Creates a crop canvas that edits `document`, with the built-in
   /// overlays.
   ///
-  /// See `init(document:isGuideInteractionEnabled:areAnimationsEnabled:contentInsets:cropInsideOverlay:cropOutsideOverlay:stateHandler:)`
+  /// See `init(document:areAnimationsEnabled:contentInsets:cropInsideOverlay:cropOutsideOverlay:)`
   /// for how the document is written back and displayed.
   ///
   /// - Parameters:
   ///   - document: The edited document.
-  ///   - isGuideInteractionEnabled: Applied on every update.
   ///   - areAnimationsEnabled: Applied on every update.
   ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
   ///     and the layout direction that resolves their leading and trailing
@@ -239,23 +201,18 @@ public struct ImageEditorCanvas: View {
   ///     that derives the insets from safe area or size class must give this
   ///     view a new identity (for example with `.id`) for new insets to take
   ///     effect.
-  ///   - stateHandler: Re-bound on every update.
   public init(
     document: Binding<ImageEditorDocument>,
-    isGuideInteractionEnabled: Bool = true,
     areAnimationsEnabled: Bool = true,
-    contentInsets: EdgeInsets? = nil,
-    stateHandler: @escaping @MainActor (StateSnapshot) -> Void = { _ in }
+    contentInsets: EdgeInsets? = nil
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
     self.previewSourceLoader = nil
     self.displayedFeature = nil
-    self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInsets = contentInsets
-    self.stateHandler = stateHandler
   }
 
   /// Creates a crop canvas with the built-in overlays over a loader a
@@ -268,18 +225,15 @@ public struct ImageEditorCanvas: View {
   init(
     document: Binding<ImageEditorDocument>,
     displayedFeature: ImageEditorFeature?,
-    previewSourceLoader: PreviewSourceLoader,
-    isGuideInteractionEnabled: Bool
+    previewSourceLoader: PreviewSourceLoader
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
     self.displayedFeature = displayedFeature
     self.previewSourceLoader = previewSourceLoader
-    self.isGuideInteractionEnabled = isGuideInteractionEnabled
     self.areAnimationsEnabled = true
     self.contentInsets = nil
-    self.stateHandler = { _ in }
   }
 
   public var body: some View {
@@ -315,8 +269,8 @@ public struct ImageEditorCanvas: View {
           rotateAction: _rotateAction,
           applyAction: _applyAction,
           adjustmentAngleCommitAction: _adjustmentAngleCommitAction,
-          stateHandler: stateHandler,
-          isGuideInteractionEnabled: isGuideInteractionEnabled,
+          onCropGuideChange: onCropGuideChange,
+          isCropGuideDisabled: isCropGuideDisabled,
           areAnimationsEnabled: areAnimationsEnabled,
           clipsToGuide: clipsToGuide,
           contentInsets: contentInsets,
@@ -345,6 +299,33 @@ public struct ImageEditorCanvas: View {
     .task {
       await previewSourceLoader.load()
     }
+  }
+
+  /// Calls `action` with the crop guide each time it changes: when the user
+  /// moves or resizes it, when the canvas loads or reloads the document's
+  /// crop (for example after an undo), and when an input or a command
+  /// changes it.
+  ///
+  /// A change made outside a SwiftUI view update (a gesture or a command) is
+  /// reported at once, so the guide is current when the command returns. A
+  /// change made while SwiftUI updates the canvas (mounting it, displaying a
+  /// new document, or applying an input) is reported on the next main-actor
+  /// turn, so `action` can write to state; only the latest guide is
+  /// reported. A guide equal to the last one reported is not reported
+  /// again. The latest `action` is used; it is re-bound on every update.
+  public consuming func onCropGuideChange(
+    _ action: @escaping @MainActor (CropGuide) -> Void
+  ) -> Self {
+    self.onCropGuideChange = action
+    return self
+  }
+
+  /// Sets whether the crop guide ignores touches. The image can still be
+  /// moved and zoomed under the guide to change the crop. The guide is
+  /// interactive by default; the value is applied on every update.
+  public consuming func cropGuideDisabled(_ disabled: Bool = true) -> Self {
+    self.isCropGuideDisabled = disabled
+    return self
   }
 
   /// Sets whether the image canvas is clipped to the crop guide.
@@ -459,8 +440,8 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let rotateAction: ImageEditorCanvas.RotateAction?
   let applyAction: ImageEditorCanvas.ApplyAction?
   let adjustmentAngleCommitAction: ImageEditorCanvas.AdjustmentAngleCommitAction?
-  let stateHandler: @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
-  let isGuideInteractionEnabled: Bool
+  let onCropGuideChange: (@MainActor (ImageEditorCanvas.CropGuide) -> Void)?
+  let isCropGuideDisabled: Bool
   let areAnimationsEnabled: Bool
   let clipsToGuide: Bool
   let contentInsets: EdgeInsets?
@@ -489,14 +470,14 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       view = .init(source: source, feature: feature)
     }
 
-    view.isGuideInteractionEnabled = isGuideInteractionEnabled
+    view.isGuideInteractionEnabled = isCropGuideDisabled == false
     view.areAnimationsEnabled = areAnimationsEnabled
     view.clipsToGuide = clipsToGuide
     view.setBrush(brush)
     // The target is set before loading, so loading never runs the "leave
     // crop editing" commit against an unloaded view.
     view.setEditingTarget(editingTarget)
-    bindStateHandler(to: view, coordinator: context.coordinator)
+    bindCropGuideHandler(to: view, coordinator: context.coordinator)
     bindFeatureChangeHandler(to: view, coordinator: context.coordinator)
 
     // `contentInsets` above and the two overlays below are creation-only inputs,
@@ -522,11 +503,11 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   }
 
   func updateUIView(_ canvasView: EditingCanvasView, context: Context) {
-    bindStateHandler(to: canvasView, coordinator: context.coordinator)
+    bindCropGuideHandler(to: canvasView, coordinator: context.coordinator)
     bindFeatureChangeHandler(to: canvasView, coordinator: context.coordinator)
 
-    if canvasView.isGuideInteractionEnabled != isGuideInteractionEnabled {
-      canvasView.isGuideInteractionEnabled = isGuideInteractionEnabled
+    if canvasView.isGuideInteractionEnabled == isCropGuideDisabled {
+      canvasView.isGuideInteractionEnabled = isCropGuideDisabled == false
     }
 
     if canvasView.areAnimationsEnabled != areAnimationsEnabled {
@@ -534,16 +515,16 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     }
 
     // Everything that pushes SwiftUI inputs into EditingCanvasView runs inside the
-    // guard. `setFeature` and `setEditingTarget` can emit a state snapshot
+    // guard. `setFeature` and `setEditingTarget` can report a crop guide
     // or a feature change synchronously, and an unguarded one writes the
-    // host's bindings from inside `updateUIView` — a state mutation during
+    // host's state from inside `updateUIView` — a state mutation during
     // view update. The coordinator defers both. `setBrush` cannot emit
     // today; it is inside for a uniform contract, so a future emitting setter
     // is safe by default.
     //
     // Order matters:
     // - The quarter-turn and angle inputs run before `setFeature`. They mirror
-    //   the proposed crop through deferred snapshots, so when `setFeature`
+    //   the proposed crop through deferred crop guides, so when `setFeature`
     //   reloads the crop (an undo), they still hold the previous values and
     //   would otherwise rotate the reloaded crop back.
     // - `setFeature` runs before `setEditingTarget`. When an undo and a
@@ -580,13 +561,13 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   }
 
   @MainActor
-  private func bindStateHandler(to canvasView: EditingCanvasView, coordinator: Coordinator) {
-    coordinator.bindStateHandler(
+  private func bindCropGuideHandler(to canvasView: EditingCanvasView, coordinator: Coordinator) {
+    coordinator.bindCropGuideHandler(
       to: canvasView,
-      syncInputs: { snapshot in
-        syncInputs(with: snapshot)
+      syncInputs: { guide in
+        syncInputs(with: guide)
       },
-      stateHandler: stateHandler
+      onCropGuideChange: onCropGuideChange ?? { _ in }
     )
   }
 
@@ -622,19 +603,29 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   }
 
   @MainActor
-  private func syncInputs(with snapshot: ImageEditorCanvas.StateSnapshot) {
-    if let crop = snapshot.pendingCrop {
+  private func syncInputs(with guide: ImageEditorCanvas.CropGuide) {
+    if let crop = guide.pendingCrop {
       quarterTurnInput.setIfChanged(crop.quarterTurn)
       straightenAngleInput.setIfChanged(Angle(radians: crop.straightenRadians))
     }
-    lockedAspectRatioInput.setIfChanged(snapshot.lockedAspectRatio)
+    lockedAspectRatioInput.setIfChanged(guide.lockedAspectRatio)
   }
 
   @MainActor
   final class Coordinator {
 
     private var isApplyingSwiftUIInputs = false
-    private var pendingInputSyncSnapshot: ImageEditorCanvas.StateSnapshot?
+    private var pendingInputSyncGuide: ImageEditorCanvas.CropGuide?
+
+    private var onCropGuideChange: @MainActor (ImageEditorCanvas.CropGuide) -> Void = { _ in }
+
+    /// The crop guide reported while SwiftUI inputs were being applied, not
+    /// yet delivered; only the latest is kept.
+    private var pendingCropGuide: ImageEditorCanvas.CropGuide?
+
+    /// The last crop guide delivered to `onCropGuideChange`, so an equal one
+    /// is not delivered again.
+    private var lastDeliveredCropGuide: ImageEditorCanvas.CropGuide?
 
     /// Feature changes emitted while SwiftUI inputs were being applied, not
     /// yet applied by the owner, in emission order.
@@ -703,19 +694,20 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       }
     }
 
-    func bindStateHandler(
+    /// Routes EditingCanvasView's crop guides to the input sync and to
+    /// `onCropGuideChange`, re-bound on every update because the host's
+    /// destinations can change.
+    func bindCropGuideHandler(
       to canvasView: EditingCanvasView,
-      syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void,
-      stateHandler: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
+      syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void,
+      onCropGuideChange: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
     ) {
-      canvasView.setStateHandler { [weak self] snapshot in
+      self.onCropGuideChange = onCropGuideChange
+      canvasView.setCropGuideHandler { [weak self] guide in
         guard let self else { return }
 
-        self.handleStateSnapshot(
-          snapshot,
-          syncInputs: syncInputs,
-          stateHandler: stateHandler
-        )
+        self.syncInputs(with: guide, syncInputs)
+        self.deliverCropGuide(guide)
       }
     }
 
@@ -728,23 +720,63 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       body()
     }
 
-    private func handleStateSnapshot(
-      _ snapshot: ImageEditorCanvas.StateSnapshot,
-      syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void,
-      stateHandler: @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
+    /// Delivers a crop guide to `onCropGuideChange`: now, or on the next
+    /// main-actor turn when it was reported while SwiftUI inputs were being
+    /// applied, keeping only the latest. A guide equal to the last one
+    /// delivered is dropped.
+    func deliverCropGuide(_ guide: ImageEditorCanvas.CropGuide) {
+      if isApplyingSwiftUIInputs {
+        if pendingCropGuide == nil {
+          schedulePendingCropGuideDelivery()
+        }
+        pendingCropGuide = guide
+      } else {
+        // A newer guide supersedes the pending one.
+        pendingCropGuide = nil
+        deliverCropGuideIfChanged(guide)
+      }
+    }
+
+    private func deliverCropGuideIfChanged(_ guide: ImageEditorCanvas.CropGuide) {
+      guard guide != lastDeliveredCropGuide else {
+        return
+      }
+      lastDeliveredCropGuide = guide
+      onCropGuideChange(guide)
+    }
+
+    private func schedulePendingCropGuideDelivery() {
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+
+        if self.isApplyingSwiftUIInputs {
+          self.schedulePendingCropGuideDelivery()
+          return
+        }
+
+        guard let guide = self.pendingCropGuide else {
+          return
+        }
+
+        self.pendingCropGuide = nil
+        self.deliverCropGuideIfChanged(guide)
+      }
+    }
+
+    private func syncInputs(
+      with guide: ImageEditorCanvas.CropGuide,
+      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
     ) {
       if isApplyingSwiftUIInputs {
-        pendingInputSyncSnapshot = snapshot
+        pendingInputSyncGuide = guide
         schedulePendingInputSync(syncInputs)
       } else {
-        syncInputs(snapshot)
+        syncInputs(guide)
       }
-
-      stateHandler(snapshot)
     }
 
     private func schedulePendingInputSync(
-      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.StateSnapshot) -> Void
+      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
     ) {
       Task { @MainActor [weak self] in
         guard let self else { return }
@@ -754,12 +786,12 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
           return
         }
 
-        guard let snapshot = self.pendingInputSyncSnapshot else {
+        guard let guide = self.pendingInputSyncGuide else {
           return
         }
 
-        self.pendingInputSyncSnapshot = nil
-        syncInputs(snapshot)
+        self.pendingInputSyncGuide = nil
+        syncInputs(guide)
       }
     }
   }
