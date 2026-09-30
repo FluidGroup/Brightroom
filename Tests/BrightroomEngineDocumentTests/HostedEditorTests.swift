@@ -114,6 +114,8 @@ struct HostedEditorTests {
     }
     #expect(recorder.guides.count == 1)
     let guide = try #require(recorder.guides.last)
+    #expect(guide.canvasBounds == CGRect(origin: .zero, size: mounted.canvasView.bounds.size))
+    #expect(guide.canvasBounds.isEmpty == false)
     #expect(guide.pendingCrop?.isPixelEquivalent(
       to: host.document.feature.crop,
       imageSize: host.document.source.pixelSize

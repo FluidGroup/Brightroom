@@ -289,6 +289,11 @@ final class EditingCanvasView: UIView {
 
   private var cropGuideHandler: @MainActor (ImageEditorCanvas.CropGuide) -> Void = { _ in }
 
+  /// True while `layoutSubviews` reports the crop guide for a new canvas
+  /// size. Layout can run inside a SwiftUI view update, so the SwiftUI
+  /// coordinator delivers such a guide on a later main-actor turn.
+  private(set) var isReportingCropGuideFromLayout = false
+
   private var lastLaidOutCrop: CropGuideState?
 
   // MARK: - Initializers
@@ -1296,6 +1301,13 @@ extension EditingCanvasView {
       // The resolved image-space brush depends on the view bounds; re-resolve
       // in the same layout pass so a stroke cannot begin with a stale width.
       refreshCanvasBrushIfNeeded()
+
+      // The guide reports the canvas bounds.
+      if previousFrame.size != frame.size {
+        isReportingCropGuideFromLayout = true
+        emitCropGuide()
+        isReportingCropGuideFromLayout = false
+      }
     }
 
     #if DEBUG

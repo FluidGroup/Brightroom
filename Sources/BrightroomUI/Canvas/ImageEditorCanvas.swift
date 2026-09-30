@@ -595,8 +595,11 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       onCropGuideChange: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
     ) {
       self.onCropGuideChange = onCropGuideChange
-      canvasView.setCropGuideHandler { [weak self] guide in
-        self?.deliverCropGuide(guide)
+      canvasView.setCropGuideHandler { [weak self, weak canvasView] guide in
+        self?.deliverCropGuide(
+          guide,
+          defers: canvasView?.isReportingCropGuideFromLayout == true
+        )
       }
     }
 
@@ -657,10 +660,11 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
 
     /// Delivers a crop guide to `onCropGuideChange`: now, or on the next
     /// main-actor turn when it was reported while SwiftUI inputs were being
-    /// applied, keeping only the latest. A guide equal to the last one
-    /// delivered is dropped.
-    func deliverCropGuide(_ guide: ImageEditorCanvas.CropGuide) {
-      if isApplyingSwiftUIInputs {
+    /// applied or when `defers` is true (a guide reported from layout),
+    /// keeping only the latest. A guide equal to the last one delivered is
+    /// dropped.
+    func deliverCropGuide(_ guide: ImageEditorCanvas.CropGuide, defers: Bool = false) {
+      if isApplyingSwiftUIInputs || defers {
         if pendingCropGuide == nil {
           schedulePendingCropGuideDelivery()
         }

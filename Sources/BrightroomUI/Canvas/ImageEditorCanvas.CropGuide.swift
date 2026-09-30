@@ -41,8 +41,8 @@ extension ImageEditorCanvas {
     /// origin at the top left): the area the image and the guide are laid
     /// out in.
     ///
-    /// A change of size alone is not reported; the value is the one current
-    /// when another member changed.
+    /// The canvas reports a new guide when its size changes, on a later
+    /// main-actor turn.
     public var canvasBounds: CGRect
 
     /// What the user is doing to the crop; empty when idle.

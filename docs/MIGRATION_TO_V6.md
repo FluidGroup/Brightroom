@@ -1168,7 +1168,7 @@ replacement on `ImageEditorCanvas`
   | 5.1.1 `StateSnapshot` | 6.0 `CropGuide` |
   | --- | --- |
   | `proposedCrop` (a `CropEditingState`) | `pendingCrop`, a `CropFeature?`: the crop Apply writes, pixel-aligned, in the same y-up coordinates as `document.feature.crop`. The output size is `pendingCrop.outputGeometry(in: .zero).outputBounds.size`; `proposedCrop.cropExtent` was the selection before the quarter turn, so its width and height were exchanged for a sideways crop. |
-  | `frame` | `canvasBounds`: the canvas's size with a zero origin, in the canvas's own coordinates. `frame` was the canvas's frame in a view SwiftUI owns. |
+  | `frame` | `canvasBounds`: the canvas's size with a zero origin, in the canvas's own coordinates. `frame` was the canvas's frame in a view SwiftUI owns, and a change of size alone was not reported, so the snapshot delivered on mount could carry a zero frame. A change of size is now reported. |
   | `adjustmentKind` | `interaction` (`CropInteraction`) |
   | `preferredAspectRatio` | `lockedAspectRatio`, the name of the modifier that sets it |
 
@@ -1176,7 +1176,8 @@ replacement on `ImageEditorCanvas`
   to `@State`. A change made while SwiftUI updates the canvas (mounting it,
   displaying a new document such as an undo, or applying an input) now
   arrives on the next main-actor turn instead of during `makeUIView` or
-  `updateUIView`, and only the latest such change arrives. A change from a
+  `updateUIView`, and only the latest such change arrives. A change of the
+  canvas's size, reported from layout, arrives the same way. A change from a
   gesture or a command still arrives before the call returns. A guide equal
   to the last one reported is not reported again.
 - `isGuideInteractionEnabled:` is the `cropGuideDisabled(_:)` modifier,
