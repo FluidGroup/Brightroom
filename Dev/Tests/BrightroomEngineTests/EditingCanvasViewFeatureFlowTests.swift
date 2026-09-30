@@ -403,7 +403,6 @@ struct EditingCanvasRepresentableCropGuideTests {
     let deliveries = Deliveries()
     coordinator.bindCropGuideHandler(
       to: canvasView,
-      syncInputs: { _ in },
       onCropGuideChange: { deliveries.guides.append($0) }
     )
     return deliveries
@@ -488,5 +487,83 @@ struct EditingCanvasRepresentableCropGuideTests {
     let reset = try #require(deliveries.guides.last)
     #expect(reset.lockedAspectRatio == nil)
     #expect(reset.pendingCrop == canvasView.proposedCrop?.makeCropFeature())
+  }
+}
+
+/// The SwiftUI coordinator applies a value input (`straightenAngle(_:isEditing:)`,
+/// `lockedAspectRatio(_:)`) only when the host's value changes, so a value
+/// the host keeps passing never pushes the canvas back after a reset or an
+/// undo.
+@MainActor
+struct EditingCanvasRepresentableValueInputTests {
+
+  private let size = CGSize(width: 80, height: 60)
+
+  private final class Latest {
+    var guide: ImageEditorCanvas.CropGuide?
+  }
+
+  private func makeLoadedCanvasView(
+    straightenDegrees: Double = 0
+  ) -> (EditingCanvasView, Latest) {
+    var feature = ImageEditorFeature(imageSize: size)
+    var crop = CropGuideState(cropFeature: feature.crop, imageSize: size)
+    crop.adjustmentAngle = .degrees(straightenDegrees)
+    feature.crop = crop.makeCropFeature()
+    let canvasView = EditingCanvasView(
+      source: EditingCanvasSource(
+        editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: size)),
+        imageSize: size
+      ),
+      feature: feature
+    )
+    let latest = Latest()
+    canvasView.setCropGuideHandler { latest.guide = $0 }
+    canvasView.setEditingTarget(.crop)
+    canvasView.loadFeature()
+    return (canvasView, latest)
+  }
+
+  @Test func `The aspect-ratio lock takes effect only when the host's value changes`() {
+    let (canvasView, latest) = makeLoadedCanvasView()
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let square = AspectRatio(width: 1, height: 1)
+
+    coordinator.applyLockedAspectRatio(square, to: canvasView)
+    #expect(latest.guide?.lockedAspectRatio == square)
+
+    // The canvas unlocks the guide itself; the same host value does not
+    // lock it again.
+    canvasView.resetCrop()
+    #expect(latest.guide?.lockedAspectRatio == nil)
+    coordinator.applyLockedAspectRatio(square, to: canvasView)
+    #expect(latest.guide?.lockedAspectRatio == nil)
+
+    // A changed value does.
+    coordinator.applyLockedAspectRatio(nil, to: canvasView)
+    coordinator.applyLockedAspectRatio(square, to: canvasView)
+    #expect(latest.guide?.lockedAspectRatio == square)
+  }
+
+  @Test func `The straighten angle takes effect only when the host's value changes`() throws {
+    let (canvasView, _) = makeLoadedCanvasView(straightenDegrees: 10)
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    let tilted = ImageEditorCanvas.StraightenAngleInput(angle: .degrees(10), isEditing: false)
+
+    // The host mirrors the loaded angle.
+    coordinator.applyStraightenAngle(tilted, to: canvasView)
+    #expect(canvasView.proposedCrop?.adjustmentAngle == .degrees(10))
+
+    // An undo reloads a level crop; the host's unchanged angle leaves it.
+    canvasView.setFeature(ImageEditorFeature(imageSize: size))
+    #expect(canvasView.proposedCrop?.adjustmentAngle == .zero)
+    coordinator.applyStraightenAngle(tilted, to: canvasView)
+    #expect(canvasView.proposedCrop?.adjustmentAngle == .zero)
+
+    // A changed angle does, and nil leaves the angle alone.
+    coordinator.applyStraightenAngle(.init(angle: .degrees(5), isEditing: false), to: canvasView)
+    #expect(canvasView.proposedCrop?.adjustmentAngle == .degrees(5))
+    coordinator.applyStraightenAngle(.init(angle: nil, isEditing: false), to: canvasView)
+    #expect(canvasView.proposedCrop?.adjustmentAngle == .degrees(5))
   }
 }

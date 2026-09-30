@@ -981,8 +981,9 @@ looks the same as 90° clockwise. Rendering is unchanged.
 `CropRotation` (`.angle_0`, `.angle_90`, `.angle_180`, `.angle_270`) was a
 second name for the same four values and is removed. Use `QuarterTurn`:
 `.angle_90` is `.counterclockwise90`, `CropEditingState.rotation` is
-`CropFeature.quarterTurn`, and `ImageEditorCanvas`'s `rotation(_:)` is
-`quarterTurn(_:)`.
+`CropFeature.quarterTurn`. `SwiftUICropView`'s `rotation(_:)` has no
+replacement on `ImageEditorCanvas`
+([ImageEditorCanvas](#swiftuicropview--imageeditorcanvas)).
 
 ## SwiftUICropView → ImageEditorCanvas
 
@@ -1005,11 +1006,25 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   `CropViewFeatureFocus.masking(_:id:)` is gone: the first stroke creates
   `localBlur` with the default blur. To use another blur, set
   `document.feature.localBlur` yourself.
-- Renamed members: `rotation(_:)` is `quarterTurn(_:)` (taking a
-  `QuarterTurn`), `adjustmentAngle(_:)` is `straightenAngle(_:)`,
+- Renamed members: `adjustmentAngle(_:)` is `straightenAngle(_:isEditing:)`,
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
-  `AspectRatio`), `SwiftUICropView.AdjustmentKind` is `CropInteraction`
+  `AspectRatio`), and `SwiftUICropView.AdjustmentKind` is `CropInteraction`
   (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`).
+- `straightenAngle(_:isEditing:)` and `lockedAspectRatio(_:)` take values
+  only; the `Binding` forms are removed, and the canvas no longer writes
+  its angle, turn, or lock back to your state. Follow them through
+  `onCropGuideChange(_:)`: `pendingCrop.straightenRadians`,
+  `pendingCrop.quarterTurn`, and `lockedAspectRatio`.
+- A value input now takes effect only when your value changes from the
+  previous update. In 5.x the canvas applied it on every update, so a
+  constant such as `.adjustmentAngle(.zero)` pulled the canvas back after
+  every undo, and `croppingAspectRatio(_:)` relocked the guide after a
+  reset. Now the canvas keeps what a reset, a turn, or an undo did until
+  you pass a different value. To lock again after a reset, pass `nil` and
+  then the ratio, or mirror `CropGuide.lockedAspectRatio` into your state
+  so the ratio you pass changes.
+- `rotation(_:)` is removed. Turn the output with `RotateAction` and read
+  the turn from `CropGuide.pendingCrop.quarterTurn`.
 - `stateHandler:` is the `onCropGuideChange(_:)` modifier, and
   `StateSnapshot` is `ImageEditorCanvas.CropGuide`:
 
@@ -1030,9 +1045,14 @@ second name for the same four values and is removed. Use `QuarterTurn`:
 - `isGuideInteractionEnabled:` is the `cropGuideDisabled(_:)` modifier,
   with the opposite value: `isGuideInteractionEnabled: false` is
   `.cropGuideDisabled()`.
-- `AdjustmentAngleCommitAction` takes an `Angle`. The 5.x parameter type,
-  `CropEditingState.AdjustmentAngle`, was a name for `Angle`, so calls such
-  as `commitAngle(.degrees(10))` are unchanged.
+- `AdjustmentAngleCommitAction` and
+  `registerAdjustmentAngleCommitAction(_:)` are removed. Pass
+  `isEditing: true` to `straightenAngle(_:isEditing:)` while a control
+  changes the angle, and `false` when it ends: the canvas shows the angle
+  without recording the crop while editing, and records the crop at the
+  final angle when the edit ends, as the commit action did. In 5.x
+  registering the action also stopped every `adjustmentAngle(_:)` value
+  from recording; now only `isEditing` does.
 - `maskingBrush(_:)` and `strokeSmoothing(_:)` are one `brush(_:)`.
   `CropViewMaskingBrush` is `ImageEditorCanvas.Brush`, and the smoothing
   configuration is its `smoothing` member: `.off`, `.bezier(strength:)`,
@@ -1419,11 +1439,8 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- The `ImageEditorCanvas` `ResetAction`, `RotateAction`, `ApplyAction`,
-  and `AdjustmentAngleCommitAction` classes may be replaced by a
-  reader/proxy pair. The `Binding` forms of
-  `quarterTurn(_:)`, `straightenAngle(_:)`, and `lockedAspectRatio(_:)` may
-  become value-only.
+- The `ImageEditorCanvas` `ResetAction`, `RotateAction`, and
+  `ApplyAction` classes may be replaced by a reader/proxy pair.
 - `FeatureTreeView` and `FeatureTreeOutline` may move out of
   BrightroomParametric, and `RenderedImage.swiftUIImage` may be removed.
 - `SwiftUIMetalImageView` may move to the demo app.

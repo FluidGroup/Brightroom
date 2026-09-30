@@ -167,6 +167,59 @@ struct HostedEditorTests {
     #expect(host.document.feature.crop.quarterTurn != .zero)
   }
 
+  /// A straighten slider's host state.
+  @MainActor
+  @Observable
+  final class StraightenHost {
+    var document: ImageEditorDocument
+    var angle: Angle?
+    var isEditing = false
+
+    init(_ document: ImageEditorDocument) {
+      self.document = document
+    }
+  }
+
+  private struct StraightenHostView: View {
+    let host: StraightenHost
+
+    var body: some View {
+      ImageEditorCanvas(document: Binding(get: { host.document }, set: { host.document = $0 }))
+        .straightenAngle(host.angle, isEditing: host.isEditing)
+    }
+  }
+
+  @Test func `Straightening records the crop when the edit ends`() async throws {
+    let host = StraightenHost(EditingDocument(source: try DocumentTestFixtures.makeImage()))
+    let mounted = try await mount(StraightenHostView(host: host))
+    defer { mounted.window.isHidden = true }
+
+    func settle() async throws {
+      for _ in 0..<5 {
+        mounted.host.view.layoutIfNeeded()
+        try await Task.sleep(for: .milliseconds(20))
+      }
+    }
+    try await settle()
+    let level = try #require(mounted.canvasView.proposedCrop)
+
+    // While editing, the canvas shows the angle without recording the crop.
+    host.angle = .degrees(10)
+    host.isEditing = true
+    try await settle()
+    let editing = try #require(mounted.canvasView.proposedCrop)
+    #expect(editing.adjustmentAngle == .degrees(10))
+    #expect(editing.cropExtent == level.cropExtent)
+
+    // Ending the edit records the crop inside the straightened image.
+    host.isEditing = false
+    try await settle()
+    let recorded = try #require(mounted.canvasView.proposedCrop)
+    #expect(recorded.adjustmentAngle == .degrees(10))
+    #expect(recorded.cropExtent.width < level.cropExtent.width)
+    #expect(recorded.cropExtent.height < level.cropExtent.height)
+  }
+
   @Test func `ImageEditor writes nothing on mount`() async throws {
     var document = try DocumentTestFixtures.makeDocument()
     document.feature = DocumentTestFixtures.exposure(1)

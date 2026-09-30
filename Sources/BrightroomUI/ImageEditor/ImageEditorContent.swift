@@ -38,8 +38,11 @@ struct ImageEditorContent: View {
   /// document as it was when the editor opened. It restarts itself when the
   /// binding shows a document it does not know.
   @State private var session: ImageEditorSession
-  @State private var quarterTurn: QuarterTurn?
+  /// The canvas's straighten angle, followed through its crop guide while
+  /// the slider is idle; nil until the canvas has loaded.
   @State private var straightenAngle: Angle?
+  /// Whether the straighten slider is being dragged.
+  @State private var isStraightening = false
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: ImageEditor.Mode = .crop
@@ -49,8 +52,6 @@ struct ImageEditorContent: View {
   @State private var resetAction = ImageEditorCanvas.ResetAction()
   @State private var rotateAction = ImageEditorCanvas.RotateAction()
   @State private var applyAction = ImageEditorCanvas.ApplyAction()
-  @State private var adjustmentAngleCommitAction =
-    ImageEditorCanvas.AdjustmentAngleCommitAction()
 
   init(
     document: Binding<ImageEditorDocument>,
@@ -100,16 +101,18 @@ struct ImageEditorContent: View {
             previewSourceLoader: previewSourceLoader,
             mode: editingMode,
             localBlurState: localBlurState,
-            quarterTurn: $quarterTurn,
-            straightenAngle: $straightenAngle,
-            lockedAspectRatio: lockedAspectRatioBinding(
+            straightenAngle: straightenAngle,
+            isStraightening: isStraightening,
+            lockedAspectRatio: aspectRatioSelection.aspectRatio(
               originalAspectRatio: originalAspectRatio
             ),
             resetAction: resetAction,
             rotateAction: rotateAction,
             applyAction: applyAction,
-            adjustmentAngleCommitAction: adjustmentAngleCommitAction,
-            editingTarget: editingMode.canvasTarget
+            editingTarget: editingMode.canvasTarget,
+            onCropGuideChange: { guide in
+              followCropGuide(guide, originalAspectRatio: originalAspectRatio)
+            }
           )
           .layoutPriority(1)
 
@@ -128,7 +131,7 @@ struct ImageEditorContent: View {
             isLoaded: isLoaded,
             onSelectAspectRatio: selectAspectRatio,
             onSetStraightenAngle: setStraightenAngle,
-            onCommitStraightenAngle: commitStraightenAngle,
+            onCommitStraightenAngle: endStraightening,
             onSetBrushDiameter: setLocalBlurBrushDiameter,
             onClearLocalBlur: clearLocalBlur,
             onSelectFilterPreset: selectFilterPreset,
@@ -234,6 +237,8 @@ struct ImageEditorContent: View {
     aspectRatioSelection = selection
   }
 
+  /// Shows the slider's angle on the canvas while it is dragged, without
+  /// recording the crop.
   private func setStraightenAngle(_ degrees: Double) {
     let angle = Angle(degrees: degrees)
 
@@ -242,10 +247,36 @@ struct ImageEditorContent: View {
     }
 
     straightenAngle = angle
+    isStraightening = true
   }
 
-  private func commitStraightenAngle(_ degrees: Double) {
-    adjustmentAngleCommitAction(.init(degrees: degrees))
+  /// Ends the drag: the canvas records the crop at the final angle.
+  private func endStraightening(_ degrees: Double) {
+    straightenAngle = .degrees(degrees)
+    isStraightening = false
+  }
+
+  /// Mirrors the canvas's own changes (rotate, reset, a reloaded crop after
+  /// an undo) into the slider and the aspect-ratio selection.
+  ///
+  /// The canvas unlocks the guide on reset, so a `.fixed` policy follows it
+  /// to freeform here, as it did when the canvas wrote the lock back
+  /// through a binding. While the slider is dragged it owns the angle, so a
+  /// guide reported for an earlier drag position cannot move it back.
+  private func followCropGuide(
+    _ guide: ImageEditorCanvas.CropGuide,
+    originalAspectRatio: AspectRatio?
+  ) {
+    if isStraightening == false, let crop = guide.pendingCrop {
+      let angle = Angle(radians: crop.straightenRadians)
+      if straightenAngle != angle {
+        straightenAngle = angle
+      }
+    }
+    aspectRatioSelection.sync(
+      aspectRatio: guide.lockedAspectRatio,
+      originalAspectRatio: originalAspectRatio
+    )
   }
 
   private func setLocalBlurBrushDiameter(_ diameter: CGFloat) {
@@ -347,19 +378,6 @@ struct ImageEditorContent: View {
       if let next = session.document(afterCanvasChange: changed, over: document) {
         document = next
       }
-    }
-  }
-
-  private func lockedAspectRatioBinding(
-    originalAspectRatio: AspectRatio?
-  ) -> Binding<AspectRatio?> {
-    Binding {
-      aspectRatioSelection.aspectRatio(originalAspectRatio: originalAspectRatio)
-    } set: { aspectRatio in
-      aspectRatioSelection.sync(
-        aspectRatio: aspectRatio,
-        originalAspectRatio: originalAspectRatio
-      )
     }
   }
 
@@ -542,14 +560,14 @@ private struct CanvasHost: View {
   let previewSourceLoader: PreviewSourceLoader
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
-  let quarterTurn: Binding<QuarterTurn?>
-  let straightenAngle: Binding<Angle?>
-  let lockedAspectRatio: Binding<AspectRatio?>
+  let straightenAngle: Angle?
+  let isStraightening: Bool
+  let lockedAspectRatio: AspectRatio?
   let resetAction: ImageEditorCanvas.ResetAction
   let rotateAction: ImageEditorCanvas.RotateAction
   let applyAction: ImageEditorCanvas.ApplyAction
-  let adjustmentAngleCommitAction: ImageEditorCanvas.AdjustmentAngleCommitAction
   let editingTarget: ImageEditorCanvas.Target?
+  let onCropGuideChange: @MainActor (ImageEditorCanvas.CropGuide) -> Void
 
   var body: some View {
     ImageEditorCanvas(
@@ -558,17 +576,16 @@ private struct CanvasHost: View {
       previewSourceLoader: previewSourceLoader
     )
     .cropGuideDisabled(mode != .crop)
-    .quarterTurn(quarterTurn)
-    .straightenAngle(straightenAngle)
+    .straightenAngle(straightenAngle, isEditing: isStraightening)
     .lockedAspectRatio(lockedAspectRatio)
     .editingTarget(editingTarget)
+    .onCropGuideChange(onCropGuideChange)
     .brush(
       .init(diameter: .viewportPoints(localBlurState.brushDiameter))
     )
     .registerResetAction(resetAction)
     .registerRotateAction(rotateAction)
     .registerApplyAction(applyAction)
-    .registerAdjustmentAngleCommitAction(adjustmentAngleCommitAction)
   }
 
 }

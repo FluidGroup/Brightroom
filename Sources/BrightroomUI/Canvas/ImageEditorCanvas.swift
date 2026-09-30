@@ -65,22 +65,10 @@ public struct ImageEditorCanvas: View {
     }
   }
 
-  /// Commits the current live straighten angle into EditingCanvasView's recorded crop
-  /// geometry.
-  ///
-  /// Use this from controls that stream `straightenAngle` while dragging but
-  /// only want to record the crop extent after the interaction settles.
-  public final class AdjustmentAngleCommitAction {
-
-    var onCall: (Angle) -> Void = { _ in }
-
-    public init() {
-
-    }
-
-    public func callAsFunction(_ angle: Angle) {
-      onCall(angle)
-    }
+  /// The `straightenAngle(_:isEditing:)` input.
+  struct StraightenAngleInput: Equatable {
+    var angle: Angle?
+    var isEditing: Bool
   }
 
   /// Applies a canvas change to the binding's latest document.
@@ -122,13 +110,11 @@ public struct ImageEditorCanvas: View {
   /// as a slider value not yet written; nil shows the document.
   private let displayedFeature: ImageEditorFeature?
 
-  private var quarterTurnInput: Binding<QuarterTurn?> = .constant(nil)
-  private var straightenAngleInput: Binding<Angle?> = .constant(nil)
-  private var lockedAspectRatioInput: Binding<AspectRatio?> = .constant(nil)
+  private var straightenAngleInput = StraightenAngleInput(angle: nil, isEditing: false)
+  private var lockedAspectRatioInput: AspectRatio?
   private var _resetAction: ResetAction?
   private var _rotateAction: RotateAction?
   private var _applyAction: ApplyAction?
-  private var _adjustmentAngleCommitAction: AdjustmentAngleCommitAction?
 
   private var onCropGuideChange: (@MainActor (CropGuide) -> Void)?
   private var isCropGuideDisabled = false
@@ -262,13 +248,11 @@ public struct ImageEditorCanvas: View {
           },
           cropInsideOverlay: cropInsideOverlay,
           cropOutsideOverlay: cropOutsideOverlay,
-          quarterTurnInput: quarterTurnInput,
           straightenAngleInput: straightenAngleInput,
           lockedAspectRatioInput: lockedAspectRatioInput,
           resetAction: _resetAction,
           rotateAction: _rotateAction,
           applyAction: _applyAction,
-          adjustmentAngleCommitAction: _adjustmentAngleCommitAction,
           onCropGuideChange: onCropGuideChange,
           isCropGuideDisabled: isCropGuideDisabled,
           areAnimationsEnabled: areAnimationsEnabled,
@@ -337,48 +321,39 @@ public struct ImageEditorCanvas: View {
     return self
   }
 
-  /// Sets the output's quarter turn; nil leaves the canvas's turn as it is.
-  public consuming func quarterTurn(_ turn: QuarterTurn?) -> Self {
-    self.quarterTurnInput = .constant(turn)
-    return self
-  }
-
-  /// Sets the output's quarter turn, and writes the canvas's turn back to the
-  /// binding when the rotate action or a reloaded crop changes it.
-  public consuming func quarterTurn(_ turn: Binding<QuarterTurn?>) -> Self {
-    self.quarterTurnInput = turn
-    return self
-  }
-
   /// Sets the straighten angle: the free rotation applied before cropping.
   /// nil leaves the canvas's angle as it is.
-  public consuming func straightenAngle(_ angle: Angle?) -> Self {
-    self.straightenAngleInput = .constant(angle)
-    return self
-  }
-
-  /// Sets the straighten angle, and writes the canvas's angle back to the
-  /// binding when a gesture or a reloaded crop changes it.
-  public consuming func straightenAngle(_ angle: Binding<Angle?>) -> Self {
-    self.straightenAngleInput = angle
-    return self
-  }
-
-  public consuming func registerAdjustmentAngleCommitAction(_ action: AdjustmentAngleCommitAction) -> Self {
-    self._adjustmentAngleCommitAction = action
+  ///
+  /// Like the other value inputs, the angle takes effect only when `angle`
+  /// or `isEditing` differs from the values of the previous update, so an
+  /// angle the host keeps passing does not undo a reset or an undo on the
+  /// canvas. A newly mounted canvas, including one rebuilt for another
+  /// image, applies the current value. Follow the canvas's angle through
+  /// `onCropGuideChange(_:)` (`pendingCrop.straightenRadians`) to show it.
+  ///
+  /// - Parameters:
+  ///   - angle: The angle, positive counterclockwise on screen.
+  ///   - isEditing: Pass true while the user is still changing the angle,
+  ///     for example while a slider is dragged. The canvas then shows each
+  ///     angle without recording the crop. When `isEditing` becomes false,
+  ///     the canvas records the crop at `angle`: it fits the guide's
+  ///     selection to the straightened image and reports it. An angle that
+  ///     changes while `isEditing` is false is recorded at once.
+  public consuming func straightenAngle(_ angle: Angle?, isEditing: Bool = false) -> Self {
+    self.straightenAngleInput = StraightenAngleInput(angle: angle, isEditing: isEditing)
     return self
   }
 
   /// Locks the crop guide to an aspect ratio in the output orientation; nil
   /// unlocks it.
+  ///
+  /// The ratio takes effect only when it differs from the value of the
+  /// previous update; a newly mounted canvas applies the current value. The
+  /// canvas changes the lock itself: a reset unlocks
+  /// it, and turning the output sideways turns the ratio. Passing the same
+  /// value again does not restore it; follow the lock through
+  /// `onCropGuideChange(_:)` (`lockedAspectRatio`) instead.
   public consuming func lockedAspectRatio(_ ratio: AspectRatio?) -> Self {
-    self.lockedAspectRatioInput = .constant(ratio)
-    return self
-  }
-
-  /// Locks the crop guide to an aspect ratio, and writes the canvas's locked
-  /// ratio back to the binding when it changes.
-  public consuming func lockedAspectRatio(_ ratio: Binding<AspectRatio?>) -> Self {
     self.lockedAspectRatioInput = ratio
     return self
   }
@@ -433,13 +408,11 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
   let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
   let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
-  let quarterTurnInput: Binding<QuarterTurn?>
-  let straightenAngleInput: Binding<Angle?>
-  let lockedAspectRatioInput: Binding<AspectRatio?>
+  let straightenAngleInput: ImageEditorCanvas.StraightenAngleInput
+  let lockedAspectRatioInput: AspectRatio?
   let resetAction: ImageEditorCanvas.ResetAction?
   let rotateAction: ImageEditorCanvas.RotateAction?
   let applyAction: ImageEditorCanvas.ApplyAction?
-  let adjustmentAngleCommitAction: ImageEditorCanvas.AdjustmentAngleCommitAction?
   let onCropGuideChange: (@MainActor (ImageEditorCanvas.CropGuide) -> Void)?
   let isCropGuideDisabled: Bool
   let areAnimationsEnabled: Bool
@@ -522,11 +495,14 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     // today; it is inside for a uniform contract, so a future emitting setter
     // is safe by default.
     //
+    // The value inputs take effect only when they change (see
+    // `Coordinator.applyStraightenAngle(_:to:)`), so a stale host value never
+    // pushes the canvas back.
+    //
     // Order matters:
-    // - The quarter-turn and angle inputs run before `setFeature`. They mirror
-    //   the proposed crop through deferred crop guides, so when `setFeature`
-    //   reloads the crop (an undo), they still hold the previous values and
-    //   would otherwise rotate the reloaded crop back.
+    // - The value inputs run before `setFeature`. When a changed input and a
+    //   new document (an undo) arrive together, the document's crop is
+    //   loaded last and wins, and it is fitted to the new aspect-ratio lock.
     // - `setFeature` runs before `setEditingTarget`. When an undo and a
     //   switch away from `.crop` arrive together, the crop reloads first, and
     //   leaving `.crop` then commits nothing over the host's undo.
@@ -537,18 +513,8 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
         canvasView.clipsToGuide = clipsToGuide
       }
 
-      if let quarterTurn = quarterTurnInput.wrappedValue {
-        canvasView.setQuarterTurn(quarterTurn)
-      }
-
-      if let straightenAngle = straightenAngleInput.wrappedValue {
-        canvasView.setStraightenAngle(
-          straightenAngle,
-          recordsCropExtent: adjustmentAngleCommitAction == nil
-        )
-      }
-
-      canvasView.setLockedAspectRatio(lockedAspectRatioInput.wrappedValue)
+      context.coordinator.applyStraightenAngle(straightenAngleInput, to: canvasView)
+      context.coordinator.applyLockedAspectRatio(lockedAspectRatioInput, to: canvasView)
 
       canvasView.setBrush(brush)
 
@@ -564,9 +530,6 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   private func bindCropGuideHandler(to canvasView: EditingCanvasView, coordinator: Coordinator) {
     coordinator.bindCropGuideHandler(
       to: canvasView,
-      syncInputs: { guide in
-        syncInputs(with: guide)
-      },
       onCropGuideChange: onCropGuideChange ?? { _ in }
     )
   }
@@ -596,26 +559,19 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     applyAction?.onCall = { [weak canvasView] in
       canvasView?.applyPendingCrop()
     }
-
-    adjustmentAngleCommitAction?.onCall = { [weak canvasView] angle in
-      canvasView?.commitStraightenAngle(angle)
-    }
-  }
-
-  @MainActor
-  private func syncInputs(with guide: ImageEditorCanvas.CropGuide) {
-    if let crop = guide.pendingCrop {
-      quarterTurnInput.setIfChanged(crop.quarterTurn)
-      straightenAngleInput.setIfChanged(Angle(radians: crop.straightenRadians))
-    }
-    lockedAspectRatioInput.setIfChanged(guide.lockedAspectRatio)
   }
 
   @MainActor
   final class Coordinator {
 
     private var isApplyingSwiftUIInputs = false
-    private var pendingInputSyncGuide: ImageEditorCanvas.CropGuide?
+
+    /// The value of each value input when it was last applied; nil before
+    /// the first update. An input takes effect only when the host's value
+    /// differs, so a value the host keeps passing does not undo what the
+    /// canvas did since (a reset, a turn, an undo).
+    private var appliedStraightenAngle: ImageEditorCanvas.StraightenAngleInput?
+    private var appliedLockedAspectRatio: AspectRatio??
 
     private var onCropGuideChange: @MainActor (ImageEditorCanvas.CropGuide) -> Void = { _ in }
 
@@ -694,21 +650,58 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       }
     }
 
-    /// Routes EditingCanvasView's crop guides to the input sync and to
-    /// `onCropGuideChange`, re-bound on every update because the host's
-    /// destinations can change.
+    /// Routes EditingCanvasView's crop guides to `onCropGuideChange`,
+    /// re-bound on every update because the host's destination can change.
     func bindCropGuideHandler(
       to canvasView: EditingCanvasView,
-      syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void,
       onCropGuideChange: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
     ) {
       self.onCropGuideChange = onCropGuideChange
       canvasView.setCropGuideHandler { [weak self] guide in
-        guard let self else { return }
-
-        self.syncInputs(with: guide, syncInputs)
-        self.deliverCropGuide(guide)
+        self?.deliverCropGuide(guide)
       }
+    }
+
+    /// Applies the straighten-angle input when it differs from the last
+    /// applied one.
+    ///
+    /// While the host edits, the angle is shown without recording the crop.
+    /// When the edit ends the crop is recorded at the final angle, even
+    /// when that angle was already shown; otherwise a changed angle is
+    /// recorded at once.
+    func applyStraightenAngle(
+      _ input: ImageEditorCanvas.StraightenAngleInput,
+      to canvasView: EditingCanvasView
+    ) {
+      let previous = appliedStraightenAngle
+      guard input != previous else {
+        return
+      }
+      appliedStraightenAngle = input
+
+      guard let angle = input.angle else {
+        return
+      }
+      if input.isEditing {
+        canvasView.setStraightenAngle(angle, recordsCropExtent: false)
+      } else if previous?.isEditing == true {
+        canvasView.commitStraightenAngle(angle)
+      } else {
+        canvasView.setStraightenAngle(angle)
+      }
+    }
+
+    /// Applies the aspect-ratio lock when it differs from the last applied
+    /// one; nil unlocks the guide.
+    func applyLockedAspectRatio(
+      _ ratio: AspectRatio?,
+      to canvasView: EditingCanvasView
+    ) {
+      guard appliedLockedAspectRatio != .some(ratio) else {
+        return
+      }
+      appliedLockedAspectRatio = .some(ratio)
+      canvasView.setLockedAspectRatio(ratio)
     }
 
     func applySwiftUIInputs(_ body: () -> Void) {
@@ -762,48 +755,6 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
         self.deliverCropGuideIfChanged(guide)
       }
     }
-
-    private func syncInputs(
-      with guide: ImageEditorCanvas.CropGuide,
-      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
-    ) {
-      if isApplyingSwiftUIInputs {
-        pendingInputSyncGuide = guide
-        schedulePendingInputSync(syncInputs)
-      } else {
-        syncInputs(guide)
-      }
-    }
-
-    private func schedulePendingInputSync(
-      _ syncInputs: @escaping @MainActor (ImageEditorCanvas.CropGuide) -> Void
-    ) {
-      Task { @MainActor [weak self] in
-        guard let self else { return }
-
-        if self.isApplyingSwiftUIInputs {
-          self.schedulePendingInputSync(syncInputs)
-          return
-        }
-
-        guard let guide = self.pendingInputSyncGuide else {
-          return
-        }
-
-        self.pendingInputSyncGuide = nil
-        syncInputs(guide)
-      }
-    }
   }
 
-}
-
-private extension Binding where Value: Equatable {
-
-  @MainActor
-  func setIfChanged(_ value: Value) {
-    if wrappedValue != value {
-      wrappedValue = value
-    }
-  }
 }
