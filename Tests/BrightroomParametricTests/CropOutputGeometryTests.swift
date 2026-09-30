@@ -85,6 +85,24 @@ struct CropOutputGeometryTests {
     #expect(stride(from: 3, to: pixels.count, by: 4).contains { pixels[$0] < 255 })
   }
 
+  /// A positive straighten angle turns the image clockwise on screen: a
+  /// mark to the right of the center moves down.
+  @Test func positiveStraightenTurnsTheImageClockwise() throws {
+    let background = CIImage(color: .black)
+    let mark = CIImage(color: .white).cropped(to: CGRect(x: 150, y: 95, width: 10, height: 10))
+    let source = mark.composited(over: background)
+      .cropped(to: CGRect(x: 0, y: 0, width: 200, height: 200))
+
+    let output = try CropFeature(rect: source.extent, straightenRadians: .pi / 6)
+      .apply(to: source, context: .init())
+
+    // The mark's center (155, 100) turns 30° about (100, 100) to about
+    // (147.6, 72.5) when clockwise and (147.6, 127.5) when counterclockwise
+    // (y-up).
+    #expect(Self.red(of: output, at: CGPoint(x: 147, y: 72)) == 255)
+    #expect(Self.red(of: output, at: CGPoint(x: 147, y: 127)) == 0)
+  }
+
   /// Missing source pixels are transparent parts of the requested canvas.
   /// The same discrete pixel mapping applies with and without an output turn.
   @Test(arguments: [
@@ -180,6 +198,20 @@ struct CropOutputGeometryTests {
       }
     }
     #expect(mismatches == 0, "\(mismatches) pixels changed position or value", sourceLocation: sourceLocation)
+  }
+
+  /// The red channel of one pixel, at y-up coordinates.
+  private static func red(of image: CIImage, at point: CGPoint) -> UInt8 {
+    var pixel = [UInt8](repeating: 0, count: 4)
+    context.render(
+      image,
+      toBitmap: &pixel,
+      rowBytes: 4,
+      bounds: CGRect(origin: point, size: CGSize(width: 1, height: 1)),
+      format: .RGBA8,
+      colorSpace: nil
+    )
+    return pixel[0]
   }
 
   /// A pixel-scale pattern reveals interpolation and wrong row/column choices.

@@ -73,7 +73,8 @@ public struct ImageEditor: View {
     public enum AspectRatioPolicy: Equatable {
       /// The user picks a ratio in crop mode, starting from freeform.
       case selectable
-      /// The crop is locked to `ratio`, and no picker is shown.
+      /// The crop starts locked to `ratio`, and no picker is shown. Reset
+      /// unlocks the crop, and the user cannot lock it again.
       case fixed(AspectRatio)
       /// The crop is freeform, and no picker is shown.
       case freeform

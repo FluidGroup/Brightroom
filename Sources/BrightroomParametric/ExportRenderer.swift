@@ -101,8 +101,10 @@ public struct ExportRenderer {
   /// Where Core Image renders. Package access, so Brightroom's tests can
   /// compare devices; the public `render` always uses `.automatic`.
   package enum Device: Sendable {
-    /// GPU rendering, falling back to software rendering when the image
-    /// exceeds the GPU context's maximum input or output size.
+    /// GPU rendering, asking for Core Image's software renderer when the
+    /// image exceeds the GPU context's maximum input or output size. On
+    /// iOS 26 (checked on the Simulator) that renderer also runs on Metal
+    /// and reports the same limits, so the fallback does not raise them.
     case automatic
     /// CPU-based rendering (`.useSoftwareRenderer`).
     case software
@@ -136,8 +138,10 @@ public struct ExportRenderer {
    - `.file` streams the render to disk through Core Image's tiled writer (no
      full-resolution `CGImage`; bounded peak memory) — use it for large images.
 
-   Core Image renders on the GPU, and in software when the image exceeds the
-   GPU context's maximum input or output size.
+   Core Image renders on the GPU. When the image exceeds the GPU context's
+   maximum input or output size, it asks for Core Image's software renderer;
+   on iOS 26 (checked on the Simulator) that renderer also runs on Metal and
+   reports the same limits, so this does not raise them.
 
    This call is synchronous; callers that need to stay off an actor should hop
    to their own queue first.

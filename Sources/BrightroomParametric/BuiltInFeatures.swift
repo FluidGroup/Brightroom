@@ -88,6 +88,10 @@ public struct CropFeature: Feature, Equatable {
 
   /// A free straightening angle in radians, applied about the center of `rect`
   /// before extracting the crop and applying `quarterTurn`.
+  ///
+  /// A positive angle turns the image clockwise on screen. This is the sign
+  /// convention of `QuarterTurn.radians`, whose counterclockwise turns are
+  /// negative.
   public var straightenRadians: Double
 
   /// Creates a current-domain crop feature.

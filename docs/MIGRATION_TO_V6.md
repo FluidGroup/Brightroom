@@ -710,7 +710,9 @@ This function follows 5.1.1's `ColorCubeLoader` rule,
 `LUT_<dimension>_<name>.{png,jpg,jpeg}` and `<name>.cube`, and builds the
 same names and ids (the id is the file name). Unlike 5.1.1, it skips other
 files instead of failing on a `LUT_` file that is not an image, and it uses
-the dimension in the name only to check the image's pixel count.
+the dimension in the name only to check the image's pixel count. A `.cube`
+file without a `TITLE` is named after its whole base name: 5.1.1 removed a
+`LUT_<dimension>_` prefix from it, and this function keeps it.
 
 ```swift
 import BrightroomParametric
@@ -769,7 +771,9 @@ the dimension, so two LUTs that share both render the same.
 
 `FeatureTreeOutline(feature:)` accepts any `some Feature` and shows its body
 structure in evaluation order. `nil` members are left out, composites and
-presets show their members as children, and nodes have positional ids.
+presets show their members as children, and nodes have type-path ids
+(such as `FilterFeature#0/WhiteBalanceFeature#0`), so an absent member does
+not change the ids of the nodes after it.
 `FeatureTreeNode` lost `isEnabled`.
 
 The outline moved to BrightroomUI, so BrightroomParametric does not depend on
@@ -780,7 +784,7 @@ returns, which stays in BrightroomParametric.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
-| `FeatureTreeView(document:)`, `FeatureTreeView(nodes:)` | Removed. `List { FeatureTreeOutline(feature:) }` |
+| `FeatureTreeView(document:)`, `FeatureTreeView(nodes:)` | Removed. `List { FeatureTreeOutline(feature:) }`, or `List { FeatureTreeOutline(nodes:) }` for nodes |
 | `FeatureTreeOutline` in BrightroomParametric | `FeatureTreeOutline` in BrightroomUI; add `import BrightroomUI` |
 | `FeatureTreeDescriptor.nodes(for:)` | `FeatureTreeNode.nodes(for:)` |
 
@@ -1398,7 +1402,7 @@ the other compiled and selected the wrong area.
 | `adjustmentAngle` | `CropFeature.straightenRadians`; `Angle(radians:)` converts it |
 | `updateCropExtent(toFitAspectRatio:)`, `updateCropExtentIfNeeded(toFitAspectRatio:)` | `CropFeature.fitted(to:imageSize:)` |
 | `updateCropExtent(_:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` |
-| `updateCropExtent(toFitBoundingBox:respectingApectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle passed through `pixelAligned(imageSize:)` |
+| `updateCropExtent(toFitBoundingBox:respectingApectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle fitted to the ratio and aligned in the order the `fittingRect` row of [Crop Conversions](#crop-conversions) gives |
 | `makeInitial()` | `CropFeature(rect: CGRect(origin: .zero, size: imageSize))` |
 | `isRenderingEquivalent(to:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
 | `id` | None ([Removed Identity and Flags](#removed-identity-and-flags)) |
@@ -1451,7 +1455,7 @@ the chain-entry extent everywhere.
 | `ParametricImageRenderer` | `FeatureRenderer` |
 | `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)` |
 | `ParametricExportRenderer` | `ExportRenderer` |
-| `ParametricExportRenderer.render(source:feature:options:device:)` | `ExportRenderer.render(from:feature:options:)`, which renders like `device: .automatic`. See [Helpers No Longer Public](#helpers-no-longer-public). |
+| `ParametricExportRenderer.render(source:document:options:device:)` | `ExportRenderer.render(from:feature:options:)`, which renders like `device: .automatic`. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricExportRenderer.Options(workingFormat:workingColorSpace:)`, `.workingFormat`, `.workingColorSpace` | `ExportRenderer.Options(outputFormat:outputColorSpace:)`, `.outputFormat`, `.outputColorSpace`. They were always the output format and the output color-space tag; processing runs in a half-float working space either way. |
 | `ParametricExportRenderer.ExportFileType` | `ExportRenderer.FileType` |
 | `ParametricExportRenderer.RenderingDevice` | Not public. See [Helpers No Longer Public](#helpers-no-longer-public). |
@@ -1583,9 +1587,9 @@ for.
 | `CropFeature.isRenderingEquivalent(to:orientedImageSize:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
 | `CropEditingState.isRenderingEquivalent(to:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` ([CropEditingState](#cropeditingstate-is-no-longer-public)) |
 | `CropGeometry.cropRect(toFitAspectRatio:in:)` | `CropFeature.fitted(to:imageSize:)` (the ratio describes the output) |
-| `CropGeometry.fittingRect(rect:in:respectingAspectRatio:)`, `fittingRect(rect:in:straightenRadians:respectingAspectRatio:)` | `CropFeature.pixelAligned(imageSize:)`, which clips the selection (or fits its straightened footprint) to the image; fit a ratio into your rectangle with `AspectRatio.rectThatFits(in:)` first |
+| `CropGeometry.fittingRect(rect:in:respectingAspectRatio:)`, `fittingRect(rect:in:straightenRadians:respectingAspectRatio:)` | `CropFeature.pixelAligned(imageSize:)`, which clips the selection (or fits its straightened footprint) to the image. To keep a ratio, fit it the way 5.1.1 did before aligning: without straightening, intersect your rectangle with the image (`rect.intersection(CGRect(origin: .zero, size: imageSize))`) and then fit the ratio into the result with `AspectRatio.rectThatFits(in:)`; with straightening, fit the ratio into your rectangle. Fitting the ratio first and letting `pixelAligned` clip a rectangle that extends past the image loses the ratio. |
 | `CropGeometry.rect(_:turnedBy:)` | None. For a sideways turn, exchange the width and height about the same center. |
-| `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle passed through `pixelAligned(imageSize:)` |
+| `CropGeometry.cropRect(toFitBoundingBox:within:in:respectingAspectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle fitted to the ratio and aligned in the order the `fittingRect` row gives |
 
 ### Image Decoding
 
@@ -1620,12 +1624,12 @@ the same shape; the table says what to use instead.
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `FeatureEvaluationContext(kernelRegistry:radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Package access. Evaluate a feature with `FeatureRenderer().makeImage(from:feature:chainEntryExtent:presentationTime:)`, which moves the source to zero origin and builds the context. A feature still reads `chainEntryExtent`, `chainEntryExtent(for:)`, and `presentationTime`, and passes the context it receives on to the features it evaluates. |
-| `ParametricExportRenderer.RenderingDevice` and the `device:` parameter of `render(source:feature:options:device:)` | Package access. `ExportRenderer.render(from:feature:options:)` does what `.automatic` did: it renders on the GPU, and in software when the image exceeds the GPU's size limits. |
+| `ParametricExportRenderer.RenderingDevice` and the `device:` parameter of `render(source:document:options:device:)` | Package access. `ExportRenderer.render(from:feature:options:)` does what `.automatic` did: it renders on the GPU, and asks Core Image for its software renderer when the image exceeds the GPU context's size limits. On iOS 26 (checked on the Simulator) that renderer also runs on Metal and reports the same limits, so it does not raise them. |
 | `ParametricVideoRenderer.resolveRenderSize(sourceRenderSize:document:mode:)` | Package access. `VideoRenderer.makeVideoComposition(for:feature:renderSizeMode:ciContext:)` resolves the size. To compute it yourself, read the extent of `FeatureRenderer().makeImage(from:feature:)` over a transparent image of the source size. |
 | `ColorMixerRenderIdentity.semanticVersion` | Internal. Two `ColorMixerFeature.RenderKey` values still compare unequal when the semantics differ. |
 | `BrushStampMetalLibrary`, `BrushStampMetalLibraryError` | Package access. A kernel that cannot load throws `FeatureEvaluationError.kernelUnavailable(name:reason:)`. |
 | `PixelAspectRatio._minimized()`, `._comparingValue` | Package access (`AspectRatio.reduced()`) and private. Compare ratios with `==`; for lowest terms, divide the width and height by their greatest common divisor. |
-| `Geometry` (BrightroomEngine) | Internal, and its aspect-fit, aspect-fill, and diagonal helpers are removed. Use `AspectRatio(size).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. (`rectThatAspectFill` ignored the rectangle's origin.) |
+| `Geometry` (BrightroomEngine) | Internal, and its aspect-fit, aspect-fill, and diagonal helpers are removed. For a fit, use `AspectRatio(size).sizeThatFits(in:)` and `rectThatFits(in:)`, which do not round the size up. A fill has no public replacement: scale the ratio by the larger of `width / ratio.width` and `height / ratio.height`, and center it (`rectThatAspectFill` ignored the rectangle's origin). For `sizeThatAspectFit(size:maxPixelSize:)`, decode at that size with `SourceImage.makeCIImage(maxPixelSize:)`, or scale by `min(1, maxPixelSize / max(width, height))` and round. |
 | `CIImage.removingExtentOffset()` (BrightroomEngine) | Removed. `image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))`. `FeatureRenderer` already does this to the image you pass. |
 | `Optional.BrightroomUnwrappedNilError` (BrightroomEngine) | Internal. No public API threw it. |
 | `_BrightroomDebounce` (BrightroomEngine) | Removed. Use a `Task` you cancel and restart, or your own timer. |

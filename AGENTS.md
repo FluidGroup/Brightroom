@@ -31,7 +31,8 @@ open Dev/Brightroom.xcodeproj
 
 1. **BrightroomParametric** - Dependency-free parametric editing vocabulary:
    no package dependencies and no SwiftUI (UIKit only for
-   `RenderedImage.uiImage`, under `canImport(UIKit)`)
+   `RenderedImage.uiImage`, under `canImport(UIKit)`; on iOS, UIKit itself
+   links SwiftUICore)
    - An edit is a root feature: a static composition of features, the way a
      SwiftUI view composes its body: `Feature`, `ImageEffect`,
      `FeatureBuilder` (`if`, `switch`, `for`, optional members, `#available`)

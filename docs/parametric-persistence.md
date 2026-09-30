@@ -150,6 +150,8 @@ Notes:
   out-of-range values.
 - Compare `ToneCurveFeature.semanticVersion` with the stored value and decide
   what to do with curves authored under a different interpretation.
+  Color Mixer has no public interpretation version to store: a stored Color
+  Mixer renders with the library's current interpretation of its algorithm.
 - Reject a Color Mixer algorithm identifier you do not recognize instead of
   substituting another algorithm.
 - Feature equality compares every stored, authored parameter, including Tone

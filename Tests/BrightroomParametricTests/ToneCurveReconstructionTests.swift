@@ -146,7 +146,6 @@ struct ToneCurveReconstructionTests {
     case nonFiniteOutput
   }
 
-  /// Round-trips a curve through the scalar fields a host would store.
   /// Reads the first pixel as float RGBA with color management off, so
   /// values outside 0...1 survive.
   private static func unmanagedPixel(_ image: CIImage) -> [Float] {
@@ -163,6 +162,7 @@ struct ToneCurveReconstructionTests {
     return pixel
   }
 
+  /// Round-trips a curve through the scalar fields a host would store.
   private static func restore(_ curve: ToneCurve) throws -> ToneCurve {
     let stored = curve.points.map { (input: $0.input, output: $0.output) }
     return try #require(

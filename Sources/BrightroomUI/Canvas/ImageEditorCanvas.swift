@@ -288,7 +288,8 @@ public struct ImageEditorCanvas: View {
   /// `onCropGuideChange(_:)` (`pendingCrop.straightenRadians`) to show it.
   ///
   /// - Parameters:
-  ///   - angle: The angle, positive counterclockwise on screen.
+  ///   - angle: The angle; a positive angle turns the image clockwise on
+  ///     screen, as `CropFeature.straightenRadians` does.
   ///   - isEditing: Pass true while the user is still changing the angle,
   ///     for example while a slider is dragged. The canvas then shows each
   ///     angle without recording the crop. When `isEditing` becomes false,
