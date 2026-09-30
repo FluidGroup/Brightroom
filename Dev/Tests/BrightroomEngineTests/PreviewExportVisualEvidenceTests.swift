@@ -70,7 +70,7 @@ struct PreviewExportVisualEvidenceTests {
     var croppedDocument = document
     var crop = CropGuideState(cropFeature: croppedDocument.crop, imageSize: imageSize)
     crop.updateCropExtent(cropRect)
-    croppedDocument.setCrop(crop)
+    croppedDocument.crop = crop.makeCropFeature()
     let croppedExport = try await renderExport(croppedDocument, source: source)
     attach(cgImage: croppedExport, name: "4-export-with-crop")
 

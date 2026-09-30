@@ -27,21 +27,33 @@ import BrightroomParametric
 public struct ImageEditorCanvas: View {
 
   public struct StateSnapshot: Equatable {
-    public var proposedCrop: CropGuideState?
+
+    /// The crop the guide shows, which Apply writes to the document; nil
+    /// until the canvas has loaded the document.
+    ///
+    /// It is pixel-aligned, and like `ImageEditorFeature.crop` it is in y-up
+    /// coordinates of the oriented, pre-crop source image, with `rect` the
+    /// selection before the quarter turn. The output size is
+    /// `pendingCrop.outputGeometry(in: .zero).outputBounds.size`.
+    public var pendingCrop: CropFeature?
+
     public var frame: CGRect
     public var interaction: CropInteraction
-    public var preferredAspectRatio: AspectRatio?
+
+    /// The locked aspect ratio in the output orientation, or nil when the
+    /// guide is free.
+    public var lockedAspectRatio: AspectRatio?
 
     public init(
-      proposedCrop: CropGuideState?,
+      pendingCrop: CropFeature?,
       frame: CGRect,
       interaction: CropInteraction,
-      preferredAspectRatio: AspectRatio?
+      lockedAspectRatio: AspectRatio?
     ) {
-      self.proposedCrop = proposedCrop
+      self.pendingCrop = pendingCrop
       self.frame = frame
       self.interaction = interaction
-      self.preferredAspectRatio = preferredAspectRatio
+      self.lockedAspectRatio = lockedAspectRatio
     }
   }
 
@@ -91,13 +103,13 @@ public struct ImageEditorCanvas: View {
   /// only want to record the crop extent after the interaction settles.
   public final class AdjustmentAngleCommitAction {
 
-    var onCall: (CropGuideState.AdjustmentAngle) -> Void = { _ in }
+    var onCall: (Angle) -> Void = { _ in }
 
     public init() {
 
     }
 
-    public func callAsFunction(_ angle: CropGuideState.AdjustmentAngle) {
+    public func callAsFunction(_ angle: Angle) {
       onCall(angle)
     }
   }
@@ -611,11 +623,11 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
 
   @MainActor
   private func syncInputs(with snapshot: ImageEditorCanvas.StateSnapshot) {
-    if let crop = snapshot.proposedCrop {
-      quarterTurnInput.setIfChanged(crop.rotation)
-      straightenAngleInput.setIfChanged(crop.adjustmentAngle)
+    if let crop = snapshot.pendingCrop {
+      quarterTurnInput.setIfChanged(crop.quarterTurn)
+      straightenAngleInput.setIfChanged(Angle(radians: crop.straightenRadians))
     }
-    lockedAspectRatioInput.setIfChanged(snapshot.preferredAspectRatio)
+    lockedAspectRatioInput.setIfChanged(snapshot.lockedAspectRatio)
   }
 
   @MainActor

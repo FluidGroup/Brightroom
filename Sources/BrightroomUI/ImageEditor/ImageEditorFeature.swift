@@ -120,6 +120,13 @@ public struct ImageEditorFeature: Feature, Equatable {
   public var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
   /// The final crop: the framing and clipping Feature of this feature.
+  ///
+  /// It is authored in the oriented, pre-crop source at full resolution
+  /// (`SourceImage.pixelSize`), in y-up coordinates. The editor and the
+  /// canvas write pixel-aligned crops. A crop you assign is rendered as
+  /// given, so align it first: create it with `CropFeature.fitted(to:imageSize:)`
+  /// or `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)`,
+  /// or call `pixelAligned(imageSize:)`.
   public var crop: CropFeature
 
   /// A feature with no effects and a crop that covers the whole image.
@@ -154,17 +161,5 @@ public struct ImageEditorFeature: Feature, Equatable {
     effects
     localBlur
     crop
-  }
-}
-
-extension ImageEditorFeature {
-
-  /// Replaces the crop geometry with a crop-editing state.
-  ///
-  /// The rect is pixel-snapped by
-  /// `CropFeature(topLeftRect:…)`, the same one `EditingCanvasView` commits
-  /// through.
-  public mutating func setCrop(_ crop: CropGuideState) {
-    self.crop = crop.makeCropFeature()
   }
 }

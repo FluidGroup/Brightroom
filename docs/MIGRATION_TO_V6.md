@@ -104,6 +104,7 @@ sections.
 | `CropViewMaskingBrush` | `ImageEditorCanvas.Brush` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `EditingCanvasStrokeSmoothingConfiguration`, `EditingCanvasStrokeSmoothingAlgorithm` | `ImageEditorCanvas.Brush.Smoothing` | [ImageEditorCanvas](#swiftuicropview--imageeditorcanvas) |
 | `CropRotation` | `QuarterTurn` | [QuarterTurn Case Names](#quarterturn-case-names) |
+| `CropEditingState` | Removed from the public API. Use `CropFeature`. | [CropEditingState](#cropeditingstate-is-no-longer-public) |
 | `EditingStack.CropModifier` (BrightroomEngine) | `InitialCrop` (BrightroomUI) | [InitialCrop](#initialcrop-replaces-cropmodifier) |
 
 ### BrightroomEngine
@@ -978,8 +979,8 @@ looks the same as 90° clockwise. Rendering is unchanged.
 
 `CropRotation` (`.angle_0`, `.angle_90`, `.angle_180`, `.angle_270`) was a
 second name for the same four values and is removed. Use `QuarterTurn`:
-`CropEditingState.rotation` is a `QuarterTurn`, `.angle_90` is
-`.counterclockwise90`, and `ImageEditorCanvas`'s `rotation(_:)` is
+`.angle_90` is `.counterclockwise90`, `CropEditingState.rotation` is
+`CropFeature.quarterTurn`, and `ImageEditorCanvas`'s `rotation(_:)` is
 `quarterTurn(_:)`.
 
 ## SwiftUICropView → ImageEditorCanvas
@@ -1008,13 +1009,22 @@ second name for the same four values and is removed. Use `QuarterTurn`:
   `AspectRatio`), `SwiftUICropView.AdjustmentKind` is `CropInteraction`
   (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`), and
   `StateSnapshot.adjustmentKind` is `StateSnapshot.interaction`.
+- `StateSnapshot.proposedCrop` (a `CropEditingState`) is `pendingCrop`, a
+  `CropFeature?`: the crop Apply writes, pixel-aligned, in the same y-up
+  coordinates as `document.feature.crop`. The output size is
+  `pendingCrop.outputGeometry(in: .zero).outputBounds.size`;
+  `proposedCrop.cropExtent` was the selection before the quarter turn, so
+  its width and height were exchanged for a sideways crop.
+  `StateSnapshot.preferredAspectRatio` is `lockedAspectRatio`, the name of
+  the modifier that sets it.
+- `AdjustmentAngleCommitAction` takes an `Angle`. The 5.x parameter type,
+  `CropEditingState.AdjustmentAngle`, was a name for `Angle`, so calls such
+  as `commitAngle(.degrees(10))` are unchanged.
 - `maskingBrush(_:)` and `strokeSmoothing(_:)` are one `brush(_:)`.
   `CropViewMaskingBrush` is `ImageEditorCanvas.Brush`, and the smoothing
   configuration is its `smoothing` member: `.off`, `.bezier(strength:)`,
   `.catmullRom(strength:)`, or `.movingAverage(strength:)` (the default is
   `.bezier(strength: 0.85)`).
-- `CropEditingState.updateCropExtent(toFitBoundingBox:respectingApectRatio:)`
-  is spelled `respectingAspectRatio:`.
 - The initializers' `contentInset: UIEdgeInsets?` is
   `contentInsets: EdgeInsets?`. Leading and trailing follow the layout
   direction, so in a right-to-left layout `leading` insets the right edge.
@@ -1104,10 +1114,9 @@ let portraitCrop = InitialCrop { input in
 ## Crop Rectangles and Output Rotation
 
 `CropFeature` evaluates straighten → crop → exact quarter turn. `rect`
-(5.x `cropRect`), `topLeftRect(imageSize:)`,
-`CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)`, and
-`CropEditingState.cropExtent` describe the selection after straightening and
-before the quarter turn. In 5.1.0 they described the frame in the output
+(5.x `cropRect`), `topLeftRect(imageSize:)`, and
+`CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` describe
+the selection after straightening and before the quarter turn. In 5.1.0 they described the frame in the output
 orientation, turned about its center.
 
 Changing `quarterTurn` (5.x `rotation`) changes only the output orientation; a sideways turn
@@ -1146,9 +1155,9 @@ and `.quarterCW` is renamed `.counterclockwise90`
 relying on the compiler to find them.
 
 - Aspect ratios describe the final output:
-  `CropEditingState.updateCropExtent(toFitAspectRatio:)`, the crop view's
-  aspect lock, and `InitialCrop.faceDetection(aspectRatio:)`. A locked ratio
-  turns with the output without refitting the selection.
+  `CropFeature.fitted(to:imageSize:)`, the canvas's `lockedAspectRatio(_:)`,
+  and `InitialCrop.faceDetection(aspectRatio:)`. A locked ratio turns with
+  the output without refitting the selection.
 - Crops keep the requested canvas at every rotation; parts outside the input
   are transparent. Quarter turns no longer trim a row or column to even out
   the dimensions, so odd sizes keep every pixel.
@@ -1173,21 +1182,57 @@ relying on the compiler to find them.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 
-## CropEditingState
+## CropEditingState Is No Longer Public
 
-`CropEditingState.id` was removed, and `makeCropFeature()` is internal. Write
-a crop state into a root feature with `ImageEditorFeature.setCrop(_:)`, which
-snaps the rectangle the same way the canvas does:
+`CropEditingState` is BrightroomUI's internal crop-guide state now. The crop
+values you use are `CropFeature`, `QuarterTurn`, and `AspectRatio`.
+`CropFeature.rect` is y-up (bottom-left origin) while
+`CropEditingState.cropExtent` was y-down, so a rectangle passed from one to
+the other compiled and selected the wrong area.
+
+| 5.1.1 | 6.0 |
+| --- | --- |
+| `CropEditingState(cropFeature:imageSize:)`, `makeCropFeature()` | The `CropFeature` itself |
+| `cropExtent` | `CropFeature.topLeftRect(imageSize:)` (y-down) or `rect` (y-up) |
+| `rotation` | `CropFeature.quarterTurn` |
+| `adjustmentAngle` | `CropFeature.straightenRadians`; `Angle(radians:)` converts it |
+| `updateCropExtent(toFitAspectRatio:)`, `updateCropExtentIfNeeded(toFitAspectRatio:)` | `CropFeature.fitted(to:imageSize:)` |
+| `updateCropExtent(_:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` |
+| `updateCropExtent(toFitBoundingBox:respectingApectRatio:)` | `InitialCrop.faceDetection(paddingBias:aspectRatio:)`, or your own rectangle passed through `pixelAligned(imageSize:)` |
+| `makeInitial()` | `CropFeature(rect: CGRect(origin: .zero, size: imageSize))` |
+| `isRenderingEquivalent(to:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
+| `id` | None ([Removed Identity and Flags](#removed-identity-and-flags)) |
+| `imageSize`, `_usedAspectRatio`, `aggregatedRotation`, `purgeAspectRatio()` | None. Lock a ratio on the canvas with `lockedAspectRatio(_:)`. |
+| `CropEditingState.Rotation`, `CropEditingState.AdjustmentAngle` | `QuarterTurn`, `Angle` |
+
+Assign `document.feature.crop` directly. The canvas and `InitialCrop` write
+pixel-aligned crops, but a crop you assign is rendered as given: fractional
+edges are resampled and parts outside the image are transparent. Create it
+with `fitted(to:imageSize:)` or `CropFeature(topLeftRect:…)`, or call
+`pixelAligned(imageSize:)` on it.
+
+Before:
+
+```swift
+// Brightroom 5.x
+var crop = CropEditingState(cropFeature: feature.crop, imageSize: imageSize)
+crop.updateCropExtent(toFitAspectRatio: .square)
+feature.crop = crop.makeCropFeature()
+```
+
+After:
 
 ```swift
 import BrightroomEngine
+import BrightroomParametric
 import BrightroomUI
 
 func squareDocument(for source: SourceImage) -> ImageEditorDocument {
   var document = ImageEditorDocument(source: source)
-  var crop = CropEditingState(cropFeature: document.feature.crop, imageSize: source.pixelSize)
-  crop.updateCropExtent(toFitAspectRatio: .square)
-  document.feature.setCrop(crop)
+  document.feature.crop = document.feature.crop.fitted(
+    to: .square,
+    imageSize: source.pixelSize
+  )
   return document
 }
 ```
@@ -1330,7 +1375,7 @@ it renders.
 | `CropFeature(id:isEnabled:displayCropRect:imageSize:rotation:straighten:)` | `CropFeature(topLeftRect:imageSize:quarterTurn:straightenRadians:)` |
 | `CropFeature.displayCropRect(imageSize:)` | `CropFeature.topLeftRect(imageSize:)` |
 | `CropFeature.isRenderingEquivalent(to:orientedImageSize:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` |
-| `CropEditingState.isRenderingEquivalent(to:)` | `CropEditingState.isPixelEquivalent(to:)` |
+| `CropEditingState.isRenderingEquivalent(to:)` | `CropFeature.isPixelEquivalent(to:imageSize:)` ([CropEditingState](#cropeditingstate-is-no-longer-public)) |
 | `CropGeometry` (BrightroomEngine) | `CropGeometry` (BrightroomParametric), with the same members |
 
 ### Image Decoding
@@ -1361,8 +1406,6 @@ Console filters that match BrightroomEngine's log names need updating:
 Brightroom 6 is not released yet. These parts of the public API may still
 change before 6.0.0; the rest of this guide describes them as they are now.
 
-- `CropEditingState` and `ImageEditorFeature.setCrop(_:)` may leave the
-  public API, so that `CropFeature` is the one public crop value.
 - `ImageEditorCanvas.StateSnapshot` with `stateHandler`, and the
   `ResetAction`, `RotateAction`, `ApplyAction`, and
   `AdjustmentAngleCommitAction` classes, may be replaced by a crop-guide
@@ -1407,6 +1450,8 @@ change before 6.0.0; the rest of this guide describes them as they are now.
 - [ ] `SwiftUICropView` is replaced with `ImageEditorCanvas`, which has a
       document binding and uses `editingTarget(_:)`; your code commits undo
       steps for canvas edits.
+- [ ] Code that used `CropEditingState` works on `CropFeature`, and crops
+      you assign are pixel-aligned.
 - [ ] An `InitialCrop` is passed to `await ImageEditorDocument(source:initialCrop:)`
       instead of a `CropModifier` to `EditingStack`.
 - [ ] Filters are supplied through `options.filters`.

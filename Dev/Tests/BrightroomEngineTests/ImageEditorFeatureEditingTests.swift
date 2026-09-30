@@ -202,7 +202,7 @@ struct ImageEditorFeatureEditingTests {
     )
     var crop = CropGuideState(cropFeature: document.feature.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 0, y: 0, width: 20, height: 20))
-    document.feature.setCrop(crop)
+    document.feature.crop = crop.makeCropFeature()
     let before = document.feature
 
     document.clearLocalBlur()
@@ -227,7 +227,7 @@ struct ImageEditorFeatureEditingTests {
 
     var crop = CropGuideState(cropFeature: document.feature.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 0, y: 0, width: 20, height: 20))
-    document.feature.setCrop(crop)
+    document.feature.crop = crop.makeCropFeature()
     #expect(document.hasCropChanges())
 
     // Effects are not crop changes.

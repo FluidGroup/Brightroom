@@ -30,7 +30,7 @@ struct ImageEditorFeatureTests {
       var document = ImageEditorFeature(imageSize: imageSize)
       var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
       crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
-      document.setCrop(crop)
+      document.crop = crop.makeCropFeature()
       document.appendLocalBlurStroke(stroke)
       ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.effects)
       return document
@@ -39,20 +39,20 @@ struct ImageEditorFeatureTests {
     #expect(build() == build())
   }
 
-  @Test func `setCrop with an equal state leaves the document equal`() {
+  @Test func `Committing an equal guide state leaves the document equal`() {
     var document = ImageEditorFeature(imageSize: imageSize)
     var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .counterclockwise90
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     let edited = document
 
     // Re-committing the state read back from the document changes nothing.
-    document.setCrop(CropGuideState(cropFeature: document.crop, imageSize: imageSize))
+    document.crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize).makeCropFeature()
     #expect(document == edited)
 
     // Neither does committing the same state again.
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     #expect(document == edited)
   }
 
@@ -65,7 +65,7 @@ struct ImageEditorFeatureTests {
     crop.rotation = .counterclockwise90
 
     var document = ImageEditorFeature(imageSize: size)
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
 
     #expect(document.crop.rect == CGRect(origin: .zero, size: size))
     #expect(document.crop.quarterTurn == .counterclockwise90 || document.crop.quarterTurn == .counterclockwise270)
@@ -75,13 +75,13 @@ struct ImageEditorFeatureTests {
     )
   }
 
-  @Test func `setCrop stores the snapped rect`() {
+  @Test func `A committed guide state stores the snapped rect`() {
     var document = ImageEditorFeature(imageSize: imageSize)
     var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10.4, y: 20.6, width: 200.3, height: 100.2))
     crop.rotation = .counterclockwise90
 
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
 
     // Pixel-aligned by CropFeature(topLeftRect:), the same way EditingCanvasView commits through.
     #expect(document.crop == CropFeature(
@@ -95,7 +95,7 @@ struct ImageEditorFeatureTests {
 
     // An integral rect round-trips exactly through the y-up working space.
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     #expect(
       document.crop.topLeftRect(imageSize: imageSize)
         == CGRect(x: 10, y: 20, width: 200, height: 100)
@@ -132,7 +132,7 @@ struct ImageEditorFeatureTests {
     var crop = CropGuideState(cropFeature: edited.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
     crop.rotation = .counterclockwise90
-    edited.setCrop(crop)
+    edited.crop = crop.makeCropFeature()
     edited.appendLocalBlurStroke(stroke)
     ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &edited.effects)
     ImageEditor.Adjustment.vignette.apply(sliderValue: 60, to: &edited.effects)
@@ -308,7 +308,7 @@ struct ImageEditorFeatureTests {
     var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
     crop.updateCropExtent(CGRect(x: 30, y: 20, width: 300, height: 220))
     crop.rotation = .counterclockwise90
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     return document
   }
 

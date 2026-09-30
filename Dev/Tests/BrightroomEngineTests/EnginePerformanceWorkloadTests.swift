@@ -157,7 +157,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
         height: imageSize.height * 0.8
       ).integral
     )
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     return document
   }
 }

@@ -399,7 +399,7 @@ struct EditingPreviewExportParityTests {
         crop.updateCropExtent(cropRect)
       }
       crop.rotation = rotation
-      document.setCrop(crop)
+      document.crop = crop.makeCropFeature()
     }
     return document
   }

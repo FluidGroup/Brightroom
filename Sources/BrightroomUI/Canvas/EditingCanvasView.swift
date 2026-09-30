@@ -105,10 +105,10 @@ final class EditingCanvasView: UIView {
 
     var snapshot: StateSnapshot {
       .init(
-        proposedCrop: proposedCrop,
+        pendingCrop: proposedCrop?.makeCropFeature(),
         frame: frame,
         interaction: interaction,
-        preferredAspectRatio: preferredAspectRatio
+        lockedAspectRatio: preferredAspectRatio
       )
     }
   }
@@ -545,6 +545,12 @@ final class EditingCanvasView: UIView {
     self.stateHandler = handler
   }
 
+  /// The crop guide's working state, which snapshots report as
+  /// `pendingCrop`; nil until the feature is loaded.
+  var proposedCrop: CropGuideState? {
+    state.proposedCrop
+  }
+
   /// Sets the handler that receives the changes EditingCanvasView makes: crop commits
   /// and brush strokes. The owner applies each one to its latest feature.
   func setFeatureChangeHandler(
@@ -656,7 +662,7 @@ final class EditingCanvasView: UIView {
   }
 
   func setStraightenAngle(
-    _ angle: CropGuideState.AdjustmentAngle,
+    _ angle: Angle,
     recordsCropExtent: Bool = true
   ) {
     guard var crop = state.proposedCrop, crop.adjustmentAngle != angle else {
@@ -673,7 +679,7 @@ final class EditingCanvasView: UIView {
     }
   }
 
-  func commitStraightenAngle(_ angle: CropGuideState.AdjustmentAngle) {
+  func commitStraightenAngle(_ angle: Angle) {
     setStraightenAngle(angle, recordsCropExtent: false)
     record()
     isStreamingStraightenAngle = false
@@ -1156,9 +1162,11 @@ extension EditingCanvasView {
   #endif
 
   private func applyCropToFeatureIfRenderingChanged(_ crop: CropGuideState) {
+    // Pixel-aligned by `CropFeature(topLeftRect:…)`.
+    let cropFeature = crop.makeCropFeature()
     guard
       feature.crop.isPixelEquivalent(
-        to: crop.makeCropFeature(),
+        to: cropFeature,
         imageSize: crop.imageSize
       ) == false
     else {
@@ -1166,7 +1174,7 @@ extension EditingCanvasView {
     }
 
     commitFeatureChange { feature in
-      feature.setCrop(crop)
+      feature.crop = cropFeature
     }
   }
 

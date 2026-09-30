@@ -41,8 +41,8 @@ struct QuarterTurnCropTests {
     crop.updateCropExtent(expectedExtent)
     crop.rotation = rotation
 
-    // Done: EditingCanvasView commits through `ImageEditorFeature.setCrop(_:)`.
-    document.setCrop(crop)
+    // Done: EditingCanvasView commits `CropGuideState.makeCropFeature()`.
+    document.crop = crop.makeCropFeature()
     let committed = document.crop
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
     #expect(committed.quarterTurn == rotation)
@@ -79,7 +79,7 @@ struct QuarterTurnCropTests {
     crop.updateCropExtent(expectedExtent)
     crop.rotation = rotation
 
-    document.setCrop(crop)
+    document.crop = crop.makeCropFeature()
     let committed = document.crop
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
     let rendered = try await EditingDocument(source: previewSource.source, feature: document).render().cgImage
@@ -98,19 +98,20 @@ struct QuarterTurnCropTests {
     let previewSource = try makePreviewSource(size: size)
     let owner = DocumentOwner(ImageEditorFeature(imageSize: size))
     let (editor, window) = try openCanvasView(on: previewSource, owner: owner)
-    var latestCrop: CropGuideState?
-    editor.setStateHandler { latestCrop = $0.proposedCrop }
+    var pendingCrop: CropFeature?
+    editor.setStateHandler { pendingCrop = $0.pendingCrop }
 
     for rotation in [QuarterTurn.counterclockwise90, .counterclockwise180, .counterclockwise270, .zero] {
       editor.rotateCounterclockwise()
       editor.layoutIfNeeded()
-      let crop = try #require(latestCrop)
+      let crop = try #require(editor.proposedCrop)
       let expectedExtent = CGRect(origin: .zero, size: size)
       #expect(crop.rotation == rotation)
       #expect(crop.cropExtent == expectedExtent)
       #expect(crop.outputCropExtent == Self.outputFrame(for: expectedExtent, rotation: rotation))
       let proposed = crop.makeCropFeature()
       #expect(proposed.topLeftRect(imageSize: size) == expectedExtent)
+      #expect(pendingCrop == proposed)
 
       editor.applyPendingCrop()
       let committed = owner.document.crop
@@ -137,7 +138,7 @@ struct QuarterTurnCropTests {
     var crop = CropGuideState(cropFeature: owner.document.crop, imageSize: size)
     crop.updateCropExtent(expectedExtent)
     crop.rotation = rotation
-    owner.document.setCrop(crop)
+    owner.document.crop = crop.makeCropFeature()
     let committed = owner.document.crop
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
 
@@ -167,7 +168,7 @@ struct QuarterTurnCropTests {
     crop.updateCropExtent(expectedExtent)
     crop.rotation = rotation
     crop.adjustmentAngle = .degrees(straightenDegrees)
-    owner.document.setCrop(crop)
+    owner.document.crop = crop.makeCropFeature()
     let committed = owner.document.crop
     #expect(committed.topLeftRect(imageSize: size) == expectedExtent)
 
@@ -315,22 +316,23 @@ struct QuarterTurnCropTests {
     editor.setLockedAspectRatio(sourceRatio)
 
     let sourceRect = CGRect(x: 50, y: 40, width: 153, height: 102)
-    var crop = try #require(latest?.proposedCrop)
+    var crop = try #require(editor.proposedCrop)
     crop.updateCropExtent(sourceRect)
     editor.setCrop(crop)
     editor.layoutIfNeeded()
-    let selected = try #require(latest?.proposedCrop)
+    let selected = try #require(editor.proposedCrop)
     #expect(selected.cropExtent == sourceRect)
 
     for rotation in [QuarterTurn.counterclockwise90, .counterclockwise180, .counterclockwise270, .zero] {
       editor.rotateCounterclockwise()
       editor.layoutIfNeeded()
       let snapshot = try #require(latest)
-      let rotated = try #require(snapshot.proposedCrop)
+      let rotated = try #require(editor.proposedCrop)
+      #expect(snapshot.pendingCrop == rotated.makeCropFeature())
       let isSideways = rotation == .counterclockwise90 || rotation == .counterclockwise270
       let expectedRatio = isSideways ? sourceRatio.swapped() : sourceRatio
       let expectedExtent = sourceRect
-      #expect(snapshot.preferredAspectRatio == expectedRatio)
+      #expect(snapshot.lockedAspectRatio == expectedRatio)
       #expect(rotated._usedAspectRatio == expectedRatio)
       #expect(rotated.rotation == rotation)
       #expect(rotated.cropExtent == expectedExtent)

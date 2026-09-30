@@ -74,7 +74,7 @@ struct EditingCanvasViewFeatureFlowTests {
     var feature = ImageEditorFeature(imageSize: imageSize)
     var crop = CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
     crop.adjustmentAngle = .init(degrees: degrees)
-    feature.setCrop(crop)
+    feature.crop = crop.makeCropFeature()
     return feature
   }
 
@@ -83,13 +83,14 @@ struct EditingCanvasViewFeatureFlowTests {
 
     #expect(harness.emitted.isEmpty, "setting the target before loading commits nothing")
     let snapshot = try #require(harness.snapshots.last)
-    let angle = try #require(snapshot.proposedCrop?.adjustmentAngle.degrees)
-    #expect(abs(angle - 10) < 0.001)
+    let radians = try #require(snapshot.pendingCrop?.straightenRadians)
+    #expect(abs(radians * 180 / .pi - 10) < 0.001)
   }
 
   @Test func `A committed stroke is stored in working space`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
-    let proposed = try #require(harness.snapshots.last?.proposedCrop)
+    let proposed = try #require(harness.canvasView.proposedCrop)
+    #expect(harness.snapshots.last?.pendingCrop == proposed.makeCropFeature())
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: proposed))
     let record = EditingCanvasStrokeRecord(
       stamps: [CGPoint(x: 40, y: 30), CGPoint(x: 42, y: 31)],
@@ -114,12 +115,12 @@ struct EditingCanvasViewFeatureFlowTests {
     ) {}
     let echoed = try #require(harness.emitted.last)
     let snapshotCount = harness.snapshots.count
-    let proposed = harness.snapshots.last?.proposedCrop
+    let pending = harness.snapshots.last?.pendingCrop
 
     harness.canvasView.setFeature(echoed)
 
     #expect(harness.snapshots.count == snapshotCount)
-    #expect(harness.snapshots.last?.proposedCrop == proposed)
+    #expect(harness.snapshots.last?.pendingCrop == pending)
     #expect(harness.emitted.count == 1, "an echo is not emitted again")
   }
 
@@ -132,13 +133,14 @@ struct EditingCanvasViewFeatureFlowTests {
     var smaller = CropGuideState(cropFeature: undone.crop, imageSize: imageSize)
     smaller.adjustmentAngle = .zero
     smaller.updateCropExtent(CGRect(x: 20, y: 10, width: 200, height: 150))
-    undone.setCrop(smaller)
+    undone.crop = smaller.makeCropFeature()
     harness.canvasView.setFeature(undone)
 
     #expect(harness.snapshots.count > snapshotCount)
-    let reloaded = try #require(harness.snapshots.last?.proposedCrop)
-    #expect(reloaded.adjustmentAngle == .zero)
-    #expect(reloaded.cropExtent == smaller.cropExtent)
+    let reloaded = try #require(harness.snapshots.last?.pendingCrop)
+    #expect(reloaded.straightenRadians == 0)
+    #expect(reloaded == undone.crop)
+    #expect(harness.canvasView.proposedCrop?.cropExtent == smaller.cropExtent)
     #expect(harness.emitted.isEmpty, "an external feature is not echoed back")
   }
 
@@ -175,8 +177,8 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.setFeature(initial)
     harness.canvasView.setLockedAspectRatio(.square)
 
-    let reloaded = try #require(harness.snapshots.last?.proposedCrop)
-    #expect(abs(reloaded.cropExtent.width - reloaded.cropExtent.height) <= 1)
+    let reloaded = try #require(harness.snapshots.last?.pendingCrop)
+    #expect(abs(reloaded.rect.width - reloaded.rect.height) <= 1)
   }
 
   /// A lock describes the output, so an undo across a sideways turn turns it
@@ -193,16 +195,16 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.applyPendingCrop()
     let turned = try #require(harness.emitted.last)
     #expect(turned.crop.quarterTurn.isSideways)
-    #expect(harness.snapshots.last?.preferredAspectRatio == landscape.swapped())
+    #expect(harness.snapshots.last?.lockedAspectRatio == landscape.swapped())
 
     // What an undo of the turn produces.
     harness.canvasView.setFeature(initial)
 
     let snapshot = try #require(harness.snapshots.last)
-    #expect(snapshot.preferredAspectRatio == landscape)
-    let reloaded = try #require(snapshot.proposedCrop)
-    #expect(reloaded.rotation.isSideways == false)
-    #expect(reloaded.cropExtent == CGRect(origin: .zero, size: imageSize))
+    #expect(snapshot.lockedAspectRatio == landscape)
+    let reloaded = try #require(snapshot.pendingCrop)
+    #expect(reloaded.quarterTurn.isSideways == false)
+    #expect(reloaded.topLeftRect(imageSize: imageSize) == CGRect(origin: .zero, size: imageSize))
 
     let emittedCount = harness.emitted.count
     harness.canvasView.applyPendingCrop()
