@@ -54,6 +54,30 @@ struct ContentView: View {
     }
   )
 
+  // The initial-crop and fixed-ratio entries keep their documents too: an
+  // initial crop policy decides the crop on the first open only.
+  @State private var faceStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image),
+    initialCrop: .faceDetection(aspectRatio: .square)
+  )
+  @State private var faceFixedSquareStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image),
+    initialCrop: .faceDetection(aspectRatio: .square)
+  )
+  @State private var squareInitialCropStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image),
+    initialCrop: .aspectRatio(.square)
+  )
+  @State private var fourByFiveStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image)
+  )
+  @State private var fiveByFourStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image)
+  )
+  @State private var leftOrientedStore = DemoDocumentStore(
+    image: SourceImage(image: Mocks.imageOrientationLeft())
+  )
+
   var body: some View {
     NavigationSplitView {
       VStack {
@@ -92,22 +116,14 @@ struct ContentView: View {
             content: {
               Button("Horizontal 1") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoImageEditor(
-                    image: {
-                      Mocks.makeSourceImage(image: Asset.horizontalRect.image)
-                    },
-                    initialCrop: .faceDetection(aspectRatio: .square)
-                  )
+                  DemoImageEditor(store: faceStore)
                 }
               }
 
               Button("Horizontal 2") {
                 fullScreenView = .init(showsDismissButton: false) {
                   DemoImageEditor(
-                    image: {
-                      Mocks.makeSourceImage(image: Asset.horizontalRect.image)
-                    },
-                    initialCrop: .faceDetection(aspectRatio: .square),
+                    store: faceFixedSquareStore,
                     options: .fixedAspectRatio(.square)
                   )
                 }
@@ -175,10 +191,7 @@ struct ContentView: View {
             Button("ImageEditor Square (initial crop)") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoImageEditor(
-                  image: {
-                    SourceImage(image: Asset.l1000316.image)
-                  },
-                  initialCrop: .aspectRatio(.square),
+                  store: squareInitialCropStore,
                   options: .fixedAspectRatio(.square)
                 )
               }
@@ -187,9 +200,7 @@ struct ContentView: View {
             Button("ImageEditor 4:5") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoImageEditor(
-                  image: {
-                    SourceImage(image: Asset.l1000316.image)
-                  },
+                  store: fourByFiveStore,
                   options: .fixedAspectRatio(.init(width: 4, height: 5))
                 )
               }
@@ -198,9 +209,7 @@ struct ContentView: View {
             Button("ImageEditor 5:4") {
               fullScreenView = .init(showsDismissButton: false) {
                 DemoImageEditor(
-                  image: {
-                    SourceImage(image: Asset.l1000316.image)
-                  },
+                  store: fiveByFourStore,
                   options: .fixedAspectRatio(.init(width: 5, height: 4))
                 )
               }
@@ -208,11 +217,7 @@ struct ContentView: View {
 
             Button("ImageEditor left") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoImageEditor(
-                  image: {
-                    SourceImage(image: Mocks.imageOrientationLeft())
-                  }
-                )
+                DemoImageEditor(store: leftOrientedStore)
               }
             }
 
@@ -242,7 +247,9 @@ struct WorkingOnPicked: View {
 
   @State private var item: PhotosPickerItem?
   @State private var selectedImage: PickedDemoImage?
-  @State private var selectedDocumentStore: DemoDocumentStore?
+  /// One document per editor variant of the selected photo, so reopening an
+  /// editor shows its previous edit. Picking another photo starts over.
+  @State private var documentStores: [String: DemoDocumentStore] = [:]
   @State private var loadingMessage: String?
   @State private var fullScreenView: FullscreenIdentifiableView?
 
@@ -258,25 +265,26 @@ struct WorkingOnPicked: View {
 
         Section("BuiltIn") {
           Button("ImageEditor") {
-            let store = documentStore(for: selectedImage)
+            let store = documentStore(for: selectedImage, variant: "free")
             fullScreenView = .init(showsDismissButton: false) {
               DemoImageEditor(store: store)
             }
           }
 
           Button("ImageEditor Square") {
+            let store = documentStore(for: selectedImage, variant: "square")
             fullScreenView = .init(showsDismissButton: false) {
-              DemoImageEditor(image: {
-                selectedImage.makeSourceImage()
-              }, options: .fixedAspectRatio(.square))
+              DemoImageEditor(store: store, options: .fixedAspectRatio(.square))
             }
           }
 
           Button("ImageEditor 4:5") {
+            let store = documentStore(for: selectedImage, variant: "4:5")
             fullScreenView = .init(showsDismissButton: false) {
-              DemoImageEditor(image: {
-                selectedImage.makeSourceImage()
-              }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
+              DemoImageEditor(
+                store: store,
+                options: .fixedAspectRatio(.init(width: 4, height: 5))
+              )
             }
           }
         }
@@ -300,7 +308,7 @@ struct WorkingOnPicked: View {
     )
     .onChange(of: item, perform: { value in
       selectedImage = nil
-      selectedDocumentStore = nil
+      documentStores = [:]
       loadingMessage = "Loading selected image..."
 
       guard let value else {
@@ -344,13 +352,16 @@ struct WorkingOnPicked: View {
 
   }
 
-  private func documentStore(for image: PickedDemoImage) -> DemoDocumentStore {
-    if let selectedDocumentStore {
-      return selectedDocumentStore
+  private func documentStore(
+    for image: PickedDemoImage,
+    variant: String
+  ) -> DemoDocumentStore {
+    if let store = documentStores[variant] {
+      return store
     }
 
     let store = DemoDocumentStore(image: image.makeSourceImage())
-    selectedDocumentStore = store
+    documentStores[variant] = store
     return store
   }
 
@@ -467,19 +478,6 @@ struct DemoImageEditor: View {
     self.options = options
   }
 
-  /// Edits a new document from scratch, created once for the view's identity.
-  @MainActor
-  init(
-    image: @escaping () -> SourceImage,
-    initialCrop: InitialCrop = .fullImage,
-    options: ImageEditor.Options = .demo()
-  ) {
-    self._store = .init(
-      wrappedValue: DemoDocumentStore(image: image(), initialCrop: initialCrop)
-    )
-    self.options = options
-  }
-
   var body: some View {
     @Bindable var store = store
 
@@ -507,9 +505,14 @@ struct DemoImageEditor: View {
     .task {
       await store.prepareDocument()
     }
-    .sheet(item: $resultImage) {
-      RenderedResultView(result: $0)
-    }
+    // Done keeps the edit in the store: closing the result closes the
+    // editor, as a host would after Done. Cancel is the only other way out,
+    // and it restores the document the editor opened with.
+    .sheet(
+      item: $resultImage,
+      onDismiss: { dismiss() },
+      content: { RenderedResultView(result: $0) }
+    )
   }
 
   private func export(_ document: ImageEditorDocument) {

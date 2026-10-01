@@ -339,6 +339,10 @@ private struct LUTImportDemoView: View {
   /// The LUTs imported on this screen, newest first. The editor opened here
   /// lists them before the demo filters.
   @State private var importedFilters: [FilterFeature] = []
+  /// The document the editor opened here edits, kept across openings.
+  @State private var documentStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image)
+  )
 
   var body: some View {
     Form {
@@ -348,13 +352,9 @@ private struct LUTImportDemoView: View {
         Button("Open ImageEditor") {
           var options = ImageEditor.Options()
           options.filters = importedFilters + DemoFilters.make() + DemoLUTs.bundled
+          let store = documentStore
           fullScreenView = .init(showsDismissButton: false) {
-            DemoImageEditor(
-              image: {
-                SourceImage(image: Asset.l1000316.image)
-              },
-              options: options
-            )
+            DemoImageEditor(store: store, options: options)
           }
         }
       } footer: {
