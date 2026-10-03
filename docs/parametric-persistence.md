@@ -129,8 +129,9 @@ Notes:
 
 - `ImageEditorFeature(effects:localBlur:crop:)` accepts any `Mask` for the
   blur, but the editor paints only a plain `.brush` mask. A restored blur
-  with another mask renders at export and cannot be painted further: Blur
-  mode is unavailable while `isLocalBlurPaintable` is false.
+  with another mask renders at export and cannot be painted further: while
+  `isLocalBlurPaintable` is false, `ImageEditor`'s Blur mode disables the
+  brush and offers only Clear, which removes the blur.
 - `CropFeature` and `ColorCubeFeature` initializers accept any value. Their
   `validate()` methods reject a crop rectangle that is not a finite, non-empty
   extent and cube data that does not match its dimension; rendering would

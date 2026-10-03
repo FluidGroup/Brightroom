@@ -42,10 +42,10 @@ extension ImageEditorFeature {
   /// The editing canvas rasterizes brush strokes only, so it cannot show any
   /// other mask (for example `.inverted`, `.feathered`, `.union`,
   /// `.intersection`, or `.subtraction`, as a host may restore). While this is
-  /// false, `ImageEditor` disables its Blur mode and `ImageEditorCanvas`
-  /// paints nothing for the `.localBlur` target. The mask still renders at
-  /// export. Removing the local blur (`localBlur = nil`, or Clear in
-  /// `ImageEditor`) makes it paintable again.
+  /// false, `ImageEditorCanvas` paints nothing for the `.localBlur` target,
+  /// and `ImageEditor`'s Blur mode disables the brush but keeps Clear. The
+  /// mask still renders at export. Removing the local blur (`localBlur =
+  /// nil`, or Clear in `ImageEditor`'s Blur mode) makes it paintable again.
   public var isLocalBlurPaintable: Bool {
     guard let localBlur else {
       return true

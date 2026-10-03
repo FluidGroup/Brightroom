@@ -151,18 +151,6 @@ struct ImageEditorFeatureTests {
     #expect(document.isLocalBlurPaintable)
   }
 
-  @Test func `Blur mode is unavailable for a blur the editor cannot paint`() {
-    for mode in ImageEditor.Mode.allCases {
-      #expect(mode.isAvailable(isLocalBlurPaintable: true))
-    }
-    #expect(ImageEditor.Mode.localBlur.isAvailable(isLocalBlurPaintable: false) == false)
-    #expect(ImageEditor.Mode.localBlur.unavailableReason != nil)
-    for mode in [ImageEditor.Mode.crop, .filters, .adjust] {
-      #expect(mode.isAvailable(isLocalBlurPaintable: false))
-      #expect(mode.unavailableReason == nil)
-    }
-  }
-
   /// A host that stores the document's values and rebuilds it gets back the
   /// document the editor produced (the resume path).
   @Test func `A document rebuilt from the same values equals the edited one`() {

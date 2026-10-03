@@ -1032,9 +1032,10 @@ that covers the whole image. To rebuild a saved edit, use
 plain `.brush` mask, the shape it authors. Check `isLocalBlurPaintable`: it is
 false when the blur's mask is anything else (`.inverted`, `.feathered`,
 `.union`, `.intersection`, `.subtraction`). Such a mask renders at export, but
-the canvas shows the image without it, `ImageEditor` disables its Blur mode,
-and `ImageEditorCanvas` paints nothing for the `.localBlur` target. Removing
-the blur (`localBlur = nil`) makes it paintable again.
+the canvas shows the image without it, and `ImageEditorCanvas` paints nothing
+for the `.localBlur` target. `ImageEditor`'s Blur mode then disables the brush
+and keeps Clear, so the user can still remove the blur. Removing the blur
+(`localBlur = nil`, or Clear) makes it paintable again.
 
 ### Editing in Code
 
@@ -1147,8 +1148,8 @@ replacement on `ImageEditorCanvas`
   `document.feature.localBlur` yourself. The `.localBlur` target paints
   only while `document.feature.isLocalBlurPaintable` is true (no blur, or a
   plain `.brush` mask); with any other mask it views the output, as `nil`
-  does, and a stroke in progress is cancelled. Disable your own Blur control
-  the same way.
+  does, and a stroke in progress is cancelled. Disable your own brush
+  controls the same way, and keep a way to remove the blur.
 - Renamed members: `adjustmentAngle(_:)` is `straightenAngle(_:isEditing:)`,
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
   `AspectRatio`), and `SwiftUICropView.AdjustmentKind` is `CropInteraction`

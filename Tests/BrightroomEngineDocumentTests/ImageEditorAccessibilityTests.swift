@@ -166,4 +166,75 @@ struct ImageEditorAccessibilityTests {
     #expect(mounted.element("Crop")?.accessibilityValue == "not selected")
     #expect(isEnabledButton("Crop"))
   }
+
+  /// A document can open with a blur whose mask the editor cannot paint (a
+  /// host restored an inverted brush). Blur stays selectable: the canvas
+  /// paints nothing and the brush size is disabled, and Clear removes the
+  /// blur, after which Blur paints again.
+  @Test func `Blur mode clears a blur the editor cannot paint`() async throws {
+    var document = try DocumentTestFixtures.makeDocument()
+    let stroke = BrushMask.Stroke(
+      stampCenters: [CGPoint(x: 10, y: 20)],
+      brush: .init(diameter: 8, hardness: 1, opacity: 1)
+    )
+    document.feature.localBlur = LocalAdjustmentFeature(
+      mask: .inverted(.brush(BrushMask(strokes: [stroke])))
+    ) {
+      GaussianBlurFeature(radius: .absolute(4))
+    }
+    #expect(document.feature.isLocalBlurPaintable == false)
+    let host = Host(document)
+    let mounted = mount(ImageEditor(document: host.binding, onDone: {}))
+    defer { mounted.window.isHidden = true }
+
+    func isEnabled(_ label: String) -> Bool? {
+      mounted.element(label).map { $0.accessibilityTraits.contains(.notEnabled) == false }
+    }
+
+    try await mounted.wait(until: { isEnabled("Blur Masking") == true }, "Blur never became selectable.")
+    #expect(try #require(mounted.element("Blur Masking")).accessibilityActivate())
+    try await mounted.wait(until: { mounted.element("Clear Blur Mask") != nil }, "Blur shows no Clear.")
+
+    #expect(isEnabled("Clear Blur Mask") == true)
+    // The brush size is the only slider in Blur.
+    let brushSize = try #require(findSlider(in: mounted.host.view))
+    #expect(brushSize.isEnabled == false)
+    #expect(brushSize.accessibilityTraits.contains(.notEnabled))
+    let canvasView = try #require(find(EditingCanvasView.self, in: mounted.host.view))
+    let drawing = canvasView.toolSurface.drawingGestureRecognizer
+    #expect(drawing.isEnabled == false, "The canvas does not paint this blur.")
+
+    #expect(try #require(mounted.element("Clear Blur Mask")).accessibilityActivate())
+    try await mounted.wait(
+      until: { host.document.feature.localBlur == nil && brushSize.isEnabled },
+      "Clear did not remove the blur."
+    )
+    #expect(brushSize.accessibilityTraits.contains(.notEnabled) == false)
+    #expect(drawing.isEnabled, "Blur paints once the blur is removed.")
+  }
+
+  /// The `SteppedSliderControl` on screen (generic, so matched by name).
+  private func findSlider(in view: UIView) -> UIControl? {
+    if let control = view as? UIControl, "\(type(of: control))".hasPrefix("SteppedSliderControl") {
+      return control
+    }
+    for subview in view.subviews {
+      if let found = findSlider(in: subview) {
+        return found
+      }
+    }
+    return nil
+  }
+
+  private func find<View: UIView>(_ type: View.Type, in view: UIView) -> View? {
+    if let match = view as? View {
+      return match
+    }
+    for subview in view.subviews {
+      if let found = find(type, in: subview) {
+        return found
+      }
+    }
+    return nil
+  }
 }
