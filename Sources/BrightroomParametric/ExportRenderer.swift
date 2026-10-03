@@ -72,6 +72,13 @@ public struct ExportRenderer {
     /// The color space the result is tagged with.
     ///
     /// `nil` uses the source image's own color space.
+    ///
+    /// The space must describe the delivered pixels: an RGB space for an RGB
+    /// output, and a gray space for a luminance `outputFormat` such as `.L8`
+    /// (`.memory` only; `.file` always writes RGB). When it does not, as for
+    /// a grayscale source exported with the default options, the result is
+    /// tagged with sRGB, or with Generic Gray Gamma 2.2 for a luminance
+    /// format.
     public var outputColorSpace: CGColorSpace?
 
     /// Where the result is stored (in-memory bitmap or a file on disk).
@@ -163,7 +170,7 @@ public struct ExportRenderer {
   ) throws -> RenderedImage {
 
     let outputCIImage = try featureRenderer.makeImage(from: sourceImage, feature: feature)
-    let colorSpace = options.outputColorSpace ?? sourceImage.colorSpace
+    let requestedColorSpace = options.outputColorSpace ?? sourceImage.colorSpace
 
     // Always process through a half-float WORKING buffer so wide-gamut and
     // out-of-range (>1 / <0) values survive the multi-filter chain — an 8-bit
@@ -188,7 +195,7 @@ public struct ExportRenderer {
         image,
         from: image.extent,
         format: options.outputFormat,
-        colorSpace: colorSpace,
+        colorSpace: Self.outputColorSpace(requestedColorSpace, for: options.outputFormat),
         deferred: false
       ) else {
         throw ExportRendererError.failedToCreateCGImage(extent: image.extent)
@@ -206,7 +213,10 @@ public struct ExportRenderer {
         context: ciContext,
         // The write APIs require a concrete color space; fall back to sRGB when
         // the source has none (mirrors `createCGImage(colorSpace: nil)`).
-        colorSpace: colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        colorSpace: Self.outputColorSpace(
+          requestedColorSpace,
+          for: CIImageStreamingFileWriter.pixelFormat
+        ) ?? CGColorSpace(name: CGColorSpace.sRGB)!
       )
       return .init(fileURL: url, options: options)
     }
@@ -230,6 +240,38 @@ public struct ExportRenderer {
       colorSpace: colorSpace
     )
   }
+
+  /// The color space a result in `format` is tagged with.
+  ///
+  /// `requested` is `Options.outputColorSpace` or, without one, the source
+  /// image's color space. Core Image tags RGB pixels only with an RGB space
+  /// and luminance pixels only with a gray one, so a space of another model
+  /// (a grayscale source exported to `.BGRA8`, or a CMYK `outputColorSpace`)
+  /// would fail the render. Such a space falls back to sRGB, the space the file
+  /// output already uses for a source without one, or to Generic Gray
+  /// Gamma 2.2 for a luminance format. `nil` stays `nil`.
+  private static func outputColorSpace(
+    _ requested: CGColorSpace?,
+    for format: CIFormat
+  ) -> CGColorSpace? {
+    guard let requested else {
+      return nil
+    }
+    if luminanceFormats.contains(format) {
+      return requested.model == .monochrome
+        ? requested
+        : CGColorSpace(name: CGColorSpace.genericGrayGamma2_2)!
+    }
+    return requested.model == .rgb
+      ? requested
+      : CGColorSpace(name: CGColorSpace.sRGB)!
+  }
+
+  /// The output formats whose pixels carry luminance (and alpha) rather than
+  /// RGB, so they take a gray color space.
+  private static let luminanceFormats: [CIFormat] = [
+    .L8, .L16, .Lh, .Lf, .LA8, .LA16, .LAh, .LAf,
+  ]
 
   /// Applies `Resolution.resize` as a Core Image Lanczos scale so the downscale
   /// is part of the tiled recipe (the `CIContext` already has

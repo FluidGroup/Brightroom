@@ -46,6 +46,31 @@ enum DocumentTestFixtures {
     return data as Data
   }
 
+  /// A 40 x 20 mid-gray JPEG with one gray channel, like a black-and-white
+  /// scan.
+  static func makeGrayscaleJPEG() throws -> Data {
+    let context = try #require(
+      CGContext(
+        data: nil,
+        width: 40,
+        height: 20,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpace(name: CGColorSpace.genericGrayGamma2_2)!,
+        bitmapInfo: CGImageAlphaInfo.none.rawValue
+      )
+    )
+    context.setFillColor(gray: 0.5, alpha: 1)
+    context.fill(CGRect(x: 0, y: 0, width: 40, height: 20))
+    let data = NSMutableData()
+    let destination = try #require(
+      CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)
+    )
+    CGImageDestinationAddImage(destination, try #require(context.makeImage()), nil)
+    #expect(CGImageDestinationFinalize(destination))
+    return data as Data
+  }
+
   /// The oriented size of `makeRotatedJPEG()`.
   static let rotatedJPEGSize = CGSize(width: 20, height: 40)
 

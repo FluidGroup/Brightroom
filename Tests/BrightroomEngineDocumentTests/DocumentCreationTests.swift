@@ -187,6 +187,25 @@ struct DocumentCreationTests {
     #expect(cgImage.height == 10)
   }
 
+  @Test func `A grayscale image renders to memory and to a file`() async throws {
+    var document = EditingDocument(source: try SourceImage(data: Fixtures.makeGrayscaleJPEG()))
+    document.feature.effects.exposure = ExposureFeature(ev: 0.5)
+
+    let memory = try await document.render()
+    #expect(try memory.cgImage.colorSpace?.model == .rgb)
+    #expect(try memory.cgImage.width == 40)
+
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString)
+      .appendingPathExtension("jpg")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let file = try await document.render(
+      options: .init(output: .file(url: url, fileType: .jpeg(quality: 0.9)))
+    )
+    #expect(try file.cgImage.width == 40)
+    #expect(try file.cgImage.height == 20)
+  }
+
   @MainActor
   @Test func `A preview source loader prepares the document's source image`() async throws {
     let image = try Fixtures.makeImage()

@@ -60,6 +60,10 @@ enum CIImageStreamingFileWriter {
   /// per-strip working set; smaller = lower peak (more, smaller GPU readbacks).
   static let defaultStripHeight = 512
 
+  /// The pixel format every strip is rendered in. The `colorSpace` passed to
+  /// `write` must be an RGB space, since it tags these pixels.
+  static let pixelFormat: CIFormat = .RGBA8
+
   static func write(
     _ image: CIImage,
     to url: URL,
@@ -127,7 +131,7 @@ enum CIImageStreamingFileWriter {
         toBitmap: base.advanced(by: top * rowBytes),
         rowBytes: rowBytes,
         bounds: bounds,
-        format: .RGBA8,
+        format: pixelFormat,
         colorSpace: colorSpace
       )
       top += h

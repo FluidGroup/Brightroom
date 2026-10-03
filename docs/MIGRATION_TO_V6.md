@@ -1497,6 +1497,15 @@ Two export behaviors changed with the rename:
   `LocalizedError`. A failed `Output.file` write, which used to throw an
   internal writer error, throws `.fileWriteFailed(url, step:)`.
 
+An image in a color space that is not RGB, such as a grayscale JPEG, now
+exports. 5.1.1 tagged the result with the source's own
+space, which Core Image cannot use for RGB pixels, so every render of such an
+image with the default options failed. 6.0 tags an RGB result with sRGB
+when the source's space (or `outputColorSpace`) is not RGB. A luminance
+`outputFormat` such as `.L8` works the other way round: it keeps a gray
+space and tags anything else with Generic Gray Gamma 2.2, where 5.1.1 failed.
+RGB sources and RGB `outputColorSpace` values are tagged as before.
+
 ### Masks and Local Adjustments
 
 | 5.1.1 | 6.0 |
