@@ -82,7 +82,14 @@ extension EditingDocument where Content == ImageEditorFeature {
   /// Reset only restores the crop geometry, so this intentionally ignores
   /// effects and the local blur.
   func hasCropChanges(tolerance: CGFloat = 1) -> Bool {
-    let crop = CropGuideState(cropFeature: feature.crop, imageSize: source.pixelSize)
+    hasCropChanges(crop: feature.crop, tolerance: tolerance)
+  }
+
+  /// Whether `crop`, a final crop of this document's source image, differs
+  /// from ImageEditor's Reset target. The editor passes the crop its crop
+  /// guide shows, which reaches the document only when it is applied.
+  func hasCropChanges(crop: CropFeature, tolerance: CGFloat = 1) -> Bool {
+    let crop = CropGuideState(cropFeature: crop, imageSize: source.pixelSize)
     let initial = crop.makeInitial()
     return crop.rotation != initial.rotation
       || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001

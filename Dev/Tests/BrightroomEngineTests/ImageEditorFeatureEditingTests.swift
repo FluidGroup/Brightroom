@@ -236,6 +236,25 @@ struct ImageEditorFeatureEditingTests {
     #expect(!effectsOnly.hasCropChanges())
   }
 
+  @Test func `Crop changes can be measured on the crop the guide shows`() {
+    // The guide's crop reaches the document only when it is applied, so the
+    // Reset button asks about the guide's crop instead.
+    var document = EditingDocument(source: makeImage())
+    var turned = document.feature.crop
+    turned.quarterTurn = .counterclockwise90
+    #expect(document.hasCropChanges(crop: turned))
+    #expect(!document.hasCropChanges())
+
+    // After a Reset on the guide, a document that still holds the old crop
+    // no longer counts as changed for the guide's crop.
+    document.feature.crop = turned
+    #expect(document.hasCropChanges())
+    let reset = CropGuideState(cropFeature: turned, imageSize: imageSize)
+      .makeInitial()
+      .makeCropFeature()
+    #expect(!document.hasCropChanges(crop: reset))
+  }
+
   @Test func `Editing target mapping`() {
     #expect(ImageEditor.Mode.crop.canvasTarget == .crop)
     #expect(ImageEditor.Mode.localBlur.canvasTarget == .localBlur)

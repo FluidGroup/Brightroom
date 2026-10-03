@@ -43,6 +43,12 @@ struct ImageEditorContent: View {
   @State private var straightenAngle: Angle?
   /// Whether the straighten slider is being dragged.
   @State private var isStraightening = false
+  /// Whether the crop the crop guide shows differs from Reset's target; nil
+  /// until the canvas has loaded. The guide's crop reaches the document only
+  /// when it is applied (leaving Crop, or Done), so the document alone cannot
+  /// tell whether a rotation or a Reset just happened. Kept as a Bool so a
+  /// guide drag does not update the editor on every tick.
+  @State private var guideHasCropChanges: Bool?
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
   @State private var editingMode: ImageEditor.Mode = .crop
@@ -157,7 +163,7 @@ struct ImageEditorContent: View {
             cancelTitle: localizedStrings.cancel,
             doneTitle: localizedStrings.done,
             isLoaded: isLoaded,
-            hasCropChanges: document.hasCropChanges(),
+            hasCropChanges: guideHasCropChanges ?? document.hasCropChanges(),
             // A failed preparation leaves nothing to edit; Done stays the
             // way out even when the host hides Cancel.
             isDoneEnabled: isLoaded || previewSourceLoader.phase == .failed,
@@ -247,7 +253,9 @@ struct ImageEditorContent: View {
   }
 
   /// Mirrors the canvas's own changes (rotate, reset, a reloaded crop after
-  /// an undo) into the slider and the aspect-ratio selection.
+  /// an undo) into the slider, the aspect-ratio selection, and the Reset
+  /// button, which follows the crop the guide shows rather than the written
+  /// one.
   ///
   /// The canvas unlocks the guide on reset, so a `.fixed` policy follows it
   /// to freeform here, as it did when the canvas wrote the lock back
@@ -257,6 +265,12 @@ struct ImageEditorContent: View {
     _ guide: ImageEditorCanvas.CropGuide,
     originalAspectRatio: AspectRatio?
   ) {
+    if let crop = guide.pendingCrop {
+      let hasCropChanges = document.hasCropChanges(crop: crop)
+      if guideHasCropChanges != hasCropChanges {
+        guideHasCropChanges = hasCropChanges
+      }
+    }
     if isStraightening == false, let crop = guide.pendingCrop {
       let angle = Angle(radians: crop.straightenRadians)
       if straightenAngle != angle {
