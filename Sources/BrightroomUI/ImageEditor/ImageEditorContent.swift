@@ -451,7 +451,6 @@ struct ImageEditorContent: View {
           .frame(width: 48, height: 48)
         }
         .disabled(!isEnabled)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(mode.accessibilityLabel)
         .accessibilityValue(isSelected ? "selected" : "not selected")
         .accessibilityHint(unavailableReason ?? "")
@@ -829,7 +828,6 @@ private struct ToolbarIconButton: View {
         )
     }
     .disabled(!isEnabled)
-    .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityLabel)
     .accessibilityIdentifier(accessibilityIdentifier)
   }
@@ -1110,7 +1108,6 @@ private struct FilterChip: View {
       }
     }
     .buttonStyle(.plain)
-    .accessibilityElement(children: .ignore)
     .accessibilityLabel(title)
     .accessibilityValue(isSelected ? "selected" : "not selected")
     .task(id: renderKey) {
@@ -1258,7 +1255,6 @@ private struct AdjustmentButton: View {
       .frame(width: 64, height: 48)
     }
     .buttonStyle(.plain)
-    .accessibilityElement(children: .ignore)
     .accessibilityLabel(parameter.title)
     .accessibilityValue(isSelected ? "selected" : "not selected")
     .accessibilityIdentifier(parameter.accessibilityIdentifier)
@@ -1706,7 +1702,6 @@ private struct AspectRatioDirectionButton: View {
     }
     .buttonStyle(.plain)
     .disabled(!isEnabled)
-    .accessibilityElement(children: .ignore)
     .accessibilityLabel(direction.accessibilityLabel)
     .accessibilityValue(isSelected ? "selected" : "not selected")
     .accessibilityIdentifier(direction.accessibilityIdentifier)
