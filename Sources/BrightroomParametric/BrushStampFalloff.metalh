@@ -24,9 +24,10 @@
 #include <metal_stdlib>
 using namespace metal;
 
-// Shared brush falloff used by the committed parametric brush mask and the live
-// in-flight-stroke render shader. The function takes a normalized distance:
-// 0 at the stamp center, 1 at the radius edge.
+// The brush falloff drawn by `brushStampFragment`, the one brush-mask shader the
+// live canvas and the parametric export share. `BrushMaskImageProcessor` mirrors
+// it in Swift for Core Image contexts without Metal. The function takes a
+// normalized distance: 0 at the stamp center, 1 at the radius edge.
 inline float brushStampAlpha(float normalizedDistance, float hardness, float opacity) {
   if (normalizedDistance > 1.0) {
     return 0.0;

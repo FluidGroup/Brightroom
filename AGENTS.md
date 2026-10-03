@@ -183,8 +183,11 @@ The project uses swift-state-graph for observable state. When modifying state-re
   color mixer)
 - Performance-critical operations use Metal instead of Core Image
 - The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
-  and `EditingCanvasRenderer`, and live brush strokes through
-  `BrushMaskMetalRasterizer` (`Sources/BrightroomUI/Canvas/`)
+  and `EditingCanvasRenderer` (`Sources/BrightroomUI/Canvas/`)
+- Brush stamps have one rasterizer, the package `BrushStampPipeline`
+  (BrightroomParametric): the canvas draws live strokes with it into its mask
+  texture, and `MaskRasterizer` draws a brush mask with it into Core Image tiles
+  through one `BrushMaskImageProcessor` node, whatever the stamp count
 - The SwiftUI demo shows a `CIImage` through its own `SwiftUIMetalImageView`
   (`Dev/Sources/SwiftUIDemo/MetalImageView.swift`), not a library type
 

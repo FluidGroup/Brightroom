@@ -12,9 +12,14 @@ Status context (as of Brightroom 6):
   the host: its `SourceImage`, its `ImageEditorFeature` (a statically composed
   `Feature`), and its undo history. Crop is a parametric `CropFeature`.
   BrightroomUI edits crop through the internal `CropGuideState`.
-- Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
-  across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
-  and the live Metal render shader (`BrushMaskRenderShader.metal`).
+- Brush-mask rasterization is ONE Metal pipeline, `BrushStampPipeline`
+  (package; `BrushMaskRenderShader.metal` with the `BrushStampFalloff.metalh`
+  falloff and a `.max` blend, one instanced draw). The live canvas encodes it
+  into its viewport mask texture; the evaluated mask (`MaskRasterizer`, for
+  preview and export) draws it into the Core Image tiles of one
+  `CIImageProcessorKernel` node, `BrushMaskImageProcessor`, whose extent is
+  the union of the stamp bounds. A mask is therefore one graph node however
+  many stamps it holds (main #333/#334, merged into v6).
 - The live canvas renders committed + active strokes in one real-time Metal pass
   (no committed-mask cache). Export/preview stay on Core Image (auto-tiling).
 - The local-adjustment **preview is evaluated at the downsampled editing-source
@@ -55,12 +60,15 @@ Status context (as of Brightroom 6):
   `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
-    `CIImageStreamingFileWriter.defaultStripHeight`. Confirm custom CIKernels
-    (`brushStamp`) tile under `render(bounds:)` (no "ROI function did not allow
-    tiling"). Guards: `DiskExportTests` (full-res, masked, resize, orientation,
+    `CIImageStreamingFileWriter.defaultStripHeight`. The brush mask is a
+    `CIImageProcessorKernel` drawn per tile (`BrushMaskImageProcessorTests`
+    pins uneven tiles); confirm on device that `render(bounds:)` strips stay
+    bounded with it. Guards: `DiskExportTests` (full-res, masked, resize, orientation,
     channel-order).
-- Pixel-level guards: `BrushMaskRasterizerParityTests` (live Metal == export
-  CIKernel), `BrushStampFalloffTests`, `LargeMaskedExportTests`,
+- Pixel-level guards: `BrushMaskRasterizerParityTests` (live texture pass ==
+  export processor tiles), `BrushMaskImageProcessorTests` (tiles, stamp
+  layout, CPU fallback), `DenseBrushMaskExportTests` (5,356 stamps stay
+  opaque), `BrushStampFalloffTests`, `LargeMaskedExportTests`,
   `MaskedPreviewExportScaleConsistencyTests` (source-res blur preview ≈ full-res
   export), `CropSurfaceBlurRenderPathTests` (prepared-path routing),
   `DiskExportTests` (render with `Output.file`: full-res, masked, resize), plus the existing
@@ -70,40 +78,38 @@ Status context (as of Brightroom 6):
 
 ## TODO
 
-### 1. Optimize the export brush-mask rasterizer — `MaskRasterizer.render(_:BrushMask)`
+### 1. Done: One node for the export brush mask
 
-The Core Image path accumulates one full-extent CIImage per stamp via `componentMax`
-(an O(stamps)-deep graph, each stamp evaluated over the whole extent). Slow and
-memory-heavy for many-stamp masks at export. Keep it on Core Image (it auto-tiles
-images too large for a single GPU texture). Options, ranked, all parity-safe unless
-noted:
+`MaskRasterizer.render(_:BrushMask)` used to build one full-extent `CIImage`
+per stamp and fold them with `componentMax`. Dense masks (thousands of stamps)
+grew a graph Core Image could not fuse into a working Metal function, so the
+export came back transparent with no error. It is now one
+`BrushMaskImageProcessor` node drawing every stamp with `BrushStampPipeline`
+per tile, bounded by the stamps' union (the bounding-box and tree-reduce
+options are subsumed).
 
-- **(a) Bounding-box crop each stamp** to `center ± radius` so the `brushStamp`
-  kernel only evaluates the disk (O(extent) → O(stamp area) per stamp). Pixel-identical.
+Remaining options, both optional:
+
 - **(b) Decimate near-duplicate stamps at commit** (e.g. drop stamps within
   `radius/4` of the previous). Reduces N for BOTH export and live; do it before
   either path consumes the stamps so parity is preserved.
-- **(c) Tree-reduce the `componentMax` chain** (pairwise → graph depth O(log N))
-  to ease Core Image concatenation / intermediate-buffer pressure.
-- **(d) [bigger] Per-stroke distance-to-polyline kernel** (N stamps → S strokes).
-  Biggest win for huge masks, but it changes the rasterization geometry, so the
-  live Metal shader must be made polyline-based too, or live/export diverge.
+- **(d) [bigger] Per-stroke distance-to-polyline shader** (N stamps → S strokes).
+  It changes the rasterization geometry, so `BrushStampPipeline` changes for
+  live and export together.
+- The CPU fallback in `BrushMaskImageProcessor` (contexts without Metal) is
+  parity-tested against the Metal pipeline, but its row orientation has not
+  been checked on a real CPU context (iOS 26 "software" contexts run on Metal).
 
-Files: `Sources/BrightroomParametric/MaskRasterizer.swift`,
-`Sources/BrightroomParametric/MaskKernels.swift`.
-Guards: `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
+Guards: `BrushMaskImageProcessorTests`, `DenseBrushMaskExportTests`,
+`BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
 `LocalAdjustmentRenderingTests`.
 
-### 2. Unify the live Metal rasterizer (MTKView ↔ `BrushMaskMetalRasterizer`)
+### 2. Done: One live Metal rasterizer
 
-`BrushMaskMetalRasterizer` (added for the parity test) duplicates the inline stamp
-encode + pipeline setup in `EditingCanvasMTKView.encodeStrokeMaskForViewport` /
-`makeBrushMaskPipeline`. The falloff is shared, but the Metal encode/pipeline is
-not. Refactor the MTKView to use `BrushMaskMetalRasterizer` so there is literally
-one live Metal rasterizer.
-
-Files: `Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`,
-`.../BrushMaskMetalRasterizer.swift`.
+`EditingCanvasRenderer` and `BrushMaskMetalRasterizer` both build their
+pipeline with `BrushStampPipeline.renderPipelineState(device:pixelFormat:)` and
+draw with `BrushStampPipeline.encode(_:targetSize:into:)`; the UI-side
+`BrushMaskPipeline` is deleted.
 
 ### 3. Done: Store masks y-up in the document — "E5"
 

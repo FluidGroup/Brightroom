@@ -24,9 +24,10 @@ import Foundation
 /// Locates the build-compiled Metal library bundled with BrightroomParametric.
 ///
 /// `ParametricKernels.metal` and `BrushMaskRenderShader.metal` are compiled by
-/// the package/Xcode Metal build step into `default.metallib`. The parametric
-/// renderer loads Core Image kernels from this library, and BrightroomUI loads
-/// the live brush-mask vertex/fragment functions from the same library.
+/// the package/Xcode Metal build step into `default.metallib`. The mask
+/// renderer loads Core Image kernels from this library, and
+/// `BrushStampPipeline` loads the brush-stamp vertex/fragment functions that
+/// both the evaluated mask and BrightroomUI's live canvas draw with.
 package enum BrightroomMetalLibrary {
 
   /// Returns the URL for the bundled `default.metallib`.

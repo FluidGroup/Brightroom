@@ -60,11 +60,12 @@ struct EditingPreviewExportParityTests {
 
     #expect(exported.width == preview.width)
     #expect(exported.height == preview.height)
-    // The canvas rasterizes the brush with the Metal stamp shader and export
-    // with the parametric kernel, which share one falloff; the small tolerance
-    // only absorbs resampling/rounding at the blur-gradient edge. A real
-    // composition bug (wrong order, missing/unmasked adjustment, a y-flip)
-    // still diverges by tens-to-hundreds of LSB, far beyond this tolerance.
+    // The canvas and the export both rasterize the brush through
+    // `BrushStampPipeline` (the canvas into its mask texture, the export into
+    // Core Image tiles), so the small tolerance only absorbs
+    // resampling/rounding at the blur-gradient edge. A real composition bug
+    // (wrong order, missing/unmasked adjustment, a y-flip) still diverges by
+    // tens-to-hundreds of LSB, far beyond this tolerance.
     assertImagesMatch(exported, preview, tolerance: 16)
   }
 
@@ -255,8 +256,8 @@ struct EditingPreviewExportParityTests {
     #expect(error is ThrowingEffectFeature.EvaluationError)
   }
 
-  /// The parametric `brushStamp` kernel (the export mask) must produce the
-  /// falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
+  /// The shared brush rasterizer (`BrushStampPipeline`, the export mask) must
+  /// produce the falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
   /// shader also draws. If it used a hard disc or a linear ramp, painted blur
   /// edges would render wider/harder than the interactive preview showed. This
   /// samples the alpha profile of a single soft, centered stamp (so the y-flip

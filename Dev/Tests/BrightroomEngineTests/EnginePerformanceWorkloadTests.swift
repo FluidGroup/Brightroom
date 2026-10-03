@@ -20,8 +20,8 @@ import UIKit
 /// - export render (`EditingDocument.render`)
 /// - preview composition (the document with its crop neutralized, over the
 ///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
-/// - brush-mask raster (`FeatureRenderer.makeMaskImage`, the parametric
-///   `brushStamp` kernel)
+/// - brush-mask raster (`FeatureRenderer.makeMaskImage` via
+///   `BrushMaskImageProcessor`)
 /// - parametric evaluation (`ImageEditorFeature.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 

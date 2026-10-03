@@ -74,6 +74,9 @@ public struct FeatureRenderer: Sendable {
   /// the result is exactly the alpha a local adjustment uses. Callers holding
   /// masks authored in a y-down display space flip at this boundary.
   public func makeMaskImage(for mask: Mask, extent: CGRect) throws -> CIImage {
+    // A brush mask's recipe is bounded by its stamps; the result still covers
+    // `extent`, transparent where nothing is painted.
     try MaskRasterizer().render(mask, extent: extent)
+      .composited(over: CIImage.transparentImage(extent: extent))
   }
 }

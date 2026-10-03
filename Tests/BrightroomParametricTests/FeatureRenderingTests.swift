@@ -335,18 +335,42 @@ struct FeatureRenderingTests {
     #expect(corner.red > center.red)
   }
 
-  @Test func metalKernelRegistryCanCreateBrushStampRecipe() throws {
-    let registry = MaskKernels()
-
-    let image = try registry.makeBrushStamp(
-      extent: CGRect(x: 0, y: 0, width: 12, height: 12),
-      center: CGPoint(x: 6, y: 6),
-      radius: 4,
-      hardness: 0.5,
-      opacity: 1
+  @Test func brushMaskRecipeIsBoundedByItsStamps() throws {
+    let image = try MaskRasterizer().render(
+      .brush(BrushMask(strokes: [
+        BrushMask.Stroke(
+          stampCenters: [CGPoint(x: 6, y: 6)],
+          brush: BrushMask.Brush(diameter: 8, hardness: 0.5, opacity: 1)
+        ),
+      ])),
+      extent: CGRect(x: 0, y: 0, width: 12, height: 12)
     )
 
-    #expect(image.extent == CGRect(x: 0, y: 0, width: 12, height: 12))
+    // The falloff is zero beyond the radius, so the recipe covers only the stamp.
+    #expect(image.extent == CGRect(x: 2, y: 2, width: 8, height: 8))
+    let rendered = try Self.render(image)
+    #expect(Self.rgba(in: rendered, x: 4, y: 4).alpha > 250)
+    #expect(Self.rgba(in: rendered, x: 0, y: 0).alpha < 5)
+  }
+
+  /// `makeMaskImage(for:extent:)` documents an image covering `extent`; the
+  /// stamp-bounded recipe underneath must not shrink it.
+  @Test func maskImageCoversTheRequestedExtent() throws {
+    let extent = CGRect(x: 0, y: 0, width: 12, height: 12)
+    let image = try Self.renderer.makeMaskImage(
+      for: .brush(BrushMask(strokes: [
+        BrushMask.Stroke(
+          stampCenters: [CGPoint(x: 6, y: 6)],
+          brush: BrushMask.Brush(diameter: 8, hardness: 0.5, opacity: 1)
+        ),
+      ])),
+      extent: extent
+    )
+
+    #expect(image.extent == extent)
+    let rendered = try Self.render(image)
+    #expect(Self.rgba(in: rendered, x: 6, y: 6).alpha > 250)
+    #expect(Self.rgba(in: rendered, x: 0, y: 0).alpha == 0)
   }
 
   private static let renderer = FeatureRenderer()

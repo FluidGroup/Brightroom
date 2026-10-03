@@ -22,38 +22,13 @@
 import CoreImage
 import Foundation
 
-/// Provides cached kernels used by the mask renderer.
+/// Provides cached Core Image kernels used by the mask renderer.
 ///
 /// Features store semantic parameters only. This registry is renderer
-/// infrastructure and all custom operations are represented as Metal-backed
-/// Core Image kernels loaded from BrightroomParametric's compiled Metal library.
+/// infrastructure; its kernels are Metal-backed Core Image kernels loaded from
+/// BrightroomParametric's compiled Metal library. Brush stamps are not a
+/// kernel here: `BrushMaskImageProcessor` draws them.
 struct MaskKernels: Sendable {
-
-  func makeBrushStamp(
-    extent: CGRect,
-    center: CGPoint,
-    radius: Double,
-    hardness: Double,
-    opacity: Double
-  ) throws -> CIImage {
-    guard radius > 0, opacity > 0 else {
-      return CIImage.transparentImage(extent: extent)
-    }
-
-    let kernel = try MetalKernelStore.colorKernel(named: "brushStamp")
-    guard let image = kernel.apply(
-      extent: extent,
-      arguments: [
-        CIVector(x: center.x, y: center.y),
-        radius,
-        hardness,
-        opacity,
-      ]
-    ) else {
-      throw FeatureEvaluationError.imageCreationFailed("brushStamp")
-    }
-    return image.cropped(to: extent)
-  }
 
   func subtractMask(
     base: CIImage,
@@ -77,7 +52,7 @@ private enum MetalKernelStore {
   ///
   /// `ParametricKernels.metal` is build-compiled into `default.metallib`, then
   /// loaded by function name through `CIColorKernel(functionName:fromMetalLibraryData:)`.
-  private static let kernelNames = ["brushStamp", "maskSubtract"]
+  private static let kernelNames = ["maskSubtract"]
 
   static func colorKernel(named name: String) throws -> CIColorKernel {
     switch loadedKernels {

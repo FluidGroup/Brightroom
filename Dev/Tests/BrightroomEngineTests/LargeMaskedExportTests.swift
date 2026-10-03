@@ -7,14 +7,14 @@ import UIKit
 
 /// Exercises the export path through Core Image at large scale to confirm the
 /// brush-mask local adjustment composites correctly when the parametric mask is
-/// rasterized via the resolution-independent, tiling-capable CIKernel path
-/// (the same code path used for full-resolution export and tiled rendering).
+/// rasterized through Core Image tiles (`BrushMaskImageProcessor`, the same
+/// code path used for full-resolution export and tiled rendering).
 ///
 /// The source size is intentionally large but simulator-safe (4096x4096).
 /// Going truly past the Metal tiling threshold (>16384 on a side) would require
 /// asserting on a multi-gigabyte intermediate, which is too memory-heavy to
-/// stand up reliably in CI; 4096x4096 drives the identical resolution-
-/// independent kernel path at scale without that cost.
+/// stand up reliably in CI; 4096x4096 drives the identical tiled mask path
+/// at scale without that cost.
 struct LargeMaskedExportTests {
 
   /// A large-but-simulator-safe source side length. See type doc for why this

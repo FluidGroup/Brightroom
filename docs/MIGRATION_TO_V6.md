@@ -534,6 +534,12 @@ func blurMaskImage(
 }
 ```
 
+The image covers `extent` and is transparent where nothing is painted. A
+brush mask is drawn as one Core Image node, so a mask with thousands of
+stamps renders and exports like a small one. In 5.1.1 a dense mask (about
+5,000 stamps) could export a correctly sized, fully transparent image without
+an error.
+
 ### Custom Effects and Domain Features
 
 Before:

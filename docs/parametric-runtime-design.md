@@ -213,8 +213,10 @@ materialization, and callers own the `CIContext`.
   time. The `FeatureEvaluationContext` then flows down through every `body`.
   `ExportRenderer` and `VideoRenderer` evaluate through
   the same path.
-- `LocalAdjustmentFeature` renders its mask over its input extent (GPU brush
-  stamps and mask combinators through internal Metal kernels), evaluates its
+- `LocalAdjustmentFeature` renders its mask over its input extent (a brush
+  mask is one Core Image node that draws every stamp per tile with the same
+  Metal pipeline the live canvas uses; mask combinators are internal Core
+  Image kernels), evaluates its
   content, and composites the result through the mask alpha. An empty
   union or intersection throws before the content is evaluated. Content that
   returns its input unchanged makes the whole adjustment return its input.
