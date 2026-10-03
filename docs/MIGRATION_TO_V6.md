@@ -288,7 +288,7 @@ struct Look: ImageEffect, Equatable {
       FadeFeature(intensity: 0.2)
     }
     for _ in 0..<sharpenPasses {
-      SharpenFeature(intensity: 0.4, radius: 1)
+      SharpenFeature(intensity: 0.4, radius: .proportional(1))
     }
   }
 }
@@ -1590,7 +1590,20 @@ macOS). Keep `.BGRA8` for very large HEIF exports.
 | `TemperatureFeature(value:tint:)`, `.value` | `WhiteBalanceFeature(temperature:tint:)`, `.temperature` |
 | `ExposureFeature(value:)`, `.value` | `ExposureFeature(ev:)`, `.ev` |
 | `SharpenFeature(sharpness:radius:)`, `.sharpness` | `SharpenFeature(intensity:radius:)`, `.intensity` |
+| `SharpenFeature.radius: Double` | `SharpenFeature.radius: EffectRadius`; a 5.1.1 value `v` is `.proportional(v)` |
+| `UnsharpMaskFeature.radius: Double` | `UnsharpMaskFeature.radius: EffectRadius`; a 5.1.1 value `v` is `.proportional(v * 100)` |
 | `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` |
+
+Gaussian blur, sharpen, and unsharp mask radii share `EffectRadius`:
+`.absolute(_:)` is pixels of the render pass, and `.proportional(_:)` is a
+fraction of the chain-entry diagonal where 100 is one twentieth of it. In
+5.1.1 both radii were plain `Double`s on different scales: a sharpen radius of
+100 and an unsharp-mask radius of 1 were each a twentieth of the diagonal. A
+5.1.1 sharpen radius keeps its look as `.proportional(v)`; multiply an
+unsharp-mask radius by 100. On a 4000 × 3000 image, `SharpenFeature` with
+`.proportional(1)` passes 2.5 px to `CISharpenLuminance`, and
+`UnsharpMaskFeature` with `.proportional(12)` (5.1.1's `0.12`) passes 30 px
+to `CIUnsharpMask`.
 
 Library types that conform to `Feature` end in `Feature`. Values that are not
 features (`Mask`, `BrushMask`, `QuarterTurn`, `EffectRadius`) have no suffix,
@@ -1759,6 +1772,9 @@ output.
       such as video through `VideoRenderer`'s default context, is checked
       again: it now matches the export
       ([Tone Curve and Color Mixer](#tone-curve-and-color-mixer)).
+- [ ] Sharpen and unsharp-mask radii are `EffectRadius` values; stored
+      5.1.1 unsharp-mask radii are multiplied by 100
+      ([Feature Members](#feature-members)).
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
       BrightroomUI in a `List`, and code that read `swiftUIImage` builds
       `Image(decorative:scale:orientation:)` from `cgImage`.

@@ -135,8 +135,9 @@ The project uses swift-state-graph for observable state. When modifying state-re
    `apply(to:context:)` and returns an image cropped to the input extent
    (see `BuiltInFeatureRecipes.swift`). A composite effect declares `body`
    instead.
-2. Resolve proportional (value-form) radii through
-   `context.chainEntryExtent(for:)`, so they resolve against the chain entry.
+2. Take a radius as `EffectRadius` and resolve it with
+   `radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))`,
+   so proportional radii resolve against the chain entry.
 3. Keep every authored parameter reconstructible through public API; add a
    validating initializer when a plain initializer clamps or repairs values.
    Do not add `Codable` conformances or storage formats to the library

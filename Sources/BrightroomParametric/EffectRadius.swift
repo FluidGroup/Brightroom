@@ -7,7 +7,10 @@ import Foundation
 
 /// The radius of a neighborhood effect, such as a blur, and its unit.
 ///
-/// `GaussianBlurFeature` uses it.
+/// `GaussianBlurFeature`, `SharpenFeature`, and `UnsharpMaskFeature` use it,
+/// each passing the resolved radius to Core Image as `inputRadius`. On a
+/// 4000×3000 chain entry, whose diagonal is 5000 px, `.proportional(100)` is
+/// 250 px and `.proportional(1)` is 2.5 px.
 public enum EffectRadius: Equatable, Sendable {
 
   /// A Core Image radius in pixels of the current render pass.

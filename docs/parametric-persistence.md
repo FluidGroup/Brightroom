@@ -347,6 +347,12 @@ decoded 5.x document:
 - A local adjustment with no enabled effect: 5.x threw
   `emptyLocalAdjustmentEffectPipeline` when it was enabled. Brightroom 6
   renders an empty adjustment as its input, so leave it out.
+- Radii become `EffectRadius` values. A Gaussian blur's `absolute` is
+  `.absolute(_:)` and its `editingStackFilterValue` is `.proportional(_:)`.
+  A sharpen `radius` `v` is `.proportional(v)`. An unsharp-mask `radius` `v`
+  is `.proportional(v * 100)`: 5.x read an unsharp-mask radius of 1, but a
+  sharpen or blur value of 100, as one twentieth of the image diagonal. The
+  sharpen `sharpness` is `SharpenFeature.intensity`.
 - Tone Curve and Color Mixer payloads never had `isEnabled`. Drop their `id`.
 - Drop each Tone Curve point's `id` as well, and keep the points in their
   stored order. The 5.1 codec required the first point to be

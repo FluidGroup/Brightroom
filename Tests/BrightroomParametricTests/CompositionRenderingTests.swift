@@ -578,8 +578,8 @@ private struct GlobalChainDocument: Feature {
     highlightColor: HighlightShadowTintFeature.Color(red: 1, green: 0.85, blue: 0.6, alpha: 0.08),
     shadowColor: HighlightShadowTintFeature.Color(red: 0.1, green: 0.2, blue: 0.45, alpha: 0.1)
   )
-  var sharpen = SharpenFeature(intensity: 0.5, radius: 30)
-  var unsharpMask = UnsharpMaskFeature(intensity: 0.6, radius: 0.4)
+  var sharpen = SharpenFeature(intensity: 0.5, radius: .proportional(30))
+  var unsharpMask = UnsharpMaskFeature(intensity: 0.6, radius: .proportional(40))
   var blur = GaussianBlurFeature(radius: .absolute(1.5))
   var fade = FadeFeature(intensity: 0.08)
   var vignette = VignetteFeature(value: 0.7)
@@ -616,7 +616,7 @@ private struct MidChainCropBlurDocument: Feature {
   var exposure = ExposureFeature(ev: 0.2)
   var crop = CropFeature(rect: CGRect(x: 40, y: 30, width: 160, height: 120))
   var blur = GaussianBlurFeature(radius: .proportional(40))
-  var sharpen: SharpenFeature? = SharpenFeature(intensity: 0.4, radius: 20)
+  var sharpen: SharpenFeature? = SharpenFeature(intensity: 0.4, radius: .proportional(20))
 
   var body: some Feature {
     exposure
@@ -878,8 +878,8 @@ enum CompositionVariant: String, CaseIterable, Sendable {
         fade: FadeFeature(intensity: 0.1),
         usesWarmBalance: true,
         sharpenPasses: [
-          SharpenFeature(intensity: 0.3, radius: 10),
-          SharpenFeature(intensity: 0.2, radius: 25),
+          SharpenFeature(intensity: 0.3, radius: .proportional(10)),
+          SharpenFeature(intensity: 0.2, radius: .proportional(25)),
         ],
         catalog: [
           AnyImageEffect(SaturationFeature(value: 0.4)),
@@ -917,8 +917,8 @@ enum CompositionVariant: String, CaseIterable, Sendable {
         ExposureFeature(ev: 0.3),
         FadeFeature(intensity: 0.1),
         WhiteBalanceFeature(temperature: 900, tint: 10),
-        SharpenFeature(intensity: 0.3, radius: 10),
-        SharpenFeature(intensity: 0.2, radius: 25),
+        SharpenFeature(intensity: 0.3, radius: .proportional(10)),
+        SharpenFeature(intensity: 0.2, radius: .proportional(25)),
         SaturationFeature(value: 0.4),
         ContrastFeature(value: -0.1),
         BrightnessFeature(value: 0.05),

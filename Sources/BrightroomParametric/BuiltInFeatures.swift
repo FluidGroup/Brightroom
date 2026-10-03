@@ -346,15 +346,16 @@ public struct SharpenFeature: ImageEffect, Equatable {
   /// The sharpness passed to `CISharpenLuminance`. `0` is neutral.
   public var intensity: Double
 
-  /// The Brightroom filter radius value, resolved against the render pass's
-  /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
-  /// so a mid-chain crop never re-bases it.
-  public var radius: Double
+  /// The radius passed to `CISharpenLuminance` as `inputRadius`.
+  ///
+  /// On a 4000×3000 chain entry, `.proportional(1)` is 2.5 px and
+  /// `.absolute(3)` is 3 px.
+  public var radius: EffectRadius
 
   /// Creates a sharpen adjustment.
   public init(
     intensity: Double,
-    radius: Double
+    radius: EffectRadius
   ) {
     self.intensity = intensity
     self.radius = radius
@@ -382,15 +383,17 @@ public struct UnsharpMaskFeature: ImageEffect, Equatable {
   /// The intensity passed to `CIUnsharpMask`.
   public var intensity: Double
 
-  /// The Brightroom filter radius value, resolved against the render pass's
-  /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
-  /// so a mid-chain crop never re-bases it.
-  public var radius: Double
+  /// The radius passed to `CIUnsharpMask` as `inputRadius`.
+  ///
+  /// On a 4000×3000 chain entry, `.proportional(100)` is 250 px and
+  /// `.absolute(3)` is 3 px. A large radius raises local contrast (clarity)
+  /// rather than sharpening edges.
+  public var radius: EffectRadius
 
   /// Creates an unsharp mask adjustment.
   public init(
     intensity: Double,
-    radius: Double
+    radius: EffectRadius
   ) {
     self.intensity = intensity
     self.radius = radius

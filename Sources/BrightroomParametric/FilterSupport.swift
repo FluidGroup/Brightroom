@@ -33,9 +33,6 @@ enum FilterConstants {
   /// The maximum legacy slider value for Gaussian blur.
   static let gaussianBlurSliderMax = 100.0
 
-  /// The maximum legacy slider value for unsharp-mask radius.
-  static let unsharpMaskRadiusSliderMax = 1.0
-
   /// The maximum legacy slider value for vignette.
   static let vignetteSliderMax = 2.0
 }

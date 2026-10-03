@@ -137,7 +137,7 @@ struct CompositionBehaviorTests {
       from: source,
       feature: Document(
         exposure: ExposureFeature(ev: 0.5),
-        passes: [SharpenFeature(intensity: 0.4, radius: 20)],
+        passes: [SharpenFeature(intensity: 0.4, radius: .proportional(20))],
         appliesFade: true
       )
     )

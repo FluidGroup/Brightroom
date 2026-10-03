@@ -331,8 +331,8 @@ struct ImageEditorFeatureTests {
       id: "p",
       effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
     )
-    document.effects.sharpen = SharpenFeature(intensity: 0.4, radius: 1.5)
-    document.effects.unsharpMask = UnsharpMaskFeature(intensity: 0.5, radius: 2)
+    document.effects.sharpen = SharpenFeature(intensity: 0.4, radius: .proportional(1.5))
+    document.effects.unsharpMask = UnsharpMaskFeature(intensity: 0.5, radius: .proportional(200))
     document.effects.fade = FadeFeature(intensity: 0.3)
 
     document.appendLocalBlurStroke(stroke)
