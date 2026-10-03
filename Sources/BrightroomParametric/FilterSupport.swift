@@ -32,9 +32,6 @@ enum FilterConstants {
 
   /// The maximum legacy slider value for Gaussian blur.
   static let gaussianBlurSliderMax = 100.0
-
-  /// The maximum legacy slider value for vignette.
-  static let vignetteSliderMax = 2.0
 }
 
 /// Converts Brightroom-style normalized radius values into image-domain radii.

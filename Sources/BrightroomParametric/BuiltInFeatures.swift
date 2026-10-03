@@ -401,10 +401,16 @@ public struct UnsharpMaskFeature: ImageEffect, Equatable {
 }
 
 /// A vignette adjustment.
+///
+/// The vignette is a circular field centred on the feature's input extent,
+/// with a radius of half the input's longer side and a fixed falloff. Its
+/// centre and size therefore follow the image the feature receives: placed
+/// after a crop, it is centred on the cropped picture.
 public struct VignetteFeature: ImageEffect, Equatable {
 
-  /// The Brightroom vignette value used for both intensity and radius scaling.
-  /// `0` is neutral.
+  /// The strength of the vignette (the intensity of Core Image's
+  /// `CIVignetteEffect`). It sets only the strength; the centre and the radius
+  /// come from the input extent. `0` is neutral.
   public var value: Double
 
   /// Creates a vignette adjustment.
