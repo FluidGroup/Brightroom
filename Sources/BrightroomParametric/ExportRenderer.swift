@@ -168,8 +168,28 @@ public struct ExportRenderer {
     case gpu
   }
 
+  /// The pixel size of the result.
   public enum Resolution: Sendable {
+    /// The size the feature evaluates to.
     case full
+    /// Downscales so that the longer side is at most `maxPixelSize` pixels.
+    ///
+    /// A result whose longer side already fits is rendered at its full size;
+    /// this never upscales.
+    ///
+    /// The result is whole pixels, like an image-size change in a photo
+    /// editor. The output size is decided first: the longer side is
+    /// `maxPixelSize` and the shorter side keeps the aspect ratio, each
+    /// rounded to the nearest whole pixel and at least 1. The whole image is
+    /// then resampled with Lanczos onto exactly that grid, each axis scaled on
+    /// its own, so there is no partial last row or column. Rounding stretches
+    /// a side by at most half a pixel, or up to a pixel when the 1-pixel
+    /// minimum applies.
+    ///
+    /// Pixels outside the image are not read: the edge pixels are clamped,
+    /// so an opaque image stays opaque to its edges. Transparent pixels the
+    /// feature produces, such as the corners of a straightened crop, stay
+    /// transparent.
     case resize(maxPixelSize: CGFloat)
   }
 
@@ -351,23 +371,33 @@ public struct ExportRenderer {
     case .resize(let maxPixelSize):
       let extent = image.extent
       let longest = max(extent.width, extent.height)
-      guard longest > maxPixelSize, longest > 0 else {
+      guard !extent.isInfinite, longest > maxPixelSize, longest > 0 else {
         return image
       }
+      // Decide the whole-pixel output size first, then scale each axis so the
+      // whole image fills exactly that size: no partial last row or column.
       let scale = maxPixelSize / longest
-      let scaled = image
+      let outputSize = CGSize(
+        width: max(1, (extent.width * scale).rounded()),
+        height: max(1, (extent.height * scale).rounded())
+      )
+      let horizontalScale = outputSize.width / extent.width
+      let verticalScale = outputSize.height / extent.height
+      return image
+        .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+        // Lanczos reads a few pixels past each edge. Clamp them, as
+        // `GaussianBlurFeature` does, so no transparent pixels from outside
+        // the image fade the edges.
+        .clampedToExtent()
         .applyingFilter(
           "CILanczosScaleTransform",
-          parameters: [kCIInputScaleKey: scale, kCIInputAspectRatioKey: 1.0]
+          parameters: [
+            kCIInputScaleKey: verticalScale,
+            // The horizontal scale relative to `inputScale`.
+            kCIInputAspectRatioKey: horizontalScale / verticalScale,
+          ]
         )
-      // Lanczos can grow the extent by sub-pixels (filter support); crop back to
-      // the integer target so the encoded file has exact dimensions. The
-      // parametric output is zero-origin.
-      let targetSize = CGSize(
-        width: (extent.width * scale).rounded(),
-        height: (extent.height * scale).rounded()
-      )
-      return scaled.cropped(to: CGRect(origin: .zero, size: targetSize))
+        .cropped(to: CGRect(origin: .zero, size: outputSize))
     }
   }
 

@@ -66,7 +66,9 @@ Status context (as of Brightroom 6):
     a large file result WITHOUT a full-resolution decode spike, use
     `RenderedImage.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
     `RenderedImage.cgImage` (which decodes full).
-  `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
+  `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs:
+  whole-pixel size first, each axis scaled to fill it, edges clamped
+  (`ExportRendererResizeTests`).
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
     `CIImageStreamingFileWriter.referenceStripHeight` (16-bit writes use half

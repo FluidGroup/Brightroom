@@ -1546,6 +1546,20 @@ when the source's space (or `outputColorSpace`) is not RGB. A luminance
 space and tags anything else with Generic Gray Gamma 2.2, where 5.1.1 failed.
 RGB sources and RGB `outputColorSpace` values are tagged as before.
 
+`Resolution.resize(maxPixelSize:)` now fills every output pixel. 5.1.1 scaled
+both sides by one factor, rounded each side on its own, and let Lanczos read
+transparent pixels from outside the image. The outer row and column of an
+opaque photo came out partly transparent, about half transparent on a side
+that was rounded up: a light line in a JPEG and a translucent edge in a PNG or
+HEIF. A crop whose shorter side rounded to 0 failed with
+`failedToCreateCGImage`. 6.0 decides the whole-pixel size first and resamples
+the whole image onto exactly that size, scaling each axis on its own and
+clamping the edge pixels. The sizes are the same as in 5.1.1, except that a
+side that rounded to 0 is now 1 pixel. Rounding stretches a side by at most
+half a pixel. Transparent pixels the edit produces, such as the corners of a
+straightened crop, stay transparent; a JPEG shows them white, because Image
+I/O flattens transparency onto white.
+
 `Output.file` now stores the depth `outputFormat` asks for when the file type
 can. 5.1.1 always wrote 8 bits per component and still reported the requested
 format in `Rendered.options`. In 6.0 a format deeper than 8 bits, such as
