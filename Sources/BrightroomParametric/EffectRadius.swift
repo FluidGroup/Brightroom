@@ -28,6 +28,31 @@ public enum EffectRadius: Equatable, Sendable {
 
 extension EffectRadius {
 
+  /// Creates an absolute radius, or returns `nil` when `pixels` is negative
+  /// or not finite.
+  ///
+  /// The cases accept any number. Restore a stored radius with this
+  /// initializer or ``init(validatingProportional:)``, and reject what they
+  /// reject.
+  public init?(validatingAbsolute pixels: Double) {
+    guard pixels.isFinite, pixels >= 0 else {
+      return nil
+    }
+    self = .absolute(pixels)
+  }
+
+  /// Creates a proportional radius, or returns `nil` when `value` is
+  /// negative or not finite.
+  public init?(validatingProportional value: Double) {
+    guard value.isFinite, value >= 0 else {
+      return nil
+    }
+    self = .proportional(value)
+  }
+}
+
+extension EffectRadius {
+
   /// The radius in pixels of the current render pass.
   ///
   /// `.proportional` resolves against `chainEntryExtent`, the extent

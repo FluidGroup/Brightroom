@@ -121,6 +121,7 @@ It uses only the public API.
 | `ColorCubeFeature` | a reference to your asset, `intensity` | load the cube, set `intensity`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands, `algorithm.rawValue` | `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, `ColorMixerFeature.Algorithm(rawValue:)` |
+| `GaussianBlurFeature`, `SharpenFeature`, `UnsharpMaskFeature` | the radius's unit (`absolute` or `proportional`) and number; `intensity` for sharpen and unsharp mask | `EffectRadius(validatingAbsolute:)`, `EffectRadius(validatingProportional:)`, then the feature's initializer |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
 | `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
@@ -141,6 +142,8 @@ Notes:
   only the output's width and height (`outputGeometry(in:).outputBounds`);
   changing `quarterTurn` never changes the selected pixels. Parts of the
   requested canvas outside the input are transparent.
+- `EffectRadius` cases accept any number. Its validating initializers return
+  `nil` for a negative or non-finite radius.
 - Masks have no `validate()`. A union or intersection with no inputs
   restores without error and throws `FeatureEvaluationError.emptyMaskComposite`
   when it renders. Reject empty composites while converting if your storage
