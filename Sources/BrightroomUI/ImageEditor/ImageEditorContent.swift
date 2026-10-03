@@ -204,6 +204,9 @@ struct ImageEditorContent: View {
           // one document's start over another.
           session.noteDocument(document)
         }
+        // A container keeps each control's own identifier; without it the
+        // editor's identifier replaces theirs.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("image-editor")
       }
     }

@@ -237,4 +237,43 @@ struct ImageEditorAccessibilityTests {
     }
     return nil
   }
+
+  /// Each control keeps its own identifier inside the editor's
+  /// `image-editor` container, so UI tests can find a mode button.
+  @Test func `Controls keep their own accessibility identifiers`() async throws {
+    let host = Host(try DocumentTestFixtures.makeDocument())
+    let mounted = mount(ImageEditor(document: host.binding, onDone: {}))
+    defer { mounted.window.isHidden = true }
+
+    try await mounted.wait(
+      until: { mounted.element("Blur Masking").map { $0.accessibilityTraits.contains(.notEnabled) == false } == true },
+      "The editor never prepared the image."
+    )
+    let identifiers = [
+      "Crop": "image-editor.mode.crop",
+      "Blur Masking": "image-editor.mode.local-blur",
+      "Filters": "image-editor.mode.filters",
+      "Adjustments": "image-editor.mode.adjust",
+      "Rotate": "image-editor.rotate",
+      "Done": "image-editor.done",
+    ]
+    for (label, identifier) in identifiers {
+      #expect(identifierOf(mounted.element(label)) == identifier, "\(label)")
+    }
+    #expect(mounted.elements.contains { identifierOf($0) == "image-editor" })
+
+    #expect(try #require(mounted.element("Blur Masking")).accessibilityActivate())
+    try await mounted.wait(until: { mounted.element("Clear Blur Mask") != nil }, "Blur shows no Clear.")
+    #expect(identifierOf(mounted.element("Clear Blur Mask")) == "image-editor.local-blur.clear")
+  }
+
+  /// The element's `accessibilityIdentifier`. SwiftUI's elements implement
+  /// it without declaring `UIAccessibilityIdentification`.
+  private func identifierOf(_ element: NSObject?) -> String? {
+    let selector = #selector(getter: UIAccessibilityIdentification.accessibilityIdentifier)
+    guard let element, element.responds(to: selector) else {
+      return nil
+    }
+    return element.perform(selector)?.takeUnretainedValue() as? String
+  }
 }
