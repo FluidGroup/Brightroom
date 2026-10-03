@@ -1524,8 +1524,10 @@ RGB sources and RGB `outputColorSpace` values are tagged as before.
 can. 5.1.1 always wrote 8 bits per component and still reported the requested
 format in `Rendered.options`. In 6.0 a format deeper than 8 bits, such as
 `.RGBA16` or `.RGBAh`, is stored with 16 bits per component in a PNG and 10 in
-a HEIF; JPEG stays at 8. No file type stores floating-point components, so
-values outside 0...1 are clamped as before. `RenderedImage.options.outputFormat`
+a HEIF; JPEG stays at 8. That holds for every format whose `.memory` result
+has more than 8 bits per component, including `.RGBX16`, `.rgbXh`, and
+`.rgbXf`. No file type stores floating-point components, so values outside
+0...1 are clamped as before. `RenderedImage.options.outputFormat`
 reports the format the file stores (`.RGBA8`, `.RGBA16`, or `.RGB10`), which
 can differ from the requested one; the default `.BGRA8` is now reported as
 `.RGBA8`. `.memory` delivers and reports the requested format as before. A

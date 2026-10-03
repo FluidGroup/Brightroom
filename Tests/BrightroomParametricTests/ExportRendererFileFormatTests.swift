@@ -35,10 +35,13 @@ struct ExportRendererFileFormatTests {
     Case(fileType: .png, fileExtension: "png", requested: .RGBAh, stored: .RGBA16, bitsPerComponent: 16),
     Case(fileType: .png, fileExtension: "png", requested: .RGBAf, stored: .RGBA16, bitsPerComponent: 16),
     Case(fileType: .png, fileExtension: "png", requested: .L16, stored: .RGBA16, bitsPerComponent: 16),
+    Case(fileType: .png, fileExtension: "png", requested: .rgbXh, stored: .RGBA16, bitsPerComponent: 16),
+    Case(fileType: .png, fileExtension: "png", requested: .rgbXf, stored: .RGBA16, bitsPerComponent: 16),
     // HEIF keeps 10.
     Case(fileType: .heif(quality: 0.9), fileExtension: "heic", requested: .BGRA8, stored: .RGBA8, bitsPerComponent: 8),
     Case(fileType: .heif(quality: 0.9), fileExtension: "heic", requested: .RGBA16, stored: .RGB10, bitsPerComponent: 10),
     Case(fileType: .heif(quality: 0.9), fileExtension: "heic", requested: .RGBAh, stored: .RGB10, bitsPerComponent: 10),
+    Case(fileType: .heif(quality: 0.9), fileExtension: "heic", requested: .rgbXh, stored: .RGB10, bitsPerComponent: 10),
     // JPEG has only 8.
     Case(fileType: .jpeg(quality: 0.9), fileExtension: "jpg", requested: .BGRA8, stored: .RGBA8, bitsPerComponent: 8),
     Case(fileType: .jpeg(quality: 0.9), fileExtension: "jpg", requested: .RGBAh, stored: .RGBA8, bitsPerComponent: 8),
@@ -107,6 +110,56 @@ struct ExportRendererFileFormatTests {
 
     let largestDifference = zip(pixels8, pixels16).map { abs(Int($0) - Int($1)) }.max() ?? 0
     #expect(largestDifference <= 1)
+  }
+
+  /// Every `CIFormat` the SDK declares.
+  static let allFormats: [CIFormat] = [
+    .ARGB8, .BGRA8, .RGBA8, .RGBX8, .ABGR8,
+    .RGBAh, .RGBA16, .RGBAf, .RGBX16, .rgbXh, .rgbXf, .RGB10,
+    .A8, .A16, .Ah, .Af,
+    .R8, .R16, .Rh, .Rf,
+    .RG8, .RG16, .RGh, .RGf,
+    .L8, .L16, .Lh, .Lf,
+    .LA8, .LA16, .LAh, .LAf,
+  ]
+
+  /// The formats Core Image cannot render into a `CGImage` with any color
+  /// space: alpha only, red only, and red-green.
+  static let formatsWithoutMemoryResult: [CIFormat] = [
+    .A8, .A16, .Ah, .Af,
+    .R8, .R16, .Rh, .Rf,
+    .RG8, .RG16, .RGh, .RGf,
+  ]
+
+  /// The file keeps more than 8 bits per component exactly when the
+  /// `.memory` result in the same format has them, so no deep format is
+  /// missing from the list `Output.file` checks.
+  @Test(arguments: allFormats.filter { formatsWithoutMemoryResult.contains($0) == false })
+  func `a PNG is deep exactly when the memory result is`(format: CIFormat) throws {
+    let memory = try ExportRenderer().render(
+      from: Self.gradientSource(),
+      feature: EmptyFeature(),
+      options: .init(
+        outputFormat: format,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
+      )
+    )
+    let isDeep = try memory.cgImage.bitsPerComponent > 8
+
+    let url = Self.temporaryURL(extension: "png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let file = try ExportRenderer().render(
+      from: Self.gradientSource(),
+      feature: EmptyFeature(),
+      options: .init(
+        outputFormat: format,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        output: .file(url: url, fileType: .png)
+      )
+    )
+
+    #expect(file.options.outputFormat == (isDeep ? .RGBA16 : .RGBA8))
+    #expect(try file.cgImage.bitsPerComponent == (isDeep ? 16 : 8))
   }
 
   // MARK: - Memory output is unchanged

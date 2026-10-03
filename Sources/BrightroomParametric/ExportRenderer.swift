@@ -87,8 +87,8 @@ public struct ExportRenderer {
     ///
     /// - A format with 8 bits per component, such as the default `.BGRA8`,
     ///   is stored as `.RGBA8` by every file type.
-    /// - A deeper format, such as `.RGBA16`, `.RGBAh`, or `.RGBAf`, is stored
-    ///   as `.RGBA16` by PNG and as `.RGB10` (10 bits per component) by HEIF.
+    /// - A deeper format, such as `.RGBA16`, `.RGBAh`, `.rgbXh`, or `.RGBAf`,
+    ///   is stored as `.RGBA16` by PNG and as `.RGB10` (10 bits per component) by HEIF.
     ///   JPEG has only 8 bits per component and stores `.RGBA8`. No file type
     ///   stores floating-point components, so values outside 0...1 are
     ///   clamped.
@@ -282,9 +282,11 @@ public struct ExportRenderer {
     }
   }
 
-  /// The output formats with more than 8 bits per component.
+  /// The output formats with more than 8 bits per component: every
+  /// `CIFormat` except the 8-bit ones (`ExportRendererFileFormatTests` checks
+  /// each format against the depth of its `.memory` result).
   private static let deepFormats: [CIFormat] = [
-    .RGBA16, .RGBAh, .RGBAf, .RGBX16, .RGB10,
+    .RGBA16, .RGBAh, .RGBAf, .RGBX16, .rgbXh, .rgbXf, .RGB10,
     .A16, .Ah, .Af, .R16, .Rh, .Rf, .RG16, .RGh, .RGf,
     .L16, .Lh, .Lf, .LA16, .LAh, .LAf,
   ]
