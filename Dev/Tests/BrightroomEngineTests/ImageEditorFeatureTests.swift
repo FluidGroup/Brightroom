@@ -119,6 +119,50 @@ struct ImageEditorFeatureTests {
     #expect(document.localBlur?.content == localBlur.content)
   }
 
+  /// A blur whose mask is not a plain brush (a host may restore one) is not
+  /// paintable: a stroke leaves the feature unchanged, without trapping in
+  /// Debug, and the canvas never offers to paint it.
+  @Test(arguments: MasksThatAreNotABrush.all)
+  func `A stroke leaves a blur that is not a brush unchanged`(mask: Mask) {
+    var document = ImageEditorFeature(imageSize: imageSize)
+    document.localBlur = LocalAdjustmentFeature(mask: mask) {
+      GaussianBlurFeature(radius: .absolute(12))
+    }
+    let before = document
+    #expect(document.isLocalBlurPaintable == false)
+
+    document.appendLocalBlurStroke(stroke)
+
+    #expect(document == before)
+    #expect(document.localBlurStrokes.isEmpty)
+  }
+
+  @Test func `A blur is paintable when absent or a brush`() {
+    var document = ImageEditorFeature(imageSize: imageSize)
+    #expect(document.isLocalBlurPaintable)
+
+    document.appendLocalBlurStroke(stroke)
+    #expect(document.isLocalBlurPaintable)
+
+    document.localBlur?.mask = .inverted(.brush(BrushMask(strokes: [stroke])))
+    #expect(document.isLocalBlurPaintable == false)
+
+    document.localBlur = nil
+    #expect(document.isLocalBlurPaintable)
+  }
+
+  @Test func `Blur mode is unavailable for a blur the editor cannot paint`() {
+    for mode in ImageEditor.Mode.allCases {
+      #expect(mode.isAvailable(isLocalBlurPaintable: true))
+    }
+    #expect(ImageEditor.Mode.localBlur.isAvailable(isLocalBlurPaintable: false) == false)
+    #expect(ImageEditor.Mode.localBlur.unavailableReason != nil)
+    for mode in [ImageEditor.Mode.crop, .filters, .adjust] {
+      #expect(mode.isAvailable(isLocalBlurPaintable: false))
+      #expect(mode.unavailableReason == nil)
+    }
+  }
+
   /// A host that stores the document's values and rebuilds it gets back the
   /// document the editor produced (the resume path).
   @Test func `A document rebuilt from the same values equals the edited one`() {

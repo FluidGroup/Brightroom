@@ -35,6 +35,12 @@ extension ImageEditorCanvas {
     case crop
 
     /// Paint `localBlur`. The canvas shows the whole feature through the crop.
+    ///
+    /// Strokes add to a brush mask. When `localBlur` has another mask
+    /// (`ImageEditorFeature.isLocalBlurPaintable` is false), the canvas
+    /// paints nothing and views the output, as with a nil target, until the
+    /// local blur is removed or becomes a brush mask again. A stroke in
+    /// progress when that happens is cancelled.
     case localBlur
   }
 }

@@ -202,19 +202,31 @@ final class EditingCanvasView: UIView {
   private let surfaceHost = SurfaceHost()
   /// Internal (not private) so tests can drive its scroll view's delegate.
   let cropSurface = CropSurface()
-  private let toolSurface = ToolSurface()
+  /// Internal (not private) so tests can read whether its drawing gesture
+  /// paints.
+  let toolSurface = ToolSurface()
 
-  /// What canvas gestures edit; nil views the output only.
+  /// What the host asked canvas gestures to edit; nil views the output only.
   private var editingTarget: ImageEditorCanvas.Target? = .crop
+
+  /// What canvas gestures edit now: `editingTarget`, except that a local
+  /// blur the canvas cannot paint (`ImageEditorFeature.isLocalBlurPaintable`)
+  /// is viewed only, as with a nil target.
+  private var activeEditingTarget: ImageEditorCanvas.Target? {
+    if editingTarget == .localBlur, feature.isLocalBlurPaintable == false {
+      return nil
+    }
+    return editingTarget
+  }
 
   /// Whether the crop guide and the crop scroll surface own interaction.
   private var isCropEditing: Bool {
-    editingTarget == .crop
+    activeEditingTarget == .crop
   }
 
   /// Whether brush gestures paint the blur mask.
   private var isMaskEditing: Bool {
-    editingTarget == .localBlur
+    activeEditingTarget == .localBlur
   }
   private var brush: ImageEditorCanvas.Brush = .init(diameter: .viewportPoints(30))
   /// The image-space brush most recently pushed to the canvas surfaces, used
@@ -620,6 +632,7 @@ final class EditingCanvasView: UIView {
       imageSize: source.imageSize
     ) == false
     let localBlurChanged = feature.localBlur != self.feature.localBlur
+    let wasMaskEditing = isMaskEditing
     self.feature = feature
 
     if cropChanged, let current = state.proposedCrop {
@@ -640,6 +653,11 @@ final class EditingCanvasView: UIView {
     // Effects-only changes (slider ticks, presets) leave the strokes alone.
     if cropChanged || localBlurChanged {
       syncCommittedStrokesFromFeature()
+    }
+    // A local blur replaced with one the canvas cannot paint (or back) turns
+    // painting off (or on); turning it off cancels a stroke in progress.
+    if isMaskEditing != wasMaskEditing {
+      applySurfaceMode()
     }
     updateDisplay()
   }
@@ -859,7 +877,7 @@ extension EditingCanvasView {
       ) != nil
     }
 
-    switch editingTarget {
+    switch activeEditingTarget {
     case .crop:
       toolSurface.hideCanvasView()
       guard
@@ -2238,6 +2256,9 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
   /// Sets what canvas gestures edit; nil views the output only.
   ///
   /// Leaving crop editing commits the visible crop to the feature first.
+  /// `.localBlur` paints only while the feature's local blur is paintable
+  /// (`ImageEditorFeature.isLocalBlurPaintable`); otherwise it views the
+  /// output only.
   func setEditingTarget(_ target: ImageEditorCanvas.Target?) {
     guard editingTarget != target else {
       return

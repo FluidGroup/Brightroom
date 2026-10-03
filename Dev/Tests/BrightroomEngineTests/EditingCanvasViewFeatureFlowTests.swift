@@ -124,6 +124,122 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.count == 1, "an echo is not emitted again")
   }
 
+  // MARK: - A local blur the canvas cannot paint
+
+  private func makeFeature(localBlurMask mask: Mask) -> ImageEditorFeature {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.localBlur = LocalAdjustmentFeature(mask: mask) {
+      GaussianBlurFeature(radius: .absolute(12))
+    }
+    return feature
+  }
+
+  private let strokeRecord = EditingCanvasStrokeRecord(
+    stamps: [CGPoint(x: 40, y: 30), CGPoint(x: 42, y: 31)],
+    brush: .init(size: 12)
+  )
+
+  @Test(arguments: MasksThatAreNotABrush.all)
+  func `The localBlur target does not paint a mask that is not a brush`(mask: Mask) throws {
+    let feature = makeFeature(localBlurMask: mask)
+    #expect(feature.isLocalBlurPaintable == false)
+    let harness = makeLoadedCanvasView(feature: feature)
+
+    #expect(harness.canvasView.toolSurface.drawingGestureRecognizer.isEnabled == false)
+
+    // A stroke that reaches the commit path anyway changes nothing.
+    var completed = false
+    harness.canvasView.commitCanvasStroke(record: strokeRecord) { completed = true }
+
+    #expect(completed)
+    #expect(harness.emitted.isEmpty)
+    #expect(harness.box.owned == feature)
+    #expect(harness.box.owned.localBlur?.mask == mask)
+  }
+
+  @Test func `The localBlur target paints a brush mask and an absent blur`() {
+    let brushFeature = makeFeature(localBlurMask: .brush(MasksThatAreNotABrush.brush))
+    #expect(brushFeature.isLocalBlurPaintable)
+    #expect(ImageEditorFeature(imageSize: imageSize).isLocalBlurPaintable)
+
+    let harness = makeLoadedCanvasView(feature: brushFeature)
+    #expect(harness.canvasView.toolSurface.drawingGestureRecognizer.isEnabled)
+
+    harness.canvasView.commitCanvasStroke(record: strokeRecord) {}
+    #expect(harness.emitted.count == 1)
+    #expect(harness.emitted.last?.localBlurStrokes.count == MasksThatAreNotABrush.brush.strokes.count + 1)
+  }
+
+  /// A host that replaces the blur while Blur is open (an undo, a restore)
+  /// turns painting off, and back on once the blur is a brush or removed.
+  @Test func `Painting follows whether the host's local blur is paintable`() throws {
+    let harness = makeLoadedCanvasView(feature: makeFeature(localBlurMask: .brush(MasksThatAreNotABrush.brush)))
+    let drawing = harness.canvasView.toolSurface.drawingGestureRecognizer
+    #expect(drawing.isEnabled)
+
+    // The host owns the feature it passes in.
+    let inverted = makeFeature(localBlurMask: .inverted(.brush(MasksThatAreNotABrush.brush)))
+    harness.box.owned = inverted
+    harness.canvasView.setFeature(inverted)
+    #expect(drawing.isEnabled == false)
+    harness.canvasView.commitCanvasStroke(record: strokeRecord) {}
+    #expect(harness.emitted.isEmpty)
+
+    var cleared = inverted
+    cleared.localBlur = nil
+    harness.box.owned = cleared
+    harness.canvasView.setFeature(cleared)
+    #expect(drawing.isEnabled)
+    harness.canvasView.commitCanvasStroke(record: strokeRecord) {}
+    let painted = try #require(harness.emitted.last)
+    #expect(painted.localBlur?.content == ImageEditorFeature.defaultLocalBlurContent)
+    #expect(painted.localBlurStrokes.count == 1)
+  }
+
+  /// The owner applies the canvas's change to its latest feature. When the
+  /// host replaced the blur before the stroke's change reached it, the
+  /// stroke leaves that blur unchanged.
+  @Test func `A stroke that reaches a blur the host replaced leaves it unchanged`() {
+    let harness = makeLoadedCanvasView(feature: makeFeature(localBlurMask: .brush(MasksThatAreNotABrush.brush)))
+    let replaced = makeFeature(localBlurMask: .feathered(.brush(MasksThatAreNotABrush.brush), radius: 8))
+    harness.box.owned = replaced
+
+    harness.canvasView.commitCanvasStroke(record: strokeRecord) {}
+
+    #expect(harness.emitted == [replaced])
+  }
+
+  /// Leaving the localBlur target view-only shows what the nil target
+  /// shows: the canvas draws no blur for a mask it cannot rasterize, and the
+  /// export of the unchanged document still applies the host's mask.
+  @Test(arguments: MasksThatAreNotABrush.all)
+  func `A mask that is not a brush has no canvas strokes and still exports`(mask: Mask) throws {
+    let feature = makeFeature(localBlurMask: mask)
+    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: feature.localBlur) == .viewportBase)
+
+    let source = makeSource(size: imageSize)
+    let renderer = FeatureRenderer()
+    let withBlur = try renderer.makeImage(from: source, feature: feature)
+    var withoutBlur = feature
+    withoutBlur.localBlur = nil
+    let plain = try renderer.makeImage(from: source, feature: withoutBlur)
+
+    let context = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+    func bytes(_ image: CIImage) -> [UInt8] {
+      var pixels = [UInt8](repeating: 0, count: Int(imageSize.width * imageSize.height) * 4)
+      context.render(
+        image,
+        toBitmap: &pixels,
+        rowBytes: Int(imageSize.width) * 4,
+        bounds: CGRect(origin: .zero, size: imageSize),
+        format: .RGBA8,
+        colorSpace: nil
+      )
+      return pixels
+    }
+    #expect(bytes(withBlur) != bytes(plain), "export applies the host's mask")
+  }
+
   @Test func `An external crop change reloads the crop`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
     let guideCount = harness.guides.count

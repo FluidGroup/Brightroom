@@ -36,12 +36,37 @@ extension ImageEditorFeature {
   /// current crop and can be a constant.
   static let defaultLocalBlurContent = GaussianBlurFeature(radius: .proportional(40))
 
-  /// Appends a stroke to the local blur's mask.
+  /// Whether the editor can paint `localBlur`: true when there is no local
+  /// blur yet or its mask is a plain `.brush`.
+  ///
+  /// The editing canvas rasterizes brush strokes only, so it cannot show any
+  /// other mask (for example `.inverted`, `.feathered`, `.union`,
+  /// `.intersection`, or `.subtraction`, as a host may restore). While this is
+  /// false, `ImageEditor` disables its Blur mode and `ImageEditorCanvas`
+  /// paints nothing for the `.localBlur` target. The mask still renders at
+  /// export. Removing the local blur (`localBlur = nil`, or Clear in
+  /// `ImageEditor`) makes it paintable again.
+  public var isLocalBlurPaintable: Bool {
+    guard let localBlur else {
+      return true
+    }
+    guard case .brush = localBlur.mask else {
+      return false
+    }
+    return true
+  }
+
+  /// Appends a stroke to the local blur's brush mask.
   ///
   /// When there is no local blur yet, one is created with the default blur
   /// (`defaultLocalBlurContent`, diagonal / 50 of the chain entry)
   /// and a brush mask. An existing blur keeps the content it was
   /// created with.
+  ///
+  /// When the local blur is not paintable (`isLocalBlurPaintable`), the
+  /// feature is left unchanged. The canvas does not paint such a blur; this
+  /// covers a stroke that reaches a document whose mask the host replaced
+  /// while the stroke was drawn.
   ///
   /// - Parameter stroke: A stroke in BrightroomParametric's working space
   ///   (bottom-left origin, y-up) of the oriented, pre-crop source at full
@@ -49,15 +74,20 @@ extension ImageEditorFeature {
   ///   `SourceImage.pixelSize`. The brush diameter is in the same
   ///   pixels.
   mutating func appendLocalBlurStroke(_ stroke: BrushMask.Stroke) {
-    guard localBlur != nil else {
-      localBlur = LocalAdjustmentFeature(
+    guard var localBlur else {
+      self.localBlur = LocalAdjustmentFeature(
         mask: .brush(BrushMask(strokes: [stroke]))
       ) {
         Self.defaultLocalBlurContent
       }
       return
     }
-    localBlur?.mask.appendBrushStroke(stroke)
+    guard case var .brush(brush) = localBlur.mask else {
+      return
+    }
+    brush.strokes.append(stroke)
+    localBlur.mask = .brush(brush)
+    self.localBlur = localBlur
   }
 
   /// The local blur's strokes in working space. Empty when there is no local
@@ -69,28 +99,17 @@ extension ImageEditorFeature {
 
 // MARK: - Brush-rooted Mask access
 
-/// Canvas tooling authors brush masks only. These accessors keep that
-/// assumption in one place. Composite masks (generated masks, future
-/// refinements) pass through untouched: they render at export, but the canvas
-/// has no strokes to preview for them.
+/// Canvas tooling authors and previews brush masks only
+/// (`ImageEditorFeature.isLocalBlurPaintable`). Other masks pass through
+/// untouched: they render at export, but the canvas has no strokes to preview
+/// for them.
 extension Mask {
 
-  /// The strokes of a brush mask; empty for composite masks.
+  /// The strokes of a brush mask; empty for any other mask.
   var brushStrokes: [BrushMask.Stroke] {
     guard case let .brush(mask) = self else {
       return []
     }
     return mask.strokes
-  }
-
-  /// Appends a stroke to a brush mask. Composite masks are not editable by
-  /// the canvas; appending to one is a programmer error.
-  mutating func appendBrushStroke(_ stroke: BrushMask.Stroke) {
-    guard case var .brush(mask) = self else {
-      assertionFailure("The canvas can only append strokes to a brush mask.")
-      return
-    }
-    mask.strokes.append(stroke)
-    self = .brush(mask)
   }
 }

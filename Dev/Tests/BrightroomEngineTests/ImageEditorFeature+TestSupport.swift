@@ -33,3 +33,30 @@ extension ImageEditorFeature {
     return copy
   }
 }
+
+/// Blur masks a host may restore that are not a plain brush, which the
+/// editor cannot paint (`ImageEditorFeature.isLocalBlurPaintable`).
+enum MasksThatAreNotABrush {
+
+  static let brush = BrushMask(strokes: [
+    .init(
+      stampCenters: [CGPoint(x: 120, y: 150), CGPoint(x: 160, y: 150)],
+      brush: .init(diameter: 40, hardness: 0.7, opacity: 1)
+    )
+  ])
+
+  static let otherBrush = BrushMask(strokes: [
+    .init(
+      stampCenters: [CGPoint(x: 140, y: 150)],
+      brush: .init(diameter: 20, hardness: 0.7, opacity: 1)
+    )
+  ])
+
+  static let all: [Mask] = [
+    .inverted(.brush(brush)),
+    .feathered(.brush(brush), radius: 8),
+    .union([.brush(brush), .brush(otherBrush)]),
+    .intersection([.brush(brush), .brush(otherBrush)]),
+    .subtraction(.brush(brush), removing: .brush(otherBrush)),
+  ]
+}

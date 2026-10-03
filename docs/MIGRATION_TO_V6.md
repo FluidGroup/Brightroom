@@ -1028,6 +1028,14 @@ A new document from `ImageEditorDocument(source:)` has no effects and a crop
 that covers the whole image. To rebuild a saved edit, use
 `ImageEditorFeature(effects:localBlur:crop:)`.
 
+`localBlur` accepts any `Mask`, but the editor paints and previews only a
+plain `.brush` mask, the shape it authors. Check `isLocalBlurPaintable`: it is
+false when the blur's mask is anything else (`.inverted`, `.feathered`,
+`.union`, `.intersection`, `.subtraction`). Such a mask renders at export, but
+the canvas shows the image without it, `ImageEditor` disables its Blur mode,
+and `ImageEditorCanvas` paints nothing for the `.localBlur` target. Removing
+the blur (`localBlur = nil`) makes it paintable again.
+
 ### Editing in Code
 
 `document.feature` is a plain value. Change it and commit when the change
@@ -1136,7 +1144,11 @@ replacement on `ImageEditorCanvas`
   canvas edits while it shows the evaluated result. The seed effect of
   `CropViewFeatureFocus.masking(_:id:)` is gone: the first stroke creates
   `localBlur` with the default blur. To use another blur, set
-  `document.feature.localBlur` yourself.
+  `document.feature.localBlur` yourself. The `.localBlur` target paints
+  only while `document.feature.isLocalBlurPaintable` is true (no blur, or a
+  plain `.brush` mask); with any other mask it views the output, as `nil`
+  does, and a stroke in progress is cancelled. Disable your own Blur control
+  the same way.
 - Renamed members: `adjustmentAngle(_:)` is `straightenAngle(_:isEditing:)`,
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
   `AspectRatio`), and `SwiftUICropView.AdjustmentKind` is `CropInteraction`

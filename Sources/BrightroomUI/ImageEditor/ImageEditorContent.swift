@@ -124,6 +124,7 @@ struct ImageEditorContent: View {
               originalAspectRatio: originalAspectRatio,
               aspectRatioSelection: aspectRatioSelection,
               localBlurState: localBlurState,
+              isLocalBlurPaintable: displayedFeature.isLocalBlurPaintable,
               filters: options.filters,
               filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
               currentEffects: displayedFeature.effects,
@@ -151,6 +152,7 @@ struct ImageEditorContent: View {
           ModeToolbar(
             selection: editingMode,
             isLoaded: isLoaded,
+            isLocalBlurPaintable: displayedFeature.isLocalBlurPaintable,
             onSelect: { selectMode($0, canvas: canvas) }
           )
         }
@@ -389,15 +391,20 @@ struct ImageEditorContent: View {
 
     let selection: ImageEditor.Mode
     let isLoaded: Bool
+    /// Whether the document's local blur can be painted; Blur is
+    /// unavailable otherwise.
+    let isLocalBlurPaintable: Bool
     let onSelect: (ImageEditor.Mode) -> Void
 
     var body: some View {
       let body = HStack(spacing: 12) {
         ForEach(ImageEditor.Mode.allCases) { mode in
+          let isAvailable = mode.isAvailable(isLocalBlurPaintable: isLocalBlurPaintable)
           _Button(
             mode: mode,
             isSelected: selection == mode,
-            isEnabled: isLoaded
+            isEnabled: isLoaded && isAvailable,
+            unavailableReason: isAvailable ? nil : mode.unavailableReason
           ) {
             onSelect(mode)
           }
@@ -419,6 +426,8 @@ struct ImageEditorContent: View {
       let mode: ImageEditor.Mode
       let isSelected: Bool
       let isEnabled: Bool
+      /// Why the mode cannot be used with this document; nil when it can.
+      let unavailableReason: String?
       let action: () -> Void
 
       var body: some View {
@@ -445,6 +454,7 @@ struct ImageEditorContent: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(mode.accessibilityLabel)
         .accessibilityValue(isSelected ? "selected" : "not selected")
+        .accessibilityHint(unavailableReason ?? "")
         .accessibilityIdentifier(mode.accessibilityIdentifier)
       }
 
@@ -533,6 +543,29 @@ extension ImageEditor {
       }
     }
 
+    /// Whether the mode can be used with the document. Blur paints the
+    /// local blur, so it is unavailable while the editor cannot paint it
+    /// (`ImageEditorFeature.isLocalBlurPaintable`).
+    func isAvailable(isLocalBlurPaintable: Bool) -> Bool {
+      switch self {
+      case .localBlur:
+        return isLocalBlurPaintable
+      case .crop, .filters, .adjust:
+        return true
+      }
+    }
+
+    /// Why the mode is unavailable when `isAvailable(isLocalBlurPaintable:)`
+    /// is false; nil for a mode that is always available.
+    var unavailableReason: String? {
+      switch self {
+      case .localBlur:
+        return "Unavailable: this blur was not painted with a brush."
+      case .crop, .filters, .adjust:
+        return nil
+      }
+    }
+
     /// What `ImageEditorCanvas` gestures edit in this mode. Filters and
     /// Adjustments edit through controls below the canvas, so the canvas only
     /// views the output there.
@@ -594,6 +627,7 @@ private struct ControlHost: View {
   let originalAspectRatio: AspectRatio?
   let aspectRatioSelection: AspectRatioSelection
   let localBlurState: LocalBlurState
+  let isLocalBlurPaintable: Bool
   let filters: [FilterFeature]
   let filterPreviewBaseImage: CIImage?
   let currentEffects: ImageEditorFeature.Effects?
@@ -632,6 +666,7 @@ private struct ControlHost: View {
         LocalBlurControl(
           brushDiameter: localBlurState.brushDiameter,
           isLoaded: isLoaded,
+          isPaintable: isLocalBlurPaintable,
           onSetBrushDiameter: onSetBrushDiameter,
           onClearLocalBlur: onClearLocalBlur
         )
@@ -851,6 +886,9 @@ private struct LocalBlurControl: View {
 
   let brushDiameter: CGFloat
   let isLoaded: Bool
+  /// False when the host replaced the local blur with one the editor cannot
+  /// paint while Blur was open; Clear still removes it.
+  let isPaintable: Bool
   let onSetBrushDiameter: (CGFloat) -> Void
   let onClearLocalBlur: () -> Void
 
@@ -892,6 +930,8 @@ private struct LocalBlurControl: View {
       )
       .tint(.white)
       .frame(height: 50)
+      .disabled(!isPaintable)
+      .opacity(isPaintable ? 1 : 0.5)
       .accessibilityLabel("Brush Size")
 
       ToolbarIconButton(
