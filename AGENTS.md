@@ -181,6 +181,11 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Metal shaders are in `Sources/BrightroomParametric/` (brush masks and mask
   combinators) and `Sources/BrightroomColorAdjustmentKernels/` (tone curve and
   color mixer)
+- Core Image hands a custom kernel the context's working-space values. The
+  tone curve and color mixer kernels compute in extended-linear Display-P3, so
+  their recipes match into that space around the kernel
+  (`ColorAdjustmentKernelSpace`) and render the same in any context; a new
+  kernel that assumes a color space does the same
 - Performance-critical operations use Metal instead of Core Image
 - The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
   and `EditingCanvasRenderer` (`Sources/BrightroomUI/Canvas/`)

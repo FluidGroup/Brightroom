@@ -121,6 +121,13 @@ public struct VideoRenderer: Sendable {
   /// Each frame evaluates the feature at the frame's composition time. The
   /// returned composition can be assigned to `AVPlayerItem.videoComposition`
   /// or `AVAssetExportSession.videoComposition`.
+  ///
+  /// - Parameter ciContext: The context that renders each frame. `nil` lets
+  ///   AVFoundation choose; its default works in extended-linear sRGB, so
+  ///   built-in filters compute in linear sRGB, while `ToneCurveFeature` and
+  ///   `ColorMixerFeature` compute in extended-linear Display-P3 as they do
+  ///   for stills. A context you pass needs a floating-point working format;
+  ///   an 8-bit one quantizes the linear values the features compute on.
   public func makeVideoComposition(
     for asset: AVAsset,
     feature: some Feature,

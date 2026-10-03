@@ -279,13 +279,19 @@ func makeGrade() -> ColorGrade {
 ```
 
 The host chooses feature order and interprets the source encoding. Both effects
-expect extended-linear Display-P3 numbers, preserve premultiplied alpha and
-extended-range values, and return the input image exactly when neutral. Tone
-Curve uses the existing scene-linear stop shaper, with normalized 0.5 at 18%
-gray, and independent RGB curves followed by the authored Y luminance result.
-Color Mixer applies eight adjacent hue bands in OKLCh without gamut clipping.
-Changing their order or feeding unmanaged camera values is an explicit host
-policy, not an automatic input conversion performed by the features.
+compute in extended-linear Display-P3: each matches its input from the
+rendering context's working color space into that space before its kernel and
+matches the result back, so a feature renders the same colors through the
+export, the canvas, a default `CIContext()`, or `VideoRenderer`'s default video
+context. Render through a floating-point working format; an 8-bit one
+quantizes the linear values the kernels read. Both effects preserve
+premultiplied alpha and extended-range values, and return the input image
+exactly when neutral. Tone Curve uses the existing scene-linear stop shaper,
+with normalized 0.5 at 18% gray, and independent RGB curves followed by the
+authored Y luminance result. Color Mixer applies eight adjacent hue bands in
+OKLCh without gamut clipping. Changing their order or feeding unmanaged camera
+values is an explicit host policy; the features convert only between the
+working space and their own.
 
 Neither effect has an `isEnabled` flag. To leave one out, make its member
 `nil`. To ask whether a value renders as identity, use the same condition as

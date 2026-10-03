@@ -27,7 +27,25 @@ nonisolated enum ToneCurveRecipe {
   }
 
   /// Applies a previously compiled plan without rebuilding its sample table.
+  ///
+  /// The kernel computes in extended-linear Display-P3 whatever the
+  /// rendering context's working space is (`ColorAdjustmentKernelSpace`).
   static func apply(
+    to image: CIImage,
+    plan: ToneCurveRenderPlan
+  ) throws -> CIImage {
+    try ColorAdjustmentKernelSpace.apply(
+      to: image,
+      kernelName: ToneCurveKernelStore.name
+    ) { image in
+      try applyKernel(to: image, plan: plan)
+    }
+  }
+
+  /// Runs the kernel on the image's working-space values as they are, with
+  /// no color-space match. Use `apply(to:plan:)`; tests call this to show
+  /// that the match changes nothing in an extended-linear Display-P3 context.
+  static func applyKernel(
     to image: CIImage,
     plan: ToneCurveRenderPlan
   ) throws -> CIImage {

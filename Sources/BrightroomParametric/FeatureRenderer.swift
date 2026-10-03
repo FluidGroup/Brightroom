@@ -29,6 +29,13 @@ import Foundation
 /// inputs. It prepares the chain entry once and returns lazy Core Image
 /// recipes (`makeImage`); callers decide when to materialize the result with a
 /// `CIContext`, or use `ExportRenderer` to render pixels.
+///
+/// Render the recipe with a context whose working color space is linear and
+/// whose working format is floating point, as `ExportRenderer` (extended-linear
+/// Display-P3, `CIFormat.RGBAh`) and a default `CIContext()` (extended-linear
+/// sRGB, `CIFormat.RGBAh`) are. Core Image's built-in filters, such as
+/// exposure and contrast, compute in the working space. `ToneCurveFeature` and
+/// `ColorMixerFeature` compute in extended-linear Display-P3 in any context.
 public struct FeatureRenderer: Sendable {
 
   /// Creates a feature renderer.

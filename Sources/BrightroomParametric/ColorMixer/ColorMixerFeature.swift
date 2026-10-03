@@ -7,12 +7,15 @@ import Foundation
 
 /// An eight-band color correction evaluated by the selected algorithm.
 ///
-/// The OKLCh algorithm evaluates extended-linear Display-P3 components. Render the
-/// resulting image with a `CIContext` whose working color space is
-/// `CGColorSpace.extendedLinearDisplayP3` and whose working format is floating
-/// point, such as `CIFormat.RGBAh` or `CIFormat.RGBAf`. The feature does not
-/// change the context's color space, clip the gamut, or choose its position
-/// relative to other features; the containing pipeline owns that order.
+/// The OKLCh algorithm evaluates extended-linear Display-P3 components
+/// whatever the rendering context's working color space is: the feature
+/// matches its input into that space and its result back, so it renders the
+/// same colors through any `CIContext`. Render through a floating-point working
+/// format, such as `CIFormat.RGBAh` or `CIFormat.RGBAf`; an 8-bit format
+/// quantizes the linear components. When Core Image cannot express that match,
+/// rendering throws `FeatureEvaluationError.imageCreationFailed`. The feature
+/// does not clip the gamut or choose its position relative to other features;
+/// the containing pipeline owns that order.
 ///
 /// Constructing the feature compiles its authored values once. Neutral values
 /// bypass rendering exactly. The authored bands and algorithm are all a

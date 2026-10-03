@@ -10,6 +10,20 @@ kernels require `-fcikernel` during compilation and linking. Applying that flag
 to `BrightroomParametric` would break its existing stitchable brush kernel.
 The original sampler ABI and shader math are preserved.
 
+## Color space
+
+Core Image passes a custom kernel its pixels in the working color space of the
+`CIContext` that renders it. Both kernels are written for extended-linear
+Display-P3 numbers: Tone Curve's stop shaper and luminance weights and Color
+Mixer's P3 → XYZ → OKLab matrices. `ToneCurveRecipe` and `ColorMixerRecipe`
+therefore match their input from the working space into extended-linear
+Display-P3 before the kernel and match the result back
+(`ColorAdjustmentKernelSpace`). In a context that already works in that space,
+such as the export and the editor canvas, Core Image drops both conversions and
+the pixels are exactly the bare kernel's. Any other context, such as a default
+`CIContext()` or AVFoundation's default video context, renders the same colors
+within half-float rounding. The working format still has to be floating point.
+
 ## SwiftPM and Xcode package integration
 
 `BuildColorAdjustmentKernels` is a SwiftPM build-tool plugin attached to the

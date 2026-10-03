@@ -415,6 +415,19 @@ func isIdentity(_ mixer: ColorMixerFeature) -> Bool {
 not the same condition: a curve with interior points on the diagonal is not
 the default, but it renders as identity.
 
+Both features now compute in extended-linear Display-P3 whatever `CIContext`
+renders them. In 5.1.x their kernels read the context's working-space values
+as Display-P3, so their colors depended on the context: a default
+`CIContext()` and `ParametricVideoRenderer`'s default video context
+(`ciContext: nil`, which AVFoundation renders in linear sRGB) shifted the
+colors, and a gamma-encoded working space shifted them further. Video rendered by
+`VideoRenderer.makeVideoComposition(for:feature:renderSizeMode:ciContext:)`
+with the default context now matches stills and the export; so does a still
+you render with your own context. `ExportRenderer` and the editor canvas
+already worked in that space, and their pixels are unchanged. Remove any
+workaround that passed a Display-P3 context only for these features. Keep a
+floating-point working format: an 8-bit one still loses precision.
+
 Equality of both features now compares their authored members: `curves` for
 a curve, `bands` and `algorithm` for a mixer. In 5.x it compared the
 feature `id` and the rendered result, so two curves with the same id that
@@ -1742,6 +1755,10 @@ output.
 - [ ] LUTs are loaded with the `ColorCubeFeature` loaders instead of
       `ColorCubeLoader`, `ColorCubeHelper`, or `PresetStorage`, each LUT has
       a unique `id`, and wide-gamut LUT images are checked again.
+- [ ] Tone Curve and Color Mixer output rendered outside `ExportRenderer`,
+      such as video through `VideoRenderer`'s default context, is checked
+      again: it now matches the export
+      ([Tone Curve and Color Mixer](#tone-curve-and-color-mixer)).
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
       BrightroomUI in a `List`, and code that read `swiftUIImage` builds
       `Image(decorative:scale:orientation:)` from `cgImage`.

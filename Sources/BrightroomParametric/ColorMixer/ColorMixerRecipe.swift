@@ -22,7 +22,22 @@ nonisolated enum ColorMixerRecipe {
   }
 
   /// Applies an already packed render plan without gamut clipping.
+  ///
+  /// The kernel computes in extended-linear Display-P3 whatever the
+  /// rendering context's working space is (`ColorAdjustmentKernelSpace`).
   static func apply(to image: CIImage, plan: ColorMixerRenderPlan) throws -> CIImage {
+    try ColorAdjustmentKernelSpace.apply(
+      to: image,
+      kernelName: ColorMixerKernelStore.name
+    ) { image in
+      try applyKernel(to: image, plan: plan)
+    }
+  }
+
+  /// Runs the kernel on the image's working-space values as they are, with
+  /// no color-space match. Use `apply(to:plan:)`; tests call this to show
+  /// that the match changes nothing in an extended-linear Display-P3 context.
+  static func applyKernel(to image: CIImage, plan: ColorMixerRenderPlan) throws -> CIImage {
     let kernel: CIKernel
     switch plan.algorithm {
     case .oklch:

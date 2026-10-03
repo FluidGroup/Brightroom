@@ -11,8 +11,15 @@ import os
 /// Constructing the feature resolves an immutable render plan once. Frame
 /// evaluation then reuses that plan and its cached Core Image table.
 /// RGB curves preserve the input luminance, then the Y curve sets the final
-/// luminance. Callers must evaluate the recipe in an extended-linear Display-P3
-/// working color space with floating-point precision.
+/// luminance.
+///
+/// The curves apply to extended-linear Display-P3 values whatever the
+/// rendering context's working color space is: the feature matches its input
+/// into that space and its result back, so it renders the same colors through
+/// any `CIContext`. Render through a floating-point working format, such as
+/// `CIFormat.RGBAh`; an 8-bit format quantizes the linear values the curves
+/// read. When Core Image cannot express that match, rendering throws
+/// `FeatureEvaluationError.imageCreationFailed`.
 ///
 /// Equality compares the authored `value`, including interior points on the
 /// diagonal that do not change pixels. The derived render plan does not take
