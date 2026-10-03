@@ -51,7 +51,12 @@ Status context (as of Brightroom 6):
     disk, not RAM), wrap that buffer in a `CGImage` via a lazy
     `CGDataProviderCreateDirect`, and encode with `CGImageDestination`, which
     demand-pages through the provider. Peak RAM ≈ one strip + CI scratch +
-    encoder working set; the full bitmap stays on disk. This REPLACED
+    encoder working set; the full bitmap stays on disk. The JPEG/PNG encoders
+    need a few MB at 8 or 16 bits, but Image I/O's HEIF encoder keeps the whole
+    frame: ~255MB at 8 bits and ~469MB at 10 bits for 6000² (macOS
+    `/usr/bin/time -l`, mmap'd provider; the 2026-10-03 review saw the 16-bit
+    export add ≥200MB over the 8-bit one through ExportRenderer on the iOS
+    Simulator), so a deep HEIF of 12000² would need roughly 2GB. This REPLACED
     `CIContext.write{JPEG,HEIF}Representation`, which renders the whole bitmap
     into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG, in
     `.rgba8` strips, or `.rgba16` strips when `outputFormat` has more than 8
@@ -65,7 +70,9 @@ Status context (as of Brightroom 6):
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
     `CIImageStreamingFileWriter.referenceStripHeight` (16-bit writes use half
-    the rows, so a strip keeps the same bytes). The brush mask is a
+    the rows, so a strip keeps the same bytes). Measure a 12000² HEIF export
+    at 8 and 10 bits on device (jetsam risk); if the 10-bit one does not fit,
+    make deep HEIF opt-in or fall back to 8 bits for large images. The brush mask is a
     `CIImageProcessorKernel` drawn per tile (`BrushMaskImageProcessorTests`
     pins uneven tiles); confirm on device that `render(bounds:)` strips stay
     bounded with it. Guards: `DiskExportTests` (full-res, masked, resize, orientation,

@@ -13,7 +13,8 @@ import Testing
 /// the requested depth when it can, the nearest one otherwise, and
 /// `RenderedImage` reports the format the file has. `.memory` still delivers
 /// the requested format exactly, and a deeper write keeps the strip size in
-/// bytes, so its peak memory is unchanged.
+/// bytes (the encoder's own memory is not measured here; HEIF's grows with
+/// the depth).
 struct ExportRendererFileFormatTests {
 
   struct Case: Sendable, CustomTestStringConvertible {
@@ -162,6 +163,72 @@ struct ExportRendererFileFormatTests {
     #expect(try file.cgImage.bitsPerComponent == (isDeep ? 16 : 8))
   }
 
+  /// A 16-bit file has the same pixels as a 16-bit memory result across
+  /// several strips with a partial last one, in color, so the rows land in
+  /// their strips in order, upright, and with R, G, and B in place.
+  @Test func `a 16-bit PNG has the pixels of a 16-bit memory result`() throws {
+    let size = (width: 513, height: 1033)
+    #expect(size.height > CIImageStreamingFileWriter.stripHeight(for: .rgba16) * 4)
+    let source = try Self.colorGradientSource(width: size.width, height: size.height)
+
+    let memory = try ExportRenderer().render(
+      from: source,
+      feature: EmptyFeature(),
+      options: .init(
+        outputFormat: .RGBA16,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
+      )
+    )
+    let url = Self.temporaryURL(extension: "png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let file = try ExportRenderer().render(
+      from: source,
+      feature: EmptyFeature(),
+      options: .init(
+        outputFormat: .RGBA16,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        output: .file(url: url, fileType: .png)
+      )
+    )
+
+    let memoryPixels = try Self.pixels16InSRGB(try memory.cgImage)
+    let filePixels = try Self.pixels16InSRGB(try file.cgImage)
+    #expect(memoryPixels.count == filePixels.count)
+    let largestDifference = zip(memoryPixels, filePixels)
+      .map { abs(Int($0) - Int($1)) }
+      .max() ?? 0
+    #expect(largestDifference <= 1)
+  }
+
+  /// `.memory` cannot deliver an alpha-only, red, or red-green format: Core
+  /// Image renders none of them into a `CGImage`. `.file` stores them as RGB.
+  @Test(arguments: formatsWithoutMemoryResult)
+  func `a memory result needs an RGB or luminance format`(format: CIFormat) throws {
+    #expect(throws: ExportRendererError.self) {
+      try ExportRenderer().render(
+        from: Self.gradientSource(),
+        feature: EmptyFeature(),
+        options: .init(
+          outputFormat: format,
+          outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
+        )
+      )
+    }
+
+    let url = Self.temporaryURL(extension: "png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let file = try ExportRenderer().render(
+      from: Self.gradientSource(),
+      feature: EmptyFeature(),
+      options: .init(
+        outputFormat: format,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        output: .file(url: url, fileType: .png)
+      )
+    )
+    #expect(try file.cgImage.width == Self.size.width)
+  }
+
   // MARK: - Memory output is unchanged
 
   @Test(arguments: [
@@ -227,6 +294,36 @@ struct ExportRendererFileFormatTests {
     return gradient.cropped(to: CGRect(x: 0, y: 0, width: size.width, height: size.height))
   }
 
+  /// Red rises left to right, green bottom to top, and blue is constant, so
+  /// every row and column differs and no two channels are equal.
+  private static func colorGradientSource(width: Int, height: Int) throws -> CIImage {
+    let horizontal = try #require(
+      CIFilter(
+        name: "CILinearGradient",
+        parameters: [
+          "inputPoint0": CIVector(x: 0, y: 0),
+          "inputPoint1": CIVector(x: CGFloat(width), y: 0),
+          "inputColor0": CIColor(red: 0, green: 0, blue: 0.25),
+          "inputColor1": CIColor(red: 1, green: 0, blue: 0.25),
+        ]
+      )?.outputImage
+    )
+    let vertical = try #require(
+      CIFilter(
+        name: "CILinearGradient",
+        parameters: [
+          "inputPoint0": CIVector(x: 0, y: 0),
+          "inputPoint1": CIVector(x: 0, y: CGFloat(height)),
+          "inputColor0": CIColor(red: 0, green: 0, blue: 0),
+          "inputColor1": CIColor(red: 0, green: 1, blue: 0),
+        ]
+      )?.outputImage
+    )
+    return vertical
+      .applyingFilter("CIAdditionCompositing", parameters: [kCIInputBackgroundImageKey: horizontal])
+      .cropped(to: CGRect(x: 0, y: 0, width: width, height: height))
+  }
+
   private static func renderFile(url: URL, outputFormat: CIFormat) throws -> CGImage {
     let rendered = try ExportRenderer().render(
       from: gradientSource(),
@@ -262,6 +359,30 @@ struct ExportRendererFileFormatTests {
       count: image.width * 4
     )
     return Set(stride(from: 0, to: row.count, by: 4).map { row[$0] }).count
+  }
+
+  /// Every component drawn into a 16-bit sRGB bitmap, top row first.
+  private static func pixels16InSRGB(_ image: CGImage) throws -> [UInt16] {
+    let context = try #require(
+      CGContext(
+        data: nil,
+        width: image.width,
+        height: image.height,
+        bitsPerComponent: 16,
+        bytesPerRow: image.width * 8,
+        space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+          | CGBitmapInfo.byteOrder16Little.rawValue
+      )
+    )
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    let data = try #require(context.data)
+    return Array(
+      UnsafeBufferPointer(
+        start: data.assumingMemoryBound(to: UInt16.self),
+        count: image.width * image.height * 4
+      )
+    )
   }
 
   /// Every pixel drawn into an 8-bit sRGB bitmap.

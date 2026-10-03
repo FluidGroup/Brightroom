@@ -1532,7 +1532,10 @@ reports the format the file stores (`.RGBA8`, `.RGBA16`, or `.RGB10`), which
 can differ from the requested one; the default `.BGRA8` is now reported as
 `.RGBA8`. `.memory` delivers and reports the requested format as before. A
 16-bit write uses a scratch file of 8 bytes per pixel on disk, twice that of an
-8-bit one, with the same peak memory.
+8-bit one. A PNG or JPEG write has the same peak memory at either depth, but
+Image I/O's HEIF encoder holds the whole frame, and a 10-bit HEIF needs about
+twice the memory of an 8-bit one (469MB against 255MB at 6000², measured on
+macOS). Keep `.BGRA8` for very large HEIF exports.
 
 ### Masks and Local Adjustments
 

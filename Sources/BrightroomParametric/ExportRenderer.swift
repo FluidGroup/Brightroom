@@ -51,6 +51,11 @@ public struct ExportRenderer {
     ///
     /// 8 bits per component (`.RGBA8`), or 10 (`.RGB10`) when
     /// `Options.outputFormat` has more than 8.
+    ///
+    /// Image I/O's HEIF encoder holds the whole frame in memory even for
+    /// `Output.file`, about 7 bytes per pixel at 8 bits and about twice that
+    /// at 10 (measured with Image I/O on macOS: 255MB and 469MB at 6000²).
+    /// JPEG and PNG encode in a few megabytes at either depth.
     case heif(quality: CGFloat)
     /// Lossless PNG.
     ///
@@ -66,8 +71,10 @@ public struct ExportRenderer {
     /// buffer (≈ W·H·4 bytes at 8 bits per component; ~576MB at 12000²).
     case memory
     /// Stream the render straight to a file via Core Image's tiled writer — no
-    /// full-resolution `CGImage`, peak memory bounded to ~a tile plus encoder
-    /// state. The right choice for very large images. The file stores
+    /// full-resolution `CGImage`, peak memory bounded to ~a strip plus encoder
+    /// state. The right choice for very large images. The JPEG and PNG
+    /// encoders' state is small; the HEIF encoder's is the whole frame (see
+    /// `FileType.heif(quality:)`). The file stores
     /// `Options.outputFormat` as far as `fileType` can; see
     /// `Options.outputFormat`.
     case file(url: URL, fileType: FileType)
@@ -82,8 +89,13 @@ public struct ExportRenderer {
     /// Processing always runs in a half-float working buffer; this is only the
     /// output format.
     ///
-    /// `.memory` delivers exactly this format. `.file` stores the depth it
-    /// asks for when the file type can, as RGB:
+    /// `.memory` delivers exactly this format when it is an RGB or a
+    /// luminance format. Core Image cannot render an alpha-only, red, or
+    /// red-green format (`.A8`, `.R8`, `.RG8`, and their deeper variants)
+    /// into a `CGImage`, so `.memory` throws
+    /// `ExportRendererError.failedToCreateCGImage` for them.
+    ///
+    /// `.file` stores the depth it asks for when the file type can, as RGB:
     ///
     /// - A format with 8 bits per component, such as the default `.BGRA8`,
     ///   is stored as `.RGBA8` by every file type.
@@ -92,13 +104,16 @@ public struct ExportRenderer {
     ///   JPEG has only 8 bits per component and stores `.RGBA8`. No file type
     ///   stores floating-point components, so values outside 0...1 are
     ///   clamped.
-    /// - A luminance format such as `.L8` or `.L16` is stored as RGB at its
-    ///   depth by the same rule.
+    /// - Any other format, such as a luminance `.L8` or `.L16` or an
+    ///   alpha-only `.A8`, is stored as RGB at its depth by the same rule.
     ///
     /// `RenderedImage.options.outputFormat` reports the format the result
     /// actually has, which for `.file` can differ from the one requested.
     /// A 16-bit write needs a scratch file of 8 bytes per pixel on disk, twice
-    /// that of an 8-bit one; its peak memory is the same.
+    /// that of an 8-bit one. Its strips hold the same bytes, so a PNG or
+    /// JPEG write has the same peak memory at either depth; a 10-bit HEIF
+    /// encode needs about twice the memory of an 8-bit one (see
+    /// `FileType.heif(quality:)`).
     public var outputFormat: CIFormat
 
     /// The color space the result is tagged with.
@@ -110,7 +125,9 @@ public struct ExportRenderer {
     /// (`.memory` only; `.file` always stores RGB). When it does not, as for
     /// a grayscale source exported with the default options, the result is
     /// tagged with sRGB, or with Generic Gray Gamma 2.2 for a luminance
-    /// format.
+    /// format. This covers RGB and luminance formats only: no color space
+    /// lets `.memory` deliver an alpha-only, red, or red-green format (see
+    /// `outputFormat`).
     public var outputColorSpace: CGColorSpace?
 
     /// Where the result is stored (in-memory bitmap or a file on disk).
@@ -175,7 +192,8 @@ public struct ExportRenderer {
 
    - `.memory` materializes a full-resolution `CGImage` (`createCGImage`).
    - `.file` streams the render to disk through Core Image's tiled writer (no
-     full-resolution `CGImage`; bounded peak memory) — use it for large images.
+     full-resolution `CGImage`; bounded peak memory for JPEG and PNG, while
+     the HEIF encoder holds the whole frame) — use it for large images.
 
    Core Image renders on the GPU. When the image exceeds the GPU context's
    maximum input or output size, it asks for Core Image's software renderer;

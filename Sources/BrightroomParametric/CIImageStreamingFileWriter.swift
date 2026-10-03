@@ -47,7 +47,10 @@ import UniformTypeIdentifiers
 ///    resident either (proven pattern; see dhoerl/PhotoScroller).
 ///
 /// Peak RAM ≈ one strip + Core Image render scratch + the encoder's working set,
-/// while the full-resolution bytes stay on disk. The scratch file is removed
+/// while the full-resolution bytes stay on disk. The JPEG and PNG encoders'
+/// working set is a few megabytes; Image I/O's HEIF encoder keeps the whole
+/// frame (about 7 bytes per pixel for `.rgba8` and 13 for `.rgba16`, measured
+/// on macOS), so a HEIF write is not bounded by the strip size. The scratch file is removed
 /// when the backing `CGImage`/provider is released (after `Finalize`).
 ///
 /// - Note: The encode step's exact paging behavior is not Apple-documented;
@@ -110,7 +113,8 @@ enum CIImageStreamingFileWriter {
 
   /// Output rows per strip for `format`, scaled so a strip holds the same
   /// number of bytes in every format: a 16-bit strip has half the rows of an
-  /// 8-bit one, keeping the peak memory of a deeper write unchanged.
+  /// 8-bit one, so the strip's share of the peak stays the same. The
+  /// encoder's working set is separate; HEIF's grows with the depth.
   static func stripHeight(for format: PixelFormat) -> Int {
     let referenceBytesPerPixel = PixelFormat.rgba8.bytesPerPixel
     return max(1, referenceStripHeight * referenceBytesPerPixel / format.bytesPerPixel)
