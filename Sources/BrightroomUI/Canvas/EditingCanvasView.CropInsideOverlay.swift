@@ -116,11 +116,9 @@ extension EditingCanvasView {
       super.init(frame: .zero)
     }
 
-    func didBeginInteraction(_ interaction: CropInteraction) {
-
-    }
-
-    func didEndInteraction(_ interaction: CropInteraction) {
+    /// Receives every crop interaction in progress each time the set
+    /// changes; empty when the last one ends.
+    func didChangeInteraction(_ interaction: CropInteraction) {
 
     }
 
@@ -131,7 +129,7 @@ extension EditingCanvasView {
     private let controller: UIHostingController<Container>
     private let proxy: Proxy
 
-    init(@ViewBuilder content: @escaping (CropInteraction?) -> Content) {
+    init(@ViewBuilder content: @escaping (CropInteraction) -> Content) {
       
       self.proxy = .init()
       self.controller = .init(rootView: Container(proxy: proxy, content: content))
@@ -144,17 +142,13 @@ extension EditingCanvasView {
       AutoLayoutTools.setEdge(controller.view, self)
     }
 
-    override func didBeginInteraction(_ interaction: CropInteraction) {
-      proxy.activeInteraction = interaction
-    }
-
-    override func didEndInteraction(_ interaction: CropInteraction) {
-      proxy.activeInteraction = nil
+    override func didChangeInteraction(_ interaction: CropInteraction) {
+      proxy.interaction = interaction
     }
 
     private final class Proxy: ObservableObject {
 
-      @Published var activeInteraction: CropInteraction?
+      @Published var interaction: CropInteraction = []
 
     }
 
@@ -162,18 +156,18 @@ extension EditingCanvasView {
 
       @ObservedObject var proxy: Proxy
 
-      private let content: (CropInteraction?) -> Content
+      private let content: (CropInteraction) -> Content
 
       init(
         proxy: Proxy,
-        content: @escaping (CropInteraction?) -> Content
+        content: @escaping (CropInteraction) -> Content
       ) {
         self.content = content
         self.proxy = proxy
       }
 
       var body: some View {
-        content(proxy.activeInteraction)
+        content(proxy.interaction)
       }
     }
 
@@ -252,6 +246,8 @@ extension EditingCanvasView {
 
     private var currentAnimator: UIViewPropertyAnimator?
 
+    private var isInteracting = false
+
     override init() {
       super.init()
 
@@ -264,19 +260,18 @@ extension EditingCanvasView {
       guideView.alpha = 0
     }
 
-    override func didBeginInteraction(_ interaction: CropInteraction) {
-      currentAnimator?.stopAnimation(true)
-      let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.guideView.alpha = 1
+    override func didChangeInteraction(_ interaction: CropInteraction) {
+      // Animate only when the canvas starts or stops interacting, not when a
+      // second interaction joins or one of two ends.
+      let isInteracting = interaction.isEmpty == false
+      guard isInteracting != self.isInteracting else {
+        return
       }
-      animator.startAnimation()
-      currentAnimator = animator
-    }
+      self.isInteracting = isInteracting
 
-    override func didEndInteraction(_ interaction: CropInteraction) {
       currentAnimator?.stopAnimation(true)
       let animator = UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1) { [weak self] in
-        self?.guideView.alpha = 0
+        self?.guideView.alpha = isInteracting ? 1 : 0
       }
       animator.startAnimation()
       currentAnimator = animator

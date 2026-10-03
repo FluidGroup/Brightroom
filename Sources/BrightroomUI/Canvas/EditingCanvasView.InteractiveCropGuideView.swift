@@ -47,7 +47,13 @@ extension EditingCanvasView {
     var updating: () -> Void = {}
     var didChange: () -> Void = {}
 
+    /// Receives `interaction` each time it changes.
     var didUpdateInteraction: (CropInteraction) -> Void = { _ in }
+
+    /// Every crop interaction in progress: the union of the guide's own
+    /// resize gesture and the image moves the canvas reports through
+    /// `insertInteraction(_:)` and `removeInteraction(_:)`. Empty when idle.
+    private(set) var interaction: CropInteraction = []
 
     private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
     private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
@@ -246,6 +252,9 @@ extension EditingCanvasView {
         overlay.isUserInteractionEnabled = false
         addSubview(overlay)
         cropInsideOverlay = overlay
+        if interaction.isEmpty == false {
+          overlay.didChangeInteraction(interaction)
+        }
       }
     }
 
@@ -263,7 +272,9 @@ extension EditingCanvasView {
       assert(view.superview != nil)
 
       cropOutsideOverlay = view
-   
+      if interaction.isEmpty == false {
+        view.didChangeInteraction(interaction)
+      }
     }
 
     func setLockedAspectRatio(_ aspectRatio: AspectRatio?) {
@@ -303,16 +314,25 @@ extension EditingCanvasView {
       return view
     }
 
-    func willBeginScrollViewAdjustment() {
-      cropInsideOverlay?.didBeginInteraction(.movingImage)
-      cropOutsideOverlay?.didBeginInteraction(.movingImage)
-      didUpdateInteraction(.movingImage)
+    /// Adds `members` to `interaction` when an interaction begins.
+    func insertInteraction(_ members: CropInteraction) {
+      setInteraction(interaction.union(members))
     }
 
-    func didEndScrollViewAdjustment() {
-      cropInsideOverlay?.didEndInteraction(.movingImage)
-      cropOutsideOverlay?.didEndInteraction(.movingImage)
-      didUpdateInteraction([])
+    /// Removes `members` from `interaction` when an interaction ends; the
+    /// others in progress stay.
+    func removeInteraction(_ members: CropInteraction) {
+      setInteraction(interaction.subtracting(members))
+    }
+
+    private func setInteraction(_ newInteraction: CropInteraction) {
+      guard newInteraction != interaction else {
+        return
+      }
+      interaction = newInteraction
+      cropInsideOverlay?.didChangeInteraction(newInteraction)
+      cropOutsideOverlay?.didChangeInteraction(newInteraction)
+      didUpdateInteraction(newInteraction)
     }
 
     @inline(__always)
@@ -357,9 +377,7 @@ extension EditingCanvasView {
 
       updateMaximumRect()
       willChange()
-      cropInsideOverlay?.didBeginInteraction(.resizingGuide)
-      cropOutsideOverlay?.didBeginInteraction(.resizingGuide)
-      didUpdateInteraction(.resizingGuide)
+      insertInteraction(.resizingGuide)
     }
 
     private func onGestureTrackingChanged() {
@@ -373,9 +391,7 @@ extension EditingCanvasView {
 
       deactivateAllConstraints()
       didChange()
-      cropInsideOverlay?.didEndInteraction(.resizingGuide)
-      cropOutsideOverlay?.didEndInteraction(.resizingGuide)
-      didUpdateInteraction([])
+      removeInteraction(.resizingGuide)
     }
 
     private var widthConstraint: NSLayoutConstraint!

@@ -1141,6 +1141,20 @@ replacement on `ImageEditorCanvas`
   `croppingAspectRatio(_:)` is `lockedAspectRatio(_:)` (taking an
   `AspectRatio`), and `SwiftUICropView.AdjustmentKind` is `CropInteraction`
   (`.scrollView` is `.movingImage`, `.guide` is `.resizingGuide`).
+- `CropInteraction` has one idle value, the empty set. The
+  `cropInsideOverlay` and `cropOutsideOverlay` builders take a
+  `CropInteraction` instead of an `AdjustmentKind?`: where you matched
+  `nil`, test `isEmpty`. `CropGuide.interaction` is the same value.
+- `CropInteraction` holds every interaction in progress. In 5.1.1 the
+  overlays and `StateSnapshot.adjustmentKind` received only the latest
+  one, and the first to end reported idle: moving the image while resizing
+  the guide, then lifting one finger, reported idle while the other kept
+  going, and a finger still panning after a pinch ended was reported idle
+  too. Now both overlap as `[.movingImage, .resizingGuide]`, and the set is
+  empty only when the last one ends. `resetCrop()` ends an image move in
+  progress (the overlays hear it too), and a guide resize continues until
+  its gesture ends; in 5.1.1 a reset reported idle in both cases without
+  telling the overlays.
 - `straightenAngle(_:isEditing:)` and `lockedAspectRatio(_:)` take values
   only; the `Binding` forms are removed, and the canvas no longer writes
   its angle, turn, or lock back to your state. Follow them through

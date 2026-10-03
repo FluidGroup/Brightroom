@@ -56,10 +56,10 @@ public struct ImageEditorCanvas: View {
   }
 
   /// Fixed at creation. See the initializer documentation.
-  private let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
+  private let cropInsideOverlay: ((CropInteraction) -> AnyView)?
 
   /// Fixed at creation. See the initializer documentation.
-  private let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
+  private let cropOutsideOverlay: ((CropInteraction) -> AnyView)?
 
   private let document: Binding<ImageEditorDocument>
 
@@ -110,17 +110,22 @@ public struct ImageEditorCanvas: View {
   ///     that derives the insets from safe area or size class must give this
   ///     view a new identity (for example with `.id`) for new insets to take
   ///     effect.
-  ///   - cropInsideOverlay: **Fixed at creation.** The builder is invoked by
-  ///     the mounted canvas, but the closure itself is installed only once, so
-  ///     values it captures are frozen at that point.
-  ///   - cropOutsideOverlay: **Fixed at creation.** Same contract as
-  ///     `cropInsideOverlay`.
+  ///   - cropInsideOverlay: Draws over the image inside the crop guide. It
+  ///     receives every crop interaction in progress, as
+  ///     `CropGuide.interaction` does: empty when idle, and the union when the
+  ///     user moves the image and resizes the guide at the same time.
+  ///     **Fixed at creation.** The builder is invoked by the mounted canvas,
+  ///     but the closure itself is installed only once, so values it
+  ///     captures are frozen at that point.
+  ///   - cropOutsideOverlay: Draws over the image outside the crop guide,
+  ///     with the same interaction as `cropInsideOverlay`. **Fixed at
+  ///     creation.** Same contract as `cropInsideOverlay`.
   public init<InsideOverlay: View, OutsideOverlay: View>(
     document: Binding<ImageEditorDocument>,
     areAnimationsEnabled: Bool = true,
     contentInsets: EdgeInsets? = nil,
-    @ViewBuilder cropInsideOverlay: @escaping (CropInteraction?) -> InsideOverlay,
-    @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction?) -> OutsideOverlay
+    @ViewBuilder cropInsideOverlay: @escaping (CropInteraction) -> InsideOverlay,
+    @ViewBuilder cropOutsideOverlay: @escaping (CropInteraction) -> OutsideOverlay
   ) {
     self.document = document
     self.previewSourceLoader = nil
@@ -346,8 +351,8 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   let source: EditingCanvasSource
   let feature: ImageEditorFeature
   let onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
-  let cropInsideOverlay: ((CropInteraction?) -> AnyView)?
-  let cropOutsideOverlay: ((CropInteraction?) -> AnyView)?
+  let cropInsideOverlay: ((CropInteraction) -> AnyView)?
+  let cropOutsideOverlay: ((CropInteraction) -> AnyView)?
   let straightenAngleInput: ImageEditorCanvas.StraightenAngleInput
   let lockedAspectRatioInput: AspectRatio?
   let onCropGuideChange: (@MainActor (ImageEditorCanvas.CropGuide) -> Void)?

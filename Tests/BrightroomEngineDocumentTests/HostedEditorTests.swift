@@ -124,6 +124,90 @@ struct HostedEditorTests {
     #expect(host.writes == 0)
   }
 
+  /// What the crop overlay builders received, latest last.
+  @MainActor
+  final class InteractionRecorder {
+    var inside: [CropInteraction] = []
+    var outside: [CropInteraction] = []
+  }
+
+  /// Moving the image and resizing the guide at once: the guide and both
+  /// overlays receive the union, and idle only when both have ended.
+  @Test func `Overlapping crop interactions are reported as their union`() async throws {
+    let host = Host(EditingDocument(source: try DocumentTestFixtures.makeImage()))
+    let guides = GuideRecorder()
+    let overlays = InteractionRecorder()
+
+    let mounted = try await mount(
+      ImageEditorCanvas(document: host.binding) { interaction in
+        let _ = overlays.inside.append(interaction)
+        Color.clear
+      } cropOutsideOverlay: { interaction in
+        let _ = overlays.outside.append(interaction)
+        Color.clear
+      }
+      .onCropGuideChange { guides.guides.append($0) }
+    )
+    defer { mounted.window.isHidden = true }
+
+    let canvasView = mounted.canvasView
+    let scrollView = canvasView.cropSurface.scrollView
+
+    /// Waits until the overlays have rendered `expected` and the guide
+    /// reported it (the guide loaded on mount arrives on a later turn).
+    func expectInteraction(
+      _ expected: CropInteraction,
+      _ comment: Comment,
+      sourceLocation: SourceLocation = #_sourceLocation
+    ) async throws {
+      for _ in 0..<50 {
+        mounted.host.view.layoutIfNeeded()
+        if overlays.inside.last == expected, overlays.outside.last == expected,
+          guides.guides.last?.interaction == expected
+        {
+          break
+        }
+        try await Task.sleep(for: .milliseconds(20))
+      }
+      #expect(overlays.inside.last == expected, comment, sourceLocation: sourceLocation)
+      #expect(overlays.outside.last == expected, comment, sourceLocation: sourceLocation)
+      #expect(guides.guides.last?.interaction == expected, comment, sourceLocation: sourceLocation)
+    }
+
+    try await expectInteraction([], "idle after mounting")
+    let guidesBefore = guides.guides.count
+    let insideBefore = overlays.inside.count
+    let outsideBefore = overlays.outside.count
+
+    canvasView.cropSurface.scrollViewWillBeginDragging(scrollView)
+    try await expectInteraction(.movingImage, "dragging the image")
+
+    // A guide resize begins and ends through these, as its gestures do.
+    canvasView.guideView.insertInteraction(.resizingGuide)
+    try await expectInteraction([.movingImage, .resizingGuide], "a guide resize joins the drag")
+
+    canvasView.cropSurface.scrollViewDidEndDragging(scrollView, willDecelerate: false)
+    try await expectInteraction(.resizingGuide, "the resize continues after the drag ends")
+
+    canvasView.cropSurface.scrollViewWillBeginZooming(scrollView, with: nil)
+    try await expectInteraction([.movingImage, .resizingGuide], "a pinch joins the resize")
+
+    canvasView.guideView.removeInteraction(.resizingGuide)
+    try await expectInteraction(.movingImage, "the pinch continues after the resize ends")
+
+    canvasView.cropSurface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await expectInteraction([], "idle once every interaction has ended")
+
+    // Nothing reported idle while an interaction was still in progress: the
+    // reports since the drag began hold no empty set before the final ones.
+    func whileInteracting(_ reports: some Collection<CropInteraction>) -> [CropInteraction] {
+      Array(reports.reversed().drop(while: \.isEmpty).reversed())
+    }
+    #expect(whileInteracting(guides.guides.dropFirst(guidesBefore).map(\.interaction)).allSatisfy { $0.isEmpty == false })
+    #expect(whileInteracting(overlays.inside.dropFirst(insideBefore)).allSatisfy { $0.isEmpty == false })
+    #expect(whileInteracting(overlays.outside.dropFirst(outsideBefore)).allSatisfy { $0.isEmpty == false })
+  }
+
   /// A custom editor's host state: the document and the tool.
   @MainActor
   @Observable

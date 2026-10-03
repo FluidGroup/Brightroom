@@ -20,8 +20,13 @@
 // THE SOFTWARE.
 
 
-/// What the user is doing to the crop in `ImageEditorCanvas`. The empty set
-/// means idle.
+/// What the user is doing to the crop in `ImageEditorCanvas`: every
+/// interaction in progress. The empty set means idle.
+///
+/// Interactions can overlap, such as moving the image with one finger while
+/// resizing the guide with another; the set then holds both, and it becomes
+/// empty only when the last one ends. `ImageEditorCanvas.CropGuide.interaction`
+/// and the crop overlay builders receive the same value.
 public struct CropInteraction: OptionSet, Equatable, Sendable {
 
   public let rawValue: Int
@@ -30,7 +35,8 @@ public struct CropInteraction: OptionSet, Equatable, Sendable {
     self.rawValue = rawValue
   }
 
-  /// Panning or zooming the image under the crop guide.
+  /// Panning or zooming the image under the crop guide, including the
+  /// image's deceleration after a flick.
   public static let movingImage = CropInteraction(rawValue: 1 << 0)
 
   /// Dragging the crop guide's edges or corners.

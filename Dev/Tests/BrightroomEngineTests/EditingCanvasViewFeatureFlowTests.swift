@@ -220,6 +220,66 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.isEmpty)
   }
 
+  /// Records each interaction set the guide hands an overlay.
+  private final class RecordingInsideOverlay: EditingCanvasView.CropInsideOverlayBase {
+    var received: [CropInteraction] = []
+
+    override func didChangeInteraction(_ interaction: CropInteraction) {
+      received.append(interaction)
+    }
+  }
+
+  /// The crop scroll view's drag and pinch overlap (a pinch starts during a
+  /// drag, a finger keeps panning after the pinch ends): the image is moving
+  /// until both have ended, including the drag's deceleration.
+  @Test func `The image is moving until every scroll gesture has ended`() {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    let canvasView = harness.canvasView
+    let overlay = RecordingInsideOverlay()
+    canvasView.setCropInsideOverlay(overlay)
+    let surface = canvasView.cropSurface
+    let scrollView = surface.scrollView
+
+    surface.scrollViewWillBeginDragging(scrollView)
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    #expect(harness.guides.last?.interaction == .movingImage)
+
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    #expect(harness.guides.last?.interaction == .movingImage, "the drag continues after the pinch")
+
+    surface.scrollViewDidEndDragging(scrollView, willDecelerate: true)
+    #expect(harness.guides.last?.interaction == .movingImage, "the image decelerates")
+
+    surface.scrollViewDidEndDecelerating(scrollView)
+    #expect(harness.guides.last?.interaction == [])
+
+    // The overlay hears each change of the set once.
+    #expect(overlay.received == [.movingImage, []])
+  }
+
+  /// Reset snaps the image, which ends an image move in progress, and leaves
+  /// a guide resize in progress to its own gesture.
+  @Test func `Reset ends an image move and keeps a guide resize`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    let canvasView = harness.canvasView
+    let surface = canvasView.cropSurface
+    let scrollView = surface.scrollView
+
+    surface.scrollViewWillBeginDragging(scrollView)
+    canvasView.guideView.insertInteraction(.resizingGuide)
+    #expect(harness.guides.last?.interaction == [.movingImage, .resizingGuide])
+
+    canvasView.resetCrop()
+    #expect(harness.guides.last?.interaction == .resizingGuide)
+
+    // The drag's late end changes nothing.
+    surface.scrollViewDidEndDragging(scrollView, willDecelerate: false)
+    #expect(harness.guides.last?.interaction == .resizingGuide)
+
+    canvasView.guideView.removeInteraction(.resizingGuide)
+    #expect(harness.guides.last?.interaction == [])
+  }
+
   /// D2 end to end: a stroke painted at a display point through EditingCanvasView and
   /// exported with the feature changes the export at that point, and not at
   /// its vertical mirror.

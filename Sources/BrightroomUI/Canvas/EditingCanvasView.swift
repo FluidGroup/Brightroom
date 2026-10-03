@@ -96,6 +96,7 @@ final class EditingCanvasView: UIView {
 
     var frame: CGRect = .zero
 
+    /// Mirrors `InteractiveCropGuideView.interaction`, which owns the set.
     var interaction: CropInteraction = []
 
     /// The locked aspect ratio in the final output orientation.
@@ -199,7 +200,8 @@ final class EditingCanvasView: UIView {
 
   private let viewportDisplayLink = ViewportDisplayLink()
   private let surfaceHost = SurfaceHost()
-  private let cropSurface = CropSurface()
+  /// Internal (not private) so tests can drive its scroll view's delegate.
+  let cropSurface = CropSurface()
   private let toolSurface = ToolSurface()
 
   /// What canvas gestures edit; nil views the output only.
@@ -232,7 +234,10 @@ final class EditingCanvasView: UIView {
   /**
    a guide view that displayed on guide container view.
    */
-  private lazy var guideView = InteractiveCropGuideView(
+  /// Internal (not private) so tests can report a guide resize, which
+  /// begins and ends through its `insertInteraction(_:)` and
+  /// `removeInteraction(_:)`.
+  private(set) lazy var guideView = InteractiveCropGuideView(
     containerView: self,
     insetOfGuideFlexibility: contentInset
   )
@@ -282,6 +287,24 @@ final class EditingCanvasView: UIView {
   private let contentInset: UIEdgeInsets
 
   private var scrollViewAdjustmentSession: ScrollViewAdjustmentSession?
+
+  /// The crop scroll view's gestures in progress, from their begin callback
+  /// to their end (a flicked drag ends when its deceleration ends). The guide
+  /// reports `.movingImage` while any is in progress.
+  ///
+  /// Tracked apart from `scrollViewAdjustmentSession`, which keeps one
+  /// session for recording the crop: a pinch replaces a drag's session and a
+  /// drag that starts during a pinch opens none, but the image is still
+  /// moving until both gestures end.
+  private var imageMovingGestures: Set<ScrollViewAdjustmentKind> = [] {
+    didSet {
+      if imageMovingGestures.isEmpty {
+        guideView.removeInteraction(.movingImage)
+      } else {
+        guideView.insertInteraction(.movingImage)
+      }
+    }
+  }
 
   private var scrollViewAdjustmentKind: ScrollViewAdjustmentKind? {
     scrollViewAdjustmentSession?.kind
@@ -460,11 +483,13 @@ final class EditingCanvasView: UIView {
         guard let self else { return }
         self.debugLogScrollViewAdjustment("drag-begin")
         self.beginScrollViewAdjustment(.drag)
+        self.imageMovingGestures.insert(.drag)
       }
       cropSurface.onWillBeginZooming = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-begin")
         self.beginScrollViewAdjustment(.zoom)
+        self.imageMovingGestures.insert(.zoom)
       }
       cropSurface.onDidEndDragging = { [weak self] decelerate in
         guard let self else { return }
@@ -472,17 +497,20 @@ final class EditingCanvasView: UIView {
 
         if !decelerate {
           self.endScrollViewAdjustment(.drag)
+          self.imageMovingGestures.remove(.drag)
         }
       }
       cropSurface.onDidEndZooming = { [weak self] scale in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-end scale:\(scale)")
         self.endScrollViewAdjustment(.zoom)
+        self.imageMovingGestures.remove(.zoom)
       }
       cropSurface.onDidEndDecelerating = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("deceleration-end")
         self.endScrollViewAdjustment(.drag)
+        self.imageMovingGestures.remove(.drag)
       }
 
       toolSurface.onDidEndDragging = { [weak self] _ in
@@ -640,13 +668,17 @@ final class EditingCanvasView: UIView {
     scrollViewSettleDebounce.cancel()
     scrollViewAdjustmentSession = nil
     isStreamingStraightenAngle = false
-    state.interaction = []
     state.lockedAspectRatio = nil
     guideView.setLockedAspectRatio(nil)
 
     if let crop = state.proposedCrop {
       setProposedCrop(crop.makeInitial(), previousCrop: crop, forcesLayout: true)
     }
+
+    // The reset snaps the image and drops the scroll session, so an image
+    // move in progress ends here; its later end callbacks change nothing. A
+    // guide resize in progress keeps going and ends with its gesture.
+    imageMovingGestures.removeAll()
 
     emitCropGuide()
   }
@@ -1909,7 +1941,6 @@ extension EditingCanvasView {
     }
 
     scrollViewAdjustmentSession = .init(kind: kind, baselineCrop: baselineCrop)
-    guideView.willBeginScrollViewAdjustment()
   }
 
   private func endScrollViewAdjustment(_ kind: ScrollViewAdjustmentKind) {
@@ -1919,7 +1950,6 @@ extension EditingCanvasView {
     }
 
     didChangeScrollView()
-    guideView.didEndScrollViewAdjustment()
   }
 
   private var isZoomInteractionActive: Bool {

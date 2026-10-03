@@ -45,7 +45,8 @@ extension ImageEditorCanvas {
     /// main-actor turn.
     public var canvasBounds: CGRect
 
-    /// What the user is doing to the crop; empty when idle.
+    /// Every interaction with the crop in progress; empty when idle. While
+    /// the user moves the image and resizes the guide at once it holds both.
     public var interaction: CropInteraction
 
     /// The locked aspect ratio in the output orientation, or nil when the
