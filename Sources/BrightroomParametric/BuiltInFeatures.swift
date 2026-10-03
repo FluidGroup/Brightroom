@@ -364,27 +364,14 @@ public struct SharpenFeature: ImageEffect, Equatable {
 /// A Gaussian blur that preserves the input extent.
 public struct GaussianBlurFeature: ImageEffect, Equatable {
 
-  /// A Gaussian blur radius and its unit.
-  public enum Radius: Equatable, Sendable {
-
-    /// A Core Image blur radius in image-domain points.
-    case absolute(Double)
-
-    /// A slider value where 100 is a radius of one twentieth of the image
-    /// diagonal, scaling linearly. It resolves against the render pass's
-    /// chain-entry extent (see `FeatureEvaluationContext.chainEntryExtent`),
-    /// so a mid-chain crop never re-bases it.
-    case proportional(Double)
-  }
-
   /// The blur radius.
-  public var radius: Radius
+  public var radius: EffectRadius
 
   /// Creates a Gaussian blur.
   ///
-  /// Pass `.absolute(_:)` for a radius in image points, or
+  /// Pass `.absolute(_:)` for a radius in pixels of the render pass, or
   /// `.proportional(_:)` for a fraction of the chain-entry diagonal.
-  public init(radius: Radius) {
+  public init(radius: EffectRadius) {
     self.radius = radius
   }
 }

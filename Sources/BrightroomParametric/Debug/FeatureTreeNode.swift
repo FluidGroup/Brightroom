@@ -535,7 +535,7 @@ private enum FeatureValueFormatter {
       return "rgba(\(number(value.red)), \(number(value.green)), \(number(value.blue)), \(number(value.alpha)))"
     case let value as QuarterTurn:
       return "\(value.rawValue)°"
-    case let value as GaussianBlurFeature.Radius:
+    case let value as EffectRadius:
       switch value {
       case let .absolute(radius):
         return "\(number(radius)) px"

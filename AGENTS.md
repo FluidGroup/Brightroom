@@ -160,8 +160,8 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - A value that is not a feature has no suffix (`Mask`, `BrushMask`,
   `QuarterTurn`, `AspectRatio`).
 - A parameter type used by only one feature is nested in it
-  (`GaussianBlurFeature.Radius`, `ToneCurveFeature.Curves`,
-  `HighlightShadowTintFeature.Color`).
+  (`ToneCurveFeature.Curves`, `HighlightShadowTintFeature.Color`). A
+  parameter type several features share is top-level (`EffectRadius`).
 - Name parameters by their unit or meaning (`ev`, `intensity`,
   `temperature`) rather than `value` when one exists.
 - "Renderer" is reserved for the public types that evaluate features

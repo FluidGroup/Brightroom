@@ -146,7 +146,7 @@ sections.
 | `MaskTree`, `MaskNode`, `MaskFeather`, `MaskSubtract` | `Mask` | [Masks and Local Adjustments](#masks-and-local-adjustments) |
 | `BrushMaskStroke`, `BrushMaskBrush` | `BrushMask.Stroke`, `BrushMask.Brush` | [Masks and Local Adjustments](#masks-and-local-adjustments) |
 | `TemperatureFeature` | `WhiteBalanceFeature` | [Feature Members](#feature-members) |
-| `GaussianBlurRadius` | `GaussianBlurFeature.Radius` | [Feature Members](#feature-members) |
+| `GaussianBlurRadius` | `EffectRadius` | [Feature Members](#feature-members) |
 | `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` | [Feature Members](#feature-members) |
 | `PresetFeature` | `FilterFeature` | [Filters and Color Cubes](#filters-and-color-cubes) |
 | `ColorCubeFeatureLoadingError` | `ColorCubeLoadingError` | [Filters and Color Cubes](#filters-and-color-cubes) |
@@ -345,7 +345,7 @@ for example
 | `BrushMask`, `MaskFeather`, `MaskSubtract` `id` and `isEnabled`; `BrushMask`'s conformance to `Feature` | `BrushMask(strokes:)`, `Mask.feathered(_:radius:)`, `Mask.subtraction(_:removing:)` |
 | `PresetFeature(id:isEnabled:name:identifier:effects:)` with `[any ImageEffectFeatureType]` | `FilterFeature(name:id:effects:)` with `[AnyImageEffect]` |
 | `ColorCubeFeature` loaders' `id:` parameter taking a `FeatureID` | The same loaders taking `id: String`: optional in the two file loaders, where it defaults to the file name as before, and required in `init(cubeImage:name:id:intensity:dimension:)`. |
-| `GaussianBlurRadius.editingStackFilterValue(_:)` | `GaussianBlurFeature.Radius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
+| `GaussianBlurRadius.editingStackFilterValue(_:)` | `EffectRadius.proportional(_:)`, as in `GaussianBlurFeature(radius: .proportional(40))` |
 | `ParametricKernelRegistry`, `ParametricKernelRegistryError`, `FeatureEvaluationContext.kernelRegistry`, and the `kernelRegistry:` parameter of `FeatureEvaluationContext.init` | None; the kernels are internal, and the renderers build the context. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `FeatureTreeNode.isEnabled`; `FeatureTreeView(document:)`, `FeatureTreeOutline(document:)`, and `FeatureTreeDescriptor.nodes(for:)` taking `EditingDocument` | `FeatureTreeOutline(feature:)` (BrightroomUI) and `FeatureTreeNode.nodes(for:)` taking `some Feature`. See [Debug Feature Tree](#debug-feature-tree). |
 
@@ -1585,7 +1585,7 @@ macOS). Keep `.BGRA8` for very large HEIF exports.
 | --- | --- |
 | `CropFeature(cropRect:rotation:straightenRadians:)`, `.cropRect`, `.rotation` | `CropFeature(rect:quarterTurn:straightenRadians:)`, `.rect`, `.quarterTurn` |
 | `CropFeature.OutputGeometry.sourceToOutputTransform` | `CropFeature.OutputGeometry.inputToOutputTransform` |
-| `GaussianBlurRadius` | `GaussianBlurFeature.Radius` |
+| `GaussianBlurRadius` | `EffectRadius` |
 | `GaussianBlurFeature(radius: Double)`, `GaussianBlurFeature(value:)` | `GaussianBlurFeature(radius: .absolute(_:))`, `GaussianBlurFeature(radius: .proportional(_:))` |
 | `TemperatureFeature(value:tint:)`, `.value` | `WhiteBalanceFeature(temperature:tint:)`, `.temperature` |
 | `ExposureFeature(value:)`, `.value` | `ExposureFeature(ev:)`, `.ev` |
@@ -1593,9 +1593,9 @@ macOS). Keep `.BGRA8` for very large HEIF exports.
 | `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` |
 
 Library types that conform to `Feature` end in `Feature`. Values that are not
-features (`Mask`, `BrushMask`, `QuarterTurn`) have no suffix, and a value type
-used by only one feature is nested in it (`GaussianBlurFeature.Radius`,
-`BrushMask.Stroke`).
+features (`Mask`, `BrushMask`, `QuarterTurn`, `EffectRadius`) have no suffix,
+and a value type used by only one feature is nested in it
+(`HighlightShadowTintFeature.Color`, `BrushMask.Stroke`).
 
 ### Filters and Color Cubes
 

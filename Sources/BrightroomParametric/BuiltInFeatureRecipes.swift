@@ -265,17 +265,7 @@ extension SharpenFeature {
 extension GaussianBlurFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius: Double
-    switch self.radius {
-    case let .absolute(value):
-      radius = value
-    case let .proportional(value):
-      radius = RadiusCalculator.radius(
-        value: value,
-        max: FilterConstants.gaussianBlurSliderMax,
-        imageExtent: context.chainEntryExtent(for: image)
-      )
-    }
+    let radius = radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))
 
     guard radius > 0.0001 else {
       return image
