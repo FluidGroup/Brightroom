@@ -1506,6 +1506,18 @@ when the source's space (or `outputColorSpace`) is not RGB. A luminance
 space and tags anything else with Generic Gray Gamma 2.2, where 5.1.1 failed.
 RGB sources and RGB `outputColorSpace` values are tagged as before.
 
+`Output.file` now stores the depth `outputFormat` asks for when the file type
+can. 5.1.1 always wrote 8 bits per component and still reported the requested
+format in `Rendered.options`. In 6.0 a format deeper than 8 bits, such as
+`.RGBA16` or `.RGBAh`, is stored with 16 bits per component in a PNG and 10 in
+a HEIF; JPEG stays at 8. No file type stores floating-point components, so
+values outside 0...1 are clamped as before. `RenderedImage.options.outputFormat`
+reports the format the file stores (`.RGBA8`, `.RGBA16`, or `.RGB10`), which
+can differ from the requested one; the default `.BGRA8` is now reported as
+`.RGBA8`. `.memory` delivers and reports the requested format as before. A
+16-bit write uses a scratch file of 8 bytes per pixel on disk, twice that of an
+8-bit one, with the same peak memory.
+
 ### Masks and Local Adjustments
 
 | 5.1.1 | 6.0 |

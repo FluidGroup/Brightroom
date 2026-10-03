@@ -53,14 +53,19 @@ Status context (as of Brightroom 6):
     demand-pages through the provider. Peak RAM ≈ one strip + CI scratch +
     encoder working set; the full bitmap stays on disk. This REPLACED
     `CIContext.write{JPEG,HEIF}Representation`, which renders the whole bitmap
-    into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG. To preview
+    into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG, in
+    `.rgba8` strips, or `.rgba16` strips when `outputFormat` has more than 8
+    bits per component and the type can keep them (PNG stores 16, HEIC 10;
+    JPEG stays 8). `RenderedImage.options.outputFormat` reports the stored
+    format (`ExportRendererFileFormatTests`). To preview
     a large file result WITHOUT a full-resolution decode spike, use
     `RenderedImage.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
     `RenderedImage.cgImage` (which decodes full).
   `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
-    `CIImageStreamingFileWriter.defaultStripHeight`. The brush mask is a
+    `CIImageStreamingFileWriter.referenceStripHeight` (16-bit writes use half
+    the rows, so a strip keeps the same bytes). The brush mask is a
     `CIImageProcessorKernel` drawn per tile (`BrushMaskImageProcessorTests`
     pins uneven tiles); confirm on device that `render(bounds:)` strips stay
     bounded with it. Guards: `DiskExportTests` (full-res, masked, resize, orientation,

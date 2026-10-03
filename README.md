@@ -143,7 +143,7 @@ let rendered = try await document.render(
 )
 ```
 
-Choose a writable `outputURL` for the destination file. The result exposes `fileURL` and `thumbnail(maxPixelSize:)`. Requesting `cgImage` or `uiImage` from a file-backed result decodes the full image back into memory.
+Choose a writable `outputURL` for the destination file. The file keeps a deeper `outputFormat`, such as `.RGBA16`, where its type can: 16 bits per component in a PNG and 10 in a HEIF; JPEG is always 8. The result's `options.outputFormat` reports the format the file stores. The result exposes `fileURL` and `thumbnail(maxPixelSize:)`. Requesting `cgImage` or `uiImage` from a file-backed result decodes the full image back into memory.
 
 ## Processing Without UI
 

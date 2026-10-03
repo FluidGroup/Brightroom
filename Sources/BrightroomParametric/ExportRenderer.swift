@@ -39,23 +39,37 @@ import UIKit
 public struct ExportRenderer {
 
   /// An encoded file format for `Output.file`.
+  ///
+  /// Each type stores the depth `Options.outputFormat` asks for when it can,
+  /// and the nearest depth it has otherwise. See `Options.outputFormat`.
   public enum FileType: Sendable {
     /// Lossy JPEG. `quality` is 0...1 (1 = best).
+    ///
+    /// Always 8 bits per component (`.RGBA8`).
     case jpeg(quality: CGFloat)
     /// HEIF (HEIC). `quality` is 0...1 (1 = best).
+    ///
+    /// 8 bits per component (`.RGBA8`), or 10 (`.RGB10`) when
+    /// `Options.outputFormat` has more than 8.
     case heif(quality: CGFloat)
     /// Lossless PNG.
+    ///
+    /// 8 bits per component (`.RGBA8`), or 16 (`.RGBA16`) when
+    /// `Options.outputFormat` has more than 8.
     case png
   }
 
   /// Where a render stores its result.
   public enum Output: Sendable {
-    /// Render into an in-memory bitmap (a full-resolution `CGImage`). Simple,
-    /// but allocates the whole output buffer (≈ W·H·4 bytes; ~576MB at 12000²).
+    /// Render into an in-memory bitmap (a full-resolution `CGImage`) in
+    /// exactly `Options.outputFormat`. Simple, but allocates the whole output
+    /// buffer (≈ W·H·4 bytes at 8 bits per component; ~576MB at 12000²).
     case memory
     /// Stream the render straight to a file via Core Image's tiled writer — no
     /// full-resolution `CGImage`, peak memory bounded to ~a tile plus encoder
-    /// state. The right choice for very large images.
+    /// state. The right choice for very large images. The file stores
+    /// `Options.outputFormat` as far as `fileType` can; see
+    /// `Options.outputFormat`.
     case file(url: URL, fileType: FileType)
   }
 
@@ -67,6 +81,24 @@ public struct ExportRenderer {
     ///
     /// Processing always runs in a half-float working buffer; this is only the
     /// output format.
+    ///
+    /// `.memory` delivers exactly this format. `.file` stores the depth it
+    /// asks for when the file type can, as RGB:
+    ///
+    /// - A format with 8 bits per component, such as the default `.BGRA8`,
+    ///   is stored as `.RGBA8` by every file type.
+    /// - A deeper format, such as `.RGBA16`, `.RGBAh`, or `.RGBAf`, is stored
+    ///   as `.RGBA16` by PNG and as `.RGB10` (10 bits per component) by HEIF.
+    ///   JPEG has only 8 bits per component and stores `.RGBA8`. No file type
+    ///   stores floating-point components, so values outside 0...1 are
+    ///   clamped.
+    /// - A luminance format such as `.L8` or `.L16` is stored as RGB at its
+    ///   depth by the same rule.
+    ///
+    /// `RenderedImage.options.outputFormat` reports the format the result
+    /// actually has, which for `.file` can differ from the one requested.
+    /// A 16-bit write needs a scratch file of 8 bytes per pixel on disk, twice
+    /// that of an 8-bit one; its peak memory is the same.
     public var outputFormat: CIFormat
 
     /// The color space the result is tagged with.
@@ -75,7 +107,7 @@ public struct ExportRenderer {
     ///
     /// The space must describe the delivered pixels: an RGB space for an RGB
     /// output, and a gray space for a luminance `outputFormat` such as `.L8`
-    /// (`.memory` only; `.file` always writes RGB). When it does not, as for
+    /// (`.memory` only; `.file` always stores RGB). When it does not, as for
     /// a grayscale source exported with the default options, the result is
     /// tagged with sRGB, or with Generic Gray Gamma 2.2 for a luminance
     /// format.
@@ -203,43 +235,59 @@ public struct ExportRenderer {
       return .init(cgImage: cgImage, options: options)
 
     case let .file(url, fileType):
-      // Hand the recipe straight to Core Image's tiled writer — no
-      // full-resolution `CGImage`, no `CGImageDestination`. Peak memory is
-      // bounded to ~a tile plus the encoder state.
-      try Self.write(
+      // Bounded-memory write: render the recipe strip-by-strip into a
+      // disk-backed (mmap'd) buffer and encode lazily, instead of
+      // `write{JPEG,HEIF}Representation`, which renders the full bitmap into
+      // RAM first. See CIImageStreamingFileWriter.
+      let storage = Self.fileStorage(for: options.outputFormat, fileType: fileType)
+      try CIImageStreamingFileWriter.write(
         image,
         to: url,
         fileType: fileType,
+        pixelFormat: storage.written,
         context: ciContext,
-        // The write APIs require a concrete color space; fall back to sRGB when
+        // The writer requires a concrete color space; fall back to sRGB when
         // the source has none (mirrors `createCGImage(colorSpace: nil)`).
         colorSpace: Self.outputColorSpace(
           requestedColorSpace,
-          for: CIImageStreamingFileWriter.pixelFormat
+          for: storage.written.ciFormat
         ) ?? CGColorSpace(name: CGColorSpace.sRGB)!
       )
-      return .init(fileURL: url, options: options)
+      var stored = options
+      stored.outputFormat = storage.stored
+      return .init(fileURL: url, options: stored)
     }
   }
 
-  private static func write(
-    _ image: CIImage,
-    to url: URL,
-    fileType: FileType,
-    context: CIContext,
-    colorSpace: CGColorSpace
-  ) throws {
-    // Bounded-memory write: render the recipe strip-by-strip into a disk-backed
-    // (mmap'd) buffer and encode lazily, instead of `write{JPEG,HEIF}Representation`
-    // which renders the full bitmap into RAM first. See CIImageStreamingFileWriter.
-    try CIImageStreamingFileWriter.write(
-      image,
-      to: url,
-      fileType: fileType,
-      context: context,
-      colorSpace: colorSpace
-    )
+  /// How `Output.file` stores a requested `outputFormat` in `fileType`: the
+  /// pixel format the writer renders and hands the encoder, and the format
+  /// the file ends up with, which `RenderedImage` reports.
+  ///
+  /// The rule is documented on `Options.outputFormat`. HEIF receives 16-bit
+  /// pixels and Image I/O encodes them with 10 bits per component.
+  private static func fileStorage(
+    for requested: CIFormat,
+    fileType: FileType
+  ) -> (written: CIImageStreamingFileWriter.PixelFormat, stored: CIFormat) {
+    guard deepFormats.contains(requested) else {
+      return (.rgba8, .RGBA8)
+    }
+    switch fileType {
+    case .jpeg:
+      return (.rgba8, .RGBA8)
+    case .heif:
+      return (.rgba16, .RGB10)
+    case .png:
+      return (.rgba16, .RGBA16)
+    }
   }
+
+  /// The output formats with more than 8 bits per component.
+  private static let deepFormats: [CIFormat] = [
+    .RGBA16, .RGBAh, .RGBAf, .RGBX16, .RGB10,
+    .A16, .Ah, .Af, .R16, .Rh, .Rf, .RG16, .RGh, .RGf,
+    .L16, .Lh, .Lf, .LA16, .LAh, .LAf,
+  ]
 
   /// The color space a result in `format` is tagged with.
   ///
@@ -472,7 +520,13 @@ public struct RenderedImage: Sendable {
     case file(URL)
   }
 
-  /// The options the result was rendered with.
+  /// The options the result was rendered with, with `outputFormat` set to
+  /// the format the result has.
+  ///
+  /// For `ExportRenderer.Output.memory` that is the requested format. For
+  /// `ExportRenderer.Output.file` it is the format the file stores, which
+  /// can differ from the requested one; see
+  /// `ExportRenderer.Options.outputFormat`.
   public let options: ExportRenderer.Options
 
   private let storage: Storage

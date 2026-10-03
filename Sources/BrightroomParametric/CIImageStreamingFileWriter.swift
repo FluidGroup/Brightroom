@@ -32,8 +32,9 @@ import UniformTypeIdentifiers
 ///
 /// Strategy (system frameworks only, no third-party encoder):
 /// 1. Back the full-resolution bitmap with a memory-mapped **temp file** sized
-///    `W·H·4`. The bytes live on DISK; dirty pages flush under memory pressure,
-///    so they are not pinned in RAM.
+///    `W·H·bytesPerPixel` (4 for `.rgba8`, 8 for `.rgba16`). The bytes live on
+///    DISK; dirty pages flush under memory pressure, so they are not pinned in
+///    RAM.
 /// 2. Render the `CIImage` into that buffer **one horizontal strip at a time**
 ///    via `CIContext.render(_:toBitmap:rowBytes:bounds:format:colorSpace:)`.
 ///    `bounds` selects only the strip's source region, and Core Image pulls the
@@ -51,27 +52,79 @@ import UniformTypeIdentifiers
 ///
 /// - Note: The encode step's exact paging behavior is not Apple-documented;
 ///   confirm the win on-device with Instruments (Allocations / VM Tracker).
-/// - Note: Output is opaque-correct. Pixels are rendered as `kCIFormatRGBA8` and
-///   tagged premultiplied-last; Brightroom's export is opaque (alpha == 1), so
-///   premultiplied vs. straight alpha is moot here.
+/// - Note: Output is opaque-correct. Pixels are tagged premultiplied-last;
+///   Brightroom's export is opaque (alpha == 1), so premultiplied vs. straight
+///   alpha is moot here.
 enum CIImageStreamingFileWriter {
 
-  /// Output rows rendered per `render(_:toBitmap:bounds:)` call. Bounds the
-  /// per-strip working set; smaller = lower peak (more, smaller GPU readbacks).
-  static let defaultStripHeight = 512
+  /// The pixel format strips are rendered in and the encoder reads.
+  ///
+  /// Both are RGB, so the `colorSpace` passed to `write` must be an RGB space.
+  enum PixelFormat: Sendable {
+    /// 8 bits per component (`CIFormat.RGBA8`).
+    case rgba8
+    /// 16-bit unsigned integer components (`CIFormat.RGBA16`), 0...1 like
+    /// `.rgba8`: values outside that range are clamped.
+    case rgba16
 
-  /// The pixel format every strip is rendered in. The `colorSpace` passed to
-  /// `write` must be an RGB space, since it tags these pixels.
-  static let pixelFormat: CIFormat = .RGBA8
+    var ciFormat: CIFormat {
+      switch self {
+      case .rgba8: .RGBA8
+      case .rgba16: .RGBA16
+      }
+    }
+
+    var bitsPerComponent: Int {
+      switch self {
+      case .rgba8: 8
+      case .rgba16: 16
+      }
+    }
+
+    var bytesPerPixel: Int {
+      bitsPerComponent / 8 * 4
+    }
+
+    var bitmapInfo: CGBitmapInfo {
+      switch self {
+      case .rgba8:
+        CGBitmapInfo(
+          rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.byteOrder32Big.rawValue
+        )
+      case .rgba16:
+        // Core Image's 16-bit formats are host-endian, which is little-endian
+        // on every Apple platform.
+        CGBitmapInfo(
+          rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.byteOrder16Little.rawValue
+        )
+      }
+    }
+  }
+
+  /// Output rows per `render(_:toBitmap:bounds:)` call for `.rgba8`. Bounds
+  /// the per-strip working set; smaller = lower peak (more, smaller GPU
+  /// readbacks).
+  static let referenceStripHeight = 512
+
+  /// Output rows per strip for `format`, scaled so a strip holds the same
+  /// number of bytes in every format: a 16-bit strip has half the rows of an
+  /// 8-bit one, keeping the peak memory of a deeper write unchanged.
+  static func stripHeight(for format: PixelFormat) -> Int {
+    let referenceBytesPerPixel = PixelFormat.rgba8.bytesPerPixel
+    return max(1, referenceStripHeight * referenceBytesPerPixel / format.bytesPerPixel)
+  }
 
   static func write(
     _ image: CIImage,
     to url: URL,
     fileType: ExportRenderer.FileType,
+    pixelFormat: PixelFormat,
     context: CIContext,
-    colorSpace: CGColorSpace,
-    stripHeight: Int = defaultStripHeight
+    colorSpace: CGColorSpace
   ) throws {
+    let stripHeight = Self.stripHeight(for: pixelFormat)
     let extent = image.extent
     guard
       extent.isNull == false,
@@ -84,7 +137,7 @@ enum CIImageStreamingFileWriter {
 
     let width = Int(extent.width.rounded())
     let height = Int(extent.height.rounded())
-    let bytesPerPixel = 4
+    let bytesPerPixel = pixelFormat.bytesPerPixel
     let rowBytes = width * bytesPerPixel
     let totalBytes = rowBytes * height
 
@@ -131,7 +184,7 @@ enum CIImageStreamingFileWriter {
         toBitmap: base.advanced(by: top * rowBytes),
         rowBytes: rowBytes,
         bounds: bounds,
-        format: pixelFormat,
+        format: pixelFormat.ciFormat,
         colorSpace: colorSpace
       )
       top += h
@@ -160,16 +213,14 @@ enum CIImageStreamingFileWriter {
     }
     // `provider` now owns `scratch` cleanup via `releaseInfo`.
 
-    let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-      | CGBitmapInfo.byteOrder32Big.rawValue
     guard let cgImage = CGImage(
       width: width,
       height: height,
-      bitsPerComponent: 8,
-      bitsPerPixel: 32,
+      bitsPerComponent: pixelFormat.bitsPerComponent,
+      bitsPerPixel: bytesPerPixel * 8,
       bytesPerRow: rowBytes,
       space: colorSpace,
-      bitmapInfo: CGBitmapInfo(rawValue: bitmapInfo),
+      bitmapInfo: pixelFormat.bitmapInfo,
       provider: provider,
       decode: nil,
       shouldInterpolate: false,
