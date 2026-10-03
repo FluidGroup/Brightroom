@@ -12,6 +12,12 @@ struct BrushMaskImageProcessorTests {
 
   private static let context = CIContext(options: [.workingColorSpace: NSNull()])
 
+  /// Evaluation checks the shaders up front: an error inside Core Image's tile
+  /// callback would be dropped and the mask drawn transparent.
+  @Test func `The bundled library holds the brush-stamp shaders`() throws {
+    try BrushStampPipeline.validateLibrary()
+  }
+
   @Test func `Stamp layout matches the shader struct`() {
     // `BrushStampInstance` in BrushMaskRenderShader.metal:
     // float2 center; float radius; float hardness; float opacity; float padding;

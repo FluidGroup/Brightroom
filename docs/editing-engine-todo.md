@@ -104,6 +104,15 @@ Remaining options, both optional:
 - The CPU fallback in `BrushMaskImageProcessor` (contexts without Metal) is
   parity-tested against the Metal pipeline, but its row orientation has not
   been checked on a real CPU context (iOS 26 "software" contexts run on Metal).
+- OPEN: errors inside `BrushMaskImageProcessor.process` (a render pipeline,
+  scratch texture, or encoder that cannot be created on Core Image's device)
+  never reach the caller: Core Image discards a processor kernel's error and
+  treats the tile as transparent, so the export succeeds without the local
+  adjustment there. A missing or incomplete `default.metallib` is caught
+  before that, at evaluation (`BrushStampPipeline.validateLibrary()` throws
+  `kernelUnavailable`), but a per-device pipeline failure is not. Surfacing
+  it would need the processor to record the failure where `ExportRenderer`
+  can check it after the render.
 
 Guards: `BrushMaskImageProcessorTests`, `DenseBrushMaskExportTests`,
 `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,

@@ -37,8 +37,14 @@ import simd
 /// Core Image working-space coordinates (bottom-left origin, y-up) of the
 /// domain the mask is authored in.
 ///
-/// Failures surface as `FeatureEvaluationError`, like every other evaluation
-/// failure.
+/// A bundled Metal library without the brush-stamp shaders fails
+/// ``makeImage(_:extent:)`` with `FeatureEvaluationError.kernelUnavailable`,
+/// like every other unavailable kernel. Failures while Core Image draws a tile
+/// (`process(with:arguments:output:)`), such as a render pipeline, scratch
+/// texture, or command encoder that cannot be created, do not reach the
+/// caller: Core Image discards the error and treats that tile of the mask as
+/// transparent, so the local adjustment is missing there while the render
+/// still succeeds.
 final class BrushMaskImageProcessor: CIImageProcessorKernel {
 
   /// The stamps in Core Image working-space coordinates (bottom-left origin,
@@ -54,7 +60,12 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
   }
 
   /// Returns the image of `mask` within `extent`.
+  ///
+  /// Throws `FeatureEvaluationError.kernelUnavailable` when the bundled Metal
+  /// library lacks the brush-stamp shaders.
   static func makeImage(_ mask: BrushMask, extent: CGRect) throws -> CIImage {
+    try BrushStampPipeline.validateLibrary()
+
     var stamps: [BrushStampPipeline.Stamp] = []
     var coverage = CGRect.null
 

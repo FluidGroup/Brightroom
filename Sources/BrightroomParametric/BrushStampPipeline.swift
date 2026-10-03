@@ -85,12 +85,61 @@ package enum BrushStampPipeline {
   // Guarded by pipelineLock.
   private nonisolated(unsafe) static var pipelines: [PipelineKey: MTLRenderPipelineState] = [:]
 
+  /// The shader functions every brush-stamp pipeline is built from.
+  private static let functionNames = ["brushStampVertex", "brushStampFragment"]
+
+  /// Checks that the bundled Metal library holds the brush-stamp shaders,
+  /// throwing `FeatureEvaluationError.kernelUnavailable(name:reason:)` when
+  /// it does not.
+  ///
+  /// `BrushMaskImageProcessor` builds its pipeline inside Core Image's tile
+  /// callback, where a thrown error never reaches the caller (Core Image
+  /// draws the tile transparent instead). Evaluation calls this first, so a
+  /// missing or incomplete library fails the evaluation the way any other
+  /// unavailable kernel does. The check runs once per process, on the
+  /// system default device; without a Metal device only the library file is
+  /// checked, since Core Image then rasterizes on the CPU.
+  package static func validateLibrary() throws {
+    try libraryValidation.get()
+  }
+
+  private static let libraryValidation: Result<Void, FeatureEvaluationError> = {
+    let url: URL
+    do {
+      url = try BrightroomMetalLibrary.url()
+    } catch {
+      return .failure(
+        .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
+      )
+    }
+    guard let device = MTLCreateSystemDefaultDevice() else {
+      return .success(())
+    }
+    let library: MTLLibrary
+    do {
+      library = try device.makeLibrary(URL: url)
+    } catch {
+      return .failure(
+        .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
+      )
+    }
+    for name in functionNames where library.makeFunction(name: name) == nil {
+      return .failure(
+        .kernelUnavailable(name: name, reason: "not in the compiled Metal library")
+      )
+    }
+    return .success(())
+  }()
+
   /// Returns the brush-stamp render pipeline for `pixelFormat` on `device`.
   ///
   /// Pipelines are cached per device and pixel format: the live canvas draws
   /// into an 8-bit mask texture, while Core Image hands the export its working
   /// format. A shader library or pipeline that cannot be built throws
-  /// `FeatureEvaluationError.kernelUnavailable(name:reason:)`.
+  /// `FeatureEvaluationError.kernelUnavailable(name:reason:)` to the caller.
+  /// Inside `BrushMaskImageProcessor` that caller is Core Image's tile
+  /// callback, which drops the error and leaves the tile transparent; see
+  /// ``validateLibrary()``.
   package static func renderPipelineState(
     device: MTLDevice,
     pixelFormat: MTLPixelFormat
