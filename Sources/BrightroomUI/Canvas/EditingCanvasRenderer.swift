@@ -67,10 +67,10 @@ private struct EditingCanvasPreFinishCacheKey: Equatable {
 }
 
 /// The drawable-resolution image under the post-crop pass, in y-down texture
-/// pixels, retained only while a post-crop effect is set.
+/// pixels, read from the renderer's pre-finish texture. It is valid until the
+/// next frame renders into that texture.
 private struct EditingCanvasPreFinishCache {
   let key: EditingCanvasPreFinishCacheKey
-  let texture: MTLTexture
   let image: CIImage
 }
 
@@ -207,6 +207,9 @@ final class EditingCanvasRenderer {
     var preparedLayersCache: EditingCanvasViewportPreparedLayersCache?
     var renderTextures: EditingCanvasViewportRenderTextures?
     var preFinishCache: EditingCanvasPreFinishCache?
+    /// The drawable-size texture every frame under a post-crop pass renders
+    /// its image into, allocated once per drawable size and reused.
+    var preFinishTexture: MTLTexture?
     var postCrop: PostCrop?
     /// Advances on every `setRenderImages`, for the pre-finish cache key.
     var renderImagesGeneration = 0
@@ -240,9 +243,14 @@ final class EditingCanvasRenderer {
     var preparedContentLayers = 0
     var preparedLayers = 0
     var preFinish = 0
+    /// Allocations of the pre-finish texture.
+    var preFinishTexture = 0
   }
 
   private(set) var cacheMissCounts = CacheMissCounts()
+
+  /// Whether an image is cached under the post-crop pass.
+  var hasPreFinishCache: Bool { viewportState.preFinishCache != nil }
   #endif
 
   var hasRenderImages: Bool { viewportState.renderImages != nil }
@@ -371,7 +379,7 @@ final class EditingCanvasRenderer {
     viewportState.postCrop = postCrop
     if postCrop == nil {
       // The cached image is only read under a pass.
-      viewportState.preFinishCache = nil
+      releasePreFinishCache()
     }
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.postCrop)
@@ -379,9 +387,18 @@ final class EditingCanvasRenderer {
     return true
   }
 
+  /// Drops the image cached under the post-crop pass and its texture, for a
+  /// canvas that is hidden and draws no frames. The next frame under a pass
+  /// allocates the texture again.
+  func releasePreFinishCache() {
+    viewportState.preFinishCache = nil
+    viewportState.preFinishTexture = nil
+  }
+
   /// Invalidates only allocations and bakes tied to the drawable size.
   func drawableSizeDidChange() {
     viewportState.renderTextures = nil
+    viewportState.preFinishTexture = nil
     invalidateViewportCoreImageLayerCaches()
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.drawableSize)
@@ -448,7 +465,7 @@ final class EditingCanvasRenderer {
         cachedImage,
         frame: frame,
         commandBuffer: commandBuffer,
-        cacheKey: nil
+        source: .cached
       )
       #if DEBUG
       recordPerformanceRender(
@@ -537,6 +554,7 @@ final class EditingCanvasRenderer {
     case .preparedContentLayers: cacheMissCounts.preparedContentLayers += 1
     case .preparedLayers: cacheMissCounts.preparedLayers += 1
     case .preFinish: cacheMissCounts.preFinish += 1
+    case .preFinishTexture: cacheMissCounts.preFinishTexture += 1
     }
   }
 
@@ -760,20 +778,39 @@ final class EditingCanvasRenderer {
       image,
       frame: frame,
       commandBuffer: commandBuffer,
-      cacheKey: preFinishCacheKey(frame: frame)
+      source: .render(cacheKey: preFinishCacheKey(frame: frame))
     )
+  }
+
+  /// Where `renderFinishedDrawable` takes the image under the pass from.
+  private enum PreFinishSource {
+    /// The image is the cached pre-finish image; nothing is rendered into
+    /// the pre-finish texture.
+    case cached
+    /// The image is rendered, through the pre-finish texture when a pass is
+    /// set, and published as the cache under `cacheKey` when there is one.
+    case render(cacheKey: EditingCanvasPreFinishCacheKey?)
   }
 
   /// Applies the post-crop pass to `image` and draws the result.
   ///
-  /// With a `cacheKey`, `image` is first rendered into a texture in the same
-  /// command buffer and published as the pre-finish cache once the buffer is
-  /// committed, so later frames that differ only by the pass sample it.
+  /// Under a pass, a rendered `image` is first rendered into the pre-finish
+  /// texture in the same command buffer; the drawable and the pass both read
+  /// that texture. The pass therefore sees exactly the pixels the drawable
+  /// shows: Core Image samples the fractional edges of a lazy image
+  /// differently when it evaluates only the frame's region, and left the
+  /// edge pixels the drawable draws out of the pass. With a cache key, the
+  /// texture's image is published as the pre-finish cache once the buffer is
+  /// committed, so later frames that differ only by the pass sample it
+  /// without rendering. The texture is reused from frame to frame, so a pan
+  /// or zoom tick allocates nothing; frames on one command queue run in
+  /// order, so a frame never overwrites the texture before an earlier one
+  /// has read it.
   private func renderFinishedDrawable(
     _ image: CIImage,
     frame: Frame,
     commandBuffer: MTLCommandBuffer,
-    cacheKey: EditingCanvasPreFinishCacheKey?
+    source: PreFinishSource
   ) -> MTLCommandBuffer {
     frame.renderPassDescriptor.colorAttachments[0].loadAction = .clear
     frame.renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
@@ -796,18 +833,19 @@ final class EditingCanvasRenderer {
       .cropped(to: renderBounds)
 
     var newCache: EditingCanvasPreFinishCache?
-    if let cacheKey,
-       let texture = makeRenderTexture(
-         pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
-         width: cacheKey.pixelWidth,
-         height: cacheKey.pixelHeight
-       )
+    if case let .render(cacheKey) = source,
+       viewportState.postCrop != nil,
+       let texture = preFinishTexture(width: frame.texture.width, height: frame.texture.height)
     {
       #if DEBUG
-      recordCacheMiss(.preFinish)
+      if cacheKey != nil {
+        recordCacheMiss(.preFinish)
+      }
       #endif
       // Bake the drawable image itself, with the same render the drawable
       // gets, so a cached frame shows the same pixels as an uncached one.
+      // A published cache reads this texture, so it is replaced here.
+      viewportState.preFinishCache = nil
       encodeClearTexture(texture, commandBuffer: commandBuffer)
       ciContext.render(
         drawableImage,
@@ -821,11 +859,9 @@ final class EditingCanvasRenderer {
         options: [.colorSpace: EditingCanvasImageProcessing.intermediateColorSpace]
       )?.cropped(to: renderBounds) {
         drawableImage = bakedImage
-        newCache = .init(
-          key: cacheKey,
-          texture: texture,
-          image: bakedImage.transformed(by: flip).cropped(to: renderBounds)
-        )
+        newCache = cacheKey.map {
+          .init(key: $0, image: bakedImage.transformed(by: flip).cropped(to: renderBounds))
+        }
       }
     }
     let preFinishImage = drawableImage.transformed(by: flip).cropped(to: renderBounds)
@@ -1208,6 +1244,27 @@ final class EditingCanvasRenderer {
     return textures
   }
 
+  /// The pre-finish texture for a drawable of this size, allocated on first
+  /// use and after a size change.
+  private func preFinishTexture(width: Int, height: Int) -> MTLTexture? {
+    if let texture = viewportState.preFinishTexture,
+       texture.width == width,
+       texture.height == height
+    {
+      return texture
+    }
+    #if DEBUG
+    recordCacheMiss(.preFinishTexture)
+    #endif
+    let texture = makeRenderTexture(
+      pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
+      width: width,
+      height: height
+    )
+    viewportState.preFinishTexture = texture
+    return texture
+  }
+
   private func makeRenderTexture(
     pixelFormat: MTLPixelFormat,
     width: Int,
@@ -1382,6 +1439,7 @@ final class EditingCanvasRenderer {
       case preparedContentLayers = "prepared-content-layers"
       case preparedLayers = "prepared-layers"
       case preFinish = "pre-finish"
+      case preFinishTexture = "pre-finish-texture"
     }
 
     enum Invalidation: String {
@@ -1404,6 +1462,7 @@ final class EditingCanvasRenderer {
     var preparedContentLayersMissCount = 0
     var preparedLayersMissCount = 0
     var preFinishMissCount = 0
+    var preFinishTextureMissCount = 0
     var cachedPreFinishFrameCount = 0
     var invalidationCount = 0
     var lastInvalidation: Invalidation?
@@ -1427,6 +1486,8 @@ final class EditingCanvasRenderer {
         preparedLayersMissCount += 1
       case .preFinish:
         preFinishMissCount += 1
+      case .preFinishTexture:
+        preFinishTextureMissCount += 1
       }
     }
 
@@ -1468,7 +1529,7 @@ final class EditingCanvasRenderer {
         [EditingCanvasRender]
         frames:\(frameCount) slow:\(slowFrameCount) budgetMs:\(formatMilliseconds(frameBudget))
         path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) coreComposite:\(coreImageCompositeFrameCount) cachedPreFinish:\(cachedPreFinishFrameCount)
-        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) contentLayers:\(preparedContentLayersMissCount) preparedLayers:\(preparedLayersMissCount) preFinish:\(preFinishMissCount)
+        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) contentLayers:\(preparedContentLayersMissCount) preparedLayers:\(preparedLayersMissCount) preFinish:\(preFinishMissCount) preFinishTexture:\(preFinishTextureMissCount)
         invalidations:\(invalidationCount) lastInvalidation:\(lastInvalidation?.rawValue ?? "none")
         last path:\(path.rawValue) submitMs:\(formatMilliseconds(duration)) preparedBase:\(usesPreparedBaseImage) localEffect:\(hasLocalEffect) stroke:\(hasRenderableStroke) drawable:\(format(drawableSize))
         content:\(format(visibleContentRect)) canvasFrame:\(format(visibleCanvasFrame))
@@ -1490,6 +1551,7 @@ final class EditingCanvasRenderer {
       preparedContentLayersMissCount = 0
       preparedLayersMissCount = 0
       preFinishMissCount = 0
+      preFinishTextureMissCount = 0
       cachedPreFinishFrameCount = 0
       invalidationCount = 0
       lastInvalidation = nil

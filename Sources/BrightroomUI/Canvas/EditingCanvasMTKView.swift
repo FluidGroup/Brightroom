@@ -140,6 +140,12 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
     }
   }
 
+  /// Drops the image cached under the post-crop pass while the canvas is
+  /// hidden; see `EditingCanvasRenderer.releasePreFinishCache()`.
+  func releasePreFinishCache() {
+    renderer.releasePreFinishCache()
+  }
+
   func reset() {
     cancelActiveStroke()
   }

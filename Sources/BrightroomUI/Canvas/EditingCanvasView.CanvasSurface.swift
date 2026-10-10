@@ -249,6 +249,9 @@ extension EditingCanvasView {
 
     func hideCanvasView() {
       canvasView?.isHidden = true
+      // A hidden canvas draws nothing, so it keeps no drawable-size image
+      // under the post-crop pass (the crop surface after crop editing).
+      canvasView?.releasePreFinishCache()
     }
 
     func configureCanvas(
@@ -271,6 +274,7 @@ extension EditingCanvasView {
       displayedViewport = viewport
       guard let viewport else {
         canvasView.isHidden = true
+        canvasView.releasePreFinishCache()
         return
       }
       canvasView.isHidden = false

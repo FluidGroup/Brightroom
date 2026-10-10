@@ -118,8 +118,11 @@ struct EditingCanvasPostCropPassTests {
   /// route, so the edge is checked by how much the pass darkens each pixel
   /// against the same frame drawn without it, and the fully covered pixels
   /// against the export recipe.
-  @Test(arguments: Route.allCases)
-  func `The pass reaches the edge pixels of a frame at a fractional position`(route: Route) throws {
+  ///
+  /// A frame drawn during a live stroke is not cached, and it must reach the
+  /// edges too.
+  @Test(arguments: Route.allCases, [false, true])
+  func `The pass reaches the edge pixels of a frame at a fractional position`(route: Route, live: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let content = Self.gradientContent()
     // The content is the crop output (the tool surface), at
@@ -139,7 +142,14 @@ struct EditingCanvasPostCropPassTests {
       ))
       renderer.setViewport(.init(visibleContentRect: Self.contentBounds, contentToCanvasTransform: transform))
       renderer.setPostCrop(effect: effect, frame: Self.contentBounds.applying(transform), chainEntry: Self.contentBounds)
-      return try Self.render(renderer, into: try Self.makeTarget(device: device))
+      // A stroke outside the viewport changes no pixel.
+      return try Self.render(
+        renderer,
+        into: try Self.makeTarget(device: device),
+        activeStroke: live
+          ? .init(brush: .init(size: 1, hardness: 1, opacity: 1), stamps: [CGPoint(x: -500, y: -500)])
+          : nil
+      )
     }
     let plain = try render(nil)
     let rendered = try render(AnyImageEffect(VignetteFeature(value: 2)))
@@ -210,9 +220,10 @@ struct EditingCanvasPostCropPassTests {
   }
 
   /// The pass replaces only the frame's pixels: every other pixel, including
-  /// the content's fractional edges, is the one drawn without a pass. A
-  /// cached frame goes through a half-float texture, which may round a
-  /// channel by one level.
+  /// the content's fractional edges, is the one drawn without a pass. Under
+  /// a pass every frame goes through the half-float pre-finish texture, which
+  /// may round a channel by one level; a live stroke makes a frame one that
+  /// is not cached.
   @Test(arguments: Route.allCases, [true, false])
   func `Pixels outside the frame are drawn as without a pass`(route: Route, cached: Bool) throws {
     let device = try #require(MTLCreateSystemDefaultDevice())
@@ -258,7 +269,7 @@ struct EditingCanvasPostCropPassTests {
         let rhs = Self.pixel(finished, (x, row))
         if frame.contains(CGPoint(x: CGFloat(x) + 0.5, y: CGFloat(y) + 0.5)) {
           insideDifference = max(insideDifference, zip(lhs, rhs).map { abs(Int($0) - Int($1)) }.max()!)
-        } else if zip(lhs, rhs).contains(where: { abs(Int($0) - Int($1)) > (cached ? 1 : 0) }) {
+        } else if zip(lhs, rhs).contains(where: { abs(Int($0) - Int($1)) > 1 }) {
           Issue.record("pixel (\(x), \(y)) outside the frame changed from \(lhs) to \(rhs)")
           return
         }
@@ -295,13 +306,13 @@ struct EditingCanvasPostCropPassTests {
     let frameA = CGRect(x: 0, y: 0, width: 50, height: 60)
     #expect(renderer.setPostCrop(effect: vignette, frame: frameA, chainEntry: Self.contentBounds))
     let first = try Self.render(renderer, into: target)
-    let afterFirst = renderer.cacheMissCounts
-    #expect(afterFirst.preFinish == 1)
+    let afterBake = renderer.cacheMissCounts
+    #expect(afterBake.preFinish == 1)
 
     for frame in [CGRect(x: 20, y: 0, width: 60, height: 50), CGRect(x: 10, y: 10, width: 40, height: 40)] {
       #expect(renderer.setPostCrop(effect: vignette, frame: frame, chainEntry: Self.contentBounds))
       let moved = try Self.render(renderer, into: target)
-      #expect(renderer.cacheMissCounts == afterFirst, "a frame-only change must not rebuild a cache")
+      #expect(renderer.cacheMissCounts == afterBake, "a frame-only change must not rebuild a cache")
       #expect(Self.maximumDifference(first, moved) > 20, "the vignette follows the frame")
 
       // The cached route draws what a fresh renderer draws.
@@ -323,13 +334,68 @@ struct EditingCanvasPostCropPassTests {
       #expect(Self.maximumDifference(moved, freshPixels) <= 1)
     }
 
-    // A viewport change rebuilds the image under the pass.
+    // A viewport change rebuilds the image under the pass, in the same
+    // texture.
     renderer.setViewport(.init(
       visibleContentRect: Self.contentBounds,
       contentToCanvasTransform: transform.concatenating(.init(translationX: 4, y: 0))
     ))
     _ = try Self.render(renderer, into: target)
     #expect(renderer.cacheMissCounts.preFinish == 2)
+    #expect(renderer.cacheMissCounts.preFinishTexture == 1)
+    #expect(renderer.hasPreFinishCache)
+
+    // A hidden canvas releases it.
+    renderer.releasePreFinishCache()
+    #expect(renderer.hasPreFinishCache == false)
+  }
+
+  /// Pan, zoom, and straighten ticks change the viewport on every frame, so
+  /// each one renders the image under the pass again; they reuse one
+  /// drawable-size texture for it instead of allocating one per tick, on
+  /// every drawing route.
+  @Test(arguments: Route.allCases, [false, true])
+  func `Viewport ticks with a post-crop effect allocate one texture`(route: Route, composite: Bool) throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let renderer = EditingCanvasRenderer(canvasSize: Self.contentSize, device: device)
+    let target = try Self.makeTarget(device: device)
+    let content = Self.gradientContent()
+    renderer.setRenderImages(.init(
+      source: content,
+      base: content,
+      adjusted: composite
+        ? AnyImageEffect(ExposureFeature(ev: 1)).applyIgnoringFailure(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
+        : content,
+      hasGlobalEffects: route == .baseImage,
+      hasLocalEffect: composite,
+      usesPreparedBaseImage: route == .baseImage || composite
+    ))
+    if composite {
+      renderer.setCommittedStrokes([
+        .init(stamps: [CGPoint(x: 60, y: 40)], brush: .init(size: 40, hardness: 0.7, opacity: 1)),
+      ])
+    }
+    let vignette = AnyImageEffect(VignetteFeature(value: 1))
+    for tick in 0..<30 {
+      let transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
+        .concatenating(.init(translationX: CGFloat(tick), y: 0))
+      renderer.setViewport(.init(visibleContentRect: Self.contentBounds, contentToCanvasTransform: transform))
+      renderer.setPostCrop(
+        effect: vignette,
+        frame: CGRect(x: 0, y: 0, width: 50, height: 60).applying(.init(translationX: CGFloat(tick), y: 0)),
+        chainEntry: Self.contentBounds
+      )
+      _ = try Self.render(renderer, into: target)
+    }
+    #expect(renderer.cacheMissCounts.preFinish == 30)
+    #expect(renderer.cacheMissCounts.preFinishTexture == 1)
+
+    // Removing the pass releases the texture; setting it again allocates one.
+    renderer.setPostCrop(effect: nil, frame: .null, chainEntry: .null)
+    #expect(renderer.hasPreFinishCache == false)
+    renderer.setPostCrop(effect: vignette, frame: CGRect(x: 0, y: 0, width: 50, height: 60), chainEntry: Self.contentBounds)
+    _ = try Self.render(renderer, into: target)
+    #expect(renderer.cacheMissCounts.preFinishTexture == 2)
   }
 
   @Test func `Without a post-crop effect a moving frame requests no frame`() throws {
