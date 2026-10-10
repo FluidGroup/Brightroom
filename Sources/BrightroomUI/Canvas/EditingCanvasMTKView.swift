@@ -1,4 +1,5 @@
 import BrightroomEngine
+import BrightroomParametric
 import MetalKit
 import UIKit
 
@@ -127,6 +128,14 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   func setViewport(_ viewport: EditingCanvasRenderer.Viewport) {
     if renderer.setViewport(viewport) {
+      needsCanvasDisplay = true
+    }
+  }
+
+  /// Sets the effect drawn after the crop; see
+  /// `EditingCanvasRenderer.setPostCrop(effect:frame:chainEntry:)`.
+  func setPostCrop(effect: AnyImageEffect?, frame: CGRect, chainEntry: CGRect) {
+    if renderer.setPostCrop(effect: effect, frame: frame, chainEntry: chainEntry) {
       needsCanvasDisplay = true
     }
   }

@@ -52,6 +52,28 @@ private struct EditingCanvasViewportPreparedLayersCache {
   let adjustedImage: CIImage
 }
 
+/// Everything the image under the post-crop pass depends on. Within one key the
+/// drawn frame differs only by the post-crop pass, so moving the crop frame
+/// (a crop guide drag) reuses the cached image instead of re-evaluating the
+/// effect graph and the brush mask.
+private struct EditingCanvasPreFinishCacheKey: Equatable {
+  var visibleContentRect: CGRect
+  var contentToCanvasTransform: CGAffineTransform
+  var viewportSize: CGSize
+  var pixelWidth: Int
+  var pixelHeight: Int
+  var renderImagesGeneration: Int
+  var committedStrokesGeneration: Int
+}
+
+/// The drawable-resolution image under the post-crop pass, in y-down texture
+/// pixels, retained only while a post-crop effect is set.
+private struct EditingCanvasPreFinishCache {
+  let key: EditingCanvasPreFinishCacheKey
+  let texture: MTLTexture
+  let image: CIImage
+}
+
 /// Texture-backed bake of `renderImages.adjusted` (the local-effect layer), keyed
 /// only on the render-images generation (NOT the viewport). `setRenderImages`
 /// invalidates it, so during a gesture (rotation / pan / zoom — which change only
@@ -72,6 +94,7 @@ private enum EditingCanvasViewportRenderPath: String {
   case baseImage = "base-image"
   case cachedSourceBase = "cached-source-base"
   case coreImageComposite = "core-image-composite"
+  case cachedPreFinish = "cached-pre-finish"
 }
 
 /// Content-space image recipes supplied by the host for one source/effects revision.
@@ -158,6 +181,23 @@ final class EditingCanvasRenderer {
     let preferredFramesPerSecond: Int
   }
 
+  /// An effect the feature evaluates after its final crop, drawn over the
+  /// crop frame of every frame.
+  ///
+  /// The render images hold the feature up to the crop. The pass applies the
+  /// effect to the drawable pixels inside `frame`, with `frame` as the
+  /// effect's input extent, so an effect that reads its input extent (a
+  /// vignette) is centred on the crop output wherever the viewport places it.
+  /// Pixels outside the frame are left as they are.
+  struct PostCrop: Equatable {
+    /// The effect evaluated after the crop.
+    var effect: AnyImageEffect
+    /// The crop output on the canvas, in canvas points (y-down).
+    var frame: CGRect
+    /// The chain entry (the whole source) in content coordinates (y-down).
+    var chainEntry: CGRect
+  }
+
   /// Retained image inputs and their dependent caches. Content bakes survive
   /// viewport changes; viewport bakes and mask allocations have shorter lifetimes.
   private struct ViewportState: ~Copyable {
@@ -166,6 +206,12 @@ final class EditingCanvasRenderer {
     var preparedContentLayers: EditingCanvasPreparedContentLayers?
     var preparedLayersCache: EditingCanvasViewportPreparedLayersCache?
     var renderTextures: EditingCanvasViewportRenderTextures?
+    var preFinishCache: EditingCanvasPreFinishCache?
+    var postCrop: PostCrop?
+    /// Advances on every `setRenderImages`, for the pre-finish cache key.
+    var renderImagesGeneration = 0
+    /// Advances when the committed strokes change, for the pre-finish cache key.
+    var committedStrokesGeneration = 0
     var viewport: Viewport
 
     init(canvasSize: CGSize) {
@@ -185,6 +231,18 @@ final class EditingCanvasRenderer {
   private var committedRecords: [EditingCanvasStrokeRecord] = []
   #if DEBUG
   private var performanceDiagnostics = PerformanceDiagnostics()
+
+  /// Cache misses since creation, never reset, so tests can tell which
+  /// caches a frame rebuilt.
+  struct CacheMissCounts: Equatable {
+    var sourceTexture = 0
+    var renderTextures = 0
+    var preparedContentLayers = 0
+    var preparedLayers = 0
+    var preFinish = 0
+  }
+
+  private(set) var cacheMissCounts = CacheMissCounts()
   #endif
 
   var hasRenderImages: Bool { viewportState.renderImages != nil }
@@ -223,6 +281,8 @@ final class EditingCanvasRenderer {
 
   func setRenderImages(_ images: EditingCanvasRenderImages) {
     viewportState.renderImages = images
+    viewportState.renderImagesGeneration &+= 1
+    viewportState.preFinishCache = nil
     // New render images may carry new source content with an identical
     // extent; the source-texture key is content-blind, so it must be
     // dropped here like every other viewport cache.
@@ -247,6 +307,8 @@ final class EditingCanvasRenderer {
     // Committed strokes are rasterized live every frame (no cache), so updating
     // the records is all that the next externally driven frame needs.
     committedRecords = records
+    viewportState.committedStrokesGeneration &+= 1
+    viewportState.preFinishCache = nil
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.committedStrokes)
     #endif
@@ -284,6 +346,35 @@ final class EditingCanvasRenderer {
     invalidateViewportCoreImageLayerCaches()
     #if DEBUG
     performanceDiagnostics.recordInvalidation(.viewport)
+    #endif
+    return true
+  }
+
+  /// Sets the effect drawn after the crop, or removes it with a nil `effect`,
+  /// returning whether a new frame is needed.
+  ///
+  /// Moving `frame` alone redraws from the cached image under the pass; the
+  /// render images and their bakes are kept. Without an effect the frame is
+  /// ignored, so a moving crop frame requests no frames.
+  ///
+  /// - Parameters:
+  ///   - effect: The effect evaluated after the crop.
+  ///   - frame: The crop output on the canvas, in canvas points (y-down).
+  ///   - chainEntry: The whole source in content coordinates (y-down): the
+  ///     chain-entry extent proportional radii resolve against.
+  @discardableResult
+  func setPostCrop(effect: AnyImageEffect?, frame: CGRect, chainEntry: CGRect) -> Bool {
+    let postCrop = effect.map { PostCrop(effect: $0, frame: frame, chainEntry: chainEntry) }
+    guard viewportState.postCrop != postCrop else {
+      return false
+    }
+    viewportState.postCrop = postCrop
+    if postCrop == nil {
+      // The cached image is only read under a pass.
+      viewportState.preFinishCache = nil
+    }
+    #if DEBUG
+    performanceDiagnostics.recordInvalidation(.postCrop)
     #endif
     return true
   }
@@ -349,6 +440,28 @@ final class EditingCanvasRenderer {
     }
 
     let hasRenderableStroke = hasRenderableStroke(frame, in: viewportState.viewport.visibleContentRect)
+
+    // Only the post-crop pass changed since the cached frame (a crop frame
+    // drag): redraw the pass over the cached image.
+    if let cachedImage = cachedPreFinishImage(frame: frame) {
+      let submitted = renderFinishedDrawable(
+        cachedImage,
+        frame: frame,
+        commandBuffer: commandBuffer,
+        cacheKey: nil
+      )
+      #if DEBUG
+      recordPerformanceRender(
+        path: .cachedPreFinish,
+        startedAt: renderStartTime,
+        renderImages: renderImages,
+        texture: frame.texture,
+        preferredFramesPerSecond: frame.preferredFramesPerSecond,
+        hasRenderableStroke: hasRenderableStroke
+      )
+      #endif
+      return submitted
+    }
 
     // Global effects are an open pipeline and may depend on direction, extent,
     // or position. Always evaluate them in content space through `base`, before
@@ -416,6 +529,17 @@ final class EditingCanvasRenderer {
   }
 
   #if DEBUG
+  private func recordCacheMiss(_ miss: PerformanceDiagnostics.CacheMiss) {
+    performanceDiagnostics.recordCacheMiss(miss)
+    switch miss {
+    case .sourceTexture: cacheMissCounts.sourceTexture += 1
+    case .renderTextures: cacheMissCounts.renderTextures += 1
+    case .preparedContentLayers: cacheMissCounts.preparedContentLayers += 1
+    case .preparedLayers: cacheMissCounts.preparedLayers += 1
+    case .preFinish: cacheMissCounts.preFinish += 1
+    }
+  }
+
   private func recordPerformanceRender(
     path: EditingCanvasViewportRenderPath,
     startedAt startTime: CFTimeInterval,
@@ -448,11 +572,6 @@ final class EditingCanvasRenderer {
     frame: Frame,
     commandBuffer: MTLCommandBuffer
   ) -> MTLCommandBuffer {
-    frame.renderPassDescriptor.colorAttachments[0].loadAction = .clear
-    frame.renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-    frame.renderPassDescriptor.colorAttachments[0].storeAction = .store
-    commandBuffer.makeRenderCommandEncoder(descriptor: frame.renderPassDescriptor)?.endEncoding()
-
     let renderBounds = CGRect(
       x: 0,
       y: 0,
@@ -465,18 +584,9 @@ final class EditingCanvasRenderer {
     )
     let visibleImage = image
       .transformed(by: transform)
-      .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
-      .transformed(by: CGAffineTransform(translationX: 0, y: renderBounds.height))
       .cropped(to: renderBounds)
 
-    ciContext.render(
-      visibleImage,
-      to: frame.texture,
-      commandBuffer: commandBuffer,
-      bounds: renderBounds,
-      colorSpace: EditingCanvasImageProcessing.drawableColorSpace
-    )
-    return Self.submit(commandBuffer)
+    return renderDrawableImage(visibleImage, frame: frame, commandBuffer: commandBuffer)
   }
 
   /// Renders an unadjusted source through its viewport-resolution texture cache.
@@ -516,6 +626,7 @@ final class EditingCanvasRenderer {
   /// when the render images themselves change.
   private func invalidateViewportCoreImageLayerCaches() {
     viewportState.preparedLayersCache = nil
+    viewportState.preFinishCache = nil
   }
 
   /// Drops the adjusted content bake when its image recipe is replaced.
@@ -544,7 +655,7 @@ final class EditingCanvasRenderer {
       return cache.adjustedImage
     }
     #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.preparedContentLayers)
+    recordCacheMiss(.preparedContentLayers)
     #endif
 
     // Cap the bake at the editing-source resolution: detail beyond it does not
@@ -588,7 +699,7 @@ final class EditingCanvasRenderer {
       return cachedSource.image
     }
     #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.sourceTexture)
+    recordCacheMiss(.sourceTexture)
     #endif
 
     guard
@@ -638,10 +749,31 @@ final class EditingCanvasRenderer {
     return cachedSource.image
   }
 
+  /// Draws a y-down, texture-space image into the drawable, applying the
+  /// post-crop pass. Every route that draws the feature ends here.
   private func renderDrawableImage(
     _ image: CIImage,
     frame: Frame,
     commandBuffer: MTLCommandBuffer
+  ) -> MTLCommandBuffer {
+    renderFinishedDrawable(
+      image,
+      frame: frame,
+      commandBuffer: commandBuffer,
+      cacheKey: preFinishCacheKey(frame: frame)
+    )
+  }
+
+  /// Applies the post-crop pass to `image` and draws the result.
+  ///
+  /// With a `cacheKey`, `image` is first rendered into a texture in the same
+  /// command buffer and published as the pre-finish cache once the buffer is
+  /// committed, so later frames that differ only by the pass sample it.
+  private func renderFinishedDrawable(
+    _ image: CIImage,
+    frame: Frame,
+    commandBuffer: MTLCommandBuffer,
+    cacheKey: EditingCanvasPreFinishCacheKey?
   ) -> MTLCommandBuffer {
     frame.renderPassDescriptor.colorAttachments[0].loadAction = .clear
     frame.renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
@@ -654,10 +786,49 @@ final class EditingCanvasRenderer {
       width: frame.texture.width,
       height: frame.texture.height
     )
-    let drawableImage = image
-      .transformed(by: CGAffineTransform(scaleX: 1, y: -1))
-      .transformed(by: CGAffineTransform(translationX: 0, y: renderBounds.height))
+
+    // Texture rows run opposite to the y-down image, so the drawable is the
+    // image flipped. The flip maps whole pixels onto whole pixels.
+    let flip = CGAffineTransform(scaleX: 1, y: -1)
+      .concatenating(.init(translationX: 0, y: renderBounds.height))
+    var drawableImage = image
+      .transformed(by: flip)
       .cropped(to: renderBounds)
+
+    var newCache: EditingCanvasPreFinishCache?
+    if let cacheKey,
+       let texture = makeRenderTexture(
+         pixelFormat: EditingCanvasImageProcessing.colorTextureFormat,
+         width: cacheKey.pixelWidth,
+         height: cacheKey.pixelHeight
+       )
+    {
+      #if DEBUG
+      recordCacheMiss(.preFinish)
+      #endif
+      // Bake the drawable image itself, with the same render the drawable
+      // gets, so a cached frame shows the same pixels as an uncached one.
+      encodeClearTexture(texture, commandBuffer: commandBuffer)
+      ciContext.render(
+        drawableImage,
+        to: texture,
+        commandBuffer: commandBuffer,
+        bounds: renderBounds,
+        colorSpace: EditingCanvasImageProcessing.intermediateColorSpace
+      )
+      if let bakedImage = CIImage(
+        mtlTexture: texture,
+        options: [.colorSpace: EditingCanvasImageProcessing.intermediateColorSpace]
+      )?.cropped(to: renderBounds) {
+        drawableImage = bakedImage
+        newCache = .init(
+          key: cacheKey,
+          texture: texture,
+          image: bakedImage.transformed(by: flip).cropped(to: renderBounds)
+        )
+      }
+    }
+    let preFinishImage = drawableImage.transformed(by: flip).cropped(to: renderBounds)
 
     ciContext.render(
       drawableImage,
@@ -666,7 +837,127 @@ final class EditingCanvasRenderer {
       bounds: renderBounds,
       colorSpace: EditingCanvasImageProcessing.drawableColorSpace
     )
-    return Self.submit(commandBuffer)
+
+    // The pass replaces only the frame's pixels, in a second write; every
+    // pixel outside the frame is the one drawn above, exactly as without a
+    // pass. (Compositing the pass over the image in one graph would resample
+    // the image's fractional edges differently.)
+    if let finished = postCropRegion(preFinishImage, frame: frame, renderBounds: renderBounds) {
+      let region = finished.rect.applying(flip).standardized
+      let destination = CIRenderDestination(mtlTexture: frame.texture, commandBuffer: commandBuffer)
+      destination.colorSpace = EditingCanvasImageProcessing.drawableColorSpace
+      do {
+        _ = try ciContext.startTask(
+          toRender: finished.image.transformed(by: flip).cropped(to: region),
+          from: region,
+          to: destination,
+          at: region.origin
+        )
+      } catch {
+        EditorLog.error(.editingCanvas, "Post-crop pass failed: \(error)")
+      }
+    }
+
+    let submitted = Self.submit(commandBuffer)
+    // Published only after the commit that fills it, so an abandoned frame
+    // can never leave an unfilled texture in the cache.
+    if let newCache {
+      viewportState.preFinishCache = newCache
+    }
+    return submitted
+  }
+
+  /// The post-crop effect applied to the pixels inside the crop frame, and
+  /// the whole-pixel rectangle of the drawable it replaces, in y-down texture
+  /// pixels; nil when there is no pass or the frame is not on the drawable.
+  ///
+  /// The frame, rounded to whole pixels, is the effect's input extent, as the
+  /// crop output is at export. The image is clamped first, so a frame that
+  /// extends beyond the drawable (a zoomed-in viewport) keeps its true centre
+  /// and size instead of shrinking to the visible part.
+  private func postCropRegion(
+    _ image: CIImage,
+    frame: Frame,
+    renderBounds: CGRect
+  ) -> (image: CIImage, rect: CGRect)? {
+    guard
+      let postCrop = viewportState.postCrop,
+      image.extent.isEmpty == false,
+      image.extent.isInfinite == false,
+      frame.viewportSize.width > 0,
+      frame.viewportSize.height > 0
+    else {
+      return nil
+    }
+
+    let canvasToTexture = CGAffineTransform(
+      scaleX: renderBounds.width / frame.viewportSize.width,
+      y: renderBounds.height / frame.viewportSize.height
+    )
+    let exactFrame = postCrop.frame.applying(canvasToTexture).standardized
+    guard exactFrame.isNull == false, exactFrame.isInfinite == false else {
+      return nil
+    }
+    let minX = exactFrame.minX.rounded()
+    let minY = exactFrame.minY.rounded()
+    let frameInTexture = CGRect(
+      x: minX,
+      y: minY,
+      width: exactFrame.maxX.rounded() - minX,
+      height: exactFrame.maxY.rounded() - minY
+    )
+    let rect = frameInTexture.intersection(renderBounds)
+    guard frameInTexture.isEmpty == false, rect.isNull == false, rect.isEmpty == false else {
+      return nil
+    }
+
+    let chainEntry = postCrop.chainEntry
+      .applying(viewportState.viewport.contentToTextureTransform(
+        canvasSize: frame.viewportSize,
+        textureSize: renderBounds.size
+      ))
+      .standardized
+
+    let finished = postCrop.effect
+      .applyIgnoringFailure(
+        to: image.clampedToExtent().cropped(to: frameInTexture),
+        chainEntryExtent: chainEntry
+      )
+      .cropped(to: rect)
+    return (finished, rect)
+  }
+
+  /// The key a frame's pre-finish image is cached under, or nil when the
+  /// frame is not cached: no post-crop pass, or a live stroke that changes
+  /// the image every frame.
+  private func preFinishCacheKey(frame: Frame) -> EditingCanvasPreFinishCacheKey? {
+    guard
+      viewportState.postCrop != nil,
+      frame.activeStroke?.stamps.isEmpty ?? true
+    else {
+      return nil
+    }
+    return EditingCanvasPreFinishCacheKey(
+      visibleContentRect: viewportState.viewport.visibleContentRect,
+      contentToCanvasTransform: viewportState.viewport.contentToCanvasTransform,
+      viewportSize: frame.viewportSize,
+      pixelWidth: frame.texture.width,
+      pixelHeight: frame.texture.height,
+      renderImagesGeneration: viewportState.renderImagesGeneration,
+      committedStrokesGeneration: viewportState.committedStrokesGeneration
+    )
+  }
+
+  /// The cached pre-finish image when it still represents this frame.
+  private func cachedPreFinishImage(frame: Frame) -> CIImage? {
+    guard
+      let key = preFinishCacheKey(frame: frame),
+      let cache = viewportState.preFinishCache,
+      cache.key == key
+    else {
+      return nil
+    }
+    return cache.image
   }
 
   private func renderViewportCoreImageComposite(
@@ -764,7 +1055,7 @@ final class EditingCanvasRenderer {
       return cache
     }
     #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.preparedLayers)
+    recordCacheMiss(.preparedLayers)
     #endif
 
     guard
@@ -879,7 +1170,7 @@ final class EditingCanvasRenderer {
       return textures
     }
     #if DEBUG
-    performanceDiagnostics.recordCacheMiss(.renderTextures)
+    recordCacheMiss(.renderTextures)
     #endif
 
     guard
@@ -1074,6 +1365,7 @@ final class EditingCanvasRenderer {
       case renderTextures = "render-textures"
       case preparedContentLayers = "prepared-content-layers"
       case preparedLayers = "prepared-layers"
+      case preFinish = "pre-finish"
     }
 
     enum Invalidation: String {
@@ -1081,6 +1373,7 @@ final class EditingCanvasRenderer {
       case committedStrokes = "committed-strokes"
       case viewport = "viewport"
       case drawableSize = "drawable-size"
+      case postCrop = "post-crop"
     }
 
     var lastLogTime = CACurrentMediaTime()
@@ -1094,6 +1387,8 @@ final class EditingCanvasRenderer {
     var renderTexturesMissCount = 0
     var preparedContentLayersMissCount = 0
     var preparedLayersMissCount = 0
+    var preFinishMissCount = 0
+    var cachedPreFinishFrameCount = 0
     var invalidationCount = 0
     var lastInvalidation: Invalidation?
 
@@ -1114,6 +1409,8 @@ final class EditingCanvasRenderer {
         preparedContentLayersMissCount += 1
       case .preparedLayers:
         preparedLayersMissCount += 1
+      case .preFinish:
+        preFinishMissCount += 1
       }
     }
 
@@ -1142,6 +1439,8 @@ final class EditingCanvasRenderer {
         cachedSourceBaseFrameCount += 1
       case .coreImageComposite:
         coreImageCompositeFrameCount += 1
+      case .cachedPreFinish:
+        cachedPreFinishFrameCount += 1
       }
 
       let now = CACurrentMediaTime()
@@ -1152,8 +1451,8 @@ final class EditingCanvasRenderer {
       EditorLog.debug(.editingCanvasPerformance, """
         [EditingCanvasRender]
         frames:\(frameCount) slow:\(slowFrameCount) budgetMs:\(formatMilliseconds(frameBudget))
-        path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) coreComposite:\(coreImageCompositeFrameCount)
-        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) contentLayers:\(preparedContentLayersMissCount) preparedLayers:\(preparedLayersMissCount)
+        path clear:\(clearFrameCount) base:\(baseImageFrameCount) cachedBase:\(cachedSourceBaseFrameCount) coreComposite:\(coreImageCompositeFrameCount) cachedPreFinish:\(cachedPreFinishFrameCount)
+        cacheMiss source:\(sourceTextureMissCount) textures:\(renderTexturesMissCount) contentLayers:\(preparedContentLayersMissCount) preparedLayers:\(preparedLayersMissCount) preFinish:\(preFinishMissCount)
         invalidations:\(invalidationCount) lastInvalidation:\(lastInvalidation?.rawValue ?? "none")
         last path:\(path.rawValue) submitMs:\(formatMilliseconds(duration)) preparedBase:\(usesPreparedBaseImage) localEffect:\(hasLocalEffect) stroke:\(hasRenderableStroke) drawable:\(format(drawableSize))
         content:\(format(visibleContentRect)) canvasFrame:\(format(visibleCanvasFrame))
@@ -1174,6 +1473,8 @@ final class EditingCanvasRenderer {
       renderTexturesMissCount = 0
       preparedContentLayersMissCount = 0
       preparedLayersMissCount = 0
+      preFinishMissCount = 0
+      cachedPreFinishFrameCount = 0
       invalidationCount = 0
       lastInvalidation = nil
     }
