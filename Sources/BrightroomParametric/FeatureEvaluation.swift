@@ -60,6 +60,17 @@ public struct FeatureEvaluationContext: Sendable {
   /// its members. Origin normalization happens only in the renderers.
   public let chainEntryExtent: CGRect?
 
+  /// Pixels of the current render per pixel of the full-resolution chain
+  /// entry.
+  ///
+  /// An absolute radius (`EffectRadius.absolute`) is a number of
+  /// full-resolution pixels, so it resolves to `pixels × renderScale` in the
+  /// current render. `FeatureRenderer`, and so export and video, render at
+  /// full resolution with the default of 1. Brightroom's canvas evaluates
+  /// over a downsampled editing source and sets its downsample factor, so a
+  /// host's absolute radius previews at the size it exports.
+  package let renderScale: Double
+
   /// Creates an evaluation context.
   ///
   /// Package access: hosts evaluate through `FeatureRenderer`, which
@@ -67,10 +78,12 @@ public struct FeatureEvaluationContext: Sendable {
   /// building the context.
   package init(
     chainEntryExtent: CGRect? = nil,
-    presentationTime: CMTime = .zero
+    presentationTime: CMTime = .zero,
+    renderScale: Double = 1
   ) {
     self.chainEntryExtent = chainEntryExtent
     self.presentationTime = presentationTime
+    self.renderScale = renderScale
   }
 
   /// Returns the extent that a diagonal-based radius must resolve against when
@@ -91,7 +104,18 @@ public struct FeatureEvaluationContext: Sendable {
   package func withChainEntryExtent(_ extent: CGRect?) -> Self {
     .init(
       chainEntryExtent: extent,
-      presentationTime: presentationTime
+      presentationTime: presentationTime,
+      renderScale: renderScale
+    )
+  }
+
+  /// Returns a copy whose absolute radii resolve at `scale` render pixels per
+  /// full-resolution pixel (see `renderScale`).
+  package func withRenderScale(_ scale: Double) -> Self {
+    .init(
+      chainEntryExtent: chainEntryExtent,
+      presentationTime: presentationTime,
+      renderScale: scale
     )
   }
 }

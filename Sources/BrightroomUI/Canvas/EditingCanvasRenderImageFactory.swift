@@ -7,7 +7,8 @@ import CoreGraphics
 ///
 /// The document is authored in the full-resolution oriented source domain.
 /// These factories evaluate the downsampled editing source and scale it up to
-/// that domain (or to the crop output), stating the chain-entry extent for
+/// that domain (or to the crop output), stating the chain-entry extent and
+/// the render scale (editing-source pixels per full-resolution pixel) for
 /// every effect they apply.
 enum EditingCanvasRenderImageFactory {
 
@@ -33,6 +34,7 @@ enum EditingCanvasRenderImageFactory {
     }
 
     let scaledSourceImage = scaledImage(sourceImage, canvasSize: canvasSize, canvasRect: canvasRect)
+    let renderScale = Self.renderScale(evaluated: displaySourceExtent.size, fullResolution: canvasSize)
 
     let viewportSourceImage = scaledSourceImage.cropped(to: canvasRect)
 
@@ -45,9 +47,16 @@ enum EditingCanvasRenderImageFactory {
     // (chainEntryExtent = displaySourceExtent here), so applying it at source
     // resolution and upscaling reproduces the same fractional radius the
     // full-resolution export produces — preview and export stay consistent
-    // (modulo the inherent downscale/upscale resampling difference).
+    // (modulo the inherent downscale/upscale resampling difference). An
+    // absolute radius is full-resolution pixels, so `renderScale` shrinks it
+    // to the editing source.
     let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
-      applying(effects, to: sourceImage, chainEntryExtent: displaySourceExtent),
+      applying(
+        effects,
+        to: sourceImage,
+        chainEntryExtent: displaySourceExtent,
+        renderScale: renderScale
+      ),
       source: sourceImage
     )
 
@@ -65,7 +74,11 @@ enum EditingCanvasRenderImageFactory {
 
     case let .localAdjustment(localEffect):
       let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(to: sourceBase, chainEntryExtent: displaySourceExtent),
+        localEffect.applyIgnoringFailure(
+          to: sourceBase,
+          chainEntryExtent: displaySourceExtent,
+          renderScale: renderScale
+        ),
         source: sourceImage
       )
       adjustedImage = scaledImage(sourceAdjusted, canvasSize: canvasSize, canvasRect: canvasRect)
@@ -119,6 +132,10 @@ enum EditingCanvasRenderImageFactory {
 
     let cropOutputSourceImage = cropOutputImage(sourceImage, geometry: geometry)
       .cropped(to: canvasRect)
+    let renderScale = Self.renderScale(
+      evaluated: displaySourceImage.extent.size,
+      fullResolution: geometry.sourceImageSize
+    )
 
     // The document evaluates its effects before the final crop, so evaluate
     // them (and the local effect) on the whole oriented source, then crop. An
@@ -130,12 +147,14 @@ enum EditingCanvasRenderImageFactory {
     // full-resolution intermediate (OOM). A proportional radius is a fraction
     // of the chain-entry extent at this evaluation scale (the display source
     // extent), so it upscales to the same fractional radius the
-    // full-resolution export produces.
+    // full-resolution export produces; an absolute radius is scaled by
+    // `renderScale`.
     let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
       applying(
         effects,
         to: displaySourceImage,
-        chainEntryExtent: displaySourceImage.extent
+        chainEntryExtent: displaySourceImage.extent,
+        renderScale: renderScale
       ),
       source: displaySourceImage
     )
@@ -159,7 +178,8 @@ enum EditingCanvasRenderImageFactory {
       let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
         localEffect.applyIgnoringFailure(
           to: displayFiltered,
-          chainEntryExtent: displaySourceImage.extent
+          chainEntryExtent: displaySourceImage.extent,
+          renderScale: renderScale
         ),
         source: displaySourceImage
       )
@@ -188,12 +208,28 @@ enum EditingCanvasRenderImageFactory {
   private static func applying(
     _ effects: AnyImageEffect?,
     to image: CIImage,
-    chainEntryExtent: CGRect
+    chainEntryExtent: CGRect,
+    renderScale: Double
   ) -> CIImage {
     guard let effects else {
       return image
     }
-    return effects.applyIgnoringFailure(to: image, chainEntryExtent: chainEntryExtent)
+    return effects.applyIgnoringFailure(
+      to: image,
+      chainEntryExtent: chainEntryExtent,
+      renderScale: renderScale
+    )
+  }
+
+  /// Pixels of the evaluated (editing-source) image per full-resolution
+  /// pixel: the ratio of the two diagonals, 1 when either is empty.
+  static func renderScale(evaluated: CGSize, fullResolution: CGSize) -> Double {
+    let full = hypot(fullResolution.width, fullResolution.height)
+    let evaluated = hypot(evaluated.width, evaluated.height)
+    guard full > 0, evaluated > 0 else {
+      return 1
+    }
+    return evaluated / full
   }
 
   private static func scaledImage(

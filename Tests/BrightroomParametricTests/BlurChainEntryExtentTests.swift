@@ -129,6 +129,29 @@ struct BlurChainEntryExtentTests {
     )
   }
 
+  /// A render scale (render pixels per full-resolution pixel, set by the
+  /// canvas for its downsampled preview) scales an absolute radius and leaves
+  /// a proportional one alone, which already resolves against the chain entry
+  /// at render size.
+  @Test func `render scale scales absolute radii only`() throws {
+    let input = Self.stepEdge(side: 200)
+    let quarter = FeatureEvaluationContext(renderScale: 0.25)
+
+    let scaledAbsolute = try GaussianBlurFeature(radius: .absolute(16)).apply(to: input, context: quarter)
+    let fourPixels = try GaussianBlurFeature(radius: .absolute(4)).apply(to: input, context: FeatureEvaluationContext())
+    let sixteenPixels = try GaussianBlurFeature(radius: .absolute(16)).apply(to: input, context: FeatureEvaluationContext())
+    #expect(Self.areNearlyEqual(scaledAbsolute, fourPixels, extent: input.extent, tolerance: 3))
+    #expect(!Self.areNearlyEqual(scaledAbsolute, sixteenPixels, extent: input.extent, tolerance: 3))
+
+    let scaledProportional = try GaussianBlurFeature(radius: .proportional(40)).apply(to: input, context: quarter)
+    let proportional = try GaussianBlurFeature(radius: .proportional(40)).apply(to: input, context: FeatureEvaluationContext())
+    #expect(Self.areNearlyEqual(scaledProportional, proportional, extent: input.extent, tolerance: 0))
+
+    // A composite keeps the scale when it resolves its chain entry.
+    #expect(quarter.withChainEntryExtent(input.extent).renderScale == 0.25)
+    #expect(FeatureEvaluationContext().renderScale == 1)
+  }
+
   // MARK: - Helpers
 
   /// A vertical black/white step edge, so a Gaussian blur spreads measurably

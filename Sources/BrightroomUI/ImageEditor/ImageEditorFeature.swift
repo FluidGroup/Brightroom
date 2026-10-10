@@ -28,11 +28,13 @@ import BrightroomParametric
 ///
 /// Evaluation order is the order of `body`: global effects, then the brush
 /// painted blur, then the final crop, then the vignette, which is centred on
-/// the cropped picture. Absent features are `nil` and contribute nothing. The feature is authored in the oriented pixel coordinates of its
+/// the cropped picture. Absent features are `nil` and contribute nothing.
+/// The feature is authored in the oriented pixel coordinates of its
 /// document's source image (`EditingDocument.source.pixelSize`), at full
 /// resolution: evaluate it over a source of that size (the export source, or
 /// the editing source scaled up to it), never over the downsampled editing
-/// source directly.
+/// source directly. (The editor's canvas evaluates only the effects over its
+/// downsampled preview, with the radii scaled to match the export.)
 ///
 /// Features compare by value: two features built from the same values are
 /// equal, whichever way they were built. Edit one inside a

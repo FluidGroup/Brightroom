@@ -447,7 +447,10 @@ currently holds by feature order becomes declared rather than incidental:
   output (`cropped(to:)`), and Core Image computes only that region.
   `FeatureRenderer` takes no other basis from hosts; the editing canvas,
   which evaluates some effects on an intermediate such as the crop output,
-  passes the entry extent explicitly.
+  passes the entry extent explicitly. An absolute radius is pixels of the
+  full-resolution chain entry; a render pass over a downsampled copy (the
+  editing canvas) scales it by the downsample factor, so it too previews as
+  it exports.
 - **Crop output orientation is separate from its selection** (decided 2026-09,
   #330). A crop evaluates straighten → crop → exact quarter turn. `rect` is
   the selection after straightening and before the quarter turn, in the crop's

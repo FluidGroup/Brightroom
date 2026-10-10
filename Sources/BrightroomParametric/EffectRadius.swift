@@ -3,6 +3,7 @@
 //
 
 import CoreGraphics
+import CoreImage
 import Foundation
 
 /// The radius of a neighborhood effect, such as a blur, and its unit.
@@ -13,10 +14,13 @@ import Foundation
 /// 250 px and `.proportional(1)` is 2.5 px.
 public enum EffectRadius: Equatable, Sendable {
 
-  /// A Core Image radius in pixels of the current render pass.
+  /// A radius in pixels of the full-resolution chain entry, the source an
+  /// export renders.
   ///
-  /// It does not scale with the image: a downsampled preview and a
-  /// full-resolution export apply the same number of pixels.
+  /// It does not scale with the image's size: on a 4000×3000 and a
+  /// 1000×750 source, `.absolute(10)` is 10 px. Brightroom's canvas, which
+  /// previews over a downsampled copy of the source, scales it by the
+  /// downsample factor, so the preview matches the export.
   case absolute(Double)
 
   /// A slider value where 100 is a radius of one twentieth of the image
@@ -53,19 +57,21 @@ extension EffectRadius {
 
 extension EffectRadius {
 
-  /// The radius in pixels of the current render pass.
+  /// The radius in pixels of the current render pass, for an effect
+  /// evaluating `image` in `context`.
   ///
-  /// `.proportional` resolves against `chainEntryExtent`, the extent
-  /// `FeatureEvaluationContext.chainEntryExtent(for:)` returns.
-  func pixels(chainEntryExtent: CGRect) -> Double {
+  /// `.proportional` resolves against
+  /// `context.chainEntryExtent(for: image)`; `.absolute` is scaled by
+  /// `context.renderScale`.
+  func pixels(in context: FeatureEvaluationContext, for image: CIImage) -> Double {
     switch self {
     case let .absolute(pixels):
-      pixels
+      pixels * context.renderScale
     case let .proportional(value):
       RadiusCalculator.radius(
         value: value,
         max: FilterConstants.gaussianBlurSliderMax,
-        imageExtent: chainEntryExtent
+        imageExtent: context.chainEntryExtent(for: image)
       )
     }
   }

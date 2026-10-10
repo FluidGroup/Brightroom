@@ -246,7 +246,7 @@ extension WhiteBalanceFeature {
 extension SharpenFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))
+    let radius = radius.pixels(in: context, for: image)
     return image.applyingFilter(
       "CISharpenLuminance",
       parameters: [
@@ -261,7 +261,7 @@ extension SharpenFeature {
 extension GaussianBlurFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))
+    let radius = radius.pixels(in: context, for: image)
 
     guard radius > 0.0001 else {
       return image
@@ -279,7 +279,7 @@ extension GaussianBlurFeature {
 extension UnsharpMaskFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))
+    let radius = radius.pixels(in: context, for: image)
     return image.applyingFilter(
       "CIUnsharpMask",
       parameters: [

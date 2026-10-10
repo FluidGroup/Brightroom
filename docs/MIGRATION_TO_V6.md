@@ -1643,8 +1643,11 @@ macOS). Keep `.BGRA8` for very large HEIF exports.
 | `ParametricRGBAColor` | `HighlightShadowTintFeature.Color` |
 
 Gaussian blur, sharpen, and unsharp mask radii share `EffectRadius`:
-`.absolute(_:)` is pixels of the render pass, and `.proportional(_:)` is a
-fraction of the chain-entry diagonal where 100 is one twentieth of it. In
+`.absolute(_:)` is pixels of the full-resolution source the export renders,
+and `.proportional(_:)` is a fraction of the chain-entry diagonal where 100 is
+one twentieth of it. The editor's canvas previews over a downsampled copy of
+the source and scales an absolute radius by the same factor, so a host's
+`.absolute(_:)` radius previews at the size it exports. In
 5.1.1 both radii were plain `Double`s on different scales: a sharpen radius of
 100 and an unsharp-mask radius of 1 were each a twentieth of the diagonal. A
 5.1.1 sharpen radius keeps its look as `.proportional(v)`; multiply an

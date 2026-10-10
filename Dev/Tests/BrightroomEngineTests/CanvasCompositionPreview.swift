@@ -21,16 +21,37 @@ enum CanvasCompositionPreview {
   /// Renders the canvas composition of `document` over `source`, as a
   /// top-left-origin image.
   ///
-  /// - Parameter throughCrop: When false, the canvas is sized to the source
-  ///   (the crop surface's source-domain canvas) and the crop is not applied.
-  ///   When true, the canvas displays the crop output (the tool surface).
+  /// - Parameters:
+  ///   - throughCrop: When false, the canvas is sized to the source (the crop
+  ///     surface's source-domain canvas) and the crop is not applied. When
+  ///     true, the canvas displays the crop output (the tool surface).
+  ///   - editingDownsample: How many times smaller the editing source is
+  ///     than `source`, as the editor's preview loader downsamples a large
+  ///     image. 1 uses `source` itself.
   static func render(
     document: ImageEditorFeature,
     source: CGImage,
-    throughCrop: Bool = false
+    throughCrop: Bool = false,
+    editingDownsample: CGFloat = 1
   ) throws -> CGImage {
     let imageSize = CGSize(width: source.width, height: source.height)
     let plan = EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur)
+    let editingSource = editingDownsample == 1
+      ? CIImage(cgImage: source)
+      : CIImage(cgImage: source)
+        .clampedToExtent()
+        .applyingFilter(
+          "CILanczosScaleTransform",
+          parameters: [kCIInputScaleKey: 1 / editingDownsample, kCIInputAspectRatioKey: 1]
+        )
+        .cropped(
+          to: CGRect(
+            x: 0,
+            y: 0,
+            width: (imageSize.width / editingDownsample).rounded(),
+            height: (imageSize.height / editingDownsample).rounded()
+          )
+        )
 
     let images: EditingCanvasRenderImages
     let geometry: EditingCanvasCropOutputGeometry?
@@ -43,7 +64,7 @@ enum CanvasCompositionPreview {
       geometry = cropOutput
       images = try #require(
         EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-          editingSourceImage: CIImage(cgImage: source),
+          editingSourceImage: editingSource,
           effects: document.effects.canvasEffect,
           geometry: cropOutput,
           mode: plan.canvasMode
@@ -53,7 +74,7 @@ enum CanvasCompositionPreview {
       geometry = nil
       images = try #require(
         EditingCanvasRenderImageFactory.makeRenderImages(
-          editingSourceImage: CIImage(cgImage: source),
+          editingSourceImage: editingSource,
           effects: document.effects.canvasEffect,
           canvasSize: imageSize,
           mode: plan.canvasMode

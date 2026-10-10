@@ -917,11 +917,19 @@ final class EditingCanvasRenderer {
         textureSize: renderBounds.size
       ))
       .standardized
+    // Content coordinates are full-resolution pixels, so the chain entry's
+    // size in the texture over its content size is texture pixels per
+    // full-resolution pixel.
+    let renderScale = EditingCanvasRenderImageFactory.renderScale(
+      evaluated: chainEntry.size,
+      fullResolution: postCrop.chainEntry.size
+    )
 
     let finished = postCrop.effect
       .applyIgnoringFailure(
         to: image.clampedToExtent().cropped(to: frameInTexture),
-        chainEntryExtent: chainEntry
+        chainEntryExtent: chainEntry,
+        renderScale: renderScale
       )
       .cropped(to: rect)
     return (finished, rect)

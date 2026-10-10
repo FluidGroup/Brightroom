@@ -136,8 +136,10 @@ The project uses swift-state-graph for observable state. When modifying state-re
    (see `BuiltInFeatureRecipes.swift`). A composite effect declares `body`
    instead.
 2. Take a radius as `EffectRadius` and resolve it with
-   `radius.pixels(chainEntryExtent: context.chainEntryExtent(for: image))`,
-   so proportional radii resolve against the chain entry.
+   `radius.pixels(in: context, for: image)`, so proportional radii resolve
+   against the chain entry and absolute radii (full-resolution pixels) scale
+   with the context's package `renderScale`, which the canvas sets for its
+   downsampled preview.
 3. Keep every authored parameter reconstructible through public API; add a
    validating initializer when a plain initializer clamps or repairs values.
    Do not add `Codable` conformances or storage formats to the library

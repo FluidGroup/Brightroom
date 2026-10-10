@@ -370,8 +370,9 @@ public struct GaussianBlurFeature: ImageEffect, Equatable {
 
   /// Creates a Gaussian blur.
   ///
-  /// Pass `.absolute(_:)` for a radius in pixels of the render pass, or
-  /// `.proportional(_:)` for a fraction of the chain-entry diagonal.
+  /// Pass `.absolute(_:)` for a radius in pixels of the full-resolution
+  /// source, or `.proportional(_:)` for a fraction of the chain-entry
+  /// diagonal.
   public init(radius: EffectRadius) {
     self.radius = radius
   }

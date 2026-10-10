@@ -68,7 +68,8 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // chain-entry extent).
     let exportImage = blur.applyIgnoringFailure(
       to: fullEdgeCI,
-      chainEntryExtent: fullEdgeCI.extent
+      chainEntryExtent: fullEdgeCI.extent,
+      renderScale: 1
     )
     let exportRow = try centerRow(of: exportImage, side: Self.fullSide)
 

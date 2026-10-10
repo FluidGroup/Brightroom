@@ -132,16 +132,22 @@ extension ImageEffect {
   /// Failures are programmer errors in built-in effects; a custom effect that
   /// throws degrades to identity rather than poisoning the whole preview.
   ///
-  /// - Parameter chainEntryExtent: The chain-entry extent of the current
-  ///   render pass, so value-form radii (blur, sharpen) stay a fixed fraction
-  ///   of the source regardless of crop or zoom. It is required: every canvas
-  ///   call states its chain entry.
+  /// - Parameters:
+  ///   - chainEntryExtent: The chain-entry extent of the current render
+  ///     pass, so value-form radii (blur, sharpen) stay a fixed fraction of
+  ///     the source regardless of crop or zoom. It is required: every canvas
+  ///     call states its chain entry.
+  ///   - renderScale: Pixels of this render per pixel of the full-resolution
+  ///     source, so an absolute radius covers as much of the picture as it
+  ///     does at export. It is required for the same reason.
   func applyIgnoringFailure(
     to image: CIImage,
-    chainEntryExtent: CGRect
+    chainEntryExtent: CGRect,
+    renderScale: Double
   ) -> CIImage {
     let context = EditingCanvasImageProcessing.evaluationContext
       .withChainEntryExtent(chainEntryExtent)
+      .withRenderScale(renderScale)
     do {
       return try apply(to: image, context: context)
     } catch {

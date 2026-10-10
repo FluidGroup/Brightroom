@@ -174,7 +174,7 @@ struct EditingCanvasPostCropPassTests {
     // The composite route: a local effect under a committed stroke.
     let content = Self.gradientContent()
     let adjusted = AnyImageEffect(ExposureFeature(ev: 1))
-      .applyIgnoringFailure(to: content, chainEntryExtent: Self.contentBounds)
+      .applyIgnoringFailure(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
     renderer.setRenderImages(.init(
       source: content,
       base: content,
@@ -279,7 +279,7 @@ struct EditingCanvasPostCropPassTests {
       ).cropped(to: extent)
     }
     func vignetted(_ image: CIImage) -> CIImage {
-      vignette.applyIgnoringFailure(to: image, chainEntryExtent: extent)
+      vignette.applyIgnoringFailure(to: image, chainEntryExtent: extent, renderScale: 1)
     }
 
     let vignetteOfBlend = vignetted(blend(adjusted, base))
