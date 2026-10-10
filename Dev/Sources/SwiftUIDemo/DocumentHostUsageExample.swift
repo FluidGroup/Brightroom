@@ -209,10 +209,35 @@ extension ExampleSavedEdit.Step {
 
 enum ExampleFeatureRendering {
 
-  static func preview(of document: ImageEditorDocument) throws -> CIImage {
-    try FeatureRenderer().makeImage(
-      from: document.source.makeCIImage(maxPixelSize: 1024),
+  /// A lazy recipe of the edited image, scaled down to fit `maxPixelSize`.
+  ///
+  /// The feature is evaluated over the full-resolution source: its crop
+  /// rect, masks, and radii are in the source's pixels, so a downscaled
+  /// source (`makeCIImage(maxPixelSize:)`) would select and blur other
+  /// pixels. The output is scaled instead.
+  static func preview(of document: ImageEditorDocument, maxPixelSize: CGFloat = 1024) throws -> CIImage {
+    let output = try FeatureRenderer().makeImage(
+      from: document.source.makeCIImage(),
       feature: document.feature
     )
+    let longerSide = max(output.extent.width, output.extent.height)
+    guard longerSide > maxPixelSize else {
+      return output
+    }
+    let scale = maxPixelSize / longerSide
+    return output.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+  }
+
+  /// The pixels of `region` of the edited image, in output pixels.
+  ///
+  /// The chain entry is always the whole source. To draw part of the result,
+  /// such as a zoomed viewport, crop the output: Core Image computes only the
+  /// requested region.
+  static func region(_ region: CGRect, of document: ImageEditorDocument) throws -> CIImage {
+    try FeatureRenderer().makeImage(
+      from: document.source.makeCIImage(),
+      feature: document.feature
+    )
+    .cropped(to: region)
   }
 }
