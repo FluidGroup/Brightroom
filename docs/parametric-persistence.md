@@ -124,11 +124,11 @@ It uses only the public API.
 | `GaussianBlurFeature`, `SharpenFeature`, `UnsharpMaskFeature` | the radius's unit (`absolute` or `proportional`) and number; `intensity` for sharpen and unsharp mask | `EffectRadius(validatingAbsolute:)`, `EffectRadius(validatingProportional:)`, then the feature's initializer |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
-| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`) | `ImageEditorFeature(effects:localBlur:crop:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
+| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`); the vignette's `value`, when present | `ImageEditorFeature(effects:localBlur:crop:vignette:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
 
 Notes:
 
-- `ImageEditorFeature(effects:localBlur:crop:)` accepts any `Mask` for the
+- `ImageEditorFeature(effects:localBlur:crop:vignette:)` accepts any `Mask` for the
   blur, but the editor paints only a plain `.brush` mask. A restored blur
   with another mask renders at export and cannot be painted further: while
   `isLocalBlurPaintable` is false, `ImageEditor`'s Blur mode disables the
@@ -356,6 +356,13 @@ decoded 5.x document:
   is `.proportional(v * 100)`: 5.x read an unsharp-mask radius of 1, but a
   sharpen or blur value of 100, as one twentieth of the image diagonal. The
   sharpen `sharpness` is `SharpenFeature.intensity`.
+- A `brightroom.effect.vignette` among the 5.x editor's adjustments becomes
+  `ImageEditorFeature.vignette`, not a member of `effects`. Brightroom 6
+  evaluates it after the final crop, centred on the crop output, so a cropped
+  edit renders its vignette differently from 5.x (see
+  [ImageEditorFeature](MIGRATION_TO_V6.md#imageeditorfeature)); there is no
+  way to keep the 5.x placement. A vignette inside a preset stays in the
+  preset's effects.
 - Tone Curve and Color Mixer payloads never had `isEnabled`. Drop their `id`.
 - Drop each Tone Curve point's `id` as well, and keep the points in their
   stored order. The 5.1 codec required the first point to be

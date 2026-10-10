@@ -1025,21 +1025,25 @@ How the editor writes to the binding:
 The canvas preview follows the export's evaluation order. In 5.1.1, while no
 blur was painted, the canvas applied the adjustments to the already-cropped
 picture: a vignette was centred on the crop, and a sharpen read no pixels
-beyond the crop edge, while the export applies both before the final crop.
+beyond the crop edge, while the export applied both before the final crop.
 Painting the first blur stroke switched to the export's order, so pixels far
 from the stroke changed. In 6.0 the canvas always applies the adjustments
 before the final crop, on the downsampled preview of the whole source, and
-then crops. The export is unchanged, and no host code changes.
+then crops, as the export does. The vignette is the exception: 6.0 evaluates
+it after the final crop, in the export and in the canvas (see
+[ImageEditorFeature](#imageeditorfeature)). While you adjust the crop, the
+canvas draws it inside the crop guide, centred on the guide as it moves.
 
 ### ImageEditorFeature
 
 `ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
 `ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
-- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and twelve
+- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and eleven
   adjustments, each an optional member, evaluated in declaration order;
 - `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
-- `crop: CropFeature` — the final crop.
+- `crop: CropFeature` — the final crop;
+- `vignette: VignetteFeature?` — the vignette, evaluated after the final crop.
 
 It is authored in the oriented, pre-crop source domain at full resolution
 (`SourceImage.pixelSize`). Brush stamps are Core Image working-space points
@@ -1048,7 +1052,28 @@ y-down, so flip them when you convert a saved 5.x edit (see
 [Converting 5.x documents](parametric-persistence.md#converting-5x-documents)).
 A new document from `ImageEditorDocument(source:)` has no effects and a crop
 that covers the whole image. To rebuild a saved edit, use
-`ImageEditorFeature(effects:localBlur:crop:)`.
+`ImageEditorFeature(effects:localBlur:crop:vignette:)`.
+
+The vignette is centred on the crop output, and its radius is half the
+output's longer side. In 5.1.1 the editor's vignette was one of the
+adjustments, evaluated before the final crop, so it was centred on the whole
+source and a crop cut it off-centre. A saved 5.x vignette becomes
+`ImageEditorFeature.vignette` (not a member of `effects`), and edits that
+crop render differently. For a uniform sRGB 128 grey of 1200×800 with
+vignette 1:
+
+| Crop | 5.1.1 | 6.0 |
+| --- | --- | --- |
+| Left half (600×800): the centre row at x = 0, 150, 300, 450, 599 | 61, 91, 114, 126, 128 | 91, 121, 128, 121, 91 |
+| Left half: the corners (top left, top right, bottom left, bottom right) | 36, 100, 36, 100 | 31, 31, 31, 31 |
+| Centre half (600×400): the corners | 106 | 36 |
+
+A crop that keeps the source's centre and size, such as the whole image
+turned a quarter or straightened about its centre, renders as before.
+Brightroom has no option for the 5.x placement. A vignette inside a filter
+(`effects.preset`) is part of that look and stays before the crop. The
+falloff stays circular, so the short sides of a very wide crop darken
+little.
 
 `localBlur` accepts any `Mask`, but the editor paints and previews only a
 plain `.brush` mask, the shape it authors. Check `isLocalBlurPaintable`: it is
@@ -1798,6 +1823,9 @@ output.
 - [ ] Sharpen and unsharp-mask radii are `EffectRadius` values; stored
       5.1.1 unsharp-mask radii are multiplied by 100
       ([Feature Members](#feature-members)).
+- [ ] A saved 5.x vignette is restored into `ImageEditorFeature.vignette`,
+      and cropped edits with a vignette are checked again: it is now centred
+      on the crop output ([ImageEditorFeature](#imageeditorfeature)).
 - [ ] Code that showed `FeatureTreeView` puts `FeatureTreeOutline` from
       BrightroomUI in a `List`, and code that read `swiftUIImage` builds
       `Image(decorative:scale:orientation:)` from `cgImage`.

@@ -101,6 +101,7 @@ var body: some Feature {
   effects
   localBlur
   crop
+  vignette
 }
 ```
 
@@ -108,9 +109,10 @@ and its body's type is
 
 ```text
 TupleFeature<
-  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 12 optional effects
+  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 11 optional effects
   Optional<LocalAdjustmentFeature<GaussianBlurFeature>>,
-  CropFeature                                    // domain feature: the final crop
+  CropFeature,                                   // domain feature: the final crop
+  Optional<VignetteFeature>                      // after the crop: centred on its output
 >
 ```
 

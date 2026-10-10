@@ -146,7 +146,11 @@ The project uses swift-state-graph for observable state. When modifying state-re
    the input image itself) belongs inside `apply(to:context:)`.
 5. To surface it in ImageEditor, add an optional member to
    `ImageEditorFeature.Effects` (its `body` order is the evaluation order) and
-   an `ImageEditor.Adjustment` case.
+   an `ImageEditor.Adjustment` case. An effect the output frame decides (one
+   that reads its input extent, like the vignette) is instead a top-level
+   optional member of `ImageEditorFeature` after `crop`, which the canvas
+   draws with its post-crop pass (`docs/vision-of-editing.md`, "Decided
+   Semantics").
 6. Test it against an explicit Core Image recipe in
    `Tests/BrightroomParametricTests`.
 

@@ -394,13 +394,17 @@ the current Crop and Tool relationship to behave like:
 Source
   -> Tool Features
   -> Final Crop
+  -> Vignette
   -> Output
 ```
 
 In other words, the current ImageEditor UI may visually use the crop frame as the
 editing window, but the engine semantics should treat Blur Masking, Filters, and
 Adjustments as Features that happen before the final Crop. Crop is the final
-framing/clipping Feature for this UI path.
+framing/clipping Feature for this UI path. The vignette is the exception: the
+output frame decides it, so it follows the final Crop (see "Decided
+Semantics"), and the canvas draws it over the crop frame, including the crop
+guide while it moves.
 
 The next step is to make that shape feel natural rather than special-cased:
 
@@ -447,6 +451,14 @@ currently holds by feature order becomes declared rather than incidental:
   input domain; the quarter turn changes only the output orientation, never
   the selected pixels. The renderer and the tool surfaces map coordinates
   through the same `CropFeature.OutputGeometry`.
+- **Effects decided by the output frame go after the final crop** (decided
+  2026-10). An effect whose geometry comes from its input extent, such as a
+  vignette centred on its input, belongs to the framed picture, so a root
+  feature evaluates it after its final crop (`ImageEditorFeature.vignette`).
+  Colour and per-pixel effects, and neighbourhood effects whose radii resolve
+  against the chain entry (blur, sharpen), stay before the crop: a crop does
+  not change them. An effect inside a filter (`FilterFeature`) is part of
+  that look and stays where the filter is.
 
 ## Open Questions
 
