@@ -36,43 +36,38 @@ enum EditingCanvasRenderImageFactory {
 
     let viewportSourceImage = scaledSourceImage.cropped(to: canvasRect)
 
-    let baseImage: CIImage
+    // Evaluate the global effects (and the local effect) at the downsampled
+    // editing source resolution and upscale the result, rather than applying
+    // them to the full-canvas (`canvasSize`) image. On very large sources the
+    // full-canvas intermediate exhausts memory (a 12000×12000 blur ROI
+    // OOM-crashes); evaluating at the ~2560 editing source bounds it. A
+    // proportional radius is a fraction of the chain-entry extent
+    // (chainEntryExtent = displaySourceExtent here), so applying it at source
+    // resolution and upscaling reproduces the same fractional radius the
+    // full-resolution export produces — preview and export stay consistent
+    // (modulo the inherent downscale/upscale resampling difference).
+    let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
+      applying(effects, to: sourceImage, chainEntryExtent: displaySourceExtent),
+      source: sourceImage
+    )
+
+    let baseImage = scaledImage(sourceBase, canvasSize: canvasSize, canvasRect: canvasRect)
+      .cropped(to: canvasRect)
+
     let adjustedImage: CIImage
     let hasLocalEffect: Bool
     let usesPreparedBaseImage: Bool
     switch mode {
     case .viewportBase:
-      baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: viewportSourceImage, chainEntryExtent: canvasRect)
-          .cropped(to: canvasRect),
-        source: viewportSourceImage
-      )
       adjustedImage = baseImage
       hasLocalEffect = false
       usesPreparedBaseImage = false
 
     case let .localAdjustment(localEffect):
-      // Evaluate the local-adjustment preview at the downsampled SOURCE
-      // resolution and upscale the result, rather than applying the effect on
-      // the full-canvas (`canvasSize`) image. On very large sources the
-      // full-canvas blur intermediate exhausts memory (a 12000×12000 blur ROI
-      // OOM-crashes); evaluating at the ~2560 editing source bounds it. The
-      // blur radius is a fraction of the chain-entry extent
-      // (chainEntryExtent = displaySourceExtent here), so applying it at
-      // source resolution and upscaling reproduces the same fractional blur
-      // the full-resolution export produces — preview and export stay
-      // consistent (modulo the inherent downscale/upscale resampling
-      // difference).
-      let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: sourceImage, chainEntryExtent: displaySourceExtent),
-        source: sourceImage
-      )
       let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
         localEffect.applyIgnoringFailure(to: sourceBase, chainEntryExtent: displaySourceExtent),
         source: sourceImage
       )
-      baseImage = scaledImage(sourceBase, canvasSize: canvasSize, canvasRect: canvasRect)
-        .cropped(to: canvasRect)
       adjustedImage = scaledImage(sourceAdjusted, canvasSize: canvasSize, canvasRect: canvasRect)
         .cropped(to: canvasRect)
       hasLocalEffect = true
@@ -125,39 +120,42 @@ enum EditingCanvasRenderImageFactory {
     let cropOutputSourceImage = cropOutputImage(sourceImage, geometry: geometry)
       .cropped(to: canvasRect)
 
-    let baseImage: CIImage
+    // The document evaluates its effects before the final crop, so evaluate
+    // them (and the local effect) on the whole oriented source, then crop. An
+    // effect that reads its input extent (a vignette) or the pixels beyond the
+    // crop edge (a sharpen) then sees what the export sees. Evaluate at the
+    // native (downsampled) source resolution BEFORE upscaling to the
+    // crop-output source size, so a huge source
+    // (`geometry.sourceImageSize == crop.imageSize`) never materializes a
+    // full-resolution intermediate (OOM). A proportional radius is a fraction
+    // of the chain-entry extent at this evaluation scale (the display source
+    // extent), so it upscales to the same fractional radius the
+    // full-resolution export produces.
+    let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
+      applying(
+        effects,
+        to: displaySourceImage,
+        chainEntryExtent: displaySourceImage.extent
+      ),
+      source: displaySourceImage
+    )
+    let filteredSourceImage = scaledImage(
+      displayFiltered,
+      canvasSize: geometry.sourceImageSize,
+      canvasRect: sourceRect
+    )
+
+    let baseImage = cropOutputImage(filteredSourceImage, geometry: geometry)
+      .cropped(to: canvasRect)
+
     let adjustedImage: CIImage
     let hasLocalEffect: Bool
     switch mode {
     case .viewportBase:
-      // The input is the CROPPED output, but the radius basis stays the
-      // source-domain chain entry: the document applies global effects
-      // pre-crop, so resolving against the crop rect would diverge from the
-      // export the moment a proportional radius appears in `effects`.
-      baseImage = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(effects, to: cropOutputSourceImage, chainEntryExtent: sourceRect)
-          .cropped(to: canvasRect),
-        source: cropOutputSourceImage
-      )
       adjustedImage = baseImage
       hasLocalEffect = false
 
     case let .localAdjustment(localEffect):
-      // Evaluate effects + the local effect at the native (downsampled) source
-      // resolution BEFORE upscaling to the crop-output source size, so a huge
-      // source (`geometry.sourceImageSize == crop.imageSize`) never
-      // materializes a full-resolution blur intermediate (OOM). The blur radius
-      // is a fraction of the chain-entry extent at this evaluation scale
-      // (the display source extent), so it upscales to the same fractional
-      // blur the full-resolution export produces.
-      let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        applying(
-          effects,
-          to: displaySourceImage,
-          chainEntryExtent: displaySourceImage.extent
-        ),
-        source: displaySourceImage
-      )
       let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
         localEffect.applyIgnoringFailure(
           to: displayFiltered,
@@ -165,19 +163,12 @@ enum EditingCanvasRenderImageFactory {
         ),
         source: displaySourceImage
       )
-      let filteredSourceImage = scaledImage(
-        displayFiltered,
-        canvasSize: geometry.sourceImageSize,
-        canvasRect: sourceRect
-      )
       let adjustedSourceImage = scaledImage(
         displayAdjusted,
         canvasSize: geometry.sourceImageSize,
         canvasRect: sourceRect
       )
 
-      baseImage = cropOutputImage(filteredSourceImage, geometry: geometry)
-        .cropped(to: canvasRect)
       adjustedImage = cropOutputImage(adjustedSourceImage, geometry: geometry)
         .cropped(to: canvasRect)
       hasLocalEffect = true

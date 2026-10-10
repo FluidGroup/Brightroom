@@ -1022,6 +1022,15 @@ How the editor writes to the binding:
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
 
+The canvas preview follows the export's evaluation order. In 5.1.1, while no
+blur was painted, the canvas applied the adjustments to the already-cropped
+picture: a vignette was centred on the crop, and a sharpen read no pixels
+beyond the crop edge, while the export applies both before the final crop.
+Painting the first blur stroke switched to the export's order, so pixels far
+from the stroke changed. In 6.0 the canvas always applies the adjustments
+before the final crop, on the downsampled preview of the whole source, and
+then crops. The export is unchanged, and no host code changes.
+
 ### ImageEditorFeature
 
 `ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
