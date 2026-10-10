@@ -442,9 +442,12 @@ currently holds by feature order becomes declared rather than incidental:
   can therefore never retroactively change the strength of a committed
   effect. The basis is per-render-pass (the downsampled preview and
   the full-resolution export each resolve against their own entry scale), so
-  preview and export stay visually consistent. Render paths that evaluate on
-  an intermediate that is not the chain entry (for example a zoomed viewport
-  slice) must pass the entry extent explicitly.
+  preview and export stay visually consistent. The chain entry is always the
+  whole source: to draw part of the result, evaluate the whole and crop the
+  output (`cropped(to:)`), and Core Image computes only that region.
+  `FeatureRenderer` takes no other basis from hosts; the editing canvas,
+  which evaluates some effects on an intermediate such as the crop output,
+  passes the entry extent explicitly.
 - **Crop output orientation is separate from its selection** (decided 2026-09,
   #330). A crop evaluates straighten → crop → exact quarter turn. `rect` is
   the selection after straightening and before the quarter turn, in the crop's

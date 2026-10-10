@@ -46,15 +46,19 @@ public struct FeatureRenderer: Sendable {
   /// `sourceImage` is the chain entry: it is translated to zero origin, and
   /// value-form radii resolve against its extent, which keeps the radius a
   /// fixed fraction of the source regardless of where crops sit in the
-  /// feature. Pass `chainEntryExtent` only when `sourceImage` is NOT the
-  /// chain entry (e.g. a zoomed viewport slice of a larger source).
+  /// feature.
+  ///
+  /// Pass the whole source image. Crop rects, masks, and radii are authored
+  /// in its pixels, so a part or a downscaled copy of it is a different
+  /// chain entry and evaluates to a different image. To draw part of the
+  /// result, crop the output with `cropped(to:)`: the recipe stays lazy, and
+  /// Core Image computes only the region a render asks for.
   ///
   /// `presentationTime` defaults to `.zero` for deterministic still-image
   /// evaluation. Video paths pass the frame's exact presentation time.
   public func makeImage(
     from sourceImage: CIImage,
     feature: some Feature,
-    chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero
   ) throws -> CIImage {
     let image = ImageGeometry.removingExtentOffset(sourceImage)
@@ -66,8 +70,43 @@ public struct FeatureRenderer: Sendable {
     // would retroactively change committed effects. The entry extent is the
     // declared basis; feature order cannot perturb it.
     let entryExtent: CGRect? = image.extent.isInfinite ? nil : image.extent
+    return try makeImage(
+      fromZeroOrigin: image,
+      feature: feature,
+      chainEntryExtent: entryExtent,
+      presentationTime: presentationTime
+    )
+  }
+
+  /// Evaluates a feature over an image that is not the chain entry.
+  ///
+  /// Package access: `sourceImage` is translated to zero origin, but
+  /// value-form radii resolve against `chainEntryExtent` instead of its
+  /// extent. Brightroom's tests use it to evaluate one feature over an
+  /// intermediate with the basis of the whole chain; hosts pass the whole
+  /// source to `makeImage(from:feature:presentationTime:)`.
+  package func makeImage(
+    from sourceImage: CIImage,
+    feature: some Feature,
+    chainEntryExtent: CGRect,
+    presentationTime: CMTime = .zero
+  ) throws -> CIImage {
+    try makeImage(
+      fromZeroOrigin: ImageGeometry.removingExtentOffset(sourceImage),
+      feature: feature,
+      chainEntryExtent: chainEntryExtent,
+      presentationTime: presentationTime
+    )
+  }
+
+  private func makeImage(
+    fromZeroOrigin image: CIImage,
+    feature: some Feature,
+    chainEntryExtent: CGRect?,
+    presentationTime: CMTime
+  ) throws -> CIImage {
     let context = FeatureEvaluationContext(
-      chainEntryExtent: chainEntryExtent ?? entryExtent,
+      chainEntryExtent: chainEntryExtent,
       presentationTime: presentationTime
     )
     return try feature.apply(to: image, context: context)

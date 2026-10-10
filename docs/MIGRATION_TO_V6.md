@@ -1540,7 +1540,7 @@ the chain-entry extent everywhere.
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `ParametricImageRenderer` | `FeatureRenderer` |
-| `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)` |
+| `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | `FeatureRenderer.makeImage(from:feature:presentationTime:)`. The radius basis is no longer a parameter: pass the whole source, and crop the output to draw part of it. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricExportRenderer` | `ExportRenderer` |
 | `ParametricExportRenderer.render(source:document:options:device:)` | `ExportRenderer.render(from:feature:options:)`, which renders like `device: .automatic`. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricExportRenderer.Options(workingFormat:workingColorSpace:)`, `.workingFormat`, `.workingColorSpace` | `ExportRenderer.Options(outputFormat:outputColorSpace:)`, `.outputFormat`, `.outputColorSpace`. They were always the output format and the output color-space tag; processing runs in a half-float working space either way. |
@@ -1554,7 +1554,7 @@ the chain-entry extent everywhere.
 | `ParametricVideoRenderer.resolveRenderSize(sourceRenderSize:document:mode:)` | Not public. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `ParametricVideoRendererError` | `VideoRendererError` |
 | `FeatureEvaluationContext.radiusReferenceExtent`, `radiusBasis(for:)` | `FeatureEvaluationContext.chainEntryExtent`, `chainEntryExtent(for:)` |
-| `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Not public. Pass `chainEntryExtent:` to `FeatureRenderer.makeImage`. See [Helpers No Longer Public](#helpers-no-longer-public). |
+| `FeatureEvaluationContext(radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Not public. `FeatureRenderer.makeImage(from:feature:presentationTime:)` builds the context. See [Helpers No Longer Public](#helpers-no-longer-public). |
 | `FeatureEvaluationError.failedToCreateImage(_:)` | `FeatureEvaluationError.imageCreationFailed(_:)` |
 
 `EditingDocument.render(options:)` takes `ExportRenderer.Options` and returns
@@ -1763,7 +1763,8 @@ the same shape; the table says what to use instead.
 
 | 5.1.1 | 6.0 |
 | --- | --- |
-| `FeatureEvaluationContext(kernelRegistry:radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Package access. Evaluate a feature with `FeatureRenderer().makeImage(from:feature:chainEntryExtent:presentationTime:)`, which moves the source to zero origin and builds the context. A feature still reads `chainEntryExtent`, `chainEntryExtent(for:)`, and `presentationTime`, and passes the context it receives on to the features it evaluates. |
+| `FeatureEvaluationContext(kernelRegistry:radiusReferenceExtent:presentationTime:)`, `withRadiusReferenceExtent(_:)` | Package access. Evaluate a feature with `FeatureRenderer().makeImage(from:feature:presentationTime:)`, which moves the source to zero origin and builds the context with the source's extent as the chain-entry extent. A feature still reads `chainEntryExtent`, `chainEntryExtent(for:)`, and `presentationTime`, and passes the context it receives on to the features it evaluates. |
+| The `radiusReferenceExtent:` parameter of `ParametricImageRenderer.makeImage(from:feature:radiusReferenceExtent:presentationTime:)` | Package access (`chainEntryExtent:`). Crop rects, masks, and radii are in the source's pixels, so the chain entry is always the whole source: pass all of it to `FeatureRenderer().makeImage(from:feature:presentationTime:)`. To draw part of the result, such as a zoomed viewport, crop the output with `cropped(to:)`; the recipe stays lazy, and Core Image computes only the region a render asks for. Evaluating a part or a downscaled copy of the source gives a different image. |
 | `ParametricExportRenderer.RenderingDevice` and the `device:` parameter of `render(source:document:options:device:)` | Package access. `ExportRenderer.render(from:feature:options:)` does what `.automatic` did: it renders on the GPU, and asks Core Image for its software renderer when the image exceeds the GPU context's size limits. On iOS 26 (checked on the Simulator) that renderer also runs on Metal and reports the same limits, so it does not raise them. |
 | `ParametricVideoRenderer.resolveRenderSize(sourceRenderSize:document:mode:)` | Package access. `VideoRenderer.makeVideoComposition(for:feature:renderSizeMode:ciContext:)` resolves the size. To compute it yourself, read the extent of `FeatureRenderer().makeImage(from:feature:)` over a transparent image of the source size. |
 | `ColorMixerRenderIdentity.semanticVersion` | Internal. Two `ColorMixerFeature.RenderKey` values still compare unequal when the semantics differ. |

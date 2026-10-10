@@ -38,8 +38,8 @@ import Foundation
 /// An `any ImageEffect` value cannot be written in a `body`. Store content
 /// decided by data as `AnyImageEffect` (or `[AnyImageEffect]`) instead.
 ///
-/// Use `FeatureRenderer.makeImage(from:feature:chainEntryExtent:presentationTime:)`
-/// to evaluate a root feature from a source image. It prepares the chain entry
+/// Use `FeatureRenderer.makeImage(from:feature:presentationTime:)` to
+/// evaluate a root feature from a source image. It prepares the chain entry
 /// once: the source is translated to zero origin and value-form radii resolve
 /// against its extent. Calling `apply(to:context:)` directly skips the origin
 /// normalization; a composite called with a context that has no

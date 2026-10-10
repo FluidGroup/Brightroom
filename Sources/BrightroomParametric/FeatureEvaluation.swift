@@ -43,12 +43,13 @@ public struct FeatureEvaluationContext: Sendable {
   /// **current render pixel space**.
   ///
   /// A radius like "value 40" means "diagonal / 50 of the image". The basis
-  /// must be the **source** image, not the cropped/zoomed/intermediate extent
-  /// the effect happens to be applied to — otherwise a tighter crop or a
-  /// zoomed viewport silently changes the blur strength. Render pipelines set
-  /// this to the full source extent scaled to the resolution they are
-  /// rendering at, so the radius stays a fixed fraction of the source in every
-  /// path (export, preview, live viewport).
+  /// must be the **source** image, not the cropped or intermediate extent the
+  /// effect happens to be applied to — otherwise a tighter crop silently
+  /// changes the blur strength. `FeatureRenderer` sets this to the extent of
+  /// the source it receives, which is always the whole source; Brightroom's
+  /// own preview paths set the whole source's extent scaled to the
+  /// resolution they render at, so the radius stays a fixed fraction of the
+  /// source in every path.
   ///
   /// `nil` falls back to the input image's own extent at the recipe level.
   /// `FeatureRenderer` never relies on that fallback: it resolves the
@@ -78,8 +79,8 @@ public struct FeatureEvaluationContext: Sendable {
   /// Every recipe with a proportional radius goes through this accessor rather
   /// than reading `chainEntryExtent` and writing its own fallback: the
   /// fallback to `image.extent` is correct ONLY when `image` is the chain entry.
-  /// Applied to any mid-chain input — a cropped result, a zoomed viewport slice,
-  /// an intermediate — it re-bases the radius and silently changes the strength
+  /// Applied to any mid-chain input — a cropped result or another
+  /// intermediate — it re-bases the radius and silently changes the strength
   /// of a committed effect, which is exactly what the pinned semantics forbid.
   public func chainEntryExtent(for image: CIImage) -> CGRect {
     chainEntryExtent ?? image.extent

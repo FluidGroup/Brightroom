@@ -210,9 +210,12 @@ materialization, and callers own the `CIContext`.
 
 - `FeatureRenderer().makeImage(from:feature:)` prepares the chain
   entry once: it translates the source to zero origin, fixes the chain-entry extent
-  (value-form radii resolve against the entry extent, or against
-  `chainEntryExtent` for a viewport slice), and sets the presentation
-  time. The `FeatureEvaluationContext` then flows down through every `body`.
+  (value-form radii resolve against the entry extent), and sets the
+  presentation time. The source is always the whole source; to draw part of
+  the result, crop the output, and Core Image computes only that region. A
+  package overload with `chainEntryExtent:` lets Brightroom's tests evaluate
+  over an intermediate with the whole chain's basis. The
+  `FeatureEvaluationContext` then flows down through every `body`.
   `ExportRenderer` and `VideoRenderer` evaluate through
   the same path.
 - `LocalAdjustmentFeature` renders its mask over its input extent (a brush
