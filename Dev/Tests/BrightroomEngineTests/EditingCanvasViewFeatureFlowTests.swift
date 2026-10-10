@@ -267,7 +267,7 @@ struct EditingCanvasViewFeatureFlowTests {
       feature: ImageEditorFeature(imageSize: imageSize),
       target: .crop
     )
-    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &harness.box.owned.effects)
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &harness.box.owned)
     let exposure = harness.box.owned.effects.exposure
 
     harness.canvasView.setLockedAspectRatio(.square)

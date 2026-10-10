@@ -12,8 +12,9 @@ import UIKit
 /// Pins the canvas `.viewportBase` path to the export's evaluation order.
 ///
 /// `ImageEditorFeature` evaluates its effects before the final crop, so an
-/// effect that reads its input extent (a vignette) or its neighbours at the
-/// crop edge (a sharpen) sees the whole source. The canvas shows the global
+/// effect that reads its neighbours at the crop edge (a sharpen) sees the
+/// whole source. (The vignette is evaluated after the crop and is covered by
+/// `PostCropVignetteCanvasTests`.) The canvas shows the global
 /// effects without a local adjustment through `.viewportBase`; it must
 /// evaluate them in the same order, on the downsampled editing source, as the
 /// `.localAdjustment` base does. Otherwise the Adjust preview differs from the
@@ -166,7 +167,6 @@ struct ViewportBasePreviewExportParityTests {
   private static func makeDocument(quarterTurn: QuarterTurn) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects.sharpen = SharpenFeature(intensity: 0.8, radius: .proportional(20))
-    document.effects.vignette = VignetteFeature(value: 1)
     document.crop = CropFeature.test(
       imageSize: imageSize,
       topLeftRect: cropRect,

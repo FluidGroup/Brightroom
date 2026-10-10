@@ -122,8 +122,8 @@ enum EditingCanvasRenderImageFactory {
 
     // The document evaluates its effects before the final crop, so evaluate
     // them (and the local effect) on the whole oriented source, then crop. An
-    // effect that reads its input extent (a vignette) or the pixels beyond the
-    // crop edge (a sharpen) then sees what the export sees. Evaluate at the
+    // effect that reads its input extent (a preset's vignette) or the pixels
+    // beyond the crop edge (a sharpen) then sees what the export sees. Evaluate at the
     // native (downsampled) source resolution BEFORE upscaling to the
     // crop-output source size, so a huge source
     // (`geometry.sourceImageSize == crop.imageSize`) never materializes a

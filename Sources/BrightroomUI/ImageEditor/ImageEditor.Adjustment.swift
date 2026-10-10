@@ -27,8 +27,9 @@ extension ImageEditor {
   /// A global adjustment parameter editable in ImageEditor's Adjust mode.
   ///
   /// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
-  /// value onto the corresponding member of `ImageEditorFeature.Effects`, which
-  /// is evaluated before the local blur and the final crop.
+  /// value onto the corresponding member of the feature: a member of
+  /// `ImageEditorFeature.Effects`, evaluated before the local blur and the
+  /// final crop, or `ImageEditorFeature.vignette`, evaluated after the crop.
   enum Adjustment: CaseIterable, Identifiable, Equatable {
     case exposure
     case brightness
@@ -107,7 +108,8 @@ extension ImageEditor {
     }
 
     /// The current slider value for this parameter.
-    func sliderValue(in effects: ImageEditorFeature.Effects) -> Double {
+    func sliderValue(in feature: ImageEditorFeature) -> Double {
+      let effects = feature.effects
       let filterValue: Double
       switch self {
       case .exposure:
@@ -127,7 +129,7 @@ extension ImageEditor {
       case .gaussianBlur:
         filterValue = effects.gaussianBlur?.proportionalValue ?? 0
       case .vignette:
-        filterValue = effects.vignette?.value ?? 0
+        filterValue = feature.vignette?.value ?? 0
       }
 
       guard maximumFilterValue != 0 else {
@@ -137,13 +139,13 @@ extension ImageEditor {
       return (filterValue / maximumFilterValue * 100).rounded()
     }
 
-    /// Writes a slider value into the global effects.
+    /// Writes a slider value into the feature.
     ///
     /// An existing effect is updated in place, so its parameters the slider
     /// does not control (such as `WhiteBalanceFeature.tint`) are kept. A neutral
     /// value removes the effect, including those parameters, so untouched
     /// parameters stay absent.
-    func apply(sliderValue: Double, to effects: inout ImageEditorFeature.Effects) {
+    func apply(sliderValue: Double, to feature: inout ImageEditorFeature) {
       let clamped = min(
         max(sliderValue, sliderRange.lowerBound),
         sliderRange.upperBound
@@ -155,63 +157,63 @@ extension ImageEditor {
       case .exposure:
         Self.upsert(
           value,
-          into: &effects.exposure,
+          into: &feature.effects.exposure,
           make: { ExposureFeature(ev: $0) },
           update: { $0.ev = $1 }
         )
       case .brightness:
         Self.upsert(
           value,
-          into: &effects.brightness,
+          into: &feature.effects.brightness,
           make: { BrightnessFeature(value: $0) },
           update: { $0.value = $1 }
         )
       case .contrast:
         Self.upsert(
           value,
-          into: &effects.contrast,
+          into: &feature.effects.contrast,
           make: { ContrastFeature(value: $0) },
           update: { $0.value = $1 }
         )
       case .saturation:
         Self.upsert(
           value,
-          into: &effects.saturation,
+          into: &feature.effects.saturation,
           make: { SaturationFeature(value: $0) },
           update: { $0.value = $1 }
         )
       case .warmth:
         Self.upsert(
           value,
-          into: &effects.whiteBalance,
+          into: &feature.effects.whiteBalance,
           make: { WhiteBalanceFeature(temperature: $0) },
           update: { $0.temperature = $1 }
         )
       case .highlights:
         Self.upsert(
           value,
-          into: &effects.highlights,
+          into: &feature.effects.highlights,
           make: { HighlightsFeature(value: $0) },
           update: { $0.value = $1 }
         )
       case .shadows:
         Self.upsert(
           value,
-          into: &effects.shadows,
+          into: &feature.effects.shadows,
           make: { ShadowsFeature(value: $0) },
           update: { $0.value = $1 }
         )
       case .gaussianBlur:
         Self.upsert(
           value,
-          into: &effects.gaussianBlur,
+          into: &feature.effects.gaussianBlur,
           make: { GaussianBlurFeature(radius: .proportional($0)) },
           update: { $0.radius = .proportional($1) }
         )
       case .vignette:
         Self.upsert(
           value,
-          into: &effects.vignette,
+          into: &feature.vignette,
           make: { VignetteFeature(value: $0) },
           update: { $0.value = $1 }
         )

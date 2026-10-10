@@ -27,8 +27,8 @@ import BrightroomParametric
 /// The feature edited by ImageEditor and `ImageEditorCanvas`.
 ///
 /// Evaluation order is the order of `body`: global effects, then the brush
-/// painted blur, then the final crop. Absent features are `nil` and contribute
-/// nothing. The feature is authored in the oriented pixel coordinates of its
+/// painted blur, then the final crop, then the vignette, which is centred on
+/// the cropped picture. Absent features are `nil` and contribute nothing. The feature is authored in the oriented pixel coordinates of its
 /// document's source image (`EditingDocument.source.pixelSize`), at full
 /// resolution: evaluate it over a source of that size (the export source, or
 /// the editing source scaled up to it), never over the downsampled editing
@@ -39,7 +39,12 @@ import BrightroomParametric
 /// `ImageEditorDocument`, which keeps it with its source image.
 public struct ImageEditorFeature: Feature, Equatable {
 
-  /// Global, extent-preserving effects, evaluated in declaration order.
+  /// Global, extent-preserving effects, evaluated in declaration order
+  /// before the local blur and the final crop.
+  ///
+  /// Their radii resolve against the chain entry (the whole source), so a
+  /// crop does not change them. The vignette, which the output frame decides,
+  /// is `ImageEditorFeature.vignette`, evaluated after the crop.
   public struct Effects: ImageEffect, Equatable {
 
     public var preset: FilterFeature?
@@ -54,7 +59,6 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var unsharpMask: UnsharpMaskFeature?
     public var gaussianBlur: GaussianBlurFeature?
     public var fade: FadeFeature?
-    public var vignette: VignetteFeature?
 
     /// Creates global effects. Omitted effects are absent.
     public init(
@@ -69,8 +73,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       sharpen: SharpenFeature? = nil,
       unsharpMask: UnsharpMaskFeature? = nil,
       gaussianBlur: GaussianBlurFeature? = nil,
-      fade: FadeFeature? = nil,
-      vignette: VignetteFeature? = nil
+      fade: FadeFeature? = nil
     ) {
       self.preset = preset
       self.exposure = exposure
@@ -84,7 +87,6 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.unsharpMask = unsharpMask
       self.gaussianBlur = gaussianBlur
       self.fade = fade
-      self.vignette = vignette
     }
 
     public var body: some ImageEffect {
@@ -100,7 +102,6 @@ public struct ImageEditorFeature: Feature, Equatable {
       unsharpMask
       gaussianBlur
       fade
-      vignette
     }
   }
 
@@ -129,6 +130,14 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// or call `pixelAligned(imageSize:)`.
   public var crop: CropFeature
 
+  /// The vignette, evaluated after the final crop.
+  ///
+  /// It is centred on the crop output and its radius is half the output's
+  /// longer side, so it follows the crop: a crop never leaves the darkening
+  /// off-centre. A vignette inside `effects.preset` is part of that look and
+  /// stays before the crop.
+  public var vignette: VignetteFeature?
+
   /// A feature with no effects and a crop that covers the whole image.
   ///
   /// - Parameter imageSize: The oriented pixel size of the image,
@@ -140,6 +149,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       topLeftRect: CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize
     )
+    self.vignette = nil
   }
 
   /// Rebuilds a feature, for example one restored by the host.
@@ -150,16 +160,19 @@ public struct ImageEditorFeature: Feature, Equatable {
   public init(
     effects: Effects = .init(),
     localBlur: LocalAdjustmentFeature<GaussianBlurFeature>? = nil,
-    crop: CropFeature
+    crop: CropFeature,
+    vignette: VignetteFeature? = nil
   ) {
     self.effects = effects
     self.localBlur = localBlur
     self.crop = crop
+    self.vignette = vignette
   }
 
   public var body: some Feature {
     effects
     localBlur
     crop
+    vignette
   }
 }

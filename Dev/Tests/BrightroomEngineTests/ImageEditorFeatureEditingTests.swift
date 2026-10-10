@@ -33,7 +33,7 @@ struct ImageEditorFeatureEditingTests {
     )
     // Members assigned after construction are ordinary values too.
     restored.effects.exposure = ExposureFeature(ev: 0.9)
-    restored.effects.vignette = VignetteFeature(value: 1)
+    restored.vignette = VignetteFeature(value: 1)
 
     var document = EditingDocument(source: makeImage(), feature: restored)
     #expect(document.feature == restored)
@@ -196,7 +196,7 @@ struct ImageEditorFeatureEditingTests {
 
   @Test func `Clear blur mask removes the blur mask only`() {
     var document = EditingDocument(source: makeImage())
-    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.feature.effects)
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.feature)
     document.feature.appendLocalBlurStroke(
       BrushMask.Stroke(stampCenters: [CGPoint(x: 10, y: 10)], brush: .init(diameter: 4, hardness: 1, opacity: 1))
     )

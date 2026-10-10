@@ -25,6 +25,14 @@ extension ImageEditorFeature {
     return copy
   }
 
+  /// The document without the vignette, which the canvas draws after the
+  /// crop, over the crop frame.
+  func withoutVignette() -> Self {
+    var copy = self
+    copy.vignette = nil
+    return copy
+  }
+
   /// The document without the blur mask: the base the canvas composites the
   /// blur over.
   func withoutLocalBlur() -> Self {

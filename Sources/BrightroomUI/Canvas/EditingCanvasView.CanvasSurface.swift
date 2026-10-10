@@ -105,6 +105,43 @@ extension EditingCanvasView {
     }
   }
 
+  /// The post-crop pass of one displayed frame: the effect the feature
+  /// evaluates after its final crop, and where the crop output lies on the
+  /// canvas. See `EditingCanvasRenderer.setPostCrop(effect:frame:chainEntry:)`.
+  struct CanvasPostCrop: Equatable {
+    let effect: AnyImageEffect
+    /// The crop output on the canvas, in canvas points.
+    let frame: CGRect
+    /// The whole source in the surface's content coordinates.
+    let chainEntry: CGRect
+
+    /// The pass on a tool surface, whose content is the crop output: the
+    /// frame is the content's bounds where the viewport places them.
+    init?(
+      effect: AnyImageEffect?,
+      geometry: EditingCanvasCropOutputGeometry,
+      viewport: CanvasViewport
+    ) {
+      guard let effect else { return nil }
+      self.effect = effect
+      self.frame = geometry.outputBounds.applying(viewport.contentToCanvasTransform)
+      self.chainEntry = CGRect(origin: .zero, size: geometry.sourceImageSize)
+        .applying(geometry.inputToOutputTransform)
+    }
+
+    /// The pass on the crop surface, whose content is the source: the crop
+    /// output is what the crop guide frames.
+    ///
+    /// - Parameter guideFrame: The crop guide on the canvas, sampled with the
+    ///   viewport of the same frame.
+    init?(effect: AnyImageEffect?, guideFrame: CGRect, imageSize: CGSize) {
+      guard let effect else { return nil }
+      self.effect = effect
+      self.frame = guideFrame
+      self.chainEntry = CGRect(origin: .zero, size: imageSize)
+    }
+  }
+
   /// Common core shared by the Crop and Tool surfaces: a UIScrollView that
   /// owns pan/zoom physics over a transparent zooming view. The Metal canvas
   /// lives in the fixed host coordinate space, outside the scroll hierarchy.
@@ -226,7 +263,10 @@ extension EditingCanvasView {
     }
 
     /// Samples the viewport and submits a changed frame without moving the canvas.
-    func draw(viewport: CanvasViewport?) {
+    ///
+    /// - Parameter postCrop: The pass drawn after the crop, sampled with
+    ///   `viewport`, or nil when the feature has none.
+    func draw(viewport: CanvasViewport?, postCrop: CanvasPostCrop?) {
       guard let canvasView else { return }
       displayedViewport = viewport
       guard let viewport else {
@@ -238,6 +278,11 @@ extension EditingCanvasView {
         canvasView.contentScaleFactor = viewport.contentScaleFactor
       }
       canvasView.setViewport(viewport.editingCanvasViewport)
+      canvasView.setPostCrop(
+        effect: postCrop?.effect,
+        frame: postCrop?.frame ?? .null,
+        chainEntry: postCrop?.chainEntry ?? .null
+      )
       canvasView.drawIfNeeded()
     }
 

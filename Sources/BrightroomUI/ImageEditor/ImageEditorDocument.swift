@@ -64,12 +64,12 @@ extension EditingDocument where Content == ImageEditorFeature {
     feature.effects.preset = preset
   }
 
-  /// Writes an adjustment slider value into the global effects.
+  /// Writes an adjustment slider value into the feature.
   mutating func setAdjustmentValue(
     _ sliderValue: Double,
     parameter: ImageEditor.Adjustment
   ) {
-    parameter.apply(sliderValue: sliderValue, to: &feature.effects)
+    parameter.apply(sliderValue: sliderValue, to: &feature)
   }
 
   /// Removes the local blur; the effects and the crop are unchanged.

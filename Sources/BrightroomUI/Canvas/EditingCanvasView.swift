@@ -57,13 +57,24 @@ extension ImageEditorFeature.Effects {
   }
 }
 
+extension ImageEditorFeature {
+
+  /// The effect the canvas draws after the crop (the vignette), or nil.
+  ///
+  /// It is drawn over the crop frame of each displayed frame instead of
+  /// being part of the render images, so changing it never rebuilds them.
+  var canvasPostCropEffect: AnyImageEffect? {
+    vignette.map { AnyImageEffect($0) }
+  }
+}
+
 /// A UIKit canvas that edits an `ImageEditorFeature`: value in, changes out.
 ///
 /// Based on the editing vision in `docs/vision-of-editing.md`, the feature
 /// evaluates tool edits before the final crop:
 ///
 /// ```text
-/// Source -> Effects -> Blur Mask -> Final Crop -> Output
+/// Source -> Effects -> Blur Mask -> Final Crop -> Vignette -> Output
 /// ```
 ///
 /// The host passes the feature with `setFeature(_:)` and receives EditingCanvasView's
@@ -71,7 +82,7 @@ extension ImageEditorFeature.Effects {
 /// handler. `ImageEditorCanvas.Target` picks what canvas gestures edit; the
 /// viewing point is always the feature's output. Crop editing adjusts the
 /// final crop while showing the effects and the blur mask over the whole
-/// source. Mask editing inspects the output through the crop while authoring
+/// source, and the vignette inside the crop guide, centred on it as it moves. Mask editing inspects the output through the crop while authoring
 /// strokes that belong to the pre-crop domain, so Tool navigation never
 /// mutates the crop, and strokes cross domains when they are displayed or
 /// committed.
@@ -1041,11 +1052,13 @@ extension EditingCanvasView {
   }
 
   /// The layer coordinates sampled together for one displayed frame.
-  /// Content placement and guide clipping must use the same animation state.
+  /// Content placement, guide clipping, and the crop guide that frames the
+  /// post-crop pass must use the same animation state.
   private struct DisplayLayers {
     let content: CALayer
     let canvas: CALayer
     let clip: CALayer
+    let guide: CALayer
   }
 
   private func hasViewportAnimation(for surface: CanvasSurface) -> Bool {
@@ -1066,15 +1079,20 @@ extension EditingCanvasView {
     let content = surface.zoomingView.layer
     let canvas = surfaceHost.canvasHostView.layer
     let clip = surfaceHost.platterView.layer
-    if hasViewportAnimation(for: surface),
+    let guide = guideView.layer
+    if hasViewportAnimation(for: surface) || guide.animationKeys()?.isEmpty == false,
        let contentPresentation = content.presentation(),
        let canvasPresentation = canvas.presentation(),
-       let clipPresentation = clip.presentation() {
+       let clipPresentation = clip.presentation(),
+       let guidePresentation = guide.presentation() {
       return DisplayLayers(
-        content: contentPresentation, canvas: canvasPresentation, clip: clipPresentation
+        content: contentPresentation,
+        canvas: canvasPresentation,
+        clip: clipPresentation,
+        guide: guidePresentation
       )
     }
-    return DisplayLayers(content: content, canvas: canvas, clip: clip)
+    return DisplayLayers(content: content, canvas: canvas, clip: clip, guide: guide)
   }
 
   /// Converts three content landmarks without discarding rotation through an
@@ -2051,16 +2069,32 @@ extension EditingCanvasView {
     if isCropEditing {
       toolSurface.hideCanvasView()
       guard let crop = state.proposedCrop else { return }
-      cropSurface.draw(viewport: makeDisplayViewport(
-        for: cropSurface, layers: layers, contentSize: crop.imageSize,
-        contentToZoomingScale: crop.imageToPlatterScale()
-      ))
+      // The guide frames the crop output, including while it is dragged
+      // (the platter keeps the settled frame), so the pass follows it.
+      let guideFrame = layers.canvas.convert(layers.guide.bounds, from: layers.guide)
+      cropSurface.draw(
+        viewport: makeDisplayViewport(
+          for: cropSurface, layers: layers, contentSize: crop.imageSize,
+          contentToZoomingScale: crop.imageToPlatterScale()
+        ),
+        postCrop: CanvasPostCrop(
+          effect: feature.canvasPostCropEffect,
+          guideFrame: guideFrame,
+          imageSize: crop.imageSize
+        )
+      )
     } else {
       cropSurface.hideCanvasView()
       guard let geometry = toolSurface.outputGeometry else { return }
-      toolSurface.draw(viewport: makeDisplayViewport(
+      let viewport = makeDisplayViewport(
         for: toolSurface, layers: layers, contentSize: geometry.outputSize, contentToZoomingScale: 1
-      ))
+      )
+      toolSurface.draw(
+        viewport: viewport,
+        postCrop: viewport.flatMap {
+          CanvasPostCrop(effect: feature.canvasPostCropEffect, geometry: geometry, viewport: $0)
+        }
+      )
       // Reconciliation remains a gesture-boundary operation. The old loop's
       // stop callback owned this quiet check; the persistent loop observes the
       // same boundary without tying it to rendering's lifetime.

@@ -79,7 +79,7 @@ struct ImageEditorSession {
     over document: ImageEditorDocument
   ) {
     var feature = displayedFeature(of: document)
-    parameter.apply(sliderValue: sliderValue, to: &feature.effects)
+    parameter.apply(sliderValue: sliderValue, to: &feature)
     liveFeature = feature == document.feature ? nil : feature
   }
 

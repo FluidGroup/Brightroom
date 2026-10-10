@@ -32,7 +32,7 @@ struct ImageEditorFeatureTests {
       crop.updateCropExtent(CGRect(x: 10, y: 20, width: 200, height: 100))
       document.crop = crop.makeCropFeature()
       document.appendLocalBlurStroke(stroke)
-      ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document.effects)
+      ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &document)
       return document
     }
 
@@ -166,8 +166,8 @@ struct ImageEditorFeatureTests {
     crop.rotation = .counterclockwise90
     edited.crop = crop.makeCropFeature()
     edited.appendLocalBlurStroke(stroke)
-    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &edited.effects)
-    ImageEditor.Adjustment.vignette.apply(sliderValue: 60, to: &edited.effects)
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &edited)
+    ImageEditor.Adjustment.vignette.apply(sliderValue: 60, to: &edited)
     edited.effects.preset = preset
 
     let rebuilt = ImageEditorFeature(
@@ -177,8 +177,7 @@ struct ImageEditorFeatureTests {
           id: "p",
           effects: [AnyImageEffect(ContrastFeature(value: 0.1))]
         ),
-        exposure: ExposureFeature(ev: edited.effects.exposure!.ev),
-        vignette: VignetteFeature(value: edited.effects.vignette!.value)
+        exposure: ExposureFeature(ev: edited.effects.exposure!.ev)
       ),
       localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: [stroke]))) {
         GaussianBlurFeature(radius: .proportional(40))
@@ -187,21 +186,24 @@ struct ImageEditorFeatureTests {
         rect: edited.crop.rect,
         quarterTurn: edited.crop.quarterTurn,
         straightenRadians: edited.crop.straightenRadians
-      )
+      ),
+      vignette: VignetteFeature(value: edited.vignette!.value)
     )
 
     #expect(rebuilt == edited)
     #expect(rebuilt.effects == edited.effects)
     #expect(rebuilt.localBlur == edited.localBlur)
     #expect(rebuilt.crop == edited.crop)
+    #expect(rebuilt.vignette == edited.vignette)
   }
 
   /// Members assigned directly compare equal to the ones the sliders create:
   /// nothing but their values decides equality.
   @Test func `Members assigned directly equal slider-created members`() {
-    var sliderMade = ImageEditorFeature.Effects()
-    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &sliderMade)
-    ImageEditor.Adjustment.gaussianBlur.apply(sliderValue: 40, to: &sliderMade)
+    var sliderMadeFeature = ImageEditorFeature(imageSize: imageSize)
+    ImageEditor.Adjustment.exposure.apply(sliderValue: 50, to: &sliderMadeFeature)
+    ImageEditor.Adjustment.gaussianBlur.apply(sliderValue: 40, to: &sliderMadeFeature)
+    let sliderMade = sliderMadeFeature.effects
 
     var assigned = ImageEditorFeature.Effects()
     assigned.exposure = ExposureFeature(ev: 0.9)
@@ -227,9 +229,9 @@ struct ImageEditorFeatureTests {
 
   /// The document's `body` evaluates the global effects in `Effects`
   /// declaration order (the preset's effects first), then the blur mask, then
-  /// the final crop. The oracle folds the leaves by hand, so it shares no
-  /// builder or composite evaluation with the document.
-  @Test func `Body evaluates effects, blur mask, and crop in order`() throws {
+  /// the final crop, then the vignette. The oracle folds the leaves by hand,
+  /// so it shares no builder or composite evaluation with the document.
+  @Test func `Body evaluates effects, blur mask, crop, and vignette in order`() throws {
     let document = makeFullDocument()
     let effects = document.effects
     let localBlur = try #require(document.localBlur)
@@ -246,16 +248,16 @@ struct ImageEditorFeatureTests {
       try #require(effects.unsharpMask),
       try #require(effects.gaussianBlur),
       try #require(effects.fade),
-      try #require(effects.vignette),
     ]
-    #expect(globalEffects.count == 13)
+    #expect(globalEffects.count == 12)
+    let vignette = try #require(document.vignette)
 
     let source = makeSource()
     let renderer = FeatureRenderer()
     let actual = try renderer.makeImage(from: source, feature: document)
     let expected = try renderer.makeImage(
       from: source,
-      feature: SequentialFeatures(globalEffects + [localBlur, document.crop])
+      feature: SequentialFeatures(globalEffects + [localBlur, document.crop, vignette])
     )
 
     #expect(actual.extent == expected.extent)
@@ -265,10 +267,19 @@ struct ImageEditorFeatureTests {
     // puts the stroke somewhere else.
     let blurAfterCrop = try renderer.makeImage(
       from: source,
-      feature: SequentialFeatures(globalEffects + [document.crop, localBlur])
+      feature: SequentialFeatures(globalEffects + [document.crop, localBlur, vignette])
     )
     #expect(blurAfterCrop.extent == expected.extent)
     #expect(maxDifference(blurAfterCrop, expected) > 4)
+
+    // The vignette is centred on the crop output: evaluating it before the
+    // (off-centre) crop darkens other pixels.
+    let vignetteBeforeCrop = try renderer.makeImage(
+      from: source,
+      feature: SequentialFeatures(globalEffects + [localBlur, vignette, document.crop])
+    )
+    #expect(vignetteBeforeCrop.extent == expected.extent)
+    #expect(maxDifference(vignetteBeforeCrop, expected) > 4)
   }
 
   // MARK: - Value substitutions (D5)
@@ -278,10 +289,11 @@ struct ImageEditorFeatureTests {
     let source = makeSource()
     let renderer = FeatureRenderer()
 
-    // The canvas base: global effects only, over the whole source.
+    // The canvas base: global effects only, over the whole source. The
+    // canvas draws the vignette inside the crop frame, after these.
     let base = try renderer.makeImage(
       from: source,
-      feature: document.withoutLocalBlur().withCropNeutralized(imageSize: imageSize)
+      feature: document.withoutLocalBlur().withoutVignette().withCropNeutralized(imageSize: imageSize)
     )
     let effectsOnly = try renderer.makeImage(from: source, feature: document.effects)
     #expect(base.extent == effectsOnly.extent)
@@ -298,7 +310,7 @@ struct ImageEditorFeatureTests {
     }
     let cropViewing = try renderer.makeImage(
       from: source,
-      feature: document.withCropNeutralized(imageSize: imageSize)
+      feature: document.withoutVignette().withCropNeutralized(imageSize: imageSize)
     )
     let uncropped = try renderer.makeImage(
       from: source,
@@ -310,7 +322,8 @@ struct ImageEditorFeatureTests {
 
   // MARK: - Helpers
 
-  /// A document with all 13 global effect members, a blur mask, and a rotated crop.
+  /// A document with all 12 global effect members, a blur mask, a rotated
+  /// crop, and a vignette.
   private func makeFullDocument() -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     for (parameter, value) in [
@@ -324,7 +337,7 @@ struct ImageEditorFeatureTests {
       (.gaussianBlur, 10),
       (.vignette, 60),
     ] {
-      parameter.apply(sliderValue: value, to: &document.effects)
+      parameter.apply(sliderValue: value, to: &document)
     }
     document.effects.preset = FilterFeature(
       name: "P",

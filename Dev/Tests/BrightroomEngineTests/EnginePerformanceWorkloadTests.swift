@@ -109,7 +109,11 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   @inline(never)
   private func parametricEvaluate(over source: CIImage) {
     let effects = Self.makeEffects()
-    let evaluated = (try? effects.apply(to: source, context: FeatureEvaluationContext())) ?? source
+    let context = FeatureEvaluationContext()
+    let adjusted = (try? effects.apply(to: source, context: context)) ?? source
+    // The vignette is a top-level member of the feature, after the crop; the
+    // workload evaluates it as well.
+    let evaluated = (try? VignetteFeature(value: 0.5).apply(to: adjusted, context: context)) ?? adjusted
     _ = Self.context.createCGImage(evaluated, from: source.extent)
   }
 
@@ -137,14 +141,14 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
       ),
       exposure: ExposureFeature(ev: 0.35),
       highlights: HighlightsFeature(value: 0.2),
-      shadows: ShadowsFeature(value: -0.15),
-      vignette: VignetteFeature(value: 0.5)
+      shadows: ShadowsFeature(value: -0.15)
     )
   }
 
   private static func makeDocument(imageSize: CGSize) -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     document.effects = makeEffects()
+    document.vignette = VignetteFeature(value: 0.5)
     document.localBlur = LocalAdjustmentFeature(mask: cachedMask) {
       GaussianBlurFeature(radius: .proportional(60))
     }

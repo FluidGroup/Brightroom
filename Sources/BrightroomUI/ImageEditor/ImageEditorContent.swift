@@ -127,7 +127,7 @@ struct ImageEditorContent: View {
               isLocalBlurPaintable: displayedFeature.isLocalBlurPaintable,
               filters: options.filters,
               filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
-              currentEffects: displayedFeature.effects,
+              currentFeature: displayedFeature,
               adjustmentParameter: adjustmentParameter,
               localizedStrings: localizedStrings,
               straightenAngle: straightenAngle,
@@ -600,7 +600,7 @@ private struct ControlHost: View {
   let isLocalBlurPaintable: Bool
   let filters: [FilterFeature]
   let filterPreviewBaseImage: CIImage?
-  let currentEffects: ImageEditorFeature.Effects?
+  let currentFeature: ImageEditorFeature?
   let adjustmentParameter: ImageEditor.Adjustment
   let localizedStrings: ImageEditor.LocalizedStrings
   let straightenAngle: Angle?
@@ -645,7 +645,7 @@ private struct ControlHost: View {
         FilterControl(
           presets: filters,
           baseImage: filterPreviewBaseImage,
-          selectedPresetIdentifier: currentEffects?.preset?.id,
+          selectedPresetIdentifier: currentFeature?.effects.preset?.id,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
           onSelectPreset: onSelectFilterPreset
@@ -654,7 +654,7 @@ private struct ControlHost: View {
       case .adjust:
         AdjustmentsControl(
           selection: adjustmentParameter,
-          sliderValue: currentEffects.map {
+          sliderValue: currentFeature.map {
             adjustmentParameter.sliderValue(in: $0)
           } ?? 0,
           isLoaded: isLoaded,
