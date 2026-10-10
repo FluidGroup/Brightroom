@@ -1067,9 +1067,16 @@ vignette 1:
 | Left half (600×800): the centre row at x = 0, 150, 300, 450, 599 | 61, 91, 114, 126, 128 | 91, 121, 128, 121, 91 |
 | Left half: the corners (top left, top right, bottom left, bottom right) | 36, 100, 36, 100 | 31, 31, 31, 31 |
 | Centre half (600×400): the corners | 106 | 36 |
+| Whole image straightened by 0.2 radians in the editor (938×625): the top-left corner | 68 | 36 |
 
-A crop that keeps the source's centre and size, such as the whole image
-turned a quarter or straightened about its centre, renders as before.
+A crop that keeps the source's centre and size renders as before: the whole
+image turned a quarter, or a full-size `CropFeature(rect:)` you build
+yourself. Straightening in the editor is not such a crop:
+`CropFeature(topLeftRect:imageSize:straightenRadians:)` fits the selection
+inside the rotated image, so the output is smaller, and the vignette, sized
+to that output, darkens more of it (the last row of the table). Every
+straightened edit with a vignette, including a converted 5.x edit, changes
+look.
 Brightroom has no option for the 5.x placement. A vignette inside a filter
 (`effects.preset`) is part of that look and stays before the crop. The
 falloff stays circular, so the short sides of a very wide crop darken
@@ -1588,9 +1595,15 @@ that was rounded up: a light line in a JPEG and a translucent edge in a PNG or
 HEIF. A crop whose shorter side rounded to 0 failed with
 `failedToCreateCGImage`. 6.0 decides the whole-pixel size first and resamples
 the whole image onto exactly that size, scaling each axis on its own and
-clamping the edge pixels. The sizes are the same as in 5.1.1, except that a
-side that rounded to 0 is now 1 pixel. Rounding stretches a side by at most
-half a pixel. Transparent pixels the edit produces, such as the corners of a
+clamping the edge pixels, so an opaque result whose edges are whole pixels
+stays opaque to its edges. A crop that is not pixel-aligned already has
+translucent edge pixels at full size, and they stay translucent after the
+resize; `CropFeature.pixelAligned(imageSize:)` aligns a crop you build (the
+editor's crops are aligned). The sizes are the same as in 5.1.1, except that a
+side that rounded to 0 is now 1 pixel, and a `maxPixelSize` below 1,
+including 0 or a negative value, renders 1 × 1 pixels. Rounding stretches a
+side by at most half a pixel, and `maxPixelSize` itself is rounded to the
+nearest pixel, so a fractional value can be exceeded by up to half a pixel. Transparent pixels the edit produces, such as the corners of a
 straightened crop, stay transparent; a JPEG shows them white, because Image
 I/O flattens transparency onto white.
 

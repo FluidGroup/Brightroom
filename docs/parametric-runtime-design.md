@@ -289,7 +289,8 @@ rendering context's working color space into that space before its kernel and
 matches the result back, so a feature renders the same colors through the
 export, the canvas, a default `CIContext()`, or `VideoRenderer`'s default video
 context. Render through a floating-point working format; an 8-bit one
-quantizes the linear values the kernels read. Both effects preserve
+clamps the linear values the kernels read to 0...1 and quantizes them, so
+wide-gamut and extended-range colors are lost. Both effects preserve
 premultiplied alpha and extended-range values, and return the input image
 exactly when neutral. Tone Curve uses the existing scene-linear stop shaper,
 with normalized 0.5 at 18% gray, and independent RGB curves followed by the

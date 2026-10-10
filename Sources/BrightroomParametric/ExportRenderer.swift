@@ -172,23 +172,29 @@ public struct ExportRenderer {
   public enum Resolution: Sendable {
     /// The size the feature evaluates to.
     case full
-    /// Downscales so that the longer side is at most `maxPixelSize` pixels.
+    /// Downscales so that the longer side is `maxPixelSize` pixels, rounded
+    /// to the nearest whole pixel.
     ///
-    /// A result whose longer side already fits is rendered at its full size;
-    /// this never upscales.
+    /// A result whose longer side is not longer than `maxPixelSize` is
+    /// rendered at its full size; this never upscales.
     ///
     /// The result is whole pixels, like an image-size change in a photo
     /// editor. The output size is decided first: the longer side is
     /// `maxPixelSize` and the shorter side keeps the aspect ratio, each
-    /// rounded to the nearest whole pixel and at least 1. The whole image is
-    /// then resampled with Lanczos onto exactly that grid, each axis scaled on
-    /// its own, so there is no partial last row or column. Rounding stretches
-    /// a side by at most half a pixel, or up to a pixel when the 1-pixel
-    /// minimum applies.
+    /// rounded to the nearest whole pixel and at least 1. A fractional
+    /// `maxPixelSize` can therefore be exceeded by up to half a pixel
+    /// (598.6 gives 599), and a value below 1, including 0 or a negative
+    /// value, gives 1 × 1 pixels. The whole image is then resampled with
+    /// Lanczos onto exactly that grid, each axis scaled on its own, so there
+    /// is no partial last row or column. Rounding stretches a side by at most
+    /// half a pixel, or up to a pixel when the 1-pixel minimum applies.
     ///
     /// Pixels outside the image are not read: the edge pixels are clamped,
-    /// so an opaque image stays opaque to its edges. Transparent pixels the
-    /// feature produces, such as the corners of a straightened crop, stay
+    /// so an opaque result whose edges are whole pixels stays opaque to its
+    /// edges. A crop that is not pixel-aligned already has translucent edge
+    /// pixels at full size, and they stay translucent; align a crop with
+    /// `CropFeature.pixelAligned(imageSize:)`. Transparent pixels the feature
+    /// produces, such as the corners of a straightened crop, stay
     /// transparent.
     case resize(maxPixelSize: CGFloat)
   }

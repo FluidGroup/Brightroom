@@ -22,8 +22,9 @@ import Foundation
 /// A context with color management off (`.workingColorSpace: NSNull()`)
 /// performs no matching, so the kernels read its values as they are.
 ///
-/// The working format still matters: an 8-bit working format quantizes the
-/// linear values the kernels read and write, so render through a
+/// The working format still matters: an 8-bit working format clamps the
+/// linear values the kernels read and write to 0...1 and quantizes them, so
+/// wide-gamut and extended-range colors are lost. Render through a
 /// floating-point format such as `CIFormat.RGBAh`.
 nonisolated enum ColorAdjustmentKernelSpace {
 

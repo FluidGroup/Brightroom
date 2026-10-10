@@ -12,7 +12,8 @@ import Foundation
 /// matches its input into that space and its result back, so it renders the
 /// same colors through any `CIContext`. Render through a floating-point working
 /// format, such as `CIFormat.RGBAh` or `CIFormat.RGBAf`; an 8-bit format
-/// quantizes the linear components. When Core Image cannot express that match,
+/// clamps the linear components to 0...1 and quantizes them, losing
+/// wide-gamut and extended-range colors. When Core Image cannot express that match,
 /// rendering throws `FeatureEvaluationError.imageCreationFailed`. The feature
 /// does not clip the gamut or choose its position relative to other features;
 /// the containing pipeline owns that order.

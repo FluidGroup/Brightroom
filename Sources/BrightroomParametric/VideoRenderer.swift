@@ -127,7 +127,8 @@ public struct VideoRenderer: Sendable {
   ///   built-in filters compute in linear sRGB, while `ToneCurveFeature` and
   ///   `ColorMixerFeature` compute in extended-linear Display-P3 as they do
   ///   for stills. A context you pass needs a floating-point working format;
-  ///   an 8-bit one quantizes the linear values the features compute on.
+  ///   an 8-bit one clamps the linear values the features compute on to
+  ///   0...1 and quantizes them, losing wide-gamut and extended-range colors.
   public func makeVideoComposition(
     for asset: AVAsset,
     feature: some Feature,

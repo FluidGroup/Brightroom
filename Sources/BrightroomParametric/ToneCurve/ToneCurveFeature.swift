@@ -17,8 +17,9 @@ import os
 /// rendering context's working color space is: the feature matches its input
 /// into that space and its result back, so it renders the same colors through
 /// any `CIContext`. Render through a floating-point working format, such as
-/// `CIFormat.RGBAh`; an 8-bit format quantizes the linear values the curves
-/// read. When Core Image cannot express that match, rendering throws
+/// `CIFormat.RGBAh`; an 8-bit format clamps the linear values the curves
+/// read to 0...1 and quantizes them, losing wide-gamut and extended-range
+/// colors. When Core Image cannot express that match, rendering throws
 /// `FeatureEvaluationError.imageCreationFailed`.
 ///
 /// Equality compares the authored `value`, including interior points on the
