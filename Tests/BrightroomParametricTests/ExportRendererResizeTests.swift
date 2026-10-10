@@ -137,6 +137,26 @@ struct ExportRendererResizeTests {
     #expect(alpha(image.width / 2, image.height / 2) == 255)
   }
 
+  /// `maxPixelSize` is rounded to the nearest whole pixel, so a fractional
+  /// value can be exceeded by half a pixel, and a value below 1, including 0
+  /// and a negative value, gives one pixel.
+  @Test(arguments: [
+    ResizeCase(width: 1000, height: 750, maxPixelSize: 598.6, expectedWidth: 599, expectedHeight: 449),
+    ResizeCase(width: 1000, height: 750, maxPixelSize: 0.4, expectedWidth: 1, expectedHeight: 1),
+    ResizeCase(width: 1000, height: 750, maxPixelSize: 0, expectedWidth: 1, expectedHeight: 1),
+    ResizeCase(width: 1000, height: 750, maxPixelSize: -5, expectedWidth: 1, expectedHeight: 1),
+  ])
+  func `maxPixelSize is rounded to whole pixels, with at least one`(resize: ResizeCase) throws {
+    let image = try ExportRenderer().render(
+      from: Self.makeOpaqueNoise(width: resize.width, height: resize.height),
+      feature: EmptyFeature(),
+      options: .init(resolution: .resize(maxPixelSize: resize.maxPixelSize))
+    ).cgImage
+
+    #expect(image.width == resize.expectedWidth)
+    #expect(image.height == resize.expectedHeight)
+  }
+
   @Test(arguments: [
     ResizeCase(width: 3984, height: 5976, maxPixelSize: 598, expectedWidth: 399, expectedHeight: 598),
     ResizeCase(width: 4000, height: 6, maxPixelSize: 256, expectedWidth: 256, expectedHeight: 1),
@@ -191,7 +211,7 @@ struct ExportRendererResizeTests {
     var expectedHeight: Int
 
     var testDescription: String {
-      "\(Int(width))×\(Int(height)) → \(Int(maxPixelSize))"
+      "\(Int(width))×\(Int(height)) → \(maxPixelSize)"
     }
   }
 

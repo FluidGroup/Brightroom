@@ -91,6 +91,16 @@ struct FeatureTreeNodeTests {
     )
   }
 
+  @Test func `sharpen and unsharp mask radii show their unit`() throws {
+    let sharpen = try #require(FeatureTreeNode.nodes(for: SharpenFeature(intensity: 0.4, radius: .proportional(1.5))).first)
+    #expect(Self.value(of: "Intensity", in: sharpen) == "0.4")
+    #expect(Self.value(of: "Radius", in: sharpen) == "1.5 (proportional)")
+
+    let unsharpMask = try #require(FeatureTreeNode.nodes(for: UnsharpMaskFeature(intensity: 0.5, radius: .absolute(3))).first)
+    #expect(Self.value(of: "Intensity", in: unsharpMask) == "0.5")
+    #expect(Self.value(of: "Radius", in: unsharpMask) == "3 px")
+  }
+
   @Test func `crop fields and type-path ids`() throws {
     let nodes = FeatureTreeNode.nodes(for: TreeDocument())
     let crop = try #require(nodes.last)

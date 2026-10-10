@@ -13,6 +13,11 @@ import BrightroomParametric
 /// the pixels are exactly that region of the whole render. The source is the
 /// chain entry, so a part or a downscaled copy of it is a different chain
 /// entry and evaluates to a different image.
+///
+/// Rendering only a region makes Core Image ask every node for that region
+/// alone. Brightroom's own kernels and its tiled brush-mask processor must
+/// answer such requests with the same pixels as for the whole image, so the
+/// regions cut through a brush stroke and include odd sizes and offsets.
 @Suite("Drawing part of a render")
 struct PartialRenderTests {
 
@@ -27,27 +32,88 @@ struct PartialRenderTests {
     }
   }
 
+  /// Brightroom's own kernels after a crop: the tone curve and color mixer
+  /// kernels, a local adjustment whose brush mask (one tiled
+  /// `CIImageProcessorKernel` node) crosses the regions, and a sharpen.
+  private struct KernelEdit: Feature {
+    var body: some Feature {
+      CropFeature(rect: CGRect(x: 100, y: 60, width: 560, height: 420))
+      RenderingFixtures.makeToneCurve()
+      ColorAdjustmentContextTests.mixer
+      LocalAdjustmentFeature(mask: .brush(PartialRenderTests.stroke)) {
+        ExposureFeature(ev: 1)
+        GaussianBlurFeature(radius: .absolute(6))
+      }
+      SharpenFeature(intensity: 0.8, radius: .proportional(1))
+    }
+  }
+
+  enum EditKind: String, CaseIterable, CustomTestStringConvertible {
+    case coreImage
+    case brightroomKernels
+
+    var testDescription: String { rawValue }
+
+    var feature: any Feature {
+      switch self {
+      case .coreImage: Edit()
+      case .brightroomKernels: KernelEdit()
+      }
+    }
+
+    /// Core Image's built-in filters give the same floats for any region.
+    /// The brush-mask processor draws each tile with the stamp centres moved
+    /// into the tile in `Float`, so a tile at another origin rounds the soft
+    /// edge of a stamp slightly differently: measured up to 3.4e-4 on the
+    /// mask under the exposure, 1.3e-3 through the whole edit. A tile drawn
+    /// at the wrong origin differs by more than 2.
+    var tolerance: Float {
+      switch self {
+      case .coreImage: 0.0001
+      case .brightroomKernels: 0.003
+      }
+    }
+  }
+
+  /// 60 stamps on a diagonal across the 560 × 420 output (y-up), so the
+  /// regions below cut through the stroke.
+  fileprivate static let stroke = BrushMask(strokes: [
+    BrushMask.Stroke(
+      stampCenters: (0..<60).map { index in
+        let progress = CGFloat(index) / 59
+        return CGPoint(x: 20 + 520 * progress, y: 30 + 370 * progress)
+      },
+      brush: BrushMask.Brush(diameter: 60, hardness: 0.6, opacity: 1)
+    ),
+  ])
+
   /// Regions of the 560 × 420 output: one inside, one on its bottom-left
-  /// corner, and one across its top edge.
+  /// corner, one across its top edge, a thin odd-sized one at an odd
+  /// offset, and a small one on the stroke.
   private static let regions: [CGRect] = [
     CGRect(x: 200, y: 150, width: 120, height: 90),
     CGRect(x: 0, y: 0, width: 100, height: 80),
     CGRect(x: 300, y: 380, width: 140, height: 40),
+    CGRect(x: 7, y: 13, width: 37, height: 211),
+    CGRect(x: 250, y: 180, width: 61, height: 47),
   ]
 
-  @Test(arguments: regions)
+  @Test(arguments: EditKind.allCases, regions)
   func `the whole render cropped to a region equals that region of the whole render`(
+    edit: EditKind,
     region: CGRect
   ) throws {
-    let whole = try FeatureRenderer().makeImage(from: Self.source, feature: Edit())
+    let whole = try FeatureRenderer().makeImage(from: Self.source, feature: edit.feature)
     #expect(whole.extent == CGRect(x: 0, y: 0, width: 560, height: 420))
 
     let wholePixels = Self.pixels(of: whole, in: whole.extent)
     let expected = Self.pixels(wholePixels, wholeExtent: whole.extent, region: region)
+    // The host's recipe; rendering with `region` as the bounds is what makes
+    // Core Image compute that region alone.
     let cropped = Self.pixels(of: whole.cropped(to: region), in: region)
 
     let difference = Self.maxDifference(cropped, expected)
-    #expect(difference <= Self.tolerance, "max difference \(difference)")
+    #expect(difference <= edit.tolerance, "max difference \(difference)")
 
     // The edit is visible in the region, so a render that skipped it could
     // not match by accident.
@@ -78,9 +144,6 @@ struct PartialRenderTests {
   }
 
   // MARK: - Helpers
-
-  /// The same recipe rendered twice gives the same floats.
-  private static let tolerance: Float = 0.0001
 
   private static let context = CIContext(options: [
     .workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
