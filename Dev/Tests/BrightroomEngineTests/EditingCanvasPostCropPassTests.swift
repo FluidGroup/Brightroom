@@ -107,6 +107,108 @@ struct EditingCanvasPostCropPassTests {
     )
   }
 
+  /// A crop output placed at a fractional position, as fitting it to the
+  /// view usually does. The pixels along its edges, which the content covers
+  /// in part (or, through Core Image's edge sampling, in full), are vignetted
+  /// like their inner neighbours; a pass over the frame rounded to the
+  /// nearest pixels left a whole edge column or row at the unvignetted
+  /// brightness, a bright line where the export is darkest.
+  ///
+  /// How much of an edge pixel the content covers depends on the drawing
+  /// route, so the edge is checked by how much the pass darkens each pixel
+  /// against the same frame drawn without it, and the fully covered pixels
+  /// against the export recipe.
+  @Test(arguments: Route.allCases)
+  func `The pass reaches the edge pixels of a frame at a fractional position`(route: Route) throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let content = Self.gradientContent()
+    // The content is the crop output (the tool surface), at
+    // (10.85, 1.6, 62, 77.5) points on the 80-point drawable: every edge
+    // falls inside a pixel.
+    let transform = CGAffineTransform(scaleX: 0.31, y: 0.31)
+      .concatenating(.init(translationX: 10.85, y: 1.6))
+    func render(_ effect: AnyImageEffect?) throws -> [UInt8] {
+      let renderer = EditingCanvasRenderer(canvasSize: Self.contentSize, device: device)
+      renderer.setRenderImages(.init(
+        source: content,
+        base: content,
+        adjusted: content,
+        hasGlobalEffects: route == .baseImage,
+        hasLocalEffect: false,
+        usesPreparedBaseImage: route == .baseImage
+      ))
+      renderer.setViewport(.init(visibleContentRect: Self.contentBounds, contentToCanvasTransform: transform))
+      renderer.setPostCrop(effect: effect, frame: Self.contentBounds.applying(transform), chainEntry: Self.contentBounds)
+      return try Self.render(renderer, into: try Self.makeTarget(device: device))
+    }
+    let plain = try render(nil)
+    let rendered = try render(AnyImageEffect(VignetteFeature(value: 2)))
+    // The pass's input extent is the frame rounded outward to whole pixels,
+    // (10, 1, 63, 79) on this 1× drawable, so its centre and radius differ
+    // from the exact frame's by up to half a pixel. The recipe uses that
+    // rectangle, mapped back to content space.
+    let passFrame = CGRect(x: 10, y: 1, width: 63, height: 79)
+    let expected = try Self.renderExpected(
+      content: content,
+      frameInContent: passFrame.applying(transform.inverted()),
+      vignette: 2,
+      transform: transform,
+      device: device
+    )
+
+    let height = Int(Self.viewportSize.height)
+    /// The pixel at canvas (x, y), y-down; texture rows run bottom-up.
+    func at(_ pixels: [UInt8], _ x: Int, _ y: Int) -> [UInt8] {
+      Self.pixel(pixels, (x, height - 1 - y))
+    }
+    /// How much the pass scales the pixel's green (premultiplied) channel.
+    func darkening(_ x: Int, _ y: Int) -> Double {
+      Double(at(rendered, x, y)[1]) / Double(at(plain, x, y)[1])
+    }
+
+    // The outermost drawn pixel of rows and columns away from the corners
+    // (which pixel that is depends on the route's edge sampling), and its
+    // inner neighbour.
+    let width = Int(Self.viewportSize.width)
+    var pairs: [(edge: (Int, Int), inner: (Int, Int))] = []
+    for y in stride(from: 10, through: 70, by: 6) {
+      let drawn = (0..<width).filter { at(plain, $0, y)[3] > 0 }
+      let first = try #require(drawn.first)
+      let last = try #require(drawn.last)
+      pairs.append(((first, y), (first + 1, y)))
+      pairs.append(((last, y), (last - 1, y)))
+    }
+    for x in stride(from: 16, through: 64, by: 6) {
+      let drawn = (0..<height).filter { at(plain, x, $0)[3] > 0 }
+      let first = try #require(drawn.first)
+      let last = try #require(drawn.last)
+      pairs.append(((x, first), (x, first + 1)))
+      pairs.append(((x, last), (x, last - 1)))
+    }
+    for (edge, inner) in pairs {
+      let edgeDarkening = darkening(edge.0, edge.1)
+      let innerDarkening = darkening(inner.0, inner.1)
+      #expect(innerDarkening < 0.8, "the vignette darkens \(inner)")
+      #expect(
+        abs(edgeDarkening - innerDarkening) <= 0.1,
+        "edge \(edge) (alpha \(at(plain, edge.0, edge.1)[3])) is scaled by \(edgeDarkening), its neighbour \(inner) by \(innerDarkening)"
+      )
+    }
+
+    // Fully covered pixels match crop then vignette over the pass's frame.
+    // The recipe vignettes the content before the viewport scales it by
+    // 0.31 and the pass after, and on this 62-point frame a value-2 vignette
+    // changes by a few levels per pixel, so the two sample it a few levels
+    // apart (measured: 4 and 5).
+    var largest = 0
+    for y in 0..<height {
+      for x in 0..<width where at(plain, x, y)[3] == 255 && at(expected, x, y)[3] == 255 {
+        largest = max(largest, zip(at(rendered, x, y), at(expected, x, y)).map { abs(Int($0) - Int($1)) }.max()!)
+      }
+    }
+    #expect(largest <= 6, "covered pixels differ from crop then vignette by \(largest)")
+  }
+
   /// The pass replaces only the frame's pixels: every other pixel, including
   /// the content's fractional edges, is the one drawn without a pass. A
   /// cached frame goes through a half-float texture, which may round a
@@ -331,7 +433,9 @@ struct EditingCanvasPostCropPassTests {
     var image = content
     if let frameInContent {
       let radius = max(frameInContent.width, frameInContent.height) * 0.5
+      // Clamped, so a frame that reaches past the content keeps its size.
       image = content
+        .clampedToExtent()
         .cropped(to: frameInContent)
         .applyingFilter("CIVignetteEffect", parameters: [
           kCIInputCenterKey: CIVector(x: frameInContent.midX, y: frameInContent.midY),

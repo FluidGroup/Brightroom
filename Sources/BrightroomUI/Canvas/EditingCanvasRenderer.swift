@@ -871,10 +871,15 @@ final class EditingCanvasRenderer {
   /// the whole-pixel rectangle of the drawable it replaces, in y-down texture
   /// pixels; nil when there is no pass or the frame is not on the drawable.
   ///
-  /// The frame, rounded to whole pixels, is the effect's input extent, as the
-  /// crop output is at export. The image is clamped first, so a frame that
-  /// extends beyond the drawable (a zoomed-in viewport) keeps its true centre
-  /// and size instead of shrinking to the visible part.
+  /// The frame, rounded outward to whole pixels, is the effect's input
+  /// extent, as the crop output is at export. Rounding outward keeps every
+  /// pixel the crop output touches, including the partly covered pixels
+  /// along an edge placed at a fractional position, inside the pass, so no
+  /// edge row or column is left without the effect; the centre moves by at
+  /// most half a pixel, and each side by less than one. The image is clamped
+  /// first, so a frame that extends beyond the drawable (a zoomed-in
+  /// viewport) keeps its true centre and size instead of shrinking to the
+  /// visible part.
   private func postCropRegion(
     _ image: CIImage,
     frame: Frame,
@@ -898,13 +903,16 @@ final class EditingCanvasRenderer {
     guard exactFrame.isNull == false, exactFrame.isInfinite == false else {
       return nil
     }
-    let minX = exactFrame.minX.rounded()
-    let minY = exactFrame.minY.rounded()
+    // Outward, ignoring the floating-point noise of a frame that the
+    // viewport transform puts on whole pixels.
+    let tolerance: CGFloat = 1.0 / 1024
+    let minX = (exactFrame.minX + tolerance).rounded(.down)
+    let minY = (exactFrame.minY + tolerance).rounded(.down)
     let frameInTexture = CGRect(
       x: minX,
       y: minY,
-      width: exactFrame.maxX.rounded() - minX,
-      height: exactFrame.maxY.rounded() - minY
+      width: (exactFrame.maxX - tolerance).rounded(.up) - minX,
+      height: (exactFrame.maxY - tolerance).rounded(.up) - minY
     )
     let rect = frameInTexture.intersection(renderBounds)
     guard frameInTexture.isEmpty == false, rect.isNull == false, rect.isEmpty == false else {
