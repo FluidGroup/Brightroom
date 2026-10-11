@@ -464,47 +464,20 @@ final class EditingCanvasView: UIView {
     )
 
     scrollEventHandlers: do {
+      // Zooming and scrolling schedule no layout. updateCropLayout() moves
+      // the scroll view to proposedCrop, which a gesture changes only when
+      // its settle records it; a layout scheduled from these events could
+      // run first (a zoom bounce or a rest outside the scroll range keeps
+      // the settle waiting) and move the image back to the crop from before
+      // the gesture. The settle lays out once, right after it records
+      // (didSettleScrollViewAdjustment).
       cropSurface.onDidZoom = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("did-zoom")
-
-        self.debounce.on { [weak self] in
-          guard let self else { return }
-          guard self.isCropEditing else { return }
-          // This trailing debounce runs updateCropLayout(), which snaps the
-          // scroll view back to the not-yet-recorded proposedCrop via
-          // customZoom. It must not fire while the user is still touching the
-          // content, or that snap reverts an in-progress zoom. Two cases:
-          //
-          // 1. A held-still pinch (two fingers down, no movement) stops
-          //    emitting scrollViewDidZoom events; the pinch recognizer is
-          //    still active.
-          // 2. One finger lifts mid-pinch (2→1). UIScrollView keeps the zoom
-          //    and pans with the remaining finger, but the pinch recognizer
-          //    has already ended — so the isInteractiveZoomGestureActive guard
-          //    alone would let this fire and revert the zoom.
-          //
-          // Guard on isTracking (any touch down) to cover both, mirroring the
-          // isTracking guard onDidScroll uses for drags. record() runs from the
-          // settle path once every touch is up, and the pan's own onDidScroll
-          // debounce then re-lays out against the recorded crop.
-          guard self.cropSurface.isInteractiveZoomGestureActive == false else { return }
-          guard self.cropSurface.scrollView.isTracking == false else { return }
-
-          self.updateCropLayout()
-        }
       }
       cropSurface.onDidScroll = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("did-scroll")
-
-        self.debounce.on { [weak self] in
-          guard let self else { return }
-          guard self.isCropEditing else { return }
-          guard self.cropSurface.scrollView.isTracking == false else { return }
-
-          self.updateCropLayout()
-        }
       }
       cropSurface.onWillBeginDragging = { [weak self] in
         guard let self else { return }
@@ -1848,20 +1821,43 @@ extension EditingCanvasView {
     updateScrollViewInset(crop: recordedCrop)
 
     /// Triggers layout update later
-    debounce.on { [weak self] in
-      guard let self else { return }
-      self.updateCropLayout()
-    }
+    scheduleCropLayoutAfterGuideChange(requiresCropEditing: false)
   }
 
   /// The guide went back to its frame from before a resize that a pinch
   /// took over. `willChangeGuideView` dropped any pending layout, so
   /// schedule it again once the fingers lift.
   private func didCancelGuideViewChange() {
+    scheduleCropLayoutAfterGuideChange(requiresCropEditing: true)
+  }
+
+  /// Runs `updateCropLayout()` after `debounce`'s delay, for a change the
+  /// guide made.
+  ///
+  /// The layout moves the crop scroll view to `proposedCrop`. While the
+  /// scroll view moves, or has moved and its settle has not recorded the
+  /// crop yet, that would move the image back to the crop from before the
+  /// gesture. A scroll adjustment waiting to be recorded lays out when it
+  /// settles (`didSettleScrollViewAdjustment`); any other motion defers the
+  /// layout by another delay.
+  private func scheduleCropLayoutAfterGuideChange(requiresCropEditing: Bool) {
     debounce.on { [weak self] in
       guard let self else { return }
-      guard self.isCropEditing else { return }
-      guard self.cropSurface.scrollView.isTracking == false else { return }
+      if requiresCropEditing {
+        guard self.isCropEditing else { return }
+      }
+      guard self.scrollViewAdjustmentSession == nil else { return }
+
+      let scrollView = self.cropSurface.scrollView
+      guard
+        scrollView.isTracking == false,
+        scrollView.isDecelerating == false,
+        scrollView.isZoomBouncing == false,
+        self.cropSurface.isInteractiveZoomGestureActive == false
+      else {
+        self.scheduleCropLayoutAfterGuideChange(requiresCropEditing: requiresCropEditing)
+        return
+      }
 
       self.updateCropLayout()
     }
@@ -2071,21 +2067,39 @@ extension EditingCanvasView {
 
     let recordedCrop = record()
 
+    var restoredBaselineCrop = false
     if
       let baselineCrop = scrollViewAdjustmentSession?.baselineCrop,
       let recordedCrop,
       baselineCrop.isPixelEquivalent(to: recordedCrop)
     {
-      setProposedCrop(baselineCrop)
+      restoredBaselineCrop = updateProposedCrop(baselineCrop)
     }
 
     debugLogScrollViewAdjustment("settle-end")
 
     scrollViewAdjustmentSession = nil
+
+    // The one layout after a scroll gesture, now that proposedCrop is the
+    // crop the gesture left on screen. A guide resize in progress lays out
+    // when it ends.
+    guard
+      isCropEditing || restoredBaselineCrop,
+      guideView.interaction.contains(.resizingGuide) == false
+    else {
+      return
+    }
+    updateCropLayout()
   }
 
+  /// Records the scroll adjustment once the scroll view rests.
+  ///
+  /// A rest outside the scroll range is checked once more, in case UIKit
+  /// is about to bounce it back; if it stays there, it is recorded as it is
+  /// on screen. Waiting longer would leave the adjustment unrecorded until
+  /// the next gesture.
   @inline(__always)
-  private func didChangeScrollView() {
+  private func didChangeScrollView(hasWaitedOutsideScrollRange: Bool = false) {
     debugLogScrollViewAdjustment("settle-scheduled")
 
     scrollViewSettleDebounce.on { [weak self] in
@@ -2093,8 +2107,14 @@ extension EditingCanvasView {
 
       self.debugLogScrollViewAdjustment("settle-check")
 
-      guard self.cropSurface.scrollView.isContentOffsetResting else {
+      let scrollView = self.cropSurface.scrollView
+      guard scrollView.isScrollMotionQuiet else {
         self.didChangeScrollView()
+        return
+      }
+
+      guard scrollView.isContentOffsetInScrollRange || hasWaitedOutsideScrollRange else {
+        self.didChangeScrollView(hasWaitedOutsideScrollRange: true)
         return
       }
 
@@ -2262,16 +2282,20 @@ extension UIScrollView {
   }
 
   fileprivate var isContentOffsetResting: Bool {
-    guard
-      isDragging == false,
-      isTracking == false,
-      isDecelerating == false,
-      isZooming == false,
-      isZoomBouncing == false
-    else {
-      return false
-    }
+    isScrollMotionQuiet && isContentOffsetInScrollRange
+  }
 
+  /// No touch, deceleration, zoom, or zoom bounce is moving the content.
+  fileprivate var isScrollMotionQuiet: Bool {
+    isDragging == false
+      && isTracking == false
+      && isDecelerating == false
+      && isZooming == false
+      && isZoomBouncing == false
+  }
+
+  /// The offset lies within the scroll range, give or take half a point.
+  fileprivate var isContentOffsetInScrollRange: Bool {
     let tolerance: CGFloat = 0.5
     let minContentOffset = self.minContentOffset
     let maxContentOffset = self.maxContentOffset
