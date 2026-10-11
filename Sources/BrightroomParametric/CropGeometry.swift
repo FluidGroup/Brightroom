@@ -177,23 +177,53 @@ package enum CropGeometry {
       return CGRect(x: 0, y: 0, width: 1, height: 1)
     }
 
-    let cosine = abs(CGFloat(cos(straightenRadians)))
-    let sine = abs(CGFloat(sin(straightenRadians)))
-    let sourceWidth = cosine * rect.width + sine * rect.height
-    let sourceHeight = sine * rect.width + cosine * rect.height
+    let sampledSize = sampledSize(of: rect.size, straightenRadians: straightenRadians)
     let epsilon = PixelAlignedCrop.pixelEpsilon
-    if rect.midX - sourceWidth / 2 >= -epsilon,
-      rect.midX + sourceWidth / 2 <= imageSize.width + epsilon,
-      rect.midY - sourceHeight / 2 >= -epsilon,
-      rect.midY + sourceHeight / 2 <= imageSize.height + epsilon
+    if rect.midX - sampledSize.width / 2 >= -epsilon,
+      rect.midX + sampledSize.width / 2 <= imageSize.width + epsilon,
+      rect.midY - sampledSize.height / 2 >= -epsilon,
+      rect.midY + sampledSize.height / 2 <= imageSize.height + epsilon
     {
       return rect
     }
 
-    let scale = min(1, imageSize.width / sourceWidth, imageSize.height / sourceHeight)
+    return translatedIntoBounds(
+      rect: rect,
+      in: imageSize,
+      straightenRadians: straightenRadians
+    )
+  }
+
+  /// Moves `rect` the shortest distance that puts the area it samples inside
+  /// the image, keeping its size.
+  ///
+  /// The sampled area is the bounding box of `rect` straightened about its
+  /// center by `straightenRadians`; with no straighten it is `rect` itself,
+  /// and an edge past the image's edge lands on it. Only a rectangle that
+  /// cannot fit at its size shrinks, uniformly about its center, before it
+  /// moves. Unlike `fittingRect`, this never clips one edge or refits an
+  /// aspect ratio, so the result keeps the proportions of `rect`.
+  package static func translatedIntoBounds(
+    rect: CGRect,
+    in imageSize: CGSize,
+    straightenRadians: Double = 0
+  ) -> CGRect {
+    guard
+      rect.minX.isFinite, rect.minY.isFinite,
+      rect.width.isFinite, rect.height.isFinite,
+      rect.width > 0, rect.height > 0
+    else {
+      return rect
+    }
+
+    let sampledSize = sampledSize(
+      of: rect.size,
+      straightenRadians: straightenRadians.isFinite ? straightenRadians : 0
+    )
+    let scale = min(1, imageSize.width / sampledSize.width, imageSize.height / sampledSize.height)
     let size = CGSize(width: rect.width * scale, height: rect.height * scale)
-    let halfWidth = sourceWidth * scale / 2
-    let halfHeight = sourceHeight * scale / 2
+    let halfWidth = sampledSize.width * scale / 2
+    let halfHeight = sampledSize.height * scale / 2
     let center = CGPoint(
       x: min(max(rect.midX, halfWidth), imageSize.width - halfWidth),
       y: min(max(rect.midY, halfHeight), imageSize.height - halfHeight)
@@ -204,6 +234,17 @@ package enum CropGeometry {
       y: center.y - size.height / 2,
       width: size.width,
       height: size.height
+    )
+  }
+
+  /// The size of the bounding box of a `size` rectangle straightened about
+  /// its center.
+  private static func sampledSize(of size: CGSize, straightenRadians: Double) -> CGSize {
+    let cosine = abs(CGFloat(cos(straightenRadians)))
+    let sine = abs(CGFloat(sin(straightenRadians)))
+    return CGSize(
+      width: cosine * size.width + sine * size.height,
+      height: sine * size.width + cosine * size.height
     )
   }
 

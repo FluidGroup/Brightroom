@@ -64,6 +64,60 @@ struct CropGeometryTests {
     #expect(abs(fitted.width / fitted.height - 1.5) < 1e-8)
   }
 
+  @Test func `Translating into bounds keeps a rect that is inside`() {
+    let rect = CGRect(x: 10, y: 10, width: 50, height: 50)
+    #expect(CropGeometry.translatedIntoBounds(rect: rect, in: imageSize) == rect)
+  }
+
+  @Test func `Translating into bounds moves an overshooting rect onto the edge`() {
+    // A fraction of a pixel past the right edge: moved, not clipped.
+    #expect(
+      CropGeometry.translatedIntoBounds(
+        rect: CGRect(x: 150.1, y: 20, width: 50, height: 30),
+        in: imageSize
+      ) == CGRect(x: 150, y: 20, width: 50, height: 30)
+    )
+    // Past the left and top edges.
+    #expect(
+      CropGeometry.translatedIntoBounds(
+        rect: CGRect(x: -10, y: -5, width: 80, height: 40),
+        in: imageSize
+      ) == CGRect(x: 0, y: 0, width: 80, height: 40)
+    )
+  }
+
+  @Test func `Translating into bounds shrinks a rect larger than the image about its center`() {
+    // 400×160 into 200×100: halved to 200×80 about its center (150, 60),
+    // then moved inside.
+    let result = CropGeometry.translatedIntoBounds(
+      rect: CGRect(x: -50, y: -20, width: 400, height: 160),
+      in: imageSize
+    )
+    #expect(result == CGRect(x: 0, y: 20, width: 200, height: 80))
+  }
+
+  @Test func `Translating a straightened rect into bounds moves its sampled area onto the edge`() {
+    let sourceSize = CGSize(width: 300, height: 200)
+    let radians = 4 * Double.pi / 180
+    let rect = CGRect(x: 220, y: 40, width: 100, height: 60)
+
+    let result = CropGeometry.translatedIntoBounds(
+      rect: rect,
+      in: sourceSize,
+      straightenRadians: radians
+    )
+
+    let cosine = abs(CGFloat(cos(radians)))
+    let sine = abs(CGFloat(sin(radians)))
+    let sampledWidth = cosine * result.width + sine * result.height
+    let sampledHeight = sine * result.width + cosine * result.height
+    #expect(result.size == rect.size)
+    #expect(abs(result.midX + sampledWidth / 2 - sourceSize.width) < 1e-9)
+    #expect(result.midY == rect.midY)
+    #expect(result.midY - sampledHeight / 2 >= 0)
+    #expect(result.midY + sampledHeight / 2 <= sourceSize.height)
+  }
+
   @Test func `Fitting rect clamps to image bounds`() {
     let result = CropGeometry.fittingRect(
       rect: .init(x: -10, y: -10, width: 250, height: 150),
