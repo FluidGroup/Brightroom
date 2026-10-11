@@ -2,13 +2,14 @@ import Foundation
 
 /// Runs only the last handler it receives, `interval` seconds after it
 /// arrives; a newer handler replaces a pending one.
+///
+/// A handler may schedule the next run: the debouncer lets go of the timer
+/// that fired before it runs the handler.
 final class Debouncer {
   private var timerReference: DispatchSourceTimer?
 
   let interval: TimeInterval
   let queue: DispatchQueue
-
-  private var lastSendTime: Date?
 
   init(interval: TimeInterval, queue: DispatchQueue = .main) {
     self.interval = interval
@@ -24,10 +25,9 @@ final class Debouncer {
     timer.schedule(deadline: deadline)
 
     timer.setEventHandler(handler: { [weak timer, weak self] in
-      self?.lastSendTime = nil
-      handler()
       timer?.cancel()
       self?.timerReference = nil
+      handler()
     })
     timer.resume()
 
