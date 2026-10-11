@@ -59,6 +59,27 @@ struct CropGuideStateAspectRatioTests {
     #expect(selection.hasAspectRatio(AspectRatio(width: 1, height: 0)) == false)
   }
 
+  // MARK: - aspectRatioLock
+
+  /// A lock follows the output's turn, as a quarter turn in the canvas
+  /// turns it, unless the output already has the lock as it is.
+  @Test func `A lock turns with a selection whose output turned, unless the output has it`() {
+    let landscape = AspectRatio(width: 4, height: 3)
+    // Output 3:4 (selection 4:3): what turning a 4:3-locked crop produces.
+    let turned = state(CGRect(x: 0, y: 0, width: 200, height: 150), rotation: .counterclockwise90)
+    #expect(turned.aspectRatioLock(landscape, replacingSideways: false) == landscape.swapped())
+    // Output 4:3 (selection 3:4): the output already has the lock.
+    let turnedWithLock = state(CGRect(x: 0, y: 0, width: 150, height: 200), rotation: .counterclockwise90)
+    #expect(turnedWithLock.aspectRatioLock(landscape, replacingSideways: false) == landscape)
+    // Neither: the lock turns with the output, as before.
+    let turnedWithNeither = state(CGRect(x: 0, y: 0, width: 200, height: 100), rotation: .counterclockwise90)
+    #expect(turnedWithNeither.aspectRatioLock(landscape, replacingSideways: false) == landscape.swapped())
+    // Same orientation as the replaced selection: the lock is kept.
+    let unturned = state(CGRect(x: 0, y: 0, width: 150, height: 200))
+    #expect(unturned.aspectRatioLock(landscape, replacingSideways: false) == landscape)
+    #expect(turned.aspectRatioLock(landscape.swapped(), replacingSideways: true) == landscape.swapped())
+  }
+
   // MARK: - adoptAspectRatio
 
   @Test func `Adopting a ratio the selection has keeps it and starts the session`() {

@@ -172,6 +172,21 @@ struct CropGuideState: Equatable, Sendable {
     return mismatch < 2 * max(1, ratio)
   }
 
+  /// The aspect-ratio lock this selection takes when it replaces one whose
+  /// output was turned sideways or not (`replacedSideways`) under `lock`.
+  ///
+  /// A lock describes the output, so it turns with the output, as in
+  /// `updateRotation(to:)`: a selection whose output turned the other way
+  /// takes the swapped lock. A selection whose output already has `lock`
+  /// keeps it unturned, so the selection is kept rather than fitted to the
+  /// swapped ratio.
+  func aspectRatioLock(_ lock: AspectRatio, replacingSideways replacedSideways: Bool) -> AspectRatio {
+    guard rotation.isSideways != replacedSideways, hasAspectRatio(lock) == false else {
+      return lock
+    }
+    return lock.swapped()
+  }
+
   /// Starts an aspect-ratio session for a selection that was loaded rather
   /// than drawn under the lock (an undo, a reopened editor, a lock applied
   /// after loading). A selection that already has the ratio is kept as it

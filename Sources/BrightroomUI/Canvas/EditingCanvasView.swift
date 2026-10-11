@@ -614,7 +614,8 @@ final class EditingCanvasView: UIView {
   ///
   /// When its crop differs from the crop EditingCanvasView holds (for example after an
   /// undo), the crop state reloads under the active aspect-ratio lock, which
-  /// first turns with the reloaded crop's output orientation. A reloaded crop
+  /// first turns with the reloaded crop's output orientation unless that
+  /// output already has the lock as it is. A reloaded crop
   /// that already has the locked ratio keeps its position and size; one that
   /// does not is fitted inside its own rectangle, not at the image center. A
   /// feature EditingCanvasView changed itself comes back equal and only refreshes the
@@ -635,11 +636,12 @@ final class EditingCanvasView: UIView {
 
     if cropChanged, let current = state.proposedCrop {
       var crop = CropGuideState(cropFeature: feature.crop, imageSize: source.imageSize)
-      if var ratio = state.lockedAspectRatio {
+      if let lock = state.lockedAspectRatio {
         // The lock describes the output, so it turns with the reloaded crop's
-        // output orientation, as it does in `setQuarterTurn(_:)`.
-        if crop.rotation.isSideways != current.rotation.isSideways {
-          ratio = ratio.swapped()
+        // output orientation, as it does in `setQuarterTurn(_:)`, unless the
+        // reloaded output already has the lock as it is.
+        let ratio = crop.aspectRatioLock(lock, replacingSideways: current.rotation.isSideways)
+        if ratio != lock {
           state.lockedAspectRatio = ratio
           guideView.setLockedAspectRatio(ratio)
         }

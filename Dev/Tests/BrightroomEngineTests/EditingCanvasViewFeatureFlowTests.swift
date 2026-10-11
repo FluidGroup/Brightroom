@@ -425,6 +425,29 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.count == emittedCount)
   }
 
+  /// An undo to a sideways crop whose output already has the locked ratio
+  /// keeps the lock as it is, instead of turning it and fitting the swapped
+  /// ratio inside the selection; Done writes nothing over the undo.
+  @Test func `A reloaded sideways crop whose output has the lock keeps the lock and its place`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    let landscape = AspectRatio(width: 4, height: 3)
+    harness.canvasView.setLockedAspectRatio(landscape)
+    harness.canvasView.applyPendingCrop()
+
+    // A 4:3 output: the selection before the turn is 3:4, at the top left.
+    let topLeftSelection = CGRect(x: 0, y: 0, width: 150, height: 200)
+    let undone = makeFeature(topLeftRect: topLeftSelection, quarterTurn: .counterclockwise90)
+    harness.box.owned = undone
+    harness.canvasView.setFeature(undone)
+
+    #expect(harness.guides.last?.lockedAspectRatio == landscape)
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSelection)
+    #expect(harness.canvasView.proposedCrop?._usedAspectRatio == landscape)
+    let emittedCount = harness.emitted.count
+    harness.canvasView.applyPendingCrop()
+    #expect(harness.emitted.count == emittedCount, "Done does not overwrite the undo")
+  }
+
   /// A straightened crop of the locked ratio keeps its place as well.
   @Test func `A reloaded straightened crop that has the locked ratio keeps its place`() throws {
     let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
