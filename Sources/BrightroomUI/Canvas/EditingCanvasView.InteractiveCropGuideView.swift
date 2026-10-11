@@ -40,12 +40,86 @@ extension EditingCanvasView {
       bounds.insetBy(dx: -horizontal, dy: -vertical).contains(point)
     }
   }
+
+  /// The pan on one of the guide's handles: a one-finger gesture.
+  ///
+  /// It counts every touch down in the window, not only its own: the other
+  /// finger of a pinch usually lands on the crop scroll view, outside the
+  /// handle. Once a second finger is down the pan never starts a resize, and
+  /// a resize in progress hands the gesture over through `onAdditionalTouch`.
+  class HandlePanGestureRecognizer: UIPanGestureRecognizer {
+
+    /// Touches down in the window in the latest event this pan received,
+    /// its own included.
+    private(set) var activeTouchCount = 0
+
+    /// Called when a second finger lands while this pan resizes the guide,
+    /// just before the pan cancels itself.
+    var onAdditionalTouch: () -> Void = {}
+
+    override func reset() {
+      super.reset()
+      activeTouchCount = 0
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+      noteActiveTouchCount(Self.activeTouchCount(in: event))
+      super.touchesBegan(touches, with: event)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+      // Before super, which asks the delegate whether the pan may begin.
+      noteActiveTouchCount(Self.activeTouchCount(in: event))
+      super.touchesMoved(touches, with: event)
+    }
+
+    /// Applies the touch count of the latest event: with more than one
+    /// finger down, a pan that has not begun fails, and a resize in progress
+    /// is handed to `onAdditionalTouch` and cancelled.
+    func noteActiveTouchCount(_ count: Int) {
+      activeTouchCount = count
+      guard count > 1 else {
+        return
+      }
+      switch state {
+      case .possible:
+        state = .failed
+      case .began, .changed:
+        onAdditionalTouch()
+        state = .cancelled
+      case .ended, .cancelled, .failed:
+        break
+      @unknown default:
+        break
+      }
+    }
+
+    private static func activeTouchCount(in event: UIEvent) -> Int {
+      event.allTouches?.count { touch in
+        touch.phase != .ended && touch.phase != .cancelled
+      } ?? 0
+    }
+  }
   
   final class InteractiveCropGuideView: CodeBasedView, UIGestureRecognizerDelegate {
 
     var willChange: () -> Void = {}
     var updating: () -> Void = {}
     var didChange: () -> Void = {}
+    /// Called when a resize ends without a change: the guide is back at its
+    /// frame from before the drag and nothing is recorded.
+    var didCancelChange: () -> Void = {}
+
+    /// The crop scroll view's pinch. While it zooms, the handles never start
+    /// a resize, and a handle pan lets it recognize alongside (both can
+    /// track the finger on a handle, since the canvas carries the pinch).
+    weak var imageZoomGestureRecognizer: UIGestureRecognizer?
+
+    /// The pans on the guide's corners and edges.
+    private(set) var handlePanGestureRecognizers: [HandlePanGestureRecognizer] = []
+
+    /// The guide's frame when the resize in progress began.
+    private var frameBeforeResizing: CGRect?
 
     /// Receives `interaction` each time it changes.
     var didUpdateInteraction: (CropInteraction) -> Void = { _ in }
@@ -89,7 +163,7 @@ extension EditingCanvasView {
 
       super.init(frame: .zero)
 
-      [
+      let handleViews = [
         topLeftControlPointView,
         topRightControlPointView,
         bottomLeftControlPointView,
@@ -99,14 +173,15 @@ extension EditingCanvasView {
         rightControlPointView,
         leftControlPointView,
         bottomControlPointView,
-      ].forEach { view in
+      ]
+      handleViews.forEach { view in
         view.translatesAutoresizingMaskIntoConstraints = false
         addSubview(view)
       }
 
       cornerGestures: do {
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInTopLeft(gesture:))
           )
@@ -115,7 +190,7 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInTopRight(gesture:))
           )
@@ -124,7 +199,7 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInBottomLeft(gesture:))
           )
@@ -133,7 +208,7 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInBottomRight(gesture:))
           )
@@ -144,7 +219,7 @@ extension EditingCanvasView {
 
       edgeGestures: do {
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInTop(gesture:))
           )
@@ -153,7 +228,7 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInRight(gesture:))
           )
@@ -162,7 +237,7 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInLeft(gesture:))
           )
@@ -171,12 +246,21 @@ extension EditingCanvasView {
         }
 
         do {
-          let panGesture = UIPanGestureRecognizer(
+          let panGesture = HandlePanGestureRecognizer(
             target: self,
             action: #selector(handlePanGestureInBottom(gesture:))
           )
           panGesture.delegate = self
           bottomControlPointView.addGestureRecognizer(panGesture)
+        }
+      }
+
+      handlePanGestureRecognizers = handleViews
+        .flatMap { $0.gestureRecognizers ?? [] }
+        .compactMap { $0 as? HandlePanGestureRecognizer }
+      for panGesture in handlePanGestureRecognizers {
+        panGesture.onAdditionalTouch = { [unowned self] in
+          self.abandonResizing()
         }
       }
 
@@ -372,6 +456,7 @@ extension EditingCanvasView {
     private func onGestureTrackingStarted() {
 
       isTracking = true
+      frameBeforeResizing = frame
 
       translatesAutoresizingMaskIntoConstraints = false
 
@@ -386,12 +471,53 @@ extension EditingCanvasView {
     }
 
     private func onGestureTrackingEnded() {
+      // A resize abandoned for a pinch has already put the guide back.
+      guard isTracking else {
+        return
+      }
 
       isTracking = false
+      frameBeforeResizing = nil
 
       deactivateAllConstraints()
       didChange()
       removeInteraction(.resizingGuide)
+    }
+
+    /// Ends the resize in progress without recording it, because the image
+    /// started to zoom: the guide goes back to its frame from before the
+    /// drag, and the handle's pan is cancelled.
+    func cancelResizing() {
+      guard abandonResizing() else {
+        return
+      }
+      for panGesture in handlePanGestureRecognizers
+      where panGesture.state == .began || panGesture.state == .changed {
+        // Disabling a recognizer cancels its gesture.
+        panGesture.isEnabled = false
+        panGesture.isEnabled = true
+      }
+    }
+
+    /// Puts the guide back at its frame from before the resize in progress
+    /// and ends the resize without `didChange`. The pan's own end that
+    /// follows is ignored. Returns false when no resize is in progress.
+    @discardableResult
+    private func abandonResizing() -> Bool {
+      guard isTracking, let frameBeforeResizing else {
+        return false
+      }
+
+      isTracking = false
+      self.frameBeforeResizing = nil
+
+      deactivateAllConstraints()
+      frame = frameBeforeResizing
+      setNeedsLayout()
+      layoutIfNeeded()
+      didCancelChange()
+      removeInteraction(.resizingGuide)
+      return true
     }
 
     private var widthConstraint: NSLayoutConstraint!
@@ -561,7 +687,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -604,7 +730,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -647,7 +773,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -689,7 +815,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -732,7 +858,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -778,7 +904,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -823,7 +949,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -869,7 +995,7 @@ extension EditingCanvasView {
     }
 
     @objc
-    private func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
+    func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
       assert(containerView == superview)
 
       switch gesture.state {
@@ -914,7 +1040,39 @@ extension EditingCanvasView {
     }
 
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-      return isTracking == false
+      guard let handlePan = gestureRecognizer as? HandlePanGestureRecognizer else {
+        // Another view's recognizer, such as the crop pinch the canvas
+        // carries: the guide decides only for its handles.
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+      }
+      guard isTracking == false else {
+        return false
+      }
+      // A pinch near the guide must zoom, not resize it.
+      guard handlePan.activeTouchCount <= 1 else {
+        return false
+      }
+      switch imageZoomGestureRecognizer?.state {
+      case .began, .changed:
+        return false
+      case .possible, .ended, .cancelled, .failed, .none:
+        return true
+      @unknown default:
+        return true
+      }
+    }
+
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      // The pinch tracks the finger on a handle too. Recognizing alongside
+      // keeps it possible while that finger drags a handle, so a second
+      // finger can still turn the gesture into a zoom.
+      guard let imageZoomGestureRecognizer else {
+        return false
+      }
+      return otherGestureRecognizer === imageZoomGestureRecognizer
     }
 
   }

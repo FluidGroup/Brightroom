@@ -311,6 +311,10 @@ final class EditingCanvasView: UIView {
 
   private var scrollViewAdjustmentSession: ScrollViewAdjustmentSession?
 
+  /// The crop scroll view's pinch, carried on this view so that a finger on
+  /// a guide handle counts toward it (see `adoptCropPinchGestureRecognizer`).
+  private(set) var adoptedCropPinchGestureRecognizer: UIGestureRecognizer?
+
   /// The crop scroll view's gestures in progress, from their begin callback
   /// to their end (a flicked drag ends when its deceleration ends). The guide
   /// reports `.movingImage` while any is in progress.
@@ -511,6 +515,9 @@ final class EditingCanvasView: UIView {
       cropSurface.onWillBeginZooming = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-begin")
+        // A pinch whose first finger started dragging a guide handle zooms;
+        // the resize it began is dropped.
+        self.guideView.cancelResizing()
         self.beginScrollViewAdjustment(.zoom)
         self.imageMovingGestures.insert(.zoom)
       }
@@ -567,6 +574,11 @@ final class EditingCanvasView: UIView {
     guideView.didChange = { [weak self] in
       guard let self = self else { return }
       self.didChangeGuideViewWithDelay()
+    }
+
+    guideView.didCancelChange = { [weak self] in
+      guard let self = self else { return }
+      self.didCancelGuideViewChange()
     }
 
     guideView.didUpdateInteraction = { [weak self] interaction in
@@ -1503,6 +1515,8 @@ extension EditingCanvasView {
             cropSurface.scrollView.maximumZoomScale = scale
           }
 
+          adoptCropPinchGestureRecognizer()
+
           updateToolScrollGeometry(crop: crop)
 
         }
@@ -1837,6 +1851,54 @@ extension EditingCanvasView {
     debounce.on { [weak self] in
       guard let self else { return }
       self.updateCropLayout()
+    }
+  }
+
+  /// The guide went back to its frame from before a resize that a pinch
+  /// took over. `willChangeGuideView` dropped any pending layout, so
+  /// schedule it again once the fingers lift.
+  private func didCancelGuideViewChange() {
+    debounce.on { [weak self] in
+      guard let self else { return }
+      guard self.isCropEditing else { return }
+      guard self.cropSurface.scrollView.isTracking == false else { return }
+
+      self.updateCropLayout()
+    }
+  }
+
+  /// Carries the crop scroll view's pinch on this view instead of on the
+  /// scroll view.
+  ///
+  /// A touch reaches only the recognizers of the view it lands on and that
+  /// view's ancestors. The guide's handles sit beside the scroll view, so a
+  /// pinch finger that lands within a handle's 16 pt reach used to be
+  /// invisible to the pinch: the handle resized the guide while the other
+  /// finger panned the image. On this view, the common ancestor, the pinch
+  /// tracks both fingers, and the handles yield to it. The scroll view still
+  /// handles the pinch (its target and delegate are unchanged), so zooming,
+  /// bouncing, and the zoom callbacks behave as before.
+  ///
+  /// UIScrollView drops its pinch while the minimum and maximum zoom scales
+  /// are equal and creates a new one when they differ again, so this runs
+  /// after every zoom-scale write: it removes a dropped pinch and adopts the
+  /// new one, enabled only while the crop is the editing target, as
+  /// `CropSurface.applyMode(isActive:)` does.
+  private func adoptCropPinchGestureRecognizer() {
+    let pinch = cropSurface.scrollView.pinchGestureRecognizer
+    guard pinch !== adoptedCropPinchGestureRecognizer else {
+      return
+    }
+
+    if let dropped = adoptedCropPinchGestureRecognizer {
+      removeGestureRecognizer(dropped)
+    }
+    adoptedCropPinchGestureRecognizer = pinch
+    guideView.imageZoomGestureRecognizer = pinch
+
+    if let pinch {
+      pinch.isEnabled = isCropEditing
+      addGestureRecognizer(pinch)
     }
   }
 
