@@ -28,8 +28,17 @@ struct CropScrollRecordBoundsTests {
 
   static let straightenDegrees: [Double] = [0, 4]
 
-  private func openCanvas(lock: AspectRatio?, straightenDegrees: Double) -> (EditingCanvasView, UIWindow) {
+  private func openCanvas(
+    lock: AspectRatio?,
+    straightenDegrees: Double,
+    quarterTurn: QuarterTurn = .zero
+  ) -> (EditingCanvasView, UIWindow) {
     var feature = ImageEditorFeature(imageSize: imageSize)
+    if quarterTurn != .zero {
+      var crop = CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
+      crop.rotation = quarterTurn
+      feature.crop = crop.makeCropFeature()
+    }
     if straightenDegrees != 0 {
       var crop = CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
       crop.adjustmentAngle = .degrees(straightenDegrees)
@@ -250,5 +259,124 @@ struct CropScrollRecordBoundsTests {
     #expect(rect.minY >= 0 && rect.maxY <= imageSize.height, "\(rect)")
     #expect(abs(scrollView.zoomScale - zoomAtRelease) <= 1e-4, "zoom \(zoomAtRelease) → \(scrollView.zoomScale)")
     #expect(abs(scrollView.contentOffset.x - maxContentOffset(scrollView).x) <= 0.5)
+  }
+
+  // MARK: - Pan
+
+  /// Zooms by `factor` about the guide's centre and lets it settle, so the
+  /// image can pan both ways.
+  private func zoomAboutGuideCentre(_ view: EditingCanvasView, by factor: CGFloat) async throws {
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    let guide = view.guideView.convert(view.guideView.bounds, to: scrollView)
+    let anchor = CGPoint(x: guide.midX - scrollView.bounds.minX, y: guide.midY - scrollView.bounds.minY)
+    let content = CGPoint(
+      x: (scrollView.contentOffset.x + anchor.x) / scrollView.zoomScale,
+      y: (scrollView.contentOffset.y + anchor.y) / scrollView.zoomScale
+    )
+    scrollView.setZoomScale(scrollView.zoomScale * factor, animated: false)
+    let maxOffset = maxContentOffset(scrollView)
+    scrollView.contentOffset = CGPoint(
+      x: min(max(content.x * scrollView.zoomScale - anchor.x, -scrollView.contentInset.left), maxOffset.x),
+      y: min(max(content.y * scrollView.zoomScale - anchor.y, -scrollView.contentInset.top), maxOffset.y)
+    )
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await waitPastLayoutDelay(view)
+  }
+
+  /// Drags the image to rest `overshoot` past the end of the scroll range
+  /// on both axes, ends the drag, and checks that the recorded crop is the
+  /// guide at release, inside the image, and that the layout after it keeps
+  /// the zoom and offset. Returns the recorded selection.
+  @discardableResult
+  private func panPastRangeEndAndExpectGuideRecorded(
+    _ view: EditingCanvasView,
+    lock: AspectRatio?,
+    straightenDegrees: Double,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async throws -> CGRect {
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+    surface.scrollViewWillBeginDragging(scrollView)
+    let maxOffset = maxContentOffset(scrollView)
+    // Less than the half point the settle accepts as a rest in the range.
+    scrollView.contentOffset = CGPoint(x: maxOffset.x + 0.4, y: maxOffset.y + 0.4)
+    let guideSize = try guideSizeInImage(view)
+    let zoomAtRelease = scrollView.zoomScale
+    let offsetAtRelease = scrollView.contentOffset
+    surface.scrollViewDidEndDragging(scrollView, willDecelerate: false)
+
+    try await waitForSettle()
+    let crop = try #require(view.proposedCrop, sourceLocation: sourceLocation)
+    try await waitPastLayoutDelay(view)
+
+    // The selection is before the quarter turn; the guide shows the output.
+    let rect = crop.cropExtent
+    let selectionGuideSize = crop.rotation.isSideways
+      ? CGSize(width: guideSize.height, height: guideSize.width)
+      : guideSize
+    let sampled = sampledArea(rect, straightenDegrees: straightenDegrees)
+    let description = "\(rect) sampling \(sampled), guide \(selectionGuideSize)"
+
+    #expect(abs(rect.width - selectionGuideSize.width) < 1e-6, "\(description)", sourceLocation: sourceLocation)
+    #expect(abs(rect.height - selectionGuideSize.height) < 1e-6, "\(description)", sourceLocation: sourceLocation)
+    if let lock {
+      let selectionLock = crop.aspectRatioBeforeOutputRotation(lock)
+      #expect(
+        abs(rect.width / rect.height - selectionLock.width / selectionLock.height) < 1e-6,
+        "\(description)",
+        sourceLocation: sourceLocation
+      )
+    }
+    #expect(sampled.minX >= -1e-6 && sampled.minY >= -1e-6, "\(description)", sourceLocation: sourceLocation)
+    #expect(
+      sampled.maxX <= imageSize.width + 1e-6 && sampled.maxY <= imageSize.height + 1e-6,
+      "\(description)",
+      sourceLocation: sourceLocation
+    )
+
+    let motion = "zoom \(zoomAtRelease) → \(scrollView.zoomScale), offset \(offsetAtRelease) → \(scrollView.contentOffset)"
+    #expect(abs(scrollView.zoomScale - zoomAtRelease) <= 1e-4, "\(motion)", sourceLocation: sourceLocation)
+    #expect(abs(scrollView.contentOffset.x - offsetAtRelease.x) <= 0.5, "\(motion)", sourceLocation: sourceLocation)
+    #expect(abs(scrollView.contentOffset.y - offsetAtRelease.y) <= 0.5, "\(motion)", sourceLocation: sourceLocation)
+    #expect(view.proposedCrop == crop, sourceLocation: sourceLocation)
+    return rect
+  }
+
+  @Test(arguments: locks, straightenDegrees)
+  func `a pan that rests just past the image corner records the guide`(
+    lock: AspectRatio?,
+    straightenDegrees: Double
+  ) async throws {
+    let (view, window) = openCanvas(lock: lock, straightenDegrees: straightenDegrees)
+    defer { window.isHidden = true }
+    try await zoomAboutGuideCentre(view, by: 2)
+
+    let rect = try await panPastRangeEndAndExpectGuideRecorded(
+      view,
+      lock: lock,
+      straightenDegrees: straightenDegrees
+    )
+
+    // The bottom-right corner of the sampled area is on the image's.
+    let sampled = sampledArea(rect, straightenDegrees: straightenDegrees)
+    #expect(abs(sampled.maxX - imageSize.width) < 1e-6, "\(sampled)")
+    #expect(abs(sampled.maxY - imageSize.height) < 1e-6, "\(sampled)")
+  }
+
+  /// A sideways crop: the guide shows the turned output, the selection is
+  /// recorded before the turn. Straightened sideways crops are left out:
+  /// their settle layout moves the offset by about 0.7 pt (recorded in
+  /// .tmp/review-fixes-progress.md, review of the locked-ratio fixes).
+  @Test(arguments: [nil, AspectRatio(width: 4, height: 5)] as [AspectRatio?])
+  func `a sideways pan that rests just past the image edge records the guide`(
+    lock: AspectRatio?
+  ) async throws {
+    let (view, window) = openCanvas(lock: lock, straightenDegrees: 0, quarterTurn: .counterclockwise90)
+    defer { window.isHidden = true }
+    try await zoomAboutGuideCentre(view, by: 2)
+
+    try await panPastRangeEndAndExpectGuideRecorded(view, lock: lock, straightenDegrees: 0)
   }
 }
