@@ -1898,8 +1898,19 @@ extension EditingCanvasView {
     }
   }
 
+  /// How `record()` brings the selection measured on screen inside the
+  /// image.
+  private enum CropRecordingBounds {
+    /// Clip to the image, and fit the locked ratio inside what remains: the
+    /// guide itself changed (a resize or a straighten).
+    case clipping
+    /// Keep the guide's size and ratio, and move it inside the image: the
+    /// image moved under the guide (a zoom or a pan).
+    case translating
+  }
+
   @discardableResult
-  private func record() -> CropGuideState? {
+  private func record(bounds: CropRecordingBounds = .clipping) -> CropGuideState? {
 
     // Crop recording only applies while the crop is the editing target. In
     // the other targets the scroll view is a free pan/zoom viewport and must
@@ -1957,10 +1968,19 @@ extension EditingCanvasView {
       convertedCropExtent,
       currentCrop: crop
     )
-    let resolvedRect = cropExtentRespectingLockedAspectRatio(
-      normalizedCropExtent,
-      currentCrop: crop
-    )
+    let resolvedRect: CGRect
+    switch bounds {
+    case .clipping:
+      resolvedRect = cropExtentRespectingLockedAspectRatio(
+        normalizedCropExtent,
+        currentCrop: crop
+      )
+    case .translating:
+      resolvedRect = cropExtentTranslatedIntoImage(
+        normalizedCropExtent,
+        currentCrop: crop
+      )
+    }
     debugLogRecordedCropExtent(
       source: scrollViewAdjustmentKind,
       normalizedRect: normalizedCropExtent,
@@ -1992,6 +2012,41 @@ extension EditingCanvasView {
       return cropExtent
     }
     return boundedCropExtent
+  }
+
+  /// The guide after a zoom or a pan, moved inside the image.
+  ///
+  /// The image moved under the guide, so the guide's size on screen is the
+  /// crop's size. UIKit rounds the scroll view's offset to device pixels, so
+  /// a guide resting against the image edge can sit a fraction of a point
+  /// past it, and a rest the scroll view does not bounce back can sit
+  /// further. Clipping that and fitting the locked ratio again about the
+  /// centre would shrink the crop on both axes and move the opposite edges,
+  /// and the layout after the settle would zoom to that smaller crop. Moving
+  /// it keeps the size and the ratio, and puts the edge on the image edge.
+  /// Without a lock, the crop is moved the same way, so it never extends past
+  /// the image.
+  private func cropExtentTranslatedIntoImage(
+    _ cropExtent: CGRect,
+    currentCrop: CropGuideState
+  ) -> CGRect {
+    var rect = cropExtent
+    if let lockedAspectRatio = state.lockedAspectRatio {
+      // The guide is laid out with the locked ratio, so this changes nothing
+      // beyond rounding, except for a loaded crop kept within rounding of the
+      // ratio (`CropGuideState.hasAspectRatio(_:)`), which it makes exact.
+      rect = currentCrop.aspectRatioBeforeOutputRotation(lockedAspectRatio).rectThatFits(in: rect)
+    }
+
+    let translated = CropGeometry.translatedIntoBounds(
+      rect: rect,
+      in: currentCrop.imageSize,
+      straightenRadians: currentCrop.adjustmentAngle.radians
+    )
+    guard translated.isNull == false, translated.isEmpty == false else {
+      return cropExtent
+    }
+    return translated
   }
 
   private func normalizedCropExtentForScrollViewRecording(
@@ -2065,7 +2120,7 @@ extension EditingCanvasView {
   private func didSettleScrollViewAdjustment() {
     debugLogScrollViewAdjustment("settle-begin")
 
-    let recordedCrop = record()
+    let recordedCrop = record(bounds: .translating)
 
     var restoredBaselineCrop = false
     if
@@ -2095,9 +2150,10 @@ extension EditingCanvasView {
   /// Records the scroll adjustment once the scroll view rests.
   ///
   /// A rest outside the scroll range is checked once more, in case UIKit
-  /// is about to bounce it back; if it stays there, it is recorded as it is
-  /// on screen. Waiting longer would leave the adjustment unrecorded until
-  /// the next gesture.
+  /// is about to bounce it back; if it stays there, the guide is recorded
+  /// with its size and moved inside the image, and the layout after it moves
+  /// the image back under the guide. Waiting longer would leave the
+  /// adjustment unrecorded until the next gesture.
   @inline(__always)
   private func didChangeScrollView(hasWaitedOutsideScrollRange: Bool = false) {
     debugLogScrollViewAdjustment("settle-scheduled")
