@@ -76,10 +76,31 @@ struct ImageEditorContent: View {
 
     switch options.aspectRatioPolicy {
     case .fixed(let aspectRatio):
-      self._aspectRatioSelection = State(initialValue: .ratio(aspectRatio))
+      self._aspectRatioSelection = State(
+        initialValue: .ratio(
+          Self.fixedAspectRatioLock(aspectRatio, for: document.wrappedValue)
+        )
+      )
     case .selectable, .freeform:
       self._aspectRatioSelection = State(initialValue: .freeform)
     }
+  }
+
+  /// The lock a `.fixed(aspectRatio)` editor starts with for `document`.
+  ///
+  /// `aspectRatio` describes the output before a quarter turn: the canvas
+  /// turns the lock with the output, so a crop the user turned sideways in
+  /// an earlier session was saved with the turned ratio. A sideways crop
+  /// therefore starts with the turned lock, as the session ended, and is
+  /// kept instead of being fitted to the unturned ratio, unless its output
+  /// already has `aspectRatio` as it is. An unturned crop starts with
+  /// `aspectRatio`.
+  static func fixedAspectRatioLock(
+    _ aspectRatio: AspectRatio,
+    for document: ImageEditorDocument
+  ) -> AspectRatio {
+    CropGuideState(cropFeature: document.feature.crop, imageSize: document.source.pixelSize)
+      .aspectRatioLock(aspectRatio, replacingSideways: false)
   }
 
   var body: some View {

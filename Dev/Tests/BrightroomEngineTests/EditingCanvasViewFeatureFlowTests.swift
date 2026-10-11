@@ -448,6 +448,57 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.count == emittedCount, "Done does not overwrite the undo")
   }
 
+  /// A `.fixed(4:3)` editor whose user turned the output sideways saved a
+  /// crop with a 3:4 output (the canvas turned the lock with it). Reopened
+  /// under `.fixed(4:3)`, the editor starts with the turned lock, so the
+  /// crop is kept and nothing is written.
+  @Test func `A reopened fixed editor keeps a crop turned sideways in an earlier session`() throws {
+    let landscape = AspectRatio(width: 4, height: 3)
+    let topLeftSelection = CGRect(x: 0, y: 0, width: 200, height: 150)
+    let saved = makeFeature(topLeftRect: topLeftSelection, quarterTurn: .counterclockwise90)
+    let pixels = try #require(
+      CGContext(
+        data: nil, width: Int(imageSize.width), height: Int(imageSize.height), bitsPerComponent: 8,
+        bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      )?.makeImage()
+    )
+    let document = ImageEditorDocument(source: SourceImage(cgImage: pixels), feature: saved)
+
+    let lock = ImageEditorContent.fixedAspectRatioLock(landscape, for: document)
+    #expect(lock == landscape.swapped())
+
+    let harness = makeLoadedCanvasView(feature: saved, target: .crop)
+    EditingCanvasRepresentable.Coordinator().applyLockedAspectRatio(lock, to: harness.canvasView)
+    harness.canvasView.applyPendingCrop()
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSelection)
+    #expect(harness.guides.last?.lockedAspectRatio == landscape.swapped())
+    #expect(harness.emitted.isEmpty, "the saved crop is not refitted to the unturned ratio")
+  }
+
+  /// Any other crop starts a `.fixed` editor with the policy's ratio as it is.
+  @Test func `A fixed editor starts with its ratio for any other crop`() throws {
+    let landscape = AspectRatio(width: 4, height: 3)
+    let pixels = try #require(
+      CGContext(
+        data: nil, width: Int(imageSize.width), height: Int(imageSize.height), bitsPerComponent: 8,
+        bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      )?.makeImage()
+    )
+    let source = SourceImage(cgImage: pixels)
+    for feature in [
+      ImageEditorFeature(imageSize: imageSize),
+      makeFeature(topLeftRect: CGRect(x: 0, y: 0, width: 150, height: 200)),
+      // Sideways with a 4:3 output: it has the policy's ratio as it is.
+      makeFeature(topLeftRect: CGRect(x: 0, y: 0, width: 150, height: 200), quarterTurn: .counterclockwise90),
+    ] {
+      let document = ImageEditorDocument(source: source, feature: feature)
+      #expect(ImageEditorContent.fixedAspectRatioLock(landscape, for: document) == landscape, "\(feature.crop)")
+    }
+  }
+
   /// A straightened crop of the locked ratio keeps its place as well.
   @Test func `A reloaded straightened crop that has the locked ratio keeps its place`() throws {
     let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
