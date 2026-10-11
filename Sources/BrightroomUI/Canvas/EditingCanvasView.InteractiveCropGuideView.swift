@@ -43,15 +43,22 @@ extension EditingCanvasView {
 
   /// The pan on one of the guide's handles: a one-finger gesture.
   ///
-  /// It counts every touch down in the window, not only its own: the other
-  /// finger of a pinch usually lands on the crop scroll view, outside the
-  /// handle. Once a second finger is down the pan never starts a resize, and
-  /// a resize in progress hands the gesture over through `onAdditionalTouch`.
+  /// It counts every touch down in `touchRegion`, not only its own: the
+  /// other finger of a pinch usually lands on the crop scroll view, outside
+  /// the handle. Once a second finger is down there the pan never starts a
+  /// resize, and a resize in progress hands the gesture over through
+  /// `onAdditionalTouch`. A finger elsewhere in the window (on a toolbar or a
+  /// slider) cannot join the pinch, so it does not count.
   class HandlePanGestureRecognizer: UIPanGestureRecognizer {
 
-    /// Touches down in the window in the latest event this pan received,
+    /// Touches down in `touchRegion` in the latest event this pan received,
     /// its own included.
     private(set) var activeTouchCount = 0
+
+    /// The view whose touches can join this pan's finger in a pinch: the
+    /// canvas, which carries the crop pinch. Nil counts every touch in the
+    /// window.
+    weak var touchRegion: UIView?
 
     /// Called when a second finger lands while this pan resizes the guide,
     /// just before the pan cancels itself.
@@ -63,13 +70,13 @@ extension EditingCanvasView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-      noteActiveTouchCount(Self.activeTouchCount(in: event))
+      noteActiveTouchCount(Self.activeTouchCount(of: event.allTouches ?? [], in: touchRegion))
       super.touchesBegan(touches, with: event)
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
       // Before super, which asks the delegate whether the pan may begin.
-      noteActiveTouchCount(Self.activeTouchCount(in: event))
+      noteActiveTouchCount(Self.activeTouchCount(of: event.allTouches ?? [], in: touchRegion))
       super.touchesMoved(touches, with: event)
     }
 
@@ -94,10 +101,18 @@ extension EditingCanvasView {
       }
     }
 
-    private static func activeTouchCount(in event: UIEvent) -> Int {
-      event.allTouches?.count { touch in
-        touch.phase != .ended && touch.phase != .cancelled
-      } ?? 0
+    /// The touches still down whose view is in `region` (all of them when
+    /// `region` is nil).
+    static func activeTouchCount(of touches: Set<UITouch>, in region: UIView?) -> Int {
+      touches.count { touch in
+        guard touch.phase != .ended, touch.phase != .cancelled else {
+          return false
+        }
+        guard let region else {
+          return true
+        }
+        return touch.view?.isDescendant(of: region) == true
+      }
     }
   }
   
@@ -259,6 +274,7 @@ extension EditingCanvasView {
         .flatMap { $0.gestureRecognizers ?? [] }
         .compactMap { $0 as? HandlePanGestureRecognizer }
       for panGesture in handlePanGestureRecognizers {
+        panGesture.touchRegion = containerView
         panGesture.onAdditionalTouch = { [unowned self] in
           self.abandonResizing()
         }

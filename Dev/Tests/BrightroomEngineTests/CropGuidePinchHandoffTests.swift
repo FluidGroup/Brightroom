@@ -235,6 +235,44 @@ struct CropGuidePinchHandoffTests {
     }
   }
 
+  /// A touch whose view and phase the test sets.
+  final class ScriptedTouch: UITouch {
+    let scriptedView: UIView
+    let scriptedPhase: UITouch.Phase
+
+    init(on view: UIView, phase: UITouch.Phase = .moved) {
+      self.scriptedView = view
+      self.scriptedPhase = phase
+      super.init()
+    }
+
+    override var view: UIView? { scriptedView }
+    override var phase: UITouch.Phase { scriptedPhase }
+  }
+
+  /// A finger resting outside the canvas (on the straighten ruler or a
+  /// toolbar) cannot join a pinch, so a one-finger resize still runs.
+  @Test
+  func `a handle counts only the touches over the canvas`() throws {
+    let (view, window, _) = openCanvas()
+    defer { window.isHidden = true }
+    let guide = view.guideView
+    let outside = UIView(frame: CGRect(x: 0, y: 650, width: 390, height: 50))
+    window.addSubview(outside)
+
+    for handlePan in guide.handlePanGestureRecognizers {
+      #expect(handlePan.touchRegion === view)
+    }
+    let handle = try #require(guide.handlePanGestureRecognizers.first?.view)
+    let own = ScriptedTouch(on: handle)
+    let count = EditingCanvasView.HandlePanGestureRecognizer.activeTouchCount
+
+    #expect(count([own, ScriptedTouch(on: outside)], view) == 1)
+    #expect(count([own, ScriptedTouch(on: view.cropSurface.scrollView)], view) == 2)
+    #expect(count([own, ScriptedTouch(on: view.cropSurface.scrollView, phase: .ended)], view) == 1)
+    #expect(count([own, ScriptedTouch(on: outside)], nil) == 2)
+  }
+
   @Test
   func `a handle pan lets the crop pinch recognize alongside it, and nothing else`() throws {
     let (view, window, _) = openCanvas()
