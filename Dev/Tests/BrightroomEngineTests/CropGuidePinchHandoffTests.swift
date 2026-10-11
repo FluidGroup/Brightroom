@@ -308,6 +308,48 @@ struct CropGuidePinchHandoffTests {
     #expect(owner.emittedCount == 0)
   }
 
+  /// A guide overlay that records each interaction it is told about.
+  final class RecordingOverlay: EditingCanvasView.CropInsideOverlayBase {
+    var received: [CropInteraction] = []
+
+    override func didChangeInteraction(_ interaction: CropInteraction) {
+      received.append(interaction)
+    }
+  }
+
+  /// The host and the guide's overlays hear idle only once every crop
+  /// interaction has ended: a pinch that takes over a resize goes from
+  /// resizing to moving the image without an idle value between.
+  @Test
+  func `a pinch that takes over a resize never reports idle in between`() throws {
+    let (view, window, _) = openCanvas()
+    defer { window.isHidden = true }
+    var reported: [CropInteraction] = []
+    view.setCropGuideHandler { guide in
+      if reported.last != guide.interaction {
+        reported.append(guide.interaction)
+      }
+    }
+    let overlay = RecordingOverlay()
+    view.setCropInsideOverlay(overlay)
+
+    let pan = ScriptedHandlePan(target: nil, action: nil)
+    beginResizingRightEdge(of: view, with: pan)
+    let overlayBefore = overlay.received.count
+    view.cropSurface.onWillBeginZooming?()
+
+    #expect(view.guideView.interaction == .movingImage)
+    #expect(reported.last == .movingImage)
+    #expect(reported.dropFirst().contains([]) == false, "host: \(reported.map(\.rawValue))")
+    #expect(
+      overlay.received.dropFirst(overlayBefore).contains([]) == false,
+      "overlay: \(overlay.received.map(\.rawValue))"
+    )
+
+    view.cropSurface.onDidEndZooming?(view.cropSurface.scrollView.zoomScale)
+    #expect(view.guideView.interaction == [])
+  }
+
   @Test
   func `a second finger during a resize puts the guide back and records nothing`() async throws {
     let (view, window, owner) = openCanvas()

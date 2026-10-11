@@ -488,11 +488,14 @@ final class EditingCanvasView: UIView {
       cropSurface.onWillBeginZooming = { [weak self] in
         guard let self else { return }
         self.debugLogScrollViewAdjustment("zoom-begin")
-        // A pinch whose first finger started dragging a guide handle zooms;
-        // the resize it began is dropped.
-        self.guideView.cancelResizing()
         self.beginScrollViewAdjustment(.zoom)
         self.imageMovingGestures.insert(.zoom)
+        // A pinch whose first finger started dragging a guide handle zooms;
+        // the resize it began is dropped. Dropped after the zoom is
+        // reported, so the interaction goes from resizing to moving the
+        // image without passing through idle. A resize leaves the crop as
+        // it was until it ends, so the zoom's baseline is the same.
+        self.guideView.cancelResizing()
       }
       cropSurface.onDidEndDragging = { [weak self] decelerate in
         guard let self else { return }
