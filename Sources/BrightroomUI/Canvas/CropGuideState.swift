@@ -157,6 +157,44 @@ struct CropGuideState: Equatable, Sendable {
     updateCropExtent(toFitAspectRatio: newAspectRatio)
   }
 
+  /// Whether the selection already has `aspectRatio` (in the final output
+  /// orientation), allowing for the inward pixel snapping of
+  /// `CropFeature(topLeftRect:…)`: each edge moves by less than a pixel, so
+  /// a committed selection can miss the exact ratio by less than two pixels
+  /// on its shorter-ratio side.
+  func hasAspectRatio(_ aspectRatio: AspectRatio) -> Bool {
+    let selectionRatio = aspectRatioBeforeOutputRotation(aspectRatio)
+    let ratio = selectionRatio.width / selectionRatio.height
+    guard ratio.isFinite, ratio > 0 else {
+      return false
+    }
+    let mismatch = abs(cropExtent.width - ratio * cropExtent.height)
+    return mismatch < 2 * max(1, ratio)
+  }
+
+  /// Starts an aspect-ratio session for a selection that was loaded rather
+  /// than drawn under the lock (an undo, a reopened editor, a lock applied
+  /// after loading). A selection that already has the ratio is kept as it
+  /// is; otherwise the largest rectangle of the ratio is fitted inside it,
+  /// about its center, rather than about the image's.
+  mutating func adoptAspectRatio(_ newAspectRatio: AspectRatio) {
+    _usedAspectRatio = newAspectRatio
+    guard hasAspectRatio(newAspectRatio) == false else {
+      return
+    }
+    let fitted = CropGeometry.fittingRect(
+      rect: cropExtent,
+      in: imageSize,
+      straightenRadians: adjustmentAngle.radians,
+      respectingAspectRatio: aspectRatioBeforeOutputRotation(newAspectRatio)
+    )
+    guard fitted.isNull == false, fitted.isEmpty == false else {
+      updateCropExtent(toFitAspectRatio: newAspectRatio)
+      return
+    }
+    cropExtent = fitted
+  }
+
   mutating func purgeAspectRatio() {
     _usedAspectRatio = nil
   }

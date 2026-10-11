@@ -317,7 +317,12 @@ public struct ImageEditorCanvas: View {
   /// unlocks it.
   ///
   /// The ratio takes effect only when it differs from the value of the
-  /// previous update; a newly mounted canvas applies the current value. The
+  /// previous update; a newly mounted canvas applies the current value. A
+  /// crop that already has the ratio keeps its place (within the pixel
+  /// rounding of a stored crop); any other crop becomes the largest crop of
+  /// the ratio centered in the image. A crop the document reloads under the
+  /// lock (an undo) keeps its place when it has the ratio, and otherwise
+  /// becomes the largest crop of the ratio inside it. The
   /// canvas changes the lock itself: a reset unlocks
   /// it, and turning the output sideways turns the ratio. Passing the same
   /// value again does not restore it; follow the lock through

@@ -628,8 +628,10 @@ final class EditingCanvasView: UIView {
   /// Displays `feature`.
   ///
   /// When its crop differs from the crop EditingCanvasView holds (for example after an
-  /// undo), the crop state reloads, fitted to the active aspect-ratio lock,
-  /// which first turns with the reloaded crop's output orientation. A
+  /// undo), the crop state reloads under the active aspect-ratio lock, which
+  /// first turns with the reloaded crop's output orientation. A reloaded crop
+  /// that already has the locked ratio keeps its position and size; one that
+  /// does not is fitted inside its own rectangle, not at the image center. A
   /// feature EditingCanvasView changed itself comes back equal and only refreshes the
   /// display.
   func setFeature(_ feature: ImageEditorFeature) {
@@ -656,7 +658,7 @@ final class EditingCanvasView: UIView {
           state.lockedAspectRatio = ratio
           guideView.setLockedAspectRatio(ratio)
         }
-        crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+        crop.adoptAspectRatio(ratio)
       }
       load(crop: crop)
     }
@@ -770,8 +772,8 @@ final class EditingCanvasView: UIView {
 
   func setCrop(_ crop: CropGuideState) {
     var crop = crop
-    if let ratio = state.lockedAspectRatio {
-      crop.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+    if let ratio = state.lockedAspectRatio, crop._usedAspectRatio != ratio {
+      crop.adoptAspectRatio(ratio)
     }
     setProposedCrop(crop)
   }
@@ -784,7 +786,14 @@ final class EditingCanvasView: UIView {
     state.lockedAspectRatio = ratio
     var crop = state.proposedCrop
     if let ratio = ratio {
-      crop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      // A selection that already has the ratio (a reopened `.fixed` editor,
+      // a face crop of that ratio) is kept; otherwise the picker's centered
+      // maximum crop of the new ratio.
+      if crop?.hasAspectRatio(ratio) == true {
+        crop?.adoptAspectRatio(ratio)
+      } else {
+        crop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
+      }
     } else {
       crop?.purgeAspectRatio()
     }

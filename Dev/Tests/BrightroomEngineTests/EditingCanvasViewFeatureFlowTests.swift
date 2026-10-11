@@ -327,6 +327,191 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.count == emittedCount)
   }
 
+  // MARK: - Reloading under an aspect-ratio lock
+
+  private func makeFeature(
+    topLeftRect: CGRect,
+    quarterTurn: QuarterTurn = .zero,
+    straightenRadians: Double = 0
+  ) -> ImageEditorFeature {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.crop = CropFeature(
+      topLeftRect: topLeftRect,
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
+    )
+    return feature
+  }
+
+  /// An undo under a lock to a crop that already has the locked ratio shows
+  /// that crop where it was, and Done writes nothing over the undo.
+  @Test func `A reloaded crop that has the locked ratio keeps its place`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    harness.canvasView.setLockedAspectRatio(.square)
+    harness.canvasView.applyPendingCrop()
+
+    let topLeftSquare = CGRect(x: 0, y: 0, width: 150, height: 150)
+    let undone = makeFeature(topLeftRect: topLeftSquare)
+    harness.box.owned = undone
+    harness.canvasView.setFeature(undone)
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSquare)
+    #expect(harness.canvasView.proposedCrop?._usedAspectRatio == .square)
+    let guide = try #require(harness.guides.last)
+    #expect(guide.lockedAspectRatio == .square)
+    #expect(guide.pendingCrop == undone.crop)
+
+    let emittedCount = harness.emitted.count
+    harness.canvasView.applyPendingCrop()
+    #expect(harness.emitted.count == emittedCount, "Done does not overwrite the undo")
+  }
+
+  /// A `.fixed` editor loads the crop in `makeUIView` and receives its lock
+  /// in the first `updateUIView`. A crop of that ratio, saved from an earlier
+  /// session, stays where the user left it.
+  @Test func `A lock applied after loading keeps a crop that has the ratio`() {
+    let topLeftSquare = CGRect(x: 0, y: 0, width: 150, height: 150)
+    let harness = makeLoadedCanvasView(feature: makeFeature(topLeftRect: topLeftSquare), target: .crop)
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+
+    coordinator.applyLockedAspectRatio(.square, to: harness.canvasView)
+    harness.canvasView.applyPendingCrop()
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSquare)
+    #expect(harness.canvasView.proposedCrop?._usedAspectRatio == .square)
+    #expect(harness.guides.last?.lockedAspectRatio == .square)
+    #expect(harness.emitted.isEmpty)
+  }
+
+  /// A face-detection crop of `.square` is rounded inward to whole pixels,
+  /// so it can miss the exact ratio by a pixel. Opening it in a
+  /// `.fixed(.square)` editor keeps it on the face.
+  @Test func `A face crop keeps its place under a fixed square lock`() throws {
+    // A face box in Vision coordinates (bottom-left origin), right of center.
+    let face = CGRect(x: 0.70, y: 0.55, width: 0.0731, height: 0.0977)
+    var initial = ImageEditorFeature(imageSize: imageSize)
+    initial.crop = CropFeature.framingFace(face, imageSize: imageSize, paddingBias: 1.3, aspectRatio: .square)
+    let faceRect = initial.crop.topLeftRect(imageSize: imageSize)
+    try #require(faceRect.width != faceRect.height, "the face crop exercises the rounding allowance")
+
+    let harness = makeLoadedCanvasView(feature: initial, target: .crop)
+    EditingCanvasRepresentable.Coordinator().applyLockedAspectRatio(.square, to: harness.canvasView)
+    harness.canvasView.applyPendingCrop()
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == faceRect)
+    #expect(harness.guides.last?.pendingCrop == initial.crop)
+    #expect(harness.emitted.isEmpty, "the face crop is not replaced by the centered square")
+  }
+
+  /// A redo to a sideways crop turns the lock with the output and keeps the
+  /// selection, which has the turned ratio.
+  @Test func `A reloaded sideways crop that has the turned ratio keeps its place`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    let landscape = AspectRatio(width: 4, height: 3)
+    harness.canvasView.setLockedAspectRatio(landscape)
+    harness.canvasView.applyPendingCrop()
+
+    // A 3:4 output: the selection before the turn is 4:3, at the top left.
+    let topLeftSelection = CGRect(x: 0, y: 0, width: 200, height: 150)
+    let redone = makeFeature(topLeftRect: topLeftSelection, quarterTurn: .counterclockwise90)
+    harness.box.owned = redone
+    harness.canvasView.setFeature(redone)
+
+    #expect(harness.guides.last?.lockedAspectRatio == landscape.swapped())
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSelection)
+    let emittedCount = harness.emitted.count
+    harness.canvasView.applyPendingCrop()
+    #expect(harness.emitted.count == emittedCount)
+  }
+
+  /// A straightened crop of the locked ratio keeps its place as well.
+  @Test func `A reloaded straightened crop that has the locked ratio keeps its place`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    harness.canvasView.setLockedAspectRatio(.square)
+    harness.canvasView.applyPendingCrop()
+
+    let undone = makeFeature(
+      topLeftRect: CGRect(x: 100, y: 60, width: 150, height: 150),
+      straightenRadians: 0.1
+    )
+    harness.box.owned = undone
+    harness.canvasView.setFeature(undone)
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == undone.crop.topLeftRect(imageSize: imageSize))
+    #expect(harness.guides.last?.pendingCrop == undone.crop)
+    let emittedCount = harness.emitted.count
+    harness.canvasView.applyPendingCrop()
+    #expect(harness.emitted.count == emittedCount)
+  }
+
+  /// A reloaded crop without the locked ratio is fitted inside its own
+  /// rectangle, about its center, not at the image's center.
+  @Test func `A reloaded crop without the locked ratio is fitted inside itself`() throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    harness.canvasView.setLockedAspectRatio(.square)
+    harness.canvasView.applyPendingCrop()
+
+    let mismatched = makeFeature(topLeftRect: CGRect(x: 0, y: 0, width: 200, height: 100))
+    harness.box.owned = mismatched
+    harness.canvasView.setFeature(mismatched)
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == CGRect(x: 50, y: 0, width: 100, height: 100))
+    #expect(harness.canvasView.proposedCrop?._usedAspectRatio == .square)
+  }
+
+  /// `setCrop` with a crop that has no ratio session adopts the lock the
+  /// same way.
+  @Test func `A crop set under a lock keeps its place when it has the ratio`() {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    harness.canvasView.setLockedAspectRatio(.square)
+
+    let topLeftSquare = CGRect(x: 0, y: 0, width: 150, height: 150)
+    harness.canvasView.setCrop(CropGuideState(imageSize: imageSize, cropRect: topLeftSquare))
+
+    #expect(harness.canvasView.proposedCrop?.cropExtent == topLeftSquare)
+    #expect(harness.canvasView.proposedCrop?._usedAspectRatio == .square)
+  }
+
+  /// In a window, the layout after the reload keeps the crop as well.
+  @Test func `A reloaded crop that has the locked ratio keeps its place after layout`() throws {
+    let source = try #require(
+      CIContext().createCGImage(makeSource(size: imageSize), from: CGRect(origin: .zero, size: imageSize))
+    )
+    let initial = ImageEditorFeature(imageSize: imageSize)
+    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+    let canvasView = EditingCanvasView(source: EditingCanvasSource(PreviewSource.test(cgImage: source)), feature: initial)
+    let box = Harness.Box(owned: initial)
+    canvasView.setFeatureChangeHandler { change in
+      change(&box.owned)
+      box.emitted.append(box.owned)
+    }
+    canvasView.areAnimationsEnabled = false
+    canvasView.setEditingTarget(.crop)
+    canvasView.frame = window.bounds
+    window.addSubview(canvasView)
+    window.isHidden = false
+    canvasView.layoutIfNeeded()
+    canvasView.loadFeature()
+    canvasView.layoutIfNeeded()
+
+    canvasView.setLockedAspectRatio(.square)
+    canvasView.layoutIfNeeded()
+    canvasView.applyPendingCrop()
+
+    let topLeftSquare = CGRect(x: 0, y: 0, width: 150, height: 150)
+    let undone = makeFeature(topLeftRect: topLeftSquare)
+    box.owned = undone
+    canvasView.setFeature(undone)
+    canvasView.layoutIfNeeded()
+    let emittedCount = box.emitted.count
+    canvasView.applyPendingCrop()
+
+    #expect(canvasView.proposedCrop?.cropExtent == topLeftSquare)
+    #expect(box.emitted.count == emittedCount)
+    withExtendedLifetime(window) {}
+  }
+
   @Test func `Switching between tool targets commits nothing`() {
     let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize))
 
