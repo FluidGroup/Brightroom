@@ -415,6 +415,30 @@ struct CropGuidePinchHandoffTests {
     #expect(owner.emittedCount == 0)
   }
 
+  /// With animations on, a dropped resize eases the guide back from where
+  /// the finger left it instead of jumping; with them off, it goes back at
+  /// once. Either way its frame is the one from before the drag.
+  @Test(arguments: [true, false])
+  func `a dropped resize animates the guide back when animations are on`(animates: Bool) throws {
+    let (view, window, _) = openCanvas()
+    defer { window.isHidden = true }
+    view.areAnimationsEnabled = animates
+    let guide = view.guideView
+    let frameBefore = guide.frame
+
+    let pan = ScriptedHandlePan(target: nil, action: nil)
+    beginResizingRightEdge(of: view, with: pan)
+    #expect(guide.frame.width < frameBefore.width - 60)
+    guide.layer.removeAllAnimations()
+
+    view.cropSurface.onWillBeginZooming?()
+
+    #expect(guide.frame == frameBefore)
+    let animationKeys = guide.layer.animationKeys() ?? []
+    #expect(animationKeys.isEmpty != animates, "\(animationKeys)")
+    view.cropSurface.onDidEndZooming?(view.cropSurface.scrollView.zoomScale)
+  }
+
   @Test
   func `one finger still resizes the guide and records the crop`() async throws {
     let (view, window, _) = openCanvas()

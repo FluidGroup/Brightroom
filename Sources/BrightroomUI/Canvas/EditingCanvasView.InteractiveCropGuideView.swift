@@ -136,6 +136,11 @@ extension EditingCanvasView {
     /// The guide's frame when the resize in progress began.
     private var frameBeforeResizing: CGRect?
 
+    /// Whether an abandoned resize animates the guide back to
+    /// `frameBeforeResizing`, as the canvas animates its own guide layouts.
+    /// The canvas sets it from `areAnimationsEnabled`.
+    var animatesRestoringFrame = true
+
     /// Receives `interaction` each time it changes.
     var didUpdateInteraction: (CropInteraction) -> Void = { _ in }
 
@@ -515,8 +520,9 @@ extension EditingCanvasView {
       }
     }
 
-    /// Puts the guide back at its frame from before the resize in progress
-    /// and ends the resize without `didChange`. The pan's own end that
+    /// Puts the guide back at its frame from before the resize in progress,
+    /// animated when `animatesRestoringFrame`, and ends the resize without
+    /// `didChange`. The pan's own end that
     /// follows is ignored. Returns false when no resize is in progress.
     @discardableResult
     private func abandonResizing() -> Bool {
@@ -528,9 +534,20 @@ extension EditingCanvasView {
       self.frameBeforeResizing = nil
 
       deactivateAllConstraints()
-      frame = frameBeforeResizing
-      setNeedsLayout()
-      layoutIfNeeded()
+      // Animated like the canvas's guide layouts, so the guide (and the
+      // mask outside it) eases back from where the finger left it instead
+      // of jumping.
+      let restoreFrame = { [self] in
+        frame = frameBeforeResizing
+        setNeedsLayout()
+        layoutIfNeeded()
+      }
+      if animatesRestoringFrame {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1, animations: restoreFrame)
+          .startAnimation()
+      } else {
+        restoreFrame()
+      }
       didCancelChange()
       removeInteraction(.resizingGuide)
       return true

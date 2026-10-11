@@ -167,7 +167,11 @@ final class EditingCanvasView: UIView {
     }
   }
 
-  var areAnimationsEnabled: Bool = true
+  var areAnimationsEnabled: Bool = true {
+    didSet {
+      guideView.animatesRestoringFrame = areAnimationsEnabled
+    }
+  }
 
   var isZoomEnabled: Bool = true {
     didSet {
