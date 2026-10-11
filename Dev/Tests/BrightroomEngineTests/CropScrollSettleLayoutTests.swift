@@ -268,6 +268,77 @@ struct CropScrollSettleLayoutTests {
     #expect(abs(scrollView.zoomScale - zoomBeforePan) <= 1e-4)
   }
 
+  /// How the host applies the crop.
+  enum CropApplication: String, CaseIterable, Sendable {
+    /// Switching the editing target away from the crop.
+    case leavingCrop
+    /// `applyPendingCrop()` while crop editing, as Done does.
+    case applyingPendingCrop
+  }
+
+  /// A flick whose deceleration is still running when the crop is applied
+  /// writes the crop the flick left on screen. The settle that would have
+  /// recorded it runs later and records nothing once the crop is no longer
+  /// the editing target.
+  @Test(arguments: locks, CropApplication.allCases)
+  func `a pan applied before its settle is written as on screen`(
+    lock: AspectRatio?,
+    application: CropApplication
+  ) async throws {
+    let (view, window, owner) = openCanvas(lock: lock)
+    defer { window.isHidden = true }
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+
+    // Zoom in about the guide's centre so the image can pan both ways.
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    let guide = view.guideView.convert(view.guideView.bounds, to: scrollView)
+    let content = CGPoint(
+      x: (scrollView.contentOffset.x + guide.midX - scrollView.bounds.minX) / scrollView.zoomScale,
+      y: (scrollView.contentOffset.y + guide.midY - scrollView.bounds.minY) / scrollView.zoomScale
+    )
+    scrollView.setZoomScale(scrollView.zoomScale * 2, animated: false)
+    scrollView.contentOffset = clampedContentOffset(
+      CGPoint(
+        x: content.x * scrollView.zoomScale - (guide.midX - scrollView.bounds.minX),
+        y: content.y * scrollView.zoomScale - (guide.midY - scrollView.bounds.minY)
+      ),
+      in: scrollView
+    )
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await waitForSettle()
+
+    let cropBeforePan = try #require(view.proposedCrop)
+    let pixelsPerPoint = try pixelsPerGuidePoint(view)
+    #expect(owner.emittedCount == 0)
+
+    surface.scrollViewWillBeginDragging(scrollView)
+    scrollView.contentOffset.x -= 40
+    surface.scrollViewDidEndDragging(scrollView, willDecelerate: true)
+    switch application {
+    case .leavingCrop:
+      view.setEditingTarget(.localBlur)
+    case .applyingPendingCrop:
+      view.applyPendingCrop()
+    }
+
+    #expect(owner.emittedCount == 1)
+    let written = owner.feature.crop.topLeftRect(imageSize: imageSize)
+    let expected = cropBeforePan.cropExtent.offsetBy(dx: -40 * pixelsPerPoint, dy: 0)
+    // The written crop is rounded inward to whole pixels.
+    #expect(written.minX >= expected.minX - 1e-6 && written.minX < expected.minX + 1, "\(expected) → \(written)")
+    #expect(written.maxX <= expected.maxX + 1e-6 && written.maxX > expected.maxX - 1, "\(expected) → \(written)")
+    #expect(written.minY >= expected.minY - 1e-6 && written.minY < expected.minY + 1, "\(expected) → \(written)")
+    #expect(written.maxY <= expected.maxY + 1e-6 && written.maxY > expected.maxY - 1, "\(expected) → \(written)")
+
+    // UIKit ends the deceleration later; nothing more is recorded or written.
+    surface.scrollViewDidEndDecelerating(scrollView)
+    let cropAfterApply = try #require(view.proposedCrop)
+    try await waitPastLayoutDelay(view)
+    #expect(view.proposedCrop == cropAfterApply)
+    #expect(owner.emittedCount == 1)
+  }
+
   // MARK: - Guide resize, then a pan
 
   @Test

@@ -676,6 +676,8 @@ final class EditingCanvasView: UIView {
     // canvas only on the next view update; record its crop first so the
     // write is the recorded crop, not the streamed one.
     finishStreamedStraightening()
+    // Likewise a zoom or a pan whose settle has not recorded it yet.
+    finishPendingScrollAdjustment()
 
     guard let crop = state.proposedCrop else {
       EditorLog.error(.editingCanvas, "EditingCanvasView has not loaded the feature state.")
@@ -758,6 +760,28 @@ final class EditingCanvasView: UIView {
     }
     record()
     isStreamingStraightenAngle = false
+  }
+
+  /// Records a zoom or a pan whose settle has not run yet, as the scroll
+  /// view shows it now, and lays out as the settle does; does nothing when
+  /// no scroll adjustment is waiting.
+  ///
+  /// Applying the crop (leaving crop editing, the host's Done) cannot wait
+  /// for the settle: once the crop is no longer the editing target the
+  /// settle records nothing, and the crop applied would be the one from
+  /// before the gesture. A deceleration in progress stops where it is.
+  private func finishPendingScrollAdjustment() {
+    guard scrollViewAdjustmentSession != nil else {
+      return
+    }
+    scrollViewSettleDebounce.cancel()
+    let scrollView = cropSurface.scrollView
+    if scrollView.isDecelerating {
+      scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+      imageMovingGestures.remove(.drag)
+    }
+    debugLogScrollViewAdjustment("settle-finish")
+    didSettleScrollViewAdjustment()
   }
 
   func setCrop(_ crop: CropGuideState) {
