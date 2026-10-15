@@ -31,9 +31,13 @@ struct CropEnlargementTests {
   @Test func `A selection that already reaches the minimum is returned as is`() {
     let fractional = CGRect(x: 100.3, y: 50.7, width: 300, height: 200)
     #expect(enlarged(fractional) == fractional)
-    let tall = CGRect(x: 10.2, y: 20.3, width: 128, height: 300)
+    let tall = CGRect(x: 10, y: 20, width: 128, height: 300)
     #expect(enlarged(tall, aspectRatio: AspectRatio(tall.size)) == tall)
-    #expect(enlarged(tall, straightenRadians: 0.1) == tall)
+    let fractionalTall = CGRect(x: 10.2, y: 20.3, width: 128, height: 300)
+    #expect(enlarged(fractionalTall, straightenRadians: 0.1) == fractionalTall)
+    // Ratio-exact alignment keeps 240 × 135 at any origin.
+    let wide = CGRect(x: 100.3, y: 200.6, width: 240, height: 135)
+    #expect(enlarged(wide, aspectRatio: AspectRatio(width: 16, height: 9)) == wide)
   }
 
   @Test func `An invalid selection or minimum is returned as is`() {
@@ -132,6 +136,48 @@ struct CropEnlargementTests {
     // 4:5: 32 × (4, 5).
     let portrait = enlarged(CGRect(x: 100, y: 100, width: 40, height: 50), aspectRatio: AspectRatio(width: 4, height: 5))
     #expect(portrait == CGRect(x: 56, y: 45, width: 128, height: 160))
+  }
+
+  /// A guide zoomed in to a shorter side of 128 under a ratio whose
+  /// shorter term does not divide 128 aligns to a smaller multiple, so it
+  /// grows to the next one; a ratio whose multiples include 128 does not.
+  @Test func `A ratio rectangle whose aligned size misses the minimum grows`() {
+    let wide = enlarged(
+      CGRect(x: 486.2, y: 386, width: 227.55555555555554, height: 128),
+      aspectRatio: AspectRatio(width: 16, height: 9)
+    )
+    // 227.6 × 128 aligns to 14 × (16, 9) = 224 × 126; 15 × (16, 9) reaches 128.
+    #expect(wide.size == CGSize(width: 240, height: 135))
+    #expect(abs(wide.midX - (486.2 + 227.55555555555554 / 2)) <= 0.5 && abs(wide.midY - 450) <= 0.5, "\(wide)")
+
+    let standard = enlarged(
+      CGRect(x: 514.67, y: 386, width: 170.66666666666666, height: 128),
+      aspectRatio: AspectRatio(width: 4, height: 3)
+    )
+    // 170.7 × 128 aligns to 42 × (4, 3) = 168 × 126; 43 × (4, 3) = 172 × 129.
+    #expect(standard.size == CGSize(width: 172, height: 129))
+
+    // Squares and 4:5 have a multiple of exactly 128.
+    let square = CGRect(x: 536, y: 386, width: 128, height: 127.99999999999994)
+    #expect(enlarged(square, aspectRatio: .square) == square)
+    let portrait = CGRect(x: 536.4, y: 370.2, width: 128, height: 160)
+    #expect(enlarged(portrait, aspectRatio: AspectRatio(width: 4, height: 5)) == portrait)
+
+    #expect(CropGeometry.smallestShorterSide(reaching: 128, aspectRatio: AspectRatio(width: 16, height: 9)) == 135)
+    #expect(CropGeometry.smallestShorterSide(reaching: 128, aspectRatio: AspectRatio(width: 3, height: 4)) == 129)
+    #expect(CropGeometry.smallestShorterSide(reaching: 128, aspectRatio: .square) == 128)
+    #expect(CropGeometry.smallestShorterSide(reaching: 128, aspectRatio: AspectRatio(width: 1123, height: 794)) == 128)
+    #expect(CropGeometry.smallestShorterSide(reaching: 127.5, aspectRatio: nil) == 128)
+  }
+
+  /// A ratio with large terms snaps edge by edge, so a 128-pixel side at a
+  /// fractional origin aligns to 127 and grows.
+  @Test func `A ratio rectangle with large terms whose snapped side misses the minimum grows`() {
+    let ratio = AspectRatio(width: 1123, height: 794)
+    let result = enlarged(CGRect(x: 100.4, y: 100.4, width: 128 * 1123 / 794, height: 128), aspectRatio: ratio)
+    #expect(result.size == CGSize(width: 181, height: 128))
+    #expect(result.minX == result.minX.rounded() && result.minY == result.minY.rounded(), "\(result)")
+    #expect(CropFeature(topLeftRect: result, imageSize: imageSize).rect.size == CGSize(width: 181, height: 128))
   }
 
   @Test func `A ratio with large terms grows to the nearest whole pixels`() {

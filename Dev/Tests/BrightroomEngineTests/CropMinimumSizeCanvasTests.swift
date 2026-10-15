@@ -386,6 +386,36 @@ struct CropMinimumSizeCanvasTests {
     #expect(written.width >= 128 && written.height >= 128, "written \(written)")
   }
 
+  /// Under a lock whose shorter term does not divide 128 (16:9, 4:3), the
+  /// ratio-exact crop of a guide 128 pixels high is a smaller multiple
+  /// (224 × 126, 168 × 126); the record grows it to the next one, so the
+  /// editor never writes a crop under the minimum.
+  @Test(arguments: [
+    (AspectRatio(width: 16, height: 9), CGSize(width: 240, height: 135)),
+    (AspectRatio(width: 4, height: 3), CGSize(width: 172, height: 129)),
+    (AspectRatio.square, CGSize(width: 128, height: 128)),
+  ])
+  func `a zoom to the maximum under a lock writes at least the minimum with the exact ratio`(
+    lock: AspectRatio,
+    expected: CGSize
+  ) async throws {
+    let (view, window, owner) = openCanvas(crop: nil, lock: lock)
+    defer { window.isHidden = true }
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    scrollView.setZoomScale(scrollView.maximumZoomScale, animated: false)
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await waitForSettleAndLayout(view)
+
+    let recorded = try #require(view.proposedCrop).cropExtent
+    #expect(abs(recorded.width - expected.width) < 1e-6 && abs(recorded.height - expected.height) < 1e-6, "recorded \(recorded)")
+
+    view.applyPendingCrop()
+    let written = owner.feature.crop.topLeftRect(imageSize: Self.largeImage)
+    #expect(written.size == expected, "written \(written)")
+  }
+
   /// A crop at or above the minimum records as it did.
   @Test func `a pan records a crop that reaches the minimum unchanged in size`() async throws {
     let rect = CGRect(x: 300, y: 200, width: 300, height: 200)

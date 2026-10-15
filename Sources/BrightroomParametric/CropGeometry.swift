@@ -249,11 +249,16 @@ package enum CropGeometry {
   ///   `minimumSide` rounded up to a whole pixel; with straightening, a side
   ///   under `minimumSide` does. The other side is left as it is.
   /// - With `aspectRatio` (the selection's, before the output quarter turn),
-  ///   a rectangle whose shorter side is under `minimumSide` grows to that
-  ///   ratio: when its lowest terms are both at most 32, to the smallest
-  ///   whole multiple of the terms that reaches `minimumSide` (the size
-  ///   ratio-exact alignment keeps); otherwise to a shorter side of
-  ///   `minimumSide` and the longer side to the nearest whole pixel. Without
+  ///   a rectangle whose aligned shorter side is under `minimumSide` grows
+  ///   to that ratio. When the ratio's lowest terms are both at most 32, the
+  ///   aligned size is the largest whole multiple of the terms inside the
+  ///   rectangle's whole-pixel size, as ratio-exact alignment writes it (a
+  ///   16:9 rectangle of 227.6 × 128 aligns to 224 × 126), and the
+  ///   rectangle grows to the smallest multiple that reaches `minimumSide`
+  ///   (`smallestShorterSide(reaching:aspectRatio:)`). Otherwise the aligned
+  ///   sides are snapped as for no ratio, and the rectangle grows to a
+  ///   shorter side of `minimumSide` and the longer side to the nearest
+  ///   whole pixel. Without
   ///   straightening, the multiple is at most the largest the image holds;
   ///   a rectangle that already has that multiple (one as large as the
   ///   image holds) is returned as is, never shrunk.
@@ -295,10 +300,7 @@ package enum CropGeometry {
 
     if let aspectRatio {
       let ratio = aspectRatio.width / aspectRatio.height
-      guard
-        ratio.isFinite, ratio > 0,
-        min(rect.width, rect.height) < minimumSide - epsilon
-      else {
+      guard ratio.isFinite, ratio > 0 else {
         return rect
       }
       grows = (true, true)
@@ -306,28 +308,47 @@ package enum CropGeometry {
       if let terms = PixelAlignedCrop.exactTerms(of: aspectRatio) {
         let termWidth = CGFloat(terms.width)
         let termHeight = CGFloat(terms.height)
-        var multiple = ceil(wholeMinimum / min(termWidth, termHeight))
+        // The multiple ratio-exact alignment gives the rectangle: the
+        // largest inside its whole-pixel size. Its shorter side, not the
+        // rectangle's, is what has to reach the minimum: a 16:9 guide of
+        // 227.6 × 128 aligns to 224 × 126.
+        let fittingMultiple = min(
+          floor(floor(rect.width + epsilon) / termWidth),
+          floor(floor(rect.height + epsilon) / termHeight)
+        )
+        var multiple = smallestShorterSide(reaching: wholeMinimum, aspectRatio: aspectRatio)
+          / min(termWidth, termHeight)
+        guard fittingMultiple < multiple else {
+          return rect
+        }
         if straighten == 0 {
           let largest = floor(min(imageSize.width / termWidth, imageSize.height / termHeight) + epsilon)
           if largest >= 1 {
             multiple = min(multiple, largest)
           }
         }
-        // The multiple ratio-exact alignment already gives the rectangle.
-        // A cap no larger than it (a rectangle as large as the image holds)
-        // would shrink the rectangle rather than grow it.
-        let fittingMultiple = min(
-          floor(floor(rect.width + epsilon) / termWidth),
-          floor(floor(rect.height + epsilon) / termHeight)
-        )
+        // A cap no larger than the rectangle's multiple (a rectangle as
+        // large as the image holds) would shrink it rather than grow it.
         guard multiple > fittingMultiple else {
           return rect
         }
         size = CGSize(width: multiple * termWidth, height: multiple * termHeight)
-      } else if ratio >= 1 {
-        size = CGSize(width: max(wholeMinimum, (wholeMinimum * ratio).rounded()), height: wholeMinimum)
       } else {
-        size = CGSize(width: wholeMinimum, height: max(wholeMinimum, (wholeMinimum / ratio).rounded()))
+        // Pixel alignment snaps each edge inward without straightening and
+        // the size down with it, so those are the sides that must reach the
+        // minimum.
+        let alignedShorterSide = straighten == 0
+          ? min(
+            wholePixelSpan(lower: rect.minX, upper: rect.maxX, bound: imageSize.width),
+            wholePixelSpan(lower: rect.minY, upper: rect.maxY, bound: imageSize.height)
+          )
+          : min(floor(rect.width + epsilon), floor(rect.height + epsilon))
+        guard alignedShorterSide < wholeMinimum else {
+          return rect
+        }
+        size = ratio >= 1
+          ? CGSize(width: max(wholeMinimum, (wholeMinimum * ratio).rounded()), height: wholeMinimum)
+          : CGSize(width: wholeMinimum, height: max(wholeMinimum, (wholeMinimum / ratio).rounded()))
       }
     } else {
       if straighten == 0 {
@@ -378,6 +399,23 @@ package enum CropGeometry {
       result.size.height = size.height
     }
     return result
+  }
+
+  /// The shorter side of the smallest crop of `aspectRatio` whose shorter
+  /// side reaches `minimumSide` once aligned to whole pixels.
+  ///
+  /// With a ratio whose lowest terms are both at most 32, ratio-exact
+  /// alignment keeps only whole multiples of the terms, so this is the
+  /// smallest multiple of the shorter term that reaches `minimumSide`
+  /// (135 for 16:9 and 128, 129 for 4:3); otherwise, and without a ratio,
+  /// `minimumSide` rounded up to a whole pixel.
+  package static func smallestShorterSide(reaching minimumSide: CGFloat, aspectRatio: AspectRatio?) -> CGFloat {
+    let wholeMinimum = ceil(minimumSide - PixelAlignedCrop.pixelEpsilon)
+    guard let aspectRatio, let terms = PixelAlignedCrop.exactTerms(of: aspectRatio) else {
+      return wholeMinimum
+    }
+    let shorterTerm = CGFloat(min(terms.width, terms.height))
+    return ceil(wholeMinimum / shorterTerm) * shorterTerm
   }
 
   /// The whole pixels between `lower` and `upper` once both snap inward
