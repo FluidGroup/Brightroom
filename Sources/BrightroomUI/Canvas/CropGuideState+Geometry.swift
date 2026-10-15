@@ -35,6 +35,16 @@ extension CropGuideState {
   /// strokes, which is not a meaningful blur-mask editing domain.
   static let minimumAuthoredCropOutputSideLength: CGFloat = 128
 
+  /// The smallest crop-output side the editor gives a crop of an image of
+  /// `imageSize`: `minimumAuthoredCropOutputSideLength`, or the image's
+  /// shorter side when that is smaller.
+  static func minimumCropOutputSideLength(imageSize: CGSize) -> CGFloat {
+    min(
+      minimumAuthoredCropOutputSideLength,
+      max(min(imageSize.width, imageSize.height), 1)
+    )
+  }
+
   func scrollViewContentSize() -> CGSize {
     AspectRatio(imageSize).size(byWidth: 1000)
   }
@@ -68,10 +78,7 @@ extension CropGuideState {
     let minScale = max(minXScale, minYScale)
 
     let platterScale = imageToPlatterScale()
-    let effectiveMinimumOutputSide = min(
-      Self.minimumAuthoredCropOutputSideLength,
-      max(min(imageSize.width, imageSize.height), 1)
-    )
+    let effectiveMinimumOutputSide = Self.minimumCropOutputSideLength(imageSize: imageSize)
     let minimumPlatterSide = effectiveMinimumOutputSide * platterScale
     let maxScale = min(
       visibleSize.width / max(minimumPlatterSide, 0.0001),

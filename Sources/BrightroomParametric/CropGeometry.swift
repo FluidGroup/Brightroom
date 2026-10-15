@@ -237,6 +237,147 @@ package enum CropGeometry {
     )
   }
 
+  /// `rect` grown about its center until the crop aligned from it has sides
+  /// of at least `minimumSide` pixels, kept inside the image.
+  ///
+  /// ImageEditor's minimum crop size uses it; any crop size stays a valid
+  /// `CropFeature`.
+  ///
+  /// - Without `aspectRatio`, each side grows on its own. Without
+  ///   straightening, a side whose whole-pixel span (snapped inward, as
+  ///   pixel alignment snaps it) is under `minimumSide` becomes
+  ///   `minimumSide` rounded up to a whole pixel; with straightening, a side
+  ///   under `minimumSide` does. The other side is left as it is.
+  /// - With `aspectRatio` (the selection's, before the output quarter turn),
+  ///   a rectangle whose shorter side is under `minimumSide` grows to that
+  ///   ratio: when its lowest terms are both at most 32, to the smallest
+  ///   whole multiple of the terms that reaches `minimumSide` (the size
+  ///   ratio-exact alignment keeps); otherwise to a shorter side of
+  ///   `minimumSide` and the longer side to the nearest whole pixel. Without
+  ///   straightening, the multiple is at most the largest the image holds.
+  ///
+  /// Without straightening, a grown side gets the whole-pixel origin nearest
+  /// its centered one, inside the image, so pixel alignment keeps it as it
+  /// is. A size the image cannot hold, or a straightened one, is moved (and
+  /// shrunk if needed) as `translatedIntoBounds(rect:in:straightenRadians:)`
+  /// moves it. A rectangle that needs no growth, or an invalid one, is
+  /// returned as is.
+  ///
+  /// - Parameter imageSize: The image in the same coordinates as `rect`;
+  ///   the result is the same in y-down and y-up coordinates, except for
+  ///   which way a centered origin halfway between two pixels rounds.
+  package static func rectEnlarged(
+    toMinimumSide minimumSide: CGFloat,
+    rect: CGRect,
+    in imageSize: CGSize,
+    straightenRadians: Double = 0,
+    aspectRatio: AspectRatio? = nil
+  ) -> CGRect {
+    guard
+      minimumSide.isFinite, minimumSide > 0,
+      rect.minX.isFinite, rect.minY.isFinite,
+      rect.width.isFinite, rect.height.isFinite,
+      rect.width > 0, rect.height > 0,
+      imageSize.width.isFinite, imageSize.height.isFinite,
+      imageSize.width > 0, imageSize.height > 0
+    else {
+      return rect
+    }
+
+    let straighten = straightenRadians.isFinite ? straightenRadians : 0
+    let epsilon = PixelAlignedCrop.pixelEpsilon
+    let wholeMinimum = ceil(minimumSide - epsilon)
+
+    let grows: (width: Bool, height: Bool)
+    var size = rect.size
+
+    if let aspectRatio {
+      let ratio = aspectRatio.width / aspectRatio.height
+      guard
+        ratio.isFinite, ratio > 0,
+        min(rect.width, rect.height) < minimumSide - epsilon
+      else {
+        return rect
+      }
+      grows = (true, true)
+
+      if let terms = PixelAlignedCrop.exactTerms(of: aspectRatio) {
+        let termWidth = CGFloat(terms.width)
+        let termHeight = CGFloat(terms.height)
+        var multiple = ceil(wholeMinimum / min(termWidth, termHeight))
+        if straighten == 0 {
+          let largest = floor(min(imageSize.width / termWidth, imageSize.height / termHeight) + epsilon)
+          if largest >= 1 {
+            multiple = min(multiple, largest)
+          }
+        }
+        size = CGSize(width: multiple * termWidth, height: multiple * termHeight)
+      } else if ratio >= 1 {
+        size = CGSize(width: max(wholeMinimum, (wholeMinimum * ratio).rounded()), height: wholeMinimum)
+      } else {
+        size = CGSize(width: wholeMinimum, height: max(wholeMinimum, (wholeMinimum / ratio).rounded()))
+      }
+    } else {
+      if straighten == 0 {
+        grows = (
+          wholePixelSpan(lower: rect.minX, upper: rect.maxX, bound: imageSize.width) < wholeMinimum,
+          wholePixelSpan(lower: rect.minY, upper: rect.maxY, bound: imageSize.height) < wholeMinimum
+        )
+      } else {
+        grows = (rect.width < minimumSide - epsilon, rect.height < minimumSide - epsilon)
+      }
+      guard grows.width || grows.height else {
+        return rect
+      }
+      if grows.width {
+        size.width = wholeMinimum
+      }
+      if grows.height {
+        size.height = wholeMinimum
+      }
+    }
+
+    let centered = CGRect(
+      x: rect.midX - size.width / 2,
+      y: rect.midY - size.height / 2,
+      width: size.width,
+      height: size.height
+    )
+
+    guard
+      straighten == 0,
+      size.width <= imageSize.width + epsilon,
+      size.height <= imageSize.height + epsilon
+    else {
+      return translatedIntoBounds(rect: centered, in: imageSize, straightenRadians: straighten)
+    }
+
+    func wholePixelOrigin(_ centeredOrigin: CGFloat, length: CGFloat, bound: CGFloat) -> CGFloat {
+      min(max(centeredOrigin.rounded(), 0), max(bound - length, 0))
+    }
+
+    var result = rect
+    if grows.width {
+      result.origin.x = wholePixelOrigin(centered.minX, length: size.width, bound: imageSize.width)
+      result.size.width = size.width
+    }
+    if grows.height {
+      result.origin.y = wholePixelOrigin(centered.minY, length: size.height, bound: imageSize.height)
+      result.size.height = size.height
+    }
+    return result
+  }
+
+  /// The whole pixels between `lower` and `upper` once both snap inward
+  /// inside `[0, bound]`, as pixel alignment snaps a crop without
+  /// straightening.
+  private static func wholePixelSpan(lower: CGFloat, upper: CGFloat, bound: CGFloat) -> CGFloat {
+    let epsilon = PixelAlignedCrop.pixelEpsilon
+    let snappedLower = min(max(ceil(lower - epsilon), 0), bound)
+    let snappedUpper = min(max(floor(upper + epsilon), 0), bound)
+    return max(snappedUpper - snappedLower, 0)
+  }
+
   /// The size of the bounding box of a `size` rectangle straightened about
   /// its center.
   private static func sampledSize(of size: CGSize, straightenRadians: Double) -> CGSize {
