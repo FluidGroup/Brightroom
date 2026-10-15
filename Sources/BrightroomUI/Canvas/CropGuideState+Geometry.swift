@@ -71,7 +71,11 @@ extension CropGuideState {
   /// viewport-sized brush reliably. At `max`, the guide's own shorter side
   /// shows `minimumCropOutputSideLength(imageSize:)` pixels; the bounding
   /// box of a straightened guide is larger than the guide, so it would
-  /// let the guide show less.
+  /// let the guide show less. Under an aspect-ratio session whose lowest
+  /// terms are both at most 32, it shows the smallest whole multiple of
+  /// the shorter term that reaches that (135 for 16:9), the smallest crop
+  /// a record writes, so a zoom to the maximum does not grow when it
+  /// settles.
   func calculateZoomScale(visibleSize: CGSize, guideSize: CGSize) -> (min: CGFloat, max: CGFloat) {
 
     let contentSize = scrollViewContentSize()
@@ -84,7 +88,13 @@ extension CropGuideState {
     let minScale = max(minXScale, minYScale)
 
     let platterScale = imageToPlatterScale()
-    let effectiveMinimumOutputSide = Self.minimumCropOutputSideLength(imageSize: imageSize)
+    // Under an aspect-ratio session, the smallest crop the record keeps:
+    // a 16:9 crop is written in whole multiples of 16 × 9, so 135 rather
+    // than 128 (`CropGeometry.rectEnlarged(toMinimumSide:…)`).
+    let effectiveMinimumOutputSide = CropGeometry.smallestShorterSide(
+      reaching: Self.minimumCropOutputSideLength(imageSize: imageSize),
+      aspectRatio: _usedAspectRatio
+    )
     let minimumPlatterSide = effectiveMinimumOutputSide * platterScale
     let maxScale = min(guideSize.width, guideSize.height) / max(minimumPlatterSide, 0.0001)
 

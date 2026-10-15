@@ -1510,7 +1510,8 @@ relying on the compiler to find them.
   bounding box, so the guide could show about 105 pixels at 10°. The
   minimum applies to the written crop: under a
   locked 16:9, whose exact crop of a 128-pixel-high guide would be
-  224 × 126, the record writes 240 × 135.
+  224 × 126, the zoom stops at 240 × 135, and a smaller guide records
+  240 × 135.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 

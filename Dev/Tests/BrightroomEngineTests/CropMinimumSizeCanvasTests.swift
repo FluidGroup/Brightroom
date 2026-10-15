@@ -417,6 +417,35 @@ struct CropMinimumSizeCanvasTests {
     #expect(written.size == expected, "written \(written)")
   }
 
+  /// Under such a lock the maximum zoom stops at that next multiple, so a
+  /// zoom to the maximum records what the guide shows and the settle does
+  /// not zoom out to the grown crop.
+  @Test(arguments: [
+    (AspectRatio(width: 16, height: 9), CGSize(width: 240, height: 135)),
+    (AspectRatio(width: 4, height: 3), CGSize(width: 172, height: 129)),
+    (AspectRatio(width: 4, height: 5), CGSize(width: 128, height: 160)),
+  ])
+  func `the maximum zoom under a lock shows the smallest crop the lock writes`(
+    lock: AspectRatio,
+    expected: CGSize
+  ) async throws {
+    let (view, window, _) = openCanvas(crop: nil, lock: lock)
+    defer { window.isHidden = true }
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    scrollView.setZoomScale(scrollView.maximumZoomScale, animated: false)
+    let shown = try guideSizeInImage(view)
+    let zoomScale = scrollView.zoomScale
+    #expect(abs(shown.width - expected.width) < 1e-6 && abs(shown.height - expected.height) < 1e-6, "shown \(shown)")
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await waitForSettleAndLayout(view)
+
+    #expect(abs(scrollView.zoomScale - zoomScale) <= zoomScale * 1e-6, "zoom \(zoomScale) → \(scrollView.zoomScale)")
+    let recorded = try #require(view.proposedCrop).cropExtent
+    #expect(abs(recorded.width - shown.width) < 1e-6 && abs(recorded.height - shown.height) < 1e-6, "recorded \(recorded)")
+  }
+
   /// The maximum zoom stops where the straightened guide's own shorter side
   /// shows the minimum. It used to stop where the guide's larger bounding
   /// box did, so the guide showed less (105 pixels high at 10°), and the
