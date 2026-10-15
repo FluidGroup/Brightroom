@@ -104,7 +104,8 @@ struct CropMinimumSizeCanvasTests {
     return crop.calculateZoomScale(
       visibleSize: view.guideView.bounds
         .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
-        .size
+        .size,
+      guideSize: view.guideView.bounds.size
     ).max
   }
 
@@ -414,6 +415,40 @@ struct CropMinimumSizeCanvasTests {
     view.applyPendingCrop()
     let written = owner.feature.crop.topLeftRect(imageSize: Self.largeImage)
     #expect(written.size == expected, "written \(written)")
+  }
+
+  /// The maximum zoom stops where the straightened guide's own shorter side
+  /// shows the minimum. It used to stop where the guide's larger bounding
+  /// box did, so the guide showed less (105 pixels high at 10°), and the
+  /// record then grew the crop: the guide's ratio changed without a lock,
+  /// and the zoom jumped back with one.
+  @Test(arguments: [nil, AspectRatio.square, AspectRatio(width: 3, height: 2)])
+  func `a zoom to the maximum on a straightened crop records what the guide shows`(lock: AspectRatio?) async throws {
+    let (view, window, owner) = openCanvas(crop: nil, lock: lock)
+    defer { window.isHidden = true }
+    view.setStraightenAngle(.degrees(10))
+    try await waitForSettleAndLayout(view)
+
+    let surface = view.cropSurface
+    let scrollView = surface.scrollView
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    scrollView.setZoomScale(scrollView.maximumZoomScale, animated: false)
+    let shown = try guideSizeInImage(view)
+    let zoomScale = scrollView.zoomScale
+    #expect(min(shown.width, shown.height) >= 128 - 1e-6, "shown \(shown)")
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    try await waitForSettleAndLayout(view)
+
+    let recorded = try #require(view.proposedCrop).cropExtent
+    #expect(
+      abs(recorded.width - shown.width) < 1e-6 && abs(recorded.height - shown.height) < 1e-6,
+      "shown \(shown), recorded \(recorded)"
+    )
+    #expect(abs(scrollView.zoomScale - zoomScale) <= zoomScale * 1e-6, "zoom \(zoomScale) → \(scrollView.zoomScale)")
+
+    view.applyPendingCrop()
+    let written = owner.feature.crop.rect.size
+    #expect(min(written.width, written.height) >= 128, "written \(written)")
   }
 
   /// A crop at or above the minimum records as it did.

@@ -61,12 +61,18 @@ extension CropGuideState {
     imageToPlatterScale()
   }
 
-  /// Returns the crop scroll view's zoom range for a visible crop guide size.
+  /// Returns the crop scroll view's zoom range for a crop guide of
+  /// `guideSize`, whose bounding box after the aggregated rotation is
+  /// `visibleSize`.
   ///
-  /// `max` is finite by design: the crop output becomes the masking tool's
-  /// canvas, so crop authoring must stop before that output becomes too small to
-  /// paint with a viewport-sized brush reliably.
-  func calculateZoomScale(visibleSize: CGSize) -> (min: CGFloat, max: CGFloat) {
+  /// `min` makes the image cover `visibleSize`. `max` is finite by design:
+  /// the crop output becomes the masking tool's canvas, so crop authoring
+  /// must stop before that output becomes too small to paint with a
+  /// viewport-sized brush reliably. At `max`, the guide's own shorter side
+  /// shows `minimumCropOutputSideLength(imageSize:)` pixels; the bounding
+  /// box of a straightened guide is larger than the guide, so it would
+  /// let the guide show less.
+  func calculateZoomScale(visibleSize: CGSize, guideSize: CGSize) -> (min: CGFloat, max: CGFloat) {
 
     let contentSize = scrollViewContentSize()
     let minXScale = visibleSize.width / contentSize.width
@@ -80,10 +86,7 @@ extension CropGuideState {
     let platterScale = imageToPlatterScale()
     let effectiveMinimumOutputSide = Self.minimumCropOutputSideLength(imageSize: imageSize)
     let minimumPlatterSide = effectiveMinimumOutputSide * platterScale
-    let maxScale = min(
-      visibleSize.width / max(minimumPlatterSide, 0.0001),
-      visibleSize.height / max(minimumPlatterSide, 0.0001)
-    )
+    let maxScale = min(guideSize.width, guideSize.height) / max(minimumPlatterSide, 0.0001)
 
     return (min: minScale, max: max(minScale, maxScale))
   }
@@ -100,15 +103,15 @@ extension CropGuideState {
   /// `guideSize`, whose bounding box after the aggregated rotation is
   /// `visibleSize`.
   ///
-  /// It is `calculateZoomScale(visibleSize:)`, except that the maximum is
-  /// raised to `zoomScaleFilling(guideSize:)` when the crop is smaller than
-  /// the maximum zoom shows. Such a crop is under the editor's minimum size
+  /// It is `calculateZoomScale(visibleSize:guideSize:)`, except that the
+  /// maximum is raised to `zoomScaleFilling(guideSize:)` when the crop is
+  /// smaller than the maximum zoom shows. Such a crop is under the editor's minimum size
   /// (`minimumCropOutputSideLength(imageSize:)`), for example one a host
   /// set; the guide then shows exactly the crop rather than the larger area
   /// around it. Only the crop's next record enlarges it, so loading it
   /// writes nothing. Any other crop gets the usual range.
   func zoomScaleRange(visibleSize: CGSize, guideSize: CGSize) -> (min: CGFloat, max: CGFloat) {
-    let range = calculateZoomScale(visibleSize: visibleSize)
+    let range = calculateZoomScale(visibleSize: visibleSize, guideSize: guideSize)
     return (min: range.min, max: max(range.max, zoomScaleFilling(guideSize: guideSize)))
   }
 

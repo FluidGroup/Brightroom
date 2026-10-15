@@ -45,7 +45,7 @@ struct CropEditingZoomScaleTests {
     )
     let guideSize = CGSize(width: 400, height: 300)
 
-    let scales = crop.calculateZoomScale(visibleSize: guideSize)
+    let scales = crop.calculateZoomScale(visibleSize: guideSize, guideSize: guideSize)
     let cropOutputSizeAtMaximumZoom = CGSize(
       width: guideSize.width / scales.max / crop.imageToPlatterScale(),
       height: guideSize.height / scales.max / crop.imageToPlatterScale()
@@ -67,7 +67,7 @@ struct CropEditingZoomScaleTests {
     )
     let guideSize = CGSize(width: 400, height: 300)
 
-    let scales = crop.calculateZoomScale(visibleSize: guideSize)
+    let scales = crop.calculateZoomScale(visibleSize: guideSize, guideSize: guideSize)
     let cropOutputSizeAtMaximumZoom = CGSize(
       width: guideSize.width / scales.max / crop.imageToPlatterScale(),
       height: guideSize.height / scales.max / crop.imageToPlatterScale()
@@ -77,5 +77,26 @@ struct CropEditingZoomScaleTests {
     #expect(abs(scales.max - scales.min) < 0.0001)
     #expect(abs(cropOutputSizeAtMaximumZoom.width - imageSize.width) < 0.0001)
     #expect(abs(cropOutputSizeAtMaximumZoom.height - imageSize.height) < 0.0001)
+  }
+
+  /// A straightened guide's bounding box is larger than the guide, so the
+  /// maximum comes from the guide itself: there its shorter side shows the
+  /// minimum, not less.
+  @Test func `Maximum zoom of a straightened guide keeps the guide at the minimum side`() {
+    let imageSize = CGSize(width: 4000, height: 3000)
+    let crop = CropGuideState(
+      cropFeature: CropFeature.test(imageSize: imageSize),
+      imageSize: imageSize
+    )
+    let guideSize = CGSize(width: 400, height: 300)
+    let visibleSize = CGRect(origin: .zero, size: guideSize)
+      .applying(CGAffineTransform(rotationAngle: 10 * .pi / 180))
+      .size
+
+    let scales = crop.calculateZoomScale(visibleSize: visibleSize, guideSize: guideSize)
+    let shorterSideAtMaximumZoom = min(guideSize.width, guideSize.height) / scales.max / crop.imageToPlatterScale()
+
+    #expect(abs(shorterSideAtMaximumZoom - CropGuideState.minimumAuthoredCropOutputSideLength) < 0.0001)
+    #expect(scales.min == crop.calculateZoomScale(visibleSize: visibleSize, guideSize: visibleSize).min)
   }
 }
