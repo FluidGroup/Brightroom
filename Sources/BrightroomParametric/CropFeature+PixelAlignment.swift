@@ -245,6 +245,128 @@ internal struct PixelAlignedCrop: Equatable, Sendable {
       )
     }
   }
+
+  /// The largest term of a ratio in lowest terms that
+  /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:aspectRatio:epsilon:)`
+  /// keeps exact.
+  ///
+  /// An exact crop is a whole multiple of the terms, so it can be up to one
+  /// term minus a pixel smaller than the selection on each axis. 32 keeps
+  /// every common ratio exact — 1:1, 4:3, 3:2, 5:4, 7:5, 16:9, 16:10, 20:9,
+  /// 21:9 (7:3), 32:9, and their turned forms — and the camera ratios an
+  /// "original" lock takes from an image, while a loss stays within 31
+  /// pixels. Larger terms come from image sizes such as 1123×794 or a
+  /// screenshot's 1179×2556; the multiples of those are too coarse, so they
+  /// keep the nearest snap and miss the ratio by less than a pixel or two.
+  internal static let maximumExactAspectRatioTerm = 32
+
+  /// Canonicalizes a selection drawn with `aspectRatio` (in the selection's
+  /// orientation, before the output quarter turn) so its whole-pixel size
+  /// has exactly that ratio, when the ratio allows it.
+  ///
+  /// Edge-by-edge snapping takes each edge inward separately, so a square
+  /// selection can become 479×478. When the ratio in lowest terms is p:q with
+  /// both terms at most `maximumExactAspectRatioTerm`, the size is instead
+  /// the largest k·p × k·q that fits in the largest whole-pixel size inside
+  /// the selection (clipped to the image; with straightening, fitted as
+  /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:epsilon:)`
+  /// fits it). It is centered on the selection: without straightening at a
+  /// whole-pixel origin inside the image, with straightening at the fitted
+  /// center, whose origin can stay fractional. Any other ratio, a selection
+  /// smaller than p × q pixels, or an invalid one is snapped as that
+  /// initializer snaps it.
+  internal init(
+    topLeftRect: CGRect,
+    imageSize: CGSize,
+    quarterTurn: QuarterTurn = .zero,
+    straightenRadians: Double = 0,
+    aspectRatio: AspectRatio,
+    epsilon: CGFloat = Self.pixelEpsilon
+  ) {
+    self.init(
+      topLeftRect: topLeftRect,
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians,
+      epsilon: epsilon
+    )
+
+    guard
+      let terms = Self.exactTerms(of: aspectRatio),
+      topLeftRect.minX.isFinite, topLeftRect.minY.isFinite,
+      topLeftRect.width.isFinite, topLeftRect.height.isFinite
+    else {
+      return
+    }
+
+    let imageBounds = CGRect(origin: .zero, size: self.imageSize.cgSize)
+    let selection: CGRect
+    if self.straightenRadians == 0 {
+      selection = imageBounds.intersection(topLeftRect.standardized)
+    } else {
+      selection = CropGeometry.fittingStraightenedRect(
+        rect: topLeftRect.standardized,
+        in: imageBounds.size,
+        straightenRadians: self.straightenRadians
+      )
+    }
+    guard selection.isNull == false, selection.width > 0, selection.height > 0 else {
+      return
+    }
+
+    // The largest whole-pixel size inside the selection, then the largest
+    // multiple of the terms inside that.
+    let availableWidth = Int(floor(selection.width + epsilon))
+    let availableHeight = Int(floor(selection.height + epsilon))
+    let multiple = min(availableWidth / terms.width, availableHeight / terms.height)
+    guard multiple >= 1 else {
+      return
+    }
+    let size = CGSize(
+      width: CGFloat(multiple * terms.width),
+      height: CGFloat(multiple * terms.height)
+    )
+
+    if self.straightenRadians == 0 {
+      // Whole-pixel origin nearest the centered one, inside the image.
+      let x = min(max((selection.midX - size.width / 2).rounded(), 0), imageBounds.width - size.width)
+      let y = min(max((selection.midY - size.height / 2).rounded(), 0), imageBounds.height - size.height)
+      self.cropExtent = CGRect(origin: CGPoint(x: x, y: y), size: size)
+    } else {
+      // No larger than the fitted selection about the same center, so its
+      // straightened footprint stays inside the source.
+      self.cropExtent = CGRect(
+        x: selection.midX - size.width / 2,
+        y: selection.midY - size.height / 2,
+        width: size.width,
+        height: size.height
+      )
+    }
+  }
+
+  /// `aspectRatio` in lowest whole-number terms, when both terms are at most
+  /// `maximumExactAspectRatioTerm`; nil otherwise.
+  ///
+  /// Scanning the denominators from 1 finds the lowest terms first, and
+  /// accepts ratios given in any scale (`16:9`, `1.5:1`, or an image size
+  /// such as `4032×3024`).
+  static func exactTerms(of aspectRatio: AspectRatio) -> (width: Int, height: Int)? {
+    let ratio = aspectRatio.width / aspectRatio.height
+    guard ratio.isFinite, ratio > 0 else {
+      return nil
+    }
+    let maximum = maximumExactAspectRatioTerm
+    for height in 1...maximum {
+      let width = (ratio * CGFloat(height)).rounded()
+      guard width >= 1, width <= CGFloat(maximum) else {
+        continue
+      }
+      if abs(width / CGFloat(height) - ratio) <= ratio * 1e-9 {
+        return (Int(width), height)
+      }
+    }
+    return nil
+  }
 }
 
 // MARK: - CropFeature in top-left coordinates
@@ -272,12 +394,64 @@ extension CropFeature {
     quarterTurn: QuarterTurn = .zero,
     straightenRadians: Double = 0
   ) {
-    let aligned = PixelAlignedCrop(
-      topLeftRect: topLeftRect,
-      imageSize: imageSize,
+    self.init(
+      aligned: PixelAlignedCrop(
+        topLeftRect: topLeftRect,
+        imageSize: imageSize,
+        quarterTurn: quarterTurn,
+        straightenRadians: straightenRadians
+      ),
       quarterTurn: quarterTurn,
       straightenRadians: straightenRadians
     )
+  }
+
+  /// Creates a crop feature from a y-down selection drawn under an
+  /// aspect-ratio lock, aligned to whole pixels with exactly that ratio when
+  /// the ratio allows it.
+  ///
+  /// As `init(topLeftRect:imageSize:quarterTurn:straightenRadians:)`, but
+  /// for a ratio whose lowest terms are both at most 32 (1:1, 4:5, 16:9, …)
+  /// the size is the largest whole multiple of those terms that fits in the
+  /// selection, centered on it, instead of each edge snapped inward on its
+  /// own, which can miss the ratio by a pixel (a square as 479×478). Other
+  /// ratios snap edge by edge, within a pixel or two of the ratio.
+  ///
+  /// Package access: the editing canvas aligns a guide it records under a
+  /// lock with it. A host aligns a crop with
+  /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:)` or
+  /// `pixelAligned(imageSize:)`.
+  ///
+  /// - Parameters:
+  ///   - imageSize: The oriented pixel size of the crop's input.
+  ///   - aspectRatio: The locked ratio of the output, after `quarterTurn`;
+  ///     a sideways turn exchanges it for the selection.
+  package init(
+    topLeftRect: CGRect,
+    imageSize: CGSize,
+    quarterTurn: QuarterTurn = .zero,
+    straightenRadians: Double = 0,
+    aspectRatio: AspectRatio
+  ) {
+    self.init(
+      aligned: PixelAlignedCrop(
+        topLeftRect: topLeftRect,
+        imageSize: imageSize,
+        quarterTurn: quarterTurn,
+        straightenRadians: straightenRadians,
+        aspectRatio: quarterTurn.isSideways ? aspectRatio.swapped() : aspectRatio
+      ),
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
+    )
+  }
+
+  /// Flips an aligned y-down selection into the feature's y-up coordinates.
+  private init(
+    aligned: PixelAlignedCrop,
+    quarterTurn: QuarterTurn,
+    straightenRadians: Double
+  ) {
     let snapped = aligned.cropExtent
     let imageHeight = CGFloat(aligned.imageSize.height)
 
