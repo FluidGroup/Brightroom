@@ -324,7 +324,10 @@ public struct ImageEditorCanvas: View {
   /// previous update; a newly mounted canvas applies the current value. A
   /// crop that already has the ratio keeps its place (within the pixel
   /// rounding of a stored crop); any other crop becomes the largest crop of
-  /// the ratio centered in the image. A crop the document reloads under the
+  /// the ratio centered in the image. The value a canvas mounts with keeps
+  /// such a crop on its pixels, so opening writes nothing; a later value
+  /// (a ratio the user picks) aligns it to exactly the ratio, as a recorded
+  /// crop is aligned. A crop the document reloads under the
   /// lock (an undo) keeps its place when it has the ratio, and otherwise
   /// becomes the largest crop of the ratio inside it. Crops the guide
   /// records or fits under the lock have exactly the ratio in whole pixels
@@ -663,8 +666,10 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
       guard appliedLockedAspectRatio != .some(ratio) else {
         return
       }
+      // The first value is the lock the canvas starts with.
+      let isInitial = appliedLockedAspectRatio == nil
       appliedLockedAspectRatio = .some(ratio)
-      canvasView.setLockedAspectRatio(ratio)
+      canvasView.setLockedAspectRatio(ratio, isInitial: isInitial)
     }
 
     func applySwiftUIInputs(_ body: () -> Void) {

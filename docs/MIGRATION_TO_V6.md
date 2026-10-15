@@ -1499,7 +1499,9 @@ relying on the compiler to find them.
   to one term minus a pixel smaller than the guide on each side (at most
   15 × 8 pixels for 16:9). A ratio with larger terms, such as an image's own
   1123:794, still snaps edge by edge. A stored crop loaded under a lock is
-  not rewritten until the user changes it.
+  not rewritten until the user changes it; picking a ratio the crop already
+  has within a pixel is such a change and aligns it exactly (a 1080 × 1349
+  photo picked as 4:5 exports 1076 × 1345).
 - ImageEditor and `ImageEditorCanvas` keep a crop at least 128 pixels on its
   shorter output side (the image's shorter side, on a smaller image);
   `CropFeature` itself accepts any size. 5.1.1 stopped the crop zoom at that

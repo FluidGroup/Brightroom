@@ -796,7 +796,17 @@ final class EditingCanvasView: UIView {
     setProposedCrop(crop)
   }
 
-  func setLockedAspectRatio(_ ratio: AspectRatio?) {
+  /// Locks the crop guide to `ratio` (output orientation); nil unlocks it.
+  ///
+  /// A selection that already has the ratio, within the rounding of a
+  /// stored crop, is kept; any other becomes the centered maximum crop of
+  /// the ratio. `isInitial` says whether this is the lock the canvas starts
+  /// with (a `.fixed` editor, or the lock a host passes when it mounts the
+  /// canvas): the selection it keeps is the document's as loaded and stays
+  /// on its pixels, so opening writes nothing. A later lock (the user's
+  /// pick) aligns the kept selection to exactly the ratio, so the picked
+  /// ratio is written even when the crop missed it by a pixel.
+  func setLockedAspectRatio(_ ratio: AspectRatio?, isInitial: Bool = false) {
     guard state.lockedAspectRatio != ratio else {
       return
     }
@@ -809,6 +819,9 @@ final class EditingCanvasView: UIView {
       // maximum crop of the new ratio.
       if crop?.hasAspectRatio(ratio) == true {
         crop?.adoptAspectRatio(ratio)
+        if isInitial == false {
+          crop?.alignToAspectRatio()
+        }
       } else {
         crop?.updateCropExtentIfNeeded(toFitAspectRatio: ratio)
       }

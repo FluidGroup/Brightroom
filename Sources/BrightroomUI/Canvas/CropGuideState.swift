@@ -250,6 +250,24 @@ struct CropGuideState: Equatable, Sendable {
     cropExtent = fitted
   }
 
+  /// Aligns the selection to whole pixels as `makeCropFeature()` writes it
+  /// under the aspect-ratio session: with exactly the ratio when its lowest
+  /// terms are both at most 32, edge by edge otherwise. The guide then shows
+  /// the crop that is written. Without a session, nothing changes.
+  mutating func alignToAspectRatio() {
+    guard let aspectRatio = _usedAspectRatio else {
+      return
+    }
+    cropExtent = CropFeature(
+      topLeftRect: cropExtent,
+      imageSize: imageSize,
+      quarterTurn: rotation,
+      straightenRadians: adjustmentAngle.radians,
+      aspectRatio: aspectRatio
+    )
+    .topLeftRect(imageSize: imageSize)
+  }
+
   mutating func purgeAspectRatio() {
     _usedAspectRatio = nil
   }

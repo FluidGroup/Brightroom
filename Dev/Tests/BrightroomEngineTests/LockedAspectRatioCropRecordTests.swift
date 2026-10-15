@@ -377,4 +377,65 @@ struct LockedAspectRatioCropRecordTests {
     )
     #expect(output.extent.size == CGSize(width: 2416, height: 3020))
   }
+
+  // MARK: - Picked locks
+
+  /// A ratio the user picks keeps a crop that already has it within the
+  /// rounding allowance, and aligns it to exactly the ratio, so the picked
+  /// ratio is exported. A 1080 × 1349 photo's full crop was kept as it was.
+  @Test func `a picked ratio aligns a crop that nearly has it to exactly the ratio`() throws {
+    let imageSize = CGSize(width: 1080, height: 1349)
+    let lock = AspectRatio(width: 4, height: 5)
+    let (view, window, owner) = openCanvas(feature: ImageEditorFeature(imageSize: imageSize), imageSize: imageSize)
+    defer { window.isHidden = true }
+
+    // As ImageEditor's picker does: the canvas mounted unlocked.
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    coordinator.applyLockedAspectRatio(nil, to: view)
+    coordinator.applyLockedAspectRatio(lock, to: view)
+    view.layoutIfNeeded()
+    view.applyPendingCrop()
+
+    // 269 × (4, 5), centered within half a pixel.
+    #expect(owner.emittedCount == 1)
+    let written = owner.feature.crop.topLeftRect(imageSize: imageSize)
+    #expect(written.size == CGSize(width: 1076, height: 1345), "\(written)")
+    #expect(abs(written.midX - 540) <= 0.5 && abs(written.midY - 674.5) <= 0.5, "\(written)")
+    // The guide shows the crop that was written.
+    #expect(view.proposedCrop?.cropExtent == written)
+    #expect(owner.guides.last?.pendingCrop == owner.feature.crop)
+  }
+
+  /// The same for a stored crop a pixel off square when the user picks
+  /// Square.
+  @Test func `a picked square aligns a stored crop a pixel off square`() throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.crop = CropFeature(topLeftRect: CGRect(x: 100, y: 100, width: 479, height: 478), imageSize: imageSize)
+    let (view, window, owner) = openCanvas(feature: feature, imageSize: imageSize)
+    defer { window.isHidden = true }
+
+    view.setLockedAspectRatio(.square)
+    view.applyPendingCrop()
+
+    #expect(owner.emittedCount == 1)
+    let written = owner.feature.crop.topLeftRect(imageSize: imageSize)
+    #expect(written.size == CGSize(width: 478, height: 478), "\(written)")
+    #expect(abs(written.midX - 339.5) <= 0.5 && abs(written.midY - 339) <= 0.5, "\(written)")
+  }
+
+  /// The lock a canvas mounts with (a `.fixed` editor) keeps the same crop
+  /// on its pixels: opening the document writes nothing.
+  @Test func `the lock a canvas mounts with keeps a crop that nearly has it`() throws {
+    let imageSize = CGSize(width: 1080, height: 1349)
+    let lock = AspectRatio(width: 4, height: 5)
+    let feature = ImageEditorFeature(imageSize: imageSize)
+    let (view, window, owner) = openCanvas(feature: feature, imageSize: imageSize)
+    defer { window.isHidden = true }
+
+    EditingCanvasRepresentable.Coordinator().applyLockedAspectRatio(lock, to: view)
+    view.applyPendingCrop()
+
+    #expect(owner.emittedCount == 0)
+    #expect(view.proposedCrop?.cropExtent == CGRect(origin: .zero, size: imageSize))
+  }
 }
