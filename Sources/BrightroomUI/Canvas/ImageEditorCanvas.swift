@@ -93,8 +93,11 @@ public struct ImageEditorCanvas: View {
   /// binding's latest document's `feature`; the
   /// view never commits them to the history, so call `commit()` when a change
   /// should become an undo step. A document set from outside (for example an
-  /// undo) is displayed, and its crop reloads the crop guide. A document of
-  /// another image rebuilds the canvas.
+  /// undo) is displayed, and its crop reloads the crop guide. A crop below
+  /// ImageEditor's minimum crop size (128 pixels on its shorter output side,
+  /// see `ImageEditor`) is shown exactly, with the crop zoom raised for it,
+  /// and is not rewritten when it loads. A document of another image
+  /// rebuilds the canvas.
   ///
   /// A host that sets `document.localBlur` with its own blur before the first
   /// stroke pays for that blur at export until a stroke lands. The canvas

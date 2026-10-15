@@ -1500,10 +1500,13 @@ extension EditingCanvasView {
 
           cropSurface.imagePlatterView.frame.origin = .zero
 
-          let (min, max) = crop.calculateZoomScale(
+          // A crop under the editor's minimum size (one a host set) raises
+          // the maximum, so the guide shows exactly that crop.
+          let (min, max) = crop.zoomScaleRange(
             visibleSize: guideView.bounds
               .applying(CGAffineTransform(rotationAngle: crop.aggregatedRotation.radians))
-              .size
+              .size,
+            guideSize: guideView.bounds.size
           )
 
           cropSurface.scrollView.minimumZoomScale = min

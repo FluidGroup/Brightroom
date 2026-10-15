@@ -88,6 +88,30 @@ extension CropGuideState {
     return (min: minScale, max: max(minScale, maxScale))
   }
 
+  /// The zoom scale at which the crop fills a guide of `guideSize`, as the
+  /// crop scroll view zooms to it; 0 when the crop has no area.
+  func zoomScaleFilling(guideSize: CGSize) -> CGFloat {
+    let extent = zoomExtent()
+    let scale = min(guideSize.width / extent.width, guideSize.height / extent.height)
+    return scale.isFinite && scale > 0 ? scale : 0
+  }
+
+  /// The crop scroll view's zoom range for this crop in a guide of
+  /// `guideSize`, whose bounding box after the aggregated rotation is
+  /// `visibleSize`.
+  ///
+  /// It is `calculateZoomScale(visibleSize:)`, except that the maximum is
+  /// raised to `zoomScaleFilling(guideSize:)` when the crop is smaller than
+  /// the maximum zoom shows. Such a crop is under the editor's minimum size
+  /// (`minimumCropOutputSideLength(imageSize:)`), for example one a host
+  /// set; the guide then shows exactly the crop rather than the larger area
+  /// around it, and loading it writes nothing. Any other crop gets the usual
+  /// range.
+  func zoomScaleRange(visibleSize: CGSize, guideSize: CGSize) -> (min: CGFloat, max: CGFloat) {
+    let range = calculateZoomScale(visibleSize: visibleSize)
+    return (min: range.min, max: max(range.max, zoomScaleFilling(guideSize: guideSize)))
+  }
+
   func platterRect(fromImageRect rect: CGRect) -> CGRect {
     let scale = imageToPlatterScale()
     return rect.applying(.init(scaleX: scale, y: scale))

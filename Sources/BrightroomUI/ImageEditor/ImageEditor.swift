@@ -43,6 +43,12 @@ import BrightroomParametric
    drive them from its own buttons.
  - The view never registers anything with an `UndoManager`, and never
    changes the document's source image.
+ - A crop is at least 128 pixels on its shorter output side (the image's
+   shorter side, on a smaller image), so the blur tool keeps room to paint:
+   crop zoom stops there, and `InitialCrop` enlarges a smaller crop it
+   decides. A smaller crop the host puts in the document is shown exactly
+   as it is and is not rewritten when it loads. `CropFeature` itself
+   accepts any size.
  - The editor's state follows the document's source image. To switch the editor
    to another document of the same image (a duplicate or a variant), give
    it a new identity with `.id`; the editor restarts its Cancel point

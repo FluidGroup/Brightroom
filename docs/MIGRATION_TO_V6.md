@@ -1493,6 +1493,13 @@ relying on the compiler to find them.
   15 × 8 pixels for 16:9). A ratio with larger terms, such as an image's own
   1123:794, still snaps edge by edge. A stored crop loaded under a lock is
   not rewritten until the user changes it.
+- ImageEditor and `ImageEditorCanvas` keep a crop at least 128 pixels on its
+  shorter output side (the image's shorter side, on a smaller image);
+  `CropFeature` itself accepts any size. 5.1.1 stopped the crop zoom at that
+  size too, but showed a smaller crop (from a `CropModifier` or the host) as
+  the larger area the zoom stopped at, and a pan grew the crop to that area.
+  A smaller crop the host sets is now shown exactly and is not rewritten
+  when it loads.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 
