@@ -1375,16 +1375,21 @@ undo does not return to the full-image crop.
   state it captures must be `Sendable`; move blocking work to your own
   queue, as `faceDetection` does.
 - The document snaps the returned crop to whole pixels inside the image with
-  `CropFeature.pixelAligned(imageSize:)`, then applies ImageEditor's minimum
-  crop size: a crop whose shorter output side is under 128 pixels (under the
-  image's shorter side, on a smaller image) grows about its center to that
-  size, inside the image. It keeps the policy's ratio (`.aspectRatio(_:)`,
-  `faceDetection(aspectRatio:)`; exactly, for ratios such as 1:1 or 16:9) or,
-  for `InitialCrop(_:)`, the crop's own ratio to the nearest pixel. A crop
+  `CropFeature.pixelAligned(imageSize:)`. A policy with a ratio
+  (`.aspectRatio(_:)`, `faceDetection(aspectRatio:)`) gets exactly that ratio
+  in whole pixels when its lowest terms are both at most 32, as a crop under
+  ImageEditor's locked ratio is written: 4:5 of a 4032 × 3024 photo is
+  2416 × 3020. Snapping each edge gives 2418 × 3024, slightly off the ratio,
+  which a `.fixed` editor confirmed untouched would export. The document
+  then applies ImageEditor's minimum crop size: a crop whose shorter output
+  side is under 128 pixels (under the image's shorter side, on a smaller
+  image) grows about its center to that size, inside the image. It keeps
+  the policy's ratio (exactly, for ratios such as 1:1 or 16:9) or, for
+  `InitialCrop(_:)`, the crop's own ratio to the nearest pixel. A crop
   already as large as the image holds at its ratio (a 16:9 crop of a small
-  square image) stays as it is. 5.1.1 kept
-  such crops as they were, so a small face could start as a 105 × 104 crop
-  that the editor's zoom could not show.
+  square image) stays as it is. 5.1.1 kept such crops as they were, so a
+  small face could start as a 105 × 104 crop that the editor's zoom could
+  not show.
 - `.faceDetection(paddingBias:aspectRatio:)` takes an `AspectRatio`.
   `.fullImage` keeps the whole image, and `.aspectRatio(_:)` starts from the
   largest centered crop of a ratio. None of them locks the ratio in the

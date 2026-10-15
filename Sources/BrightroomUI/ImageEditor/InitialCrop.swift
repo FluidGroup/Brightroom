@@ -32,10 +32,16 @@ import BrightroomParametric
 /// It runs once, when a document is created with
 /// `ImageEditorDocument(source:initialCrop:history:)`, and never for a
 /// document rebuilt from saved values. The document pixel-aligns the crop it
-/// decides with `CropFeature.pixelAligned(imageSize:)`, then applies
-/// ImageEditor's minimum crop size: a crop whose shorter output side is
-/// under 128 pixels (or under the image's shorter side, when the image is
-/// smaller) grows about its center to that size, keeping its aspect ratio
+/// decides with `CropFeature.pixelAligned(imageSize:)`. A policy with a
+/// ratio (`aspectRatio(_:)`, `faceDetection(paddingBias:aspectRatio:)`)
+/// gets exactly that ratio in whole pixels instead when its lowest terms
+/// are both at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of
+/// the terms inside the framing, centered on it, less than one term
+/// smaller on each side, as a crop under ImageEditor's locked ratio is
+/// written. It then applies ImageEditor's minimum crop size: a crop whose
+/// shorter output side is under 128 pixels (or under the image's shorter
+/// side, when the image is smaller) grows about its center to that size,
+/// keeping its aspect ratio
 /// (the policy's ratio, or the crop's own for a custom policy) and staying
 /// inside the image. A small face, for example, is framed with more of its
 /// surroundings. A crop the image cannot hold at that size and ratio stays
@@ -94,8 +100,11 @@ public struct InitialCrop: Sendable {
   /// The whole image.
   public static let fullImage = InitialCrop(policy: .fullImage)
 
-  /// The largest selection of `aspectRatio`, centered in the image. See
-  /// `CropFeature.fitted(to:imageSize:)`.
+  /// The largest selection of `aspectRatio`, centered in the image, as
+  /// `CropFeature.fitted(to:imageSize:)` fits it, but with exactly that
+  /// ratio in whole pixels when its lowest terms are both at most 32 (see
+  /// `InitialCrop`): a 4:5 crop of a 4032 × 3024 photo is 2416 × 3020, not
+  /// the 2418 × 3024 that snapping each edge gives.
   ///
   /// The editor does not lock the ratio; pass
   /// `ImageEditor.Options.aspectRatioPolicy` for that.
@@ -112,7 +121,9 @@ public struct InitialCrop: Sendable {
   ///     the image's own aspect ratio.
   ///
   /// When no face is found, or detection fails, the crop is fitted to
-  /// `aspectRatio` if one is given and covers the whole image otherwise. A
+  /// `aspectRatio` if one is given and covers the whole image otherwise.
+  /// With `aspectRatio`, the crop has exactly that ratio in whole pixels
+  /// when its lowest terms are both at most 32 (see `InitialCrop`). A
   /// framing smaller than the editor's minimum crop size (128 pixels on its
   /// shorter side) grows about the face's center to that size, with
   /// `aspectRatio` exactly when its lowest terms are both at most 32 (see
@@ -124,11 +135,16 @@ public struct InitialCrop: Sendable {
   ) -> InitialCrop {
     InitialCrop(policy: .decide { input in
 
+      // The document aligns the crop, to exactly `aspectRatio` when one is
+      // given, so the framing stays continuous here.
       var fallbackCrop: CropFeature {
         guard let aspectRatio else {
           return input.crop
         }
-        return input.crop.fitted(to: aspectRatio, imageSize: input.imageSize)
+        // Centered, so the same in y-down and y-up coordinates.
+        return CropFeature(
+          rect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: input.imageSize, straightenRadians: 0)
+        )
       }
 
       // A released editor no longer needs the crop.
@@ -140,11 +156,13 @@ public struct InitialCrop: Sendable {
         return fallbackCrop
       }
 
-      return CropFeature.framingFace(
-        face.boundingBox,
-        imageSize: input.imageSize,
-        paddingBias: paddingBias,
-        aspectRatio: aspectRatio
+      return CropFeature(
+        rect: CropFeature.framingFaceSelection(
+          face.boundingBox,
+          imageSize: input.imageSize,
+          paddingBias: paddingBias,
+          aspectRatio: aspectRatio
+        )
       )
     }, framingAspectRatio: aspectRatio)
   }
@@ -200,6 +218,25 @@ extension CropFeature {
     paddingBias: CGFloat,
     aspectRatio: AspectRatio?
   ) -> CropFeature {
+    CropFeature(
+      rect: framingFaceSelection(
+        normalizedFaceBox,
+        imageSize: imageSize,
+        paddingBias: paddingBias,
+        aspectRatio: aspectRatio
+      )
+    )
+    .pixelAligned(imageSize: imageSize)
+  }
+
+  /// The selection `framingFace(_:imageSize:paddingBias:aspectRatio:)`
+  /// aligns, in the crop's y-up coordinates, before pixel alignment.
+  static func framingFaceSelection(
+    _ normalizedFaceBox: CGRect,
+    imageSize: CGSize,
+    paddingBias: CGFloat,
+    aspectRatio: AspectRatio?
+  ) -> CGRect {
     // Vision's image rectangles and `CropFeature.rect` share the bottom-left
     // origin, so no flip is needed.
     let faceRect = VNImageRectForNormalizedRect(
@@ -211,13 +248,30 @@ extension CropFeature {
       dx: -faceRect.width * paddingBias,
       dy: -faceRect.height * paddingBias
     )
-    let selection = CropGeometry.fittingRect(
+    return CropGeometry.fittingRect(
       rect: paddedRect,
       in: imageSize,
       straightenRadians: 0,
       respectingAspectRatio: aspectRatio ?? AspectRatio(imageSize)
     )
-    return CropFeature(rect: selection).pixelAligned(imageSize: imageSize)
+  }
+
+  /// This crop aligned to whole pixels in an input of `imageSize`, as
+  /// `pixelAligned(imageSize:)` aligns it, or with exactly `aspectRatio`
+  /// (the output's, after `quarterTurn`) when its lowest terms are both at
+  /// most 32: the largest whole multiple of the terms inside the selection,
+  /// centered on it.
+  func pixelAligned(imageSize: CGSize, aspectRatio: AspectRatio?) -> CropFeature {
+    guard let aspectRatio else {
+      return pixelAligned(imageSize: imageSize)
+    }
+    return CropFeature(
+      topLeftRect: topLeftRect(imageSize: imageSize),
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians,
+      aspectRatio: aspectRatio
+    )
   }
 
   /// This crop grown about its center to ImageEditor's minimum crop size
@@ -280,12 +334,17 @@ extension EditingDocument where Content == ImageEditorFeature {
     case .fullImage:
       break
     case .aspectRatio(let aspectRatio):
-      feature.crop = feature.crop.fitted(to: aspectRatio, imageSize: imageSize)
+      // The full-image crop has no turn or straighten, and the selection is
+      // centered, so the same in y-down and y-up coordinates.
+      feature.crop = CropFeature(
+        rect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: imageSize, straightenRadians: 0)
+      )
+      .pixelAligned(imageSize: imageSize, aspectRatio: aspectRatio)
     case .decide(let decide):
       // The input is built off the calling actor: downsampling decodes the
       // full image, which would otherwise hitch the caller (often main).
       let decided = await Self.decideInitialCrop(decide, source: source, crop: feature.crop)
-      feature.crop = decided.pixelAligned(imageSize: imageSize)
+      feature.crop = decided.pixelAligned(imageSize: imageSize, aspectRatio: initialCrop.framingAspectRatio)
     }
     feature.crop = feature.crop.enlargedToEditorMinimum(
       imageSize: imageSize,

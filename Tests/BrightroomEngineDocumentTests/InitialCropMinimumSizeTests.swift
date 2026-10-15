@@ -37,11 +37,9 @@ struct InitialCropMinimumSizeTests {
     let document = await EditingDocument(source: image, initialCrop: InitialCrop { _ in requested })
     #expect(document.feature.crop == requested)
 
+    // 75 × (16, 9), centered: 112.5 rounds to 113.
     let fitted = await EditingDocument(source: image, initialCrop: .aspectRatio(AspectRatio(width: 16, height: 9)))
-    #expect(
-      fitted.feature.crop
-        == ImageEditorFeature(imageSize: imageSize).crop.fitted(to: AspectRatio(width: 16, height: 9), imageSize: imageSize)
-    )
+    #expect(fitted.feature.crop.topLeftRect(imageSize: imageSize) == CGRect(x: 0, y: 113, width: 1200, height: 675))
   }
 
   /// A face framed with `.square` that the inward snap left a pixel off
@@ -96,8 +94,8 @@ struct InitialCropMinimumSizeTests {
   }
 
   /// An aspect-ratio crop as large as a small or thin image holds is under
-  /// the minimum but cannot grow; the document keeps it rather than
-  /// shrinking it to a smaller multiple of the ratio.
+  /// the minimum but cannot grow; the document keeps the largest crop of
+  /// exactly the ratio the image holds rather than shrinking it further.
   @Test(arguments: [
     (CGSize(width: 100, height: 100), AspectRatio(width: 16, height: 9)),
     (CGSize(width: 3000, height: 200), AspectRatio(width: 9, height: 16)),
@@ -108,8 +106,69 @@ struct InitialCropMinimumSizeTests {
     let image = SourceImage(cgImage: try Fixtures.makeCGImage(width: Int(size.width), height: Int(size.height)))
     let document = await EditingDocument(source: image, initialCrop: .aspectRatio(ratio))
 
-    let fitted = ImageEditorFeature(imageSize: size).crop.fitted(to: ratio, imageSize: size)
+    let fitted = CropFeature(
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: ratio, in: size, straightenRadians: 0),
+      imageSize: size,
+      aspectRatio: ratio
+    )
     #expect(document.feature.crop == fitted)
+  }
+
+  // MARK: - Exact ratios
+
+  /// `.aspectRatio(_:)` aligns its crop to exactly the ratio, as a crop
+  /// recorded under ImageEditor's locked ratio is, so a `.fixed` editor
+  /// opened on it exports that ratio. Snapping each edge on its own gave
+  /// 2418 × 3024 for 4:5 of a 4032 × 3024 photo.
+  @Test(arguments: [
+    (CGSize(width: 4032, height: 3024), AspectRatio(width: 4, height: 5), CGSize(width: 2416, height: 3020)),
+    (CGSize(width: 1001, height: 667), AspectRatio(width: 4, height: 5), CGSize(width: 532, height: 665)),
+    (CGSize(width: 3024, height: 4032), AspectRatio(width: 16, height: 9), CGSize(width: 3024, height: 1701)),
+    (CGSize(width: 4032, height: 3024), AspectRatio(width: 9, height: 16), CGSize(width: 1701, height: 3024)),
+    (CGSize(width: 1001, height: 667), AspectRatio.square, CGSize(width: 667, height: 667)),
+  ])
+  func `An aspect-ratio crop has exactly the ratio`(size: CGSize, ratio: AspectRatio, expected: CGSize) async throws {
+    let image = SourceImage(cgImage: try Fixtures.makeCGImage(width: Int(size.width), height: Int(size.height)))
+    let document = await EditingDocument(source: image, initialCrop: .aspectRatio(ratio))
+
+    let crop = document.feature.crop
+    let rect = crop.topLeftRect(imageSize: size)
+    #expect(rect.size == expected, "\(rect)")
+    // Centered within half a pixel, at whole pixels.
+    #expect(abs(rect.midX - size.width / 2) <= 0.5 && abs(rect.midY - size.height / 2) <= 0.5, "\(rect)")
+    #expect(crop == crop.pixelAligned(imageSize: size))
+  }
+
+  /// Face detection that finds no face falls back to the ratio, exactly too.
+  @Test func `Face detection without a face falls back to exactly the ratio`() async throws {
+    let size = CGSize(width: 1001, height: 667)
+    let image = SourceImage(cgImage: try Fixtures.makeCGImage(width: Int(size.width), height: Int(size.height)))
+    let document = await EditingDocument(
+      source: image,
+      initialCrop: .faceDetection(aspectRatio: AspectRatio(width: 4, height: 5))
+    )
+    #expect(document.feature.crop.topLeftRect(imageSize: size).size == CGSize(width: 532, height: 665))
+  }
+
+  /// A face framed with a ratio is aligned to exactly the ratio, about the
+  /// framing's center; without a ratio, as `framingFace` aligns it.
+  @Test func `A face framing with a ratio aligns to exactly the ratio`() throws {
+    let size = CGSize(width: 4000, height: 3000)
+    let face = CGRect(x: 0.4123, y: 0.5531, width: 0.0731, height: 0.0977)
+    for ratio in [AspectRatio.square, AspectRatio(width: 4, height: 5), AspectRatio(width: 16, height: 9)] {
+      let selection = CropFeature.framingFaceSelection(face, imageSize: size, paddingBias: 1.3, aspectRatio: ratio)
+      let aligned = CropFeature(rect: selection).pixelAligned(imageSize: size, aspectRatio: ratio)
+      let terms = try #require(PixelAlignedCrop.exactTerms(of: ratio))
+      let multiple = aligned.rect.width / CGFloat(terms.width)
+      #expect(multiple == multiple.rounded() && aligned.rect.height == multiple * CGFloat(terms.height), "\(aligned.rect)")
+      #expect(abs(aligned.rect.midX - selection.midX) <= 0.5 && abs(aligned.rect.midY - selection.midY) <= 0.5, "\(aligned.rect)")
+      #expect(selection.width - aligned.rect.width < CGFloat(terms.width) + 1, "\(aligned.rect) in \(selection)")
+    }
+    let unlocked = CropFeature.framingFaceSelection(face, imageSize: size, paddingBias: 1.3, aspectRatio: nil)
+    #expect(
+      CropFeature(rect: unlocked).pixelAligned(imageSize: size, aspectRatio: nil)
+        == CropFeature.framingFace(face, imageSize: size, paddingBias: 1.3, aspectRatio: nil)
+    )
   }
 
   /// On an image smaller than 128 pixels on a side, the minimum is the
