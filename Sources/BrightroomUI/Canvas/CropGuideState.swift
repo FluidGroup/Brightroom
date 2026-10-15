@@ -33,7 +33,8 @@ import BrightroomParametric
 /// image pixel size (sourced from the loaded state, since `CropFeature` has
 /// none) so clamping and aspect-fitting work. Loading converts coordinates and
 /// fits the selection to the source. Committing uses the engine's shared pixel
-/// canonicalization before converting back to `CropFeature`; live gesture
+/// canonicalization before converting back to `CropFeature`, exact to the
+/// ratio under an aspect-ratio session (`makeCropFeature()`); live gesture
 /// coordinates remain continuous until then.
 ///
 /// This is the home for the UI-authoring richness the engine does not carry:
@@ -81,16 +82,55 @@ struct CropGuideState: Equatable, Sendable {
     self.adjustmentAngle = .radians(cropFeature.straightenRadians)
   }
 
-  /// Creates a stored crop feature (y-down → y-up), using the pixel
-  /// alignment of `CropFeature(topLeftRect:…)` for the selection before its
-  /// output quarter turn.
+  /// Creates a stored crop feature (y-down → y-up), aligning the selection
+  /// before its output quarter turn to whole pixels.
+  ///
+  /// Without an aspect-ratio session, the alignment is that of
+  /// `CropFeature(topLeftRect:…)`, which snaps each edge inward. Under a
+  /// session, a selection a gesture or a fit left off the pixel grid is
+  /// aligned to exactly the ratio instead, through
+  /// `CropFeature(topLeftRect:…aspectRatio:)`: a locked square records a
+  /// square, not 479×478. A selection already on the pixel grid, such as a
+  /// stored crop loaded as it is and kept by `adoptAspectRatio(_:)`, keeps
+  /// its pixels even when it misses the ratio by a pixel, so loading never
+  /// rewrites the document; the next record fits it to the ratio.
   func makeCropFeature() -> CropFeature {
-    CropFeature(
+    let aligned = CropFeature(
       topLeftRect: cropExtent,
       imageSize: imageSize,
       quarterTurn: rotation,
       straightenRadians: adjustmentAngle.radians
     )
+    guard
+      let aspectRatio = _usedAspectRatio,
+      Self.isOnPixelGrid(cropExtent, alignedAs: aligned, in: imageSize) == false
+    else {
+      return aligned
+    }
+    return CropFeature(
+      topLeftRect: cropExtent,
+      imageSize: imageSize,
+      quarterTurn: rotation,
+      straightenRadians: adjustmentAngle.radians,
+      aspectRatio: aspectRatio
+    )
+  }
+
+  /// Whether pixel alignment leaves `selection` where it is: `aligned` is
+  /// `selection` aligned edge by edge.
+  private static func isOnPixelGrid(
+    _ selection: CGRect,
+    alignedAs aligned: CropFeature,
+    in imageSize: CGSize
+  ) -> Bool {
+    // A straightened selection's fractional origin goes through y-up
+    // coordinates and back, which can move it by an ulp.
+    let alignedSelection = aligned.topLeftRect(imageSize: imageSize)
+    let tolerance: CGFloat = 1e-6
+    return abs(alignedSelection.minX - selection.minX) <= tolerance
+      && abs(alignedSelection.minY - selection.minY) <= tolerance
+      && abs(alignedSelection.width - selection.width) <= tolerance
+      && abs(alignedSelection.height - selection.height) <= tolerance
   }
 
   // MARK: - Construction

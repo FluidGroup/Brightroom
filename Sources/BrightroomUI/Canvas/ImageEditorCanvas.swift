@@ -322,9 +322,11 @@ public struct ImageEditorCanvas: View {
   /// rounding of a stored crop); any other crop becomes the largest crop of
   /// the ratio centered in the image. A crop the document reloads under the
   /// lock (an undo) keeps its place when it has the ratio, and otherwise
-  /// becomes the largest crop of the ratio inside it. The
-  /// canvas changes the lock itself: a reset unlocks
-  /// it, and turning the output sideways turns the ratio. Passing the same
+  /// becomes the largest crop of the ratio inside it. Crops the guide
+  /// records or fits under the lock have exactly the ratio in whole pixels
+  /// when its lowest terms are both at most 32 (see `CropGuide.pendingCrop`).
+  /// The canvas changes the lock itself: a reset unlocks it, and turning the
+  /// output sideways turns the ratio. Passing the same
   /// value again does not restore it; follow the lock through
   /// `onCropGuideChange(_:)` (`lockedAspectRatio`) instead.
   public consuming func lockedAspectRatio(_ ratio: AspectRatio?) -> Self {

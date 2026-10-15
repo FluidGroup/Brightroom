@@ -35,6 +35,14 @@ extension ImageEditorCanvas {
     /// coordinates of the oriented, pre-crop source image, with `rect` the
     /// selection before the quarter turn. The output size is
     /// `pendingCrop.outputGeometry(in: .zero).outputBounds.size`.
+    ///
+    /// Under `lockedAspectRatio`, a crop the guide recorded or fitted has
+    /// exactly that ratio in whole pixels when the ratio's lowest terms are
+    /// both at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of the
+    /// terms inside the guide, centered on it, so it can be up to one term
+    /// minus a pixel smaller than the guide on each side. Other ratios, and a
+    /// crop loaded with the ratio but not recorded since, snap each edge to
+    /// whole pixels and can miss the ratio by a pixel.
     public var pendingCrop: CropFeature?
 
     /// The canvas's bounds, in the canvas's own coordinate space (points,

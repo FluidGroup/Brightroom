@@ -1477,6 +1477,15 @@ relying on the compiler to find them.
   corners transparent. Without straightening, edges still snap inward.
 - ImageEditor's Done commits the proposed crop directly, so reopening and
   confirming an untouched crop keeps it exactly.
+- While an aspect ratio is locked, the crop the canvas and ImageEditor write
+  has exactly that ratio in whole pixels when the ratio's lowest terms are
+  both at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of the
+  terms inside the guide, centered on it. 5.1.1 snapped each edge inward on
+  its own, so a locked square could export as 479 × 478. The crop can be up
+  to one term minus a pixel smaller than the guide on each side (at most
+  15 × 8 pixels for 16:9). A ratio with larger terms, such as an image's own
+  1123:794, still snaps edge by edge. A stored crop loaded under a lock is
+  not rewritten until the user changes it.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 

@@ -1278,7 +1278,8 @@ extension EditingCanvasView {
   #endif
 
   private func applyCropToFeatureIfRenderingChanged(_ crop: CropGuideState) {
-    // Pixel-aligned by `CropFeature(topLeftRect:…)`.
+    // Pixel-aligned, to exactly the locked ratio when the guide recorded it
+    // under a lock (`CropGuideState.makeCropFeature()`).
     let cropFeature = crop.makeCropFeature()
     guard
       feature.crop.isPixelEquivalent(

@@ -325,11 +325,23 @@ struct CropScrollSettleLayoutTests {
     #expect(owner.emittedCount == 1)
     let written = owner.feature.crop.topLeftRect(imageSize: imageSize)
     let expected = cropBeforePan.cropExtent.offsetBy(dx: -40 * pixelsPerPoint, dy: 0)
-    // The written crop is rounded inward to whole pixels.
-    #expect(written.minX >= expected.minX - 1e-6 && written.minX < expected.minX + 1, "\(expected) → \(written)")
-    #expect(written.maxX <= expected.maxX + 1e-6 && written.maxX > expected.maxX - 1, "\(expected) → \(written)")
-    #expect(written.minY >= expected.minY - 1e-6 && written.minY < expected.minY + 1, "\(expected) → \(written)")
-    #expect(written.maxY <= expected.maxY + 1e-6 && written.maxY > expected.maxY - 1, "\(expected) → \(written)")
+    if let lock {
+      // Under a lock, the written crop is the largest whole multiple of the
+      // ratio's terms inside the guide, centered on it within half a pixel.
+      let terms = try #require(PixelAlignedCrop.exactTerms(of: lock))
+      let largestTerm = CGFloat(max(terms.width, terms.height))
+      #expect(abs(written.midX - expected.midX) <= 0.5 + 1e-6, "\(expected) → \(written)")
+      #expect(abs(written.midY - expected.midY) <= 0.5 + 1e-6, "\(expected) → \(written)")
+      #expect(written.width <= expected.width + 1e-6 && written.width > expected.width - largestTerm, "\(expected) → \(written)")
+      #expect(written.height <= expected.height + 1e-6 && written.height > expected.height - largestTerm, "\(expected) → \(written)")
+      #expect(written.width * lock.height == written.height * lock.width, "\(written)")
+    } else {
+      // The written crop is rounded inward to whole pixels.
+      #expect(written.minX >= expected.minX - 1e-6 && written.minX < expected.minX + 1, "\(expected) → \(written)")
+      #expect(written.maxX <= expected.maxX + 1e-6 && written.maxX > expected.maxX - 1, "\(expected) → \(written)")
+      #expect(written.minY >= expected.minY - 1e-6 && written.minY < expected.minY + 1, "\(expected) → \(written)")
+      #expect(written.maxY <= expected.maxY + 1e-6 && written.maxY > expected.maxY - 1, "\(expected) → \(written)")
+    }
 
     // UIKit ends the deceleration later; nothing more is recorded or written.
     surface.scrollViewDidEndDecelerating(scrollView)

@@ -70,6 +70,10 @@ public struct ImageEditor: View {
   public struct Options: Equatable {
 
     /// How the crop's aspect ratio is chosen.
+    ///
+    /// While a ratio is locked, a crop the user frames has exactly that
+    /// ratio in whole pixels when the ratio's lowest terms are both at most
+    /// 32 (see `ImageEditorCanvas.CropGuide.pendingCrop`).
     public enum AspectRatioPolicy: Equatable {
       /// The user picks a ratio in crop mode, starting from freeform.
       case selectable
