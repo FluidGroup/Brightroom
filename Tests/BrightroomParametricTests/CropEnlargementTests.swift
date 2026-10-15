@@ -161,6 +161,32 @@ struct CropEnlargementTests {
     #expect(result == CGRect(x: 0, y: 0, width: 192, height: 108))
   }
 
+  /// A rectangle as large as the image holds at its ratio is under the
+  /// minimum but cannot grow; it is kept, not shrunk to the multiple below.
+  @Test func `A rectangle as large as the image holds is not shrunk`() {
+    // A 16:9 crop filling a 100 × 100 image (minimum 100): 6 × 16 = 96 is
+    // the largest multiple the image holds, which 100 × 56 already has.
+    let wide = CGRect(x: 0, y: 22, width: 100, height: 56)
+    #expect(
+      enlarged(wide, minimum: 100, in: CGSize(width: 100, height: 100), aspectRatio: AspectRatio(width: 16, height: 9))
+        == wide
+    )
+
+    // A 9:16 crop the full height of a 3000 × 200 image: 12 × 16 = 192.
+    let tall = CGRect(x: 1444, y: 0, width: 112, height: 200)
+    #expect(
+      enlarged(tall, in: CGSize(width: 3000, height: 200), aspectRatio: AspectRatio(width: 9, height: 16))
+        == tall
+    )
+
+    // The same in a 1000 × 120 image (minimum 120): 7 × 16 = 112.
+    let thin = CGRect(x: 467, y: 0, width: 66, height: 120)
+    #expect(
+      enlarged(thin, minimum: 120, in: CGSize(width: 1000, height: 120), aspectRatio: AspectRatio(width: 9, height: 16))
+        == thin
+    )
+  }
+
   @Test(arguments: [
     AspectRatio.square,
     AspectRatio(width: 4, height: 5),

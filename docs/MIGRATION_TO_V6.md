@@ -1380,7 +1380,9 @@ undo does not return to the full-image crop.
   image's shorter side, on a smaller image) grows about its center to that
   size, inside the image. It keeps the policy's ratio (`.aspectRatio(_:)`,
   `faceDetection(aspectRatio:)`; exactly, for ratios such as 1:1 or 16:9) or,
-  for `InitialCrop(_:)`, the crop's own ratio to the nearest pixel. 5.1.1 kept
+  for `InitialCrop(_:)`, the crop's own ratio to the nearest pixel. A crop
+  already as large as the image holds at its ratio (a 16:9 crop of a small
+  square image) stays as it is. 5.1.1 kept
   such crops as they were, so a small face could start as a 105 × 104 crop
   that the editor's zoom could not show.
 - `.faceDetection(paddingBias:aspectRatio:)` takes an `AspectRatio`.

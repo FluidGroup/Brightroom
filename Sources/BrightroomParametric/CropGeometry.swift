@@ -254,7 +254,9 @@ package enum CropGeometry {
   ///   whole multiple of the terms that reaches `minimumSide` (the size
   ///   ratio-exact alignment keeps); otherwise to a shorter side of
   ///   `minimumSide` and the longer side to the nearest whole pixel. Without
-  ///   straightening, the multiple is at most the largest the image holds.
+  ///   straightening, the multiple is at most the largest the image holds;
+  ///   a rectangle that already has that multiple (one as large as the
+  ///   image holds) is returned as is, never shrunk.
   ///
   /// Without straightening, a grown side gets the whole-pixel origin nearest
   /// its centered one, inside the image, so pixel alignment keeps it as it
@@ -310,6 +312,16 @@ package enum CropGeometry {
           if largest >= 1 {
             multiple = min(multiple, largest)
           }
+        }
+        // The multiple ratio-exact alignment already gives the rectangle.
+        // A cap no larger than it (a rectangle as large as the image holds)
+        // would shrink the rectangle rather than grow it.
+        let fittingMultiple = min(
+          floor(floor(rect.width + epsilon) / termWidth),
+          floor(floor(rect.height + epsilon) / termHeight)
+        )
+        guard multiple > fittingMultiple else {
+          return rect
         }
         size = CGSize(width: multiple * termWidth, height: multiple * termHeight)
       } else if ratio >= 1 {

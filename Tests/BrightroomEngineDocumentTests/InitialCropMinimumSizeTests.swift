@@ -95,6 +95,23 @@ struct InitialCropMinimumSizeTests {
     #expect(grown.topLeftRect(imageSize: imageSize) == CGRect(x: 1072, y: 0, width: 128, height: 128))
   }
 
+  /// An aspect-ratio crop as large as a small or thin image holds is under
+  /// the minimum but cannot grow; the document keeps it rather than
+  /// shrinking it to a smaller multiple of the ratio.
+  @Test(arguments: [
+    (CGSize(width: 100, height: 100), AspectRatio(width: 16, height: 9)),
+    (CGSize(width: 3000, height: 200), AspectRatio(width: 9, height: 16)),
+    (CGSize(width: 1000, height: 120), AspectRatio(width: 9, height: 16)),
+    (CGSize(width: 4000, height: 220), AspectRatio(width: 9, height: 16)),
+  ])
+  func `An aspect-ratio crop as large as the image holds is not shrunk`(size: CGSize, ratio: AspectRatio) async throws {
+    let image = SourceImage(cgImage: try Fixtures.makeCGImage(width: Int(size.width), height: Int(size.height)))
+    let document = await EditingDocument(source: image, initialCrop: .aspectRatio(ratio))
+
+    let fitted = ImageEditorFeature(imageSize: size).crop.fitted(to: ratio, imageSize: size)
+    #expect(document.feature.crop == fitted)
+  }
+
   /// On an image smaller than 128 pixels on a side, the minimum is the
   /// image's shorter side.
   @Test func `On a small image the minimum is the image's shorter side`() async throws {
