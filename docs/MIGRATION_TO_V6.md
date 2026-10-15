@@ -1499,7 +1499,13 @@ relying on the compiler to find them.
   size too, but showed a smaller crop (from a `CropModifier` or the host) as
   the larger area the zoom stopped at, and a pan grew the crop to that area.
   A smaller crop the host sets is now shown exactly and is not rewritten
-  when it loads.
+  when it loads; the first crop gesture records it grown about its center
+  to the minimum (to the smallest exact multiple of a locked ratio's terms,
+  such as 240 × 135 for 16:9). A guide drag at the maximum zoom, which could
+  record a crop as narrow as the guide's 80-point minimum, now records at
+  least the minimum too. The minimum applies to the guide: under a locked
+  ratio, a guide zoomed in all the way can still write a few pixels under
+  it (the whole multiple of the terms above, such as 224 × 126 for 16:9).
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 

@@ -105,8 +105,8 @@ extension CropGuideState {
   /// the maximum zoom shows. Such a crop is under the editor's minimum size
   /// (`minimumCropOutputSideLength(imageSize:)`), for example one a host
   /// set; the guide then shows exactly the crop rather than the larger area
-  /// around it, and loading it writes nothing. Any other crop gets the usual
-  /// range.
+  /// around it. Only the crop's next record enlarges it, so loading it
+  /// writes nothing. Any other crop gets the usual range.
   func zoomScaleRange(visibleSize: CGSize, guideSize: CGSize) -> (min: CGFloat, max: CGFloat) {
     let range = calculateZoomScale(visibleSize: visibleSize)
     return (min: range.min, max: max(range.max, zoomScaleFilling(guideSize: guideSize)))

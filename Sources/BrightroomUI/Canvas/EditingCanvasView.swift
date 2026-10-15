@@ -2024,8 +2024,20 @@ extension EditingCanvasView {
       resolvedRect: resolvedRect
     )
 
+    // The editor's minimum crop size. The zoom stops at it, but a crop
+    // loaded below it (a host's) is shown at a raised zoom, and a guide
+    // resize at the maximum zoom can go below it; either is recorded grown
+    // about its center, with the locked ratio, at whole pixels.
+    let minimumSizedRect = CropGeometry.rectEnlarged(
+      toMinimumSide: CropGuideState.minimumCropOutputSideLength(imageSize: crop.imageSize),
+      rect: resolvedRect,
+      in: crop.imageSize,
+      straightenRadians: crop.adjustmentAngle.radians,
+      aspectRatio: state.lockedAspectRatio.map(crop.aspectRatioBeforeOutputRotation)
+    )
+
     crop.updateCropExtent(
-      resolvedRect
+      minimumSizedRect
     )
     updateProposedCrop(crop)
     return crop

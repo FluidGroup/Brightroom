@@ -96,8 +96,9 @@ public struct ImageEditorCanvas: View {
   /// undo) is displayed, and its crop reloads the crop guide. A crop below
   /// ImageEditor's minimum crop size (128 pixels on its shorter output side,
   /// see `ImageEditor`) is shown exactly, with the crop zoom raised for it,
-  /// and is not rewritten when it loads. A document of another image
-  /// rebuilds the canvas.
+  /// and is not rewritten when it loads; the first crop gesture records it
+  /// grown about its center to the minimum, keeping a locked ratio. A
+  /// document of another image rebuilds the canvas.
   ///
   /// A host that sets `document.localBlur` with its own blur before the first
   /// stroke pays for that blur at export until a stroke lands. The canvas
