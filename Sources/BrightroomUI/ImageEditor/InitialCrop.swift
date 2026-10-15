@@ -32,7 +32,16 @@ import BrightroomParametric
 /// It runs once, when a document is created with
 /// `ImageEditorDocument(source:initialCrop:history:)`, and never for a
 /// document rebuilt from saved values. The document pixel-aligns the crop it
-/// decides with `CropFeature.pixelAligned(imageSize:)`.
+/// decides with `CropFeature.pixelAligned(imageSize:)`, then applies
+/// ImageEditor's minimum crop size: a crop whose shorter output side is
+/// under 128 pixels (or under the image's shorter side, when the image is
+/// smaller) grows about its center to that size, keeping its aspect ratio
+/// (the policy's ratio, or the crop's own for a custom policy) and staying
+/// inside the image. A small face, for example, is framed with more of its
+/// surroundings. A crop the image cannot hold at that size and ratio stays
+/// as large as the image allows. Any crop size is still a valid
+/// `CropFeature`; the minimum is the editor's, so a crop the host sets on
+/// the document itself is not changed (see `ImageEditorCanvas`).
 public struct InitialCrop: Sendable {
 
   /// What a custom initial crop decides from.
@@ -60,8 +69,14 @@ public struct InitialCrop: Sendable {
 
   fileprivate let policy: Policy
 
-  private init(policy: Policy) {
+  /// The output ratio the policy frames with, which a decided crop keeps
+  /// when the document enlarges it to the editor's minimum size; nil keeps
+  /// the crop's own ratio.
+  let framingAspectRatio: AspectRatio?
+
+  private init(policy: Policy, framingAspectRatio: AspectRatio? = nil) {
     self.policy = policy
+    self.framingAspectRatio = framingAspectRatio
   }
 
   /// An initial crop that `decide` returns.
@@ -70,7 +85,8 @@ public struct InitialCrop: Sendable {
   /// executor: move blocking work (such as a synchronous Vision request) to
   /// a queue of its own, as `faceDetection` does. Return a crop in
   /// `input.imageSize`; the document snaps it to whole pixels inside the
-  /// image.
+  /// image and enlarges a crop below the editor's minimum size, keeping its
+  /// ratio (see `InitialCrop`).
   public init(_ decide: @escaping @Sendable (_ input: Input) async -> CropFeature) {
     self.init(policy: .decide(decide))
   }
@@ -84,7 +100,7 @@ public struct InitialCrop: Sendable {
   /// The editor does not lock the ratio; pass
   /// `ImageEditor.Options.aspectRatioPolicy` for that.
   public static func aspectRatio(_ aspectRatio: AspectRatio) -> InitialCrop {
-    InitialCrop(policy: .aspectRatio(aspectRatio))
+    InitialCrop(policy: .aspectRatio(aspectRatio), framingAspectRatio: aspectRatio)
   }
 
   /// Frames the first face Vision detects, optionally at an aspect ratio.
@@ -96,14 +112,17 @@ public struct InitialCrop: Sendable {
   ///     the image's own aspect ratio.
   ///
   /// When no face is found, or detection fails, the crop is fitted to
-  /// `aspectRatio` if one is given and covers the whole image otherwise. The
-  /// editor does not lock the ratio; pass
+  /// `aspectRatio` if one is given and covers the whole image otherwise. A
+  /// framing smaller than the editor's minimum crop size (128 pixels on its
+  /// shorter side) grows about the face's center to that size, with
+  /// `aspectRatio` exactly when its lowest terms are both at most 32 (see
+  /// `InitialCrop`). The editor does not lock the ratio; pass
   /// `ImageEditor.Options.aspectRatioPolicy` for that.
   public static func faceDetection(
     paddingBias: CGFloat = 1.3,
     aspectRatio: AspectRatio? = nil
   ) -> InitialCrop {
-    InitialCrop { input in
+    InitialCrop(policy: .decide { input in
 
       var fallbackCrop: CropFeature {
         guard let aspectRatio else {
@@ -127,7 +146,7 @@ public struct InitialCrop: Sendable {
         paddingBias: paddingBias,
         aspectRatio: aspectRatio
       )
-    }
+    }, framingAspectRatio: aspectRatio)
   }
 
   /// Serializes face detection off Swift concurrency's shared executor.
@@ -200,6 +219,38 @@ extension CropFeature {
     )
     return CropFeature(rect: selection).pixelAligned(imageSize: imageSize)
   }
+
+  /// This crop grown about its center to ImageEditor's minimum crop size
+  /// (`CropGuideState.minimumCropOutputSideLength(imageSize:)`), keeping
+  /// `aspectRatio` (the output's, after `quarterTurn`) or, when nil, its own
+  /// ratio, inside an input of `imageSize`, and pixel-aligned; returned as
+  /// is when its shorter side already reaches the minimum.
+  ///
+  /// With a ratio whose lowest terms are both at most 32, the size is the
+  /// smallest whole multiple of the terms that reaches the minimum, so the
+  /// crop has exactly that ratio; otherwise the longer side is the nearest
+  /// whole pixel. See `CropGeometry.rectEnlarged(toMinimumSide:…)`.
+  func enlargedToEditorMinimum(imageSize: CGSize, aspectRatio: AspectRatio?) -> CropFeature {
+    let selection = topLeftRect(imageSize: imageSize)
+    let selectionAspectRatio = aspectRatio.map { quarterTurn.isSideways ? $0.swapped() : $0 }
+      ?? AspectRatio(selection.size)
+    let enlarged = CropGeometry.rectEnlarged(
+      toMinimumSide: CropGuideState.minimumCropOutputSideLength(imageSize: imageSize),
+      rect: selection,
+      in: imageSize,
+      straightenRadians: straightenRadians,
+      aspectRatio: selectionAspectRatio
+    )
+    guard enlarged != selection else {
+      return self
+    }
+    return CropFeature(
+      topLeftRect: enlarged,
+      imageSize: imageSize,
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
+    )
+  }
 }
 
 extension EditingDocument where Content == ImageEditorFeature {
@@ -208,7 +259,8 @@ extension EditingDocument where Content == ImageEditorFeature {
   ///
   /// Create the document before showing an editor; the editor then edits a
   /// document that already exists. The decided crop is the committed state,
-  /// so undo does not return to the full-image crop.
+  /// so undo does not return to the full-image crop. A decided crop below
+  /// ImageEditor's minimum crop size is enlarged to it (see `InitialCrop`).
   ///
   /// - Parameters:
   ///   - source: The source image to edit.
@@ -235,6 +287,10 @@ extension EditingDocument where Content == ImageEditorFeature {
       let decided = await Self.decideInitialCrop(decide, source: source, crop: feature.crop)
       feature.crop = decided.pixelAligned(imageSize: imageSize)
     }
+    feature.crop = feature.crop.enlargedToEditorMinimum(
+      imageSize: imageSize,
+      aspectRatio: initialCrop.framingAspectRatio
+    )
 
     self.init(source: source, feature: feature, history: history)
   }

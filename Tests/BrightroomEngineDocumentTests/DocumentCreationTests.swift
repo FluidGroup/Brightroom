@@ -129,17 +129,19 @@ struct DocumentCreationTests {
 
   @Test func `The document pixel-aligns the crop an initial crop returns`() async throws {
     let image = try Fixtures.makeImage()
+    // At least as wide as the 20 x 40 image, so ImageEditor's minimum crop
+    // size (the image's shorter side here) leaves it as aligned.
     let requested = CropFeature(
-      rect: CGRect(x: -3.5, y: 2.25, width: 15.5, height: 60),
+      rect: CGRect(x: -3.5, y: 2.25, width: 25, height: 30),
       quarterTurn: .counterclockwise90
     )
     let document = await EditingDocument(
       source: image,
       initialCrop: InitialCrop { _ in requested }
     )
-    // x -3.5...12 → 0...12, y 2.25...62.25 clipped to 40 → 3...40.
+    // x -3.5...21.5 clipped to 20 → 0...20, y 2.25...32.25 → 3...32.
     #expect(document.feature.crop == requested.pixelAligned(imageSize: image.pixelSize))
-    #expect(document.feature.crop.rect == CGRect(x: 0, y: 3, width: 12, height: 37))
+    #expect(document.feature.crop.rect == CGRect(x: 0, y: 3, width: 20, height: 29))
     #expect(document.feature.crop.quarterTurn == .counterclockwise90)
   }
 

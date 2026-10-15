@@ -1375,7 +1375,14 @@ undo does not return to the full-image crop.
   state it captures must be `Sendable`; move blocking work to your own
   queue, as `faceDetection` does.
 - The document snaps the returned crop to whole pixels inside the image with
-  `CropFeature.pixelAligned(imageSize:)`.
+  `CropFeature.pixelAligned(imageSize:)`, then applies ImageEditor's minimum
+  crop size: a crop whose shorter output side is under 128 pixels (under the
+  image's shorter side, on a smaller image) grows about its center to that
+  size, inside the image. It keeps the policy's ratio (`.aspectRatio(_:)`,
+  `faceDetection(aspectRatio:)`; exactly, for ratios such as 1:1 or 16:9) or,
+  for `InitialCrop(_:)`, the crop's own ratio to the nearest pixel. 5.1.1 kept
+  such crops as they were, so a small face could start as a 105 × 104 crop
+  that the editor's zoom could not show.
 - `.faceDetection(paddingBias:aspectRatio:)` takes an `AspectRatio`.
   `.fullImage` keeps the whole image, and `.aspectRatio(_:)` starts from the
   largest centered crop of a ratio. None of them locks the ratio in the
