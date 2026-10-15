@@ -33,17 +33,17 @@ import BrightroomParametric
 /// `ImageEditorDocument(source:initialCrop:history:)`, and never for a
 /// document rebuilt from saved values. The document pixel-aligns the crop it
 /// decides with `CropFeature.pixelAligned(imageSize:)`. A policy with a
-/// ratio (`aspectRatio(_:)`, `faceDetection(paddingBias:aspectRatio:)`)
-/// gets exactly that ratio in whole pixels instead when its lowest terms
-/// are both at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of
-/// the terms inside the framing, centered on it, less than one term
-/// smaller on each side, as a crop under ImageEditor's locked ratio is
-/// written. It then applies ImageEditor's minimum crop size: a crop whose
-/// shorter output side is under 128 pixels (or under the image's shorter
-/// side, when the image is smaller) grows about its center to that size,
-/// keeping its aspect ratio
-/// (the policy's ratio, or the crop's own for a custom policy) and staying
-/// inside the image. A small face, for example, is framed with more of its
+/// ratio (`aspectRatio(_:)`, `faceDetection(paddingBias:aspectRatio:)`) gets
+/// exactly that ratio in whole pixels instead when its lowest terms are both
+/// at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of the terms
+/// that fits the framing's whole-pixel size, centered on it within half a
+/// pixel and less than one term smaller in each dimension, as a crop under
+/// ImageEditor's locked ratio is written. It then applies ImageEditor's
+/// minimum crop size: a crop whose shorter output side is under 128 pixels
+/// (or under the image's shorter side, when the image is smaller) grows
+/// about its center to that size, keeping its aspect ratio (the policy's
+/// ratio, or the crop's own for a custom policy) and staying inside the
+/// image. A small face, for example, is framed with more of its
 /// surroundings. A crop the image cannot hold at that size and ratio stays
 /// as large as the image allows. Any crop size is still a valid
 /// `CropFeature`; the minimum is the editor's, so a crop the host sets on
@@ -259,8 +259,8 @@ extension CropFeature {
   /// This crop aligned to whole pixels in an input of `imageSize`, as
   /// `pixelAligned(imageSize:)` aligns it, or with exactly `aspectRatio`
   /// (the output's, after `quarterTurn`) when its lowest terms are both at
-  /// most 32: the largest whole multiple of the terms inside the selection,
-  /// centered on it.
+  /// most 32: the largest whole multiple of the terms that fits the
+  /// selection's whole-pixel size, centered on it within half a pixel.
   func pixelAligned(imageSize: CGSize, aspectRatio: AspectRatio?) -> CropFeature {
     guard let aspectRatio else {
       return pixelAligned(imageSize: imageSize)

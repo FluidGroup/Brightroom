@@ -1494,10 +1494,13 @@ relying on the compiler to find them.
 - While an aspect ratio is locked, the crop the canvas and ImageEditor write
   has exactly that ratio in whole pixels when the ratio's lowest terms are
   both at most 32 (1:1, 4:5, 16:9, …): the largest whole multiple of the
-  terms inside the guide, centered on it. 5.1.1 snapped each edge inward on
-  its own, so a locked square could export as 479 × 478. The crop can be up
-  to one term minus a pixel smaller than the guide on each side (at most
-  15 × 8 pixels for 16:9). A ratio with larger terms, such as an image's own
+  terms that fits the guide's whole-pixel size, centered on the guide within
+  half a pixel. 5.1.1 snapped each edge inward on its own, so a locked square
+  could export as 479 × 478. The crop is smaller than the guide by less than
+  one term in each dimension (under 16 × 9 pixels for 16:9), and an edge can
+  lie up to half a pixel outside it. The guide on screen, with the tool
+  surface and vignette that follow it, keeps the user's framing until the
+  crop reloads, so it can show that much more than the export. A ratio with larger terms, such as an image's own
   1123:794, still snaps edge by edge. A stored crop loaded under a lock is
   not rewritten until the user changes it; picking a ratio the crop already
   has within a pixel is such a change and aligns it exactly (a 1080 × 1349

@@ -250,12 +250,12 @@ internal struct PixelAlignedCrop: Equatable, Sendable {
   /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:aspectRatio:epsilon:)`
   /// keeps exact.
   ///
-  /// An exact crop is a whole multiple of the terms, so it can be up to one
-  /// term minus a pixel smaller than the selection on each axis. 32 keeps
-  /// every common ratio exact — 1:1, 4:3, 3:2, 5:4, 7:5, 16:9, 16:10, 20:9,
-  /// 21:9 (7:3), 32:9, and their turned forms — and the camera ratios an
-  /// "original" lock takes from an image, while a loss stays within 31
-  /// pixels. Larger terms come from image sizes such as 1123×794 or a
+  /// An exact crop is a whole multiple of the terms, so it is smaller than a
+  /// selection of the ratio by less than one term in each dimension (under
+  /// 16 × 9 pixels for 16:9). 32 keeps every common ratio exact — 1:1, 4:3,
+  /// 3:2, 5:4, 7:5, 16:9, 16:10, 20:9, 21:9 (7:3), 32:9, and their turned
+  /// forms — and the camera ratios an "original" lock takes from an image,
+  /// while a loss stays under 32 pixels. Larger terms come from image sizes such as 1123×794 or a
   /// screenshot's 1179×2556; the multiples of those are too coarse, so they
   /// keep the nearest snap and miss the ratio by less than a pixel or two.
   internal static let maximumExactAspectRatioTerm = 32
@@ -270,9 +270,11 @@ internal struct PixelAlignedCrop: Equatable, Sendable {
   /// the largest k·p × k·q that fits in the largest whole-pixel size inside
   /// the selection (clipped to the image; with straightening, fitted as
   /// `init(topLeftRect:imageSize:quarterTurn:straightenRadians:epsilon:)`
-  /// fits it). It is centered on the selection: without straightening at a
-  /// whole-pixel origin inside the image, with straightening at the fitted
-  /// center, whose origin can stay fractional. Any other ratio, a selection
+  /// fits it). It is centered on the selection: without straightening at
+  /// the whole-pixel origin nearest the centered one, inside the image, so
+  /// an edge can lie up to half a pixel outside the selection; with
+  /// straightening at the fitted center, whose origin can stay
+  /// fractional. Any other ratio, a selection
   /// smaller than p × q pixels, or an invalid one is snapped as that
   /// initializer snaps it.
   internal init(
@@ -413,8 +415,10 @@ extension CropFeature {
   /// As `init(topLeftRect:imageSize:quarterTurn:straightenRadians:)`, but
   /// for a ratio whose lowest terms are both at most 32 (1:1, 4:5, 16:9, …)
   /// the size is the largest whole multiple of those terms that fits in the
-  /// selection, centered on it, instead of each edge snapped inward on its
-  /// own, which can miss the ratio by a pixel (a square as 479×478). Other
+  /// selection's whole-pixel size, centered on it within half a pixel
+  /// (so an edge can lie up to half a pixel outside it), instead of each
+  /// edge snapped inward on its own, which can miss the ratio by a pixel
+  /// (a square as 479×478). Other
   /// ratios snap edge by edge, within a pixel or two of the ratio.
   ///
   /// Package access: the editing canvas aligns a guide it records under a
