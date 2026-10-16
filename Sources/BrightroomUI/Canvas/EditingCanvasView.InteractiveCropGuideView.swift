@@ -185,6 +185,16 @@ extension EditingCanvasView {
     /// was when the resize began, so a crop already under the editor's
     /// minimum (one a host set) does not jump when a handle is touched.
     private var minimumSize = InteractiveCropGuideView.minimumSizeFloor
+
+    /// The priority of the resize's minimum-size constraints: just under
+    /// required, so the guide's largest frame (`maximumRect`) and the edges
+    /// the resize keeps win. The crop scroll view can rest a fraction of a
+    /// point past the image, so that frame can be a fraction of a point
+    /// smaller than a guide at its minimum; a required minimum could then
+    /// not hold with them, and Auto Layout would break one of them. The
+    /// record grows a crop that ends that fraction short to the editor's
+    /// minimum.
+    private static let minimumSizePriority = UILayoutPriority(rawValue: UILayoutPriority.required.rawValue - 1)
     
     private let insetOfGuideFlexibility: UIEdgeInsets
 
@@ -715,7 +725,9 @@ extension EditingCanvasView {
       widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width).withPriority(.defaultLow).activated()
 
       activeConstraints.append(
-        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width).activated()
+        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)
+          .withPriority(Self.minimumSizePriority)
+          .activated()
       )
     }
 
@@ -725,7 +737,9 @@ extension EditingCanvasView {
       heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height).withPriority(.defaultLow).activated()
 
       activeConstraints.append(
-        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height).activated()
+        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)
+          .withPriority(Self.minimumSizePriority)
+          .activated()
       )
     }
     

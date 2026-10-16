@@ -49,6 +49,23 @@ struct CropMinimumSizeCanvasTests {
     }
   }
 
+  /// A window that records the constraints Auto Layout breaks because the
+  /// required ones cannot all hold. UIKit tells the engine's delegate, the
+  /// window, before it breaks one (and logs "Unable to simultaneously
+  /// satisfy constraints").
+  final class ConflictRecordingWindow: UIWindow {
+    var brokenConstraints: [NSLayoutConstraint] = []
+
+    @objc(engine:willBreakConstraint:dueToMutuallyExclusiveConstraints:)
+    func engine(
+      _ engine: AnyObject,
+      willBreakConstraint constraint: NSLayoutConstraint,
+      dueToMutuallyExclusiveConstraints constraints: [NSLayoutConstraint]
+    ) {
+      brokenConstraints.append(constraint)
+    }
+  }
+
   static let largeImage = CGSize(width: 1200, height: 900)
 
   /// The guide's smallest size on screen, whatever the zoom.
@@ -58,13 +75,13 @@ struct CropMinimumSizeCanvasTests {
     imageSize: CGSize = Self.largeImage,
     crop topLeftRect: CGRect?,
     lock: AspectRatio? = nil
-  ) -> (EditingCanvasView, UIWindow, Owner) {
+  ) -> (EditingCanvasView, ConflictRecordingWindow, Owner) {
     var feature = ImageEditorFeature(imageSize: imageSize)
     if let topLeftRect {
       feature.crop = CropFeature(topLeftRect: topLeftRect, imageSize: imageSize)
     }
     let owner = Owner(feature)
-    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+    let window = ConflictRecordingWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
     let view = EditingCanvasView(
       source: EditingCanvasSource(
         editingSourceImage: CIImage(color: .gray).cropped(to: CGRect(origin: .zero, size: imageSize)),
@@ -501,6 +518,74 @@ struct CropMinimumSizeCanvasTests {
     _ = try await expectRecordedAsShown(view, shown: shown, "small image")
     view.applyPendingCrop()
     #expect(owner.feature.crop.rect.size == CGSize(width: 80, height: 80), "written \(owner.feature.crop.rect)")
+  }
+
+  enum Handle: String, CaseIterable, Sendable {
+    case top, bottom, left, right, topLeft, topRight, bottomLeft, bottomRight
+  }
+
+  /// Drags `handle` inward by `distance` points in two steps and returns
+  /// the guide's size in image pixels just before the finger lifts.
+  private func drag(
+    _ view: EditingCanvasView,
+    _ handle: Handle,
+    inwardBy distance: CGFloat
+  ) throws -> CGSize {
+    let guide = view.guideView
+    let translation: CGPoint
+    let call: (UIPanGestureRecognizer) -> Void
+    switch handle {
+    case .top: translation = CGPoint(x: 0, y: distance); call = guide.handlePanGestureInTop
+    case .bottom: translation = CGPoint(x: 0, y: -distance); call = guide.handlePanGestureInBottom
+    case .left: translation = CGPoint(x: distance, y: 0); call = guide.handlePanGestureInLeft
+    case .right: translation = CGPoint(x: -distance, y: 0); call = guide.handlePanGestureInRight
+    case .topLeft: translation = CGPoint(x: distance, y: distance); call = guide.handlePanGestureInTopLeft
+    case .topRight: translation = CGPoint(x: -distance, y: distance); call = guide.handlePanGestureInTopRight
+    case .bottomLeft: translation = CGPoint(x: distance, y: -distance); call = guide.handlePanGestureInBottomLeft
+    case .bottomRight: translation = CGPoint(x: -distance, y: -distance); call = guide.handlePanGestureInBottomRight
+    }
+    let pan = ScriptedHandlePan(target: nil, action: nil)
+    pan.scriptedState = .began
+    pan.scriptedTranslation = CGPoint(x: translation.x / 2, y: translation.y / 2)
+    call(pan)
+    pan.scriptedState = .changed
+    pan.scriptedTranslation = CGPoint(x: translation.x / 2, y: translation.y / 2)
+    call(pan)
+    view.layoutIfNeeded()
+    let shown = try guideSizeInImage(view)
+    pan.scriptedState = .ended
+    pan.scriptedTranslation = .zero
+    call(pan)
+    return shown
+  }
+
+  /// A crop at the minimum against the image's bottom-right corner, at the
+  /// maximum zoom, after a pan toward that corner that the settle moves
+  /// back: the scroll view can rest a fraction of a point past the image
+  /// (here about 0.08 point on the right and 0.06 at the bottom), so the
+  /// guide's largest frame for a drag is that much smaller than the guide.
+  /// The drag's minimum is the guide's size, so a required minimum could
+  /// not hold together with the largest frame and the edge the drag keeps,
+  /// and Auto Layout broke one of them on every drag. The largest frame
+  /// wins; the record grows the fraction of a pixel back to the minimum.
+  @Test(arguments: Handle.allCases)
+  func `a drag of a minimum crop resting past the image edge breaks no constraint`(handle: Handle) async throws {
+    let (view, window, owner) = openCanvas(crop: CGRect(x: 1072, y: 772, width: 128, height: 128))
+    defer { window.isHidden = true }
+    try await pan(view, by: CGPoint(x: -7.3, y: -5.1))
+    let remaining = view.remainingScroll
+    try #require(remaining.right < 0 || remaining.bottom < 0, "remaining scroll \(remaining)")
+    window.brokenConstraints = []
+
+    let shown = try drag(view, handle, inwardBy: 50)
+
+    #expect(window.brokenConstraints.isEmpty, "\(handle): broke \(window.brokenConstraints)")
+    #expect(min(shown.width, shown.height) >= 128 - 0.5, "\(handle): shown \(shown)")
+    try await waitForSettleAndLayout(view)
+    let recorded = try #require(view.proposedCrop).cropExtent
+    #expect(abs(recorded.width - 128) < 1e-6 && abs(recorded.height - 128) < 1e-6, "\(handle): recorded \(recorded)")
+    view.applyPendingCrop()
+    #expect(owner.feature.crop.rect.size == CGSize(width: 128, height: 128), "\(handle): written \(owner.feature.crop.rect)")
   }
 
   /// Under a lock whose shorter term does not divide 128 (16:9, 4:3), the
