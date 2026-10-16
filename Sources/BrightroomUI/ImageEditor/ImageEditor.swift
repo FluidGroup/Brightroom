@@ -48,8 +48,10 @@ import BrightroomParametric
    crop zoom stops there (straightened or not), a guide drag stops there
    too (under a locked ratio, at the smallest crop of that ratio in whole
    multiples of its terms, such as 240 × 135 for 16:9), and `InitialCrop`
-   enlarges a smaller crop it decides. A
-   smaller crop the
+   enlarges a smaller crop it decides. Under a locked ratio whose
+   multiples reaching that size do not fit the image, the crop is the
+   largest multiple that does, a few pixels shorter (224 × 126 for 16:9 of
+   a 130-pixel-high image). A smaller crop the
    host puts in the document is shown exactly as it is and is not
    rewritten when it loads; the first crop gesture (a pan, a zoom, a guide
    drag, or straightening) records it grown about its center to the

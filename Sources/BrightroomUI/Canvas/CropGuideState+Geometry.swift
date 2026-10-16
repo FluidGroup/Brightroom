@@ -55,6 +55,12 @@ extension CropGuideState {
   /// (`CropGeometry.rectEnlarged(toMinimumSide:…)`), the crop zoom stops
   /// where the guide's shorter side shows its shorter side, and a guide
   /// resize stops at it.
+  ///
+  /// The size ignores whether the image holds it. When it does not (16:9
+  /// on an image 130 pixels high), a record without straightening grows a
+  /// crop only to the largest multiple of the terms the image holds
+  /// (224 × 126), so the editor records less than this size; a guide resize
+  /// never asks for more than the guide's size when it began.
   static func minimumCropOutputSize(imageSize: CGSize, aspectRatio: AspectRatio?) -> CGSize {
     CropGeometry.smallestSize(
       reaching: minimumCropOutputSideLength(imageSize: imageSize),

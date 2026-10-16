@@ -1523,7 +1523,9 @@ relying on the compiler to find them.
   minimum applies to the written crop: under a
   locked 16:9, whose exact crop of a 128-pixel-high guide would be
   224 × 126, the zoom stops at 240 × 135, and a smaller guide records
-  240 × 135.
+  240 × 135. An image that holds no such multiple gets the largest one it
+  holds, a few pixels under the minimum: 224 × 126 for 16:9 of a
+  130-pixel-high image.
 - Rectangles saved by 5.1.0: see
   [Crop rectangles](parametric-persistence.md#crop-rectangles).
 
