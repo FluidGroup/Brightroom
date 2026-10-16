@@ -45,6 +45,23 @@ extension CropGuideState {
     )
   }
 
+  /// The smallest crop the editor records of an image of `imageSize`, in
+  /// image pixels in the orientation of `aspectRatio`: a square of
+  /// `minimumCropOutputSideLength(imageSize:)` without a ratio. With a
+  /// ratio whose lowest terms are both at most 32 it is the smallest whole
+  /// multiple of the terms whose shorter side reaches that (240 × 135 for
+  /// 16:9, 172 × 129 for 4:3); with larger terms, the ratio with that
+  /// shorter side. A record grows a side under it to reach it
+  /// (`CropGeometry.rectEnlarged(toMinimumSide:…)`), the crop zoom stops
+  /// where the guide's shorter side shows its shorter side, and a guide
+  /// resize stops at it.
+  static func minimumCropOutputSize(imageSize: CGSize, aspectRatio: AspectRatio?) -> CGSize {
+    CropGeometry.smallestSize(
+      reaching: minimumCropOutputSideLength(imageSize: imageSize),
+      aspectRatio: aspectRatio
+    )
+  }
+
   func scrollViewContentSize() -> CGSize {
     AspectRatio(imageSize).size(byWidth: 1000)
   }

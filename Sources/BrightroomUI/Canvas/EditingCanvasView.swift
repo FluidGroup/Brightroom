@@ -556,6 +556,10 @@ final class EditingCanvasView: UIView {
       self.didChangeGuideViewWithDelay()
     }
 
+    guideView.minimumCropGuideSize = { [weak self] in
+      self?.minimumCropGuideSize() ?? .zero
+    }
+
     guideView.didCancelChange = { [weak self] in
       guard let self = self else { return }
       self.didCancelGuideViewChange()
@@ -1587,6 +1591,28 @@ extension EditingCanvasView {
     }
   }
 
+  /// The guide size, in points, that shows the editor's smallest crop
+  /// (`CropGuideState.minimumCropOutputSize(imageSize:aspectRatio:)`, with
+  /// the locked ratio) at the crop scroll view's current zoom, rounded up to
+  /// whole display pixels. A guide resize stops there, so the crop it
+  /// records needs no visible growth. The straighten rotates the image, not
+  /// its scale, so only the zoom matters.
+  private func minimumCropGuideSize() -> CGSize {
+    guard let crop = state.proposedCrop else {
+      return .zero
+    }
+    let pointsPerPixel = cropSurface.scrollView.zoomScale * crop.imageToPlatterScale()
+    let pixels = CropGuideState.minimumCropOutputSize(
+      imageSize: crop.imageSize,
+      aspectRatio: state.lockedAspectRatio
+    )
+    let displayScale = traitCollection.displayScale > 0 ? traitCollection.displayScale : 1
+    func points(_ pixels: CGFloat) -> CGFloat {
+      ceil(pixels * pointsPerPixel * displayScale - 1e-6) / displayScale
+    }
+    return CGSize(width: points(pixels.width), height: points(pixels.height))
+  }
+
   @inline(__always)
   private func willChangeGuideView() {
     // flush scheduled debouncing
@@ -2037,10 +2063,11 @@ extension EditingCanvasView {
       resolvedRect: resolvedRect
     )
 
-    // The editor's minimum crop size. The zoom stops at it, but a crop
-    // loaded below it (a host's) is shown at a raised zoom, and a guide
-    // resize at the maximum zoom can go below it; either is recorded grown
-    // about its center, with the locked ratio, at whole pixels.
+    // The editor's minimum crop size. The zoom and a guide resize stop at
+    // it, but a crop loaded below it (a host's) is shown at a raised zoom,
+    // and a guide at the minimum can align a fraction of a pixel under it;
+    // either is recorded grown about its center, with the locked ratio, at
+    // whole pixels.
     let minimumSizedRect = CropGeometry.rectEnlarged(
       toMinimumSide: CropGuideState.minimumCropOutputSideLength(imageSize: crop.imageSize),
       rect: resolvedRect,

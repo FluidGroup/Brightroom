@@ -170,6 +170,20 @@ struct CropEnlargementTests {
     #expect(CropGeometry.smallestShorterSide(reaching: 127.5, aspectRatio: nil) == 128)
   }
 
+  /// The smallest size has that shorter side, in the ratio's orientation:
+  /// whole multiples of small terms, the ratio itself for large ones.
+  @Test func `The smallest size reaching the minimum keeps the ratio's orientation`() {
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: nil) == CGSize(width: 128, height: 128))
+    #expect(CropGeometry.smallestSize(reaching: 80, aspectRatio: nil) == CGSize(width: 80, height: 80))
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: .square) == CGSize(width: 128, height: 128))
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: AspectRatio(width: 16, height: 9)) == CGSize(width: 240, height: 135))
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: AspectRatio(width: 9, height: 16)) == CGSize(width: 135, height: 240))
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: AspectRatio(width: 4, height: 3)) == CGSize(width: 172, height: 129))
+    #expect(CropGeometry.smallestSize(reaching: 128, aspectRatio: AspectRatio(width: 4, height: 5)) == CGSize(width: 128, height: 160))
+    let large = CropGeometry.smallestSize(reaching: 128, aspectRatio: AspectRatio(width: 794, height: 1123))
+    #expect(large.width == 128 && abs(large.height - 128 * 1123 / 794) < 1e-9, "\(large)")
+  }
+
   /// A ratio with large terms snaps edge by edge, so a 128-pixel side at a
   /// fractional origin aligns to 127 and grows.
   @Test func `A ratio rectangle with large terms whose snapped side misses the minimum grows`() {

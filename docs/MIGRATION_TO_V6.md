@@ -1513,9 +1513,11 @@ relying on the compiler to find them.
   A smaller crop the host sets is now shown exactly and is not rewritten
   when it loads; the first crop gesture records it grown about its center
   to the minimum (to the smallest exact multiple of a locked ratio's terms,
-  such as 240 × 135 for 16:9). A guide drag at the maximum zoom, which could
-  record a crop as narrow as the guide's 80-point minimum, now records at
-  least the minimum too. The crop zoom stops at the minimum for a
+  such as 240 × 135 for 16:9). A guide drag stops at the minimum too (at
+  that smallest multiple under a lock), never below the guide's 80-point
+  floor; 5.1.1 stopped it only at those 80 points, so at a high zoom it
+  recorded a crop narrower than the minimum. The crop zoom stops at the
+  minimum for a
   straightened crop as well; 5.1.1 measured the straightened guide's larger
   bounding box, so the guide could show about 105 pixels at 10°. The
   minimum applies to the written crop: under a

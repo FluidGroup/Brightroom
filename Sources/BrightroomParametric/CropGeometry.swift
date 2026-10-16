@@ -418,6 +418,31 @@ package enum CropGeometry {
     return ceil(wholeMinimum / shorterTerm) * shorterTerm
   }
 
+  /// The smallest crop of `aspectRatio`, in its orientation, whose shorter
+  /// side reaches `minimumSide` once aligned to whole pixels: its shorter
+  /// side is `smallestShorterSide(reaching:aspectRatio:)`. With a ratio
+  /// whose lowest terms are both at most 32 it is a whole multiple of the
+  /// terms (240 × 135 for 16:9 and 128, 172 × 129 for 4:3); with larger
+  /// terms the longer side follows the ratio, continuous; without a ratio
+  /// it is a square.
+  package static func smallestSize(reaching minimumSide: CGFloat, aspectRatio: AspectRatio?) -> CGSize {
+    let shorterSide = smallestShorterSide(reaching: minimumSide, aspectRatio: aspectRatio)
+    guard let aspectRatio else {
+      return CGSize(width: shorterSide, height: shorterSide)
+    }
+    if let terms = PixelAlignedCrop.exactTerms(of: aspectRatio) {
+      let multiple = shorterSide / CGFloat(min(terms.width, terms.height))
+      return CGSize(width: multiple * CGFloat(terms.width), height: multiple * CGFloat(terms.height))
+    }
+    let ratio = aspectRatio.width / aspectRatio.height
+    guard ratio.isFinite, ratio > 0 else {
+      return CGSize(width: shorterSide, height: shorterSide)
+    }
+    return ratio >= 1
+      ? CGSize(width: shorterSide * ratio, height: shorterSide)
+      : CGSize(width: shorterSide, height: shorterSide / ratio)
+  }
+
   /// The whole pixels between `lower` and `upper` once both snap inward
   /// inside `[0, bound]`, as pixel alignment snaps a crop without
   /// straightening.

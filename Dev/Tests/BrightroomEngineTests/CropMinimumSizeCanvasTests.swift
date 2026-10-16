@@ -13,7 +13,9 @@ import UIKit
 ///
 /// The crop scroll view's maximum zoom stops at the minimum, so it used to
 /// show a larger area than such a crop, and a mere pan grew the crop to that
-/// area. These tests host the canvas in a 390×700 window and call the
+/// area. A guide drag stops at the minimum (at the smallest crop a lock
+/// writes), not only at the guide's 80-point floor, so nothing grows after
+/// the finger lifts. These tests host the canvas in a 390×700 window and call the
 /// scroll view's delegate and the guide's handle handlers the way UIKit
 /// does.
 @MainActor
@@ -48,6 +50,9 @@ struct CropMinimumSizeCanvasTests {
   }
 
   static let largeImage = CGSize(width: 1200, height: 900)
+
+  /// The guide's smallest size on screen, whatever the zoom.
+  static let guideFloor = CGSize(width: 80, height: 80)
 
   private func openCanvas(
     imageSize: CGSize = Self.largeImage,
@@ -348,43 +353,154 @@ struct CropMinimumSizeCanvasTests {
     )
   }
 
-  /// A resize at the maximum zoom used to record the guide as dragged,
-  /// 48.8 × 128.08 pixels here (127 high once aligned).
-  @Test(arguments: [nil, AspectRatio.square])
-  func `a guide resize at the maximum zoom records at least the minimum`(lock: AspectRatio?) async throws {
-    let (view, window, owner) = openCanvas(crop: nil, lock: lock)
-    defer { window.isHidden = true }
-    let surface = view.cropSurface
-    let scrollView = surface.scrollView
-    surface.scrollViewWillBeginZooming(scrollView, with: nil)
-    scrollView.setZoomScale(scrollView.maximumZoomScale, animated: false)
-    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
-    try await waitForSettleAndLayout(view)
+  // MARK: - Guide resize
 
+  /// Drags the guide's right edge by `translation` points in two steps,
+  /// the way UIKit calls the handle's pan, and returns the guide's size in
+  /// image pixels just before the finger lifts, and in points.
+  private func dragRightEdge(
+    _ view: EditingCanvasView,
+    by translation: CGFloat
+  ) throws -> (shownInImage: CGSize, shownInPoints: CGSize) {
     let guide = view.guideView
     let pan = ScriptedHandlePan(target: nil, action: nil)
     pan.scriptedState = .began
-    pan.scriptedTranslation = CGPoint(x: -100, y: 0)
+    pan.scriptedTranslation = CGPoint(x: translation / 2, y: 0)
     guide.handlePanGestureInRight(gesture: pan)
     pan.scriptedState = .changed
-    pan.scriptedTranslation = CGPoint(x: -150, y: 0)
+    pan.scriptedTranslation = CGPoint(x: translation / 2, y: 0)
     guide.handlePanGestureInRight(gesture: pan)
     view.layoutIfNeeded()
-    try #require(guide.bounds.width < 120, "the drag shrank the guide: \(guide.bounds)")
+    let shownInImage = try guideSizeInImage(view)
+    let shownInPoints = guide.bounds.size
     pan.scriptedState = .ended
     pan.scriptedTranslation = .zero
     guide.handlePanGestureInRight(gesture: pan)
+    return (shownInImage, shownInPoints)
+  }
 
-    let recorded = try #require(view.proposedCrop).cropExtent
-    #expect(recorded.width >= 128 && recorded.height >= 128, "recorded \(recorded)")
-    if lock == .square {
-      #expect(recorded.size == CGSize(width: 128, height: 128), "recorded \(recorded)")
-    }
+  /// Zooms to `fraction` of the maximum zoom about the guide's center and
+  /// lets it settle.
+  private func zoomToFractionOfMaximum(_ view: EditingCanvasView, _ fraction: CGFloat) async throws {
+    let scrollView = view.cropSurface.scrollView
+    try await zoom(view, by: scrollView.maximumZoomScale * fraction / scrollView.zoomScale)
+  }
+
+  /// The crop recorded when the drag ended is the one the guide showed,
+  /// within the fraction of a pixel that whole-pixel alignment moves it;
+  /// it is still the crop after the guide's layout, which shows it (within
+  /// a pixel: the guide's frame lands on display pixels, so it can show a
+  /// fraction of a pixel past the image, which the layout leaves out).
+  private func expectRecordedAsShown(
+    _ view: EditingCanvasView,
+    shown: CGSize,
+    _ name: String,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async throws -> CGRect {
+    let recorded = try #require(view.proposedCrop, sourceLocation: sourceLocation).cropExtent
+    let description = "\(name): shown \(shown), recorded \(recorded)"
+    #expect(abs(recorded.width - shown.width) <= 0.5, "\(description)", sourceLocation: sourceLocation)
+    #expect(abs(recorded.height - shown.height) <= 0.5, "\(description)", sourceLocation: sourceLocation)
 
     try await waitForSettleAndLayout(view)
+    let settled = try #require(view.proposedCrop, sourceLocation: sourceLocation).cropExtent
+    #expect(
+      abs(settled.minX - recorded.minX) < 1e-6 && abs(settled.minY - recorded.minY) < 1e-6
+        && abs(settled.width - recorded.width) < 1e-6 && abs(settled.height - recorded.height) < 1e-6,
+      "\(description), settled \(settled)",
+      sourceLocation: sourceLocation
+    )
+    let guide = try guideSizeInImage(view)
+    #expect(
+      abs(guide.width - recorded.width) <= 1 && abs(guide.height - recorded.height) <= 1,
+      "\(description), guide after the layout \(guide)",
+      sourceLocation: sourceLocation
+    )
+    return recorded
+  }
+
+  /// At the maximum zoom the guide's shorter side shows 128 pixels, and a
+  /// drag of its right edge stops when the width shows 128 too. The guide
+  /// used to stop only at its 80-point minimum (about 38 pixels here), and
+  /// the record then grew the crop to 128 pixels, so the guide jumped
+  /// wider at the layout after the drag.
+  @Test func `a guide drag at the maximum zoom stops at the minimum crop`() async throws {
+    let (view, window, owner) = openCanvas(crop: nil)
+    defer { window.isHidden = true }
+    try await zoomToFractionOfMaximum(view, 1)
+    let pixelsPerPoint = try pixelsPerPoint(view)
+    try #require(128 / pixelsPerPoint > Self.guideFloor.width, "128 pixels are \(128 / pixelsPerPoint) points")
+
+    let (shown, _) = try dragRightEdge(view, by: -400)
+
+    #expect(abs(shown.width - 128) <= 0.5, "shown \(shown)")
+    #expect(abs(shown.height - 128) <= 0.5, "shown \(shown)")
+    let recorded = try await expectRecordedAsShown(view, shown: shown, "free")
     view.applyPendingCrop()
     let written = owner.feature.crop.topLeftRect(imageSize: Self.largeImage)
-    #expect(written.width >= 128 && written.height >= 128, "written \(written)")
+    #expect(written.width >= 128 && written.height >= 128 && written.width <= recorded.width + 1e-6, "written \(written)")
+  }
+
+  /// Under a lock the drag stops at the smallest crop the lock writes, a
+  /// whole multiple of its terms, and writes exactly that.
+  @Test(arguments: [
+    (AspectRatio(width: 16, height: 9), CGSize(width: 240, height: 135)),
+    (AspectRatio(width: 4, height: 3), CGSize(width: 172, height: 129)),
+    (AspectRatio.square, CGSize(width: 128, height: 128)),
+  ])
+  func `a guide drag under a lock stops at the smallest crop the lock writes`(
+    lock: AspectRatio,
+    expected: CGSize
+  ) async throws {
+    let (view, window, owner) = openCanvas(crop: nil, lock: lock)
+    defer { window.isHidden = true }
+    try await zoomToFractionOfMaximum(view, 0.6)
+    let before = try guideSizeInImage(view)
+    let pixelsPerPoint = try pixelsPerPoint(view)
+    try #require(before.width > expected.width + 10, "the guide shows \(before)")
+    try #require(expected.width / pixelsPerPoint > Self.guideFloor.width, "\(expected.width / pixelsPerPoint) points")
+
+    let (shown, _) = try dragRightEdge(view, by: -600)
+
+    #expect(abs(shown.width - expected.width) <= 0.5, "shown \(shown)")
+    #expect(abs(shown.height - expected.height) <= 0.5, "shown \(shown)")
+    _ = try await expectRecordedAsShown(view, shown: shown, "\(lock)")
+    view.applyPendingCrop()
+    let written = owner.feature.crop.topLeftRect(imageSize: Self.largeImage)
+    #expect(written.size == expected, "written \(written)")
+  }
+
+  /// Zoomed out, 128 pixels are fewer points than the guide's 80-point
+  /// floor, which stays the limit.
+  @Test func `zoomed out a guide drag stops at the guide's 80-point floor`() async throws {
+    let (view, window, _) = openCanvas(crop: nil)
+    defer { window.isHidden = true }
+    let pixelsPerPoint = try pixelsPerPoint(view)
+    try #require(128 / pixelsPerPoint < Self.guideFloor.width, "128 pixels are \(128 / pixelsPerPoint) points")
+
+    let (shown, shownInPoints) = try dragRightEdge(view, by: -600)
+
+    #expect(abs(shownInPoints.width - Self.guideFloor.width) <= 0.5, "shown \(shownInPoints) points")
+    #expect(shown.width > 128, "shown \(shown)")
+    _ = try await expectRecordedAsShown(view, shown: shown, "zoomed out")
+  }
+
+  /// On an image smaller than 128 pixels on a side the drag stops at the
+  /// image's shorter side.
+  @Test func `on a small image a guide drag stops at the image's shorter side`() async throws {
+    let imageSize = CGSize(width: 100, height: 80)
+    let (view, window, owner) = openCanvas(imageSize: imageSize, crop: nil)
+    defer { window.isHidden = true }
+    let pixelsPerPoint = try pixelsPerPoint(view)
+    try #require(80 / pixelsPerPoint > Self.guideFloor.width, "80 pixels are \(80 / pixelsPerPoint) points")
+
+    let (shown, _) = try dragRightEdge(view, by: -600)
+
+    #expect(abs(shown.width - 80) <= 0.5, "shown \(shown)")
+    #expect(abs(shown.height - 80) <= 0.5, "shown \(shown)")
+    _ = try await expectRecordedAsShown(view, shown: shown, "small image")
+    view.applyPendingCrop()
+    #expect(owner.feature.crop.rect.size == CGSize(width: 80, height: 80), "written \(owner.feature.crop.rect)")
   }
 
   /// Under a lock whose shorter term does not divide 128 (16:9, 4:3), the

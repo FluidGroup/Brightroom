@@ -45,8 +45,10 @@ import BrightroomParametric
    changes the document's source image.
  - A crop is at least 128 pixels on its shorter output side (the image's
    shorter side, on a smaller image), so the blur tool keeps room to paint:
-   crop zoom stops there (straightened or not), a guide drag cannot
-   record less, and `InitialCrop` enlarges a smaller crop it decides. A
+   crop zoom stops there (straightened or not), a guide drag stops there
+   too (under a locked ratio, at the smallest crop of that ratio in whole
+   multiples of its terms, such as 240 × 135 for 16:9), and `InitialCrop`
+   enlarges a smaller crop it decides. A
    smaller crop the
    host puts in the document is shown exactly as it is and is not
    rewritten when it loads; the first crop gesture (a pan, a zoom, a guide

@@ -170,7 +170,21 @@ extension EditingCanvasView {
 
     private(set) var lockedAspectRatio: AspectRatio?
 
-    private let minimumSize = CGSize(width: 80, height: 80)
+    /// The smallest size a resize leaves the guide on screen, whatever the
+    /// crop it shows.
+    static let minimumSizeFloor = CGSize(width: 80, height: 80)
+
+    /// Returns, in points, the guide size that shows the editor's smallest
+    /// crop at the current zoom. Asked when a resize begins, before its
+    /// constraints activate; a pinch cancels a resize, so the zoom does not
+    /// change while it lasts. The canvas sets it.
+    var minimumCropGuideSize: () -> CGSize = { .zero }
+
+    /// The smallest size of the resize in progress: `minimumCropGuideSize()`
+    /// per axis, at least `minimumSizeFloor`, and never more than the guide
+    /// was when the resize began, so a crop already under the editor's
+    /// minimum (one a host set) does not jump when a handle is touched.
+    private var minimumSize = InteractiveCropGuideView.minimumSizeFloor
     
     private let insetOfGuideFlexibility: UIEdgeInsets
 
@@ -478,6 +492,10 @@ extension EditingCanvasView {
 
       isTracking = true
       frameBeforeResizing = frame
+      minimumSize = Self.resizingMinimumSize(
+        minimumCropGuideSize: minimumCropGuideSize(),
+        currentSize: bounds.size
+      )
 
       translatesAutoresizingMaskIntoConstraints = false
 
@@ -551,6 +569,20 @@ extension EditingCanvasView {
       didCancelChange()
       removeInteraction(.resizingGuide)
       return true
+    }
+
+    /// The smallest size of a resize that begins at `currentSize`:
+    /// `minimumCropGuideSize` capped at `currentSize`, and at least
+    /// `minimumSizeFloor`, on each axis.
+    private static func resizingMinimumSize(minimumCropGuideSize: CGSize, currentSize: CGSize) -> CGSize {
+      func side(_ crop: CGFloat, current: CGFloat, floor: CGFloat) -> CGFloat {
+        let crop = crop.isFinite ? crop : 0
+        return max(floor, min(crop, current))
+      }
+      return CGSize(
+        width: side(minimumCropGuideSize.width, current: currentSize.width, floor: minimumSizeFloor.width),
+        height: side(minimumCropGuideSize.height, current: currentSize.height, floor: minimumSizeFloor.height)
+      )
     }
 
     private var widthConstraint: NSLayoutConstraint!
