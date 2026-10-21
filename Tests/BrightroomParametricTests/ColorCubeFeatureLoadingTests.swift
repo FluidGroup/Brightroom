@@ -343,14 +343,20 @@ struct ColorCubeFeatureLoadingTests {
   /// color conversion, a swapped channel, or a flipped row changes them.
   private static func rawValueCubeBytes(dimension: Int) -> [UInt8] {
     let count = dimension * dimension * dimension
-    return (0..<count).flatMap { index -> [UInt8] in
-      [
-        UInt8(index % 251),
-        UInt8((index * 7 + 30) % 253),
-        UInt8((index / 3 + 90) % 256),
-        255,
-      ]
+    // Plain statements: the Xcode 26.5 compiler cannot type-check this as
+    // one `flatMap` expression in reasonable time.
+    var bytes: [UInt8] = []
+    bytes.reserveCapacity(count * 4)
+    for index in 0..<count {
+      let red = UInt8(index % 251)
+      let green = UInt8((index * 7 + 30) % 253)
+      let blue = UInt8((index / 3 + 90) % 256)
+      bytes.append(red)
+      bytes.append(green)
+      bytes.append(blue)
+      bytes.append(255)
     }
+    return bytes
   }
 
   /// An opaque 8-bit image laid out the way ImageIO decodes most LUT files.
