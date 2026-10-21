@@ -61,7 +61,10 @@ struct PartialRenderTests {
       }
     }
 
-    /// Core Image's built-in filters give the same floats for any region.
+    /// On iOS 27, Core Image's built-in filters give the same floats for any
+    /// region. On iOS 26, which CI runs on, they do not: measured up to
+    /// 7.8e-3 (2 levels in 8 bits) on the iOS 26.5 simulator, so it allows 5
+    /// levels, still well under the edit's own effect (more than 0.05).
     /// The brush-mask processor draws each tile with the stamp centres moved
     /// into the tile in `Float`, so a tile at another origin rounds the soft
     /// edge of a stamp slightly differently: measured up to 3.4e-4 on the
@@ -69,7 +72,12 @@ struct PartialRenderTests {
     /// at the wrong origin differs by more than 2.
     var tolerance: Float {
       switch self {
-      case .coreImage: 0.0001
+      case .coreImage:
+        if #available(iOS 27, *) {
+          0.0001
+        } else {
+          0.02
+        }
       case .brightroomKernels: 0.003
       }
     }
