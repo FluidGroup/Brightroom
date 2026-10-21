@@ -50,7 +50,7 @@ struct LockedAspectRatioCropRecordTests {
     }
   }
 
-  static let exactCases: [(lock: AspectRatio, turn: QuarterTurn)] = [
+  nonisolated static let exactCases: [(lock: AspectRatio, turn: QuarterTurn)] = [
     (.square, .zero),
     (AspectRatio(width: 4, height: 5), .zero),
     (AspectRatio(width: 16, height: 9), .zero),

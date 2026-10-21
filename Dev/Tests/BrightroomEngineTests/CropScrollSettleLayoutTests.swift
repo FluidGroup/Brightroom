@@ -46,7 +46,7 @@ struct CropScrollSettleLayoutTests {
     }
   }
 
-  static let locks: [AspectRatio?] = [nil, .square, AspectRatio(width: 4, height: 5)]
+  nonisolated static let locks: [AspectRatio?] = [nil, .square, AspectRatio(width: 4, height: 5)]
 
   private func openCanvas(lock: AspectRatio?) -> (EditingCanvasView, UIWindow, Owner) {
     let feature = ImageEditorFeature(imageSize: imageSize)

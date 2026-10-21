@@ -19,14 +19,14 @@ struct CropScrollRecordBoundsTests {
 
   private let imageSize = CGSize(width: 1200, height: 900)
 
-  static let locks: [AspectRatio?] = [
+  nonisolated static let locks: [AspectRatio?] = [
     nil,
     .square,
     AspectRatio(width: 4, height: 5),
     AspectRatio(width: 16, height: 9),
   ]
 
-  static let straightenDegrees: [Double] = [0, 4]
+  nonisolated static let straightenDegrees: [Double] = [0, 4]
 
   private func openCanvas(
     lock: AspectRatio?,

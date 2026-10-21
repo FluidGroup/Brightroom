@@ -19,7 +19,7 @@ import UIKit
 @Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct PostCropVignetteCanvasTests {
 
-  private static let imageSize = CGSize(width: 1200, height: 800)
+  nonisolated private static let imageSize = CGSize(width: 1200, height: 800)
   private static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
 
   enum CropCase: CaseIterable, Sendable {

@@ -32,7 +32,7 @@ struct EditingCanvasPostCropPassTests {
     var testDescription: String { "zoom \(zoom)" }
   }
 
-  static let viewportCases: [ViewportCase] = [
+  nonisolated static let viewportCases: [ViewportCase] = [
     // 200×250 content at 62×77.5 points, shifted left: the frame, at
     // (-20, 46, 31, 31) points, is partly outside the drawable. The frame's
     // edges land on whole texture pixels inside the content, so the

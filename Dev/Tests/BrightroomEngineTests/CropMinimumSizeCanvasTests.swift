@@ -66,7 +66,7 @@ struct CropMinimumSizeCanvasTests {
     }
   }
 
-  static let largeImage = CGSize(width: 1200, height: 900)
+  nonisolated static let largeImage = CGSize(width: 1200, height: 900)
 
   /// The guide's smallest size on screen, whatever the zoom.
   static let guideFloor = CGSize(width: 80, height: 80)
@@ -236,7 +236,7 @@ struct CropMinimumSizeCanvasTests {
 
   // MARK: - Loading
 
-  static let smallCrops: [(name: String, rect: CGRect, lock: AspectRatio?)] = [
+  nonisolated static let smallCrops: [(name: String, rect: CGRect, lock: AspectRatio?)] = [
     ("a face crop", CGRect(x: 242, y: 68, width: 105, height: 104), nil),
     ("a face crop under a square lock", CGRect(x: 242, y: 68, width: 105, height: 104), .square),
     ("a 16:9 crop under its lock", CGRect(x: 500, y: 400, width: 160, height: 90), AspectRatio(width: 16, height: 9)),
@@ -246,7 +246,7 @@ struct CropMinimumSizeCanvasTests {
   /// `smallCrops` with the size the first record grows each to: each short
   /// side to 128 without a lock, the smallest whole multiple of the lock's
   /// terms with one (16:9: 15 × (16, 9)).
-  static let grownSmallCrops: [(name: String, rect: CGRect, lock: AspectRatio?, grown: CGSize)] = [
+  nonisolated static let grownSmallCrops: [(name: String, rect: CGRect, lock: AspectRatio?, grown: CGSize)] = [
     ("a face crop", CGRect(x: 242, y: 68, width: 105, height: 104), nil, CGSize(width: 128, height: 128)),
     ("a face crop under a square lock", CGRect(x: 242, y: 68, width: 105, height: 104), .square, CGSize(width: 128, height: 128)),
     ("a 16:9 crop under its lock", CGRect(x: 500, y: 400, width: 160, height: 90), AspectRatio(width: 16, height: 9), CGSize(width: 240, height: 135)),
