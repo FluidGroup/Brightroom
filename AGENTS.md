@@ -206,6 +206,8 @@ The project uses swift-state-graph for observable state. When modifying state-re
 ### Testing
 - Engine and UI tests are in `Dev/Tests/BrightroomEngineTests/`
 - Parametric tests are in `Tests/BrightroomParametricTests/`
+- Document tests (`EditingDocument`, its history, `SourceImage`, and the
+  ImageEditor document flows) are in `Tests/BrightroomEngineDocumentTests/`
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 - Test files marked "Public API only" play a host app: evaluate through
@@ -221,10 +223,10 @@ xcodebuild -project Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test 
   -default-test-execution-time-allowance 180 \
   -skipMacroValidation -skipPackagePluginValidation
 
-# Parametric tests
+# Package tests: BrightroomParametricTests and BrightroomEngineDocumentTests
+# (CI runs this command; add -only-testing:<target> to run one target)
 xcodebuild -scheme Brightroom-Package test \
   -destination 'platform=iOS Simulator,name=<simulator>' \
-  -only-testing:BrightroomParametricTests \
   -skipMacroValidation -skipPackagePluginValidation
 ```
 
