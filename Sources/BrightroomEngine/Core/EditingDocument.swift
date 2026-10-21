@@ -146,9 +146,11 @@ extension EditingDocument {
 
     /// The maximum number of undo steps kept; nil keeps every step.
     ///
-    /// Lowering it drops the oldest steps.
+    /// Must not be negative: a negative limit is a precondition failure, here
+    /// as in the initializers. Lowering it drops the oldest steps.
     public var limit: Int? {
       didSet {
+        Self.requireValidLimit(limit)
         trimToLimit()
       }
     }
@@ -176,7 +178,7 @@ extension EditingDocument {
     ///   - limit: The maximum number of undo steps kept; nil keeps every
     ///     step. Must not be negative.
     public init(undoStack: [Content], redoStack: [Content], limit: Int? = 100) {
-      precondition(limit.map { $0 >= 0 } ?? true, "A history limit must not be negative.")
+      Self.requireValidLimit(limit)
       self.undoStack = undoStack
       self.redoStack = redoStack
       self.limit = limit
@@ -193,6 +195,10 @@ extension EditingDocument {
       undoStack.append(committed)
       redoStack.removeAll()
       trimToLimit()
+    }
+
+    private static func requireValidLimit(_ limit: Int?) {
+      precondition(limit.map { $0 >= 0 } ?? true, "A history limit must not be negative.")
     }
 
     mutating func trimToLimit() {

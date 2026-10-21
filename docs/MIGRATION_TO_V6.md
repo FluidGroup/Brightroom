@@ -867,7 +867,8 @@ Changing `feature` records nothing. `commit()` records the current feature as
 one undo step, and `undo()`, `redo()`, `canUndo`, `canRedo`,
 `hasUncommittedChanges`, and `discardUncommittedChanges()` work on the value.
 The UI that edits a document decides when to commit. `history.limit` caps the
-undo steps (100 by default), and `history.removeAll()` drops them.
+undo steps (100 by default; nil keeps every step, and a negative limit is a
+precondition failure), and `history.removeAll()` drops them.
 `render(options:)` renders the feature over the full-resolution source image.
 
 `ImageEditorDocument` is `EditingDocument<ImageEditorFeature>`, the document

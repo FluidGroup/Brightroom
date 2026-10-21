@@ -217,6 +217,35 @@ struct EditingDocumentHistoryTests {
     #expect(document.feature == Fixtures.exposure(5))
   }
 
+  /// The setter checks the limit as the initializers do; every
+  /// non-negative limit, on an empty history too, is accepted.
+  @Test func `Setting a non-negative limit keeps the newest steps that fit`() throws {
+    var empty = ImageEditorDocument.History(limit: nil)
+    empty.limit = 0
+    #expect(empty.limit == 0)
+    #expect(empty.undoStack.isEmpty)
+
+    var document = try Fixtures.makeDocument(history: .init(limit: nil))
+    for value in 1...3 {
+      document.feature = Fixtures.exposure(Double(value))
+      document.commit()
+    }
+    let steps = [Fixtures.exposure(0), Fixtures.exposure(1), Fixtures.exposure(2)]
+
+    document.history.limit = 5
+    #expect(document.history.undoStack == steps)
+    document.history.limit = 3
+    #expect(document.history.undoStack == steps)
+    document.history.limit = 1
+    #expect(document.history.undoStack == [Fixtures.exposure(2)])
+    document.history.limit = nil
+    #expect(document.history.undoStack == [Fixtures.exposure(2)])
+
+    document.history.limit = 0
+    #expect(document.history.undoStack.isEmpty)
+    #expect(document.feature == Fixtures.exposure(3))
+  }
+
   @Test func `A nil limit keeps every step`() throws {
     var document = try Fixtures.makeDocument(history: .init(limit: nil))
     for value in 1...150 {
