@@ -74,4 +74,26 @@ struct DebouncerTests {
     try await wait(milliseconds: 300)
     #expect(runs.labels.isEmpty)
   }
+
+  /// Tests of the crop canvas wait for its debouncers this way.
+  @Test
+  func `it is pending from scheduling until the handler runs or is cancelled`() async throws {
+    let debouncer = Debouncer(interval: 0.05)
+    let runs = Runs()
+    #expect(debouncer.isPending == false)
+
+    debouncer.on {
+      runs.labels.append("first")
+      #expect(debouncer.isPending == false)
+    }
+    #expect(debouncer.isPending)
+    try await wait(milliseconds: 300)
+    #expect(runs.labels == ["first"])
+    #expect(debouncer.isPending == false)
+
+    debouncer.on { runs.labels.append("cancelled") }
+    #expect(debouncer.isPending)
+    debouncer.cancel()
+    #expect(debouncer.isPending == false)
+  }
 }

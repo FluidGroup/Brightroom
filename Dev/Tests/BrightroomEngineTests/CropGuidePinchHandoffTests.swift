@@ -114,10 +114,13 @@ struct CropGuidePinchHandoffTests {
     }
   }
 
-  /// Waits past the scroll settle (0.2 s) and the trailing layout (0.8 s).
-  private func waitForSettleAndLayout(_ view: EditingCanvasView) async throws {
-    try await Task.sleep(for: .milliseconds(1300))
-    view.layoutIfNeeded()
+  /// Waits past the scroll settle (0.2 s) and the trailing layout (0.8 s),
+  /// and until both have run.
+  private func waitForSettleAndLayout(
+    _ view: EditingCanvasView,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async throws {
+    try await view.waitForPendingCropUpdates(after: .milliseconds(1300), sourceLocation: sourceLocation)
   }
 
   // MARK: - The pinch reaches a finger on a handle

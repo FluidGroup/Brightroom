@@ -131,10 +131,13 @@ struct CropMinimumSizeCanvasTests {
     ).max
   }
 
-  /// Past the scroll settle (0.2 s) and the guide's layout delay (0.8 s).
-  private func waitForSettleAndLayout(_ view: EditingCanvasView) async throws {
-    try await Task.sleep(for: .milliseconds(1100))
-    view.layoutIfNeeded()
+  /// Past the scroll settle (0.2 s) and the guide's layout delay (0.8 s),
+  /// and until both have run.
+  private func waitForSettleAndLayout(
+    _ view: EditingCanvasView,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async throws {
+    try await view.waitForPendingCropUpdates(after: .milliseconds(1100), sourceLocation: sourceLocation)
   }
 
   /// Image pixels per point at the crop scroll view's current zoom.

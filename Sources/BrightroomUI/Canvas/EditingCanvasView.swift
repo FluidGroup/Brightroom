@@ -311,6 +311,13 @@ final class EditingCanvasView: UIView {
 
   private let scrollViewSettleDebounce = Debouncer(interval: 0.2)
 
+  /// Whether a scroll settle or a crop layout after a guide change is still
+  /// scheduled. Tests wait for both to run rather than for a fixed time,
+  /// which a busy main thread can outlast.
+  var hasPendingCropUpdate: Bool {
+    scrollViewSettleDebounce.isPending || debounce.isPending
+  }
+
   private let contentInset: UIEdgeInsets
 
   private var scrollViewAdjustmentSession: ScrollViewAdjustmentSession?

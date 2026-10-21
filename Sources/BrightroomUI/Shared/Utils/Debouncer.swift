@@ -11,6 +11,11 @@ final class Debouncer {
   let interval: TimeInterval
   let queue: DispatchQueue
 
+  /// Whether a handler is waiting for its timer.
+  var isPending: Bool {
+    timerReference != nil
+  }
+
   init(interval: TimeInterval, queue: DispatchQueue = .main) {
     self.interval = interval
     self.queue = queue
