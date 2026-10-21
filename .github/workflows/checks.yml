@@ -48,7 +48,7 @@ jobs:
           set -o pipefail && xcodebuild \
             -scheme Brightroom-Package \
             test \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
