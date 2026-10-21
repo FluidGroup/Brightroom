@@ -1,4 +1,5 @@
 import CoreGraphics
+import Darwin
 import SwiftUI
 import Testing
 import UIKit
@@ -84,6 +85,7 @@ struct ImageEditorAccessibilityTests {
   }
 
   private func mount(_ rootView: some View) -> Mounted {
+    AccessibilityAutomation.enable()
     let host = UIHostingController(rootView: rootView)
     let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
     window.rootViewController = host
@@ -277,3 +279,44 @@ struct ImageEditorAccessibilityTests {
     return element.perform(selector)?.takeUnretainedValue() as? String
   }
 }
+
+/// Turns on the accessibility runtime's automation mode for the test process,
+/// as a UI test runner does, so SwiftUI vends the accessibility elements these
+/// tests read. The iOS 27 simulator vends them without it; the iOS 26
+/// simulator CI runs on vends none of SwiftUI's elements until something
+/// enables it. `_AXSSetAutomationEnabled` is private, so this lives only in
+/// tests, and the setting is put back when the process exits.
+@MainActor
+private enum AccessibilityAutomation {
+
+  private typealias Getter = @convention(c) () -> Int32
+  private typealias Setter = @convention(c) (Int32) -> Void
+
+  private static var isEnabled = false
+
+  static func enable() {
+    guard isEnabled == false else {
+      return
+    }
+    isEnabled = true
+    let root = ProcessInfo.processInfo.environment["IPHONE_SIMULATOR_ROOT"] ?? ""
+    guard
+      let library = dlopen(root + "/usr/lib/libAccessibility.dylib", RTLD_NOW),
+      let getter = dlsym(library, "_AXSAutomationEnabled"),
+      let setter = dlsym(library, "_AXSSetAutomationEnabled")
+    else {
+      Issue.record("The accessibility runtime is unavailable, so SwiftUI may vend no elements.")
+      return
+    }
+    accessibilityAutomationInitialValue = unsafeBitCast(getter, to: Getter.self)()
+    setAccessibilityAutomation = unsafeBitCast(setter, to: Setter.self)
+    setAccessibilityAutomation?(1)
+    atexit {
+      setAccessibilityAutomation?(accessibilityAutomationInitialValue)
+    }
+  }
+}
+
+// Globals, because the `atexit` handler is a C function that captures nothing.
+nonisolated(unsafe) private var accessibilityAutomationInitialValue: Int32 = 0
+nonisolated(unsafe) private var setAccessibilityAutomation: (@convention(c) (Int32) -> Void)?
