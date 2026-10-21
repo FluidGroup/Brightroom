@@ -65,6 +65,24 @@ public struct InitialCrop: Sendable {
     /// The crop to start from: the whole image, with no quarter turn or
     /// straighten.
     public let crop: CropFeature
+
+    /// Creates an input, for example to unit-test a `decide` closure.
+    ///
+    /// The document builds the input itself when it runs a custom initial
+    /// crop. To pass a `decide` closure what the document passes it, give
+    /// an image whose extent is `imageSize` at a zero origin and a crop of
+    /// the whole image: `CropFeature(rect: CGRect(origin: .zero, size:
+    /// imageSize))`.
+    ///
+    /// - Parameters:
+    ///   - image: The image to decide from, in the crop's coordinates.
+    ///   - imageSize: The oriented pixel size of the source image.
+    ///   - crop: The crop to start from.
+    public init(image: CIImage, imageSize: CGSize, crop: CropFeature) {
+      self.image = image
+      self.imageSize = imageSize
+      self.crop = crop
+    }
   }
 
   fileprivate enum Policy: Sendable {
@@ -92,7 +110,8 @@ public struct InitialCrop: Sendable {
   /// a queue of its own, as `faceDetection` does. Return a crop in
   /// `input.imageSize`; the document snaps it to whole pixels inside the
   /// image and enlarges a crop below the editor's minimum size, keeping its
-  /// ratio (see `InitialCrop`).
+  /// ratio (see `InitialCrop`). To unit-test `decide`, keep it in a
+  /// property of its own and call it with an `Input` you create.
   public init(_ decide: @escaping @Sendable (_ input: Input) async -> CropFeature) {
     self.init(policy: .decide(decide))
   }

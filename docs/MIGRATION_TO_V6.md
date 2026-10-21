@@ -1373,7 +1373,8 @@ undo does not return to the full-image crop.
   image's size, with a zero origin), `imageSize` (the oriented pixel size),
   and `crop` (the whole image). The closure runs off the main actor, so the
   state it captures must be `Sendable`; move blocking work to your own
-  queue, as `faceDetection` does.
+  queue, as `faceDetection` does. To unit-test the closure, call it with an
+  `InitialCrop.Input(image:imageSize:crop:)` you create.
 - The document snaps the returned crop to whole pixels inside the image with
   `CropFeature.pixelAligned(imageSize:)`. A policy with a ratio
   (`.aspectRatio(_:)`, `faceDetection(aspectRatio:)`) gets exactly that ratio
