@@ -43,12 +43,16 @@ jobs:
       # Runs every package test target: BrightroomParametricTests and
       # BrightroomEngineDocumentTests (documents, history, and the editor's
       # document flows).
+      # The generated package scheme gathers code coverage; with coverage
+      # instrumentation the Xcode 26.5 compiler did not finish BrightroomUI
+      # in 26 minutes (the same sources compile in about 2 without it).
       - name: Test package
         run: |
           set -o pipefail && xcodebuild \
             -scheme Brightroom-Package \
             test \
             -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -enableCodeCoverage NO \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
