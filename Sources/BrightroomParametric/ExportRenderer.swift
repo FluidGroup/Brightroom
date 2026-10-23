@@ -407,6 +407,37 @@ public struct ExportRenderer {
     }
   }
 
+  /// Downsamples an in-memory result for
+  /// `RenderedImage.thumbnail(maxPixelSize:)` with the same Lanczos scale as
+  /// `Resolution.resize`, so a thumbnail and a resized render of the same
+  /// result have the same pixels. `format` is the result's own format, and
+  /// the thumbnail keeps the image's color space.
+  fileprivate static func thumbnail(
+    of image: CGImage,
+    format: CIFormat,
+    maxPixelSize: CGFloat
+  ) throws -> CGImage {
+    let input = CIImage(cgImage: image)
+    let scaledImage = scaled(input, for: .resize(maxPixelSize: maxPixelSize))
+    // The input is as large as the export it came from, so choose the device
+    // the way `render` does.
+    let ciContext = makeCIContext(
+      workingFormat: .RGBAh,
+      device: .automatic,
+      imageExtent: input.extent
+    )
+    guard let thumbnail = ciContext.createCGImage(
+      scaledImage,
+      from: scaledImage.extent,
+      format: format,
+      colorSpace: image.colorSpace,
+      deferred: false
+    ) else {
+      throw ExportRendererError.failedToCreateCGImage(extent: scaledImage.extent)
+    }
+    return thumbnail
+  }
+
   private struct CIContextCacheKey: Hashable {
     let workingFormatRawValue: Int32
     let useSoftwareRenderer: Bool
@@ -634,14 +665,29 @@ public struct RenderedImage: Sendable {
   }
   #endif
 
-  /// A downsampled decode of the result, capped to `maxPixelSize` on the long
+  /// A downsampled copy of the result, capped to `maxPixelSize` on the long
   /// side — preview a large export WITHOUT the full-resolution decode spike.
-  /// A file result decodes a thumbnail via Image I/O (bounded memory); an
-  /// in-memory result returns the already-resident image unchanged.
+  ///
+  /// A file result decodes a thumbnail via Image I/O (bounded memory). An
+  /// in-memory result is downsampled the way `ExportRenderer.Resolution.resize`
+  /// downscales, to whole pixels with Lanczos, in its own format and color
+  /// space; one whose longer side is not longer than `maxPixelSize` is
+  /// returned itself, never upscaled.
+  ///
+  /// - Throws: `ExportRendererError.failedToDecodeRenderedFile` when the file
+  ///   cannot be read, or `ExportRendererError.failedToCreateCGImage` when
+  ///   Core Image cannot allocate the thumbnail.
   public func thumbnail(maxPixelSize: CGFloat) throws -> CGImage {
     switch storage {
     case .memory(let image):
-      return image
+      guard CGFloat(max(image.width, image.height)) > maxPixelSize else {
+        return image
+      }
+      return try ExportRenderer.thumbnail(
+        of: image,
+        format: options.outputFormat,
+        maxPixelSize: maxPixelSize
+      )
     case .file(let url):
       guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
         throw ExportRendererError.failedToDecodeRenderedFile(url)
