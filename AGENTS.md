@@ -47,9 +47,12 @@ open Dev/Brightroom.xcodeproj
    - Crop value types live next to `CropFeature`: `AspectRatio` and
      `QuarterTurn` (the package `CropGeometry` does the fitting math behind
      `CropFeature.fitted(to:imageSize:)` and `pixelAligned(imageSize:)`)
-   - Features are plain values with no identity: no `FeatureID`, no
-     `isEnabled`. (`FilterFeature.id` and `ColorCubeFeature.id` are string
-     lookup keys for a filter or a LUT, not feature identity.)
+   - Features are plain values compared by their parameters, never by an
+     identifier: no `FeatureID`, no `isEnabled`. A filter or a LUT is the
+     same when its contents are the same; because a LUT is binary data,
+     `FilterFeature.id` and `ColorCubeFeature.id` name it so hosts and
+     pickers can tell one from another. Equality still compares the whole
+     value.
      The library owns no storage format: apps convert features to their own
      `Codable` models and rebuild them through public, validating initializers
      (`docs/parametric-persistence.md`)

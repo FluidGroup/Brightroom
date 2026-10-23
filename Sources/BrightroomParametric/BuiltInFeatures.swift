@@ -109,8 +109,9 @@ public struct CropFeature: Feature, Equatable {
 /// A named group of image effects: a filter, such as a film look.
 ///
 /// The effects are decided by data (a catalog), so they are type-erased.
-/// Equal filters compare equal (name, id, and effects); selection UIs compare
-/// `id`.
+/// Two filters are equal when their whole value is equal (name, id, and
+/// effects); `id` names the look, so a picker can tell one filter from
+/// another without comparing their effects.
 ///
 /// A filter is a composite: its `body` is its effects, evaluated in order.
 /// Nest another filter with `AnyImageEffect(innerFilter)`.
@@ -150,7 +151,9 @@ public struct ColorCubeFeature: ImageEffect, Equatable {
   /// The display name associated with the lookup table.
   public var name: String
 
-  /// The stable lookup-table identifier.
+  /// The name that tells this lookup table from another: `cubeData` is
+  /// binary, so a host keeps the id unique per table. Equality compares the
+  /// whole value, the data included.
   public var id: String
 
   /// The opacity used when compositing the color-cube result over its input.
