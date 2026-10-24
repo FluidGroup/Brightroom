@@ -12,20 +12,22 @@ import SwiftUI
 ///   the document is also registered with the window's `UndoManager`, as a
 ///   document-based app would, so "System Undo" (or shake) walks the writes.
 ///   The reverse step is registered inside the undo, so it becomes the redo.
-/// - With Cancel shown, the editor edits a copy: Done writes the copy to the
-///   document (one system undo step for the session) and Cancel drops it, so
-///   a cancelled session leaves nothing to undo. With Cancel hidden, the
-///   editor edits the document itself, as in a document window, and each of
-///   its writes is one system undo step.
+/// - Editing a copy: Done writes the copy to the document (one system undo
+///   step for the session) and Cancel drops it, so a cancelled session leaves
+///   nothing to undo. Editing the document itself, as in a document window,
+///   makes each of the editor's writes one system undo step.
+/// - A host bar over the editor undoes and redoes the document the editor is
+///   bound to while it is open, as a document window's Edit menu would.
 /// - The history limit is configurable and the history can be dropped, as an
 ///   app that does not save history would do before saving.
 struct DocumentEditorDemoView: View {
 
   @State private var document: ImageEditorDocument?
-  /// The copy the editor edits while Cancel is shown.
+  /// The copy the editor edits while `editsCopy` is on.
   @State private var draft: ImageEditorDocument?
   @State private var isEditing = false
   @State private var showsCancel = true
+  @State private var editsCopy = true
   @State private var pickerItem: PhotosPickerItem?
   @State private var loadingMessage: String?
   @State private var rendered: ResultImage?
@@ -79,38 +81,74 @@ struct DocumentEditorDemoView: View {
   /// document nor the draft is set back to nil while it is shown.
   @ViewBuilder
   private var editor: some View {
-    if showsCancel {
+    if editsCopy {
       if let binding = Binding($draft) {
+        // The editor's own navigation bar sits at the top of its frame, so
+        // the host bar stacks above it rather than insetting it.
+        VStack(spacing: 0) {
+          hostHistoryBar(binding)
+          ImageEditor(
+            document: binding,
+            options: .documentEditorDemo(),
+            onDone: {
+              write(binding.wrappedValue)
+              isEditing = false
+            },
+            onCancel: showsCancel ? { isEditing = false } : nil
+          )
+        }
+      }
+    } else if let document {
+      // Reads the latest value: the editor can write twice in one event.
+      let binding = Binding(get: { self.document ?? document }, set: { write($0) })
+      VStack(spacing: 0) {
+        hostHistoryBar(binding)
         ImageEditor(
           document: binding,
           options: .documentEditorDemo(),
-          onDone: {
-            write(binding.wrappedValue)
-            isEditing = false
-          },
-          onCancel: { isEditing = false }
+          onDone: { isEditing = false },
+          onCancel: showsCancel ? { isEditing = false } : nil
         )
       }
-    } else if let document {
-      ImageEditor(
-        // Reads the latest value: the editor can write twice in one event.
-        document: Binding(get: { self.document ?? document }, set: { write($0) }),
-        options: .documentEditorDemo(),
-        onDone: { isEditing = false }
-      )
     }
+  }
+
+  /// Undo and redo over the open editor: the host walks the history of the
+  /// document the editor is bound to, and the editor sees each step as a
+  /// write from outside.
+  private func hostHistoryBar(_ document: Binding<ImageEditorDocument>) -> some View {
+    HStack(spacing: 16) {
+      Text("Host")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      Button("Undo") { document.wrappedValue.undo() }
+        .disabled(!document.wrappedValue.canUndo)
+        .accessibilityIdentifier("document-editor.host-undo")
+      Button("Redo") { document.wrappedValue.redo() }
+        .disabled(!document.wrappedValue.canRedo)
+        .accessibilityIdentifier("document-editor.host-redo")
+      Spacer()
+      Text("\(document.wrappedValue.history.undoStack.count) undo · \(document.wrappedValue.history.redoStack.count) redo")
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(.secondary)
+    }
+    .padding(.horizontal)
+    .padding(.vertical, 8)
+    .background(.bar)
   }
 
   @ViewBuilder
   private func documentSections(_ document: ImageEditorDocument) -> some View {
     Section("Document") {
       LabeledContent("Image", value: "\(Int(document.source.pixelSize.width)) x \(Int(document.source.pixelSize.height)) px")
-      LabeledContent("Crop", value: Self.describe(document.feature.crop.rect))
+      LabeledContent("Crop", value: Self.describe(document.feature.crop))
       LabeledContent("Undo steps", value: "\(document.history.undoStack.count)")
       LabeledContent("Redo steps", value: "\(document.history.redoStack.count)")
       LabeledContent("Uncommitted changes", value: document.hasUncommittedChanges ? "Yes" : "No")
 
       Toggle("Show Cancel in the editor", isOn: $showsCancel)
+      Toggle("Edit a copy; Done writes it back", isOn: $editsCopy)
+        .accessibilityIdentifier("document-editor.edits-copy")
 
       Button(document.canUndo || document.canRedo ? "Reopen editor" : "Open editor") {
         startEditing()
@@ -161,7 +199,7 @@ struct DocumentEditorDemoView: View {
     } header: {
       Text("UndoManager")
     } footer: {
-      Text("Every write to the document is registered as one system undo step: one editor session with Cancel shown, one editor operation with Cancel hidden. The library registers nothing itself.")
+      Text("Every write to the document is registered as one system undo step: one editor session when editing a copy, one editor operation when editing the document itself. The library registers nothing itself.")
     }
   }
 
@@ -272,8 +310,16 @@ struct DocumentEditorDemoView: View {
     return try SourceImage(data: Data(contentsOf: url))
   }
 
-  private static func describe(_ rect: CGRect) -> String {
-    "\(Int(rect.minX)), \(Int(rect.minY)), \(Int(rect.width)) x \(Int(rect.height))"
+  private static func describe(_ crop: CropFeature) -> String {
+    let rect = crop.rect
+    var text = "\(Int(rect.minX)), \(Int(rect.minY)), \(Int(rect.width)) x \(Int(rect.height))"
+    if crop.quarterTurn != .zero {
+      text += " · \(crop.quarterTurn)"
+    }
+    if crop.straightenRadians != 0 {
+      text += " · \(String(format: "%.2f", crop.straightenRadians)) rad"
+    }
+    return text
   }
 }
 
