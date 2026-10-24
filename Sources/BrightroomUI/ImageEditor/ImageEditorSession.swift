@@ -39,6 +39,9 @@ import BrightroomParametric
 ///   treats uncommitted changes as a step, so the steps are the same.
 /// - A slider drag is shown through `liveFeature` and written once when the
 ///   drag ends.
+/// - Reset writes the initial feature as a history step of its own
+///   (`document(afterResetTo:of:)`), so the host's undo brings the edit
+///   back.
 /// - Cancel restores the document as it was when the session started,
 ///   history included (`documentForCancel(replacing:)`).
 ///
@@ -131,6 +134,26 @@ struct ImageEditorSession {
     of document: ImageEditorDocument
   ) -> ImageEditorDocument? {
     let written = self.document(after: document)
+    toolVisitStart = writes.count
+    return written
+  }
+
+  /// The document to write for Reset: `initial` as a history step of its
+  /// own, or nil when `document` already has that feature.
+  ///
+  /// The current tool visit ends first, so its work (the document as it is)
+  /// is committed as a step by the write, and the visit ends again after
+  /// it, so the next edit starts a new step: `undo()` after the next edit
+  /// returns to the reset, and once more to the document before it. A value
+  /// shown by a control in progress is dropped: Reset replaces it.
+  mutating func document(
+    afterResetTo initial: ImageEditorFeature,
+    of document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
+    liveFeature = nil
+    // Nothing to write: the live value is gone.
+    _ = endToolVisit(of: document)
+    let written = write(over: document) { $0.feature = initial }
     toolVisitStart = writes.count
     return written
   }

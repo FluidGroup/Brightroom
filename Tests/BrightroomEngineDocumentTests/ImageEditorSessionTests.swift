@@ -298,6 +298,86 @@ struct ImageEditorSessionTests {
     #expect(session.documentForCancel(replacing: other) == nil)
   }
 
+  // MARK: - Reset
+
+  @Test func `Reset writes the initial feature as a step of its own`() throws {
+    let initial = ImageEditorFeature(imageSize: Fixtures.rotatedJPEGSize)
+    // D0: opened, committed.
+    var document = try Fixtures.makeDocument(feature: Fixtures.exposure(1))
+    var session = ImageEditorSession(documentAtStart: document)
+    // D1: the visit's work.
+    document = try #require(session.document(after: document) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+    let edited = document.feature
+
+    // R: one write, committing the visit first.
+    let reset = session.document(afterResetTo: initial, of: document)
+    document = try #require(reset)
+    #expect(document.feature == initial)
+    #expect(document.history.undoStack == [Fixtures.exposure(1)])
+    #expect(document.hasUncommittedChanges)
+
+    // E: the next edit starts a new step, so the reset is one.
+    document = try #require(session.document(after: document) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(document.history.undoStack == [Fixtures.exposure(1), edited])
+    document.undo()
+    #expect(document.feature == initial)
+    document.undo()
+    #expect(document.feature == edited)
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(1))
+  }
+
+  @Test func `Reset of a document that has the initial feature writes nothing`() throws {
+    let initial = ImageEditorFeature(imageSize: Fixtures.rotatedJPEGSize)
+    var document = try Fixtures.makeDocument(feature: Fixtures.exposure(1))
+    // The last visit left the document initial, uncommitted.
+    document.feature = initial
+    var session = ImageEditorSession(documentAtStart: document)
+
+    let reset = session.document(afterResetTo: initial, of: document)
+    #expect(reset == nil)
+    #expect(document.hasUncommittedChanges, "Not even a commit is written.")
+  }
+
+  @Test func `Reset drops a live slider value instead of writing it`() throws {
+    let initial = ImageEditorFeature(imageSize: Fixtures.rotatedJPEGSize)
+    let document = try Fixtures.makeDocument(feature: Fixtures.exposure(1))
+    var session = ImageEditorSession(documentAtStart: document)
+    session.previewAdjustmentValue(30, parameter: .saturation, over: document)
+    #expect(session.liveFeature != nil)
+
+    let reset = session.document(afterResetTo: initial, of: document)
+    let written = try #require(reset)
+    #expect(written.feature == initial, "The live value is not written.")
+    #expect(written.history.undoStack.isEmpty, "The opened document was committed already.")
+    #expect(session.liveFeature == nil)
+    #expect(session.displayedFeature(of: written) == initial)
+  }
+
+  @Test func `Reset under a fixed ratio writes the fitted crop`() throws {
+    let size = Fixtures.rotatedJPEGSize
+    let initial = ImageEditor.Options.AspectRatioPolicy.fixed(.square).initialFeature(imageSize: size)
+    // The 20 x 40 image fits a centered 20 x 20 square.
+    #expect(initial.crop.rect == CGRect(x: 0, y: 10, width: 20, height: 20))
+    #expect(initial.crop == InitialCrop.crop(fitting: .square, imageSize: size))
+    #expect(initial.hasAnyEffect == false)
+    #expect(ImageEditor.Options.AspectRatioPolicy.selectable.initialFeature(imageSize: size) == ImageEditorFeature(imageSize: size))
+    #expect(ImageEditor.Options.AspectRatioPolicy.freeform.initialFeature(imageSize: size) == ImageEditorFeature(imageSize: size))
+
+    let document = try Fixtures.makeDocument(feature: Fixtures.exposure(1))
+    var session = ImageEditorSession(documentAtStart: document)
+    let reset = session.document(afterResetTo: initial, of: document)
+    let written = try #require(reset)
+    #expect(written.feature == initial)
+    #expect(written.feature.crop.quarterTurn == .zero)
+    #expect(written.hasCropChanges(initialCrop: initial.crop) == false)
+    #expect(written.hasCropChanges(), "The fitted square is not the whole image.")
+  }
+
   // MARK: - Canvas writes
 
   @Test func `A canvas change commits the previous visit and keeps a live value`() throws {

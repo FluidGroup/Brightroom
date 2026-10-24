@@ -1020,6 +1020,14 @@ How the editor writes to the binding:
   history.
 - The editor never registers anything with an `UndoManager`. Drive
   `document.undo()` and `redo()` from your own controls if you want them.
+- Reset restores every parameter to its initial value: no filter,
+  adjustments, or painted blur, and the crop the aspect-ratio policy starts
+  with (under `.fixed`, the largest centered crop of the ratio, still
+  locked). 5.x reset only the crop, and unlocked it. It is one write and an
+  undo step of its own (in Crop mode, a crop pending on the crop guide is
+  applied first, as leaving Crop applies it), shown in every mode whenever
+  anything differs, and asks for no confirmation: `undo()` brings the edit
+  back.
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
 

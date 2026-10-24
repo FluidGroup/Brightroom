@@ -76,6 +76,13 @@ public struct ImageEditorCanvasProxy {
   /// Resets the crop guide to the whole image, level and unturned, and
   /// unlocks its aspect ratio. The document is not written; apply the
   /// pending crop to write it.
+  ///
+  /// `ImageEditor`'s Reset does more: it writes every parameter of the
+  /// document back to its initial value, and the canvas reloads the crop
+  /// from the document under the lock the editor passes (kept by a `.fixed`
+  /// policy, released by `.selectable`). To do the same, write the feature
+  /// you want through the binding, and the lock through
+  /// `lockedAspectRatio(_:)`, instead of calling this.
   public func resetCrop() {
     registry.canvasView?.resetCrop()
   }

@@ -653,6 +653,9 @@ final class EditingCanvasView: UIView {
     self.feature = feature
 
     if cropChanged, let current = state.proposedCrop {
+      // The reloaded crop replaces the one on screen, so a gesture's timer
+      // about to record the replaced crop must not record it afterwards.
+      cancelPendingCropUpdates()
       var crop = CropGuideState(cropFeature: feature.crop, imageSize: source.imageSize)
       if let lock = state.lockedAspectRatio {
         // The lock describes the output, so it turns with the reloaded crop's
@@ -666,6 +669,9 @@ final class EditingCanvasView: UIView {
         crop.adoptAspectRatio(ratio)
       }
       load(crop: crop)
+      // The reload snaps the image, so an image move in progress ends here,
+      // as it does in `resetCrop()`.
+      imageMovingGestures.removeAll()
     }
 
     // Effects-only changes (slider ticks, presets) leave the strokes alone.
@@ -701,11 +707,12 @@ final class EditingCanvasView: UIView {
     applyCropToFeatureIfRenderingChanged(crop)
   }
 
+  /// Resets the crop guide to the whole image, level and unturned, and
+  /// unlocks its aspect ratio; the feature is not changed. `ImageEditor`'s
+  /// Reset does not call this: it writes its initial feature to the
+  /// document, and the crop reloads through `setFeature(_:)`.
   func resetCrop() {
-    debounce.cancel()
-    scrollViewSettleDebounce.cancel()
-    scrollViewAdjustmentSession = nil
-    isStreamingStraightenAngle = false
+    cancelPendingCropUpdates()
     state.lockedAspectRatio = nil
     guideView.setLockedAspectRatio(nil)
 
@@ -719,6 +726,20 @@ final class EditingCanvasView: UIView {
     imageMovingGestures.removeAll()
 
     emitCropGuide()
+  }
+
+  /// Cancels what would still record or lay out the crop on screen, before
+  /// it is replaced (a reset, a reload after an undo or the editor's
+  /// Reset): the scroll settle and the layout after a guide change, a zoom
+  /// or a pan waiting to be recorded, and a streamed straighten edit, which
+  /// ends without recording. The caller lays out the replacing crop and ends
+  /// an image move in progress; a guide resize in progress keeps going and
+  /// records the replacing crop when its gesture ends.
+  private func cancelPendingCropUpdates() {
+    debounce.cancel()
+    scrollViewSettleDebounce.cancel()
+    scrollViewAdjustmentSession = nil
+    isStreamingStraightenAngle = false
   }
 
   func setQuarterTurn(_ rotation: QuarterTurn) {

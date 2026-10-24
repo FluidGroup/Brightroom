@@ -255,6 +255,16 @@ struct ImageEditorFeatureEditingTests {
     #expect(!document.hasCropChanges(crop: reset))
   }
 
+  @Test func `Crop changes are measured against the policy's initial crop`() {
+    let document = EditingDocument(source: makeImage())
+    // The 40 x 20 image fits a centered 20 x 20 square.
+    let fitted = ImageEditor.Options.AspectRatioPolicy.fixed(.square).initialFeature(imageSize: imageSize).crop
+    #expect(fitted.rect.size == CGSize(width: 20, height: 20))
+    #expect(document.hasCropChanges(initialCrop: fitted), "The whole image differs from the fitted square.")
+    #expect(!document.hasCropChanges(crop: fitted, initialCrop: fitted))
+    #expect(document.hasCropChanges(crop: fitted), "The whole image is the default.")
+  }
+
   @Test func `Editing target mapping`() {
     #expect(ImageEditor.Mode.crop.canvasTarget == .crop)
     #expect(ImageEditor.Mode.localBlur.canvasTarget == .localBlur)

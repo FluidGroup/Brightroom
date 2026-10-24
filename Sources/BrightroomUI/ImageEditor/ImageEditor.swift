@@ -41,6 +41,14 @@ import BrightroomParametric
    `undo()` treats it as a step. Commit a copy before saving the history.
    Undo and redo are operations on the document value, so the host can
    drive them from its own buttons.
+ - Reset, shown in every mode whenever anything differs from the initial
+   values, restores every parameter at once: no filter, adjustments, or
+   painted blur, and the crop the aspect-ratio policy starts with (the whole
+   image, level and unturned, or under `.fixed`, the largest centered crop
+   of the ratio, still locked). It is one write and a history step of its
+   own (in Crop mode, a crop pending on the crop guide is applied first, as
+   leaving Crop applies it), so `undo()` brings the edit back; the editor
+   asks for no confirmation.
  - The view never registers anything with an `UndoManager`, and never
    changes the document's source image.
  - A crop is at least 128 pixels on its shorter output side (the image's
@@ -71,6 +79,8 @@ public struct ImageEditor: View {
   public struct LocalizedStrings {
     public var done: String = "Done"
     public var cancel: String = "Cancel"
+    /// The button that restores every parameter to its initial value, as
+    /// one undoable step and without a confirmation.
     public var reset: String = "Reset"
     public var originalAspectRatio: String = "ORIGINAL"
     public var freeformAspectRatio: String = "FREEFORM"
@@ -91,7 +101,8 @@ public struct ImageEditor: View {
       /// The user picks a ratio in crop mode, starting from freeform.
       case selectable
       /// The crop starts locked to `ratio`, and no picker is shown. Reset
-      /// unlocks the crop, and the user cannot lock it again.
+      /// returns the crop to the largest centered crop of `ratio` (as
+      /// `InitialCrop.aspectRatio(_:)` decides it) and keeps the lock.
       case fixed(AspectRatio)
       /// The crop is freeform, and no picker is shown.
       case freeform

@@ -655,6 +655,45 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.guides.last?.interaction == [])
   }
 
+  /// A crop reloaded from outside (an undo, the editor's Reset) replaces the
+  /// crop on screen, so what would still record the replaced one is dropped
+  /// as `resetCrop()` drops it: a zoom or a pan waiting for its settle, and
+  /// an image move in progress.
+  @Test func `A reloaded crop drops a pending scroll settle and ends an image move`() async throws {
+    let harness = makeLoadedCanvasView(feature: ImageEditorFeature(imageSize: imageSize), target: .crop)
+    let canvasView = harness.canvasView
+    let surface = canvasView.cropSurface
+    let scrollView = surface.scrollView
+
+    // A pinch whose settle has not recorded it, and a drag in progress.
+    surface.scrollViewWillBeginZooming(scrollView, with: nil)
+    surface.scrollViewDidEndZooming(scrollView, with: nil, atScale: scrollView.zoomScale)
+    surface.scrollViewWillBeginDragging(scrollView)
+    #expect(canvasView.hasPendingCropUpdate)
+    #expect(harness.guides.last?.interaction == .movingImage)
+
+    var reloaded = ImageEditorFeature(imageSize: imageSize)
+    var crop = CropGuideState(cropFeature: reloaded.crop, imageSize: imageSize)
+    crop.updateCropExtent(CGRect(x: 20, y: 10, width: 200, height: 150))
+    reloaded.crop = crop.makeCropFeature()
+    canvasView.setFeature(reloaded)
+
+    #expect(harness.guides.last?.interaction == [])
+    #expect(harness.guides.last?.pendingCrop == reloaded.crop)
+
+    // Without a window the settle would record a zero-size guide over the
+    // reloaded crop.
+    try await canvasView.waitForPendingCropUpdates(after: .milliseconds(400))
+    #expect(canvasView.proposedCrop?.cropExtent == crop.cropExtent)
+
+    // The drag's late end changes nothing.
+    surface.scrollViewDidEndDragging(scrollView, willDecelerate: false)
+    try await canvasView.waitForPendingCropUpdates(after: .milliseconds(400))
+    #expect(harness.guides.last?.interaction == [])
+    #expect(canvasView.proposedCrop?.cropExtent == crop.cropExtent)
+    #expect(harness.emitted.isEmpty, "an external feature is not echoed back")
+  }
+
   /// D2 end to end: a stroke painted at a display point through EditingCanvasView and
   /// exported with the feature changes the export at that point, and not at
   /// its vertical mirror.

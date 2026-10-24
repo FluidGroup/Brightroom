@@ -103,6 +103,23 @@ public struct InitialCrop: Sendable {
     self.framingAspectRatio = framingAspectRatio
   }
 
+  /// The crop `aspectRatio(_:)` decides for an image of `imageSize`, grown
+  /// to the editor's minimum size: the largest selection of `aspectRatio`
+  /// centered in the image, with exactly that ratio in whole pixels when
+  /// its lowest terms are both at most 32 (see `InitialCrop`).
+  ///
+  /// ImageEditor's Reset restores it under
+  /// `ImageEditor.Options.AspectRatioPolicy.fixed`.
+  static func crop(fitting aspectRatio: AspectRatio, imageSize: CGSize) -> CropFeature {
+    // The full-image crop has no turn or straighten, and the selection is
+    // centered, so the same in y-down and y-up coordinates.
+    CropFeature(
+      rect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: imageSize, straightenRadians: 0)
+    )
+    .pixelAligned(imageSize: imageSize, aspectRatio: aspectRatio)
+    .enlargedToEditorMinimum(imageSize: imageSize, aspectRatio: aspectRatio)
+  }
+
   /// An initial crop that `decide` returns.
   ///
   /// `decide` runs off the main actor, on Swift concurrency's shared
@@ -351,24 +368,19 @@ extension EditingDocument where Content == ImageEditorFeature {
 
     switch initialCrop.policy {
     case .fullImage:
+      // The whole image is never below the editor's minimum, which the
+      // image's shorter side caps.
       break
     case .aspectRatio(let aspectRatio):
-      // The full-image crop has no turn or straighten, and the selection is
-      // centered, so the same in y-down and y-up coordinates.
-      feature.crop = CropFeature(
-        rect: CropGeometry.cropRect(toFitAspectRatio: aspectRatio, in: imageSize, straightenRadians: 0)
-      )
-      .pixelAligned(imageSize: imageSize, aspectRatio: aspectRatio)
+      feature.crop = InitialCrop.crop(fitting: aspectRatio, imageSize: imageSize)
     case .decide(let decide):
       // The input is built off the calling actor: downsampling decodes the
       // full image, which would otherwise hitch the caller (often main).
       let decided = await Self.decideInitialCrop(decide, source: source, crop: feature.crop)
-      feature.crop = decided.pixelAligned(imageSize: imageSize, aspectRatio: initialCrop.framingAspectRatio)
+      feature.crop = decided
+        .pixelAligned(imageSize: imageSize, aspectRatio: initialCrop.framingAspectRatio)
+        .enlargedToEditorMinimum(imageSize: imageSize, aspectRatio: initialCrop.framingAspectRatio)
     }
-    feature.crop = feature.crop.enlargedToEditorMinimum(
-      imageSize: imageSize,
-      aspectRatio: initialCrop.framingAspectRatio
-    )
 
     self.init(source: source, feature: feature, history: history)
   }

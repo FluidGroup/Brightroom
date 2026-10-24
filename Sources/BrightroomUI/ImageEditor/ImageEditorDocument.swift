@@ -77,25 +77,60 @@ extension EditingDocument where Content == ImageEditorFeature {
     feature.localBlur = nil
   }
 
-  /// Whether the final crop differs from ImageEditor's Reset target.
+  /// Whether the final crop differs from `initialCrop`, the crop
+  /// ImageEditor's Reset restores: the whole image, or the one the editor's
+  /// aspect-ratio policy starts with (`AspectRatioPolicy.initialFeature(imageSize:)`).
   ///
-  /// Reset only restores the crop geometry, so this intentionally ignores
-  /// effects and the local blur.
-  func hasCropChanges(tolerance: CGFloat = 1) -> Bool {
-    hasCropChanges(crop: feature.crop, tolerance: tolerance)
+  /// The effects, the local blur, and the vignette are compared apart, by
+  /// value (`ImageEditorFeature.hasAnyEffect`).
+  func hasCropChanges(initialCrop: CropFeature? = nil, tolerance: CGFloat = 1) -> Bool {
+    hasCropChanges(crop: feature.crop, initialCrop: initialCrop, tolerance: tolerance)
   }
 
   /// Whether `crop`, a final crop of this document's source image, differs
-  /// from ImageEditor's Reset target. The editor passes the crop its crop
-  /// guide shows, which reaches the document only when it is applied.
-  func hasCropChanges(crop: CropFeature, tolerance: CGFloat = 1) -> Bool {
+  /// from `initialCrop` (the whole image when nil). The editor passes the
+  /// crop its crop guide shows, which reaches the document only when it is
+  /// applied.
+  func hasCropChanges(
+    crop: CropFeature,
+    initialCrop: CropFeature? = nil,
+    tolerance: CGFloat = 1
+  ) -> Bool {
     let crop = CropGuideState(cropFeature: crop, imageSize: source.pixelSize)
-    let initial = crop.makeInitial()
+    let initial = initialCrop.map { CropGuideState(cropFeature: $0, imageSize: source.pixelSize) }
+      ?? crop.makeInitial()
     return crop.rotation != initial.rotation
       || abs(crop.adjustmentAngle.radians - initial.adjustmentAngle.radians) > 0.0001
       || abs(crop.cropExtent.minX - initial.cropExtent.minX) > tolerance
       || abs(crop.cropExtent.minY - initial.cropExtent.minY) > tolerance
       || abs(crop.cropExtent.width - initial.cropExtent.width) > tolerance
       || abs(crop.cropExtent.height - initial.cropExtent.height) > tolerance
+  }
+}
+
+// MARK: - Reset
+
+extension ImageEditor.Options.AspectRatioPolicy {
+
+  /// The feature ImageEditor's Reset restores for an image of `imageSize`:
+  /// no effects, no local blur, no vignette, and the crop the policy starts
+  /// with: the whole image, level and unturned, or under `.fixed`, the
+  /// largest centered crop of the ratio as `InitialCrop.aspectRatio(_:)`
+  /// decides it.
+  func initialFeature(imageSize: CGSize) -> ImageEditorFeature {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    if case .fixed(let aspectRatio) = self {
+      feature.crop = InitialCrop.crop(fitting: aspectRatio, imageSize: imageSize)
+    }
+    return feature
+  }
+}
+
+extension ImageEditorFeature {
+
+  /// Whether a global effect, the local blur, or the vignette is set:
+  /// everything but the crop that ImageEditor's Reset removes.
+  var hasAnyEffect: Bool {
+    effects != .init() || localBlur != nil || vignette != nil
   }
 }

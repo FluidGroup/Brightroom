@@ -43,11 +43,15 @@ struct ImageEditorContent: View {
   @State private var straightenAngle: Angle?
   /// Whether the straighten slider is being dragged.
   @State private var isStraightening = false
-  /// Whether the crop the crop guide shows differs from Reset's target; nil
-  /// until the canvas has loaded. The guide's crop reaches the document only
-  /// when it is applied (leaving Crop, or Done), so the document alone cannot
-  /// tell whether a rotation or a Reset just happened. Kept as a Bool so a
-  /// guide drag does not update the editor on every tick.
+  /// Whether the crop the crop guide shows differs from the initial crop
+  /// (`initialFeature.crop`); nil until the canvas has reported its guide,
+  /// and until then the crop does not count for Reset. The guide's crop
+  /// reaches the document only when it is applied (leaving Crop, or Done),
+  /// so the document alone cannot tell whether a rotation just happened, and
+  /// a `.fixed` editor shows the document's crop fitted to its ratio, so the
+  /// written crop would show Reset over a whole-image crop while the image
+  /// is prepared. Kept as a Bool so a guide drag does not update the editor
+  /// on every tick.
   @State private var guideHasCropChanges: Bool?
   @State private var aspectRatioSelection: AspectRatioSelection
   @State private var isSelectingAspectRatio = false
@@ -109,6 +113,10 @@ struct ImageEditorContent: View {
     let isLoaded = previewSourceLoader.previewSource != nil
     // Includes a slider value that is shown but not yet written.
     let displayedFeature = session.displayedFeature(of: document)
+    // Reset shows in every mode, whenever what is shown differs from the
+    // initial feature: an effect by value, the crop as the guide shows it
+    // (not the written one: see `guideHasCropChanges`).
+    let isResettable = displayedFeature.hasAnyEffect || (guideHasCropChanges ?? false)
     let cancelAction: (() -> Void)? = onCancel == nil ? nil : { cancel() }
     let bottomControlHeight: CGFloat = 120
     let bottomControlMaxWidth: CGFloat = 560
@@ -185,14 +193,14 @@ struct ImageEditorContent: View {
             cancelTitle: localizedStrings.cancel,
             doneTitle: localizedStrings.done,
             isLoaded: isLoaded,
-            hasCropChanges: guideHasCropChanges ?? document.hasCropChanges(),
+            isResettable: isResettable,
             // A failed preparation leaves nothing to edit; Done stays the
             // way out even when the host hides Cancel.
             isDoneEnabled: isLoaded || previewSourceLoader.phase == .failed,
             mode: editingMode,
             isSelectingAspectRatio: isSelectingAspectRatio,
             onRotate: { canvas.rotateCounterclockwise() },
-            onReset: { canvas.resetCrop() },
+            onReset: { reset(canvas) },
             onToggleAspectRatio: toggleAspectRatioControl,
             onSelectMode: { selectMode($0, canvas: canvas) },
             onCancel: cancelAction,
@@ -237,6 +245,12 @@ struct ImageEditorContent: View {
     .environment(\.colorScheme, .dark)
   }
 
+  /// The feature Reset restores: the aspect-ratio policy's crop of this
+  /// image, and nothing else.
+  private var initialFeature: ImageEditorFeature {
+    options.aspectRatioPolicy.initialFeature(imageSize: document.source.pixelSize)
+  }
+
   private var isAspectRatioControlAvailable: Bool {
     switch options.aspectRatioPolicy {
     case .selectable:
@@ -277,21 +291,22 @@ struct ImageEditorContent: View {
     isStraightening = false
   }
 
-  /// Mirrors the canvas's own changes (rotate, reset, a reloaded crop after
-  /// an undo) into the slider, the aspect-ratio selection, and the Reset
+  /// Mirrors the canvas's own changes (rotate, a reloaded crop after an undo
+  /// or a Reset) into the slider, the aspect-ratio selection, and the Reset
   /// button, which follows the crop the guide shows rather than the written
   /// one.
   ///
-  /// The canvas unlocks the guide on reset, so a `.fixed` policy follows it
-  /// to freeform here, as it did when the canvas wrote the lock back
-  /// through a binding. While the slider is dragged it owns the angle, so a
-  /// guide reported for an earlier drag position cannot move it back.
+  /// The canvas turns a `.fixed` policy's lock with the reloaded crop's
+  /// output, so the selection follows it here, as it did when the canvas
+  /// wrote the lock back through a binding. While the slider is dragged it
+  /// owns the angle, so a guide reported for an earlier drag position
+  /// cannot move it back.
   private func followCropGuide(
     _ guide: ImageEditorCanvas.CropGuide,
     originalAspectRatio: AspectRatio?
   ) {
     if let crop = guide.pendingCrop {
-      let hasCropChanges = document.hasCropChanges(crop: crop)
+      let hasCropChanges = document.hasCropChanges(crop: crop, initialCrop: initialFeature.crop)
       if guideHasCropChanges != hasCropChanges {
         guideHasCropChanges = hasCropChanges
       }
@@ -366,6 +381,24 @@ struct ImageEditorContent: View {
 
   private func clearLocalBlur() {
     write { $0.clearLocalBlur() }
+  }
+
+  /// Restores every parameter to its initial value as one write that is a
+  /// history step of its own; the host's undo is the way back, so nothing
+  /// is confirmed. The canvas reloads the crop from the written document.
+  private func reset(_ canvas: ImageEditorCanvasProxy) {
+    if editingMode == .crop {
+      // The guide's pending crop is the visit's work: written first, it is
+      // in the step the reset commits, so undoing the reset shows it again.
+      canvas.applyPendingCrop()
+    }
+    if case .selectable = options.aspectRatioPolicy {
+      // The canvas unlocks the guide when the value it is passed changes.
+      aspectRatioSelection = .freeform
+    }
+    if let next = session.document(afterResetTo: initialFeature, of: document) {
+      document = next
+    }
   }
 
   private func finish(_ canvas: ImageEditorCanvasProxy) {
@@ -695,7 +728,8 @@ private struct EditorToolbar: ToolbarContent {
   let cancelTitle: String
   let doneTitle: String
   let isLoaded: Bool
-  let hasCropChanges: Bool
+  /// Whether anything differs from the initial feature, so Reset is shown.
+  let isResettable: Bool
   let isDoneEnabled: Bool
   let mode: ImageEditor.Mode
   let isSelectingAspectRatio: Bool
@@ -746,7 +780,7 @@ private struct EditorToolbar: ToolbarContent {
     }
 
     ToolbarItem(placement: .principal) {
-      if hasCropChanges && mode == .crop {
+      if isResettable {
         ToolbarTextButton(
           title: resetTitle,
           accessibilityIdentifier: "image-editor.reset",
