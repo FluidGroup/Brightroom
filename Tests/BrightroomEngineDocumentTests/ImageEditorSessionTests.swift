@@ -236,7 +236,39 @@ struct ImageEditorSessionTests {
     #expect(session.documentForCancel(replacing: opened) == nil, "Nothing changed: no write.")
   }
 
-  @Test func `Another document of the same image restarts the session`() throws {
+  @Test func `Cancel after an undo by the host past the opening state restores the opening document`() throws {
+    // A previous session's work, committed, that the host can undo past.
+    var document = try Fixtures.makeDocument()
+    document.feature = Fixtures.exposure(1)
+    document.commit()
+    let opened = document
+    var session = ImageEditorSession(documentAtStart: opened)
+    document = try #require(session.document(after: document) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The host undoes this session's work, then the previous session's.
+    document.undo()
+    session.noteDocument(document)
+    document.undo()
+    session.noteDocument(document)
+    #expect(document.feature == Fixtures.exposure(0))
+    #expect(document.history.undoStack.isEmpty)
+    #expect(document.canRedo)
+
+    #expect(session.documentAtStart == opened)
+    #expect(session.documentForCancel(replacing: document) == opened, "Cancel returns to the opening state, history included.")
+
+    // The next edit is a step of its own over the undone document.
+    let next = try #require(session.document(after: document) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(next.history.undoStack.isEmpty, "The undone document had nothing to commit.")
+    #expect(next.hasUncommittedChanges)
+    #expect(session.documentForCancel(replacing: next) == opened)
+  }
+
+  @Test func `Another document of the same image keeps the session`() throws {
     var opened = try Fixtures.makeDocument()
     opened.feature = Fixtures.exposure(1)
     opened.commit()
@@ -245,18 +277,58 @@ struct ImageEditorSessionTests {
       $0.feature.effects.saturation = SaturationFeature(value: 0.5)
     })
 
-    // The host rebinds the editor to a duplicate with its own edit.
-    var duplicate = EditingDocument(source: opened.source, feature: Fixtures.exposure(-1))
-    session.noteDocument(duplicate)
-    #expect(session.documentForCancel(replacing: duplicate) == nil, "Cancel must not write the first document over the duplicate.")
+    // The host writes a document of the same image with its own edit.
+    var changed = EditingDocument(source: opened.source, feature: Fixtures.exposure(-1))
+    session.noteDocument(changed)
+    #expect(session.documentAtStart == opened)
+    #expect(session.documentForCancel(replacing: changed) == opened, "Cancel discards the host's write too.")
 
-    duplicate = try #require(session.document(after: duplicate) {
+    changed = try #require(session.document(after: changed) {
       $0.feature.effects.saturation = SaturationFeature(value: 0.2)
     })
-    #expect(session.documentForCancel(replacing: duplicate)?.feature == Fixtures.exposure(-1))
+    #expect(session.documentForCancel(replacing: changed) == opened)
   }
 
-  @Test func `A write over an unknown document restarts the session first`() throws {
+  @Test func `A write over an unknown document of the same image commits it first and keeps the session`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: opened)
+    _ = try #require(session.document(after: opened) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The host's own change and the next write arrive before any onChange.
+    var changed = opened
+    changed.feature = Fixtures.exposure(-1)
+    let written = try #require(session.document(after: changed) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(session.documentAtStart == opened)
+    #expect(written.history.undoStack == [Fixtures.exposure(0)], "The host's change is a step of its own.")
+    #expect(written.hasUncommittedChanges)
+    #expect(session.documentForCancel(replacing: written) == opened)
+  }
+
+  @Test func `A document of another image restarts the session`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: opened)
+    _ = try #require(session.document(after: opened) {
+      $0.feature.effects.saturation = SaturationFeature(value: 0.5)
+    })
+
+    // The host rebinds the editor to a document of another image.
+    var other = EditingDocument(source: try Fixtures.makeImage(), feature: Fixtures.exposure(-1))
+    session.noteDocument(other)
+    #expect(session.documentAtStart == other)
+    #expect(session.documentForCancel(replacing: other) == nil, "Cancel must not write the first document over the other image's.")
+
+    other = try #require(session.document(after: other) {
+      $0.feature.effects.contrast = ContrastFeature(value: 0.2)
+    })
+    #expect(other.history.undoStack.isEmpty, "The restarted session's first visit begins here.")
+    #expect(session.documentForCancel(replacing: other)?.feature == Fixtures.exposure(-1))
+  }
+
+  @Test func `A write over a document of another image restarts the session first`() throws {
     let opened = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: opened)
     _ = try #require(session.document(after: opened) {
@@ -264,12 +336,12 @@ struct ImageEditorSessionTests {
     })
 
     // The rebinding and the next write arrive before any onChange.
-    let duplicate = EditingDocument(source: opened.source, feature: Fixtures.exposure(-1))
-    let written = try #require(session.document(after: duplicate) {
+    let other = EditingDocument(source: try Fixtures.makeImage(), feature: Fixtures.exposure(-1))
+    let written = try #require(session.document(after: other) {
       $0.feature.effects.contrast = ContrastFeature(value: 0.2)
     })
-    #expect(session.documentAtStart == duplicate)
-    #expect(session.documentForCancel(replacing: written) == duplicate)
+    #expect(session.documentAtStart == other)
+    #expect(session.documentForCancel(replacing: written) == other)
   }
 
   @Test func `A value the session wrote keeps the session`() throws {

@@ -45,12 +45,14 @@ import BrightroomParametric
 /// - Cancel restores the document as it was when the session started,
 ///   history included (`documentForCancel(replacing:)`).
 ///
-/// A session starts with the document the editor opens with. It restarts
-/// when the binding shows a document the session neither started with nor
-/// wrote (`noteDocument(_:)`), such as another document of the same image:
-/// Cancel then restores that document, never the previous one. An undo by
-/// the host's `UndoManager` brings back a value the session knows, so it
-/// keeps the session.
+/// A session belongs to the image it started with. It starts with the
+/// document the editor opens with and restarts only for a document of
+/// another source image (`noteDocument(_:)`). Every other document the host
+/// writes during the session (an undo, a redo, a change of its own) keeps
+/// the session, so Cancel discards everything written since the editor
+/// opened, the host's own writes included. A host whose outside changes
+/// must survive a Cancel binds the editor to a copy, as the SwiftUIDemo's
+/// `DocumentEditorDemoView` does with "Edit a copy".
 struct ImageEditorSession {
 
   /// The document when the session started; Cancel restores it.
@@ -158,12 +160,17 @@ struct ImageEditorSession {
     return written
   }
 
-  /// Keeps the session for a document it knows, and restarts it for any
-  /// other, which the editor now edits from its current state.
+  /// Keeps the session for a document of the image it started with, and
+  /// restarts it for a document of another image, which the editor now
+  /// edits from its current state.
+  ///
+  /// A document of the same image that the session did not write (an undo,
+  /// a redo, a change of the host's own) keeps the session: Cancel restores
+  /// the document the session started with over it, history included.
   ///
   /// Call it whenever the binding's document changes.
   mutating func noteDocument(_ document: ImageEditorDocument) {
-    guard document != documentAtStart, writes.contains(document) == false else {
+    guard document.source != documentAtStart.source else {
       return
     }
     self = ImageEditorSession(documentAtStart: document)

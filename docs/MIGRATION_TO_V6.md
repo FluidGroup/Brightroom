@@ -1030,6 +1030,12 @@ How the editor writes to the binding:
   back.
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
+- Cancel writes back the document the editor opened with, history
+  included, then calls `onCancel`. Everything written since the editor
+  opened is discarded, your own writes to the binding (an undo, a redo)
+  included; bind the editor to a copy if those must survive a Cancel. Only
+  a document of another source image restarts the editor and its Cancel
+  point.
 
 The canvas preview follows the export's evaluation order. In 5.1.1, while no
 blur was painted, the canvas applied the adjustments to the already-cropped

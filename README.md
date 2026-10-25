@@ -121,7 +121,7 @@ struct PhotoEditor: View {
 }
 ```
 
-The editor prepares the image itself. Each completed operation, such as a filter tap, a slider drag, a brush stroke, or an applied crop, is written to the binding once. On Cancel, the editor writes back the document it opened with and then calls `onCancel`; pass `nil` for `onCancel` to hide the Cancel button. The editor never registers anything with an `UndoManager`: undo and redo are `document.undo()` and `document.redo()`, so you can drive them from your own buttons.
+The editor prepares the image itself. Each completed operation, such as a filter tap, a slider drag, a brush stroke, or an applied crop, is written to the binding once. On Cancel, the editor writes back the document it opened with, history included, discarding everything written since (your own writes to the binding too), and then calls `onCancel`; pass `nil` for `onCancel` to hide the Cancel button. The editor never registers anything with an `UndoManager`: undo and redo are `document.undo()` and `document.redo()`, so you can drive them from your own buttons.
 
 For large images, prefer `SourceImage(contentsOf:)` or `SourceImage(data:)`, which decode only when the image is rendered or prepared. `SourceImage(asset:)` loads a Photos asset. To start from a crop that frames a face, create the document with `await ImageEditorDocument(source:initialCrop:)` and `.faceDetection(aspectRatio:)`; `.aspectRatio(_:)` starts from a centered crop of a ratio.
 

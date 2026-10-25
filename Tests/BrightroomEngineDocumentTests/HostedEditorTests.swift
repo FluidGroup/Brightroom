@@ -382,6 +382,103 @@ struct HostedEditorTests {
     #expect(recorded.cropExtent.height < level.cropExtent.height)
   }
 
+  /// The host of a directly bound editor, observable so its own undo reaches
+  /// the editor as a document window's Undo would.
+  @MainActor
+  @Observable
+  final class UndoingHost {
+    var document: ImageEditorDocument
+    var cancels = 0
+
+    init(_ document: ImageEditorDocument) {
+      self.document = document
+    }
+
+    var binding: Binding<ImageEditorDocument> {
+      Binding(get: { self.document }, set: { self.document = $0 })
+    }
+  }
+
+  /// Whether `label` is on screen as an enabled button.
+  private func isEnabledButton(_ label: String, in mounted: MountedEditor) -> Bool {
+    guard let element = mounted.element(label) else {
+      return false
+    }
+    return element.accessibilityTraits.contains(.button)
+      && element.accessibilityTraits.contains(.notEnabled) == false
+  }
+
+  /// Mounts `ImageEditor` over `host`, with Cancel, and waits until it has
+  /// prepared the image.
+  private func mountLoadedEditor(_ host: UndoingHost) async throws -> MountedEditor {
+    let mounted = mountEditor(
+      ImageEditor(document: host.binding, onDone: {}, onCancel: { host.cancels += 1 })
+    )
+    try await mounted.wait(
+      until: { isEnabledButton("Rotate", in: mounted) },
+      "The editor never prepared the image."
+    )
+    // The first crop guide arrives on a later turn.
+    for _ in 0..<10 {
+      mounted.host.view.layoutIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    return mounted
+  }
+
+  /// A directly bound editor (no copy): the host undoes the reopened
+  /// editor's document past its opening state, as the SwiftUIDemo Document
+  /// Editor's host bar does, and Cancel still restores the document the
+  /// editor reopened with, feature and history.
+  @Test func `Cancel restores the reopened document after an undo by the host`() async throws {
+    let initial = ImageEditorFeature(imageSize: DocumentTestFixtures.rotatedJPEGSize)
+    let host = UndoingHost(try DocumentTestFixtures.makeDocument(feature: initial))
+
+    // First session: rotate, Done, and the editor goes away.
+    do {
+      let first = try await mountLoadedEditor(host)
+      #expect(try #require(first.element("Rotate")).accessibilityActivate())
+      #expect(try #require(first.element("Done")).accessibilityActivate())
+      #expect(host.document.feature.crop.quarterTurn != .zero)
+      #expect(host.document.hasUncommittedChanges, "The turn is the step in progress.")
+      first.window.isHidden = true
+      first.window.rootViewController = nil
+    }
+
+    // Reopen over the same document.
+    let reopened = host.document
+    let mounted = try await mountLoadedEditor(host)
+    defer { mounted.window.isHidden = true }
+    try await mounted.wait(until: { isEnabledButton("Reset", in: mounted) }, "Reset is not shown for the turned crop.")
+
+    // The host undoes the turn through the binding: the editor sees a
+    // document it did not write.
+    host.document.undo()
+    #expect(host.document.feature == initial)
+    #expect(host.document.canRedo)
+    #expect(host.document != reopened)
+    let canvasView = try #require(find(EditingCanvasView.self, in: mounted.host.view))
+    try await mounted.wait(
+      until: { canvasView.proposedCrop?.rotation == .zero && mounted.element("Reset") == nil },
+      "The editor did not follow the host's undo."
+    )
+
+    #expect(try #require(mounted.element("Cancel")).accessibilityActivate())
+    #expect(host.cancels == 1)
+    #expect(host.document == reopened, "Cancel restores the reopened document, history included.")
+
+    // No later write by the canvas changes it.
+    try await mounted.wait(
+      until: { canvasView.proposedCrop?.rotation != .zero && canvasView.hasPendingCropUpdate == false },
+      "The canvas did not follow the Cancel."
+    )
+    for _ in 0..<10 {
+      mounted.host.view.layoutIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(host.document == reopened)
+  }
+
   @Test func `ImageEditor writes nothing on mount`() async throws {
     var document = try DocumentTestFixtures.makeDocument()
     document.feature = DocumentTestFixtures.exposure(1)

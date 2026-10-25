@@ -35,8 +35,8 @@ struct ImageEditorContent: View {
   let onCancel: (@MainActor () -> Void)?
 
   /// Created once per editor identity (one per image), so it keeps the
-  /// document as it was when the editor opened. It restarts itself when the
-  /// binding shows a document it does not know.
+  /// document as it was when the editor opened. It restarts itself for a
+  /// document of another image.
   @State private var session: ImageEditorSession
   /// The canvas's straighten angle, followed through its crop guide while
   /// the slider is idle; nil until the canvas has loaded.
@@ -228,9 +228,9 @@ struct ImageEditorContent: View {
           session.discardLiveFeature()
         }
         .onChange(of: document) { _, document in
-          // A document the session did not write (for example another
-          // document of the same image) restarts it, so Cancel never writes
-          // one document's start over another.
+          // A document of another image restarts the session, so Cancel
+          // never writes one image's document over another's. A document of
+          // the same image (an undo by the host) keeps it.
           session.noteDocument(document)
         }
         // A container keeps each control's own identifier; without it the

@@ -64,11 +64,15 @@ import BrightroomParametric
    rewritten when it loads; the first crop gesture (a pan, a zoom, a guide
    drag, or straightening) records it grown about its center to the
    minimum, keeping a locked ratio. `CropFeature` itself accepts any size.
- - The editor's state follows the document's source image. To switch the editor
-   to another document of the same image (a duplicate or a variant), give
-   it a new identity with `.id`; the editor restarts its Cancel point
-   itself when it sees a document it did not write, but its tool and crop
-   guide state carry over otherwise.
+ - Cancel writes back the document the editor opened with, history
+   included, and discards everything written since, the host's own writes
+   to the binding (an undo, a redo, a change of its own) included.
+ - The editor's state follows the document's source image: a document of
+   another image restarts it, Cancel point included. To switch the editor
+   to another document of the same image (a duplicate or a variant) with a
+   Cancel point of its own, give it a new identity with `.id`; otherwise
+   its tool and crop guide state carry over, and Cancel still restores the
+   document it opened with.
 
  Render the document with `EditingDocument.render(options:)`.
 
@@ -139,7 +143,8 @@ public struct ImageEditor: View {
   ///   - localizedStrings: The button titles.
   ///   - onDone: Called after the binding received the last change.
   ///   - onCancel: Called when the user cancels, after the binding received
-  ///     the document as it was when the editor opened (history included).
+  ///     the document as it was when the editor opened (history included),
+  ///     whatever the host wrote to the binding meanwhile.
   ///     nil hides the Cancel button, for example in a document window where
   ///     every change is kept. That restoring write is a write like any
   ///     other: a host that registers an undo step per write (FileDocument,
