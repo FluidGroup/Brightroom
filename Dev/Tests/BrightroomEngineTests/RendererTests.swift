@@ -53,152 +53,143 @@ struct RendererTests {
   }
 
   @Test func cropping() async throws {
-    let imageSource = ImageSource(image: Asset.l1000069.image)
+    let imageSource = SourceImage.test(Asset.l1000069.image)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: crop)
+    )
 
     let rendered = try await renderer.render()
     print(rendered)
   }
 
   @Test func `V2 input display P3 no effects`() async throws {
-    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    let imageSource = SourceImage.test(Asset.instaLogo.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 input sRGB no effects`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 input sRGB effects`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash3.image)
+    let imageSource = SourceImage.test(Asset.unsplash3.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let filter = ExposureFeature(ev: 0.72)
 
-    let filter = ExposureFeature(value: 0.72)
-
-    renderer.edit = .make(
-      crop: CropFeature.test(imageSize: imageSource.readImageSize()),
-      orientedImageSize: imageSource.readImageSize(),
-      effects: EffectPipeline(effects: [filter])
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: CropFeature.test(imageSize: imageSource.pixelSize))
     )
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 input sRGB effects crop`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let filter = ExposureFeature(ev: 0.72)
 
-    let filter = ExposureFeature(value: 0.72)
-
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size, effects: EffectPipeline(effects: [filter]))
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    )
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 input sRGB effects crop resizing`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash2.image)
+    let imageSource = SourceImage.test(Asset.unsplash2.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let filter = ExposureFeature(ev: 0.72)
 
-    let filter = ExposureFeature(value: 0.72)
-
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size)
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size, effects: EffectPipeline(effects: [filter]))
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(filter)], crop: crop)
+    )
 
-    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.width == 300 || image.height == 300)
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 input sRGB rotation resizing`() async throws {
-    let imageSource = ImageSource(image: Asset.unsplash1.image)
+    let imageSource = SourceImage.test(Asset.unsplash1.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     assertStandardRGBInputColorSpace(inputCGImage.colorSpace)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    let size = imageSource.readImageSize()
+    let size = imageSource.pixelSize
     let crop = CropFeature.test(
       imageSize: size,
-      cropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
-      rotation: .quarterCW
+      topLeftRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: size),
+      quarterTurn: .counterclockwise90
     )
 
-    renderer.edit = .make(crop: crop, orientedImageSize: size)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: crop)
+    )
 
-    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let image = try await renderer.render(options: .init(resolution: .resize(maxPixelSize: 300), outputColorSpace: ColorSpaces.displayP3)).cgImage
 
     #expect(image.width == 300 || image.height == 300)
     #expect(image.colorSpace == ColorSpaces.displayP3)
   }
 
   @Test func `V2 display P3 to sRGB`() async throws {
-    let imageSource = ImageSource(image: Asset.instaLogo.image)
+    let imageSource = SourceImage.test(Asset.instaLogo.image)
 
-    let inputCGImage = imageSource.loadOriginalCGImage()
+    let inputCGImage = imageSource.bitmapForTesting
     #expect(inputCGImage.colorSpace == ColorSpaces.displayP3)
 
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
-    let image = try await renderer.render(options: .init(workingColorSpace: ColorSpaces.displayP3)).cgImage
+    let rendered = try await renderer.render(options: .init(outputColorSpace: ColorSpaces.displayP3))
 
-    #expect(image.colorSpace == ColorSpaces.displayP3)
+    #expect(try rendered.cgImage.colorSpace == ColorSpaces.displayP3)
 
-    let data = ImageTool.makeImageForJPEGOptimizedSharing(image: image)
+    let data = try rendered.sharingData(as: .jpeg(quality: 1))
 
     let result = UIImage(data: data as Data)!.cgImage
 
@@ -206,7 +197,7 @@ struct RendererTests {
   }
 }
 
-struct RenderCropTests {
+struct PixelAlignedCropTests {
 
   @Test(arguments: [
     CGRect(x: 0.05, y: 0.05, width: 0.2, height: 0.2),
@@ -214,10 +205,10 @@ struct RenderCropTests {
   ], QuarterTurn.allCases)
   func `Unrepresentable straightened crops use a stable single pixel`(input: CGRect, rotation: QuarterTurn) {
     let imageSize = CGSize(width: 300, height: 200)
-    let first = RenderCrop(
-      cropRectYDown: input,
+    let first = PixelAlignedCrop(
+      topLeftRect: input,
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straightenRadians: .pi / 4
     )
     let crop = first.cropExtent
@@ -227,10 +218,10 @@ struct RenderCropTests {
     #expect(crop.midY - halfFootprint >= -1e-8)
     #expect(crop.midX + halfFootprint <= imageSize.width + 1e-8)
     #expect(crop.midY + halfFootprint <= imageSize.height + 1e-8)
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: imageSize,
-      rotation: rotation,
+      quarterTurn: rotation,
       straightenRadians: .pi / 4
     )
     #expect(second == first)
@@ -238,14 +229,14 @@ struct RenderCropTests {
 
   @Test func `A tiny straightened source retains a stable minimum canvas`() {
     let size = CGSize(width: 1, height: 1)
-    let first = RenderCrop(
-      cropRectYDown: CGRect(origin: .zero, size: size),
+    let first = PixelAlignedCrop(
+      topLeftRect: CGRect(origin: .zero, size: size),
       imageSize: size,
       straightenRadians: .pi / 4
     )
     #expect(first.cropExtent == CGRect(origin: .zero, size: size))
-    #expect(RenderCrop(
-      cropRectYDown: first.cropExtent,
+    #expect(PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: size,
       straightenRadians: .pi / 4
     ) == first)
@@ -257,20 +248,20 @@ struct RenderCropTests {
     let expected = CGRect(x: requested.midX - 60.5, y: requested.midY - 35, width: 121, height: 70)
 
     for rotation in QuarterTurn.allCases {
-      let first = RenderCrop(
-        cropRectYDown: requested,
+      let first = PixelAlignedCrop(
+        topLeftRect: requested,
         imageSize: imageSize,
-        rotation: rotation,
+        quarterTurn: rotation,
         straightenRadians: .pi / 6
       )
       #expect(abs(first.cropExtent.minX - expected.minX) < 1e-8)
       #expect(abs(first.cropExtent.minY - expected.minY) < 1e-8)
       #expect(first.cropExtent.size == expected.size)
 
-      let second = RenderCrop(
-        cropRectYDown: first.cropExtent,
+      let second = PixelAlignedCrop(
+        topLeftRect: first.cropExtent,
         imageSize: imageSize,
-        rotation: rotation,
+        quarterTurn: rotation,
         straightenRadians: .pi / 6
       )
       #expect(second == first)
@@ -278,8 +269,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes image size to pixel dimensions`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0, y: 0, width: 100, height: 100),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0, y: 0, width: 100, height: 100),
       imageSize: .init(width: 99.999999999, height: 100.2)
     )
 
@@ -287,8 +278,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes fractional origin inward`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 3.4, width: 20.8, height: 30.9),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 3.4, width: 20.8, height: 30.9),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -296,8 +287,8 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalizes fractional max inward`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0, y: 0, width: 999.8, height: 499.8),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0, y: 0, width: 999.8, height: 499.8),
       imageSize: .init(width: 1000, height: 1000)
     )
 
@@ -305,8 +296,8 @@ struct RenderCropTests {
   }
 
   @Test func `treats near integers as integers`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(
         x: 0.000000001,
         y: 0.000000001,
         width: 99.999999998,
@@ -319,8 +310,8 @@ struct RenderCropTests {
   }
 
   @Test func `clamps outside image bounds`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: -10.4, y: -20.1, width: 150.9, height: 130.2),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: -10.4, y: -20.1, width: 150.9, height: 130.2),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -328,8 +319,8 @@ struct RenderCropTests {
   }
 
   @Test func `sub pixel crop falls back to nearest single pixel`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 10.2, y: 20.2, width: 0.2, height: 0.2),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 10.2, y: 20.2, width: 0.2, height: 0.2),
       imageSize: .init(width: 100, height: 100)
     )
 
@@ -337,8 +328,8 @@ struct RenderCropTests {
   }
 
   @Test func `broken crop falls back to single pixel at origin`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(
         x: CGFloat.nan,
         y: CGFloat.nan,
         width: CGFloat.nan,
@@ -351,14 +342,14 @@ struct RenderCropTests {
   }
 
   @Test func `canonicalization is idempotent`() {
-    let first = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
+    let first = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100)
     )
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: first.imageSize.cgSize,
-      rotation: first.rotation,
+      quarterTurn: first.quarterTurn,
       straightenRadians: first.straightenRadians
     )
 
@@ -369,11 +360,11 @@ struct RenderCropTests {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cropRect = CropGeometry.cropRect(toFitAspectRatio: .init(width: 4, height: 5), in: imageSize)
 
-    let first = RenderCrop(cropRectYDown: cropRect, imageSize: imageSize)
-    let second = RenderCrop(
-      cropRectYDown: first.cropExtent,
+    let first = PixelAlignedCrop(topLeftRect: cropRect, imageSize: imageSize)
+    let second = PixelAlignedCrop(
+      topLeftRect: first.cropExtent,
       imageSize: first.imageSize.cgSize,
-      rotation: first.rotation,
+      quarterTurn: first.quarterTurn,
       straightenRadians: first.straightenRadians
     )
 
@@ -381,77 +372,75 @@ struct RenderCropTests {
   }
 
   @Test func `retains rotation and adjustment angle`() {
-    let crop = RenderCrop(
-      cropRectYDown: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
+    let crop = PixelAlignedCrop(
+      topLeftRect: .init(x: 0.2, y: 0.2, width: 99.6, height: 99.6),
       imageSize: .init(width: 100, height: 100),
-      rotation: .quarterCW,
+      quarterTurn: .counterclockwise90,
       straightenRadians: 0.25 * .pi / 180
     )
 
-    #expect(crop.rotation == .quarterCW)
+    #expect(crop.quarterTurn == .counterclockwise90)
     #expect(abs(crop.straightenRadians - 0.25 * .pi / 180) <= 1e-12)
   }
 
 }
 
 /// Pins the shared y-flip + integer-snap contract on `CropFeature` that UI crop
-/// commits (`CropEditingState`) and the engine bridge both flow through. If these
-/// drift, `isRenderingEquivalent` oscillates and the live crop jitters / reverts.
+/// commits (`CropGuideState`) and the engine bridge both flow through. If these
+/// drift, `isPixelEquivalent` oscillates and the live crop jitters / reverts.
 struct CropFeatureDisplaySpaceTests {
 
   @Test func `display rect flip maps y-down top-left to y-up bottom-left`() {
     let imageSize = CGSize(width: 200, height: 100)
     // y-down display rect anchored at the top-left of the image.
     let feature = CropFeature(
-      displayCropRect: .init(x: 10, y: 20, width: 80, height: 30),
+      topLeftRect: .init(x: 10, y: 20, width: 80, height: 30),
       imageSize: imageSize
     )
     // Stored (y-up) rect: top edge (display y=20) becomes the far edge from the
     // bottom: maxY = 100 - 20 = 80, so minY = 80 - 30 = 50.
-    #expect(feature.cropRect == .init(x: 10, y: 50, width: 80, height: 30))
+    #expect(feature.rect == .init(x: 10, y: 50, width: 80, height: 30))
   }
 
   @Test func `display rect round trip is stable`() {
     let imageSize = CGSize(width: 7864, height: 5248)
     let cases: [(CGRect, QuarterTurn, Double)] = [
       (.init(x: 0, y: 0, width: 7864, height: 5248), .zero, 0),
-      (.init(x: 100, y: 200, width: 4000, height: 3000), .quarterCW, 0),
-      (.init(x: 1745.4, y: 0.2, width: 4373.6, height: 5247.8), .half, 0.02),
-      (.init(x: 12, y: 34, width: 56, height: 78), .quarterCCW, -0.05),
+      (.init(x: 100, y: 200, width: 4000, height: 3000), .counterclockwise90, 0),
+      (.init(x: 1745.4, y: 0.2, width: 4373.6, height: 5247.8), .counterclockwise180, 0.02),
+      (.init(x: 12, y: 34, width: 56, height: 78), .counterclockwise270, -0.05),
     ]
 
     for (displayRect, rotation, straighten) in cases {
       let feature = CropFeature(
-        displayCropRect: displayRect,
+        topLeftRect: displayRect,
         imageSize: imageSize,
-        rotation: rotation,
-        straighten: straighten
+        quarterTurn: rotation,
+        straightenRadians: straighten
       )
       // Re-seeding the working model from the stored crop and re-committing must
       // be a fixed point — otherwise document-follow fights the live viewport.
       let reseeded = CropFeature(
-        id: feature.id,
-        displayCropRect: feature.displayCropRect(imageSize: imageSize),
+        topLeftRect: feature.topLeftRect(imageSize: imageSize),
         imageSize: imageSize,
-        rotation: feature.rotation,
-        straighten: feature.straightenRadians
+        quarterTurn: feature.quarterTurn,
+        straightenRadians: feature.straightenRadians
       )
-      #expect(reseeded.cropRect == feature.cropRect, "rect @ \(rotation)")
-      #expect(reseeded.rotation == feature.rotation, "rotation @ \(rotation)")
+      #expect(reseeded.rect == feature.rect, "rect @ \(rotation)")
+      #expect(reseeded.quarterTurn == feature.quarterTurn, "rotation @ \(rotation)")
       #expect(reseeded.straightenRadians == feature.straightenRadians, "straighten @ \(rotation)")
     }
   }
 
 }
 
-struct RenderCropRendererTests {
+struct PixelAlignedCropRendererTests {
 
   @Test func `render crop excludes fractional bright edges`() async throws {
     let sourceImage = try Self.makeImageWithBrightBorder(size: 16)
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(crop: Self.fractionalCrop(for: sourceImage), orientedImageSize: sourceImage.size)
+    let imageSource = SourceImage(cgImage: sourceImage)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(crop: Self.fractionalCrop(for: sourceImage))
+    )
 
     let renderedImage = try await renderer.render().cgImage
 
@@ -463,7 +452,7 @@ struct RenderCropRendererTests {
   private static func fractionalCrop(for image: CGImage) -> CropFeature {
     CropFeature.test(
       imageSize: image.size,
-      cropRect: .init(
+      topLeftRect: .init(
         x: 0.2,
         y: 0.2,
         width: CGFloat(image.width) - 0.4,

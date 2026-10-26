@@ -12,15 +12,16 @@ import Testing
 import UIKit
 
 @testable import BrightroomEngine
+import BrightroomParametric
 
 struct RendererOrientationTests {
 
   private func run(image: UIImage, orientation: CGImagePropertyOrientation) async throws
-    -> BrightRoomImageRenderer.Rendered
+    -> RenderedImage
   {
 
-    let imageSource = ImageSource(image: image)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: orientation)
+    let imageSource = SourceImage.test(image, orientation: orientation)
+    let renderer = EditingDocument(source: imageSource, feature: EmptyFeature())
 
     let rendered = try await renderer.render()
     return rendered

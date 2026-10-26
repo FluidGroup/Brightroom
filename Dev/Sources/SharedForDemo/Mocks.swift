@@ -32,16 +32,12 @@ enum Mocks {
     UIImage(named: "orientation_left.HEIC")!
   }
 
-  static func makeEditingStack(image: UIImage) -> EditingStack {
-    .init(
-      imageProvider: .init(image: image)
-    )
+  static func makeSourceImage(image: UIImage) -> SourceImage {
+    SourceImage(image: image)
   }
-    
-  static func makeEditingStack(fileURL: URL) -> EditingStack {
-    .init(
-      imageProvider: try! .init(fileURL: fileURL)
-    )
+
+  static func makeSourceImage(contentsOf fileURL: URL) -> SourceImage {
+    try! SourceImage(contentsOf: fileURL)
   }
   
 }

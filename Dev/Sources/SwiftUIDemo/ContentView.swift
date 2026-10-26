@@ -9,42 +9,73 @@ struct ContentView: View {
 
   @State private var fullScreenView: FullscreenIdentifiableView?
 
-  @State var verticalStack = Mocks.makeEditingStack(image: Mocks.imageVertical())
-  @State private var photosCropHorizontalStack = Mocks.makeEditingStack(
-    image: Asset.horizontalRect.image
+  // Each editor keeps its document in a store, so reopening an editor shows
+  // the previous edit and keeps its undo history.
+  @State private var horizontalStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image)
   )
-  @State private var photosCropVerticalStack = Mocks.makeEditingStack(
-    image: Asset.verticalRect.image
+  @State private var verticalStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.verticalRect.image)
   )
-  @State private var photosCropSquareStack = Mocks.makeEditingStack(
-    image: Asset.squareRect.image
+  @State private var squareStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.squareRect.image)
   )
-  @State private var photosCropNasaStack = Mocks.makeEditingStack(
-    fileURL: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
-      URL(fileURLWithPath: $0)
-    }!
-  )
-  @State private var photosCropSuperSmallStack = Mocks.makeEditingStack(
-    image: Asset.superSmall.image
-  )
-  @State private var photosCropInstaLogoStack = Mocks.makeEditingStack(
-    image: Asset.instaLogo.image
-  )
-  @State private var photosCropRemoteStack = EditingStack(
-    imageProvider: .init(
-      editableRemoteURL: URL(
-        string:
-          "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
-      )!
+  @State private var nasaStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(
+      contentsOf: Bundle.main.path(forResource: "nasa", ofType: "jpg").map {
+        URL(fileURLWithPath: $0)
+      }!
     )
   )
-  @State private var photosCropRemotePreviewStack = EditingStack(
-    imageProvider: .init(
-      editableRemoteURL: URL(
-        string:
-          "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
-      )!
-    )
+  @State private var superSmallStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.superSmall.image)
+  )
+  @State private var instaLogoStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.instaLogo.image)
+  )
+  @State private var remoteStore = DemoDocumentStore(
+    loading: {
+      try await DemoRemoteImage.load(
+        URL(
+          string:
+            "https://images.unsplash.com/photo-1604456930969-37f67bcd6e1e?ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D&ixlib=rb-1.2.1"
+        )!
+      )
+    }
+  )
+  @State private var remotePreviewStore = DemoDocumentStore(
+    loading: {
+      try await DemoRemoteImage.load(
+        URL(
+          string:
+            "https://images.unsplash.com/photo-1597522781074-9a05ab90638e?ixlib=rb-1.2.1&ixid=MXwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHw%3D"
+        )!
+      )
+    }
+  )
+
+  // The initial-crop and fixed-ratio entries keep their documents too: an
+  // initial crop policy decides the crop on the first open only.
+  @State private var faceStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image),
+    initialCrop: .faceDetection(aspectRatio: .square)
+  )
+  @State private var faceFixedSquareStore = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Asset.horizontalRect.image),
+    initialCrop: .faceDetection(aspectRatio: .square)
+  )
+  @State private var squareInitialCropStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image),
+    initialCrop: .aspectRatio(.square)
+  )
+  @State private var fourByFiveStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image)
+  )
+  @State private var fiveByFourStore = DemoDocumentStore(
+    image: SourceImage(image: Asset.l1000316.image)
+  )
+  @State private var leftOrientedStore = DemoDocumentStore(
+    image: SourceImage(image: Mocks.imageOrientationLeft())
   )
 
   var body: some View {
@@ -53,7 +84,11 @@ struct ContentView: View {
 
         Form {
 
-          NavigationLink("Isolated", destination: IsolatedEditinView())
+          NavigationLink("Isolated", destination: IsolatedEditingView())
+
+          NavigationLink("Document Editor") {
+            DocumentEditorDemoView()
+          }
 
           if #available(iOS 16, *) {
             NavigationLink("Pick image") {
@@ -77,26 +112,18 @@ struct ContentView: View {
           }
 
           Section(
-            "PhotosCrop FaceDetection",
+            "ImageEditor FaceDetection",
             content: {
               Button("Horizontal 1") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  let stack = Mocks.makeEditingStack(
-                    image: Asset.horizontalRect.image
-                  )
-                  stack.cropModifier = .faceDetection(aspectRatio: .square)
-                  return DemoPhotosCropView(stack: stack)
+                  DemoImageEditor(store: faceStore)
                 }
               }
 
               Button("Horizontal 2") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  let stack = Mocks.makeEditingStack(
-                    image: Asset.horizontalRect.image
-                  )
-                  stack.cropModifier = .faceDetection(aspectRatio: .square)
-                  return DemoPhotosCropView(
-                    stack: stack,
+                  DemoImageEditor(
+                    store: faceFixedSquareStore,
                     options: .fixedAspectRatio(.square)
                   )
                 }
@@ -106,119 +133,91 @@ struct ContentView: View {
           )
 
           Section(
-            "PhotosCrop",
+            "ImageEditor",
             content: {
               Button("Horizontal") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropHorizontalStack)
+                  DemoImageEditor(store: horizontalStore)
                 }
               }
 
               Button("Vertical") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropVerticalStack)
+                  DemoImageEditor(store: verticalStore)
                 }
               }
 
               Button("Square") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropSquareStack)
+                  DemoImageEditor(store: squareStore)
                 }
               }
 
               Button("Nasa") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropNasaStack)
+                  DemoImageEditor(store: nasaStore)
                 }
               }
 
               Button("Super small") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropSuperSmallStack)
+                  DemoImageEditor(store: superSmallStore)
                 }
               }
 
               Button("Insta Logo") {
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropInstaLogoStack)
+                  DemoImageEditor(store: instaLogoStore)
                 }
               }
 
               Button("Remote") {
 
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropRemoteStack)
+                  DemoImageEditor(store: remoteStore)
                 }
               }
 
               Button("Remote - preview") {
 
                 fullScreenView = .init(showsDismissButton: false) {
-                  DemoPhotosCropView(stack: photosCropRemotePreviewStack)
+                  DemoImageEditor(store: remotePreviewStore)
                 }
               }
             }
           )
 
           Section(content: {
-            Button("PhotosCrop Square (modifier)") {
+            Button("ImageEditor Square (initial crop)") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image),
-                      cropModifier: .init { _, crop, imageSize, completion in
-                        let new = CropFeature(
-                          id: crop.id,
-                          displayCropRect: CropGeometry.cropRect(toFitAspectRatio: .square, in: imageSize),
-                          imageSize: imageSize,
-                          rotation: crop.rotation,
-                          straighten: crop.straightenRadians
-                        )
-                        completion(new)
-                      }
-                    )
-                  },
+                DemoImageEditor(
+                  store: squareInitialCropStore,
                   options: .fixedAspectRatio(.square)
                 )
               }
             }
 
-            Button("PhotosCrop 4:5") {
+            Button("ImageEditor 4:5") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
-                    )
-                  },
+                DemoImageEditor(
+                  store: fourByFiveStore,
                   options: .fixedAspectRatio(.init(width: 4, height: 5))
                 )
               }
             }
 
-            Button("PhotosCrop 5:4") {
+            Button("ImageEditor 5:4") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Asset.l1000316.image)
-                    )
-                  },
+                DemoImageEditor(
+                  store: fiveByFourStore,
                   options: .fixedAspectRatio(.init(width: 5, height: 4))
                 )
               }
             }
 
-            Button("PhotosCrop left") {
+            Button("ImageEditor left") {
               fullScreenView = .init(showsDismissButton: false) {
-                DemoPhotosCropView(
-                  stack: {
-                    EditingStack.init(
-                      imageProvider: .init(image: Mocks.imageOrientationLeft())
-                    )
-                  }
-                )
+                DemoImageEditor(store: leftOrientedStore)
               }
             }
 
@@ -240,9 +239,6 @@ struct ContentView: View {
         .font(.largeTitle.bold())
         .foregroundStyle(.secondary)
     }
-    .onAppear(perform: {
-      try? PresetStorage.default.loadLUTs()
-    })
   }
 }
 
@@ -251,7 +247,9 @@ struct WorkingOnPicked: View {
 
   @State private var item: PhotosPickerItem?
   @State private var selectedImage: PickedDemoImage?
-  @State private var selectedPhotosCropStack: EditingStack?
+  /// One document per editor variant of the selected photo, so reopening an
+  /// editor shows its previous edit. Picking another photo starts over.
+  @State private var documentStores: [String: DemoDocumentStore] = [:]
   @State private var loadingMessage: String?
   @State private var fullScreenView: FullscreenIdentifiableView?
 
@@ -266,26 +264,27 @@ struct WorkingOnPicked: View {
         }
 
         Section("BuiltIn") {
-          Button("PhotosCrop") {
-            let stack = photosCropStack(for: selectedImage)
+          Button("ImageEditor") {
+            let store = documentStore(for: selectedImage, variant: "free")
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(stack: stack)
+              DemoImageEditor(store: store)
             }
           }
 
-          Button("PhotosCrop Square") {
+          Button("ImageEditor Square") {
+            let store = documentStore(for: selectedImage, variant: "square")
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(stack: {
-                selectedImage.makeEditingStack()
-              }, options: .fixedAspectRatio(.square))
+              DemoImageEditor(store: store, options: .fixedAspectRatio(.square))
             }
           }
 
-          Button("PhotosCrop 4:5") {
+          Button("ImageEditor 4:5") {
+            let store = documentStore(for: selectedImage, variant: "4:5")
             fullScreenView = .init(showsDismissButton: false) {
-              DemoPhotosCropView(stack: {
-                selectedImage.makeEditingStack()
-              }, options: .fixedAspectRatio(.init(width: 4, height: 5)))
+              DemoImageEditor(
+                store: store,
+                options: .fixedAspectRatio(.init(width: 4, height: 5))
+              )
             }
           }
         }
@@ -309,7 +308,7 @@ struct WorkingOnPicked: View {
     )
     .onChange(of: item, perform: { value in
       selectedImage = nil
-      selectedPhotosCropStack = nil
+      documentStores = [:]
       loadingMessage = "Loading selected image..."
 
       guard let value else {
@@ -353,14 +352,17 @@ struct WorkingOnPicked: View {
 
   }
 
-  private func photosCropStack(for image: PickedDemoImage) -> EditingStack {
-    if let selectedPhotosCropStack {
-      return selectedPhotosCropStack
+  private func documentStore(
+    for image: PickedDemoImage,
+    variant: String
+  ) -> DemoDocumentStore {
+    if let store = documentStores[variant] {
+      return store
     }
 
-    let stack = image.makeEditingStack()
-    selectedPhotosCropStack = stack
-    return stack
+    let store = DemoDocumentStore(image: image.makeSourceImage())
+    documentStores[variant] = store
+    return store
   }
 
 }
@@ -375,8 +377,8 @@ private struct PickedDemoImage: Identifiable {
     previewImage.size.applying(.init(scaleX: previewImage.scale, y: previewImage.scale))
   }
 
-  func makeEditingStack() -> EditingStack {
-    EditingStack(imageProvider: try! .init(data: data))
+  func makeSourceImage() -> SourceImage {
+    try! SourceImage(data: data)
   }
 }
 
@@ -405,80 +407,149 @@ private struct PickedImageSummary: View {
   }
 }
 
-struct DemoPhotosCropView: View {
+/// A long-lived edit of one image.
+///
+/// The store keeps the document, so reopening the editor shows the previous
+/// edit and keeps its undo history. The document exists only once the image
+/// is loaded: an edit never exists without its image.
+@MainActor
+@Observable
+final class DemoDocumentStore {
 
-  @ObjectEdge var stack: EditingStack
-  @Environment(\.dismiss) private var dismiss
+  /// The edited document; nil until the image is loaded.
+  var document: ImageEditorDocument?
 
-  @State var resultImage: ResultImage?
-  private let editingModel: PhotosCropEditingModel
-  private let options: SwiftUIPhotosCropView.Options
+  private(set) var loadingError: String?
 
-  @MainActor
+  @ObservationIgnored
+  private let loadImage: @Sendable () async throws -> SourceImage
+
+  @ObservationIgnored
+  private let initialCrop: InitialCrop
+
+  /// A store over an image that loads asynchronously, such as a download.
   init(
-    stack: EditingStack,
-    options: SwiftUIPhotosCropView.Options = .init()
+    loading loadImage: @escaping @Sendable () async throws -> SourceImage,
+    initialCrop: InitialCrop = .fullImage
   ) {
-    self._stack = .init(wrappedValue: stack)
-    self.editingModel = PhotosCropEditingModel(editingStack: stack)
-    self.options = options
+    self.loadImage = loadImage
+    self.initialCrop = initialCrop
   }
 
-  @MainActor
-  init(
-    stack: @escaping () -> EditingStack,
-    options: SwiftUIPhotosCropView.Options = .init()
-  ) {
-    let stack = stack()
-    self._stack = .init(wrappedValue: stack)
-    self.editingModel = PhotosCropEditingModel(editingStack: stack)
-    self.options = options
+  /// A store over an image that is already available.
+  convenience init(image: SourceImage, initialCrop: InitialCrop = .fullImage) {
+    self.init(loading: { image }, initialCrop: initialCrop)
   }
 
-  var body: some View {
-
-    SwiftUIPhotosCropView(
-      editingModel: editingModel,
-      options: options,
-      onDone: {
-        // Export straight to disk with bounded memory (strip render into an
-        // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
-        // then preview from a DOWNSAMPLED decode so the read-back doesn't
-        // re-spike to the full resolution.
-        let url = FileManager.default.temporaryDirectory
-          .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
-          .appendingPathExtension("heic")
-        // Snapshot the parametric document that produced this render so the
-        // result screen can show the feature tree used for it.
-        let document = stack.loadedState?.currentEdit.document
-        Task {
-          do {
-            let rendered = try await stack.makeRenderer().render(
-              options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
-            )
-            let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
-            await MainActor.run {
-              self.resultImage = .init(cgImage: cgImage, document: document)
-            }
-          } catch {
-            assertionFailure("\(error)")
-          }
-        }
-      },
-      onCancel: {
-        dismiss()
+  /// Loads the image and creates the document, once.
+  func prepareDocument() async {
+    guard document == nil else {
+      return
+    }
+    do {
+      let image = try await loadImage()
+      let document = await EditingDocument(source: image, initialCrop: initialCrop)
+      // Another call may have finished first while this one was suspended.
+      if self.document == nil {
+        self.document = document
       }
-    )
-    .sheet(item: $resultImage) {
-      RenderedResultView(result: $0)
+    } catch {
+      loadingError = "\(error)"
     }
   }
 }
 
-private extension SwiftUIPhotosCropView.Options {
-  static func fixedAspectRatio(_ aspectRatio: PixelAspectRatio?) -> Self {
+struct DemoImageEditor: View {
+
+  @ObjectEdge private var store: DemoDocumentStore
+  @Environment(\.dismiss) private var dismiss
+
+  @State var resultImage: ResultImage?
+
+  private let options: ImageEditor.Options
+
+  /// Edits a long-lived store; reopening shows its previous edit.
+  @MainActor
+  init(
+    store: DemoDocumentStore,
+    options: ImageEditor.Options = .demo()
+  ) {
+    self._store = .init(wrappedValue: store)
+    self.options = options
+  }
+
+  var body: some View {
+    @Bindable var store = store
+
+    Group {
+      // The editor takes a non-optional binding: show it once the document
+      // exists. The store never sets it back to nil.
+      if let document = Binding($store.document) {
+        ImageEditor(
+          document: document,
+          options: options,
+          onDone: {
+            export(document.wrappedValue)
+          },
+          onCancel: {
+            // The editor already restored the document it opened with.
+            dismiss()
+          }
+        )
+      } else if let loadingError = store.loadingError {
+        Text(loadingError)
+      } else {
+        ProgressView()
+      }
+    }
+    .task {
+      await store.prepareDocument()
+    }
+    // Done keeps the edit in the store: closing the result closes the
+    // editor, as a host would after Done. Cancel is the only other way out,
+    // and it restores the document the editor opened with.
+    .sheet(
+      item: $resultImage,
+      onDismiss: { dismiss() },
+      content: { RenderedResultView(result: $0) }
+    )
+  }
+
+  private func export(_ document: ImageEditorDocument) {
+    // Export straight to disk with bounded memory (strip render into an
+    // mmap'd buffer + lazy-paged encode — see CIImageStreamingFileWriter),
+    // then preview from a DOWNSAMPLED decode so the read-back doesn't
+    // re-spike to the full resolution.
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("brightroom-export-\(UUID().uuidString)")
+      .appendingPathExtension("heic")
+    Task {
+      do {
+        let rendered = try await document.render(
+          options: .init(output: .file(url: url, fileType: .heif(quality: 0.9)))
+        )
+        let cgImage = try rendered.thumbnail(maxPixelSize: 2048)
+        // Keep the feature that produced this render so the result screen
+        // can show its tree.
+        self.resultImage = .init(cgImage: cgImage, feature: document.feature)
+      } catch {
+        assertionFailure("\(error)")
+      }
+    }
+  }
+}
+
+private extension ImageEditor.Options {
+  /// Creates demo options with the sample filters and the bundled LUTs.
+  static func demo() -> Self {
     var options = Self()
-    options.aspectRatioOptions = .fixed(aspectRatio)
+    options.filters = DemoFilters.make() + DemoLUTs.bundled
+    return options
+  }
+
+  static func fixedAspectRatio(_ aspectRatio: AspectRatio) -> Self {
+    var options = Self.demo()
+    options.aspectRatioPolicy = .fixed(aspectRatio)
     return options
   }
 }

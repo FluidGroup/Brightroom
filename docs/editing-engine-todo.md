@@ -4,14 +4,22 @@ Near-term, actionable follow-ups for the parametric editing/rendering work. The
 broader direction lives in [`vision-of-editing.md`](./vision-of-editing.md); this
 file tracks concrete engineering items that are not yet done.
 
-Status context (as of the v5 parametric migration):
+Status context (as of Brightroom 6):
 
-- `EditingCrop` / `EditingFeature` are deleted. `EditingStack.Edit` stores an
-  `EditingDocument` directly; crop is a parametric `CropFeature`. BrightroomUI
-  edits crop through `CropEditingState` / `CropRotation`.
-- Brush-mask rasterization shares ONE falloff (`BrushStampFalloff.metalh`)
-  across the export/preview CIKernel (`ParametricKernels.metal` `brushStamp`)
-  and the live Metal render shader (`BrushMaskRenderShader.metal`).
+- `PreviewSourceLoader` (package) holds no edit; it only prepares the preview
+  (`await load()`, one decode per image, published as `phase`).
+  ImageEditor and `ImageEditorCanvas` edit an `ImageEditorDocument` owned by
+  the host: its `SourceImage`, its `ImageEditorFeature` (a statically composed
+  `Feature`), and its undo history. Crop is a parametric `CropFeature`.
+  BrightroomUI edits crop through the internal `CropGuideState`.
+- Brush-mask rasterization is ONE Metal pipeline, `BrushStampPipeline`
+  (package; `BrushMaskRenderShader.metal` with the `BrushStampFalloff.metalh`
+  falloff and a `.max` blend, one instanced draw). The live canvas encodes it
+  into its viewport mask texture; the evaluated mask (`MaskRasterizer`, for
+  preview and export) draws it into the Core Image tiles of one
+  `CIImageProcessorKernel` node, `BrushMaskImageProcessor`, whose extent is
+  the union of the stamp bounds. A mask is therefore one graph node however
+  many stamps it holds (main #333/#334, merged into v6).
 - The live canvas renders committed + active strokes in one real-time Metal pass
   (no committed-mask cache). Export/preview stay on Core Image (auto-tiling).
 - The local-adjustment **preview is evaluated at the downsampled editing-source
@@ -23,15 +31,15 @@ Status context (as of the v5 parametric migration):
   `.localAdjustment` in both `makeRenderImages` and `makeCropOutputRenderImages`.
   A small preview↔export resampling discrepancy is inherent and accepted (any
   editor downsamples its preview).
-- `BrightRoomImageRenderer` has a SINGLE rendering path AND a single public
-  entry point: `func render(options:) async throws -> Rendered`. The render
-  compiles the edit (effects, local adjustments, crop-as-domain-feature) to one
-  `CIImage` recipe via `ParametricImageRenderer` and evaluates it on the
-  renderer's private serial queue (off the calling actor). The old CoreGraphics
+- Export has a SINGLE rendering path AND a single public entry point:
+  `EditingDocument.render(options:) async throws -> RenderedImage`, backed by
+  `ExportRenderer`. The render compiles the edit (effects, local adjustments,
+  crop-as-domain-feature) to one `CIImage` recipe via `FeatureRenderer` and
+  evaluates it off the calling actor (`@concurrent`). The old CoreGraphics
   fast path (`renderOnlyCropping` / `axisAlignedCropOnlyFeature` /
   `pixelCropRect` / `Rendered.Engine`), the completion-handler `render`, and the
   separate `renderToFile` are all deleted.
-- Output is chosen via `Options.output`, and `Rendered` HIDES the disk/memory
+- Output is chosen via `Options.output`, and `RenderedImage` HIDES the disk/memory
   backing (`cgImage` / `uiImage` are `get throws`; `fileURL` is non-nil only for
   file output):
   - `.memory` → in-memory `CGImage` via `CIContext.createCGImage(from: fullExtent)`,
@@ -43,23 +51,38 @@ Status context (as of the v5 parametric migration):
     disk, not RAM), wrap that buffer in a `CGImage` via a lazy
     `CGDataProviderCreateDirect`, and encode with `CGImageDestination`, which
     demand-pages through the provider. Peak RAM ≈ one strip + CI scratch +
-    encoder working set; the full bitmap stays on disk. This REPLACED
+    encoder working set; the full bitmap stays on disk. The JPEG/PNG encoders
+    need a few MB at 8 or 16 bits, but Image I/O's HEIF encoder keeps the whole
+    frame: ~255MB at 8 bits and ~469MB at 10 bits for 6000² (macOS
+    `/usr/bin/time -l`, mmap'd provider; the 2026-10-03 review saw the 16-bit
+    export add ≥200MB over the 8-bit one through ExportRenderer on the iOS
+    Simulator), so a deep HEIF of 12000² would need roughly 2GB. This REPLACED
     `CIContext.write{JPEG,HEIF}Representation`, which renders the whole bitmap
-    into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG. To preview
+    into RAM first (the observed ~576MB spike). Output JPEG/HEIC/PNG, in
+    `.rgba8` strips, or `.rgba16` strips when `outputFormat` has more than 8
+    bits per component and the type can keep them (PNG stores 16, HEIC 10;
+    JPEG stays 8). `RenderedImage.options.outputFormat` reports the stored
+    format (`ExportRendererFileFormatTests`). To preview
     a large file result WITHOUT a full-resolution decode spike, use
-    `Rendered.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
-    `Rendered.cgImage` (which decodes full).
-  `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs.
-  A private `renderSynchronously(options:)` backs the async API and is used by
-  size-sensitive benchmarks (`measure {}` can't await).
+    `RenderedImage.thumbnail(maxPixelSize:)` (Image I/O downsample-decode), not
+    `RenderedImage.cgImage` (which decodes full).
+  `Resolution.resize` is a CI-side Lanczos scale on the recipe for both outputs:
+  whole-pixel size first, each axis scaled to fill it, edges clamped
+  (`ExportRendererResizeTests`).
   - OPEN: the encode step's demand-paging is not Apple-documented — verify the
     peak-memory win on-device with Instruments (Allocations / VM Tracker); tune
-    `CIImageStreamingFileWriter.defaultStripHeight`. Confirm custom CIKernels
-    (`brushStamp`) tile under `render(bounds:)` (no "ROI function did not allow
-    tiling"). Guards: `DiskExportTests` (full-res, masked, resize, orientation,
+    `CIImageStreamingFileWriter.referenceStripHeight` (16-bit writes use half
+    the rows, so a strip keeps the same bytes). Measure a 12000² HEIF export
+    at 8 and 10 bits on device (jetsam risk); if the 10-bit one does not fit,
+    make deep HEIF opt-in or fall back to 8 bits for large images. The brush mask is a
+    `CIImageProcessorKernel` drawn per tile (`BrushMaskImageProcessorTests`
+    pins uneven tiles); confirm on device that `render(bounds:)` strips stay
+    bounded with it. Guards: `DiskExportTests` (full-res, masked, resize, orientation,
     channel-order).
-- Pixel-level guards: `BrushMaskRasterizerParityTests` (live Metal == export
-  CIKernel), `BrushStampFalloffTests`, `LargeMaskedExportTests`,
+- Pixel-level guards: `BrushMaskRasterizerParityTests` (live texture pass ==
+  export processor tiles), `BrushMaskImageProcessorTests` (tiles, stamp
+  layout, CPU fallback), `DenseBrushMaskExportTests` (5,356 stamps stay
+  opaque), `BrushStampFalloffTests`, `LargeMaskedExportTests`,
   `MaskedPreviewExportScaleConsistencyTests` (source-res blur preview ≈ full-res
   export), `CropSurfaceBlurRenderPathTests` (prepared-path routing),
   `DiskExportTests` (render with `Output.file`: full-res, masked, resize), plus the existing
@@ -69,48 +92,54 @@ Status context (as of the v5 parametric migration):
 
 ## TODO
 
-### 1. Optimize the export brush-mask rasterizer — `FeatureGraphCompiler.render(_:BrushMask)`
+### 1. Done: One node for the export brush mask
 
-The Core Image path accumulates one full-extent CIImage per stamp via `componentMax`
-(an O(stamps)-deep graph, each stamp evaluated over the whole extent). Slow and
-memory-heavy for many-stamp masks at export. Keep it on Core Image (it auto-tiles
-images too large for a single GPU texture). Options, ranked, all parity-safe unless
-noted:
+`MaskRasterizer.render(_:BrushMask)` used to build one full-extent `CIImage`
+per stamp and fold them with `componentMax`. Dense masks (thousands of stamps)
+grew a graph Core Image could not fuse into a working Metal function, so the
+export came back transparent with no error. It is now one
+`BrushMaskImageProcessor` node drawing every stamp with `BrushStampPipeline`
+per tile, bounded by the stamps' union (the bounding-box and tree-reduce
+options are subsumed).
 
-- **(a) Bounding-box crop each stamp** to `center ± radius` so the `brushStamp`
-  kernel only evaluates the disk (O(extent) → O(stamp area) per stamp). Pixel-identical.
+Remaining options, both optional:
+
 - **(b) Decimate near-duplicate stamps at commit** (e.g. drop stamps within
   `radius/4` of the previous). Reduces N for BOTH export and live; do it before
   either path consumes the stamps so parity is preserved.
-- **(c) Tree-reduce the `componentMax` chain** (pairwise → graph depth O(log N))
-  to ease Core Image concatenation / intermediate-buffer pressure.
-- **(d) [bigger] Per-stroke distance-to-polyline kernel** (N stamps → S strokes).
-  Biggest win for huge masks, but it changes the rasterization geometry, so the
-  live Metal shader must be made polyline-based too, or live/export diverge.
+- **(d) [bigger] Per-stroke distance-to-polyline shader** (N stamps → S strokes).
+  It changes the rasterization geometry, so `BrushStampPipeline` changes for
+  live and export together.
+- The CPU fallback in `BrushMaskImageProcessor` (contexts without Metal) is
+  parity-tested against the Metal pipeline, but its row orientation has not
+  been checked on a real CPU context (iOS 26 "software" contexts run on Metal).
+- OPEN: errors inside `BrushMaskImageProcessor.process` (a render pipeline,
+  scratch texture, or encoder that cannot be created on Core Image's device)
+  never reach the caller: Core Image discards a processor kernel's error and
+  treats the tile as transparent, so the export succeeds without the local
+  adjustment there. A missing or incomplete `default.metallib` is caught
+  before that, at evaluation (`BrushStampPipeline.validateLibrary()` throws
+  `kernelUnavailable`), but a per-device pipeline failure is not. Surfacing
+  it would need the processor to record the failure where `ExportRenderer`
+  can check it after the render.
 
-Files: `Sources/BrightroomParametric/FeatureGraphCompiler.swift`,
-`Sources/BrightroomParametric/ParametricKernelRegistry.swift`.
-Guards: `BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
+Guards: `BrushMaskImageProcessorTests`, `DenseBrushMaskExportTests`,
+`BrushMaskRasterizerParityTests`, `EditingPreviewExportParityTests`,
 `LocalAdjustmentRenderingTests`.
 
-### 2. Unify the live Metal rasterizer (MTKView ↔ `BrushMaskMetalRasterizer`)
+### 2. Done: One live Metal rasterizer
 
-`BrushMaskMetalRasterizer` (added for the parity test) duplicates the inline stamp
-encode + pipeline setup in `_EditingCanvasMTKView.encodeStrokeMaskForViewport` /
-`makeBrushMaskPipeline`. The falloff is shared, but the Metal encode/pipeline is
-not. Refactor the MTKView to use `BrushMaskMetalRasterizer` so there is literally
-one live Metal rasterizer.
+`EditingCanvasRenderer` and `BrushMaskMetalRasterizer` both build their
+pipeline with `BrushStampPipeline.renderPipelineState(device:pixelFormat:)` and
+draw with `BrushStampPipeline.encode(_:targetSize:into:)`; the UI-side
+`BrushMaskPipeline` is deleted.
 
-Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`,
-`.../BrushMaskMetalRasterizer.swift`.
+### 3. Done: Store masks y-up in the document — "E5"
 
-### 3. (Optional) Store masks y-up in the document — "E5"
-
-Masks are currently stored y-down and flipped to the compiler's y-up space in the
-bridge (`EditingDocumentBridge.loweredToParametricDocument` / `MaskNode.flippingStampsY`).
-This is behavior-preserving and parity-green. The cleanup would store masks y-up so
-`edit.document` is directly renderable, relocating the single flip to the CPU raster.
-Low priority; only do it if "document is directly renderable" becomes valuable.
+`ImageEditorFeature` stores brush stamps in Core Image's y-up working space, and
+the y-down bridge (`EditingDocumentBridge`) is deleted, so the document is
+directly renderable. The canvas converts gestures to y-up when it commits a
+stroke.
 
 Guards: `LocalAdjustmentMaskOrientationTests`, `EditingPreviewExportParityTests`,
 `PreviewExportVisualEvidenceTests`.
@@ -123,36 +152,48 @@ effort (e.g. the untracked `CommittedMaskParametricParityTests.swift`, and stale
 comments referencing a committed-mask bake) should be reconciled with the live
 real-time path or removed.
 
-### 5. Manual verification pass (PhotosCrop)
+### 5. Manual verification pass (ImageEditor)
 
 Live paint position/orientation and zoom memory were confirmed visually. Remaining:
-a full PhotosCrop pass on device/sim — pan/zoom, 90° rotate, straighten dial,
+a full ImageEditor pass on device/sim — pan/zoom, 90° rotate, straighten dial,
 aspect-ratio lock, reset — and confirm the exported result matches the on-screen
 preview. **Re-test drawing a mask on the 12000×12000 "Nasa" image** — the OOM
 that motivated the source-resolution-blur change cannot be unit-tested (it is a
 device memory-watermark crash), so it needs a manual confirmation.
 
+### 5a. Crop Done / tool switch before a gesture settles (from #330)
+
+ImageEditor's Done and a switch from Crop to a tool commit the proposed crop,
+which is the last *recorded* interaction state. Pressing Done or switching
+before a scroll/pinch settles can omit the final unrecorded movement; there is
+no synchronous gesture flush. Quarter-turn crops (straighten → crop → quarter
+turn, `CropFeature.OutputGeometry`) are covered by unit and UI tests on the
+Simulator but have not been verified on a physical device.
+
+Files: `Sources/BrightroomUI/Canvas/EditingCanvasView.swift`
+(`applyPendingCrop()`, `record()`).
+
 ### 6. (If global spatial effects land) downsample the global-effect preview too
 
 The source-resolution-blur fix covers the **local-adjustment** preview path
 (`.localAdjustment`). The `.preview` / `.renderedEditPreview` paths still apply
-the global `EffectPipeline` to the full-canvas image. That is safe today because
-every global effect PhotosCrop exposes is pointwise (exposure/contrast/etc.) —
+the global effects (`ImageEditorFeature.Effects`) to the full-canvas image. That is safe today because
+every global effect ImageEditor exposes is pointwise (exposure/contrast/etc.) —
 Core Image evaluates those lazily at the output/viewport resolution, so no
 full-canvas buffer is materialized. If a global **spatial** effect (blur,
-sharpen, displacement) is ever added to the global pipeline, that path would
+sharpen, displacement) is ever added to the global effects, that path would
 materialize a full-canvas intermediate and could OOM on huge sources; apply the
 same source-resolution-then-upscale treatment there.
 
-Files: `Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasRenderImageFactory.swift`.
+Files: `Sources/BrightroomUI/Canvas/EditingCanvasRenderImageFactory.swift`.
 
 ### 7. Texture bit-depth / memory for the GPU-resident source + content bake
 
-The CropView-rotation perf work added persistent GPU textures. Two memory
-reductions are **done**; one open question remains.
+The crop-rotation perf work in `EditingCanvasView` added persistent GPU
+textures. Two memory reductions are **done**; one open question remains.
 
 Done:
-- **Adaptive source depth.** `EditingSourcePreparation.makeGPUResidentSource`
+- **Adaptive source depth.** `PreviewTextureUpload.makeGPUResidentSource`
   picks the texture format from `cgImage.bitsPerComponent`: `rgba8Unorm` for an
   8-bit source (the common case — lossless, half the memory), `rgba16Float` for
   >8-bit / HDR (preserves precision + extended range). Guard:
@@ -161,6 +202,9 @@ Done:
   (the blur), not `base`. `base` is the global effects on the GPU-resident source
   — pointwise, so re-evaluating it per frame is cheap and needs no held texture.
   When there is no local effect, nothing is baked. (See `preparedAdjustedLayer`.)
+- **No CPU copy after upload.** `PreviewSource` keeps only the texture-backed
+  editing source; the decoded `CGImage` is released once it is uploaded (the
+  CPU-backed image is the editing source only when there is no Metal device).
 
 Net (8-bit source): plain crop/rotate now holds just the source texture (~26MB,
 ~back to the pre-change CGImage footprint); a blur-mask gesture adds one ~52MB
@@ -178,9 +222,9 @@ Open:
 - Confirm on device that keeping `base` as a live (un-baked) graph did not
   re-introduce per-frame cost (it shouldn't — pointwise on a GPU texture).
 
-Files: `Sources/BrightroomEngine/Engine/EditingSourcePreparation.swift`,
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasContentBake.swift`,
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasMTKView.swift`
+Files: `Sources/BrightroomEngine/Engine/PreviewTextureUpload.swift`,
+`Sources/BrightroomUI/Canvas/EditingCanvasContentBake.swift`,
+`Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`
 (`preparedAdjustedLayer`),
-`Sources/BrightroomUI/Shared/Components/EditingCanvas/EditingCanvasGeometry.swift`
+`Sources/BrightroomUI/Canvas/EditingCanvasImageProcessing.swift`
 (`colorTextureFormat`).

@@ -21,176 +21,52 @@
 
 import CoreImage
 import Foundation
-import StateGraph
 import Testing
 
 @testable import BrightroomEngine
-@testable import BrightroomParametric
 
-// Kept on the main actor: the original `testOrientation` ran as a synchronous
-// XCTest method (implicitly main-actor isolated) and observes the reactive
-// `ImageProvider.orientation` through StateGraph on that actor.
-@MainActor
+/// A `SourceImage` reads its orientation and oriented size when it is
+/// created, before any pixels are decoded.
 struct LoadingTests {
 
-  @Test(.timeLimit(.minutes(2)))
-  func orientation() async throws {
+  @Test(arguments: [
+    ("orientation_right", CGImagePropertyOrientation.right),
+    ("orientation_down", .down),
+    ("orientation_left", .left),
+    ("orientation_up", .up),
+    ("orientation_left_mirrored", .leftMirrored),
+    ("orientation_down_mirrored", .downMirrored),
+    ("orientation_right_mirrored", .rightMirrored),
+    ("orientation_up_mirrored", .upMirrored),
+  ])
+  func orientation(resource: String, expected: CGImagePropertyOrientation) throws {
+    let url = _url(forResource: resource, ofType: "HEIC")
+    let image = try SourceImage(contentsOf: url)
+    #expect(image.storage.orientation == expected)
 
-    var subscriptions: [Any] = []
-
-    // Resolve `ImageProvider.orientation` reactively, but bound the wait with a
-    // hard, cancellation-aware timeout. A `withCheckedContinuation` that never
-    // resumes cannot be interrupted by `.timeLimit` (task cancellation does not
-    // resume a suspended continuation), so a value that never arrives would hang
-    // the run indefinitely. The original XCTest used `wait(for:timeout:10)`;
-    // this polls a captured flag with `Task.sleep`, which is cancellable.
-    func fetch(image: ImageProvider) async throws -> CGImagePropertyOrientation {
-
-      image.start()
-
-      var resolved: CGImagePropertyOrientation?
-      let subscription = withGraphTracking {
-        withGraphTrackingGroup {
-          let orientation = image.orientation
-          if resolved == nil, let orientation = orientation {
-            resolved = orientation
-          }
-        }
-      }
-      subscriptions.append(subscription)
-
-      let deadline = ContinuousClock.now + .seconds(10)
-      while resolved == nil, ContinuousClock.now < deadline {
-        try await Task.sleep(for: .milliseconds(20))
-      }
-      return try #require(resolved, "orientation did not resolve within 10s")
-    }
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.right.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.down.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.left.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.up.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_left_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.leftMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_down_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.downMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_right_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.rightMirrored.rawValue)
-
-    #expect(try await fetch(image: try ImageProvider(fileURL: _url(forResource: "orientation_up_mirrored", ofType: "HEIC"))).rawValue == CGImagePropertyOrientation.upMirrored.rawValue)
-
-    withExtendedLifetime(subscriptions) {}
-  }
-
-}
-
-struct ColorCubeTextParserTests {
-
-  @Test func `Parse cube data in Core Image order`() throws {
-    let parsedCube = try ColorCubeTextParser().parse(Self.identityCube(size: 2, title: "Identity 2"))
-
-    #expect(parsedCube.title == "Identity 2")
-    #expect(parsedCube.dimension == 2)
-
-    let values = parsedCube.cubeData.withUnsafeBytes {
-      Array($0.bindMemory(to: Float.self))
-    }
-
-    #expect(values.count == 2 * 2 * 2 * 4)
-    #expect(Array(values[0..<4]) == [0, 0, 0, 1])
-    #expect(Array(values[4..<8]) == [1, 0, 0, 1])
-    #expect(Array(values[8..<12]) == [0, 1, 0, 1])
-    #expect(Array(values[28..<32]) == [1, 1, 1, 1])
-  }
-
-  @Test func `Rejects non-default domain`() throws {
-    let cube = """
-    LUT_3D_SIZE 2
-    DOMAIN_MIN -0.5 0.0 0.0
-    DOMAIN_MAX 1.0 1.0 1.0
-    0 0 0
-    1 0 0
-    0 1 0
-    1 1 0
-    0 0 1
-    1 0 1
-    0 1 1
-    1 1 1
-    """
-
-    #expect(throws: ColorCubeTextParserError.unsupportedDomain(domainMin: [-0.5, 0, 0], domainMax: [1, 1, 1])) {
-      try ColorCubeTextParser().parse(cube)
-    }
-  }
-
-  @Test func `Color cube loader loads cube files`() throws {
-    let directory = FileManager.default.temporaryDirectory
-      .appendingPathComponent(UUID().uuidString)
-      .appendingPathExtension("bundle")
-
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    defer {
-      try? FileManager.default.removeItem(at: directory)
-    }
-
-    try Self.identityCube(size: 2, title: "Bundle Look").write(
-      to: directory.appendingPathComponent("BundleLook.cube"),
-      atomically: true,
-      encoding: .utf8
+    // The oriented size swaps the stored width and height for the quarter
+    // turns, and the full-resolution image starts at zero with that size.
+    let imageSource = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+    let properties = try #require(
+      CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
     )
-
-    let bundle = try #require(Bundle(url: directory))
-    let filters = try ColorCubeLoader(bundle: bundle).load()
-
-    #expect(filters.count == 1)
-    #expect(filters[0].name == "Bundle Look")
-    #expect(filters[0].identifier == "BundleLook.cube")
-    #expect(filters[0].dimension == 2)
-    #expect(filters[0].cubeData.count == 2 * 2 * 2 * 4 * MemoryLayout<Float>.size)
-  }
-
-  @Test func `Cube data filter creates output image`() throws {
-    let parsedCube = try ColorCubeTextParser().parse(Self.identityCube(size: 2, title: "Identity 2"))
-    let filter = ColorCubeFeature(
-      name: "Identity 2",
-      identifier: "Identity2.cube",
-      dimension: parsedCube.dimension,
-      cubeData: parsedCube.cubeData
+    let stored = CGSize(
+      width: try #require(properties[kCGImagePropertyPixelWidth] as? CGFloat),
+      height: try #require(properties[kCGImagePropertyPixelHeight] as? CGFloat)
     )
-
-    let image = CIImage(color: CIColor(red: 1, green: 0, blue: 0, alpha: 1))
-      .cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1))
-
-    let outputImage = try filter.apply(to: image, context: FeatureEvaluationContext())
-
-    #expect(outputImage.extent == image.extent)
+    let swapsAxes = [.left, .right, .leftMirrored, .rightMirrored].contains(expected)
+    let expectedSize = swapsAxes ? CGSize(width: stored.height, height: stored.width) : stored
+    #expect(image.pixelSize == expectedSize)
+    #expect(image.makeCIImage().extent == CGRect(origin: .zero, size: expectedSize))
   }
 
-  private static func identityCube(size: Int, title: String) -> String {
-    let divisor = Float(size - 1)
-    var lines = [
-      "# comment",
-      "TITLE \"\(title)\"",
-      "LUT_3D_SIZE \(size)",
-      "DOMAIN_MIN 0.0 0.0 0.0",
-      "DOMAIN_MAX 1.0 1.0 1.0",
-    ]
-
-    for blueIndex in 0..<size {
-      for greenIndex in 0..<size {
-        for redIndex in 0..<size {
-          let red = Float(redIndex) / divisor
-          let green = Float(greenIndex) / divisor
-          let blue = Float(blueIndex) / divisor
-          lines.append("\(red) \(green) \(blue)")
-        }
-      }
-    }
-
-    return lines.joined(separator: "\n")
+  @Test func `Data and the same file read the same`() throws {
+    let url = _url(forResource: "orientation_right", ofType: "HEIC")
+    let fromFile = try SourceImage(contentsOf: url)
+    let fromData = try SourceImage(data: Data(contentsOf: url))
+    #expect(fromFile.pixelSize == fromData.pixelSize)
+    #expect(fromFile.storage.orientation == fromData.storage.orientation)
+    #expect(fromFile != fromData, "Two loads are two images.")
   }
 }
 

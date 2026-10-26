@@ -32,8 +32,9 @@ import UniformTypeIdentifiers
 ///
 /// Strategy (system frameworks only, no third-party encoder):
 /// 1. Back the full-resolution bitmap with a memory-mapped **temp file** sized
-///    `W·H·4`. The bytes live on DISK; dirty pages flush under memory pressure,
-///    so they are not pinned in RAM.
+///    `W·H·bytesPerPixel` (4 for `.rgba8`, 8 for `.rgba16`). The bytes live on
+///    DISK; dirty pages flush under memory pressure, so they are not pinned in
+///    RAM.
 /// 2. Render the `CIImage` into that buffer **one horizontal strip at a time**
 ///    via `CIContext.render(_:toBitmap:rowBytes:bounds:format:colorSpace:)`.
 ///    `bounds` selects only the strip's source region, and Core Image pulls the
@@ -46,38 +47,88 @@ import UniformTypeIdentifiers
 ///    resident either (proven pattern; see dhoerl/PhotoScroller).
 ///
 /// Peak RAM ≈ one strip + Core Image render scratch + the encoder's working set,
-/// while the full-resolution bytes stay on disk. The scratch file is removed
+/// while the full-resolution bytes stay on disk. The JPEG and PNG encoders'
+/// working set is a few megabytes; Image I/O's HEIF encoder keeps the whole
+/// frame (about 7 bytes per pixel for `.rgba8` and 13 for `.rgba16`, measured
+/// on macOS), so a HEIF write is not bounded by the strip size. The scratch file is removed
 /// when the backing `CGImage`/provider is released (after `Finalize`).
 ///
 /// - Note: The encode step's exact paging behavior is not Apple-documented;
 ///   confirm the win on-device with Instruments (Allocations / VM Tracker).
-/// - Note: Output is opaque-correct. Pixels are rendered as `kCIFormatRGBA8` and
-///   tagged premultiplied-last; Brightroom's export is opaque (alpha == 1), so
-///   premultiplied vs. straight alpha is moot here.
+/// - Note: Output is opaque-correct. Pixels are tagged premultiplied-last;
+///   Brightroom's export is opaque (alpha == 1), so premultiplied vs. straight
+///   alpha is moot here.
 enum CIImageStreamingFileWriter {
 
-  enum WriterError: Swift.Error {
-    case invalidExtent
-    case scratchCreationFailed
-    case mmapFailed
-    case providerCreationFailed
-    case cgImageCreationFailed
-    case destinationCreationFailed
-    case finalizeFailed
+  /// The pixel format strips are rendered in and the encoder reads.
+  ///
+  /// Both are RGB, so the `colorSpace` passed to `write` must be an RGB space.
+  enum PixelFormat: Sendable {
+    /// 8 bits per component (`CIFormat.RGBA8`).
+    case rgba8
+    /// 16-bit unsigned integer components (`CIFormat.RGBA16`), 0...1 like
+    /// `.rgba8`: values outside that range are clamped.
+    case rgba16
+
+    var ciFormat: CIFormat {
+      switch self {
+      case .rgba8: .RGBA8
+      case .rgba16: .RGBA16
+      }
+    }
+
+    var bitsPerComponent: Int {
+      switch self {
+      case .rgba8: 8
+      case .rgba16: 16
+      }
+    }
+
+    var bytesPerPixel: Int {
+      bitsPerComponent / 8 * 4
+    }
+
+    var bitmapInfo: CGBitmapInfo {
+      switch self {
+      case .rgba8:
+        CGBitmapInfo(
+          rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.byteOrder32Big.rawValue
+        )
+      case .rgba16:
+        // Core Image's 16-bit formats are host-endian, which is little-endian
+        // on every Apple platform.
+        CGBitmapInfo(
+          rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.byteOrder16Little.rawValue
+        )
+      }
+    }
   }
 
-  /// Output rows rendered per `render(_:toBitmap:bounds:)` call. Bounds the
-  /// per-strip working set; smaller = lower peak (more, smaller GPU readbacks).
-  static let defaultStripHeight = 512
+  /// Output rows per `render(_:toBitmap:bounds:)` call for `.rgba8`. Bounds
+  /// the per-strip working set; smaller = lower peak (more, smaller GPU
+  /// readbacks).
+  static let referenceStripHeight = 512
+
+  /// Output rows per strip for `format`, scaled so a strip holds the same
+  /// number of bytes in every format: a 16-bit strip has half the rows of an
+  /// 8-bit one, so the strip's share of the peak stays the same. The
+  /// encoder's working set is separate; HEIF's grows with the depth.
+  static func stripHeight(for format: PixelFormat) -> Int {
+    let referenceBytesPerPixel = PixelFormat.rgba8.bytesPerPixel
+    return max(1, referenceStripHeight * referenceBytesPerPixel / format.bytesPerPixel)
+  }
 
   static func write(
     _ image: CIImage,
     to url: URL,
-    fileType: ParametricExportRenderer.ExportFileType,
+    fileType: ExportRenderer.FileType,
+    pixelFormat: PixelFormat,
     context: CIContext,
-    colorSpace: CGColorSpace,
-    stripHeight: Int = defaultStripHeight
+    colorSpace: CGColorSpace
   ) throws {
+    let stripHeight = Self.stripHeight(for: pixelFormat)
     let extent = image.extent
     guard
       extent.isNull == false,
@@ -85,12 +136,12 @@ enum CIImageStreamingFileWriter {
       extent.width >= 1,
       extent.height >= 1
     else {
-      throw WriterError.invalidExtent
+      throw ExportRendererError.fileWriteFailed(url, step: .validatingExtent)
     }
 
     let width = Int(extent.width.rounded())
     let height = Int(extent.height.rounded())
-    let bytesPerPixel = 4
+    let bytesPerPixel = pixelFormat.bytesPerPixel
     let rowBytes = width * bytesPerPixel
     let totalBytes = rowBytes * height
 
@@ -100,18 +151,18 @@ enum CIImageStreamingFileWriter {
 
     let fd = open(scratchURL.path, O_RDWR | O_CREAT | O_TRUNC, 0o600)
     guard fd >= 0 else {
-      throw WriterError.scratchCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingScratchFile)
     }
     guard ftruncate(fd, off_t(totalBytes)) == 0 else {
       close(fd)
       try? FileManager.default.removeItem(at: scratchURL)
-      throw WriterError.scratchCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingScratchFile)
     }
     let mapped = mmap(nil, totalBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
     guard let base = mapped, base != MAP_FAILED else {
       close(fd)
       try? FileManager.default.removeItem(at: scratchURL)
-      throw WriterError.mmapFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .mappingScratchFile)
     }
 
     // 2. Render strip-by-strip into the mmap'd buffer.
@@ -137,7 +188,7 @@ enum CIImageStreamingFileWriter {
         toBitmap: base.advanced(by: top * rowBytes),
         rowBytes: rowBytes,
         bounds: bounds,
-        format: .RGBA8,
+        format: pixelFormat.ciFormat,
         colorSpace: colorSpace
       )
       top += h
@@ -162,26 +213,24 @@ enum CIImageStreamingFileWriter {
     guard let provider = CGDataProvider(directInfo: info, size: off_t(totalBytes), callbacks: &callbacks) else {
       Unmanaged<MmapScratch>.fromOpaque(info).release()
       scratch.cleanup()
-      throw WriterError.providerCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingDataProvider)
     }
     // `provider` now owns `scratch` cleanup via `releaseInfo`.
 
-    let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-      | CGBitmapInfo.byteOrder32Big.rawValue
     guard let cgImage = CGImage(
       width: width,
       height: height,
-      bitsPerComponent: 8,
-      bitsPerPixel: 32,
+      bitsPerComponent: pixelFormat.bitsPerComponent,
+      bitsPerPixel: bytesPerPixel * 8,
       bytesPerRow: rowBytes,
       space: colorSpace,
-      bitmapInfo: CGBitmapInfo(rawValue: bitmapInfo),
+      bitmapInfo: pixelFormat.bitmapInfo,
       provider: provider,
       decode: nil,
       shouldInterpolate: false,
       intent: .defaultIntent
     ) else {
-      throw WriterError.cgImageCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingImage)
     }
 
     // 4. Encode. CGImageDestination demand-pages pixels through the provider.
@@ -206,11 +255,11 @@ enum CIImageStreamingFileWriter {
         nil
       )
     else {
-      throw WriterError.destinationCreationFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .creatingDestination)
     }
     CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
     guard CGImageDestinationFinalize(destination) else {
-      throw WriterError.finalizeFailed
+      throw ExportRendererError.fileWriteFailed(url, step: .finalizing)
     }
     // `cgImage` / `provider` drop here → `scratch.cleanup()` removes the temp file.
     withExtendedLifetime(cgImage) {}

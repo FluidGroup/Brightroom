@@ -32,8 +32,19 @@ import simd
 /// holds, and the work follows the painted area instead of stamps × pixels.
 ///
 /// The output is the mask's alpha field, premultiplied as `(a, a, a, a)`. Its
-/// extent is the union of the stamp bounds, because the falloff is zero beyond
-/// each stamp's radius.
+/// extent is the union of the stamp bounds within the requested extent,
+/// because the falloff is zero beyond each stamp's radius. Stamp centers are
+/// Core Image working-space coordinates (bottom-left origin, y-up) of the
+/// domain the mask is authored in.
+///
+/// A bundled Metal library without the brush-stamp shaders fails
+/// ``makeImage(_:extent:)`` with `FeatureEvaluationError.kernelUnavailable`,
+/// like every other unavailable kernel. Failures while Core Image draws a tile
+/// (`process(with:arguments:output:)`), such as a render pipeline, scratch
+/// texture, or command encoder that cannot be created, do not reach the
+/// caller: Core Image discards the error and treats that tile of the mask as
+/// transparent, so the local adjustment is missing there while the render
+/// still succeeds.
 final class BrushMaskImageProcessor: CIImageProcessorKernel {
 
   /// The stamps in Core Image working-space coordinates (bottom-left origin,
@@ -49,7 +60,12 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
   }
 
   /// Returns the image of `mask` within `extent`.
+  ///
+  /// Throws `FeatureEvaluationError.kernelUnavailable` when the bundled Metal
+  /// library lacks the brush-stamp shaders.
   static func makeImage(_ mask: BrushMask, extent: CGRect) throws -> CIImage {
+    try BrushStampPipeline.validateLibrary()
+
     var stamps: [BrushStampPipeline.Stamp] = []
     var coverage = CGRect.null
 
@@ -58,7 +74,7 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
       guard radius > 0, stroke.brush.opacity > 0 else {
         continue
       }
-      for center in stroke.stamps {
+      for center in stroke.stampCenters {
         let bounds = CGRect(
           x: center.x - radius,
           y: center.y - radius,
@@ -82,15 +98,19 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
 
     let imageExtent = coverage.integral.intersection(extent)
     guard stamps.isEmpty == false, imageExtent.isEmpty == false else {
-      return CIImage.parametricTransparent(extent: extent)
+      return CIImage.transparentImage(extent: extent)
     }
 
     let payload = stamps.withUnsafeBytes { Data($0) }
-    return try apply(
-      withExtent: imageExtent,
-      inputs: nil,
-      arguments: [stampsArgumentKey: payload]
-    )
+    do {
+      return try apply(
+        withExtent: imageExtent,
+        inputs: nil,
+        arguments: [stampsArgumentKey: payload]
+      )
+    } catch {
+      throw FeatureEvaluationError.imageCreationFailed("BrushMaskImageProcessor")
+    }
   }
 
   override class func process(
@@ -99,7 +119,7 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
     output: any CIImageProcessorOutput
   ) throws {
     guard let payload = arguments?[stampsArgumentKey] as? Data else {
-      throw BrushMaskImageProcessorError.missingStamps
+      throw FeatureEvaluationError.imageCreationFailed("BrushMaskImageProcessor: missing stamps")
     }
 
     // Core Image hands over the tile with its first row at the top
@@ -160,7 +180,7 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
       descriptor.usage = [.renderTarget]
       descriptor.storageMode = .private
       guard let scratch = device.makeTexture(descriptor: descriptor) else {
-        throw BrushMaskImageProcessorError.failedToCreateRenderTarget
+        throw FeatureEvaluationError.imageCreationFailed("BrushMaskImageProcessor: render target")
       }
       target = scratch
     } else {
@@ -178,7 +198,7 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
     passDescriptor.colorAttachments[0].storeAction = .store
 
     guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else {
-      throw BrushMaskImageProcessorError.failedToCreateEncoder
+      throw FeatureEvaluationError.imageCreationFailed("BrushMaskImageProcessor: render encoder")
     }
     encoder.setRenderPipelineState(pipeline)
     BrushStampPipeline.encode(
@@ -190,7 +210,7 @@ final class BrushMaskImageProcessor: CIImageProcessorKernel {
 
     if needsCopy {
       guard let blit = commandBuffer.makeBlitCommandEncoder() else {
-        throw BrushMaskImageProcessorError.failedToCreateEncoder
+        throw FeatureEvaluationError.imageCreationFailed("BrushMaskImageProcessor: blit encoder")
       }
       blit.copy(from: target, to: texture)
       blit.endEncoding()
@@ -319,15 +339,9 @@ extension BrushMaskImageProcessor {
       }
 
     default:
-      throw BrushMaskImageProcessorError.unsupportedOutputFormat(output.format)
+      throw FeatureEvaluationError.imageCreationFailed(
+        "BrushMaskImageProcessor: output format \(output.format)"
+      )
     }
   }
-}
-
-/// Errors thrown while Core Image renders a brush mask tile.
-enum BrushMaskImageProcessorError: Error {
-  case missingStamps
-  case failedToCreateRenderTarget
-  case failedToCreateEncoder
-  case unsupportedOutputFormat(CIFormat)
 }

@@ -25,15 +25,11 @@ import os.log
 
 enum EngineLog {
 
-  private static let osLog = OSLog.init(subsystem: "PixelEngine", category: "Engine")
+  private static let osLog = OSLog.init(subsystem: "BrightroomEngine", category: "Engine")
 
   static func debug(_ object: Any...) {
 #if DEBUG
-    if #available(iOS 12.0, *) {
-      os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
-    } else {
-      os_log("%@", log: osLog, type: .debug, object.map { "\($0)" }.joined(separator: " "))
-    }
+    os_log(.debug, log: osLog, "%@", object.map { "\($0)" }.joined(separator: " "))
 #endif
   }
 
@@ -57,6 +53,6 @@ extension OSLog {
 #endif
   }()
 
-  static let stack = OSLog.init(subsystem: "BrightroomEngine", category: "🥞 Stack")
+  static let preview = OSLog.init(subsystem: "BrightroomEngine", category: "Preview")
 
 }

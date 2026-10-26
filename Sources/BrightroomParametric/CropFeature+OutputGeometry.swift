@@ -21,15 +21,15 @@ extension CropFeature {
     ///
     /// Tool surfaces can invert this transform to map output gestures back to
     /// the input domain. Clipping is separate from this coordinate mapping.
-    public var sourceToOutputTransform: CGAffineTransform {
-      sourceToCropTransform.concatenating(cropToOutputTransform)
+    public var inputToOutputTransform: CGAffineTransform {
+      inputToCropTransform.concatenating(cropToOutputTransform)
     }
 
     /// The zero-origin crop canvas before its final quarter turn.
     let cropBounds: CGRect
 
     /// Straightens the input and places the crop in its zero-origin canvas.
-    let sourceToCropTransform: CGAffineTransform
+    let inputToCropTransform: CGAffineTransform
 
     /// Turns the cropped canvas using only exact zero/one matrix coefficients.
     let cropToOutputTransform: CGAffineTransform
@@ -37,45 +37,45 @@ extension CropFeature {
 
   /// Resolves this crop against the extent of its current input image.
   ///
-  /// `cropRect` selects the straightened image before its final quarter turn,
+  /// `rect` selects the straightened image before its final quarter turn,
   /// relative to `inputExtent.origin`. The selection is independent of output
   /// orientation; only `outputBounds` exchanges dimensions for a sideways turn.
   public func outputGeometry(in inputExtent: CGRect) -> OutputGeometry {
-    let cropSize = cropRect.size
-    let outputSize = rotation.isSideways
+    let cropSize = rect.size
+    let outputSize = quarterTurn.isSideways
       ? CGSize(width: cropSize.height, height: cropSize.width)
       : cropSize
 
     let center = CGPoint(
-      x: inputExtent.minX + cropRect.midX,
-      y: inputExtent.minY + cropRect.midY
+      x: inputExtent.minX + rect.midX,
+      y: inputExtent.minY + rect.midY
     )
     let straighten = straightenRadians.isFinite ? CGFloat(straightenRadians) : 0
-    let sourceToCrop = CGAffineTransform(
+    let inputToCrop = CGAffineTransform(
       translationX: cropSize.width / 2,
       y: cropSize.height / 2
     )
     .rotated(by: -straighten)
     .translatedBy(x: -center.x, y: -center.y)
 
-    // QuarterTurn retains the engine's signed angle convention. The image
-    // transform in y-up coordinates uses its opposite sign.
+    // QuarterTurn's raw value is a y-down angle, so the image transform in
+    // y-up coordinates uses its opposite sign.
     let cropToOutput: CGAffineTransform
-    switch rotation {
+    switch quarterTurn {
     case .zero:
       cropToOutput = .identity
-    case .quarterCW:
+    case .counterclockwise90:
       cropToOutput = .init(a: 0, b: 1, c: -1, d: 0, tx: cropSize.height, ty: 0)
-    case .half:
+    case .counterclockwise180:
       cropToOutput = .init(a: -1, b: 0, c: 0, d: -1, tx: cropSize.width, ty: cropSize.height)
-    case .quarterCCW:
+    case .counterclockwise270:
       cropToOutput = .init(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: cropSize.width)
     }
 
     return OutputGeometry(
       outputBounds: CGRect(origin: .zero, size: outputSize),
       cropBounds: CGRect(origin: .zero, size: cropSize),
-      sourceToCropTransform: sourceToCrop,
+      inputToCropTransform: inputToCrop,
       cropToOutputTransform: cropToOutput
     )
   }

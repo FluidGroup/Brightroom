@@ -1,0 +1,215 @@
+//
+// Copyright (c) 2026 Muukii <muukii.app@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+
+import BrightroomEngine
+import BrightroomParametric
+
+/// The document logic of one ImageEditor editing session, kept apart from the
+/// views so it can be tested without a window.
+///
+/// It decides what the editor writes to the host's binding:
+///
+/// - Every write changes the feature. A completed operation produces one
+///   write, and a write that would only change the history is never made,
+///   so hosts that register an undo step per write (FileDocument,
+///   `UndoManager` in `onChange`) get one step per visible change.
+/// - The work of one tool visit is one history step, committed lazily: the
+///   first write of a tool visit commits the document before applying its
+///   change. Leaving a tool or tapping Done writes nothing by itself, so the
+///   last visit's work stays uncommitted until the next edit. `undo()`
+///   treats uncommitted changes as a step, so the steps are the same.
+/// - A slider drag is shown through `liveFeature` and written once when the
+///   drag ends.
+/// - Reset writes the initial feature as a history step of its own
+///   (`document(afterResetTo:of:)`), so the host's undo brings the edit
+///   back.
+/// - Cancel restores the document as it was when the session started,
+///   history included (`documentForCancel(replacing:)`).
+///
+/// A session belongs to the image it started with. It starts with the
+/// document the editor opens with and restarts only for a document of
+/// another source image (`noteDocument(_:)`). Every other document the host
+/// writes during the session (an undo, a redo, a change of its own) keeps
+/// the session, so Cancel discards everything written since the editor
+/// opened, the host's own writes included. A host whose outside changes
+/// must survive a Cancel binds the editor to a copy, as the SwiftUIDemo's
+/// `DocumentEditorDemoView` does with "Edit a copy".
+struct ImageEditorSession {
+
+  /// The document when the session started; Cancel restores it.
+  private(set) var documentAtStart: ImageEditorDocument
+
+  /// The feature a control shows while it is being dragged, not yet written
+  /// to the document. nil when nothing is in progress.
+  private(set) var liveFeature: ImageEditorFeature?
+
+  /// Every document this session wrote, oldest first.
+  private var writes: [ImageEditorDocument] = []
+
+  /// The index in `writes` of the current tool visit's first write.
+  private var toolVisitStart = 0
+
+  init(documentAtStart: ImageEditorDocument) {
+    self.documentAtStart = documentAtStart
+  }
+
+  /// The feature the canvas and the controls show.
+  func displayedFeature(of document: ImageEditorDocument) -> ImageEditorFeature {
+    liveFeature ?? document.feature
+  }
+
+  /// Shows an adjustment slider value without writing it.
+  mutating func previewAdjustmentValue(
+    _ sliderValue: Double,
+    parameter: ImageEditor.Adjustment,
+    over document: ImageEditorDocument
+  ) {
+    var feature = displayedFeature(of: document)
+    parameter.apply(sliderValue: sliderValue, to: &feature)
+    liveFeature = feature == document.feature ? nil : feature
+  }
+
+  /// Drops the value shown by a control in progress, for example because
+  /// the document changed from outside (an undo) while dragging.
+  mutating func discardLiveFeature() {
+    liveFeature = nil
+  }
+
+  /// The document to write after a completed operation, or nil when the
+  /// operation leaves the feature unchanged: an equal write would still
+  /// invalidate the host, and a write that changes only the history would
+  /// register an undo step that changes nothing visible.
+  ///
+  /// The value shown by a control in progress is applied, then `change`,
+  /// which changes the feature only. The live value is consumed.
+  mutating func document(
+    after document: ImageEditorDocument,
+    change: (inout ImageEditorDocument) -> Void = { _ in }
+  ) -> ImageEditorDocument? {
+    let liveFeature = self.liveFeature
+    self.liveFeature = nil
+    return write(over: document) { next in
+      if let liveFeature {
+        next.feature = liveFeature
+      }
+      change(&next)
+    }
+  }
+
+  /// The document to write for a change the canvas made, or nil when the
+  /// feature is unchanged.
+  ///
+  /// - Parameter changed: The binding's document with the canvas change
+  ///   applied; only its feature is taken. A value in progress on a control
+  ///   is kept for the control.
+  mutating func document(
+    afterCanvasChange changed: ImageEditorDocument,
+    over document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
+    write(over: document) { $0.feature = changed.feature }
+  }
+
+  /// Ends the current tool visit: the next write starts a new history step.
+  ///
+  /// Returns the document to write when a control still shows a value in
+  /// progress, which is part of the visit that ends.
+  mutating func endToolVisit(
+    of document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
+    let written = self.document(after: document)
+    toolVisitStart = writes.count
+    return written
+  }
+
+  /// The document to write for Reset: `initial` as a history step of its
+  /// own, or nil when `document` already has that feature.
+  ///
+  /// The current tool visit ends first, so its work (the document as it is)
+  /// is committed as a step by the write, and the visit ends again after
+  /// it, so the next edit starts a new step: `undo()` after the next edit
+  /// returns to the reset, and once more to the document before it. A value
+  /// shown by a control in progress is dropped: Reset replaces it.
+  mutating func document(
+    afterResetTo initial: ImageEditorFeature,
+    of document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
+    liveFeature = nil
+    // Nothing to write: the live value is gone.
+    _ = endToolVisit(of: document)
+    let written = write(over: document) { $0.feature = initial }
+    toolVisitStart = writes.count
+    return written
+  }
+
+  /// Keeps the session for a document of the image it started with, and
+  /// restarts it for a document of another image, which the editor now
+  /// edits from its current state.
+  ///
+  /// A document of the same image that the session did not write (an undo,
+  /// a redo, a change of the host's own) keeps the session: Cancel restores
+  /// the document the session started with over it, history included.
+  ///
+  /// Call it whenever the binding's document changes.
+  mutating func noteDocument(_ document: ImageEditorDocument) {
+    guard document.source != documentAtStart.source else {
+      return
+    }
+    self = ImageEditorSession(documentAtStart: document)
+  }
+
+  /// The document Cancel writes, or nil when `document` already equals the
+  /// document at the start of the session.
+  ///
+  /// A document of another image is never replaced: the session belongs to
+  /// the image it started with.
+  func documentForCancel(
+    replacing document: ImageEditorDocument
+  ) -> ImageEditorDocument? {
+    guard document.source == documentAtStart.source, document != documentAtStart else {
+      return nil
+    }
+    return documentAtStart
+  }
+
+  /// Applies `change` over `document`, committing first when `document` is
+  /// not one the current tool visit wrote: then its uncommitted changes, if
+  /// any, belong to an earlier visit (or to the host) and become their own
+  /// step. After an undo by the host back into the visit, the visit goes on
+  /// without a commit.
+  private mutating func write(
+    over document: ImageEditorDocument,
+    change: (inout ImageEditorDocument) -> Void
+  ) -> ImageEditorDocument? {
+    // A rebinding can reach a write before `onChange` reports it.
+    noteDocument(document)
+    var next = document
+    if writes[toolVisitStart...].contains(document) == false {
+      next.commit()
+    }
+    change(&next)
+    guard next.feature != document.feature else {
+      return nil
+    }
+    writes.append(next)
+    return next
+  }
+}

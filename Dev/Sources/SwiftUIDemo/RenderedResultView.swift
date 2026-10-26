@@ -1,4 +1,5 @@
 import BrightroomParametric
+import BrightroomUI
 import SwiftUI
 
 struct ResultImage: Identifiable {
@@ -6,18 +7,18 @@ struct ResultImage: Identifiable {
   let cgImage: CGImage
   let image: Image
   let metadata: [String]
-  let document: EditingDocument?
+  let feature: ImageEditorFeature?
 
   init(
     cgImage: CGImage,
     metadata: [String] = [],
-    document: EditingDocument? = nil
+    feature: ImageEditorFeature? = nil
   ) {
     self.id = UUID().uuidString
     self.cgImage = cgImage
     self.image = .init(decorative: cgImage, scale: 1, orientation: .up)
     self.metadata = metadata
-    self.document = document
+    self.feature = feature
   }
 }
 
@@ -52,12 +53,11 @@ struct RenderedResultView: View {
         Text("Result")
       }
 
-      if let document = result.document {
+      if let feature = result.feature {
         Section {
-          // Reusable debug viewer from BrightroomParametric: walks the
-          // parametric document used to produce this render and presents it as a
-          // List + DisclosureGroup hierarchy.
-          FeatureTreeOutline(document: document)
+          // Reusable debug rows from BrightroomUI: they walk the
+          // body of the feature used to produce this render.
+          FeatureTreeOutline(feature: feature)
         } header: {
           Text("Feature Tree")
         }

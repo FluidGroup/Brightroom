@@ -24,17 +24,19 @@ import Metal
 import simd
 
 /// The brush-mask rasterizer shared by the live editing canvas and the
-/// parametric export.
+/// parametric evaluation.
 ///
 /// Stamps are drawn as instanced quads with the `brushStampAlpha` falloff and a
 /// `.max` blend, so overlapping stamps never exceed the brush opacity. The live
-/// canvas encodes into its viewport mask texture every frame, and
-/// `FeatureGraphCompiler` encodes into the Core Image tiles that
-/// `BrushMaskImageProcessor` is asked for. Both go through
+/// canvas (BrightroomUI's `EditingCanvasRenderer`) encodes into its viewport
+/// mask texture every frame, and `MaskRasterizer` encodes into the Core Image
+/// tiles that `BrushMaskImageProcessor` is asked for. Both go through
 /// ``encode(_:targetSize:into:)``, so preview and export share the shader, the
 /// blend state, and the stamp encoding; they differ only in how stamp
 /// coordinates map into their target.
-public enum BrushStampPipeline {
+///
+/// Package access: only Brightroom's own modules draw brush stamps.
+package enum BrushStampPipeline {
 
   /// One soft circular stamp in target pixels.
   ///
@@ -42,14 +44,14 @@ public enum BrushStampPipeline {
   /// row. This layout is ABI against the MSL `BrushStampInstance` struct in
   /// `BrushMaskRenderShader.metal` (`float2 center; float radius; float
   /// hardness; float opacity; float padding;`).
-  public struct Stamp: Equatable, Sendable {
-    public var center: SIMD2<Float>
-    public var radius: Float
-    public var hardness: Float
-    public var opacity: Float
+  package struct Stamp: Equatable, Sendable {
+    package var center: SIMD2<Float>
+    package var radius: Float
+    package var hardness: Float
+    package var opacity: Float
     var padding: Float = 0
 
-    public init(center: SIMD2<Float>, radius: Float, hardness: Float, opacity: Float) {
+    package init(center: SIMD2<Float>, radius: Float, hardness: Float, opacity: Float) {
       self.center = center
       self.radius = radius
       self.hardness = hardness
@@ -83,12 +85,62 @@ public enum BrushStampPipeline {
   // Guarded by pipelineLock.
   private nonisolated(unsafe) static var pipelines: [PipelineKey: MTLRenderPipelineState] = [:]
 
+  /// The shader functions every brush-stamp pipeline is built from.
+  private static let functionNames = ["brushStampVertex", "brushStampFragment"]
+
+  /// Checks that the bundled Metal library holds the brush-stamp shaders,
+  /// throwing `FeatureEvaluationError.kernelUnavailable(name:reason:)` when
+  /// it does not.
+  ///
+  /// `BrushMaskImageProcessor` builds its pipeline inside Core Image's tile
+  /// callback, where a thrown error never reaches the caller (Core Image
+  /// draws the tile transparent instead). Evaluation calls this first, so a
+  /// missing or incomplete library fails the evaluation the way any other
+  /// unavailable kernel does. The check runs once per process, on the
+  /// system default device; without a Metal device only the library file is
+  /// checked, since Core Image then rasterizes on the CPU.
+  package static func validateLibrary() throws {
+    try libraryValidation.get()
+  }
+
+  private static let libraryValidation: Result<Void, FeatureEvaluationError> = {
+    let url: URL
+    do {
+      url = try BrightroomMetalLibrary.url()
+    } catch {
+      return .failure(
+        .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
+      )
+    }
+    guard let device = MTLCreateSystemDefaultDevice() else {
+      return .success(())
+    }
+    let library: MTLLibrary
+    do {
+      library = try device.makeLibrary(URL: url)
+    } catch {
+      return .failure(
+        .kernelUnavailable(name: "default.metallib", reason: String(describing: error))
+      )
+    }
+    for name in functionNames where library.makeFunction(name: name) == nil {
+      return .failure(
+        .kernelUnavailable(name: name, reason: "not in the compiled Metal library")
+      )
+    }
+    return .success(())
+  }()
+
   /// Returns the brush-stamp render pipeline for `pixelFormat` on `device`.
   ///
   /// Pipelines are cached per device and pixel format: the live canvas draws
   /// into an 8-bit mask texture, while Core Image hands the export its working
-  /// format.
-  public static func renderPipelineState(
+  /// format. A shader library or pipeline that cannot be built throws
+  /// `FeatureEvaluationError.kernelUnavailable(name:reason:)` to the caller.
+  /// Inside `BrushMaskImageProcessor` that caller is Core Image's tile
+  /// callback, which drops the error and leaves the tile transparent; see
+  /// ``validateLibrary()``.
+  package static func renderPipelineState(
     device: MTLDevice,
     pixelFormat: MTLPixelFormat
   ) throws -> MTLRenderPipelineState {
@@ -101,7 +153,15 @@ public enum BrushStampPipeline {
       return cached
     }
 
-    let library = try device.makeLibrary(URL: BrushStampMetalLibrary.url())
+    let library: MTLLibrary
+    do {
+      library = try device.makeLibrary(URL: BrightroomMetalLibrary.url())
+    } catch {
+      throw FeatureEvaluationError.kernelUnavailable(
+        name: "brushStampVertex",
+        reason: String(describing: error)
+      )
+    }
     let descriptor = MTLRenderPipelineDescriptor()
     descriptor.vertexFunction = library.makeFunction(name: "brushStampVertex")
     descriptor.fragmentFunction = library.makeFunction(name: "brushStampFragment")
@@ -116,7 +176,15 @@ public enum BrushStampPipeline {
     descriptor.colorAttachments[0].sourceAlphaBlendFactor = .one
     descriptor.colorAttachments[0].destinationAlphaBlendFactor = .one
 
-    let pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+    let pipeline: MTLRenderPipelineState
+    do {
+      pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+    } catch {
+      throw FeatureEvaluationError.kernelUnavailable(
+        name: "brushStampVertex",
+        reason: String(describing: error)
+      )
+    }
     pipelines[key] = pipeline
     return pipeline
   }
@@ -126,7 +194,7 @@ public enum BrushStampPipeline {
   /// Stamps that cannot reach any pixel of a `targetSize` target are skipped.
   /// The encoder's pipeline state must come from
   /// ``renderPipelineState(device:pixelFormat:)`` for the target's pixel format.
-  public static func encode(
+  package static func encode(
     _ stamps: [Stamp],
     targetSize: SIMD2<Float>,
     into encoder: MTLRenderCommandEncoder

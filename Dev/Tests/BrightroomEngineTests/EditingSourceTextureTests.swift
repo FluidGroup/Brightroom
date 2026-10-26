@@ -27,7 +27,7 @@ import Testing
 
 @testable import BrightroomEngine
 
-/// `EditingSourcePreparation.makeGPUResidentSource` must be a faithful drop-in
+/// `PreviewTextureUpload.makeGPUResidentSource` must be a faithful drop-in
 /// for the CGImage-backed editing source it replaces. The on-screen result can
 /// only be seen on a real device (the Simulator canvas presents black), but the
 /// thing that could silently break — orientation and color — is testable
@@ -64,7 +64,7 @@ struct EditingSourceTextureTests {
     #expect(source.bitsPerComponent == bitsPerComponent)
 
     let candidate = try #require(
-      EditingSourcePreparation.makeGPUResidentSource(
+      PreviewTextureUpload.makeGPUResidentSource(
         cgImage: source,
         orientation: orientation
       ),

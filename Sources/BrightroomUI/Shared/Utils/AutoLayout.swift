@@ -1,6 +1,6 @@
 //
 //  AutoLayout.swift
-//  PixelEditor
+//  BrightroomUI
 //
 //  Created by Muukii on 2021/02/27.
 //  Copyright © 2021 muukii. All rights reserved.

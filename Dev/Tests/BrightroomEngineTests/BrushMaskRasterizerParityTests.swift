@@ -31,7 +31,7 @@ import Testing
 /// Proves a mask drawn the **live** canvas way (`BrushMaskMetalRasterizer`: one
 /// `BrushStampPipeline` pass into a texture wrapped by `CIImage(mtlTexture:)`)
 /// matches the mask the **export** draws through Core Image tiles
-/// (`FeatureGraphCompiler.renderMask` → `BrushMaskImageProcessor`) for the same
+/// (`FeatureRenderer.makeMaskImage` → `BrushMaskImageProcessor`) for the same
 /// stamps and canvas.
 ///
 /// Both draw with the same `BrushStampPipeline` (shader, `brushStampAlpha`
@@ -90,21 +90,19 @@ struct BrushMaskRasterizerParityTests {
     )
 
     // Path B — Core Image processor tiles (export/preview path).
-    let maskB = try FeatureGraphCompiler().renderMask(
-      MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: stampCenters,
-                brush: BrushMaskBrush(
-                  diameter: Double(2 * radius),
-                  hardness: Double(hardness),
-                  opacity: Double(opacity)
-                )
+    let maskB = try FeatureRenderer().makeMaskImage(
+      for: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: stampCenters,
+              brush: BrushMask.Brush(
+                diameter: Double(2 * radius),
+                hardness: Double(hardness),
+                opacity: Double(opacity)
               )
-            ]
-          )
+            )
+          ]
         )
       ),
       extent: extent

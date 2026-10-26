@@ -34,7 +34,7 @@ struct RAWImportTests {
     let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
 
     let source = CGImageSourceCreateWithURL(url as CFURL, nil)!
-    let value = ImageTool.readOrientation(from: source)
+    let value = ImageDecoding.makeImageMetadata(from: source)?.orientation
 
     #expect(value != nil)
     #expect(value == .right)
@@ -47,10 +47,27 @@ struct RAWImportTests {
     let data = try! Data.init(contentsOf: url)
 
     let source = CGImageSourceCreateWithData(data as CFData, nil)!
-    let value = ImageTool.readOrientation(from: source)
+    let value = ImageDecoding.makeImageMetadata(from: source)?.orientation
 
     #expect(value != nil)
     #expect(value == .right)
 
+  }
+
+  @Test func `A RAW image is developed once, at creation`() throws {
+    let url = _url(forResource: "AppleRAW_1", ofType: "DNG")
+    let fromFile = try SourceImage(rawContentsOf: url)
+    let fromData = try SourceImage(rawData: Data(contentsOf: url))
+
+    // Developed pixels are already oriented: the stored `.right` turns the
+    // developed image portrait, and no orientation is left to apply.
+    #expect(fromFile.storage.orientation == .up)
+    #expect(fromFile.pixelSize == fromData.pixelSize)
+    #expect(fromFile.pixelSize.height > fromFile.pixelSize.width)
+    guard case .bitmap = fromFile.storage.backing else {
+      Issue.record("A RAW image keeps its developed bitmap.")
+      return
+    }
+    #expect(fromFile.makeCIImage().extent == CGRect(origin: .zero, size: fromFile.pixelSize))
   }
 }

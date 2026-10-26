@@ -56,7 +56,7 @@ struct EditingCanvasDisplayInvalidationTests {
     ))
     canvas.setRenderImages(images(.gray))
     let brush = EditingCanvasBrush(size: 12)
-    canvas.configure(brush: brush, smoothing: .init(algorithm: .raw, strength: 0))
+    canvas.configure(brush: brush, smoothing: .off)
     try #require(canvas.drawIfNeeded())
 
     canvas.beginStroke(at: CGPoint(x: 20, y: 20))
@@ -83,7 +83,7 @@ struct EditingCanvasDisplayInvalidationTests {
     #expect(canvas.drawIfNeeded())
   }
 
-  private func makeCanvas() throws -> (UIWindow, _EditingCanvasMTKView) {
+  private func makeCanvas() throws -> (UIWindow, EditingCanvasMTKView) {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let frame = CGRect(x: 0, y: 0, width: 80, height: 60)
     let window: UIWindow
@@ -94,7 +94,7 @@ struct EditingCanvasDisplayInvalidationTests {
     }
     let controller = UIViewController()
     window.rootViewController = controller
-    let canvas = _EditingCanvasMTKView(canvasSize: frame.size, device: device)
+    let canvas = EditingCanvasMTKView(canvasSize: frame.size, device: device)
     canvas.frame = frame
     controller.view.addSubview(canvas)
     window.isHidden = false
@@ -106,8 +106,8 @@ struct EditingCanvasDisplayInvalidationTests {
   private func images(_ color: CIColor) -> EditingCanvasRenderImages {
     let image = CIImage(color: color).cropped(to: CGRect(x: 0, y: 0, width: 80, height: 60))
     return .init(
-      source: image, effects: .init(), base: image, adjusted: image,
-      localEffect: .init(), usesPreparedBaseImage: false
+      source: image, base: image, adjusted: image,
+      hasGlobalEffects: false, hasLocalEffect: false, usesPreparedBaseImage: false
     )
   }
 }

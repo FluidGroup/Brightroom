@@ -7,14 +7,14 @@ import UIKit
 
 /// Exercises the export path through Core Image at large scale to confirm the
 /// brush-mask local adjustment composites correctly when the parametric mask is
-/// rasterized via the resolution-independent, tiling-capable CIKernel path
-/// (the same code path used for full-resolution export and tiled rendering).
+/// rasterized through Core Image tiles (`BrushMaskImageProcessor`, the same
+/// code path used for full-resolution export and tiled rendering).
 ///
 /// The source size is intentionally large but simulator-safe (4096x4096).
 /// Going truly past the Metal tiling threshold (>16384 on a side) would require
 /// asserting on a multi-gigabyte intermediate, which is too memory-heavy to
-/// stand up reliably in CI; 4096x4096 drives the identical resolution-
-/// independent kernel path at scale without that cost.
+/// stand up reliably in CI; 4096x4096 drives the identical tiled mask path
+/// at scale without that cost.
 struct LargeMaskedExportTests {
 
   /// A large-but-simulator-safe source side length. See type doc for why this
@@ -35,46 +35,36 @@ struct LargeMaskedExportTests {
     // outside it.
     let diameter = Double(side) / 4
     let layer = LocalAdjustmentFeature(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: diameter, hardness: 1, opacity: 1)
-              ),
-            ]
-          )
+      mask: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: [center],
+              brush: BrushMask.Brush(diameter: diameter, hardness: 1, opacity: 1)
+            ),
+          ]
         )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)])
-    )
+      )
+    ) {
+      [AnyImageEffect(ExposureFeature(ev: 2))]
+    }
 
     // Export WITH the local adjustment through an identity crop.
-    let adjustedRenderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    adjustedRenderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size,
-      localAdjustments: [layer]
+    let adjustedRenderer = EditingDocument(
+      source: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     let adjusted = try await adjustedRenderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
     ).cgImage
 
     // Export the SAME edit with NO local adjustment as the baseline.
-    let baselineRenderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    baselineRenderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size
+    let baselineRenderer = EditingDocument(
+      source: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
     )
     let baseline = try await baselineRenderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
     ).cgImage
 
     // Identity crop preserves the source dimensions at full scale.

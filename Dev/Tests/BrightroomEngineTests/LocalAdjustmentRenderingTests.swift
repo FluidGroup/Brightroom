@@ -13,71 +13,11 @@ struct LocalAdjustmentRenderingTests {
     let layer = Self.makeBlurLayer(radius: 0, center: CGPoint(x: 20, y: 10))
 
     let renderedImage = try #require(
-      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(try layer.apply(to: sourceCIImage, context: FeatureEvaluationContext()), from: sourceCIImage.extent)
     )
 
     #expect(Self.rgba(in: sourceImage, x: 5, y: 10) == Self.rgba(in: renderedImage, x: 5, y: 10))
     #expect(Self.rgba(in: sourceImage, x: 35, y: 10) == Self.rgba(in: renderedImage, x: 35, y: 10))
-  }
-
-  @Test func `Editing preview applies filters and local adjustments`() throws {
-    let sourceImage = Self.makeSplitImage(
-      width: 40,
-      height: 20,
-      leftWhite: 0.25,
-      rightWhite: 0.75
-    )
-    let sourceCIImage = CIImage(cgImage: sourceImage)
-    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 40, height: 20))
-    edit.effects = EffectPipeline(effects: [BrightnessFeature(value: 0.2)])
-    edit.setPhotosCropLocalAdjustmentsForTest([
-      Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
-    ])
-
-    let editingPreview = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
-    let editingImage = try #require(
-      Self.context.createCGImage(editingPreview, from: sourceCIImage.extent)
-    )
-
-    #expect(
-      Self.rgba(in: editingImage, x: 5, y: 10).red > Self.rgba(in: sourceImage, x: 5, y: 10).red
-    )
-  }
-
-  @Test func `Editing base preview skips local adjustment rasterization`() throws {
-    let sourceImage = Self.makeSplitImage(
-      width: 40,
-      height: 20,
-      leftWhite: 0.25,
-      rightWhite: 0.25
-    )
-    let sourceCIImage = CIImage(cgImage: sourceImage)
-    var editWithLocalAdjustment = EditingStack.Edit.test(
-      imageSize: CGSize(width: 40, height: 20)
-    )
-    editWithLocalAdjustment.setPhotosCropLocalAdjustmentsForTest([
-      Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10)),
-    ])
-
-    let editingBasePreviewImage = try #require(
-      Self.context.createCGImage(
-        editWithLocalAdjustment.makePreviewImage(from: sourceCIImage, purpose: .editingBase),
-        from: sourceCIImage.extent
-      )
-    )
-    let fullEditingPreviewImage = try #require(
-      Self.context.createCGImage(
-        editWithLocalAdjustment.makePreviewImage(from: sourceCIImage, purpose: .editing),
-        from: sourceCIImage.extent
-      )
-    )
-
-    let sourcePixel = Self.rgba(in: sourceImage, x: 20, y: 10)
-    let editingBasePixel = Self.rgba(in: editingBasePreviewImage, x: 20, y: 10)
-    let fullEditingPixel = Self.rgba(in: fullEditingPreviewImage, x: 20, y: 10)
-
-    #expect(sourcePixel == editingBasePixel)
-    #expect(fullEditingPixel.red > sourcePixel.red)
   }
 
   @Test func `Exposure local adjustment applies only inside mask`() throws {
@@ -91,7 +31,7 @@ struct LocalAdjustmentRenderingTests {
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 10))
 
     let renderedImage = try #require(
-      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(try layer.apply(to: sourceCIImage, context: FeatureEvaluationContext()), from: sourceCIImage.extent)
     )
 
     #expect(
@@ -102,43 +42,40 @@ struct LocalAdjustmentRenderingTests {
     )
   }
 
-  @Test func `Local adjustment mask uses display Y coordinates`() throws {
+  @Test func `Local adjustment mask uses working space Y coordinates`() throws {
     let sourceImage = Self.makeSolidImage(width: 40, height: 40, white: 0.25)
     let sourceCIImage = CIImage(cgImage: sourceImage)
     let layer = Self.makeExposureLayer(value: 1, center: CGPoint(x: 20, y: 6))
 
     let renderedImage = try #require(
-      Self.context.createCGImage(try layer.engineRender(over: sourceCIImage), from: sourceCIImage.extent)
+      Self.context.createCGImage(
+        try layer.apply(to: sourceCIImage, context: FeatureEvaluationContext()),
+        from: sourceCIImage.extent
+      )
     )
 
-    // Stamps are authored in display coordinates (top-left origin, y-down),
-    // matching where the user painted on the interactive canvas. `rgba(in:)`
-    // reads with the same top-left origin, so the authored position is read
-    // directly — no mirroring.
-    let maskedPixel = Self.rgba(in: renderedImage, x: 20, y: 6)
-    let mirroredPixel = Self.rgba(in: renderedImage, x: 20, y: 34)
+    // Stamps are stored in BrightroomParametric's working space (bottom-left
+    // origin, y-up). `rgba(in:)` reads with a top-left origin, so a stamp at
+    // working y = 6 lands on display row 40 - 6 = 34.
+    let maskedPixel = Self.rgba(in: renderedImage, x: 20, y: 34)
+    let mirroredPixel = Self.rgba(in: renderedImage, x: 20, y: 6)
 
     #expect(maskedPixel.red > mirroredPixel.red)
   }
 
   @Test func `Renderer applies local adjustment before crop`() async throws {
     let sourceImage = Self.makeSplitImage(width: 40, height: 20)
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(
-      crop: CropFeature.test(
-        imageSize: CGSize(width: 40, height: 20),
-        cropRect: CGRect(x: 20, y: 0, width: 20, height: 20)
-      ),
-      orientedImageSize: CGSize(width: 40, height: 20),
-      localAdjustments: [
+    let imageSource = SourceImage(cgImage: sourceImage)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
-      ]
+      ], crop: CropFeature.test(
+        imageSize: CGSize(width: 40, height: 20),
+        topLeftRect: CGRect(x: 20, y: 0, width: 20, height: 20)
+      ))
     )
 
     let renderedImage = try await renderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 0, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 19, y: 10)
@@ -155,23 +92,17 @@ struct LocalAdjustmentRenderingTests {
       leftWhite: 0.125,
       rightWhite: 0.625
     )
-    let imageSource = ImageSource(cgImage: sourceImage)
-    let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-
-    renderer.edit = .make(
-      crop: CropFeature.test(
-        imageSize: CGSize(width: 40, height: 20),
-        cropRect: CGRect(x: 0, y: 0, width: 40, height: 20)
-      ),
-      orientedImageSize: CGSize(width: 40, height: 20),
-      effects: EffectPipeline(effects: [ExposureFeature(value: 0.5)]),
-      localAdjustments: [
+    let imageSource = SourceImage(cgImage: sourceImage)
+    let renderer = EditingDocument(source: imageSource, feature: RendererTestDocument(effects: [AnyImageEffect(ExposureFeature(ev: 0.5))], localAdjustments: [
         Self.makeBlurLayer(radius: 6, center: CGPoint(x: 20, y: 10)),
-      ]
+      ], crop: CropFeature.test(
+        imageSize: CGSize(width: 40, height: 20),
+        topLeftRect: CGRect(x: 0, y: 0, width: 40, height: 20)
+      ))
     )
 
     let renderedImage = try await renderer.render(
-      options: .init(workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+      options: .init(outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB))
     ).cgImage
     let edgePixel = Self.rgba(in: renderedImage, x: 20, y: 10)
     let farPixel = Self.rgba(in: renderedImage, x: 35, y: 10)
@@ -186,42 +117,32 @@ struct LocalAdjustmentRenderingTests {
   private static func makeBlurLayer(
     radius: CGFloat,
     center: CGPoint
-  ) -> LocalAdjustmentFeature {
-    .init(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-              ),
-            ]
-          )
-        )
-      ),
-      effectPipeline: EffectPipeline(effects: [GaussianBlurFeature(radius: Double(radius))])
-    )
+  ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
+    LocalAdjustmentFeature(mask: makeMask(center: center)) {
+      [AnyImageEffect(GaussianBlurFeature(radius: .absolute(Double(radius))))]
+    }
   }
 
   private static func makeExposureLayer(
     value: Double,
     center: CGPoint
-  ) -> LocalAdjustmentFeature {
-    .init(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-              ),
-            ]
-          )
-        )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: value)])
+  ) -> LocalAdjustmentFeature<[AnyImageEffect]> {
+    LocalAdjustmentFeature(mask: makeMask(center: center)) {
+      [AnyImageEffect(ExposureFeature(ev: value))]
+    }
+  }
+
+  /// A hard 18 px stamp at `center`, in working space (y-up).
+  private static func makeMask(center: CGPoint) -> Mask {
+    .brush(
+      BrushMask(
+        strokes: [
+          BrushMask.Stroke(
+            stampCenters: [center],
+            brush: BrushMask.Brush(diameter: 18, hardness: 1, opacity: 1)
+          ),
+        ]
+      )
     )
   }
 

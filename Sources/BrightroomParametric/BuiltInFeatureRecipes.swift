@@ -24,17 +24,23 @@ import Foundation
 
 // Core Image recipes for the built-in features.
 //
-// The parameter structs stay pure data in ParametricFeatureModel.swift; their
-// evaluation behavior lives here as capability conformances. Every effect is
+// The parameter structs stay pure data in BuiltInFeatures.swift; their
+// evaluation (`apply(to:context:)`) lives here. Every effect is
 // extent-preserving (`cropped(to: image.extent)`).
 
 // MARK: - Domain features
 
-extension CropFeature: DomainFeatureType {
+extension CropFeature {
 
+  /// Checks that `rect` describes a finite, non-empty extent.
+  ///
+  /// `apply(to:context:)` calls this before evaluating. A host that rebuilds
+  /// stored crops can call it to reject an invalid rectangle at load time.
+  ///
+  /// - Throws: `FeatureEvaluationError.invalidCropRect`.
   public func validate() throws {
-    guard cropRect.isParametricValidExtent else {
-      throw FeatureGraphCompilerError.invalidCropRect(id, cropRect)
+    guard rect.isValidExtent else {
+      throw FeatureEvaluationError.invalidCropRect(rect)
     }
   }
 
@@ -49,7 +55,7 @@ extension CropFeature: DomainFeatureType {
     let canvas = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 0))
       .cropped(to: geometry.cropBounds)
     let cropped = image
-      .transformed(by: geometry.sourceToCropTransform)
+      .transformed(by: geometry.inputToCropTransform)
       .cropped(to: geometry.cropBounds)
       .composited(over: canvas)
 
@@ -62,50 +68,22 @@ extension CropFeature: DomainFeatureType {
 
 // MARK: - Image effects
 
-extension PresetFeature: ImageEffectFeatureType {
-
-  public var childFeatures: [any Feature] { effects }
-
-  public func validate() throws {
-    for effect in effects {
-      try effect.validate()
-    }
-  }
-
-  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    try effects
-      .filter(\.isEnabled)
-      .reduce(image) { image, effect in
-        try effect.apply(to: image, context: context)
-      }
-  }
-}
-
-extension EffectPipelineFeature: ImageEffectFeatureType {
-
-  public var childFeatures: [any Feature] { pipeline.effects }
-
-  public func validate() throws {
-    for effect in pipeline.effects {
-      try effect.validate()
-    }
-  }
-
-  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    try pipeline.apply(to: image, context: context)
-  }
-}
-
-extension ColorCubeFeature: ImageEffectFeatureType {
+extension ColorCubeFeature {
 
   private var expectedByteCount: Int {
     dimension * dimension * dimension * 4 * MemoryLayout<Float>.size
   }
 
+  /// Checks that `cubeData` holds exactly `dimension³` RGBA float entries.
+  ///
+  /// `apply(to:context:)` calls this before evaluating. A host that rebuilds
+  /// stored lookup tables can call it to reject mismatched data at load time.
+  ///
+  /// - Throws: `FeatureEvaluationError.invalidColorCubeData`.
   public func validate() throws {
     guard cubeData.count == expectedByteCount else {
-      throw FeatureGraphCompilerError.invalidColorCubeData(
-        id,
+      throw FeatureEvaluationError.invalidColorCubeData(
+        id: id,
         expectedByteCount: expectedByteCount,
         actualByteCount: cubeData.count
       )
@@ -115,15 +93,15 @@ extension ColorCubeFeature: ImageEffectFeatureType {
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     try validate()
 
-    let filter = ParametricColorCubeHelper.makeColorCubeFilter(
+    let filter = ColorCubeFilterFactory.makeColorCubeFilter(
       cubeData: cubeData,
       dimension: dimension,
-      identifier: identifier
+      id: id
     )
     filter.setValue(image, forKeyPath: kCIInputImageKey)
 
     guard let filtered = filter.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CIColorCubeWithColorSpace")
+      throw FeatureEvaluationError.imageCreationFailed("CIColorCubeWithColorSpace")
     }
 
     let foreground = filtered.applyingFilter(
@@ -132,7 +110,7 @@ extension ColorCubeFeature: ImageEffectFeatureType {
         "inputRVector": CIVector(x: 1, y: 0, z: 0, w: 0),
         "inputGVector": CIVector(x: 0, y: 1, z: 0, w: 0),
         "inputBVector": CIVector(x: 0, y: 0, z: 1, w: 0),
-        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(amount)),
+        "inputAVector": CIVector(x: 0, y: 0, z: 0, w: CGFloat(intensity)),
         "inputBiasVector": CIVector(x: 0, y: 0, z: 0, w: 0),
       ]
     )
@@ -144,14 +122,14 @@ extension ColorCubeFeature: ImageEffectFeatureType {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return output.cropped(to: image.extent)
   }
 }
 
-extension BrightnessFeature: ImageEffectFeatureType {
+extension BrightnessFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
@@ -162,7 +140,7 @@ extension BrightnessFeature: ImageEffectFeatureType {
   }
 }
 
-extension ContrastFeature: ImageEffectFeatureType {
+extension ContrastFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
@@ -173,7 +151,7 @@ extension ContrastFeature: ImageEffectFeatureType {
   }
 }
 
-extension SaturationFeature: ImageEffectFeatureType {
+extension SaturationFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
@@ -184,21 +162,21 @@ extension SaturationFeature: ImageEffectFeatureType {
   }
 }
 
-extension ExposureFeature: ImageEffectFeatureType {
+extension ExposureFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    guard abs(value) > 0.0001 else {
+    guard abs(ev) > 0.0001 else {
       return image
     }
     return image.applyingFilter(
       "CIExposureAdjust",
-      parameters: [kCIInputEVKey: value]
+      parameters: [kCIInputEVKey: ev]
     )
     .cropped(to: image.extent)
   }
 }
 
-extension HighlightsFeature: ImageEffectFeatureType {
+extension HighlightsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
@@ -209,7 +187,7 @@ extension HighlightsFeature: ImageEffectFeatureType {
   }
 }
 
-extension ShadowsFeature: ImageEffectFeatureType {
+extension ShadowsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
@@ -220,10 +198,10 @@ extension ShadowsFeature: ImageEffectFeatureType {
   }
 }
 
-extension HighlightShadowTintFeature: ImageEffectFeatureType {
+extension HighlightShadowTintFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let shadow = CIImage(color: shadowColor.parametricCIColor)
+    let shadow = CIImage(color: shadowColor.ciColor)
       .cropped(to: image.extent)
     guard let shadowOutput = CIFilter(
       name: "CISourceOverCompositing",
@@ -232,10 +210,10 @@ extension HighlightShadowTintFeature: ImageEffectFeatureType {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
-    let highlight = CIImage(color: highlightColor.parametricCIColor)
+    let highlight = CIImage(color: highlightColor.ciColor)
       .cropped(to: image.extent)
     guard let highlightOutput = CIFilter(
       name: "CISourceOverCompositing",
@@ -244,20 +222,20 @@ extension HighlightShadowTintFeature: ImageEffectFeatureType {
         kCIInputBackgroundImageKey: shadowOutput,
       ]
     )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return highlightOutput.cropped(to: image.extent)
   }
 }
 
-extension TemperatureFeature: ImageEffectFeatureType {
+extension WhiteBalanceFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter(
       "CITemperatureAndTint",
       parameters: [
-        "inputNeutral": CIVector(x: CGFloat(value) + 6500, y: CGFloat(tint)),
+        "inputNeutral": CIVector(x: CGFloat(temperature) + 6500, y: CGFloat(tint)),
         "inputTargetNeutral": CIVector(x: 6500, y: 0),
       ]
     )
@@ -265,39 +243,25 @@ extension TemperatureFeature: ImageEffectFeatureType {
   }
 }
 
-extension SharpenFeature: ImageEffectFeatureType {
+extension SharpenFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = ParametricRadiusCalculator.radius(
-      value: radius,
-      max: ParametricFilterConstants.gaussianBlurSliderMax,
-      imageExtent: context.radiusBasis(for: image)
-    )
+    let radius = radius.pixels(in: context, for: image)
     return image.applyingFilter(
       "CISharpenLuminance",
       parameters: [
         "inputRadius": radius,
-        "inputSharpness": sharpness,
+        "inputSharpness": intensity,
       ]
     )
     .cropped(to: image.extent)
   }
 }
 
-extension GaussianBlurFeature: ImageEffectFeatureType {
+extension GaussianBlurFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius: Double
-    switch self.radius {
-    case let .absolute(value):
-      radius = value
-    case let .editingStackFilterValue(value):
-      radius = ParametricRadiusCalculator.radius(
-        value: value,
-        max: ParametricFilterConstants.gaussianBlurSliderMax,
-        imageExtent: context.radiusBasis(for: image)
-      )
-    }
+    let radius = radius.pixels(in: context, for: image)
 
     guard radius > 0.0001 else {
       return image
@@ -312,14 +276,10 @@ extension GaussianBlurFeature: ImageEffectFeatureType {
   }
 }
 
-extension UnsharpMaskFeature: ImageEffectFeatureType {
+extension UnsharpMaskFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    let radius = ParametricRadiusCalculator.radius(
-      value: radius,
-      max: ParametricFilterConstants.unsharpMaskRadiusSliderMax,
-      imageExtent: context.radiusBasis(for: image)
-    )
+    let radius = radius.pixels(in: context, for: image)
     return image.applyingFilter(
       "CIUnsharpMask",
       parameters: [
@@ -331,14 +291,14 @@ extension UnsharpMaskFeature: ImageEffectFeatureType {
   }
 }
 
-extension VignetteFeature: ImageEffectFeatureType {
+extension VignetteFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    ParametricVignetteRenderer.apply(value: value, to: image)
+    VignetteRecipe.apply(value: value, to: image)
   }
 }
 
-extension FadeFeature: ImageEffectFeatureType {
+extension FadeFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     let foreground = CIImage(
@@ -358,7 +318,7 @@ extension FadeFeature: ImageEffectFeatureType {
         kCIInputBackgroundImageKey: image,
       ]
     )?.outputImage else {
-      throw FeatureGraphCompilerError.failedToCreateImage("CISourceOverCompositing")
+      throw FeatureEvaluationError.imageCreationFailed("CISourceOverCompositing")
     }
 
     return output.cropped(to: image.extent)
@@ -367,9 +327,9 @@ extension FadeFeature: ImageEffectFeatureType {
 
 // MARK: - Helpers
 
-extension ParametricRGBAColor {
+extension HighlightShadowTintFeature.Color {
 
-  var parametricCIColor: CIColor {
+  var ciColor: CIColor {
     CIColor(
       red: CGFloat(red),
       green: CGFloat(green),
@@ -381,7 +341,7 @@ extension ParametricRGBAColor {
 
 extension CGRect {
 
-  var isParametricValidExtent: Bool {
+  var isValidExtent: Bool {
     origin.x.isFinite
       && origin.y.isFinite
       && size.width.isFinite

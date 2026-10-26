@@ -1,21 +1,37 @@
 import CoreGraphics
 import Foundation
+import ImageIO
 import Testing
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 /// Guards the coordinate contract of exported local-adjustment masks.
 ///
-/// Stamps are authored in display coordinates (top-left origin, y-down).
-/// A regression that flips the rasterized mask renders the adjustment at the
-/// vertically mirrored position — the export no longer matches what the user
-/// painted on the interactive canvas.
+/// Stamps are painted in display coordinates (top-left origin, y-down) and
+/// stored in working space (bottom-left origin, y-up). A regression that
+/// flips twice, or not at all, renders the adjustment at the vertically
+/// mirrored position — the export no longer matches what the user painted on
+/// the interactive canvas.
 struct LocalAdjustmentMaskOrientationTests {
 
-  @Test func `Mask applies at authored display position`() async throws {
-    let imageSource = ImageSource(image: Asset.l1000069.image)
-    let imageSize = imageSource.readImageSize()
+  /// The stamp is authored as a display point and stored in working space
+  /// through the production conversion, against the ORIENTED image size
+  /// (`SourceImage.pixelSize`). The `.right` case swaps width and
+  /// height, so a regression that flips by the raw pixel height passes every
+  /// `.up` case and fails only there.
+  @Test(arguments: [CGImagePropertyOrientation.up, .right])
+  func `Mask applies at authored display position`(
+    orientation: CGImagePropertyOrientation
+  ) async throws {
+    let pixelSize = SourceImage.test(Asset.l1000069.image).pixelSize
+    let imageSize = orientation == .up
+      ? pixelSize
+      : CGSize(width: pixelSize.height, height: pixelSize.width)
+    #expect(imageSize.width != imageSize.height)
+    let imageSource = SourceImage.test(Asset.l1000069.image, orientation: orientation)
+    #expect(imageSource.pixelSize == imageSize)
 
     // A single hard stamp in the top-left quadrant.
     let stampCenter = CGPoint(x: imageSize.width * 0.25, y: imageSize.height * 0.25)
@@ -23,36 +39,31 @@ struct LocalAdjustmentMaskOrientationTests {
     let mirroredCenter = CGPoint(x: imageSize.width * 0.25, y: imageSize.height * 0.75)
 
     let adjustment = LocalAdjustmentFeature(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(strokes: [
-            BrushMaskStroke(
-              stamps: [stampCenter],
-              brush: BrushMaskBrush(
-                diameter: imageSize.width * 0.2,
-                hardness: 1,
-                opacity: 1
-              )
-            )
-          ])
-        )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)]),
-      blendMode: .alpha
-    )
+      mask: .test(
+        displayStamps: [stampCenter],
+        diameter: imageSize.width * 0.2,
+        domainHeight: imageSize.height
+      )
+    ) {
+      [AnyImageEffect(ExposureFeature(ev: 2))]
+    }
 
-    func render(localAdjustments: [LocalAdjustmentFeature]) async throws -> CGImage {
-      let renderer = BrightRoomImageRenderer(source: imageSource, orientation: .up)
-      renderer.edit = .make(
-        crop: CropFeature.test(imageSize: imageSize),
-        orientedImageSize: imageSize,
-        localAdjustments: localAdjustments
+    func render(
+      localAdjustments: [LocalAdjustmentFeature<[AnyImageEffect]>]
+    ) async throws -> CGImage {
+      let renderer = EditingDocument(
+        source: imageSource,
+        feature: RendererTestDocument(
+          localAdjustments: localAdjustments,
+          crop: CropFeature.test(imageSize: imageSize)
+        )
       )
       return try await renderer.render().cgImage
     }
 
     let base = try await render(localAdjustments: [])
     let adjusted = try await render(localAdjustments: [adjustment])
+    #expect(CGSize(width: adjusted.width, height: adjusted.height) == imageSize)
 
     let deltaAtStamp = abs(
       try Self.brightness(of: adjusted, at: stampCenter)

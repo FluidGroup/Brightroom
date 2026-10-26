@@ -17,7 +17,7 @@ import UIKit
 /// export blurs the full-size source directly.
 ///
 /// Those two evaluations land on the same visual result *because the blur radius
-/// is a fraction of the image extent* (`radiusReferenceExtent == nil` →
+/// is a fraction of the image extent* (`chainEntryExtent == nil` →
 /// `image.extent`): a fraction of 256 upscaled 4× equals the same fraction of
 /// 1024. This test renders both and asserts they agree within a loose tolerance
 /// — "loose" because the preview starts from a downsampled source, so a small
@@ -42,22 +42,12 @@ struct MaskedPreviewExportScaleConsistencyTests {
     let sourceEdgeCG = Self.makeVerticalEdge(side: Self.sourceSide)
     let fullEdgeCI = CIImage(cgImage: Self.makeVerticalEdge(side: Self.fullSide))
 
-    // A Loaded whose editing source is the SMALL edge but whose image size is
-    // the FULL side, so the factory must upscale source→canvas (the Nasa shape:
-    // small editing source, large canvas).
-    let edit = EditingStack.Edit.test(imageSize: fullSize)
+    // The editing source is the SMALL edge but the canvas is the FULL side, so
+    // the factory must upscale source→canvas (the Nasa shape: small editing
+    // source, large canvas).
     let sourceEdgeCI = CIImage(cgImage: sourceEdgeCG)
-    let loaded = EditingStack.Loaded(
-      imageSource: ImageSource(cgImage: sourceEdgeCG),
-      metadata: .init(orientation: .up, imageSize: fullSize),
-      initialEditing: edit,
-      currentEdit: edit,
-      thumbnailCIImage: sourceEdgeCI,
-      editingSourceCGImage: sourceEdgeCG,
-      editingSourceCIImage: sourceEdgeCI
-    )
 
-    let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
 
     // PREVIEW: the factory's local-adjustment `adjusted` layer is the blur
     // applied to the whole image (the mask selects it later in compositing), so
@@ -65,7 +55,8 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // computed at the 256 source and upscaled to 1024.
     let previewImages = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
-        loadedState: loaded,
+        editingSourceImage: sourceEdgeCI,
+        effects: nil,
         canvasSize: fullSize,
         mode: .localAdjustment(effect: blur)
       )
@@ -73,9 +64,13 @@ struct MaskedPreviewExportScaleConsistencyTests {
     let previewRow = try centerRow(of: previewImages.adjusted, side: Self.fullSide)
 
     // EXPORT reference: the same blur applied to the FULL-resolution source,
-    // exactly as the export renderer does (radiusReferenceExtent nil → relative
-    // to the full extent).
-    let exportImage = blur.applyIgnoringFailure(to: fullEdgeCI)
+    // exactly as the export renderer does (the radius basis is the full
+    // chain-entry extent).
+    let exportImage = blur.applyIgnoringFailure(
+      to: fullEdgeCI,
+      chainEntryExtent: fullEdgeCI.extent,
+      renderScale: 1
+    )
     let exportRow = try centerRow(of: exportImage, side: Self.fullSide)
 
     // Sanity: both are dark on the left and bright on the right (the blur did
@@ -136,23 +131,14 @@ struct MaskedPreviewExportScaleConsistencyTests {
 
     let sourceEdgeCG = Self.makeVerticalEdge(side: Self.sourceSide)
     let sourceEdgeCI = CIImage(cgImage: sourceEdgeCG)
-    let edit = EditingStack.Edit.test(imageSize: canvasSize)
-    let loaded = EditingStack.Loaded(
-      imageSource: ImageSource(cgImage: sourceEdgeCG),
-      metadata: .init(orientation: .up, imageSize: canvasSize),
-      initialEditing: edit,
-      currentEdit: edit,
-      thumbnailCIImage: sourceEdgeCI,
-      editingSourceCGImage: sourceEdgeCG,
-      editingSourceCIImage: sourceEdgeCI
-    )
 
-    let blur = EffectPipeline(effects: [GaussianBlurFeature(value: 40)])
+    let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     // The factory renders the FULL 12000² canvas (the not-zoomed case that
     // crashed): the adjusted image carries a 12000² extent.
     let images = try #require(
       EditingCanvasRenderImageFactory.makeRenderImages(
-        loadedState: loaded,
+        editingSourceImage: sourceEdgeCI,
+        effects: nil,
         canvasSize: canvasSize,
         mode: .localAdjustment(effect: blur)
       )

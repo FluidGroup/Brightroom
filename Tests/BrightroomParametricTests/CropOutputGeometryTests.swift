@@ -52,7 +52,7 @@ struct CropOutputGeometryTests {
   @Test(arguments: QuarterTurn.allCases)
   func laterCropUsesPreviousOutputDomain(rotation: QuarterTurn) throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let first = CropFeature(cropRect: source.extent, rotation: .quarterCW)
+    let first = CropFeature(rect: source.extent, quarterTurn: .counterclockwise90)
     let intermediate = try first.apply(to: source, context: .init())
     try Self.expectExactQuarterTurn(
       source: intermediate,
@@ -64,8 +64,8 @@ struct CropOutputGeometryTests {
   @Test func straightenKeepsAValidThinFrame() throws {
     let source = Self.makeSource(size: CGSize(width: 300, height: 200))
     let feature = CropFeature(
-      cropRect: CGRect(x: 132, y: -5, width: 36, height: 210),
-      rotation: .quarterCW,
+      rect: CGRect(x: 132, y: -5, width: 36, height: 210),
+      quarterTurn: .counterclockwise90,
       straightenRadians: .pi / 6
     )
     let output = try feature.apply(to: source, context: .init())
@@ -77,12 +77,30 @@ struct CropOutputGeometryTests {
 
   @Test func uncoveredCornersRetainTheRequestedCanvas() throws {
     let source = Self.makeSource(size: CGSize(width: 301, height: 200))
-    let feature = CropFeature(cropRect: source.extent, straightenRadians: .pi / 6)
+    let feature = CropFeature(rect: source.extent, straightenRadians: .pi / 6)
     let output = try feature.apply(to: source, context: .init())
 
     #expect(output.extent == source.extent)
     let pixels = Self.pixels(output)
     #expect(stride(from: 3, to: pixels.count, by: 4).contains { pixels[$0] < 255 })
+  }
+
+  /// A positive straighten angle turns the image clockwise on screen: a
+  /// mark to the right of the center moves down.
+  @Test func positiveStraightenTurnsTheImageClockwise() throws {
+    let background = CIImage(color: .black)
+    let mark = CIImage(color: .white).cropped(to: CGRect(x: 150, y: 95, width: 10, height: 10))
+    let source = mark.composited(over: background)
+      .cropped(to: CGRect(x: 0, y: 0, width: 200, height: 200))
+
+    let output = try CropFeature(rect: source.extent, straightenRadians: .pi / 6)
+      .apply(to: source, context: .init())
+
+    // The mark's center (155, 100) turns 30° about (100, 100) to about
+    // (147.6, 72.5) when clockwise and (147.6, 127.5) when counterclockwise
+    // (y-up).
+    #expect(Self.red(of: output, at: CGPoint(x: 147, y: 72)) == 255)
+    #expect(Self.red(of: output, at: CGPoint(x: 147, y: 127)) == 0)
   }
 
   /// Missing source pixels are transparent parts of the requested canvas.
@@ -108,9 +126,9 @@ struct CropOutputGeometryTests {
     ]
 
     for fixture in cases {
-      let crop = CropFeature(cropRect: fixture.footprint, rotation: rotation)
+      let crop = CropFeature(rect: fixture.footprint, quarterTurn: rotation)
       let output = try crop.apply(to: source, context: .init())
-      let isSideways = rotation == .quarterCW || rotation == .quarterCCW
+      let isSideways = rotation == .counterclockwise90 || rotation == .counterclockwise270
       let expectedSize = isSideways
         ? CGSize(width: fixture.rasterSize.height, height: fixture.rasterSize.width)
         : fixture.rasterSize
@@ -133,12 +151,12 @@ struct CropOutputGeometryTests {
     let width: Int
     let height: Int
     switch rotation {
-    case .zero, .half:
+    case .zero, .counterclockwise180:
       (width, height) = (fw, fh)
-    case .quarterCW, .quarterCCW:
+    case .counterclockwise90, .counterclockwise270:
       (width, height) = (fh, fw)
     }
-    let crop = CropFeature(cropRect: footprint, rotation: rotation)
+    let crop = CropFeature(rect: footprint, quarterTurn: rotation)
     let output = try crop.apply(to: source, context: .init())
     let expectedBounds = CGRect(x: 0, y: 0, width: width, height: height)
     try #require(output.extent == expectedBounds, sourceLocation: sourceLocation)
@@ -156,13 +174,13 @@ struct CropOutputGeometryTests {
         case .zero:
           sourceX = fx + x
           sourceY = fy + y
-        case .quarterCW:
+        case .counterclockwise90:
           sourceX = fx + y
           sourceY = fy + fh - 1 - x
-        case .half:
+        case .counterclockwise180:
           sourceX = fx + fw - 1 - x
           sourceY = fy + fh - 1 - y
-        case .quarterCCW:
+        case .counterclockwise270:
           sourceX = fx + fw - 1 - y
           sourceY = fy + x
         }
@@ -180,6 +198,20 @@ struct CropOutputGeometryTests {
       }
     }
     #expect(mismatches == 0, "\(mismatches) pixels changed position or value", sourceLocation: sourceLocation)
+  }
+
+  /// The red channel of one pixel, at y-up coordinates.
+  private static func red(of image: CIImage, at point: CGPoint) -> UInt8 {
+    var pixel = [UInt8](repeating: 0, count: 4)
+    context.render(
+      image,
+      toBitmap: &pixel,
+      rowBytes: 4,
+      bounds: CGRect(origin: point, size: CGSize(width: 1, height: 1)),
+      format: .RGBA8,
+      colorSpace: nil
+    )
+    return pixel[0]
   }
 
   /// A pixel-scale pattern reveals interpolation and wrong row/column choices.

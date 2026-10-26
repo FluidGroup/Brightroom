@@ -1,7 +1,10 @@
 import CoreGraphics
+import CoreImage
+import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 extension CropFeature {
 
@@ -9,73 +12,135 @@ extension CropFeature {
   /// changes the rendered orientation without changing this selected rectangle.
   static func test(
     imageSize: CGSize,
-    cropRect: CGRect? = nil,
-    rotation: QuarterTurn = .zero,
-    straighten: Double = 0
+    topLeftRect: CGRect? = nil,
+    quarterTurn: QuarterTurn = .zero,
+    straightenRadians: Double = 0
   ) -> CropFeature {
     CropFeature(
-      displayCropRect: cropRect ?? CGRect(origin: .zero, size: imageSize),
+      topLeftRect: topLeftRect ?? CGRect(origin: .zero, size: imageSize),
       imageSize: imageSize,
-      rotation: rotation,
-      straighten: straighten
+      quarterTurn: quarterTurn,
+      straightenRadians: straightenRadians
     )
   }
 }
 
-extension EditingStack.Edit {
+/// A general document for renderer tests: ordered global effects, local
+/// adjustments, then a crop.
+///
+/// It replaces the old `BrightRoomImageRenderer.Edit.make(crop:…)`, whose
+/// canonical arrangement was the same `[effects, localAdjustments…, crop]`.
+struct RendererTestDocument: Feature, Equatable {
+  var effects: [AnyImageEffect] = []
+  var localAdjustments: [LocalAdjustmentFeature<[AnyImageEffect]>] = []
+  var crop: CropFeature
 
-  /// Test helper: the canonical default edit for an image of `imageSize`,
-  /// optionally with a non-default final crop rect (y-down display space).
-  static func test(imageSize: CGSize, cropRect: CGRect? = nil) -> Self {
-    EditingFeatureTree.canonicalEdit(
-      finalCrop: CropFeature.test(imageSize: imageSize, cropRect: cropRect),
-      orientedImageSize: imageSize
-    )
-  }
-
-  /// Test helper for PhotosCrop-style documents: local adjustments are authored
-  /// before the built-in final crop node.
-  mutating func setPhotosCropLocalAdjustmentsForTest(
-    _ localAdjustments: [LocalAdjustmentFeature]
-  ) {
-    EditingFeatureTree.replaceLocalAdjustments(
-      localAdjustments,
-      in: &self,
-      insertingBefore: EditingFeatureTree.finalCropNodeID
-    )
-  }
-
-  /// Test helper for replacing the built-in final crop node.
-  mutating func setFinalCropForTest(_ crop: CropFeature) {
-    _ = EditingFeatureTree.updateCropFeature(
-      id: EditingFeatureTree.finalCropNodeID,
-      in: &self,
-      with: crop
-    )
+  var body: some Feature {
+    effects
+    localAdjustments
+    crop
   }
 }
 
-extension BrightRoomImageRenderer.Edit {
+/// A test-only primitive that applies its steps in order.
+///
+/// The fold oracle for order tests: it shares no code with `FeatureBuilder`,
+/// `TupleFeature`, `Optional`, `EitherFeature`, `Array`, or composite `body`
+/// evaluation, as long as every step is a primitive leaf. Expand a preset into
+/// `preset.effects.map(\.base)` before listing it.
+struct SequentialFeatures: Feature {
 
-  /// Test helper mirroring how `EditingStack.makeRenderer` lowers an edit:
-  /// builds the renderer's parametric document from a crop plus ordered global
-  /// effects and local adjustments, through the production bridge.
+  var steps: [any Feature]
+
+  init(_ steps: [any Feature]) {
+    self.steps = steps
+  }
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try steps.reduce(image) { image, step in
+      try step.apply(to: image, context: context)
+    }
+  }
+}
+
+extension Mask {
+
+  /// A brush mask whose stamps are given in display coordinates (top-left
+  /// origin, y-down) of a domain `domainHeight` tall.
   ///
-  /// The resulting document order is `[effects, localAdjustments…, crop]`, which
-  /// matches the canonical arrangement the old `(croppingRect, operations)`
-  /// construction produced.
-  static func make(
-    crop: CropFeature,
-    orientedImageSize: CGSize,
-    effects: EffectPipeline = .init(),
-    localAdjustments: [LocalAdjustmentFeature] = []
-  ) -> Self {
-    var edit = EditingFeatureTree.canonicalEdit(
-      finalCrop: crop,
-      orientedImageSize: orientedImageSize
+  /// The stamps are stored in BrightroomParametric's working space through the
+  /// production conversion (`EditingCanvasStrokeRecord.workingSpaceStroke`), so
+  /// a test still states the display position it expects while exercising the
+  /// same flip the editor commits through.
+  static func test(
+    displayStamps: [CGPoint],
+    diameter: Double,
+    hardness: Double = 1,
+    opacity: Double = 1,
+    domainHeight: CGFloat
+  ) -> Mask {
+    let record = EditingCanvasStrokeRecord(
+      stamps: displayStamps,
+      brush: .init(size: diameter, hardness: hardness, opacity: opacity, spacing: 0.05)
     )
-    edit.effects = effects
-    edit.setPhotosCropLocalAdjustmentsForTest(localAdjustments)
-    return .init(document: edit.makeEditingDocument(orientedImageSize: orientedImageSize))
+    return .brush(
+      BrushMask(
+        strokes: [record.workingSpaceStroke(domainHeight: domainHeight)]
+      )
+    )
+  }
+}
+
+extension PreviewSource {
+
+  /// A preview built synchronously, without the loader's preparation. The
+  /// editing source and the thumbnail are the full-resolution oriented image.
+  static func test(
+    cgImage: CGImage,
+    orientation: CGImagePropertyOrientation = .up
+  ) -> PreviewSource {
+    let source = SourceImage(cgImage: cgImage, orientation: orientation)
+    let image = source.makeCIImage()
+    return PreviewSource(source: source, thumbnail: image, image: image)
+  }
+}
+
+extension EditingDocument {
+
+  /// Renders synchronously on a chosen device, through the same core as
+  /// `render(options:)`.
+  func renderForTesting(
+    options: ExportRenderer.Options = .init(),
+    device: ExportRenderer.Device = .automatic
+  ) throws -> RenderedImage {
+    try render(options: options, device: device)
+  }
+}
+
+extension UIImage {
+
+  /// The decoded, unoriented full-resolution pixels (what the removed
+  /// `ImageSource(image:).loadOriginalCGImage()` returned).
+  var decodedCGImageForTesting: CGImage {
+    ImageDecoding.makeDecodedCGImage(from: cgImage!) ?? cgImage!
+  }
+}
+
+extension SourceImage {
+
+  /// The pixels of `image` under an explicit orientation, ignoring the
+  /// `UIImage`'s own `imageOrientation` (what the removed
+  /// `BrightRoomImageRenderer(source: ImageSource(image:), orientation:…)`
+  /// rendered).
+  static func test(_ image: UIImage, orientation: CGImagePropertyOrientation = .up) -> SourceImage {
+    SourceImage(cgImage: image.decodedCGImageForTesting, orientation: orientation)
+  }
+
+  /// The unoriented decoded pixels of a bitmap-backed image.
+  var bitmapForTesting: CGImage {
+    guard case .bitmap(let cgImage) = storage.backing else {
+      preconditionFailure("Not a bitmap-backed source image.")
+    }
+    return cgImage
   }
 }

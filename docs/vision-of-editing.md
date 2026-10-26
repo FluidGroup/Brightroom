@@ -42,33 +42,74 @@ only inside that mask.
 ## Parametric Stack
 
 The engine should treat editing Features as data. A Feature should be
-serializable, inspectable, reorderable when valid, and re-renderable.
+inspectable, reconstructible from its public parameters, reorderable when
+valid, and re-renderable. Storing Features is the host application's
+responsibility: Brightroom defines the values and their validation, not a file
+format.
 
 In Brightroom's parametric model, "Feature" is the name for each item in the
 stack. Crop, Mask, Adjust, Filter, and Geometry Correction are all Features.
 Renderer implementation may compile Features into Core Image operations or
 transforms, but the document model should expose them as Features.
 
-Conceptually:
+In Brightroom 6 an edit is a root feature: a static composition of Features.
+The source image stays outside it, and `EditingDocument` pairs the two with
+the edit's undo history. A root feature that crops, adjusts exposure inside a
+mask, and crops again is:
 
 ```swift
-struct EditingDocument {
-  var source: ImageSource
-  var features: [EditingFeature]
-}
+import BrightroomParametric
 
-enum EditingFeature {
-  case crop(CropParameters)
-  case geometryCorrection(GeometryCorrectionParameters)
-  case mask(MaskParameters)
-  case adjustment(AdjustmentParameters)
-  case filter(FilterParameters)
+struct PhotoFeature: Feature, Equatable {
+  var crop: CropFeature
+  var localExposure: LocalAdjustmentFeature<ExposureFeature>?
+  var finalCrop: CropFeature
+
+  var body: some Feature {
+    crop
+    localExposure
+    finalCrop
+  }
 }
 ```
 
-This shape is intentionally broader than the current UI. A UI may present a
-simple Photos-like editor, but the engine should still be able to describe a
-deeper sequence.
+Each member receives the output of the one before it, so `localExposure` is
+authored in the domain `crop` produces, and `finalCrop` clips the adjusted
+result.
+
+The engine can express any such order; the UI decides how much freedom a
+document gives. `ImageEditorFeature` fixes one shape for a simple Photos-like
+editor, and another editor can define a deeper sequence with the same
+Features.
+
+## Vocabulary
+
+Brightroom names things with the words below. Each concept has one word, and
+each word has one meaning; new API and documentation follow this list.
+
+| Word | Meaning | In the API |
+| --- | --- | --- |
+| Source image | The image an edit is authored over, fixed for a document's lifetime. Its oriented pixel size is the domain the first Feature receives. "Source" means only this: the entry of the chain. | `SourceImage`, `EditingDocument.source`, `SourceImage.pixelSize` |
+| Feature | One step of an edit: a value with parameters that turns an input image into an output image. | `Feature`; top-level library types end in `Feature` (`CropFeature`, `ExposureFeature`) |
+| Root feature | The Feature a document holds: the whole edit, composed from other Features. | `EditingDocument.feature`, `ImageEditorFeature` |
+| Input, output | The image a Feature receives and the image it returns. | `inputToOutputTransform` |
+| Effect | A Feature that keeps the extent and domain of its input: an adjustment or a filter. | `ImageEffect` |
+| Domain Feature | A Feature that changes the domain later Features work in, such as a crop. | `CropFeature` |
+| Adjust, adjustment | An effect with parameters the user tunes, such as exposure. | `ExposureFeature`, `WhiteBalanceFeature` |
+| Filter | A named, predefined look, applied as one effect. | `FilterFeature` |
+| Mask | A grayscale field that says where a local adjustment applies. It is a parameter, not a Feature. | `Mask`, `BrushMask` |
+| Local adjustment | Effects applied only where a mask allows. | `LocalAdjustmentFeature` |
+| Document | The source image, the root feature, and the root feature's undo history. The word means only this; a root feature is not a document. | `EditingDocument`, `ImageEditorDocument` |
+| Commit | Record the current root feature as an undo step. Only history commits. | `EditingDocument.commit()` |
+| Editor | A complete UI that edits a document. | `ImageEditor` |
+| Canvas | The view that shows the evaluated result and lets tools edit one Feature. | `ImageEditorCanvas` |
+| Viewing point | What the canvas shows: the result of evaluating the Feature stack. | |
+| Adjustment point | The Feature a tool edits, which can sit upstream of the viewing point. | `ImageEditorCanvas.editingTarget(_:)`, `ImageEditorCanvas.Target` |
+| Display, viewport | The on-screen space of a canvas. Stored edits never use it. | |
+| Chain-entry extent | The extent of the image as it entered the chain for one render pass. Proportional radii resolve against it. | `FeatureEvaluationContext.chainEntryExtent` |
+| Apply | What a Feature implements: evaluate itself over an input. | `Feature.apply(to:context:)` |
+| Make an image | Build a lazy `CIImage` recipe from a Feature. | `FeatureRenderer.makeImage(from:feature:)` |
+| Render | Produce pixels, in memory or in a file. | `ExportRenderer.render(from:feature:)`, `EditingDocument.render(options:)` |
 
 ## Feature Semantics
 
@@ -80,7 +121,8 @@ the next Feature.
 The ideal crop Feature should include:
 
 - crop extent
-- rotation
+- straightening rotation
+- output orientation (quarter turn)
 - perspective or geometry parameters, if supported later
 - output aspect ratio policy, if the crop is constrained
 
@@ -124,6 +166,11 @@ The ideal mask Feature should support:
 - erase strokes
 - generated masks, such as subject, sky, depth, or luminance masks
 - mask refinements, such as blur, feather, invert, add, subtract, and intersect
+
+In the static model a mask is not a Feature of its own: it is the `Mask`
+parameter of the `LocalAdjustmentFeature` that uses it. A stand-alone mask Feature
+that later adjustments reference is still an open question (see "Feature
+references" below).
 
 Mask coordinates need a clear contract. For early Brightroom work, masks are
 often easiest to store in oriented original image coordinates. In a fully
@@ -240,7 +287,7 @@ This is not a contradiction. It is the expected behavior of a parametric editor.
 The user should be able to edit an upstream Feature while seeing the
 downstream result that will actually be exported.
 
-This distinction is especially important for CropView. The current UI should
+This distinction is especially important for the canvas (`ImageEditorCanvas`). The current UI should
 not be interpreted as "Tool edits happen after Crop" merely because the user
 paints through the crop frame. The crop frame can be the viewing window for the
 fully evaluated result while Tool Features remain authored before the final
@@ -340,20 +387,24 @@ final crop, and the crop clips the already-adjusted image.
 
 ## Near-Term Direction
 
-PhotosCrop blur masking is a useful first pressure test because it already wants
+ImageEditor blur masking is a useful first pressure test because it already wants
 the current Crop and Tool relationship to behave like:
 
 ```text
 Source
   -> Tool Features
   -> Final Crop
+  -> Vignette
   -> Output
 ```
 
-In other words, the current PhotosCrop UI may visually use the crop frame as the
+In other words, the current ImageEditor UI may visually use the crop frame as the
 editing window, but the engine semantics should treat Blur Masking, Filters, and
 Adjustments as Features that happen before the final Crop. Crop is the final
-framing/clipping Feature for this UI path.
+framing/clipping Feature for this UI path. The vignette is the exception: the
+output frame decides it, so it follows the final Crop (see "Decided
+Semantics"), and the canvas draws it over the crop frame, including the crop
+guide while it moves.
 
 The next step is to make that shape feel natural rather than special-cased:
 
@@ -368,7 +419,7 @@ The next step is to make that shape feel natural rather than special-cased:
   Feature model.
 
 This should be treated as a small UI expression of the larger parametric engine,
-not as a one-off PhotosCrop feature.
+not as a one-off ImageEditor feature.
 
 ## Decided Semantics
 
@@ -380,19 +431,40 @@ currently holds by feature order becomes declared rather than incidental:
   the stack. Masks are frame-anchored, not content-anchored: when an upstream
   crop changes, the content under the mask shifts accordingly, and no
   restoration to the original pixels is attempted. This is the parametric
-  reading — each Feature is a function of its input — and it means the
-  compiler's existing rasterization into the current base extent is the
+  reading — each Feature is a function of its input — and it means that
+  `LocalAdjustmentFeature` rasterizing its mask into its input extent is the
   correct implementation, not a limitation.
 - **Proportional (value-form) radii resolve against the render pass's
-  chain-entry extent.** A value like `GaussianBlurFeature(value: 40)` means a
-  fixed fraction of the image as it entered the parametric chain for the
-  current render, regardless of where crops sit in the feature list. Editing
-  or moving a crop can therefore never retroactively change the strength of a
-  committed effect. The basis is per-render-pass (the downsampled preview and
+  chain-entry extent.** A value like
+  `GaussianBlurFeature(radius: .proportional(40))` means a fixed fraction of
+  the image as it entered the parametric chain for the current render,
+  regardless of where crops sit in the feature list. Editing or moving a crop
+  can therefore never retroactively change the strength of a committed
+  effect. The basis is per-render-pass (the downsampled preview and
   the full-resolution export each resolve against their own entry scale), so
-  preview and export stay visually consistent. Render paths that evaluate on
-  an intermediate that is not the chain entry (for example a zoomed viewport
-  slice) must pass the entry extent explicitly.
+  preview and export stay visually consistent. The chain entry is always the
+  whole source: to draw part of the result, evaluate the whole and crop the
+  output (`cropped(to:)`), and Core Image computes only that region.
+  `FeatureRenderer` takes no other basis from hosts; the editing canvas,
+  which evaluates some effects on an intermediate such as the crop output,
+  passes the entry extent explicitly. An absolute radius is pixels of the
+  full-resolution chain entry; a render pass over a downsampled copy (the
+  editing canvas) scales it by the downsample factor, so it too previews as
+  it exports.
+- **Crop output orientation is separate from its selection** (decided 2026-09,
+  #330). A crop evaluates straighten → crop → exact quarter turn. `rect` is
+  the selection after straightening and before the quarter turn, in the crop's
+  input domain; the quarter turn changes only the output orientation, never
+  the selected pixels. The renderer and the tool surfaces map coordinates
+  through the same `CropFeature.OutputGeometry`.
+- **Effects decided by the output frame go after the final crop** (decided
+  2026-10). An effect whose geometry comes from its input extent, such as a
+  vignette centred on its input, belongs to the framed picture, so a root
+  feature evaluates it after its final crop (`ImageEditorFeature.vignette`).
+  Colour and per-pixel effects, and neighbourhood effects whose radii resolve
+  against the chain entry (blur, sharpen), stay before the crop: a crop does
+  not change them. An effect inside a filter (`FilterFeature`) is part of
+  that look and stays where the filter is.
 
 ## Open Questions
 
@@ -400,10 +472,10 @@ currently holds by feature order becomes declared rather than incidental:
   should some tools opt into screen-space width that is reprojected at render
   time?
 - How should Feature references work when an adjustment depends on a mask
-  generated by an earlier Feature?
+  generated by an earlier Feature? Features have no identity in Brightroom
+  6, so a reference would be structural (a member of the root feature)
+  rather than an identifier.
 - What is the smallest public data model that can express repeated
   crop-mask-adjust sequences without overfitting to a layer UI?
-- Where should Brightroom expose flattening: document Feature, renderer cache,
-  or UI-only workflow?
-- How much of the current `EditingStack.Edit` shape can evolve into this model
-  without a disruptive migration?
+- Where should Brightroom expose flattening: a Feature in the edit, a
+  renderer cache, or a UI-only workflow?

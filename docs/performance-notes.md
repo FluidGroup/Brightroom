@@ -71,15 +71,15 @@ with no single app caller.)
 Ordered roughly by expected payoff vs. risk. None are blocking; interactive
 performance is already good.
 
-1. **Reduce existential-cast churn in the effect pipeline (CPU ~12%, low risk).**
-   `EffectPipeline.first(of:)` / `firstIndex(of:)` / `set(_:)` do `as?` / `is T`
-   over `[any ImageEffectFeatureType]`, and `parametricFeaturesAreEqual` /
-   `isEqualFeature` do dynamic type checks. These run on every slider tick
-   (PhotosCrop upserts a typed effect per value change) and per Equatable
-   comparison. Candidates: cache the type→index lookup on `EffectPipeline`,
-   avoid re-scanning the array per parameter, and short-circuit equality by
-   identity/kind before the dynamic compare. Some of the measured cost is
-   SwiftUI's, so verify the win with the same Instruments session.
+1. **Resolved in Brightroom 6: existential-cast churn in the effect pipeline
+   (was CPU ~12%).** The global effects were an `EffectPipeline` of
+   `[any ImageEffectFeatureType]` searched with `as?` / `is T` on every slider
+   tick and compared through dynamic type checks. `PhotosCropFeature.Effects`
+   now stores each effect as a typed optional member with synthesized
+   equality, so the type lookups are gone and the adjustments compare
+   statically. A filter preset's effects still compare through
+   `AnyImageEffect`, one dynamic type check per preset effect.
+   Re-measure with the same Instruments session before relying on the number.
 
 2. **Alpha-only (A8) brush-mask raster instead of RGBA (memmove + raster, med risk).**
    The CPU mask raster allocates and copies a full-resolution RGBA buffer; the

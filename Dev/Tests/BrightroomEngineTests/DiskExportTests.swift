@@ -35,7 +35,7 @@ final class DiskExportTests {
 
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .jpeg(quality: 0.9))
       )
     )
@@ -67,7 +67,7 @@ final class DiskExportTests {
 
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )
@@ -90,7 +90,7 @@ final class DiskExportTests {
     _ = try await makeMaskedRenderer(size: size).render(
       options: .init(
         resolution: .resize(maxPixelSize: cap),
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .jpeg(quality: 0.9))
       )
     )
@@ -112,11 +112,13 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeTopWhiteBottomBlack(side: side)
 
-    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
-    renderer.edit = .make(crop: CropFeature.test(imageSize: size), orientedImageSize: size)
+    let renderer = EditingDocument(
+      source: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    )
     _ = try await renderer.render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )
@@ -137,11 +139,13 @@ final class DiskExportTests {
     let size = CGSize(width: side, height: side)
     let source = Self.makeSolidColorImage(side: side, red: 200, green: 100, blue: 30)
 
-    let renderer = BrightRoomImageRenderer(source: ImageSource(cgImage: source), orientation: .up)
-    renderer.edit = .make(crop: CropFeature.test(imageSize: size), orientedImageSize: size)
+    let renderer = EditingDocument(
+      source: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(crop: CropFeature.test(imageSize: size))
+    )
     _ = try await renderer.render(
       options: .init(
-        workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
+        outputColorSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
         output: .file(url: url, fileType: .png)
       )
     )
@@ -159,36 +163,30 @@ final class DiskExportTests {
   /// A renderer over a solid mid-grey source with a strong, fully-opaque,
   /// hard-edged exposure lift painted across the central quarter (mirrors
   /// `LargeMaskedExportTests`).
-  private func makeMaskedRenderer(size: CGSize) -> BrightRoomImageRenderer {
+  private func makeMaskedRenderer(size: CGSize) -> EditingDocument<RendererTestDocument> {
     let side = Int(size.width)
     let source = Self.makeSolidImage(width: side, height: Int(size.height), white: 0.25)
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
     let diameter = Double(size.width) / 4
 
     let layer = LocalAdjustmentFeature(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(
-            strokes: [
-              BrushMaskStroke(
-                stamps: [center],
-                brush: BrushMaskBrush(diameter: diameter, hardness: 1, opacity: 1)
-              )
-            ]
-          )
+      mask: .brush(
+        BrushMask(
+          strokes: [
+            BrushMask.Stroke(
+              stampCenters: [center],
+              brush: BrushMask.Brush(diameter: diameter, hardness: 1, opacity: 1)
+            )
+          ]
         )
-      ),
-      effectPipeline: EffectPipeline(effects: [ExposureFeature(value: 2)])
-    )
+      )
+    ) {
+      [AnyImageEffect(ExposureFeature(ev: 2))]
+    }
 
-    let renderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    renderer.edit = .make(
-      crop: CropFeature.test(imageSize: size),
-      orientedImageSize: size,
-      localAdjustments: [layer]
+    let renderer = EditingDocument(
+      source: SourceImage(cgImage: source, orientation: .up),
+      feature: RendererTestDocument(localAdjustments: [layer], crop: CropFeature.test(imageSize: size))
     )
     return renderer
   }

@@ -3,15 +3,17 @@ import BrightroomUI
 import SwiftUI
 import StateGraph
 
-struct IsolatedEditinView: View {
-  let editingStack = Mocks.makeEditingStack(image: Mocks.imageHorizontal())
+struct IsolatedEditingView: View {
+  @State private var store = DemoDocumentStore(
+    image: Mocks.makeSourceImage(image: Mocks.imageHorizontal())
+  )
   @State private var fullScreenView: FullscreenIdentifiableView?
 
   var body: some View {
     Form.init {
       Button("Crop") {
         fullScreenView = .init(showsDismissButton: false) {
-          DemoPhotosCropView(stack: editingStack)
+          DemoImageEditor(store: store)
         }
       }
     }

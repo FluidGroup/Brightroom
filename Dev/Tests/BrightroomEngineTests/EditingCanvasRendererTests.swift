@@ -56,7 +56,7 @@ struct EditingCanvasRendererTests {
       .cropped(to: CGRect(x: 6, y: 10, width: 12, height: 16))
       .composited(over: solid(.clear))
       .cropped(to: contentBounds)
-    let effects = EffectPipeline(effects: [ExposureFeature(value: 3)])
+    let effects = AnyImageEffect(ExposureFeature(ev: 3))
     renderer.setRenderImages(images(source: source, effects: effects))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
     let unrotated = try render(renderer, into: target)
@@ -85,7 +85,7 @@ struct EditingCanvasRendererTests {
     let renderer = EditingCanvasRenderer(canvasSize: contentBounds.size, device: device)
     let target = try makeTarget(device: device)
     let source = solid(.init(red: 0.2, green: 0.2, blue: 0.2))
-    let effect = EffectPipeline(effects: [ExposureFeature(value: 3)])
+    let effect = AnyImageEffect(ExposureFeature(ev: 3))
     renderer.setRenderImages(images(source: source, localEffect: effect))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
 
@@ -129,18 +129,18 @@ struct EditingCanvasRendererTests {
 
   private func images(
     source: CIImage,
-    effects: EffectPipeline = .init(),
-    localEffect: EffectPipeline = .init()
+    effects: AnyImageEffect? = nil,
+    localEffect: AnyImageEffect? = nil
   ) -> EditingCanvasRenderImages {
-    let base = effects.applyIgnoringFailure(to: source, radiusReferenceExtent: contentBounds)
-    let adjusted = localEffect.applyIgnoringFailure(to: base, radiusReferenceExtent: contentBounds)
+    let base = effects?.applyIgnoringFailure(to: source, chainEntryExtent: contentBounds, renderScale: 1) ?? source
+    let adjusted = localEffect?.applyIgnoringFailure(to: base, chainEntryExtent: contentBounds, renderScale: 1) ?? base
     return .init(
       source: source,
-      effects: effects,
       base: base,
       adjusted: adjusted,
-      localEffect: localEffect,
-      usesPreparedBaseImage: localEffect.hasEnabledEffects
+      hasGlobalEffects: effects != nil,
+      hasLocalEffect: localEffect != nil,
+      usesPreparedBaseImage: localEffect != nil
     )
   }
 

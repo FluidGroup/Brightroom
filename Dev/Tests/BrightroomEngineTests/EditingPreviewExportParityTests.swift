@@ -1,19 +1,23 @@
 import CoreImage
 import Foundation
+import Metal
 import Testing
 import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 /// Pins the locked invariant that the interactive preview and the exported
-/// result are the *same composition*: `Edit.makePreviewImage(.editing)` (the
-/// engine-side preview semantics every UI surface renders) and
-/// `BrightRoomImageRenderer` (the export path) must walk the feature list in
-/// the same order and produce matching pixels.
+/// result are the *same composition*: the canvas composition `EditingCanvasView`
+/// renders for an `ImageEditorFeature` (`CanvasCompositionPreview`) and the
+/// export of the same feature through `EditingDocument.render(options:)`
+/// must produce matching pixels.
 ///
-/// These run at a single resolution (small images, no editing-size downscale)
-/// so the comparison isolates the composition contract from resampling.
+/// These run at a single resolution (small images, the editing source is the
+/// full-resolution image) so the comparison isolates the composition contract
+/// from resampling.
+@Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct EditingPreviewExportParityTests {
 
   private static let context = CIContext()
@@ -22,76 +26,84 @@ struct EditingPreviewExportParityTests {
   // MARK: - Helpers
 
   private func export(
-    _ edit: EditingStack.Edit,
+    _ document: some Feature & Equatable,
     source: CGImage
   ) async throws -> CGImage {
-    let renderer = BrightRoomImageRenderer(
-      source: ImageSource(cgImage: source),
-      orientation: .up
-    )
-    // Build the renderer's parametric document through the production bridge —
-    // the same lowering `EditingStack.makeRenderer` uses.
-    renderer.edit = .init(
-      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize)
-    )
-    return try await renderer.render(
-      options: .init(workingColorSpace: Self.sRGB)
+    try await EditingDocument(source: SourceImage(cgImage: source), feature: document).render(
+      options: .init(outputColorSpace: Self.sRGB)
     ).cgImage
-  }
-
-  /// The preview composition every UI surface renders, materialized to a
-  /// CGImage tagged with the same colorspace the export uses.
-  private func previewComposition(
-    _ edit: EditingStack.Edit,
-    source: CGImage
-  ) throws -> CGImage {
-    let sourceCIImage = CIImage(cgImage: source)
-    let composed = edit.makePreviewImage(from: sourceCIImage, purpose: .editing)
-    return try #require(
-      Self.context.createCGImage(
-        composed,
-        from: sourceCIImage.extent,
-        format: .RGBA8,
-        colorSpace: Self.sRGB
-      )
-    )
   }
 
   // MARK: - Parity
 
-  /// Effects + a masked local adjustment with an identity crop: the export and
-  /// the preview composition must be pixel-equivalent across the whole frame.
+  /// Effects + a masked blur with an identity crop: the export and the canvas
+  /// composition must be pixel-equivalent across the whole frame.
   @Test func `Preview matches export without crop`() async throws {
+    let imageSize = CGSize(width: 60, height: 24)
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
       leftWhite: 0.2,
       rightWhite: 0.8
     )
-    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
-    edit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
-    edit.setPhotosCropLocalAdjustmentsForTest([
-      Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
-    ])
+    let document = Self.makeDocument(
+      imageSize: imageSize,
+      localBlur: Self.makeLocalBlur(
+        radius: 8,
+        displayCenter: CGPoint(x: 30, y: 12),
+        domainHeight: imageSize.height
+      )
+    )
 
-    let exported = try await export(edit, source: source)
-    let preview = try previewComposition(edit, source: source)
+    let exported = try await export(document, source: source)
+    let preview = try CanvasCompositionPreview.render(document: document, source: source)
 
     #expect(exported.width == preview.width)
     #expect(exported.height == preview.height)
-    // Both paths now rasterize the brush mask through the same
-    // `BrushStampPipeline` (preview via `engineMakeMaskImage`, export via the
-    // compiler), so they agree closely; the small tolerance only absorbs
+    // The canvas and the export both rasterize the brush through
+    // `BrushStampPipeline` (the canvas into its mask texture, the export into
+    // Core Image tiles), so the small tolerance only absorbs
     // resampling/rounding at the blur-gradient edge. A real composition bug
     // (wrong order, missing/unmasked adjustment, a y-flip) still diverges by
     // tens-to-hundreds of LSB, far beyond this tolerance.
     assertImagesMatch(exported, preview, tolerance: 16)
   }
 
+  /// An off-center stamp: the blur lands at the painted display position in
+  /// both paths, and not at its vertical mirror.
+  @Test func `Preview and export agree on the painted position`() async throws {
+    let imageSize = CGSize(width: 60, height: 40)
+    let source = Self.makeCheckerImage(width: 60, height: 40, cell: 2)
+    let painted = CGPoint(x: 20, y: 8)
+    let mirrored = CGPoint(x: 20, y: imageSize.height - 8)
+    let document = Self.makeDocument(
+      imageSize: imageSize,
+      localBlur: Self.makeLocalBlur(radius: 4, displayCenter: painted, domainHeight: imageSize.height)
+    )
+    var unmasked = document
+    unmasked.localBlur = nil
+
+    let exported = try await export(document, source: source)
+    let preview = try CanvasCompositionPreview.render(document: document, source: source)
+    let reference = try await export(unmasked, source: source)
+
+    func delta(_ image: CGImage, _ point: CGPoint) -> Int {
+      let a = Self.rgba(in: image, x: Int(point.x), y: Int(point.y))
+      let b = Self.rgba(in: reference, x: Int(point.x), y: Int(point.y))
+      return abs(Int(a.red) - Int(b.red))
+    }
+
+    #expect(delta(exported, painted) > 20, "export: blur missing at the painted position")
+    #expect(delta(preview, painted) > 20, "preview: blur missing at the painted position")
+    #expect(delta(exported, mirrored) <= 2, "export: blur leaked to the mirrored position")
+    #expect(delta(preview, mirrored) <= 2, "preview: blur leaked to the mirrored position")
+  }
+
   /// A non-identity crop (no rotation): export pixel (x, y) must equal the
-  /// preview composition at (cropMinX + x, cropMinY + y), proving both paths
-  /// apply the crop to the same composed image.
+  /// source-domain canvas composition at (cropMinX + x, cropMinY + y), proving
+  /// both paths apply the crop to the same composed image.
   @Test func `Preview matches export through crop`() async throws {
+    let imageSize = CGSize(width: 60, height: 24)
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
@@ -99,18 +111,18 @@ struct EditingPreviewExportParityTests {
       rightWhite: 0.8
     )
     let cropRect = CGRect(x: 30, y: 0, width: 30, height: 24)
-    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 60, height: 24))
-    edit.setFinalCropForTest(CropFeature.test(
-      imageSize: CGSize(width: 60, height: 24),
-      cropRect: cropRect
-    ))
-    edit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
-    edit.setPhotosCropLocalAdjustmentsForTest([
-      Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12)),
-    ])
+    let document = Self.makeDocument(
+      imageSize: imageSize,
+      cropRect: cropRect,
+      localBlur: Self.makeLocalBlur(
+        radius: 8,
+        displayCenter: CGPoint(x: 30, y: 12),
+        domainHeight: imageSize.height
+      )
+    )
 
-    let exported = try await export(edit, source: source)
-    let preview = try previewComposition(edit, source: source)
+    let exported = try await export(document, source: source)
+    let preview = try CanvasCompositionPreview.render(document: document, source: source)
 
     #expect(exported.width == Int(cropRect.width))
     #expect(exported.height == Int(cropRect.height))
@@ -126,79 +138,130 @@ struct EditingPreviewExportParityTests {
     }
   }
 
-  /// A disabled brush leaf must select nothing in BOTH paths: export and
+  /// A rotated crop: the tool surface's crop-output composition matches the
+  /// export of the same document pixel for pixel (up to tolerance), including
+  /// where the off-center stamp lands after the rotation.
+  @Test func `Crop output preview matches export through a rotated crop`() async throws {
+    let imageSize = CGSize(width: 60, height: 40)
+    // Asymmetric in both axes, so a missing or wrong-signed rotation on either
+    // side changes the compared pixels.
+    let source = Self.makeRampedCheckerImage(width: 60, height: 40, cell: 2)
+    let document = Self.makeDocument(
+      imageSize: imageSize,
+      cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
+      rotation: .counterclockwise90,
+      localBlur: Self.makeLocalBlur(
+        radius: 4,
+        displayCenter: CGPoint(x: 20, y: 10),
+        domainHeight: imageSize.height
+      )
+    )
+
+    let exported = try await export(document, source: source)
+    let preview = try CanvasCompositionPreview.render(
+      document: document,
+      source: source,
+      throughCrop: true
+    )
+
+    // The crop rect is the selection before the output quarter turn, so the
+    // sideways turn exchanges the output's width and height.
+    #expect(document.crop.quarterTurn != .zero)
+    #expect(exported.width == 30)
+    #expect(exported.height == 40)
+    assertImagesMatch(exported, preview, tolerance: 16)
+
+    // The rotation is visible in the compared pixels: without it the export
+    // differs, so the match above cannot come from an ignored rotation.
+    let unrotated = try await export(
+      Self.makeDocument(
+        imageSize: imageSize,
+        cropRect: CGRect(x: 10, y: 4, width: 40, height: 30),
+        localBlur: document.localBlur
+      ),
+      source: source
+    )
+    let largestDifference = [(4, 4), (20, 8), (25, 15), (8, 26)]
+      .map { x, y in
+        abs(Int(Self.rgba(in: exported, x: x, y: y).red) - Int(Self.rgba(in: unrotated, x: x, y: y).red))
+      }
+      .max() ?? 0
+    #expect(largestDifference > 40)
+  }
+
+  /// A brush with no strokes must select nothing in BOTH paths: export and
   /// preview equal the globally-adjusted image with no local blur, matching the
-  /// parametric compiler's transparent disabled-leaf contract.
-  @Test func `Disabled mask leaf is ignored by both paths`() async throws {
+  /// mask renderer's transparent empty-brush contract.
+  @Test func `An empty brush mask is ignored by both paths`() async throws {
+    let imageSize = CGSize(width: 60, height: 24)
     let source = Self.makeSplitImage(
       width: 60,
       height: 24,
       leftWhite: 0.2,
       rightWhite: 0.8
     )
-    let baseImageSize = CGSize(width: 60, height: 24)
 
-    var disabledEdit = EditingStack.Edit.test(imageSize: baseImageSize)
-    disabledEdit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
-    var disabledLayer = Self.makeBlurLayer(radius: 8, center: CGPoint(x: 30, y: 12))
-    if case var .brush(mask) = disabledLayer.maskTree.root {
-      mask.isEnabled = false
-      disabledLayer.maskTree.root = .brush(mask)
-    }
-    disabledEdit.setPhotosCropLocalAdjustmentsForTest([disabledLayer])
+    let emptyDocument = Self.makeDocument(
+      imageSize: imageSize,
+      localBlur: LocalAdjustmentFeature(mask: .brush(BrushMask(strokes: []))) {
+        GaussianBlurFeature(radius: .absolute(8))
+      }
+    )
+    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
 
-    // Reference: same document with no local adjustment at all.
-    var globalOnlyEdit = EditingStack.Edit.test(imageSize: baseImageSize)
-    globalOnlyEdit.effects = EffectPipeline(effects: [ExposureFeature(value: 0.4)])
+    // Reference: same document with no blur mask at all.
+    let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, localBlur: nil)
 
-    let disabledExport = try await export(disabledEdit, source: source)
-    let globalOnlyExport = try await export(globalOnlyEdit, source: source)
-    let disabledPreview = try previewComposition(disabledEdit, source: source)
+    let emptyExport = try await export(emptyDocument, source: source)
+    let globalOnlyExport = try await export(globalOnlyDocument, source: source)
+    let emptyPreview = try CanvasCompositionPreview.render(
+      document: emptyDocument,
+      source: source
+    )
 
-    // The disabled-leaf export must equal the no-adjustment export...
-    assertImagesMatch(disabledExport, globalOnlyExport, tolerance: 2)
-    // ...and the preview must match the export (same disabled-leaf semantics).
-    assertImagesMatch(disabledPreview, disabledExport, tolerance: 4)
+    // The empty-brush export must equal the no-adjustment export...
+    assertImagesMatch(emptyExport, globalOnlyExport, tolerance: 2)
+    // ...and the preview must match the export (same empty-brush semantics).
+    assertImagesMatch(emptyPreview, emptyExport, tolerance: 4)
   }
 
   /// A local-adjustment effect that throws must fail the export, surfaced like
   /// a throwing global effect instead of silently exporting an image missing
   /// the adjustment.
   ///
-  /// (The preview path's release-mode degrade-to-identity is not asserted here:
-  /// `engineRenderIgnoringFailure` calls `assertionFailure`, which traps in the
+  /// (The canvas path's release-mode degrade-to-identity is not asserted here:
+  /// `applyIgnoringFailure` calls `assertionFailure`, which traps in the
   /// debug test build — the same intentional contract global effects use.)
   @Test func `Throwing local adjustment fails export`() async throws {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
-    var edit = EditingStack.Edit.test(imageSize: CGSize(width: 32, height: 32))
+    let imageSize = CGSize(width: 32, height: 32)
 
     let throwingLayer = LocalAdjustmentFeature(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(strokes: [
-            BrushMaskStroke(
-              stamps: [CGPoint(x: 16, y: 16)],
-              brush: BrushMaskBrush(diameter: 12, hardness: 1, opacity: 1)
-            )
-          ])
-        )
-      ),
-      effectPipeline: EffectPipeline(effects: [ThrowingEffectFeature()])
+      mask: .test(
+        displayStamps: [CGPoint(x: 16, y: 16)],
+        diameter: 12,
+        domainHeight: imageSize.height
+      )
+    ) {
+      [AnyImageEffect(ThrowingEffectFeature())]
+    }
+    let document = RendererTestDocument(
+      localAdjustments: [throwingLayer],
+      crop: CropFeature.test(imageSize: imageSize)
     )
-    edit.setPhotosCropLocalAdjustmentsForTest([throwingLayer])
 
     let error = await #expect(throws: (any Error).self) {
-      _ = try await export(edit, source: source)
+      _ = try await export(document, source: source)
     }
     #expect(error is ThrowingEffectFeature.EvaluationError)
   }
 
-  /// The shared brush rasterizer (`BrushStampPipeline`, used by the engine preview and
-  /// the export renderer via `engineMakeMaskImage` / `renderMask`) must produce
-  /// the falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
+  /// The shared brush rasterizer (`BrushStampPipeline`, the export mask) must
+  /// produce the falloff `(1 - smoothstep(hardness, 1, d)) * opacity` the live canvas
   /// shader also draws. If it used a hard disc or a linear ramp, painted blur
   /// edges would render wider/harder than the interactive preview showed. This
-  /// samples the alpha profile of a single soft stamp and checks that contract.
+  /// samples the alpha profile of a single soft, centered stamp (so the y-flip
+  /// is irrelevant) and checks that contract.
   @Test func `Export mask reproduces live canvas brush falloff`() throws {
     let canvas = 300
     let center = CGPoint(x: 150, y: 150)
@@ -206,14 +269,15 @@ struct EditingPreviewExportParityTests {
     let radius = diameter / 2
     let hardness = 0.5
 
-    let tree = MaskTree(root: .brush(BrushMask(strokes: [
-      BrushMaskStroke(
-        stamps: [center],
-        brush: BrushMaskBrush(diameter: diameter, hardness: hardness, opacity: 1)
+    let mask = Mask.brush(BrushMask(strokes: [
+      BrushMask.Stroke(
+        stampCenters: [center],
+        brush: BrushMask.Brush(diameter: diameter, hardness: hardness, opacity: 1)
       )
-    ])))
-    let maskCIImage = try #require(
-      tree.engineMakeMaskImage(size: CGSize(width: canvas, height: canvas))
+    ]))
+    let maskCIImage = try FeatureRenderer().makeMaskImage(
+      for: mask,
+      extent: CGRect(x: 0, y: 0, width: canvas, height: canvas)
     )
     let maskCG = try #require(
       Self.context.createCGImage(maskCIImage, from: CGRect(x: 0, y: 0, width: canvas, height: canvas))
@@ -303,23 +367,42 @@ struct EditingPreviewExportParityTests {
 
   // MARK: - Fixtures
 
-  private static func makeBlurLayer(
+  /// A hard 18 px stamp painted at `displayCenter` (top-left origin, y-down),
+  /// stored in working space through the production conversion.
+  private static func makeLocalBlur(
     radius: CGFloat,
-    center: CGPoint
-  ) -> LocalAdjustmentFeature {
-    .init(
-      maskTree: MaskTree(
-        root: .brush(
-          BrushMask(strokes: [
-            BrushMaskStroke(
-              stamps: [center],
-              brush: BrushMaskBrush(diameter: 18, hardness: 1, opacity: 1)
-            )
-          ])
-        )
-      ),
-      effectPipeline: EffectPipeline(effects: [GaussianBlurFeature(radius: Double(radius))])
-    )
+    displayCenter: CGPoint,
+    domainHeight: CGFloat
+  ) -> LocalAdjustmentFeature<GaussianBlurFeature> {
+    LocalAdjustmentFeature(
+      mask: .test(
+        displayStamps: [displayCenter],
+        diameter: 18,
+        domainHeight: domainHeight
+      )
+    ) {
+      GaussianBlurFeature(radius: .absolute(Double(radius)))
+    }
+  }
+
+  private static func makeDocument(
+    imageSize: CGSize,
+    cropRect: CGRect? = nil,
+    rotation: QuarterTurn = .zero,
+    localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
+  ) -> ImageEditorFeature {
+    var document = ImageEditorFeature(imageSize: imageSize)
+    document.effects.exposure = ExposureFeature(ev: 0.4)
+    document.localBlur = localBlur
+    if cropRect != nil || rotation != .zero {
+      var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
+      if let cropRect {
+        crop.updateCropExtent(cropRect)
+      }
+      crop.rotation = rotation
+      document.crop = crop.makeCropFeature()
+    }
+    return document
   }
 
   private static func makeSplitImage(
@@ -337,6 +420,51 @@ struct EditingPreviewExportParityTests {
       UIRectFill(CGRect(origin: .zero, size: size))
       UIColor(white: rightWhite, alpha: 1).setFill()
       UIRectFill(CGRect(x: size.width / 2, y: 0, width: size.width / 2, height: size.height))
+    }.cgImage!
+  }
+
+  private static func makeCheckerImage(
+    width: Int,
+    height: Int,
+    cell: Int
+  ) -> CGImage {
+    let size = CGSize(width: width, height: height)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+    return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+      UIColor(white: 0.1, alpha: 1).setFill()
+      UIRectFill(CGRect(origin: .zero, size: size))
+      UIColor(white: 0.9, alpha: 1).setFill()
+      for y in stride(from: 0, to: height, by: cell) {
+        for x in stride(from: 0, to: width, by: cell) where (x / cell + y / cell).isMultiple(of: 2) {
+          UIRectFill(CGRect(x: x, y: y, width: cell, height: cell))
+        }
+      }
+    }.cgImage!
+  }
+
+  /// A horizontal ramp with a checker over its top half only.
+  private static func makeRampedCheckerImage(
+    width: Int,
+    height: Int,
+    cell: Int
+  ) -> CGImage {
+    let size = CGSize(width: width, height: height)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = true
+    return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+      for x in 0..<width {
+        UIColor(white: 0.15 + 0.7 * CGFloat(x) / CGFloat(width), alpha: 1).setFill()
+        UIRectFill(CGRect(x: x, y: 0, width: 1, height: height))
+      }
+      UIColor(white: 1, alpha: 1).setFill()
+      for y in stride(from: 0, to: height / 2, by: cell) {
+        for x in stride(from: 0, to: width, by: cell) where (x / cell + y / cell).isMultiple(of: 2) {
+          UIRectFill(CGRect(x: x, y: y, width: cell, height: cell))
+        }
+      }
     }.cgImage!
   }
 
@@ -392,11 +520,8 @@ struct EditingPreviewExportParityTests {
 
 /// A local-adjustment effect that always throws, to prove the export path
 /// surfaces evaluation failures instead of silently dropping the adjustment.
-private struct ThrowingEffectFeature: ImageEffectFeatureType {
+private struct ThrowingEffectFeature: ImageEffect, Equatable {
   struct EvaluationError: Error {}
-
-  var id: FeatureID = .init(rawValue: "test.throwing-effect")
-  var isEnabled: Bool = true
 
   func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     throw EvaluationError()

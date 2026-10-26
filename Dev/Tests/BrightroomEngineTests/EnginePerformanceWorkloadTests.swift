@@ -4,6 +4,7 @@ import UIKit
 
 @testable import BrightroomEngine
 @testable import BrightroomParametric
+@testable import BrightroomUI
 
 /// Per-path performance benchmarks for the engine hot paths, with wall-clock
 /// and CPU metrics (CPU Instructions Retired is the device-portable one).
@@ -16,10 +17,12 @@ import UIKit
 /// `-only-testing:BrightroomEngineTests/EnginePerformanceWorkloadTests`.
 ///
 /// Covered hot paths:
-/// - export render (`BrightRoomImageRenderer.render`)
-/// - preview composition (`Edit.makePreviewImage(.editing)`)
-/// - brush-mask raster (`MaskTree.engineMakeMaskImage` via `BrushMaskImageProcessor`)
-/// - parametric evaluation (`EffectPipeline.apply` / feature recipes)
+/// - export render (`EditingDocument.render`)
+/// - preview composition (the document with its crop neutralized, over the
+///   full-size source, as the old `Edit.makePreviewImage(.editing)` did)
+/// - brush-mask raster (`FeatureRenderer.makeMaskImage` via
+///   `BrushMaskImageProcessor`)
+/// - parametric evaluation (`ImageEditorFeature.Effects.apply` / feature recipes)
 final class EnginePerformanceWorkloadTests: XCTestCase {
 
   private static let context = CIContext()
@@ -35,7 +38,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Benchmarks
 
   func testMeasureExportRender() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let document = Self.makeDocument(imageSize: CGSize(width: source.width, height: source.height))
     measure(metrics: benchMetrics, options: benchOptions) {
       _ = try? exportRender(document, source: source)
@@ -43,7 +46,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasurePreviewComposition() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let ci = CIImage(cgImage: source)
     let document = Self.makeDocument(imageSize: CGSize(width: source.width, height: source.height))
     measure(metrics: benchMetrics, options: benchOptions) {
@@ -52,7 +55,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasureMaskRasterCacheMiss() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let imageSize = CGSize(width: source.width, height: source.height)
     var salt = 0
     measure(metrics: benchMetrics, options: benchOptions) {
@@ -62,7 +65,7 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   }
 
   func testMeasureParametricEval() throws {
-    let source = ImageSource(image: Asset.unsplash2.image).loadOriginalCGImage()
+    let source = Asset.unsplash2.image.decodedCGImageForTesting
     let ci = CIImage(cgImage: source)
     measure(metrics: benchMetrics, options: benchOptions) {
       parametricEvaluate(over: ci)
@@ -72,95 +75,93 @@ final class EnginePerformanceWorkloadTests: XCTestCase {
   // MARK: - Hot paths
 
   @inline(never)
-  private func exportRender(_ edit: EditingStack.Edit, source: CGImage) throws -> CGImage {
+  private func exportRender(_ document: ImageEditorFeature, source: CGImage) throws -> CGImage {
     // `measure {}` is synchronous; call the synchronous render core directly so
     // the benchmark measures the render work itself, not the async/executor hop.
-    return try BrightRoomImageRenderer.render(
-      source: ImageSource(cgImage: source),
-      orientation: .up,
-      document: edit.makeEditingDocument(orientedImageSize: edit.imageSize),
-      device: .automatic,
-      options: .init(workingColorSpace: Self.sRGB)
-    ).cgImage
+    return try EditingDocument(source: SourceImage(cgImage: source), feature: document)
+      .renderForTesting(options: .init(outputColorSpace: Self.sRGB), device: .automatic)
+      .cgImage
   }
 
   @inline(never)
-  private func previewComposition(_ edit: EditingStack.Edit, source: CIImage) {
-    let composed = edit.makePreviewImage(from: source, purpose: .editing)
+  private func previewComposition(_ document: ImageEditorFeature, source: CIImage) {
+    // The document is authored in full-resolution coordinates, so the preview
+    // evaluates over the full-size source, with the crop neutralized.
+    let preview = document.withCropNeutralized(imageSize: source.extent.size)
+    guard let composed = try? FeatureRenderer().makeImage(from: source, feature: preview) else {
+      return
+    }
     _ = Self.context.createCGImage(composed, from: source.extent)
   }
 
   @inline(never)
   private func maskRasterCacheMiss(imageSize: CGSize, salt: Int) {
     // A fresh stamp position each call forces a new BrushMask ⇒ cache miss.
-    let tree = MaskTree(root: .brush(BrushMask(strokes: [
-      BrushMaskStroke(
-        stamps: [CGPoint(x: 100 + (salt % 50), y: 100 + (salt % 50))],
-        brush: BrushMaskBrush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
+    let mask = Mask.brush(BrushMask(strokes: [
+      BrushMask.Stroke(
+        stampCenters: [CGPoint(x: 100 + (salt % 50), y: 100 + (salt % 50))],
+        brush: BrushMask.Brush(diameter: imageSize.height * 0.3, hardness: 0.6, opacity: 1)
       )
-    ])))
-    _ = tree.engineMakeMaskImage(size: imageSize)
+    ]))
+    _ = try? FeatureRenderer().makeMaskImage(for: mask, extent: CGRect(origin: .zero, size: imageSize))
   }
 
   @inline(never)
   private func parametricEvaluate(over source: CIImage) {
-    let pipeline = Self.makeEffectPipeline()
-    let evaluated = (try? pipeline.apply(to: source, context: FeatureEvaluationContext())) ?? source
+    let effects = Self.makeEffects()
+    let context = FeatureEvaluationContext()
+    let adjusted = (try? effects.apply(to: source, context: context)) ?? source
+    // The vignette is a top-level member of the feature, after the crop; the
+    // workload evaluates it as well.
+    let evaluated = (try? VignetteFeature(value: 0.5).apply(to: adjusted, context: context)) ?? adjusted
     _ = Self.context.createCGImage(evaluated, from: source.extent)
   }
 
   // MARK: - Fixtures
 
-  private static let cachedMaskTree = MaskTree(root: .brush(BrushMask(
-    id: .init(rawValue: "perf.cached.mask"),
+  private static let cachedMask = Mask.brush(BrushMask(
     strokes: [
-      BrushMaskStroke(
-        stamps: [CGPoint(x: 400, y: 300)],
-        brush: BrushMaskBrush(diameter: 500, hardness: 0.6, opacity: 1)
+      BrushMask.Stroke(
+        stampCenters: [CGPoint(x: 400, y: 300)],
+        brush: BrushMask.Brush(diameter: 500, hardness: 0.6, opacity: 1)
       )
     ]
-  )))
+  ))
 
-  private static func makeEffectPipeline() -> EffectPipeline {
-    EffectPipeline(effects: [
-      PresetFeature(
-        id: .init(rawValue: "perf.preset"),
+  private static func makeEffects() -> ImageEditorFeature.Effects {
+    ImageEditorFeature.Effects(
+      preset: FilterFeature(
         name: "Perf",
-        identifier: "perf.preset",
+        id: "perf.preset",
         effects: [
-          SaturationFeature(id: .init(rawValue: "perf.sat"), value: 0.3),
-          TemperatureFeature(id: .init(rawValue: "perf.temp"), value: 900),
-          ContrastFeature(id: .init(rawValue: "perf.contrast"), value: 0.06),
+          AnyImageEffect(SaturationFeature(value: 0.3)),
+          AnyImageEffect(WhiteBalanceFeature(temperature: 900)),
+          AnyImageEffect(ContrastFeature(value: 0.06)),
         ]
       ),
-      ExposureFeature(id: .init(rawValue: "perf.exposure"), value: 0.35),
-      HighlightsFeature(id: .init(rawValue: "perf.highlights"), value: 0.2),
-      ShadowsFeature(id: .init(rawValue: "perf.shadows"), value: -0.15),
-      VignetteFeature(id: .init(rawValue: "perf.vignette"), value: 0.5),
-    ])
+      exposure: ExposureFeature(ev: 0.35),
+      highlights: HighlightsFeature(value: 0.2),
+      shadows: ShadowsFeature(value: -0.15)
+    )
   }
 
-  private static func makeDocument(imageSize: CGSize) -> EditingStack.Edit {
-    var edit = EditingStack.Edit.test(imageSize: imageSize)
-    edit.effects = makeEffectPipeline()
-    edit.setPhotosCropLocalAdjustmentsForTest([
-      LocalAdjustmentFeature(
-        id: .init(rawValue: "perf.local"),
-        maskTree: cachedMaskTree,
-        effectPipeline: EffectPipeline(effects: [
-          GaussianBlurFeature(id: .init(rawValue: "perf.local.blur"), value: 60)
-        ])
-      )
-    ])
-    edit.setFinalCropForTest(CropFeature.test(
-      imageSize: imageSize,
-      cropRect: CGRect(
+  private static func makeDocument(imageSize: CGSize) -> ImageEditorFeature {
+    var document = ImageEditorFeature(imageSize: imageSize)
+    document.effects = makeEffects()
+    document.vignette = VignetteFeature(value: 0.5)
+    document.localBlur = LocalAdjustmentFeature(mask: cachedMask) {
+      GaussianBlurFeature(radius: .proportional(60))
+    }
+    var crop = CropGuideState(cropFeature: document.crop, imageSize: imageSize)
+    crop.updateCropExtent(
+      CGRect(
         x: imageSize.width * 0.1,
         y: imageSize.height * 0.1,
         width: imageSize.width * 0.8,
         height: imageSize.height * 0.8
       ).integral
-    ))
-    return edit
+    )
+    document.crop = crop.makeCropFeature()
+    return document
   }
 }

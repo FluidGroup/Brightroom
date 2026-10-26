@@ -15,8 +15,8 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   /// The number of uniformly spaced samples compiled for every channel.
   static let sampleCount = 4_096
 
-  /// Coordinates whose equality describes render output, excluding UI point IDs.
-  let identity: ToneCurveRenderIdentity
+  /// Points whose equality describes render output, excluding identity channels.
+  let identity: ToneCurveFeature.RenderKey
 
   /// Two interleaved float tables: Y/Red and Green/Blue.
   let sampleTable: ToneCurveSampleTable
@@ -36,14 +36,14 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   let activeChannels: SIMD4<Float>
 
   /// Compiles four authored curves, or returns `nil` when all are identities.
-  init?(value: ToneCurveEditorValue) {
-    guard let identity = ToneCurveRenderIdentity(activeValue: value) else {
+  init?(curves value: ToneCurveFeature.Curves) {
+    guard let identity = ToneCurveFeature.RenderKey(activeCurves: value) else {
       return nil
     }
 
     let curves = [value.y, value.red, value.green, value.blue]
     let evaluators = curves.map(ToneCurveEvaluator.init(curve:))
-    let active = curves.map { !$0.isIdentityMapping }
+    let active = curves.map { !$0.isIdentity }
 
     self.identity = identity
     activeChannels = SIMD4(
@@ -87,7 +87,7 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
 
   /// Evaluates the exact table interpolation that the Metal kernel consumes.
   func normalizedOutput(
-    for channel: ToneCurveChannel,
+    for channel: ToneCurveFeature.Channel,
     input: Double
   ) -> Double {
     let channelIndex = Self.channelIndex(channel)
@@ -110,11 +110,11 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   }
 
   /// Whether one channel requires a scene-linear shaper round trip.
-  func isChannelActive(_ channel: ToneCurveChannel) -> Bool {
+  func isChannelActive(_ channel: ToneCurveFeature.Channel) -> Bool {
     activeChannels[Self.channelIndex(channel)] > 0.5
   }
 
-  private static func channelIndex(_ channel: ToneCurveChannel) -> Int {
+  private static func channelIndex(_ channel: ToneCurveFeature.Channel) -> Int {
     switch channel {
     case .y:
       0
@@ -128,50 +128,45 @@ nonisolated struct ToneCurveRenderPlan: Equatable, Sendable {
   }
 }
 
-/// Render-significant curve coordinates with UI identity deliberately removed.
-public nonisolated struct ToneCurveRenderIdentity: Hashable, Sendable {
+extension ToneCurveFeature {
 
-  /// One normalized input/output pair whose point UUID has been discarded.
-  struct Coordinate: Hashable, Sendable {
-    let input: Double
-    let output: Double
-  }
-
-  /// Increment when the shaper, channel composition, or table interpretation changes.
-  let semanticVersion = ToneCurveFeature.semanticVersion
-  let y: [Coordinate]
-  let red: [Coordinate]
-  let green: [Coordinate]
-  let blue: [Coordinate]
-
-  /// Creates a cache identity from pixel-affecting coordinates only.
-  public init(value: ToneCurveEditorValue) {
-    y = Self.activeCoordinates(value.y)
-    red = Self.activeCoordinates(value.red)
-    green = Self.activeCoordinates(value.green)
-    blue = Self.activeCoordinates(value.blue)
-  }
-
-  /// Creates an identity only when at least one channel changes rendered pixels.
+  /// Render-significant curve points, with channels that cannot change pixels
+  /// removed.
   ///
-  /// This check copies only authored coordinates. Cache and lifecycle code can
-  /// therefore identify neutral work without compiling the 4,096-sample table.
-  public init?(activeValue value: ToneCurveEditorValue) {
-    self.init(value: value)
-    guard [y, red, green, blue].contains(where: { !$0.isEmpty }) else {
-      return nil
-    }
-  }
+  /// Two values whose only difference is an identity-mapping channel, such as
+  /// a channel with diagonal interior points, have the same render identity.
+  public nonisolated struct RenderKey: Hashable, Sendable {
 
-  private static func coordinates(_ curve: ToneCurve) -> [Coordinate] {
-    curve.points.map { point in
-      Coordinate(input: point.input, output: point.output)
-    }
-  }
+    /// Increment when the shaper, channel composition, or table interpretation changes.
+    let semanticVersion = ToneCurveFeature.semanticVersion
+    let y: [ToneCurve.Point]
+    let red: [ToneCurve.Point]
+    let green: [ToneCurve.Point]
+    let blue: [ToneCurve.Point]
 
-  /// Omits authored structure that cannot change this channel's pixels.
-  private static func activeCoordinates(_ curve: ToneCurve) -> [Coordinate] {
-    curve.isIdentityMapping ? [] : coordinates(curve)
+    /// Creates a cache identity from pixel-affecting points only.
+    public init(curves value: Curves) {
+      y = Self.activePoints(value.y)
+      red = Self.activePoints(value.red)
+      green = Self.activePoints(value.green)
+      blue = Self.activePoints(value.blue)
+    }
+
+    /// Creates an identity only when at least one channel changes rendered pixels.
+    ///
+    /// This check copies only authored points. Cache and lifecycle code can
+    /// therefore identify neutral work without compiling the 4,096-sample table.
+    public init?(activeCurves value: Curves) {
+      self.init(curves: value)
+      guard [y, red, green, blue].contains(where: { !$0.isEmpty }) else {
+        return nil
+      }
+    }
+
+    /// Omits authored structure that cannot change this channel's pixels.
+    private static func activePoints(_ curve: ToneCurve) -> [ToneCurve.Point] {
+      curve.isIdentity ? [] : curve.points
+    }
   }
 }
 
@@ -209,7 +204,7 @@ nonisolated struct ToneCurveSampleTable: Equatable, Sendable {
     self.greenBlue = greenBlue
   }
 
-  subscript(_ channel: ToneCurveChannel, _ index: Int) -> Float {
+  subscript(_ channel: ToneCurveFeature.Channel, _ index: Int) -> Float {
     switch channel {
     case .y:
       yRed[index].x
@@ -248,7 +243,7 @@ nonisolated enum ToneCurveReferenceProcessor {
   /// Processes one premultiplied extended-linear Display-P3 pixel.
   static func processPremultiplied(
     _ pixel: SIMD4<Double>,
-    value: ToneCurveEditorValue
+    value: ToneCurveFeature.Curves
   ) -> SIMD4<Double> {
     let hasActiveChannel = [value.y, value.red, value.green, value.blue]
       .contains(where: Self.isActive)
@@ -321,7 +316,7 @@ nonisolated enum ToneCurveReferenceProcessor {
   }
 
   private static func apply(
-    _ channel: ToneCurveChannel,
+    _ channel: ToneCurveFeature.Channel,
     to linear: Double,
     plan: ToneCurveRenderPlan
   ) -> Double {
@@ -337,7 +332,7 @@ nonisolated enum ToneCurveReferenceProcessor {
   }
 
   private static func isActive(_ curve: ToneCurve) -> Bool {
-    !curve.isIdentityMapping
+    !curve.isIdentity
   }
 
   private static func dot(

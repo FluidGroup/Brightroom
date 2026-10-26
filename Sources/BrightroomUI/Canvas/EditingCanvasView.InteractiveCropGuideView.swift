@@ -1,0 +1,1240 @@
+//
+// Copyright (c) 2021 Muukii <muukii.app@gmail.com>
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+import UIKit
+import BrightroomEngine
+import BrightroomParametric
+
+extension EditingCanvasView {
+  
+  private final class TapExpandedView: CodeBasedView {
+    
+    let horizontal: CGFloat
+    let vertical: CGFloat
+    
+    init(horizontal: CGFloat, vertical: CGFloat) {
+      self.horizontal = horizontal
+      self.vertical = vertical
+      super.init(frame: .zero)
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+      bounds.insetBy(dx: -horizontal, dy: -vertical).contains(point)
+    }
+  }
+
+  /// The pan on one of the guide's handles: a one-finger gesture.
+  ///
+  /// It counts every touch down in `touchRegion`, not only its own: the
+  /// other finger of a pinch usually lands on the crop scroll view, outside
+  /// the handle. Once a second finger is down there the pan never starts a
+  /// resize, and a resize in progress hands the gesture over through
+  /// `onAdditionalTouch`. A finger elsewhere in the window (on a toolbar or a
+  /// slider) cannot join the pinch, so it does not count.
+  class HandlePanGestureRecognizer: UIPanGestureRecognizer {
+
+    /// Touches down in `touchRegion` in the latest event this pan received,
+    /// its own included.
+    private(set) var activeTouchCount = 0
+
+    /// The view whose touches can join this pan's finger in a pinch: the
+    /// canvas, which carries the crop pinch. Nil counts every touch in the
+    /// window.
+    weak var touchRegion: UIView?
+
+    /// Called when a second finger lands while this pan resizes the guide,
+    /// just before the pan cancels itself.
+    var onAdditionalTouch: () -> Void = {}
+
+    override func reset() {
+      super.reset()
+      activeTouchCount = 0
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+      noteActiveTouchCount(Self.activeTouchCount(of: event.allTouches ?? [], in: touchRegion))
+      super.touchesBegan(touches, with: event)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+      // Before super, which asks the delegate whether the pan may begin.
+      noteActiveTouchCount(Self.activeTouchCount(of: event.allTouches ?? [], in: touchRegion))
+      super.touchesMoved(touches, with: event)
+    }
+
+    /// Applies the touch count of the latest event: with more than one
+    /// finger down, a pan that has not begun fails, and a resize in progress
+    /// is handed to `onAdditionalTouch` and cancelled.
+    func noteActiveTouchCount(_ count: Int) {
+      activeTouchCount = count
+      guard count > 1 else {
+        return
+      }
+      switch state {
+      case .possible:
+        state = .failed
+      case .began, .changed:
+        onAdditionalTouch()
+        state = .cancelled
+      case .ended, .cancelled, .failed:
+        break
+      @unknown default:
+        break
+      }
+    }
+
+    /// The touches still down whose view is in `region` (all of them when
+    /// `region` is nil).
+    static func activeTouchCount(of touches: Set<UITouch>, in region: UIView?) -> Int {
+      touches.count { touch in
+        guard touch.phase != .ended, touch.phase != .cancelled else {
+          return false
+        }
+        guard let region else {
+          return true
+        }
+        return touch.view?.isDescendant(of: region) == true
+      }
+    }
+  }
+  
+  final class InteractiveCropGuideView: CodeBasedView, UIGestureRecognizerDelegate {
+
+    var willChange: () -> Void = {}
+    var updating: () -> Void = {}
+    var didChange: () -> Void = {}
+    /// Called when a resize ends without a change: the guide is back at its
+    /// frame from before the drag and nothing is recorded.
+    var didCancelChange: () -> Void = {}
+
+    /// The crop scroll view's pinch. While it zooms, the handles never start
+    /// a resize, and a handle pan lets it recognize alongside (both can
+    /// track the finger on a handle, since the canvas carries the pinch).
+    weak var imageZoomGestureRecognizer: UIGestureRecognizer?
+
+    /// The pans on the guide's corners and edges.
+    private(set) var handlePanGestureRecognizers: [HandlePanGestureRecognizer] = []
+
+    /// The guide's frame when the resize in progress began.
+    private var frameBeforeResizing: CGRect?
+
+    /// Whether an abandoned resize animates the guide back to
+    /// `frameBeforeResizing`, as the canvas animates its own guide layouts.
+    /// The canvas sets it from `areAnimationsEnabled`.
+    var animatesRestoringFrame = true
+
+    /// Receives `interaction` each time it changes.
+    var didUpdateInteraction: (CropInteraction) -> Void = { _ in }
+
+    /// Every crop interaction in progress: the union of the guide's own
+    /// resize gesture and the image moves the canvas reports through
+    /// `insertInteraction(_:)` and `removeInteraction(_:)`. Empty when idle.
+    private(set) var interaction: CropInteraction = []
+
+    private let topLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let topRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let bottomLeftControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+    private let bottomRightControlPointView = TapExpandedView(horizontal: 16, vertical: 16)
+
+    private let topControlPointView = TapExpandedView(horizontal: 0, vertical: 16)
+    private let rightControlPointView = TapExpandedView(horizontal: 16, vertical: 0)
+    private let leftControlPointView = TapExpandedView(horizontal: 16, vertical: 0)
+    private let bottomControlPointView = TapExpandedView(horizontal: 0, vertical: 16)
+
+    private weak var cropInsideOverlay: CropInsideOverlayBase?
+    private weak var cropOutsideOverlay: CropOutsideOverlayBase?
+
+    private unowned let containerView: EditingCanvasView
+
+    private lazy var invertedMaskShapeLayerView = MaskView()
+
+    private var maximumRect: CGRect?
+
+    private(set) var lockedAspectRatio: AspectRatio?
+
+    /// The smallest size a resize leaves the guide on screen, whatever the
+    /// crop it shows.
+    static let minimumSizeFloor = CGSize(width: 80, height: 80)
+
+    /// Returns, in points, the guide size that shows the editor's smallest
+    /// crop at the current zoom. Asked when a resize begins, before its
+    /// constraints activate; a pinch cancels a resize, so the zoom does not
+    /// change while it lasts. The canvas sets it.
+    var minimumCropGuideSize: () -> CGSize = { .zero }
+
+    /// The smallest size of the resize in progress: `minimumCropGuideSize()`
+    /// per axis, at least `minimumSizeFloor`, and never more than the guide
+    /// was when the resize began, so a crop already under the editor's
+    /// minimum (one a host set) does not jump when a handle is touched.
+    private var minimumSize = InteractiveCropGuideView.minimumSizeFloor
+
+    /// The priority of the resize's minimum-size constraints: just under
+    /// required, so the guide's largest frame (`maximumRect`) and the edges
+    /// the resize keeps win. The crop scroll view can rest a fraction of a
+    /// point past the image, so that frame can be a fraction of a point
+    /// smaller than a guide at its minimum; a required minimum could then
+    /// not hold with them, and Auto Layout would break one of them. The
+    /// record grows a crop that ends that fraction short to the editor's
+    /// minimum.
+    private static let minimumSizePriority = UILayoutPriority(rawValue: UILayoutPriority.required.rawValue - 1)
+    
+    private let insetOfGuideFlexibility: UIEdgeInsets
+
+    init(
+      containerView: EditingCanvasView,
+      insetOfGuideFlexibility: UIEdgeInsets
+    ) {
+      self.containerView = containerView
+      self.insetOfGuideFlexibility = insetOfGuideFlexibility
+
+      super.init(frame: .zero)
+
+      let handleViews = [
+        topLeftControlPointView,
+        topRightControlPointView,
+        bottomLeftControlPointView,
+        bottomRightControlPointView,
+
+        topControlPointView,
+        rightControlPointView,
+        leftControlPointView,
+        bottomControlPointView,
+      ]
+      handleViews.forEach { view in
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+      }
+
+      cornerGestures: do {
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTopLeft(gesture:))
+          )
+          panGesture.delegate = self
+          topLeftControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTopRight(gesture:))
+          )
+          panGesture.delegate = self
+          topRightControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottomLeft(gesture:))
+          )
+          panGesture.delegate = self
+          bottomLeftControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottomRight(gesture:))
+          )
+          panGesture.delegate = self
+          bottomRightControlPointView.addGestureRecognizer(panGesture)
+        }
+      }
+
+      edgeGestures: do {
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInTop(gesture:))
+          )
+          panGesture.delegate = self
+          topControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInRight(gesture:))
+          )
+          panGesture.delegate = self
+          rightControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInLeft(gesture:))
+          )
+          panGesture.delegate = self
+          leftControlPointView.addGestureRecognizer(panGesture)
+        }
+
+        do {
+          let panGesture = HandlePanGestureRecognizer(
+            target: self,
+            action: #selector(handlePanGestureInBottom(gesture:))
+          )
+          panGesture.delegate = self
+          bottomControlPointView.addGestureRecognizer(panGesture)
+        }
+      }
+
+      handlePanGestureRecognizers = handleViews
+        .flatMap { $0.gestureRecognizers ?? [] }
+        .compactMap { $0 as? HandlePanGestureRecognizer }
+      for panGesture in handlePanGestureRecognizers {
+        panGesture.touchRegion = containerView
+        panGesture.onAdditionalTouch = { [unowned self] in
+          self.abandonResizing()
+        }
+      }
+
+      let length: CGFloat = 1
+
+      NSLayoutConstraint.activate([
+        topLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        topLeftControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topLeftControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        topLeftControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
+
+      NSLayoutConstraint.activate([
+        topRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        topRightControlPointView.topAnchor.constraint(equalTo: topAnchor),
+        topRightControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        topRightControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
+
+      NSLayoutConstraint.activate([
+        bottomLeftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        bottomLeftControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomLeftControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        bottomLeftControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
+
+      NSLayoutConstraint.activate([
+        bottomRightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        bottomRightControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        bottomRightControlPointView.heightAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+        bottomRightControlPointView.widthAnchor.constraint(equalToConstant: length).withPriority(.defaultHigh),
+      ])
+
+      NSLayoutConstraint.activate([
+        topControlPointView.topAnchor.constraint(equalTo: topAnchor, constant: 0),
+        topControlPointView.leftAnchor.constraint(equalTo: topLeftControlPointView.rightAnchor, constant: 16),
+        topControlPointView.rightAnchor.constraint(equalTo: topRightControlPointView.leftAnchor, constant: -16),
+        topControlPointView.heightAnchor.constraint(equalToConstant: length),
+      ])
+
+      NSLayoutConstraint.activate([
+        rightControlPointView.topAnchor.constraint(equalTo: topRightControlPointView.bottomAnchor, constant: 16),
+        rightControlPointView.bottomAnchor.constraint(equalTo: bottomRightControlPointView.topAnchor, constant: -16),
+        rightControlPointView.rightAnchor.constraint(equalTo: rightAnchor),
+        rightControlPointView.widthAnchor.constraint(equalToConstant: length),
+      ])
+
+      NSLayoutConstraint.activate([
+        bottomControlPointView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: 0),
+        bottomControlPointView.leftAnchor.constraint(equalTo: bottomLeftControlPointView.rightAnchor, constant: 16),
+        bottomControlPointView.rightAnchor.constraint(equalTo: bottomRightControlPointView.leftAnchor, constant: -16),
+        bottomControlPointView.heightAnchor.constraint(equalToConstant: length),
+      ])
+
+      NSLayoutConstraint.activate([
+        leftControlPointView.topAnchor.constraint(equalTo: topLeftControlPointView.bottomAnchor, constant: 16),
+        leftControlPointView.bottomAnchor.constraint(equalTo: bottomLeftControlPointView.topAnchor, constant: -16),
+        leftControlPointView.leftAnchor.constraint(equalTo: leftAnchor),
+        leftControlPointView.widthAnchor.constraint(equalToConstant: length),
+      ])
+    }
+
+    // MARK: - Functions
+
+    /**
+     Displays a view as an overlay.
+     e.g. grid view
+     */
+    func setCropInsideOverlay(_ newOverlay: CropInsideOverlayBase?) {
+      cropInsideOverlay?.removeFromSuperview()
+
+      if let overlay = newOverlay {
+        overlay.isUserInteractionEnabled = false
+        addSubview(overlay)
+        cropInsideOverlay = overlay
+        if interaction.isEmpty == false {
+          overlay.didChangeInteraction(interaction)
+        }
+      }
+    }
+
+    func setCropOutsideOverlay(_ view: CropOutsideOverlayBase?) {
+      defer {
+        setNeedsLayout()
+        layoutIfNeeded()
+      }
+      
+      guard let view = view else {
+        cropOutsideOverlay = nil
+        return
+      }
+      
+      assert(view.superview != nil)
+
+      cropOutsideOverlay = view
+      if interaction.isEmpty == false {
+        view.didChangeInteraction(interaction)
+      }
+    }
+
+    func setLockedAspectRatio(_ aspectRatio: AspectRatio?) {
+      lockedAspectRatio = aspectRatio
+    }
+
+    override func layoutSubviews() {
+      super.layoutSubviews()
+
+      cropInsideOverlay?.frame = bounds
+
+      if let outOfBoundsOverlayView = cropOutsideOverlay {
+        // Take care `outOfBoundsOverlayView` has the latest layout.
+        let frame = convert(bounds, to: outOfBoundsOverlayView)
+        invertedMaskShapeLayerView.frame = outOfBoundsOverlayView.bounds
+        invertedMaskShapeLayerView.setUnmaskRect(frame)
+
+        if outOfBoundsOverlayView.mask == nil {
+          outOfBoundsOverlayView.mask = invertedMaskShapeLayerView
+        }
+      }
+    
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+      bounds.insetBy(dx: -16, dy: -16).contains(point)
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+      
+      let view = super.hitTest(point, with: event)
+ 
+      if view == self {
+        return nil
+      }
+
+      return view
+    }
+
+    /// Adds `members` to `interaction` when an interaction begins.
+    func insertInteraction(_ members: CropInteraction) {
+      setInteraction(interaction.union(members))
+    }
+
+    /// Removes `members` from `interaction` when an interaction ends; the
+    /// others in progress stay.
+    func removeInteraction(_ members: CropInteraction) {
+      setInteraction(interaction.subtracting(members))
+    }
+
+    private func setInteraction(_ newInteraction: CropInteraction) {
+      guard newInteraction != interaction else {
+        return
+      }
+      interaction = newInteraction
+      cropInsideOverlay?.didChangeInteraction(newInteraction)
+      cropOutsideOverlay?.didChangeInteraction(newInteraction)
+      didUpdateInteraction(newInteraction)
+    }
+
+    @inline(__always)
+    private func updateMaximumRect() {
+
+      let insets = containerView.remainingScroll
+
+      let reversedInsets = UIEdgeInsets(
+        top: -insets.top,
+        left: -insets.left,
+        bottom: -insets.bottom,
+        right: -insets.right
+      )
+
+      let r = self.frame
+        .inset(by: reversedInsets)
+        .intersection(containerView.bounds.inset(by: insetOfGuideFlexibility))
+
+      // An empty intersection has no usable bounds; feeding its
+      // infinite/zero coordinates into constraint constants would
+      // corrupt the layout, so keep the previous clamp.
+      guard r.isEmpty == false else {
+        return
+      }
+
+      maximumRect = r
+
+      leftMaxConstraint?.constant = r.minX
+      rightMaxConstraint?.constant = maximumRect!.maxX - superview!.bounds.maxX
+      topMaxConstraint?.constant = r.minY
+      bottomMaxConstraint?.constant = maximumRect!.maxY - superview!.bounds.maxY
+
+    }
+
+    private var isTracking = false
+
+    private func onGestureTrackingStarted() {
+
+      isTracking = true
+      frameBeforeResizing = frame
+      minimumSize = Self.resizingMinimumSize(
+        minimumCropGuideSize: minimumCropGuideSize(),
+        currentSize: bounds.size
+      )
+
+      translatesAutoresizingMaskIntoConstraints = false
+
+      updateMaximumRect()
+      willChange()
+      insertInteraction(.resizingGuide)
+    }
+
+    private func onGestureTrackingChanged() {
+      updating()
+      updateMaximumRect()
+    }
+
+    private func onGestureTrackingEnded() {
+      // A resize abandoned for a pinch has already put the guide back.
+      guard isTracking else {
+        return
+      }
+
+      isTracking = false
+      frameBeforeResizing = nil
+
+      deactivateAllConstraints()
+      didChange()
+      removeInteraction(.resizingGuide)
+    }
+
+    /// Ends the resize in progress without recording it, because the image
+    /// started to zoom: the guide goes back to its frame from before the
+    /// drag, and the handle's pan is cancelled.
+    func cancelResizing() {
+      guard abandonResizing() else {
+        return
+      }
+      for panGesture in handlePanGestureRecognizers
+      where panGesture.state == .began || panGesture.state == .changed {
+        // Disabling a recognizer cancels its gesture.
+        panGesture.isEnabled = false
+        panGesture.isEnabled = true
+      }
+    }
+
+    /// Puts the guide back at its frame from before the resize in progress,
+    /// animated when `animatesRestoringFrame`, and ends the resize without
+    /// `didChange`. The pan's own end that
+    /// follows is ignored. Returns false when no resize is in progress.
+    @discardableResult
+    private func abandonResizing() -> Bool {
+      guard isTracking, let frameBeforeResizing else {
+        return false
+      }
+
+      isTracking = false
+      self.frameBeforeResizing = nil
+
+      deactivateAllConstraints()
+      // Animated like the canvas's guide layouts, so the guide (and the
+      // mask outside it) eases back from where the finger left it instead
+      // of jumping.
+      let restoreFrame = { [self] in
+        frame = frameBeforeResizing
+        setNeedsLayout()
+        layoutIfNeeded()
+      }
+      if animatesRestoringFrame {
+        UIViewPropertyAnimator(duration: 0.6, dampingRatio: 1, animations: restoreFrame)
+          .startAnimation()
+      } else {
+        restoreFrame()
+      }
+      didCancelChange()
+      removeInteraction(.resizingGuide)
+      return true
+    }
+
+    /// The smallest size of a resize that begins at `currentSize`:
+    /// `minimumCropGuideSize` capped at `currentSize`, and at least
+    /// `minimumSizeFloor`, on each axis.
+    private static func resizingMinimumSize(minimumCropGuideSize: CGSize, currentSize: CGSize) -> CGSize {
+      func side(_ crop: CGFloat, current: CGFloat, floor: CGFloat) -> CGFloat {
+        let crop = crop.isFinite ? crop : 0
+        return max(floor, min(crop, current))
+      }
+      return CGSize(
+        width: side(minimumCropGuideSize.width, current: currentSize.width, floor: minimumSizeFloor.width),
+        height: side(minimumCropGuideSize.height, current: currentSize.height, floor: minimumSizeFloor.height)
+      )
+    }
+
+    private var widthConstraint: NSLayoutConstraint!
+    private var heightConstraint: NSLayoutConstraint!
+
+    private var leftMaxConstraint: NSLayoutConstraint?
+    private var rightMaxConstraint: NSLayoutConstraint?
+    private var topMaxConstraint: NSLayoutConstraint?
+    private var bottomMaxConstraint: NSLayoutConstraint?
+
+    private var activeConstraints: [NSLayoutConstraint] = []
+
+    private func activateRightConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      activeConstraints.append(
+        rightAnchor.constraint(
+          equalTo: superview!.rightAnchor,
+          constant: frame.maxX - superview!.bounds.maxX
+        ).activated()
+      )
+    }
+
+    private func activateLeftMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      leftMaxConstraint = leftAnchor.constraint(
+        greaterThanOrEqualTo: superview!.leftAnchor,
+        constant: maximumRect!.minX
+      ).activated()
+
+      activeConstraints.append(
+        leftMaxConstraint!
+      )
+    }
+
+    private func activateRightMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      rightMaxConstraint = rightAnchor.constraint(
+        lessThanOrEqualTo: superview!.rightAnchor,
+        constant: maximumRect!.maxX - superview!.bounds.maxX
+      ).activated()
+
+      activeConstraints.append(
+        rightMaxConstraint!
+      )
+    }
+
+    private func activateTopMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      topMaxConstraint = topAnchor.constraint(
+        greaterThanOrEqualTo: superview!.topAnchor,
+        constant: maximumRect!.minY
+      ).activated()
+
+      activeConstraints.append(
+        topMaxConstraint!
+      )
+    }
+
+    private func activateBottomMaxConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      bottomMaxConstraint = bottomAnchor.constraint(
+        lessThanOrEqualTo: superview!.bottomAnchor,
+        constant: maximumRect!.maxY - superview!.bounds.maxY
+      ).activated()
+
+      activeConstraints.append(
+        bottomMaxConstraint!
+      )
+    }
+
+    private func activateLeftConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      activeConstraints.append(
+        leftAnchor.constraint(
+          equalTo: superview!.leftAnchor,
+          constant: frame.minX - superview!.bounds.minX
+        ).activated()
+      )
+    }
+
+    private func activateBottomConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      activeConstraints.append(
+        bottomAnchor.constraint(
+          equalTo: superview!.bottomAnchor,
+          constant: frame.maxY - superview!.bounds.maxY
+        ).activated()
+      )
+    }
+
+    private func activateTopConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      activeConstraints.append(
+        topAnchor.constraint(
+          equalTo: superview!.topAnchor,
+          constant: frame.minY - superview!.bounds.minY
+        ).activated()
+      )
+    }
+
+    private func activateCenterXConstraint() {
+      activeConstraints.append(
+        centerXAnchor.constraint(
+          equalTo: superview!.centerXAnchor,
+          constant: frame.midX - superview!.bounds.midX
+        ).withPriority(.defaultLow).activated()
+      )
+    }
+
+    private func activateCenterYConstraint() {
+      activeConstraints.append(
+        centerYAnchor.constraint(
+          equalTo: superview!.centerYAnchor,
+          constant: frame.midY - superview!.bounds.midY
+        ).withPriority(.defaultLow).activated()
+      )
+    }
+
+    private func activateWidthConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      widthConstraint = widthAnchor.constraint(equalToConstant: bounds.width).withPriority(.defaultLow).activated()
+
+      activeConstraints.append(
+        widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width)
+          .withPriority(Self.minimumSizePriority)
+          .activated()
+      )
+    }
+
+    private func activateHeightConstraint() {
+      translatesAutoresizingMaskIntoConstraints = false
+
+      heightConstraint = heightAnchor.constraint(equalToConstant: bounds.height).withPriority(.defaultLow).activated()
+
+      activeConstraints.append(
+        heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height)
+          .withPriority(Self.minimumSizePriority)
+          .activated()
+      )
+    }
+    
+    
+    private func activateAspectRatioConstraint() {
+      if let aspectRatio = lockedAspectRatio {
+        activeConstraints.append(widthAnchor.constraint(
+          equalTo: heightAnchor,
+          multiplier: aspectRatio.width / aspectRatio.height
+        ).activated())
+      }
+    }
+
+    private func deactivateAllConstraints() {
+      translatesAutoresizingMaskIntoConstraints = true
+
+      NSLayoutConstraint.deactivate([
+        widthConstraint,
+        heightConstraint,
+
+      ].compactMap { $0 } + activeConstraints)
+      
+      layoutIfNeeded()
+    }
+
+    @objc
+    func handlePanGestureInTopLeft(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+
+          activateTopMaxConstraint()
+          activateLeftMaxConstraint()
+
+          activateBottomConstraint()
+          activateRightConstraint()
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+                
+        widthConstraint.constant -= translation.x
+        heightConstraint.constant -= translation.y
+
+        onGestureTrackingChanged()
+
+      case .cancelled,
+           .ended,
+           .failed:
+
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInTopRight(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+
+          activateTopMaxConstraint()
+          activateRightMaxConstraint()
+
+          activateBottomConstraint()
+          activateLeftConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+        let translation = gesture.translation(in: self)
+
+        widthConstraint.constant += translation.x
+        heightConstraint.constant -= translation.y
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInBottomLeft(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+
+          activateBottomMaxConstraint()
+          activateLeftMaxConstraint()
+
+          activateTopConstraint()
+          activateRightConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        widthConstraint.constant -= translation.x
+        heightConstraint.constant += translation.y
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInBottomRight(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+
+          activateBottomMaxConstraint()
+          activateRightMaxConstraint()
+
+          activateTopConstraint()
+          activateLeftConstraint()
+
+          activateWidthConstraint()
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        widthConstraint.constant += translation.x
+        heightConstraint.constant += translation.y
+
+        onGestureTrackingChanged()
+
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInTop(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+
+          activateTopMaxConstraint()
+          activateCenterXConstraint()
+          
+          activateRightMaxConstraint()
+          activateLeftMaxConstraint()
+          
+          activateBottomConstraint()
+
+          if lockedAspectRatio == nil {
+            activateWidthConstraint()
+          }
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        heightConstraint.constant -= translation.y
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInRight(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+          
+          activateRightMaxConstraint()
+          activateCenterYConstraint()
+          
+          activateTopMaxConstraint()
+          activateBottomMaxConstraint()
+          
+          activateLeftConstraint()
+          
+          activateWidthConstraint()
+          if lockedAspectRatio == nil {
+            activateHeightConstraint()
+          }
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        widthConstraint.constant += translation.x
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInLeft(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+          
+          activateLeftMaxConstraint()
+          activateCenterYConstraint()
+          
+          activateTopMaxConstraint()
+          activateBottomMaxConstraint()
+          
+          activateRightConstraint()
+          
+          activateWidthConstraint()
+          if lockedAspectRatio == nil {
+            activateHeightConstraint()
+          }
+        }
+
+        fallthrough
+      case .changed:
+
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        widthConstraint.constant -= translation.x
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    @objc
+    func handlePanGestureInBottom(gesture: UIPanGestureRecognizer) {
+      assert(containerView == superview)
+
+      switch gesture.state {
+      case .began:
+        onGestureTrackingStarted()
+
+        activateConstraints: do {
+          activateAspectRatioConstraint()
+          
+          activateBottomMaxConstraint()
+          activateCenterXConstraint()
+          
+          activateRightMaxConstraint()
+          activateLeftMaxConstraint()
+          
+          activateTopConstraint()
+          
+          if lockedAspectRatio == nil {
+            activateWidthConstraint()
+          }
+          activateHeightConstraint()
+        }
+
+        fallthrough
+      case .changed:
+        defer {
+          gesture.setTranslation(.zero, in: self)
+        }
+
+        let translation = gesture.translation(in: self)
+
+        heightConstraint.constant += translation.y
+
+        onGestureTrackingChanged()
+      case .cancelled,
+           .ended,
+           .failed:
+        onGestureTrackingEnded()
+      default:
+        break
+      }
+    }
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+      guard let handlePan = gestureRecognizer as? HandlePanGestureRecognizer else {
+        // Another view's recognizer, such as the crop pinch the canvas
+        // carries: the guide decides only for its handles.
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+      }
+      guard isTracking == false else {
+        return false
+      }
+      // A pinch near the guide must zoom, not resize it.
+      guard handlePan.activeTouchCount <= 1 else {
+        return false
+      }
+      switch imageZoomGestureRecognizer?.state {
+      case .began, .changed:
+        return false
+      case .possible, .ended, .cancelled, .failed, .none:
+        return true
+      @unknown default:
+        return true
+      }
+    }
+
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      // The pinch tracks the finger on a handle too. Recognizing alongside
+      // keeps it possible while that finger drags a handle, so a second
+      // finger can still turn the gesture into a zoom.
+      guard let imageZoomGestureRecognizer else {
+        return false
+      }
+      return otherGestureRecognizer === imageZoomGestureRecognizer
+    }
+
+  }
+
+}
+
+private final class MaskView: CodeBasedView {
+  private let topView = UIView()
+  private let rightView = UIView()
+  private let leftView = UIView()
+  private let bottomView = UIView()
+
+  init() {
+    super.init(frame: .zero)
+
+    backgroundColor = .clear
+    [
+      topView,
+      rightView,
+      leftView,
+      bottomView,
+    ].forEach {
+      addSubview($0)
+      $0.backgroundColor = .white
+    }
+  }
+
+  func setUnmaskRect(_ rect: CGRect) {
+    topView.frame = .init(origin: .zero, size: .init(width: bounds.width, height: rect.minY))
+    rightView.frame = .init(
+      origin: .init(x: rect.maxX, y: rect.minY),
+      size: .init(width: bounds.width - rect.maxX, height: rect.height)
+    )
+    leftView.frame = .init(
+      origin: .init(x: 0, y: rect.minY),
+      size: .init(width: rect.minX, height: rect.height)
+    )
+    bottomView.frame = .init(
+      origin: .init(x: 0, y: rect.maxY),
+      size: .init(width: bounds.width, height: bounds.height - rect.maxY)
+    )
+  }
+}
+
+/*
+extension UIPanGestureRecognizer {
+  
+  func pointTranslation(in view: UIView?) -> CGPoint {
+    
+    let translation = self.translation(in: view)
+
+    var point = CGPoint()
+    
+    if abs(translation.x) >= 1 {
+      point.x = translation.x
+      self.setTranslation(.init(x: 0, y: translation.y), in: view)
+    }
+    
+    if abs(translation.y) >= 1 {
+      point.y = translation.y
+      self.setTranslation(.init(x: translation.x, y: 0), in: view)
+    }
+            
+    return point
+    
+  }
+  
+}
+*/
+
+private extension NSLayoutConstraint {
+
+  /// Sets the priority and returns the constraint, for building one inline.
+  /// Set it before activating: a required constraint cannot change priority
+  /// once active.
+  func withPriority(_ priority: UILayoutPriority) -> NSLayoutConstraint {
+    self.priority = priority
+    return self
+  }
+
+  /// Activates the constraint and returns it.
+  func activated() -> NSLayoutConstraint {
+    isActive = true
+    return self
+  }
+}

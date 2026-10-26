@@ -9,6 +9,10 @@ Draft for the Metal Brush Sandbox v1.
 > `LocalAdjustmentEffect` / `LocalAdjustmentMask.makeCIImage(size:)` became
 > `LocalAdjustmentFeature` / `EffectPipeline` /
 > `MaskTree.engineMakeMaskImage(size:)` (BrightroomParametric vocabulary).
+> Brightroom 6 replaced those in turn with `LocalAdjustment` (a mask plus
+> static content, with no `id` or `isEnabled`) and
+> `ParametricImageRenderer.makeMaskImage(for:extent:)`; see
+> `MIGRATION_TO_V6.md`.
 > The coordinate and falloff contracts described here still apply.
 
 This document defines the target behavior for a zoomable viewport-rendered

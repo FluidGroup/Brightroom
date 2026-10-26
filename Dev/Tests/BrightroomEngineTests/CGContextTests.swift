@@ -24,7 +24,7 @@ struct CGContextTests {
       Issue.record("\(error.localizedDescription)")
     }
 
-    let result = ImageTool.makeResizedCGImage(from: image.cgImage!, maxPixelSize: 300)
+    let result = ImageDecoding.makeResizedCGImage(from: image.cgImage!, maxPixelSize: 300)
     #expect(result != nil)
   }
 

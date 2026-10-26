@@ -5,73 +5,126 @@
 Adopted 2026-06. This document fixes the data-structure design of
 `BrightroomParametric` after the removal of the JSON-backed registry model.
 
+Amended 2026-09: the library no longer owns persistence. `ParametricDocumentCodec`,
+`PersistableFeature`, and the library's `Codable` conformances were removed;
+hosts store edits in their own format (see
+[Saving parametric edits](parametric-persistence.md)).
+
+Amended 2026-09 (v6): edits are static compositions. The 5.x identified
+model (the parametric `EditingDocument` with its `MainTree`, `FeatureID`,
+`isEnabled`, and the `ImageEffectFeatureType` / `DomainFeatureType`
+protocols) was removed. An edit is a root feature: a `Feature` value whose
+`body` lists its members, the way a SwiftUI view lists its content.
+BrightroomEngine's `EditingDocument` (a new type that reuses the 5.x name)
+pairs a root feature with its source image and undo history; this library
+knows nothing about images or history.
+
+Amended 2026-09 (v6 naming): names follow the vocabulary in
+[Vision of Editing](vision-of-editing.md#vocabulary). [Migrating to
+Brightroom 6](MIGRATION_TO_V6.md) maps the 5.1.1 API to the new one.
+
 ## Principles
 
-1. **The runtime document is not a text document.** The in-memory editing
+1. **The runtime edit is not a text document.** The in-memory editing
    model is a Swift-native value tree: plain structs, `Equatable`, `Sendable`,
    copy-on-write through standard containers (`Array`, `Data`). No JSON, no
    string-keyed dictionaries, no type-erased byte payloads participate in
-   evaluation, equality, or history snapshots.
+   evaluation, equality, or history snapshots. `AnyImageEffect` erases the
+   type of a typed value; it is not a payload.
 2. **Behavior is protocol conformance.** A feature's parameters are a struct;
-   its evaluation is a protocol requirement (`apply(to:context:)`). Runtime
-   dispatch is Swift protocol dispatch — no registry lookup, no string keys in
-   the hot path.
-3. **Codable is the persistence boundary only.** Serialization goes through a
-   codec that owns a type registry. Registration follows the
-   `UICollectionView.register(_:forCellWithReuseIdentifier:)` shape: the host
-   registers `(type key → params type)` pairs; decode resolves keys to types
-   once and produces typed values.
-4. **No `JSONValue`.** Two consequences of the codec design make a generic
-   JSON tree representation unnecessary:
-   - *Unknown types are an error, not a payload.* Like an unregistered cell
-     identifier, an unregistered feature key throws — at encode time as well
-     as decode time, so a codec never writes a document it cannot read back.
-     There is no requirement to round-trip features the host cannot
-     evaluate. If that requirement ever appears, the
-     escape hatch is a `Data` blob of the nested encoding — bit-perfect and
-     still JSON-model-free.
-   - *Migration is typed decoding, not tree surgery.* A params type decodes
-     old schema versions by declaring the old shape as a private `Decodable`
-     struct and converting. Migrations are compiler-checked.
+   its evaluation is a protocol requirement (`apply(to:context:)`) or its
+   `body`. Runtime dispatch is Swift protocol dispatch — no registry lookup,
+   no string keys in the hot path.
+3. **The host owns persistence.** The library defines feature values, their
+   validation, and their evaluation — not a storage format. Every authored
+   parameter is reachable and reconstructible through public API; where a
+   plain initializer clamps or repairs input, a validating initializer
+   rejects values the editor could not have produced. The host decides which
+   feature types it stores, how assets such as LUTs are referenced, and how
+   its own old formats migrate.
+4. **No `JSONValue`.** Nothing in the library represents features as a
+   generic JSON tree or a type-erased payload. A host that stores an open set
+   of features defines its own closed model — for example an enum of the
+   types it supports — so unknown types and migrations are compiler-checked
+   in the host.
+5. **Edits are static compositions; identity is the value.** A root
+   feature's structure is its Swift type. Features have no identity id and
+   no `isEnabled` (`FilterFeature.id` and `ColorCubeFeature.id` are string
+   lookup keys, not feature identity): two root features built from the same values are equal, and a
+   feature is switched off by leaving it out (a `nil` member, a branch not
+   taken, a mask node removed). Hosts address parts of an edit by their own
+   member names.
+6. **`any` only where data decides content.** A preset catalog or a list of
+   effects decoded by the host is `[AnyImageEffect]`. Everything the code
+   decides keeps its static type.
 
 ## Runtime model
 
-```text
-EditingDocument
-  └─ MainTree.features: [MainFeature]        // evaluation order
-       ├─ .domain(any DomainFeatureType)     // crop, future geometry
-       ├─ .effect(any ImageEffectFeatureType)
-       └─ .localAdjustment(LocalAdjustmentFeature)
-             ├─ effectPipeline: [any ImageEffectFeatureType]
-             └─ maskTree: MaskTree (closed enum: brush/invert/feather/union/intersect/subtract)
-```
+- `Feature` is the base protocol: `Sendable`, with an associated `Body`, a
+  `@FeatureBuilder var body`, and `apply(to:context:)`.
+  - A *primitive* implements `apply(to: CIImage, context: FeatureEvaluationContext) throws -> CIImage`
+    and leaves `Body` as `Never` (`ExposureFeature`, `CropFeature`, …).
+  - A *composite* declares `body`; the default `apply` evaluates it
+    (`FilterFeature`, `ImageEditorFeature`, a host's root feature).
+- `ImageEffect: Feature` marks features that preserve the extent and
+  coordinate domain of their input. A composite is an `ImageEffect` only when
+  its body is one. Features that are not image effects, such as `CropFeature`,
+  may change the domain; they return a zero-origin image of the new domain,
+  and later members work in it.
+- `FeatureBuilder` builds bodies. Members evaluate in order, and each receives
+  the previous member's output. `if`/`else`, `switch`, `for`, optional
+  members, and `if #available` produce the structural types `TupleFeature`,
+  `EitherFeature`, `Optional`, `Array`, and `EmptyFeature`, which are
+  features themselves. An `if #available` branch of equatable image effects is
+  erased to `AnyImageEffect`, so a body's type never names an unavailable
+  type.
+- `LocalAdjustmentFeature<Content: ImageEffect>` applies its content where
+  its `Mask` allows. The content cannot contain a domain feature; the compiler
+  rejects it.
+- `AnyImageEffect` wraps an `ImageEffect & Equatable` value whose type is
+  decided at run time. `[AnyImageEffect]` is itself an image effect that
+  evaluates in order.
+- `Mask` stays a closed indirect enum (brush, inverted, feathered, union,
+  intersection, subtraction); opening it for generated masks (subject/sky) follows
+  the same protocol pattern later.
+- Every built-in value is `Equatable`, so root features compare with `==`
+  and owners (undo history, canvas caches) can drop updates that change
+  nothing.
+  Equality compares a value's stored, authored members; derived state such as
+  a compiled render plan never takes part. "Renders the same" is a separate
+  question, answered by the render identity types where a cache needs it.
 
-- `Feature` (base protocol): `id: FeatureID`, `isEnabled`, `Equatable`,
-  `Sendable`. **Not** `Codable`.
-- `ImageEffectFeatureType: Feature` adds
-  `apply(to: CIImage, context: FeatureEvaluationContext) throws -> CIImage`
-  and `validate() throws`. Extent-preserving by contract.
-- `DomainFeatureType: Feature` adds the same shape for domain-changing
-  features (output may change extent; the evaluator re-normalizes to zero
-  origin).
-- Existing parameter structs (`BrightnessFeature`, `GaussianBlurFeature`,
-  `CropFeature`, …) are unchanged as data; their CI recipes move from the
-  compiler's switch into their conformances (kept in a separate file so the
-  model stays pure data).
-- Containers holding existentials (`MainFeature`, `PresetFeature`,
-  `LocalAdjustmentFeature`, `EffectPipeline`) implement `Equatable` via
-  existential opening (`SE-0352`).
-- The mask tree stays a closed enum for now; opening it for generated masks
-  (subject/sky) follows the same pattern later.
-
-A custom filter is therefore:
+A root feature's structure is visible in its type. `ImageEditorFeature` declares
 
 ```swift
-struct Posterize: ImageEffectFeatureType, PersistableFeature {
-  static let featureTypeKey: FeatureTypeKey = "myapp.posterize"  // persistence only
-  var id: FeatureID = .init()
-  var isEnabled: Bool = true
+var body: some Feature {
+  effects
+  localBlur
+  crop
+  vignette
+}
+```
+
+and its body's type is
+
+```text
+TupleFeature<
+  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 11 optional effects
+  Optional<LocalAdjustmentFeature<GaussianBlurFeature>>,
+  CropFeature,                                   // domain feature: the final crop
+  Optional<VignetteFeature>                      // after the crop: centred on its output
+>
+```
+
+A custom effect is therefore:
+
+```swift
+import BrightroomParametric
+import CoreImage
+
+struct Posterize: ImageEffect, Equatable {
   var levels: Double
+
   func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     image.applyingFilter("CIColorPosterize", parameters: ["inputLevels": levels])
       .cropped(to: image.extent)
@@ -79,50 +132,120 @@ struct Posterize: ImageEffectFeatureType, PersistableFeature {
 }
 ```
 
-No registration is required to *render* it (`PersistableFeature` and
-`featureTypeKey` exist for persistence; a render-only feature can conform to
-`ImageEffectFeatureType` alone). Registration is required only to persist.
+A custom domain feature conforms to `Feature` and returns its output in the
+new domain, with a zero origin:
+
+```swift
+import BrightroomParametric
+import CoreImage
+
+struct Inset: Feature, Equatable {
+  var amount: CGFloat
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    let extent = image.extent.insetBy(dx: amount, dy: amount)
+    return image
+      .cropped(to: extent)
+      .transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
+  }
+}
+```
+
+A composite groups other features, and a host's root feature is a
+composite. This example uses `Posterize` and `Inset` from the two examples
+above:
+
+```swift
+struct FilmLook: ImageEffect, Equatable {
+  var strength: Double
+  var grain: Posterize?
+
+  var body: some ImageEffect {
+    SaturationFeature(value: -0.2 * strength)
+    FadeFeature(intensity: 0.1 * strength)
+    grain
+  }
+}
+
+struct EditFeature: Feature, Equatable {
+  var look: FilmLook?
+  var inset: Inset?
+  var crop: CropFeature
+
+  var body: some Feature {
+    look
+    inset
+    crop
+  }
+}
+```
+
+No registration is required to render these, and nothing is required to store
+them: the host that owns `Posterize` also owns its saved form.
 
 ## Persistence
 
-```swift
-public protocol PersistableFeature: Feature, Codable {
-  static var featureTypeKey: FeatureTypeKey { get }
-  static var schemaVersion: Int { get }
-  // Default implementations decode the current version via Codable.
-  static func decodeParameters(from decoder: Decoder, version: Int) throws -> Self
-}
+The host converts the features it supports to its own `Codable` model and
+rebuilds them through public initializers. There are no feature ids to store;
+enablement is whether a member is present. The library contributes the pieces
+a host cannot write itself:
 
-var codec = ParametricDocumentCodec()
-codec.register(Posterize.self)                  // UICollectionView-style
-let data = try codec.encode(document)
-let document = try codec.decode(data)           // one pass, typed values out
-```
+- public access to every authored parameter;
+- validating reconstruction where the editing API clamps or repairs values
+  (`ToneCurve(validating:)`, `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`),
+  and `validate()` on `CropFeature` and `ColorCubeFeature`, whose initializers
+  accept any value;
+- stable raw values for semantic choices (`ColorMixerFeature.Algorithm`) and
+  interpretation versions a host can store (`ToneCurveFeature.semanticVersion`).
 
-- The codec injects its type registry through `Decoder.userInfo`; feature
-  envelopes (`{type, v, params}`) decode their params **directly from the
-  document stream** into typed values via nested containers. There is no
-  intermediate representation.
-- Unregistered key on encode or decode → `unregisteredFeatureType(key)`.
-  Non-persistable feature on encode → `notPersistable(type)`. Coding without
-  a codec → `missingRegistry`.
-- The structural spine (document, tree, local adjustments, mask vocabulary)
-  carries a single `formatVersion`, separate from per-feature `v` values, as
-  the migration hook for everything between the envelopes.
-- Versioning: the envelope stores `v`; `decodeParameters(from:version:)`
-  switches on it. Old versions are private structs + conversions.
-- Large binary parameters (color-cube data) are accepted today via `Data`
-  (base64 in JSON); the planned evolution is codec-level attachment
-  references (manifest + blob store) so documents stay small.
+Derived render state — compiled plans, sampled tables, caches, GPU resources —
+is never part of an authored value. See
+[Saving parametric edits](parametric-persistence.md) for the recipe and for
+reading documents written by the removed `ParametricDocumentCodec`.
 
 ## Evaluation
 
-`FeatureGraphCompiler` keeps its lazy-`CIImage` contract (no intermediate
-materialization; callers own `CIContext`) and loses both dispatch tables:
-effects and domain features evaluate through their protocol conformances;
-the compiler retains tree-level validation (duplicate IDs, empty composites),
-local-adjustment compositing, and the mask-tree renderer (GPU brush stamps
-via `ParametricKernelRegistry`).
+Evaluation keeps its lazy-`CIImage` contract: no intermediate
+materialization, and callers own the `CIContext`.
+
+- `FeatureRenderer().makeImage(from:feature:)` prepares the chain
+  entry once: it translates the source to zero origin, fixes the chain-entry extent
+  (value-form radii resolve against the entry extent), and sets the
+  presentation time. The source is always the whole source; to draw part of
+  the result, crop the output, and Core Image computes only that region. A
+  package overload with `chainEntryExtent:` lets Brightroom's tests evaluate
+  over an intermediate with the whole chain's basis. The
+  `FeatureEvaluationContext` then flows down through every `body`.
+  `ExportRenderer` and `VideoRenderer` evaluate through
+  the same path.
+- `LocalAdjustmentFeature` renders its mask over its input extent (a brush
+  mask is one Core Image node that draws every stamp per tile with the same
+  Metal pipeline the live canvas uses; mask combinators are internal Core
+  Image kernels), evaluates its
+  content, and composites the result through the mask alpha. An empty
+  union or intersection throws before the content is evaluated. Content that
+  returns its input unchanged makes the whole adjustment return its input.
+  `FeatureRenderer().makeMaskImage(for:extent:)` renders the same
+  alpha for inspection.
+- Validation happens where a value is applied: `CropFeature` and
+  `ColorCubeFeature` call their public `validate()` from `apply`.
+- Evaluation errors are `FeatureEvaluationError` (a `LocalizedError`):
+  `invalidCropRect(CGRect)`,
+  `invalidColorCubeData(id:expectedByteCount:actualByteCount:)`,
+  `emptyMaskComposite`, `kernelUnavailable(name:reason:)`, and
+  `imageCreationFailed(String)`. Built-in features and the renderers throw no
+  other error type while evaluating.
+- The renderers take `some Feature`. A `nil` optional feature leaves its
+  input unchanged, as an absent member does, so rendering `nil` renders the
+  unedited image. `EmptyFeature()` says the same explicitly.
+- `EditingDocument.render(options:)` (BrightroomEngine) renders a document's
+  root feature over its full-resolution source image through
+  `ExportRenderer`.
+- `FeatureTreeNode.nodes(for:)` describes a feature's body structure
+  for debugging, in evaluation order, and BrightroomUI's
+  `FeatureTreeOutline(feature:)` shows it as SwiftUI rows. Node ids are
+  type paths (`FilterFeature#0/WhiteBalanceFeature#0`), so an absent member
+  does not re-key the nodes after it.
 
 ## Tone Curve and Color Mixer
 
@@ -133,41 +256,84 @@ and Metal evaluation are implementation details. Editors can bind the values
 without owning a renderer or adopting BrightroomUI.
 
 ```swift
-var curves = ToneCurveEditorValue.neutral
-curves.y.insertPoint(input: 0.5, output: 0.6)
+import BrightroomParametric
 
-var mixer = ColorMixerAdjustment.neutral
-mixer.red.hue = 23
-mixer.red.saturation = -24
+struct ColorGrade: ImageEffect, Equatable {
+  var curves: ToneCurveFeature?
+  var mixer: ColorMixerFeature?
 
-let document = EditingDocument(mainTree: MainTree(features: [
-  .effect(ToneCurveFeature(value: curves)),
-  .effect(ColorMixerFeature(adjustment: mixer, algorithm: .oklch)),
-]))
+  var body: some ImageEffect {
+    curves
+    mixer
+  }
+}
+
+func makeGrade() -> ColorGrade {
+  var curves = ToneCurveFeature.Curves.neutral
+  curves.y.insertPoint(input: 0.5, output: 0.6)
+
+  var mixer = ColorMixerFeature.Bands.neutral
+  mixer.red.hue = 23
+  mixer.red.saturation = -24
+
+  return ColorGrade(
+    curves: ToneCurveFeature(curves: curves),
+    mixer: ColorMixerFeature(bands: mixer, algorithm: .oklch)
+  )
+}
 ```
 
 The host chooses feature order and interprets the source encoding. Both effects
-expect extended-linear Display-P3 numbers, preserve premultiplied alpha and
-extended-range values, and return the input image exactly when neutral. Tone
-Curve uses the existing scene-linear stop shaper, with normalized 0.5 at 18%
-gray, and independent RGB curves followed by the authored Y luminance result.
-Color Mixer applies eight adjacent hue bands in OKLCh without gamut clipping.
-Changing their order or feeding unmanaged camera values is an explicit host
-policy, not an automatic input conversion performed by the features.
+compute in extended-linear Display-P3: each matches its input from the
+rendering context's working color space into that space before its kernel and
+matches the result back, so a feature renders the same colors through the
+export, the canvas, a default `CIContext()`, or `VideoRenderer`'s default video
+context. Render through a floating-point working format; an 8-bit one
+clamps the linear values the kernels read to 0...1 and quantizes them, so
+wide-gamut and extended-range colors are lost. Both effects preserve
+premultiplied alpha and extended-range values, and return the input image
+exactly when neutral. Tone Curve uses the existing scene-linear stop shaper,
+with normalized 0.5 at 18% gray, and independent RGB curves followed by the
+authored Y luminance result. Color Mixer applies eight adjacent hue bands in
+OKLCh without gamut clipping. Changing their order or feeding unmanaged camera
+values is an explicit host policy; the features convert only between the
+working space and their own.
+
+Neither effect has an `isEnabled` flag. To leave one out, make its member
+`nil`. To ask whether a value renders as identity, use the same condition as
+the neutral bypass: `ToneCurveFeature.RenderKey(activeCurves:) == nil` for a
+curve, and `ColorMixerFeature.Bands.isIdentity` for a mixer.
+`ToneCurveFeature.Curves.isDefault` is not that condition: a curve with
+interior points on the diagonal is not the default, but it still renders as
+identity.
 
 `ColorMixerFeature.Algorithm` names the rendering semantics of the feature.
 Its only current case is `.oklch`; the `algorithm` parameter of
-`ColorMixerFeature(id:adjustment:algorithm:)` defaults to `.oklch`, so existing
-`ColorMixerFeature(adjustment:)` calls keep the same result. The algorithm is
+`ColorMixerFeature(bands:algorithm:)` defaults to `.oklch`, so existing
+`ColorMixerFeature(bands:)` calls keep the same result. The algorithm is
 part of the feature, its compiled plan, feature equality, and render identity.
-`ColorMixerRenderIdentity(activeAdjustment:algorithm:)` has the same default;
+`ColorMixerFeature.RenderKey(activeBands:algorithm:)` has the same default;
 hosts choosing an algorithm must use that choice for both rendering and cache
 identity. This API does not add a second algorithm, change editor controls, or
 claim compatibility with Adobe Lightroom's Color Mixer.
 
-Curve render identities ignore point UUIDs and diagonal-only structure. Mixer
-render identities include the selected algorithm and the same normalized
-Float32 parameters as the kernel.
+Tone Curve points are plain `(input, output)` coordinates with no identity of
+their own: the first and last points are the endpoints, and editing addresses
+a point by its index, which a move never changes. Curve render identities
+drop channels that render as identity, such as a channel whose only interior
+points lie on the diagonal. Mixer render identities include the selected
+algorithm and the same normalized Float32 parameters as the kernel.
+
+Equality of both features compares their stored, authored members like
+every other feature: `curves` for a curve, `bands` and `algorithm` for a
+mixer. The compiled plan is derived state and does not take part. Two curves
+that differ only in diagonal interior points are therefore not equal, and
+neither are mixers whose values differ as Doubles but round to the same
+Float32 parameters. An owner that drops equal updates (such as an undo
+history) keeps such an edit. Code that needs "renders the same", such as a
+preview cache, compares `ToneCurveFeature.RenderKey` or `ColorMixerFeature.RenderKey`
+explicitly.
+
 The curve's one-entry plan and table caches use `OSAllocatedUnfairLock`, keeping
 iOS 17 / macOS 14 compatibility. Compiled kernels are loaded from the package
 resource bundle, independently of the host application's Metal library. The
@@ -176,18 +342,19 @@ separate target keeps the general Core Image compiler flags away from the
 existing brush shaders. See [Building the color adjustment kernels](color-adjustment-kernels.md)
 for SwiftPM and Tuist integration.
 
-The default document codec registers both feature types. Persistence stores
-authored parameters and feature identity, validates the payload, and rebuilds
-derived rendering state when decoding; sampled tables and GPU resources are
-not serialized. Default feature IDs are deterministic; a host placing multiple
-instances of the same effect in one tree must supply distinct IDs.
+A host restores both effects from authored values alone: Tone Curve points
+through `ToneCurve.Point(input:output:)` and `ToneCurve(validating:)`, which
+keeps endpoint moves and rejects points that are out of range, out of order,
+or too close together, and Mixer bands through
+`ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)`, which rejects
+non-finite and out-of-range values instead of clamping them. Constructing the
+feature rebuilds its plan; sampled tables and GPU resources are never stored.
 
-Color Mixer uses feature `schemaVersion` 2, which stores the selected algorithm
-as an identifier (`"oklch"`) alongside the authored adjustment. Version 1
-documents predate algorithm selection and migrate to `.oklch` when decoded.
-Unsupported algorithm identifiers are rejected instead of silently changing
-the document's rendering semantics. Decoding reconstructs the plan from the
-stored adjustment and selected algorithm.
+`ColorMixerFeature.Algorithm` raw values (`"oklch"`) are stable identifiers a
+host can store. A host should reject an identifier it does not recognize
+instead of silently changing the edit's rendering semantics.
+`ToneCurveFeature.semanticVersion` is part of the curve's render identity; a
+host that stores it can detect a future change in interpretation.
 
 ## What this deletes
 
@@ -195,16 +362,19 @@ stored adjustment and selected algorithm.
   `AnyImageEffectFeatureDefinition`-style erasure, `FeatureNodeBridge` —
   the entire JSON-backed second model.
 - Per-apply JSON decode/encode and double validation.
-- The closed `ImageEffectFeature`/`DomainFeature` enums (replaced by the
-  protocols above).
+- The closed `ImageEffectFeature`/`DomainFeature` enums.
+- (v6) The identified model: `FeatureID`, `IdentifiedFeature` (an unreleased
+  transitional name), the parametric `EditingDocument` (5.x), `MainTree`,
+  `MainFeature`, `EffectPipeline`, `EffectPipelineFeature`, the 5.x
+  `LocalAdjustmentFeature(maskTree:effectPipeline:blendMode:)`, the
+  `ImageEffectFeatureType` and `DomainFeatureType` protocols with their
+  `childFeatures` and `validate()` requirements, duplicate-id validation, the
+  existential equality helpers, `FeatureGraphCompiler` with
+  `FeatureGraphOutput`, the public `ParametricKernelRegistry` with its error
+  type, and every `id` and `isEnabled` property.
 
 ## Known follow-ups
 
-- Open the mask vocabulary with the same protocol + codec pattern.
+- Open the mask vocabulary with the same protocol pattern.
 - Parameter metadata (`range`/neutral descriptors) on conformances for
   slider UIs.
-- Attachment store for large binary payloads.
-- Engine convergence: `EditingStack.Edit`'s features adopt this vocabulary,
-  replacing `Filtering`/`AnyFilter`/`Filter*`/`Edit.Filters`; an
-  `EditingCrop`-backed `DomainFeatureType` brings rotation/straighten into
-  the parametric domain features.

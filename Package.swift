@@ -52,6 +52,12 @@ let package = Package(
       name: "BrightroomParametricTests",
       dependencies: ["BrightroomParametric"]
     ),
+    // EditingDocument, SourceImage, and the ImageEditor document flows. Hosts
+    // BrightroomUI views, so it depends on the whole stack.
+    .testTarget(
+      name: "BrightroomEngineDocumentTests",
+      dependencies: ["BrightroomEngine", "BrightroomUI", "BrightroomParametric"]
+    ),
     .plugin(
       name: "BuildColorAdjustmentKernels",
       capability: .buildTool()
