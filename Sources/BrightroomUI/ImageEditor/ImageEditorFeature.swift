@@ -29,6 +29,8 @@ import BrightroomParametric
 /// Evaluation order is the order of `body`: global effects, then the brush
 /// painted blur, then the final crop, then the vignette, which is centred on
 /// the cropped picture. Absent features are `nil` and contribute nothing.
+/// The global effects end with `effects.custom`, effects the host adds and
+/// the editor never edits.
 /// The feature is authored in the oriented pixel coordinates of its
 /// document's source image (`EditingDocument.source.pixelSize`), at full
 /// resolution: evaluate it over a source of that size (the export source, or
@@ -47,6 +49,11 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// Their radii resolve against the chain entry (the whole source), so a
   /// crop does not change them. The vignette, which the output frame decides,
   /// is `ImageEditorFeature.vignette`, evaluated after the crop.
+  ///
+  /// The editor edits `preset` through its Filters strip and the other
+  /// optional members through its Adjust sliders. `custom` holds effects the
+  /// host adds, evaluated last; the editor never reads or writes them, and
+  /// Reset keeps them.
   public struct Effects: ImageEffect, Equatable {
 
     public var preset: FilterFeature?
@@ -62,6 +69,17 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var gaussianBlur: GaussianBlurFeature?
     public var fade: FadeFeature?
 
+    /// Effects the host adds, evaluated in order after every other member.
+    ///
+    /// The editor never edits them: no control reads or writes them,
+    /// selecting a filter leaves them, the filter swatches preview the
+    /// presets without them, and Reset keeps them, since no control could
+    /// put them back. Put here an effect of your own that belongs to every
+    /// edit of the image, such as an automatic retouch. Like the other
+    /// members, they are evaluated before the local blur and the final crop,
+    /// and their radii resolve against the chain entry.
+    public var custom: [AnyImageEffect]
+
     /// Creates global effects. Omitted effects are absent.
     public init(
       preset: FilterFeature? = nil,
@@ -75,7 +93,8 @@ public struct ImageEditorFeature: Feature, Equatable {
       sharpen: SharpenFeature? = nil,
       unsharpMask: UnsharpMaskFeature? = nil,
       gaussianBlur: GaussianBlurFeature? = nil,
-      fade: FadeFeature? = nil
+      fade: FadeFeature? = nil,
+      custom: [AnyImageEffect] = []
     ) {
       self.preset = preset
       self.exposure = exposure
@@ -89,6 +108,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.unsharpMask = unsharpMask
       self.gaussianBlur = gaussianBlur
       self.fade = fade
+      self.custom = custom
     }
 
     public var body: some ImageEffect {
@@ -104,6 +124,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       unsharpMask
       gaussianBlur
       fade
+      custom
     }
   }
 

@@ -1027,7 +1027,8 @@ How the editor writes to the binding:
   undo step of its own (in Crop mode, a crop pending on the crop guide is
   applied first, as leaving Crop applies it), shown in every mode whenever
   anything differs, and asks for no confirmation: `undo()` brings the edit
-  back.
+  back. Effects you put in `effects.custom` are kept (see
+  [Your own effects](#your-own-effects)).
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
 - Cancel writes back the document the editor opened with, history
@@ -1055,7 +1056,8 @@ canvas draws it inside the crop guide, centred on the guide as it moves.
 `ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
 - `effects: ImageEditorFeature.Effects` — the filter (`preset`) and eleven
-  adjustments, each an optional member, evaluated in declaration order;
+  adjustments, each an optional member, evaluated in declaration order, then
+  `custom`, effects of your own (see [Your own effects](#your-own-effects));
 - `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
 - `crop: CropFeature` — the final crop;
 - `vignette: VignetteFeature?` — the vignette, evaluated after the final crop.
@@ -1105,6 +1107,40 @@ the canvas shows the image without it, and `ImageEditorCanvas` paints nothing
 for the `.localBlur` target. `ImageEditor`'s Blur mode then disables the brush
 and keeps Clear, so the user can still remove the blur. Removing the blur
 (`localBlur = nil`, or Clear) makes it paintable again.
+
+#### Your own effects
+
+In 5.x an app could insert an `ImageEffectFeatureType` of its own (an
+automatic retouch, say) into the editor's `EffectPipeline`, addressed by its
+`FeatureID`. In 6.0 that effect is an `ImageEffect & Equatable` value in
+`effects.custom`, wrapped in `AnyImageEffect`:
+
+```swift
+import BrightroomParametric
+import BrightroomUI
+import CoreImage
+
+struct SkinSmoothing: ImageEffect, Equatable {
+  var amount: Double
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    // …
+  }
+}
+
+var document = ImageEditorDocument(source: source)
+document.feature.effects.custom = [AnyImageEffect(SkinSmoothing(amount: 0.5))]
+```
+
+The custom effects are evaluated in order after the built-in adjustments and
+before the painted blur and the final crop, in the editor's canvas as in the
+export. The editor's controls never read or write them: selecting a filter
+leaves them, the filter swatches preview the presets without them, and Reset
+keeps them, since no control could put them back; a document whose only
+effect is a custom one shows no Reset. Cancel and undo act on the whole
+document, so they treat the custom effects like any other member. To change
+a custom effect while the editor is open, write the document's
+`feature.effects.custom` through the binding yourself.
 
 ### Editing in Code
 

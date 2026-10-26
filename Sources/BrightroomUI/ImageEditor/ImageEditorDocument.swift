@@ -79,7 +79,7 @@ extension EditingDocument where Content == ImageEditorFeature {
 
   /// Whether the final crop differs from `initialCrop`, the crop
   /// ImageEditor's Reset restores: the whole image, or the one the editor's
-  /// aspect-ratio policy starts with (`AspectRatioPolicy.initialFeature(imageSize:)`).
+  /// aspect-ratio policy starts with (`AspectRatioPolicy.initialFeature(imageSize:custom:)`).
   ///
   /// The effects, the local blur, and the vignette are compared apart, by
   /// value (`ImageEditorFeature.hasAnyEffect`).
@@ -113,12 +113,17 @@ extension EditingDocument where Content == ImageEditorFeature {
 extension ImageEditor.Options.AspectRatioPolicy {
 
   /// The feature ImageEditor's Reset restores for an image of `imageSize`:
-  /// no effects, no local blur, no vignette, and the crop the policy starts
-  /// with: the whole image, level and unturned, or under `.fixed`, the
-  /// largest centered crop of the ratio as `InitialCrop.aspectRatio(_:)`
-  /// decides it.
-  func initialFeature(imageSize: CGSize) -> ImageEditorFeature {
+  /// no effects but `custom`, no local blur, no vignette, and the crop the
+  /// policy starts with: the whole image, level and unturned, or under
+  /// `.fixed`, the largest centered crop of the ratio as
+  /// `InitialCrop.aspectRatio(_:)` decides it.
+  ///
+  /// - Parameter custom: The host's effects (`Effects.custom`) of the
+  ///   document being reset, which Reset keeps: the editor never edits them,
+  ///   so no control could put them back.
+  func initialFeature(imageSize: CGSize, custom: [AnyImageEffect]) -> ImageEditorFeature {
     var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.custom = custom
     if case .fixed(let aspectRatio) = self {
       feature.crop = InitialCrop.crop(fitting: aspectRatio, imageSize: imageSize)
     }
@@ -128,9 +133,10 @@ extension ImageEditor.Options.AspectRatioPolicy {
 
 extension ImageEditorFeature {
 
-  /// Whether a global effect, the local blur, or the vignette is set:
-  /// everything but the crop that ImageEditor's Reset removes.
+  /// Whether a global effect the editor edits, the local blur, or the
+  /// vignette is set: everything but the crop that ImageEditor's Reset
+  /// removes. The host's `effects.custom`, which Reset keeps, does not count.
   var hasAnyEffect: Bool {
-    effects != .init() || localBlur != nil || vignette != nil
+    effects != .init(custom: effects.custom) || localBlur != nil || vignette != nil
   }
 }
