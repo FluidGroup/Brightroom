@@ -155,7 +155,9 @@ The project uses swift-state-graph for observable state. When modifying state-re
    that reads its input extent, like the vignette) is instead a top-level
    optional member of `ImageEditorFeature` after `crop`, which the canvas
    draws with its post-crop pass (`docs/vision-of-editing.md`, "Decided
-   Semantics").
+   Semantics"). A host's own effect gets no member: it goes in
+   `ImageEditorFeature.Effects.custom`, evaluated after the built-in
+   members, which the editor never edits and Reset keeps.
 6. Test it against an explicit Core Image recipe in
    `Tests/BrightroomParametricTests`.
 

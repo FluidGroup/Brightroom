@@ -246,6 +246,28 @@ struct ImageEditorResetTests {
     try await mounted.wait(until: { mounted.element("Reset") != nil }, "Reset is not shown for an effect.")
   }
 
+  /// A host's own effect in `effects.custom` has no control, so it alone is
+  /// nothing to reset, and Reset keeps it.
+  @Test func `Reset keeps the host's custom effects and is hidden while they are the only effect`() async throws {
+    let custom = [AnyImageEffect(ExposureFeature(ev: 1))]
+    var feature = Self.initial
+    feature.effects.custom = custom
+    let host = Host(try DocumentTestFixtures.makeDocument(feature: feature))
+    let (mounted, _) = try await mountLoadedEditor(host)
+    defer { mounted.window.isHidden = true }
+    #expect(mounted.element("Reset") == nil, "A custom effect alone is nothing to reset.")
+
+    host.document.feature.effects.saturation = SaturationFeature(value: 0.5)
+    try await mounted.wait(until: { isEnabledButton("Reset", in: mounted) }, "Reset is not shown for an adjustment.")
+
+    let writes = host.writes
+    try activate("Reset", in: mounted)
+    #expect(host.writes == writes + 1)
+    #expect(host.document.feature == feature, "Reset keeps the custom effects.")
+    #expect(host.document.feature.effects.custom == custom)
+    try await mounted.wait(until: { mounted.element("Reset") == nil }, "Reset stayed after resetting.")
+  }
+
   /// The `SteppedSliderControl` on screen (generic, so matched by name).
   private func findSlider(in view: UIView) -> UIControl? {
     if let control = view as? UIControl, "\(type(of: control))".hasPrefix("SteppedSliderControl") {

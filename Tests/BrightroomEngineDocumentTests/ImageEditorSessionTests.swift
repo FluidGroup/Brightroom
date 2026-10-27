@@ -432,13 +432,13 @@ struct ImageEditorSessionTests {
 
   @Test func `Reset under a fixed ratio writes the fitted crop`() throws {
     let size = Fixtures.rotatedJPEGSize
-    let initial = ImageEditor.Options.AspectRatioPolicy.fixed(.square).initialFeature(imageSize: size)
+    let initial = ImageEditor.Options.AspectRatioPolicy.fixed(.square).initialFeature(imageSize: size, custom: [])
     // The 20 x 40 image fits a centered 20 x 20 square.
     #expect(initial.crop.rect == CGRect(x: 0, y: 10, width: 20, height: 20))
     #expect(initial.crop == InitialCrop.crop(fitting: .square, imageSize: size))
     #expect(initial.hasAnyEffect == false)
-    #expect(ImageEditor.Options.AspectRatioPolicy.selectable.initialFeature(imageSize: size) == ImageEditorFeature(imageSize: size))
-    #expect(ImageEditor.Options.AspectRatioPolicy.freeform.initialFeature(imageSize: size) == ImageEditorFeature(imageSize: size))
+    #expect(ImageEditor.Options.AspectRatioPolicy.selectable.initialFeature(imageSize: size, custom: []) == ImageEditorFeature(imageSize: size))
+    #expect(ImageEditor.Options.AspectRatioPolicy.freeform.initialFeature(imageSize: size, custom: []) == ImageEditorFeature(imageSize: size))
 
     let document = try Fixtures.makeDocument(feature: Fixtures.exposure(1))
     var session = ImageEditorSession(documentAtStart: document)
@@ -448,6 +448,46 @@ struct ImageEditorSessionTests {
     #expect(written.feature.crop.quarterTurn == .zero)
     #expect(written.hasCropChanges(initialCrop: initial.crop) == false)
     #expect(written.hasCropChanges(), "The fitted square is not the whole image.")
+  }
+
+  /// A host's own effect (`effects.custom`) has no control that could put it
+  /// back, so Reset keeps it, and it alone is nothing to reset.
+  @Test func `Reset keeps the host's custom effects, which alone are nothing to reset`() throws {
+    let size = Fixtures.rotatedJPEGSize
+    let custom = [AnyImageEffect(ExposureFeature(ev: 1))]
+    var feature = ImageEditorFeature(imageSize: size)
+    feature.effects.custom = custom
+    #expect(feature.hasAnyEffect == false, "No control edits a custom effect.")
+    feature.effects.saturation = SaturationFeature(value: 0.5)
+    #expect(feature.hasAnyEffect)
+
+    let initial = ImageEditor.Options.AspectRatioPolicy.selectable.initialFeature(imageSize: size, custom: custom)
+    #expect(initial.effects == ImageEditorFeature.Effects(custom: custom))
+    #expect(initial.hasAnyEffect == false)
+    #expect(initial.crop == ImageEditorFeature(imageSize: size).crop)
+    #expect(
+      ImageEditor.Options.AspectRatioPolicy.fixed(.square).initialFeature(imageSize: size, custom: custom).effects
+        == initial.effects
+    )
+
+    var document = try Fixtures.makeDocument(feature: feature)
+    var session = ImageEditorSession(documentAtStart: document)
+    let edited = document.feature
+    let reset = session.document(afterResetTo: initial, of: document)
+    document = try #require(reset)
+    #expect(document.feature == initial)
+    #expect(document.feature.effects.custom == custom)
+    #expect(document.feature.effects.saturation == nil)
+
+    // The host's undo restores the whole feature, custom effects included.
+    var undone = document
+    undone.undo()
+    #expect(undone.feature == edited)
+    #expect(undone.feature.effects.custom == custom)
+
+    // A document whose only effect is a custom one is already initial.
+    let resetAgain = session.document(afterResetTo: initial, of: document)
+    #expect(resetAgain == nil)
   }
 
   // MARK: - Canvas writes

@@ -23,6 +23,7 @@ struct ImageEditorFeatureTests {
         == ImageEditorFeature(imageSize: imageSize)
     )
     #expect(ImageEditorFeature.Effects() == ImageEditorFeature.Effects())
+    #expect(ImageEditorFeature.Effects() == ImageEditorFeature.Effects(custom: []))
   }
 
   @Test func `Documents built through the same operations are equal`() {
@@ -236,7 +237,7 @@ struct ImageEditorFeatureTests {
     let effects = document.effects
     let localBlur = try #require(document.localBlur)
     let presetEffects: [any Feature] = try #require(effects.preset).effects.map { $0.base }
-    let globalEffects: [any Feature] = presetEffects + [
+    let builtInEffects: [any Feature] = presetEffects + [
       try #require(effects.exposure),
       try #require(effects.brightness),
       try #require(effects.whiteBalance),
@@ -249,7 +250,10 @@ struct ImageEditorFeatureTests {
       try #require(effects.gaussianBlur),
       try #require(effects.fade),
     ]
-    #expect(globalEffects.count == 12)
+    #expect(builtInEffects.count == 12)
+    let customEffects: [any Feature] = effects.custom.map { $0.base }
+    #expect(customEffects.count == 2)
+    let globalEffects = builtInEffects + customEffects
     let vignette = try #require(document.vignette)
 
     let source = makeSource()
@@ -280,6 +284,46 @@ struct ImageEditorFeatureTests {
     )
     #expect(vignetteBeforeCrop.extent == expected.extent)
     #expect(maxDifference(vignetteBeforeCrop, expected) > 4)
+
+    // The custom effects are the last global effects: evaluating them before
+    // the built-in adjustments changes the result.
+    let customFirst = try renderer.makeImage(
+      from: source,
+      feature: SequentialFeatures(customEffects + builtInEffects + [localBlur, document.crop, vignette])
+    )
+    #expect(customFirst.extent == expected.extent)
+    #expect(maxDifference(customFirst, expected) > 4)
+  }
+
+  /// The custom effects are the last global effects: in the feature tree
+  /// they follow `fade` inside the Effects node, before the blur mask, the
+  /// crop, and the vignette.
+  @Test func `Custom effects are the last nodes of the global effects`() throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.exposure = ExposureFeature(ev: 0.3)
+    feature.effects.fade = FadeFeature(intensity: 0.2)
+    feature.effects.custom = [
+      AnyImageEffect(HostLook(gamma: 1.4)),
+      AnyImageEffect(FadeFeature(intensity: 0.1)),
+    ]
+    feature.appendLocalBlurStroke(stroke)
+    feature.vignette = VignetteFeature(value: 1)
+
+    let nodes = FeatureTreeNode.nodes(for: feature)
+    let effects = try #require(nodes.first)
+    #expect(effects.typeName == "Effects")
+    #expect(
+      effects.children.map(\.typeName)
+        == ["ExposureFeature", "FadeFeature", "HostLook", "FadeFeature"]
+    )
+    #expect(
+      Array(effects.children.map(\.id).suffix(2))
+        == ["Effects#0/HostLook#0", "Effects#0/FadeFeature#1"]
+    )
+    let rest = nodes.dropFirst().map(\.typeName)
+    #expect(rest.count == 3, "\(rest)")
+    #expect(rest.first?.hasPrefix("LocalAdjustmentFeature") == true, "\(rest)")
+    #expect(Array(rest.suffix(2)) == ["CropFeature", "VignetteFeature"])
   }
 
   // MARK: - Value substitutions (D5)
@@ -322,8 +366,8 @@ struct ImageEditorFeatureTests {
 
   // MARK: - Helpers
 
-  /// A document with all 12 global effect members, a blur mask, a rotated
-  /// crop, and a vignette.
+  /// A document with all 12 built-in global effect members, two custom
+  /// effects, a blur mask, a rotated crop, and a vignette.
   private func makeFullDocument() -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
     for (parameter, value) in [
@@ -347,6 +391,10 @@ struct ImageEditorFeatureTests {
     document.effects.sharpen = SharpenFeature(intensity: 0.4, radius: .proportional(1.5))
     document.effects.unsharpMask = UnsharpMaskFeature(intensity: 0.5, radius: .proportional(200))
     document.effects.fade = FadeFeature(intensity: 0.3)
+    document.effects.custom = [
+      AnyImageEffect(HostLook(gamma: 2.2)),
+      AnyImageEffect(ExposureFeature(ev: -0.2)),
+    ]
 
     document.appendLocalBlurStroke(stroke)
 
@@ -400,5 +448,17 @@ struct ImageEditorFeatureTests {
       return buffer
     }
     return zip(bytes(lhs), bytes(rhs)).map { abs(Int($0) - Int($1)) }.max() ?? -1
+  }
+}
+
+/// A host's own effect, as a host puts in `ImageEditorFeature.Effects.custom`.
+private struct HostLook: ImageEffect, Equatable {
+
+  var gamma: Double
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    image
+      .applyingFilter("CIGammaAdjust", parameters: ["inputPower": gamma])
+      .cropped(to: image.extent)
   }
 }

@@ -48,7 +48,11 @@ import BrightroomParametric
    of the ratio, still locked). It is one write and a history step of its
    own (in Crop mode, a crop pending on the crop guide is applied first, as
    leaving Crop applies it), so `undo()` brings the edit back; the editor
-   asks for no confirmation.
+   asks for no confirmation. Effects the host put in `effects.custom` are
+   kept: the editor never edits them, so they alone are nothing to reset.
+ - The editor's controls edit the feature's filter, adjustments, blur, crop,
+   and vignette, never `effects.custom`: selecting a filter leaves it, and
+   the filter swatches preview the presets without it.
  - The view never registers anything with an `UndoManager`, and never
    changes the document's source image.
  - A crop is at least 128 pixels on its shorter output side (the image's
@@ -118,7 +122,7 @@ public struct ImageEditor: View {
     ///
     /// Defaults to an empty array; only Original is offered until presets are
     /// supplied. A selected preset is written to the feature's
-    /// `effects.preset`.
+    /// `effects.preset`; the host's `effects.custom` is left as it is.
     public var filters: [FilterFeature] = []
 
     public init() {

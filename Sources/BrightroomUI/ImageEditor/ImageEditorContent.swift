@@ -246,9 +246,13 @@ struct ImageEditorContent: View {
   }
 
   /// The feature Reset restores: the aspect-ratio policy's crop of this
-  /// image, and nothing else.
+  /// image and the host's custom effects, which the editor never edits, and
+  /// nothing else.
   private var initialFeature: ImageEditorFeature {
-    options.aspectRatioPolicy.initialFeature(imageSize: document.source.pixelSize)
+    options.aspectRatioPolicy.initialFeature(
+      imageSize: document.source.pixelSize,
+      custom: document.feature.effects.custom
+    )
   }
 
   private var isAspectRatioControlAvailable: Bool {

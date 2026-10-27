@@ -162,6 +162,38 @@ struct ViewportBasePreviewExportParityTests {
     #expect(toolSurfaceRecorder.records == [.init(input: editingExtent, chainEntry: editingExtent)])
   }
 
+  // MARK: - Custom effects
+
+  /// The host's `effects.custom` reaches the canvas as part of the global
+  /// effects: the preview of a document whose only effect is a custom one
+  /// matches the export, and differs from the preview without it.
+  @Test func `Custom effects reach the canvas`() async throws {
+    let source = Self.makeTexturedImage()
+    var document = Self.makeDocument(quarterTurn: .zero)
+    document.effects = .init(custom: [AnyImageEffect(ExposureFeature(ev: 0.6))])
+    #expect(document.effects.canvasEffect != nil)
+
+    let exported = try await EditingDocument(
+      source: SourceImage(cgImage: source),
+      feature: document
+    ).render(options: .init(outputColorSpace: Self.sRGB)).cgImage
+    let preview = try CanvasCompositionPreview.render(
+      document: document,
+      source: source,
+      throughCrop: true
+    )
+    #expect(exported.width == preview.width)
+    #expect(exported.height == preview.height)
+    let difference = Self.maximumDifference(exported, preview)
+    #expect(difference.value <= 2, "preview differs from export by \(difference.value) at \(difference.point)")
+
+    var plain = document
+    plain.effects.custom = []
+    #expect(plain.effects.canvasEffect == nil)
+    let unedited = try CanvasCompositionPreview.render(document: plain, source: source, throughCrop: true)
+    #expect(Self.maximumDifference(unedited, preview).value > 10, "the custom effect is not visible")
+  }
+
   // MARK: - Fixtures
 
   private static func makeDocument(quarterTurn: QuarterTurn) -> ImageEditorFeature {
