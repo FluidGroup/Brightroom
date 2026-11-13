@@ -88,6 +88,18 @@ struct ImageEditorSession {
     liveFeature = feature == document.feature ? nil : feature
   }
 
+  /// Previews all grading axes together without adding a document history step.
+  mutating func previewColorGrading(
+    _ grading: ColorGradingFeature,
+    over document: ImageEditorDocument
+  ) {
+    var feature = displayedFeature(of: document)
+    // Keep an authored hue at zero saturation so returning to the wheel keeps
+    // the selected hue. Only a complete reset removes the optional feature.
+    feature.effects.colorGrading = grading == ColorGradingFeature() ? nil : grading
+    liveFeature = feature == document.feature ? nil : feature
+  }
+
   /// Drops the value shown by a control in progress, for example because
   /// the document changed from outside (an undo) while dragging.
   mutating func discardLiveFeature() {

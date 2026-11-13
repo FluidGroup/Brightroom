@@ -7,7 +7,7 @@ import Foundation
 
 /// An eight-band color correction evaluated by the selected algorithm.
 ///
-/// The OKLCh algorithm evaluates extended-linear Display-P3 components
+/// Both algorithms evaluate extended-linear Display-P3 components
 /// whatever the rendering context's working color space is: the feature
 /// matches its input into that space and its result back, so it renders the
 /// same colors through any `CIContext`. Render through a floating-point working
@@ -40,6 +40,21 @@ public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
     /// low-chroma gate protects neutral pixels.
     /// It does not claim compatibility with Lightroom's Color Mixer.
     case oklch
+
+    /// Approximates Lightroom's post-development Color Mixer in an SDR RGB image.
+    ///
+    /// This experimental, measured model combines eight selection weights before
+    /// evaluating a sampled response for luminance, saturation, then hue. It was
+    /// calibrated against Process Version 15.4 with an embedded RGB profile;
+    /// it does not reproduce Adobe RAW development or guarantee XMP compatibility.
+    /// See `Tools/LightroomComparison/Mixer` for evidence and reproduction.
+    ///
+    /// A 24-cubed lattice uses tetrahedral interpolation in encoded Display-P3.
+    /// Corrections are linear RGB deltas. Outside SDR, the nearest boundary
+    /// correction is added without clipping the original color; that extension
+    /// is a Brightroom policy, not a measured Adobe HDR response.
+    /// The default algorithm remains ``oklch``.
+    case lightroomApproximation
   }
 
   /// The complete authored eight-band correction.

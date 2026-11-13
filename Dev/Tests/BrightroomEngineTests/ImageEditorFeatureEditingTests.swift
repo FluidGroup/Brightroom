@@ -24,6 +24,42 @@ struct ImageEditorFeatureEditingTests {
     effects: [AnyImageEffect(BrightnessFeature(value: 0.1))]
   )
 
+  @Test func `Grading previews preserve other edits and commit once`() throws {
+    var document = EditingDocument(source: makeImage())
+    document.feature.effects.exposure = .init(ev: 0.7)
+    document.commit()
+    let initial = document
+    var session = ImageEditorSession(documentAtStart: document)
+    var grading = ColorGradingFeature(global: .init(hue: 52))
+    session.previewColorGrading(grading, over: document)
+    #expect(document == initial)
+    #expect(session.displayedFeature(of: document).effects.colorGrading?.global.hue == 52)
+    grading.global.saturation = 30
+    session.previewColorGrading(grading, over: document)
+    grading.midtones.luminance = 10
+    session.previewColorGrading(grading, over: document)
+    #expect(document == initial)
+    let gradingWrite = session.document(after: document)
+    document = try #require(gradingWrite)
+    #expect(document.feature.effects.colorGrading == grading)
+    #expect(document.feature.effects.exposure?.ev == 0.7)
+    let repeatedWrite = session.document(after: document)
+    #expect(repeatedWrite == nil)
+    document.undo()
+    #expect(document.feature == initial.feature)
+    document.redo()
+    #expect(document.feature.effects.colorGrading == grading)
+    session.noteDocument(document)
+    _ = session.endToolVisit(of: document)
+    session.previewColorGrading(.init(), over: document)
+    let resetWrite = session.document(after: document)
+    document = try #require(resetWrite)
+    #expect(document.feature.effects.colorGrading == nil)
+    #expect(document.feature.effects.exposure?.ev == 0.7)
+    document.undo()
+    #expect(document.feature.effects.colorGrading == grading)
+  }
+
   // MARK: - Initial document
 
   @Test func `A resumed feature is installed unchanged`() {

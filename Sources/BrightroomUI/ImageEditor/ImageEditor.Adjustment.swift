@@ -26,7 +26,7 @@ extension ImageEditor {
 
   /// A global adjustment parameter editable in ImageEditor's Adjust mode.
   ///
-  /// Each parameter maps a -100...100 (or 0...100 for zero-based ranges) slider
+  /// Color Grading has its own range controls. Other parameters map a -100...100 (or 0...100 for zero-based ranges) slider
   /// value onto the corresponding member of the feature: a member of
   /// `ImageEditorFeature.Effects`, evaluated before the local blur and the
   /// final crop, or `ImageEditorFeature.vignette`, evaluated after the crop.
@@ -35,6 +35,7 @@ extension ImageEditor {
     case brightness
     case contrast
     case saturation
+    case colorGrading
     case warmth
     case highlights
     case shadows
@@ -49,6 +50,7 @@ extension ImageEditor {
       case .brightness: return "Brightness"
       case .contrast: return "Contrast"
       case .saturation: return "Saturation"
+      case .colorGrading: return "Color Grading"
       case .warmth: return "Warmth"
       case .highlights: return "Highlights"
       case .shadows: return "Shadows"
@@ -63,6 +65,7 @@ extension ImageEditor {
       case .brightness: return "sun.max"
       case .contrast: return "circle.lefthalf.filled"
       case .saturation: return "drop"
+      case .colorGrading: return "circle.lefthalf.filled.righthalf.striped.horizontal"
       case .warmth: return "thermometer.medium"
       case .highlights: return "circle.tophalf.filled"
       case .shadows: return "circle.bottomhalf.filled"
@@ -80,13 +83,14 @@ extension ImageEditor {
       switch self {
       case .highlights, .gaussianBlur, .vignette:
         return true
-      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows:
+      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading:
         return false
       }
     }
 
-    var sliderRange: ClosedRange<Double> {
-      isZeroBased ? 0...100 : -100...100
+    var sliderRange: ClosedRange<Double>? {
+      guard self != .colorGrading else { return nil }
+      return isZeroBased ? 0...100 : -100...100
     }
 
     /// The maximum effect value the slider's positive end maps to.
@@ -95,6 +99,7 @@ extension ImageEditor {
     /// carry unbounded values, so the slider scale is an ImageEditor policy.
     private var maximumFilterValue: Double {
       switch self {
+      case .colorGrading: return 0
       case .exposure: return 1.8
       case .brightness: return 0.2
       case .contrast: return 0.18
@@ -112,6 +117,8 @@ extension ImageEditor {
       let effects = feature.effects
       let filterValue: Double
       switch self {
+      case .colorGrading:
+        return 0
       case .exposure:
         filterValue = effects.exposure?.ev ?? 0
       case .brightness:
@@ -146,6 +153,7 @@ extension ImageEditor {
     /// value removes the effect, including those parameters, so untouched
     /// parameters stay absent.
     func apply(sliderValue: Double, to feature: inout ImageEditorFeature) {
+      guard let sliderRange else { return }
       let clamped = min(
         max(sliderValue, sliderRange.lowerBound),
         sliderRange.upperBound
@@ -154,6 +162,8 @@ extension ImageEditor {
       let value: Double? = abs(clamped) < 0.5 ? nil : filterValue
 
       switch self {
+      case .colorGrading:
+        return
       case .exposure:
         Self.upsert(
           value,

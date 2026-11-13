@@ -137,7 +137,10 @@ extension SourceImage {
   /// settings.
   ///
   /// The RAW data is developed here, once and synchronously; the value keeps
-  /// the developed pixels, already oriented. Developing takes hundreds of
+  /// already-oriented, 16-bit floating-point pixels in extended-linear
+  /// Display-P3. This preserves developed precision and extended range for
+  /// subsequent edits, using eight bytes per pixel before preview buffers.
+  /// Developing takes hundreds of
   /// milliseconds for a 12 MP RAW and more for larger ones, so call this off
   /// the main actor.
   public init(rawData: Data) throws {
@@ -152,7 +155,8 @@ extension SourceImage {
   ///
   /// The file is developed here, once and synchronously; the value keeps the
   /// developed pixels, already oriented, and does not read the file again.
-  /// Like `init(rawData:)`, call this off the main actor.
+  /// As with `init(rawData:)`, the bitmap uses 16-bit floating-point
+  /// extended-linear Display-P3. Call this off the main actor.
   public init(rawContentsOf fileURL: URL) throws {
     guard fileURL.isFileURL else {
       throw SourceImageError.notFileURL(fileURL)
@@ -165,14 +169,26 @@ extension SourceImage {
 
   /// Shared by every RAW development: creating a context is costly, and a
   /// context is safe to use from several threads.
-  private static let rawDevelopmentContext = CIContext()
+  private static let rawDevelopmentContext = CIContext(options: [
+    .workingColorSpace: rawDevelopmentColorSpace,
+    .workingFormat: CIFormat.RGBAh,
+    .cacheIntermediates: false,
+  ])
+
+  private static let rawDevelopmentColorSpace = CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)!
 
   private init(developing rawFilter: CIFilter) throws {
     guard
       let output = rawFilter.outputImage,
       output.extent.isInfinite == false,
       output.extent.isEmpty == false,
-      let developed = Self.rawDevelopmentContext.createCGImage(output, from: output.extent)
+      let developed = Self.rawDevelopmentContext.createCGImage(
+        output,
+        from: output.extent,
+        format: .RGBAh,
+        colorSpace: Self.rawDevelopmentColorSpace,
+        deferred: false
+      )
     else {
       throw SourceImageError.unreadableImage
     }
