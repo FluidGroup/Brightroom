@@ -4,7 +4,8 @@ The loop keeps absolute RGB error and the previous adapter's error separately.
 It never converts those measurements into a Lightroom compatibility pass.
 """
 import argparse
-import hashlib
+import atexit
+from contextlib import ExitStack
 import importlib.util
 import json
 import os
@@ -12,12 +13,13 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from reference_pack import case_id, file_hash as digest, profile_of, registration
 from xmp_settings import read_adjustments
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('references', type=Path)
+parser.add_argument('references', type=Path, help='registered directory or portable Lightroom reference ZIP')
 parser.add_argument('output', type=Path)
-parser.add_argument('--developer-dir', required=True)
+parser.add_argument('--developer-dir', help='override the active Xcode (DEVELOPER_DIR or xcode-select)')
 parser.add_argument('--additional-references', type=Path, action='append', default=[],
   help='also read a registered set, for example another strength acquired for the same photographs')
 parser.add_argument('--scope', choices=['point', 'partial', 'groups', 'ablation', 'adjustments', 'mixer', 'light', 'grain', 'presence'], default='point',
@@ -49,7 +51,9 @@ repo = Path(__file__).resolve().parents[3]
 root = args.references.resolve()
 out = args.output.resolve()
 out.mkdir(parents=True, exist_ok=False)
-env = dict(os.environ, DEVELOPER_DIR=args.developer_dir)
+env = os.environ.copy()
+if args.developer_dir:
+  env['DEVELOPER_DIR'] = args.developer_dir
 products = repo / '.tmp/xmp-derived-data/Build/Products/Debug'
 work = dict(renderedImages=0, comparedImages=0, comparedPixels=0, failures=0)
 
@@ -74,27 +78,10 @@ if args.light_calibration:
   light_model = module.PointModel(*args.light_calibration)
 
 
-def digest(path):
-  with path.open('rb') as stream:
-    return hashlib.file_digest(stream, 'sha256').hexdigest()
-
-
 def require(condition, message):
   # Evidence checks must also run under python -O and PYTHONOPTIMIZE.
   if not condition:
     raise ValueError(message)
-
-
-def output_profile(reference):
-  """Use the ICC extracted from this exact Adobe output when one was retained."""
-  if 'outputICC' in reference:
-    return reference['outputICC']
-  inspection = reference.get('inspection', {})
-  if 'icc' in inspection:
-    require(inspection['sha256'] == reference['referenceSHA256'],
-      f"ICC inspection belongs to a different image: {reference['id']}")
-    return {'path': inspection['icc'], 'sha256': inspection['iccSHA256']}
-  return None
 
 
 def run(command, log):
@@ -128,22 +115,34 @@ def modes_for(case):
   return modes
 
 
-registrations = [root, *(directory.resolve() for directory in args.additional_references)]
-cases, references, reference_paths = [], {}, {}
+sources = [root, *(directory.resolve() for directory in args.additional_references)]
+temporary = ExitStack()
+atexit.register(temporary.close)
+registrations = [registration(source, temporary) for source in sources]
+cases, references, reference_paths, reference_roots = [], {}, {}, {}
 case_ids = set()
 for directory in registrations:
   local_ids = set()
   for case in json.loads((directory/'cases.json').read_text())['cases']:
+    case_id(case['id'])
     require(case['id'] not in case_ids, f"Duplicate registered case: {case['id']}")
     case_ids.add(case['id'])
     local_ids.add(case['id'])
-    cases.append(case)
+    cases.append(dict(case, input=str(directory/case['input']), settings=str(directory/case['settings'])))
   for reference in json.loads((directory/'references.json').read_text())['references']:
     identity = reference['id']
     require(identity not in references, f'Duplicate registered reference: {identity}')
     references[identity] = reference
     if identity in local_ids:
       reference_paths[identity] = directory/reference['reference']
+      reference_roots[identity] = directory
+
+
+def output_profile(reference):
+  profile = profile_of(reference)
+  if profile is not None:
+    return dict(profile, path=reference_roots[reference['id']]/profile['path'])
+  return None
 selected = [c for c in cases if c['group'] in ['neutral', 'curve-master', 'curve-red', 'curve-green',
   'curve-blue', 'curve-rgb', 'curve-point', 'curve-mid-up', 'curve-mid-down', 'curve-quarter-up', 'curve-endpoints']]
 if args.scope == 'partial':
@@ -234,6 +233,7 @@ run(['xcrun', 'swiftc', '-O', '-module-cache-path', '.tmp/swift-module-cache', '
 run(['xcrun', 'swiftc', '-O', '-module-cache-path', '.tmp/swift-module-cache',
   Path(__file__).parent.parent/'compare.swift', '-o', products/'compare-a10'], out/'compile-compare.log')
 results = []
+runtime = {}
 for case in selected:
   directory = out/case['id']
   directory.mkdir()
@@ -273,9 +273,16 @@ for case in selected:
       comparison += ['--middle-channel-source', case['input']]
     run(comparison, directory/(mode+'-compare.log'))
     metrics = json.loads((directory/(mode+'-comparison')/'comparison.json').read_text())
+    render = json.loads((directory/mode/'render.json').read_text())
+    if not runtime:
+      runtime = {k: render[k] for k in ('os', 'defaultMetalDevice', 'workingFormat', 'outputFormat')}
+      runtime['xcode'] = subprocess.check_output(['xcodebuild', '-version'], env=env, text=True).strip()
     work['comparedImages'] += 1
     work['comparedPixels'] += metrics['allPixels']['pixels']
     results.append(dict(id=case['id'], mode=mode, metrics=metrics, sourceRole=case.get('role'),
+      inputSHA256=case['inputSHA256'], settingsSHA256=case['settingsSHA256'], referenceSHA256=ref['referenceSHA256'],
+      outputICCSHA256=render['outputICCSHA256'],
+      neutralID=neutral_for[case['id']]['id'] if args.paired_neutral and case['group'] != 'neutral' else None,
       role='selected' if case['id'] in selected_ids else 'paired-neutral'))
     print(case['id'], mode, metrics['pixelMaxChannelError'], flush=True)
     if args.metrics_only:
@@ -289,7 +296,8 @@ if args.metrics_only:
       (out/identity/mode/'brightroom.png').unlink()
 (out/'report.json').write_text(json.dumps({'measurement': 'linear Display-P3; white = 1; not Delta E',
   'scope': args.scope,
-  'registrations': [str(directory) for directory in registrations],
+  'runtime': runtime, 'comparatorSHA256': digest(out/'compare.swift'),
+  'registrations': [str(source) for source in sources],
   'pairedNeutral': args.paired_neutral, 'responseAxes': args.response_axes,
   'retainedImages': not args.metrics_only, 'work': work,
   'status': 'measured; no overall compatibility threshold assigned', 'cases': results}, indent=2)+'\n')

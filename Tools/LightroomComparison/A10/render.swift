@@ -4,6 +4,7 @@ import CoreImage
 import CryptoKit
 import Foundation
 import ImageIO
+import Metal
 
 precondition(CommandLine.arguments.count == 5 || CommandLine.arguments.count == 6,
   "usage: render input-image settings.json output-directory point|legacy|partial|legacy-partial|calibrated|calibrated-light|tonal|adaptive|adaptive-no-grain|neutral [light-tables.bin]")
@@ -137,6 +138,7 @@ var evidence: [String: Any] = ["input": input.path, "inputSHA256": try hash(inpu
   "output": renderedURL.path, "outputSHA256": try hash(renderedURL),
   "renderSecondsIncludesDecodeAndWrite": renderSeconds,
   "workingFormat": "RGBAh", "outputFormat": "16-bit PNG",
+  "defaultMetalDevice": MTLCreateSystemDefaultDevice()?.name ?? "unavailable",
   "outputColorSpace": outputSpace.name as String? ?? "embedded ICC",
   "pointCurveSemanticVersion": PointCurveFeature.semanticVersion,
   "unsupportedInPartial": ((measuredLight || tonal) ? [] : ["Whites/Blacks"]) + ["parametric curve", "noise reduction", "Adobe profiles"] + (adaptive ? [] : ["Texture", "Clarity", "Dehaze"]) + (includeGrain ? [] : ["grain"]),

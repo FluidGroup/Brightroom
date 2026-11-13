@@ -14,6 +14,10 @@ adapter. [Highlights and Shadows measurements](../../docs/highlights-shadows.md#
 
 ## Replay the measured loop
 
+[Run recorded Lightroom charts on a fresh Mac or from a Linux agent via CI](Fixtures/README.md). The included post-development Light cases do not require the local acquisition or an Adobe installation.
+
+### Original Color Grading study
+
 The local acquisition is in `.tmp/xmp-research`. It contains private photographs,
 large TIFF exports and fixed manifests; these are deliberately not committed.
 Keep that directory with this checkout if continuing the experiment.

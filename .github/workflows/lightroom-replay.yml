@@ -1,0 +1,55 @@
+name: Lightroom reference replay
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/lightroom-replay.yml'
+      - 'Tools/LightroomComparison/**'
+      - 'Sources/BrightroomParametric/**'
+      - 'Sources/BrightroomColorAdjustmentKernels/**'
+      - 'Plugins/BuildColorAdjustmentKernels/**'
+      - 'Dev/**'
+      - 'Package.swift'
+
+permissions:
+  contents: read
+
+jobs:
+  charts:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: "26.5"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Record worker and check Metal
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun -f metal
+          xcrun swift -e 'import Metal; guard let gpu = MTLCreateSystemDefaultDevice() else { fatalError("No Metal device") }; print(gpu.name)'
+      - name: Render public charts and compare to recorded Lightroom TIFFs
+        run: |
+          python3 Tools/LightroomComparison/A10/run.py \
+            Tools/LightroomComparison/Fixtures/light-context-v1.zip .tmp/replay \
+            --scope light --modes adaptive --paired-neutral --metrics-only
+          python3 Tools/LightroomComparison/Fixtures/check_light_context.py .tmp/replay/report.json
+          python3 Tools/LightroomComparison/A10/score.py .tmp/replay/report.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: light-context-report
+          if-no-files-found: warn
+          path: |
+            .tmp/replay/report.json
+            .tmp/replay/failure.json
+            .tmp/replay/**/*.log
+          include-hidden-files: true
