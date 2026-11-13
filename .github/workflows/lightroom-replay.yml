@@ -43,6 +43,11 @@ jobs:
             --scope light --modes adaptive --paired-neutral --metrics-only
           python3 Tools/LightroomComparison/Fixtures/check_light_context.py .tmp/replay/report.json
           python3 Tools/LightroomComparison/A10/score.py .tmp/replay/report.json >> "$GITHUB_STEP_SUMMARY"
+          python3 Tools/LightroomComparison/A10/run.py \
+            Tools/LightroomComparison/Fixtures/grading-wheels-v1.zip .tmp/grading \
+            --scope all --paired-neutral --metrics-only
+          printf '\n' >> "$GITHUB_STEP_SUMMARY"
+          python3 Tools/LightroomComparison/A10/score.py .tmp/grading/report.json >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,4 +57,7 @@ jobs:
             .tmp/replay/report.json
             .tmp/replay/failure.json
             .tmp/replay/**/*.log
+            .tmp/grading/report.json
+            .tmp/grading/failure.json
+            .tmp/grading/**/*.log
           include-hidden-files: true

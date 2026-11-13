@@ -22,8 +22,8 @@ parser.add_argument('output', type=Path)
 parser.add_argument('--developer-dir', help='override the active Xcode (DEVELOPER_DIR or xcode-select)')
 parser.add_argument('--additional-references', type=Path, action='append', default=[],
   help='also read a registered set, for example another strength acquired for the same photographs')
-parser.add_argument('--scope', choices=['point', 'partial', 'groups', 'ablation', 'adjustments', 'mixer', 'light', 'grain', 'presence'], default='point',
-  help='choose the registered control, group, or full-preset cases to render')
+parser.add_argument('--scope', choices=['point', 'partial', 'groups', 'ablation', 'adjustments', 'mixer', 'light', 'grain', 'presence', 'all'], default='point',
+  help='choose the controls to render; all replays every registered case, including calibration')
 parser.add_argument('--calibrated-mixer', action='store_true',
   help='measure the explicit Lightroom approximation while retaining the previous adapter')
 parser.add_argument('--modes', nargs='+', choices=['point', 'legacy', 'partial', 'legacy-partial', 'calibrated', 'calibrated-light', 'tonal', 'adaptive', 'adaptive-no-grain'],
@@ -106,6 +106,8 @@ def modes_for(case):
     modes = ['adaptive', 'adaptive-no-grain']
   elif args.scope == 'presence':
     modes = ['adaptive']
+  elif args.scope == 'all':
+    modes = ['adaptive']
   elif args.scope in ['groups', 'adjustments', 'mixer']:
     modes = ['adaptive', 'partial']
   elif args.scope == 'light':
@@ -164,6 +166,8 @@ elif args.scope == 'grain':
   selected = [c for c in cases if c['group'] in ['neutral', 'grain', 'minus-grain', 'full']]
 elif args.scope == 'presence':
   selected = [c for c in cases if c['group'] in ['presence', 'presence-texture', 'presence-clarity', 'presence-dehaze']]
+elif args.scope == 'all':
+  selected = cases
 elif args.scope == 'light':
   selected = [c for c in cases if c['group'].startswith('light') and
     (c.get('role', 'validation') == 'validation'

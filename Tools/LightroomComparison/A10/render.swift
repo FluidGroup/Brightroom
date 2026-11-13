@@ -110,9 +110,26 @@ if partial {
     bands[band] = .init(hue: number("HueAdjustment" + key),
       saturation: number("SaturationAdjustment" + key), luminance: number("LuminanceAdjustment" + key))
   }
-  effects += [AnyImageEffect(ColorMixerFeature(bands: bands,
-    algorithm: measuredMixer ? .lightroomApproximation : .oklch)),
-    AnyImageEffect(UnsharpMaskFeature(intensity: number("Sharpness") / 100,
+  effects.append(AnyImageEffect(ColorMixerFeature(bands: bands,
+    algorithm: measuredMixer ? .lightroomApproximation : .oklch)))
+  // The grading study includes combined wheels. Preserve their authored blend
+  // and balance in the same pass instead of measuring each wheel separately.
+  if adaptive {
+    func correction(_ hue: String, _ saturation: String, _ luminance: String) -> ColorGradingFeature.Correction {
+      guard let wheel = ColorGradingFeature.Correction(validatingHue: number(hue),
+        saturation: number(saturation), luminance: number(luminance)) else { fatalError("Invalid grading wheel") }
+      return wheel
+    }
+    guard let grading = ColorGradingFeature(
+      validatingShadows: correction("SplitToningShadowHue", "SplitToningShadowSaturation", "ColorGradeShadowLum"),
+      midtones: correction("ColorGradeMidtoneHue", "ColorGradeMidtoneSat", "ColorGradeMidtoneLum"),
+      highlights: correction("SplitToningHighlightHue", "SplitToningHighlightSaturation", "ColorGradeHighlightLum"),
+      global: correction("ColorGradeGlobalHue", "ColorGradeGlobalSat", "ColorGradeGlobalLum"),
+      blending: number("ColorGradeBlending", 50), balance: number("SplitToningBalance"))
+    else { fatalError("Invalid grading blend or balance") }
+    effects.append(AnyImageEffect(grading))
+  }
+  effects += [AnyImageEffect(UnsharpMaskFeature(intensity: number("Sharpness") / 100,
       radius: .absolute(number("SharpenRadius", 1)))),
     AnyImageEffect(VignetteFeature(value: -number("PostCropVignetteAmount") / 50))]
   if includeGrain {
