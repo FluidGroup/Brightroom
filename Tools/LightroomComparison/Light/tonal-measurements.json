@@ -1,0 +1,305 @@
+{
+  "measurement": "Full-image linear Display-P3 maximum RGB channel error; white=1; not Delta E",
+  "calibrationSHA256": "4f4690a8ddb7541624dcaf62538fb05836a7632a54be1bbed30395cbb72874d2",
+  "cases": [
+    {
+      "run": "tonal-context-001",
+      "id": "context-ramp-Whites2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00010791420936584473,
+        "p95": 0.00047004222869873047,
+        "p99": 0.0007910728454589844
+      },
+      "maximum": 0.0011715292930603027,
+      "referenceSHA256": "38c0b117774a77d01fb2ad98959cbd08e2abb5adbaa17b8f6be0d51910019901",
+      "candidateSHA256": "158e72c1fb471abe9b28f681d32ff6dc148dc851e7847a840426ce07ba5126a9"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-ramp-Whites2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0012635886669158936,
+        "p95": 0.005063235759735107,
+        "p99": 0.012076318264007568
+      },
+      "maximum": 0.015420198440551758,
+      "referenceSHA256": "eed818fc751deaf7fafecff9a3c4a782667ed4ce9d3a1bd811af8fed9a532cd5",
+      "candidateSHA256": "44540363d999c9af657afbb5441e81b0caa3ddd3f6617b9bc728d3ce3a448111"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-ramp-Blacks2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00010797381401062012,
+        "p95": 0.0005434155464172363,
+        "p99": 0.0006281733512878418
+      },
+      "maximum": 0.0007019639015197754,
+      "referenceSHA256": "723a349758dc7281c58c38e5bab1d8f3f1b3fcedbc283b3d14f93e3a2e907ac4",
+      "candidateSHA256": "47f32f11cd83e89a2252368153e0eabcb7283a45d9f7c0ee0bdc617b58cc19d8"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-ramp-Blacks2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00012409687042236328,
+        "p95": 0.0005068182945251465,
+        "p99": 0.0005736947059631348
+      },
+      "maximum": 0.0006124973297119141,
+      "referenceSHA256": "ddd7c2a718eaeb0ee71e1f659f1b5a7a0f22eb1619bd4db7a4f76976acec2078",
+      "candidateSHA256": "3da4f7bf0209c769eb688531587490d81882852b7c7b5f28c33ebe5604b8017a"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-dark-Whites2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0001643410651013255,
+        "p95": 0.0001643410651013255,
+        "p99": 0.00041157007217407227
+      },
+      "maximum": 0.0011715292930603027,
+      "referenceSHA256": "dfb639862ce935d7b02a9ff6ab0fca379a88c6aabe92f6e583d7afc726503048",
+      "candidateSHA256": "04f3a02025b42d2f51396028a3bab2f2af72169201d41c0b463f928d2db6c902"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-dark-Whites2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00015506299678236246,
+        "p95": 0.011170893907546997,
+        "p99": 0.025586068630218506
+      },
+      "maximum": 0.026867985725402832,
+      "referenceSHA256": "d8f77c67d1e4de97f9a360a20e721d17025b247146cbafdb84101af98d4f1787",
+      "candidateSHA256": "d4290e70e1a673c88831d198cbd3b2cf4aa40b76234b9782d98858614949e9ee"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-dark-Blacks2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0002339673665119335,
+        "p95": 0.0002339673665119335,
+        "p99": 0.00048601627349853516
+      },
+      "maximum": 0.0007019639015197754,
+      "referenceSHA256": "29cae9b7d96f0ba8cbbb75147cb77b9b28e8b71d22e6c609ee4e5005fccf13a0",
+      "candidateSHA256": "90231cdadaa6592e8655559cf74e3710f043ee44162df644a31fd6948192526d"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-dark-Blacks2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 8.28116899356246e-05,
+        "p95": 0.00017845630645751953,
+        "p99": 0.0004584193229675293
+      },
+      "maximum": 0.0006124973297119141,
+      "referenceSHA256": "591c68ce2a8fbb2fd7af334a82ab9d120db46a8047c38b6772d775cbc63c50c9",
+      "candidateSHA256": "28f558d416af2b716c2a75c77c220daa1fb8796752110ec7475d56b710e2dc1f"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-light-Whites2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0011933445930480957,
+        "p95": 0.0011933445930480957,
+        "p99": 0.0011933445930480957
+      },
+      "maximum": 0.0011933445930480957,
+      "referenceSHA256": "4c38e3a719fa30939d4bfef9875e91d08c2e969f540c40c278f1d0f22d9a5d89",
+      "candidateSHA256": "66409f1092850c8ce058747f0e999b132cdb16c9efb6874cb81b66d1669271f6"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-light-Whites2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.004638314247131348,
+        "p95": 0.004638314247131348,
+        "p99": 0.0065506696701049805
+      },
+      "maximum": 0.011178672313690186,
+      "referenceSHA256": "ad19f7802aa81c2540a75b6f143efc85f6c0ff6cd6ba8cbed007387dfab78951",
+      "candidateSHA256": "d6c206fbb7ffc9c489eb818550b1ee030c884521ff73caeb31b1ae7f38f588cb"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-light-Blacks2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00022619962692260742,
+        "p95": 0.00022619962692260742,
+        "p99": 0.00048601627349853516
+      },
+      "maximum": 0.0007019639015197754,
+      "referenceSHA256": "359c0c10385b4fa29706dae090d521a2217f383db9569813b4b1a5c90bc3ae19",
+      "candidateSHA256": "2a170392812851e4785cfaf9f6f6c45521750e255ba8f9d030439f9168052440"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-light-Blacks2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.00011861324310302734,
+        "p95": 0.00017845630645751953,
+        "p99": 0.0004584193229675293
+      },
+      "maximum": 0.0006124973297119141,
+      "referenceSHA256": "5b6289089a7c8722bceecfad01f8b9b65f1c5a71103b0de5384725396e63c6a2",
+      "candidateSHA256": "cc3f32cc3a641875cc7fbb71afcd76fce7fa3d99d3488c215a76f560c0f701c6"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-midgray-Whites2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0001163780689239502,
+        "p95": 0.0001163780689239502,
+        "p99": 0.0001163780689239502
+      },
+      "maximum": 0.0001163780689239502,
+      "referenceSHA256": "fcec1abd967fd198b71f1d5d44dc4a00ff008c790da697028059419b5dbb542b",
+      "candidateSHA256": "c522773bf3c6fc150cecabb270982263f5b3343933ff0ff0548acdd953e6e341"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-midgray-Whites2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.014099150896072388,
+        "p95": 0.014099150896072388,
+        "p99": 0.014099150896072388
+      },
+      "maximum": 0.014099150896072388,
+      "referenceSHA256": "e3742052837093915f7fff792793c69374ba03b8fceb4a43875eea867be322ea",
+      "candidateSHA256": "4f66a12ca4940c4b1b5d22c4b28554f50ae5e6615993b1bfa818ba0f38d4bba4"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-midgray-Blacks2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0017895996570587158,
+        "p95": 0.0017895996570587158,
+        "p99": 0.0017895996570587158
+      },
+      "maximum": 0.0017895996570587158,
+      "referenceSHA256": "67735499310ae3c328f8ce7e284c4c33f15df9a5df138a88893474c375b1641b",
+      "candidateSHA256": "71ad91446d0aba4b179d8068b97b3d2e6acc0fbd0ecedcaed2ba260bd2509cae"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-midgray-Blacks2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0002593100070953369,
+        "p95": 0.0002593100070953369,
+        "p99": 0.0002593100070953369
+      },
+      "maximum": 0.0002593100070953369,
+      "referenceSHA256": "331f8d6076507701d8a56edd4928d5f4242ce0499da315a0bf273e1c47c98fee",
+      "candidateSHA256": "2a65ca486236a391ab5a39ec63dbd11fb3856c5ed2d6d9c11b53a896ad243cb0"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-photo-Whites2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 5.982816219329834e-05,
+        "p95": 0.0002288818359375,
+        "p99": 0.00027865171432495117
+      },
+      "maximum": 0.0012694001197814941,
+      "referenceSHA256": "5819edd0e35334d441ccbb6ed955cc748c993ee6e0fa74288fbae30000b4244b",
+      "candidateSHA256": "f519d62790091e4d1604a920f5540ece66581be700f265a1cb298bfde02285db"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-photo-Whites2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.0032814964652061462,
+        "p95": 0.04324200749397278,
+        "p99": 0.04589301347732544
+      },
+      "maximum": 0.1001359224319458,
+      "referenceSHA256": "82d79f6423d6265b483144d360351437a711a60839df8d7aa150598767c801f7",
+      "candidateSHA256": "2692eec4612d0d2cd8127602513f97867f11839697d2c113365f9cdf8df7949d"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-photo-Blacks2012--25",
+      "mode": "tonal",
+      "error": {
+        "p50": 7.486995309591293e-05,
+        "p95": 0.00021064281463623047,
+        "p99": 0.0002723698562476784
+      },
+      "maximum": 0.0009218454360961914,
+      "referenceSHA256": "fce33b93e668e595791d79237a53cb73e76e3fd9fc806fdb6b1eefd20e3b481c",
+      "candidateSHA256": "4b2ca53c669cc8c14d8908ed581289d5d789577152508d6aa4c7f1191cbe19e1"
+    },
+    {
+      "run": "tonal-context-001",
+      "id": "context-photo-Blacks2012-25",
+      "mode": "tonal",
+      "error": {
+        "p50": 5.861744284629822e-05,
+        "p95": 0.00025963783264160156,
+        "p99": 0.000318378210067749
+      },
+      "maximum": 0.0006947517395019531,
+      "referenceSHA256": "95f2225e363103087690a2312e4aaf1bdd2e08cc980ccb4fbcf84f5388c16f5c",
+      "candidateSHA256": "b0a6512705e890e07e0dd4504166277f60c28c255ae55fe39bbec36ef1489307"
+    },
+    {
+      "run": "tonal-user-a10-001",
+      "id": "supplied-photo-full",
+      "mode": "tonal",
+      "error": {
+        "p50": 0.03199029713869095,
+        "p95": 0.08122912049293518,
+        "p99": 0.09618166089057922
+      },
+      "maximum": 0.20978772640228271,
+      "referenceSHA256": "321b2031d578fa0e9b6aca37b018bcbe4aea2da4b1a5cde12a7126a9db121bdf",
+      "candidateSHA256": "b243f732e633ba9234b15063630d203f88ce4a0a75024a3c6ccd2718a4056433"
+    },
+    {
+      "run": "tonal-a10-controls-001",
+      "id": "adjust-photo-Whites2012",
+      "mode": "tonal",
+      "error": {
+        "p50": 4.1350722312927246e-05,
+        "p95": 0.0001964271068572998,
+        "p99": 0.00023683905601501465
+      },
+      "maximum": 0.0008788704872131348,
+      "referenceSHA256": "943165e3e3e1d6e7303dbfab284a7c6d5772c66c73dcbb38cf722e61d2a8bab6",
+      "candidateSHA256": "b5cc0ca78935e3d837782b9fbe6770b072b7bdbd09c3c22cacd121e744616d7b"
+    },
+    {
+      "run": "tonal-a10-controls-001",
+      "id": "adjust-photo-Blacks2012",
+      "mode": "tonal",
+      "error": {
+        "p50": 4.871934652328491e-05,
+        "p95": 0.00024762749671936035,
+        "p99": 0.0002924799919128418
+      },
+      "maximum": 0.0006898045539855957,
+      "referenceSHA256": "d184e560e94c79aaf9b36d4954d32795ce42926fa348025122c7e219d004a0b2",
+      "candidateSHA256": "7efc17753e21f055aa5a4e33ac2c48226a1869677305ebc96f5bd4ccbafdc393"
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "format": "BRTN0001 + UInt32 dimension + Float32 responses[Whites/Blacks,knot,node,RGB]; little endian",
+  "dimension": 32,
+  "responseKnots": [
+    -100,
+    -50,
+    -25,
+    -10,
+    0,
+    10,
+    25,
+    50,
+    100
+  ],
+  "parameters": [
+    "Whites2012",
+    "Blacks2012"
+  ],
+  "domain": "encoded Display-P3; response deltas in linear Display-P3; R-fastest lattice",
+  "runtime": "piecewise linear parameter response, tetrahedral RGB interpolation",
+  "neutralDiagonal": "mean measured RGB delta",
+  "maximumNeutralCorrection": 0.00010345379511514374,
+  "limits": "Pointwise SDR approximation; no image adaptation or measured Adobe HDR behavior",
+  "outputSHA256": "bca0ada47f3d36f2d28fe01afe3fc0507b4fa6d64185391f7d4db7567b4230ad",
+  "sourceSHA256": "cf39c8c23f724812ad35bf66391479e8ba662e6cb03d01e4e61a7b1ab8522342",
+  "pointModelSHA256": "9559e85ce00718a3f461f5ed10f61a3180f98bd93f7380c974c47742155c4c5f",
+  "references": [
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "fc4b151db2ffa98991cf76fbad899bcf4a168834dc75ad2551d3099aa6946975",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "212f80196bb46160c3c46b870a9141a10a3ceb0b806a869c1a6c6e0eda29e9fe",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Whites2012--100",
+      "referenceSHA256": "9f530d5718d26910108fb95774615780aa03082edeeb13d67acb0e13540105f5",
+      "decodedSHA256": "e82f1d97f6247cbaaae7fe4d6ae0122c8296ca16e17a8f338e4fac285d9844b1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Whites2012--50",
+      "referenceSHA256": "631687bd764023c633cef950dd43eebadd17792d2b864c54d4187cbd0042d6c1",
+      "decodedSHA256": "ada1b2238b381618099fb4181ba3ac498c4d349750fbf5627ff54553f9b87e3e"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Whites2012--25",
+      "referenceSHA256": "b23e129daf40d605a0723bf16364ac9b27d48c7a4f6fb56b89a3bc89256d035c",
+      "decodedSHA256": "58eeeb897591e4ba6ad308a7625fbeee3d13d29a43d6ef15e8878fe6a824b927"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Whites2012--10",
+      "referenceSHA256": "e4104186d21ffca3f413b8a2ea1cac597bd3d54f563cab5080fee19f406cdcdd",
+      "decodedSHA256": "9757c5880a26f8ca2434e212205a638769e04dd33ade41ccd5a22a53d48c370a"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Whites2012-10",
+      "referenceSHA256": "16e9c19a9058e479e57afc438d87f41a40ae815118a55134814d07dfb05bc149",
+      "decodedSHA256": "409319c446d5e9e9ffe297c07a09d908dbd44af7ad76a15a8b98e4fd3352155a"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Whites2012-25",
+      "referenceSHA256": "02aae1fae403cb8a8ce6ee6c2bc14bec206f55870958b7e33032d81a5e16a320",
+      "decodedSHA256": "17f5c63d5fab0546f1b7df9f59adcd830c99a63e51a4d6c3b8218b2ab61f2516"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Whites2012-50",
+      "referenceSHA256": "80b8177ad0ed5380e7bd77357ea6960f0f5dc9e79b5c282a38ba51bae63ea4fc",
+      "decodedSHA256": "a84d667c333fcbd3279e23aac90e49af4624a927aa58a011279dea6e61a3665b"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Whites2012-100",
+      "referenceSHA256": "2c1a7465723ebfe5ec673631eeee9692d875aec7f2506801ac3bc59f49f5654f",
+      "decodedSHA256": "42e21444682de4e77fb73410b3fd1baddc4eaaf6e07e44772ba08e27cdf32cfd"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Blacks2012--100",
+      "referenceSHA256": "6040eb267786e1a140629aa97f85dc72e29ef4416f477770b4134855ab49eb41",
+      "decodedSHA256": "9de7f73f3b93a41d202546fda40bea777fc337f3813cce2e0a0b5912bf72a0e7"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Blacks2012--50",
+      "referenceSHA256": "4595eef547d71e6978bbf61379a5ee00b6f623212cd61cd5fe625a1d2db61b5b",
+      "decodedSHA256": "4b2e30f02ad54176acb0bb541e85f4c9176510250694c4ed7734fc0e31a5a432"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Blacks2012--25",
+      "referenceSHA256": "827aac5202c3d2eee08589e3f9b72f73ab144c45f0ead91b17afe54e379e0002",
+      "decodedSHA256": "a3ecfd1faec47e8ebf84f8a780e0575d043952db6b8dd07abd2a1bbcc58f9870"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Blacks2012--10",
+      "referenceSHA256": "7902c2e7088de7eee0829e40c48339d6aab3724e94c40c3314992f7f2b39289b",
+      "decodedSHA256": "11d6c3accc4f8e1a1c9abb581b1fa47adc7632d7db01abb3eafdd5d50f83d37a"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Blacks2012-10",
+      "referenceSHA256": "f50d7270c0ea20bcb08b52cf5a234e9ccfcdf0cd3991c297ac4c26bf78399b3c",
+      "decodedSHA256": "2dfadd36528752f16ea454efde070771cc89d289bdd781120635b15837128ba2"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Blacks2012-25",
+      "referenceSHA256": "e5ae3e310773ae55ebb9bf3eb21899b89e025fe5be71d04b331a61dbf08ac557",
+      "decodedSHA256": "440e7b71f61db8d6ce0c246e9823ae3b5eb97bb07b0c362dcbf395b321e53b0b"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Blacks2012-50",
+      "referenceSHA256": "56fa6a8995918d08fbe9bbc608e503f7b9047af9efdc08aaa4689312fbd57004",
+      "decodedSHA256": "d552e31af352798ae83025dc201879b3f6de323affd04b167f3dde42e18eb984"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Blacks2012-100",
+      "referenceSHA256": "572d4e62283382aebe57635b34fa90a952acaff6927f4328dd922dbaaab3d009",
+      "decodedSHA256": "1c644da456215e0eb8a7507b1cb5eb86332e4c1137a41247a7d2f290b91b7aff"
+    }
+  ],
+  "compressedSHA256": "4f4690a8ddb7541624dcaf62538fb05836a7632a54be1bbed30395cbb72874d2",
+  "compressedBytes": 5424365,
+  "decodedBytes": 7077888,
+  "compiledTableBytes": 524288
+}

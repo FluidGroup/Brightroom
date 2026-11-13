@@ -1,0 +1,722 @@
+{
+  "baselineKernelSHA256": "00188fb1992399e900c67341c64154601c93762a2f29d144117db1da8ef79c70",
+  "samplesPerScene": 18000,
+  "luminanceFloor": 0.003,
+  "scenes": [
+    {
+      "inputSHA256": "4b2e7b6e958bc37cb23ab7bc05bf3cc66ffac778e8a73aec5066f9ce0e5e95b2",
+      "acquisition": "synthetic-001",
+      "publicNeutralID": "4b2e7b6e958bc37cb23a-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "color-layout-00-neutral",
+        "referenceSHA256": "63f21d2dcb4bfa4628a9101876bd60d23db01f5dcf876840790c2cf7ffbfc814",
+        "brightroomSHA256": "bd7e7902fd2cdfb6b3e27c14a0205aaf41de70df1576a2a1146198ede7d8528c",
+        "brightroomDecodedSHA256": "93f3b4e97fd29fa276da738e7140563e83b7a30e015881b219bde27441a656bf"
+      },
+      "Highlights2012": {
+        "id": "color-layout-00-Highlights2012--50",
+        "referenceSHA256": "b17d96560f997ffdb117be207672ef567e17ddad856b91de8e69f415c67bc617",
+        "brightroomSHA256": "94be7f2dbb2b2ea5fd955f7f47f5310653504440729941cb20f3b8d7efc4486c",
+        "brightroomDecodedSHA256": "f4843e7fd77fee70ee308290fef159bd2d42568814833a17ca380ef0d8433c73"
+      },
+      "Shadows2012": {
+        "id": "color-layout-00-Shadows2012--50",
+        "referenceSHA256": "dda815afc91544829e9254f3cd50a6ec3446059a7e85d52735ef7fdca80dfd5d",
+        "brightroomSHA256": "2ad46d35b152c554a2990251c00781aad6c0753db7ba26b748199ab6b36dc91f",
+        "brightroomDecodedSHA256": "34a451b0bfd53602a52ec83e5d0ba8acbb70d4a3d9359335bc01ea85851f0b5c"
+      }
+    },
+    {
+      "inputSHA256": "061b4875edb3267895957600e40929481c84e9b80609f95d037a5ec93f500a37",
+      "acquisition": "synthetic-001",
+      "publicNeutralID": "061b4875edb326789595-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "color-layout-01-neutral",
+        "referenceSHA256": "ef4015f01e20a14cd6332ea1972e25b48d2062b223382ae1c8e2f22a25b12808",
+        "brightroomSHA256": "ae31fbfe3c04b2ec67027dd888f249edac4316b7af30342583aad11453dc5c23",
+        "brightroomDecodedSHA256": "a12e05dda9ffe98bbf40e25b71ea7c6bfe41c0b2273fb96a0a0111376a0d8009"
+      },
+      "Highlights2012": {
+        "id": "color-layout-01-Highlights2012--50",
+        "referenceSHA256": "91365ff70eeee5bb51625079546810bcbf8fc4c5b4ad2b01ac2c003e86d9837c",
+        "brightroomSHA256": "5b93353822c784bd775a2a409a3691a55db9f7737b88cbb30b34ae3742515821",
+        "brightroomDecodedSHA256": "023a909668717bf09164acdf2e18096ed18fb22a85ecaa03745e160a38fc15d0"
+      },
+      "Shadows2012": {
+        "id": "color-layout-01-Shadows2012--50",
+        "referenceSHA256": "2b9aed523397d11b25637fd17f4f41fcd7c5bb71c4e10bb986ba2887f181f982",
+        "brightroomSHA256": "84749a2fd16cb5e575e3c5b801d678b59739e73afea0d3d40f24db001d31551a",
+        "brightroomDecodedSHA256": "4e18d38ebcfa3da182f3238157e3144a047fe81f5b99e24827f93ace0dc8bb2d"
+      }
+    },
+    {
+      "inputSHA256": "e21e0abc9706b75e636478b1a43f8111295e75cd5bce1d7c023905fdebb0173c",
+      "acquisition": "synthetic-001",
+      "publicNeutralID": "e21e0abc9706b75e6364-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "color-layout-03-neutral",
+        "referenceSHA256": "052ab78cabc7755dadd671107e53f5b4c1c3036c90ca1b55acbe2e006852e0fe",
+        "brightroomSHA256": "1a2857eeda058b1f8cd736c43a8749a8e8dc50bffe8c6deb512be664f26eb118",
+        "brightroomDecodedSHA256": "9585e9b0d7b328ab29584905233ec2c6ac80eb1634526bcf15a7bba9d5188b0e"
+      },
+      "Highlights2012": {
+        "id": "color-layout-03-Highlights2012--50",
+        "referenceSHA256": "ef20b13f136139994f1c4a04c45f5d438af553fb1906bd7d026aaa4c70be6722",
+        "brightroomSHA256": "6689dd2cac84acf1c45db77d09d37d70066514a252a9f6232b0f51145f361a53",
+        "brightroomDecodedSHA256": "22b7c41a23de06000c42b3f1b8670107af5ba842bfad5eb9b6ed7967d3bd21b4"
+      },
+      "Shadows2012": {
+        "id": "color-layout-03-Shadows2012--50",
+        "referenceSHA256": "a1aad9a2a56baad8788f850c83d450cabc3da532ed8b76895be4ed58e9034502",
+        "brightroomSHA256": "463c46369d6bf71b1925eab80bfe663e75ad3b5cd157aeef864b9e42841ea5ff",
+        "brightroomDecodedSHA256": "ebda3d83b36b4820314689fc37fe76f6aed4ed6d01b7a92a77368861d52b52a8"
+      }
+    },
+    {
+      "inputSHA256": "2b396e147a6eac5f09a56a2d770c9ee1e3c06a04064093d58fb768bf99f87f06",
+      "acquisition": "synthetic-001",
+      "publicNeutralID": "2b396e147a6eac5f09a5-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "color-layout-04-neutral",
+        "referenceSHA256": "c54360f70b31352654b3a42efc24bcb2573a1e59179e8e2bde74ed0ba0a27172",
+        "brightroomSHA256": "e51976d0b3f0f5ec7bd851b57e9ecdb0bcc7674d1a419fbe8f56ad02f8ee6a26",
+        "brightroomDecodedSHA256": "23691ba72a35a2c6c8398dfa093af67cf4160efbf47053214ecd4cea7774413d"
+      },
+      "Highlights2012": {
+        "id": "color-layout-04-Highlights2012--50",
+        "referenceSHA256": "8fd54050507ee33d6ab012584f758ef77d1cbf301599208617446b557b547631",
+        "brightroomSHA256": "df8d9524df7cdd6fd7a5f3f3c5b81ab372f6ee73dc65cfafc8acd71710026cf5",
+        "brightroomDecodedSHA256": "59a08196e243cccffa00ee71736bc87ebfd12b3c94fada76814a8834c7ad7254"
+      },
+      "Shadows2012": {
+        "id": "color-layout-04-Shadows2012--50",
+        "referenceSHA256": "6f91f72421493425e9acde125c264fff17a449501dd33ebe9d9f1ec20684654e",
+        "brightroomSHA256": "cbfb9d8c73a186e91927179c88a75a2c3a7df7f06be3704c2a6f22debe7d9117",
+        "brightroomDecodedSHA256": "ea53a2e11920da1d8554e91bb802db60cd9ac4570274a212e9ccd6e86876642e"
+      }
+    },
+    {
+      "inputSHA256": "9960fb34aa0f3e1c5993eb3d169081dd95ff8e81fb4ee4e3ec428558f7d8ea10",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "9960fb34aa0f3e1c5993-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-001-neutral",
+        "referenceSHA256": "6795cf291184ffbfe0cea82d0fad2e7dae299988425b419ec9cecb428622b5b5",
+        "brightroomSHA256": "f50aa92b655d4721ac7c9937898c0d538e355a0a2347206f5894a2fd267d1b98",
+        "brightroomDecodedSHA256": "dab84b77c1e75e105104fe7a0977f16fde3ff912b2992152d11ffcf0f4708cc8"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-001-Highlights2012--50",
+        "referenceSHA256": "435d59c1f449f264bd41d8f7b17661beb1d8a525b0360a2e68867f052457a206",
+        "brightroomSHA256": "d856db438c540df8b910a21eafddfd6702e771ba191c2b2146e79f4b2001dc6f",
+        "brightroomDecodedSHA256": "0f56a496ecf7100dacc0f9e9693896747bc7e3da8a7f24fe99cc55be5a6692c8"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-001-Shadows2012--50",
+        "referenceSHA256": "62bcd16ac17f6ccc4323e601f0ebb727088a2b7f30d75fd90cb2e49b8519eb6e",
+        "brightroomSHA256": "78850c4c0fbb92647b9f5e2cd69bea64f29e55a1ef7426308ba60c323cce9133",
+        "brightroomDecodedSHA256": "a7e0384ce75252f6c2f1d720344f621fd04c45ff66f8d1860638fd77c27b9b6a"
+      }
+    },
+    {
+      "inputSHA256": "f87e6ea6e68e3421af4b6752ee017651244ab17b45a7a537da2795ada8511c63",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "f87e6ea6e68e3421af4b-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-002-neutral",
+        "referenceSHA256": "6626031b900d99c1e6d4fd771f8b4043a65f7b60e02a4e8c5de60813e0fb3f2e",
+        "brightroomSHA256": "4e38b5f21cba469b5ef26ccb2191732d6d39f887e053d10532f42eb7709874f2",
+        "brightroomDecodedSHA256": "f0374795063585f7dd963675fae43eb882371c9519ed09d9589911bf708578da"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-002-Highlights2012--50",
+        "referenceSHA256": "7fb27ab3f69d1d9843bed20643a2118ad9f75bb43d86264d47ddd8c7dff157b1",
+        "brightroomSHA256": "b7617aebc9268de4cdc583707595470c542d12bf9ac419ee17c06aa6b6dcd551",
+        "brightroomDecodedSHA256": "8d5ede048e62543080d1406a6ba8ee8fa2cd31fa3a329256d60cb50ffb0bf161"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-002-Shadows2012--50",
+        "referenceSHA256": "30da22f0035d1b79680b07b86be4b3be2a5f48249f1784d41025d3971aadf433",
+        "brightroomSHA256": "d2b52c62a57852febb445ed25e7144cb976d175ac14761ca05f1829ee31d19de",
+        "brightroomDecodedSHA256": "0ba4fa89277e5ab60d23c93dfed8b9c728265ef68778b96053839e816dbbc31e"
+      }
+    },
+    {
+      "inputSHA256": "0c5fb00cddcf69ca7081c4da8503dc34b0707376619be11aa4eb07a72e8d7c48",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "0c5fb00cddcf69ca7081-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-003-neutral",
+        "referenceSHA256": "961bc34ceb631bea273eece298ea0b6cdd810be97f3067b707c91749abb9ceee",
+        "brightroomSHA256": "ba28f4f48df18cb06de4b0b5d8ddc8ad9549773da1f2c5b666f3aea6b9a1e907",
+        "brightroomDecodedSHA256": "5f6c6d4a726928b31ea901a4ee85d1d88934b696e6312452ae8dcc69036e9b6e"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-003-Highlights2012--50",
+        "referenceSHA256": "8f3a538df7b2b8c424778852d6589b33e82099d8f667fbeef69fbf7c7575c3c9",
+        "brightroomSHA256": "a6c0bafc2e0ee56118a70e1ec51b4d78e311f44724a6d1d7a67714b4dbc96cd0",
+        "brightroomDecodedSHA256": "2fd216f46355626e0d11cf63b3e4f4c0d68cf9e78dfaca6456852387e406fd47"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-003-Shadows2012--50",
+        "referenceSHA256": "ca0d7f714f81417e4339147f866a54cb67389a32156470d4d260d3d64b5b58e8",
+        "brightroomSHA256": "d17a227a732b464ef71c4c8e14772c618a2d419c091d6d866f61b99646e75309",
+        "brightroomDecodedSHA256": "b80e9895272e732b023ba5c9b0aa82513032f5af5070e7213340660e85805d42"
+      }
+    },
+    {
+      "inputSHA256": "9739dbfd2a353527bb6b87358a72e2346b0abd72d35fa6149c75a066d7c99954",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "9739dbfd2a353527bb6b-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-004-neutral",
+        "referenceSHA256": "8b7d8ccd756bcdf862217131a34b1d03150e02ef9e0a37a63350e612e3302f47",
+        "brightroomSHA256": "4f1d01d2b9bc88640f26df44d45deac8715e7645f1811a74192b1291665f3f54",
+        "brightroomDecodedSHA256": "f8717b20b907c8f1c08e4e737e3e11f36e37f4ed14a24f2f2eaf212b9d5241ce"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-004-Highlights2012--50",
+        "referenceSHA256": "9ecc58be104ea1758f317a89ff5e68bb78f0436551d915f81a8a0dac7dd699bd",
+        "brightroomSHA256": "09eb17fc098389797abdadfaba5db1d6a14cf22af49cf232cac495f64123ff8e",
+        "brightroomDecodedSHA256": "254a9a4cd52cedeb4e460749e68f3c84eabe850a93375664e6d99d7ec074118e"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-004-Shadows2012--50",
+        "referenceSHA256": "67c58d2d6931d40f9333dc2afc68d13c5ddaa81ab85a1afdc057cf76f82a1bb5",
+        "brightroomSHA256": "7f6554a0fa610870369132184808d46337edd0aeefc1ca81f3aa2ee9b5235eed",
+        "brightroomDecodedSHA256": "967c8eec25cfc8b864c37877915ee558bd02eaf4abc765ce0c918f7fe642aa3a"
+      }
+    },
+    {
+      "inputSHA256": "e0a76b620083eecfb549f35fde0f153e8258186af6a59b64cd328ee50a572e1b",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "e0a76b620083eecfb549-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-006-neutral",
+        "referenceSHA256": "3d01d0b197885fbb728d9b54fb1f687e153a434bab658fa2b62a63000a44e6fe",
+        "brightroomSHA256": "dd70250cbfe16a80aa3a27f29ae96f96672b85afdc820ab371a35e4b4b6142e1",
+        "brightroomDecodedSHA256": "a1268057c3b680d42cff7fae4dc1bbe1e8029b69f05427d0c914fd8495d41c63"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-006-Highlights2012--50",
+        "referenceSHA256": "9378b5dd8dd49e44936d4fd5cd1da8072f4fb11332e8666221494ed626c675dc",
+        "brightroomSHA256": "f3e31092533df438cb470e493dbd810e0f53d9ea4b4ff0da65b4265dda534e68",
+        "brightroomDecodedSHA256": "9acc0c3c1c8f84ad498ff626d1221ebcfce201250ffad4460f1929abec755364"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-006-Shadows2012--50",
+        "referenceSHA256": "9c95272cfe0794ee4f6a4639db805af1f8995a812e01d57e837a0cd723f8c44e",
+        "brightroomSHA256": "4a3a719f12c2e3417ccf2e8f1e27981db9c6dc4f5498f06580ee42ae8e45eae7",
+        "brightroomDecodedSHA256": "06ba869bf264b4dee87c22781277da9ed2ee225ebf354913433e09155997bcbb"
+      }
+    },
+    {
+      "inputSHA256": "effce78e4e91b3c28d1600c8201129cf997ae9bac55fb383f150dbd94eb3266e",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "effce78e4e91b3c28d16-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-007-neutral",
+        "referenceSHA256": "143d71fa3d68677bd604ad36c0a011dc466e33b2a48593a073b3ba56d27ac24c",
+        "brightroomSHA256": "58f97504d707abf52e8e145604c2b9c959cfead1382f553c5ca13424bdd1111a",
+        "brightroomDecodedSHA256": "d077c4314a52a0bed5f3fc4d9c2b6e55b1a27fedf2e0152e810a7bf58c588c20"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-007-Highlights2012--50",
+        "referenceSHA256": "0922f76dff05e83cf6e9fdf57be6baf2d30a705913dba6bafd4a41fed381a926",
+        "brightroomSHA256": "e4532550d17c04229934d903c4363a2e721ab8962df123eca1431f3fc068a1d0",
+        "brightroomDecodedSHA256": "d5544a8e9d270d487728b6e4450eaca002ee9e90103b719727cdbb214924a4db"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-007-Shadows2012--50",
+        "referenceSHA256": "d1d997b7402923253c1926ea4273982d14e8e4278b543839401b9cac3a5c2264",
+        "brightroomSHA256": "acd9929e0d7354744212b4bc4e7f3e62df8aed6490686d2273e5f346029e9f25",
+        "brightroomDecodedSHA256": "d7bc663e5eb1d2910f47e41c80c4a1efc9facd33888a02b5f540021d609c0725"
+      }
+    },
+    {
+      "inputSHA256": "964d6263376b88df50341916d48e670a2d9d544f5c807b966b299b5d5284ae64",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "964d6263376b88df5034-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-008-neutral",
+        "referenceSHA256": "ba4efd2d684056e4c35f700cc2a86c766078dfa4718b5d82a1ba157b0e679fe9",
+        "brightroomSHA256": "0ef522fa0e721e7ea55886be502da9d3e86c694d355153011313294cb14fa62d",
+        "brightroomDecodedSHA256": "51ff3f994bd169a1d10b75ac859e044bea738f810ecb8d1b1cd3eb8dedccc02b"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-008-Highlights2012--50",
+        "referenceSHA256": "73b07049a584d085240ea55f44e83582222c44d9ca0c946ff184d21005af0fad",
+        "brightroomSHA256": "3380544cec35bd3ea81abee17c15483eed31db83da5f56a20f16daa9a4b681b3",
+        "brightroomDecodedSHA256": "806cc2ce0389e99711ec40cd536945b3be127373a868f9f1ea9099a198cccde6"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-008-Shadows2012--50",
+        "referenceSHA256": "2681561882fba7a22f7f0c1bebc4e09381cc7448a64affeabc8b8dd74318b594",
+        "brightroomSHA256": "4b0e767392379843b532538a9d222af0f073fabf4f2419c4edd05b2bd2cc1799",
+        "brightroomDecodedSHA256": "0d84d9459612a5ed9058d0a11ecc014ce506c12cdbfb0a2c5bd27c795527d1fe"
+      }
+    },
+    {
+      "inputSHA256": "91d969de93a15cf9a613811d1b10fd3cdb14e3ea24f049b70b6c6d89d9d21d21",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "91d969de93a15cf9a613-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-009-neutral",
+        "referenceSHA256": "6a29cf13c32cff6dc08a7da865bbd708a2d4b990b97494f557e08bcabef534c2",
+        "brightroomSHA256": "a6cfdab59973a091655c6815ca23edfa5b0dceb9536030ae9f26bc1cb8920bff",
+        "brightroomDecodedSHA256": "c39e397f3369d2960d880be4e7eb38faf4b17d72847056583f1718759f50c10e"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-009-Highlights2012--50",
+        "referenceSHA256": "1e3560ec7e7b69524635170dfb130b6d30e65d2b89ea4dc864fabe6e98d436a5",
+        "brightroomSHA256": "8283326fe1e82046b298d6ebdba7eb16e2ae310ef016cd24f7c171bcb213fe0e",
+        "brightroomDecodedSHA256": "e5cdf569d843cdfaca650b0132ad17de54dbee76aefe706764477b3af737635e"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-009-Shadows2012--50",
+        "referenceSHA256": "4fd081b2aceee54de576f8eff29ae7ca7eb505232861f9e90d83c57192ec3889",
+        "brightroomSHA256": "eb6101c20fe5b3f6cd1789b6d4e76173ae71995414dcfffd8f7215f5cc53db44",
+        "brightroomDecodedSHA256": "08d8a6fa1a917f7a0e2799c72f0904babbd3b58e1e8d72f7605eb88a79bf5121"
+      }
+    },
+    {
+      "inputSHA256": "eb6760ce0adc55fcd543311840714a52c26018698989f4453cc44f0e804b60d5",
+      "acquisition": "acquisition-001",
+      "publicNeutralID": "eb6760ce0adc55fcd543-neutral-0a8ef7d1d9",
+      "neutral": {
+        "id": "photo-domain-010-neutral",
+        "referenceSHA256": "662161bcb4ee48ae66ffe9dccb5801b7e862f3730bc1fadbe3160c24c84fae13",
+        "brightroomSHA256": "e185e6d05f3cbd303c3ca1c8e2eb6fbc30d0c1cbbdf94abee190331161e28159",
+        "brightroomDecodedSHA256": "a8c472ba64796b7406575535d289caa00b9a1d32b346053155ce7415e6986004"
+      },
+      "Highlights2012": {
+        "id": "photo-domain-010-Highlights2012--50",
+        "referenceSHA256": "8f5e8414df1df03fa412d23bc656636736d3322d65a27f2d7fb6872b3af187d1",
+        "brightroomSHA256": "2c4cbafabf3c9488956cd5abd732556d3b48c479e57ecc30895886ab5a8cc14f",
+        "brightroomDecodedSHA256": "b0ad458ac1eff15341c225c7b1872825398011f8296ae88d04e92c0ea7ae331b"
+      },
+      "Shadows2012": {
+        "id": "photo-domain-010-Shadows2012--50",
+        "referenceSHA256": "aa28e86006d04675fb987794a57334df59394ae7f244f7e4225b209eacf8cc4d",
+        "brightroomSHA256": "9323799baaf9db675f6d17a0b691473f1464918541c85da9758703c840065670",
+        "brightroomDecodedSHA256": "0d8294af60688e962ca2cb8117d1e410aa9cad686f98036e7a0d6f7ae1c5a428"
+      }
+    }
+  ],
+  "controls": {
+    "Highlights2012": {
+      "ridge": 1.0,
+      "normalMatrix": [
+        [
+          0.00645518482527379,
+          0.015001281812596516,
+          0.0,
+          0.0,
+          0.0,
+          0.0011040385913953733,
+          0.002888578720504877,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.015001281812596516,
+          0.5215755201575447,
+          0.4430812785458792,
+          0.0,
+          0.0,
+          0.002888578720504877,
+          0.1320442979231221,
+          0.14210069131543304,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.4430812785458792,
+          4.137182089832516,
+          1.2165266733198927,
+          0.0,
+          0.0,
+          0.14210069131543304,
+          1.3708111204473366,
+          0.3569845455932402,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.2165266733198927,
+          3.168246610667949,
+          0.2947124634946903,
+          0.0,
+          0.0,
+          0.3569845455932402,
+          0.7565830157961466,
+          0.03994953521814266
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.2947124634946903,
+          0.22789721379711037,
+          0.0,
+          0.0,
+          0.0,
+          0.03994953521814266,
+          0.02428301121729623
+        ],
+        [
+          0.0011040385913953733,
+          0.002888578720504877,
+          0.0,
+          0.0,
+          0.0,
+          0.0002564167284061802,
+          0.0007755011334141294,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.002888578720504877,
+          0.1320442979231221,
+          0.14210069131543307,
+          0.0,
+          0.0,
+          0.0007755011334141294,
+          0.04513080167636469,
+          0.0578957422916557,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.14210069131543304,
+          1.3708111204473363,
+          0.3569845455932402,
+          0.0,
+          0.0,
+          0.05789574229165569,
+          0.5373506723010956,
+          0.12890549013289113,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.3569845455932402,
+          0.7565830157961467,
+          0.03994953521814266,
+          0.0,
+          0.0,
+          0.1289054901328911,
+          0.2847073126231743,
+          0.01340533226255115
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.03994953521814265,
+          0.02428301121729623,
+          0.0,
+          0.0,
+          0.0,
+          0.01340533226255115,
+          0.007060302184597197
+        ]
+      ],
+      "rightHandSide": [
+        -0.003736887233069512,
+        0.39025028285682734,
+        2.3350058932312607,
+        0.0636550087055105,
+        -0.38063565743629624,
+        -0.0004891936896925784,
+        0.08901921273454003,
+        0.7717277325798672,
+        0.16752733736889427,
+        -0.030764558155150345
+      ]
+    },
+    "Shadows2012": {
+      "ridge": 0.02,
+      "normalMatrix": [
+        [
+          0.15303419212700237,
+          0.20858179472395827,
+          0.0,
+          0.0,
+          0.0,
+          0.005743967053874965,
+          0.010412516953186244,
+          0.0,
+          0.0,
+          0.0,
+          -0.006430077427378129,
+          -0.012098140811882981,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.20858179472395827,
+          2.5968517380741956,
+          1.2133238936966175,
+          0.0,
+          0.0,
+          0.010412516953186244,
+          0.24937874422564266,
+          0.155773274480563,
+          0.0,
+          0.0,
+          -0.012098140811882983,
+          -0.15790168915281708,
+          -0.011822426819805106,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.2133238936966175,
+          4.140866523409633,
+          0.6774805458034265,
+          0.0,
+          0.0,
+          0.155773274480563,
+          0.5397846866509444,
+          0.09540386707833541,
+          0.0,
+          0.0,
+          -0.011822426819805068,
+          -0.20227109645479707,
+          -0.08100874226596962,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.6774805458034265,
+          0.8458421972636767,
+          0.025720745927743673,
+          0.0,
+          0.0,
+          0.09540386707833541,
+          0.11237759824430402,
+          0.000624048035282012,
+          0.0,
+          0.0,
+          -0.0810087422659696,
+          -0.1594377033100747,
+          -0.003917791321596403
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.025720745927743673,
+          0.013191394830634423,
+          0.0,
+          0.0,
+          0.0,
+          0.0006240480352820115,
+          0.00025384532371556666,
+          0.0,
+          0.0,
+          0.0,
+          -0.0039177913215964035,
+          -0.0017223435441660105
+        ],
+        [
+          0.005743967053874965,
+          0.010412516953186244,
+          0.0,
+          0.0,
+          0.0,
+          0.0006343956104587686,
+          0.0013774235277025859,
+          0.0,
+          0.0,
+          0.0,
+          -0.0005721458931352327,
+          -0.0013250185619476413,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.010412516953186244,
+          0.24937874422564266,
+          0.155773274480563,
+          0.0,
+          0.0,
+          0.0013774235277025859,
+          0.0403567917411105,
+          0.028992501550809267,
+          0.0,
+          0.0,
+          -0.0013250185619476413,
+          -0.021839021875309353,
+          -0.004300512501303771,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.155773274480563,
+          0.5397846866509445,
+          0.09540386707833541,
+          0.0,
+          0.0,
+          0.028992501550809267,
+          0.11081254638562892,
+          0.021583743424045777,
+          0.0,
+          0.0,
+          -0.0043005125013037705,
+          -0.045408584704224465,
+          -0.016633725585089063,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.09540386707833541,
+          0.11237759824430402,
+          0.0006240480352820117,
+          0.0,
+          0.0,
+          0.021583743424045777,
+          0.02889139789513835,
+          0.0007467245817431138,
+          0.0,
+          0.0,
+          -0.016633725585089066,
+          -0.03288140384652442,
+          -0.0007807132729095573
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0006240480352820119,
+          0.00025384532371556666,
+          0.0,
+          0.0,
+          0.0,
+          0.0007467245817431137,
+          0.0002936006603436871,
+          0.0,
+          0.0,
+          0.0,
+          -0.0007807132729095573,
+          -0.0003068166665478905
+        ],
+        [
+          -0.006430077427378129,
+          -0.012098140811882981,
+          0.0,
+          0.0,
+          0.0,
+          -0.0005721458931352326,
+          -0.0013250185619476413,
+          0.0,
+          0.0,
+          0.0,
+          0.0006207362925057396,
+          0.0015116157801223888,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -0.012098140811882981,
+          -0.15790168915281708,
+          -0.011822426819805068,
+          0.0,
+          0.0,
+          -0.0013250185619476413,
+          -0.021839021875309356,
+          -0.004300512501303772,
+          0.0,
+          0.0,
+          0.0015116157801223884,
+          0.0586066220851767,
+          0.04735903627332802,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -0.011822426819805073,
+          -0.20227109645479707,
+          -0.0810087422659696,
+          0.0,
+          0.0,
+          -0.004300512501303772,
+          -0.045408584704224465,
+          -0.016633725585089066,
+          0.0,
+          0.0,
+          0.04735903627332802,
+          0.15325411760098043,
+          0.02644775663940947,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          -0.0810087422659696,
+          -0.15943770331007473,
+          -0.0039177913215964035,
+          0.0,
+          0.0,
+          -0.016633725585089063,
+          -0.03288140384652442,
+          -0.0007807132729095573,
+          0.0,
+          0.0,
+          0.02644775663940947,
+          0.053246764661603725,
+          0.001633353933674188
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          -0.0039177913215964035,
+          -0.0017223435441660107,
+          0.0,
+          0.0,
+          0.0,
+          -0.0007807132729095573,
+          -0.0003068166665478905,
+          0.0,
+          0.0,
+          0.0,
+          0.001633353933674188,
+          0.0006807854568982322
+        ]
+      ],
+      "rightHandSide": [
+        0.32896704062502674,
+        2.2008749611406624,
+        1.4429703408878811,
+        -0.3075517469994391,
+        -0.025514930585530105,
+        0.015578772798073298,
+        0.2410178006836651,
+        0.20480419214421067,
+        -0.028506777725194492,
+        -0.00024136114054929735,
+        -0.01719191769788187,
+        -0.19476570577881785,
+        -0.22517609152519338,
+        0.05438467694526788,
+        0.003260513290802
+      ]
+    }
+  }
+}

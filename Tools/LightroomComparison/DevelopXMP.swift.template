@@ -1,0 +1,145 @@
+// Generated only for a local research run; never installed as a CI fixture.
+import BrightroomParametric
+import CoreImage
+import CryptoKit
+import Foundation
+import ImageIO
+import Testing
+@testable import BrightroomEngine
+
+/// Exercises the production iOS RAW loader and document export with a partial
+/// host-side XMP interpretation. No Adobe profile is installed or synthesized.
+struct XMPResearchExportTests {
+  struct Edit: Feature, Equatable {
+    var effects: [AnyImageEffect]
+    var crop: CropFeature
+    var vignette: VignetteFeature?
+    var grain: GrainFeature.CameraRaw
+    var body: some Feature { effects; crop; vignette; grain }
+  }
+
+  @Test func develop() async throws {
+    let configuration = URL(fileURLWithPath: __CONFIGURATION__)
+    let config = try JSONSerialization.jsonObject(with: Data(contentsOf: configuration)) as! [String: Any]
+    let output = URL(fileURLWithPath: config["output"] as! String)
+    let raw = URL(fileURLWithPath: config["raw"] as! String)
+    func stage(_ name: String) throws {
+      try name.write(to: output.appendingPathComponent("stage.txt"), atomically: true, encoding: .utf8)
+    }
+    try stage("Creating SourceImage from RAW")
+    let source = try SourceImage(rawContentsOf: raw)
+    try stage("RAW developed; exporting neutral")
+    var result: [String: Any] = ["sourceWidth": source.pixelSize.width, "sourceHeight": source.pixelSize.height,
+      "os": ProcessInfo.processInfo.operatingSystemVersionString,
+      "route": "SourceImage(rawContentsOf:) -> EditingDocument.render -> ExportRenderer",
+      "rawSHA256": SHA256.hash(data: try Data(contentsOf: raw)).map { String(format: "%02x", $0) }.joined()]
+    if case .bitmap(let bitmap) = source.storage.backing {
+      result["rawMaterializationBitsPerComponent"] = bitmap.bitsPerComponent
+      result["rawMaterializationColorSpace"] = bitmap.colorSpace?.name as String?
+      result["rawMaterializationFloatComponents"] = bitmap.bitmapInfo.contains(.floatComponents)
+      result["rawMaterializationBytes"] = bitmap.bytesPerRow * bitmap.height
+    }
+    var outputs = [[String: Any]]()
+    let checkContext = CIContext(options: [.useSoftwareRenderer: true, .cacheIntermediates: false])
+    func record(_ url: URL) throws -> [String: Any] {
+      let image = CGImageSourceCreateWithURL(url as CFURL, nil)!
+      let properties = CGImageSourceCopyPropertiesAtIndex(image, 0, nil)! as NSDictionary
+      // This adapter exports an opaque DNG with an axis-aligned pixel crop.
+      // The PNG writer can return success even when Core Image drops a tile.
+      let decoded = try #require(CIImage(contentsOf: url))
+      let minimum = decoded.applyingFilter("CIAreaMinimum",
+        parameters: [kCIInputExtentKey: CIVector(cgRect: decoded.extent)])
+      var alpha: UInt8 = 0
+      checkContext.render(minimum, toBitmap: &alpha, rowBytes: 1, bounds: minimum.extent,
+        format: .A8, colorSpace: nil)
+      try #require(alpha == 255, "Missing opaque pixels in \(url.lastPathComponent)")
+      return ["file": url.path, "sha256": SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined(),
+        "width": properties[kCGImagePropertyPixelWidth]!, "height": properties[kCGImagePropertyPixelHeight]!,
+        "bits": properties[kCGImagePropertyDepth]!, "profile": properties[kCGImagePropertyProfileName] ?? "unknown",
+        "minimumAlpha8": Int(alpha)]
+    }
+    let neutralURL = output.appendingPathComponent("apple-raw-neutral.png")
+    _ = try await EditingDocument(source: source, feature: EmptyFeature()).render(options: .init(
+      outputFormat: .RGBA16, outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3),
+      output: .file(url: neutralURL, fileType: .png)))
+    outputs.append(try record(neutralURL))
+    try stage("Neutral exported; applying XMP features")
+
+    for packet in config["presets"] as! [[String: Any]] {
+      let settings = packet["settings"] as! [String: String]
+      func number(_ key: String, _ fallback: Double = 0) -> Double { Double(settings[key] ?? "") ?? fallback }
+      func correction(_ h: String, _ s: String, _ l: String) -> ColorGradingFeature.Correction {
+        .init(hue: number(h), saturation: number(s), luminance: number(l))
+      }
+      // XMP supplies the points of each curve in 0...255 coordinates.
+      let storedPoints = packet["curves"] as! [String: [[Double]]]
+      func curve(_ key: String) throws -> ToneCurve {
+        let points = storedPoints[key] ?? [[0, 0], [255, 255]]
+        return try #require(ToneCurve(validating: points.map {
+          .init(input: $0[0] / 255, output: $0[1] / 255)
+        }))
+      }
+      var bands = ColorMixerFeature.Bands()
+      for (band, key) in zip(ColorMixerFeature.Band.allCases, ["Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Purple", "Magenta"]) {
+        bands[band] = .init(hue: number("HueAdjustment" + key),
+          saturation: number("SaturationAdjustment" + key), luminance: number("LuminanceAdjustment" + key))
+      }
+      let grading = ColorGradingFeature(
+        shadows: correction("SplitToningShadowHue", "SplitToningShadowSaturation", "ColorGradeShadowLum"),
+        midtones: correction("ColorGradeMidtoneHue", "ColorGradeMidtoneSat", "ColorGradeMidtoneLum"),
+        highlights: correction("SplitToningHighlightHue", "SplitToningHighlightSaturation", "ColorGradeHighlightLum"),
+        global: correction("ColorGradeGlobalHue", "ColorGradeGlobalSat", "ColorGradeGlobalLum"),
+        blending: number("ColorGradeBlending", 50), balance: number("SplitToningBalance"))
+      let size = source.pixelSize
+      let rect = CGRect(x: number("CropLeft") * size.width, y: number("CropTop") * size.height,
+        width: (number("CropRight", 1) - number("CropLeft")) * size.width,
+        height: (number("CropBottom", 1) - number("CropTop")) * size.height)
+      var effects = [AnyImageEffect(ExposureFeature(ev: number("Exposure2012")))]
+      if let path = packet["lightTables"] as? String {
+        // Replay the original chart-table experiment with its original H/S algorithm.
+        effects += [
+          AnyImageEffect(HighlightsFeature(value: -number("Highlights2012") / 100)),
+          AnyImageEffect(ShadowsFeature(value: number("Shadows2012") / 100)),
+          AnyImageEffect(try MeasuredLightFeature(tableURL: URL(fileURLWithPath: path))),
+        ]
+      } else {
+        effects += [
+          AnyImageEffect(HighlightsShadowsFeature(
+            highlights: number("Highlights2012"), shadows: number("Shadows2012"))),
+          AnyImageEffect(WhitesFeature(amount: number("Whites2012"))),
+          AnyImageEffect(BlacksFeature(amount: number("Blacks2012"))),
+          AnyImageEffect(SaturationFeature(lightroomAmount: number("Saturation"))),
+        ]
+      }
+      let curves = try PointCurveFeature.Curves(master: curve("ToneCurvePV2012"),
+        red: curve("ToneCurvePV2012Red"), green: curve("ToneCurvePV2012Green"), blue: curve("ToneCurvePV2012Blue"))
+      let refinement = try #require(Double(settings["CurveRefineSaturation"] ?? "100"))
+      let pointCurve = try #require(PointCurveFeature(validatingCurves: curves, refineSaturation: refinement))
+      effects.append(AnyImageEffect(pointCurve))
+      if packet["lightTables"] == nil {
+        effects.append(AnyImageEffect(TextureFeature(amount: number("Texture"))))
+        effects.append(AnyImageEffect(ClarityFeature(amount: number("Clarity2012"))))
+        effects.append(AnyImageEffect(DehazeFeature(amount: number("Dehaze"))))
+      }
+      effects += [
+        AnyImageEffect(ColorMixerFeature(bands: bands, algorithm: .lightroomApproximation)), AnyImageEffect(grading),
+        AnyImageEffect(UnsharpMaskFeature(intensity: number("Sharpness") / 100,
+          radius: .absolute(number("SharpenRadius", 1))))
+      ]
+      let seed = try #require(UInt32(exactly: number("GrainSeed")))
+      let edit = Edit(effects: effects, crop: .init(topLeftRect: rect, imageSize: size),
+        vignette: .init(value: -number("PostCropVignetteAmount") / 50),
+        grain: .init(amount: number("GrainAmount"), size: number("GrainSize", 25),
+          roughness: number("GrainFrequency", 50), seed: seed))
+      let url = output.appendingPathComponent((packet["name"] as! String) + "-partial.png")
+      _ = try await EditingDocument(source: source, feature: edit).render(options: .init(
+        outputFormat: .RGBA16, outputColorSpace: CGColorSpace(name: CGColorSpace.displayP3),
+        output: .file(url: url, fileType: .png)))
+      outputs.append(try record(url))
+      try stage("Exported " + url.lastPathComponent)
+    }
+    result["outputs"] = outputs
+    try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+      .write(to: output.appendingPathComponent("render.json"))
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "status": "Diagnostic: pointwise chart response rejected for photographic Shadows",
+  "measurement": "linear Display-P3 max-channel absolute error; stride-8 samples, not full-image percentiles",
+  "model": "signed piecewise-linear +/-50 chart response with trilinear RGB interpolation",
+  "consumedSHA256": {
+    "decoded/adjust-chart-neutral.rgba32f": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c",
+    "photo-samples/adjust-photo-neutral.rgba32f": "28282e47a1ce0ad4e9d8bf3f4cd0021915bc3b9f7a94feec00cded1968019424",
+    "decoded/adjust-chart-Highlights2012--50.rgba32f": "ae3f5c2e2910ec87da2f3edfff76ea2ff56c25769023caa3d984d8c423887a29",
+    "photo-samples/adjust-photo-Highlights2012.rgba32f": "e0bede21cf816d39917c3cebb1462e0e1357e7461cffc609b81de4868f5507e6",
+    "decoded/adjust-chart-Shadows2012-50.rgba32f": "ecdf77b64dcfc34d8d2fa14a15102c9e74613083f552cc77b3b194346692106a",
+    "photo-samples/adjust-photo-Shadows2012.rgba32f": "3c0c655a72112c9ea61662ea025a0f3ac77bfb22caca2984aa860cbe42a67384",
+    "decoded/adjust-chart-Whites2012--50.rgba32f": "ada1b2238b381618099fb4181ba3ac498c4d349750fbf5627ff54553f9b87e3e",
+    "photo-samples/adjust-photo-Whites2012.rgba32f": "d9085f1bfc25ba9d948049fe97e54c498fe9dd03eb9f72cee2abc4262470deac",
+    "decoded/adjust-chart-Blacks2012-50.rgba32f": "d552e31af352798ae83025dc201879b3f6de323affd04b167f3dde42e18eb984",
+    "photo-samples/adjust-photo-Blacks2012.rgba32f": "cde6323fd0ad001e0e65ddb4d3c491fd8e27817f0731216f325ba18218535de8",
+    "decoded/adjust-chart-Saturation-50.rgba32f": "4030b1966baf1551de9f3a642281ff4ec0e4851fe57e1f80216f9d359df95aa9",
+    "photo-samples/adjust-photo-Saturation.rgba32f": "f08bba4508e2206c883051fcf8f7b8095023f24ee12a0a6080c33d5cafcd5831"
+  },
+  "cases": [
+    {
+      "id": "adjust-photo-Highlights2012",
+      "parameter": "Highlights2012",
+      "amount": -11,
+      "p50": 0.001022840169789499,
+      "p95": 0.0034068684737086417,
+      "maximum": 0.02448886201335254,
+      "adobeResponseP95": 0.014740049839019775,
+      "predictedResponseP95": 0.01497597232405531
+    },
+    {
+      "id": "adjust-photo-Shadows2012",
+      "parameter": "Shadows2012",
+      "amount": 30,
+      "p50": 0.020062596579878633,
+      "p95": 0.07193616083210803,
+      "maximum": 0.13828913588119307,
+      "adobeResponseP95": 0.010393207333981984,
+      "predictedResponseP95": 0.08329753286565236
+    },
+    {
+      "id": "adjust-photo-Whites2012",
+      "parameter": "Whites2012",
+      "amount": -22,
+      "p50": 0.0007340946960809544,
+      "p95": 0.004152023367462843,
+      "maximum": 0.006770066494924287,
+      "adobeResponseP95": 0.02415335178375244,
+      "predictedResponseP95": 0.019994620362906102
+    },
+    {
+      "id": "adjust-photo-Blacks2012",
+      "parameter": "Blacks2012",
+      "amount": 11,
+      "p50": 0.00038338612152529275,
+      "p95": 0.0012287122108963497,
+      "maximum": 0.001629040612252608,
+      "adobeResponseP95": 0.011463178694248196,
+      "predictedResponseP95": 0.012688600190677472
+    },
+    {
+      "id": "adjust-photo-Saturation",
+      "parameter": "Saturation",
+      "amount": 5,
+      "p50": 2.6628386660235842e-05,
+      "p95": 0.00030915098912470684,
+      "maximum": 0.029506864802977734,
+      "adobeResponseP95": 0.006558120250701904,
+      "predictedResponseP95": 0.006351241423027362
+    }
+  ]
+}

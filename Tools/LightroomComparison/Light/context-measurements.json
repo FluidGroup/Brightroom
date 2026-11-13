@@ -1,0 +1,161 @@
+{
+  "measurement": "Float32 linear Display-P3 RGB; white=1; identical central ramp at row 128",
+  "caution": "Uniform midgray and nearest ramp midgray have slightly different input values; only the central ramps are exact input matches",
+  "interpretation": "Context dependence falsifies a fixed pointwise transform; local versus global adaptation is unresolved",
+  "cases": [
+    {
+      "parameter": "Whites2012",
+      "amount": -25,
+      "centralRampMaximumResponseDifference": {
+        "dark": 0.0,
+        "light": 0.0
+      },
+      "uniformMidgrayResponse": [
+        -0.01515910029411316,
+        -0.01516018807888031,
+        -0.015175625681877136
+      ],
+      "nearestRampMidgrayResponse": [
+        -0.015222102403640747,
+        -0.015199199318885803,
+        -0.015216872096061707
+      ]
+    },
+    {
+      "parameter": "Whites2012",
+      "amount": 25,
+      "centralRampMaximumResponseDifference": {
+        "dark": 0.021821022033691406,
+        "light": 0.01156848669052124
+      },
+      "uniformMidgrayResponse": [
+        0.023726701736450195,
+        0.023745864629745483,
+        0.02372981607913971
+      ],
+      "nearestRampMidgrayResponse": [
+        0.010967031121253967,
+        0.01098749041557312,
+        0.01097087562084198
+      ]
+    },
+    {
+      "parameter": "Blacks2012",
+      "amount": -25,
+      "centralRampMaximumResponseDifference": {
+        "dark": 0.0,
+        "light": 0.0
+      },
+      "uniformMidgrayResponse": [
+        -0.011696964502334595,
+        -0.011674478650093079,
+        -0.011691927909851074
+      ],
+      "nearestRampMidgrayResponse": [
+        -0.009925469756126404,
+        -0.009882032871246338,
+        -0.009916156530380249
+      ]
+    },
+    {
+      "parameter": "Blacks2012",
+      "amount": 25,
+      "centralRampMaximumResponseDifference": {
+        "dark": 0.0,
+        "light": 0.0
+      },
+      "uniformMidgrayResponse": [
+        0.018601447343826294,
+        0.01862107217311859,
+        0.01860480010509491
+      ],
+      "nearestRampMidgrayResponse": [
+        0.018603742122650146,
+        0.01862342655658722,
+        0.018607094883918762
+      ]
+    }
+  ],
+  "references": {
+    "context-ramp-neutral": {
+      "referenceSHA256": "3eda273f9a4969b1e66ac56a275293dc359a740031467744d72891bac9066f4d",
+      "decodedSHA256": "f57bcc02c9653f30cc38466cacf18a77984610b78d2091e256b0e3ce68e25af0"
+    },
+    "context-dark-neutral": {
+      "referenceSHA256": "dbb703c57010d91ffe7ebfe6229482f6b8e8ac5097fcb1f191b6740d43852ab6",
+      "decodedSHA256": "57c3b7c5f33ca4b330c56e3726a51b07a6f518d1382914e4e4a19fac55f95796"
+    },
+    "context-light-neutral": {
+      "referenceSHA256": "67a84ef3e767407de5dc49ec4f9ebd6a48b1a931dee0ad7de1d6d9980e463296",
+      "decodedSHA256": "9fd350992eaa1f5f1d05c13d70033d67d2f8ced5afd0edd771f402ca21d76bda"
+    },
+    "context-midgray-neutral": {
+      "referenceSHA256": "a740fe55a199e468e0b0888f9a0eaa07d3831080d28a5601cd5198a20fbd9280",
+      "decodedSHA256": "6e4d63b2803646efc08b746abf8e09e919aaa6b9eda125716dd2deaa40afc760"
+    },
+    "context-ramp-Whites2012--25": {
+      "referenceSHA256": "38c0b117774a77d01fb2ad98959cbd08e2abb5adbaa17b8f6be0d51910019901",
+      "decodedSHA256": "faf1bb2667a193f63a50f5516cf3c92de74fa7c973cf6306e5595f104e977b24"
+    },
+    "context-dark-Whites2012--25": {
+      "referenceSHA256": "dfb639862ce935d7b02a9ff6ab0fca379a88c6aabe92f6e583d7afc726503048",
+      "decodedSHA256": "99a02c40483cec1f9bdf167bd9c222458c0d28f892e29a15df0ade77cd6a5d6e"
+    },
+    "context-light-Whites2012--25": {
+      "referenceSHA256": "4c38e3a719fa30939d4bfef9875e91d08c2e969f540c40c278f1d0f22d9a5d89",
+      "decodedSHA256": "d8b1ea80159e83944b736ff3f49b39ff64eefccbe30bd5a402ff6fdaf0651c22"
+    },
+    "context-midgray-Whites2012--25": {
+      "referenceSHA256": "fcec1abd967fd198b71f1d5d44dc4a00ff008c790da697028059419b5dbb542b",
+      "decodedSHA256": "d72ad4d2297f2cf78a10c531e62db8ec59e78cc2fb592c7fab9e2b1a7018f033"
+    },
+    "context-ramp-Whites2012-25": {
+      "referenceSHA256": "eed818fc751deaf7fafecff9a3c4a782667ed4ce9d3a1bd811af8fed9a532cd5",
+      "decodedSHA256": "344b8abfdf1038536b7d9ad0556d4792b01e65ff44a1e3b726af0f6025e6b25d"
+    },
+    "context-dark-Whites2012-25": {
+      "referenceSHA256": "d8f77c67d1e4de97f9a360a20e721d17025b247146cbafdb84101af98d4f1787",
+      "decodedSHA256": "0a744f3bf6dc96f1edd9675a176a18e3bb43b19fab2c87f4368e68fbb9cb2a1e"
+    },
+    "context-light-Whites2012-25": {
+      "referenceSHA256": "ad19f7802aa81c2540a75b6f143efc85f6c0ff6cd6ba8cbed007387dfab78951",
+      "decodedSHA256": "254bca2efaf25678eac0a5c4a6129d3c94eca609209c75cdaa3bf1c9a0c10187"
+    },
+    "context-midgray-Whites2012-25": {
+      "referenceSHA256": "e3742052837093915f7fff792793c69374ba03b8fceb4a43875eea867be322ea",
+      "decodedSHA256": "3f430a9061cf0932732f610ef526012c97d5c7e67c401fad265f36f3d0c6da17"
+    },
+    "context-ramp-Blacks2012--25": {
+      "referenceSHA256": "723a349758dc7281c58c38e5bab1d8f3f1b3fcedbc283b3d14f93e3a2e907ac4",
+      "decodedSHA256": "18fa77c6c720493d51e3cbfcfe20ba550cce5e08bb2dc676a0842d1eaf43f50b"
+    },
+    "context-dark-Blacks2012--25": {
+      "referenceSHA256": "29cae9b7d96f0ba8cbbb75147cb77b9b28e8b71d22e6c609ee4e5005fccf13a0",
+      "decodedSHA256": "2d118d71eda7698b3de4358093ab981c8f37d9a16e2ae66da84f7200d2b75ad9"
+    },
+    "context-light-Blacks2012--25": {
+      "referenceSHA256": "359c0c10385b4fa29706dae090d521a2217f383db9569813b4b1a5c90bc3ae19",
+      "decodedSHA256": "9226b472f387ef15262e34e3256d9800226b5ccb4d04171eec5da4e9e5505690"
+    },
+    "context-midgray-Blacks2012--25": {
+      "referenceSHA256": "67735499310ae3c328f8ce7e284c4c33f15df9a5df138a88893474c375b1641b",
+      "decodedSHA256": "be38fc77b071338422a7214fa7867d3342f59fef23f5d8926d7e3a5b262c8ce9"
+    },
+    "context-ramp-Blacks2012-25": {
+      "referenceSHA256": "ddd7c2a718eaeb0ee71e1f659f1b5a7a0f22eb1619bd4db7a4f76976acec2078",
+      "decodedSHA256": "c2484ad055fed5b81ab5aa9406e48a029619f1667cfceb4f632e5099f7bf7556"
+    },
+    "context-dark-Blacks2012-25": {
+      "referenceSHA256": "591c68ce2a8fbb2fd7af334a82ab9d120db46a8047c38b6772d775cbc63c50c9",
+      "decodedSHA256": "52ad1d0422d969213aa455bb9b84b4ebd3b80c603593de88c0dc9981594d84df"
+    },
+    "context-light-Blacks2012-25": {
+      "referenceSHA256": "5b6289089a7c8722bceecfad01f8b9b65f1c5a71103b0de5384725396e63c6a2",
+      "decodedSHA256": "a8278da33210868f398eb162287d1bd57c31701b159e87230db372d15dd3086b"
+    },
+    "context-midgray-Blacks2012-25": {
+      "referenceSHA256": "331f8d6076507701d8a56edd4928d5f4242ce0499da315a0bf273e1c47c98fee",
+      "decodedSHA256": "6cecdcfba98f9bada34b9b42009ab134ecc93429cb95d38c91d3eb3fdae8552c"
+    }
+  }
+}

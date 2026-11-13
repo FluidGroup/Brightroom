@@ -1,0 +1,26 @@
+{
+  "test": "TonalPointTests.intermediateAmountsApproximatePhotographicReferences",
+  "coordinates": "x=75,275,475,675 at y=125,375; row-major; stride-8 decoded image 750x500",
+  "input": "Registered Lightroom neutral; Float32 extended-linear Display-P3",
+  "parameters": {
+    "Whites2012": -22,
+    "Blacks2012": 11
+  },
+  "references": [
+    {
+      "id": "adjust-photo-neutral",
+      "referenceSHA256": "58a4328c6d16ddf0b2bd79a77700bc3fdd50ca9ab5065b19e2e10e0de1d06d76",
+      "decodedSHA256": "28282e47a1ce0ad4e9d8bf3f4cd0021915bc3b9f7a94feec00cded1968019424"
+    },
+    {
+      "id": "adjust-photo-Whites2012",
+      "referenceSHA256": "943165e3e3e1d6e7303dbfab284a7c6d5772c66c73dcbb38cf722e61d2a8bab6",
+      "decodedSHA256": "d9085f1bfc25ba9d948049fe97e54c498fe9dd03eb9f72cee2abc4262470deac"
+    },
+    {
+      "id": "adjust-photo-Blacks2012",
+      "referenceSHA256": "d184e560e94c79aaf9b36d4954d32795ce42926fa348025122c7e219d004a0b2",
+      "decodedSHA256": "cde6323fd0ad001e0e65ddb4d3c491fd8e27817f0731216f325ba18218535de8"
+    }
+  ]
+}

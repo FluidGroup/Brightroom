@@ -1,0 +1,80 @@
+{
+  "format": "BRSAT001: dimension and knot count as little-endian UInt32, then RGBAh atlas",
+  "amounts": [
+    -100,
+    -50,
+    -25,
+    -10,
+    0,
+    10,
+    25,
+    50,
+    100
+  ],
+  "dimension": 32,
+  "interpolation": "PCHIP by signed amount, tetrahedral by encoded Display-P3 color",
+  "units": "linear Display-P3 residual relative to linear luminance-based saturation",
+  "references": [
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "fc4b151db2ffa98991cf76fbad899bcf4a168834dc75ad2551d3099aa6946975",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Saturation--100",
+      "referenceSHA256": "ca327fa44a4b1f275173774b526ec245f61a0383b3d318b5e405a3e2bd104c65",
+      "decodedSHA256": "c11e6ae597890ca7a08862d5f108d90c00ad7637d1f80225aabc52e226bcd2d1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Saturation--50",
+      "referenceSHA256": "428558458bf5bd8e0311fbe0a9af4e0a1557b918c3d676035c71c26964b25336",
+      "decodedSHA256": "1a84f250609583dbce844a30f7b359d26e38cd5f505428623f57d77d3ea060f9"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Saturation-50",
+      "referenceSHA256": "c740a4d55d803ebeb1dca9af609b0bd6a422e7654e4fb65ba4c3afff902b8275",
+      "decodedSHA256": "4030b1966baf1551de9f3a642281ff4ec0e4851fe57e1f80216f9d359df95aa9"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-Saturation-100",
+      "referenceSHA256": "f035e1f886a71fb76f73970f785e3018513f1580c8b83ecec053982765043df7",
+      "decodedSHA256": "c0dda1f9bdf8b23fa1cfa8f5703fc8a92f5e2751f4e261d9bf33dbeb002156c2"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "212f80196bb46160c3c46b870a9141a10a3ceb0b806a869c1a6c6e0eda29e9fe",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Saturation--25",
+      "referenceSHA256": "64fff19ed74818d9cf8edf0699c9254edcf07f7bfe4ae81d1d0b51369662f64d",
+      "decodedSHA256": "b510e8d6b4dc48b3f05de59f6f4bd6e56c68498c38d24a044ba11217de8b4eb6"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Saturation--10",
+      "referenceSHA256": "2de0c74879c47d580489c9e03cf20c1faa0a4bfaeeee3a50f42a62250f1ff7d3",
+      "decodedSHA256": "90877d042fe9ff932c5362f312cf80889b7681dc3bec3829b45ed66eec5f8856"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Saturation-10",
+      "referenceSHA256": "e10e21c5a8eb34ae4d669c24a5bb3ab266dcf78918b2ff373303b3404f3f758d",
+      "decodedSHA256": "5fe64ce3ee97f620e02e62df1fea203c808cbbbdc221265f231b7efbd5a94632"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-Saturation-25",
+      "referenceSHA256": "1aa7ded09ab3f1b601870588de022439584ff249761fcafd202a0a5c28988424",
+      "decodedSHA256": "f262d0471ef64e62beb8b85beee8f1fe7aae55cae0fc67452d0531faf17b3d01"
+    }
+  ],
+  "outputSHA256": "c86cf98588318402dc413aeb10f4e94b86cc4078ef48e576eaca830ae74b970d"
+}
