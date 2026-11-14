@@ -70,6 +70,7 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var unsharpMask: UnsharpMaskFeature?
     public var gaussianBlur: GaussianBlurFeature?
     public var fade: FadeFeature?
+    public var grain: GrainFeature.CameraRaw?
 
     /// Effects the host adds, evaluated in order after every other member.
     ///
@@ -139,6 +140,32 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.colorGrading = colorGrading
     }
 
+    public init(
+      preset: FilterFeature? = nil,
+      exposure: ExposureFeature? = nil,
+      brightness: BrightnessFeature? = nil,
+      whiteBalance: WhiteBalanceFeature? = nil,
+      highlights: HighlightsFeature? = nil,
+      shadows: ShadowsFeature? = nil,
+      saturation: SaturationFeature? = nil,
+      contrast: ContrastFeature? = nil,
+      colorGrading: ColorGradingFeature? = nil,
+      sharpen: SharpenFeature? = nil,
+      unsharpMask: UnsharpMaskFeature? = nil,
+      gaussianBlur: GaussianBlurFeature? = nil,
+      fade: FadeFeature? = nil,
+      grain: GrainFeature.CameraRaw?,
+      custom: [AnyImageEffect] = []
+    ) {
+      self.init(
+        preset: preset, exposure: exposure, brightness: brightness, whiteBalance: whiteBalance,
+        highlights: highlights, shadows: shadows, saturation: saturation, contrast: contrast,
+        colorGrading: colorGrading, sharpen: sharpen, unsharpMask: unsharpMask,
+        gaussianBlur: gaussianBlur, fade: fade, custom: custom
+      )
+      self.grain = grain
+    }
+
     public var body: some ImageEffect {
       preset
       exposure
@@ -153,6 +180,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       unsharpMask
       gaussianBlur
       fade
+      grain
       custom
     }
   }

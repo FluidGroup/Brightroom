@@ -26,7 +26,7 @@ extension ImageEditor {
 
   /// A global adjustment parameter editable in ImageEditor's Adjust mode.
   ///
-  /// Color Grading has its own range controls. Other parameters map a -100...100 (or 0...100 for zero-based ranges) slider
+  /// Color Grading and Grain have their own controls. Other parameters map a -100...100 (or 0...100 for zero-based ranges) slider
   /// value onto the corresponding member of the feature: a member of
   /// `ImageEditorFeature.Effects`, evaluated before the local blur and the
   /// final crop, or `ImageEditorFeature.vignette`, evaluated after the crop.
@@ -41,6 +41,7 @@ extension ImageEditor {
     case shadows
     case gaussianBlur
     case vignette
+    case grain
 
     var id: Self { self }
 
@@ -56,6 +57,7 @@ extension ImageEditor {
       case .shadows: return "Shadows"
       case .gaussianBlur: return "Blur"
       case .vignette: return "Vignette"
+      case .grain: return "Grain"
       }
     }
 
@@ -71,6 +73,7 @@ extension ImageEditor {
       case .shadows: return "circle.bottomhalf.filled"
       case .gaussianBlur: return "drop.fill"
       case .vignette: return "circle.dashed.inset.filled"
+      case .grain: return "circle.dotted"
       }
     }
 
@@ -83,13 +86,13 @@ extension ImageEditor {
       switch self {
       case .highlights, .gaussianBlur, .vignette:
         return true
-      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading:
+      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading, .grain:
         return false
       }
     }
 
     var sliderRange: ClosedRange<Double>? {
-      guard self != .colorGrading else { return nil }
+      guard self != .colorGrading, self != .grain else { return nil }
       return isZeroBased ? 0...100 : -100...100
     }
 
@@ -99,7 +102,7 @@ extension ImageEditor {
     /// carry unbounded values, so the slider scale is an ImageEditor policy.
     private var maximumFilterValue: Double {
       switch self {
-      case .colorGrading: return 0
+      case .colorGrading, .grain: return 0
       case .exposure: return 1.8
       case .brightness: return 0.2
       case .contrast: return 0.18
@@ -117,7 +120,7 @@ extension ImageEditor {
       let effects = feature.effects
       let filterValue: Double
       switch self {
-      case .colorGrading:
+      case .colorGrading, .grain:
         return 0
       case .exposure:
         filterValue = effects.exposure?.ev ?? 0
@@ -162,7 +165,7 @@ extension ImageEditor {
       let value: Double? = abs(clamped) < 0.5 ? nil : filterValue
 
       switch self {
-      case .colorGrading:
+      case .colorGrading, .grain:
         return
       case .exposure:
         Self.upsert(

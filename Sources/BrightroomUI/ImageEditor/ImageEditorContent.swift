@@ -118,7 +118,11 @@ struct ImageEditorContent: View {
     // (not the written one: see `guideHasCropChanges`).
     let isResettable = displayedFeature.hasAnyEffect || (guideHasCropChanges ?? false)
     let cancelAction: (() -> Void)? = onCancel == nil ? nil : { cancel() }
-    let bottomControlHeight: CGFloat = editingMode == .adjust && adjustmentParameter == .colorGrading ? 340 : 120
+    let bottomControlHeight: CGFloat = switch (editingMode, adjustmentParameter) {
+    case (.adjust, .colorGrading): 340
+    case (.adjust, .grain): 240
+    default: 120
+    }
     let bottomControlMaxWidth: CGFloat = 560
 
     NavigationStack {
@@ -172,7 +176,9 @@ struct ImageEditorContent: View {
               onSetAdjustmentValue: previewAdjustmentValue,
               onEndAdjustmentValue: endAdjustmentValue,
               onSetColorGrading: previewColorGrading,
-              onEndColorGrading: endColorGrading
+              onEndColorGrading: endColorGrading,
+              onSetGrain: previewGrain,
+              onEndGrain: endGrain
             )
             .frame(maxWidth: bottomControlMaxWidth)
             .frame(maxWidth: .infinity)
@@ -391,6 +397,15 @@ struct ImageEditorContent: View {
 
   private func endColorGrading(_ grading: ColorGradingFeature) {
     previewColorGrading(grading)
+    write()
+  }
+
+  private func previewGrain(_ grain: GrainFeature.CameraRaw) {
+    session.previewGrain(grain, over: document)
+  }
+
+  private func endGrain(_ grain: GrainFeature.CameraRaw) {
+    previewGrain(grain)
     write()
   }
 
@@ -686,6 +701,8 @@ private struct ControlHost: View {
   let onEndAdjustmentValue: (Double) -> Void
   let onSetColorGrading: (ColorGradingFeature) -> Void
   let onEndColorGrading: (ColorGradingFeature) -> Void
+  let onSetGrain: (GrainFeature.CameraRaw) -> Void
+  let onEndGrain: (GrainFeature.CameraRaw) -> Void
 
   var body: some View {
     Group {
@@ -734,7 +751,10 @@ private struct ControlHost: View {
           onEndValue: onEndAdjustmentValue,
           grading: currentFeature?.effects.colorGrading ?? .init(),
           onSetGrading: onSetColorGrading,
-          onEndGrading: onEndColorGrading
+          onEndGrading: onEndColorGrading,
+          grain: currentFeature?.effects.grain ?? .init(amount: 0),
+          onSetGrain: onSetGrain,
+          onEndGrain: onEndGrain
         )
       }
     }
@@ -1211,6 +1231,9 @@ private struct AdjustmentsControl: View {
   let grading: ColorGradingFeature
   let onSetGrading: (ColorGradingFeature) -> Void
   let onEndGrading: (ColorGradingFeature) -> Void
+  let grain: GrainFeature.CameraRaw
+  let onSetGrain: (GrainFeature.CameraRaw) -> Void
+  let onEndGrain: (GrainFeature.CameraRaw) -> Void
 
   var body: some View {
     VStack(spacing: 4) {
@@ -1230,6 +1253,9 @@ private struct AdjustmentsControl: View {
 
       if selection == .colorGrading {
         ColorGradingControl(grading: grading, onChange: onSetGrading, onEnd: onEndGrading)
+          .padding(.horizontal, 24)
+      } else if selection == .grain {
+        GrainControl(grain: grain, onChange: onSetGrain, onEnd: onEndGrain)
           .padding(.horizontal, 24)
       } else if let sliderRange = selection.sliderRange {
         SteppedSlider(

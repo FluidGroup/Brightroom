@@ -100,6 +100,16 @@ struct ImageEditorSession {
     liveFeature = feature == document.feature ? nil : feature
   }
 
+  mutating func previewGrain(
+    _ grain: GrainFeature.CameraRaw,
+    over document: ImageEditorDocument
+  ) {
+    var feature = displayedFeature(of: document)
+    // Keep size, roughness and seed at zero amount so the next edit restores them.
+    feature.effects.grain = grain == .init(amount: 0) ? nil : grain
+    liveFeature = feature == document.feature ? nil : feature
+  }
+
   /// Drops the value shown by a control in progress, for example because
   /// the document changed from outside (an undo) while dragging.
   mutating func discardLiveFeature() {
