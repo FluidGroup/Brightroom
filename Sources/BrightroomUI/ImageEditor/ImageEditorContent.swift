@@ -27,6 +27,8 @@ import UIKit
 
 struct ImageEditorContent: View {
 
+  @Environment(\.verticalSizeClass) private var verticalSizeClass
+
   @Binding var document: ImageEditorDocument
   let previewSourceLoader: PreviewSourceLoader
   let options: ImageEditor.Options
@@ -124,6 +126,10 @@ struct ImageEditorContent: View {
     default: 120
     }
     let bottomControlMaxWidth: CGFloat = 560
+    let usesSidePanel = verticalSizeClass == .compact
+    let contentLayout = usesSidePanel
+      ? AnyLayout(HStackLayout(spacing: 0))
+      : AnyLayout(VStackLayout(spacing: 0))
 
     NavigationStack {
       // The toolbar's and the mode buttons' commands reach the canvas
@@ -133,7 +139,7 @@ struct ImageEditorContent: View {
           Color.black
             .ignoresSafeArea()
 
-          VStack(spacing: 0) {
+          contentLayout {
             CanvasHost(
               document: canvasDocumentBinding,
               displayedFeature: displayedFeature,
@@ -181,8 +187,11 @@ struct ImageEditorContent: View {
               onEndGrain: endGrain
             )
             .frame(maxWidth: bottomControlMaxWidth)
-            .frame(maxWidth: .infinity)
-            .frame(height: bottomControlHeight)
+            .frame(maxWidth: usesSidePanel ? nil : .infinity)
+            .frame(
+              width: usesSidePanel ? 340 : nil,
+              height: usesSidePanel ? nil : bottomControlHeight
+            )
           }
         }
         .safeAreaInset(edge: .bottom) {
