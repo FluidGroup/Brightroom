@@ -1,0 +1,4384 @@
+{
+  "measurement": "Per-pixel maximum absolute RGB-channel error, ICC-managed linear Display-P3, white = 1; not Delta E",
+  "source": "All values in this report come from actual public-API renders, not numerical model predictions.",
+  "spatialModelSHA256": "07a53bff7b3b7a5f6eae71dee3b874dfc69975186db4fcbd423e41614bf7ca85",
+  "limitations": [
+    "Photographic validation repeatedly uses the same scene.",
+    "Color-scene negative Highlights and negative Shadows regress against Core Image.",
+    "Strong positive Whites retains a large residual.",
+    "The A10 comparison excludes grain and other unsupported stages in both versions.",
+    "The final finite-value clamping fix leaves the tested normal-range values unchanged."
+  ],
+  "cases": [
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Highlights2012--37",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.005750409893046692,
+            0.0059071918542989935,
+            0.008708304525015335
+          ],
+          "channelMAE": [
+            0.005761077141873658,
+            0.005960681934819468,
+            0.00876759646803734
+          ],
+          "channelRMSE": [
+            0.008731110819620368,
+            0.009318544433877593,
+            0.01362875885780133
+          ],
+          "maxAbsolute": 0.11121279001235962,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012--37/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "eefdf5bbf736d256f26bae728d09211aa02372fa26b11660ba717622ac56a616",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -1.4727484085597098e-05,
+          0.9816597700119019
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.0038075273514007833,
+              0.0037362554494969986,
+              0.0058478179156738735
+            ],
+            "channelMAE": [
+              0.003814933667237977,
+              0.003739374132819785,
+              0.005858266654452218
+            ],
+            "channelRMSE": [
+              0.006009237851444762,
+              0.006340833496758992,
+              0.010271825090727346
+            ],
+            "maxAbsolute": 0.10282424092292786,
+            "pixels": 1149674
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.015543927792994025,
+              0.016751443359756413,
+              0.02329125502144
+            ],
+            "channelMAE": [
+              0.015565293614365438,
+              0.01700773128400882,
+              0.023524106997260295
+            ],
+            "channelRMSE": [
+              0.016319806827332636,
+              0.01755591068327155,
+              0.02402829013081261
+            ],
+            "maxAbsolute": 0.11121279001235962,
+            "pixels": 271745
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.00016734115425588595,
+              7.00441720555564e-05,
+              0.00011400550676331675
+            ],
+            "channelMAE": [
+              0.00018880108678447625,
+              0.00015257214289100067,
+              0.0001749129611628089
+            ],
+            "channelRMSE": [
+              0.00023075315190719195,
+              0.0001891083063289408,
+              0.00022045388557179963
+            ],
+            "maxAbsolute": 0.004447687417268753,
+            "pixels": 78284
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              0.037423725080008456,
+              0.025951919330892338,
+              0.0039248156427132965
+            ],
+            "channelMAE": [
+              0.037423725080008456,
+              0.02778380487101648,
+              0.03382660654257444
+            ],
+            "channelRMSE": [
+              0.03905299004503347,
+              0.030239887981923022,
+              0.03733086825144794
+            ],
+            "maxAbsolute": 0.07185882329940796,
+            "pixels": 297
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0027914196252822876,
+          "p95": 0.02720421552658081,
+          "p99": 0.03043636679649353
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Highlights2012--37.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "ce7e3d3d80606a50be6c48b23669faa6fe1c5c7f6c744a3cdee98b2778a61f10",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.018214240670204163,
+          0.9727146625518799
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012--37/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "eefdf5bbf736d256f26bae728d09211aa02372fa26b11660ba717622ac56a616",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.25165291666053236,
+        "settingsSHA256": "cfaa12ab6b348a7e1ff907b482f8b90f4abd4476e915285d2ba4b6d4077d8763",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Highlights2012--37",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.002755886770234273,
+            0.002805584236851676,
+            0.005130712526212152
+          ],
+          "channelMAE": [
+            0.003326479660359491,
+            0.003354543676686193,
+            0.005488496799880104
+          ],
+          "channelRMSE": [
+            0.008023546684882824,
+            0.007867500852106121,
+            0.010922257020099201
+          ],
+          "maxAbsolute": 0.15350064635276794,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012--37/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "95897c742014f1e65c07d747c2e644f321ec491a90cf98395fe31439092bdbc1",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -5.588694421021501e-06,
+          1.0000264644622803
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.0013236634592897279,
+              0.0010175655472609618,
+              0.0028753598589559577
+            ],
+            "channelMAE": [
+              0.0020341872242871217,
+              0.001705935853708685,
+              0.0033209753742891733
+            ],
+            "channelRMSE": [
+              0.004810562574841321,
+              0.003939776008951534,
+              0.006772443740432399
+            ],
+            "maxAbsolute": 0.14376437664031982,
+            "pixels": 1149674
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.009553839135107252,
+              0.011134546337571218,
+              0.01607888031248489
+            ],
+            "channelMAE": [
+              0.009646120221483803,
+              0.01119302165369369,
+              0.016112936131072703
+            ],
+            "channelRMSE": [
+              0.015932491429042607,
+              0.01649849396090987,
+              0.021385171165102818
+            ],
+            "maxAbsolute": 0.15350064635276794,
+            "pixels": 271745
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -1.101966980336559e-05,
+              -5.623985231092828e-05,
+              -3.290734400638496e-05
+            ],
+            "channelMAE": [
+              0.00016707179679028872,
+              0.00015002632311579455,
+              0.00016009940200280477
+            ],
+            "channelRMSE": [
+              0.0002219804276084589,
+              0.0001922910962688863,
+              0.0002069393218974578
+            ],
+            "maxAbsolute": 0.004077054560184479,
+            "pixels": 78284
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              0.05624020039433181,
+              0.05775450636642148,
+              0.07933706005012948
+            ],
+            "channelMAE": [
+              0.05624020039433181,
+              0.05775450636642148,
+              0.07933706005012948
+            ],
+            "channelRMSE": [
+              0.05732490309316196,
+              0.05887092548495821,
+              0.08068151892116827
+            ],
+            "maxAbsolute": 0.10209554433822632,
+            "pixels": 297
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0014555789530277252,
+          "p95": 0.021154940128326416,
+          "p99": 0.05295753479003906
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Highlights2012--37.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "ce7e3d3d80606a50be6c48b23669faa6fe1c5c7f6c744a3cdee98b2778a61f10",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.018214240670204163,
+          0.9727146625518799
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012--37/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "95897c742014f1e65c07d747c2e644f321ec491a90cf98395fe31439092bdbc1",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.3736535832285881,
+        "settingsSHA256": "cfaa12ab6b348a7e1ff907b482f8b90f4abd4476e915285d2ba4b6d4077d8763",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Highlights2012-23",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.007772893432960596,
+            -0.00806640126972186,
+            -0.010313730340701417
+          ],
+          "channelMAE": [
+            0.0077737168428068165,
+            0.008066441946038458,
+            0.010313738792375286
+          ],
+          "channelRMSE": [
+            0.013237541292878617,
+            0.014058847619515978,
+            0.017379321259461043
+          ],
+          "maxAbsolute": 0.128692626953125,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012-23/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "b5a6835b6dff9ba9c8c317d1fc86e4a0eac5540d47497c23c9972db4fcccc3a0",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -5.459388830786338e-06,
+          1.0000228881835938
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.0023213529087738323,
+              -0.002053121320860779,
+              -0.003097194371666749
+            ],
+            "channelMAE": [
+              0.0023213548160707633,
+              0.00205317806264553,
+              0.0030971959078170425
+            ],
+            "channelRMSE": [
+              0.003850626141701806,
+              0.0039782221601200735,
+              0.006360442307008019
+            ],
+            "maxAbsolute": 0.06347543001174927,
+            "pixels": 1036991
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.023801205354779583,
+              -0.02564727199620545,
+              -0.03153075598203739
+            ],
+            "channelMAE": [
+              0.023801205354779583,
+              0.02564727199620545,
+              0.03153075598203739
+            ],
+            "channelRMSE": [
+              0.02519315494604062,
+              0.026808432856862498,
+              0.03248045594813828
+            ],
+            "maxAbsolute": 0.128692626953125,
+            "pixels": 387746
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -5.924530015729727e-05,
+              -8.780305569893526e-05,
+              -9.063042805721373e-05
+            ],
+            "channelMAE": [
+              7.572425355830488e-05,
+              8.783097348985381e-05,
+              9.0778555661717e-05
+            ],
+            "channelRMSE": [
+              0.0001056999728813837,
+              0.00012543804004783835,
+              0.0001238206730574944
+            ],
+            "maxAbsolute": 0.003148486837744713,
+            "pixels": 74831
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.04366323765781191,
+              -0.04475938666749884,
+              -0.060477656967662
+            ],
+            "channelMAE": [
+              0.0436632384856542,
+              0.04475958259017379,
+              0.060477656967662
+            ],
+            "channelRMSE": [
+              0.05634805849993378,
+              0.0568045803343967,
+              0.06878704344138706
+            ],
+            "maxAbsolute": 0.12395155429840088,
+            "pixels": 432
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0018117353320121765,
+          "p95": 0.03773239254951477,
+          "p99": 0.045104384422302246
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Highlights2012-23.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "e45fc9d72579c403d56b9d525e6d1daf29feeb1fedb6530aeee41dc7f64a8ff0",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.00017511907208245248,
+          1.1018991470336914
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012-23/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "b5a6835b6dff9ba9c8c317d1fc86e4a0eac5540d47497c23c9972db4fcccc3a0",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.24443029169924557,
+        "settingsSHA256": "c7d94dfd8095dada5533602ccac001c2f00775021b2ac8d9ed0094ef8866b22b",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Highlights2012-23",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.0006400795269216311,
+            0.0007405190183682098,
+            0.0006646175507991174
+          ],
+          "channelMAE": [
+            0.0017823192279114264,
+            0.001716217751093894,
+            0.001993726880346605
+          ],
+          "channelRMSE": [
+            0.003514010087489591,
+            0.0033157822267605524,
+            0.0037385363723406806
+          ],
+          "maxAbsolute": 0.11575925350189209,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012-23/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "36b74967ad8cd09ca1b06f0b6925071569a0b33d3b6020f14fb1743816266308",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -4.036307473143097e-06,
+          1.000028371810913
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.00048074279816109997,
+              0.0005065806163511459,
+              0.0002234190973967047
+            ],
+            "channelMAE": [
+              0.0009709409169582772,
+              0.0008045216566371011,
+              0.0008924014619198959
+            ],
+            "channelRMSE": [
+              0.0016299164916461512,
+              0.0013046273878588972,
+              0.0015347194344003865
+            ],
+            "maxAbsolute": 0.05555376410484314,
+            "pixels": 1036991
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.0011027008477794864,
+              0.0014554491918041777,
+              0.0019092970656820237
+            ],
+            "channelMAE": [
+              0.004129992538576445,
+              0.004347859877496516,
+              0.005164411111126056
+            ],
+            "channelRMSE": [
+              0.006183243866225709,
+              0.005959974803917395,
+              0.006665862969144734
+            ],
+            "maxAbsolute": 0.11575925350189209,
+            "pixels": 387746
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.0006540442533603919,
+              0.0004870578870485124,
+              0.0005481083958307706
+            ],
+            "channelMAE": [
+              0.0006723226715443135,
+              0.0005191193988574431,
+              0.0005788958338589373
+            ],
+            "channelRMSE": [
+              0.0008534244107224503,
+              0.0006592342834085225,
+              0.0007344525018120634
+            ],
+            "maxAbsolute": 0.005496256053447723,
+            "pixels": 74831
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.03453077099941395,
+              -0.03549223020672798,
+              -0.037257098213390065
+            ],
+            "channelMAE": [
+              0.0345444091492229,
+              0.03549400372085748,
+              0.044858637231367605
+            ],
+            "channelRMSE": [
+              0.04535096114514757,
+              0.046169017231393314,
+              0.05385861553879103
+            ],
+            "maxAbsolute": 0.10741093754768372,
+            "pixels": 432
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0009021908044815063,
+          "p95": 0.008316248655319214,
+          "p99": 0.013292670249938965
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Highlights2012-23.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "e45fc9d72579c403d56b9d525e6d1daf29feeb1fedb6530aeee41dc7f64a8ff0",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.00017511907208245248,
+          1.1018991470336914
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Highlights2012-23/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "36b74967ad8cd09ca1b06f0b6925071569a0b33d3b6020f14fb1743816266308",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.2887343750335276,
+        "settingsSHA256": "c7d94dfd8095dada5533602ccac001c2f00775021b2ac8d9ed0094ef8866b22b",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Shadows2012-17",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.005082807143409805,
+            0.004895275774355749,
+            0.0077248963493278585
+          ],
+          "channelMAE": [
+            0.005100144139940895,
+            0.0049279379216207045,
+            0.00775202118910095
+          ],
+          "channelRMSE": [
+            0.006166458103088135,
+            0.006263883247195659,
+            0.009992868746108035
+          ],
+          "maxAbsolute": 0.019693881273269653,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012-17/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "94720aa15cb288afe0aac50934e5b40756e47a73e680cd2705f88041e03cdad2",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -1.888787664938718e-05,
+          1.00380277633667
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.004379711265036962,
+              0.003457051772291916,
+              0.005489420928407606
+            ],
+            "channelMAE": [
+              0.00439940693799083,
+              0.003494611974449409,
+              0.005519086017352538
+            ],
+            "channelRMSE": [
+              0.005402170422542318,
+              0.0044683497225759,
+              0.0073897843414168895
+            ],
+            "maxAbsolute": 0.018484503030776978,
+            "pixels": 1081363
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.008126094041134641,
+              0.010197636635476156,
+              0.016008561515327313
+            ],
+            "channelMAE": [
+              0.008126123097607815,
+              0.010202577963862517,
+              0.016017737688097153
+            ],
+            "channelRMSE": [
+              0.008510982441230247,
+              0.010296687146817037,
+              0.0160694781442294
+            ],
+            "maxAbsolute": 0.019693881273269653,
+            "pixels": 351267
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.0004875069778363273,
+              0.0003218403114476587,
+              0.00041268069496781394
+            ],
+            "channelMAE": [
+              0.0005575691499432535,
+              0.00042093287069812796,
+              0.0004894825028534871
+            ],
+            "channelRMSE": [
+              0.0006901686736575012,
+              0.0005335663718377369,
+              0.0006200392648490307
+            ],
+            "maxAbsolute": 0.0033034533262252808,
+            "pixels": 67021
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              0.0030118100622663524,
+              0.002643261734599029,
+              0.0010034095250433018
+            ],
+            "channelMAE": [
+              0.0030160489943102642,
+              0.002643261734599029,
+              0.0016850984540573164
+            ],
+            "channelRMSE": [
+              0.0030847064086651547,
+              0.002764280768996767,
+              0.0019264278106759472
+            ],
+            "maxAbsolute": 0.004021763801574707,
+            "pixels": 349
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.006440006196498871,
+          "p95": 0.0166165828704834,
+          "p99": 0.018153265118598938
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Shadows2012-17.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "7b104421f62707708fb58224c47b42659cf871cc219135cef750d3057c23352a",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.0001695313840173185,
+          1.002454400062561
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012-17/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "94720aa15cb288afe0aac50934e5b40756e47a73e680cd2705f88041e03cdad2",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.2457581665366888,
+        "settingsSHA256": "ea468bae5446358306e56bee84bd9092c2816bb9240d425b0d30e6ab691adab9",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Shadows2012-17",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.0008176998452226312,
+            -0.0005521606652247568,
+            -0.0008755133042138372
+          ],
+          "channelMAE": [
+            0.0011117973918973291,
+            0.0008623643572317586,
+            0.0011431313857204965
+          ],
+          "channelRMSE": [
+            0.001673260155201187,
+            0.0011055349860046328,
+            0.0015114252747948581
+          ],
+          "maxAbsolute": 0.01737821102142334,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012-17/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "025799949f11fc13affe77378f06a031696e95803a42910c3ffe973c92272e9d",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.00012679552310146391,
+          1.000027060508728
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.0006477373456789325,
+              -0.00025216073905326295,
+              -0.0005484578235038535
+            ],
+            "channelMAE": [
+              0.001011641132288851,
+              0.0006485543982652024,
+              0.0008873170637805705
+            ],
+            "channelRMSE": [
+              0.0017260750151099839,
+              0.0008756365864046221,
+              0.0012855525127479276
+            ],
+            "maxAbsolute": 0.015235379338264465,
+            "pixels": 1081363
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.001461253235634569,
+              -0.0015715740861743104,
+              -0.0020337328164096585
+            ],
+            "channelMAE": [
+              0.0015598479150000415,
+              0.0016397712471270638,
+              0.002087434408381349
+            ],
+            "channelRMSE": [
+              0.0016439781099058162,
+              0.0016798591384653682,
+              0.0021336948857848784
+            ],
+            "maxAbsolute": 0.01737821102142334,
+            "pixels": 351267
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.0002028661408953032,
+              -6.665696328208078e-05,
+              -0.00013184040354896831
+            ],
+            "channelMAE": [
+              0.0003729931375338839,
+              0.00022797890447000745,
+              0.00028210617409111307
+            ],
+            "channelRMSE": [
+              0.0005572084291229835,
+              0.00030012594314253607,
+              0.00039761685019662257
+            ],
+            "maxAbsolute": 0.005060246214270592,
+            "pixels": 67021
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              0.002222817914192178,
+              0.002710103988647461,
+              0.008685793652917047
+            ],
+            "channelMAE": [
+              0.002359104532225426,
+              0.0027131955739761833,
+              0.008685892026198969
+            ],
+            "channelRMSE": [
+              0.004724891542309488,
+              0.004446777141483571,
+              0.009226080073299215
+            ],
+            "maxAbsolute": 0.015055358409881592,
+            "pixels": 349
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0009426549077033997,
+          "p95": 0.0038162022829055786,
+          "p99": 0.006399631500244141
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Shadows2012-17.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "7b104421f62707708fb58224c47b42659cf871cc219135cef750d3057c23352a",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.0001695313840173185,
+          1.002454400062561
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012-17/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "025799949f11fc13affe77378f06a031696e95803a42910c3ffe973c92272e9d",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.29563487507402897,
+        "settingsSHA256": "ea468bae5446358306e56bee84bd9092c2816bb9240d425b0d30e6ab691adab9",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Shadows2012--32",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.007407010019741389,
+            -0.007979609305892954,
+            -0.005420007041881895
+          ],
+          "channelMAE": [
+            0.007787165782719562,
+            0.007984882388196285,
+            0.005524041260233645
+          ],
+          "channelRMSE": [
+            0.00822428517162231,
+            0.008436575106078915,
+            0.0067109872232525205
+          ],
+          "maxAbsolute": 0.03197881579399109,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012--32/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "06bb86be853fea1497f6c3bc79be72d8bbebf81b1a4d4a52b5768630e2ea3476",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.00012702085950877517,
+          1.0197616815567017
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.008107791530283381,
+              -0.009374187387439488,
+              -0.007257755881497942
+            ],
+            "channelMAE": [
+              0.008601503437199428,
+              0.009374524738044622,
+              0.007284596650215717
+            ],
+            "channelRMSE": [
+              0.008911929793309783,
+              0.009525043342065333,
+              0.00785930862640694
+            ],
+            "maxAbsolute": 0.030993521213531494,
+            "pixels": 1068737
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.006616477915351369,
+              -0.004978382448103327,
+              -0.0004097963348365775
+            ],
+            "channelMAE": [
+              0.006712784017993855,
+              0.004984280288863276,
+              0.0007746871114494669
+            ],
+            "channelRMSE": [
+              0.006824240493199618,
+              0.005068960780963908,
+              0.0014363224438174293
+            ],
+            "maxAbsolute": 0.03197881579399109,
+            "pixels": 336815
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.0023583085671869714,
+              -0.002942222647879017,
+              -0.002519195287214073
+            ],
+            "channelMAE": [
+              0.0023593259101271622,
+              0.0029422282020640754,
+              0.0025192298944646677
+            ],
+            "channelRMSE": [
+              0.002939801129951873,
+              0.003446430413453363,
+              0.0029474948670352823
+            ],
+            "maxAbsolute": 0.012774305418133736,
+            "pixels": 94099
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              0.014399008627948925,
+              0.007968596708467151,
+              0.0048739098887730465
+            ],
+            "channelMAE": [
+              0.014404404812350998,
+              0.007968596708467151,
+              0.007910220363420198
+            ],
+            "channelRMSE": [
+              0.014924616810103111,
+              0.009122014410363123,
+              0.009136297739534614
+            ],
+            "maxAbsolute": 0.01960885524749756,
+            "pixels": 349
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.009220477193593979,
+          "p95": 0.011738477274775505,
+          "p99": 0.013416877947747707
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Shadows2012--32.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "55dd7a4f69afe34f8d0e2ed48dadd244cdc94f9e6935f5f8d8f2bc23fd729685",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.0019057367462664843,
+          1.0002081394195557
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012--32/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "06bb86be853fea1497f6c3bc79be72d8bbebf81b1a4d4a52b5768630e2ea3476",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.24259779159910977,
+        "settingsSHA256": "124a616f994602c7de571c6377697875e8dae5ea48d8fa544fc2f3f4fd97dd4a",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-photo-Shadows2012--32",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.0007266033039807443,
+            0.00043870159121208477,
+            0.000895239842362941
+          ],
+          "channelMAE": [
+            0.0017439842064482078,
+            0.0014834552641470528,
+            0.0018173906267702404
+          ],
+          "channelRMSE": [
+            0.002499737570198866,
+            0.0019284716417509804,
+            0.0024315140333149923
+          ],
+          "maxAbsolute": 0.03866755962371826,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012--32/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "85118b8d67a8d295edf4567372086d421c8410691a35c40ff4b271b6c0d11e96",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.0001267489860765636,
+          0.9801615476608276
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.0003671833000439844,
+              -0.00012294121556759231,
+              0.00030498057766085307
+            ],
+            "channelMAE": [
+              0.0015667086791497685,
+              0.0011303253703313346,
+              0.0014085347814692907
+            ],
+            "channelRMSE": [
+              0.0023886645337499435,
+              0.0014749826496812646,
+              0.0020245496512542715
+            ],
+            "maxAbsolute": 0.025238513946533203,
+            "pixels": 1068737
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.0021876903869888675,
+              0.0025251715505662567,
+              0.00316788612059409
+            ],
+            "channelMAE": [
+              0.0025806056729676193,
+              0.0028090167195698465,
+              0.0034231258356775666
+            ],
+            "channelRMSE": [
+              0.0029657757965115016,
+              0.002976600564046432,
+              0.0035646625481835885
+            ],
+            "maxAbsolute": 0.03866755962371826,
+            "pixels": 336815
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.0003226308536700459,
+              -0.0005578642548064572,
+              -0.00045706199105209166
+            ],
+            "channelMAE": [
+              0.0006735986221010629,
+              0.0006638371283022116,
+              0.0006451271912929204
+            ],
+            "channelRMSE": [
+              0.000906804185875853,
+              0.0007700698422491439,
+              0.000779771029783081
+            ],
+            "maxAbsolute": 0.0067741405218839645,
+            "pixels": 94099
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.025802634848564605,
+              -0.024575858368914585,
+              -0.02024857161892178
+            ],
+            "channelMAE": [
+              0.025802634848564605,
+              0.024575858368914585,
+              0.02024857161892178
+            ],
+            "channelRMSE": [
+              0.025958777249556596,
+              0.024725132237210914,
+              0.020785895345690718
+            ],
+            "maxAbsolute": 0.03624463081359863,
+            "pixels": 349
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0014587459154427052,
+          "p95": 0.005431175231933594,
+          "p99": 0.009059444069862366
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Shadows2012--32.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "55dd7a4f69afe34f8d0e2ed48dadd244cdc94f9e6935f5f8d8f2bc23fd729685",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.0019057367462664843,
+          1.0002081394195557
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-photo-Shadows2012--32/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "85118b8d67a8d295edf4567372086d421c8410691a35c40ff4b271b6c0d11e96",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.28498695814050734,
+        "settingsSHA256": "124a616f994602c7de571c6377697875e8dae5ea48d8fa544fc2f3f4fd97dd4a",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Highlights2012--37",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.0002558224147879429,
+            0.0031734590199974377,
+            0.00024353500844398468
+          ],
+          "channelMAE": [
+            0.003303175784600043,
+            0.004544637415584418,
+            0.0019199837325771796
+          ],
+          "channelRMSE": [
+            0.005625497961569693,
+            0.00689195510329002,
+            0.0033452534726366124
+          ],
+          "maxAbsolute": 0.020777255296707153,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012--37/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "461d8dea659dfd9acb9f31cd07100b391ebf3ba2ddbac6193f5ee5d0df962182",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.007173783145844936,
+          0.41561710834503174
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.0019481383541817305,
+              -0.000972570037192696,
+              -0.0008322327839376663
+            ],
+            "channelMAE": [
+              0.002198414698462409,
+              0.0013517779759309929,
+              0.0011381481347084222
+            ],
+            "channelRMSE": [
+              0.003970475241206612,
+              0.002032741553340031,
+              0.0016751408244300794
+            ],
+            "maxAbsolute": 0.011787354946136475,
+            "pixels": 148286
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.0031262094458919232,
+              0.008573150431883262,
+              0.0016445898562465588
+            ],
+            "channelMAE": [
+              0.0047419908210402165,
+              0.008702942979255375,
+              0.0029382281551523746
+            ],
+            "channelRMSE": [
+              0.007233947186789477,
+              0.010197020256344306,
+              0.004702197282804057
+            ],
+            "maxAbsolute": 0.020777255296707153,
+            "pixels": 113858
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.003934264183044434,
+          "p95": 0.017087459564208984,
+          "p99": 0.019840121269226074
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Highlights2012--37.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "fbe930f1adb360e19378abcd818605cf0935172b6c926fb83d895707da1b0812",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.007408238016068935,
+          0.4186650812625885
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012--37/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "461d8dea659dfd9acb9f31cd07100b391ebf3ba2ddbac6193f5ee5d0df962182",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.07029725005850196,
+        "settingsSHA256": "cfaa12ab6b348a7e1ff907b482f8b90f4abd4476e915285d2ba4b6d4077d8763",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Highlights2012--37",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.0016517149191574987,
+            0.005728511627438593,
+            0.00027807922379174954
+          ],
+          "channelMAE": [
+            0.002462609024371787,
+            0.006012877362365998,
+            0.0015474055033859457
+          ],
+          "channelRMSE": [
+            0.0042522618889581885,
+            0.009241271079315468,
+            0.0024475994998001713
+          ],
+          "maxAbsolute": 0.02212509512901306,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012--37/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "9851e181ff26f370c4ab0ba8c38795b247d5926db6fbcec1f5c3e0829a85fa1f",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.007191943936049938,
+          0.4326518177986145
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.00024381584636881115,
+              7.853315981593374e-05,
+              -0.0002334911290872181
+            ],
+            "channelMAE": [
+              0.0011387091825146912,
+              0.0005812014424109345,
+              0.0009562087908402057
+            ],
+            "channelRMSE": [
+              0.001570886589495699,
+              0.0010226556703116607,
+              0.0013427743637562913
+            ],
+            "maxAbsolute": 0.009659439325332642,
+            "pixels": 148286
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.003485329789500762,
+              0.013086911626120228,
+              0.0009443365034472028
+            ],
+            "channelMAE": [
+              0.004186825258186023,
+              0.01308696522151034,
+              0.0023173662941653166
+            ],
+            "channelRMSE": [
+              0.006198153003537384,
+              0.01397366881506681,
+              0.0033830025719825785
+            ],
+            "maxAbsolute": 0.02212509512901306,
+            "pixels": 113858
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0024647414684295654,
+          "p95": 0.0182972252368927,
+          "p99": 0.019168317317962646
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Highlights2012--37.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "fbe930f1adb360e19378abcd818605cf0935172b6c926fb83d895707da1b0812",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.007408238016068935,
+          0.4186650812625885
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012--37/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "9851e181ff26f370c4ab0ba8c38795b247d5926db6fbcec1f5c3e0829a85fa1f",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.12482808320783079,
+        "settingsSHA256": "cfaa12ab6b348a7e1ff907b482f8b90f4abd4476e915285d2ba4b6d4077d8763",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Highlights2012-23",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.005632945156591518,
+            -0.010031794011197803,
+            -0.00427827801678049
+          ],
+          "channelMAE": [
+            0.0056331310501960274,
+            0.010032234938691431,
+            0.004278336288972895
+          ],
+          "channelRMSE": [
+            0.01015438159960231,
+            0.015752218359007687,
+            0.008029577699295812
+          ],
+          "maxAbsolute": 0.03758898377418518,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012-23/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "515a776c4e158592e4b14d3b1e7420cb2b80070182ddf17977087c7b5747fd9d",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.010013406164944172,
+          0.4480108618736267
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.000637976254694759,
+              -0.0004969728225917071,
+              -0.0003917351193882279
+            ],
+            "channelMAE": [
+              0.0006383187763123802,
+              0.0004977852615068029,
+              0.00039184248986854893
+            ],
+            "channelRMSE": [
+              0.001071704115186016,
+              0.0008624853749227699,
+              0.0007530982526003071
+            ],
+            "maxAbsolute": 0.007089853286743164,
+            "pixels": 142271
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.011561212745137344,
+              -0.021348175058841377,
+              -0.008891012698943233
+            ],
+            "channelMAE": [
+              0.011561212745137344,
+              0.021348175058841377,
+              0.008891012698943233
+            ],
+            "channelRMSE": [
+              0.014970835740703861,
+              0.023275413417554885,
+              0.011845756657244421
+            ],
+            "maxAbsolute": 0.03758898377418518,
+            "pixels": 119873
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.001926034688949585,
+          "p95": 0.03330603241920471,
+          "p99": 0.03689113259315491
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Highlights2012-23.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "72678bfdeaf83d4238e92bcb452b01734a5e3146d65fc607e46b61981882d9df",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.010019909590482712,
+          0.4855934977531433
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012-23/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "515a776c4e158592e4b14d3b1e7420cb2b80070182ddf17977087c7b5747fd9d",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.06875733332708478,
+        "settingsSHA256": "c7d94dfd8095dada5533602ccac001c2f00775021b2ac8d9ed0094ef8866b22b",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Highlights2012-23",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.00017679231980238796,
+            -0.0013187115196444665,
+            0.0010289299324490742
+          ],
+          "channelMAE": [
+            0.0016766071347369405,
+            0.002373168216564636,
+            0.001670255840441115
+          ],
+          "channelRMSE": [
+            0.002122768945574991,
+            0.0032918568660237407,
+            0.002036452119659225
+          ],
+          "maxAbsolute": 0.011241316795349121,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012-23/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "073f4df5508ffe857aa65d1658cd5e0c4d6eeeeaa859ff3208ff258eb22ff32d",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.010411936789751053,
+          0.4802468419075012
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.0003603278327716756,
+              0.0007418773737855218,
+              0.0007673639572470853
+            ],
+            "channelMAE": [
+              0.0009891164607463872,
+              0.0008449999361966571,
+              0.001088915774617636
+            ],
+            "channelRMSE": [
+              0.0012551660047119017,
+              0.00123037641959456,
+              0.0014297455492875296
+            ],
+            "maxAbsolute": 0.004542745649814606,
+            "pixels": 142271
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -4.103639029624575e-05,
+              -0.003764316805715374,
+              0.0013393689208614952
+            ],
+            "channelMAE": [
+              0.0024925538923830327,
+              0.004186871297460524,
+              0.0023602179879202985
+            ],
+            "channelRMSE": [
+              0.0028256769388044817,
+              0.004679818842642007,
+              0.0025774088518547866
+            ],
+            "maxAbsolute": 0.011241316795349121,
+            "pixels": 119873
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.002375274896621704,
+          "p95": 0.0065874457359313965,
+          "p99": 0.007464200258255005
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Highlights2012-23.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "72678bfdeaf83d4238e92bcb452b01734a5e3146d65fc607e46b61981882d9df",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.010019909590482712,
+          0.4855934977531433
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Highlights2012-23/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "073f4df5508ffe857aa65d1658cd5e0c4d6eeeeaa859ff3208ff258eb22ff32d",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.08327141660265625,
+        "settingsSHA256": "c7d94dfd8095dada5533602ccac001c2f00775021b2ac8d9ed0094ef8866b22b",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Shadows2012-17",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.006095536666705925,
+            0.009792262897477144,
+            0.004353145552038029
+          ],
+          "channelMAE": [
+            0.00672348991540872,
+            0.00992323413542806,
+            0.004608124396689561
+          ],
+          "channelRMSE": [
+            0.009132667121346381,
+            0.011940111639643331,
+            0.006388314772617836
+          ],
+          "maxAbsolute": 0.020697355270385742,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012-17/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "ef88083f83b7ce0403148fa958d98e59cca662389e69cd089e9fe6e30d1f0791",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.008373936638236046,
+          0.4644234776496887
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.005474429813693781,
+              0.004733584477594119,
+              0.004457017809783719
+            ],
+            "channelMAE": [
+              0.0061342228163744185,
+              0.004972476511364219,
+              0.004465098509980102
+            ],
+            "channelRMSE": [
+              0.008195806481552935,
+              0.006872349873217528,
+              0.006212579925544163
+            ],
+            "maxAbsolute": 0.019731953740119934,
+            "pixels": 143719
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.006849303656852029,
+              0.015931407536085282,
+              0.00422708756587841
+            ],
+            "channelMAE": [
+              0.0074386166049262275,
+              0.015931407536085282,
+              0.004781698704580604
+            ],
+            "channelRMSE": [
+              0.010154182259334074,
+              0.016070658543480908,
+              0.006595297697212061
+            ],
+            "maxAbsolute": 0.020697355270385742,
+            "pixels": 118425
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.013935297727584839,
+          "p95": 0.019585415720939636,
+          "p99": 0.02024132013320923
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Shadows2012-17.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "3e6f4f4501d25472562ba280adc95a1a4af86af5529ee86965d5c3c6ae9d7110",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.010061628185212612,
+          0.44858452677726746
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012-17/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "ef88083f83b7ce0403148fa958d98e59cca662389e69cd089e9fe6e30d1f0791",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.060066291596740484,
+        "settingsSHA256": "ea468bae5446358306e56bee84bd9092c2816bb9240d425b0d30e6ab691adab9",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Shadows2012-17",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.0018926600268152072,
+            -0.0012391187029692219,
+            -0.00144676081370676
+          ],
+          "channelMAE": [
+            0.0020233778446261397,
+            0.001248545853556493,
+            0.001704299685563626
+          ],
+          "channelRMSE": [
+            0.003888670472614202,
+            0.0017478509536479057,
+            0.0033130904114764682
+          ],
+          "maxAbsolute": 0.01300036907196045,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012-17/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "a37c45bdcee656ebc48a0d6b67c7836423534ae3e0a025c628599217b9e1a2ac",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.010018942877650261,
+          0.44800952076911926
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.003284130131052838,
+              -0.001717330754979636,
+              -0.0026347504891822988
+            ],
+            "channelMAE": [
+              0.003403779245739464,
+              0.0017344917256520212,
+              0.00286951766084032
+            ],
+            "channelRMSE": [
+              0.005236280058122693,
+              0.00226866964542472,
+              0.004463452321933964
+            ],
+            "maxAbsolute": 0.01300036907196045,
+            "pixels": 143719
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.00020399047299694205,
+              -0.0006587669368481772,
+              -5.03239344356431e-06
+            ],
+            "channelMAE": [
+              0.0003481411212433585,
+              0.0006588084265630608,
+              0.00029020669684679115
+            ],
+            "channelRMSE": [
+              0.00044546571222816645,
+              0.0007185447142764786,
+              0.0003464357905573306
+            ],
+            "maxAbsolute": 0.0015057623386383057,
+            "pixels": 118425
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.0013265013694763184,
+          "p95": 0.01110103726387024,
+          "p99": 0.012247800827026367
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Shadows2012-17.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "3e6f4f4501d25472562ba280adc95a1a4af86af5529ee86965d5c3c6ae9d7110",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.010061628185212612,
+          0.44858452677726746
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012-17/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "a37c45bdcee656ebc48a0d6b67c7836423534ae3e0a025c628599217b9e1a2ac",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.0840337083209306,
+        "settingsSHA256": "ea468bae5446358306e56bee84bd9092c2816bb9240d425b0d30e6ab691adab9",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Shadows2012--32",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.005588285348833512,
+            -0.0052247339279674065,
+            -0.006618056764481369
+          ],
+          "channelMAE": [
+            0.008735165046855505,
+            0.005338231196070353,
+            0.010022598070080537
+          ],
+          "channelRMSE": [
+            0.009420858858334142,
+            0.006416672897010943,
+            0.010628852087543389
+          ],
+          "maxAbsolute": 0.021592363715171814,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012--32/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "2a36c949c98960bcce464dc2e5bb5fd34961a62e4f91936c38fbeda52bfb9b6d",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          -1.092193997465074e-05,
+          0.44674697518348694
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.0028697158074406396,
+              -0.007046368038057886,
+              -0.0034955608296426835
+            ],
+            "channelMAE": [
+              0.008564071615503805,
+              0.007251744121620131,
+              0.009656161620805664
+            ],
+            "channelRMSE": [
+              0.009480882346663505,
+              0.00795481590323815,
+              0.010665103868511674
+            ],
+            "maxAbsolute": 0.021592363715171814,
+            "pixels": 144869
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.008946515584536333,
+              -0.002974481854680707,
+              -0.010475254492762431
+            ],
+            "channelMAE": [
+              0.008946515584536333,
+              0.002974481854680707,
+              0.010475254492762431
+            ],
+            "channelRMSE": [
+              0.00934618006189959,
+              0.0037238470019486567,
+              0.010583899083238533
+            ],
+            "maxAbsolute": 0.013552100397646427,
+            "pixels": 117275
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.011495605111122131,
+          "p95": 0.0158555805683136,
+          "p99": 0.020175576210021973
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Shadows2012--32.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "21e5728db5ebf9daf20ba6df6d4c6dce6fd61613df37f8ff48add8b81396d0c3",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.00800231285393238,
+          0.4480234980583191
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public adaptive Whites/Blacks; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012--32/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "2a36c949c98960bcce464dc2e5bb5fd34961a62e4f91936c38fbeda52bfb9b6d",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.06236799992620945,
+        "settingsSHA256": "124a616f994602c7de571c6377697875e8dae5ea48d8fa544fc2f3f4fd97dd4a",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "spatial-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-tone-holdout-001",
+      "id": "holdout-color-scene-Shadows2012--32",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.0033485481172785825,
+            0.002173771026235727,
+            0.002909790392497058
+          ],
+          "channelMAE": [
+            0.003749500475260348,
+            0.00219111034208197,
+            0.0035361133479305806
+          ],
+          "channelRMSE": [
+            0.007155374911884688,
+            0.0031278735230862833,
+            0.006897401080795139
+          ],
+          "maxAbsolute": 0.025401964783668518,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012--32/adaptive/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "e16c311ee571a3e6663052de829a8c4260c066aa39da3f2237f5aa30c332718b",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.007496511097997427,
+          0.44800952076911926
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.0060236586864796035,
+              0.0031423727998981603,
+              0.005368097372796556
+            ],
+            "channelMAE": [
+              0.006333406302836319,
+              0.003169737900281384,
+              0.0059913562324654425
+            ],
+            "channelRMSE": [
+              0.009604594176607367,
+              0.004087866878824801,
+              0.009261880196865415
+            ],
+            "maxAbsolute": 0.025401964783668518,
+            "pixels": 144869
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              4.4002450686531826e-05,
+              0.00097726392456271,
+              -0.0001269392935315751
+            ],
+            "channelMAE": [
+              0.0005576193980051494,
+              0.0009822184578032159,
+              0.0005031687183020923
+            ],
+            "channelRMSE": [
+              0.0007014568758106368,
+              0.0011075376939263103,
+              0.0006129540158617643
+            ],
+            "maxAbsolute": 0.0023392438888549805,
+            "pixels": 117275
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.002435028553009033,
+          "p95": 0.02135998010635376,
+          "p99": 0.0232982337474823
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Shadows2012--32.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "21e5728db5ebf9daf20ba6df6d4c6dce6fd61613df37f8ff48add8b81396d0c3",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          0.00800231285393238,
+          0.4480234980583191
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-tone-holdout-001/holdout-color-scene-Shadows2012--32/adaptive/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "e16c311ee571a3e6663052de829a8c4260c066aa39da3f2237f5aa30c332718b",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 0.0831883333157748,
+        "settingsSHA256": "124a616f994602c7de571c6377697875e8dae5ea48d8fa544fc2f3f4fd97dd4a",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-photo-Whites2012-42",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.008673212359783295,
+            0.007569013023930522,
+            0.008846394169860996
+          ],
+          "channelMAE": [
+            0.008727790334071861,
+            0.007590771945423781,
+            0.008858909144144639
+          ],
+          "channelRMSE": [
+            0.012343058653081225,
+            0.011430186352519859,
+            0.01257391442002344
+          ],
+          "maxAbsolute": 0.10183119773864746,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-42/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "bc129aeffc917a79311dabd534560ea4210eb54381ccdbeb64c9cfee42fd70c7",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.015871522948145866,
+          1.357237458229065
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.004087825967935327,
+              0.0022720799279572525,
+              0.0037608025080555097
+            ],
+            "channelMAE": [
+              0.004087826574066118,
+              0.002275036367377272,
+              0.003762118919011056
+            ],
+            "channelRMSE": [
+              0.006550633780054445,
+              0.0034349384891345374,
+              0.005974447452731818
+            ],
+            "maxAbsolute": 0.03568267822265625,
+            "pixels": 964032
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.01960892967564439,
+              0.0198014933492735,
+              0.020799089697726474
+            ],
+            "channelMAE": [
+              0.019683773700745238,
+              0.019804239670509014,
+              0.020812205018206256
+            ],
+            "channelRMSE": [
+              0.020017994775641257,
+              0.019942896466649273,
+              0.020907371015169613
+            ],
+            "maxAbsolute": 0.10183119773864746,
+            "pixels": 463196
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.00011972870368651818,
+              2.194456817759374e-05,
+              6.98571369273571e-05
+            ],
+            "channelMAE": [
+              0.00014357427840328048,
+              0.00011699894202527534,
+              0.00014048388574663335
+            ],
+            "channelRMSE": [
+              0.00018425701930629718,
+              0.00015072972779975807,
+              0.0001825688613065402
+            ],
+            "maxAbsolute": 0.0012280270457267761,
+            "pixels": 72097
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.03316499886689363,
+              -0.015396847636611373,
+              0.007356518098601588
+            ],
+            "channelMAE": [
+              0.03421237839592828,
+              0.016696574334745053,
+              0.01674386394244653
+            ],
+            "channelRMSE": [
+              0.047840106478673115,
+              0.023594528893329178,
+              0.02003768229536591
+            ],
+            "maxAbsolute": 0.09865999221801758,
+            "pixels": 675
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.005054071545600891,
+          "p95": 0.023378461599349976,
+          "p99": 0.023904234170913696
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Whites2012-42.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "68f919149fc8dbe69d88c80783b8882984b6ea27963199a3f9f33698b8e77f5b",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.017749732360243797,
+          1.3841527700424194
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-42/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "bc129aeffc917a79311dabd534560ea4210eb54381ccdbeb64c9cfee42fd70c7",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "17a2ee6e3ad411d44fd0ac7b12547f98cecb6c20ff3983064a3085efc55e3a38",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-photo-Whites2012-42",
+      "mode": "calibrated-light",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.024330321719417236,
+            -0.025666323525023658,
+            -0.041036352045582716
+          ],
+          "channelMAE": [
+            0.024333204857993652,
+            0.025672751878839977,
+            0.0410380388704646
+          ],
+          "channelRMSE": [
+            0.0371639402182464,
+            0.042015480774684935,
+            0.06506399966444436
+          ],
+          "maxAbsolute": 0.2522810697555542,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-42/calibrated-light/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "8c8c00c4a7042fc83ab7d8814dcb499f2e7358ce4531bac0e2b1286de39c40ae",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.006528070662170649,
+          1.1406521797180176
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.009521701091999166,
+              -0.0053476299203383485,
+              -0.010004684101288843
+            ],
+            "channelMAE": [
+              0.009521808816235752,
+              0.005357270752731875,
+              0.010007037129196115
+            ],
+            "channelRMSE": [
+              0.01574965615745163,
+              0.00821019483336004,
+              0.018422271903929463
+            ],
+            "maxAbsolute": 0.17712384462356567,
+            "pixels": 964032
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.05881831526881847,
+              -0.07185451586026281,
+              -0.1119256439676975
+            ],
+            "channelMAE": [
+              0.05881831526881847,
+              0.07185497933194776,
+              0.11192619757733833
+            ],
+            "channelRMSE": [
+              0.06271802277000726,
+              0.07457824504323442,
+              0.1139751977090611
+            ],
+            "maxAbsolute": 0.2522810697555542,
+            "pixels": 463196
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.00017104394322415252,
+              -0.0001304968431964412,
+              -0.00018283495909320366
+            ],
+            "channelMAE": [
+              0.0001860680890643236,
+              0.0001306226895673104,
+              0.00018290950105065025
+            ],
+            "channelRMSE": [
+              0.0002634513067490136,
+              0.00016243156064389095,
+              0.0002677253134506095
+            ],
+            "maxAbsolute": 0.0027114134281873703,
+            "pixels": 72097
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.08817469270141036,
+              -0.07713505312248513,
+              -0.07851853264150796
+            ],
+            "channelMAE": [
+              0.09282308145805641,
+              0.07731980632852625,
+              0.07851859056839236
+            ],
+            "channelRMSE": [
+              0.12530334315446806,
+              0.09970051996616429,
+              0.09214697354560027
+            ],
+            "maxAbsolute": 0.2285568118095398,
+            "pixels": 675
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.012126334011554718,
+          "p95": 0.133681058883667,
+          "p99": 0.1391615867614746
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Whites2012-42.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "68f919149fc8dbe69d88c80783b8882984b6ea27963199a3f9f33698b8e77f5b",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.017749732360243797,
+          1.3841527700424194
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Measured Whites/Blacks/Saturation; CI Highlights/Shadows",
+        "lightTablesSHA256": "9dfd0b228a00f790e31f06aa80c6691f274884370ef127d33fc56be6387267ef",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "calibrated-light",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-42/calibrated-light/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "8c8c00c4a7042fc83ab7d8814dcb499f2e7358ce4531bac0e2b1286de39c40ae",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "17a2ee6e3ad411d44fd0ac7b12547f98cecb6c20ff3983064a3085efc55e3a38",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-photo-Whites2012-75",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.12418562863624763,
+            -0.09496863189400474,
+            -0.08745254156303592
+          ],
+          "channelMAE": [
+            0.12423186494227918,
+            0.09500236466056965,
+            0.08745710532163294
+          ],
+          "channelRMSE": [
+            0.16314965955436678,
+            0.13121185553060277,
+            0.11454827235304943
+          ],
+          "maxAbsolute": 0.503834068775177,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-75/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "b61443492f5a0a62e1c195467886cb4f5d701a67d4749d5367bc6751abc52bdc",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.03434021398425102,
+          1.5226010084152222
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.05666904990723655,
+              -0.02671283089777455,
+              -0.04340505638564511
+            ],
+            "channelMAE": [
+              0.05666961834915936,
+              0.026738340512703913,
+              0.043409116526652594
+            ],
+            "channelRMSE": [
+              0.09147554702769066,
+              0.0322979860913717,
+              0.05426574386809488
+            ],
+            "maxAbsolute": 0.3426819443702698,
+            "pixels": 811387
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.19638045114180314,
+              -0.1734869614684078,
+              -0.18331733215461657
+            ],
+            "channelMAE": [
+              0.19641424629308984,
+              0.17349107976386902,
+              0.18332352840982696
+            ],
+            "channelRMSE": [
+              0.20696176147559356,
+              0.18620160504038025,
+              0.19181085919835186
+            ],
+            "maxAbsolute": 0.503834068775177,
+            "pixels": 378043
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.0007253146944982812,
+              -0.0003874698387824271,
+              -0.0007005586636429974
+            ],
+            "channelMAE": [
+              0.000730342274581785,
+              0.0003883773219322694,
+              0.0007006363417746132
+            ],
+            "channelRMSE": [
+              0.0010778272679926345,
+              0.0005105740341257817,
+              0.001222628021197522
+            ],
+            "maxAbsolute": 0.022336341440677643,
+            "pixels": 51548
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.2548828637892374,
+              -0.21300507079592992,
+              -0.10278110454422112
+            ],
+            "channelMAE": [
+              0.25509851362046715,
+              0.21311431753252588,
+              0.10278575603020697
+            ],
+            "channelRMSE": [
+              0.2557669463282151,
+              0.21408199748550227,
+              0.11429679800008924
+            ],
+            "maxAbsolute": 0.3529399633407593,
+            "pixels": 259022
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.10375078022480011,
+          "p95": 0.2753112316131592,
+          "p99": 0.3127128481864929
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Whites2012-75.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "c7798d932796259d5e472a6a9f6bee456801cc5f1573243fbe4d32e5ef081d33",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.039643604308366776,
+          1.5474143028259277
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-75/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "b61443492f5a0a62e1c195467886cb4f5d701a67d4749d5367bc6751abc52bdc",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "b112cfa1ac8a42218a3c6f125535df477d86c70cf683d7bbc4a09a93faec601e",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-photo-Whites2012-75",
+      "mode": "calibrated-light",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.1950646905568993,
+            -0.16598223961449785,
+            -0.19266882003488706
+          ],
+          "channelMAE": [
+            0.19510329959422112,
+            0.16600659485374586,
+            0.19267381740804618
+          ],
+          "channelRMSE": [
+            0.2648021826443466,
+            0.24129372524919993,
+            0.26294469581501345
+          ],
+          "maxAbsolute": 0.714927077293396,
+          "pixels": 1500000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-75/calibrated-light/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "bd21fc4b5d84372d890ce620082a1ad7cc49c7449cf948181639ab74ccc35f03",
+          "width": 1500
+        },
+        "candidateChannelRange": [
+          -0.015654994174838066,
+          1.3524038791656494
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.07901135070770252,
+              -0.036581740924160444,
+              -0.05930454702139786
+            ],
+            "channelMAE": [
+              0.0790119031253003,
+              0.03662462360953988,
+              0.059312759067670036
+            ],
+            "channelRMSE": [
+              0.12997988952961476,
+              0.044235606585891006,
+              0.07418465283028929
+            ],
+            "maxAbsolute": 0.5321240425109863,
+            "pixels": 811387
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.2908350316498104,
+              -0.27618279854907085,
+              -0.3574603675076064
+            ],
+            "channelMAE": [
+              0.2908374605951748,
+              0.27618685593492065,
+              0.3574616105735102
+            ],
+            "channelRMSE": [
+              0.3124824977592977,
+              0.3029007649430766,
+              0.38393069494666465
+            ],
+            "maxAbsolute": 0.714927077293396,
+            "pixels": 378043
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              -0.001061797046076596,
+              -0.0005524083542933592,
+              -0.0009974868385368338
+            ],
+            "channelMAE": [
+              0.001064774419393756,
+              0.0005534759800570104,
+              0.0009975632722191363
+            ],
+            "channelRMSE": [
+              0.0015465700580026922,
+              0.0007407805711485998,
+              0.0017247098160431032
+            ],
+            "maxAbsolute": 0.030714135617017746,
+            "pixels": 51548
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.4574336219879309,
+              -0.44341392291304077,
+              -0.40806372969496185
+            ],
+            "channelMAE": [
+              0.45765133943314124,
+              0.4434145001039295,
+              0.4080651158312108
+            ],
+            "channelRMSE": [
+              0.45894461846132695,
+              0.4439942223071867,
+              0.40989722009276985
+            ],
+            "maxAbsolute": 0.6702902317047119,
+            "pixels": 259022
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.1410360038280487,
+          "p95": 0.47909554839134216,
+          "p99": 0.4919012784957886
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 1000,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-photo-Whites2012-75.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "c7798d932796259d5e472a6a9f6bee456801cc5f1573243fbe4d32e5ef081d33",
+          "width": 1500
+        },
+        "referenceChannelRange": [
+          -0.039643604308366776,
+          1.5474143028259277
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/photo.tiff",
+        "inputSHA256": "f732344dab1f85d1b8435568ab759f7f0ef326b3bf993d64fca102ee9dd3eeaa",
+        "lightModel": "Measured Whites/Blacks/Saturation; CI Highlights/Shadows",
+        "lightTablesSHA256": "d0f9b415004cc0100936bbfea50c7022c0cec42b2c8ee3794b677a26a1bb6a72",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "calibrated-light",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-photo-Whites2012-75/calibrated-light/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "bd21fc4b5d84372d890ce620082a1ad7cc49c7449cf948181639ab74ccc35f03",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "b112cfa1ac8a42218a3c6f125535df477d86c70cf683d7bbc4a09a93faec601e",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-color-scene-Whites2012-42",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.01748367158310197,
+            0.024106677142441413,
+            0.012569419082064215
+          ],
+          "channelMAE": [
+            0.018205031011245563,
+            0.024106677142441413,
+            0.012634979402713853
+          ],
+          "channelRMSE": [
+            0.02405657845617976,
+            0.029405790682681586,
+            0.017043564169621567
+          ],
+          "maxAbsolute": 0.047143131494522095,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-42/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "f31dd3312111a190ddcf50a9ed8cfd633a6198ce137bfbecf7b1cc6007bb5291",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          -0.0039023132994771004,
+          0.6378638744354248
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.015037746294786708,
+              0.007922392243261018,
+              0.011744390203239218
+            ],
+            "channelMAE": [
+              0.01629265518508291,
+              0.007922392243261018,
+              0.011813324557347635
+            ],
+            "channelRMSE": [
+              0.0231395120178208,
+              0.010394598978578199,
+              0.01653312035351081
+            ],
+            "maxAbsolute": 0.04708787798881531,
+            "pixels": 122373
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.019625140237593982,
+              0.03827642262589222,
+              0.01329175246301199
+            ],
+            "channelMAE": [
+              0.01987936379111408,
+              0.03827642262589222,
+              0.013354358733132897
+            ],
+            "channelRMSE": [
+              0.024831701418437355,
+              0.03907900939882626,
+              0.017478235368793744
+            ],
+            "maxAbsolute": 0.047143131494522095,
+            "pixels": 139771
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.03772345185279846,
+          "p95": 0.04596453905105591,
+          "p99": 0.04653733968734741
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Whites2012-42.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "7b5e08dc896b72bef16fe59f26bbd1b77946c478838902b093c3e727efb3d038",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          -0.00042093516094610095,
+          0.592344343662262
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-42/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "f31dd3312111a190ddcf50a9ed8cfd633a6198ce137bfbecf7b1cc6007bb5291",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "17a2ee6e3ad411d44fd0ac7b12547f98cecb6c20ff3983064a3085efc55e3a38",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-color-scene-Whites2012-42",
+      "mode": "calibrated-light",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.0195409576941712,
+            -0.034106457188784134,
+            -0.012355383156522848
+          ],
+          "channelMAE": [
+            0.020974531085902182,
+            0.034106457188784134,
+            0.01276130669634945
+          ],
+          "channelRMSE": [
+            0.029160485063333005,
+            0.04464997846764206,
+            0.01832420595072067
+          ],
+          "maxAbsolute": 0.08028936386108398,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-42/calibrated-light/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "20a9ce4af9d9ff1a3b1f6d14e090096a82936886eb24b91f64fceeb1542fb75a",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          0.005651114508509636,
+          0.5123493671417236
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.015809177910932285,
+              -0.00759690529264739,
+              -0.012324850493837696
+            ],
+            "channelMAE": [
+              0.017467023202302447,
+              0.00759690529264739,
+              0.012487919104416432
+            ],
+            "channelRMSE": [
+              0.025653920501116118,
+              0.010113559932424934,
+              0.01807409653426412
+            ],
+            "maxAbsolute": 0.057538241147994995,
+            "pixels": 122373
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.022808224061402572,
+              -0.057316231707002806,
+              -0.012382115264977176
+            ],
+            "channelMAE": [
+              0.024045441805863765,
+              0.057316231707002806,
+              0.01300066435843686
+            ],
+            "channelRMSE": [
+              0.031915807423429476,
+              0.060411363885634624,
+              0.018540413053691963
+            ],
+            "maxAbsolute": 0.08028936386108398,
+            "pixels": 139771
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "pixels": 0
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.04577529430389404,
+          "p95": 0.07918751239776611,
+          "p99": 0.0800207257270813
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Whites2012-42.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "7b5e08dc896b72bef16fe59f26bbd1b77946c478838902b093c3e727efb3d038",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          -0.00042093516094610095,
+          0.592344343662262
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Measured Whites/Blacks/Saturation; CI Highlights/Shadows",
+        "lightTablesSHA256": "9dfd0b228a00f790e31f06aa80c6691f274884370ef127d33fc56be6387267ef",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "calibrated-light",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-42/calibrated-light/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "20a9ce4af9d9ff1a3b1f6d14e090096a82936886eb24b91f64fceeb1542fb75a",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "17a2ee6e3ad411d44fd0ac7b12547f98cecb6c20ff3983064a3085efc55e3a38",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-color-scene-Whites2012-75",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.036734330554483996,
+            -0.03311017431663288,
+            -0.030534289906021382
+          ],
+          "channelMAE": [
+            0.037391916269772243,
+            0.03311017431663288,
+            0.030575375547377125
+          ],
+          "channelRMSE": [
+            0.04558518300362177,
+            0.03791315350920633,
+            0.03746685308573616
+          ],
+          "maxAbsolute": 0.0861978530883789,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-75/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "fcb2143ad650c227cce3dcfa8d8f8e54f82056c624d177b5f9090856e400401b",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          -0.02804495021700859,
+          0.9530868530273438
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.016917320215402182,
+              -0.011345180392178062,
+              -0.03526651617040673
+            ],
+            "channelMAE": [
+              0.01843620800388355,
+              0.011345180392178062,
+              0.0352665456806673
+            ],
+            "channelRMSE": [
+              0.02869649923289249,
+              0.013500553896652265,
+              0.04122768255363993
+            ],
+            "maxAbsolute": 0.07786142826080322,
+            "pixels": 60453
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.042021475205960446,
+              -0.04144643658206805,
+              -0.024938320328658826
+            ],
+            "channelMAE": [
+              0.04248125003657977,
+              0.04144643658206805,
+              0.02499977845729731
+            ],
+            "channelRMSE": [
+              0.0498754125579142,
+              0.044329148592625954,
+              0.03201585514123576
+            ],
+            "maxAbsolute": 0.0861978530883789,
+            "pixels": 175218
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.0469936443642567,
+              -0.027636521012891213,
+              -0.05676619875826429
+            ],
+            "channelMAE": [
+              0.0469936443642567,
+              0.027636521012891213,
+              0.05676619875826429
+            ],
+            "channelRMSE": [
+              0.04724513599996685,
+              0.028480300285949462,
+              0.05687509478796166
+            ],
+            "maxAbsolute": 0.060819000005722046,
+            "pixels": 26473
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.056366026401519775,
+          "p95": 0.08290660381317139,
+          "p99": 0.08547163009643555
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Whites2012-75.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "d9d8e046b080cef61dc5dc51a52d18ddb7848e6bdf387272030300426ff230da",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          -0.028707431629300117,
+          0.9847196936607361
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-75/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "fcb2143ad650c227cce3dcfa8d8f8e54f82056c624d177b5f9090856e400401b",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "b112cfa1ac8a42218a3c6f125535df477d86c70cf683d7bbc4a09a93faec601e",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-holdout",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-holdout-002",
+      "id": "holdout-color-scene-Whites2012-75",
+      "mode": "calibrated-light",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.12089014029228076,
+            -0.1627715805947787,
+            -0.08778190915153106
+          ],
+          "channelMAE": [
+            0.12489975834846442,
+            0.1627715805947787,
+            0.08808953090235816
+          ],
+          "channelRMSE": [
+            0.16341736190895131,
+            0.197108371286881,
+            0.11699852475705802
+          ],
+          "maxAbsolute": 0.3170631229877472,
+          "pixels": 262144
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-75/calibrated-light/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "f753e1f0a24a7a3698112191eab101f343d5b6c093aa24373c39860fa51a42df",
+          "width": 1024
+        },
+        "candidateChannelRange": [
+          -0.0069082872942090034,
+          0.6770438551902771
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.041456481509921865,
+              -0.028934642014590856,
+              -0.10999027957327495
+            ],
+            "channelMAE": [
+              0.05039282006590029,
+              0.028934642014590856,
+              0.10999027957327495
+            ],
+            "channelRMSE": [
+              0.07807576314421291,
+              0.034785574002211016,
+              0.13305913884501083
+            ],
+            "maxAbsolute": 0.24313589930534363,
+            "pixels": 60453
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.13408677000481925,
+              -0.19048061228966773,
+              -0.06644335342791788
+            ],
+            "channelMAE": [
+              0.13700238849718707,
+              0.19048061228966773,
+              0.06690358694415947
+            ],
+            "channelRMSE": [
+              0.17520116678561348,
+              0.21314625918644006,
+              0.09686348901296991
+            ],
+            "maxAbsolute": 0.3170631229877472,
+            "pixels": 175218
+          },
+          "Y < 0.01": {
+            "pixels": 0
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.21493750588735294,
+              -0.28499888133413687,
+              -0.178301927270912
+            ],
+            "channelMAE": [
+              0.21493750588735294,
+              0.28499888133413687,
+              0.178301927270912
+            ],
+            "channelRMSE": [
+              0.21761915185636727,
+              0.2850620583462202,
+              0.18171061509851683
+            ],
+            "maxAbsolute": 0.2995808720588684,
+            "pixels": 26473
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.25304511189460754,
+          "p95": 0.30754774808883667,
+          "p99": 0.3155478239059448
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 256,
+          "path": ".tmp/xmp-research/adaptive-holdout-002/inputs/adobe-references/holdout-color-scene-Whites2012-75.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "d9d8e046b080cef61dc5dc51a52d18ddb7848e6bdf387272030300426ff230da",
+          "width": 1024
+        },
+        "referenceChannelRange": [
+          -0.028707431629300117,
+          0.9847196936607361
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/adaptive-holdout-fixtures-002/color-scene.tiff",
+        "inputSHA256": "5d936442daf82c4079911a8bcd416c35e9f8bccb3c58c6b897591f9257a24fdd",
+        "lightModel": "Measured Whites/Blacks/Saturation; CI Highlights/Shadows",
+        "lightTablesSHA256": "d0f9b415004cc0100936bbfea50c7022c0cec42b2c8ee3794b677a26a1bb6a72",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "calibrated-light",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-holdout-002/holdout-color-scene-Whites2012-75/calibrated-light/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "f753e1f0a24a7a3698112191eab101f343d5b6c093aa24373c39860fa51a42df",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "b112cfa1ac8a42218a3c6f125535df477d86c70cf683d7bbc4a09a93faec601e",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "positive-whites-original-photo",
+      "run": ".tmp/xmp-research/runs/adaptive-whites-photo25-001",
+      "id": "context-photo-Whites2012-25",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -2.6788331382750628e-05,
+            -3.136790919017665e-05,
+            -0.00012293021811306636
+          ],
+          "channelMAE": [
+            6.081656167144232e-05,
+            7.150570340032062e-05,
+            0.00015138968045804216
+          ],
+          "channelRMSE": [
+            0.00013906460105622196,
+            0.00013810956498985736,
+            0.00027328823777800123
+          ],
+          "maxAbsolute": 0.015644192695617676,
+          "pixels": 24000000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": ".tmp/xmp-research/runs/adaptive-whites-photo25-001/context-photo-Whites2012-25/tonal/brightroom.png",
+          "profile": "kCGColorSpaceROMMRGB",
+          "sha256": "e3cbd2140a320edcbef876654541230b8503068cd744941370cdf267c6d8684b",
+          "width": 6000
+        },
+        "candidateChannelRange": [
+          -0.007787118665874004,
+          1.1556614637374878
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              1.0529381026870564e-05,
+              2.198511879984197e-05,
+              -3.356586195265025e-06
+            ],
+            "channelMAE": [
+              2.8046635154294484e-05,
+              2.893618835715169e-05,
+              4.088618749770392e-05
+            ],
+            "channelRMSE": [
+              3.863446310543282e-05,
+              3.5769096711292026e-05,
+              7.33306502721016e-05
+            ],
+            "maxAbsolute": 0.003004014492034912,
+            "pixels": 16367097
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.00012838306071813818,
+              -0.00016538365242102805,
+              -0.0004462467442957251
+            ],
+            "channelMAE": [
+              0.00014143302753409355,
+              0.00017686624847828715,
+              0.00044706496829304064
+            ],
+            "channelRMSE": [
+              0.0002077428971517433,
+              0.00021531866101616402,
+              0.0004854105160398592
+            ],
+            "maxAbsolute": 0.015433788299560547,
+            "pixels": 6408153
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              2.500304162595894e-05,
+              -2.551960278858384e-05,
+              -1.1685947199858736e-05
+            ],
+            "channelMAE": [
+              5.765121172870255e-05,
+              7.144919321796658e-05,
+              6.371940065375132e-05
+            ],
+            "channelRMSE": [
+              9.149371313382704e-05,
+              0.00011874782288976411,
+              0.00010088142314560368
+            ],
+            "maxAbsolute": 0.000620932609308511,
+            "pixels": 1217329
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.003098502327467036,
+              -0.0029366516051724857,
+              -0.002903194616505671
+            ],
+            "channelMAE": [
+              0.00324087190493116,
+              0.002987781193937161,
+              0.002928977525605898
+            ],
+            "channelRMSE": [
+              0.00453998212329962,
+              0.004064238139138936,
+              0.00495449526650128
+            ],
+            "maxAbsolute": 0.015644192695617676,
+            "pixels": 7421
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 5.325302481651306e-05,
+          "p95": 0.000616222620010376,
+          "p99": 0.0007551312446594238
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": ".tmp/xmp-research/whites-context-001/inputs/adobe-references/context-photo-Whites2012-25.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "82d79f6423d6265b483144d360351437a711a60839df8d7aa150598767c801f7",
+          "width": 6000
+        },
+        "referenceChannelRange": [
+          -0.008008315227925777,
+          1.1584432125091553
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": ".tmp/xmp-research/fixtures/L1007620-developed.tiff",
+        "inputSHA256": "a6cc6bf9fbf8beab999f653846091d49e42ff25e3a2f0e9f1c130526d81b952d",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-whites-photo25-001/context-photo-Whites2012-25/tonal/brightroom.png",
+        "outputColorSpace": "kCGColorSpaceROMMRGB",
+        "outputFormat": "16-bit PNG",
+        "outputSHA256": "e3cbd2140a320edcbef876654541230b8503068cd744941370cdf267c6d8684b",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "446dd45ae5380d2fecdfb33afebf0632027af5cbd149e012bdabe645b0a5a9a2",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "a10-after",
+      "run": ".tmp/xmp-research/runs/adaptive-user-a10-001",
+      "id": "supplied-photo-full",
+      "mode": "adaptive",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            -0.009489501382931512,
+            -0.00819379933479761,
+            -0.006278994704522032
+          ],
+          "channelMAE": [
+            0.010716263218882818,
+            0.00949996139444943,
+            0.008884701107632337
+          ],
+          "channelRMSE": [
+            0.01698460598457773,
+            0.015707502856927576,
+            0.0136065788410948
+          ],
+          "maxAbsolute": 0.20772355794906616,
+          "pixels": 24000000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": ".tmp/xmp-research/runs/adaptive-user-a10-001/supplied-photo-full/adaptive/brightroom.png",
+          "profile": "unnamed embedded ICC",
+          "sha256": "328c87a6da6a5bc38b9745ca9a8dfa4404da1193826abcda5c66437295e94fe8",
+          "width": 6000
+        },
+        "candidateChannelRange": [
+          -0.013629133813083172,
+          1.1005302667617798
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              -0.006002691477142859,
+              -0.0032546283095695413,
+              -0.004164647984538282
+            ],
+            "channelMAE": [
+              0.007093163538556244,
+              0.004539966682220557,
+              0.006025199812629708
+            ],
+            "channelRMSE": [
+              0.011900206889545684,
+              0.006494422422904647,
+              0.008926973731351427
+            ],
+            "maxAbsolute": 0.16111805103719234,
+            "pixels": 16039823
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              -0.020561585587139254,
+              -0.022573640490111676,
+              -0.013184558759075236
+            ],
+            "channelMAE": [
+              0.02200735757334758,
+              0.023855549385131198,
+              0.017819439871412452
+            ],
+            "channelRMSE": [
+              0.026893982001824687,
+              0.02856458291628265,
+              0.022179524583395564
+            ],
+            "maxAbsolute": 0.20772355794906616,
+            "pixels": 6418056
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.0003695251527320727,
+              0.0003088624877550746,
+              0.0004515230627192993
+            ],
+            "channelMAE": [
+              0.0013433892506217245,
+              0.0012853000348364658,
+              0.0013916960584917143
+            ],
+            "channelRMSE": [
+              0.0017410701016758563,
+              0.00164469557395765,
+              0.0018215892834632554
+            ],
+            "maxAbsolute": 0.04799991101026535,
+            "pixels": 1538230
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.0177155749193043,
+              -0.011239983036106946,
+              0.00746177102048242
+            ],
+            "channelMAE": [
+              0.02732835259299081,
+              0.024536756861335482,
+              0.021273821010224403
+            ],
+            "channelRMSE": [
+              0.03659642143354386,
+              0.032124656660731894,
+              0.026640862167825723
+            ],
+            "maxAbsolute": 0.2039366364479065,
+            "pixels": 3891
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.008015093393623829,
+          "p95": 0.04279202222824097,
+          "p99": 0.05904003977775574
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": "processed.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "321b2031d578fa0e9b6aca37b018bcbe4aea2da4b1a5cde12a7126a9db121bdf",
+          "width": 6000
+        },
+        "referenceChannelRange": [
+          -0.0043592872098088264,
+          1.150036096572876
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks approximation",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": "bitmap_from_apple_raw.tiff",
+        "inputSHA256": "6dea6e2d6088adb50361a5b0a54e3714f1256672edf77d26f5f03003427b7691",
+        "lightModel": "Public spatial Highlights/Shadows; adaptive Whites/Blacks; CI Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "adaptive",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/adaptive-user-a10-001/supplied-photo-full/adaptive/brightroom.png",
+        "outputColorSpace": "embedded ICC",
+        "outputFormat": "16-bit PNG",
+        "outputICCSHA256": "e5f6ffb83b6d3491301dd750975684cc5cc2a1951c994a14b08cfdaa0d75a041",
+        "outputSHA256": "328c87a6da6a5bc38b9745ca9a8dfa4404da1193826abcda5c66437295e94fe8",
+        "pointCurveSemanticVersion": 1,
+        "renderSecondsIncludesDecodeAndWrite": 16.005806125001982,
+        "settingsSHA256": "c8b7dc70e5255ccc118bf4cc006135f3fa2204d22489f00e961e6c4e896e6750",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    },
+    {
+      "purpose": "a10-before",
+      "run": ".tmp/xmp-research/runs/tonal-user-a10-001",
+      "id": "supplied-photo-full",
+      "mode": "tonal",
+      "metrics": {
+        "allPixels": {
+          "channelBias": [
+            0.02459682860912157,
+            0.022672387599505066,
+            0.03237996466108438
+          ],
+          "channelMAE": [
+            0.02487706698611805,
+            0.023117129257400636,
+            0.032530384303517276
+          ],
+          "channelRMSE": [
+            0.031223915213627728,
+            0.029964394260682085,
+            0.041040968776887385
+          ],
+          "maxAbsolute": 0.20978772640228271,
+          "pixels": 24000000
+        },
+        "candidate": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": ".tmp/xmp-research/runs/tonal-user-a10-001/supplied-photo-full/tonal/brightroom.png",
+          "profile": "unnamed embedded ICC",
+          "sha256": "b243f732e633ba9234b15063630d203f88ce4a0a75024a3c6ccd2718a4056433",
+          "width": 6000
+        },
+        "candidateChannelRange": [
+          -0.011517893522977829,
+          1.108428955078125
+        ],
+        "comparison": "extended-linear Display-P3 D65, Float32; candidate minus reference",
+        "differencePreview": {
+          "meaning": "maximum absolute linear RGB channel error per 10 x 10 source block, multiplied by 64; white saturates at 1/64",
+          "path": "difference-x64.png"
+        },
+        "luminanceBands": {
+          "0.01 <= Y < 0.18": {
+            "channelBias": [
+              0.022112546213261145,
+              0.018456889054969675,
+              0.026437161392520548
+            ],
+            "channelMAE": [
+              0.022190105449200952,
+              0.018729739142195192,
+              0.02653293189348607
+            ],
+            "channelRMSE": [
+              0.028176529363388506,
+              0.024640015279799296,
+              0.03442141551088991
+            ],
+            "maxAbsolute": 0.20978772640228271,
+            "pixels": 16039823
+          },
+          "0.18 <= Y < 0.75": {
+            "channelBias": [
+              0.03588371910332898,
+              0.03791141202218989,
+              0.05407122152264946
+            ],
+            "channelMAE": [
+              0.03666931822992765,
+              0.0388026492696553,
+              0.054319324609847564
+            ],
+            "channelRMSE": [
+              0.04068551383523044,
+              0.042834809879282884,
+              0.05770330429147961
+            ],
+            "maxAbsolute": 0.207308828830719,
+            "pixels": 6418056
+          },
+          "Y < 0.01": {
+            "channelBias": [
+              0.003508349541916577,
+              0.0031383630048021755,
+              0.003950220979679556
+            ],
+            "channelMAE": [
+              0.003688767992341721,
+              0.003408974530953768,
+              0.004178425483332712
+            ],
+            "channelRMSE": [
+              0.004782078324376459,
+              0.004350239359339909,
+              0.005492347052152634
+            ],
+            "maxAbsolute": 0.04044569097459316,
+            "pixels": 1538230
+          },
+          "Y >= 0.75": {
+            "channelBias": [
+              -0.014856831254152736,
+              -0.013626498739139122,
+              -0.0094355257724435
+            ],
+            "channelMAE": [
+              0.026813785648689085,
+              0.027766293209152398,
+              0.024118576827836018
+            ],
+            "channelRMSE": [
+              0.03602056685597625,
+              0.03725644885232872,
+              0.030930802494304355
+            ],
+            "maxAbsolute": 0.20194774866104126,
+            "pixels": 3891
+          }
+        },
+        "os": "Version 27.0.1 (Build 26A434)",
+        "pixelMaxChannelError": {
+          "p50": 0.03199029713869095,
+          "p95": 0.08122912049293518,
+          "p99": 0.09618166089057922
+        },
+        "reference": {
+          "bitsPerComponent": 16,
+          "height": 4000,
+          "path": "processed.tif",
+          "profile": "unnamed embedded ICC",
+          "sha256": "321b2031d578fa0e9b6aca37b018bcbe4aea2da4b1a5cde12a7126a9db121bdf",
+          "width": 6000
+        },
+        "referenceChannelRange": [
+          -0.0043592872098088264,
+          1.150036096572876
+        ],
+        "renderer": "Core Image software renderer, RGBAf working format",
+        "status": "measured; no compatibility threshold assigned",
+        "units": "linear RGB, 1.0 = diffuse output white; not perceptual Delta E or 8-bit code values"
+      },
+      "render": {
+        "approximatedInPartial": [
+          "Whites/Blacks (no image adaptation)",
+          "master point curve",
+          "Mixer",
+          "Highlights/Shadows",
+          "Saturation",
+          "sharpening",
+          "vignette"
+        ],
+        "input": "bitmap_from_apple_raw.tiff",
+        "inputSHA256": "6dea6e2d6088adb50361a5b0a54e3714f1256672edf77d26f5f03003427b7691",
+        "lightModel": "Public WhitesFeature/BlacksFeature; CI Highlights/Shadows/Saturation",
+        "mixerAlgorithm": "lightroomApproximation",
+        "mode": "tonal",
+        "os": "Version 27.0.1 (Build 26A434)",
+        "output": ".tmp/xmp-research/runs/tonal-user-a10-001/supplied-photo-full/tonal/brightroom.png",
+        "outputColorSpace": "embedded ICC",
+        "outputFormat": "16-bit PNG",
+        "outputICCSHA256": "e5f6ffb83b6d3491301dd750975684cc5cc2a1951c994a14b08cfdaa0d75a041",
+        "outputSHA256": "b243f732e633ba9234b15063630d203f88ce4a0a75024a3c6ccd2718a4056433",
+        "pointCurveSemanticVersion": 1,
+        "settingsSHA256": "1c5cd5126fa053f96bf7cfeed5972f011cd62d1ab572bc48f37e7cb0c2924994",
+        "unsupportedInPartial": [
+          "parametric curve",
+          "Texture/Clarity/Dehaze",
+          "noise reduction",
+          "grain",
+          "Adobe profiles"
+        ],
+        "workingFormat": "RGBAh"
+      }
+    }
+  ],
+  "algorithmNotes": "Positive Whites uses image statistics. Negative Whites and all Blacks remain pointwise. Older frozen render metadata used the shorthand adaptive Whites/Blacks for their combined stage."
+}

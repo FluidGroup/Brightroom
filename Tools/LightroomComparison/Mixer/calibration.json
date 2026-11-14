@@ -1,0 +1,467 @@
+{
+  "format": "BRCM0001 + UInt32 dimension + Float16 weights[HSL,band,sign,node] + responses[HSL,knot,node,RGB]",
+  "dimension": 24,
+  "sourceDimension": 32,
+  "responseKnots": [
+    -100,
+    -75,
+    -50,
+    -25,
+    0,
+    25,
+    50,
+    75,
+    100
+  ],
+  "domain": "encoded Display-P3; response deltas in linear Display-P3",
+  "runtime": "signed selection weights, piecewise linear parameter response, L/S/H, tetrahedral RGB interpolation",
+  "limits": "Experimental SDR approximation; range extensions are not measured Adobe HDR behavior",
+  "outputSHA256": "96a0fea624dfc342401ce5a965824c8e6ec52727a589709ddef61c397995aa1b",
+  "sourceSHA256": "a4f609adaea833a6169aa4c6c8f2d39cb40c959b5807b506839824b3341afd4c",
+  "references": [
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "fc4b151db2ffa98991cf76fbad899bcf4a168834dc75ad2551d3099aa6946975",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-neutral",
+      "referenceSHA256": "212f80196bb46160c3c46b870a9141a10a3ceb0b806a869c1a6c6e0eda29e9fe",
+      "decodedSHA256": "adcf59df3d9106f79215f81c1a081a82066dbc0e8d38cfb6a4754e14b76ab30c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue--100",
+      "referenceSHA256": "3944eafed0648c8c30184f159678292b896c90c133067cdc5c8ff0fe973a65ca",
+      "decodedSHA256": "c1b8f27c94d0dd56e2136faa881837ce24af286a3d6f89390c5c7d8706ad748a"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue--75",
+      "referenceSHA256": "1e203a96e6b5c0e8f24899e56b5a7e3c85b9cfd3a7ca4eb536da88ffb1b3af40",
+      "decodedSHA256": "1e4c1121dffd20aae34bbbdb941e351d46f4109eed378e4bb54a8dd8894b188c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue--50",
+      "referenceSHA256": "da375a30cb218c59bd2f1b3fe1931cf5816f23fa34fe29fa763f06204bddc2ba",
+      "decodedSHA256": "5d7bc21d24b7c9bb05ab29dae858ac4cb8ba2f1037492d44ae075262c2821b2d"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue--25",
+      "referenceSHA256": "e4bc9bc6b3f99fd7273bb52d6c74ff927f3ddd5e0e5238bf96f61cb0483eec71",
+      "decodedSHA256": "3791b35200816408e4bf1b05d2cbe99edb87cc0a07799c21b3356a9c04642f26"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue-25",
+      "referenceSHA256": "d043403782e8f01a538c23feff52b7ef6f58aedd1f099352c8582b3b9c53edaf",
+      "decodedSHA256": "48cab78b2ebcf2d9d3b5d1a71c51fbe07951383e5af4dc5b9957c96f993fbdd7"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue-50",
+      "referenceSHA256": "10d52342b96712e2f2bcc3eb57fe28ca0a8f50db6af43d18232aba07e84a5122",
+      "decodedSHA256": "61ff93d1e401a8f777ed839df5a29f623690740ff3ecf44386ace6401171805d"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue-75",
+      "referenceSHA256": "937051e27fce6c8011341aed6ef3b7713331c28ee062a1a2eb9b22b77d6545b4",
+      "decodedSHA256": "2cfd39131d700970257ddaa4e009b5e21481c5db576e56e7773a4531f0ee25d4"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Hue-100",
+      "referenceSHA256": "d15719278c7ae45497ab3242dcf8ec626fd4c7f0834910fd351d3a1b90ea208b",
+      "decodedSHA256": "eb408debb3b150c7dbec3136882d78e673bd0ccc014cf173a70b57255b67cd39"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation--100",
+      "referenceSHA256": "b73a8f2d7c296a5913b3e0acfd27b1dbda9073245931ac4855df111392bb3016",
+      "decodedSHA256": "17cc9843c527ec19c9457b250f380150445bed53a3b7e4c72b32b024e67a5a6c"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation--75",
+      "referenceSHA256": "956abad2c82f4ad4874625efbb5af1a420c245a8ed42c624ec3ee8d23f1a0349",
+      "decodedSHA256": "33724be5e5f8421977072fd7e5f6c816a92112cdd046ea0391056724e47f6003"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation--50",
+      "referenceSHA256": "9e0e2a8f9c2262aca70acb698d5ebea9d70229f45b30b78f12fc87c030f1b00f",
+      "decodedSHA256": "a2aaf66ef5110a7611dae86666295c055fdc9ac7bd608d75d3661e965c4fecd4"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation--25",
+      "referenceSHA256": "0f4cb50135ee958472d25c315cf3bb36f31ac9765e0a2f4380b81aa092367221",
+      "decodedSHA256": "ad2bcebe232b846bd97992e77c6936896c85ad6ae6707c112e1f1907c87dee1a"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation-25",
+      "referenceSHA256": "dd5fc2bc44a0948877413722890fda5263d79df43a67e0354596475b57e2133f",
+      "decodedSHA256": "0c8cadc951257860d327398cf54fbde08ec0a1f03ca4d2b186658d24a5ef0703"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation-50",
+      "referenceSHA256": "c2b5033ec5dbf8e59a5d9d685106b67fa6fba5a67b5c5feec1b2e6d10eb5ef8d",
+      "decodedSHA256": "60498d83cb0588a65cfe04cd2c6ef5fbe45c3286a9c7bf4d1b3fc6efbc7fcb93"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation-75",
+      "referenceSHA256": "69bb25c46c81e7c6290a8cb8a519cb00e1670f6baa3d61798044decc1d2b6710",
+      "decodedSHA256": "135e4b366ebfdb62cf6b9e93576e2afe248332e1a74e4e450c099e4eda8a73ae"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Saturation-100",
+      "referenceSHA256": "d239819bdcbff832a7c73ee0705acd36597cf17ea4e1c29a9228d9283c476ed8",
+      "decodedSHA256": "8fdaca32f4498272d0bd7f86a6fccb50c12c6cb0f84667b6b5e0ae48a8467888"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance--100",
+      "referenceSHA256": "13dddecb44130329a1152764fac0a347af88ea56cab1316877d40a9663fa363f",
+      "decodedSHA256": "3d65c39ed5d81d91ab2a8015f46038146983293eb0c3def2f9027ac3afae59dc"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance--75",
+      "referenceSHA256": "aaf0f682d5d218142be825f697e9095ecaf5d5851f418306033f5471aa8ec4f0",
+      "decodedSHA256": "910aa8741c42e1aa9bb1e1215a4d6c990e8d818f7b6adbd042edd98fe0c83117"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance--50",
+      "referenceSHA256": "2b26367d692ba5ae6d2346e000a7c01acda51cc6bfe6617670b5897b95d69635",
+      "decodedSHA256": "52c9d706bb802556c7176161af4eddb42ed3e5eaa61870676e1b321bb93fdbc7"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance--25",
+      "referenceSHA256": "933f5f878909369820095f7fbd69bae56c27ade0264db0060bdc56e005b4b32d",
+      "decodedSHA256": "6c0d5ba9f69ed89cfd40c210c9277d5e79ca13fa4001d7d5ecc052600226d2bf"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance-25",
+      "referenceSHA256": "4ed35fd482861798ee914f9172f92216a24080823e85bed17d81fdb9d733039c",
+      "decodedSHA256": "0ba57c4445b78e930461dedd3e23e1264d6be5bf1532d65bc065c525d5ddfbef"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance-50",
+      "referenceSHA256": "1c145cd16d5824278214fbc3ef9e674c399cfa802061ff91b8e5ec496900b05c",
+      "decodedSHA256": "71e4f57c1436719e250b39889b3d2a325890d41d49cfd0c7017e9d53308dcf98"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance-75",
+      "referenceSHA256": "e691d5b99c20d7b0fa79c642706eac51a29fc4d9ef4af93084228b31624e502c",
+      "decodedSHA256": "bd61f4f3ca9993a5289518ffd76a3fa9ca2e1bf570f8ed07efdd5a20cf74b040"
+    },
+    {
+      "set": "response-model-001",
+      "id": "adjust-chart-uniform-Luminance-100",
+      "referenceSHA256": "07a3351a93383d44067eb8d1ade6b1fa8d54dd600d91c392b3999e1d8878ad7c",
+      "decodedSHA256": "93408f9946037082d522ff28cd56a2960ab66916d9a34c8e12cd6cdee74b188d"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentRed--50",
+      "referenceSHA256": "ac95e7565f343a8c22e7f523af1a792d76ad06a27ebc341ac0d980e705b48486",
+      "decodedSHA256": "b714f1453a3992ca1322b986bfc15e1f57931bb711c735d40d741d6fd73d589b"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentRed-50",
+      "referenceSHA256": "44ea6432047676c53631cb1f3ffc52b803268492cb248dfb09bc5330422f0814",
+      "decodedSHA256": "26ec6b2d3cc529a350d64ff2b91678a3ba7d0a8ea9bad489c69f8bf456cb7419"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentOrange--50",
+      "referenceSHA256": "09d546f201912f112a1b51b89abcf4b2db0fb62cc425888946d717255c6075bf",
+      "decodedSHA256": "8c106917734a7578b370f0e28124a71dba8f4a52fdad9f71033790ec57beddf6"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentOrange-50",
+      "referenceSHA256": "f0ff2766f4c7ea4b1f1c4241b5c4cf4a161fd9d1bd7436f32f2fc95458080eb4",
+      "decodedSHA256": "8c7dff9fc31969a3c36f813724af7ecb5cd19f6222c32454e1d6c196e56937e3"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentYellow--50",
+      "referenceSHA256": "527cd9c2fa9691e943d5aae1b8c9396cb4af997d9d2a2bb4b489afc4046da2f5",
+      "decodedSHA256": "196b75acb971cf06ee38eea70fe2284a9c95f7ab95b9281630adc4d89986f7ee"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentYellow-50",
+      "referenceSHA256": "21893264ca914e1fad56de5379a90719faace1621643a7b33ce1ba296b771464",
+      "decodedSHA256": "012bc9fc94d2e68edb3cb75e4925897a4a8a59b38055a915cb37eae177d8f52c"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentGreen--50",
+      "referenceSHA256": "20e86650b91f110d982771e0718a0b50678a12c1e189ce26608668b927e39ce4",
+      "decodedSHA256": "268746c0a4c6b4b5d06d0b9e7dc92fcbbac4e4e3c70b6545152b6a28b1dd5cd1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentGreen-50",
+      "referenceSHA256": "decea59d198ae4b542300a203ecef0b5b2466313f7b88274fb407b819e40fca6",
+      "decodedSHA256": "9cc33cf5fd8dec89f94506ac41f4463d5486c420599f64e8c49aa31561b02ff1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentAqua--50",
+      "referenceSHA256": "3c6107e87e720309bbda523d1600e31d691b0f2f4df4c0e9f432b21506900cd4",
+      "decodedSHA256": "bcf4d4f64cd06d79efbd6d3f76c69f4761e15e859f4c4f1b39f122bb08e25ee1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentAqua-50",
+      "referenceSHA256": "01ca9fbfd39e8c9f118d1d4a0edb092cca64333c7d92d63f47657c2aed940e22",
+      "decodedSHA256": "61fc64a62f0bce5a4ac71817580a31b9fd1203dc0869b1d945b9cc5f1272c0cd"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentBlue--50",
+      "referenceSHA256": "dbb7ff6d6c0089a737f12e390f19d0abb30248f23aaad71f333adcd79a9e6042",
+      "decodedSHA256": "7f039ca7b95e4b0bcab2a70cd0165af45966f400224356748a6e78e4bebbacba"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentBlue-50",
+      "referenceSHA256": "f6b6a93f65b1453a8605ac2564b528ec3bca80cd1d292695f02bc29f302ca18d",
+      "decodedSHA256": "b769c54b1a7d6b21d5dd642ae28ef2f8b82320cf5288a8a473e9762c4ef4a7a7"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentPurple--50",
+      "referenceSHA256": "d48a1b3baab2e6a8a127aeb5ddcd96b2aa20789ded8fcad3cb5a83625fbee937",
+      "decodedSHA256": "6d41e4cf8d971944e0260ed6cd6b9304264ef6f5cfd7d07e8e905c0f55c0c500"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentPurple-50",
+      "referenceSHA256": "90af4ab1c396ad14100978aab30c8c8b6fcc4dad9fba82a63a9a94aeab3636e8",
+      "decodedSHA256": "8a8e235a937bedc81ae11ca1f933f3be258f809e92f482deacff8b877c8edd8f"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentMagenta--50",
+      "referenceSHA256": "4f264ce271fc2b5fe15c3c467cfcf3a86eb80707f58444e020db24f967bd8988",
+      "decodedSHA256": "735855e3e306a54ae97a3b74d212de79931052b0c293d050aa615dea57cf5d94"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-HueAdjustmentMagenta-50",
+      "referenceSHA256": "99c8762de3b34e1da141487bf00301752db728e468cae012c38aff2db201b85a",
+      "decodedSHA256": "c03a6638fc89b29adf6a19f8e2c78408b73888fe0c323218879ef0640d5fa57f"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentRed--50",
+      "referenceSHA256": "5dcc5f9e94be2c23e63cf56e4ab15b492e5482e4857d4b130937f6ea1c9fb41b",
+      "decodedSHA256": "deb8e0304b899980c2177ad14dcfd18152fbcc663fd764da3a2773a7999f92ae"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentRed-50",
+      "referenceSHA256": "54b92eb2b7077b357d2655bcb81a8b16b5055cfd7a8a0d96485f9f6c536dabdc",
+      "decodedSHA256": "c41a992aca81c9b5a492f9c788275a3142faf5cdf9c23ed4c18c1788a061dd65"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentOrange--50",
+      "referenceSHA256": "1c7fa47832dae940a5127090491ae91e11f351e36e159a8edc1d4b1971296801",
+      "decodedSHA256": "bfe87207a41bcfac39022114f4ea68744adef9be745507b639f8b6769aed05bd"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentOrange-50",
+      "referenceSHA256": "446f39d05173773b1f4fe61f907a238e5c5963adaa24167eb6da91c04801310f",
+      "decodedSHA256": "5d0b243484783045b1b7a85b03e11bc5c0f68d92d9d778d8f8ff2ca9dcdc575a"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentYellow--50",
+      "referenceSHA256": "662126b4b1ce1626e8c999dd2197824e588643157e183f7a95a43da5d3842ebd",
+      "decodedSHA256": "7d71542338951292f078c13106b382083705eec79b189ae579e856b5fc777b09"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentYellow-50",
+      "referenceSHA256": "1ed7f9ac22b704da72f47a9cb175efe1ea3d5c31957b1a289821114cbbbc7b38",
+      "decodedSHA256": "3565e8205f36b6ca2bf7b6e34930e5dc55f056a35fc0bc3059216edc6b814463"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentGreen--50",
+      "referenceSHA256": "66cbebe58193abdba7962ece566a933f0103600fc39f97c52a70eb5dca071534",
+      "decodedSHA256": "5c9d915c5d1a499dd6c698d4b79a3275fe9a2bc7113f8359049dcce936c4b8ce"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentGreen-50",
+      "referenceSHA256": "fd2db6739ff152c9be2ba909a0833a050479098b581d67c9b9c20fa8b1db6619",
+      "decodedSHA256": "c9e3215c6c13ce88c912a30060b24235e40aee9ab7ca382c435fc55b7ad13fe5"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentAqua--50",
+      "referenceSHA256": "e72aba9ae61c3ecd53593b101968198c50acc109c1bb1b6686fc7f29129a13a8",
+      "decodedSHA256": "17c853c274a16316f566c79b3f5010048f139158a8c741eaf5dfb5af9fe6b002"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentAqua-50",
+      "referenceSHA256": "02848c75ff27e65305e134dbc739cfe305203f811482f2d22b68da3616be4b8d",
+      "decodedSHA256": "253c7b04bfd524274307d434ab2bb6a5a6975aaf28a48dfadd20df99179609cf"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentBlue--50",
+      "referenceSHA256": "b93d039f300a716ef9eb7fd3f83c8e7859388e47c70d2f3e356d9089f3cd0251",
+      "decodedSHA256": "00f7935d762f2b1cf92b66e167f50a95f26a6789e232bbf70f6713c05b315bef"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentBlue-50",
+      "referenceSHA256": "0f7a57c36acc880ffc8ed2a4929776a4054309bfe9fb73add3120bd42b73ef87",
+      "decodedSHA256": "fc2a0f4e75f90cb1dc49dc9de783d15800d2a1f0a5bdff851ce5414fb3fe058e"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentPurple--50",
+      "referenceSHA256": "f00d1b1083e7a372178c6b5403ad5c0b9652866356316e5e81dc8e9c370b07e6",
+      "decodedSHA256": "da6783c3c7681eaff9b61d604b27320d58167fc154b20c4f75ab361a1870818f"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentPurple-50",
+      "referenceSHA256": "75fd996d4145e041c2402c3f29b3931125c4c1a5044d0f2cdf08a6a5b4725a91",
+      "decodedSHA256": "7140e0c66db2a84eb45feb172bd47db94ae1618885db386835c30f7e03c8081a"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentMagenta--50",
+      "referenceSHA256": "e9b4cbba7a3e1f3e0022527ccf817fbc2474c5bfa5b65a9a0d52bd41988b358f",
+      "decodedSHA256": "f749a43473a289598c5a8e14bd57b11f0fe702381c6584cd75491b9b2815b2df"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-SaturationAdjustmentMagenta-50",
+      "referenceSHA256": "9e88ab8efc71c7dec35e4a7550d226e1a6a8ea23d4219215f9290396e7f866ab",
+      "decodedSHA256": "96e2c74c67ae05652b694c2e265488af05c1382065093fe050aefaee7d4ca79b"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentRed--50",
+      "referenceSHA256": "f1da2324e728d669bb50cd1b2ce66be22b3f6d35539cc9609f8614a2261c41da",
+      "decodedSHA256": "452ea51d7a1380a99bbd2486a4e48f63b12a0ddf3d44935364783e6b18c61a15"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentRed-50",
+      "referenceSHA256": "92adb15671c9c7732dd9c87a1210db4922067d24d47a5c724e4dd74359bc1aff",
+      "decodedSHA256": "c77683bf65bf303301728d65cbcf5df404f408091375274a2005071239df3cf1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentOrange--50",
+      "referenceSHA256": "2c7e0bd26ee0de3aae9a5b6afb404ed90cf9f16117d9a4f946716dfda6eeb131",
+      "decodedSHA256": "313e934d8079ff67d61548ecede7f2fe4855aa868a77aedeac419150ae1be059"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentOrange-50",
+      "referenceSHA256": "85fb9becd1300ef41250c39a93d550685f4dffcee865dc35cb89b664da01b7c0",
+      "decodedSHA256": "2ab3f840d40b7854713d6b7e01e1f3ae85c4c7a0cb368fe6579b34e49231c3e1"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentYellow--50",
+      "referenceSHA256": "00c9fe276899be419584d6a51b2efdc9d0fce202e45338c9549d258ee4443ee6",
+      "decodedSHA256": "db9c07cfb22ff8c1bcbd1a5901f6d968a977529326f5fa77bdbe6e26e2984025"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentYellow-50",
+      "referenceSHA256": "9b6f76a34c1512699745d64d8e0e52a4def6e38153f5e7886fca45b0787d685c",
+      "decodedSHA256": "bf4e1a485b6246f139db3f9104fca5278f2832e20854dca7eb1024288288aa4f"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentGreen--50",
+      "referenceSHA256": "3c58abd7471351db42c7904a114a8d0588e48ccfbd3d4c942e238c31a492880d",
+      "decodedSHA256": "9195e15df86285316adfd55dbfb17142f043b5418207ce5182e994cff57344d4"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentGreen-50",
+      "referenceSHA256": "f23a3192d2415d8f1e8ac29ec8498d50572c9f1f85f181fc06b127ba2e2615b1",
+      "decodedSHA256": "e841811bd71b1b3e7c153f24d65d75e1aa2d0f6a3b3cd0086699c317a245c99d"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentAqua--50",
+      "referenceSHA256": "b92bcd1af9669cbfd02a85b9c719b1f20e987d587a8dcdd911a461648c65dc84",
+      "decodedSHA256": "fccf4125fe930647a818ad89d2861005a5b990eef26bb3b4153b82577c1bfa24"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentAqua-50",
+      "referenceSHA256": "18d29c48ce8bc5192c64a2e544f206e41d50b4905319433ce26571254935bae7",
+      "decodedSHA256": "8bd935992c62995ccf51d8fb34e09287ee90a6432df2ae6fa972a6c8564a9646"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentBlue--50",
+      "referenceSHA256": "e97fc7442e359ae8c9d6b9472491fd804c9b45fb527648baa1efba8175cb08a4",
+      "decodedSHA256": "3d89fa9997a658beef44fc42c4fafc15fa792de492ecc32454a58e54c72f5c9c"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentBlue-50",
+      "referenceSHA256": "6933bcafe093fe94b29a54cdec8ad87cf2e0fe6fa6c629b3a57b6996940b5a9a",
+      "decodedSHA256": "393c4278a424ed3e9c98cfaa3b05e6ca26bdc01975695053edd193a5e36eb274"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentPurple--50",
+      "referenceSHA256": "5d2d3de16d063e2126908483967dbbb9e3ff6a1c944f0332fc4574856d07919a",
+      "decodedSHA256": "1d0668a9132a78ca80ea4d3365d2e6fc7bdbe9d9ba7a224652727348a1f4fa01"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentPurple-50",
+      "referenceSHA256": "ebdc5d057f20e4a871d755c08dcbf902ef73fe212041eae55a8f1c79eaf1ae99",
+      "decodedSHA256": "cd23e1733aa17c93edc60c07b91cd766fddbed67475611079c1ddd759114468f"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentMagenta--50",
+      "referenceSHA256": "9f72851e401c4ce2ef72811d6746167a017429e561684ea00afba173e932c36c",
+      "decodedSHA256": "11b488c7166d1772bfb0b2fd9238c74f50dbc0c8875fdcf5116e6526b14ef7da"
+    },
+    {
+      "set": "adjustments-001",
+      "id": "adjust-chart-LuminanceAdjustmentMagenta-50",
+      "referenceSHA256": "253e46a9875c835aedae55fd7b4f94b87937e442384b267bdd7994c9e8445200",
+      "decodedSHA256": "28347374838ca02edb676b1b96679fb68a735c4b4e83addc4163baaf7b1e2200"
+    }
+  ]
+}

@@ -154,11 +154,17 @@ extension ContrastFeature {
 extension SaturationFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
-      "CIColorControls",
-      parameters: [kCIInputSaturationKey: 1 + value]
-    )
-    .cropped(to: image.extent)
+    switch algorithm {
+    case .coreImage:
+      return image.applyingFilter(
+        "CIColorControls",
+        parameters: [kCIInputSaturationKey: 1 + value]
+      )
+      .cropped(to: image.extent)
+    case .lightroomApproximation:
+      guard value.isFinite, value != 0 else { return image }
+      return try SaturationRecipe.apply(to: image, strength: min(max(value, -1), 1))
+    }
   }
 }
 
@@ -179,7 +185,10 @@ extension ExposureFeature {
 extension HighlightsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
+    if algorithm == .lightroomApproximation {
+      return try HighlightShadowRecipe.apply(to: image, highlights: true, value: value)
+    }
+    return image.applyingFilter(
       "CIHighlightShadowAdjust",
       parameters: ["inputHighlightAmount": 1 - value]
     )
@@ -190,7 +199,10 @@ extension HighlightsFeature {
 extension ShadowsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
+    if algorithm == .lightroomApproximation {
+      return try HighlightShadowRecipe.apply(to: image, highlights: false, value: value)
+    }
+    return image.applyingFilter(
       "CIHighlightShadowAdjust",
       parameters: ["inputShadowAmount": value]
     )

@@ -27,6 +27,8 @@ import UIKit
 
 struct ImageEditorContent: View {
 
+  @Environment(\.verticalSizeClass) private var verticalSizeClass
+
   @Binding var document: ImageEditorDocument
   let previewSourceLoader: PreviewSourceLoader
   let options: ImageEditor.Options
@@ -118,8 +120,16 @@ struct ImageEditorContent: View {
     // (not the written one: see `guideHasCropChanges`).
     let isResettable = displayedFeature.hasAnyEffect || (guideHasCropChanges ?? false)
     let cancelAction: (() -> Void)? = onCancel == nil ? nil : { cancel() }
-    let bottomControlHeight: CGFloat = 120
+    let bottomControlHeight: CGFloat = switch (editingMode, adjustmentParameter) {
+    case (.adjust, .colorGrading): 340
+    case (.adjust, .grain): 240
+    default: 120
+    }
     let bottomControlMaxWidth: CGFloat = 560
+    let usesSidePanel = verticalSizeClass == .compact
+    let contentLayout = usesSidePanel
+      ? AnyLayout(HStackLayout(spacing: 0))
+      : AnyLayout(VStackLayout(spacing: 0))
 
     NavigationStack {
       // The toolbar's and the mode buttons' commands reach the canvas
@@ -129,7 +139,7 @@ struct ImageEditorContent: View {
           Color.black
             .ignoresSafeArea()
 
-          VStack(spacing: 0) {
+          contentLayout {
             CanvasHost(
               document: canvasDocumentBinding,
               displayedFeature: displayedFeature,
@@ -170,11 +180,18 @@ struct ImageEditorContent: View {
               onSelectFilterPreset: selectFilterPreset,
               onSelectAdjustmentParameter: selectAdjustmentParameter,
               onSetAdjustmentValue: previewAdjustmentValue,
-              onEndAdjustmentValue: endAdjustmentValue
+              onEndAdjustmentValue: endAdjustmentValue,
+              onSetColorGrading: previewColorGrading,
+              onEndColorGrading: endColorGrading,
+              onSetGrain: previewGrain,
+              onEndGrain: endGrain
             )
             .frame(maxWidth: bottomControlMaxWidth)
-            .frame(maxWidth: .infinity)
-            .frame(height: bottomControlHeight)
+            .frame(maxWidth: usesSidePanel ? nil : .infinity)
+            .frame(
+              width: usesSidePanel ? 340 : nil,
+              height: usesSidePanel ? nil : bottomControlHeight
+            )
           }
         }
         .safeAreaInset(edge: .bottom) {
@@ -380,6 +397,24 @@ struct ImageEditorContent: View {
   /// Writes the slider value once, when the drag (or a reset) ends.
   private func endAdjustmentValue(_ sliderValue: Double) {
     previewAdjustmentValue(sliderValue)
+    write()
+  }
+
+  private func previewColorGrading(_ grading: ColorGradingFeature) {
+    session.previewColorGrading(grading, over: document)
+  }
+
+  private func endColorGrading(_ grading: ColorGradingFeature) {
+    previewColorGrading(grading)
+    write()
+  }
+
+  private func previewGrain(_ grain: GrainFeature.CameraRaw) {
+    session.previewGrain(grain, over: document)
+  }
+
+  private func endGrain(_ grain: GrainFeature.CameraRaw) {
+    previewGrain(grain)
     write()
   }
 
@@ -673,6 +708,10 @@ private struct ControlHost: View {
   let onSelectAdjustmentParameter: (ImageEditor.Adjustment) -> Void
   let onSetAdjustmentValue: (Double) -> Void
   let onEndAdjustmentValue: (Double) -> Void
+  let onSetColorGrading: (ColorGradingFeature) -> Void
+  let onEndColorGrading: (ColorGradingFeature) -> Void
+  let onSetGrain: (GrainFeature.CameraRaw) -> Void
+  let onEndGrain: (GrainFeature.CameraRaw) -> Void
 
   var body: some View {
     Group {
@@ -718,7 +757,13 @@ private struct ControlHost: View {
           isLoaded: isLoaded,
           onSelectParameter: onSelectAdjustmentParameter,
           onSetValue: onSetAdjustmentValue,
-          onEndValue: onEndAdjustmentValue
+          onEndValue: onEndAdjustmentValue,
+          grading: currentFeature?.effects.colorGrading ?? .init(),
+          onSetGrading: onSetColorGrading,
+          onEndGrading: onEndColorGrading,
+          grain: currentFeature?.effects.grain ?? .init(amount: 0),
+          onSetGrain: onSetGrain,
+          onEndGrain: onEndGrain
         )
       }
     }
@@ -1192,6 +1237,13 @@ private struct AdjustmentsControl: View {
   /// Called once when a drag, an accessibility step, or a reset ends.
   let onEndValue: (Double) -> Void
 
+  let grading: ColorGradingFeature
+  let onSetGrading: (ColorGradingFeature) -> Void
+  let onEndGrading: (ColorGradingFeature) -> Void
+  let grain: GrainFeature.CameraRaw
+  let onSetGrain: (GrainFeature.CameraRaw) -> Void
+  let onEndGrain: (GrainFeature.CameraRaw) -> Void
+
   var body: some View {
     VStack(spacing: 4) {
       ScrollView(.horizontal, showsIndicators: false) {
@@ -1208,45 +1260,53 @@ private struct AdjustmentsControl: View {
       }
       .frame(height: 56)
 
-      SteppedSlider(
-        value: valueBinding,
-        range: selection.sliderRange,
-        stepCount: Int(
-          (selection.sliderRange.upperBound - selection.sliderRange.lowerBound)
-            / 4
-        ),
-        style: .imageEditorAdjustmentSlider,
-        resetValue: 0,
-        snapsToTicksOnEditingEnd: false,
-        transform: { $0.rounded() },
-        hapticIdentity: { value in
-          let step = Int(value.rounded())
-          return step.isMultiple(of: 25) ? AnyHashable(step) : nil
-        },
-        onHaptic: {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred(
-            intensity: 0.35
-          )
-        },
-        onEditingEnded: { value in
-          onEndValue(value.rounded())
-        },
-        topMarker: { context in
-          Circle()
-            .frame(width: 6, height: 6)
-            .opacity(context.isZero && sliderValue != 0 ? 1 : 0)
-            .animation(.spring, value: sliderValue == 0)
-        },
-        tick: { context in
-          Capsule()
-            .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
-        }
-      )
-      .id(selection)
-      .tint(.white)
-      .frame(height: 44)
-      .accessibilityLabel(selection.title)
-      .padding(.horizontal, 24)
+      if selection == .colorGrading {
+        ColorGradingControl(grading: grading, onChange: onSetGrading, onEnd: onEndGrading)
+          .padding(.horizontal, 24)
+      } else if selection == .grain {
+        GrainControl(grain: grain, onChange: onSetGrain, onEnd: onEndGrain)
+          .padding(.horizontal, 24)
+      } else if let sliderRange = selection.sliderRange {
+        SteppedSlider(
+          value: valueBinding,
+          range: sliderRange,
+          stepCount: Int(
+            (sliderRange.upperBound - sliderRange.lowerBound)
+              / 4
+          ),
+          style: .imageEditorAdjustmentSlider,
+          resetValue: 0,
+          snapsToTicksOnEditingEnd: false,
+          transform: { $0.rounded() },
+          hapticIdentity: { value in
+            let step = Int(value.rounded())
+            return step.isMultiple(of: 25) ? AnyHashable(step) : nil
+          },
+          onHaptic: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred(
+              intensity: 0.35
+            )
+          },
+          onEditingEnded: { value in
+            onEndValue(value.rounded())
+          },
+          topMarker: { context in
+            Circle()
+              .frame(width: 6, height: 6)
+              .opacity(context.isZero && sliderValue != 0 ? 1 : 0)
+              .animation(.spring, value: sliderValue == 0)
+          },
+          tick: { context in
+            Capsule()
+              .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
+          }
+        )
+        .id(selection)
+        .tint(.white)
+        .frame(height: 44)
+        .accessibilityLabel(selection.title)
+        .padding(.horizontal, 24)
+      }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .opacity(isLoaded ? 1 : 0.5)

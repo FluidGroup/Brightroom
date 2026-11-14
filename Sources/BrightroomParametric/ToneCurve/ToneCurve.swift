@@ -20,8 +20,9 @@ import Foundation
 /// example on undo) replaces the points altogether.
 ///
 /// This value stores authored control points without prescribing color-space
-/// semantics. Use ``ToneCurveEvaluator`` when evaluating the curve between and
-/// beyond those points.
+/// or interpolation semantics. ``ToneCurveFeature`` uses the shape-preserving
+/// ``ToneCurveEvaluator``; ``PointCurveFeature`` uses natural cubic splines in
+/// its display-referred coordinate domain.
 public struct ToneCurve: Equatable, Sendable {
 
   /// The normalized range shared by both curve axes.

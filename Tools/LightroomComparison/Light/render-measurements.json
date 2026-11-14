@@ -1,0 +1,447 @@
+{
+  "measurement": "full-image linear Display-P3 maximum RGB channel error; white=1; not Delta E",
+  "cases": [
+    {
+      "run": "light-001",
+      "id": "adjust-chart-neutral",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 6.258487701416016e-05,
+        "p95": 0.00017064809799194336,
+        "p99": 0.0002189967781305313
+      },
+      "maximum": 0.0005640866940836986,
+      "referenceSHA256": "fc4b151db2ffa98991cf76fbad899bcf4a168834dc75ad2551d3099aa6946975",
+      "candidateSHA256": "0b6298e206bc852a68097ef5004c66e56b0ea221555f01ee81bf2f9372b91147"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-chart-mixed-light",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.040378838777542114,
+        "p95": 0.10005278140306473,
+        "p99": 0.12816055119037628
+      },
+      "maximum": 0.1790662407875061,
+      "referenceSHA256": "5f6566af07da8c7d1dbeb2f3665a9d85b79c3d3729707ce1c0932e13f8accaa5",
+      "candidateSHA256": "50008b084c7fb4c9126fff5fa792fbca9200f93e8a5723669126ba6150f6eebf"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-chart-mixed-mixer",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0004642605781555176,
+        "p95": 0.006791293621063232,
+        "p99": 0.013687491416931152
+      },
+      "maximum": 0.021960437297821045,
+      "referenceSHA256": "352c650bd406f7744e98d01a30b7ffe2b1bdc675554396241e39aa4ae9547538",
+      "candidateSHA256": "2e206135158f1b15fd3995615857be7a63053a5fba3f78f81efe351b4885a3bd"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-chart-blue-luminance-23",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0002199411392211914,
+        "p95": 0.003292977809906006,
+        "p99": 0.005061447620391846
+      },
+      "maximum": 0.017507612705230713,
+      "referenceSHA256": "e892c0e353db2799b8b16138ff85aabecdf8d5143ed8dfec8a4ab082f724ef34",
+      "candidateSHA256": "fd1c51fa2e0bdaaafc5f5f68fa9955aaf57fc0df4a7180d674f86c739483637e"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-chart-orange-hue-31",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.00020197033882141113,
+        "p95": 0.0009920429438352585,
+        "p99": 0.002550184726715088
+      },
+      "maximum": 0.015147209167480469,
+      "referenceSHA256": "1bb093a6662cf531634cebfc55a6da5dae46424eb02d7fcf4c30cd872b4042a5",
+      "candidateSHA256": "c53cdf2d48144352659a4b10dbd957283c9ea464948167e806b9ec2063146eaa"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-neutral",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 3.0316412448883057e-05,
+        "p95": 7.863342761993408e-05,
+        "p99": 0.00011652708053588867
+      },
+      "maximum": 0.000616888515651226,
+      "referenceSHA256": "58a4328c6d16ddf0b2bd79a77700bc3fdd50ca9ab5065b19e2e10e0de1d06d76",
+      "candidateSHA256": "a873ac45ad3b5ea36449cb9b5e6051cdfff8616a98d7c6f2a43463551db201a5"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-Highlights2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0007987320423126221,
+        "p95": 0.0077002644538879395,
+        "p99": 0.008601278066635132
+      },
+      "maximum": 0.03336131572723389,
+      "referenceSHA256": "993f2f4035c9df41c536cc65e95609885cb9da2d0c07986fabe29612e5039214",
+      "candidateSHA256": "a320186a0dbcb41d6aa7840d3bb44a51e6085d719be3d6c35b1aadfb1e156b03"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-Shadows2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.03752566874027252,
+        "p95": 0.06251516938209534,
+        "p99": 0.07015512883663177
+      },
+      "maximum": 0.07240062952041626,
+      "referenceSHA256": "d2dc320430bdd4ad875ba5cba93c26e1fd5243789dd59e28b84ec5e05af20144",
+      "candidateSHA256": "845d469c959b74c9fabde1f391a9cb5c2a8d4def62bbe412a746306e33d3f3f3"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-Whites2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 4.135258495807648e-05,
+        "p95": 0.0001964271068572998,
+        "p99": 0.00023683905601501465
+      },
+      "maximum": 0.0008788704872131348,
+      "referenceSHA256": "943165e3e3e1d6e7303dbfab284a7c6d5772c66c73dcbb38cf722e61d2a8bab6",
+      "candidateSHA256": "9be0fc9e06dc1a814a6ac36d97bc9b6eb4a9736cc40a3c05526ee5945bbab98b"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-Blacks2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 4.871934652328491e-05,
+        "p95": 0.00024762749671936035,
+        "p99": 0.0002924799919128418
+      },
+      "maximum": 0.0006898045539855957,
+      "referenceSHA256": "d184e560e94c79aaf9b36d4954d32795ce42926fa348025122c7e219d004a0b2",
+      "candidateSHA256": "38f522b739df0248cb1cf7ffe479a12d55182220bada26d48938edbc0631c7cd"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-Saturation",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 4.969164729118347e-05,
+        "p95": 0.0002611875534057617,
+        "p99": 0.00030860304832458496
+      },
+      "maximum": 0.011566562578082085,
+      "referenceSHA256": "109f41404d61244716d8c53b71ed5eefcad04ca69d19eced41ac591134515709",
+      "candidateSHA256": "268c8d15fa844b2c9986fa593904fd3caf1f3919b62969a54a1fde6495061cad"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-mixed-light",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0636826679110527,
+        "p95": 0.09582053124904633,
+        "p99": 0.10276404023170471
+      },
+      "maximum": 0.15592586994171143,
+      "referenceSHA256": "186f47341d96de21c5d20af2f3948474215403b4fb0b2b9f44bfd98f38501ed1",
+      "candidateSHA256": "aec97d6798e15ca690f199e7666a2e34a50fd662cef8a392f0d6c03284ff7fab"
+    },
+    {
+      "run": "light-001",
+      "id": "adjust-photo-mixed-mixer",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.000802457332611084,
+        "p95": 0.0037654340267181396,
+        "p99": 0.004165530204772949
+      },
+      "maximum": 0.01706308126449585,
+      "referenceSHA256": "b8160d840e4d8558c57ed06954d56e80318fd858878520c48de863f3c114ea72",
+      "candidateSHA256": "51baf2ec797950bf350b5045815729672db09f621d64a4da80efb6d2a25725b2"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-chart-mixed-light",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.044206403195858,
+        "p95": 0.08998098969459534,
+        "p99": 0.11970648169517517
+      },
+      "maximum": 0.18703091144561768,
+      "referenceSHA256": "5f6566af07da8c7d1dbeb2f3665a9d85b79c3d3729707ce1c0932e13f8accaa5",
+      "candidateSHA256": "3ad880cb88d06bb601f5316441456a5d7bceaa836a3ad9c4c6d3fa3c4c500e25"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-Highlights2012",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.0007987320423126221,
+        "p95": 0.0077002644538879395,
+        "p99": 0.008601278066635132
+      },
+      "maximum": 0.03336131572723389,
+      "referenceSHA256": "993f2f4035c9df41c536cc65e95609885cb9da2d0c07986fabe29612e5039214",
+      "candidateSHA256": "a320186a0dbcb41d6aa7840d3bb44a51e6085d719be3d6c35b1aadfb1e156b03"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-Shadows2012",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.03752566874027252,
+        "p95": 0.06251516938209534,
+        "p99": 0.07015512883663177
+      },
+      "maximum": 0.07240062952041626,
+      "referenceSHA256": "d2dc320430bdd4ad875ba5cba93c26e1fd5243789dd59e28b84ec5e05af20144",
+      "candidateSHA256": "845d469c959b74c9fabde1f391a9cb5c2a8d4def62bbe412a746306e33d3f3f3"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-Whites2012",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.002299167215824127,
+        "p95": 0.024115413427352905,
+        "p99": 0.02593463659286499
+      },
+      "maximum": 0.047583699226379395,
+      "referenceSHA256": "943165e3e3e1d6e7303dbfab284a7c6d5772c66c73dcbb38cf722e61d2a8bab6",
+      "candidateSHA256": "a873ac45ad3b5ea36449cb9b5e6051cdfff8616a98d7c6f2a43463551db201a5"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-Blacks2012",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.00476103276014328,
+        "p95": 0.011475950479507446,
+        "p99": 0.013190552592277527
+      },
+      "maximum": 0.023547470569610596,
+      "referenceSHA256": "d184e560e94c79aaf9b36d4954d32795ce42926fa348025122c7e219d004a0b2",
+      "candidateSHA256": "a873ac45ad3b5ea36449cb9b5e6051cdfff8616a98d7c6f2a43463551db201a5"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-Saturation",
+      "mode": "calibrated",
+      "error": {
+        "p50": 5.320459604263306e-05,
+        "p95": 0.0005414783954620361,
+        "p99": 0.0005919933319091797
+      },
+      "maximum": 0.031045988202095032,
+      "referenceSHA256": "109f41404d61244716d8c53b71ed5eefcad04ca69d19eced41ac591134515709",
+      "candidateSHA256": "bc0895b89cc5b6bf4405a0852a84c8085aa4bd3d0c2f9f657b6ceeb9a6b70acb"
+    },
+    {
+      "run": "light-baseline-001",
+      "id": "adjust-photo-mixed-light",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.05828271061182022,
+        "p95": 0.10002177953720093,
+        "p99": 0.10666626691818237
+      },
+      "maximum": 0.1589537262916565,
+      "referenceSHA256": "186f47341d96de21c5d20af2f3948474215403b4fb0b2b9f44bfd98f38501ed1",
+      "candidateSHA256": "9fe1cc048333ce09a2c34d4c79782dc382267eb5da2b7830b5b31a0e89e0d19f"
+    },
+    {
+      "run": "light-ablation-001",
+      "id": "a10-photo-full",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.031570933759212494,
+        "p95": 0.08015340566635132,
+        "p99": 0.09498471021652222
+      },
+      "maximum": 0.21708539128303528,
+      "referenceSHA256": "1516cab7e09b0a5b153cb0acdd36ac4711894a50eec67ad58985da9a807268e5",
+      "candidateSHA256": "2d66139cdab04ba9840df091fe939794d33b0ae93803580a698003f0d4c7ad5f"
+    },
+    {
+      "run": "light-ablation-001",
+      "id": "a10-photo-minus-curves",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.04017253220081329,
+        "p95": 0.0845053493976593,
+        "p99": 0.09681284427642822
+      },
+      "maximum": 0.1722283661365509,
+      "referenceSHA256": "9eb43e2834593527d6290718d77389577be26308d40dc4ad84a316d5530ace5a",
+      "candidateSHA256": "1b7c1e72ff84dca45a85a2811c8d312d423d223ab399f28b6a724c04fc4908be"
+    },
+    {
+      "run": "light-ablation-001",
+      "id": "a10-photo-minus-mixer",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.030623644590377808,
+        "p95": 0.07450437545776367,
+        "p99": 0.0899060070514679
+      },
+      "maximum": 0.23183292150497437,
+      "referenceSHA256": "6decacfa34fc16c505332a19309d704acc2f6dfa4acca08905cd4e632db73e65",
+      "candidateSHA256": "908419a90b75646d81609d037b3d197948c6df10ae4253e475814e1e342348f4"
+    },
+    {
+      "run": "light-ablation-001",
+      "id": "a10-photo-minus-light",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.006484899669885635,
+        "p95": 0.03698095679283142,
+        "p99": 0.054335832595825195
+      },
+      "maximum": 0.2313007116317749,
+      "referenceSHA256": "fa0b859977853ec19381fb27cacddb49104f5766057b05325fda7c31543208d5",
+      "candidateSHA256": "03b8df4f61fc7bba348a99ad4eeb5080f36006768225b7d1e6776972c41a6d40"
+    },
+    {
+      "run": "light-fresh-001",
+      "id": "adjust-chart-fresh-points",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.012960195541381836,
+        "p95": 0.07096731662750244,
+        "p99": 0.10512447357177734
+      },
+      "maximum": 0.15422210097312927,
+      "referenceSHA256": "938017e9289ada68fdabd7c13ad27aa3f0f4f3fbbb37be23fb1b07ef5dc1d8be",
+      "candidateSHA256": "bd62284d28d76d2281c7ff7adf0194c0d5239b6a4ceca38167bbad23e984246e"
+    },
+    {
+      "run": "light-fresh-001",
+      "id": "adjust-chart-fresh-points",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0006963014602661133,
+        "p95": 0.004774153232574463,
+        "p99": 0.018128961324691772
+      },
+      "maximum": 0.03730505704879761,
+      "referenceSHA256": "938017e9289ada68fdabd7c13ad27aa3f0f4f3fbbb37be23fb1b07ef5dc1d8be",
+      "candidateSHA256": "aadfad2fce0d7baca7f4aaa51eebd37ea7e4e546a5a7dc5155012b40a8caa24a"
+    },
+    {
+      "run": "light-fresh-001",
+      "id": "adjust-photo-fresh-points",
+      "mode": "calibrated",
+      "error": {
+        "p50": 0.005806289613246918,
+        "p95": 0.03150230646133423,
+        "p99": 0.0347612202167511
+      },
+      "maximum": 0.13479453325271606,
+      "referenceSHA256": "09f371c9fe73c8e9ac3a6daa8568494c4104e264e389ede9f7db469d6253ac9a",
+      "candidateSHA256": "bbe2550baa6489a34e2775b6ca05ceff9c378da6c003956dc5754173cff22069"
+    },
+    {
+      "run": "light-fresh-001",
+      "id": "adjust-photo-fresh-points",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0018806420266628265,
+        "p95": 0.024031251668930054,
+        "p99": 0.02573573589324951
+      },
+      "maximum": 0.05787861347198486,
+      "referenceSHA256": "09f371c9fe73c8e9ac3a6daa8568494c4104e264e389ede9f7db469d6253ac9a",
+      "candidateSHA256": "1a56334fc1a4e6005a966e4ba26bee95db575851d44aa8550fc71c0351e620f5"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-chart-fresh-Whites2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0010584592819213867,
+        "p95": 0.0020276904106140137,
+        "p99": 0.007869064807891846
+      },
+      "maximum": 0.011423885822296143,
+      "referenceSHA256": "a63b742bf98fd808894df5cc905a32aa5ca08cd0f41cf4f8a6e8ce8ecb7919de",
+      "candidateSHA256": "998e7f9f3a28627ce88e9aa5aa9c06e03ffd70e466cf9424deb027940db35463"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-photo-fresh-Whites2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0017944127321243286,
+        "p95": 0.02439221739768982,
+        "p99": 0.02598363161087036
+      },
+      "maximum": 0.05987751483917236,
+      "referenceSHA256": "bf0d7b62468e4376615901a6fc8ca9a262ee1e5f7463551dfede43ea3582a194",
+      "candidateSHA256": "852c27cf4b4cb3f29399bd2e7ef4d9ce878714c1a2cffdc9093ea45591889078"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-chart-fresh-Blacks2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.0005109310150146484,
+        "p95": 0.0007465481758117676,
+        "p99": 0.0008416734635829926
+      },
+      "maximum": 0.0013114213943481445,
+      "referenceSHA256": "b9308b5cbb6051acd25e485d2e42bf4d5608fa85416c5d75647ff2c1c264ba84",
+      "candidateSHA256": "1bceee6524fc8467ef9c4874bfefd717579e606662771766a61090a9841be0b9"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-photo-fresh-Blacks2012",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.00027734413743019104,
+        "p95": 0.0005932599306106567,
+        "p99": 0.0006344616413116455
+      },
+      "maximum": 0.0012805461883544922,
+      "referenceSHA256": "afad9c046383b009af24b2230f40c462d69f511609be489116915076b04258e4",
+      "candidateSHA256": "fc0f8cc0efebe9b29beb72caa434bda9c482cb4962cc98c3c79dc46e110c4cfc"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-chart-fresh-Saturation",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 0.00027156807482242584,
+        "p95": 0.0017940402030944824,
+        "p99": 0.003789931535720825
+      },
+      "maximum": 0.009420990943908691,
+      "referenceSHA256": "db64d1f39a95d00862c37cb90eaae4d684e08616692ab3c2870ef2ffa0a8b099",
+      "candidateSHA256": "768367f30be613ec25463fa320220c753fc180b904e3d7b0e279c52b40c6cb84"
+    },
+    {
+      "run": "light-split-001",
+      "id": "adjust-photo-fresh-Saturation",
+      "mode": "calibrated-light",
+      "error": {
+        "p50": 5.28823584318161e-05,
+        "p95": 0.0002490878105163574,
+        "p99": 0.00029268860816955566
+      },
+      "maximum": 0.004357576370239258,
+      "referenceSHA256": "bffb240f01afc4517df7d03c2792f082e1cb78e1d7f5bba40a988533554e361d",
+      "candidateSHA256": "3677ed1828efb170265b12e2744b2fdccfe5ce336ebe2030f691f9a6bd83ce26"
+    }
+  ]
+}

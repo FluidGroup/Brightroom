@@ -23,12 +23,22 @@ let package = Package(
         // Included by the compiled `.metal` sources; not a standalone package
         // input.
         "BrushStampFalloff.metalh"
+      ],
+      resources: [
+        .copy("ColorGrading/Resources/ColorGradingCalibration.bin"),
+        .copy("ColorMixer/Resources/ColorMixerCalibration.lzfse"),
+        .copy("Saturation/Resources/SaturationCalibration.lzfse"),
+        .copy("TonalPoints/Resources/TonalPointCalibration.lzfse"),
+        .copy("TonalPoints/Resources/StrongWhitesCalibration.lzfse"),
+        .copy("HighlightsShadows/Resources/HighlightShadowCalibration.json"),
+        .copy("HighlightsShadows/Resources/HighlightStrength.bin"),
       ]
     ),
     // General Core Image kernels require different Metal flags from the
     // stitchable and live brush shaders in BrightroomParametric.
     .target(
       name: "BrightroomColorAdjustmentKernels",
+      exclude: ["ColorAdjustmentWorkingSpace.metalh"],
       plugins: [
         .plugin(name: "BuildColorAdjustmentKernels")
       ]

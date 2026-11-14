@@ -207,16 +207,39 @@ public struct ContrastFeature: ImageEffect, Equatable {
   }
 }
 
-/// A saturation adjustment.
+/// Adjusts the color intensity of the whole image.
 public struct SaturationFeature: ImageEffect, Equatable {
 
-  /// The saturation offset passed to `CIColorControls` as `1 + value`. `0` is
-  /// neutral, `-1` removes all color.
+  /// The color response used when increasing or reducing saturation.
+  public enum Algorithm: Equatable, Sendable {
+    /// Applies Core Image's `CIColorControls` with a saturation of `1 + value`.
+    case coreImage
+
+    /// Approximates the signed Camera Raw saturation slider measured on SDR Display-P3 colors.
+    case lightroomApproximation
+  }
+
+  /// The saturation offset. Zero is neutral and −1 removes all color.
+  /// The measured algorithm clamps finite offsets to −1...1 and bypasses nonfinite values.
   public var value: Double
 
-  /// Creates a saturation adjustment.
+  /// The processing method for this adjustment.
+  public var algorithm: Algorithm
+
+  /// Creates a Core Image saturation adjustment.
   public init(value: Double) {
+    self.init(value: value, algorithm: .coreImage)
+  }
+
+  /// Creates a saturation adjustment with the specified color response.
+  public init(value: Double, algorithm: Algorithm) {
     self.value = value
+    self.algorithm = algorithm
+  }
+
+  /// Creates a measured saturation adjustment from the signed XMP `Saturation` value, in −100...100.
+  public init(lightroomAmount amount: Double) {
+    self.init(value: amount / 100, algorithm: .lightroomApproximation)
   }
 }
 
@@ -236,25 +259,68 @@ public struct ExposureFeature: ImageEffect, Equatable {
 /// A highlight recovery adjustment.
 public struct HighlightsFeature: ImageEffect, Equatable {
 
-  /// The highlight recovery value. It is applied as `1 - value`. `0` is
-  /// neutral.
+  /// The normalized highlight recovery. Zero is neutral.
+  ///
+  /// Core Image uses `1 - value` for its highlight amount. The spatial
+  /// approximation clamps finite values to `-1...1` when rendering and
+  /// bypasses nonfinite values.
   public var value: Double
 
-  /// Creates a highlight adjustment.
+  /// The processing method. A recovery value of `0.5` in the spatial
+  /// approximation corresponds to Lightroom Highlights `-50`.
+  public var algorithm: HighlightShadowAlgorithm
+
+  /// Creates a Core Image highlight adjustment.
   public init(value: Double) {
+    self.init(value: value, algorithm: .coreImage)
+  }
+
+  /// Creates a highlight adjustment with the specified recovery response.
+  public init(value: Double, algorithm: HighlightShadowAlgorithm) {
     self.value = value
+    self.algorithm = algorithm
+  }
+
+  /// Creates the measured approximation from a signed XMP `Highlights2012` amount.
+  ///
+  /// The slider ranges from −100 to 100. For example, −50 gives a highlight
+  /// recovery `value` of 0.5. Zero bypasses processing.
+  public init(lightroomAmount amount: Double) {
+    self.init(value: -amount / 100, algorithm: .lightroomApproximation)
   }
 }
 
 /// A shadow lift adjustment.
 public struct ShadowsFeature: ImageEffect, Equatable {
 
-  /// The shadow amount passed to `CIHighlightShadowAdjust`. `0` is neutral.
+  /// The normalized shadow lift. Zero is neutral.
+  ///
+  /// Core Image uses this value for its shadow amount. The spatial
+  /// approximation clamps finite values to `-1...1` when rendering and
+  /// bypasses nonfinite values.
   public var value: Double
 
-  /// Creates a shadow adjustment.
+  /// The processing method. A value of `0.5` in the measured approximation
+  /// corresponds to Lightroom Shadows `+50`.
+  public var algorithm: HighlightShadowAlgorithm
+
+  /// Creates a Core Image shadow adjustment.
   public init(value: Double) {
+    self.init(value: value, algorithm: .coreImage)
+  }
+
+  /// Creates a shadow adjustment with the specified lift response.
+  public init(value: Double, algorithm: HighlightShadowAlgorithm) {
     self.value = value
+    self.algorithm = algorithm
+  }
+
+  /// Creates the measured approximation from a signed XMP `Shadows2012` amount.
+  ///
+  /// The slider ranges from −100 to 100. For example, +50 gives a shadow lift
+  /// `value` of 0.5. Zero bypasses processing.
+  public init(lightroomAmount amount: Double) {
+    self.init(value: amount / 100, algorithm: .lightroomApproximation)
   }
 }
 

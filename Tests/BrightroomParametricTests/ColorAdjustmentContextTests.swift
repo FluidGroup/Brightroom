@@ -9,18 +9,20 @@ import Testing
 
 import BrightroomParametric
 
-/// Public API only. A host renders a `ToneCurveFeature` or a
-/// `ColorMixerFeature` with whatever `CIContext` it has. Both kernels compute
+/// Public API only. A host renders pointwise color adjustments with any `CIContext`. The kernels compute
 /// in extended-linear Display-P3, so the colors must not depend on the
 /// context's working color space: a default `CIContext()`, a linear or
 /// gamma-encoded sRGB working space, and `VideoRenderer`'s default (`nil`)
 /// video context all render what `ExportRenderer` renders.
-@Suite("Tone Curve and Color Mixer through any context", .serialized)
+@Suite("Color adjustments through any context", .serialized)
 struct ColorAdjustmentContextTests {
 
   enum Effect: String, CaseIterable, CustomTestStringConvertible {
     case toneCurve
     case colorMixer
+    case calibratedColorMixer
+    case calibratedSaturation
+    case colorGrading
 
     var testDescription: String { rawValue }
 
@@ -28,6 +30,13 @@ struct ColorAdjustmentContextTests {
       switch self {
       case .toneCurve: AnyImageEffect(RenderingFixtures.makeToneCurve())
       case .colorMixer: AnyImageEffect(ColorAdjustmentContextTests.mixer)
+      case .calibratedColorMixer: AnyImageEffect(ColorMixerFeature(
+        bands: ColorAdjustmentContextTests.mixer.bands, algorithm: .lightroomApproximation))
+      case .calibratedSaturation: AnyImageEffect(SaturationFeature(lightroomAmount: 35))
+      case .colorGrading: AnyImageEffect(ColorGradingFeature(
+        shadows: .init(hue: 220, saturation: 25),
+        midtones: .init(hue: 35, saturation: 30),
+        global: .init(hue: 52, saturation: 40)))
       }
     }
   }

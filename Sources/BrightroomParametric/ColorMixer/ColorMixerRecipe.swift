@@ -26,9 +26,13 @@ nonisolated enum ColorMixerRecipe {
   /// The kernel computes in extended-linear Display-P3 whatever the
   /// rendering context's working space is (`ColorAdjustmentKernelSpace`).
   static func apply(to image: CIImage, plan: ColorMixerRenderPlan) throws -> CIImage {
-    try ColorAdjustmentKernelSpace.apply(
+    let name = switch plan.algorithm {
+    case .oklch: ColorMixerKernelStore.name
+    case .lightroomApproximation: ColorMixerCalibrationRecipe.name
+    }
+    return try ColorAdjustmentKernelSpace.apply(
       to: image,
-      kernelName: ColorMixerKernelStore.name
+      kernelName: name
     ) { image in
       try applyKernel(to: image, plan: plan)
     }
@@ -42,6 +46,8 @@ nonisolated enum ColorMixerRecipe {
     switch plan.algorithm {
     case .oklch:
       kernel = try ColorMixerKernelStore.kernel()
+    case .lightroomApproximation:
+      return try ColorMixerCalibrationRecipe.applyKernel(to: image, plan: plan)
     }
     guard
       let output = kernel.apply(

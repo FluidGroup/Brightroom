@@ -8,7 +8,7 @@ import Foundation
 nonisolated struct ColorMixerRenderPlan: Equatable, Sendable {
 
   /// Increment when band anchors, interpolation, or color transforms change.
-  static let semanticVersion = 1
+  static let semanticVersion = 2
 
   /// Selects how the normalized band corrections are evaluated.
   let algorithm: ColorMixerFeature.Algorithm
@@ -94,7 +94,7 @@ extension ColorMixerFeature {
   }
 }
 
-/// Independent CPU implementation of the extended-linear Display-P3 mixer.
+/// Independent CPU implementation of the original OKLCh mixer for numeric tests.
 nonisolated enum ColorMixerReferenceProcessor {
 
   /// A perceptual cylindrical coordinate used by focused numeric tests.
@@ -148,10 +148,8 @@ nonisolated enum ColorMixerReferenceProcessor {
     _ rgb: SIMD3<Double>,
     plan: ColorMixerRenderPlan
   ) -> SIMD3<Double> {
-    switch plan.algorithm {
-    case .oklch:
-      return processOKLCh(rgb, plan: plan)
-    }
+    precondition(plan.algorithm == .oklch, "This independent reference implements OKLCh only")
+    return processOKLCh(rgb, plan: plan)
   }
 
   /// Evaluates the original OKLCh correction independently of algorithm dispatch.
