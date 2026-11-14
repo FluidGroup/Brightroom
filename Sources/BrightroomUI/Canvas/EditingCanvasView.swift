@@ -1438,7 +1438,7 @@ extension EditingCanvasView {
     let previousFrame = state.frame
     if previousFrame != frame {
       state.frame = frame
-      updateCropLayout()
+      updateCropLayout(animatesLayout: false)
       // The resolved image-space brush depends on the view bounds; re-resolve
       // in the same layout pass so a stroke cannot begin with a stale width.
       refreshCanvasBrushIfNeeded()
@@ -1716,10 +1716,6 @@ extension EditingCanvasView {
 
     let contentSize = geometry.outputSize
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
-    let shouldResetToolSurface = syncsViewportFromCropSurface
-      || isContentSizeChanged
-      || toolSurface.lastAppliedCrop?.isPixelEquivalent(to: crop) != true
-
     // Resolve and validate the frame BEFORE any write so a degenerate layout
     // pass cannot leave the surface half-configured.
     let toolFrame = self
@@ -1728,6 +1724,11 @@ extension EditingCanvasView {
     guard toolFrame.width > 0, toolFrame.height > 0 else {
       return
     }
+
+    let shouldResetToolSurface = syncsViewportFromCropSurface
+      || isContentSizeChanged
+      || toolSurface.scrollView.bounds.size != toolFrame.size
+      || toolSurface.lastAppliedCrop?.isPixelEquivalent(to: crop) != true
 
     if isContentSizeChanged {
       // `contentView` is the zoom view; while a zoom transform is applied,

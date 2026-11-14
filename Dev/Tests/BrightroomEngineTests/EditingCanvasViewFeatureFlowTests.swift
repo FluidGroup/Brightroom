@@ -595,6 +595,56 @@ struct EditingCanvasViewFeatureFlowTests {
     #expect(harness.emitted.isEmpty)
   }
 
+  @Test func `Tool viewing stays fitted and centered through repeated canvas resizes`() {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.grain = .init(amount: 100, size: 100, roughness: 100)
+    let harness = makeLoadedCanvasView(feature: feature, target: nil)
+    let canvasView = harness.canvasView
+    canvasView.areAnimationsEnabled = false
+    let surface = canvasView.toolSurface
+
+    let landscape = CGSize(width: 420, height: 260)
+    let portrait = CGSize(width: 400, height: 500)
+    for size in [landscape, portrait, landscape, portrait, landscape] {
+      canvasView.frame = CGRect(origin: .zero, size: size)
+      canvasView.layoutIfNeeded()
+
+      let fit = min(size.width / imageSize.width, size.height / imageSize.height)
+      #expect(abs(surface.scrollView.zoomScale - fit) < 0.001)
+      let displayedFrame = surface.contentView.convert(surface.contentView.bounds, to: canvasView)
+      #expect(abs(displayedFrame.midX - canvasView.bounds.midX) < 0.5)
+      #expect(abs(displayedFrame.midY - canvasView.bounds.midY) < 0.5)
+      #expect(canvasView.bounds.insetBy(dx: -0.5, dy: -0.5).contains(displayedFrame))
+      #expect(harness.emitted.isEmpty)
+      #expect(canvasView.proposedCrop?.makeCropFeature() == feature.crop)
+    }
+  }
+
+  @Test func `Grain previews and equal layouts preserve tool navigation`() {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.grain = .init(amount: 20)
+    let harness = makeLoadedCanvasView(feature: feature, target: nil)
+    let canvasView = harness.canvasView
+    canvasView.areAnimationsEnabled = false
+    canvasView.frame = CGRect(x: 0, y: 0, width: 420, height: 260)
+    canvasView.layoutIfNeeded()
+
+    let scrollView = canvasView.toolSurface.scrollView
+    scrollView.setZoomScale(scrollView.minimumZoomScale * 2, animated: false)
+    scrollView.setContentOffset(CGPoint(x: 80, y: 40), animated: false)
+    let zoom = scrollView.zoomScale
+    let offset = scrollView.contentOffset
+
+    feature.effects.grain?.amount = 80
+    canvasView.setFeature(feature)
+    canvasView.setNeedsLayout()
+    canvasView.layoutIfNeeded()
+
+    #expect(scrollView.zoomScale == zoom)
+    #expect(scrollView.contentOffset == offset)
+    #expect(harness.emitted.isEmpty)
+  }
+
   /// Records each interaction set the guide hands an overlay.
   private final class RecordingInsideOverlay: EditingCanvasView.CropInsideOverlayBase {
     var received: [CropInteraction] = []
