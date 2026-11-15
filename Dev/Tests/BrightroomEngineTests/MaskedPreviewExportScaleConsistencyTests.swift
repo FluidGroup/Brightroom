@@ -66,7 +66,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // EXPORT reference: the same blur applied to the FULL-resolution source,
     // exactly as the export renderer does (the radius basis is the full
     // chain-entry extent).
-    let exportImage = blur.applyIgnoringFailure(
+    let exportImage = try blur.applyForPreview(
       to: fullEdgeCI,
       chainEntryExtent: fullEdgeCI.extent,
       renderScale: 1

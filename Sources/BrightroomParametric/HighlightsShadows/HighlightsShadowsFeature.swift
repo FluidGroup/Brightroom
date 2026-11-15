@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Hiroshi Kimura (Muukii)
 
+import CoreImage
+
 /// Adjusts Highlights and Shadows together on a developed RGB image.
 ///
 /// Pass the signed XMP `Highlights2012` and `Shadows2012` values. When reducing
@@ -23,6 +25,18 @@ public nonisolated struct HighlightsShadowsFeature: ImageEffect, Equatable {
   public init(highlights: Double, shadows: Double) {
     self.highlights = highlights
     self.shadows = shadows
+  }
+
+  public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    let h = highlights.isFinite ? min(100, max(-100, highlights)) : 0
+    let s = shadows.isFinite ? min(100, max(-100, shadows)) : 0
+    guard h != 0 || s != 0 else {
+      return image
+    }
+    if let output = try context.adjustmentRendering.implementation?.apply(self, to: image, context: context) {
+      return output
+    }
+    return try body.apply(to: image, context: context.resolvingChainEntry(for: image))
   }
 
   public var body: some ImageEffect {

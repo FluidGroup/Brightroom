@@ -24,13 +24,13 @@ struct EditingCanvasRendererTests {
     let empty = try render(renderer, into: target)
     #expect(empty.allSatisfy { $0 == 0 })
 
-    renderer.setRenderImages(images(source: solid(.init(red: 1, green: 0, blue: 0))))
+    renderer.setRenderImages(try images(source: solid(.init(red: 1, green: 0, blue: 0))))
     let red = try render(renderer, into: target)
     let cachedRed = try render(renderer, into: target)
     #expect(red == cachedRed)
     #expect(pixel(red, in: target, x: 20, y: 10)[2] > 180)
 
-    renderer.setRenderImages(images(source: solid(.init(red: 0, green: 0, blue: 1))))
+    renderer.setRenderImages(try images(source: solid(.init(red: 0, green: 0, blue: 1))))
     let blue = try render(renderer, into: target)
     let sample = pixel(blue, in: target, x: 20, y: 10)
     #expect(sample[0] > 180)
@@ -57,7 +57,7 @@ struct EditingCanvasRendererTests {
       .composited(over: solid(.clear))
       .cropped(to: contentBounds)
     let effects = AnyImageEffect(ExposureFeature(ev: 3))
-    renderer.setRenderImages(images(source: source, effects: effects))
+    renderer.setRenderImages(try images(source: source, effects: effects))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
     let unrotated = try render(renderer, into: target)
     let originalSample = pixel(unrotated, in: target, x: 10, y: 16)
@@ -75,7 +75,7 @@ struct EditingCanvasRendererTests {
     #expect(pixel(rotated, in: target, x: 10, y: 60)[3] == 0)
 
     // Returning to the source-cache route must replace the effected output.
-    renderer.setRenderImages(images(source: source))
+    renderer.setRenderImages(try images(source: source))
     let unadjusted = try render(renderer, into: target)
     #expect(Int(pixel(unadjusted, in: target, x: 60, y: 10)[0]) + 60 < Int(originalSample[0]))
   }
@@ -86,7 +86,7 @@ struct EditingCanvasRendererTests {
     let target = try makeTarget(device: device)
     let source = solid(.init(red: 0.2, green: 0.2, blue: 0.2))
     let effect = AnyImageEffect(ExposureFeature(ev: 3))
-    renderer.setRenderImages(images(source: source, localEffect: effect))
+    renderer.setRenderImages(try images(source: source, localEffect: effect))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
 
     let brush = EditingCanvasBrush(size: 16, hardness: 0.7, opacity: 0.8)
@@ -117,7 +117,7 @@ struct EditingCanvasRendererTests {
 
     // Replacing images at the same extent invalidates the retained local-effect
     // bake as well as the viewport layers; the new source is fully black.
-    renderer.setRenderImages(images(source: solid(.black), localEffect: effect))
+    renderer.setRenderImages(try images(source: solid(.black), localEffect: effect))
     let replaced = try render(renderer, into: largerTarget)
     #expect(pixel(replaced, in: largerTarget, x: 132, y: 40)[0] == 0)
     #expect(pixel(replaced, in: largerTarget, x: 132, y: 40)[3] == 255)
@@ -131,9 +131,9 @@ struct EditingCanvasRendererTests {
     source: CIImage,
     effects: AnyImageEffect? = nil,
     localEffect: AnyImageEffect? = nil
-  ) -> EditingCanvasRenderImages {
-    let base = effects?.applyIgnoringFailure(to: source, chainEntryExtent: contentBounds, renderScale: 1) ?? source
-    let adjusted = localEffect?.applyIgnoringFailure(to: base, chainEntryExtent: contentBounds, renderScale: 1) ?? base
+  ) throws -> EditingCanvasRenderImages {
+    let base = try effects?.applyForPreview(to: source, chainEntryExtent: contentBounds, renderScale: 1) ?? source
+    let adjusted = try localEffect?.applyForPreview(to: base, chainEntryExtent: contentBounds, renderScale: 1) ?? base
     return .init(
       source: source,
       base: base,

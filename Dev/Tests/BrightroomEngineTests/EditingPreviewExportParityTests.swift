@@ -229,9 +229,6 @@ struct EditingPreviewExportParityTests {
   /// a throwing global effect instead of silently exporting an image missing
   /// the adjustment.
   ///
-  /// (The canvas path's release-mode degrade-to-identity is not asserted here:
-  /// `applyIgnoringFailure` calls `assertionFailure`, which traps in the
-  /// debug test build — the same intentional contract global effects use.)
   @Test func `Throwing local adjustment fails export`() async throws {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
     let imageSize = CGSize(width: 32, height: 32)

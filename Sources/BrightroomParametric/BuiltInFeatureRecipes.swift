@@ -174,6 +174,9 @@ extension ExposureFeature {
     guard abs(ev) > 0.0001 else {
       return image
     }
+    if let output = try context.adjustmentRendering.implementation?.apply(self, to: image, context: context) {
+      return output
+    }
     return image.applyingFilter(
       "CIExposureAdjust",
       parameters: [kCIInputEVKey: ev]

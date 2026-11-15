@@ -286,8 +286,8 @@ struct EditingCanvasPostCropPassTests {
     let target = try Self.makeTarget(device: device)
     // The composite route: a local effect under a committed stroke.
     let content = Self.gradientContent()
-    let adjusted = AnyImageEffect(ExposureFeature(ev: 1))
-      .applyIgnoringFailure(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
+    let adjusted = try AnyImageEffect(ExposureFeature(ev: 1))
+      .applyForPreview(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
     renderer.setRenderImages(.init(
       source: content,
       base: content,
@@ -364,7 +364,7 @@ struct EditingCanvasPostCropPassTests {
       source: content,
       base: content,
       adjusted: composite
-        ? AnyImageEffect(ExposureFeature(ev: 1)).applyIgnoringFailure(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
+        ? try AnyImageEffect(ExposureFeature(ev: 1)).applyForPreview(to: content, chainEntryExtent: Self.contentBounds, renderScale: 1)
         : content,
       hasGlobalEffects: route == .baseImage,
       hasLocalEffect: composite,
@@ -446,12 +446,12 @@ struct EditingCanvasPostCropPassTests {
         parameters: [kCIInputBackgroundImageKey: background, kCIInputMaskImageKey: mask]
       ).cropped(to: extent)
     }
-    func vignetted(_ image: CIImage) -> CIImage {
-      vignette.applyIgnoringFailure(to: image, chainEntryExtent: extent, renderScale: 1)
+    func vignetted(_ image: CIImage) throws -> CIImage {
+      try vignette.applyForPreview(to: image, chainEntryExtent: extent, renderScale: 1)
     }
 
-    let vignetteOfBlend = vignetted(blend(adjusted, base))
-    let blendOfVignettes = blend(vignetted(adjusted), vignetted(base))
+    let vignetteOfBlend = try vignetted(blend(adjusted, base))
+    let blendOfVignettes = try blend(vignetted(adjusted), vignetted(base))
     let context = CIContext(options: [
       .workingColorSpace: EditingCanvasImageProcessing.workingColorSpace,
       .workingFormat: EditingCanvasImageProcessing.workingFormat,

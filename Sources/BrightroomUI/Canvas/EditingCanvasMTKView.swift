@@ -26,6 +26,10 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   /// Sampling an unchanged viewport must not acquire a drawable or submit GPU work.
   private var needsCanvasDisplay = true
   private var lastDrawnSize: CGSize?
+  private var inputError: (any Error)?
+  private let failureLabel = UILabel()
+
+  var renderingError: (any Error)? { inputError ?? renderer.renderingError }
 
   /// Delivers a completed content-space stroke to the host. Completion signals
   /// that its rendering inputs have been refreshed; stale completions are ignored.
@@ -61,6 +65,15 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
       metalLayer.maximumDrawableCount = 3
     }
     applyColorSpaceContract()
+
+    failureLabel.text = "The image could not be rendered"
+    failureLabel.textColor = .white
+    failureLabel.backgroundColor = .black
+    failureLabel.textAlignment = .center
+    failureLabel.numberOfLines = 0
+    failureLabel.isHidden = true
+    failureLabel.accessibilityIdentifier = "editing-canvas-rendering-failure"
+    addSubview(failureLabel)
 
     reset()
   }
@@ -116,8 +129,22 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   func setRenderImages(_ images: EditingCanvasRenderImages) {
+    inputError = nil
+    failureLabel.isHidden = true
     renderer.setRenderImages(images)
     needsCanvasDisplay = true
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    failureLabel.frame = bounds
+  }
+
+  func setRenderingFailure(_ error: any Error) {
+    inputError = error
+    failureLabel.isHidden = false
+    isHidden = false
+    EditorLog.error(.editingCanvas, "Preview evaluation failed: \(error)")
   }
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
@@ -176,6 +203,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   func draw(in view: MTKView) {
+    guard inputError == nil else { return }
     guard let drawable = currentDrawable,
           let descriptor = currentRenderPassDescriptor else { return }
 
@@ -189,6 +217,8 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
       activeStroke: activeStroke,
       preferredFramesPerSecond: preferredFramesPerSecond
     )) != nil else { return }
+
+    failureLabel.isHidden = renderer.renderingError == nil
 
     // The renderer has committed and waited until scheduling. Present directly
     // in the current Core Animation transaction, matching presentsWithTransaction.
